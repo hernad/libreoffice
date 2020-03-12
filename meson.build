@@ -9,6 +9,7 @@ micro_version = varr[2]
 patch_version = '0'
 this_year = '2020'
 main_inc = include_directories('include', 'config_host')
+java_inc = include_directories('/usr/lib/jvm/java-openjdk/include', '/usr/lib/jvm/java-openjdk/include/linux')
 cpp = meson.get_compiler('cpp')
 thread_dep = dependency('threads')
 dl_dep = cpp.find_library('dl', required: false)
@@ -133,7 +134,7 @@ cairo_dep = dependency('cairo')
 orcus_dep = dependency('liborcus-0.14')
 clucene_dep = dependency('libclucene-core')
 libxslt_dep = dependency('libxslt')
-qrcodegen_dep = declare_dependency(compile_args: ['-I/usr/include/qrcodegen'],
+qrcodegen_dep = declare_dependency(compile_args: ['-I/usr/include/qrcodegen', '-I/usr/include/qrcodegencpp'],
   dependencies: cpp.find_library('qrcodegencpp'))
 revenge_dep = dependency('librevenge-0.0')
 odfgen_dep = dependency('libodfgen-0.1')
@@ -159,8 +160,9 @@ libexttextcat_dep = dependency('libexttextcat')
 
 # The version in Ubuntu eoan is too old.
 #mdds_dep = dependency('mdds-1.5')
-mdds_dep = declare_dependency(include_directories: 'mdds')
-broken_mdds_dep = declare_dependency(include_directories: '.')
+#hernad
+mdds_dep = declare_dependency(include_directories: 'external/mdds-1.5.0/include')
+core_dep = declare_dependency(include_directories: '.')
 
 # FIXME. Java does not provide .pc files.
 # Presumably this data can be obtained via other methods.
