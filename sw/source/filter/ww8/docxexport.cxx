@@ -755,7 +755,10 @@ void DocxExport::WriteNumbering()
             FSNS( XML_xmlns, XML_w ), m_pFilter->getNamespaceURL(OOX_NS(doc)).toUtf8(),
             FSNS( XML_xmlns, XML_o ), m_pFilter->getNamespaceURL(OOX_NS(vmlOffice)).toUtf8(),
             FSNS( XML_xmlns, XML_r ), m_pFilter->getNamespaceURL(OOX_NS(officeRel)).toUtf8(),
-            FSNS( XML_xmlns, XML_v ), m_pFilter->getNamespaceURL(OOX_NS(vml)).toUtf8() );
+            FSNS( XML_xmlns, XML_v ), m_pFilter->getNamespaceURL(OOX_NS(vml)).toUtf8(),
+            FSNS( XML_xmlns, XML_mc ), m_pFilter->getNamespaceURL(OOX_NS(mce)).toUtf8(),
+            FSNS( XML_xmlns, XML_w14 ), m_pFilter->getNamespaceURL(OOX_NS(w14)).toUtf8(),
+            FSNS( XML_mc, XML_Ignorable ), "w14" );
 
     BulletDefinitions();
 
@@ -1102,7 +1105,7 @@ void DocxExport::WriteSettings()
      * Its focus is on sharing files between multiple users, tracking the lowest supported mode in the group.
      * It is to BENEFIT older programs by not using certain new features that they don't understand.
      *
-     * The next time the compat mode needs to be changed, I forsee the following steps:
+     * The next time the compat mode needs to be changed, I foresee the following steps:
      * 1.) Accept the new mode: Start round-tripping the new value, indicating we understand that format.
      * 2.) Many years later, change the TargetCompatilityMode for new documents, when we no longer care
      *     about working with perfect compatibility with older versions of MS Word.

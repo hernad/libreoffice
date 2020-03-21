@@ -380,15 +380,6 @@ void SettingsTable::lcl_attribute(Id nName, Value & val)
         break;
     case NS_ooxml::LN_CT_DocProtect_enforcement: // 92039
         m_pImpl->m_DocumentProtection.m_bEnforcement = (nIntValue != 0);
-        switch (m_pImpl->m_DocumentProtection.m_nEdit)
-        {
-        case NS_ooxml::LN_Value_doc_ST_DocProtect_trackedChanges:
-            m_pImpl->m_bRedlineProtection = (nIntValue != 0);
-            break;
-        case NS_ooxml::LN_Value_doc_ST_DocProtect_forms:
-            m_pImpl->m_bProtectForm = (nIntValue != 0);
-            break;
-        }
         break;
     case NS_ooxml::LN_CT_DocProtect_formatting: // 92038
         m_pImpl->m_DocumentProtection.m_bFormatting = (nIntValue != 0);
@@ -664,7 +655,7 @@ bool SettingsTable::GetDoNotExpandShiftReturn() const
 
 bool SettingsTable::GetProtectForm() const
 {
-    return m_pImpl->m_bProtectForm;
+    return m_pImpl->m_bProtectForm && m_pImpl->m_DocumentProtection.m_bEnforcement;
 }
 
 bool SettingsTable::GetNoHyphenateCaps() const
@@ -734,7 +725,7 @@ void SettingsTable::ApplyProperties(uno::Reference<text::XTextDocument> const& x
     {
         xDocProps->setPropertyValue("RecordChanges", uno::makeAny( m_pImpl->m_bRecordChanges ) );
         // Password protected Record changes
-        if ( m_pImpl->m_bRecordChanges && m_pImpl->m_bRedlineProtection )
+        if ( m_pImpl->m_bRecordChanges && m_pImpl->m_bRedlineProtection && m_pImpl->m_DocumentProtection.m_bEnforcement )
         {
             // use dummy protection key to forbid disabling of Record changes without a notice
             // (extending the recent GrabBag support)    TODO support password verification...
@@ -776,6 +767,36 @@ void SettingsTable::ApplyProperties(uno::Reference<text::XTextDocument> const& x
     }
 }
 
+bool SettingsTable::GetCompatSettingValue( const OUString& sCompatName ) const
+{
+    bool bRet = false;
+    for (const auto& rProp : m_pImpl->m_aCompatSettings)
+    {
+        if (rProp.Name == "compatSetting") //always true
+        {
+            css::uno::Sequence<css::beans::PropertyValue> aCurrentCompatSettings;
+            rProp.Value >>= aCurrentCompatSettings;
+
+            OUString sName;
+            aCurrentCompatSettings[0].Value >>= sName;
+            if ( sName != sCompatName )
+                continue;
+
+            OUString sUri;
+            aCurrentCompatSettings[1].Value >>= sUri;
+            if ( sUri != "http://schemas.microsoft.com/office/word" )
+                continue;
+
+            OUString sVal;
+            aCurrentCompatSettings[2].Value >>= sVal;
+            // if repeated, what happens?  Last one wins
+            bRet = sVal.toBoolean();
+        }
+    }
+
+    return bRet;
+}
+
 //Keep this function in-sync with the one in sw/.../docxattributeoutput.cxx
 sal_Int32 SettingsTable::GetWordCompatibilityMode() const
 {
@@ -784,26 +805,27 @@ sal_Int32 SettingsTable::GetWordCompatibilityMode() const
 
     for (const auto& rProp : m_pImpl->m_aCompatSettings)
     {
-        if (rProp.Name == "compatSetting")
+        if (rProp.Name == "compatSetting") //always true
         {
             css::uno::Sequence<css::beans::PropertyValue> aCurrentCompatSettings;
             rProp.Value >>= aCurrentCompatSettings;
 
             OUString sName;
-            OUString sUri;
-            OUString sVal;
-
             aCurrentCompatSettings[0].Value >>= sName;
-            aCurrentCompatSettings[1].Value >>= sUri;
-            aCurrentCompatSettings[2].Value >>= sVal;
+            if ( sName != "compatibilityMode" )
+                continue;
 
-            if (sName == "compatibilityMode" && sUri == "http://schemas.microsoft.com/office/word")
-            {
-                const sal_Int32 nValidMode = sVal.toInt32();
-                // if repeated, highest mode wins in MS Word. 11 is the first valid mode.
-                if ( nValidMode > 10 && nValidMode > m_pImpl->m_nWordCompatibilityMode )
-                    m_pImpl->m_nWordCompatibilityMode = nValidMode;
-            }
+            OUString sUri;
+            aCurrentCompatSettings[1].Value >>= sUri;
+            if ( sUri != "http://schemas.microsoft.com/office/word" )
+                continue;
+
+            OUString sVal;
+            aCurrentCompatSettings[2].Value >>= sVal;
+            const sal_Int32 nValidMode = sVal.toInt32();
+            // if repeated, highest mode wins in MS Word. 11 is the first valid mode.
+            if ( nValidMode > 10 && nValidMode > m_pImpl->m_nWordCompatibilityMode )
+                m_pImpl->m_nWordCompatibilityMode = nValidMode;
         }
     }
 

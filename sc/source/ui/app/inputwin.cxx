@@ -821,7 +821,7 @@ ScInputBarGroup::ScInputBarGroup(vcl::Window* pParent, ScTabViewShell* pViewSh)
     maButton->SetSymbol(SymbolType::SPIN_DOWN);
     maButton->SetQuickHelpText(ScResId(SCSTR_QHELP_EXPAND_FORMULA));
     // disable the multiline toggle on the mobile phones
-    if (!comphelper::LibreOfficeKit::isActive() || !comphelper::LibreOfficeKit::isMobile(SfxLokHelper::getView()))
+    if (!comphelper::LibreOfficeKit::isActive() || !comphelper::LibreOfficeKit::isMobilePhone(SfxLokHelper::getView()))
         maButton->Show();
 }
 
@@ -1159,7 +1159,7 @@ long ScTextWndGroup::GetPixelHeightForLines(long nLines)
 
 ScrollBar& ScTextWndGroup::GetScrollBar()
 {
-    return *maScrollBar.get();
+    return *maScrollBar;
 }
 
 const OUString& ScTextWndGroup::GetTextString() const
