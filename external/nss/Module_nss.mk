@@ -11,6 +11,7 @@ $(eval $(call gb_Module_Module,nss))
 
 $(eval $(call gb_Module_add_targets,nss,\
 	UnpackedTarball_nss \
+	UnpackedTarball_gyp \
 	ExternalPackage_nss \
 	ExternalProject_nss \
 ))

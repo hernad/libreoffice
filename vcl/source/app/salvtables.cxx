@@ -1007,6 +1007,11 @@ public:
         }
     }
 
+    virtual sal_uInt16 get_modifier_state() const override
+    {
+        return m_xToolBox->GetModifier();
+    }
+
     virtual ~SalInstanceToolbar() override
     {
         m_xToolBox->SetDropdownClickHdl(Link<ToolBox*, void>());
@@ -3314,6 +3319,7 @@ public:
         , m_nSortColumn(-1)
     {
         m_xTreeView->SetNodeDefaultImages();
+        m_xTreeView->SetForceMakeVisible(true);
         m_xTreeView->SetSelectHdl(LINK(this, SalInstanceTreeView, SelectHdl));
         m_xTreeView->SetDeselectHdl(LINK(this, SalInstanceTreeView, DeSelectHdl));
         m_xTreeView->SetDoubleClickHdl(LINK(this, SalInstanceTreeView, DoubleClickHdl));
