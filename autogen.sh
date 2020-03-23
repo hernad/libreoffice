@@ -1,4 +1,4 @@
-:
+#!/usr/bin/env perl
 #
 # This script checks various configure parameters and uses three files:
 #   * autogen.input (ro)
