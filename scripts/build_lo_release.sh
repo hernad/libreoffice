@@ -1,12 +1,15 @@
 make clean
+`
+#THEME=colibre_svg
+THEME=sukapura_svg
 
 ./autogen.sh --with-lang="bs" \
    --with-locales="bs" \
    --with-vendor="hernad" \
-   --with-theme="colibre_svg" \
+   --with-theme="$THEME" \
     --with-visual-studio=2019 \
     --without-doxygen \
     --without-java \
     --with-product-name="LO_Ziher"\
     --with-package-version='7.0.0.10'\
-    -–enable-release-build
+    --enable-release-build
