@@ -4793,7 +4793,6 @@ if test "$cross_compiling" = "yes"; then
     ./configure \
         --disable-cups \
         --disable-gstreamer-1-0 \
-        --disable-gtk \
         --disable-gtk3 \
         --disable-pdfimport \
         --disable-postgresql-sdbc \
@@ -9005,7 +9004,7 @@ internal)
     SYSTEM_PYTHON=
     PYTHON_VERSION_MAJOR=3
     PYTHON_VERSION_MINOR=7
-    PYTHON_VERSION=${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}.6
+    PYTHON_VERSION=${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}.7
     if ! grep -q -i python.*${PYTHON_VERSION} ${SRC_ROOT}/download.lst; then
         AC_MSG_ERROR([PYTHON_VERSION ${PYTHON_VERSION} but no matching file in download.lst])
     fi
@@ -9703,9 +9702,9 @@ for a in "$NINJA" ninja ninja-build; do
         $a --version > /dev/null 2>/dev/null
         if test $? -eq 0;  then
             if test "$build_os" = "cygwin"; then
-                # nss requires the Windows version of ninja
+                # nss requires the Windows version of ninja (but uses its Unix path)
                 if test -n "$($a -t list | grep 'msvc')" ; then
-                    NINJA="$(cygpath -m "$(which "$(cygpath -u $a)")")"
+                    NINJA=`which $a`
                 fi
             else
                 NINJA=`which $a`
@@ -9724,6 +9723,7 @@ fi
 if test -z "$NINJA" -a "$nss_needs_ninja" = "yes" -a -n "$ENABLE_NSS" -a -z "$SYSTEM_NSS"; then
     AC_MSG_ERROR([Not found. NSS build requires Ninja (https://ninja-build.org/).])
 fi
+AC_SUBST(NINJA)
 
 dnl ===================================================================
 dnl Check for TLS/SSL and cryptographic implementation to use
