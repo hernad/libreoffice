@@ -1,5 +1,5 @@
 make clean
-`
+
 #THEME=colibre_svg
 THEME=sukapura_svg
 
@@ -13,3 +13,5 @@ THEME=sukapura_svg
     --with-product-name="LO_Ziher"\
     --with-package-version='7.0.0.10'\
     --enable-release-build
+
+make build-nocheck
