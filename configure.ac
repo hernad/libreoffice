@@ -1740,10 +1740,10 @@ AC_ARG_WITH(system-jpeg,
         [Use jpeg already on system.]),,
     [with_system_jpeg="$with_system_libs"])
 
-AC_ARG_WITH(system-clucene,
-    AS_HELP_STRING([--with-system-clucene],
-        [Use clucene already on system.]),,
-    [with_system_clucene="$with_system_libs"])
+dnl AC_ARG_WITH(system-clucene,
+dnl     AS_HELP_STRING([--with-system-clucene],
+dnl         [Use clucene already on system.]),,
+dnl     [with_system_clucene="$with_system_libs"])
 
 AC_ARG_WITH(system-expat,
     AS_HELP_STRING([--with-system-expat],
@@ -2651,6 +2651,12 @@ else
     fi
 fi
 AC_SUBST(WITH_GALLERY_BUILD)
+
+WITH_HELP_BUILD=
+AC_SUBST(WITH_HELP_BUILD)
+
+WITH_EBOOK_BUILD=
+AC_SUBST(WITH_EBOOK_BUILD)
 
 dnl ===================================================================
 dnl  Checks if ccache is available
@@ -8517,36 +8523,36 @@ dnl ===================================================================
 dnl we should rather be using
 dnl libo_CHECK_SYSTEM_MODULE([clucence],[CLUCENE],[liblucence-core]) here
 dnl but the contribs-lib check seems tricky
-AC_MSG_CHECKING([which clucene to use])
-if test "$with_system_clucene" = "yes"; then
-    AC_MSG_RESULT([external])
-    SYSTEM_CLUCENE=TRUE
-    PKG_CHECK_MODULES(CLUCENE, libclucene-core)
-    CLUCENE_CFLAGS=[$(printf '%s' "$CLUCENE_CFLAGS" | sed -e 's@-I[^ ]*/CLucene/ext@@' -e "s/-I/${ISYSTEM?}/g")]
-    FilterLibs "${CLUCENE_LIBS}"
-    CLUCENE_LIBS="${filteredlibs}"
-    AC_LANG_PUSH([C++])
-    save_CXXFLAGS=$CXXFLAGS
-    save_CPPFLAGS=$CPPFLAGS
-    CXXFLAGS="$CXXFLAGS $CLUCENE_CFLAGS"
-    CPPFLAGS="$CPPFLAGS $CLUCENE_CFLAGS"
-    dnl http://sourceforge.net/tracker/index.php?func=detail&aid=3392466&group_id=80013&atid=558446
-    dnl https://bugzilla.redhat.com/show_bug.cgi?id=794795
-    AC_CHECK_HEADER([CLucene/analysis/cjk/CJKAnalyzer.h], [],
-                 [AC_MSG_ERROR([Your version of libclucene has contribs-lib missing.])], [#include <CLucene.h>])
-    CXXFLAGS=$save_CXXFLAGS
-    CPPFLAGS=$save_CPPFLAGS
-    AC_LANG_POP([C++])
-
-    CLUCENE_LIBS="$CLUCENE_LIBS -lclucene-contribs-lib"
-else
-    AC_MSG_RESULT([internal])
-    SYSTEM_CLUCENE=
-    BUILD_TYPE="$BUILD_TYPE CLUCENE"
-fi
-AC_SUBST(SYSTEM_CLUCENE)
-AC_SUBST(CLUCENE_CFLAGS)
-AC_SUBST(CLUCENE_LIBS)
+dnl AC_MSG_CHECKING([which clucene to use])
+dnl if test "$with_system_clucene" = "yes"; then
+dnl     AC_MSG_RESULT([external])
+dnl     SYSTEM_CLUCENE=TRUE
+dnl     PKG_CHECK_MODULES(CLUCENE, libclucene-core)
+dnl     CLUCENE_CFLAGS=[$(printf '%s' "$CLUCENE_CFLAGS" | sed -e 's@-I[^ ]*/CLucene/ext@@' -e "s/-I/${ISYSTEM?}/g")]
+dnl     FilterLibs "${CLUCENE_LIBS}"
+dnl     CLUCENE_LIBS="${filteredlibs}"
+dnl     AC_LANG_PUSH([C++])
+dnl     save_CXXFLAGS=$CXXFLAGS
+dnl     save_CPPFLAGS=$CPPFLAGS
+dnl     CXXFLAGS="$CXXFLAGS $CLUCENE_CFLAGS"
+dnl     CPPFLAGS="$CPPFLAGS $CLUCENE_CFLAGS"
+dnl     dnl http://sourceforge.net/tracker/index.php?func=detail&aid=3392466&group_id=80013&atid=558446
+dnl     dnl https://bugzilla.redhat.com/show_bug.cgi?id=794795
+dnl     AC_CHECK_HEADER([CLucene/analysis/cjk/CJKAnalyzer.h], [],
+dnl                  [AC_MSG_ERROR([Your version of libclucene has contribs-lib missing.])], [#include <CLucene.h>])
+dnl     CXXFLAGS=$save_CXXFLAGS
+dnl     CPPFLAGS=$save_CPPFLAGS
+dnl     AC_LANG_POP([C++])
+dnl 
+dnl     CLUCENE_LIBS="$CLUCENE_LIBS -lclucene-contribs-lib"
+dnl else
+dnl     AC_MSG_RESULT([internal])
+dnl     SYSTEM_CLUCENE=
+dnl     BUILD_TYPE="$BUILD_TYPE CLUCENE"
+dnl fi
+dnl AC_SUBST(SYSTEM_CLUCENE)
+dnl AC_SUBST(CLUCENE_CFLAGS)
+dnl AC_SUBST(CLUCENE_LIBS)
 
 dnl ===================================================================
 dnl Check for system expat
@@ -8601,16 +8607,22 @@ libo_CHECK_SYSTEM_MODULE([libcdr],[CDR],[libcdr-0.1])
 
 libo_CHECK_SYSTEM_MODULE([libmspub],[MSPUB],[libmspub-0.1])
 
-libo_CHECK_SYSTEM_MODULE([libmwaw],[MWAW],[libmwaw-0.3 >= 0.3.1])
-libo_PKG_VERSION([MWAW], [libmwaw-0.3], [0.3.15])
+dnl ====================MWAW - old Macintosh formats OFF ======================
+dnl libo_CHECK_SYSTEM_MODULE([libmwaw],[MWAW],[libmwaw-0.3 >= 0.3.1])
+dnl libo_PKG_VERSION([MWAW], [libmwaw-0.3], [0.3.15])
+WITH_OLD_MACINTOSH=
+AC_SUBST(WITH_OLD_MACINTOSH)
 
-libo_CHECK_SYSTEM_MODULE([libetonyek],[ETONYEK],[libetonyek-0.1])
-libo_PKG_VERSION([ETONYEK], [libetonyek-0.1], [0.1.8])
+dnl ====================ETONYEK - Apple Keynote presentations OFF ======================
+dnl libo_CHECK_SYSTEM_MODULE([libetonyek],[ETONYEK],[libetonyek-0.1])
+dnl libo_PKG_VERSION([ETONYEK], [libetonyek-0.1], [0.1.8])
+dnl =====================================================================================
 
 libo_CHECK_SYSTEM_MODULE([libfreehand],[FREEHAND],[libfreehand-0.1])
 
-libo_CHECK_SYSTEM_MODULE([libebook],[EBOOK],[libe-book-0.1])
-libo_PKG_VERSION([EBOOK], [libe-book-0.1], [0.1.2])
+dnl ====================EBOOK OFF ======================
+dnl libo_CHECK_SYSTEM_MODULE([libebook],[EBOOK],[libe-book-0.1])
+dnl libo_PKG_VERSION([EBOOK], [libe-book-0.1], [0.1.2])
 
 libo_CHECK_SYSTEM_MODULE([libabw],[ABW],[libabw-0.1])
 

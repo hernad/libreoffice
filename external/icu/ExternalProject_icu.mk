@@ -24,6 +24,7 @@ $(call gb_ExternalProject_get_state_target,icu,build) :
 		export LIB="$(ILIB)" \
 		&& CFLAGS="-FS -arch:SSE $(SOLARINC) $(gb_DEBUGINFO_FLAGS)" CPPFLAGS="$(SOLARINC)" CXXFLAGS="-FS -arch:SSE $(SOLARINC) $(gb_DEBUGINFO_FLAGS)" \
 			INSTALL=`cygpath -m /usr/bin/install` \
+			ICU_DATA_FILTER_FILE=/cygdrive/c/dev/filters.json \
 			./runConfigureICU \
 			$(if $(MSVC_USE_DEBUG_RUNTIME),--enable-debug --disable-release) \
 			Cygwin/MSVC --disable-extras \

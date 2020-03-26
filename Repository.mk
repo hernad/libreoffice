@@ -372,7 +372,7 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,ooo, \
 	fwm \
 	$(if $(filter WNT,$(OS)),gdipluscanvas) \
 	guesslang \
-	$(if $(filter DESKTOP,$(BUILD_TYPE)),helplinker) \
+	$(if $(filter HELP,$(BUILD_TYPE)),helplinker) \
 	i18npool \
 	i18nsearch \
     gie \

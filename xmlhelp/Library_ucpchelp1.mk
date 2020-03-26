@@ -34,7 +34,7 @@ $(eval $(call gb_Library_use_libraries,ucpchelp1,\
 	comphelper \
 	cppu \
 	cppuhelper \
-	helplinker \
+	$(if $(filter HELP,$(BUILD_TYPE)),helplinker) \
 	sal \
 	tl \
 	ucbhelper \

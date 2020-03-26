@@ -1718,11 +1718,11 @@ endif # SYSTEM_EBOOK
 ifneq ($(SYSTEM_ETONYEK),)
 
 define gb_LinkTarget__use_etonyek
-$(call gb_LinkTarget_set_include,$(1),\
-	$$(INCLUDE) \
-    $(ETONYEK_CFLAGS) \
-)
-$(call gb_LinkTarget_add_libs,$(1),$(ETONYEK_LIBS))
+#$(call gb_LinkTarget_set_include,$(1),\
+#	$$(INCLUDE) \
+#    $(ETONYEK_CFLAGS) \
+#)
+#$(call gb_LinkTarget_add_libs,$(1),$(ETONYEK_LIBS))
 
 endef
 
@@ -1732,18 +1732,18 @@ else # !SYSTEM_ETONYEK
 
 ifeq ($(COM),MSC)
 
-$(eval $(call gb_Helper_register_libraries_for_install,PLAINLIBS_OOO,ooo,\
-	etonyek \
-))
+#$(eval $(call gb_Helper_register_libraries_for_install,PLAINLIBS_OOO,ooo,\
+#	etonyek \
+#))
 
 define gb_LinkTarget__use_etonyek
-$(call gb_LinkTarget_set_include,$(1),\
-	-I$(call gb_UnpackedTarball_get_dir,libetonyek)/inc \
-	$$(INCLUDE) \
-)
-$(call gb_LinkTarget_use_libraries,$(1),\
-	etonyek \
-)
+#$(call gb_LinkTarget_set_include,$(1),\
+#	-I$(call gb_UnpackedTarball_get_dir,libetonyek)/inc \
+#	$$(INCLUDE) \
+#)
+#$(call gb_LinkTarget_use_libraries,$(1),\
+#	etonyek \
+#)
 
 endef
 
@@ -1754,22 +1754,22 @@ $(eval $(call gb_Helper_register_packages_for_install,ooo, \
 ))
 
 define gb_LinkTarget__use_etonyek
-$(call gb_LinkTarget_use_package,$(1),libetonyek)
-
-$(call gb_LinkTarget_set_include,$(1),\
-	-I${WORKDIR}/UnpackedTarball/libetonyek/inc \
-	-DLIBETONYEK_VISIBILITY \
-	$$(INCLUDE) \
-)
-$(call gb_LinkTarget_add_libs,$(1),\
-	-L$(call gb_UnpackedTarball_get_dir,libetonyek)/src/lib/.libs -letonyek-0.1 \
-)
-$(call gb_LinkTarget_use_external_project,$(1),libetonyek)
+#$(call gb_LinkTarget_use_package,$(1),libetonyek)
+#
+#$(call gb_LinkTarget_set_include,$(1),\
+#	-I${WORKDIR}/UnpackedTarball/libetonyek/inc \
+#	-DLIBETONYEK_VISIBILITY \
+#	$$(INCLUDE) \
+#)
+#$(call gb_LinkTarget_add_libs,$(1),\
+#	-L$(call gb_UnpackedTarball_get_dir,libetonyek)/src/lib/.libs -letonyek-0.1 \
+#)
+#$(call gb_LinkTarget_use_external_project,$(1),libetonyek)
 
 endef
 
 define gb_ExternalProject__use_etonyek
-$(call gb_ExternalProject_use_external_project,$(1),libetonyek)
+#$(call gb_ExternalProject_use_external_project,$(1),libetonyek)
 
 endef
 

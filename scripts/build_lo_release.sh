@@ -47,7 +47,7 @@ ENABLE_64_BIT=--enable-64-bit
     --disable-lpsolve \
     --disable-coinmp \
     --disable-report-builder \
-    --without-help \
+    --with-help=no \
     --disable-online-update \
     --disable-sdremote \
     --disable-sdremote-bluetooth \

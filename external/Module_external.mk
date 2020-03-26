@@ -25,14 +25,14 @@ $(eval $(call gb_Module_add_moduledirs,external,\
 	$(call gb_Helper_optional,CAIRO,cairo) \
 	$(call gb_Helper_optional,CDR,libcdr) \
 	$(call gb_Helper_optional,OPENCL,clew) \
-	$(call gb_Helper_optional,CLUCENE,clucene) \
+	$(if $(WITH_HELP_BUILD),$(call gb_Helper_optional,CLUCENE,clucene)) \
 	$(call gb_Helper_optional,LIBCMIS,libcmis) \
 	$(call gb_Helper_optional,COINMP,coinmp) \
 	$(call gb_Helper_optional,CPPUNIT,cppunit) \
 	$(call gb_Helper_optional,CT2N,ct2n) \
 	$(call gb_Helper_optional,CURL,curl) \
 	dtoa \
-	$(call gb_Helper_optional,EBOOK,libebook) \
+	$(if $(WITH_EBOOK_BUILD),$(call gb_Helper_optional,EBOOK,libebook)) \
 	$(call gb_Helper_optional,EPM,epm) \
 	$(call gb_Helper_optional,EPOXY,epoxy) \
 	$(call gb_Helper_optional,EPUBGEN,libepubgen) \
@@ -74,7 +74,7 @@ $(eval $(call gb_Module_add_moduledirs,external,\
 	$(if $(WITH_EXTRA_EXTENSIONS),misc_extensions) \
 	$(call gb_Helper_optional,MORE_FONTS,more_fonts) \
 	$(call gb_Helper_optional,MSPUB,libmspub) \
-	$(call gb_Helper_optional,MWAW,libmwaw) \
+	$(if $(WITH_OLD_MACINTOSH),$(call gb_Helper_optional,MWAW,libmwaw)) \
 	$(call gb_Helper_optional,MYTHES,mythes) \
 	$(call gb_Helper_optional,NEON,neon) \
 	$(call gb_Helper_optional,NSS,nss) \
