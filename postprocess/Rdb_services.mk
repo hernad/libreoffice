@@ -123,11 +123,13 @@ $(eval $(call gb_Rdb_add_components,services,\
 		sccomp/source/solver/lpsolvesolver \
 	) \
 	sccomp/source/solver/swarmsolver \
+	$(if $(ENABLE_WPFT), \
 	writerfilter/util/writerfilter \
 	writerperfect/source/draw/wpftdraw \
 	writerperfect/source/impress/wpftimpress \
 	writerperfect/source/writer/wpftwriter \
 	writerperfect/source/calc/wpftcalc \
+	) \
 	$(if $(filter MACOSX,$(OS)), \
 		$(call gb_Helper_optional,AVMEDIA,avmedia/source/macavf/avmediaMacAVF) \
 		fpicker/source/aqua/fps_aqua \
@@ -244,7 +246,9 @@ $(eval $(call gb_Rdb_add_components,services,\
 	connectivity/source/cpool/dbpool2 \
 	connectivity/source/dbtools/dbtools \
 	$(if $(filter WNT,$(OS)), \
+	$(if $(ENABLE_ADO), \
 		connectivity/source/drivers/ado/ado \
+	) \
 	) \
 	connectivity/source/drivers/calc/calc \
 	connectivity/source/drivers/dbase/dbase \
@@ -272,9 +276,11 @@ $(eval $(call gb_Rdb_add_components,services,\
 	dbaccess/util/dbu \
 	dbaccess/util/sdbt \
 	forms/util/frm \
-	reportdesign/util/rpt \
-	reportdesign/util/rptui \
-	reportdesign/util/rptxml \
+	$(if $(ENABLE_DBACCESS), \
+		reportdesign/util/rpt \
+		reportdesign/util/rptui \
+		reportdesign/util/rptxml \
+	) \
 	shell/source/backends/localebe/localebe1 \
 	$(if $(filter-out ANDROID iOS,$(OS)),\
 		connectivity/source/drivers/odbc/odbc \

@@ -74,28 +74,28 @@ gb_CppunitTest_RUNTIMEDEPS += \
 	$(call gb_Package_get_target,test_unittest) \
 
 define gb_CppunitTest__make_args
-$(HEADLESS) \
-"-env:BRAND_BASE_DIR=$(call gb_Helper_make_url,$(INSTROOT))" \
-"-env:BRAND_SHARE_SUBDIR=$(LIBO_SHARE_FOLDER)" \
-"-env:BRAND_SHARE_RESOURCE_SUBDIR=$(LIBO_SHARE_RESOURCE_FOLDER)" \
-"-env:UserInstallation=$(call gb_Helper_make_url,$(call gb_CppunitTest_get_target,$*).user)" \
-$(if $(URE),\
-    $(if $(strip $(CONFIGURATION_LAYERS)),\
-	    "-env:CONFIGURATION_LAYERS=$(strip $(CONFIGURATION_LAYERS))") \
-    $(if $(strip $(UNO_TYPES)),\
-	    "-env:UNO_TYPES=$(foreach item,$(UNO_TYPES),$(call gb_Helper_make_url,$(item)))") \
-    $(if $(strip $(UNO_SERVICES)),\
-	"-env:UNO_SERVICES=$(foreach item,$(UNO_SERVICES),$(call gb_Helper_make_url,$(item)))") \
-	-env:URE_INTERNAL_LIB_DIR=$(call gb_Helper_make_url,$(INSTROOT)/$(LIBO_URE_LIB_FOLDER)) \
-	-env:LO_LIB_DIR=$(call gb_Helper_make_url,$(INSTROOT)/$(LIBO_LIB_FOLDER)) \
-	-env:LO_JAVA_DIR=$(call gb_Helper_make_url,$(INSTROOT)/$(LIBO_SHARE_JAVA_FOLDER)) \
-	--protector $(call gb_Library_get_target,unoexceptionprotector) unoexceptionprotector \
-	--protector $(call gb_Library_get_target,unobootstrapprotector) unobootstrapprotector \
- ) \
-$(if $(VCL),\
-	--protector $(call gb_Library_get_target,vclbootstrapprotector) vclbootstrapprotector \
- ) \
-$(ARGS)
+#$(HEADLESS) \
+#"-env:BRAND_BASE_DIR=$(call gb_Helper_make_url,$(INSTROOT))" \
+#"-env:BRAND_SHARE_SUBDIR=$(LIBO_SHARE_FOLDER)" \
+#"-env:BRAND_SHARE_RESOURCE_SUBDIR=$(LIBO_SHARE_RESOURCE_FOLDER)" \
+#"-env:UserInstallation=$(call gb_Helper_make_url,$(call gb_CppunitTest_get_target,$*).user)" \
+#$(if $(URE),\
+#    $(if $(strip $(CONFIGURATION_LAYERS)),\
+#	    "-env:CONFIGURATION_LAYERS=$(strip $(CONFIGURATION_LAYERS))") \
+#    $(if $(strip $(UNO_TYPES)),\
+#	    "-env:UNO_TYPES=$(foreach item,$(UNO_TYPES),$(call gb_Helper_make_url,$(item)))") \
+#    $(if $(strip $(UNO_SERVICES)),\
+#	"-env:UNO_SERVICES=$(foreach item,$(UNO_SERVICES),$(call gb_Helper_make_url,$(item)))") \
+#	-env:URE_INTERNAL_LIB_DIR=$(call gb_Helper_make_url,$(INSTROOT)/$(LIBO_URE_LIB_FOLDER)) \
+#	-env:LO_LIB_DIR=$(call gb_Helper_make_url,$(INSTROOT)/$(LIBO_LIB_FOLDER)) \
+#	-env:LO_JAVA_DIR=$(call gb_Helper_make_url,$(INSTROOT)/$(LIBO_SHARE_JAVA_FOLDER)) \
+#	--protector $(call gb_Library_get_target,unoexceptionprotector) unoexceptionprotector \
+#	--protector $(call gb_Library_get_target,unobootstrapprotector) unobootstrapprotector \
+# ) \
+#$(if $(VCL),\
+#	--protector $(call gb_Library_get_target,vclbootstrapprotector) vclbootstrapprotector \
+# ) \
+#$(ARGS)
 endef
 
 .PHONY : $(call gb_CppunitTest_get_clean_target,%)
@@ -148,14 +148,14 @@ else
 endif
 
 define gb_CppunitTest_CppunitTest
-$(call gb_CppunitTest__CppunitTest_impl,$(1),$(call gb_CppunitTest_get_linktarget,$(1)))
+#$(call gb_CppunitTest__CppunitTest_impl,$(1),$(call gb_CppunitTest_get_linktarget,$(1)))
 
 endef
 
 define gb_CppunitTest_CppunitScreenShot
-$(call gb_CppunitTest_get_target,$(1)) : gb_CppunitTest_localized := $(true)
-$(call gb_CppunitTest__CppunitTest_impl,$(1),$(call gb_CppunitTest_get_linktarget,$(1)))
-
+#$(call gb_CppunitTest_get_target,$(1)) : gb_CppunitTest_localized := $(true)
+#$(call gb_CppunitTest__CppunitTest_impl,$(1),$(call gb_CppunitTest_get_linktarget,$(1)))
+#
 endef
 
 define gb_CppunitTest_register_target
@@ -163,37 +163,37 @@ endef
 
 # call gb_CppunitTest__CppunitTest_impl,cppunittest,linktarget
 define gb_CppunitTest__CppunitTest_impl
-$(call gb_CppunitTest_register_target, $(1), $(2), "test")
-$(call gb_LinkTarget_LinkTarget,$(2),CppunitTest_$(1),NONE)
-$(call gb_LinkTarget_set_targettype,$(2),CppunitTest)
-$(call gb_LinkTarget_add_libs,$(2),$(gb_STDLIBS))
-$(call gb_LinkTarget_add_defs,$(2),\
-	$(gb_CppunitTest_DEFS) \
-)
-$(call gb_LinkTarget_use_external,$(2),cppunit)
-$(call gb_LinkTarget_set_include,$(2),\
-    $$(INCLUDE) \
-    $(filter -I%,$(CPPUNIT_CFLAGS)) \
-)
-$(call gb_LinkTarget_add_defs,$(2), \
-    $(filter-out -I%,$(CPPUNIT_CFLAGS)) \
-	-DCPPUNIT_PLUGIN_EXPORT='extern "C" SAL_DLLPUBLIC_EXPORT' \
-)
-$(call gb_CppunitTest_get_target,$(1)) : $(call gb_LinkTarget_get_target,$(2))
-$(call gb_CppunitTest_get_clean_target,$(1)) : $(call gb_LinkTarget_get_clean_target,$(2))
-$(call gb_CppunitTest_CppunitTest_platform,$(1),$(2),$(gb_CppunitTest_DLLDIR)/$(call gb_CppunitTest_get_ilibfilename,$(1)))
-$(call gb_CppunitTest_get_target,$(1)) : ARGS :=
-$(call gb_CppunitTest_get_target,$(1)) : CONFIGURATION_LAYERS :=
-$(call gb_CppunitTest_get_target,$(1)) : PYTHON_URE := $(false)
-$(call gb_CppunitTest_get_target,$(1)) : URE := $(false)
-$(call gb_CppunitTest_get_target,$(1)) : VCL := $(false)
-$(call gb_CppunitTest_get_target,$(1)) : UNO_SERVICES :=
-$(call gb_CppunitTest_get_target,$(1)) : UNO_TYPES :=
-$(call gb_CppunitTest_get_target,$(1)) : HEADLESS := --headless
-$(call gb_CppunitTest_get_target,$(1)) : EXTRA_ENV_VARS :=
-$$(eval $$(call gb_Module_register_target,$(call gb_CppunitTest_get_target,$(1)),$(call gb_CppunitTest_get_clean_target,$(1))))
-$(call gb_Helper_make_userfriendly_targets,$(1),CppunitTest)
-
+#$(call gb_CppunitTest_register_target, $(1), $(2), "test")
+#$(call gb_LinkTarget_LinkTarget,$(2),CppunitTest_$(1),NONE)
+#$(call gb_LinkTarget_set_targettype,$(2),CppunitTest)
+#$(call gb_LinkTarget_add_libs,$(2),$(gb_STDLIBS))
+#$(call gb_LinkTarget_add_defs,$(2),\
+#	$(gb_CppunitTest_DEFS) \
+#)
+#$(call gb_LinkTarget_use_external,$(2),cppunit)
+#$(call gb_LinkTarget_set_include,$(2),\
+#    $$(INCLUDE) \
+#    $(filter -I%,$(CPPUNIT_CFLAGS)) \
+#)
+#$(call gb_LinkTarget_add_defs,$(2), \
+#    $(filter-out -I%,$(CPPUNIT_CFLAGS)) \
+#	-DCPPUNIT_PLUGIN_EXPORT='extern "C" SAL_DLLPUBLIC_EXPORT' \
+#)
+#$(call gb_CppunitTest_get_target,$(1)) : $(call gb_LinkTarget_get_target,$(2))
+#$(call gb_CppunitTest_get_clean_target,$(1)) : $(call gb_LinkTarget_get_clean_target,$(2))
+#$(call gb_CppunitTest_CppunitTest_platform,$(1),$(2),$(gb_CppunitTest_DLLDIR)/$(call gb_CppunitTest_get_ilibfilename,$(1)))
+#$(call gb_CppunitTest_get_target,$(1)) : ARGS :=
+#$(call gb_CppunitTest_get_target,$(1)) : CONFIGURATION_LAYERS :=
+#$(call gb_CppunitTest_get_target,$(1)) : PYTHON_URE := $(false)
+#$(call gb_CppunitTest_get_target,$(1)) : URE := $(false)
+#$(call gb_CppunitTest_get_target,$(1)) : VCL := $(false)
+#$(call gb_CppunitTest_get_target,$(1)) : UNO_SERVICES :=
+#$(call gb_CppunitTest_get_target,$(1)) : UNO_TYPES :=
+#$(call gb_CppunitTest_get_target,$(1)) : HEADLESS := --headless
+#$(call gb_CppunitTest_get_target,$(1)) : EXTRA_ENV_VARS :=
+#$$(eval $$(call gb_Module_register_target,$(call gb_CppunitTest_get_target,$(1)),$(call gb_CppunitTest_get_clean_target,$(1))))
+#$(call gb_Helper_make_userfriendly_targets,$(1),CppunitTest)
+#
 endef
 
 # Add additional command line arguments for the test.
@@ -201,230 +201,230 @@ endef
 # You should practically never need to use this, as there are special
 # functions for adding many commonly used arguments.
 define gb_CppunitTest_add_arguments
-$(call gb_CppunitTest_get_target,$(1)) : ARGS += $(2)
+#$(call gb_CppunitTest_get_target,$(1)) : ARGS += $(2)
 
 endef
 
 define gb_CppunitTest_use_ure
-$(call gb_CppunitTest_use_rdb,$(1),ure/services)
-$(call gb_CppunitTest_get_target,$(1)) : URE := $(true)
-$(call gb_CppunitTest_get_target,$(1)) : $(call gb_Library_get_target,$(gb_CPPU_ENV)_uno)
-$(call gb_CppunitTest_get_target,$(1)) : $(call gb_Library_get_target,affine_uno)
-$(call gb_CppunitTest_get_target,$(1)) : $(call gb_Library_get_target,unobootstrapprotector)
-$(call gb_CppunitTest_get_target,$(1)) : $(call gb_Library_get_target,unoexceptionprotector)
-
+#$(call gb_CppunitTest_use_rdb,$(1),ure/services)
+#$(call gb_CppunitTest_get_target,$(1)) : URE := $(true)
+#$(call gb_CppunitTest_get_target,$(1)) : $(call gb_Library_get_target,$(gb_CPPU_ENV)_uno)
+#$(call gb_CppunitTest_get_target,$(1)) : $(call gb_Library_get_target,affine_uno)
+#$(call gb_CppunitTest_get_target,$(1)) : $(call gb_Library_get_target,unobootstrapprotector)
+#$(call gb_CppunitTest_get_target,$(1)) : $(call gb_Library_get_target,unoexceptionprotector)
+#
 endef
 
 # $(2) == $(true) if headless:
 define gb_CppunitTest__use_vcl
-$(call gb_CppunitTest_get_target,$(1)) : VCL := $(true)
-$(call gb_CppunitTest_get_target,$(1)) : $(call gb_Library_get_target,vclbootstrapprotector)
-ifeq ($(USING_X11),TRUE)
-$(call gb_CppunitTest_get_target,$(1)) : $(call gb_Library_get_target,desktop_detector)
-$(call gb_CppunitTest_get_target,$(1)) : $(if $(filter $(2),$(true)),, \
-    $(call gb_Library_get_target,vclplug_gen) \
-        $(if $(ENABLE_GTK3),$(call gb_Library_get_target,vclplug_gtk3)) \
-        $(if $(ENABLE_QT5),$(call gb_Library_get_target,vclplug_qt5)) \
-	 )
-else ifeq ($(OS),MACOSX)
-$(call gb_CppunitTest_get_target,$(1)): $(call gb_Library_get_target,vclplug_osx)
-else ifeq ($(OS),WNT)
-$(call gb_CppunitTest_get_target,$(1)): $(call gb_Library_get_target,vclplug_win)
-endif
-
+#$(call gb_CppunitTest_get_target,$(1)) : VCL := $(true)
+#$(call gb_CppunitTest_get_target,$(1)) : $(call gb_Library_get_target,vclbootstrapprotector)
+#ifeq ($(USING_X11),TRUE)
+#$(call gb_CppunitTest_get_target,$(1)) : $(call gb_Library_get_target,desktop_detector)
+#$(call gb_CppunitTest_get_target,$(1)) : $(if $(filter $(2),$(true)),, \
+#    $(call gb_Library_get_target,vclplug_gen) \
+#        $(if $(ENABLE_GTK3),$(call gb_Library_get_target,vclplug_gtk3)) \
+#        $(if $(ENABLE_QT5),$(call gb_Library_get_target,vclplug_qt5)) \
+#	 )
+#else ifeq ($(OS),MACOSX)
+#$(call gb_CppunitTest_get_target,$(1)): $(call gb_Library_get_target,vclplug_osx)
+#else ifeq ($(OS),WNT)
+#$(call gb_CppunitTest_get_target,$(1)): $(call gb_Library_get_target,vclplug_win)
+#endif
+#
 endef
 
 define gb_CppunitTest_use_confpreinit
-$(call gb_CppunitTest_use_executable,$(1),lokconf_init)
-$(call gb_CppunitTest_get_target,$(1)) : gb_CppunitTest__use_confpreinit := TRUE
+#$(call gb_CppunitTest_use_executable,$(1),lokconf_init)
+#$(call gb_CppunitTest_get_target,$(1)) : gb_CppunitTest__use_confpreinit := TRUE
 
 endef
 
 define gb_CppunitTest_use_vcl
-$(call gb_CppunitTest__use_vcl,$(1),$(true))
+#$(call gb_CppunitTest__use_vcl,$(1),$(true))
 
 endef
 
 define gb_CppunitTest_use_vcl_non_headless
-$(call gb_CppunitTest_get_target,$(1)) : gb_CppunitTest__vcl_no_svp := $(true)
-$(call gb_CppunitTest__use_vcl,$(1),$(false))
+#$(call gb_CppunitTest_get_target,$(1)) : gb_CppunitTest__vcl_no_svp := $(true)
+#$(call gb_CppunitTest__use_vcl,$(1),$(false))
 
 endef
 
 define gb_CppunitTest_use_vcl_non_headless_with_windows
-$(call gb_CppunitTest_get_target,$(1)) : HEADLESS :=
-$(call gb_CppunitTest_get_target,$(1)) : gb_CppunitTest__vcl_no_svp := $(true)
-$(call gb_CppunitTest__use_vcl,$(1),$(false))
+#$(call gb_CppunitTest_get_target,$(1)) : HEADLESS :=
+#$(call gb_CppunitTest_get_target,$(1)) : gb_CppunitTest__vcl_no_svp := $(true)
+#$(call gb_CppunitTest__use_vcl,$(1),$(false))
 
 endef
 
 define gb_CppunitTest_localized_run
-$(call gb_CppunitTest_get_target,$(1)) : gb_CppunitTest_localized := $(true)
+#$(call gb_CppunitTest_get_target,$(1)) : gb_CppunitTest_localized := $(true)
 
 endef
 
 define gb_CppunitTest__use_api
-$(call gb_CppunitTest_get_target,$(1)) : $(call gb_UnoApi_get_target,$(2))
-$(call gb_CppunitTest_get_target,$(1)) : UNO_TYPES += $(call gb_UnoApi_get_target,$(2))
+#$(call gb_CppunitTest_get_target,$(1)) : $(call gb_UnoApi_get_target,$(2))
+#$(call gb_CppunitTest_get_target,$(1)) : UNO_TYPES += $(call gb_UnoApi_get_target,$(2))
 
 endef
 
 define gb_CppunitTest_use_api
-$(call gb_LinkTarget_use_api,$(call gb_CppunitTest_get_linktarget,$(1)),$(2))
-$(foreach rdb,$(2),$(call gb_CppunitTest__use_api,$(1),$(rdb)))
+#$(call gb_LinkTarget_use_api,$(call gb_CppunitTest_get_linktarget,$(1)),$(2))
+#$(foreach rdb,$(2),$(call gb_CppunitTest__use_api,$(1),$(rdb)))
 
 endef
 
 define gb_CppunitTest_use_udk_api
-$(call gb_CppunitTest_use_api,$(1),udkapi)
+#$(call gb_CppunitTest_use_api,$(1),udkapi)
 
 endef
 
 define gb_CppunitTest_use_sdk_api
-$(call gb_CppunitTest_use_api,$(1),udkapi offapi)
+#$(call gb_CppunitTest_use_api,$(1),udkapi offapi)
 
 endef
 
 define gb_CppunitTest_use_rdb
-$(call gb_CppunitTest_get_target,$(1)) : $(call gb_Rdb_get_target_for_build,$(2))
-$(call gb_CppunitTest_get_target,$(1)) : UNO_SERVICES += $(call gb_Rdb_get_target_for_build,$(2))
-
+#$(call gb_CppunitTest_get_target,$(1)) : $(call gb_Rdb_get_target_for_build,$(2))
+#$(call gb_CppunitTest_get_target,$(1)) : UNO_SERVICES += $(call gb_Rdb_get_target_for_build,$(2))
+#
 endef
 
 define gb_CppunitTest_use_rdbs
-$(foreach rdb,$(2),$(call gb_CppunitTest_use_rdb,$(1),$(rdb)))
+#$(foreach rdb,$(2),$(call gb_CppunitTest_use_rdb,$(1),$(rdb)))
 
 endef
 
 define gb_CppunitTest_use_component
-$(call gb_CppunitTest_get_target,$(1)) : \
-    $(call gb_ComponentTarget_get_target,$(2))
-$(call gb_CppunitTest_get_target,$(1)) : \
-    UNO_SERVICES += $(call gb_ComponentTarget_get_target,$(2))
-
+#$(call gb_CppunitTest_get_target,$(1)) : \
+#    $(call gb_ComponentTarget_get_target,$(2))
+#$(call gb_CppunitTest_get_target,$(1)) : \
+#    UNO_SERVICES += $(call gb_ComponentTarget_get_target,$(2))
+#
 endef
 
 define gb_CppunitTest_set_componentfile
-$(call gb_ComponentTarget_ComponentTarget,CppunitTest/$(2),\
-    $(call gb_Helper_make_url,$(gb_CppunitTest_DLLDIR))/,\
-    $(call gb_CppunitTest_get_filename,$(1)))
-$(call gb_CppunitTest_get_target,$(1)) : \
-    $(call gb_ComponentTarget_get_target,CppunitTest/$(2))
-$(call gb_CppunitTest_get_clean_target,$(1)) : \
-    $(call gb_ComponentTarget_get_clean_target,CppunitTest/$(2))
-$(call gb_CppunitTest_use_component,$(1),CppunitTest/$(2))
-
+#$(call gb_ComponentTarget_ComponentTarget,CppunitTest/$(2),\
+#    $(call gb_Helper_make_url,$(gb_CppunitTest_DLLDIR))/,\
+#    $(call gb_CppunitTest_get_filename,$(1)))
+#$(call gb_CppunitTest_get_target,$(1)) : \
+#    $(call gb_ComponentTarget_get_target,CppunitTest/$(2))
+#$(call gb_CppunitTest_get_clean_target,$(1)) : \
+#    $(call gb_ComponentTarget_get_clean_target,CppunitTest/$(2))
+#$(call gb_CppunitTest_use_component,$(1),CppunitTest/$(2))
+#
 endef
 
 # Given a list of component files, filter out those corresponding
 # to libraries not built in this configuration.
 define gb_CppunitTest__filter_not_built_components
-$(filter-out \
-	$(if $(filter SCRIPTING,$(BUILD_TYPE)),, \
-		basic/util/sb \
-	    sw/util/vbaswobj \
-	    scripting/source/basprov/basprov \
-	    scripting/util/scriptframe) \
-	$(if $(filter DBCONNECTIVITY,$(BUILD_TYPE)),, \
-	    dbaccess/util/dba \
-		forms/util/frm),$(1))
+#$(filter-out \
+#	$(if $(filter SCRIPTING,$(BUILD_TYPE)),, \
+#		basic/util/sb \
+#	    sw/util/vbaswobj \
+#	    scripting/source/basprov/basprov \
+#	    scripting/util/scriptframe) \
+#	$(if $(filter DBCONNECTIVITY,$(BUILD_TYPE)),, \
+#	    dbaccess/util/dba \
+#		forms/util/frm),$(1))
 endef
 
 define gb_CppunitTest_use_components
-$(foreach component,$(call gb_CppunitTest__filter_not_built_components,$(2)),$(call gb_CppunitTest_use_component,$(1),$(component)))
+#$(foreach component,$(call gb_CppunitTest__filter_not_built_components,$(2)),$(call gb_CppunitTest_use_component,$(1),$(component)))
 
 endef
 
 define gb_CppunitTest__use_configuration
-$(call gb_CppunitTest_get_target,$(1)) : CONFIGURATION_LAYERS += $(2):$(call gb_Helper_make_url,$(3))
+#$(call gb_CppunitTest_get_target,$(1)) : CONFIGURATION_LAYERS += $(2):$(call gb_Helper_make_url,$(3))
 
 endef
 
 # Use instdir configuration
 define gb_CppunitTest_use_instdir_configuration
-$(call gb_CppunitTest_get_target,$(1)) : $(call gb_Package_get_target,postprocess_registry)
-$(call gb_CppunitTest__use_configuration,$(1),xcsxcu,$(INSTROOT)/$(LIBO_SHARE_FOLDER)/registry)
-
+#$(call gb_CppunitTest_get_target,$(1)) : $(call gb_Package_get_target,postprocess_registry)
+#$(call gb_CppunitTest__use_configuration,$(1),xcsxcu,$(INSTROOT)/$(LIBO_SHARE_FOLDER)/registry)
+#
 endef
 
 # Use configuration in $(WORKDIR)/unittest/registry.
 define gb_CppunitTest_use_unittest_configuration
-$(call gb_CppunitTest_get_target,$(1)) : $(call gb_Package_get_target,test_unittest)
-$(call gb_CppunitTest__use_configuration,$(1),xcsxcu,$(WORKDIR)/unittest/registry)
-
+#$(call gb_CppunitTest_get_target,$(1)) : $(call gb_Package_get_target,test_unittest)
+#$(call gb_CppunitTest__use_configuration,$(1),xcsxcu,$(WORKDIR)/unittest/registry)
+#
 endef
 
 # Use standard configuration: instdir config + unittest config (in this order!)
 define gb_CppunitTest_use_configuration
-$(call gb_CppunitTest_use_instdir_configuration,$(1))
-$(call gb_CppunitTest_use_unittest_configuration,$(1))
-
+#$(call gb_CppunitTest_use_instdir_configuration,$(1))
+#$(call gb_CppunitTest_use_unittest_configuration,$(1))
+#
 endef
 
 define gb_CppunitTest_use_executable
-$(call gb_CppunitTest_get_target,$(1)) : $(call gb_Executable_get_target,$(2))
+#$(call gb_CppunitTest_get_target,$(1)) : $(call gb_Executable_get_target,$(2))
 
 endef
 
 define gb_CppunitTest_use_more_fonts
-ifneq ($(filter MORE_FONTS,$(BUILD_TYPE)),)
-$(call gb_CppunitTest_get_target,$(1)) : \
-    $(foreach font,$(gb_Package_MODULE_ooo_fonts),$(call gb_Package_get_target,$(font)))
-endif
-
+#ifneq ($(filter MORE_FONTS,$(BUILD_TYPE)),)
+#$(call gb_CppunitTest_get_target,$(1)) : \
+#    $(foreach font,$(gb_Package_MODULE_ooo_fonts),$(call gb_Package_get_target,$(font)))
+#endif
+#
 endef
 
 define gb_CppunitTest__use_java_ure
-$(call gb_CppunitTest_get_target,$(1)) : \
-    $(foreach jar,java_uno juh ridl unoloader,$(call gb_Jar_get_target,$(jar))) \
-    $(call gb_Library_get_target,affine_uno_uno) \
-    $(call gb_Library_get_target,java_uno) \
-    $(call gb_Library_get_target,jpipe) \
-    $(call gb_Library_get_target,juhx) \
-    $(call gb_Library_get_target,juhx) \
-    $(call gb_Library_get_target,jvmaccess) \
-    $(call gb_Library_get_target,jvmfwk) \
-    $(call gb_Package_get_target,jvmfwk_javavendors) \
-    $(call gb_Package_get_target,jvmfwk_jreproperties) \
-    $(call gb_Package_get_target,jvmfwk_jvmfwk3_ini) \
-
+#$(call gb_CppunitTest_get_target,$(1)) : \
+#    $(foreach jar,java_uno juh ridl unoloader,$(call gb_Jar_get_target,$(jar))) \
+#    $(call gb_Library_get_target,affine_uno_uno) \
+#    $(call gb_Library_get_target,java_uno) \
+#    $(call gb_Library_get_target,jpipe) \
+#    $(call gb_Library_get_target,juhx) \
+#    $(call gb_Library_get_target,juhx) \
+#    $(call gb_Library_get_target,jvmaccess) \
+#    $(call gb_Library_get_target,jvmfwk) \
+#    $(call gb_Package_get_target,jvmfwk_javavendors) \
+#    $(call gb_Package_get_target,jvmfwk_jreproperties) \
+#    $(call gb_Package_get_target,jvmfwk_jvmfwk3_ini) \
+#
 endef
 
 define gb_CppunitTest_use_jar
-$(call gb_CppunitTest__use_java_ure,$(1))
-$(call gb_CppunitTest_get_target,$(1)) : $(call gb_Jar_get_target,$(2))
-
+#$(call gb_CppunitTest__use_java_ure,$(1))
+#$(call gb_CppunitTest_get_target,$(1)) : $(call gb_Jar_get_target,$(2))
+#
 endef
 
 define gb_CppunitTest_use_jars
-$(foreach jar,$(2),$(call gb_CppunitTest_use_jar,$(1),$(jar)))
-
+#$(foreach jar,$(2),$(call gb_CppunitTest_use_jar,$(1),$(jar)))
+#
 endef
 
 define gb_CppunitTest_use_python_ure
-$(call gb_CppunitTest_get_target,$(1)) : PYTHON_URE := $(true)
-$(call gb_CppunitTest_get_target,$(1)) :\
-	$(call gb_Library_get_target,pythonloader) \
-	$(call gb_Library_get_target,pyuno) \
-	$(gb_CppunitTest_PYTHONDEPS) \
-	$(call gb_Package_get_target,pyuno_python_scripts)
-
+#$(call gb_CppunitTest_get_target,$(1)) : PYTHON_URE := $(true)
+#$(call gb_CppunitTest_get_target,$(1)) :\
+#	$(call gb_Library_get_target,pythonloader) \
+#	$(call gb_Library_get_target,pyuno) \
+#	$(gb_CppunitTest_PYTHONDEPS) \
+#	$(call gb_Package_get_target,pyuno_python_scripts)
+#
 endef
 
 define gb_CppunitTest_use_uiconfig
-$(call gb_CppunitTest_get_target,$(1)) : $(call gb_UIConfig_get_target,$(2))
+#$(call gb_CppunitTest_get_target,$(1)) : $(call gb_UIConfig_get_target,$(2))
 
 endef
 
 define gb_CppunitTest_use_uiconfigs
-$(foreach uiconfig,$(2),$(call gb_CppunitTest_use_uiconfig,$(1),$(uiconfig)))
+#$(foreach uiconfig,$(2),$(call gb_CppunitTest_use_uiconfig,$(1),$(uiconfig)))
 
 endef
 
 # forward the call to the gb_LinkTarget implementation
 # (note: because the function name is in $(1), the other args are shifted by 1)
 define gb_CppunitTest__forward_to_Linktarget
-$(call gb_LinkTarget_$(subst gb_CppunitTest_,,$(1)),$(call gb_CppunitTest_get_linktarget,$(2)),$(3),$(4),CppunitTest_$(2))
+#$(call gb_LinkTarget_$(subst gb_CppunitTest_,,$(1)),$(call gb_CppunitTest_get_linktarget,$(2)),$(3),$(4),CppunitTest_$(2))
 
 endef
 

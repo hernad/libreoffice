@@ -62,10 +62,12 @@ endif
 endif
 
 ifeq ($(OS),WNT)
+ifeq ($(ENABLE_ADO),TRUE)
 $(eval $(call gb_Module_add_targets,connectivity,\
 	Configuration_ado \
 	Library_ado \
 ))
+endif
 endif
 
 ifeq ($(ENABLE_EVOAB2),TRUE)

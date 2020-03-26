@@ -38,13 +38,13 @@ $(eval $(call gb_Module_add_moduledirs,libreoffice,\
 	$(call gb_Helper_optional,DESKTOP,codemaker) \
 	comphelper \
 	configmgr \
-	connectivity \
+	$(call gb_Helper_optional,DBACCESS,connectivity) \
 	cppcanvas \
 	cppu \
 	cppuhelper \
 	cpputools \
 	cui \
-	dbaccess \
+	$(call gb_Helper_optional,DBACCESS,dbaccess) \
 	desktop \
 	$(call gb_Helper_optional,DICTIONARIES,dictionaries) \
 	dtrans \
@@ -98,8 +98,8 @@ $(eval $(call gb_Module_add_moduledirs,libreoffice,\
 	readlicense_oo \
 	registry \
 	remotebridges \
-	reportbuilder \
-	$(call gb_Helper_optional,DBCONNECTIVITY,reportdesign) \
+	$(call gb_Helper_optional,DBACCESS,reportbuilder) \
+	$(call gb_Helper_optional,DBACCESS,reportdesign) \
 	ridljar \
 	sal \
 	salhelper \
@@ -152,7 +152,7 @@ $(eval $(call gb_Module_add_moduledirs,libreoffice,\
 	winaccessibility \
 	wizards \
 	writerfilter \
-	writerperfect \
+	$(call gb_Helper_optional,WPFT,writerperfect) \
 	xmerge \
 	$(call gb_Helper_optional,DESKTOP,xmlhelp) \
 	xmloff \

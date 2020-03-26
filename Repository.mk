@@ -239,9 +239,9 @@ $(eval $(call gb_Helper_register_executables_for_install,UREBIN,ure,\
 ))
 
 $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,base, \
+	dbu \
 	abp \
 	dbp \
-	dbu \
 ))
 
 $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,calc, \
@@ -253,7 +253,7 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,calc, \
 	scd \
 	scfilt \
 	scui \
-	wpftcalc \
+	$(call gb_Helper_optional,WPFT,wpftcalc) \
 	solver \
 	$(call gb_Helper_optional,SCRIPTING,vbaobj) \
 ))
@@ -341,10 +341,10 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,ooo, \
 	cui \
 	dba \
 	dbahsql \
+	dbtools \
 	$(call gb_Helper_optional,DBCONNECTIVITY, \
 		dbase \
 		dbaxml) \
-	dbtools \
 	deploymentmisc \
 	$(if $(filter-out MACOSX WNT,$(OS)),desktopbe1) \
 	$(if $(USING_X11),desktop_detector) \
@@ -519,7 +519,7 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,writer, \
 	swui \
 	t602filter \
 	$(call gb_Helper_optional,SCRIPTING,vbaswobj) \
-	wpftwriter \
+	$(call gb_Helper_optional,WPFT,wpftwriter) \
 	writerfilter \
 	$(call gb_Helper_optional,DBCONNECTIVITY,writer) \
 ))
@@ -1114,7 +1114,7 @@ $(eval $(call gb_Helper_register_mos,\
 	fwk \
 	oox \
 	pcr \
-	rpt \
+	$(call gb_Helper_optional,DBACCESS,rpt) \
 	$(call gb_Helper_optional,SCRIPTING,sb) \
 	sc \
 	sca \
@@ -1137,7 +1137,7 @@ $(eval $(call gb_Helper_register_mos,\
 # UI configuration
 $(eval $(call gb_Helper_register_uiconfigs,\
 	cui \
-	$(call gb_Helper_optional,DBCONNECTIVITY,dbaccess) \
+	$(call gb_Helper_optional,DBACCESS,dbaccess) \
 	desktop \
 	editeng \
 	filter \

@@ -2573,6 +2573,7 @@ if test -z "$enable_database_connectivity"; then
     fi
 fi
 
+
 if test "$enable_database_connectivity" = yes; then
     BUILD_TYPE="$BUILD_TYPE DBCONNECTIVITY"
     AC_DEFINE(HAVE_FEATURE_DBCONNECTIVITY)
@@ -9035,7 +9036,19 @@ AC_SUBST(PYTHON_VERSION)
 AC_SUBST(PYTHON_VERSION_MAJOR)
 AC_SUBST(PYTHON_VERSION_MINOR)
 
-ENABLE_MARIADBC=TRUE
+ENABLE_DBACCESS=TRUE
+if test "$ENABLE_DBACCESS" = "TRUE"; then
+    BUILD_TYPE="$BUILD_TYPE DBACCESS"
+    AC_DEFINE(HAVE_FEATURE_DBACCESS)
+fi
+
+ENABLE_ADO=
+if test "$ENABLE_ADO" = "TRUE"; then
+    BUILD_TYPE="$BUILD_TYPE ADO"
+    AC_DEFINE(HAVE_FEATURE_ADO)
+fi
+
+ENABLE_MARIADBC=
 if test "$_os" = "Android" -o "$_os" = "iOS" -o "$enable_mpl_subset" = "yes"; then
     ENABLE_MARIADBC=
 fi
