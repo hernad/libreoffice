@@ -3643,24 +3643,24 @@ if test "$_os" = "WINNT"; then
     BUILD_X64=
     CXX_X64_BINARY=
 
-    if test "$BITNESS_OVERRIDE" = ""; then
-        AC_MSG_CHECKING([for a x64 compiler and libraries for 64-bit Explorer extensions])
-        if test -f "$VC_PRODUCT_DIR/Tools/MSVC/$vcbuildnumber/atlmfc/lib/x64/atls.lib" || \
-             test -f "$VC_PRODUCT_DIR/Tools/MSVC/$vcbuildnumber/atlmfc/lib/spectre/x64/atls.lib"; then
-            if "$VC_PRODUCT_DIR/Tools/MSVC/$vcbuildnumber/bin/$VC_HOST_DIR/x64/cl.exe" -? </dev/null >/dev/null 2>&1; then
-                BUILD_X64=TRUE
-                CXX_X64_BINARY=`win_short_path_for_make "$VC_PRODUCT_DIR/Tools/MSVC/$vcbuildnumber/bin/$VC_HOST_DIR/x64/cl.exe"`
-            fi
-        fi
-        if test "$BUILD_X64" = TRUE; then
-            AC_MSG_RESULT([found])
-        else
-            AC_MSG_RESULT([not found])
-            AC_MSG_WARN([Installation set will not contain 64-bit Explorer extensions])
-        fi
-    else
-        CXX_X64_BINARY=$CXX
-    fi
+    dnl if test "$BITNESS_OVERRIDE" = ""; then
+    dnl     AC_MSG_CHECKING([for a x64 compiler and libraries for 64-bit Explorer extensions])
+    dnl     if test -f "$VC_PRODUCT_DIR/Tools/MSVC/$vcbuildnumber/atlmfc/lib/x64/atls.lib" || \
+    dnl          test -f "$VC_PRODUCT_DIR/Tools/MSVC/$vcbuildnumber/atlmfc/lib/spectre/x64/atls.lib"; then
+    dnl         if "$VC_PRODUCT_DIR/Tools/MSVC/$vcbuildnumber/bin/$VC_HOST_DIR/x64/cl.exe" -? </dev/null >/dev/null 2>&1; then
+    dnl             BUILD_X64=TRUE
+    dnl             CXX_X64_BINARY=`win_short_path_for_make "$VC_PRODUCT_DIR/Tools/MSVC/$vcbuildnumber/bin/$VC_HOST_DIR/x64/cl.exe"`
+    dnl         fi
+    dnl     fi
+    dnl     if test "$BUILD_X64" = TRUE; then
+    dnl         AC_MSG_RESULT([found])
+    dnl     else
+    dnl         AC_MSG_RESULT([not found])
+    dnl         AC_MSG_WARN([Installation set will not contain 64-bit Explorer extensions])
+    dnl     fi
+    dnl else
+    dnl     CXX_X64_BINARY=$CXX
+    dnl fi
     AC_SUBST(BUILD_X64)
 
     # These are passed to the environment and then used in gbuild/platform/com_MSC_class.mk
@@ -8307,10 +8307,14 @@ AC_MSG_CHECKING([which zlib to use])
 if test "$with_system_zlib" = "yes"; then
     AC_MSG_RESULT([external])
     SYSTEM_ZLIB=TRUE
-    AC_CHECK_HEADER(zlib.h, [],
-        [AC_MSG_ERROR(zlib.h not found. install zlib)], [])
-    AC_CHECK_LIB(z, deflate, [ ZLIB_LIBS=-lz ],
-        [AC_MSG_ERROR(zlib not found or functional)], [])
+    if test "$build_os" = "cygwin"; then
+        AC_MSG_NOTICE([cygwin - zlib system skip check])
+    else
+        AC_CHECK_HEADER(zlib.h, [],
+            [AC_MSG_ERROR(zlib.h not found. install zlib)], [])
+        AC_CHECK_LIB(z, deflate, [ ZLIB_LIBS=-lz ],
+            [AC_MSG_ERROR(zlib not found or functional)], [])
+    fi
 else
     AC_MSG_RESULT([internal])
     SYSTEM_ZLIB=
@@ -8557,7 +8561,12 @@ dnl AC_SUBST(CLUCENE_LIBS)
 dnl ===================================================================
 dnl Check for system expat
 dnl ===================================================================
-libo_CHECK_SYSTEM_MODULE([expat], [EXPAT], [expat])
+if test $build_os = cygwin; then
+    SYSTEM_EXPAT=TRUE
+    AC_MSG_CHECKING([cygwin EXPAT external])
+else
+    libo_CHECK_SYSTEM_MODULE([expat], [EXPAT], [expat])
+fi
 
 dnl ===================================================================
 dnl Check for system xmlsec
@@ -8596,10 +8605,13 @@ AS_IF([test "$COM" = "MSC"],
 )
 libo_CHECK_SYSTEM_MODULE([libwpd],[WPD],[libwpd-0.10],["-I${WORKDIR}/UnpackedTarball/libwpd/inc"],["-L${libwpd_libdir} -lwpd-0.10"])
 
-libo_CHECK_SYSTEM_MODULE([libwpg],[WPG],[libwpg-0.3])
+dnl ========= WordPerfect graphics filter OFF ========================
+dnl libo_CHECK_SYSTEM_MODULE([libwpg],[WPG],[libwpg-0.3])
 
-libo_CHECK_SYSTEM_MODULE([libwps],[WPS],[libwps-0.4])
-libo_PKG_VERSION([WPS], [libwps-0.4], [0.4.10])
+dnl ========= Microsoft Works documents OFF ========================
+dnl libo_CHECK_SYSTEM_MODULE([libwps],[WPS],[libwps-0.4])
+dnl libo_PKG_VERSION([WPS], [libwps-0.4], [0.4.10])
+dnl ========================================================================
 
 libo_CHECK_SYSTEM_MODULE([libvisio],[VISIO],[libvisio-0.1])
 
@@ -8632,8 +8644,11 @@ libo_CHECK_SYSTEM_MODULE([libqxp],[QXP],[libqxp-0.0])
 
 libo_CHECK_SYSTEM_MODULE([libzmf],[ZMF],[libzmf-0.0])
 
-libo_CHECK_SYSTEM_MODULE([libstaroffice],[STAROFFICE],[libstaroffice-0.0])
-libo_PKG_VERSION([STAROFFICE], [libstaroffice-0.0], [0.0.6])
+dnl ====================STAROFFICE OFF ======================
+dnl libo_CHECK_SYSTEM_MODULE([libstaroffice],[STAROFFICE],[libstaroffice-0.0])
+dnl libo_PKG_VERSION([STAROFFICE], [libstaroffice-0.0], [0.0.6])
+WITH_STAROFFICE=
+AC_SUBST(WITH_STAROFFICE)
 
 dnl ===================================================================
 dnl Check for system lcms2
@@ -8768,6 +8783,8 @@ if test "$with_system_libxml" = "yes"; then
         LIBXML_CFLAGS="-I$MACOSX_SDK_PATH/usr/include/libxml2"
         dnl omit -L/usr/lib
         LIBXML_LIBS="-lxml2 -lz -lpthread -liconv -lm"
+    elif test $_os = WINNT; then
+        AC_MSG_NOTICE([Cygwin - libmxl skip])
     elif test $_os = iOS; then
         dnl make sure to use SDK path
         usr=`echo '#include <stdlib.h>' | $CC -E -MD - | grep usr/include/stdlib.h | head -1 | sed -e 's,# 1 ",,' -e 's,/usr/include/.*,/usr,'`
@@ -8900,7 +8917,7 @@ if test $enable_python = system; then
     if test -n "$PYTHON_CFLAGS" -a -n "$PYTHON_LIBS"; then
         # Fallback: Accept these in the environment, or as set above
         # for MacOSX.
-        :
+        AC_MSG_WARN([Python-system CFLAGS and LIBS set up])
     elif test "$cross_compiling" != yes; then
         # Unset variables set by the above AM_PATH_PYTHON so that
         # we actually do check anew.
@@ -8936,12 +8953,13 @@ if test $enable_python = system; then
         test -n "$PYTHON_CFLAGS" && break
     fi
 
-    dnl Check if the headers really work
-    save_CPPFLAGS="$CPPFLAGS"
-    CPPFLAGS="$CPPFLAGS $PYTHON_CFLAGS"
-    AC_CHECK_HEADER(Python.h)
-    CPPFLAGS="$save_CPPFLAGS"
-
+    if test $build_os != cygwin; then
+        dnl Check if the headers really work
+        save_CPPFLAGS="$CPPFLAGS"
+        CPPFLAGS="$CPPFLAGS $PYTHON_CFLAGS"
+        AC_CHECK_HEADER(Python.h)
+        CPPFLAGS="$save_CPPFLAGS"
+    fi
     # let the PYTHON_FOR_BUILD match the same python installation that
     # provides PYTHON_CFLAGS/PYTHON_LDFLAGS for pyuno, which should be
     # better for PythonTests.
@@ -8991,28 +9009,31 @@ case $enable_python in
 system)
     SYSTEM_PYTHON=TRUE
 
-    if test "x$ac_cv_header_Python_h" != "xyes"; then
-       AC_MSG_ERROR([Python headers not found. You probably want to set both the PYTHON_CFLAGS and PYTHON_LIBS environment variables.])
+    if test $build_os != cygwin; then
+        if test "x$ac_cv_header_Python_h" != "xyes"; then
+            AC_MSG_ERROR([Python headers not found. You probably want to set both the PYTHON_CFLAGS and PYTHON_LIBS environment variables.])
+        fi
+        AC_LANG_PUSH(C)
+        CFLAGS="$CFLAGS $PYTHON_CFLAGS"
+        AC_MSG_CHECKING([for correct python library version])
+        AC_RUN_IFELSE([AC_LANG_SOURCE([[
+        #include <Python.h>
+
+        int main(int argc, char **argv) {
+        if ((PY_MAJOR_VERSION == 2 && PY_MINOR_VERSION >= 7) ||
+            (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 3)) return 0;
+        else return 1;
+        }
+        ]])],[AC_MSG_RESULT([ok])],[AC_MSG_ERROR([Python >= 3.3 is needed when building with Python 3, or Python >= 2.7 when building with Python 2])],[AC_MSG_RESULT([skipped; cross-compiling])])
+        CFLAGS=$save_CFLAGS
+        AC_LANG_POP(C)
+
+        dnl FIXME Check if the Python library can be linked with, too?
+    else
+        CFLAGS="$CFLAGS $PYTHON_CFLAGS"
+        AC_DEFINE_UNQUOTED([PYTHON_VERSION_STRING], [L"${PYTHON_VERSION}"])
     fi
-
-    AC_LANG_PUSH(C)
-    CFLAGS="$CFLAGS $PYTHON_CFLAGS"
-    AC_MSG_CHECKING([for correct python library version])
-       AC_RUN_IFELSE([AC_LANG_SOURCE([[
-#include <Python.h>
-
-int main(int argc, char **argv) {
-   if ((PY_MAJOR_VERSION == 2 && PY_MINOR_VERSION >= 7) ||
-       (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 3)) return 0;
-   else return 1;
-}
-       ]])],[AC_MSG_RESULT([ok])],[AC_MSG_ERROR([Python >= 3.3 is needed when building with Python 3, or Python >= 2.7 when building with Python 2])],[AC_MSG_RESULT([skipped; cross-compiling])])
-    CFLAGS=$save_CFLAGS
-    AC_LANG_POP(C)
-
-    dnl FIXME Check if the Python library can be linked with, too?
     ;;
-
 internal)
     SYSTEM_PYTHON=
     PYTHON_VERSION_MAJOR=3
@@ -9058,6 +9079,12 @@ ENABLE_ADO=
 if test "$ENABLE_ADO" = "TRUE"; then
     BUILD_TYPE="$BUILD_TYPE ADO"
     AC_DEFINE(HAVE_FEATURE_ADO)
+fi
+
+ENABLE_WRITERPERFECT=
+if test "$ENABLE_WRITERPERFECT" = "TRUE"; then
+    BUILD_TYPE="$BUILD_TYPE WRITERPERFECT"
+    AC_DEFINE(HAVE_FEATURE_WRITERPERFECT)
 fi
 
 ENABLE_MARIADBC=
@@ -9262,12 +9289,17 @@ if test "x$enable_postgresql_sdbc" != "xno"; then
             POSTGRESQL_INC=-I$(${PGCONFIG} --includedir)
             POSTGRESQL_LIB="-L$(${PGCONFIG} --libdir)"
         else
-            PKG_CHECK_MODULES(POSTGRESQL, libpq, [
-              POSTGRESQL_INC=$POSTGRESQL_CFLAGS
-              POSTGRESQL_LIB=$POSTGRESQL_LIBS
-            ],[
-              AC_MSG_ERROR([pg_config or 'pkg-config libpq' needed; set PGCONFIG if not in PATH])
-            ])
+            if test $build_os = cygwin; then
+                POSTGRESQL_INC=$POSTGRESQL_CFLAGS
+                POSTGRESQL_LIB=$POSTGRESQL_LIBS
+            else
+                PKG_CHECK_MODULES(POSTGRESQL, libpq, [
+                POSTGRESQL_INC=$POSTGRESQL_CFLAGS
+                POSTGRESQL_LIB=$POSTGRESQL_LIBS
+                ],[
+                AC_MSG_ERROR([pg_config or 'pkg-config libpq' needed; set PGCONFIG if not in PATH])
+                ])
+            fi
         fi
         FilterLibs "${POSTGRESQL_LIB}"
         POSTGRESQL_LIB="${filteredlibs}"
@@ -9376,9 +9408,13 @@ if test "x$enable_postgresql_sdbc" != "xno"; then
         save_LIBS=$LIBS
         CPPFLAGS="${CPPFLAGS} ${POSTGRESQL_INC}"
         LIBS="${LIBS} ${POSTGRESQL_LIB}"
-        AC_CHECK_HEADER([libpq-fe.h], [], [AC_MSG_ERROR([libpq-fe.h is needed])], [])
-        AC_CHECK_LIB([pq], [PQconnectdbParams], [:],
-            [AC_MSG_ERROR(libpq not found or too old. Need >= 9.0)], [])
+        if test "$build_os" = "cygwin"; then
+            AC_MSG_NOTICE([cygwin system - skip PostgreSQL check])
+        else
+            AC_CHECK_HEADER([libpq-fe.h], [], [AC_MSG_ERROR([libpq-fe.h is needed])], [])
+            AC_CHECK_LIB([pq], [PQconnectdbParams], [:],
+                [AC_MSG_ERROR(libpq not found or too old. Need >= 9.0)], [])
+        fi
         CFLAGS=$save_CFLAGS
         CPPFLAGS=$save_CPPFLAGS
         LIBS=$save_LIBS
@@ -9517,6 +9553,7 @@ if test "$with_system_curl" = "auto"; then
 fi
 
 if test "$with_system_curl" = "yes"; then
+
     AC_MSG_RESULT([external])
     SYSTEM_CURL=TRUE
 
@@ -9546,7 +9583,6 @@ if test "$with_system_curl" = "yes"; then
             ;;
         esac
     fi
-
     ENABLE_CURL=TRUE
 elif test $_os = iOS; then
     # Let's see if we need curl, I think not?
@@ -9570,23 +9606,28 @@ AC_MSG_CHECKING([which boost to use])
 if test "$with_system_boost" = "yes"; then
     AC_MSG_RESULT([external])
     SYSTEM_BOOST=TRUE
-    AX_BOOST_BASE(1.47)
-    AX_BOOST_DATE_TIME
-    AX_BOOST_FILESYSTEM
-    AX_BOOST_IOSTREAMS
-    AX_BOOST_LOCALE
-    AC_LANG_PUSH([C++])
-    save_CXXFLAGS=$CXXFLAGS
-    CXXFLAGS="$CXXFLAGS $BOOST_CPPFLAGS $CXXFLAGS_CXX11"
-    AC_CHECK_HEADER(boost/shared_ptr.hpp, [],
-       [AC_MSG_ERROR(boost/shared_ptr.hpp not found. install boost)], [])
-    AC_CHECK_HEADER(boost/spirit/include/classic_core.hpp, [],
-       [AC_MSG_ERROR(boost/spirit/include/classic_core.hpp not found. install boost >= 1.36)], [])
-    CXXFLAGS=$save_CXXFLAGS
-    AC_LANG_POP([C++])
-    # this is in m4/ax_boost_base.m4
-    FilterLibs "${BOOST_LDFLAGS}"
-    BOOST_LDFLAGS="${filteredlibs}"
+    if test "$build_os" = "cygwin" ; then
+
+        AC_MSG_RESULT([Cygwin boost system $BOOST_SYSTEM_LIB])
+    else  
+        AX_BOOST_BASE(1.47)
+        AX_BOOST_DATE_TIME
+        AX_BOOST_FILESYSTEM
+        AX_BOOST_IOSTREAMS
+        AX_BOOST_LOCALE
+        AC_LANG_PUSH([C++])
+        save_CXXFLAGS=$CXXFLAGS
+        CXXFLAGS="$CXXFLAGS $BOOST_CPPFLAGS $CXXFLAGS_CXX11"
+        AC_CHECK_HEADER(boost/shared_ptr.hpp, [],
+        [AC_MSG_ERROR(boost/shared_ptr.hpp not found. install boost)], [])
+        AC_CHECK_HEADER(boost/spirit/include/classic_core.hpp, [],
+        [AC_MSG_ERROR(boost/spirit/include/classic_core.hpp not found. install boost >= 1.36)], [])
+        CXXFLAGS=$save_CXXFLAGS
+        AC_LANG_POP([C++])
+        # this is in m4/ax_boost_base.m4
+        FilterLibs "${BOOST_LDFLAGS}"
+        BOOST_LDFLAGS="${filteredlibs}"
+    fi
 else
     AC_MSG_RESULT([internal])
     BUILD_TYPE="$BUILD_TYPE BOOST"
@@ -9816,7 +9857,17 @@ ICU_RECLASSIFIED_PREPEND_SET_EMPTY="TRUE"
 ICU_RECLASSIFIED_CONDITIONAL_JAPANESE_STARTER="TRUE"
 ICU_RECLASSIFIED_HEBREW_LETTER="TRUE"
 AC_MSG_CHECKING([which icu to use])
+
+
 if test "$with_system_icu" = "yes"; then
+
+if test $build_os = cygwin; then
+    SYSTEM_ICU=TRUE
+    SYSTEM_GENBRK=`which genbrk`
+    SYSTEM_GENCCODE=`which genccode`
+    SYSTEM_GENCMN=`which gencmn`
+    AC_MSG_CHECKING([cygwin ICU external - SYSTEM_ICU])
+else
     AC_MSG_RESULT([external])
     SYSTEM_ICU=TRUE
     AC_LANG_PUSH([C++])
@@ -9879,6 +9930,8 @@ You can use --with-system-icu-for-build=force to use it anyway.])
             ICU_MINOR=""
         fi
     fi
+fi
+
 else
     AC_MSG_RESULT([internal])
     SYSTEM_ICU=
@@ -10230,12 +10283,16 @@ if test "$enable_openssl" = "yes"; then
         libo_CHECK_SYSTEM_MODULE([openssl],[OPENSSL],[openssl])
     fi
     if test "$with_system_openssl" = "yes"; then
-        AC_MSG_CHECKING([whether openssl supports SHA512])
-        AC_LANG_PUSH([C])
-        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <openssl/sha.h>]],[[
-            SHA512_CTX context;
-]])],[AC_MSG_RESULT([yes])],[AC_MSG_ERROR([no, openssl too old. Need >= 0.9.8.])])
-        AC_LANG_POP(C)
+        if test $build_os = cygwin; then
+            AC_MSG_NOTICE([Cygwin-openssh check skip])
+        else
+            AC_MSG_CHECKING([whether openssl supports SHA512])
+            AC_LANG_PUSH([C])
+            AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <openssl/sha.h>]],[[
+                SHA512_CTX context;
+            ]])],[AC_MSG_RESULT([yes])],[AC_MSG_ERROR([no, openssl too old. Need >= 0.9.8.])])
+            AC_LANG_POP(C)
+        fi
     fi
 else
     AC_MSG_RESULT([yes])

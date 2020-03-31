@@ -334,7 +334,7 @@ printf "gdb $(INSTROOT)/$(LIBO_BIN_FOLDER)/soffice.bin" >> $${OFFICESCRIPT} && \
 printf " -ex \"set args --norestore --nologo '--accept=pipe,name=$(USER);urp;' %s\"" \
 	"$(subst ","\\\"",$(value gb_DBGARGS))" >> $${OFFICESCRIPT} && \
 $(SHELL) $${OFFICESCRIPT} && \
-rm $${OFFICESCRIPT}
+rm -f $${OFFICESCRIPT}
 endef
 
 # InstallModuleTarget class

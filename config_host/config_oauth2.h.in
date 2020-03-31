@@ -15,6 +15,7 @@
 
 
 /* Google Drive settings */
+
 #define GDRIVE_BASE_URL "https://www.googleapis.com/drive/v2"
 #define GDRIVE_CLIENT_ID ""
 #define GDRIVE_CLIENT_SECRET ""

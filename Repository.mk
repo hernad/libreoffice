@@ -450,7 +450,9 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,ooo, \
 	) \
 	vcl \
 	vclcanvas \
-	writerperfect \
+	$(if $(ENABLE_WRITERPERFECT), \
+		writerperfect \
+	) \
 	xmlscript \
 	xmlfa \
 	xmlfd \
@@ -1177,7 +1179,7 @@ $(eval $(call gb_Helper_register_uiconfigs,\
 	svx \
 	uui \
 	vcl \
-	writerperfect \
+	$(if $(ENABLE_WFP),writerperfect) \
 	$(if $(ENABLE_NSS),xmlsec) \
 ))
 

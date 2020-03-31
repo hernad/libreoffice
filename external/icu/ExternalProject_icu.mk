@@ -17,6 +17,7 @@ icu_CPPFLAGS:="-DHAVE_GCC_ATOMICS=$(if $(filter TRUE,$(GCC_HAVE_BUILTIN_ATOMIC))
 
 ifeq ($(OS),WNT)
 
+# ICU_DATA_FILTER_FILE=/cygdrive/c/dev/filters.json \
 # Note: runConfigureICU ignores everything following the platform name!
 $(call gb_ExternalProject_get_state_target,icu,build) :
 	$(call gb_Trace_StartRange,icu,EXTERNAL)
@@ -24,7 +25,6 @@ $(call gb_ExternalProject_get_state_target,icu,build) :
 		export LIB="$(ILIB)" \
 		&& CFLAGS="-FS -arch:SSE $(SOLARINC) $(gb_DEBUGINFO_FLAGS)" CPPFLAGS="$(SOLARINC)" CXXFLAGS="-FS -arch:SSE $(SOLARINC) $(gb_DEBUGINFO_FLAGS)" \
 			INSTALL=`cygpath -m /usr/bin/install` \
-			ICU_DATA_FILTER_FILE=/cygdrive/c/dev/filters.json \
 			./runConfigureICU \
 			$(if $(MSVC_USE_DEBUG_RUNTIME),--enable-debug --disable-release) \
 			Cygwin/MSVC --disable-extras \

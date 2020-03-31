@@ -13,6 +13,7 @@ $(eval $(call gb_Library_set_componentfile,xmlsecurity,xmlsecurity/util/xmlsecur
 
 $(eval $(call gb_Library_set_include,xmlsecurity,\
 	$$(INCLUDE) \
+	$(LIBXML_CFLAGS) \
 	-I$(SRCDIR)/xmlsecurity/inc \
 ))
 

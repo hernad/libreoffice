@@ -172,7 +172,9 @@ UI_FILELIST(swriter, "UIConfig/modules/swriter.filelist")
 UI_FILELIST(swxform, "UIConfig/modules/swxform.filelist")
 UI_FILELIST(uui, "UIConfig/uui.filelist")
 UI_FILELIST(vcl, "UIConfig/vcl.filelist")
+#ifdef ENABLE_WPFT
 UI_FILELIST(writerperfect, "UIConfig/writerperfect.filelist")
+#endif
 UI_FILELIST(xmlsec, "UIConfig/xmlsec.filelist")
 
 MO_FILELIST_ALL_LANG(acc)

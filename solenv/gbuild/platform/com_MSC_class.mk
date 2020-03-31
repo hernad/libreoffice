@@ -174,6 +174,7 @@ gb_LinkTarget_get_manifestfile = \
  $(WORKDIR)/LinkTarget/$(call gb_LinkTarget__get_workdir_linktargetname,$(1)).manifest
 
 gb_LinkTarget_get_linksearchpath_for_layer = \
+    -LIBPATH:$(LIBPATH) \
 	-LIBPATH:$(WORKDIR)/LinkTarget/StaticLibrary \
 	-LIBPATH:$(INSTDIR)/$(SDKDIRNAME)/lib \
 	$(if $(filter OXT,$(1)),\
@@ -207,6 +208,8 @@ $(call gb_Helper_abbreviate_dirs,\
 		$(PCHOBJS) $(NATIVERES)) && \
 		$(if $(filter $(call gb_Library__get_workdir_linktargetname,merged),$(2)),$(call gb_LinkTarget_MergedResponseFile)) \
 	unset INCLUDE && \
+	$(gb_LINK_log) \
+		@$${RESPONSEFILE} && \
 	$(gb_LINK) \
 		$(if $(filter Library CppunitTest,$(TARGETTYPE)),$(gb_Library_TARGETTYPEFLAGS)) \
 		$(if $(filter StaticLibrary,$(TARGETTYPE)),-LIB) \
@@ -599,7 +602,7 @@ gb_AUTOCONF_WRAPPERS = \
 	REAL_CXX="$(shell cygpath -w $(filter-out -%,$(CXX)))" \
 	REAL_CXX_FLAGS="$(filter -%,$(CXX))" \
 	CXX="$(call gb_Executable_get_target,g++-wrapper)" \
-    LD="$(shell cygpath -w $(COMPATH)/bin/link.exe) -nologo"
+    LD="$(shell cygpath -w $(COMPATH)/bin/link.exe) -LIBPATH:$(LIBPATH) -nologo"
 
 gb_ExternalProject_INCLUDE := \
 	$(subst -I,,$(subst $(WHITESPACE),;,$(SOLARINC)))
@@ -644,7 +647,7 @@ $(call gb_Helper_abbreviate_dirs,\
 	RESPONSEFILE=$(call var2file,$(shell $(gb_MKTEMP)),100,$(if $(UI_IMAGELISTS),$(strip $(UI_IMAGELISTS)),/dev/null)) \
 	&& tr " " "\000" < $$RESPONSEFILE | tr -d "\r\n" > $$RESPONSEFILE.0 \
 	&& $(SORT) -u --files0-from=$$RESPONSEFILE.0 > $@ \
-	&& rm $$RESPONSEFILE $$RESPONSEFILE.0 \
+	&& rm -f $$RESPONSEFILE $$RESPONSEFILE.0 \
 )
 
 endef

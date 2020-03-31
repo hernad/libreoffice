@@ -26,6 +26,7 @@ include $(GBUILDDIR)/platform/windows.mk
 gb_CC := cl
 gb_CXX := cl
 gb_LINK := link
+gb_LINK_log := link_log
 gb_AWK := awk
 gb_CLASSPATHSEP := ;
 gb_RC := rc
@@ -253,7 +254,8 @@ gb_LinkTarget_LDFLAGS := \
 # Happens because of the way we link our unit tests with our libraries.
 # LNK4049: locally defined symbol
 gb_LinkTarget_LDFLAGS += \
-	/ignore:4217 /ignore:4049
+	/ignore:4217 /ignore:4049 \
+	/LIBPATH:$(LIBPATH) \
 
 
 gb_DEBUGINFO_FLAGS := \
@@ -345,7 +347,7 @@ endif
 # Helper class
 
 ifeq ($(GNUMAKE_WIN_NATIVE),TRUE)
-gb_Helper_set_ld_path := PATH="$(shell cygpath -w $(INSTDIR)/$(LIBO_URE_LIB_FOLDER));$(shell cygpath -w $(INSTDIR)/$(LIBO_BIN_FOLDER));$$PATH"
+gb_Helper_set_ld_path := PATH="$(shell cygpath -w $(INSTDIR)/$(LIBO_URE_LIB_FOLDER));$(shell cygpath -w $(INSTDIR)/$(LIBO_BIN_FOLDER));$(shell cygpath -w $(EXTRA_LO_PATH));$$PATH"
 
 define gb_Helper_prepend_ld_path
 PATH="$(shell cygpath -w $(INSTDIR)/$(LIBO_URE_LIB_FOLDER));$(shell cygpath -w $(INSTDIR)/$(LIBO_BIN_FOLDER));$(1);$$PATH"

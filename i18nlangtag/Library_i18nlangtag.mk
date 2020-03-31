@@ -25,6 +25,7 @@ $(eval $(call gb_Library_use_externals,i18nlangtag,\
 	icuuc \
 ))
 
+
 $(eval $(call gb_Library_add_exception_objects,i18nlangtag,\
 	i18nlangtag/source/isolang/insys \
 	i18nlangtag/source/isolang/isolang \
@@ -36,10 +37,18 @@ $(eval $(call gb_Library_add_exception_objects,i18nlangtag,\
 
 $(eval $(call gb_Library_use_external,i18nlangtag,liblangtag))
 $(eval $(call gb_Library_use_external,i18nlangtag,libxml2))
+
 $(eval $(call gb_Library_use_system_win32_libs,i18nlangtag,\
         $(if $(filter $(COM),MSC), \
                 kernel32 \
         ) \
 ))
+
+# ifeq ($(OS),WINNT)
+# $(eval $(call gb_Library_add_libs,i18nlangtag,\
+#     -LIBPATH:$(LIBPATH) \
+# 	icuuc.lib \
+# ))
+# endif
 
 # vim: set noet sw=4 ts=4:

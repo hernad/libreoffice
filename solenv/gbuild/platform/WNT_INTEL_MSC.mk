@@ -20,6 +20,7 @@
 gb_CPPU_ENV := msci
 gb_CPUDEFS := -D_X86_=1
 
+
 include $(GBUILDDIR)/platform/com_MSC_defs.mk
 
 include $(GBUILDDIR)/platform/com_MSC_class.mk

@@ -13,6 +13,7 @@ $(eval $(call gb_Library_set_componentfile,xsec_xmlsec,xmlsecurity/util/xsec_xml
 
 $(eval $(call gb_Library_set_include,xsec_xmlsec,\
 	$$(INCLUDE) \
+	$(LIBXML_CFLAGS) \
 	-I$(SRCDIR)/xmlsecurity/inc \
 	-I$(SRCDIR)/xmlsecurity/source/gpg \
 	-I$(SRCDIR)/xmlsecurity/source/xmlsec \
@@ -98,6 +99,7 @@ $(eval $(call gb_Library_use_system_win32_libs,xsec_xmlsec,\
 	crypt32 \
 	advapi32 \
 	ncrypt \
+	bcrypt \
 ))
 
 $(eval $(call gb_Library_add_exception_objects,xsec_xmlsec,\

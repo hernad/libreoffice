@@ -13,8 +13,8 @@ i18npool_BIDIR := $(call gb_CustomTarget_get_workdir,i18npool/breakiterator)
 
 ifneq ($(filter iOS ANDROID,$(OS)),)
 
-$(call gb_CustomTarget_get_target,i18npool/breakiterator) : \
-	$(i18npool_BIDIR)/dict_ja.data $(i18npool_BIDIR)/dict_zh.data $(i18npool_BIDIR)/OpenOffice_dat.c
+# $(call gb_CustomTarget_get_target,i18npool/breakiterator) : \
+#	$(i18npool_BIDIR)/dict_ja.data $(i18npool_BIDIR)/dict_zh.data $(i18npool_BIDIR)/OpenOffice_dat.c
 
 $(i18npool_BIDIR)/dict_%.data : \
 		$(SRCDIR)/i18npool/source/breakiterator/data/%.dic \
@@ -27,8 +27,8 @@ $(i18npool_BIDIR)/dict_%.data : \
 	$(call gb_Trace_EndRange,$(subst $(WORKDIR)/,,$@),DIC)
 else
 
-$(call gb_CustomTarget_get_target,i18npool/breakiterator) : \
-	$(i18npool_BIDIR)/dict_ja.cxx $(i18npool_BIDIR)/dict_zh.cxx $(i18npool_BIDIR)/OpenOffice_dat.c
+# $(call gb_CustomTarget_get_target,i18npool/breakiterator) : \
+#	$(i18npool_BIDIR)/dict_ja.cxx $(i18npool_BIDIR)/dict_zh.cxx $(i18npool_BIDIR)/OpenOffice_dat.c
 
 $(i18npool_BIDIR)/dict_%.cxx : \
 		$(SRCDIR)/i18npool/source/breakiterator/data/%.dic \
