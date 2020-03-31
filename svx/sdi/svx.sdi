@@ -5483,7 +5483,7 @@ SfxVoidItem ArrowsToolbox SID_DRAWTBX_ARROWS
 ]
 
 SvxColorItem FrameLineColor SID_FRAME_LINECOLOR
-
+(SfxStringItem Color SID_ATTR_COLOR_STR, SvxColorItem FrameLineColor SID_FRAME_LINECOLOR)
 [
     AutoUpdate = TRUE,
     FastCall = FALSE,
@@ -12217,4 +12217,55 @@ SfxVoidItem AccessibilityCheck SID_ACCESSIBILITY_CHECK
     MenuConfig = FALSE,
     ToolBoxConfig = FALSE,
     GroupId = SfxGroupId::Modify;
+]
+
+SdrOnOffItem Glow SID_ATTR_GLOW
+
+[
+    AutoUpdate = TRUE,
+    FastCall = FALSE,
+    ReadOnlyDoc = FALSE,
+    Toggle = TRUE,
+    Container = FALSE,
+    RecordAbsolute = FALSE,
+    RecordPerSet;
+
+    AccelConfig = FALSE,
+    MenuConfig = FALSE,
+    ToolBoxConfig = TRUE,
+    GroupId = SfxGroupId::Document;
+]
+
+XColorItem GlowColor SID_ATTR_GLOW_COLOR
+
+[
+    AutoUpdate = TRUE,
+    FastCall = FALSE,
+    ReadOnlyDoc = FALSE,
+    Toggle = FALSE,
+    Container = FALSE,
+    RecordAbsolute = FALSE,
+    RecordPerSet;
+
+    AccelConfig = FALSE,
+    MenuConfig = FALSE,
+    ToolBoxConfig = FALSE,
+    GroupId = SfxGroupId::Document;
+]
+
+SdrMetricItem GlowRadius SID_ATTR_GLOW_RADIUS
+
+[
+    AutoUpdate = TRUE,
+    FastCall = FALSE,
+    ReadOnlyDoc = FALSE,
+    Toggle = FALSE,
+    Container = FALSE,
+    RecordAbsolute = FALSE,
+    RecordPerSet;
+
+    AccelConfig = FALSE,
+    MenuConfig = FALSE,
+    ToolBoxConfig = FALSE,
+    GroupId = SfxGroupId::Document;
 ]

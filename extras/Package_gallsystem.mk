@@ -10,9 +10,6 @@
 $(eval $(call gb_Package_Package,extras_gallsystem,$(SRCDIR)/extras/source/gallery/gallery_system))
 
 $(eval $(call gb_Package_add_files,extras_gallsystem,$(LIBO_SHARE_FOLDER)/gallery,\
-	sg1.sdg \
-	sg1.sdv \
-	sg1.thm \
 	sg4.sdg \
 	sg4.sdv \
 	sg4.thm \
@@ -22,6 +19,9 @@ $(eval $(call gb_Package_add_files,extras_gallsystem,$(LIBO_SHARE_FOLDER)/galler
 	sg36.sdg \
 	sg36.sdv \
 	sg36.thm \
+	bpmn.sdg \
+	bpmn.sdv \
+	bpmn.thm \
 ))
 
 # vim: set noet sw=4 ts=4:

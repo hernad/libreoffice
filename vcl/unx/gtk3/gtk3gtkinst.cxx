@@ -8262,9 +8262,9 @@ private:
         if (bContinue && !sText.isEmpty())
         {
             OString sFinalText(OUStringToOString(sText, RTL_TEXTENCODING_UTF8));
-            g_signal_handlers_block_by_func(pEntry, gpointer(signalInsertText), this);
+            g_signal_handlers_block_by_func(pEntry, reinterpret_cast<gpointer>(signalInsertText), this);
             gtk_editable_insert_text(GTK_EDITABLE(pEntry), sFinalText.getStr(), sFinalText.getLength(), position);
-            g_signal_handlers_unblock_by_func(pEntry, gpointer(signalInsertText), this);
+            g_signal_handlers_unblock_by_func(pEntry, reinterpret_cast<gpointer>(signalInsertText), this);
         }
         g_signal_stop_emission_by_name(pEntry, "insert-text");
     }
@@ -8631,6 +8631,8 @@ private:
     std::map<int, int> m_aSensitiveMap;
     // map from text column to indent column
     std::map<int, int> m_aIndentMap;
+    // map from text column to text align column
+    std::map<int, int> m_aAlignMap;
     // currently expanding parent that logically, but not currently physically,
     // contain placeholders
     o3tl::sorted_vector<GtkTreePath*, CompareGtkTreePath> m_aExpandingPlaceHolderParents;
@@ -8839,6 +8841,19 @@ private:
         GtkTreeIter iter;
         if (gtk_tree_model_iter_nth_child(pModel, &iter, nullptr, pos))
             set(iter, col, bInt);
+    }
+
+    void set(const GtkTreeIter& iter, int col, double fValue)
+    {
+        gtk_tree_store_set(m_pTreeStore, const_cast<GtkTreeIter*>(&iter), col, fValue, -1);
+    }
+
+    void set(int pos, int col, double fValue)
+    {
+        GtkTreeModel *pModel = GTK_TREE_MODEL(m_pTreeStore);
+        GtkTreeIter iter;
+        if (gtk_tree_model_iter_nth_child(pModel, &iter, nullptr, pos))
+            set(iter, col, fValue);
     }
 
     static gboolean signalTestExpandRow(GtkTreeView*, GtkTreeIter* iter, GtkTreePath*, gpointer widget)
@@ -9233,6 +9248,44 @@ private:
         return false;
     }
 
+    bool iter_next(weld::TreeIter& rIter, bool bOnlyExpanded) const
+    {
+        GtkInstanceTreeIter& rGtkIter = static_cast<GtkInstanceTreeIter&>(rIter);
+        GtkTreeModel *pModel = GTK_TREE_MODEL(m_pTreeStore);
+        GtkTreeIter tmp;
+        GtkTreeIter iter = rGtkIter.iter;
+
+        bool ret = gtk_tree_model_iter_children(pModel, &tmp, &iter);
+        if (ret && bOnlyExpanded && !get_row_expanded(rGtkIter))
+            ret = false;
+        rGtkIter.iter = tmp;
+        if (ret)
+        {
+            //on-demand dummy entry doesn't count
+            if (get_text(rGtkIter, -1) == "<dummy>")
+                return iter_next(rGtkIter, bOnlyExpanded);
+            return true;
+        }
+
+        tmp = iter;
+        if (gtk_tree_model_iter_next(pModel, &tmp))
+        {
+            rGtkIter.iter = tmp;
+            return true;
+        }
+        // Move up level(s) until we find the level where the next node exists.
+        while (gtk_tree_model_iter_parent(pModel, &tmp, &iter))
+        {
+            iter = tmp;
+            if (gtk_tree_model_iter_next(pModel, &tmp))
+            {
+                rGtkIter.iter = tmp;
+                return true;
+            }
+        }
+        return false;
+    }
+
 public:
     GtkInstanceTreeView(GtkTreeView* pTreeView, GtkInstanceBuilder* pBuilder, bool bTakeOwnership)
         : GtkInstanceContainer(GTK_CONTAINER(pTreeView), pBuilder, bTakeOwnership)
@@ -9274,6 +9327,7 @@ public:
                     m_aWeightMap[nIndex] = -1;
                     m_aSensitiveMap[nIndex] = -1;
                     m_aIndentMap[nIndex] = -1;
+                    m_aAlignMap[nIndex] = -1;
                     g_signal_connect(G_OBJECT(pCellRenderer), "editing-started", G_CALLBACK(signalCellEditingStarted), this);
                     g_signal_connect(G_OBJECT(pCellRenderer), "editing-canceled", G_CALLBACK(signalCellEditingCanceled), this);
                     g_signal_connect(G_OBJECT(pCellRenderer), "edited", G_CALLBACK(signalCellEdited), this);
@@ -9310,6 +9364,8 @@ public:
         for (auto& a : m_aSensitiveMap)
             a.second = nIndex++;
         for (auto& a : m_aIndentMap)
+            a.second = nIndex++;
+        for (auto& a : m_aAlignMap)
             a.second = nIndex++;
 
         ensure_drag_begin_end();
@@ -9862,6 +9918,19 @@ public:
         return get_int(pos, m_aWeightMap.find(col)->second) == PANGO_WEIGHT_BOLD;
     }
 
+    virtual void set_text_align(const weld::TreeIter& rIter, double fAlign, int col) override
+    {
+        const GtkInstanceTreeIter& rGtkIter = static_cast<const GtkInstanceTreeIter&>(rIter);
+        col = get_model_col(col);
+        set(rGtkIter.iter, m_aAlignMap[col], fAlign);
+    }
+
+    virtual void set_text_align(int pos, double fAlign, int col) override
+    {
+        col = get_model_col(col);
+        set(pos, m_aAlignMap[col], fAlign);
+    }
+
     using GtkInstanceWidget::set_sensitive;
 
     virtual void set_sensitive(int pos, bool bSensitive, int col) override
@@ -10182,38 +10251,7 @@ public:
 
     virtual bool iter_next(weld::TreeIter& rIter) const override
     {
-        GtkInstanceTreeIter& rGtkIter = static_cast<GtkInstanceTreeIter&>(rIter);
-        GtkTreeModel *pModel = GTK_TREE_MODEL(m_pTreeStore);
-        GtkTreeIter tmp;
-        GtkTreeIter iter = rGtkIter.iter;
-
-        bool ret = gtk_tree_model_iter_children(pModel, &tmp, &iter);
-        rGtkIter.iter = tmp;
-        if (ret)
-        {
-            //on-demand dummy entry doesn't count
-            if (get_text(rGtkIter, -1) == "<dummy>")
-                return iter_next(rGtkIter);
-            return true;
-        }
-
-        tmp = iter;
-        if (gtk_tree_model_iter_next(pModel, &tmp))
-        {
-            rGtkIter.iter = tmp;
-            return true;
-        }
-        // Move up level(s) until we find the level where the next node exists.
-        while (gtk_tree_model_iter_parent(pModel, &tmp, &iter))
-        {
-            iter = tmp;
-            if (gtk_tree_model_iter_next(pModel, &tmp))
-            {
-                rGtkIter.iter = tmp;
-                return true;
-            }
-        }
-        return false;
+        return iter_next(rIter, false);
     }
 
     virtual bool iter_previous(weld::TreeIter& rIter) const override
@@ -10252,6 +10290,11 @@ public:
         }
 
         return false;
+    }
+
+    virtual bool iter_next_visible(weld::TreeIter& rIter) const override
+    {
+        return iter_next(rIter, true);
     }
 
     virtual bool iter_children(weld::TreeIter& rIter) const override
@@ -10827,37 +10870,29 @@ public:
     {
         disable_notify_events();
 
-        if (value == 0)
-        {
-            gtk_adjustment_set_value(m_pVAdjustment, 0);
-            m_nPendingVAdjustment = -1;
-        }
-        else
-        {
-            /* This rube goldberg device is to remove flicker from setting the
-               scroll position of a GtkTreeView directly after clearing it and
-               filling it. As a specific example the writer navigator with ~100
-               tables, scroll to the end, right click on an entry near the end
-               and rename it, the tree is cleared and refilled and an attempt
-               made to set the scroll position of the freshly refilled tree to
-               the same point as before the clear.
-            */
+        /* This rube goldberg device is to remove flicker from setting the
+           scroll position of a GtkTreeView directly after clearing it and
+           filling it. As a specific example the writer navigator with ~100
+           tables, scroll to the end, right click on an entry near the end
+           and rename it, the tree is cleared and refilled and an attempt
+           made to set the scroll position of the freshly refilled tree to
+           the same point as before the clear.
+        */
 
-            // This forces the tree to recalculate now its preferred size
-            // after being cleared
-            GtkRequisition size;
-            gtk_widget_get_preferred_size(GTK_WIDGET(m_pTreeView), nullptr, &size);
+        // This forces the tree to recalculate now its preferred size
+        // after being cleared
+        GtkRequisition size;
+        gtk_widget_get_preferred_size(GTK_WIDGET(m_pTreeView), nullptr, &size);
 
-            m_nPendingVAdjustment = value;
+        m_nPendingVAdjustment = value;
 
-            // The value set here just has to be different to the final value
-            // set later so that isn't a no-op
-            gtk_adjustment_set_value(m_pVAdjustment, value - 0.0001);
+        // The value set here just has to be different to the final value
+        // set later so that isn't a no-op
+        gtk_adjustment_set_value(m_pVAdjustment, value - 0.0001);
 
-            // This will set the desired m_nPendingVAdjustment value right
-            // before the tree gets drawn
-            gtk_widget_add_tick_callback(GTK_WIDGET(m_pTreeView), setAdjustmentCallback, this, nullptr);
-        }
+        // This will set the desired m_nPendingVAdjustment value right
+        // before the tree gets drawn
+        gtk_widget_add_tick_callback(GTK_WIDGET(m_pTreeView), setAdjustmentCallback, this, nullptr);
 
         enable_notify_events();
     }
@@ -12286,9 +12321,9 @@ private:
             if (bContinue && !sText.isEmpty())
             {
                 OString sFinalText(OUStringToOString(sText, RTL_TEXTENCODING_UTF8));
-                g_signal_handlers_block_by_func(pEntry, gpointer(signalEntryInsertText), this);
+                g_signal_handlers_block_by_func(pEntry, reinterpret_cast<gpointer>(signalEntryInsertText), this);
                 gtk_editable_insert_text(GTK_EDITABLE(pEntry), sFinalText.getStr(), sFinalText.getLength(), position);
-                g_signal_handlers_unblock_by_func(pEntry, gpointer(signalEntryInsertText), this);
+                g_signal_handlers_unblock_by_func(pEntry, reinterpret_cast<gpointer>(signalEntryInsertText), this);
             }
             g_signal_stop_emission_by_name(pEntry, "insert-text");
         }

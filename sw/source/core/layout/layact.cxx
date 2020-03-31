@@ -1354,6 +1354,7 @@ bool SwLayAction::FormatLayout( OutputDevice *pRenderContext, SwLayoutFrame *pLa
     bool bTabChanged = false;
     while ( pLow && pLow->GetUpper() == pLay )
     {
+        SwFrame* pNext = nullptr;
         if ( pLow->IsLayoutFrame() )
         {
             if ( pLow->IsTabFrame() )
@@ -1364,6 +1365,22 @@ bool SwLayAction::FormatLayout( OutputDevice *pRenderContext, SwLayoutFrame *pLa
                 }
 
                 ++m_nTabLevel;
+
+                // Remember what was the next of the lower. Formatting may move it to the previous
+                // page, in which case it looses its next.
+                pNext = pLow->GetNext();
+
+                if (pNext && pNext->IsTabFrame())
+                {
+                    auto pTab = static_cast<SwTabFrame*>(pNext);
+                    if (pTab->IsFollow())
+                    {
+                        // The next frame is a follow of the previous frame, SwTabFrame::Join() will
+                        // delete this one as part of formatting, so forget about it.
+                        pNext = nullptr;
+                    }
+                }
+
                 bTabChanged |= FormatLayoutTab( static_cast<SwTabFrame*>(pLow), bAddRect );
                 --m_nTabLevel;
             }
@@ -1378,7 +1395,11 @@ bool SwLayAction::FormatLayout( OutputDevice *pRenderContext, SwLayoutFrame *pLa
 
         if ( IsAgain() )
             return false;
-        pLow = pLow->GetNext();
+        if (!pNext)
+        {
+            pNext = pLow->GetNext();
+        }
+        pLow = pNext;
     }
     // add complete frame area as paint area, if frame
     // area has been already added and after formatting its lowers the frame area

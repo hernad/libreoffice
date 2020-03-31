@@ -124,6 +124,34 @@ DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testfdo79008, "fdo79008.docx")
      parseExport("word/document.xml");
 }
 
+DECLARE_OOXMLEXPORT_TEST(testTdf120852_readOnlyUnProtected, "tdf120852_readOnlyUnProtected.docx")
+{
+
+    // Readonly is not enforced, just a suggestion,
+    // so when a section is protected, the document should enable forms protection.
+    SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument *>(mxComponent.get());
+    CPPUNIT_ASSERT(pTextDoc);
+    CPPUNIT_ASSERT(!pTextDoc->GetDocShell()->IsSecurityOptOpenReadOnly());
+
+    uno::Reference<text::XTextSectionsSupplier> xTextSectionsSupplier(mxComponent, uno::UNO_QUERY_THROW);
+    uno::Reference<container::XIndexAccess> xSections(xTextSectionsSupplier->getTextSections(), uno::UNO_QUERY_THROW);
+    const sal_Int32 nLastSection = xSections->getCount() - 1;
+    uno::Reference<beans::XPropertySet> xSect(xSections->getByIndex(nLastSection), uno::UNO_QUERY_THROW);
+    if ( !mbExported )
+    {
+        CPPUNIT_ASSERT_MESSAGE("Section is not protected", !getProperty<bool>(xSect, "IsProtected"));
+        // Enable section protection. The round-trip should have forms protection enabled.
+        xSect->setPropertyValue("IsProtected", uno::makeAny(true));
+    }
+    else
+    {
+        CPPUNIT_ASSERT_MESSAGE("Section is protected", getProperty<bool>(xSect, "IsProtected"));
+        xmlDocPtr pXmlSettings = parseExport("word/settings.xml");
+        assertXPath(pXmlSettings, "/w:settings/w:documentProtection", "edit", "forms");
+        assertXPath(pXmlSettings, "/w:settings/w:documentProtection", "enforcement", "true");
+    }
+}
+
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testAuthorPropertySdt, "author-property.docx")
 {
     xmlDocPtr pXmlDoc = parseExport("word/document.xml");
@@ -990,6 +1018,20 @@ DECLARE_OOXMLEXPORT_TEST(testSectionProtection, "sectionprot.odt")
     CPPUNIT_ASSERT_EQUAL_MESSAGE("TextSection is protected", true, getProperty<bool>(xSect, "IsProtected"));
     xSect.set(xSections->getByIndex(1), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL_MESSAGE("Section1 is protected", false, getProperty<bool>(xSect, "IsProtected"));
+}
+
+DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testSectionProtection2, "sectionprot2.odt")
+{
+    if (xmlDocPtr pXmlSettings = parseExport("word/settings.xml"))
+    {
+        assertXPath(pXmlSettings, "/w:settings/w:documentProtection", "enforcement", "true");
+        assertXPath(pXmlSettings, "/w:settings/w:documentProtection", "edit", "forms");
+    }
+
+    uno::Reference<text::XTextSectionsSupplier> xTextSectionsSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<container::XIndexAccess> xSections(xTextSectionsSupplier->getTextSections(), uno::UNO_QUERY);
+    uno::Reference<beans::XPropertySet> xSect(xSections->getByIndex(0), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("TextSection is protected", true, getProperty<bool>(xSect, "IsProtected"));
 }
 
 DECLARE_OOXMLEXPORT_TEST(tdf66398_permissions, "tdf66398_permissions.docx")

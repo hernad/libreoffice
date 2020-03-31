@@ -410,6 +410,7 @@ cmd/32/fa/alphaliststyle.png cmd/32/ar/alphaliststyle.png
 cmd/32/fa/alphalowliststyle.png cmd/32/ar/alphalowliststyle.png
 cmd/32/fa/bulletliststyle.png cmd/32/ar/defaultbullet.png
 cmd/32/fa/bulletsandnumberingdialog.png cmd/32/ar/bulletsandnumberingdialog.png
+cmd/32/fa/chapternumberingdialog.png cmd/32/ar/chapternumberingdialog.png
 cmd/32/fa/defaultbullet.png cmd/32/ar/defaultbullet.png
 cmd/32/fa/defaultnumbering.png cmd/32/ar/defaultnumbering.png
 cmd/32/fa/insertneutralparagraph.png cmd/32/ar/insertneutralparagraph.png
@@ -433,6 +434,7 @@ cmd/32/he/alphaliststyle.png cmd/32/ar/alphaliststyle.png
 cmd/32/he/alphalowliststyle.png cmd/32/ar/alphalowliststyle.png
 cmd/32/he/bulletliststyle.png cmd/32/ar/defaultbullet.png
 cmd/32/he/bulletsandnumberingdialog.png cmd/32/ar/bulletsandnumberingdialog.png
+cmd/32/he/chapternumberingdialog.png cmd/32/ar/chapternumberingdialog.png
 cmd/32/he/defaultbullet.png cmd/32/ar/defaultbullet.png
 cmd/32/he/defaultnumbering.png cmd/32/ar/defaultnumbering.png
 cmd/32/he/insertneutralparagraph.png cmd/32/ar/insertneutralparagraph.png
@@ -499,6 +501,7 @@ cmd/32/ur/alphaliststyle.png cmd/32/ar/alphaliststyle.png
 cmd/32/ur/alphalowliststyle.png cmd/32/ar/alphalowliststyle.png
 cmd/32/ur/bulletliststyle.png cmd/32/ar/defaultbullet.png
 cmd/32/ur/bulletsandnumberingdialog.png cmd/32/ar/bulletsandnumberingdialog.png
+cmd/32/ur/chapternumberingdialog.png cmd/32/ar/chapternumberingdialog.png
 cmd/32/ur/defaultbullet.png cmd/32/ar/defaultbullet.png
 cmd/32/ur/defaultnumbering.png cmd/32/ar/defaultnumbering.png
 cmd/32/ur/insertneutralparagraph.png cmd/32/ar/insertneutralparagraph.png
@@ -563,6 +566,7 @@ cmd/fa/lc_alphaliststyle.png cmd/ar/lc_alphaliststyle.png
 cmd/fa/lc_alphalowliststyle.png cmd/ar/lc_alphalowliststyle.png
 cmd/fa/lc_bulletliststyle.png cmd/ar/lc_defaultbullet.png
 cmd/fa/lc_bulletsandnumberingdialog.png cmd/ar/lc_bulletsandnumberingdialog.png
+cmd/fa/lc_chapternumberingdialog.png cmd/ar/lc_chapternumberingdialog.png
 cmd/fa/lc_defaultbullet.png cmd/ar/lc_defaultbullet.png
 cmd/fa/lc_defaultnumbering.png cmd/ar/lc_defaultnumbering.png
 cmd/fa/lc_insertneutralparagraph.png cmd/ar/lc_insertneutralparagraph.png
@@ -579,6 +583,7 @@ cmd/fa/sc_alphaliststyle.png cmd/ar/sc_alphaliststyle.png
 cmd/fa/sc_alphalowliststyle.png cmd/ar/sc_alphalowliststyle.png
 cmd/fa/sc_bulletliststyle.png cmd/ar/sc_defaultbullet.png
 cmd/fa/sc_bulletsandnumberingdialog.png cmd/ar/sc_bulletsandnumberingdialog.png
+cmd/fa/sc_chapternumberingdialog.png cmd/ar/sc_chapternumberingdialog.png
 cmd/fa/sc_defaultbullet.png cmd/ar/sc_defaultbullet.png
 cmd/fa/sc_defaultnumbering.png cmd/ar/sc_defaultnumbering.png
 cmd/fa/sc_insertneutralparagraph.png cmd/ar/sc_insertneutralparagraph.png
@@ -609,6 +614,7 @@ cmd/he/lc_alphaliststyle.png cmd/ar/lc_alphaliststyle.png
 cmd/he/lc_alphalowliststyle.png cmd/ar/lc_alphalowliststyle.png
 cmd/he/lc_bulletliststyle.png cmd/ar/lc_defaultbullet.png
 cmd/he/lc_bulletsandnumberingdialog.png cmd/ar/lc_bulletsandnumberingdialog.png
+cmd/he/lc_chapternumberingdialog.png cmd/ar/lc_chapternumberingdialog.png
 cmd/he/lc_defaultbullet.png cmd/ar/lc_defaultbullet.png
 cmd/he/lc_defaultnumbering.png cmd/ar/lc_defaultnumbering.png
 cmd/he/lc_insertneutralparagraph.png cmd/ar/lc_insertneutralparagraph.png
@@ -625,6 +631,7 @@ cmd/he/sc_alphaliststyle.png cmd/ar/sc_alphaliststyle.png
 cmd/he/sc_alphalowliststyle.png cmd/ar/sc_alphalowliststyle.png
 cmd/he/sc_bulletliststyle.png cmd/ar/sc_defaultbullet.png
 cmd/he/sc_bulletsandnumberingdialog.png cmd/ar/sc_bulletsandnumberingdialog.png
+cmd/he/sc_chapternumberingdialog.png cmd/ar/sc_chapternumberingdialog.png
 cmd/he/sc_defaultbullet.png cmd/ar/sc_defaultbullet.png
 cmd/he/sc_defaultnumbering.png cmd/ar/sc_defaultnumbering.png
 cmd/he/sc_insertneutralparagraph.png cmd/ar/sc_insertneutralparagraph.png
@@ -741,6 +748,7 @@ cmd/ur/lc_alphaliststyle.png cmd/ar/lc_alphaliststyle.png
 cmd/ur/lc_alphalowliststyle.png cmd/ar/lc_alphalowliststyle.png
 cmd/ur/lc_bulletliststyle.png cmd/ar/lc_defaultbullet.png
 cmd/ur/lc_bulletsandnumberingdialog.png cmd/ar/lc_bulletsandnumberingdialog.png
+cmd/ur/lc_chapternumberingdialog.png cmd/ar/lc_chapternumberingdialog.png
 cmd/ur/lc_defaultbullet.png cmd/ar/lc_defaultbullet.png
 cmd/ur/lc_defaultnumbering.png cmd/ar/lc_defaultnumbering.png
 cmd/ur/lc_insertneutralparagraph.png cmd/ar/lc_insertneutralparagraph.png
@@ -757,6 +765,7 @@ cmd/ur/sc_alphaliststyle.png cmd/ar/sc_alphaliststyle.png
 cmd/ur/sc_alphalowliststyle.png cmd/ar/sc_alphalowliststyle.png
 cmd/ur/sc_bulletliststyle.png cmd/ar/sc_defaultbullet.png
 cmd/ur/sc_bulletsandnumberingdialog.png cmd/ar/sc_bulletsandnumberingdialog.png
+cmd/ur/sc_chapternumberingdialog.png cmd/ar/sc_chapternumberingdialog.png
 cmd/ur/sc_defaultbullet.png cmd/ar/sc_defaultbullet.png
 cmd/ur/sc_defaultnumbering.png cmd/ar/sc_defaultnumbering.png
 cmd/ur/sc_insertneutralparagraph.png cmd/ar/sc_insertneutralparagraph.png
@@ -1633,18 +1642,12 @@ cmd/sc_rehearsetimings.png cmd/sc_diatime.png
 # Arrange
 cmd/32/arrangeframemenu.png cmd/32/bringtofront.png
 cmd/32/arrangemenu.png cmd/32/bringtofront.png
-cmd/32/setobjecttobackground.png cmd/32/sendtoback.png
-cmd/32/setobjecttoforeground.png cmd/32/bringtofront.png
 
 cmd/lc_arrangeframemenu.png cmd/lc_bringtofront.png
 cmd/lc_arrangemenu.png cmd/lc_bringtofront.png
-cmd/lc_setobjecttobackground.png cmd/lc_sendtoback.png
-cmd/lc_setobjecttoforeground.png cmd/lc_bringtofront.png
 
 cmd/sc_arrangeframemenu.png cmd/sc_bringtofront.png
 cmd/sc_arrangemenu.png cmd/sc_bringtofront.png
-cmd/sc_setobjecttobackground.png cmd/sc_sendtoback.png
-cmd/sc_setobjecttoforeground.png cmd/sc_bringtofront.png
 
 # Reload
 cmd/32/draw.png cmd/32/reload.png
@@ -1854,7 +1857,6 @@ dbaccess/res/db.png cmd/sc_changedatabasefield.png
 dbaccess/res/exerror.png cmd/sc_cancel.png
 dbaccess/res/exinfo.png cmd/sc_helpindex.png
 dbaccess/res/form_16.png cmd/sc_dbviewforms.png
-dbaccess/res/forms_16.png cmd/sc_dbviewforms.png
 dbaccess/res/forms_32.png cmd/32/dbviewforms.png
 dbaccess/res/jo01.png dbaccess/res/pkey.png
 dbaccess/res/lc036.png cmd/lc_dbnewreport.png
@@ -1866,7 +1868,6 @@ dbaccess/res/one_left.png cmd/sc_prevrecord.png
 dbaccess/res/one_right.png cmd/sc_nextrecord.png
 dbaccess/res/queries_32.png cmd/32/dbviewqueries.png
 dbaccess/res/report_16.png cmd/sc_dbviewreports.png
-dbaccess/res/reports_16.png res/dialogfolder_16.png
 dbaccess/res/reports_32.png cmd/32/dbviewreports.png
 dbaccess/res/sc036.png cmd/sc_dbnewreport.png
 dbaccess/res/sc037.png cmd/sc_dbreportdelete.png
@@ -1902,7 +1903,7 @@ formula/res/fx.png cmd/sc_dbviewfunctions.png
 
 # fpicker
 # ==============================================
-fpicker/res/fp011.png cmd/sc_firstpage.png
+fpicker/res/fp011.png res/lc06303.png
 fpicker/res/fp014.png res/fp015.png
 fpicker/res/fp016.png desktop/res/shared_16.png
 
@@ -1932,9 +1933,8 @@ reportdesign/res/sx12594.png cmd/sc_dbviewfunctions.png
 # res
 # ==============================================
 res/adrbook.png cmd/sc_viewdatasourcebrowser.png
-res/basbrk.png cmd/sc_addwatch.png
 res/browse.png cmd/sc_browseview.png
-res/dir-clos.png cmd/sc_open.png
+res/dir-clos.png cmd/sc_closedocs.png
 res/dir-open.png cmd/sc_open.png
 res/extension_plus_26.png cmd/lc_insertplugin.png
 res/extension_plus_32.png cmd/32/insertplugin.png
@@ -1962,7 +1962,6 @@ res/lc05711.png cmd/lc_copy.png
 res/lc05961.png cmd/lc_recsearch.png
 res/lc06300.png cmd/lc_nextrecord.png
 res/lc06301.png cmd/lc_prevrecord.png
-res/lc06303.png cmd/lc_firstpage.png
 res/lc10711.png cmd/lc_removefiltersort.png
 res/lc10715.png cmd/lc_datafilterstandardfilter.png
 res/lc10716.png cmd/lc_datafilterautofilter.png
@@ -2034,13 +2033,12 @@ res/sc05508.png cmd/sc_reload.png
 res/sc05509.png cmd/sc_print.png
 res/sc05554.png cmd/sc_backgroundcolor.png
 res/sc05555.png cmd/sc_stylenewbyexample.png
-res/sc05556.png cmd/sc_reload.png
+res/sc05556.png cmd/sc_styleupdatebyexample.png
 res/sc05678.png cmd/sc_inserthyperlink.png
 res/sc05711.png cmd/sc_copy.png
 res/sc05961.png cmd/sc_recsearch.png
 res/sc06300.png cmd/sc_nextrecord.png
 res/sc06301.png cmd/sc_prevrecord.png
-res/sc06303.png cmd/sc_firstrecord.png
 res/sc10223.png cmd/sc_position.png
 res/sc10224.png cmd/sc_size.png
 res/sc10350.png cmd/sc_bmpmask.png
@@ -2067,6 +2065,7 @@ res/sx03130.png res/otp_16_8.png
 res/sx03137.png res/sx03125.png
 res/sx03139.png cmd/sc_newhtmldoc.png
 res/sx03140.png res/sx03125.png
+res/sx03141.png cmd/32/closedocs.png
 res/sx03144.png res/odf_16_8.png
 res/sx03145.png res/otf_16_8.png
 res/sx03150.png cmd/sc_showsinglepage.png
@@ -2082,11 +2081,9 @@ res/sx03163.png res/ott_16_8.png
 res/sx03164.png cmd/sc_open.png
 res/sx03165.png cmd/sc_save.png
 res/sx03167.png cmd/sc_openremote.png
-res/sx03187.png cmd/sc_dbviewtables.png
 res/sx03188.png cmd/sc_dbviewtables.png
-res/sx03189.png cmd/sc_open.png
-res/sx03201.png cmd/sc_dbviewqueries.png
-res/sx03202.png cmd/sc_copy.png
+res/sx03189.png cmd/sc_closedocs.png
+res/sx03202.png cmd/sc_dbviewqueries.png
 res/sx03202.png cmd/sc_dbviewqueries.png
 res/sx03217.png res/odg_16_8.png
 res/sx03218.png res/odg_16_8.png
@@ -2174,8 +2171,6 @@ sc/res/sc26047.png cmd/sc_dbviewfunctions.png
 sc/res/sc26048.png cmd/sc_autosum.png
 sc/res/sc26050.png cmd/sc_cancel.png
 sc/res/sc26051.png cmd/sc_ok.png
-sc/res/sf01.png cmd/sc_inserttable.png
-sc/res/sf02.png cmd/sc_adddirect.png
 sc/res/table.png cmd/sc_inserttable.png
 sc/res/text.png cmd/sc_text.png
 sc/res/time.png cmd/sc_timefield.png
@@ -2204,7 +2199,6 @@ sd/res/ole.png cmd/sc_insertobject.png
 sd/res/page.png cmd/sc_adddirect.png
 sd/res/pipette.png cmd/sc_bmpmask.png
 sd/res/playblue_16.png cmd/sc_runbasic.png
-sd/res/sf01.png cmd/sc_insertdraw.png
 sd/res/stopplayingblue_16.png cmd/sc_basicstop.png
 sd/res/time_16.png cmd/sc_timefield.png
 sd/res/waiticon.png cmd/sc_mediapause.png
@@ -2278,7 +2272,7 @@ svtools/res/back_large.png cmd/lc_prevrecord.png
 svtools/res/back_small.png cmd/sc_prevrecord.png
 svtools/res/bmpfont.png cmd/color.png
 svtools/res/ed06.png dbaccess/res/pkey.png
-svtools/res/folder.png cmd/sc_open.png
+svtools/res/folder.png cmd/sc_closedocs.png
 svtools/res/folderop.png cmd/sc_open.png
 svtools/res/info_large.png cmd/lc_alignleft.png
 svtools/res/info_small.png cmd/sc_alignleft.png
@@ -2424,12 +2418,9 @@ sw/res/sc20249.png cmd/sc_navigator.png
 sw/res/sc20556.png cmd/sc_dbviewfunctions.png
 sw/res/sc20557.png cmd/sc_cancel.png
 sw/res/sc20558.png cmd/sc_ok.png
-sw/res/sf01.png cmd/sc_controlcodes.png
-sw/res/sf02.png cmd/sc_charfontname.png
-sw/res/sf03.png cmd/sc_insertframe.png
-sw/res/sf04.png cmd/sc_showsinglepage.png
-sw/res/sf05.png cmd/sc_defaultbullet.png
-sw/res/sf06.png cmd/sc_inserttable.png
+sw/res/sf02.png cmd/sc_designerdialog.png
+sw/res/sf04.png sc/res/sf02.png
+sw/res/sf06.png cmd/sc_autoformat.png
 sw/res/sidebar/pageproppanel/last_custom_common.png svx/res/symphony/last_custom_common.png
 sw/res/sidebar/pageproppanel/last_custom_common_grey.png svx/res/symphony/last_custom_common_grey.png
 sw/res/sidebar/pageproppanel/portraitcopy_24x24.png cmd/lc_orientation.png
@@ -2456,7 +2447,7 @@ sw/res/sx03.png cmd/sc_dbviewqueries.png
 
 # res
 sw/res/page_break.png cmd/sc_insertpagebreak.png
-sw/res/styfamnu.png cmd/sc_defaultbullet.png
+sw/res/styfamnu.png sw/res/sf05.png
 
 # split cells duplicates
 sw/res/zetlhor2.png svx/res/zetlhor2.png
@@ -2543,15 +2534,15 @@ cmd/sc_rowheight.png cmd/sc_setminimalrowheight.png
 # ==============================================
 cmd/32/exportasgraphic.png cmd/32/insertgraphic.png
 cmd/32/margins.png cmd/32/pagemargin.png
-cmd/32/namegroup.png cmd/32/definename.png
+cmd/32/namegroup.png cmd/32/renameobject.png
 
 cmd/lc_exportasgraphic.png cmd/lc_insertgraphic.png
 cmd/lc_margins.png cmd/lc_pagemargin.png
-cmd/lc_namegroup.png cmd/lc_definename.png
+cmd/lc_namegroup.png cmd/lc_renameobject.png
 
 cmd/sc_exportasgraphic.png cmd/sc_insertgraphic.png
 cmd/sc_margins.png cmd/sc_pagemargin.png
-cmd/sc_namegroup.png cmd/sc_definename.png
+cmd/sc_namegroup.png cmd/sc_renameobject.png
 
 # calc toolbar draw
 # ===============================================

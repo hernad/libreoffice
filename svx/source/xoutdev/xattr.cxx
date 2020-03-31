@@ -878,7 +878,7 @@ std::unique_ptr<XLineDashItem> XLineDashItem::checkForUniqueItem( SdrModel* pMod
     {
         const OUString aUniqueName = NameOrIndex::CheckNamedItem(
                 this, XATTR_LINEDASH, &pModel->GetItemPool(),
-                XLineDashItem::CompareValueFunc, RID_SVXSTR_DASH11,
+                XLineDashItem::CompareValueFunc, RID_SVXSTR_DASH20,
                 pModel->GetPropertyList( XPropertyListType::Dash ) );
 
         // if the given name is not valid, replace it!
@@ -2501,6 +2501,19 @@ boost::property_tree::ptree XFillFloatTransparenceItem::dumpAsJSON() const
 {
     boost::property_tree::ptree aTree = XFillGradientItem::dumpAsJSON();
     aTree.put("commandName", ".uno:FillFloatTransparence");
+
+    if (!bEnabled)
+    {
+        boost::property_tree::ptree& rState = aTree.get_child("state");
+        // When gradient fill is disabled, the intensity fields contain the
+        // constant encoded percent-transparency. However we use that here to just
+        // distinguish between 'None' and 'Solid' types and correct the 'style'
+        // property appropriately.
+        if (GetGradientValue().GetStartIntens() == 100)
+            rState.put("style", "NONE");
+        else
+            rState.put("style", "SOLID");
+    }
 
     return aTree;
 }

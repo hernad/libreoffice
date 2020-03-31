@@ -138,6 +138,12 @@ void SdrGrafObj::onGraphicChanged()
     if (!rVectorGraphicDataPtr.get())
         return;
 
+    // Skip for PDF as it is only a bitmap primitive in a sequence and
+    // doesn't contain metadata. However getting the primitive sequence
+    // will also trigger a premature rendering of the PDF.
+    if (rVectorGraphicDataPtr->getVectorGraphicDataType() == VectorGraphicDataType::Pdf)
+        return;
+
     const drawinglayer::primitive2d::Primitive2DContainer aSequence(rVectorGraphicDataPtr->getPrimitive2DSequence());
 
     if (aSequence.empty())
@@ -462,7 +468,7 @@ void SdrGrafObj::ImpRegisterLink()
         {
             pGraphicLink = new SdrGraphicLink( *this );
             pLinkManager->InsertFileLink(
-                *pGraphicLink, OBJECT_CLIENT_GRF, aFileName, (aFilterName.isEmpty() ? nullptr : &aFilterName));
+                *pGraphicLink, sfx2::SvBaseLinkObjectType::ClientGraphic, aFileName, (aFilterName.isEmpty() ? nullptr : &aFilterName));
             pGraphicLink->Connect();
         }
     }

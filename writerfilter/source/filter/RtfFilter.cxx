@@ -19,6 +19,7 @@
 
 #include <memory>
 
+#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/document/XExporter.hpp>
 #include <com/sun/star/document/XFilter.hpp>
 #include <com/sun/star/document/XImporter.hpp>
@@ -34,6 +35,7 @@
 #include <unotools/mediadescriptor.hxx>
 #include <unotools/streamwrap.hxx>
 #include <unotools/ucbstreamhelper.hxx>
+#include <comphelper/scopeguard.hxx>
 
 #include <dmapper/DomainMapperFactory.hxx>
 #include <rtftok/RTFDocument.hxx>
@@ -94,6 +96,20 @@ sal_Bool RtfFilter::filter(const uno::Sequence<beans::PropertyValue>& rDescripto
 
     bool bResult(false);
     uno::Reference<task::XStatusIndicator> xStatusIndicator;
+
+    uno::Reference<beans::XPropertySet> xDocProps;
+    if (m_xDstDoc.is()) // not in cppunittest?
+    {
+        xDocProps.set(m_xDstDoc, uno::UNO_QUERY);
+        xDocProps->setPropertyValue("UndocumentedWriterfilterHack", uno::makeAny(true));
+    }
+    comphelper::ScopeGuard g([xDocProps] {
+        if (xDocProps.is()) // not in cppunittest?
+        {
+            // note: pStream.clear calls RemoveLastParagraph()
+            xDocProps->setPropertyValue("UndocumentedWriterfilterHack", uno::makeAny(false));
+        }
+    });
 
     try
     {

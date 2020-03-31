@@ -252,6 +252,62 @@ DECLARE_WW8EXPORT_TEST(testTdf116570_exportFootnote, "tdf116570_exportFootnote.o
     CPPUNIT_ASSERT_EQUAL_MESSAGE( "Number of paragraphs in first footnote", 2, getParagraphs(xFootnoteText) );
 }
 
+DECLARE_WW8EXPORT_TEST(testTdf80635_pageRightRTL, "tdf80635_pageRightRTL.doc")
+{
+    // tdf#80635 - transfer the float orientation to the table.
+    uno::Reference<text::XTextTablesSupplier> xTextTablesSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<container::XIndexAccess> xTables(xTextTablesSupplier->getTextTables(), uno::UNO_QUERY);
+    uno::Reference<text::XTextTable> xTable(xTables->getByIndex(0), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Horizontal Orientation", text::HoriOrientation::LEFT_AND_WIDTH, getProperty<sal_Int16>(xTable, "HoriOrient"));
+    CPPUNIT_ASSERT_DOUBLES_EQUAL_MESSAGE("Table Indent", long(3500), getProperty<long>(xTable, "LeftMargin"), 100);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Did you fix me? Text probably should wrap here", 2, getPages() );
+    // If so, replace test with the table set to a greater preferred width so that the text shouldn't wrap
+}
+
+DECLARE_WW8EXPORT_TEST(testTdf80635_marginRTL, "tdf80635_marginRightRTL.doc")
+{
+    // tdf#80635 - transfer the float orientation to the table.
+    uno::Reference<text::XTextTablesSupplier> xTextTablesSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<container::XIndexAccess> xTables(xTextTablesSupplier->getTextTables(), uno::UNO_QUERY);
+    uno::Reference<text::XTextTable> xTable(xTables->getByIndex(0), uno::UNO_QUERY);
+    if ( !mbExported )
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("Horizontal Orientation", text::HoriOrientation::RIGHT, getProperty<sal_Int16>(xTable, "HoriOrient"));
+}
+
+DECLARE_WW8EXPORT_TEST(testTdf80635_marginLeft, "tdf80635_marginLeft.doc")
+{
+    // tdf#80635 - transfer the float orientation to the table.
+    uno::Reference<text::XTextTablesSupplier> xTextTablesSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<container::XIndexAccess> xTables(xTextTablesSupplier->getTextTables(), uno::UNO_QUERY);
+    uno::Reference<text::XTextTable> xTable(xTables->getByIndex(0), uno::UNO_QUERY);
+    // This was just the GetMinLeft of -199
+    CPPUNIT_ASSERT_DOUBLES_EQUAL_MESSAGE("Table Indent", long(-2950), getProperty<long>(xTable, "LeftMargin"), 100);
+}
+
+DECLARE_WW8EXPORT_TEST(testTdf80635_pageLeft, "tdf80635_pageLeft.doc")
+{
+    // tdf#80635 - transfer the float orientation to the table.
+    uno::Reference<text::XTextTablesSupplier> xTextTablesSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<container::XIndexAccess> xTables(xTextTablesSupplier->getTextTables(), uno::UNO_QUERY);
+    uno::Reference<text::XTextTable> xTable(xTables->getByIndex(0), uno::UNO_QUERY);
+    // This was just the GetMinLeft of -199
+    CPPUNIT_ASSERT_DOUBLES_EQUAL_MESSAGE("Table Indent", long(-2750), getProperty<long>(xTable, "LeftMargin"), 100);
+}
+
+DECLARE_WW8EXPORT_TEST(testTdf107773, "tdf107773.doc")
+{
+    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<drawing::XDrawPage> xDrawPage = xDrawPageSupplier->getDrawPage();
+    // This was 1, multi-page table was imported as a floating one.
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(0), xDrawPage->getCount());
+
+    // tdf#80635 - transfer the float orientation to the table.
+    uno::Reference<text::XTextTablesSupplier> xTextTablesSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<container::XIndexAccess> xTables(xTextTablesSupplier->getTextTables(), uno::UNO_QUERY);
+    uno::Reference<text::XTextTable> xTable(xTables->getByIndex(0), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Horizontal Orientation", text::HoriOrientation::CENTER, getProperty<sal_Int16>(xTable, "HoriOrient"));
+}
+
 DECLARE_WW8EXPORT_TEST(testTdf112074_RTLtableJustification, "tdf112074_RTLtableJustification.doc")
 {
     uno::Reference<text::XTextTablesSupplier> xTextTablesSupplier(mxComponent, uno::UNO_QUERY);

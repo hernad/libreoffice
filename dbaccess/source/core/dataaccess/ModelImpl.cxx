@@ -38,6 +38,7 @@
 #include <com/sun/star/util/NumberFormatsSupplier.hpp>
 #include <com/sun/star/security/DocumentDigitalSignatures.hpp>
 #include <com/sun/star/security/XDocumentDigitalSignatures.hpp>
+#include <com/sun/star/task/DocumentMacroConfirmationRequest.hpp>
 
 #include <cppuhelper/exc_hlp.hxx>
 #include <cppuhelper/implbase.hxx>
@@ -45,6 +46,7 @@
 #include <comphelper/storagehelper.hxx>
 #include <comphelper/types.hxx>
 #include <comphelper/processfactory.hxx>
+#include <sfx2/docfile.hxx>
 #include <sfx2/signaturestate.hxx>
 #include <tools/diagnose_ex.h>
 #include <osl/diagnose.h>
@@ -393,6 +395,7 @@ ODatabaseModelImpl::ODatabaseModelImpl(
             ,m_aEmbeddedMacros()
             ,m_bModificationLock( false )
             ,m_bDocumentInitialized( false )
+            ,m_nScriptingSignatureState(SignatureState::UNKNOWN)
             ,m_aContext( _rxContext )
             ,m_sName(_rRegistrationName)
             ,m_nLoginTimeout(0)
@@ -1277,11 +1280,10 @@ Reference< XEmbeddedScripts > ODatabaseModelImpl::getEmbeddedDocumentScripts() c
 
 SignatureState ODatabaseModelImpl::getScriptingSignatureState()
 {
-    // no support for signatures at the moment
     return m_nScriptingSignatureState;
 }
 
-bool ODatabaseModelImpl::hasTrustedScriptingSignature(bool /*bAllowUIToAddAuthor*/)
+bool ODatabaseModelImpl::hasTrustedScriptingSignature(bool bAllowUIToAddAuthor)
 {
     bool bResult = false;
 
@@ -1291,19 +1293,11 @@ bool ODatabaseModelImpl::hasTrustedScriptingSignature(bool /*bAllowUIToAddAuthor
         // which leads to signatures not being found
         Reference<XStorage> xStorage = comphelper::OStorageHelper::GetStorageOfFormatFromURL(
             ZIP_STORAGE_FORMAT_STRING, m_sDocFileLocation, ElementModes::READ);
-        OUString aVersion;
-        try
-        {
-            uno::Reference<beans::XPropertySet> xPropSet(xStorage, uno::UNO_QUERY_THROW);
-            xPropSet->getPropertyValue("Version") >>= aVersion;
-        }
-        catch (uno::Exception&)
-        {
-        }
 
+        OUString aODFVersion(comphelper::OStorageHelper::GetODFVersionFromStorage(getOrCreateRootStorage()));
         uno::Reference<security::XDocumentDigitalSignatures> xSigner(
             security::DocumentDigitalSignatures::createWithVersion(
-                comphelper::getProcessComponentContext(), aVersion));
+                comphelper::getProcessComponentContext(), aODFVersion));
         uno::Sequence<security::DocumentSignatureInformation> aInfo
             = xSigner->verifyScriptingContentSignatures(xStorage,
                                                         uno::Reference<io::XInputStream>());
@@ -1319,6 +1313,22 @@ bool ODatabaseModelImpl::hasTrustedScriptingSignature(bool /*bAllowUIToAddAuthor
                                   [&xSigner](const security::DocumentSignatureInformation& rInfo) {
                                       return xSigner->isAuthorTrusted(rInfo.Signer);
                                   });
+        }
+
+        if (!bResult && bAllowUIToAddAuthor)
+        {
+            Reference<XInteractionHandler> xInteraction;
+            xInteraction = m_aMediaDescriptor.getOrDefault("InteractionHandler", xInteraction);
+            if (xInteraction.is())
+            {
+                task::DocumentMacroConfirmationRequest aRequest;
+                aRequest.DocumentURL = m_sDocFileLocation;
+                aRequest.DocumentStorage = xStorage;
+                aRequest.DocumentSignatureInformation = aInfo;
+                aRequest.DocumentVersion = aODFVersion;
+                aRequest.Classification = task::InteractionClassification_QUERY;
+                bResult = SfxMedium::CallApproveHandler(xInteraction, uno::makeAny(aRequest), true);
+            }
         }
     }
     catch (uno::Exception&)

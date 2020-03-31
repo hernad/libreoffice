@@ -3936,6 +3936,30 @@ public:
         return ::get_text_emphasis(pEntry, col);
     }
 
+    void set_text_align(SvTreeListEntry* pEntry, double fAlign, int col)
+    {
+        ++col; //skip dummy/expander column
+
+        assert(col >= 0 && o3tl::make_unsigned(col) < pEntry->ItemCount());
+        SvLBoxItem& rItem = pEntry->GetItem(col);
+        assert(dynamic_cast<SvLBoxString*>(&rItem));
+        static_cast<SvLBoxString&>(rItem).Align(fAlign);
+
+        m_xTreeView->ModelHasEntryInvalidated(pEntry);
+    }
+
+    virtual void set_text_align(const weld::TreeIter& rIter, double fAlign, int col) override
+    {
+        const SalInstanceTreeIter& rVclIter = static_cast<const SalInstanceTreeIter&>(rIter);
+        set_text_align(rVclIter.iter, fAlign, col);
+    }
+
+    virtual void set_text_align(int pos, double fAlign, int col) override
+    {
+        SvTreeListEntry* pEntry = m_xTreeView->GetEntry(nullptr, pos);
+        set_text_align(pEntry, fAlign, col);
+    }
+
     virtual void connect_editing(
         const Link<const weld::TreeIter&, bool>& rStartLink,
         const Link<const std::pair<const weld::TreeIter&, OUString>&, bool>& rEndLink) override
@@ -4152,6 +4176,15 @@ public:
         rVclIter.iter = m_xTreeView->Prev(rVclIter.iter);
         if (rVclIter.iter && IsDummyEntry(rVclIter.iter))
             return iter_previous(rVclIter);
+        return rVclIter.iter != nullptr;
+    }
+
+    virtual bool iter_next_visible(weld::TreeIter& rIter) const override
+    {
+        SalInstanceTreeIter& rVclIter = static_cast<SalInstanceTreeIter&>(rIter);
+        rVclIter.iter = m_xTreeView->NextVisible(rVclIter.iter);
+        if (rVclIter.iter && IsDummyEntry(rVclIter.iter))
+            return iter_next_visible(rVclIter);
         return rVclIter.iter != nullptr;
     }
 

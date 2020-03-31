@@ -854,6 +854,7 @@ public:
         = 0;
     virtual void set_text_emphasis(int row, bool bOn, int col) = 0;
     virtual bool get_text_emphasis(int row, int col) const = 0;
+    virtual void set_text_align(int row, double fAlign, int col) = 0;
     virtual void swap(int pos1, int pos2) = 0;
     virtual std::vector<int> get_selected_rows() const = 0;
     virtual void set_font_color(int pos, const Color& rColor) = 0;
@@ -899,6 +900,8 @@ public:
     virtual bool iter_next(TreeIter& rIter) const = 0;
     // set iter to point to previous node, sibling first then depth
     virtual bool iter_previous(TreeIter& rIter) const = 0;
+    // set iter to point to next node, depth first but only if expanded, then sibling
+    virtual bool iter_next_visible(TreeIter& rIter) const = 0;
     virtual bool iter_children(TreeIter& rIter) const = 0;
     bool iter_nth_sibling(TreeIter& rIter, int nChild) const
     {
@@ -939,6 +942,7 @@ public:
     virtual void set_sensitive(const TreeIter& rIter, bool bSensitive, int col = -1) = 0;
     virtual void set_text_emphasis(const TreeIter& rIter, bool bOn, int col) = 0;
     virtual bool get_text_emphasis(const TreeIter& rIter, int col) const = 0;
+    virtual void set_text_align(const TreeIter& rIter, double fAlign, int col) = 0;
     virtual void set_toggle(const TreeIter& rIter, TriState bOn, int col) = 0;
     virtual TriState get_toggle(const TreeIter& rIter, int col) const = 0;
     virtual OUString get_text(const TreeIter& rIter, int col = -1) const = 0;
