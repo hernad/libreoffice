@@ -14,8 +14,13 @@ function mklink() {
  $MKLINK `cygpath -w instdir/program/$FILE` `cygpath -w $SRC_DIR/$FILE` 
 }
 
-
-SRC_DIR=c:/dev/vcpkg/installed/x86-windows/bin
+if [ $BUILD_ARCH = "x64" ] ; then
+  SRC_DIR=c:/dev/vcpkg/installed/x64-windows/bin
+  BOOST_ARCH=x64
+else
+  SRC_DIR=c:/dev/vcpkg/installed/x86-windows/bin
+  BOOST_ARCH=x32
+fi
 MKLINK="cmd /c mklink"
 
 # c:\dev\libreoffice-core-meson\instdir\program>c:\dev\Listdlls.exe soffice.bin | grep vcpkg
@@ -39,9 +44,9 @@ for FILE in  zlib1.dll \
              libxml2.dll \
              expat.dll \
              libcharset.dll \
-             boost_locale-vc142-mt-x32-1_72.dll \
-             boost_filesystem-vc142-mt-x32-1_72.dll \
-             boost_iostreams-vc142-mt-x32-1_72.dll \
+             boost_locale-vc142-mt-$BOOST_ARCH-1_72.dll \
+             boost_filesystem-vc142-mt-$BOOST_ARCH-1_72.dll \
+             boost_iostreams-vc142-mt-$BOOST_ARCH-1_72.dll \
              icuin65.dll \
              icuuc65.dll \
              icudt65.dll \

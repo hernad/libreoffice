@@ -2,6 +2,9 @@
 
 #ENVARS_ONLY=0 MAKE_ONLY=1 PARALLELISM=8 scripts/build_lo_release.sh
 
+#64bit
+#BUILD_ARCH=x64 ENVARS_ONLY=0 MAKE_ONLY=0 PARALLELISM=8 scripts/build_lo_release.sh
+
 #C:\dev\vcpkg>cl -Bv
 
 #C:\dev\vcpkg>cat triplets/x86-windows.cmake
@@ -13,9 +16,31 @@
 #THEME=colibre_svg
 THEME=sukapura_svg
 
-ENABLE_64_BIT=
-#ENABLE_64_BIT=--enable-64-bit
-export VCPKG_DIR=c:/dev/vcpkg/installed/x86-windows
+
+#https://github.com/boostorg/uuid/issues/68
+export VCPKG_BOOST_BUILD_LIB="vc140"  # VS 2019
+
+if [ "$BUILD_ARCH" == "x64" ] ; then
+
+  ENABLE_64_BIT=--enable-64-bit
+  export PYTHON_VERSION="3.7.3"
+  export VCPKG_DIR=c:/dev/vcpkg/installed/x64-windows
+  export PYTHON=C:/dev/vcpkg/downloads/tools/python/python-3.7.3-x64/python.exe
+  export PYTHON_CFLAGS="-I$VCPKG_DIR/include/python3.7"
+  export PYTHON_LIBS="$LDFLAGS python37.lib"
+
+else
+  ENABLE_64_BIT=
+  export VCPKG_DIR=c:/dev/vcpkg/installed/x86-windows
+  export PYTHON_DIR=c:/dev/Python37-32
+  export PYTHON=$PYTHON_DIR/python.exe
+  export PYTHON_CFLAGS="-I$PYTHON_DIR/include"
+  export PYTHON_LIBS="$LDFLAGS -LIBPATH:$PYTHON_DIR/libs python37.lib"
+  export PYTHON_VERSION="3.7.7"
+fi
+
+export LIBPATH="$VCPKG_DIR/lib"
+export LDFLAGS="-LIBPATH:$LIBPATH"
 
 # gb_LinkTarget__command => link.exe ...
 
@@ -38,8 +63,7 @@ SKIA=--disable-skia
 # => build-error
 # dllmgr-x64.o : error LNK2019: unresolved external symbol "public: static bool __cdecl SbiRuntime::isVBAEnabled(void)" (?isVBAEnabled@SbiRuntime@@SA_NXZ) referenced in function "class ErrCode __cdecl `anonymous namespace'::marshal(bool,class SbxVariable *,bool,class std::vector<char,class std::allocator<char> > &,unsigned __int64,class A0x3147681c::MarshalData &)" ....
 
-export LIBPATH="$VCPKG_DIR/lib"
-export LDFLAGS="-LIBPATH:$LIBPATH"
+
 export CURL_CFLAGS="-I$VCPKG_DIR/include" 
 export CURL_LIBS="libcurl.lib"
 
@@ -86,22 +110,18 @@ export CXXFLAGS="-I$VCPKG_DIR/include"
 #export LIBS="$ICU_LIBS"
 
 
-export PYTHON_DIR=c:/dev/Python37-32
-export PYTHON=$PYTHON_DIR/python.exe
-export PYTHON_CFLAGS="-I$PYTHON_DIR/include"
-export PYTHON_LIBS="$LDFLAGS -LIBPATH:$PYTHON_DIR/libs python37.lib"
-export PYTHON_VERSION="3.7.7"
 
 export BOOST_CPPFLAGS="-I$VCPKG_DIR/include"
 export BOOST_CXXFLAGS=$BOOST_CPPFLAGS
 export BOOST_LDFLAGS=""
 
-#https://github.com/boostorg/uuid/issues/68
-export BOOST_LOCALE_LIB="bcrypt.lib boost_locale-vc140-mt.lib"
-export BOOST_DATE_TIME_LIB="bcrypt.lib boost_date_time-vc140-mt.lib"
-export BOOST_FILESYSTEM_LIB="bcrypt.lib boost_filesystem-vc140-mt.lib"
-export BOOST_IOSTREAMS_LIB="bcrypt.lib boost_iostreams-vc140-mt.lib"
-export BOOST_SYSTEM_LIB="bcrypt.lib boost_system-vc140-mt.lib"
+
+
+export BOOST_LOCALE_LIB="bcrypt.lib boost_locale-$VCPKG_BOOST_BUILD_LIB-mt.lib"
+export BOOST_DATE_TIME_LIB="bcrypt.lib boost_date_time-$VCPKG_BOOST_BUILD_LIB-mt.lib"
+export BOOST_FILESYSTEM_LIB="bcrypt.lib boost_filesystem-$VCPKG_BOOST_BUILD_LIB-mt.lib"
+export BOOST_IOSTREAMS_LIB="bcrypt.lib boost_iostreams-$VCPKG_BOOST_BUILD_LIB-mt.lib"
+export BOOST_SYSTEM_LIB="bcrypt.lib boost_system-$VCPKG_BOOST_BUILD_LIB-mt.lib"
 
 echo PYTHON_CFLAGS=$PYTHON_CFLAGS, PYTHON_LIBS=$PYTHON_LIBS
 
@@ -132,7 +152,7 @@ export PATH=$PATH:/usr/sbin
 if [ "$ENVARS_ONLY" == "0" ] && [ "$MAKE_ONLY" == "0" ]; then
 
 make clean
-rm config_host.mk
+rm -f config_host.mk
 
 
 ./autogen.sh --with-lang="bs" \
@@ -172,12 +192,7 @@ rm config_host.mk
     --with-system-icu=yes \
     --with-system-icu-for-build=force \
     --enable-python=system \
-    --with-system-boost \
-    --with-boost-libdir=$VCPKG_DIR/lib \
-    --with-boost-locale=boost_locale-vc140-mt.lib \
-    --with-boost-date-time=boost_date_time-vc140-mt.lib \
-    --with-boost-filesystem=boost_iostreams-vc140-mt.lib \
-    --with-boost-system=boost_system-vc140-mt.lib
+    --with-system-boost
     
 #--with-system-xmlsec=yes 
 
