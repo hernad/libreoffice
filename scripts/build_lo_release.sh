@@ -13,8 +13,9 @@
 #set(VCPKG_LIBRARY_LINKAGE dynamic)
 #set(VCPKG_PLATFORM_TOOLSET v142)
 
-#THEME=colibre_svg
-THEME=sukapura_svg
+THEME=colibre
+#THEME=sukapura_svg
+#THEME=sukapura
 
 
 #https://github.com/boostorg/uuid/issues/68
@@ -44,8 +45,8 @@ export LDFLAGS="-LIBPATH:$LIBPATH"
 
 # gb_LinkTarget__command => link.exe ...
 
-SKIA=--disable-skia
-#SKIA=
+#SKIA=--disable-skia
+SKIA=
 
 # --disable-avmedia => build error
 # C:/dev/libreoffice-core-meson/avmedia/source/avmediadummy.cxx(30): warning C4273: 'avmedia::MediaItem::MediaItem': inconsistent dll linkage
@@ -162,8 +163,8 @@ rm -f config_host.mk
     --with-visual-studio=2019 \
     --without-doxygen \
     --without-java \
-    --with-product-name="LO_Ziher"\
-    --with-package-version='7.0.0.25'\
+    --with-product-name="ZiherO"\
+    --with-package-version='7.0.0.30'\
     --enable-release-build \
     --disable-scripting-beanshell \
     --disable-scripting-javascript \
@@ -196,7 +197,7 @@ rm -f config_host.mk
     
 #--with-system-xmlsec=yes 
 
-
+tar xvf workdir_UnpacketTarBall.tar.gz
 
 # Directory of C:\dev\vcpkg\installed\x86-windows\lib
 #
