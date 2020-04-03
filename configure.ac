@@ -1074,10 +1074,6 @@ libo_FUZZ_ARG_ENABLE(pdfium,
         [Disable building PDFium.])
 )
 
-libo_FUZZ_ARG_ENABLE(skia,
-    AS_HELP_STRING([--disable-skia],
-        [Disable building Skia.])
-)
 
 ###############################################################################
 
@@ -8553,9 +8549,12 @@ dnl AC_SUBST(CLUCENE_LIBS)
 dnl ===================================================================
 dnl Check for system expat
 dnl ===================================================================
-if test $build_os = cygwin; then
+if test $build_os = cygwin -a "$with_system_expat" = "yes"; then
     SYSTEM_EXPAT=TRUE
     AC_MSG_CHECKING([cygwin EXPAT external])
+    AC_SUBST(EXPAT_CFLAGS)
+    AC_SUBST(EXPAT_LIBS)
+
 else
     libo_CHECK_SYSTEM_MODULE([expat], [EXPAT], [expat])
 fi
@@ -8578,24 +8577,16 @@ else
 fi
 AC_SUBST([ENABLE_EOT])
 
-dnl ===================================================================
-dnl Check for DLP libs
-dnl ===================================================================
-AS_IF([test "$COM" = "MSC"],
-      [librevenge_libdir="${WORKDIR}/LinkTarget/Library"],
-      [librevenge_libdir="${WORKDIR}/UnpackedTarball/librevenge/src/lib/.libs"]
-)
-libo_CHECK_SYSTEM_MODULE([librevenge],[REVENGE],[librevenge-0.0 >= 0.0.1],["-I${WORKDIR}/UnpackedTarball/librevenge/inc"],["-L${librevenge_libdir} -lrevenge-0.0"])
 
-libo_CHECK_SYSTEM_MODULE([libodfgen],[ODFGEN],[libodfgen-0.1])
+dnl libo_CHECK_SYSTEM_MODULE([libodfgen],[ODFGEN],[libodfgen-0.1])
 
-libo_CHECK_SYSTEM_MODULE([libepubgen],[EPUBGEN],[libepubgen-0.1])
+dnl libo_CHECK_SYSTEM_MODULE([libepubgen],[EPUBGEN],[libepubgen-0.1])
 
-AS_IF([test "$COM" = "MSC"],
-      [libwpd_libdir="${WORKDIR}/LinkTarget/Library"],
-      [libwpd_libdir="${WORKDIR}/UnpackedTarball/libwpd/src/lib/.libs"]
-)
-libo_CHECK_SYSTEM_MODULE([libwpd],[WPD],[libwpd-0.10],["-I${WORKDIR}/UnpackedTarball/libwpd/inc"],["-L${libwpd_libdir} -lwpd-0.10"])
+dnl AS_IF([test "$COM" = "MSC"],
+dnl       [libwpd_libdir="${WORKDIR}/LinkTarget/Library"],
+dnl       [libwpd_libdir="${WORKDIR}/UnpackedTarball/libwpd/src/lib/.libs"]
+dnl )
+dnl libo_CHECK_SYSTEM_MODULE([libwpd],[WPD],[libwpd-0.10],["-I${WORKDIR}/UnpackedTarball/libwpd/inc"],["-L${libwpd_libdir} -lwpd-0.10"])
 
 dnl ========= WordPerfect graphics filter OFF ========================
 dnl libo_CHECK_SYSTEM_MODULE([libwpg],[WPG],[libwpg-0.3])
@@ -8605,11 +8596,11 @@ dnl libo_CHECK_SYSTEM_MODULE([libwps],[WPS],[libwps-0.4])
 dnl libo_PKG_VERSION([WPS], [libwps-0.4], [0.4.10])
 dnl ========================================================================
 
-libo_CHECK_SYSTEM_MODULE([libvisio],[VISIO],[libvisio-0.1])
+dnl libo_CHECK_SYSTEM_MODULE([libvisio],[VISIO],[libvisio-0.1])
 
-libo_CHECK_SYSTEM_MODULE([libcdr],[CDR],[libcdr-0.1])
+dnl libo_CHECK_SYSTEM_MODULE([libcdr],[CDR],[libcdr-0.1])
 
-libo_CHECK_SYSTEM_MODULE([libmspub],[MSPUB],[libmspub-0.1])
+dnl libo_CHECK_SYSTEM_MODULE([libmspub],[MSPUB],[libmspub-0.1])
 
 dnl ====================MWAW - old Macintosh formats OFF ======================
 dnl libo_CHECK_SYSTEM_MODULE([libmwaw],[MWAW],[libmwaw-0.3 >= 0.3.1])
@@ -8622,19 +8613,19 @@ dnl libo_CHECK_SYSTEM_MODULE([libetonyek],[ETONYEK],[libetonyek-0.1])
 dnl libo_PKG_VERSION([ETONYEK], [libetonyek-0.1], [0.1.8])
 dnl =====================================================================================
 
-libo_CHECK_SYSTEM_MODULE([libfreehand],[FREEHAND],[libfreehand-0.1])
+dnl libo_CHECK_SYSTEM_MODULE([libfreehand],[FREEHAND],[libfreehand-0.1])
 
 dnl ====================EBOOK OFF ======================
 dnl libo_CHECK_SYSTEM_MODULE([libebook],[EBOOK],[libe-book-0.1])
 dnl libo_PKG_VERSION([EBOOK], [libe-book-0.1], [0.1.2])
 
-libo_CHECK_SYSTEM_MODULE([libabw],[ABW],[libabw-0.1])
+dnl libo_CHECK_SYSTEM_MODULE([libabw],[ABW],[libabw-0.1])
 
-libo_CHECK_SYSTEM_MODULE([libpagemaker],[PAGEMAKER],[libpagemaker-0.0])
+dnl libo_CHECK_SYSTEM_MODULE([libpagemaker],[PAGEMAKER],[libpagemaker-0.0])
 
-libo_CHECK_SYSTEM_MODULE([libqxp],[QXP],[libqxp-0.0])
+dnl libo_CHECK_SYSTEM_MODULE([libqxp],[QXP],[libqxp-0.0])
 
-libo_CHECK_SYSTEM_MODULE([libzmf],[ZMF],[libzmf-0.0])
+dnl libo_CHECK_SYSTEM_MODULE([libzmf],[ZMF],[libzmf-0.0])
 
 dnl ====================STAROFFICE OFF ======================
 dnl libo_CHECK_SYSTEM_MODULE([libstaroffice],[STAROFFICE],[libstaroffice-0.0])
@@ -13293,7 +13284,6 @@ AC_CONFIG_HEADERS([config_host/config_mpl.h])
 AC_CONFIG_HEADERS([config_host/config_oox.h])
 AC_CONFIG_HEADERS([config_host/config_options.h])
 AC_CONFIG_HEADERS([config_host/config_options_calc.h])
-AC_CONFIG_HEADERS([config_host/config_skia.h])
 AC_CONFIG_HEADERS([config_host/config_typesizes.h])
 AC_CONFIG_HEADERS([config_host/config_vendor.h])
 AC_CONFIG_HEADERS([config_host/config_vcl.h])

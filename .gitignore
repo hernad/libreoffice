@@ -178,3 +178,4 @@ LibreOffice.VC.VC.opendb
 
 # vim-ide-integration
 /compile_commands.json
+build.log
