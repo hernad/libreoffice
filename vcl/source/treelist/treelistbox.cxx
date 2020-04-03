@@ -784,11 +784,6 @@ void SvTreeListBox::FillEntryPath( SvTreeListEntry* pEntry, ::std::deque< sal_In
     }
 }
 
-const SvTreeListEntry* SvTreeListBox::GetParent( const SvTreeListEntry* pEntry ) const
-{
-    return pModel->GetParent(pEntry);
-}
-
 SvTreeListEntry* SvTreeListBox::GetParent( SvTreeListEntry* pEntry ) const
 {
     return pModel->GetParent(pEntry);
@@ -1081,8 +1076,7 @@ sal_Int8 SvTreeListBox::AcceptDrop( const AcceptDropEvent& rEvt )
                     && DND_ACTION_MOVE == rEvt.mnAction
                     && (pEntry->nEntryFlags & SvTLEntryFlags::DISABLE_DROP)))
             {
-                if( NotifyAcceptDrop( pEntry ))
-                    nRet = rEvt.mnAction;
+                nRet = rEvt.mnAction;
             }
         }
 
@@ -1243,11 +1237,6 @@ DragDropMode SvTreeListBox::NotifyStartDrag( TransferDataContainer&, SvTreeListE
     return DragDropMode(0xffff);
 }
 
-bool SvTreeListBox::NotifyAcceptDrop( SvTreeListEntry* )
-{
-    return true;
-}
-
 // Handler and methods for Drag - finished handler.
 // The with get GetDragFinishedHdl() get link can set on the
 // TransferDataContainer. This link is a callback for the DragFinished
@@ -1329,16 +1318,6 @@ void SvTreeListBox::InitTreeView()
     SetTabs();
 }
 
-OUString SvTreeListBox::GetEntryAltText( SvTreeListEntry* ) const
-{
-    return OUString();
-}
-
-OUString SvTreeListBox::GetEntryLongDescription( SvTreeListEntry* ) const
-{
-    return OUString();
-}
-
 OUString SvTreeListBox::SearchEntryTextWithHeadTitle( SvTreeListEntry* pEntry )
 {
     assert(pEntry);
@@ -1409,11 +1388,6 @@ void SvTreeListBox::SetSublistOpenWithReturn()
 void SvTreeListBox::SetSublistOpenWithLeftRight()
 {
     pImpl->m_bSubLstOpLR = true;
-}
-
-void SvTreeListBox::SetSublistDontOpenWithDoubleClick(bool bDontOpen)
-{
-    pImpl->m_bSubLstOpDblClick = !bDontOpen;
 }
 
 void SvTreeListBox::Resize()
@@ -3408,11 +3382,6 @@ ScrollBar *SvTreeListBox::GetVScroll()
     return pImpl->m_aVerSBar.get();
 }
 
-void SvTreeListBox::EnableAsyncDrag( bool b )
-{
-    pImpl->EnableAsyncDrag( b );
-}
-
 SvTreeListEntry* SvTreeListBox::GetFirstEntryInView() const
 {
     return GetEntry( Point() );
@@ -3429,19 +3398,6 @@ SvTreeListEntry* SvTreeListBox::GetNextEntryInView(SvTreeListEntry* pEntry ) con
             return nullptr;
     }
     return pNext;
-}
-
-SvTreeListEntry* SvTreeListBox::GetPrevEntryInView(SvTreeListEntry* pEntry ) const
-{
-    SvTreeListEntry* pPrev = PrevVisible( pEntry );
-    if( pPrev )
-    {
-        Point aPos( GetEntryPosition(pPrev) );
-        const Size& rSize = pImpl->GetOutputSize();
-        if( aPos.Y() < 0 || aPos.Y() >= rSize.Height() )
-            return nullptr;
-    }
-    return pPrev;
 }
 
 SvTreeListEntry* SvTreeListBox::GetLastEntryInView() const

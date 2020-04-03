@@ -787,16 +787,6 @@ SvTreeListEntry* SvTreeList::NextSelected( const SvListView* pView, SvTreeListEn
     return pEntry;
 }
 
-SvTreeListEntry* SvTreeList::PrevSelected( const SvListView* pView, SvTreeListEntry* pEntry) const
-{
-    DBG_ASSERT(pView&&pEntry,"PrevSel:View/Entry?");
-    pEntry = Prev( pEntry );
-    while( pEntry && !pView->IsSelected(pEntry) )
-        pEntry = Prev( pEntry );
-
-    return pEntry;
-}
-
 SvTreeListEntry* SvTreeList::LastSelected( const SvListView* pView ) const
 {
     DBG_ASSERT(pView,"LastSel:No View");
@@ -1365,10 +1355,10 @@ bool SvListView::IsAllExpanded( SvTreeListEntry* pEntry ) const
     return true;
 }
 
-bool SvListView::IsSelected( SvTreeListEntry* pEntry ) const
+bool SvListView::IsSelected(const SvTreeListEntry* pEntry) const
 {
     DBG_ASSERT(pEntry,"IsExpanded:No Entry");
-    SvDataTable::const_iterator itr = m_pImpl->m_DataTable.find(pEntry);
+    SvDataTable::const_iterator itr = m_pImpl->m_DataTable.find(const_cast<SvTreeListEntry*>(pEntry));
     if (itr == m_pImpl->m_DataTable.end())
         return false;
     return itr->second->IsSelected();

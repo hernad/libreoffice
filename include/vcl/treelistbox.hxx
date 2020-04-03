@@ -373,7 +373,6 @@ public:
     void            FillEntryPath( SvTreeListEntry* pEntry, ::std::deque< sal_Int32 >& _rPath ) const;
 
     using Window::GetParent;
-    const SvTreeListEntry* GetParent( const SvTreeListEntry* pEntry ) const;
     SvTreeListEntry* GetParent( SvTreeListEntry* pEntry ) const;
     SvTreeListEntry*    GetRootLevelParent(SvTreeListEntry* pEntry ) const;
 
@@ -455,7 +454,6 @@ public:
     virtual DragDropMode     NotifyStartDrag( TransferDataContainer& rData,
                                          SvTreeListEntry* );
     virtual void             DragFinished( sal_Int8 nDropAction );
-    virtual bool             NotifyAcceptDrop( SvTreeListEntry* );
 
     SvTreeListEntry*         CloneEntry( SvTreeListEntry* pSource );
 
@@ -467,7 +465,7 @@ public:
         sal_uLong&        rNewChildPos); // The TargetParent's position in Childlist
 
     // Return value: TRISTATE_TRUE == Ok, TRISTATE_FALSE == Cancel, TRISTATE_INDET == Ok and Make visible moved entry
-    virtual TriState    NotifyCopying(
+    TriState    NotifyCopying(
         SvTreeListEntry*  pTarget,       // D'n'D DropPosition in GetModel()
         SvTreeListEntry*  pEntry,        // Entry to be copied from GetSourceListBox()->GetModel()
         SvTreeListEntry*& rpNewParent,   // New TargetParent
@@ -490,8 +488,6 @@ public:
     SvTreeFlags         GetTreeFlags() const {return nTreeFlags;}
 
     static OUString     SearchEntryTextWithHeadTitle(SvTreeListEntry* pEntry);
-    virtual OUString    GetEntryAltText(SvTreeListEntry* pEntry) const;
-    virtual OUString    GetEntryLongDescription(SvTreeListEntry* pEntry) const;
 
     void set_min_width_in_chars(sal_Int32 nChars);
 
@@ -610,7 +606,6 @@ public:
 
     void            SetSublistOpenWithReturn();      // open/close sublist with return/enter
     void            SetSublistOpenWithLeftRight();   // open/close sublist with cursor left/right
-    void            SetSublistDontOpenWithDoubleClick( bool bDontOpen ); // set mouse double click open/close sublist behavior
 
     void            EnableInplaceEditing( bool bEnable );
     // Edits the Entry's first StringItem, 0 == Cursor
@@ -667,7 +662,7 @@ public:
 
     virtual tools::Rectangle GetFocusRect(const SvTreeListEntry*, long nLine );
     // Respects indentation
-    virtual sal_IntPtr GetTabPos(const SvTreeListEntry*, SvLBoxTab*);
+    sal_IntPtr      GetTabPos(const SvTreeListEntry*, SvLBoxTab*);
     void            InvalidateEntry( SvTreeListEntry* );
     SvLBoxItem*     GetItem( SvTreeListEntry*, long nX, SvLBoxTab** ppTab);
     SvLBoxItem*     GetItem( SvTreeListEntry*, long nX );
@@ -701,11 +696,9 @@ public:
 
     void            EndSelection();
     ScrollBar*      GetVScroll();
-    void            EnableAsyncDrag( bool b );
 
     SvTreeListEntry*    GetFirstEntryInView() const;
     SvTreeListEntry*    GetNextEntryInView(SvTreeListEntry*) const;
-    SvTreeListEntry*    GetPrevEntryInView(SvTreeListEntry*) const;
     SvTreeListEntry*    GetLastEntryInView() const;
     void            ScrollToAbsPos( long nPos );
 
