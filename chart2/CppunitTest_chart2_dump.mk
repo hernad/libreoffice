@@ -119,7 +119,6 @@ $(eval $(call gb_CppunitTest_use_components,chart2_dump,\
     unotools/util/utl \
     unoxml/source/rdf/unordf \
     unoxml/source/service/unoxml \
-    writerfilter/util/writerfilter \
     xmloff/util/xo \
 ))
 

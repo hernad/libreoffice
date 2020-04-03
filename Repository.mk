@@ -373,7 +373,7 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,ooo, \
 	fwm \
 	$(if $(filter WNT,$(OS)),gdipluscanvas) \
 	guesslang \
-	$(if $(filter DESKTOP,$(BUILD_TYPE)),helplinker) \
+	$(if $(filter HELP,$(BUILD_TYPE)),helplinker) \
 	i18npool \
 	i18nsearch \
     gie \
@@ -451,7 +451,6 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,ooo, \
 	) \
 	vcl \
 	vclcanvas \
-	writerperfect \
 	xmlscript \
 	xmlfa \
 	xmlfd \
@@ -521,7 +520,6 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,writer, \
 	t602filter \
 	$(call gb_Helper_optional,SCRIPTING,vbaswobj) \
 	wpftwriter \
-	writerfilter \
 	$(call gb_Helper_optional,DBCONNECTIVITY,writer) \
 ))
 
@@ -919,7 +917,7 @@ $(eval $(call gb_Helper_register_packages_for_install,ooo,\
 	$(if $(filter $(OS),MACOSX),vcl_osxres) \
 	xmloff_dtd \
 	xmlscript_dtd \
-	xmlhelp_helpxsl \
+	$(if $(filter HELP,$(BUILD_TYPE)),xmlhelp_helpxsl) \
 	$(if $(ENABLE_JAVA),\
 		scripting_java \
 		scripting_java_jars \
@@ -1173,7 +1171,6 @@ $(eval $(call gb_Helper_register_uiconfigs,\
 	svx \
 	uui \
 	vcl \
-	writerperfect \
 	$(if $(ENABLE_NSS),xmlsec) \
 ))
 

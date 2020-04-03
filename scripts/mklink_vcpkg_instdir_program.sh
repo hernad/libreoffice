@@ -10,8 +10,12 @@
 
 function mklink() {
  echo $MKLINK `cygpath -w instdir/program/$FILE` `cygpath -w $SRC_DIR/$FILE`
- rm -f `cygpath -w instdir/program/$FILE`
- $MKLINK `cygpath -w instdir/program/$FILE` `cygpath -w $SRC_DIR/$FILE` 
+ #rm -f `cygpath -w instdir/program/$FILE`
+ if [ ! -f `cygpath -w instdir/program/$FILE` ] ; then
+ $MKLINK `cygpath -w instdir/program/$FILE` `cygpath -w $SRC_DIR/$FILE`
+ else
+    echo "$(cygpath -w instdir/program/$FILE) exists!"
+  fi
 }
 
 if [ $BUILD_ARCH = "x64" ] ; then

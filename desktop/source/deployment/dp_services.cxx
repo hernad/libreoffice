@@ -34,7 +34,7 @@ SAL_DLLPUBLIC_EXPORT void * deployment_component_getFactory(
         pImplName,
         {&dp_registry::backend::configuration::serviceDecl,
          &dp_registry::backend::component::serviceDecl,
-         &dp_registry::backend::help::serviceDecl,
+         //&dp_registry::backend::help::serviceDecl,
          &dp_registry::backend::script::serviceDecl,
          &dp_registry::backend::sfwk::serviceDecl,
          &dp_registry::backend::executable::serviceDecl,

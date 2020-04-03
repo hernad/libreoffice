@@ -11,7 +11,6 @@ $(eval $(call gb_Executable_Executable,HelpIndexer))
 
 $(eval $(call gb_Executable_use_libraries,HelpIndexer,\
     sal \
-	helplinker \
 ))
 
 $(eval $(call gb_Executable_use_externals,HelpIndexer,\

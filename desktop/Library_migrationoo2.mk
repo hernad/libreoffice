@@ -13,6 +13,10 @@ $(eval $(call gb_Library_use_external,migrationoo2,boost_headers))
 
 $(eval $(call gb_Library_use_sdk_api,migrationoo2))
 
+$(eval $(call gb_Library_use_externals,migrationoo2,\
+	expat \
+))
+
 $(eval $(call gb_Library_use_libraries,migrationoo2,\
     cppu \
     cppuhelper \

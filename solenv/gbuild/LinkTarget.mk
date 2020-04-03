@@ -540,7 +540,7 @@ gb_LinkTarget_DEFAULTDEFS := $(gb_GLOBALDEFS)
 
 .PHONY : $(WORKDIR)/Clean/LinkTarget/%
 $(WORKDIR)/Clean/LinkTarget/% :
-	$(call gb_Output_announce,$(LINKTARGETMAKEFILENAME),$(false),LNK,4)
+	$(call gb_Output_announce,$(LINKTARGETMAKEFILENAME),$(false),LNKLO,4)
 	RESPONSEFILE=$(call var2file,$(shell $(gb_MKTEMP)),200,\
 		$(foreach object,$(COBJECTS),$(call gb_CObject_get_target,$(object))) \
 		$(foreach object,$(COBJECTS),$(call gb_CObject_get_dep_target,$(object))) \
@@ -584,7 +584,7 @@ $(WORKDIR)/Clean/LinkTarget/% :
 # cat the deps of all objects in one file, then we need only open that one file
 # call gb_LinkTarget__command_dep,dep_target,linktargetname
 define gb_LinkTarget__command_dep
-$(call gb_Output_announce,LNK:$(2),$(true),DEP,1)
+$(call gb_Output_announce,LNKLO:$(2),$(true),DEP,1)
 $(call gb_Helper_abbreviate_dirs,\
 	mkdir -p $(dir $(1)) && \
 	RESPONSEFILE=$(call var2file,$(shell $(gb_MKTEMP)),200,\

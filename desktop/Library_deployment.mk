@@ -60,8 +60,6 @@ $(eval $(call gb_Library_add_exception_objects,deployment,\
     desktop/source/deployment/registry/dp_registry \
     desktop/source/deployment/registry/executable/dp_executable \
     desktop/source/deployment/registry/executable/dp_executablebackenddb \
-    desktop/source/deployment/registry/help/dp_help \
-    desktop/source/deployment/registry/help/dp_helpbackenddb \
     desktop/source/deployment/registry/package/dp_extbackenddb \
     desktop/source/deployment/registry/package/dp_package \
     desktop/source/deployment/registry/script/dp_lib_container \
@@ -71,12 +69,12 @@ $(eval $(call gb_Library_add_exception_objects,deployment,\
     desktop/source/deployment/registry/sfwk/dp_sfwk \
 ))
 
-ifneq (,$(filter DESKTOP,$(BUILD_TYPE)))
-
-$(eval $(call gb_Library_use_libraries,deployment,\
-    helplinker \
-))
-
-endif
+# ifneq (,$(filter DESKTOP,$(BUILD_TYPE)))
+# 
+# $(eval $(call gb_Library_use_libraries,deployment,\
+#     helplinker \
+# ))
+# 
+# endif
 
 # vim: set ts=4 sw=4 et:

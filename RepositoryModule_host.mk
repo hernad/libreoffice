@@ -67,8 +67,6 @@ $(eval $(call gb_Module_add_moduledirs,libreoffice,\
 	formula \
 	$(call gb_Helper_optional,DESKTOP,fpicker) \
 	framework \
-	$(call gb_Helper_optional,DESKTOP,helpcompiler) \
-	$(call gb_Helper_optional,HELP,helpcontent2) \
 	hwpfilter \
 	i18nlangtag \
 	i18npool \
@@ -157,10 +155,8 @@ $(eval $(call gb_Module_add_moduledirs,libreoffice,\
 	vcl \
 	winaccessibility \
 	wizards \
-	writerfilter \
-	writerperfect \
 	xmerge \
-	$(call gb_Helper_optional,DESKTOP,xmlhelp) \
+	$(call gb_Helper_optional,HELP,xmlhelp) \
 	xmloff \
 	xmlreader \
 	xmlscript \
@@ -195,7 +191,7 @@ $(eval $(call repositorymodule_serialize,\
 	$(call gb_Helper_optional,DESKTOP,swui) \
 	sw sd \
 	$(call gb_Helper_optional,DBCONNECTIVITY,dbu) \
-	writerfilter cui chartcontroller chartcore oox \
+	cui chartcontroller chartcore oox \
 	$(if $(MERGELIBS), merged, \
 		svx svxcore xo sfx fwk svt vcl) \
 ))

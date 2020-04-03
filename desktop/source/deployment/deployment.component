@@ -43,9 +43,11 @@
   <implementation name="com.sun.star.comp.deployment.executable.PackageRegistryBackend">
     <service name="com.sun.star.deployment.PackageRegistryBackend"/>
   </implementation>
+<!--
   <implementation name="com.sun.star.comp.deployment.help.PackageRegistryBackend">
     <service name="com.sun.star.deployment.PackageRegistryBackend"/>
   </implementation>
+-->
   <implementation name="com.sun.star.comp.deployment.script.PackageRegistryBackend">
     <service name="com.sun.star.deployment.PackageRegistryBackend"/>
   </implementation>

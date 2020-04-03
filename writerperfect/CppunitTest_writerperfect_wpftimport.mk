@@ -14,10 +14,10 @@ $(eval $(call gb_CppunitTest_set_include,writerperfect_wpftimport,\
 	$$(INCLUDE) \
 ))
 
-$(eval $(call gb_CppunitTest_use_externals,writerperfect_wpftimport,\
-	odfgen \
-	revenge \
-))
+#$(eval $(call gb_CppunitTest_use_externals,writerperfect_wpftimport,\
+#	odfgen \
+#	revenge \
+#))
 
 $(eval $(call gb_CppunitTest_use_sdk_api,writerperfect_wpftimport))
 

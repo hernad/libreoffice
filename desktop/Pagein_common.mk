@@ -59,7 +59,6 @@ $(eval $(call gb_Pagein_add_objects,common,\
     svt \
     spl \
     avmedia \
-    helplinker \
     sax \
     fsstorage \
     desktopbe1 \

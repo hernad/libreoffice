@@ -152,7 +152,6 @@ fuzzer_writer_libraries = \
     msword \
     sw \
     swd \
-    writerfilter \
     textfd \
     guesslang \
 

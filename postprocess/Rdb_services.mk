@@ -121,11 +121,6 @@ $(eval $(call gb_Rdb_add_components,services,\
 		sccomp/source/solver/lpsolvesolver \
 	) \
 	sccomp/source/solver/swarmsolver \
-	writerfilter/util/writerfilter \
-	writerperfect/source/draw/wpftdraw \
-	writerperfect/source/impress/wpftimpress \
-	writerperfect/source/writer/wpftwriter \
-	writerperfect/source/calc/wpftcalc \
 	$(if $(filter MACOSX,$(OS)), \
 		$(call gb_Helper_optional,AVMEDIA,avmedia/source/macavf/avmediaMacAVF) \
 		fpicker/source/aqua/fps_aqua \
@@ -301,7 +296,6 @@ $(eval $(call gb_Rdb_add_components,services,\
 	extensions/source/logging/log \
 	extensions/source/scanner/scn \
 	extensions/source/update/feed/updatefeed \
-	xmlhelp/util/ucpchelp1 \
 	$(if $(filter-out WNT,$(OS)),\
 		shell/source/cmdmail/cmdmail \
 	) \
