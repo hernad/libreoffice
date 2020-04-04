@@ -631,8 +631,8 @@ $(eval $(call gb_Helper_register_libraries_for_install,PLAINLIBS_OOO,ooo, \
 	ucphier1 \
 	ucppkg1 \
 	unopkgapp \
-	xmlsecurity \
-	xsec_xmlsec \
+	$(if $(ENABLE_NSS),xmlsecurity) \
+	$(if $(ENABLE_NSS),xsec_xmlsec) \
 	xstor \
 	$(if $(filter $(OS),MACOSX), \
 		macab1 \

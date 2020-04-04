@@ -158,7 +158,7 @@ $(eval $(call gb_Module_add_moduledirs,libreoffice,\
 	xmloff \
 	xmlreader \
 	xmlscript \
-	xmlsecurity \
+	$(if $(ENABLE_NSS),xmlsecurity) \
 ))
 
 # Especially when building everything with symbols, the linking of the largest

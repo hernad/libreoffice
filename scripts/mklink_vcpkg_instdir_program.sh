@@ -9,12 +9,16 @@
 
 
 function mklink() {
- echo $MKLINK `cygpath -w instdir/program/$FILE` `cygpath -w $SRC_DIR/$FILE`
- rm -f `cygpath -w instdir/program/$FILE`
- $MKLINK `cygpath -w instdir/program/$FILE` `cygpath -w $SRC_DIR/$FILE` 
+ #rm -f `cygpath -w instdir/program/$FILE`
+ if [ ! -f `cygpath -w instdir/program/$FILE` ] ; then
+    echo $MKLINK `cygpath -w instdir/program/$FILE` `cygpath -w $SRC_DIR/$FILE`
+    $MKLINK `cygpath -w instdir/program/$FILE` `cygpath -w $SRC_DIR/$FILE`
+ else
+    echo "EXISTS: $(cygpath -w instdir/program/$FILE)"
+  fi
 }
 
-if [ $BUILD_ARCH = "x64" ] ; then
+if [ "$BUILD_ARCH" = "x64" ] ; then
   SRC_DIR=c:/dev/vcpkg/installed/x64-windows/bin
   BOOST_ARCH=x64
 else

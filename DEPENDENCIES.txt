@@ -1,0 +1,29 @@
+
+
+nss
+-------
+
+used by:
+curl
+xmlsec
+postgresql
+
+
+xmlsec
+----------------
+
+
+XML Security Library is a C library based on LibXML2. The library supports major XML security standards:
+
+XML Signature
+XML Encryption
+Canonical XML (part of the LibXML2)
+Exclusive Canonical XML (part of the LibXML2)
+XML Security Library is released under the MIT Licence see the Copyright file in the distribution for details.
+
+
+used by:
+---------------
+xmlsecurity
+
+if config_host.mk/ENABLE_NSS=TRUE

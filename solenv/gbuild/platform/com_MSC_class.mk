@@ -527,7 +527,7 @@ endif
 gb_WinResTarget_POSTFIX :=.res
 
 define gb_WinResTarget__command
-$(call gb_Output_announce,$(2),$(true),RC ,1)
+$(call gb_Output_announce,$(2),$(true),WINRC ,1)
 $(call gb_Helper_abbreviate_dirs,\
 	mkdir -p $(dir $(1)) && \
 	$(gb_RC) \
@@ -545,8 +545,8 @@ ifeq ($(gb_FULLDEPS),$(true))
 # FIXME this is used before TargetLocations is read?
 gb_WinResTarget__command_target = $(WORKDIR)/LinkTarget/Executable/makedepend.exe
 define gb_WinResTarget__command_dep
-$(call gb_Output_announce,RC:$(2),$(true),DEP,1)
-	$(call gb_Trace_StartRange,RC:$(2),DEP)
+$(call gb_Output_announce,WINRC:$(2),$(true),DEP,1)
+	$(call gb_Trace_StartRange,WINRC:$(2),DEP)
 $(call gb_Helper_abbreviate_dirs,\
 	mkdir -p $(dir $(1)) && \
 	$(call gb_Executable_get_target,makedepend) \
@@ -556,7 +556,7 @@ $(call gb_Helper_abbreviate_dirs,\
 		-o .res \
 		-p $(dir $(3)) \
 		-f $(1))
-	$(call gb_Trace_EndRange,RC:$(2),DEP)
+	$(call gb_Trace_EndRange,WINRC:$(2),DEP)
 endef
 else
 gb_WinResTarget__command_target =

@@ -17,7 +17,7 @@ THEME=colibre
 #THEME=sukapura_svg
 
 LO_PRODUCT_NAME=ZiherO
-LO_PRODUCT_VERSION=6.4.3.30
+LO_PRODUCT_VERSION=7.0.0.100
 
 
 #https://github.com/boostorg/uuid/issues/68
@@ -31,7 +31,7 @@ if [ "$BUILD_ARCH" == "x64" ] ; then
   export VCPKG_DIR=c:/dev/vcpkg/installed/x64-windows
   export PYTHON=C:/dev/vcpkg/downloads/tools/python/python-3.7.3-x64/python.exe
   export PYTHON_CFLAGS="-I$VCPKG_DIR/include/python3.7"
-  export PYTHON_LIBS="python37.lib"
+  export PYTHON_LIBS="$VCPKG_DIR/lib/python37.lib"
 
 else
   ENABLE_64_BIT=
@@ -39,7 +39,7 @@ else
   export PYTHON_DIR=c:/dev/Python37-32
   export PYTHON=$PYTHON_DIR/python.exe
   export PYTHON_CFLAGS="-I$PYTHON_DIR/include"
-  export PYTHON_LIBS="-LIBPATH:$PYTHON_DIR/libs python37.lib"
+  export PYTHON_LIBS="$PYTHON_DIR/libs/python37.lib"
   export PYTHON_VERSION="3.7.7"
 fi
 
@@ -66,20 +66,12 @@ fi
 # dllmgr-x64.o : error LNK2019: unresolved external symbol "public: static bool __cdecl SbiRuntime::isVBAEnabled(void)" (?isVBAEnabled@SbiRuntime@@SA_NXZ) referenced in function "class ErrCode __cdecl `anonymous namespace'::marshal(bool,class SbxVariable *,bool,class std::vector<char,class std::allocator<char> > &,unsigned __int64,class A0x3147681c::MarshalData &)" ....
 
 
-
 #export OPENSSL_CFLAGS="-I$VCPKG_DIR/include"
 #export OPENSSL_LIBS="$VCPKG_DIR/lib/libssl.lib $VCPKG_DIR/lib/libcrypto.lib"
-#
-
-#
-
-
 
 #export ICU_CFLAGS="-I$VCPKG_DIR/include"
 #export ICU_LIBS="$VCPKG_DIR/lib/icudt.lib $VCPKG_DIR/lib/icuin.lib $VCPKG_DIR/lib/icuio.lib $VCPKG_DIR/lib/icutu.lib $VCPKG_DIR/lib/icuuc.lib"
 #export ICU_VERSION="65.1"
-#
-
 
 
 #export BOOST_CPPFLAGS="-I$VCPKG_DIR/include"
@@ -104,12 +96,13 @@ fi
 
 #export LIBS="$ICU_LIBS"
 
-
-
 #--with-webdav=serf or --without-webdav
 #[Specify which library to use for webdav implementation.
 #         Possible values: "neon", "serf", "no". The default value is "neon".
 export WEBDAV="--with-webdav=no"
+
+#export TLS_METHOD="--with-tls=openssl"
+export TLS_METHOD="--with-tls=nss"
 
 #make basegfx.build
 #make comphelper.build
@@ -129,44 +122,52 @@ export PATH=$PATH:/usr/sbin
 [ -z "$ENVARS_ONLY" ] && ENVARS_ONLY=0
 [ -z "$PARALLELISM" ] && PARALLELISM=12
 [ -z "$WITH_VCPKG" ] && WITH_VCPKG=0  # WITH_VCPKG=0 => don't use vcpkg
+[ -z "$WITH_VCPKG_ZERO" ] && WITH_VCPKG_ZERO=1  # WITH_VCPKG=0 => don't use vcpkg
 
 if [ "$ENVARS_ONLY" == "0" ] && [ "$MAKE_ONLY" == "0" ]; then
 
 make clean
 #rm -f config_host.mk
 
-if [ "$WITH_VCPKG" == "1" ] ; then
-  SYSTEM=" --with-system-zlib=yes"
+WITH_SYSTEM=
+if [ "$WITH_VCPKG_ZERO" == "1" ] ; then
+  WITH_SYSTEM+=" --with-system-zlib=yes"
   export ZLIB_CFLAGS="-I$VCPKG_DIR/include"
   export ZLIB_LIBS="$VCPKG_DIR/lib/zlib.lib"
 
-  SYSTEM+=" --with-system-postgresql=yes"
-  export POSTGRESQL_CFLAGS="-I$VCPKG_DIR/include"
-  export POSTGRESQL_LIBS="libpq.lib libssl.lib libcrypto.lib"
+  WITH_SYSTEM+=" --with-system-curl=yes"
+  export CURL_CFLAGS="-I$VCPKG_DIR/include" 
+  export CURL_LIBS="$VCPKG_DIR/lib/libcurl.lib"
 
-  SYSTEM+=" --with-system-libxml=yes"
+  WITH_SYSTEM+=" --with-system-expat=yes"
+  export EXPAT_CFLAGS="-I$VCPKG_DIR/include"
+  export EXPAT_LIBS="$VCPKG_DIR/lib/expat.lib"
+  
+  WITH_SYSTEM+=" --with-system-libxml=yes"
   export LIBXML_CFLAGS="-I$VCPKG_DIR/include"
-  export LIBXML_LIBS="$VCPKG_DIR/lib/libxml2.lib"
+  export LIBXML_LIBS="-LIBPATH:$VCPKG_DIR/lib -L$VCPKG_DIR/lib libxml2.lib" 
   export LIBXSLT_CFLAGS="-I$VCPKG_DIR/include"
   export LIBXSLT_LIBS="$VCPKG_DIR/lib/libxslt.lib"
   export LIBEXSLT_CFLAGS="-I$VCPKG_DIR/include"
   export LIBEXSLT_LIBS="$VCPKG_DIR/lib/libexslt.lib"
 
-  SYSTEM+=" --with-system-curl=yes"
-  export CURL_CFLAGS="-I$VCPKG_DIR/include" 
-  export CURL_LIBS="libcurl.lib"
+  echo PYTHON_CFLAGS=$PYTHON_CFLAGS, PYTHON_LIBS=$PYTHON_LIBS
+  WITH_SYSTEM+=" --enable-python=system"
+fi
 
-  SYSTEM+=" --with-system-libpng=yes"
+if [ "$WITH_VCPKG" == "1" ] ; then
+  
+  WITH_SYSTEM+=" --with-system-postgresql=yes"
+  export POSTGRESQL_CFLAGS="-I$VCPKG_DIR/include"
+  export POSTGRESQL_LIBS="$VCPKG_DIR/lib/libpq.lib $VCPKG_DIR/lib/libssl.lib $VCPKG_DIR/lib/libcrypto.lib"
+
+ 
+  WITH_SYSTEM+=" --with-system-libpng=yes"
   export LIBPNG_CFLAGS="-I$VCPKG_DIR/include"
   export LIBPNG_LIBS="$VCPKG_DIR/lib/libpng16.lib"
 
-  SYSTEM+=" --with-system-expat=yes"
-  export EXPAT_CFLAGS="-I$VCPKG_DIR/include"
-  export EXPAT_LIBS="$VCPKG_DIR/lib/expat.lib"
-
-
   echo PYTHON_CFLAGS=$PYTHON_CFLAGS, PYTHON_LIBS=$PYTHON_LIBS
-  SYSTEM+=" --enable-python=system"
+  WITH_SYSTEM+=" --enable-python=system"
 
 
   export VCPKG_LIBPATH="$VCPKG_DIR/lib"
@@ -194,6 +195,7 @@ fi
 
 ./autogen.sh --with-lang="bs" \
    $ENABLE_64_BIT --with-locales="bs" \
+   $TLS_METHOD \
    --with-vendor="hernad" \
    --with-theme="$THEME" \
     --with-visual-studio=$VS_VERSION \
@@ -218,7 +220,7 @@ fi
     --disable-sdremote \
     --disable-sdremote-bluetooth \
     --disable-pdfimport \
-    --disable-extension-integration $WEBDAV $SYSTEM
+    --disable-extension-integration $WEBDAV $WITH_SYSTEM
 
 
 #    

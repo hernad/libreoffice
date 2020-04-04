@@ -8552,12 +8552,12 @@ dnl ===================================================================
 if test $build_os = cygwin -a "$with_system_expat" = "yes"; then
     SYSTEM_EXPAT=TRUE
     AC_MSG_CHECKING([cygwin EXPAT external])
-    AC_SUBST(EXPAT_CFLAGS)
-    AC_SUBST(EXPAT_LIBS)
-
 else
     libo_CHECK_SYSTEM_MODULE([expat], [EXPAT], [expat])
 fi
+AC_SUBST(EXPAT_CFLAGS)
+AC_SUBST(EXPAT_LIBS)
+AC_SUBST(LIBPATH)
 
 dnl ===================================================================
 dnl Check for system xmlsec
@@ -9718,6 +9718,7 @@ AC_SUBST(SYSTEM_OPENLDAP)
 dnl ===================================================================
 dnl Check for system NSS
 dnl ===================================================================
+
 if test $_os != iOS -a "$enable_fuzzers" != "yes"; then
     libo_CHECK_SYSTEM_MODULE([nss],[NSS],[nss >= 3.9.3 nspr >= 4.8])
     AC_DEFINE(HAVE_FEATURE_NSS)
