@@ -13,6 +13,26 @@
 #set(VCPKG_LIBRARY_LINKAGE dynamic)
 #set(VCPKG_PLATFORM_TOOLSET v142)
 
+
+# The __imp__ prefix appears whenever you are linking to a DLL. 
+# It does not appear when linking to statically linked libraries. 
+# Most likely the code is generated to be linked against a DLL import lib
+# but you have linked it with a static lib instead.
+# 
+# The prefix is added when you mark the imported function with __declspec(dllimport) 
+# - make sure your imports are not using this when not linking against a DLL.
+
+# dumpbin /all LinkTarget/Library/isax.lib | grep __imp_
+
+# hernad@XPS15-hernad /cygdrive/c/dev/vcpkg/installed/x64-windows/lib
+#$ dumpbin /all expat.lib  | grep _imp_XML_ParseBuffer
+#     2F00 __imp_XML_ParseBuffer
+#       14 __imp_XML_ParseBuffer
+
+# export EXPAT_LIBS=$(gb_SPACE)c:/dev/vcpkg/installed/x64-windows/lib/expat.lib
+#$ make sax.build OK (trazi dynamic expat.lib)
+
+
 THEME=colibre
 #THEME=sukapura_svg
 
@@ -24,11 +44,14 @@ LO_PRODUCT_VERSION=7.0.0.100
 export VCPKG_BOOST_BUILD_LIB="vc140"  # VS 2019
 export VS_VERSION="2019"
 
+
+
 if [ "$BUILD_ARCH" == "x64" ] ; then
 
   ENABLE_64_BIT=--enable-64-bit
   export PYTHON_VERSION="3.7.3"
   export VCPKG_DIR=c:/dev/vcpkg/installed/x64-windows
+  export VCPKG_STATIC_DIR=c:/dev/vcpkg/installed/x64-windows-static
   export PYTHON=C:/dev/vcpkg/downloads/tools/python/python-3.7.3-x64/python.exe
   export PYTHON_CFLAGS="-I$VCPKG_DIR/include/python3.7"
   export PYTHON_LIBS="$VCPKG_DIR/lib/python37.lib"
@@ -36,6 +59,7 @@ if [ "$BUILD_ARCH" == "x64" ] ; then
 else
   ENABLE_64_BIT=
   export VCPKG_DIR=c:/dev/vcpkg/installed/x86-windows
+  export VCPKG_STATIC_DIR=c:/dev/vcpkg/installed/x86-windows-static
   export PYTHON_DIR=c:/dev/Python37-32
   export PYTHON=$PYTHON_DIR/python.exe
   export PYTHON_CFLAGS="-I$PYTHON_DIR/include"
@@ -114,7 +138,7 @@ export PATH=$EXTRA_LO_PATH:$PYTHON:$PATH
 # /usr/sbin/gencmn.exe
 export PATH=$PATH:/usr/sbin
 
-#export verbose="V=1"
+# export verbose="V=1"
 
 #echo "PATH=$PATH"
 
@@ -131,18 +155,24 @@ make clean
 
 WITH_SYSTEM=
 if [ "$WITH_VCPKG_ZERO" == "1" ] ; then
+  echo PYTHON_CFLAGS=$PYTHON_CFLAGS, PYTHON_LIBS=$PYTHON_LIBS
+  WITH_SYSTEM+=" --enable-python=system"
+
   WITH_SYSTEM+=" --with-system-zlib=yes"
   export ZLIB_CFLAGS="-I$VCPKG_DIR/include"
-  export ZLIB_LIBS="$VCPKG_DIR/lib/zlib.lib"
+  export ZLIB_LIBS="$VCPKG_STATIC_DIR/lib/zlib.lib"
+
+  WITH_SYSTEM+=" --with-system-expat=yes"
+  export EXPAT_CFLAGS="-I$VCPKG_DIR/include"
+  export EXPAT_LIBS="$VCPKG_DIR/lib/expat.lib"
+fi
+
+if [ "$WITH_VCPKG" == "1" ] ; then
 
   WITH_SYSTEM+=" --with-system-curl=yes"
   export CURL_CFLAGS="-I$VCPKG_DIR/include" 
   export CURL_LIBS="$VCPKG_DIR/lib/libcurl.lib"
 
-  WITH_SYSTEM+=" --with-system-expat=yes"
-  export EXPAT_CFLAGS="-I$VCPKG_DIR/include"
-  export EXPAT_LIBS="$VCPKG_DIR/lib/expat.lib"
-  
   WITH_SYSTEM+=" --with-system-libxml=yes"
   export LIBXML_CFLAGS="-I$VCPKG_DIR/include"
   export LIBXML_LIBS="-LIBPATH:$VCPKG_DIR/lib -L$VCPKG_DIR/lib libxml2.lib" 
@@ -151,12 +181,6 @@ if [ "$WITH_VCPKG_ZERO" == "1" ] ; then
   export LIBEXSLT_CFLAGS="-I$VCPKG_DIR/include"
   export LIBEXSLT_LIBS="$VCPKG_DIR/lib/libexslt.lib"
 
-  echo PYTHON_CFLAGS=$PYTHON_CFLAGS, PYTHON_LIBS=$PYTHON_LIBS
-  WITH_SYSTEM+=" --enable-python=system"
-fi
-
-if [ "$WITH_VCPKG" == "1" ] ; then
-  
   WITH_SYSTEM+=" --with-system-postgresql=yes"
   export POSTGRESQL_CFLAGS="-I$VCPKG_DIR/include"
   export POSTGRESQL_LIBS="$VCPKG_DIR/lib/libpq.lib $VCPKG_DIR/lib/libssl.lib $VCPKG_DIR/lib/libcrypto.lib"

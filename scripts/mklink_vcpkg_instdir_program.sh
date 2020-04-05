@@ -44,22 +44,26 @@ MKLINK="cmd /c mklink"
 # 0x0000000003ca0000  0x1ab1000  c:\dev\vcpkg\installed\x86-windows\bin\icudt65.dll
 # 0x0000000054300000  0x21000   c:\dev\vcpkg\installed\x86-windows\bin\expat.dll
 
-for FILE in  zlib1.dll \
-             libxml2.dll \
-             expat.dll \
-             libcharset.dll \
-             boost_locale-vc142-mt-$BOOST_ARCH-1_72.dll \
-             boost_filesystem-vc142-mt-$BOOST_ARCH-1_72.dll \
-             boost_iostreams-vc142-mt-$BOOST_ARCH-1_72.dll \
-             icuin65.dll \
-             icuuc65.dll \
-             icudt65.dll \
-             bz2.dll \
-             lzma.dll \
-             zstd.dll \
-             libiconv.dll \
-             libpq.dll \
-             libpng16.dll ; do
+DLLS=
+#DLLS+=" zlib1.dll"
+DLLS+=" expat.dll"
+
+# libxml2.dll \
+# libcharset.dll \
+# boost_locale-vc142-mt-$BOOST_ARCH-1_72.dll \
+# boost_filesystem-vc142-mt-$BOOST_ARCH-1_72.dll \
+# boost_iostreams-vc142-mt-$BOOST_ARCH-1_72.dll \
+# icuin65.dll \
+# icuuc65.dll \
+# icudt65.dll \
+# bz2.dll \
+# lzma.dll \
+# zstd.dll \
+# libiconv.dll \
+# libpq.dll \
+# libpng16.dll
+
+for FILE in $DLLS; do
   mklink
 done
 
