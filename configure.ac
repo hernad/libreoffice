@@ -8806,6 +8806,7 @@ fi
 AC_SUBST(SYSTEM_LIBXML_FOR_BUILD)
 AC_SUBST(LIBXML_CFLAGS)
 AC_SUBST(LIBXML_LIBS)
+AC_SUBST(LIBXML_LIBTOOL_LIBS)
 AC_SUBST(XMLLINT)
 
 # =====================================================================
@@ -9910,29 +9911,36 @@ AC_MSG_CHECKING([whether to enable breakpad])
 if test "$enable_breakpad" != yes; then
     AC_MSG_RESULT([no])
 else
-    AC_MSG_RESULT([yes])
-    ENABLE_BREAKPAD="TRUE"
-    AC_DEFINE(ENABLE_BREAKPAD)
-    AC_DEFINE(HAVE_FEATURE_BREAKPAD, 1)
-    BUILD_TYPE="$BUILD_TYPE BREAKPAD"
-
-    AC_MSG_CHECKING([for disable crash dump])
-    if test "$enable_crashdump" = no; then
-        DEFAULT_CRASHDUMP_VALUE="false"
-        AC_MSG_RESULT([yes])
+    if test $BREAKPAD_CFLAGS != ""; then
+        SYSTEM_BREAKPAD=TRUE
+        AC_MSG_CHECKING([BREAKPAD EXTERNAL])
     else
-       AC_MSG_RESULT([no])
-    fi
+        AC_MSG_RESULT([yes])
+        ENABLE_BREAKPAD="TRUE"
+        AC_DEFINE(ENABLE_BREAKPAD)
+        AC_DEFINE(HAVE_FEATURE_BREAKPAD, 1)
+        BUILD_TYPE="$BUILD_TYPE BREAKPAD"
 
-    AC_MSG_CHECKING([for crashreport config])
-    if test "$with_symbol_config" = "no"; then
-        BREAKPAD_SYMBOL_CONFIG="invalid"
+        AC_MSG_CHECKING([for disable crash dump])
+        if test "$enable_crashdump" = no; then
+            DEFAULT_CRASHDUMP_VALUE="false"
+            AC_MSG_RESULT([yes])
+        else
         AC_MSG_RESULT([no])
-    else
-        BREAKPAD_SYMBOL_CONFIG="$with_symbol_config"
-        AC_DEFINE(BREAKPAD_SYMBOL_CONFIG)
-        AC_MSG_RESULT([yes])
+        fi
+
+        AC_MSG_CHECKING([for crashreport config])
+        if test "$with_symbol_config" = "no"; then
+            BREAKPAD_SYMBOL_CONFIG="invalid"
+            AC_MSG_RESULT([no])
+        else
+            BREAKPAD_SYMBOL_CONFIG="$with_symbol_config"
+            AC_DEFINE(BREAKPAD_SYMBOL_CONFIG)
+            AC_MSG_RESULT([yes])
+        fi
     fi
+    AC_SUBST(BREAKPAD_CFLAGS)
+    AC_SUBST(BREAKPAD_LIBS)
     AC_SUBST(BREAKPAD_SYMBOL_CONFIG)
 fi
 AC_SUBST(ENABLE_BREAKPAD)

@@ -93,20 +93,8 @@ fi
 #export OPENSSL_CFLAGS="-I$VCPKG_DIR/include"
 #export OPENSSL_LIBS="$VCPKG_DIR/lib/libssl.lib $VCPKG_DIR/lib/libcrypto.lib"
 
-#export ICU_CFLAGS="-I$VCPKG_DIR/include"
-#export ICU_LIBS="$VCPKG_DIR/lib/icudt.lib $VCPKG_DIR/lib/icuin.lib $VCPKG_DIR/lib/icuio.lib $VCPKG_DIR/lib/icutu.lib $VCPKG_DIR/lib/icuuc.lib"
-#export ICU_VERSION="65.1"
 
 
-#export BOOST_CPPFLAGS="-I$VCPKG_DIR/include"
-#export BOOST_CXXFLAGS=$BOOST_CPPFLAGS
-#export BOOST_LDFLAGS=""
-#
-#export BOOST_LOCALE_LIB="bcrypt.lib boost_locale-$VCPKG_BOOST_BUILD_LIB-mt.lib"
-#export BOOST_DATE_TIME_LIB="bcrypt.lib boost_date_time-$VCPKG_BOOST_BUILD_LIB-mt.lib"
-#export BOOST_FILESYSTEM_LIB="bcrypt.lib boost_filesystem-$VCPKG_BOOST_BUILD_LIB-mt.lib"
-#export BOOST_IOSTREAMS_LIB="bcrypt.lib boost_iostreams-$VCPKG_BOOST_BUILD_LIB-mt.lib"
-#export BOOST_SYSTEM_LIB="bcrypt.lib boost_system-$VCPKG_BOOST_BUILD_LIB-mt.lib"
 
 # ---------------------------------------------------------
 
@@ -165,37 +153,81 @@ if [ "$WITH_VCPKG_ZERO" == "1" ] ; then
   WITH_SYSTEM+=" --with-system-expat=yes"
   export EXPAT_CFLAGS="-I$VCPKG_DIR/include"
   export EXPAT_LIBS="$VCPKG_DIR/lib/expat.lib"
-fi
 
-if [ "$WITH_VCPKG" == "1" ] ; then
+  WITH_SYSTEM+=" --with-system-libpng=yes"
+  export LIBPNG_CFLAGS="-I$VCPKG_DIR/include"
+  export LIBPNG_LIBS="$VCPKG_STATIC_DIR/lib/libpng16.lib"
 
+  WITH_SYSTEM+=" --with-system-libpng=yes"
+  export LIBPNG_CFLAGS="-I$VCPKG_DIR/include"
+  export LIBPNG_LIBS="$VCPKG_STATIC_DIR/lib/libpng16.lib $ZLIB_LIBS"
+
+  export BREAKPAD_CFLAGS="-I$VCPKG_DIR/include"
+  export BREAKPAD_LIBS="$VCPKG_STATIC_DIR/lib/libbreakpad.lib"
+
+  WITH_SYSTEM+=" --with-system-boost"
+  export BOOST_CPPFLAGS="-I$VCPKG_DIR/include"
+  export BOOST_CXXFLAGS=$BOOST_CPPFLAGS
+  export BOOST_LDFLAGS=""
+  export BOOST_LOCALE_LIB="bcrypt.lib $VCPKG_DIR/lib/boost_locale-$VCPKG_BOOST_BUILD_LIB-mt.lib"
+  export BOOST_DATE_TIME_LIB="bcrypt.lib $VCPKG_DIR/lib/boost_date_time-$VCPKG_BOOST_BUILD_LIB-mt.lib"
+  export BOOST_FILESYSTEM_LIB="bcrypt.lib $VCPKG_DIR/lib/boost_filesystem-$VCPKG_BOOST_BUILD_LIB-mt.lib"
+  export BOOST_IOSTREAMS_LIB="bcrypt.lib $VCPKG_DIR/lib/boost_iostreams-$VCPKG_BOOST_BUILD_LIB-mt.lib"
+  export BOOST_SYSTEM_LIB="bcrypt.lib $VCPKG_DIR/lib/boost_system-$VCPKG_BOOST_BUILD_LIB-mt.lib"
+  
   WITH_SYSTEM+=" --with-system-curl=yes"
   export CURL_CFLAGS="-I$VCPKG_DIR/include" 
   export CURL_LIBS="$VCPKG_DIR/lib/libcurl.lib"
 
-  WITH_SYSTEM+=" --with-system-libxml=yes"
-  export LIBXML_CFLAGS="-I$VCPKG_DIR/include"
-  export LIBXML_LIBS="-LIBPATH:$VCPKG_DIR/lib -L$VCPKG_DIR/lib libxml2.lib" 
-  export LIBXSLT_CFLAGS="-I$VCPKG_DIR/include"
-  export LIBXSLT_LIBS="$VCPKG_DIR/lib/libxslt.lib"
-  export LIBEXSLT_CFLAGS="-I$VCPKG_DIR/include"
-  export LIBEXSLT_LIBS="$VCPKG_DIR/lib/libexslt.lib"
+  #WITH_SYSTEM+=" --with-system-icu=yes" 
+  #export ICU_CFLAGS="-I$VCPKG_DIR/include"
+  #export ICU_LIBS="$VCPKG_DIR/lib/icudt.lib $VCPKG_DIR/lib/icuin.lib $VCPKG_DIR/lib/icuio.lib $VCPKG_DIR/lib/icutu.lib $VCPKG_DIR/lib/icuuc.lib"
+  #export ICU_VERSION="65.1"
 
   WITH_SYSTEM+=" --with-system-postgresql=yes"
   export POSTGRESQL_CFLAGS="-I$VCPKG_DIR/include"
   export POSTGRESQL_LIBS="$VCPKG_DIR/lib/libpq.lib $VCPKG_DIR/lib/libssl.lib $VCPKG_DIR/lib/libcrypto.lib"
 
- 
-  WITH_SYSTEM+=" --with-system-libpng=yes"
-  export LIBPNG_CFLAGS="-I$VCPKG_DIR/include"
-  export LIBPNG_LIBS="$VCPKG_DIR/lib/libpng16.lib"
 
-  echo PYTHON_CFLAGS=$PYTHON_CFLAGS, PYTHON_LIBS=$PYTHON_LIBS
-  WITH_SYSTEM+=" --enable-python=system"
+fi
+
+
+if [ "$WITH_VCPKG_LIBXML" == "1" ] ; then
+  #C:/cygwin64/bin/sh.exe ../libtool  --tag=CC  --mode=link 
+  #C:/dev/libreoffice-core-meson/workdir/LinkTarget/Executable/gcc-wrapper.exe -DLT_MODULE_PREFIX=lt_module_ext_t  
+  #-O2 -Oy-   -w  -avoid-version -module 
+  # -LIBPATH:c:/dev/vcpkg/installed/x64-windows 
+  #-o liblangtag-ext-ldml-t.la  liblangtag_ext_ldml_t_la-lt-ext-ldml-t.lo   -LIBPATH:c:/dev/vcpkg/installed/x64-windows 
+  #-Lc:/xx  -LIBPATH:c:/dev/vcpkg/installed/x64-windows/lib 
+  #-Lc:/dev/vcpkg/installed/x64-windows/lib libxml2.lib
+  #*** Warning: Trying to link with static lib archive libxml2.lib.
+  #*** I have the capability to make that library automatically link in when
+  #*** you link to this library.  But I can only do this if you have a
+  #*** shared version of the library, which you do not appear to have
+  #*** because the file extensions .lib of this argument makes me believe
+  #*** that it is just a static archive that I should not use here.
+  #
+  #libtool: link: lib -OUT:.libs/liblangtag-ext-ldml-t.lib libxml2.lib  liblangtag_ext_ldml_t_la-lt-ext-ldml-t.obj libxml2.lib
+  #Microsoft (R) Library Manager Version 14.25.28612.0
+  #Copyright (C) Microsoft Corporation.  All rights reserved.
+  #LINK : fatal error LNK1181: cannot open input file 'libxml2.lib'
+
+  WITH_SYSTEM+=" --with-system-libxml=yes"
+  export LIBXML_CFLAGS="-I$VCPKG_DIR/include"
+  #export LDFLAGS="-LIBPATH:${VCPKG_DIR/lib}"
+  export LIBXML_LIBS="$VCPKG_DIR/lib/libxml2.lib" 
+  export LIBXML_LIBTOOL_LIBS="-L$VCPKG_DIR/lib -llibxml2"
+  export LIBXSLT_CFLAGS="-I$VCPKG_DIR/include"
+  export LIBXSLT_LIBS="$VCPKG_DIR/lib/libxslt.lib"
+  export LIBEXSLT_CFLAGS="-I$VCPKG_DIR/include"
+  export LIBEXSLT_LIBS="$VCPKG_DIR/lib/libexslt.lib"
+fi
+
+if [ "$WITH_VCPKG" == "1" ] ; then
 
 
   export VCPKG_LIBPATH="$VCPKG_DIR/lib"
-  export LIBPATH="$VCPKG_DIR/lib"
+  #export LIBPATH="$VCPKG_DIR/lib"
   #build liblangtag
   #libtool needs linux format -L${VCPKG_LIBPATH}
   export LDFLAGS="-L${VCPKG_LIBPATH} -LIBPATH:${VCPKG_LIBPATH}"
@@ -206,9 +238,9 @@ if [ "$WITH_VCPKG" == "1" ] ; then
   export LIBPATH="$VCPKG_DIR/lib"
   #build liblangtag
   #libtool needs linux format -L${VCPKG_LIBPATH}
-  export LDFLAGS="-L${VCPKG_LIBPATH} -LIBPATH:${VCPKG_LIBPATH}"
-  export CFLAGS="-I$VCPKG_DIR/include"
-  export CXXFLAGS="-I$VCPKG_DIR/include"
+  #export LDFLAGS="-L${VCPKG_LIBPATH} -LIBPATH:${VCPKG_LIBPATH}"
+  #export CFLAGS="-I$VCPKG_DIR/include"
+  #export CXXFLAGS="-I$VCPKG_DIR/include"
 
 else
   export LIBPATH="c:/xx"
@@ -244,15 +276,15 @@ fi
     --disable-sdremote \
     --disable-sdremote-bluetooth \
     --disable-pdfimport \
-    --disable-extension-integration $WEBDAV $WITH_SYSTEM
-
+    --disable-extension-integration $WEBDAV $WITH_SYSTEM \
+    --enable-breakpad       #Enables breakpad for crash reporting.
 
 #    
 #    
 #    --with-system-openssl=yes \
-#    --with-system-icu=yes \
+#    \
 #    --with-system-icu-for-build=force \
-#    --with-system-boost
+#    
     
 #--with-system-xmlsec=yes 
 

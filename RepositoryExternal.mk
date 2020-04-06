@@ -1464,6 +1464,7 @@ $(call gb_LinkTarget_add_libs,$(1),$(ICU_LIBS))
 
 endef
 
+
 else # !SYSTEM_ICU
 
 $(call gb_Output_announce,ZLIB=$(SYSTEM_ZLIB) NOT-SYSTEM-ICU=$(SYSTEM_ICU),build,ICU,5)
@@ -3511,6 +3512,16 @@ $(call gb_LinkTarget_set_include,$(1),\
     $$(INCLUDE) \
 )
 
+
+ifneq ($(BREAKPAD_CFLAGS),)
+
+$(call gb_LinkTarget_set_include,$(1),\
+    $$(INCLUDE) \
+	$(BREAKPAD_CFLAGS) \
+)
+$(call gb_LinkTarget_add_libs,$(1),$(BREAKPAD_LIBS))
+
+else
 ifeq ($(COM),MSC)
 $(call gb_LinkTarget_use_static_libraries,$(1),\
     breakpad \
@@ -3522,7 +3533,7 @@ $(call gb_LinkTarget_add_libs,$(1),\
 endif
 
 $(call gb_LinkTarget_use_external_project,$(1),breakpad)
-
+endif # BREAKPAD_CFLAGS
 endef
 
 endif # ENABLE_BREAKPAD
