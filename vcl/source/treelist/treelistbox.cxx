@@ -2189,7 +2189,7 @@ sal_uLong SvTreeListBox::SelectChildren( SvTreeListEntry* pParent, bool bSelect 
     return nRet;
 }
 
-void SvTreeListBox::SelectAll( bool bSelect, bool )
+void SvTreeListBox::SelectAll( bool bSelect )
 {
     pImpl->SelAllDestrAnch(
         bSelect,
@@ -2866,6 +2866,16 @@ void SvTreeListBox::PaintEntry1(SvTreeListEntry& rEntry, long nLine, vcl::Render
 
 void SvTreeListBox::PreparePaint(vcl::RenderContext& /*rRenderContext*/, SvTreeListEntry& /*rEntry*/)
 {
+}
+
+void SvTreeListBox::DrawCustomEntry(vcl::RenderContext& rRenderContext, const tools::Rectangle& rRect, const SvTreeListEntry& rEntry)
+{
+    aCustomRenderHdl.Call(std::tuple<vcl::RenderContext&, const tools::Rectangle&, const SvTreeListEntry&>(rRenderContext, rRect, rEntry));
+}
+
+Size SvTreeListBox::MeasureCustomEntry(vcl::RenderContext& rRenderContext, const SvTreeListEntry& rEntry)
+{
+    return aCustomMeasureHdl.Call(std::pair<vcl::RenderContext&, const SvTreeListEntry&>(rRenderContext, rEntry));
 }
 
 tools::Rectangle SvTreeListBox::GetFocusRect(const SvTreeListEntry* pEntry, long nLine )

@@ -18,7 +18,6 @@ $(eval $(call gb_Module_add_targets,extras,\
 	CustomTarget_tplpersonal \
 	CustomTarget_tplpresnt \
 	CustomTarget_tpl_styles \
-	Gallery_bullets \
 	Package_autocorr \
 	Package_autotextuser \
 	Package_cfgsrvnolang \
@@ -27,6 +26,7 @@ $(eval $(call gb_Module_add_targets,extras,\
 	Package_databasebiblio \
 	Package_fonts \
 	Package_resource_fonts \
+	Package_gallbullets \
 	Package_gallhtmlexpo \
 	Package_gallmytheme \
 	Package_gallroot \
@@ -58,17 +58,8 @@ $(eval $(call gb_Module_add_l10n_targets,extras,\
 
 ifneq ($(WITH_GALLERY_BUILD),)
 $(eval $(call gb_Module_add_targets,extras,\
-	Gallery_arrows \
 	Gallery_backgrounds \
-	Gallery_diagrams \
-	Gallery_education \
-	Gallery_environment \
-	Gallery_finance \
-	Gallery_people \
-	Gallery_symbols \
 	Gallery_sound \
-	Gallery_txtshapes \
-	Gallery_transportation \
 ))
 endif
 

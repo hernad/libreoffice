@@ -501,7 +501,7 @@ void SfxViewShell::SetPrinter_Impl( VclPtr<SfxPrinter>& pNewPrinter )
             ( bOriChg ? aNewPgSz.Height() : aNewPgSz.Width() ) ) &&
             bSizeToDoc;
 
-    // Message and Flags for page format, summaries changes
+    // Message and Flags for page format changes
     OUString aMsg;
     SfxPrinterChangeFlags nNewOpt = SfxPrinterChangeFlags::NONE;
     if( bOriChg && bPgSzChg )
@@ -520,7 +520,7 @@ void SfxViewShell::SetPrinter_Impl( VclPtr<SfxPrinter>& pNewPrinter )
         nNewOpt = SfxPrinterChangeFlags::CHG_SIZE;
     }
 
-    // Summaries in this variable what has been changed.
+    // Summarize in this variable what has been changed.
     SfxPrinterChangeFlags nChangedFlags = SfxPrinterChangeFlags::NONE;
 
     // Ask if possible, if page format should be taken over from printer.
@@ -536,15 +536,17 @@ void SfxViewShell::SetPrinter_Impl( VclPtr<SfxPrinter>& pNewPrinter )
         }
     }
 
-    // For the MAC to have its "temporary of class String" in next if()
-    OUString aTempPrtName = pNewPrinter->GetName();
-    OUString aDocPrtName = pDocPrinter->GetName();
-
     // Was the printer selection changed from Default to Specific
     // or the other way around?
-    if ( (aTempPrtName != aDocPrtName) || (pDocPrinter->IsDefPrinter() != pNewPrinter->IsDefPrinter()) )
+    if ( (pNewPrinter->GetName() != pDocPrinter->GetName())
+         || (pDocPrinter->IsDefPrinter() != pNewPrinter->IsDefPrinter()) )
     {
         nChangedFlags |= SfxPrinterChangeFlags::PRINTER|SfxPrinterChangeFlags::JOBSETUP;
+        if ( ! (pNewPrinter->GetOptions() == pDocPrinter->GetOptions()) )
+        {
+            nChangedFlags |= SfxPrinterChangeFlags::OPTIONS;
+        }
+
         pDocPrinter = pNewPrinter;
     }
     else

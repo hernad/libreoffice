@@ -362,9 +362,9 @@ DECLARE_OOXMLEXPORT_TEST(testTdf108350_noFontdefaults, "tdf108350_noFontdefaults
 
 DECLARE_OOXMLEXPORT_TEST(testTdf123116_oversizedRowSplit, "tdf123116_oversizedRowSplit.odt")
 {
-    // For highest backward compatibility and interoperability, the now-splitable-row
-    // should start on a new page.
-    CPPUNIT_ASSERT_EQUAL_MESSAGE("Row splits over 5 pages", 5, getPages());
+    // Intentionally require a very non-backward-compatible, natural continuation of the table
+    // instead of an ugly "page break" like MS Word does (and LO used to do).
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Row splits over 4 pages", 4, getPages());
 }
 
 DECLARE_OOXMLEXPORT_TEST(testTdf129522_removeShadowStyle, "tdf129522_removeShadowStyle.odt")
@@ -757,6 +757,26 @@ DECLARE_OOXMLEXPORT_TEST(testHyphenationAuto, "hyphenation.odt")
     xmlDocPtr pXmlStyles = parseExport("word/styles.xml");
     CPPUNIT_ASSERT(pXmlStyles);
     assertXPath(pXmlStyles, "/w:styles/w:docDefaults/w:pPrDefault/w:pPr/w:suppressAutoHyphens", "val", "true");
+}
+
+DECLARE_OOXMLEXPORT_TEST(testStrikeoutGroupShapeText, "tdf131776_StrikeoutGroupShapeText.docx")
+{
+    // tdf#131776: Check if strikeout is used in shape group texts
+    xmlDocPtr pXml = parseExport("word/document.xml");
+    if (!pXml)
+        return;
+
+    // double strike
+    assertXPath(pXml, "/w:document/w:body/w:p/w:r/mc:AlternateContent/mc:Choice/w:drawing/wp:anchor/a:graphic/a:graphicData/wpg:wgp/"
+        "wps:wsp[1]/wps:txbx/w:txbxContent/w:p/w:r/w:rPr/w:dstrike");
+    assertXPathNoAttribute(pXml, "/w:document/w:body/w:p/w:r/mc:AlternateContent/mc:Choice/w:drawing/wp:anchor/a:graphic/a:graphicData/wpg:wgp/"
+        "wps:wsp[1]/wps:txbx/w:txbxContent/w:p/w:r/w:rPr/w:dstrike", "val");
+
+    // simple strike
+    assertXPath(pXml, "/w:document/w:body/w:p/w:r/mc:AlternateContent/mc:Choice/w:drawing/wp:anchor/a:graphic/a:graphicData/wpg:wgp/"
+        "wps:wsp[2]/wps:txbx/w:txbxContent/w:p/w:r/w:rPr/w:strike");
+    assertXPathNoAttribute(pXml, "/w:document/w:body/w:p/w:r/mc:AlternateContent/mc:Choice/w:drawing/wp:anchor/a:graphic/a:graphicData/wpg:wgp/"
+        "wps:wsp[2]/wps:txbx/w:txbxContent/w:p/w:r/w:rPr/w:strike", "val");
 }
 
 CPPUNIT_PLUGIN_IMPLEMENT();

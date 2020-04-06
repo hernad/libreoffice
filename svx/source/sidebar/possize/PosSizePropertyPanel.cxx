@@ -39,6 +39,7 @@
 #include <svx/svdpagv.hxx>
 #include <svx/svdview.hxx>
 #include <svx/transfrmhelper.hxx>
+#include <boost/property_tree/json_parser.hpp>
 
 #include <svtools/unitconv.hxx>
 
@@ -760,6 +761,30 @@ void PosSizePropertyPanel::NotifyItemUpdate(
     mxCbxScale->set_active(static_cast<bool>(sUserData.toInt32()));
 }
 
+void PosSizePropertyPanel::GetControlState(const sal_uInt16 nSID, boost::property_tree::ptree& rState)
+{
+    weld::MetricSpinButton* pControl = nullptr;
+    switch (nSID)
+    {
+        case SID_ATTR_TRANSFORM_POS_X:
+            pControl = mxMtrPosX.get();
+            break;
+        case SID_ATTR_TRANSFORM_POS_Y:
+            pControl = mxMtrPosY.get();
+            break;
+        case SID_ATTR_TRANSFORM_WIDTH:
+            pControl = mxMtrWidth.get();
+            break;
+        case SID_ATTR_TRANSFORM_HEIGHT:
+            pControl = mxMtrHeight.get();
+            break;
+    }
+
+    if (pControl && !pControl->get_text().isEmpty())
+    {
+        rState.put(pControl->get_buildable_name().getStr(), pControl->get_text().toUtf8().getStr());
+    }
+}
 
 void PosSizePropertyPanel::executeSize()
 {
@@ -805,6 +830,16 @@ void PosSizePropertyPanel::executeSize()
             GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_TRANSFORM,
                 SfxCallMode::RECORD, { &aHeightItem, &aPointItem });
     }
+}
+
+boost::property_tree::ptree PosSizePropertyPanel::DumpAsPropertyTree()
+{
+    if (meDlgUnit != GetCurrentUnit(SfxItemState::DEFAULT, nullptr))
+    {
+        mpBindings->Update( SID_ATTR_METRIC );
+    }
+
+    return PanelLayout::DumpAsPropertyTree();
 }
 
 void PosSizePropertyPanel::MetricState( SfxItemState eState, const SfxPoolItem* pState )

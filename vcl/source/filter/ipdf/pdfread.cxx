@@ -70,9 +70,10 @@ bool isCompatible(SvStream& rInStream, sal_uInt64 nPos, sal_uInt64 nSize)
 
 /// Takes care of transparently downgrading the version of the PDF stream in
 /// case it's too new for our PDF export.
-bool getCompatibleStream(SvStream& rInStream, SvStream& rOutStream, sal_uInt64 nPos,
-                         sal_uInt64 nSize)
+bool getCompatibleStream(SvStream& rInStream, SvStream& rOutStream)
 {
+    sal_uInt64 nPos = STREAM_SEEK_TO_BEGIN;
+    sal_uInt64 nSize = STREAM_SEEK_TO_END;
     bool bCompatible = isCompatible(rInStream, nPos, nSize);
     rInStream.Seek(nPos);
     if (bCompatible)
@@ -116,11 +117,10 @@ bool getCompatibleStream(SvStream& rInStream, SvStream& rOutStream, sal_uInt64 n
     return rOutStream.good();
 }
 #else
-bool getCompatibleStream(SvStream& rInStream, SvStream& rOutStream, sal_uInt64 nPos,
-                         sal_uInt64 nSize)
+bool getCompatibleStream(SvStream& rInStream, SvStream& rOutStream)
 {
-    rInStream.Seek(nPos);
-    rOutStream.WriteStream(rInStream, nSize);
+    rInStream.Seek(STREAM_SEEK_TO_BEGIN);
+    rOutStream.WriteStream(rInStream, STREAM_SEEK_TO_END);
     return rOutStream.good();
 }
 #endif // HAVE_FEATURE_PDFIUM
@@ -129,7 +129,7 @@ VectorGraphicDataArray createVectorGraphicDataArray(SvStream& rStream)
 {
     // Save the original PDF stream for later use.
     SvMemoryStream aMemoryStream;
-    if (!getCompatibleStream(rStream, aMemoryStream, STREAM_SEEK_TO_BEGIN, STREAM_SEEK_TO_END))
+    if (!getCompatibleStream(rStream, aMemoryStream))
         return VectorGraphicDataArray();
 
     const sal_uInt32 nStreamLength = aMemoryStream.TellEnd();

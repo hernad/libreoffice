@@ -65,6 +65,8 @@ public:
         const SfxItemState eState,
         const SfxPoolItem* pState) override;
 
+    virtual boost::property_tree::ptree DumpAsPropertyTree() override;
+
     SfxBindings* GetBindings() { return mpBindings;}
 
     // constructor/destructor
@@ -73,6 +75,10 @@ public:
         const css::uno::Reference<css::frame::XFrame>& rxFrame,
         SfxBindings* pBindings,
         const css::uno::Reference<css::ui::XSidebar>& rxSidebar);
+
+    virtual void GetControlState(
+        const sal_uInt16 nSId,
+        boost::property_tree::ptree& rState) override;
 
 private:
     //Position

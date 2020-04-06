@@ -6,6 +6,7 @@
 
 from uitest.framework import UITestCase
 from libreoffice.uno.propertyvalue import mkPropertyValues
+from uitest.uihelper.common import get_state_as_dict
 
 class WriterInsertTableDialog(UITestCase):
 
@@ -29,6 +30,10 @@ class WriterInsertTableDialog(UITestCase):
         xRowSpin.executeAction("TYPE", mkPropertyValues({"KEYCODE":"CTRL+A"}))
         xRowSpin.executeAction("TYPE", mkPropertyValues({"TEXT": str(rows)}))
 
+        self.assertEqual(get_state_as_dict(xNameEdit)["Text"], name)
+        self.assertEqual(get_state_as_dict(xColSpin)["Text"], str(cols))
+        self.assertEqual(get_state_as_dict(xRowSpin)["Text"], str(rows))
+
         xOkBtn = xDialog.getChild("ok")
         xOkBtn.executeAction("CLICK", tuple())
 
@@ -44,41 +49,6 @@ class WriterInsertTableDialog(UITestCase):
         tableText = table.getCellByName( cellName )
         tableText.setString( text )
 
-    def test_tdf80663(self):
-
-        self.insert_table("Test1", 2, 2)
-
-        document = self.ui_test.get_component()
-
-        tables = document.getTextTables()
-        self.xUITest.executeCommand(".uno:DeleteRows")
-
-        self.assertEqual(len(tables[0].getRows()), 1)
-        self.assertEqual(len(tables[0].getColumns()), 2)
-
-        self.xUITest.executeCommand(".uno:Undo")
-
-        self.assertEqual(len(tables[0].getRows()), 2)
-        self.assertEqual(len(tables[0].getColumns()), 2)
-
-        self.ui_test.close_doc()
-
-    def test_tdf96067(self):
-
-        self.insert_table("Test2", 3, 3)
-
-        self.xUITest.executeCommand(".uno:SelectTable")
-        self.xUITest.executeCommand(".uno:InsertRowsBefore")
-
-        document = self.ui_test.get_component()
-        tables = document.getTextTables()
-        self.assertEqual(len(tables[0].getRows()), 6)
-        self.assertEqual(len(tables[0].getColumns()), 3)
-
-        self.xUITest.executeCommand(".uno:Undo")
-
-        self.ui_test.close_doc()
-
     def test_tdf104158(self):
 
         self.insert_table("Test3", 2, 2)
@@ -92,38 +62,16 @@ class WriterInsertTableDialog(UITestCase):
 
         self.ui_test.close_doc()
 
-    def test_tdf87199(self):
-
-        self.insert_table("Test4", 2, 1)
-
-        document = self.ui_test.get_component()
-        tables = document.getTextTables()
-        self.insertTextIntoCell(tables[0], "A1", "test" )
-        self.insertTextIntoCell(tables[0], "A2", "test" )
-
-        cursor = tables[0].getCellByName( "A1" ).createTextCursor()
-
-        self.xUITest.executeCommand(".uno:EntireColumn")
-
-        self.xUITest.executeCommand(".uno:MergeCells")
-
-        tables = document.getTextTables()
-        self.assertEqual(len(tables[0].getRows()), 1)
-        self.assertEqual(len(tables[0].getColumns()), 1)
-
-        self.xUITest.executeCommand(".uno:Undo")
-
-        self.assertEqual(len(tables[0].getRows()), 2)
-        self.assertEqual(len(tables[0].getColumns()), 1)
-
-        self.ui_test.close_doc()
-
-    def test_cancel_button_insert_line_break_dialog(self):
+    def test_cancel_button_insert_table_dialog(self):
         self.ui_test.create_doc_in_start_center("writer")
         self.ui_test.execute_dialog_through_command(".uno:InsertTable")
         Dialog = self.xUITest.getTopFocusWindow()
         CancelBtn = Dialog.getChild("cancel")
         self.ui_test.close_dialog_through_button(CancelBtn)
+
+        document = self.ui_test.get_component()
+        tables = document.getTextTables()
+        self.assertEqual(len(tables), 0)
 
         self.ui_test.close_doc()
 
