@@ -21,6 +21,7 @@ $(eval $(call gb_Library_add_defs,skia,\
     -DSK_USER_CONFIG_HEADER="<$(BUILDDIR)/config_host/config_skia.h>" \
 ))
 
+
 ifeq ($(OS),WNT)
 # Skia can be built with or without UNICODE set, in LO sources we explicitly use the *W unicode
 # variants, so build Skia with UNICODE to make it also use the *W variants.

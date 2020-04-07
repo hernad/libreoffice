@@ -160,6 +160,7 @@ if [ "$ENVARS_ONLY" == "0" ] && [ "$MAKE_ONLY" == "0" ]; then
 
 make clean
 #rm -f config_host.mk
+rm -f config_host/*.h
 
 WITH_SYSTEM=
 if [ "$WITH_VCPKG_ZERO" == "1" ] ; then

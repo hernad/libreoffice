@@ -68,6 +68,7 @@
 #include <tools/diagnose_ex.h>
 #include <wizdlg.hxx>
 #include <tools/svlibrary.h>
+#define concat(first, second) (std::string(first) + std::string(second)).c_str()
 
 #if defined(DISABLE_DYNLOADING) || defined(LINUX)
 #include <dlfcn.h>
@@ -1693,11 +1694,11 @@ void VclBuilder::preload()
 // find -name '*ui*' | xargs grep 'class=".*lo-' |
 //     sed 's/.*class="//' | sed 's/-.*$//' | sort | uniq
     static const char *aWidgetLibs[] = {
-        sprintf("sfx%s", DLL_SUFIX), sprintf("svt%s", DLL_SUFIX), sprintf("svxcore%s", DLL_SUFIX), sprintf("forui%s", DLL_SUFIX),
-        sprintf("vcl%s", DLL_SUFIX), sprintf("svx%s", DLL_SUFIX), sprintf("cui%s", DLL_SUFIX),  sprintf("sw%s", DLL_SUFIX),
-        sprintf("swui%s", DLL_SUFIX), sprintf("sc%s", DLL_SUFIX), sprintf("sd%s", DLL_SUFIX), sprintf("chartcontroller%s", DLL_SUFIX),
-        sprintf("sm%s", DLL_SUFIX, sprintf("scui%s", DLL_SUFIX), sprintf("basctl%s", DLL_SUFIX), sprintf("sdui%s", DLL_SUFIX),
-        sprintf("scn%s", DLL_SUFIX), sprintf("xsltdlg%s", DLL_SUFIX), sprintf("pcr%s", DLL_SUFIX) // "dbulo"
+        concat("sfx", DLL_SUFIX), concat("svt", DLL_SUFIX), concat("svxcore", DLL_SUFIX), concat("forui", DLL_SUFIX),
+        concat("vcl", DLL_SUFIX), concat("svx", DLL_SUFIX), concat("cui", DLL_SUFIX),  concat("sw", DLL_SUFIX),
+        concat("swuis", DLL_SUFIX), concat("sc", DLL_SUFIX), concat("sd", DLL_SUFIX), concat("chartcontroller", DLL_SUFIX),
+        concat("sm", DLL_SUFIX), concat("scui", DLL_SUFIX), concat("basctl", DLL_SUFIX), concat("sdui", DLL_SUFIX),
+        concat("scn", DLL_SUFIX), concat("xsltdlg", DLL_SUFIX), concat("pcr", DLL_SUFIX) // "dbulo"
     };
     for (const auto & lib : aWidgetLibs)
     {

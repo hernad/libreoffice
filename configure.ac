@@ -9911,7 +9911,7 @@ AC_MSG_CHECKING([whether to enable breakpad])
 if test "$enable_breakpad" != yes; then
     AC_MSG_RESULT([no])
 else
-    if test $BREAKPAD_CFLAGS != ""; then
+    if test "$BREAKPAD_CFLAGS" != ""; then
         SYSTEM_BREAKPAD=TRUE
         AC_MSG_CHECKING([BREAKPAD EXTERNAL])
     else
@@ -13301,7 +13301,7 @@ AC_CONFIG_HEADERS([config_host/config_version.h])
 AC_CONFIG_HEADERS([config_host/config_oauth2.h])
 AC_CONFIG_HEADERS([config_host/config_poppler.h])
 AC_CONFIG_HEADERS([config_host/config_python.h])
-AC_CONFIG_HEADERS([config_host/config_writerperfect.h])
+AC_CONFIG_HEADERS([config_host/config_skia.h])
 AC_OUTPUT
 
 if test "$CROSS_COMPILING" = TRUE; then
