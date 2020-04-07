@@ -70,6 +70,20 @@ DECLARE_OOXMLEXPORT_TEST(testTdf130814model, "tdf130814.docx")
     CPPUNIT_ASSERT_EQUAL(OUString("Arial Unicode MS"), getProperty<OUString>(getRun(getParagraph(2), 1), "CharFontNameAsian"));
 }
 
+DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf107020, "tdf107020.docx")
+{
+    xmlDocPtr p_XmlDoc = parseExport("word/document.xml");
+    CPPUNIT_ASSERT(p_XmlDoc);
+    assertXPath(
+        p_XmlDoc, "/w:document/w:body/w:p/w:r/w:drawing/wp:inline/a:graphic/a:graphicData/pic:pic/pic:blipFill/a:srcRect", "l", "4910");
+    assertXPath(
+        p_XmlDoc, "/w:document/w:body/w:p/w:r/w:drawing/wp:inline/a:graphic/a:graphicData/pic:pic/pic:blipFill/a:srcRect", "t", "27183");
+    assertXPath(
+        p_XmlDoc, "/w:document/w:body/w:p/w:r/w:drawing/wp:inline/a:graphic/a:graphicData/pic:pic/pic:blipFill/a:srcRect", "r", "57638");
+    assertXPath(
+        p_XmlDoc, "/w:document/w:body/w:p/w:r/w:drawing/wp:inline/a:graphic/a:graphicData/pic:pic/pic:blipFill/a:srcRect", "b", "48360");
+}
+
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf130814ooxml, "tdf130814.docx")
 {
     xmlDocPtr p_XmlDoc = parseExport("word/document.xml");
@@ -98,10 +112,10 @@ DECLARE_OOXMLIMPORT_TEST(testTdf129888vml, "tdf129888vml.docx")
     //to be calculated from the page frame instead of the table:
 
     uno::Reference<beans::XPropertySet> xShapeProperties(getShape(1), uno::UNO_QUERY);
-    sal_Int16 nValue;
-    xShapeProperties->getPropertyValue("HoriOrientRelation") >>= nValue;
+    bool bValue;
+    xShapeProperties->getPropertyValue("IsFollowingTextFlow") >>= bValue;
     CPPUNIT_ASSERT_EQUAL_MESSAGE("tdf129888vml The line shape has bad place!",
-                                 text::RelOrientation::PAGE_FRAME, nValue);
+                                 false, bValue);
 }
 
 DECLARE_OOXMLIMPORT_TEST(testTdf129888dml, "tdf129888dml.docx")
@@ -112,18 +126,18 @@ DECLARE_OOXMLIMPORT_TEST(testTdf129888dml, "tdf129888dml.docx")
     //to be calculated from the page frame instead of the table:
 
     uno::Reference<beans::XPropertySet> xShapeProperties(getShape(1), uno::UNO_QUERY);
-    sal_Int16 nValue;
-    xShapeProperties->getPropertyValue("HoriOrientRelation") >>= nValue;
+    bool bValue;
+    xShapeProperties->getPropertyValue("IsFollowingTextFlow") >>= bValue;
     CPPUNIT_ASSERT_EQUAL_MESSAGE("tdf129888dml The shape has bad place!",
-                                 text::RelOrientation::PAGE_FRAME, nValue);
+        false, bValue);
 }
 
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf130120, "tdf130120.docx")
 {
-   //Text for exporting the allowincell attribute:
+    //Text for exporting the allowincell attribute:
     xmlDocPtr p_XmlDoc = parseExport("word/document.xml");
     assertXPath(p_XmlDoc, "/w:document/w:body/w:tbl/w:tr/w:tc/w:p/w:r/mc:AlternateContent/"
-                          "mc:Choice/w:drawing/wp:anchor","layoutInCell","0");
+        "mc:Choice/w:drawing/wp:anchor", "layoutInCell", "0");
 }
 
 
@@ -131,10 +145,10 @@ DECLARE_OOXMLEXPORT_TEST(testTdf87569v, "tdf87569_vml.docx")
 {
     //the original tdf87569 sample has vml shapes...
     uno::Reference<beans::XPropertySet> xShapeProperties(getShape(1), uno::UNO_QUERY);
-    sal_Int16 nValue;
-    xShapeProperties->getPropertyValue("HoriOrientRelation") >>= nValue;
+    bool bValue;
+    xShapeProperties->getPropertyValue("IsFollowingTextFlow") >>= bValue;
     CPPUNIT_ASSERT_EQUAL_MESSAGE("tdf87569_vml: The Shape is not in the table!",
-                                 text::RelOrientation::FRAME, nValue);
+                                 true, bValue);
 }
 
 DECLARE_ODFEXPORT_TEST(testArabicZeroNumbering, "arabic-zero-numbering.docx")
@@ -249,10 +263,10 @@ DECLARE_OOXMLEXPORT_TEST(testTdf87569d, "tdf87569_drawingml.docx")
 {
     //if the original tdf87569 sample is upgraded it will have drawingml shapes...
     uno::Reference<beans::XPropertySet> xShapeProperties(getShape(1), uno::UNO_QUERY);
-    sal_Int16 nValue;
-    xShapeProperties->getPropertyValue("HoriOrientRelation") >>= nValue;
+    bool bValue;
+    xShapeProperties->getPropertyValue("IsFollowingTextFlow") >>= bValue;
     CPPUNIT_ASSERT_EQUAL_MESSAGE("tdf87569_drawingml: The Shape is not in the table!",
-                                 text::RelOrientation::FRAME, nValue);
+                                 true, bValue);
 }
 
 DECLARE_OOXMLEXPORT_TEST(testTdf130610, "tdf130610_bold_in_2_styles.ott")
