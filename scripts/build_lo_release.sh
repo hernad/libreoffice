@@ -1,9 +1,25 @@
 #!/bin/bash
 
+#gbuild.mk
+#gb_Library_DLLPOSTFIX := lo -> zh
+
+#ReporitoryFixes.mk
+#gb_Executable_FILENAMES := $(patsubst soffice_exe:soffice_exe%,soffice_exe:soffice.exe,$(gb_Executable_FILENAMES))
+#gb_Executable_FILENAMES := $(patsubst soffice_com:soffice_com%,soffice_com:soffice.com,$(gb_Executable_FILENAMES))
+# soffice.exe -> zihero.exe
+# soffice.com -> zihero.com
+# soffice -> zihero
+# soffice.bin -> zihero.bin
+
 #ENVARS_ONLY=0 MAKE_ONLY=1 PARALLELISM=8 scripts/build_lo_release.sh
 
+#32bit
+#BUILD_ARCH=x86 WITH_VCPKG_ZERO=1 WITH_VCPKG=0 ENVARS_ONLY=0 MAKE_ONLY=0 PARALLELISM=12 scripts/build_lo_release.sh
+
+
 #64bit
-#BUILD_ARCH=x64 WITH_VCPKG=1 ENVARS_ONLY=0 MAKE_ONLY=0 PARALLELISM=8 scripts/build_lo_release.sh
+#BUILD_ARCH=x64 WITH_VCPKG_ZERO=1 WITH_VCPKG=0 ENVARS_ONLY=0 MAKE_ONLY=0 PARALLELISM=12 scripts/build_lo_release.sh
+
 
 #C:\dev\vcpkg>cl -Bv
 
@@ -37,7 +53,7 @@ THEME=colibre
 #THEME=sukapura_svg
 
 LO_PRODUCT_NAME=ZiherO
-LO_PRODUCT_VERSION=7.0.0.100
+LO_PRODUCT_VERSION=7.0.0.210
 
 
 #https://github.com/boostorg/uuid/issues/68
@@ -60,18 +76,19 @@ else
   ENABLE_64_BIT=
   export VCPKG_DIR=c:/dev/vcpkg/installed/x86-windows
   export VCPKG_STATIC_DIR=c:/dev/vcpkg/installed/x86-windows-static
-  export PYTHON_DIR=c:/dev/Python37-32
-  export PYTHON=$PYTHON_DIR/python.exe
-  export PYTHON_CFLAGS="-I$PYTHON_DIR/include"
-  export PYTHON_LIBS="$PYTHON_DIR/libs/python37.lib"
-  export PYTHON_VERSION="3.7.7"
+  #export PYTHON_DIR=c:/dev/Python37-32
+  #export PYTHON=$PYTHON_DIR/python.exe
+  #export PYTHON_CFLAGS="-I$PYTHON_DIR/include"
+  #export PYTHON_LIBS="$PYTHON_DIR/libs/python37.lib"
+  #export PYTHON_VERSION="3.7.7"
+  export PYTHON_VERSION="3.7.3"
+  export PYTHON=C:/dev/vcpkg/downloads/tools/python/python-3.7.3-x86/python.exe
+  export PYTHON_CFLAGS="-I$VCPKG_DIR/include/python3.7"
+  export PYTHON_LIBS="$VCPKG_DIR/lib/python37.lib"
 fi
 
 
 # gb_LinkTarget__command => link.exe ...
-
-#SKIA=--disable-skia
-#SKIA=
 
 # --disable-avmedia => build error
 # C:/dev/libreoffice-core-meson/avmedia/source/avmediadummy.cxx(30): warning C4273: 'avmedia::MediaItem::MediaItem': inconsistent dll linkage
@@ -112,6 +129,9 @@ fi
 #[Specify which library to use for webdav implementation.
 #         Possible values: "neon", "serf", "no". The default value is "neon".
 export WEBDAV="--with-webdav=no"
+
+#export PDF_IMPORT="--disable-pdfimport"
+export PDF_IMPORT=
 
 #export TLS_METHOD="--with-tls=openssl"
 export TLS_METHOD="--with-tls=nss"
@@ -188,7 +208,6 @@ if [ "$WITH_VCPKG_ZERO" == "1" ] ; then
   export POSTGRESQL_CFLAGS="-I$VCPKG_DIR/include"
   export POSTGRESQL_LIBS="$VCPKG_DIR/lib/libpq.lib $VCPKG_DIR/lib/libssl.lib $VCPKG_DIR/lib/libcrypto.lib"
 
-
 fi
 
 
@@ -223,14 +242,14 @@ if [ "$WITH_VCPKG_LIBXML" == "1" ] ; then
   export LIBEXSLT_LIBS="$VCPKG_DIR/lib/libexslt.lib"
 fi
 
-if [ "$WITH_VCPKG" == "1" ] ; then
 
+if [ "$WITH_VCPKG" == "1" ] ; then
 
   export VCPKG_LIBPATH="$VCPKG_DIR/lib"
   #export LIBPATH="$VCPKG_DIR/lib"
   #build liblangtag
   #libtool needs linux format -L${VCPKG_LIBPATH}
-  export LDFLAGS="-L${VCPKG_LIBPATH} -LIBPATH:${VCPKG_LIBPATH}"
+  #export LDFLAGS="-L${VCPKG_LIBPATH} -LIBPATH:${VCPKG_LIBPATH}"
   export CFLAGS="-I$VCPKG_DIR/include"
   export CXXFLAGS="-I$VCPKG_DIR/include"
 
@@ -266,7 +285,7 @@ fi
     --disable-firebird-sdbc \
     --disable-cve-tests \
     --disable-odk \
-    --with-galleries=no $SKIA \
+    --with-galleries=no \
     --disable-report-builder \
     --disable-lpsolve \
     --disable-coinmp \
@@ -275,8 +294,7 @@ fi
     --disable-online-update \
     --disable-sdremote \
     --disable-sdremote-bluetooth \
-    --disable-pdfimport \
-    --disable-extension-integration $WEBDAV $WITH_SYSTEM \
+    --disable-extension-integration $PDF_IMPORT $WEBDAV $WITH_SYSTEM \
     --enable-breakpad       #Enables breakpad for crash reporting.
 
 #    

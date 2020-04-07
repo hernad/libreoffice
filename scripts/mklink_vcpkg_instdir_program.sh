@@ -18,6 +18,16 @@ function mklink() {
   fi
 }
 
+function copy() {
+ #rm -f `cygpath -w instdir/program/$FILE`
+ if [ ! -f `cygpath -w instdir/program/$FILE` ] ; then
+    echo cp  `cygpath -w $SRC_DIR/$FILE` `cygpath -w instdir/program/$FILE`
+    cp -av `cygpath -w $SRC_DIR/$FILE` `cygpath -w instdir/program/$FILE`
+ else
+    echo "EXISTS: $(cygpath -w instdir/program/$FILE)"
+  fi
+}
+
 if [ "$BUILD_ARCH" = "x64" ] ; then
   SRC_DIR=c:/dev/vcpkg/installed/x64-windows/bin
   BOOST_ARCH=x64
@@ -58,7 +68,8 @@ DLLS+=" libpq.dll libiconv.dll libcharset.dll"
 DLLS+=" libxml2.dll"
 
 for FILE in $DLLS; do
-  mklink
+  #mklink
+  copy
 done
 
 
