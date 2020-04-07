@@ -193,7 +193,7 @@ $(eval $(call gb_Helper_register_executables_for_install,OOO,math_brand, \
 $(eval $(call gb_Helper_register_executables_for_install,OOO,writer_brand, \
 	$(if $(filter WNT,$(OS)), \
 		sweb \
-		swriter \
+		zwriter \
 	) \
 ))
 
@@ -514,6 +514,7 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,reportbuilder, \
 ))
 
 $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,writer, \
+	writerfilter \
 	hwp \
 	$(if $(ENABLE_LWP),lwpft) \
 	msword \
@@ -522,7 +523,6 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,writer, \
 	t602filter \
 	$(call gb_Helper_optional,SCRIPTING,vbaswobj) \
 	$(call gb_Helper_optional,WPFT,wpftwriter) \
-	writerfilter \
 	$(call gb_Helper_optional,DBCONNECTIVITY,writer) \
 ))
 
