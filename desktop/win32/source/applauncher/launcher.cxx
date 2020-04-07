@@ -50,7 +50,7 @@ extern "C" int APIENTRY wWinMain( HINSTANCE, HINSTANCE, LPWSTR, int )
 
     GetModuleFileNameW( nullptr, szApplicationName, MAX_PATH );
     _wsplitpath( szApplicationName, szDrive, szDir, szFileName, szExt );
-    _wmakepath( szApplicationName, szDrive, szDir, L"soffice", L".exe" );
+    _wmakepath( szApplicationName, szDrive, szDir, SOFFICE_EXE_NAME, L".exe" );
 
     PROCESS_INFORMATION aProcessInfo;
 

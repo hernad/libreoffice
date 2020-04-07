@@ -168,7 +168,7 @@ $(eval $(call gb_Helper_register_executables_for_install,OOO,base, \
 
 $(eval $(call gb_Helper_register_executables_for_install,OOO,calc_brand, \
 	$(if $(filter WNT,$(OS)), \
-		scalc \
+		zcalc \
 	) \
 ))
 
