@@ -28,6 +28,8 @@
 #  undef check
 #endif
 
+#define DLL_SUFIX  "lo"
+
 class Button;
 class ComboBox;
 class FormattedField;

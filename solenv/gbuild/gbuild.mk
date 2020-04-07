@@ -186,7 +186,7 @@ include $(SRCDIR)/Repository.mk
 include $(SRCDIR)/RepositoryExternal.mk
 $(eval $(call gb_Helper_collect_knownlibs))
 
-gb_Library_DLLPOSTFIX := zh
+gb_Library_DLLPOSTFIX := lo
 
 # Include platform/cpu/compiler specific config/definitions
 

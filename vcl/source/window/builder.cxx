@@ -1693,11 +1693,11 @@ void VclBuilder::preload()
 // find -name '*ui*' | xargs grep 'class=".*lo-' |
 //     sed 's/.*class="//' | sed 's/-.*$//' | sort | uniq
     static const char *aWidgetLibs[] = {
-        "sfxlo",  "svtlo",     "svxcorelo", "foruilo",
-        "vcllo",  "svxlo",     "cuilo",     "swlo",
-        "swuilo", "sclo",      "sdlo",      "chartcontrollerlo",
-        "smlo",   "scuilo",    "basctllo",  "sduilo",
-        "scnlo",  "xsltdlglo", "pcrlo" // "dbulo"
+        sprintf("sfx%s", DLL_SUFIX), sprintf("svt%s", DLL_SUFIX), sprintf("svxcore%s", DLL_SUFIX), sprintf("forui%s", DLL_SUFIX),
+        sprintf("vcl%s", DLL_SUFIX), sprintf("svx%s", DLL_SUFIX), sprintf("cui%s", DLL_SUFIX),  sprintf("sw%s", DLL_SUFIX),
+        sprintf("swui%s", DLL_SUFIX), sprintf("sc%s", DLL_SUFIX), sprintf("sd%s", DLL_SUFIX), sprintf("chartcontroller%s", DLL_SUFIX),
+        sprintf("sm%s", DLL_SUFIX, sprintf("scui%s", DLL_SUFIX), sprintf("basctl%s", DLL_SUFIX), sprintf("sdui%s", DLL_SUFIX),
+        sprintf("scn%s", DLL_SUFIX), sprintf("xsltdlg%s", DLL_SUFIX), sprintf("pcr%s", DLL_SUFIX) // "dbulo"
     };
     for (const auto & lib : aWidgetLibs)
     {
