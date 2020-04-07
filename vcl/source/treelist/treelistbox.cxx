@@ -1225,11 +1225,19 @@ nAction
     }
 #endif
 
-    ImplShowTargetEmphasis( pTargetEntry, false );
+    UnsetDropTarget();
     g_pDDSource = nullptr;
     g_pDDTarget = nullptr;
-    pTargetEntry = nullptr;
     nDragDropMode = nOldDragMode;
+}
+
+void SvTreeListBox::UnsetDropTarget()
+{
+    if (pTargetEntry)
+    {
+        ImplShowTargetEmphasis(pTargetEntry, false);
+        pTargetEntry = nullptr;
+    }
 }
 
 DragDropMode SvTreeListBox::NotifyStartDrag( TransferDataContainer&, SvTreeListEntry* )
@@ -2764,7 +2772,7 @@ void SvTreeListBox::PaintEntry1(SvTreeListEntry& rEntry, long nLine, vcl::Render
         rRenderContext.Push();
         rRenderContext.SetLineColor(rSettings.GetDeactiveColor());
         rRenderContext.SetFillColor(rSettings.GetDeactiveColor());
-        rRenderContext.DrawRect(tools::Rectangle(Point(0, nLine + nTempEntryHeight - 2), Size(nWidth, 2)));
+        rRenderContext.DrawRect(tools::Rectangle(Point(0, nLine), Size(nWidth, 2)));
         rRenderContext.Pop();
     }
 

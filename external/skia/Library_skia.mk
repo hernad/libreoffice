@@ -39,7 +39,6 @@ $(eval $(call gb_Library_use_system_win32_libs,skia,\
     oleaut32 \
     user32 \
     usp10 \
-    opengl32 \
     gdi32 \
 ))
 else
@@ -60,7 +59,6 @@ ifeq ($(OS),LINUX)
 $(eval $(call gb_Library_add_libs,skia,\
     -lm \
     -ldl \
-    -lGL \
     -lX11-xcb \
     -lX11 \
 ))
@@ -210,9 +208,6 @@ $(eval $(call gb_Library_add_generated_exception_objects,skia,\
     UnpackedTarball/skia/src/core/SkMiniRecorder \
     UnpackedTarball/skia/src/core/SkMipMap \
     UnpackedTarball/skia/src/core/SkModeColorFilter \
-    UnpackedTarball/skia/src/core/SkNormalFlatSource \
-    UnpackedTarball/skia/src/core/SkNormalMapSource \
-    UnpackedTarball/skia/src/core/SkNormalSource \
     UnpackedTarball/skia/src/core/SkOpts \
     UnpackedTarball/skia/src/core/SkOverdrawCanvas \
     UnpackedTarball/skia/src/core/SkPaint \
@@ -403,8 +398,6 @@ $(eval $(call gb_Library_add_generated_exception_objects,skia,\
     UnpackedTarball/skia/src/shaders/SkColorShader \
     UnpackedTarball/skia/src/shaders/SkComposeShader \
     UnpackedTarball/skia/src/shaders/SkImageShader \
-    UnpackedTarball/skia/src/shaders/SkLightingShader \
-    UnpackedTarball/skia/src/shaders/SkLights \
     UnpackedTarball/skia/src/shaders/SkLocalMatrixShader \
     UnpackedTarball/skia/src/shaders/SkPerlinNoiseShader \
     UnpackedTarball/skia/src/shaders/SkPictureShader \
@@ -499,7 +492,6 @@ $(eval $(call gb_Library_add_generated_exception_objects,skia,\
     UnpackedTarball/skia/src/gpu/effects/generated/GrClampFragmentProcessor \
     UnpackedTarball/skia/src/gpu/effects/generated/GrColorMatrixFragmentProcessor \
     UnpackedTarball/skia/src/gpu/effects/generated/GrComposeLerpEffect \
-    UnpackedTarball/skia/src/gpu/effects/generated/GrComposeLerpRedEffect \
     UnpackedTarball/skia/src/gpu/effects/generated/GrConfigConversionEffect \
     UnpackedTarball/skia/src/gpu/effects/generated/GrConstColorProcessor \
     UnpackedTarball/skia/src/gpu/effects/generated/GrEllipseEffect \
@@ -528,7 +520,6 @@ $(eval $(call gb_Library_add_generated_exception_objects,skia,\
     UnpackedTarball/skia/src/gpu/effects/GrRRectEffect \
     UnpackedTarball/skia/src/gpu/effects/GrShadowGeoProc \
     UnpackedTarball/skia/src/gpu/effects/GrSkSLFP \
-    UnpackedTarball/skia/src/gpu/effects/GrSRGBEffect \
     UnpackedTarball/skia/src/gpu/effects/GrTextureDomain \
     UnpackedTarball/skia/src/gpu/effects/GrTextureEffect \
     UnpackedTarball/skia/src/gpu/effects/GrXfermodeFragmentProcessor \
@@ -537,36 +528,6 @@ $(eval $(call gb_Library_add_generated_exception_objects,skia,\
     UnpackedTarball/skia/src/gpu/geometry/GrQuad \
     UnpackedTarball/skia/src/gpu/geometry/GrQuadUtils \
     UnpackedTarball/skia/src/gpu/geometry/GrShape \
-    UnpackedTarball/skia/src/gpu/gl/builders/GrGLProgramBuilder \
-    UnpackedTarball/skia/src/gpu/gl/builders/GrGLShaderStringBuilder \
-    UnpackedTarball/skia/src/gpu/gl/GrGLAssembleGLESInterfaceAutogen \
-    UnpackedTarball/skia/src/gpu/gl/GrGLAssembleGLInterfaceAutogen \
-    UnpackedTarball/skia/src/gpu/gl/GrGLAssembleHelpers \
-    UnpackedTarball/skia/src/gpu/gl/GrGLAssembleInterface \
-    UnpackedTarball/skia/src/gpu/gl/GrGLAssembleWebGLInterfaceAutogen \
-    UnpackedTarball/skia/src/gpu/gl/GrGLBuffer \
-    UnpackedTarball/skia/src/gpu/gl/GrGLCaps \
-    UnpackedTarball/skia/src/gpu/gl/GrGLContext \
-    UnpackedTarball/skia/src/gpu/gl/GrGLExtensions \
-    UnpackedTarball/skia/src/gpu/gl/GrGLGLSL \
-    UnpackedTarball/skia/src/gpu/gl/GrGLGpu \
-    UnpackedTarball/skia/src/gpu/gl/GrGLGpuProgramCache \
-    UnpackedTarball/skia/src/gpu/gl/GrGLInterfaceAutogen \
-    UnpackedTarball/skia/src/gpu/gl/GrGLPath \
-    UnpackedTarball/skia/src/gpu/gl/GrGLPathRendering \
-    UnpackedTarball/skia/src/gpu/gl/GrGLOpsRenderPass \
-    UnpackedTarball/skia/src/gpu/gl/GrGLProgram \
-    UnpackedTarball/skia/src/gpu/gl/GrGLProgramDataManager \
-    UnpackedTarball/skia/src/gpu/gl/GrGLRenderTarget \
-    UnpackedTarball/skia/src/gpu/gl/GrGLSemaphore \
-    UnpackedTarball/skia/src/gpu/gl/GrGLStencilAttachment \
-    UnpackedTarball/skia/src/gpu/gl/GrGLTexture \
-    UnpackedTarball/skia/src/gpu/gl/GrGLTextureRenderTarget \
-    UnpackedTarball/skia/src/gpu/gl/GrGLTypesPriv \
-    UnpackedTarball/skia/src/gpu/gl/GrGLUniformHandler \
-    UnpackedTarball/skia/src/gpu/gl/GrGLUtil \
-    UnpackedTarball/skia/src/gpu/gl/GrGLVaryingHandler \
-    UnpackedTarball/skia/src/gpu/gl/GrGLVertexArray \
     UnpackedTarball/skia/src/gpu/glsl/GrGLSLBlend \
     UnpackedTarball/skia/src/gpu/glsl/GrGLSL \
     UnpackedTarball/skia/src/gpu/glsl/GrGLSLFragmentProcessor \
@@ -576,7 +537,6 @@ $(eval $(call gb_Library_add_generated_exception_objects,skia,\
     UnpackedTarball/skia/src/gpu/glsl/GrGLSLProgramBuilder \
     UnpackedTarball/skia/src/gpu/glsl/GrGLSLProgramDataManager \
     UnpackedTarball/skia/src/gpu/glsl/GrGLSLShaderBuilder \
-    UnpackedTarball/skia/src/gpu/glsl/GrGLSLUtil \
     UnpackedTarball/skia/src/gpu/glsl/GrGLSLVarying \
     UnpackedTarball/skia/src/gpu/glsl/GrGLSLVertexGeoBuilder \
     UnpackedTarball/skia/src/gpu/glsl/GrGLSLXferProcessor \
@@ -598,6 +558,7 @@ $(eval $(call gb_Library_add_generated_exception_objects,skia,\
     UnpackedTarball/skia/src/gpu/GrBackendSurface \
     UnpackedTarball/skia/src/gpu/GrBackendTextureImageGenerator \
     UnpackedTarball/skia/src/gpu/GrBitmapTextureMaker \
+    UnpackedTarball/skia/src/gpu/GrBlockAllocator \
     UnpackedTarball/skia/src/gpu/GrBlurUtils \
     UnpackedTarball/skia/src/gpu/GrBufferAllocPool \
     UnpackedTarball/skia/src/gpu/GrCaps \
@@ -671,8 +632,8 @@ $(eval $(call gb_Library_add_generated_exception_objects,skia,\
     UnpackedTarball/skia/src/gpu/GrSurfaceProxy \
     UnpackedTarball/skia/src/gpu/GrSwizzle \
     UnpackedTarball/skia/src/gpu/GrSWMaskHelper \
-    UnpackedTarball/skia/src/gpu/GrTessellator \
     UnpackedTarball/skia/src/gpu/GrTestUtils \
+    UnpackedTarball/skia/src/gpu/GrTriangulator \
     UnpackedTarball/skia/src/gpu/GrTextureAdjuster \
     UnpackedTarball/skia/src/gpu/GrTexture \
     UnpackedTarball/skia/src/gpu/GrTextureMaker \
@@ -716,17 +677,17 @@ $(eval $(call gb_Library_add_generated_exception_objects,skia,\
     UnpackedTarball/skia/src/gpu/ops/GrStencilAndCoverPathRenderer \
     UnpackedTarball/skia/src/gpu/ops/GrStencilPathOp \
     UnpackedTarball/skia/src/gpu/ops/GrStrokeRectOp \
-    UnpackedTarball/skia/src/gpu/ops/GrTessellatingPathRenderer \
+    UnpackedTarball/skia/src/gpu/ops/GrTriangulatingPathRenderer \
     UnpackedTarball/skia/src/gpu/ops/GrTextureOp \
     UnpackedTarball/skia/src/gpu/SkGpuDevice \
     UnpackedTarball/skia/src/gpu/SkGpuDevice_drawTexture \
     UnpackedTarball/skia/src/gpu/SkGr \
     UnpackedTarball/skia/src/gpu/tessellate/GrDrawAtlasPathOp \
     UnpackedTarball/skia/src/gpu/tessellate/GrFillPathShader \
-    UnpackedTarball/skia/src/gpu/tessellate/GrGpuTessellationPathRenderer \
     UnpackedTarball/skia/src/gpu/tessellate/GrPathParser \
     UnpackedTarball/skia/src/gpu/tessellate/GrStencilPathShader \
     UnpackedTarball/skia/src/gpu/tessellate/GrTessellatePathOp \
+    UnpackedTarball/skia/src/gpu/tessellate/GrTessellationPathRenderer \
     UnpackedTarball/skia/src/gpu/text/GrAtlasManager \
     UnpackedTarball/skia/src/gpu/text/GrDistanceFieldAdjustTable \
     UnpackedTarball/skia/src/gpu/text/GrSDFMaskFilter \
@@ -804,13 +765,11 @@ $(eval $(call gb_Library_add_generated_exception_objects,skia,\
 
 $(eval $(call gb_Library_add_generated_exception_objects,skia,\
     UnpackedTarball/skia/tools/gpu/vk/VkTestUtils \
-    UnpackedTarball/skia/tools/sk_app/GLWindowContext \
     UnpackedTarball/skia/tools/sk_app/VulkanWindowContext \
 ))
 
 ifeq ($(OS),WNT)
 $(eval $(call gb_Library_add_generated_exception_objects,skia,\
-    UnpackedTarball/skia/src/gpu/gl/win/GrGLMakeNativeInterface_win \
     UnpackedTarball/skia/src/ports/SkDebug_win \
     UnpackedTarball/skia/src/ports/SkFontHost_win \
     UnpackedTarball/skia/src/fonts/SkFontMgr_indirect \
@@ -826,17 +785,14 @@ $(eval $(call gb_Library_add_generated_exception_objects,skia,\
     UnpackedTarball/skia/src/utils/win/SkDWriteGeometrySink \
     UnpackedTarball/skia/src/utils/win/SkHRESULT \
     UnpackedTarball/skia/src/utils/win/SkIStream \
-    UnpackedTarball/skia/src/utils/win/SkWGL_win \
 ))
 
 $(eval $(call gb_Library_add_generated_exception_objects,skia,\
-    UnpackedTarball/skia/tools/sk_app/win/GLWindowContext_win \
     UnpackedTarball/skia/tools/sk_app/win/RasterWindowContext_win \
     UnpackedTarball/skia/tools/sk_app/win/VulkanWindowContext_win \
 ))
 else
 $(eval $(call gb_Library_add_generated_exception_objects,skia,\
-    UnpackedTarball/skia/src/gpu/gl/glx/GrGLMakeNativeInterface_glx \
     UnpackedTarball/skia/src/ports/SkDebug_stdio \
     UnpackedTarball/skia/src/ports/SkFontConfigInterface \
     UnpackedTarball/skia/src/ports/SkFontConfigInterface_direct \
@@ -851,7 +807,6 @@ $(eval $(call gb_Library_add_generated_exception_objects,skia,\
 ))
 
 $(eval $(call gb_Library_add_generated_exception_objects,skia,\
-    UnpackedTarball/skia/tools/sk_app/unix/GLWindowContext_unix \
     UnpackedTarball/skia/tools/sk_app/unix/RasterWindowContext_unix \
     UnpackedTarball/skia/tools/sk_app/unix/VulkanWindowContext_unix \
 ))
