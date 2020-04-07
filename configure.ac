@@ -1074,6 +1074,10 @@ libo_FUZZ_ARG_ENABLE(pdfium,
         [Disable building PDFium.])
 )
 
+libo_FUZZ_ARG_ENABLE(skia,
+    AS_HELP_STRING([--disable-skia],
+        [Disable building Skia.])
+)
 
 ###############################################################################
 
@@ -1728,10 +1732,10 @@ AC_ARG_WITH(system-jpeg,
         [Use jpeg already on system.]),,
     [with_system_jpeg="$with_system_libs"])
 
-dnl AC_ARG_WITH(system-clucene,
-dnl     AS_HELP_STRING([--with-system-clucene],
-dnl         [Use clucene already on system.]),,
-dnl     [with_system_clucene="$with_system_libs"])
+AC_ARG_WITH(system-clucene,
+    AS_HELP_STRING([--with-system-clucene],
+        [Use clucene already on system.]),,
+    [with_system_clucene="$with_system_libs"])
 
 AC_ARG_WITH(system-expat,
     AS_HELP_STRING([--with-system-expat],
@@ -2561,7 +2565,6 @@ if test -z "$enable_database_connectivity"; then
     fi
 fi
 
-
 if test "$enable_database_connectivity" = yes; then
     BUILD_TYPE="$BUILD_TYPE DBCONNECTIVITY"
     AC_DEFINE(HAVE_FEATURE_DBCONNECTIVITY)
@@ -2639,12 +2642,6 @@ else
     fi
 fi
 AC_SUBST(WITH_GALLERY_BUILD)
-
-WITH_HELP_BUILD=
-AC_SUBST(WITH_HELP_BUILD)
-
-WITH_EBOOK_BUILD=
-AC_SUBST(WITH_EBOOK_BUILD)
 
 dnl ===================================================================
 dnl  Checks if ccache is available
@@ -3631,24 +3628,24 @@ if test "$_os" = "WINNT"; then
     BUILD_X64=
     CXX_X64_BINARY=
 
-    dnl if test "$BITNESS_OVERRIDE" = ""; then
-    dnl     AC_MSG_CHECKING([for a x64 compiler and libraries for 64-bit Explorer extensions])
-    dnl     if test -f "$VC_PRODUCT_DIR/Tools/MSVC/$vcbuildnumber/atlmfc/lib/x64/atls.lib" || \
-    dnl          test -f "$VC_PRODUCT_DIR/Tools/MSVC/$vcbuildnumber/atlmfc/lib/spectre/x64/atls.lib"; then
-    dnl         if "$VC_PRODUCT_DIR/Tools/MSVC/$vcbuildnumber/bin/$VC_HOST_DIR/x64/cl.exe" -? </dev/null >/dev/null 2>&1; then
-    dnl             BUILD_X64=TRUE
-    dnl             CXX_X64_BINARY=`win_short_path_for_make "$VC_PRODUCT_DIR/Tools/MSVC/$vcbuildnumber/bin/$VC_HOST_DIR/x64/cl.exe"`
-    dnl         fi
-    dnl     fi
-    dnl     if test "$BUILD_X64" = TRUE; then
-    dnl         AC_MSG_RESULT([found])
-    dnl     else
-    dnl         AC_MSG_RESULT([not found])
-    dnl         AC_MSG_WARN([Installation set will not contain 64-bit Explorer extensions])
-    dnl     fi
-    dnl else
-    dnl     CXX_X64_BINARY=$CXX
-    dnl fi
+    if test "$BITNESS_OVERRIDE" = ""; then
+        AC_MSG_CHECKING([for a x64 compiler and libraries for 64-bit Explorer extensions])
+        if test -f "$VC_PRODUCT_DIR/Tools/MSVC/$vcbuildnumber/atlmfc/lib/x64/atls.lib" || \
+             test -f "$VC_PRODUCT_DIR/Tools/MSVC/$vcbuildnumber/atlmfc/lib/spectre/x64/atls.lib"; then
+            if "$VC_PRODUCT_DIR/Tools/MSVC/$vcbuildnumber/bin/$VC_HOST_DIR/x64/cl.exe" -? </dev/null >/dev/null 2>&1; then
+                BUILD_X64=TRUE
+                CXX_X64_BINARY=`win_short_path_for_make "$VC_PRODUCT_DIR/Tools/MSVC/$vcbuildnumber/bin/$VC_HOST_DIR/x64/cl.exe"`
+            fi
+        fi
+        if test "$BUILD_X64" = TRUE; then
+            AC_MSG_RESULT([found])
+        else
+            AC_MSG_RESULT([not found])
+            AC_MSG_WARN([Installation set will not contain 64-bit Explorer extensions])
+        fi
+    else
+        CXX_X64_BINARY=$CXX
+    fi
     AC_SUBST(BUILD_X64)
 
     # These are passed to the environment and then used in gbuild/platform/com_MSC_class.mk
@@ -8295,14 +8292,10 @@ AC_MSG_CHECKING([which zlib to use])
 if test "$with_system_zlib" = "yes"; then
     AC_MSG_RESULT([external])
     SYSTEM_ZLIB=TRUE
-    if test "$build_os" = "cygwin"; then
-        AC_MSG_NOTICE([cygwin - zlib system skip check])
-    else
-        AC_CHECK_HEADER(zlib.h, [],
-            [AC_MSG_ERROR(zlib.h not found. install zlib)], [])
-        AC_CHECK_LIB(z, deflate, [ ZLIB_LIBS=-lz ],
-            [AC_MSG_ERROR(zlib not found or functional)], [])
-    fi
+    AC_CHECK_HEADER(zlib.h, [],
+        [AC_MSG_ERROR(zlib.h not found. install zlib)], [])
+    AC_CHECK_LIB(z, deflate, [ ZLIB_LIBS=-lz ],
+        [AC_MSG_ERROR(zlib not found or functional)], [])
 else
     AC_MSG_RESULT([internal])
     SYSTEM_ZLIB=
@@ -8515,49 +8508,41 @@ dnl ===================================================================
 dnl we should rather be using
 dnl libo_CHECK_SYSTEM_MODULE([clucence],[CLUCENE],[liblucence-core]) here
 dnl but the contribs-lib check seems tricky
-dnl AC_MSG_CHECKING([which clucene to use])
-dnl if test "$with_system_clucene" = "yes"; then
-dnl     AC_MSG_RESULT([external])
-dnl     SYSTEM_CLUCENE=TRUE
-dnl     PKG_CHECK_MODULES(CLUCENE, libclucene-core)
-dnl     CLUCENE_CFLAGS=[$(printf '%s' "$CLUCENE_CFLAGS" | sed -e 's@-I[^ ]*/CLucene/ext@@' -e "s/-I/${ISYSTEM?}/g")]
-dnl     FilterLibs "${CLUCENE_LIBS}"
-dnl     CLUCENE_LIBS="${filteredlibs}"
-dnl     AC_LANG_PUSH([C++])
-dnl     save_CXXFLAGS=$CXXFLAGS
-dnl     save_CPPFLAGS=$CPPFLAGS
-dnl     CXXFLAGS="$CXXFLAGS $CLUCENE_CFLAGS"
-dnl     CPPFLAGS="$CPPFLAGS $CLUCENE_CFLAGS"
-dnl     dnl http://sourceforge.net/tracker/index.php?func=detail&aid=3392466&group_id=80013&atid=558446
-dnl     dnl https://bugzilla.redhat.com/show_bug.cgi?id=794795
-dnl     AC_CHECK_HEADER([CLucene/analysis/cjk/CJKAnalyzer.h], [],
-dnl                  [AC_MSG_ERROR([Your version of libclucene has contribs-lib missing.])], [#include <CLucene.h>])
-dnl     CXXFLAGS=$save_CXXFLAGS
-dnl     CPPFLAGS=$save_CPPFLAGS
-dnl     AC_LANG_POP([C++])
-dnl 
-dnl     CLUCENE_LIBS="$CLUCENE_LIBS -lclucene-contribs-lib"
-dnl else
-dnl     AC_MSG_RESULT([internal])
-dnl     SYSTEM_CLUCENE=
-dnl     BUILD_TYPE="$BUILD_TYPE CLUCENE"
-dnl fi
-dnl AC_SUBST(SYSTEM_CLUCENE)
-dnl AC_SUBST(CLUCENE_CFLAGS)
-dnl AC_SUBST(CLUCENE_LIBS)
+AC_MSG_CHECKING([which clucene to use])
+if test "$with_system_clucene" = "yes"; then
+    AC_MSG_RESULT([external])
+    SYSTEM_CLUCENE=TRUE
+    PKG_CHECK_MODULES(CLUCENE, libclucene-core)
+    CLUCENE_CFLAGS=[$(printf '%s' "$CLUCENE_CFLAGS" | sed -e 's@-I[^ ]*/CLucene/ext@@' -e "s/-I/${ISYSTEM?}/g")]
+    FilterLibs "${CLUCENE_LIBS}"
+    CLUCENE_LIBS="${filteredlibs}"
+    AC_LANG_PUSH([C++])
+    save_CXXFLAGS=$CXXFLAGS
+    save_CPPFLAGS=$CPPFLAGS
+    CXXFLAGS="$CXXFLAGS $CLUCENE_CFLAGS"
+    CPPFLAGS="$CPPFLAGS $CLUCENE_CFLAGS"
+    dnl http://sourceforge.net/tracker/index.php?func=detail&aid=3392466&group_id=80013&atid=558446
+    dnl https://bugzilla.redhat.com/show_bug.cgi?id=794795
+    AC_CHECK_HEADER([CLucene/analysis/cjk/CJKAnalyzer.h], [],
+                 [AC_MSG_ERROR([Your version of libclucene has contribs-lib missing.])], [#include <CLucene.h>])
+    CXXFLAGS=$save_CXXFLAGS
+    CPPFLAGS=$save_CPPFLAGS
+    AC_LANG_POP([C++])
+
+    CLUCENE_LIBS="$CLUCENE_LIBS -lclucene-contribs-lib"
+else
+    AC_MSG_RESULT([internal])
+    SYSTEM_CLUCENE=
+    BUILD_TYPE="$BUILD_TYPE CLUCENE"
+fi
+AC_SUBST(SYSTEM_CLUCENE)
+AC_SUBST(CLUCENE_CFLAGS)
+AC_SUBST(CLUCENE_LIBS)
 
 dnl ===================================================================
 dnl Check for system expat
 dnl ===================================================================
-if test $build_os = cygwin -a "$with_system_expat" = "yes"; then
-    SYSTEM_EXPAT=TRUE
-    AC_MSG_CHECKING([cygwin EXPAT external])
-else
-    libo_CHECK_SYSTEM_MODULE([expat], [EXPAT], [expat])
-fi
-AC_SUBST(EXPAT_CFLAGS)
-AC_SUBST(EXPAT_LIBS)
-AC_SUBST(LIBPATH)
+libo_CHECK_SYSTEM_MODULE([expat], [EXPAT], [expat])
 
 dnl ===================================================================
 dnl Check for system xmlsec
@@ -8577,61 +8562,57 @@ else
 fi
 AC_SUBST([ENABLE_EOT])
 
+dnl ===================================================================
+dnl Check for DLP libs
+dnl ===================================================================
+AS_IF([test "$COM" = "MSC"],
+      [librevenge_libdir="${WORKDIR}/LinkTarget/Library"],
+      [librevenge_libdir="${WORKDIR}/UnpackedTarball/librevenge/src/lib/.libs"]
+)
+libo_CHECK_SYSTEM_MODULE([librevenge],[REVENGE],[librevenge-0.0 >= 0.0.1],["-I${WORKDIR}/UnpackedTarball/librevenge/inc"],["-L${librevenge_libdir} -lrevenge-0.0"])
 
-dnl libo_CHECK_SYSTEM_MODULE([libodfgen],[ODFGEN],[libodfgen-0.1])
+libo_CHECK_SYSTEM_MODULE([libodfgen],[ODFGEN],[libodfgen-0.1])
 
-dnl libo_CHECK_SYSTEM_MODULE([libepubgen],[EPUBGEN],[libepubgen-0.1])
+libo_CHECK_SYSTEM_MODULE([libepubgen],[EPUBGEN],[libepubgen-0.1])
 
-dnl AS_IF([test "$COM" = "MSC"],
-dnl       [libwpd_libdir="${WORKDIR}/LinkTarget/Library"],
-dnl       [libwpd_libdir="${WORKDIR}/UnpackedTarball/libwpd/src/lib/.libs"]
-dnl )
-dnl libo_CHECK_SYSTEM_MODULE([libwpd],[WPD],[libwpd-0.10],["-I${WORKDIR}/UnpackedTarball/libwpd/inc"],["-L${libwpd_libdir} -lwpd-0.10"])
+AS_IF([test "$COM" = "MSC"],
+      [libwpd_libdir="${WORKDIR}/LinkTarget/Library"],
+      [libwpd_libdir="${WORKDIR}/UnpackedTarball/libwpd/src/lib/.libs"]
+)
+libo_CHECK_SYSTEM_MODULE([libwpd],[WPD],[libwpd-0.10],["-I${WORKDIR}/UnpackedTarball/libwpd/inc"],["-L${libwpd_libdir} -lwpd-0.10"])
 
-dnl ========= WordPerfect graphics filter OFF ========================
-dnl libo_CHECK_SYSTEM_MODULE([libwpg],[WPG],[libwpg-0.3])
+libo_CHECK_SYSTEM_MODULE([libwpg],[WPG],[libwpg-0.3])
 
-dnl ========= Microsoft Works documents OFF ========================
-dnl libo_CHECK_SYSTEM_MODULE([libwps],[WPS],[libwps-0.4])
-dnl libo_PKG_VERSION([WPS], [libwps-0.4], [0.4.10])
-dnl ========================================================================
+libo_CHECK_SYSTEM_MODULE([libwps],[WPS],[libwps-0.4])
+libo_PKG_VERSION([WPS], [libwps-0.4], [0.4.10])
 
-dnl libo_CHECK_SYSTEM_MODULE([libvisio],[VISIO],[libvisio-0.1])
+libo_CHECK_SYSTEM_MODULE([libvisio],[VISIO],[libvisio-0.1])
 
-dnl libo_CHECK_SYSTEM_MODULE([libcdr],[CDR],[libcdr-0.1])
+libo_CHECK_SYSTEM_MODULE([libcdr],[CDR],[libcdr-0.1])
 
-dnl libo_CHECK_SYSTEM_MODULE([libmspub],[MSPUB],[libmspub-0.1])
+libo_CHECK_SYSTEM_MODULE([libmspub],[MSPUB],[libmspub-0.1])
 
-dnl ====================MWAW - old Macintosh formats OFF ======================
-dnl libo_CHECK_SYSTEM_MODULE([libmwaw],[MWAW],[libmwaw-0.3 >= 0.3.1])
-dnl libo_PKG_VERSION([MWAW], [libmwaw-0.3], [0.3.15])
-WITH_OLD_MACINTOSH=
-AC_SUBST(WITH_OLD_MACINTOSH)
+libo_CHECK_SYSTEM_MODULE([libmwaw],[MWAW],[libmwaw-0.3 >= 0.3.1])
+libo_PKG_VERSION([MWAW], [libmwaw-0.3], [0.3.15])
 
-dnl ====================ETONYEK - Apple Keynote presentations OFF ======================
-dnl libo_CHECK_SYSTEM_MODULE([libetonyek],[ETONYEK],[libetonyek-0.1])
-dnl libo_PKG_VERSION([ETONYEK], [libetonyek-0.1], [0.1.8])
-dnl =====================================================================================
+libo_CHECK_SYSTEM_MODULE([libetonyek],[ETONYEK],[libetonyek-0.1])
+libo_PKG_VERSION([ETONYEK], [libetonyek-0.1], [0.1.8])
 
-dnl libo_CHECK_SYSTEM_MODULE([libfreehand],[FREEHAND],[libfreehand-0.1])
+libo_CHECK_SYSTEM_MODULE([libfreehand],[FREEHAND],[libfreehand-0.1])
 
-dnl ====================EBOOK OFF ======================
-dnl libo_CHECK_SYSTEM_MODULE([libebook],[EBOOK],[libe-book-0.1])
-dnl libo_PKG_VERSION([EBOOK], [libe-book-0.1], [0.1.2])
+libo_CHECK_SYSTEM_MODULE([libebook],[EBOOK],[libe-book-0.1])
+libo_PKG_VERSION([EBOOK], [libe-book-0.1], [0.1.2])
 
-dnl libo_CHECK_SYSTEM_MODULE([libabw],[ABW],[libabw-0.1])
+libo_CHECK_SYSTEM_MODULE([libabw],[ABW],[libabw-0.1])
 
-dnl libo_CHECK_SYSTEM_MODULE([libpagemaker],[PAGEMAKER],[libpagemaker-0.0])
+libo_CHECK_SYSTEM_MODULE([libpagemaker],[PAGEMAKER],[libpagemaker-0.0])
 
-dnl libo_CHECK_SYSTEM_MODULE([libqxp],[QXP],[libqxp-0.0])
+libo_CHECK_SYSTEM_MODULE([libqxp],[QXP],[libqxp-0.0])
 
-dnl libo_CHECK_SYSTEM_MODULE([libzmf],[ZMF],[libzmf-0.0])
+libo_CHECK_SYSTEM_MODULE([libzmf],[ZMF],[libzmf-0.0])
 
-dnl ====================STAROFFICE OFF ======================
-dnl libo_CHECK_SYSTEM_MODULE([libstaroffice],[STAROFFICE],[libstaroffice-0.0])
-dnl libo_PKG_VERSION([STAROFFICE], [libstaroffice-0.0], [0.0.6])
-WITH_STAROFFICE=
-AC_SUBST(WITH_STAROFFICE)
+libo_CHECK_SYSTEM_MODULE([libstaroffice],[STAROFFICE],[libstaroffice-0.0])
+libo_PKG_VERSION([STAROFFICE], [libstaroffice-0.0], [0.0.6])
 
 dnl ===================================================================
 dnl Check for system lcms2
@@ -8766,8 +8747,6 @@ if test "$with_system_libxml" = "yes"; then
         LIBXML_CFLAGS="-I$MACOSX_SDK_PATH/usr/include/libxml2"
         dnl omit -L/usr/lib
         LIBXML_LIBS="-lxml2 -lz -lpthread -liconv -lm"
-    elif test $_os = WINNT; then
-        AC_MSG_NOTICE([Cygwin - libmxl skip])
     elif test $_os = iOS; then
         dnl make sure to use SDK path
         usr=`echo '#include <stdlib.h>' | $CC -E -MD - | grep usr/include/stdlib.h | head -1 | sed -e 's,# 1 ",,' -e 's,/usr/include/.*,/usr,'`
@@ -8806,7 +8785,6 @@ fi
 AC_SUBST(SYSTEM_LIBXML_FOR_BUILD)
 AC_SUBST(LIBXML_CFLAGS)
 AC_SUBST(LIBXML_LIBS)
-AC_SUBST(LIBXML_LIBTOOL_LIBS)
 AC_SUBST(XMLLINT)
 
 # =====================================================================
@@ -8901,7 +8879,7 @@ if test $enable_python = system; then
     if test -n "$PYTHON_CFLAGS" -a -n "$PYTHON_LIBS"; then
         # Fallback: Accept these in the environment, or as set above
         # for MacOSX.
-        AC_MSG_WARN([Python-system CFLAGS and LIBS set up])
+        :
     elif test "$cross_compiling" != yes; then
         # Unset variables set by the above AM_PATH_PYTHON so that
         # we actually do check anew.
@@ -8937,13 +8915,12 @@ if test $enable_python = system; then
         test -n "$PYTHON_CFLAGS" && break
     fi
 
-    if test $build_os != cygwin; then
-        dnl Check if the headers really work
-        save_CPPFLAGS="$CPPFLAGS"
-        CPPFLAGS="$CPPFLAGS $PYTHON_CFLAGS"
-        AC_CHECK_HEADER(Python.h)
-        CPPFLAGS="$save_CPPFLAGS"
-    fi
+    dnl Check if the headers really work
+    save_CPPFLAGS="$CPPFLAGS"
+    CPPFLAGS="$CPPFLAGS $PYTHON_CFLAGS"
+    AC_CHECK_HEADER(Python.h)
+    CPPFLAGS="$save_CPPFLAGS"
+
     # let the PYTHON_FOR_BUILD match the same python installation that
     # provides PYTHON_CFLAGS/PYTHON_LDFLAGS for pyuno, which should be
     # better for PythonTests.
@@ -8993,31 +8970,28 @@ case $enable_python in
 system)
     SYSTEM_PYTHON=TRUE
 
-    if test $build_os != cygwin; then
-        if test "x$ac_cv_header_Python_h" != "xyes"; then
-            AC_MSG_ERROR([Python headers not found. You probably want to set both the PYTHON_CFLAGS and PYTHON_LIBS environment variables.])
-        fi
-        AC_LANG_PUSH(C)
-        CFLAGS="$CFLAGS $PYTHON_CFLAGS"
-        AC_MSG_CHECKING([for correct python library version])
-        AC_RUN_IFELSE([AC_LANG_SOURCE([[
-        #include <Python.h>
-
-        int main(int argc, char **argv) {
-        if ((PY_MAJOR_VERSION == 2 && PY_MINOR_VERSION >= 7) ||
-            (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 3)) return 0;
-        else return 1;
-        }
-        ]])],[AC_MSG_RESULT([ok])],[AC_MSG_ERROR([Python >= 3.3 is needed when building with Python 3, or Python >= 2.7 when building with Python 2])],[AC_MSG_RESULT([skipped; cross-compiling])])
-        CFLAGS=$save_CFLAGS
-        AC_LANG_POP(C)
-
-        dnl FIXME Check if the Python library can be linked with, too?
-    else
-        CFLAGS="$CFLAGS $PYTHON_CFLAGS"
-        AC_DEFINE_UNQUOTED([PYTHON_VERSION_STRING], [L"${PYTHON_VERSION}"])
+    if test "x$ac_cv_header_Python_h" != "xyes"; then
+       AC_MSG_ERROR([Python headers not found. You probably want to set both the PYTHON_CFLAGS and PYTHON_LIBS environment variables.])
     fi
+
+    AC_LANG_PUSH(C)
+    CFLAGS="$CFLAGS $PYTHON_CFLAGS"
+    AC_MSG_CHECKING([for correct python library version])
+       AC_RUN_IFELSE([AC_LANG_SOURCE([[
+#include <Python.h>
+
+int main(int argc, char **argv) {
+   if ((PY_MAJOR_VERSION == 2 && PY_MINOR_VERSION >= 7) ||
+       (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 3)) return 0;
+   else return 1;
+}
+       ]])],[AC_MSG_RESULT([ok])],[AC_MSG_ERROR([Python >= 3.3 is needed when building with Python 3, or Python >= 2.7 when building with Python 2])],[AC_MSG_RESULT([skipped; cross-compiling])])
+    CFLAGS=$save_CFLAGS
+    AC_LANG_POP(C)
+
+    dnl FIXME Check if the Python library can be linked with, too?
     ;;
+
 internal)
     SYSTEM_PYTHON=
     PYTHON_VERSION_MAJOR=3
@@ -9053,25 +9027,7 @@ AC_SUBST(PYTHON_VERSION)
 AC_SUBST(PYTHON_VERSION_MAJOR)
 AC_SUBST(PYTHON_VERSION_MINOR)
 
-ENABLE_DBACCESS=TRUE
-if test "$ENABLE_DBACCESS" = "TRUE"; then
-    BUILD_TYPE="$BUILD_TYPE DBACCESS"
-    AC_DEFINE(HAVE_FEATURE_DBACCESS)
-fi
-
-ENABLE_ADO=
-if test "$ENABLE_ADO" = "TRUE"; then
-    BUILD_TYPE="$BUILD_TYPE ADO"
-    AC_DEFINE(HAVE_FEATURE_ADO)
-fi
-
-ENABLE_WRITERPERFECT=
-if test "$ENABLE_WRITERPERFECT" = "TRUE"; then
-    BUILD_TYPE="$BUILD_TYPE WRITERPERFECT"
-    AC_DEFINE(HAVE_FEATURE_WRITERPERFECT)
-fi
-
-ENABLE_MARIADBC=
+ENABLE_MARIADBC=TRUE
 if test "$_os" = "Android" -o "$_os" = "iOS" -o "$enable_mpl_subset" = "yes"; then
     ENABLE_MARIADBC=
 fi
@@ -9273,17 +9229,12 @@ if test "x$enable_postgresql_sdbc" != "xno"; then
             POSTGRESQL_INC=-I$(${PGCONFIG} --includedir)
             POSTGRESQL_LIB="-L$(${PGCONFIG} --libdir)"
         else
-            if test $build_os = cygwin; then
-                POSTGRESQL_INC=$POSTGRESQL_CFLAGS
-                POSTGRESQL_LIB=$POSTGRESQL_LIBS
-            else
-                PKG_CHECK_MODULES(POSTGRESQL, libpq, [
-                POSTGRESQL_INC=$POSTGRESQL_CFLAGS
-                POSTGRESQL_LIB=$POSTGRESQL_LIBS
-                ],[
-                AC_MSG_ERROR([pg_config or 'pkg-config libpq' needed; set PGCONFIG if not in PATH])
-                ])
-            fi
+            PKG_CHECK_MODULES(POSTGRESQL, libpq, [
+              POSTGRESQL_INC=$POSTGRESQL_CFLAGS
+              POSTGRESQL_LIB=$POSTGRESQL_LIBS
+            ],[
+              AC_MSG_ERROR([pg_config or 'pkg-config libpq' needed; set PGCONFIG if not in PATH])
+            ])
         fi
         FilterLibs "${POSTGRESQL_LIB}"
         POSTGRESQL_LIB="${filteredlibs}"
@@ -9392,13 +9343,9 @@ if test "x$enable_postgresql_sdbc" != "xno"; then
         save_LIBS=$LIBS
         CPPFLAGS="${CPPFLAGS} ${POSTGRESQL_INC}"
         LIBS="${LIBS} ${POSTGRESQL_LIB}"
-        if test "$build_os" = "cygwin"; then
-            AC_MSG_NOTICE([cygwin system - skip PostgreSQL check])
-        else
-            AC_CHECK_HEADER([libpq-fe.h], [], [AC_MSG_ERROR([libpq-fe.h is needed])], [])
-            AC_CHECK_LIB([pq], [PQconnectdbParams], [:],
-                [AC_MSG_ERROR(libpq not found or too old. Need >= 9.0)], [])
-        fi
+        AC_CHECK_HEADER([libpq-fe.h], [], [AC_MSG_ERROR([libpq-fe.h is needed])], [])
+        AC_CHECK_LIB([pq], [PQconnectdbParams], [:],
+            [AC_MSG_ERROR(libpq not found or too old. Need >= 9.0)], [])
         CFLAGS=$save_CFLAGS
         CPPFLAGS=$save_CPPFLAGS
         LIBS=$save_LIBS
@@ -9537,7 +9484,6 @@ if test "$with_system_curl" = "auto"; then
 fi
 
 if test "$with_system_curl" = "yes"; then
-
     AC_MSG_RESULT([external])
     SYSTEM_CURL=TRUE
 
@@ -9567,6 +9513,7 @@ if test "$with_system_curl" = "yes"; then
             ;;
         esac
     fi
+
     ENABLE_CURL=TRUE
 elif test $_os = iOS; then
     # Let's see if we need curl, I think not?
@@ -9590,28 +9537,23 @@ AC_MSG_CHECKING([which boost to use])
 if test "$with_system_boost" = "yes"; then
     AC_MSG_RESULT([external])
     SYSTEM_BOOST=TRUE
-    if test "$build_os" = "cygwin" ; then
-
-        AC_MSG_RESULT([Cygwin boost system $BOOST_SYSTEM_LIB])
-    else  
-        AX_BOOST_BASE(1.47)
-        AX_BOOST_DATE_TIME
-        AX_BOOST_FILESYSTEM
-        AX_BOOST_IOSTREAMS
-        AX_BOOST_LOCALE
-        AC_LANG_PUSH([C++])
-        save_CXXFLAGS=$CXXFLAGS
-        CXXFLAGS="$CXXFLAGS $BOOST_CPPFLAGS $CXXFLAGS_CXX11"
-        AC_CHECK_HEADER(boost/shared_ptr.hpp, [],
-        [AC_MSG_ERROR(boost/shared_ptr.hpp not found. install boost)], [])
-        AC_CHECK_HEADER(boost/spirit/include/classic_core.hpp, [],
-        [AC_MSG_ERROR(boost/spirit/include/classic_core.hpp not found. install boost >= 1.36)], [])
-        CXXFLAGS=$save_CXXFLAGS
-        AC_LANG_POP([C++])
-        # this is in m4/ax_boost_base.m4
-        FilterLibs "${BOOST_LDFLAGS}"
-        BOOST_LDFLAGS="${filteredlibs}"
-    fi
+    AX_BOOST_BASE([1.66],,[AC_MSG_ERROR([no suitable Boost found])])
+    AX_BOOST_DATE_TIME
+    AX_BOOST_FILESYSTEM
+    AX_BOOST_IOSTREAMS
+    AX_BOOST_LOCALE
+    AC_LANG_PUSH([C++])
+    save_CXXFLAGS=$CXXFLAGS
+    CXXFLAGS="$CXXFLAGS $BOOST_CPPFLAGS $CXXFLAGS_CXX11"
+    AC_CHECK_HEADER(boost/shared_ptr.hpp, [],
+       [AC_MSG_ERROR(boost/shared_ptr.hpp not found. install boost)], [])
+    AC_CHECK_HEADER(boost/spirit/include/classic_core.hpp, [],
+       [AC_MSG_ERROR(boost/spirit/include/classic_core.hpp not found. install boost >= 1.36)], [])
+    CXXFLAGS=$save_CXXFLAGS
+    AC_LANG_POP([C++])
+    # this is in m4/ax_boost_base.m4
+    FilterLibs "${BOOST_LDFLAGS}"
+    BOOST_LDFLAGS="${filteredlibs}"
 else
     AC_MSG_RESULT([internal])
     BUILD_TYPE="$BUILD_TYPE BOOST"
@@ -9719,7 +9661,6 @@ AC_SUBST(SYSTEM_OPENLDAP)
 dnl ===================================================================
 dnl Check for system NSS
 dnl ===================================================================
-
 if test $_os != iOS -a "$enable_fuzzers" != "yes"; then
     libo_CHECK_SYSTEM_MODULE([nss],[NSS],[nss >= 3.9.3 nspr >= 4.8])
     AC_DEFINE(HAVE_FEATURE_NSS)
@@ -9796,17 +9737,7 @@ ICU_RECLASSIFIED_PREPEND_SET_EMPTY="TRUE"
 ICU_RECLASSIFIED_CONDITIONAL_JAPANESE_STARTER="TRUE"
 ICU_RECLASSIFIED_HEBREW_LETTER="TRUE"
 AC_MSG_CHECKING([which icu to use])
-
-
 if test "$with_system_icu" = "yes"; then
-
-if test $build_os = cygwin; then
-    SYSTEM_ICU=TRUE
-    SYSTEM_GENBRK=`which genbrk`
-    SYSTEM_GENCCODE=`which genccode`
-    SYSTEM_GENCMN=`which gencmn`
-    AC_MSG_CHECKING([cygwin ICU external - SYSTEM_ICU])
-else
     AC_MSG_RESULT([external])
     SYSTEM_ICU=TRUE
     AC_LANG_PUSH([C++])
@@ -9869,8 +9800,6 @@ You can use --with-system-icu-for-build=force to use it anyway.])
             ICU_MINOR=""
         fi
     fi
-fi
-
 else
     AC_MSG_RESULT([internal])
     SYSTEM_ICU=
@@ -9911,36 +9840,29 @@ AC_MSG_CHECKING([whether to enable breakpad])
 if test "$enable_breakpad" != yes; then
     AC_MSG_RESULT([no])
 else
-    if test "$BREAKPAD_CFLAGS" != ""; then
-        SYSTEM_BREAKPAD=TRUE
-        AC_MSG_CHECKING([BREAKPAD EXTERNAL])
-    else
+    AC_MSG_RESULT([yes])
+    ENABLE_BREAKPAD="TRUE"
+    AC_DEFINE(ENABLE_BREAKPAD)
+    AC_DEFINE(HAVE_FEATURE_BREAKPAD, 1)
+    BUILD_TYPE="$BUILD_TYPE BREAKPAD"
+
+    AC_MSG_CHECKING([for disable crash dump])
+    if test "$enable_crashdump" = no; then
+        DEFAULT_CRASHDUMP_VALUE="false"
         AC_MSG_RESULT([yes])
-        ENABLE_BREAKPAD="TRUE"
-        AC_DEFINE(ENABLE_BREAKPAD)
-        AC_DEFINE(HAVE_FEATURE_BREAKPAD, 1)
-        BUILD_TYPE="$BUILD_TYPE BREAKPAD"
-
-        AC_MSG_CHECKING([for disable crash dump])
-        if test "$enable_crashdump" = no; then
-            DEFAULT_CRASHDUMP_VALUE="false"
-            AC_MSG_RESULT([yes])
-        else
-        AC_MSG_RESULT([no])
-        fi
-
-        AC_MSG_CHECKING([for crashreport config])
-        if test "$with_symbol_config" = "no"; then
-            BREAKPAD_SYMBOL_CONFIG="invalid"
-            AC_MSG_RESULT([no])
-        else
-            BREAKPAD_SYMBOL_CONFIG="$with_symbol_config"
-            AC_DEFINE(BREAKPAD_SYMBOL_CONFIG)
-            AC_MSG_RESULT([yes])
-        fi
+    else
+       AC_MSG_RESULT([no])
     fi
-    AC_SUBST(BREAKPAD_CFLAGS)
-    AC_SUBST(BREAKPAD_LIBS)
+
+    AC_MSG_CHECKING([for crashreport config])
+    if test "$with_symbol_config" = "no"; then
+        BREAKPAD_SYMBOL_CONFIG="invalid"
+        AC_MSG_RESULT([no])
+    else
+        BREAKPAD_SYMBOL_CONFIG="$with_symbol_config"
+        AC_DEFINE(BREAKPAD_SYMBOL_CONFIG)
+        AC_MSG_RESULT([yes])
+    fi
     AC_SUBST(BREAKPAD_SYMBOL_CONFIG)
 fi
 AC_SUBST(ENABLE_BREAKPAD)
@@ -10229,16 +10151,12 @@ if test "$enable_openssl" = "yes"; then
         libo_CHECK_SYSTEM_MODULE([openssl],[OPENSSL],[openssl])
     fi
     if test "$with_system_openssl" = "yes"; then
-        if test $build_os = cygwin; then
-            AC_MSG_NOTICE([Cygwin-openssh check skip])
-        else
-            AC_MSG_CHECKING([whether openssl supports SHA512])
-            AC_LANG_PUSH([C])
-            AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <openssl/sha.h>]],[[
-                SHA512_CTX context;
-            ]])],[AC_MSG_RESULT([yes])],[AC_MSG_ERROR([no, openssl too old. Need >= 0.9.8.])])
-            AC_LANG_POP(C)
-        fi
+        AC_MSG_CHECKING([whether openssl supports SHA512])
+        AC_LANG_PUSH([C])
+        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <openssl/sha.h>]],[[
+            SHA512_CTX context;
+]])],[AC_MSG_RESULT([yes])],[AC_MSG_ERROR([no, openssl too old. Need >= 0.9.8.])])
+        AC_LANG_POP(C)
     fi
 else
     AC_MSG_RESULT([yes])
@@ -13293,6 +13211,7 @@ AC_CONFIG_HEADERS([config_host/config_mpl.h])
 AC_CONFIG_HEADERS([config_host/config_oox.h])
 AC_CONFIG_HEADERS([config_host/config_options.h])
 AC_CONFIG_HEADERS([config_host/config_options_calc.h])
+AC_CONFIG_HEADERS([config_host/config_skia.h])
 AC_CONFIG_HEADERS([config_host/config_typesizes.h])
 AC_CONFIG_HEADERS([config_host/config_vendor.h])
 AC_CONFIG_HEADERS([config_host/config_vcl.h])
@@ -13301,7 +13220,7 @@ AC_CONFIG_HEADERS([config_host/config_version.h])
 AC_CONFIG_HEADERS([config_host/config_oauth2.h])
 AC_CONFIG_HEADERS([config_host/config_poppler.h])
 AC_CONFIG_HEADERS([config_host/config_python.h])
-AC_CONFIG_HEADERS([config_host/config_skia.h])
+AC_CONFIG_HEADERS([config_host/config_writerperfect.h])
 AC_OUTPUT
 
 if test "$CROSS_COMPILING" = TRUE; then
