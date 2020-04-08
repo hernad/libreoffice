@@ -1694,11 +1694,11 @@ void VclBuilder::preload()
 // find -name '*ui*' | xargs grep 'class=".*lo-' |
 //     sed 's/.*class="//' | sed 's/-.*$//' | sort | uniq
     static const char *aWidgetLibs[] = {
-        concat("sfx", DLL_SUFIX), concat("svt", DLL_SUFIX), concat("svxcore", DLL_SUFIX), concat("forui", DLL_SUFIX),
-        concat("vcl", DLL_SUFIX), concat("svx", DLL_SUFIX), concat("cui", DLL_SUFIX),  concat("sw", DLL_SUFIX),
-        concat("swuis", DLL_SUFIX), concat("sc", DLL_SUFIX), concat("sd", DLL_SUFIX), concat("chartcontroller", DLL_SUFIX),
-        concat("sm", DLL_SUFIX), concat("scui", DLL_SUFIX), concat("basctl", DLL_SUFIX), concat("sdui", DLL_SUFIX),
-        concat("scn", DLL_SUFIX), concat("xsltdlg", DLL_SUFIX), concat("pcr", DLL_SUFIX) // "dbulo"
+        concat("sfx", DLL_FNAME_POSTFIX), concat("svt", DLL_FNAME_POSTFIX), concat("svxcore", DLL_FNAME_POSTFIX), concat("forui", DLL_FNAME_POSTFIX),
+        concat("vcl", DLL_FNAME_POSTFIX), concat("svx", DLL_FNAME_POSTFIX), concat("cui", DLL_FNAME_POSTFIX),  concat("sw", DLL_FNAME_POSTFIX),
+        concat("swuis", DLL_FNAME_POSTFIX), concat("sc", DLL_FNAME_POSTFIX), concat("sd", DLL_FNAME_POSTFIX), concat("chartcontroller", DLL_FNAME_POSTFIX),
+        concat("sm", DLL_FNAME_POSTFIX), concat("scui", DLL_FNAME_POSTFIX), concat("basctl", DLL_FNAME_POSTFIX), concat("sdui", DLL_FNAME_POSTFIX),
+        concat("scn", DLL_FNAME_POSTFIX), concat("xsltdlg", DLL_FNAME_POSTFIX), concat("pcr", DLL_FNAME_POSTFIX) // "dbulo"
     };
     for (const auto & lib : aWidgetLibs)
     {

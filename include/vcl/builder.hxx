@@ -28,7 +28,7 @@
 #  undef check
 #endif
 
-#define DLL_SUFIX  "lo"
+#define DLL_FNAME_POSTFIX  "lo"
 
 class Button;
 class ComboBox;

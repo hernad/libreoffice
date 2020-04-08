@@ -20,7 +20,7 @@
 #pragma once
 
 #define WIN32_LEAN_AND_MEAN
-#define SOFFICE_EXE_NAME L"soffice"
+#define SOFFICE_EXE_NAME L"zoffice"
 #include <windows.h>
 
 extern WCHAR APPLICATION_SWITCH[];

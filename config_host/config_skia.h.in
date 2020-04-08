@@ -33,8 +33,8 @@ are the same.
 
 #define SK_CODEC_DECODES_PNG 1
 #define SK_ENCODE_PNG 1
-#define SK_CODEC_DECODES_JPEG 1
-#define SK_ENCODE_JPEG 1
+//#define SK_CODEC_DECODES_JPEG 1
+//#define SK_ENCODE_JPEG 1
 
 // These are just to avoid warnings (some headers use them even with GL disabled).
 #define SK_ASSUME_GL 1
