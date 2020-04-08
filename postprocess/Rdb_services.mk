@@ -123,8 +123,8 @@ $(eval $(call gb_Rdb_add_components,services,\
 		sccomp/source/solver/lpsolvesolver \
 	) \
 	sccomp/source/solver/swarmsolver \
-	$(if $(ENABLE_WPFT), \
 	writerfilter/util/writerfilter \
+	$(if $(ENABLE_WPFT), \
 	writerperfect/source/draw/wpftdraw \
 	writerperfect/source/impress/wpftimpress \
 	writerperfect/source/writer/wpftwriter \
