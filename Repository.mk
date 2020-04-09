@@ -174,13 +174,13 @@ $(eval $(call gb_Helper_register_executables_for_install,OOO,calc_brand, \
 
 $(eval $(call gb_Helper_register_executables_for_install,OOO,draw_brand, \
 	$(if $(filter WNT,$(OS)), \
-		sdraw \
+		zdraw \
 	) \
 ))
 
 $(eval $(call gb_Helper_register_executables_for_install,OOO,impress_brand, \
 	$(if $(filter WNT,$(OS)), \
-		simpress \
+		zimpress \
 	) \
 ))
 

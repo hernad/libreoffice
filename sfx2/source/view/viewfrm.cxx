@@ -1277,6 +1277,7 @@ void SfxViewFrame::Notify( SfxBroadcaster& /*rBC*/, const SfxHint& rHint )
                         bIsUITest = true;
                 }
 
+                /* hernad don't show update, nor whatsnew
                 //what's new infobar
                 if (!officecfg::Setup::Product::ooSetupLastVersion::isReadOnly()) //don't show/update when readonly
                 {
@@ -1304,6 +1305,7 @@ void SfxViewFrame::Notify( SfxBroadcaster& /*rBC*/, const SfxHint& rHint )
                         }
                     }
                 }
+                */
 
                 // show tip-of-the-day dialog
                 const bool bShowTipOfTheDay = officecfg::Office::Common::Misc::ShowTipOfTheDay::get();

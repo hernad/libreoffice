@@ -5570,7 +5570,7 @@
         <info>
           <desc>Determines whether the Tip-of-the-Day dialog is shown on startup.</desc>
         </info>
-        <value>true</value>
+        <value>false</value>
       </prop>
       <prop oor:name="LastTipOfTheDayShown" oor:type="xs:int" oor:nillable="false">
           <info>
@@ -5769,7 +5769,7 @@
           <desc>Specifies if the office has never before been started.</desc>
           <label>FirstRun</label>
         </info>
-        <value>true</value>
+        <value>false</value>
       </prop>
       <prop oor:name="FilePickerPlacesUrls" oor:type="oor:string-list" oor:nillable="false">
         <info>
