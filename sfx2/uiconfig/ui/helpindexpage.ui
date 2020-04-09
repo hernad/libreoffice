@@ -50,7 +50,7 @@
           </packing>
         </child>
         <child>
-          <object class="sfxlo-IndexBox" id="terms:border">
+          <object class="sfxzh-IndexBox" id="terms:border">
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="hexpand">True</property>

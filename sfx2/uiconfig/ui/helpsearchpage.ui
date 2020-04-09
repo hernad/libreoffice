@@ -50,7 +50,7 @@
           </packing>
         </child>
         <child>
-          <object class="sfxlo-SearchResultsBox" id="results:border">
+          <object class="sfxzh-SearchResultsBox" id="results:border">
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="hexpand">True</property>
@@ -70,7 +70,7 @@
             <property name="hexpand">True</property>
             <property name="column_spacing">12</property>
             <child>
-              <object class="sfxlo-SearchBox" id="search">
+              <object class="sfxzh-SearchBox" id="search">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="hexpand">True</property>

@@ -234,7 +234,7 @@ namespace desktop
     void displayCmdlineHelp(OUString const & unknown)
     {
         OUString aHelpMessage_version = ReplaceStringHookProc(aCmdLineHelp_version);
-        OUString aHelpMessage(OUString(aCmdLineHelp).replaceFirst("%CMDNAME", "soffice"));
+        OUString aHelpMessage(OUString(aCmdLineHelp).replaceFirst("%CMDNAME", SOFFICE_EXE_NAME));
         if (!unknown.isEmpty())
         {
             aHelpMessage = "Error in option: " + unknown + "\n\n"

@@ -59,6 +59,7 @@ struct Encoder
 
 }
 
+
 int main()
 {
 #   define EXP(x) Encoder(x, #x)
@@ -149,5 +150,6 @@ int main()
 
     return EXIT_SUCCESS;
 }
+
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

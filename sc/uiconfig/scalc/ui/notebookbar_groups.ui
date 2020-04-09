@@ -766,7 +766,7 @@
                         <property name="valign">center</property>
                         <property name="orientation">vertical</property>
                         <child>
-                          <object class="sfxlo-NotebookbarToolBox" id="numberformat">
+                          <object class="sfxzh-NotebookbarToolBox" id="numberformat">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="show_arrow">False</property>
@@ -793,7 +793,7 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="sfxlo-SidebarToolBox" id="font">
+                          <object class="sfxzh-SidebarToolBox" id="font">
                             <property name="can_focus">False</property>
                             <child>
                               <object class="GtkToolButton" id="fontname">
@@ -831,7 +831,7 @@
                         <property name="hexpand">True</property>
                         <property name="spacing">4</property>
                         <child>
-                          <object class="sfxlo-NotebookbarToolBox" id="numberformat1">
+                          <object class="sfxzh-NotebookbarToolBox" id="numberformat1">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="show_arrow">False</property>
@@ -904,7 +904,7 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="sfxlo-SidebarToolBox" id="fontadjust">
+                          <object class="sfxzh-SidebarToolBox" id="fontadjust">
                             <property name="can_focus">False</property>
                             <property name="halign">end</property>
                             <property name="hexpand">True</property>
@@ -1140,7 +1140,7 @@
                     <property name="can_focus">False</property>
                     <property name="orientation">vertical</property>
                     <child>
-                      <object class="sfxlo-SidebarToolBox" id="wrapbox">
+                      <object class="sfxzh-SidebarToolBox" id="wrapbox">
                         <property name="height_request">26</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
@@ -1167,7 +1167,7 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="sfxlo-SidebarToolBox" id="backgroundbox">
+                      <object class="sfxzh-SidebarToolBox" id="backgroundbox">
                         <property name="height_request">26</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
@@ -1194,7 +1194,7 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="sfxlo-SidebarToolBox" id="colorbox">
+                      <object class="sfxzh-SidebarToolBox" id="colorbox">
                         <property name="height_request">26</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
@@ -1283,7 +1283,7 @@
           </packing>
         </child>
         <child>
-          <object class="sfxlo-ContextVBox" id="ContextContainer">
+          <object class="sfxzh-ContextVBox" id="ContextContainer">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="orientation">vertical</property>
@@ -1468,7 +1468,7 @@
                         <property name="can_focus">False</property>
                         <property name="orientation">vertical</property>
                         <child>
-                          <object class="sfxlo-SidebarToolBox" id="tableborder1">
+                          <object class="sfxzh-SidebarToolBox" id="tableborder1">
                             <property name="height_request">26</property>
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
@@ -1495,7 +1495,7 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="sfxlo-SidebarToolBox" id="tableborder2">
+                          <object class="sfxzh-SidebarToolBox" id="tableborder2">
                             <property name="height_request">26</property>
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
@@ -1522,7 +1522,7 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="sfxlo-SidebarToolBox" id="tableborder3">
+                          <object class="sfxzh-SidebarToolBox" id="tableborder3">
                             <property name="height_request">26</property>
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
@@ -1687,7 +1687,7 @@
                         <property name="can_focus">False</property>
                         <property name="orientation">vertical</property>
                         <child>
-                          <object class="sfxlo-SidebarToolBox" id="tablebox">
+                          <object class="sfxzh-SidebarToolBox" id="tablebox">
                             <property name="height_request">26</property>
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
@@ -1712,7 +1712,7 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="sfxlo-SidebarToolBox" id="shapesbox">
+                          <object class="sfxzh-SidebarToolBox" id="shapesbox">
                             <property name="height_request">26</property>
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>

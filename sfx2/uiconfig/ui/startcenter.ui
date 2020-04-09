@@ -513,7 +513,7 @@
               </packing>
             </child>
             <child>
-              <object class="sfxlo-RecentDocsView" id="all_recent">
+              <object class="sfxzh-RecentDocsView" id="all_recent">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="margin">0</property>
@@ -527,7 +527,7 @@
               </packing>
             </child>
             <child>
-              <object class="sfxlo-TemplateDefaultView" id="local_view">
+              <object class="sfxzh-TemplateDefaultView" id="local_view">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="margin">0</property>

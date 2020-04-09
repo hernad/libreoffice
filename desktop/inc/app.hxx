@@ -28,6 +28,7 @@
 #include <com/sun/star/frame/XDesktop2.hpp>
 #include <com/sun/star/task/XStatusIndicator.hpp>
 #include <com/sun/star/uno/Reference.h>
+#define SOFFICE_EXE_NAME "zoffice"
 
 #include <memory>
 #include <thread>

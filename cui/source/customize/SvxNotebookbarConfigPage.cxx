@@ -319,7 +319,7 @@ void SvxNotebookbarConfigPage::searchNodeandAttribute(std::vector<NotebookbarEnt
                 xmlFree(UriValue);
 
                 CategoriesEntries aCategoryEntry;
-                if (sClassId == "sfxlo-PriorityHBox")
+                if (sClassId == "sfxzh-PriorityHBox")
                 {
                     aCategoryEntry.sDisplayName = sUIItemId;
                     aCategoryEntry.sUIItemId = sUIItemId;
@@ -328,7 +328,7 @@ void SvxNotebookbarConfigPage::searchNodeandAttribute(std::vector<NotebookbarEnt
 
                     aCurItemEntry = aCategoryEntry;
                 }
-                else if (sClassId == "sfxlo-PriorityMergedHBox")
+                else if (sClassId == "sfxzh-PriorityMergedHBox")
                 {
                     aCategoryEntry.sDisplayName = aCurItemEntry.sDisplayName + " | " + sUIItemId;
                     aCategoryEntry.sUIItemId = sUIItemId;
@@ -382,8 +382,8 @@ void SvxNotebookbarConfigPage::searchNodeandAttribute(std::vector<NotebookbarEnt
                         nodeEntries.sActionName = "Null";
                         aEntries.push_back(nodeEntries);
                     }
-                    else if (sClassId == "sfxlo-PriorityHBox"
-                             || sClassId == "sfxlo-PriorityMergedHBox"
+                    else if (sClassId == "sfxzh-PriorityHBox"
+                             || sClassId == "sfxzh-PriorityMergedHBox"
                              || sClassId == "svtlo-ManagedMenuButton")
                     {
                         nodeEntries.sClassId = sClassId;
@@ -432,8 +432,8 @@ void SvxNotebookbarConfigPage::SelectElement()
                                        aCategoryList[nIdx].sDisplayName);
     }
     unsigned long nStart = 0;
-    if (aEntries[nStart].sClassId == "sfxlo-PriorityHBox"
-        || aEntries[nStart].sClassId == "sfxlo-PriorityMergedHBox")
+    if (aEntries[nStart].sClassId == "sfxzh-PriorityHBox"
+        || aEntries[nStart].sClassId == "sfxzh-PriorityMergedHBox")
         nStart = 1;
 
     std::vector<NotebookbarEntries> aTempEntries;

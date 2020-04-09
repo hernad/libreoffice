@@ -15,24 +15,24 @@
 -->
 <glade-catalog name="LibreOffice" domain="glade-3" depends="gtk+" version="1.0">
   <glade-widget-classes>
-    <glade-widget-class title="Bookmarks Box" name="sfxlo-BookmarksBox"
+    <glade-widget-class title="Bookmarks Box" name="sfxzh-BookmarksBox"
                         generic-name="BookmarksBox" parent="GtkComboBoxText"
                         icon-name="widget-gtk-comboboxtext"/>
-    <glade-widget-class title="Index Box" name="sfxlo-IndexBox"
+    <glade-widget-class title="Index Box" name="sfxzh-IndexBox"
                         generic-name="IndexBox" parent="GtkComboBoxText"
                         icon-name="widget-gtk-comboboxtext"/>
-    <glade-widget-class title="Search Box" name="sfxlo-SearchBox"
+    <glade-widget-class title="Search Box" name="sfxzh-SearchBox"
                         generic-name="SearchBox" parent="GtkComboBoxText"
                         icon-name="widget-gtk-comboboxtext"/>
-    <glade-widget-class title="Search Results Box" name="sfxlo-SearchResultsBox"
+    <glade-widget-class title="Search Results Box" name="sfxzh-SearchResultsBox"
                         generic-name="SearchResultsBox" parent="GtkComboBoxText"
                         icon-name="widget-gtk-comboboxtext"/>
 
-    <glade-widget-class title="Content List Box" name="sfxlo-ContentListBox"
+    <glade-widget-class title="Content List Box" name="sfxzh-ContentListBox"
                         generic-name="Content List Box" parent="GtkTreeView"
                         icon-name="widget-gtk-treeview"/>
 
-    <glade-widget-class title="Sidebar ToolBox" name="sfxlo-SidebarToolBox"
+    <glade-widget-class title="Sidebar ToolBox" name="sfxzh-SidebarToolBox"
                         generic-name="Sidebar ToolBox" parent="GtkToolbar"
                         icon-name="widget-gtk-toolbar">
         <properties>
@@ -41,13 +41,13 @@
         </properties>
     </glade-widget-class>
 
-    <glade-widget-class title="Recent Documents View" name="sfxlo-RecentDocsView"
+    <glade-widget-class title="Recent Documents View" name="sfxzh-RecentDocsView"
                         generic-name="Icon View" parent="GtkIconView"
                         icon-name="widget-gtk-iconview"/>
-    <glade-widget-class title="Emoji View" name="sfxlo-EmojiView"
+    <glade-widget-class title="Emoji View" name="sfxzh-EmojiView"
                         generic-name="Template Icon View" parent="GtkIconView"
                         icon-name="widget-gtk-iconview"/>
-    <glade-widget-class title="Template Thumbnail View" name="sfxlo-TemplateDefaultView"
+    <glade-widget-class title="Template Thumbnail View" name="sfxzh-TemplateDefaultView"
                         generic-name="Template Icon View" parent="GtkIconView"
                         icon-name="widget-gtk-iconview"/>
 
@@ -55,25 +55,25 @@
                         generic-name="DataTreeListBox" parent="GtkTreeView"
                         icon-name="widget-gtk-treeview"/>
 
-    <glade-widget-class title="Notebook switching tabs depending on context" name="sfxlo-NotebookbarTabControl"
+    <glade-widget-class title="Notebook switching tabs depending on context" name="sfxzh-NotebookbarTabControl"
                         generic-name="NotebookbarTabControl" parent="GtkNotebook"
                         icon-name="widget-gtk-notebook"/>
-    <glade-widget-class title="Horizontal box hiding children depending on its priorities" name="sfxlo-PriorityHBox"
+    <glade-widget-class title="Horizontal box hiding children depending on its priorities" name="sfxzh-PriorityHBox"
                         generic-name="PriorityHBox" parent="GtkBox"
                         icon-name="widget-gtk-box"/>
-    <glade-widget-class title="Horizontal box hiding children depending on its priorities" name="sfxlo-PriorityMergedHBox"
+    <glade-widget-class title="Horizontal box hiding children depending on its priorities" name="sfxzh-PriorityMergedHBox"
                         generic-name="PriorityMergedHBox" parent="GtkBox"
                         icon-name="widget-gtk-box"/>
-    <glade-widget-class title="Box which can move own content to the popup" name="sfxlo-DropdownBox"
+    <glade-widget-class title="Box which can move own content to the popup" name="sfxzh-DropdownBox"
                         generic-name="DropdownBox" parent="GtkBox"
                         icon-name="widget-gtk-box"/>
     <glade-widget-class title="Box which can hide own content" name="VclOptionalBox"
                         generic-name="VclOptionalBox" parent="GtkBox"
                         icon-name="widget-gtk-box"/>
-    <glade-widget-class title="Notebookbar ToolBox" name="sfxlo-NotebookbarToolBox"
-                        generic-name="Notebookbar ToolBox" parent="sfxlo-SidebarToolBox"
+    <glade-widget-class title="Notebookbar ToolBox" name="sfxzh-NotebookbarToolBox"
+                        generic-name="Notebookbar ToolBox" parent="sfxzh-SidebarToolBox"
                         icon-name="widget-gtk-toolbar"/>
-    <glade-widget-class title="Vertical box hiding children depending on context" name="sfxlo-ContextVBox"
+    <glade-widget-class title="Vertical box hiding children depending on context" name="sfxzh-ContextVBox"
                         generic-name="ContextVBox" parent="GtkBox"
                         icon-name="widget-gtk-box"/>
     <glade-widget-class title="Managed Menu Button" name="svtlo-ManagedMenuButton"

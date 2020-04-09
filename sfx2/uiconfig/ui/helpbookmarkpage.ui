@@ -50,7 +50,7 @@
           </packing>
         </child>
         <child>
-          <object class="sfxlo-BookmarksBox" id="bookmarks:border">
+          <object class="sfxzh-BookmarksBox" id="bookmarks:border">
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="hexpand">True</property>

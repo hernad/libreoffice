@@ -53,8 +53,9 @@ THEME=colibre
 #THEME=sukapura_svg
 
 LO_PRODUCT_NAME=ZiherO
-LO_PRODUCT_VERSION=7.0.0.210
+LO_PRODUCT_VERSION=7.0.0.300
 
+#LO_DEBUG=" --enable-dbgutil"
 
 #https://github.com/boostorg/uuid/issues/68
 export VCPKG_BOOST_BUILD_LIB="vc140"  # VS 2019
@@ -295,7 +296,7 @@ fi
     --disable-online-update \
     --disable-sdremote \
     --disable-sdremote-bluetooth \
-    --disable-extension-integration $PDF_IMPORT $WEBDAV $WITH_SYSTEM \
+    --disable-extension-integration $PDF_IMPORT $WEBDAV $WITH_SYSTEM $LO_DEBUG \
     --enable-breakpad       #Enables breakpad for crash reporting.
 
 #    

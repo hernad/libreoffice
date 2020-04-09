@@ -73,7 +73,7 @@ SalInstance* tryInstance( const OUString& rModuleBase, bool bForce = false )
 #ifdef SAL_DLLPREFIX
             SAL_DLLPREFIX
 #endif
-            "vclplug_" + aUsedModuleBase + "lo" SAL_DLLEXTENSION );
+            "vclplug_" + aUsedModuleBase + DLL_FNAME_POSTFIX SAL_DLLEXTENSION );
 
     osl::Module aMod;
     if (aMod.loadRelative(reinterpret_cast<oslGenericFunction>(&tryInstance), aModule, SAL_LOADMODULE_GLOBAL))
@@ -293,7 +293,7 @@ void DestroySalInstance( SalInstance *pInst )
 void SalAbort( const OUString& rErrorText, bool bDumpCore )
 {
     if( rErrorText.isEmpty() )
-        std::fprintf( stderr, "Application Error\n" );
+        std::fprintf( stderr, "Application Error - SalAbort\n" );
     else
     {
         CrashReporter::addKeyValue("AbortMessage", rErrorText, CrashReporter::Write);

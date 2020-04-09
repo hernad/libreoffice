@@ -21,7 +21,7 @@
             <property name="can_focus">False</property>
             <property name="spacing">6</property>
             <child>
-              <object class="sfxlo-SidebarToolBox" id="font">
+              <object class="sfxzh-SidebarToolBox" id="font">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <child>
@@ -44,7 +44,7 @@
               </packing>
             </child>
             <child>
-              <object class="sfxlo-SidebarToolBox" id="fontheight">
+              <object class="sfxzh-SidebarToolBox" id="fontheight">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <child>
@@ -80,7 +80,7 @@
             <property name="can_focus">False</property>
             <property name="spacing">6</property>
             <child>
-              <object class="sfxlo-SidebarToolBox" id="fonteffects">
+              <object class="sfxzh-SidebarToolBox" id="fonteffects">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="show_arrow">False</property>
@@ -157,7 +157,7 @@
               </packing>
             </child>
             <child>
-              <object class="sfxlo-SidebarToolBox" id="fontadjust">
+              <object class="sfxzh-SidebarToolBox" id="fontadjust">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="show_arrow">False</property>
@@ -208,7 +208,7 @@
             <property name="can_focus">False</property>
             <property name="spacing">6</property>
             <child>
-              <object class="sfxlo-SidebarToolBox" id="colorbar_writer">
+              <object class="sfxzh-SidebarToolBox" id="colorbar_writer">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="show_arrow">False</property>
@@ -246,7 +246,7 @@
               </packing>
             </child>
             <child>
-              <object class="sfxlo-SidebarToolBox" id="colorbar_others">
+              <object class="sfxzh-SidebarToolBox" id="colorbar_others">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <child>
@@ -270,7 +270,7 @@
               </packing>
             </child>
             <child>
-              <object class="sfxlo-SidebarToolBox" id="colorbar_background">
+              <object class="sfxzh-SidebarToolBox" id="colorbar_background">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <child>
@@ -294,7 +294,7 @@
               </packing>
             </child>
             <child>
-              <object class="sfxlo-SidebarToolBox" id="resetattr">
+              <object class="sfxzh-SidebarToolBox" id="resetattr">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="show_arrow">False</property>
@@ -319,7 +319,7 @@
               </packing>
             </child>
             <child>
-              <object class="sfxlo-SidebarToolBox" id="position">
+              <object class="sfxzh-SidebarToolBox" id="position">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="show_arrow">False</property>
@@ -356,7 +356,7 @@
               </packing>
             </child>
             <child>
-              <object class="sfxlo-SidebarToolBox" id="spacingbar">
+              <object class="sfxzh-SidebarToolBox" id="spacingbar">
                 <property name="visible">False</property>
                 <property name="can_focus">True</property>
                 <child>

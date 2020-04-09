@@ -18,7 +18,7 @@
         <property name="vexpand">True</property>
         <property name="row_spacing">6</property>
         <child>
-          <object class="sfxlo-ContentListBox" id="content:border">
+          <object class="sfxzh-ContentListBox" id="content:border">
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="hexpand">True</property>

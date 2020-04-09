@@ -68,7 +68,10 @@
 #include <tools/diagnose_ex.h>
 #include <wizdlg.hxx>
 #include <tools/svlibrary.h>
-#define concat(first, second) (std::string(first) + std::string(second)).c_str()
+
+#include <string>
+#define concatc_str(first, second) (std::string(first) + std::string(second)).c_str()
+
 
 #if defined(DISABLE_DYNLOADING) || defined(LINUX)
 #include <dlfcn.h>
@@ -1694,11 +1697,11 @@ void VclBuilder::preload()
 // find -name '*ui*' | xargs grep 'class=".*lo-' |
 //     sed 's/.*class="//' | sed 's/-.*$//' | sort | uniq
     static const char *aWidgetLibs[] = {
-        concat("sfx", DLL_FNAME_POSTFIX), concat("svt", DLL_FNAME_POSTFIX), concat("svxcore", DLL_FNAME_POSTFIX), concat("forui", DLL_FNAME_POSTFIX),
-        concat("vcl", DLL_FNAME_POSTFIX), concat("svx", DLL_FNAME_POSTFIX), concat("cui", DLL_FNAME_POSTFIX),  concat("sw", DLL_FNAME_POSTFIX),
-        concat("swuis", DLL_FNAME_POSTFIX), concat("sc", DLL_FNAME_POSTFIX), concat("sd", DLL_FNAME_POSTFIX), concat("chartcontroller", DLL_FNAME_POSTFIX),
-        concat("sm", DLL_FNAME_POSTFIX), concat("scui", DLL_FNAME_POSTFIX), concat("basctl", DLL_FNAME_POSTFIX), concat("sdui", DLL_FNAME_POSTFIX),
-        concat("scn", DLL_FNAME_POSTFIX), concat("xsltdlg", DLL_FNAME_POSTFIX), concat("pcr", DLL_FNAME_POSTFIX) // "dbulo"
+        concatc_str("sfx", DLL_FNAME_POSTFIX), concatc_str("svt", DLL_FNAME_POSTFIX), concatc_str("svxcore", DLL_FNAME_POSTFIX), concatc_str("forui", DLL_FNAME_POSTFIX),
+        concatc_str("vcl", DLL_FNAME_POSTFIX), concatc_str("svx", DLL_FNAME_POSTFIX), concatc_str("cui", DLL_FNAME_POSTFIX),  concatc_str("sw", DLL_FNAME_POSTFIX),
+        concatc_str("swuis", DLL_FNAME_POSTFIX), concatc_str("sc", DLL_FNAME_POSTFIX), concatc_str("sd", DLL_FNAME_POSTFIX), concatc_str("chartcontroller", DLL_FNAME_POSTFIX),
+        concatc_str("sm", DLL_FNAME_POSTFIX), concatc_str("scui", DLL_FNAME_POSTFIX), concatc_str("basctl", DLL_FNAME_POSTFIX), concatc_str("sdui", DLL_FNAME_POSTFIX),
+        concatc_str("scn", DLL_FNAME_POSTFIX), concatc_str("xsltdlg", DLL_FNAME_POSTFIX), concatc_str("pcr", DLL_FNAME_POSTFIX) // "dbulo"
     };
     for (const auto & lib : aWidgetLibs)
     {
@@ -1717,7 +1720,7 @@ extern "C" VclBuilder::customMakeWidget lo_get_custom_widget_func(const char* na
 
 namespace
 {
-// Takes a string like "sfxlo-SidebarToolBox"
+// Takes a string like "sfxzh-SidebarToolBox"
 VclBuilder::customMakeWidget GetCustomMakeWidget(const OString& name)
 {
     VclBuilder::customMakeWidget pFunction = nullptr;
@@ -1758,7 +1761,8 @@ VclBuilder::customMakeWidget GetCustomMakeWidget(const OString& name)
                         assert(ok && "couldn't even directly dlsym the sFunction (available via preload)");
                     }
 #endif
-                    assert(ok && "bad module name in .ui");
+                    SAL_WARN("vcl", "modul " << sModule);
+                    assert(ok && "bad module name in .ui ");
                 }
                 else
                 {
@@ -2346,7 +2350,7 @@ VclPtr<vcl::Window> VclBuilder::makeObject(vcl::Window *pParent, const OString &
     }
     else if(name == "NotebookBarAddonsToolMergePoint")
     {
-        customMakeWidget pFunction = GetCustomMakeWidget("sfxlo-NotebookbarToolBox");
+        customMakeWidget pFunction = GetCustomMakeWidget("sfxzh-NotebookbarToolBox");
         if(pFunction != nullptr)
             NotebookBarAddonsMerger::MergeNotebookBarAddons(pParent, pFunction, m_xFrame, *m_pNotebookBarAddonsItem, rMap);
         return nullptr;
