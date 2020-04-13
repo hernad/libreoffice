@@ -175,28 +175,24 @@ if [ "$WITH_VCPKG_ZERO" == "1" ] ; then
  
   WITH_SYSTEM+=" --with-system-libpng=yes"
   export LIBPNG_CFLAGS="-I$CONAN_DEPLOY_DIR/libpng/include"
-  export LIBPNG_LIBS="$CONAN_DEPLOY_DIR/libpng/lib/libpng16.lib"
+  export LIBPNG_LIBS="$CONAN_DEPLOY_DIR/libpng/lib/libpng16.lib $ZLIB_LIBS"
 
   WITH_SYSTEM+=" --with-system-boost"
   export BOOST_CPPFLAGS="-I$CONAN_DEPLOY_DIR/boost/include -I$CONAN_DEPLOY_DIR/bzip2/include"
   export BOOST_CXXFLAGS=$BOOST_CPPFLAGS
   export BOOST_LDFLAGS=""
-  export BOOST_LOCALE_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/boost_locale.lib"
-  export BOOST_DATE_TIME_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/boost_date_time.lib"
-  export BOOST_FILESYSTEM_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/boost_filesystem.lib"
-  export BOOST_IOSTREAMS_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/boost_iostreams.lib"
-  export BOOST_SYSTEM_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/boost_system.lib"
+  export BOOST_LOCALE_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/boost_locale.lib $ZLIB_LIBS"
+  export BOOST_DATE_TIME_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/boost_date_time.lib $ZLIB_LIBS"
+  export BOOST_FILESYSTEM_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/boost_filesystem.lib $ZLIB_LIBS"
+  export BOOST_IOSTREAMS_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/boost_iostreams.lib $ZLIB_LIBS"
+  export BOOST_SYSTEM_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/boost_system.lib $ZLIB_LIBS"
   
 
   #WITH_SYSTEM+=" --with-system-expat=yes"
   #export EXPAT_CFLAGS="-I$VCPKG_DIR/include"
   #export EXPAT_LIBS="$VCPKG_DIR/lib/expat.lib"
 #
-  
-#
-  #WITH_SYSTEM+=" --with-system-libpng=yes"
-  #export LIBPNG_CFLAGS="-I$VCPKG_DIR/include"
-  #export LIBPNG_LIBS="$VCPKG_STATIC_DIR/lib/libpng16.lib $ZLIB_LIBS"
+
 #
   #export BREAKPAD_CFLAGS="-I$VCPKG_DIR/include"
   #export BREAKPAD_LIBS="$VCPKG_STATIC_DIR/lib/libbreakpad.lib"
