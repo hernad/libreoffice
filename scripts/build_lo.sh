@@ -166,8 +166,8 @@ rm -f config_host/*.h
 
 WITH_SYSTEM=
 if [ "$WITH_VCPKG_ZERO" == "1" ] ; then
-  echo PYTHON_CFLAGS=$PYTHON_CFLAGS, PYTHON_LIBS=$PYTHON_LIBS
-  WITH_SYSTEM+=" --enable-python=system"
+  #echo PYTHON_CFLAGS=$PYTHON_CFLAGS, PYTHON_LIBS=$PYTHON_LIBS
+  #WITH_SYSTEM+=" --enable-python=system"
 
   WITH_SYSTEM+=" --with-system-zlib=yes"
   export ZLIB_CFLAGS="-I$CONAN_DEPLOY_DIR/zlib/include"
@@ -177,15 +177,15 @@ if [ "$WITH_VCPKG_ZERO" == "1" ] ; then
   export LIBPNG_CFLAGS="-I$CONAN_DEPLOY_DIR/libpng/include"
   export LIBPNG_LIBS="$CONAN_DEPLOY_DIR/libpng/lib/libpng16.lib $ZLIB_LIBS"
 
-  WITH_SYSTEM+=" --with-system-boost"
-  export BOOST_CPPFLAGS="-I$CONAN_DEPLOY_DIR/boost/include -I$CONAN_DEPLOY_DIR/bzip2/include"
-  export BOOST_CXXFLAGS=$BOOST_CPPFLAGS
-  export BOOST_LDFLAGS=""
-  export BOOST_LOCALE_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/boost_locale.lib $ZLIB_LIBS"
-  export BOOST_DATE_TIME_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/boost_date_time.lib $ZLIB_LIBS"
-  export BOOST_FILESYSTEM_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/boost_filesystem.lib $ZLIB_LIBS"
-  export BOOST_IOSTREAMS_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/boost_iostreams.lib $ZLIB_LIBS"
-  export BOOST_SYSTEM_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/boost_system.lib $ZLIB_LIBS"
+  #WITH_SYSTEM+=" --with-system-boost"
+  #export BOOST_CPPFLAGS="-I$CONAN_DEPLOY_DIR/boost/include -I$CONAN_DEPLOY_DIR/bzip2/include"
+  #export BOOST_CXXFLAGS=$BOOST_CPPFLAGS
+  #export BOOST_LDFLAGS=""
+  #export BOOST_LOCALE_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/boost_locale.lib $ZLIB_LIBS"
+  #export BOOST_DATE_TIME_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/boost_date_time.lib $ZLIB_LIBS"
+  #export BOOST_FILESYSTEM_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/boost_filesystem.lib $ZLIB_LIBS"
+  #export BOOST_IOSTREAMS_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/boost_iostreams.lib $ZLIB_LIBS"
+  #export BOOST_SYSTEM_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/boost_system.lib $ZLIB_LIBS"
   
 
   #WITH_SYSTEM+=" --with-system-expat=yes"

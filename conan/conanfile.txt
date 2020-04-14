@@ -1,14 +1,12 @@
 [requires]
 zlib/1.2.11
-boost/1.72.0
 libpng/1.6.37
-libxml2/2.9.9
 
 [generators]
-make
 deploy
 
 [options]
 zlib:shared=False
+zlib:minizip=True
 libpng:shared=False
-boost:shared=True
+

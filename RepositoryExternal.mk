@@ -3206,10 +3206,12 @@ $(call gb_LinkTarget_set_include,$(1),\
 	-I$(call gb_UnpackedTarball_get_dir,python3) \
 	-I$(call gb_UnpackedTarball_get_dir,python3)/PC \
 	-I$(call gb_UnpackedTarball_get_dir,python3)/Include \
+	$(ZLIB_CFLAGS) \
 	$$(INCLUDE) \
 )
 
 endef
+
 
 define gb_LinkTarget__use_python
 $(call gb_LinkTarget__use_python_headers,$(1))
@@ -3222,6 +3224,7 @@ endif
 ifeq ($(OS),WNT)
 $(call gb_LinkTarget_add_libs,$(1),\
 	$(call gb_UnpackedTarball_get_dir,python3)/PCbuild/$(if $(filter X86_64,$(CPUNAME)),amd64,win32)/python$(PYTHON_VERSION_MAJOR)$(PYTHON_VERSION_MINOR)$(if $(MSVC_USE_DEBUG_RUNTIME),_d).lib \
+	$(ZLIB_LIBS) \
 )
 else ifeq ($(OS),MACOSX)
 $(call gb_LinkTarget_add_libs,$(1),\
@@ -3231,6 +3234,7 @@ else
 $(call gb_LinkTarget_add_libs,$(1),\
 	-L$(call gb_UnpackedTarball_get_dir,python3) \
 	-lpython$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)m \
+	$(ZLIB_LIBS) \
 )
 endif
 
