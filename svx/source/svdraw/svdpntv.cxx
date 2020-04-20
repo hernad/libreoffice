@@ -1022,7 +1022,7 @@ void SdrPaintView::MakeVisible(const tools::Rectangle& rRect, vcl::Window& rWin)
     MapMode aMap(rWin.GetMapMode());
     Size aActualSize(rWin.GetOutputSize());
 
-    if( aActualSize.Height() <= 0 || aActualSize.Width() <= 0 )
+    if( aActualSize.IsEmpty() )
         return;
 
     Size aNewSize(rRect.GetSize());
@@ -1058,7 +1058,7 @@ void SdrPaintView::MakeVisible(const tools::Rectangle& rRect, vcl::Window& rWin)
         if (dx!=0 || dy!=0) {
             rWin.Scroll(-dx,-dy);
             rWin.SetMapMode(aMap);
-            rWin.Update();
+            rWin.PaintImmediately();
         }
     } else {
         rWin.SetMapMode(aMap);

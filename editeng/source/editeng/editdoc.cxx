@@ -665,7 +665,10 @@ sal_Int32 FastGetPos(const Array& rArray, const Val* p, sal_Int32& rLastPos)
     // The world's lamest linear search from svarray...
     for (sal_Int32 nIdx = 0; nIdx < nArrayLen; ++nIdx)
         if (rArray.at(nIdx).get() == p)
-            return rLastPos = nIdx;
+        {
+            rLastPos = nIdx;
+            return rLastPos;
+        }
 
     // XXX "not found" condition for sal_Int32 indexes
     return EE_PARA_NOT_FOUND;
@@ -1825,18 +1828,18 @@ void ContentAttribs::SetStyleSheet( SfxStyleSheet* pS )
     bool bStyleChanged = ( pStyle != pS );
     pStyle = pS;
     // Only when other style sheet, not when current style sheet modified
-    if ( pStyle && bStyleChanged )
+    if ( !(pStyle && bStyleChanged) )
+        return;
+
+    // Selectively remove the attributes from the paragraph formatting
+    // which are specified in the style, so that the attributes of the
+    // style can have an affect.
+    const SfxItemSet& rStyleAttribs = pStyle->GetItemSet();
+    for ( sal_uInt16 nWhich = EE_PARA_START; nWhich <= EE_CHAR_END; nWhich++ )
     {
-        // Selectively remove the attributes from the paragraph formatting
-        // which are specified in the style, so that the attributes of the
-        // style can have an affect.
-        const SfxItemSet& rStyleAttribs = pStyle->GetItemSet();
-        for ( sal_uInt16 nWhich = EE_PARA_START; nWhich <= EE_CHAR_END; nWhich++ )
-        {
-            // Don't change bullet on/off
-            if ( ( nWhich != EE_PARA_BULLETSTATE ) && ( rStyleAttribs.GetItemState( nWhich ) == SfxItemState::SET ) )
-                aAttribSet.ClearItem( nWhich );
-        }
+        // Don't change bullet on/off
+        if ( ( nWhich != EE_PARA_BULLETSTATE ) && ( rStyleAttribs.GetItemState( nWhich ) == SfxItemState::SET ) )
+            aAttribSet.ClearItem( nWhich );
     }
 }
 

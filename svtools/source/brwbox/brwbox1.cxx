@@ -950,7 +950,7 @@ long BrowseBox::ScrollColumns( long nCols )
     if ( nCols )
     {
         pDataWin->Update();
-        Update();
+        PaintImmediately();
     }
     bScrolling = false;
     EndScroll();
@@ -1874,8 +1874,7 @@ void BrowseBox::MakeFieldVisible
 
     Size aTestSize = pDataWin->GetSizePixel();
 
-    if ( !bBootstrapped ||
-         ( aTestSize.Width() == 0 && aTestSize.Height() == 0 ) )
+    if ( !bBootstrapped || aTestSize.IsEmpty() )
         return;
 
     // is it visible already?

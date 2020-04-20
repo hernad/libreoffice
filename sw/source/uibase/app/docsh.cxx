@@ -436,32 +436,51 @@ bool SwDocShell::SaveAs( SfxMedium& rMedium )
         // We have an embedded data source definition, need to re-store it,
         // otherwise relative references will break when the new file is in a
         // different directory.
-        uno::Reference<sdb::XDatabaseContext> xDatabaseContext = sdb::DatabaseContext::create(comphelper::getProcessComponentContext());
 
-        const INetURLObject& rOldURLObject = GetMedium()->GetURLObject();
-        auto xContext(comphelper::getProcessComponentContext());
-        auto xUri = css::uri::UriReferenceFactory::create(xContext)
-            ->parse(rOldURLObject.GetMainURL(INetURLObject::DecodeMechanism::NONE));
-        assert(xUri.is());
-        xUri = css::uri::VndSunStarPkgUrlReferenceFactory::create(xContext)->createVndSunStarPkgUrlReference(xUri);
-        assert(xUri.is());
-        OUString const aURL = xUri->getUriReference() + "/"
-            + INetURLObject::encode(pMgr->getEmbeddedName(),
-                INetURLObject::PART_FPATH, INetURLObject::EncodeMechanism::All);
-
-        bool bCopyTo = GetCreateMode() == SfxObjectCreateMode::EMBEDDED;
-        if (!bCopyTo)
+        OUString aURL(GetMedium()->GetURLObject().GetMainURL(INetURLObject::DecodeMechanism::NONE));
+        if (aURL.isEmpty())
         {
-            if (const SfxBoolItem* pSaveToItem
-                = SfxItemSet::GetItem(rMedium.GetItemSet(), SID_SAVETO, false))
-                bCopyTo = pSaveToItem->GetValue();
+            // No old URL - is this a new document created from a template with embedded DS?
+            // Try to get the template URL to reconstruct the embedded data source URL
+            const css::beans::PropertyValues& rArgs = GetMedium()->GetArgs();
+            const auto aURLIter = std::find_if(rArgs.begin(), rArgs.end(),
+                                               [](const auto& v) { return v.Name == "URL"; });
+            if (aURLIter != rArgs.end())
+                aURLIter->Value >>= aURL;
         }
 
-        uno::Reference<sdb::XDocumentDataSource> xDataSource(xDatabaseContext->getByName(aURL), uno::UNO_QUERY);
-        uno::Reference<frame::XStorable> xStorable(xDataSource->getDatabaseDocument(), uno::UNO_QUERY);
-        SwDBManager::StoreEmbeddedDataSource(xStorable, rMedium.GetOutputStorage(),
-                                             pMgr->getEmbeddedName(),
-                                             rMedium.GetName(), bCopyTo);
+        if (!aURL.isEmpty())
+        {
+            auto xContext(comphelper::getProcessComponentContext());
+            auto xUri = css::uri::UriReferenceFactory::create(xContext)->parse(aURL);
+            assert(xUri.is());
+            xUri = css::uri::VndSunStarPkgUrlReferenceFactory::create(xContext)
+                       ->createVndSunStarPkgUrlReference(xUri);
+            assert(xUri.is());
+            aURL = xUri->getUriReference() + "/"
+                   + INetURLObject::encode(pMgr->getEmbeddedName(), INetURLObject::PART_FPATH,
+                                           INetURLObject::EncodeMechanism::All);
+
+            bool bCopyTo = GetCreateMode() == SfxObjectCreateMode::EMBEDDED;
+            if (!bCopyTo)
+            {
+                if (const SfxBoolItem* pSaveToItem
+                    = SfxItemSet::GetItem(rMedium.GetItemSet(), SID_SAVETO, false))
+                    bCopyTo = pSaveToItem->GetValue();
+            }
+
+            auto xDatabaseContext = sdb::DatabaseContext::create(xContext);
+            uno::Reference<sdb::XDocumentDataSource> xDataSource(xDatabaseContext->getByName(aURL),
+                                                                 uno::UNO_QUERY);
+            if (xDataSource)
+            {
+                uno::Reference<frame::XStorable> xStorable(xDataSource->getDatabaseDocument(),
+                                                           uno::UNO_QUERY);
+                SwDBManager::StoreEmbeddedDataSource(xStorable, rMedium.GetOutputStorage(),
+                                                     pMgr->getEmbeddedName(), rMedium.GetName(),
+                                                     bCopyTo);
+            }
+        }
     }
 
     // #i62875#
@@ -1019,7 +1038,7 @@ void SwDocShell::GetState(SfxItemSet& rSet)
         case FN_OUTLINE_TO_IMPRESS:
             {
                 SvtModuleOptions aMOpt;
-                if (!aMOpt.IsImpress() || (GetViewShell() && GetViewShell()->isExportLocked()))
+                if (!aMOpt.IsImpress() || GetObjectShell()->isExportLocked())
                     rSet.DisableItem( nWhich );
             }
             [[fallthrough]];
@@ -1042,13 +1061,13 @@ void SwDocShell::GetState(SfxItemSet& rSet)
 
         case FN_NEW_GLOBAL_DOC:
             if (dynamic_cast<const SwGlobalDocShell*>(this) != nullptr
-                || (GetViewShell() && GetViewShell()->isExportLocked()))
+                || GetObjectShell()->isExportLocked())
                 rSet.DisableItem( nWhich );
             break;
 
         case FN_NEW_HTML_DOC:
             if (dynamic_cast<const SwWebDocShell*>(this) != nullptr
-                || (GetViewShell() && GetViewShell()->isExportLocked()))
+                || GetObjectShell()->isExportLocked())
                 rSet.DisableItem( nWhich );
             break;
 
@@ -1175,20 +1194,6 @@ void SwDocShell::LoadingFinished()
     if ( bHasDocToStayModified && !m_xDoc->getIDocumentState().IsModified() )
     {
         m_xDoc->getIDocumentState().SetModified();
-    }
-}
-
-void SwDocShell::SetFormatSpecificCompatibilityOptions( const OUString& rFilterTypeName )
-{
-    //Enable MS Word-compatibility trailing blanks option for MS Word files
-    if ( rFilterTypeName == "writer_MS_Word_95" ||
-         rFilterTypeName == "writer_MS_Word_97" ||
-         rFilterTypeName == "writer_MS_Word_2003_XML" ||
-         rFilterTypeName == "writer_MS_Word_2007" ||
-         rFilterTypeName == "writer_MS_Word_2007_Template" ||
-         rFilterTypeName == "writer_Rich_Text_Format" )
-    {
-        GetDoc()->getIDocumentSettingAccess().set( DocumentSettingId::MS_WORD_COMP_TRAILING_BLANKS, true );
     }
 }
 

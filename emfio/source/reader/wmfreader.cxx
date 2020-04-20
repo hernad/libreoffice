@@ -165,6 +165,12 @@ namespace emfio
         aTL = ReadYX();
         aBR.AdjustX( -1 );
         aBR.AdjustY( -1 );
+        if (aTL.X() > aBR.X() || aTL.Y() > aBR.Y())
+        {
+            SAL_WARN("vcl.wmf", "broken rectangle");
+            mpInputStream->SetError( SVSTREAM_FILEFORMAT_ERROR );
+            return tools::Rectangle();
+        }
         return tools::Rectangle( aTL, aBR );
     }
 
@@ -1813,39 +1819,39 @@ namespace emfio
             bRet = false;
         }
 
-        if (bRet)
+        if (!bRet)
+            return;
+
+        if (aWinExt)
         {
-            if (aWinExt)
-            {
-                rPlaceableBound = tools::Rectangle(aWinOrg, *aWinExt);
-                SAL_INFO("vcl.wmf", "Window dimension "
-                           " t: " << rPlaceableBound.Left()  << " l: " << rPlaceableBound.Top()
-                        << " b: " << rPlaceableBound.Right() << " r: " << rPlaceableBound.Bottom());
-            }
-            else if (aViewportExt)
-            {
-                rPlaceableBound = tools::Rectangle(aViewportOrg, *aViewportExt);
-                SAL_INFO("vcl.wmf", "Viewport dimension "
-                           " t: " << rPlaceableBound.Left()  << " l: " << rPlaceableBound.Top()
-                        << " b: " << rPlaceableBound.Right() << " r: " << rPlaceableBound.Bottom());
-            }
-            else if (bBoundsDetermined)
-            {
-                rPlaceableBound = aBound;
-                SAL_INFO("vcl.wmf", "Determined dimension "
-                           " t: " << rPlaceableBound.Left()  << " l: " << rPlaceableBound.Top()
-                        << " b: " << rPlaceableBound.Right() << " r: " << rPlaceableBound.Bottom());
-            }
-            else
-            {
-                rPlaceableBound.SetLeft( 0 );
-                rPlaceableBound.SetTop( 0 );
-                rPlaceableBound.SetRight( aMaxWidth );
-                rPlaceableBound.SetBottom( aMaxWidth );
-                SAL_INFO("vcl.wmf", "Default dimension "
-                           " t: " << rPlaceableBound.Left()  << " l: " << rPlaceableBound.Top()
-                        << " b: " << rPlaceableBound.Right() << " r: " << rPlaceableBound.Bottom());
-            }
+            rPlaceableBound = tools::Rectangle(aWinOrg, *aWinExt);
+            SAL_INFO("vcl.wmf", "Window dimension "
+                       " t: " << rPlaceableBound.Left()  << " l: " << rPlaceableBound.Top()
+                    << " b: " << rPlaceableBound.Right() << " r: " << rPlaceableBound.Bottom());
+        }
+        else if (aViewportExt)
+        {
+            rPlaceableBound = tools::Rectangle(aViewportOrg, *aViewportExt);
+            SAL_INFO("vcl.wmf", "Viewport dimension "
+                       " t: " << rPlaceableBound.Left()  << " l: " << rPlaceableBound.Top()
+                    << " b: " << rPlaceableBound.Right() << " r: " << rPlaceableBound.Bottom());
+        }
+        else if (bBoundsDetermined)
+        {
+            rPlaceableBound = aBound;
+            SAL_INFO("vcl.wmf", "Determined dimension "
+                       " t: " << rPlaceableBound.Left()  << " l: " << rPlaceableBound.Top()
+                    << " b: " << rPlaceableBound.Right() << " r: " << rPlaceableBound.Bottom());
+        }
+        else
+        {
+            rPlaceableBound.SetLeft( 0 );
+            rPlaceableBound.SetTop( 0 );
+            rPlaceableBound.SetRight( aMaxWidth );
+            rPlaceableBound.SetBottom( aMaxWidth );
+            SAL_INFO("vcl.wmf", "Default dimension "
+                       " t: " << rPlaceableBound.Left()  << " l: " << rPlaceableBound.Top()
+                    << " b: " << rPlaceableBound.Right() << " r: " << rPlaceableBound.Bottom());
         }
     }
 

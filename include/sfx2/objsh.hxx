@@ -460,8 +460,6 @@ public:
     bool                        IsAbortingImport() const;
     void                        FinishedLoading( SfxLoadedFlags nWhich = SfxLoadedFlags::ALL );
 
-    virtual void                SetFormatSpecificCompatibilityOptions( const OUString& /*rFilterTypeName*/ ) { /* Do not do anything here; Derived classes must overload to do actual work */ };
-
     void                        TemplateDisconnectionAfterLoad();
     void                        SetLoading(SfxLoadedFlags nFlags);
     bool                        IsLoading() const;
@@ -586,6 +584,10 @@ public:
                                     const css::uno::Sequence<OUString>& rExceptions = css::uno::Sequence<OUString>());
 
     bool isEditDocLocked();
+    bool isContentExtractionLocked();
+    bool isExportLocked();
+    bool isPrintLocked();
+    bool isSaveLocked();
 
     // The functions from SvPersist
     void            EnableSetModified( bool bEnable = true );
@@ -861,7 +863,8 @@ inline SfxObjectShellLock & SfxObjectShellLock::operator=( SfxObjectShellLock &&
 }
 inline SfxObjectShellLock & SfxObjectShellLock::operator=( SfxObjectShell * pObjP )
 {
-    return *this = SfxObjectShellLock( pObjP );
+    *this = SfxObjectShellLock( pObjP );
+    return *this;
 }
 
 class SFX2_DLLPUBLIC SfxObjectShellItem final : public SfxPoolItem

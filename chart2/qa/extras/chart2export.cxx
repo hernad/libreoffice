@@ -89,6 +89,7 @@ public:
     void testIndividualDataLabelProps();
     void testTdf108107();
     void testTdf114139();
+    void testTdf64224();
     void testChartTitlePropertiesColorFillDOCX();
     void testChartTitlePropertiesGradientFillDOCX();
     void testChartTitlePropertiesBitmapFillDOCX();
@@ -133,7 +134,7 @@ public:
     void testCrossBetweenODS();
     void testAxisTitleRotationXLSX();
     void testAxisTitlePositionDOCX();
-    void testAxisCrossBetweenXSLX();
+    void testAxisCrossBetweenDOCX();
     void testPieChartDataPointExplosionXLSX();
     void testCustomDataLabel();
     void testCustomPositionofDataLabel();
@@ -159,8 +160,11 @@ public:
     void testCustomLabelText();
     void testDeletedLegendEntries();
     void testTdf130225();
+    void testTdf59857();
     void testTdf126076();
     void testTdf75330();
+    void testTdf127792();
+    void testTdf131979();
 
     CPPUNIT_TEST_SUITE(Chart2ExportTest);
     CPPUNIT_TEST(testErrorBarXLSX);
@@ -213,6 +217,7 @@ public:
     CPPUNIT_TEST(testIndividualDataLabelProps);
     CPPUNIT_TEST(testTdf108107);
     CPPUNIT_TEST(testTdf114139);
+    CPPUNIT_TEST(testTdf64224);
     CPPUNIT_TEST(testChartTitlePropertiesColorFillDOCX);
     CPPUNIT_TEST(testChartTitlePropertiesGradientFillDOCX);
     CPPUNIT_TEST(testChartTitlePropertiesBitmapFillDOCX);
@@ -257,7 +262,7 @@ public:
     CPPUNIT_TEST(testCrossBetweenODS);
     CPPUNIT_TEST(testAxisTitleRotationXLSX);
     CPPUNIT_TEST(testAxisTitlePositionDOCX);
-    CPPUNIT_TEST(testAxisCrossBetweenXSLX);
+    CPPUNIT_TEST(testAxisCrossBetweenDOCX);
     CPPUNIT_TEST(testPieChartDataPointExplosionXLSX);
     CPPUNIT_TEST(testCustomDataLabel);
     CPPUNIT_TEST(testCustomPositionofDataLabel);
@@ -283,8 +288,11 @@ public:
     CPPUNIT_TEST(testCustomLabelText);
     CPPUNIT_TEST(testDeletedLegendEntries);
     CPPUNIT_TEST(testTdf130225);
+    CPPUNIT_TEST(testTdf59857);
     CPPUNIT_TEST(testTdf126076);
     CPPUNIT_TEST(testTdf75330);
+    CPPUNIT_TEST(testTdf127792);
+    CPPUNIT_TEST(testTdf131979);
 
     CPPUNIT_TEST_SUITE_END();
 
@@ -1262,6 +1270,17 @@ void Chart2ExportTest::testTdf114139()
     assertXPath(pXmlDoc, "/c:chartSpace/c:chart/c:plotArea/c:spPr/a:solidFill", 0);
 }
 
+void Chart2ExportTest::testTdf64224()
+{
+    load("/chart2/qa/extras/data/ods/", "tdf64224.ods");
+    xmlDocPtr pXmlDoc = parseExport("xl/charts/chart", "Calc Office Open XML");
+    CPPUNIT_ASSERT(pXmlDoc);
+
+    //no fill
+    assertXPath(pXmlDoc, "/c:chartSpace/c:spPr/a:noFill", 1);
+    assertXPath(pXmlDoc, "/c:chartSpace/c:spPr/a:solidFill", 0);
+}
+
 void Chart2ExportTest::testChartTitlePropertiesColorFillDOCX()
 {
     load("/chart2/qa/extras/data/docx/", "testChartTitlePropertiesColorFill.docx");
@@ -2105,7 +2124,7 @@ void Chart2ExportTest::testAxisTitlePositionDOCX()
     CPPUNIT_ASSERT_DOUBLES_EQUAL(0.384070199122511, nY, 1e-2);
 }
 
-void Chart2ExportTest::testAxisCrossBetweenXSLX()
+void Chart2ExportTest::testAxisCrossBetweenDOCX()
 {
     load("/chart2/qa/extras/data/odt/", "axis-position.odt");
     xmlDocPtr pXmlDoc = parseExport("word/charts/chart", "Office Open XML Text");
@@ -2597,6 +2616,18 @@ void Chart2ExportTest::testTdf130225()
     CPPUNIT_ASSERT_EQUAL(sal_Int32(1), deletedLegendEntriesSeq[0]);
 }
 
+void Chart2ExportTest::testTdf59857()
+{
+    load("/chart2/qa/extras/data/ods/", "tdf59857.ods");
+    xmlDocPtr pXmlDoc = parseExport("xl/charts/chart","Calc Office Open XML");
+    CPPUNIT_ASSERT(pXmlDoc);
+
+    assertXPath(pXmlDoc, "/c:chartSpace/c:chart/c:floor/c:spPr/a:ln/a:noFill", 1);
+    assertXPath(pXmlDoc, "/c:chartSpace/c:chart/c:floor/c:spPr/a:solidFill/a:srgbClr", "val", "cccccc");
+    assertXPath(pXmlDoc, "/c:chartSpace/c:chart/c:backWall/c:spPr/a:ln/a:noFill", 0);
+    assertXPath(pXmlDoc, "/c:chartSpace/c:chart/c:backWall/c:spPr/a:ln/a:solidFill/a:srgbClr", "val", "b3b3b3");
+}
+
 void Chart2ExportTest::testTdf126076()
 {
     load("/chart2/qa/extras/data/xlsx/", "auto_marker_excel10.xlsx");
@@ -2631,6 +2662,52 @@ void Chart2ExportTest::testTdf75330()
         bool bOverlay = false;
         CPPUNIT_ASSERT(xPropertySet->getPropertyValue("Overlay") >>= bOverlay);
         CPPUNIT_ASSERT(bOverlay);
+    }
+}
+
+void Chart2ExportTest::testTdf127792()
+{
+    load("/chart2/qa/extras/data/docx/", "MSO_axis_position.docx");
+    {
+        xmlDocPtr pXmlDoc = parseExport("word/charts/chart1", "Office Open XML Text");
+        CPPUNIT_ASSERT(pXmlDoc);
+        assertXPath(pXmlDoc, "/c:chartSpace/c:chart/c:plotArea/c:valAx/c:crossBetween", "val", "between");
+    }
+    {
+        xmlDocPtr pXmlDoc = parseExport("word/charts/chart2", "Office Open XML Text");
+        CPPUNIT_ASSERT(pXmlDoc);
+        assertXPath(pXmlDoc, "/c:chartSpace/c:chart/c:plotArea/c:valAx/c:crossBetween", "val", "midCat");
+    }
+}
+
+void Chart2ExportTest::testTdf131979()
+{
+    load("/chart2/qa/extras/data/ods/", "tdf131115.ods");
+    {
+        reload("calc8");
+        Reference<chart2::XChartDocument> xChartDoc = getChartDocFromSheet(0, mxComponent);
+        CPPUNIT_ASSERT(xChartDoc.is());
+        Reference<chart2::XDataSeries> xDataSeries(getDataSeriesFromDoc(xChartDoc, 0));
+        CPPUNIT_ASSERT(xDataSeries.is());
+        Reference<beans::XPropertySet> xPropertySet;
+        xPropertySet.set(xDataSeries->getDataPointByIndex(2), uno::UNO_SET_THROW);
+        bool blinknumberformattosource = true;
+        CPPUNIT_ASSERT(xPropertySet->getPropertyValue(CHART_UNONAME_LINK_TO_SRC_NUMFMT) >>= blinknumberformattosource);
+        CPPUNIT_ASSERT_MESSAGE("\"LinkNumberFormatToSource\" should be set to false.", !blinknumberformattosource);
+    }
+
+    load("/chart2/qa/extras/data/ods/", "tdf131979.ods");
+    {
+        reload("calc8");
+        Reference<chart2::XChartDocument> xChartDoc = getChartDocFromSheet(0, mxComponent);
+        CPPUNIT_ASSERT(xChartDoc.is());
+        Reference<chart2::XDataSeries> xDataSeries(getDataSeriesFromDoc(xChartDoc, 0));
+        CPPUNIT_ASSERT(xDataSeries.is());
+        Reference<beans::XPropertySet> xPropertySet;
+        xPropertySet.set(xDataSeries->getDataPointByIndex(2), uno::UNO_SET_THROW);
+        bool blinknumberformattosource = true;
+        CPPUNIT_ASSERT(xPropertySet->getPropertyValue(CHART_UNONAME_LINK_TO_SRC_NUMFMT) >>= blinknumberformattosource);
+        CPPUNIT_ASSERT_MESSAGE("\"LinkNumberFormatToSource\" should be set to true.", blinknumberformattosource);
     }
 }
 

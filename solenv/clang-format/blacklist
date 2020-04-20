@@ -3757,9 +3757,7 @@ drawinglayer/source/processor2d/vclhelperbufferdevice.hxx
 drawinglayer/source/processor2d/vclmetafileprocessor2d.cxx
 drawinglayer/source/processor2d/vclmetafileprocessor2d.hxx
 drawinglayer/source/processor2d/vclpixelprocessor2d.cxx
-drawinglayer/source/processor2d/vclpixelprocessor2d.hxx
 drawinglayer/source/processor2d/vclprocessor2d.cxx
-drawinglayer/source/processor2d/vclprocessor2d.hxx
 drawinglayer/source/processor3d/baseprocessor3d.cxx
 drawinglayer/source/processor3d/cutfindprocessor3d.cxx
 drawinglayer/source/processor3d/defaultprocessor3d.cxx
@@ -5851,7 +5849,6 @@ include/drawinglayer/attribute/fillgradientattribute.hxx
 include/drawinglayer/attribute/fillgraphicattribute.hxx
 include/drawinglayer/attribute/fillhatchattribute.hxx
 include/drawinglayer/attribute/fontattribute.hxx
-include/drawinglayer/attribute/lineattribute.hxx
 include/drawinglayer/attribute/linestartendattribute.hxx
 include/drawinglayer/attribute/materialattribute3d.hxx
 include/drawinglayer/attribute/sdrallattribute3d.hxx
@@ -5864,7 +5861,6 @@ include/drawinglayer/attribute/sdrlinestartendattribute.hxx
 include/drawinglayer/attribute/sdrobjectattribute3d.hxx
 include/drawinglayer/attribute/sdrsceneattribute3d.hxx
 include/drawinglayer/attribute/sdrshadowattribute.hxx
-include/drawinglayer/attribute/strokeattribute.hxx
 include/drawinglayer/geometry/viewinformation3d.hxx
 include/drawinglayer/primitive2d/discretebitmapprimitive2d.hxx
 include/drawinglayer/primitive2d/discreteshadowprimitive2d.hxx
@@ -12069,6 +12065,7 @@ sfx2/source/appl/fileobj.cxx
 sfx2/source/appl/fileobj.hxx
 sfx2/source/appl/flatpak.cxx
 sfx2/source/appl/fwkhelper.cxx
+sfx2/source/appl/getbasctlfunction.cxx
 sfx2/source/appl/helpdispatch.cxx
 sfx2/source/appl/helpdispatch.hxx
 sfx2/source/appl/helpinterceptor.cxx

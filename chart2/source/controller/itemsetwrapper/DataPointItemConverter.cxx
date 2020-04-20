@@ -241,18 +241,18 @@ DataPointItemConverter::DataPointItemConverter(
 
     m_bForbidPercentValue = ChartTypeHelper::getAxisType( xChartType, 0 ) != AxisType::CATEGORY;
 
-    if (!bDataSeries)
+    if (bDataSeries)
+        return;
+
+    uno::Reference<beans::XPropertySet> xSeriesProp(xSeries, uno::UNO_QUERY);
+    uno::Sequence<sal_Int32> deletedLegendEntriesSeq;
+    xSeriesProp->getPropertyValue("DeletedLegendEntries") >>= deletedLegendEntriesSeq;
+    for (auto& deletedLegendEntry : deletedLegendEntriesSeq)
     {
-        uno::Reference<beans::XPropertySet> xSeriesProp(xSeries, uno::UNO_QUERY);
-        uno::Sequence<sal_Int32> deletedLegendEntriesSeq;
-        xSeriesProp->getPropertyValue("DeletedLegendEntries") >>= deletedLegendEntriesSeq;
-        for (auto& deletedLegendEntry : deletedLegendEntriesSeq)
+        if (nPointIndex == deletedLegendEntry)
         {
-            if (nPointIndex == deletedLegendEntry)
-            {
-                m_bHideLegendEntry = true;
-                break;
-            }
+            m_bHideLegendEntry = true;
+            break;
         }
     }
 }
@@ -636,13 +636,31 @@ void DataPointItemConverter::FillSpecialItem(
 
         case SID_ATTR_NUMBERFORMAT_SOURCE:
         {
-            bool bNumberFormatIsSet = GetPropertySet()->getPropertyValue(CHART_UNONAME_NUMFMT).hasValue();
+            bool bUseSourceFormat = false;
+            try
+            {
+                GetPropertySet()->getPropertyValue(CHART_UNONAME_LINK_TO_SRC_NUMFMT) >>= bUseSourceFormat;
+            }
+            catch (const uno::Exception&)
+            {
+                TOOLS_WARN_EXCEPTION("chart2", "");
+            }
+            bool bNumberFormatIsSet = GetPropertySet()->getPropertyValue(CHART_UNONAME_NUMFMT).hasValue() && !bUseSourceFormat;
             rOutItemSet.Put( SfxBoolItem( nWhichId, ! bNumberFormatIsSet ));
         }
         break;
         case SCHATTR_PERCENT_NUMBERFORMAT_SOURCE:
         {
-            bool bNumberFormatIsSet = GetPropertySet()->getPropertyValue( "PercentageNumberFormat" ).hasValue();
+            bool bUseSourceFormat = false;
+            try
+            {
+                GetPropertySet()->getPropertyValue(CHART_UNONAME_LINK_TO_SRC_NUMFMT) >>= bUseSourceFormat;
+            }
+            catch (const uno::Exception&)
+            {
+                TOOLS_WARN_EXCEPTION("chart2", "");
+            }
+            bool bNumberFormatIsSet = GetPropertySet()->getPropertyValue( "PercentageNumberFormat" ).hasValue() && !bUseSourceFormat;
             rOutItemSet.Put( SfxBoolItem( nWhichId, ! bNumberFormatIsSet ));
         }
         break;

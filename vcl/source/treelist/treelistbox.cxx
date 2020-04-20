@@ -1190,7 +1190,7 @@ void SvTreeListBox::StartDrag( sal_Int8, const Point& rPosPixel )
 
     bool bOldUpdateMode = Control::IsUpdateMode();
     Control::SetUpdateMode( true );
-    Update();
+    PaintImmediately();
     Control::SetUpdateMode( bOldUpdateMode );
 
     // Disallow using the selection and its children as drop targets.
@@ -1945,7 +1945,7 @@ void SvTreeListBox::GetFocus()
     SvTreeListEntry* pEntry = FirstSelected();
     if ( !pEntry )
     {
-        pEntry = pImpl->GetCurrentEntry();
+        pEntry = pImpl->GetCurEntry();
     }
     if (pImpl->m_pCursor)
     {
@@ -3383,7 +3383,7 @@ void SvTreeListBox::ModelNotification( SvListAction nActionId, SvTreeListEntry* 
 
         case SvListAction::CLEARED:
             if( IsUpdateMode() )
-                Update();
+                PaintImmediately();
             break;
 
         default: break;

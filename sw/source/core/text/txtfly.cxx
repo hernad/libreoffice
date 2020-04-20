@@ -272,7 +272,7 @@ SwRect SwContourCache::ContourRect( const SwFormat* pFormat,
 
     Range aRange( std::min( nTmpTop, nTmpBottom ), std::max( nTmpTop, nTmpBottom ) );
 
-    LongDqPtr pTmp = mvItems[0].mxTextRanger->GetTextRanges( aRange );
+    std::deque<long>* pTmp = mvItems[0].mxTextRanger->GetTextRanges( aRange );
 
     const size_t nCount = pTmp->size();
     if( 0 != nCount )
@@ -608,7 +608,7 @@ void SwTextFly::DrawFlyRect( OutputDevice* pOut, const SwRect &rRect )
                     SwRect aFly( pAnchoredObjTmp->GetObjRect() );
                     // OD 24.01.2003 #106593#
                     ::SwAlignRect( aFly, pPage->getRootFrame()->GetCurrShell(), pOut );
-                    if( aFly.Width() > 0 && aFly.Height() > 0 )
+                    if( !aFly.IsEmpty() )
                         aRegion -= aFly;
                 }
             }

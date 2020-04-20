@@ -956,9 +956,14 @@ void SmParser::NextToken()
         m_aCurToken.cMathChar  = '\0';
         m_aCurToken.nGroup     = TG::NONE;
         m_aCurToken.nLevel     = 5;
-        m_aCurToken.aText      = m_aBufferString.copy( nRealStart, 1 );
 
-        aRes.EndPos = nRealStart + 1;
+        // tdf#129372: we may have to deal with surrogate pairs
+        // (see https://en.wikipedia.org/wiki/Universal_Character_Set_characters#Surrogates)
+        // in this case, we must read 2 sal_Unicode instead of 1
+        int nOffset(rtl::isSurrogate(m_aBufferString[nRealStart])? 2 : 1);
+        m_aCurToken.aText      = m_aBufferString.copy( nRealStart, nOffset );
+
+        aRes.EndPos = nRealStart + nOffset;
     }
 
     if (TEND != m_aCurToken.eType)
@@ -1533,9 +1538,13 @@ std::unique_ptr<SmNode> SmParser::DoTerm(bool bGroupNumberIdent)
             {
                 std::stack<std::unique_ptr<SmStructureNode>> aStack;
                 bool    bIsAttr;
-                while ( (bIsAttr = TokenInGroup(TG::Attribute))
-                       ||  TokenInGroup(TG::FontAttr))
+                for (;;)
+                {
+                    bIsAttr = TokenInGroup(TG::Attribute);
+                    if (!bIsAttr && !TokenInGroup(TG::FontAttr))
+                        break;
                     aStack.push(bIsAttr ? DoAttribut() : DoFontAttribut());
+                }
 
                 auto xFirstNode = DoPower();
                 while (!aStack.empty())

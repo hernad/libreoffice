@@ -661,8 +661,12 @@ bool SvxAutoCorrect::FnAddNonBrkSpace(
             // Get the last word delimiter position
             sal_Int32 nSttWdPos = nEndPos;
             bool bWasWordDelim = false;
-            while( nSttWdPos && !(bWasWordDelim = IsWordDelim( rTxt[ --nSttWdPos ])))
-                ;
+            while( nSttWdPos )
+            {
+                bWasWordDelim = IsWordDelim( rTxt[ --nSttWdPos ]);
+                if (bWasWordDelim)
+                    break;
+            }
 
             //See if the text is the start of a protocol string, e.g. have text of
             //"http" see if it is the start of "http:" and if so leave it alone
@@ -898,8 +902,12 @@ void SvxAutoCorrect::FnCapitalStartSentence( SvxAutoCorrDoc& rDoc,
     {
         if (NonFieldWordDelim(*pStr))
         {
-            while (!(bAtStart = (pStart == pStr--)) && NonFieldWordDelim(*pStr))
-                ;
+            for (;;)
+            {
+                bAtStart = (pStart == pStr--);
+                if (bAtStart || !NonFieldWordDelim(*pStr))
+                    break;
+            }
         }
         // Asian full stop, full width full stop, full width exclamation mark
         // and full width question marks are treated as word delimiters
@@ -1881,11 +1889,11 @@ static bool lcl_FindAbbreviation(const SvStringsISortDtor* pList, const OUString
     {
         OUString sLowerWord(sWord.toAsciiLowerCase());
         OUString sAbr;
-        for( SvStringsISortDtor::size_type n = nPos;
-                n < pList->size() &&
-                '~' == ( sAbr = (*pList)[ n ])[ 0 ];
-            ++n )
+        for( SvStringsISortDtor::size_type n = nPos; n < pList->size(); ++n )
         {
+            sAbr = (*pList)[ n ];
+            if (sAbr[0] != '~')
+                break;
             // ~ and ~. are not allowed!
             if( 2 < sAbr.getLength() && sAbr.getLength() - 1 <= sWord.getLength() )
             {
@@ -2001,8 +2009,10 @@ bool SvxAutoCorrectLanguageLists::IsFileChanged_Imp()
 
     tools::Time nMinTime( 0, 2 );
     tools::Time nAktTime( tools::Time::SYSTEM );
-    if( aLastCheckTime > nAktTime ||                    // overflow?
-        ( nAktTime -= aLastCheckTime ) > nMinTime )     // min time past
+    if( aLastCheckTime <= nAktTime) // overflow?
+        return false;
+    nAktTime -= aLastCheckTime;
+    if( nAktTime > nMinTime )     // min time past
     {
         Date aTstDate( Date::EMPTY ); tools::Time aTstTime( tools::Time::EMPTY );
         if( FStatHelper::GetModifiedDateTimeOfFile( sShareAutoCorrFile,
@@ -2106,49 +2116,49 @@ void SvxAutoCorrectLanguageLists::SaveExceptList_Imp(
                             tools::SvRef<SotStorage> const &rStg,
                             bool bConvert )
 {
-    if( rStg.is() )
+    if( !rStg.is() )
+        return;
+
+    OUString sStrmName( pStrmName, strlen(pStrmName), RTL_TEXTENCODING_MS_1252 );
+    if( rLst.empty() )
     {
-        OUString sStrmName( pStrmName, strlen(pStrmName), RTL_TEXTENCODING_MS_1252 );
-        if( rLst.empty() )
+        rStg->Remove( sStrmName );
+        rStg->Commit();
+    }
+    else
+    {
+        tools::SvRef<SotStorageStream> xStrm = rStg->OpenSotStream( sStrmName,
+                ( StreamMode::READ | StreamMode::WRITE | StreamMode::SHARE_DENYWRITE ) );
+        if( xStrm.is() )
         {
-            rStg->Remove( sStrmName );
-            rStg->Commit();
-        }
-        else
-        {
-            tools::SvRef<SotStorageStream> xStrm = rStg->OpenSotStream( sStrmName,
-                    ( StreamMode::READ | StreamMode::WRITE | StreamMode::SHARE_DENYWRITE ) );
-            if( xStrm.is() )
+            xStrm->SetSize( 0 );
+            xStrm->SetBufferSize( 8192 );
+            xStrm->SetProperty( "MediaType", Any(OUString( "text/xml" )) );
+
+
+            uno::Reference< uno::XComponentContext > xContext =
+                comphelper::getProcessComponentContext();
+
+            uno::Reference < xml::sax::XWriter > xWriter  = xml::sax::Writer::create(xContext);
+            uno::Reference < io::XOutputStream> xOut = new utl::OOutputStreamWrapper( *xStrm );
+            xWriter->setOutputStream(xOut);
+
+            uno::Reference < xml::sax::XDocumentHandler > xHandler(xWriter, UNO_QUERY_THROW);
+            rtl::Reference< SvXMLExceptionListExport > xExp( new SvXMLExceptionListExport( xContext, rLst, sStrmName, xHandler ) );
+
+            xExp->exportDoc( XML_BLOCK_LIST );
+
+            xStrm->Commit();
+            if( xStrm->GetError() == ERRCODE_NONE )
             {
-                xStrm->SetSize( 0 );
-                xStrm->SetBufferSize( 8192 );
-                xStrm->SetProperty( "MediaType", Any(OUString( "text/xml" )) );
-
-
-                uno::Reference< uno::XComponentContext > xContext =
-                    comphelper::getProcessComponentContext();
-
-                uno::Reference < xml::sax::XWriter > xWriter  = xml::sax::Writer::create(xContext);
-                uno::Reference < io::XOutputStream> xOut = new utl::OOutputStreamWrapper( *xStrm );
-                xWriter->setOutputStream(xOut);
-
-                uno::Reference < xml::sax::XDocumentHandler > xHandler(xWriter, UNO_QUERY_THROW);
-                rtl::Reference< SvXMLExceptionListExport > xExp( new SvXMLExceptionListExport( xContext, rLst, sStrmName, xHandler ) );
-
-                xExp->exportDoc( XML_BLOCK_LIST );
-
-                xStrm->Commit();
-                if( xStrm->GetError() == ERRCODE_NONE )
+                xStrm.clear();
+                if (!bConvert)
                 {
-                    xStrm.clear();
-                    if (!bConvert)
+                    rStg->Commit();
+                    if( ERRCODE_NONE != rStg->GetError() )
                     {
+                        rStg->Remove( sStrmName );
                         rStg->Commit();
-                        if( ERRCODE_NONE != rStg->GetError() )
-                        {
-                            rStg->Remove( sStrmName );
-                            rStg->Commit();
-                        }
                     }
                 }
             }

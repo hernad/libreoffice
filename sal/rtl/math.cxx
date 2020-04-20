@@ -19,7 +19,6 @@
 
 #include <rtl/math.h>
 
-#include <config_global.h>
 #include <o3tl/safeint.hxx>
 #include <osl/diagnose.h>
 #include <rtl/alloc.h>
@@ -42,10 +41,6 @@
 #include <stdlib.h>
 
 #include <dtoa.h>
-
-#if !HAVE_GCC_BUILTIN_FFS && !defined _WIN32
-    #include <strings.h>
-#endif
 
 static int const n10Count = 16;
 static double const n10s[2][n10Count] = {
@@ -172,9 +167,10 @@ bool isRepresentableInteger(double fAbsValue)
         // XXX loplugin:fpcomparison complains about floating-point comparison
         // for static_cast<double>(nInt) == fAbsValue, though we actually want
         // this here.
-        double fInt;
-        return (nInt <= kMaxInt &&
-                (!((fInt = static_cast< double >(nInt)) < fAbsValue) && !(fInt > fAbsValue)));
+        if (nInt > kMaxInt)
+            return false;
+        double fInt = static_cast< double >(nInt);
+        return !(fInt < fAbsValue) && !(fInt > fAbsValue);
     }
     return false;
 }
@@ -182,14 +178,12 @@ bool isRepresentableInteger(double fAbsValue)
 // Returns 1-based index of least significant bit in a number, or zero if number is zero
 int findFirstSetBit(unsigned n)
 {
-#if HAVE_GCC_BUILTIN_FFS
-    return __builtin_ffs(n);
-#elif defined _WIN32
+#if defined _WIN32
     unsigned long pos;
     unsigned char bNonZero = _BitScanForward(&pos, n);
     return (bNonZero == 0) ? 0 : pos + 1;
 #else
-    return ffs(n);
+    return __builtin_ffs(n);
 #endif
 }
 
@@ -447,7 +441,8 @@ void doubleToString(typename T::String ** pResult,
     // Round the number
     if(nDigits >= 0)
     {
-        if ((fValue += nRoundVal[std::min<sal_Int32>(nDigits, 15)] ) >= 10)
+        fValue += nRoundVal[std::min<sal_Int32>(nDigits, 15)];
+        if (fValue >= 10)
         {
             fValue = 1.0;
             nExp++;
@@ -1213,7 +1208,11 @@ bool SAL_CALL rtl_math_approxEqual(double a, double b) SAL_THROW_EXTERN_C()
     if (!std::isfinite(d))
         return false;   // Nan or Inf involved
 
-    if (d > ((a = fabs(a)) * e44) || d > ((b = fabs(b)) * e44))
+    a = fabs(a);
+    if (d > (a * e44))
+        return false;
+    b = fabs(b);
+    if (d > (b * e44))
         return false;
 
     if (isRepresentableInteger(d) && isRepresentableInteger(a) && isRepresentableInteger(b))

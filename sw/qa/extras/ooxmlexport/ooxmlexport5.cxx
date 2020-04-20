@@ -369,6 +369,20 @@ DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testFootnoteSeparator, "footnotesep.fodt")
     assertXPath(pXmlSettings, "/w:settings[1]/w:footnotePr[1]/w:footnote[2]", "id", "1");
 }
 
+DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf121441, "tdf121441.docx")
+{
+    xmlDocPtr pXmlFootnotes = parseExport("word/footnotes.xml");
+    assertXPath(pXmlFootnotes, "/w:footnotes/w:footnote[3]/w:p/w:r[1]/w:rPr/w:rStyle", 1);
+    assertXPath(pXmlFootnotes, "/w:footnotes/w:footnote[3]/w:p/w:r[2]/w:rPr/w:rStyle", 0);
+    assertXPath(pXmlFootnotes, "/w:footnotes/w:footnote[3]/w:p/w:r[2]/w:rPr/w:rFonts", 0);
+
+    xmlDocPtr pXmlDoc = parseExport("word/document.xml");
+    assertXPath(pXmlDoc, "/w:document/w:body/w:p/w:r/w:rPr/w:rFonts", "eastAsia", "Symbol");
+    assertXPath(pXmlDoc, "/w:document/w:body/w:p/w:r/w:rPr/w:rFonts", "cs", "Symbol");
+    assertXPath(pXmlDoc, "/w:document/w:body/w:p/w:r/w:rPr/w:rFonts", "ascii", "Symbol");
+    assertXPath(pXmlDoc, "/w:document/w:body/w:p/w:r/w:rPr/w:rFonts", "hAnsi", "Symbol");
+}
+
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testFDO77812, "fdo77812.docx")
 {
     /* Additional sectPr was getting inserted and hence Column properties
@@ -1105,10 +1119,11 @@ DECLARE_OOXMLEXPORT_TEST(tdf106843, "tdf106843.fodt")
         assertXPath(pXmlSettings, "/w:settings/w:documentProtection", "edit",               "trackedChanges");
         assertXPath(pXmlSettings, "/w:settings/w:documentProtection", "enforcement",        "1");
 
-        // LO intends to export a .docx format that is natively compatible with 2013.
+        // LO intends to export a .docx format that is natively compatible with 2013
+        // but this document has an implicitly added setting AddExternalLeading = false
         assertXPath(pXmlSettings, "/w:settings/w:compat/w:compatSetting[1]", "name", "compatibilityMode");
         assertXPath(pXmlSettings, "/w:settings/w:compat/w:compatSetting[1]", "uri", "http://schemas.microsoft.com/office/word");
-        assertXPath(pXmlSettings, "/w:settings/w:compat/w:compatSetting[1]", "val", "15"); // compatible with 2003/2016/2019
+        assertXPath(pXmlSettings, "/w:settings/w:compat/w:compatSetting[1]", "val", "14"); // compatible with 2010
     }
 }
 

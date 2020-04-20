@@ -124,6 +124,7 @@ DomainMapper::DomainMapper( const uno::Reference< uno::XComponentContext >& xCon
 
     // Don't load the default style definitions to avoid weird mix
     m_pImpl->SetDocumentSettingsProperty("StylesNoDefault", uno::makeAny(true));
+    m_pImpl->SetDocumentSettingsProperty("MsWordCompTrailingBlanks", uno::makeAny(true));
 
     // Initialize RDF metadata, to be able to add statements during the import.
     try
@@ -1329,14 +1330,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, const PropertyMapPtr& rContext )
             }
             else
             {
-                if( IsStyleSheetImport() )
-                {
-                    // set the number id for AbstractNum references
-                    StyleSheetPropertyMap* pStyleSheetPropertyMap = dynamic_cast< StyleSheetPropertyMap* >( rContext.get() );
-                    if (pStyleSheetPropertyMap)
-                        pStyleSheetPropertyMap->SetNumId( nIntValue );
-                }
-                else
+                if( !IsStyleSheetImport() )
                 {
                     // eg. disabled numbering using non-existent numId "0"
                     rContext->Insert( PROP_NUMBERING_STYLE_NAME, uno::makeAny( OUString() ) );
@@ -3908,6 +3902,11 @@ bool DomainMapper::IsInShape() const { return m_pImpl->IsInShape(); }
 bool DomainMapper::IsInTable() const
 {
     return m_pImpl->hasTableManager() && m_pImpl->getTableManager().isInCell();
+}
+
+OUString DomainMapper::GetListStyleName(sal_Int32 nListId) const
+{
+    return m_pImpl->GetListStyleName( nListId );
 }
 
 bool DomainMapper::IsStyleSheetImport() const

@@ -95,6 +95,23 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest3, testTdf128739)
     CPPUNIT_ASSERT_EQUAL(OUString(""), getParagraph(1)->getString());
 }
 
+CPPUNIT_TEST_FIXTURE(SwUiWriterTest3, testTdf124722)
+{
+    load(DATA_DIRECTORY, "tdf124722.rtf");
+
+    SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
+    CPPUNIT_ASSERT(pTextDoc);
+
+    CPPUNIT_ASSERT_EQUAL(22, getPages());
+    dispatchCommand(mxComponent, ".uno:SelectAll", {});
+    dispatchCommand(mxComponent, ".uno:Copy", {});
+    CPPUNIT_ASSERT_EQUAL(22, getPages());
+    dispatchCommand(mxComponent, ".uno:Paste", {});
+    CPPUNIT_ASSERT_EQUAL(43, getPages());
+    dispatchCommand(mxComponent, ".uno:Undo", {});
+    CPPUNIT_ASSERT_EQUAL(22, getPages());
+}
+
 CPPUNIT_TEST_FIXTURE(SwUiWriterTest3, testTdf125261)
 {
     load(DATA_DIRECTORY, "tdf125261.odt");
@@ -372,6 +389,37 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest3, testTdf130680)
     //CPPUNIT_ASSERT_EQUAL(sal_Int32(0), xIndexAccess->getCount());
     //dispatchCommand(mxComponent, ".uno:Undo", {});
     //CPPUNIT_ASSERT_EQUAL(sal_Int32(23), xIndexAccess->getCount());
+}
+
+CPPUNIT_TEST_FIXTURE(SwUiWriterTest3, testTdf131684)
+{
+    load(DATA_DIRECTORY, "tdf131684.docx");
+
+    SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
+    CPPUNIT_ASSERT(pTextDoc);
+
+    uno::Reference<text::XTextTablesSupplier> xTextTablesSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<container::XIndexAccess> xIndexAccess(xTextTablesSupplier->getTextTables(),
+                                                         uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(1), xIndexAccess->getCount());
+
+    //Use selectAll 3 times in a row
+    dispatchCommand(mxComponent, ".uno:SelectAll", {});
+    dispatchCommand(mxComponent, ".uno:SelectAll", {});
+    dispatchCommand(mxComponent, ".uno:SelectAll", {});
+
+    dispatchCommand(mxComponent, ".uno:Cut", {});
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(0), xIndexAccess->getCount());
+
+    dispatchCommand(mxComponent, ".uno:Undo", {});
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(1), xIndexAccess->getCount());
+
+    dispatchCommand(mxComponent, ".uno:Paste", {});
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(1), xIndexAccess->getCount());
+
+    // without the fix, it crashes
+    dispatchCommand(mxComponent, ".uno:Undo", {});
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(1), xIndexAccess->getCount());
 }
 
 CPPUNIT_TEST_FIXTURE(SwUiWriterTest3, testTdf80663)

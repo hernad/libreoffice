@@ -126,6 +126,22 @@ CPPUNIT_TEST_FIXTURE(SwModelTestBase, testChicagoNumberingFootnote)
     CPPUNIT_ASSERT_EQUAL(nExpected, nActual);
 }
 
+DECLARE_WW8EXPORT_TEST(testdf79553_lineNumbers, "tdf79553_lineNumbers.doc")
+{
+    bool bValue = false;
+    sal_Int32 nValue = -1;
+
+    uno::Reference< text::XTextDocument > xtextDocument(mxComponent, uno::UNO_QUERY);
+    uno::Reference< text::XLineNumberingProperties > xLineProperties( xtextDocument, uno::UNO_QUERY_THROW );
+    uno::Reference< beans::XPropertySet > xPropertySet = xLineProperties->getLineNumberingProperties();
+
+    xPropertySet->getPropertyValue("IsOn") >>= bValue;
+    CPPUNIT_ASSERT_EQUAL(true, bValue);
+
+    xPropertySet->getPropertyValue("Distance") >>= nValue;
+    CPPUNIT_ASSERT_MESSAGE("automatic distance", nValue > 0);
+}
+
 DECLARE_WW8EXPORT_TEST(testTdf122429_header, "tdf122429_header.doc")
 {
     uno::Reference<container::XNameAccess> pageStyles = getStyles("PageStyles");
@@ -298,6 +314,16 @@ DECLARE_WW8EXPORT_TEST(testTdf128608_fillStyleNoneB, "tdf128608_fillStyleNoneB.o
     uno::Reference<text::XTextRange> xText(getParagraph(1));
     CPPUNIT_ASSERT_EQUAL(COL_AUTO, Color(getProperty<sal_uInt32>(xText, "ParaBackColor")));
     CPPUNIT_ASSERT_EQUAL_MESSAGE("No fill", drawing::FillStyle_NONE, getProperty<drawing::FillStyle>(xText, "FillStyle"));
+}
+
+DECLARE_WW8EXPORT_TEST(testTdf132094_transparentPageImage, "tdf132094_transparentPageImage.doc")
+{
+    uno::Reference<drawing::XShape> image (getShape(1), uno::UNO_QUERY);
+    // Don't add fillstyle when none is set.
+    // Well, ok, at least make it transparent if you do uselessly set a solid color...
+    const bool bFillNone = drawing::FillStyle_NONE == getProperty<drawing::FillStyle>(image, "FillStyle");
+    const bool bTransparent = sal_Int16(0) != getProperty<sal_Int16>(image, "FillTransparence");
+    CPPUNIT_ASSERT_MESSAGE("no background fill", bTransparent || bFillNone);
 }
 
 DECLARE_WW8EXPORT_TEST(testTdf112618_textbox_no_bg, "tdf112618_textbox_no_bg.doc")

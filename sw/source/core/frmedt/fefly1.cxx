@@ -953,8 +953,6 @@ void SwFEShell::InsertDrawObj( SdrObject& rDrawObj,
     }
     // insert drawing object into the document creating a new <SwDrawFrameFormat> instance
     SwDrawFrameFormat* pFormat = GetDoc()->getIDocumentContentOperations().InsertDrawObj( aPam, rDrawObj, rFlyAttrSet );
-    OUString sShapeName = GetDoc()->GetUniqueShapeName();
-    rDrawObj.SetName(sShapeName);
 
     // move object to visible layer
     SwContact* pContact = static_cast<SwContact*>(rDrawObj.GetUserCall());
@@ -965,7 +963,7 @@ void SwFEShell::InsertDrawObj( SdrObject& rDrawObj,
 
     if (pFormat)
     {
-        pFormat->SetName(sShapeName);
+        pFormat->SetName(rDrawObj.GetName());
         // select drawing object
         Imp()->GetDrawView()->MarkObj( &rDrawObj, Imp()->GetPageView() );
     }
@@ -1362,7 +1360,7 @@ Size SwFEShell::RequestObjectResize( const SwRect &rRect, const uno::Reference <
         }
 
         // set the new Size at the fly themself
-        if ( pFly->getFramePrintArea().Height() > 0 && pFly->getFramePrintArea().Width() > 0 )
+        if ( !pFly->getFramePrintArea().IsEmpty() )
         {
             aSz.AdjustWidth(pFly->getFrameArea().Width() - pFly->getFramePrintArea().Width() );
             aSz.AdjustHeight(pFly->getFrameArea().Height()- pFly->getFramePrintArea().Height() );

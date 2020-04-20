@@ -56,6 +56,8 @@ private:
 
     GDIMetaFile                  maMetaFile;
     BitmapEx                     maEx;
+    /// If maEx is empty, this preferred size will be set on it when it gets initialized.
+    Size                         maExPrefSize;
     ImpSwapInfo                  maSwapInfo;
     std::unique_ptr<Animation>   mpAnimation;
     std::shared_ptr<GraphicReader> mpContext;
@@ -65,7 +67,7 @@ private:
     mutable sal_uLong            mnSizeBytes;
     bool                         mbSwapOut;
     bool                         mbDummyContext;
-    VectorGraphicDataPtr         maVectorGraphicData;
+    std::shared_ptr<VectorGraphicData> maVectorGraphicData;
     // cache checksum computation
     mutable BitmapChecksum       mnChecksum = 0;
 
@@ -82,7 +84,7 @@ public:
     ImpGraphic( const GraphicExternalLink& rExternalLink);
     ImpGraphic( const Bitmap& rBmp );
     ImpGraphic( const BitmapEx& rBmpEx );
-    ImpGraphic(const VectorGraphicDataPtr& rVectorGraphicDataPtr);
+    ImpGraphic(const std::shared_ptr<VectorGraphicData>& rVectorGraphicDataPtr);
     ImpGraphic( const Animation& rAnimation );
     ImpGraphic( const GDIMetaFile& rMtf );
     ~ImpGraphic();
@@ -193,7 +195,10 @@ private:
     friend void         WriteImpGraphic(SvStream& rOStm, const ImpGraphic& rImpGraphic);
     friend void         ReadImpGraphic(SvStream& rIStm, ImpGraphic& rImpGraphic);
 
-    const VectorGraphicDataPtr& getVectorGraphicData() const;
+    const std::shared_ptr<VectorGraphicData>& getVectorGraphicData() const;
+
+    /// Gets the bitmap replacement for a vector graphic.
+    BitmapEx getVectorGraphicReplacement() const;
 
     bool ensureAvailable () const;
 

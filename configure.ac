@@ -2186,7 +2186,7 @@ AC_ARG_WITH(branding,
     AS_HELP_STRING([--with-branding=/path/to/images],
         [Use given path to retrieve branding images set.])
     [
-                          Search for intro.png about.svg and flat_logo.svg.
+                          Search for intro.png about.svg and logo.svg.
                           If any is missing, default ones will be used instead.
 
                           Search also progress.conf for progress
@@ -6304,26 +6304,6 @@ if test "$GCC" = "yes" -o "$COM_IS_CLANG" = TRUE; then
         AC_MSG_RESULT([no])
     fi
 
-    AC_MSG_CHECKING([whether $CC_BASE supports __builtin_ffs])
-    AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[ return __builtin_ffs(1); ]])],[HAVE_GCC_BUILTIN_FFS=TRUE],[])
-    if test "$HAVE_GCC_BUILTIN_FFS" = "TRUE"; then
-        AC_MSG_RESULT([yes])
-        AC_DEFINE(HAVE_GCC_BUILTIN_FFS)
-    else
-        AC_MSG_RESULT([no])
-    fi
-
-    AC_MSG_CHECKING([whether $CC_BASE supports __attribute__((deprecated(message)))])
-    save_CFLAGS=$CFLAGS
-    CFLAGS="$CFLAGS -Werror"
-    AC_COMPILE_IFELSE([AC_LANG_SOURCE([
-            __attribute__((deprecated("test"))) void f();
-        ])], [
-            AC_DEFINE([HAVE_GCC_DEPRECATED_MESSAGE],[1])
-            AC_MSG_RESULT([yes])
-        ], [AC_MSG_RESULT([no])])
-    CFLAGS=$save_CFLAGS
-
     AC_MSG_CHECKING([whether $CXX_BASE defines __base_class_type_info in cxxabi.h])
     AC_LANG_PUSH([C++])
     AC_COMPILE_IFELSE([AC_LANG_SOURCE([
@@ -6457,7 +6437,6 @@ fi
 
 AC_SUBST(HAVE_GCC_AVX)
 AC_SUBST(HAVE_GCC_BUILTIN_ATOMIC)
-AC_SUBST(HAVE_GCC_BUILTIN_FFS)
 AC_SUBST(HAVE_GCC_STACK_CLASH_PROTECTION)
 
 dnl ===================================================================
@@ -6655,22 +6634,6 @@ return !(i != 0 && j != 0);
 AC_LANG_POP([C++])
 CXXFLAGS=$save_CXXFLAGS
 
-dnl _Pragma support (may require C++11)
-if test "$GCC" = "yes" -o "$COM_IS_CLANG" = TRUE; then
-    AC_MSG_CHECKING([whether $CXX_BASE supports _Pragma operator])
-    AC_LANG_PUSH([C++])
-    save_CXXFLAGS=$CXXFLAGS
-    CXXFLAGS="$CXXFLAGS $CXXFLAGS_CXX11 -Werror"
-    AC_COMPILE_IFELSE([AC_LANG_SOURCE([
-            _Pragma("GCC diagnostic ignored \"-Wformat\"")
-        ])], [
-            AC_DEFINE([HAVE_GCC_PRAGMA_OPERATOR],[1])
-            AC_MSG_RESULT([yes])
-        ], [AC_MSG_RESULT([no])])
-    AC_LANG_POP([C++])
-    CXXFLAGS=$save_CXXFLAGS
-fi
-
 HAVE_GCC_FNO_SIZED_DEALLOCATION=
 if test "$GCC" = yes; then
     AC_MSG_CHECKING([whether $CXX_BASE supports -fno-sized-deallocation])
@@ -6688,7 +6651,8 @@ if test "$GCC" = yes; then
 fi
 AC_SUBST([HAVE_GCC_FNO_SIZED_DEALLOCATION])
 
-AC_MSG_CHECKING([whether $CXX_BASE supports guaranteed copy elision])
+dnl This check can eventually be removed completely (e.g., after libreoffice-7-0 branch off):
+AC_MSG_CHECKING([that $CXX_BASE supports guaranteed copy elision])
 AC_LANG_PUSH([C++])
 save_CXXFLAGS=$CXXFLAGS
 CXXFLAGS="$CXXFLAGS $CXXFLAGS_CXX11"
@@ -6706,10 +6670,8 @@ AC_COMPILE_IFELSE([AC_LANG_SOURCE([
         S copy();
         void f() { S c(copy()); }
         #endif
-    ])], [
-        AC_DEFINE([HAVE_CPP_GUARANTEED_COPY_ELISION],[1])
-        AC_MSG_RESULT([yes])
-    ], [AC_MSG_RESULT([no])])
+    ])], [AC_MSG_RESULT([yes])
+    ], [AC_MSG_ERROR([no])])
 CXXFLAGS=$save_CXXFLAGS
 AC_LANG_POP([C++])
 
@@ -8584,7 +8546,7 @@ libo_CHECK_SYSTEM_MODULE([libwpd],[WPD],[libwpd-0.10],["-I${WORKDIR}/UnpackedTar
 libo_CHECK_SYSTEM_MODULE([libwpg],[WPG],[libwpg-0.3])
 
 libo_CHECK_SYSTEM_MODULE([libwps],[WPS],[libwps-0.4])
-libo_PKG_VERSION([WPS], [libwps-0.4], [0.4.10])
+libo_PKG_VERSION([WPS], [libwps-0.4], [0.4.11])
 
 libo_CHECK_SYSTEM_MODULE([libvisio],[VISIO],[libvisio-0.1])
 
@@ -8593,7 +8555,7 @@ libo_CHECK_SYSTEM_MODULE([libcdr],[CDR],[libcdr-0.1])
 libo_CHECK_SYSTEM_MODULE([libmspub],[MSPUB],[libmspub-0.1])
 
 libo_CHECK_SYSTEM_MODULE([libmwaw],[MWAW],[libmwaw-0.3 >= 0.3.1])
-libo_PKG_VERSION([MWAW], [libmwaw-0.3], [0.3.15])
+libo_PKG_VERSION([MWAW], [libmwaw-0.3], [0.3.16])
 
 libo_CHECK_SYSTEM_MODULE([libetonyek],[ETONYEK],[libetonyek-0.1])
 libo_PKG_VERSION([ETONYEK], [libetonyek-0.1], [0.1.8])
@@ -8612,7 +8574,7 @@ libo_CHECK_SYSTEM_MODULE([libqxp],[QXP],[libqxp-0.0])
 libo_CHECK_SYSTEM_MODULE([libzmf],[ZMF],[libzmf-0.0])
 
 libo_CHECK_SYSTEM_MODULE([libstaroffice],[STAROFFICE],[libstaroffice-0.0])
-libo_PKG_VERSION([STAROFFICE], [libstaroffice-0.0], [0.0.6])
+libo_PKG_VERSION([STAROFFICE], [libstaroffice-0.0], [0.0.7])
 
 dnl ===================================================================
 dnl Check for system lcms2
@@ -8788,8 +8750,7 @@ AC_SUBST(LIBXML_LIBS)
 AC_SUBST(XMLLINT)
 
 # =====================================================================
-# Checking for a Python interpreter with version >= 2.7.
-# Build and runtime requires Python 3 compatible version (>= 2.7).
+# Checking for a Python interpreter with version >= 3.3.
 # Optionally user can pass an option to configure, i. e.
 # ./configure PYTHON=/usr/bin/python
 # =====================================================================
@@ -8798,7 +8759,7 @@ if test "$build_os" != "cygwin" -a "$enable_python" != fully-internal; then
         PYTHON_FOR_BUILD=$PYTHON
     else
         # This allows a lack of system python with no error, we use internal one in that case.
-        AM_PATH_PYTHON([2.7],, [:])
+        AM_PATH_PYTHON([3.3],, [:])
         # Clean PYTHON_VERSION checked below if cross-compiling
         PYTHON_VERSION=""
         if test "$PYTHON" != ":"; then
@@ -8863,7 +8824,7 @@ fully-internal)
 system)
     AC_MSG_RESULT([system])
     if test "$_os" = Darwin; then
-        AC_MSG_ERROR([--enable-python=system doesn't work on macOS: /System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7/unicodeobject.h is known to contain uses of "register", which is removed from C++17])
+        AC_MSG_ERROR([--enable-python=system doesn't work on macOS because the version provided is obsolete])
     fi
     ;;
 *)
@@ -8981,11 +8942,10 @@ system)
 #include <Python.h>
 
 int main(int argc, char **argv) {
-   if ((PY_MAJOR_VERSION == 2 && PY_MINOR_VERSION >= 7) ||
-       (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 3)) return 0;
+   if ((PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 3)) return 0;
    else return 1;
 }
-       ]])],[AC_MSG_RESULT([ok])],[AC_MSG_ERROR([Python >= 3.3 is needed when building with Python 3, or Python >= 2.7 when building with Python 2])],[AC_MSG_RESULT([skipped; cross-compiling])])
+       ]])],[AC_MSG_RESULT([ok])],[AC_MSG_ERROR([Python >= 3.3 is needed when building with Python 3])],[AC_MSG_RESULT([skipped; cross-compiling])])
     CFLAGS=$save_CFLAGS
     AC_LANG_POP(C)
 
@@ -11147,6 +11107,47 @@ else
 fi
 AC_SUBST(ENABLE_SKIA)
 
+if test "$ENABLE_SKIA" = TRUE -a "$COM_IS_CLANG" != TRUE; then
+    if test -n "$CLANG_C" -a -n "$CLANG_CXX"; then
+        AC_MSG_CHECKING([for Clang])
+        AC_MSG_RESULT([$CLANG_C / $CLANG_CXX])
+    else
+        if test "$_os" = "WINNT"; then
+            AC_MSG_CHECKING([for clang-cl])
+            if test -x "$VC_PRODUCT_DIR/Tools/Llvm/bin/clang-cl.exe"; then
+                CLANG_C=`win_short_path_for_make "$VC_PRODUCT_DIR/Tools/Llvm/bin/clang-cl.exe"`
+                if test "$BITNESS_OVERRIDE" = ""; then
+                    dnl match our MSVC default
+                    CLANG_C="$CLANG_C -arch:SSE"
+                fi
+                CLANG_CXX="$CLANG_C"
+                AC_MSG_RESULT([$CLANG_C])
+            else
+                AC_MSG_RESULT([no])
+            fi
+        else
+            AC_CHECK_PROG(CLANG_C,clang,clang,[])
+            AC_CHECK_PROG(CLANG_CXX,clang++,clang++,[])
+        fi
+    fi
+    if test -n "$CLANG_C" -a -n "$CLANG_CXX"; then
+        clang2_version=`echo __clang_major__.__clang_minor__.__clang_patchlevel__ | $CLANG_C -E - | tail -1 | sed 's/ //g'`
+        clang2_ver=`echo "$clang2_version" | $AWK -F. '{ print \$1*10000+(\$2<100?\$2:99)*100+(\$3<100?\$3:99) }'`
+        if test "$clang2_ver" -lt 50002; then
+            AC_MSG_WARN(["$clang2_version" is too old or unrecognized, must be at least Clang 5.0.2])
+            CLANG_C=
+            CLANG_CXX=
+        fi
+    fi
+    if test -z "$CLANG_C" -o -z "$CLANG_CXX"; then
+        # So far do not require this, but release builds with Skia should possibly
+        # do so.
+        AC_MSG_WARN([Clang compiler not found.])
+    fi
+fi
+AC_SUBST(CLANG_C)
+AC_SUBST(CLANG_CXX)
+
 SYSTEM_GPGMEPP=
 
 if test "$build_for_ios" = "YES"; then
@@ -12555,8 +12556,8 @@ dnl branding
 dnl ===================================================================
 AC_MSG_CHECKING([for alternative branding images directory])
 # initialize mapped arrays
-BRAND_INTRO_IMAGES="flat_logo.svg intro.png intro-highres.png"
-brand_files="$BRAND_INTRO_IMAGES about.svg"
+BRAND_INTRO_IMAGES="intro.png intro-highres.png"
+brand_files="$BRAND_INTRO_IMAGES logo.svg logo_inverted.svg about.svg"
 
 if test -z "$with_branding" -o "$with_branding" = "no"; then
     AC_MSG_RESULT([none])

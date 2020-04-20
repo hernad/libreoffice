@@ -266,13 +266,17 @@ void SkiaSalGraphicsImpl::createOffscreenSurface()
     assert(isOffscreen());
     assert(!mSurface);
     assert(!mWindowContext);
+    // When created (especially on Windows), Init() gets called with size (0,0), which is invalid size
+    // for Skia. May happen also in rare cases such as shutting down (tdf#131939).
+    int width = std::max(1, GetWidth());
+    int height = std::max(1, GetHeight());
     switch (SkiaHelper::renderMethodToUse())
     {
         case SkiaHelper::RenderVulkan:
         {
             if (SkiaHelper::getSharedGrContext())
             {
-                mSurface = SkiaHelper::createSkSurface(GetWidth(), GetHeight());
+                mSurface = SkiaHelper::createSkSurface(width, height);
                 assert(mSurface);
                 assert(mSurface->getCanvas()->getGrContext()); // is GPU-backed
                 mIsGPU = true;
@@ -286,7 +290,7 @@ void SkiaSalGraphicsImpl::createOffscreenSurface()
             break;
     }
     // Create raster surface as a fallback.
-    mSurface = SkiaHelper::createSkSurface(GetWidth(), GetHeight());
+    mSurface = SkiaHelper::createSkSurface(width, height);
     assert(mSurface);
     assert(!mSurface->getCanvas()->getGrContext()); // is not GPU-backed
     mIsGPU = false;
@@ -428,7 +432,22 @@ void SkiaSalGraphicsImpl::checkSurface()
         if (!avoidRecreateByResize())
         {
             Size oldSize(mSurface->width(), mSurface->height());
+            // Recreating a surface means that the old SkSurface contents will be lost.
+            // But if a window has been resized the windowing system may send repaint events
+            // only for changed parts and VCL would not repaint the whole area, assuming
+            // that some parts have not changed (this is what seems to cause tdf#131952).
+            // So carry over the old contents for windows, even though generally everything
+            // will be usually repainted anyway.
+            sk_sp<SkImage> snapshot;
+            if (!isOffscreen())
+                snapshot = mSurface->makeImageSnapshot();
             recreateSurface();
+            if (snapshot)
+            {
+                SkPaint paint;
+                paint.setBlendMode(SkBlendMode::kSrc); // copy as is
+                mSurface->getCanvas()->drawImage(snapshot, 0, 0, &paint);
+            }
             SAL_INFO("vcl.skia.trace", "recreate(" << this << "): old " << oldSize << " new "
                                                    << Size(mSurface->width(), mSurface->height())
                                                    << " requested "
@@ -1086,6 +1105,12 @@ void SkiaSalGraphicsImpl::invert(basegfx::B2DPolygon const& rPoly, SalInvert eFl
 {
     preDraw();
     SAL_INFO("vcl.skia.trace", "invert(" << this << "): " << rPoly << ":" << int(eFlags));
+    // Intel Vulkan drivers (up to current 0.401.3889) have a problem
+    // with SkBlendMode::kDifference(?) and surfaces wider than 1024 pixels, resulting
+    // in drawing errors. Work that around by fetching the relevant part of the surface
+    // and drawing using CPU.
+    bool intelHack
+        = (isGPU() && SkiaHelper::getVendor() == DriverBlocklist::VendorIntel && !mXorMode);
     // TrackFrame just inverts a dashed path around the polygon
     if (eFlags == SalInvert::TrackFrame)
     {
@@ -1104,8 +1129,21 @@ void SkiaSalGraphicsImpl::invert(basegfx::B2DPolygon const& rPoly, SalInvert eFl
         aPaint.setPathEffect(SkDashPathEffect::Make(intervals, SK_ARRAY_COUNT(intervals), 0));
         aPaint.setColor(SkColorSetARGB(255, 255, 255, 255));
         aPaint.setBlendMode(SkBlendMode::kDifference);
-
-        getDrawCanvas()->drawPath(aPath, aPaint);
+        if (!intelHack)
+            getDrawCanvas()->drawPath(aPath, aPaint);
+        else
+        {
+            SkRect area;
+            aPath.getBounds().roundOut(&area);
+            SkRect size = SkRect::MakeWH(area.width(), area.height());
+            sk_sp<SkSurface> surface = SkSurface::MakeRasterN32Premul(area.width(), area.height());
+            SkPaint copy;
+            copy.setBlendMode(SkBlendMode::kSrc);
+            surface->getCanvas()->drawImageRect(mSurface->makeImageSnapshot(), area, size, &copy);
+            aPath.offset(-area.x(), -area.y());
+            surface->getCanvas()->drawPath(aPath, aPaint);
+            getDrawCanvas()->drawImageRect(surface->makeImageSnapshot(), size, area, &copy);
+        }
         if (mXorMode) // limit xor area update
             mXorExtents = aPath.getBounds();
     }
@@ -1140,8 +1178,21 @@ void SkiaSalGraphicsImpl::invert(basegfx::B2DPolygon const& rPoly, SalInvert eFl
             // as the polygon (usually rectangle)
             aPaint.setShader(aBitmap.makeShader(SkTileMode::kRepeat, SkTileMode::kRepeat));
         }
-
-        getDrawCanvas()->drawPath(aPath, aPaint);
+        if (!intelHack)
+            getDrawCanvas()->drawPath(aPath, aPaint);
+        else
+        {
+            SkRect area;
+            aPath.getBounds().roundOut(&area);
+            SkRect size = SkRect::MakeWH(area.width(), area.height());
+            sk_sp<SkSurface> surface = SkSurface::MakeRasterN32Premul(area.width(), area.height());
+            SkPaint copy;
+            copy.setBlendMode(SkBlendMode::kSrc);
+            surface->getCanvas()->drawImageRect(mSurface->makeImageSnapshot(), area, size, &copy);
+            aPath.offset(-area.x(), -area.y());
+            surface->getCanvas()->drawPath(aPath, aPaint);
+            getDrawCanvas()->drawImageRect(surface->makeImageSnapshot(), size, area, &copy);
+        }
         if (mXorMode) // limit xor area update
             mXorExtents = aPath.getBounds();
     }

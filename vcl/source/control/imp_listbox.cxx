@@ -732,19 +732,24 @@ void ImplListBoxWindow::ImplCallSelect()
     mbSelectionChanged = false;
 }
 
-sal_Int32 ImplListBoxWindow::InsertEntry( sal_Int32 nPos, ImplEntryType* pNewEntry )
+sal_Int32 ImplListBoxWindow::InsertEntry(sal_Int32 nPos, ImplEntryType* pNewEntry, bool bSort)
 {
     assert(nPos >= 0);
     assert(mpEntryList->GetEntryCount() < LISTBOX_MAX_ENTRIES);
 
     ImplClearLayoutData();
-    sal_Int32 nNewPos = mpEntryList->InsertEntry( nPos, pNewEntry, mbSort );
+    sal_Int32 nNewPos = mpEntryList->InsertEntry( nPos, pNewEntry, bSort );
 
     if( GetStyle() & WB_WORDBREAK )
         pNewEntry->mnFlags |= ListBoxEntryFlags::MultiLine;
 
     ImplUpdateEntryMetrics( *pNewEntry );
     return nNewPos;
+}
+
+sal_Int32 ImplListBoxWindow::InsertEntry( sal_Int32 nPos, ImplEntryType* pNewEntry )
+{
+    return InsertEntry(nPos, pNewEntry, mbSort);
 }
 
 void ImplListBoxWindow::RemoveEntry( sal_Int32 nPos )
@@ -1976,11 +1981,11 @@ void ImplListBoxWindow::SetTopEntry( sal_Int32 nTop )
     {
         ImplClearLayoutData();
         long nDiff = mpEntryList->GetAddedHeight( mnTop, nTop );
-        Update();
+        PaintImmediately();
         ImplHideFocusRect();
         mnTop = nTop;
         Scroll( 0, nDiff );
-        Update();
+        PaintImmediately();
         if( HasFocus() )
             ImplShowFocusRect();
         maScrollHdl.Call( this );
@@ -2019,10 +2024,10 @@ void ImplListBoxWindow::ScrollHorz( long n )
     {
         ImplClearLayoutData();
         mnLeft = sal::static_int_cast<sal_uInt16>(mnLeft + nDiff);
-        Update();
+        PaintImmediately();
         ImplHideFocusRect();
         Scroll( -nDiff, 0 );
-        Update();
+        PaintImmediately();
         if( HasFocus() )
             ImplShowFocusRect();
         maScrollHdl.Call( this );
@@ -2551,7 +2556,7 @@ void ImplListBox::SetMRUEntries( const OUString& rEntries, sal_Unicode cSep )
         if ( GetEntryList()->FindEntry( aEntry ) != LISTBOX_ENTRY_NOTFOUND )
         {
             ImplEntryType* pNewEntry = new ImplEntryType( aEntry );
-            maLBWindow->GetEntryList()->InsertEntry( nMRUCount++, pNewEntry, false );
+            maLBWindow->InsertEntry(nMRUCount++, pNewEntry, false);
             bChanges = true;
         }
     }
@@ -2619,11 +2624,10 @@ void ImplWin::FillLayoutData() const
 
 bool ImplWin::PreNotify( NotifyEvent& rNEvt )
 {
-    const MouseEvent* pMouseEvt = nullptr;
-
-    if( (rNEvt.GetType() == MouseNotifyEvent::MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) != nullptr )
+    if( rNEvt.GetType() == MouseNotifyEvent::MOUSEMOVE )
     {
-        if( pMouseEvt->IsEnterWindow() || pMouseEvt->IsLeaveWindow() )
+        const MouseEvent* pMouseEvt = rNEvt.GetMouseEvent();
+        if( pMouseEvt && (pMouseEvt->IsEnterWindow() || pMouseEvt->IsLeaveWindow()) )
         {
             // trigger redraw as mouse over state has changed
             if ( IsNativeControlSupported(ControlType::Listbox, ControlPart::Entire)
@@ -2674,8 +2678,13 @@ void ImplWin::ImplDraw(vcl::RenderContext& rRenderContext, bool bLayout)
 
             bool bMouseOver = false;
             vcl::Window *pChild = pWin->GetWindow( GetWindowType::FirstChild );
-            while( pChild && !(bMouseOver = pChild->IsMouseOver()) )
+            while( pChild )
+            {
+                bMouseOver = pChild->IsMouseOver();
+                if (bMouseOver)
+                    break;
                 pChild = pChild->GetWindow( GetWindowType::Next );
+            }
             if( bMouseOver )
                 nState |= ControlState::ROLLOVER;
 
