@@ -6,7 +6,7 @@ patch -p1 < patch/03_mk_lo2zh.diff
 patch -p1 < patch/04_mk_solenv.diff
 patch -p1 < patch/05_configure_ac.diff
 patch -p1 < patch/06_mk_modules.diff
-patch -p1 < patch/ado_cut.diff
+patch -p1 < patch/ado_cut.patch
 patch -p1 < patch/launcher.diff
 patch -p1 < patch/help.diff
 patch -p1 < patch/init_bs.diff

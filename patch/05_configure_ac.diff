@@ -779,6 +779,7 @@ index 5447d184fc3f..cf68b1e47ea6 100644
  AC_CONFIG_HEADERS([config_host/config_poppler.h])
  AC_CONFIG_HEADERS([config_host/config_python.h])
 -AC_CONFIG_HEADERS([config_host/config_writerperfect.h])
++#AC_CONFIG_HEADERS([config_host/config_writerperfect.h])
  AC_OUTPUT
  
  if test "$CROSS_COMPILING" = TRUE; then
