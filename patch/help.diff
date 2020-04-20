@@ -1,0 +1,21 @@
+diff --git a/desktop/source/deployment/registry/help/dp_help.cxx b/desktop/source/deployment/registry/help/dp_help.cxx
+index 27cf615eb41b..e2d822a46f45 100644
+--- a/desktop/source/deployment/registry/help/dp_help.cxx
++++ b/desktop/source/deployment/registry/help/dp_help.cxx
+@@ -32,7 +32,7 @@
+ #include <svl/inettype.hxx>
+ #include <unotools/pathoptions.hxx>
+ 
+-#if HAVE_FEATURE_DESKTOP
++#if HAVE_FEATURE_HELP
+ #include <helpcompiler/compilehelp.hxx>
+ #include <helpcompiler/HelpIndexer.hxx>
+ #endif
+@@ -357,7 +357,7 @@ void BackendImpl::implProcessHelp(
+             data.dataUrl = xPackage->getURL();
+             if (!package->extensionContainsCompiledHelp())
+             {
+-#if HAVE_FEATURE_DESKTOP
++#if HAVE_FEATURE_HELP
+                 const OUString sHelpFolder = createFolder(xCmdEnv);
+                 data.dataUrl = sHelpFolder;

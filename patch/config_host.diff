@@ -1,0 +1,83 @@
+diff --git a/config_host.mk.in b/config_host.mk.in
+index 13e5e906a3f6..523365104c54 100644
+--- a/config_host.mk.in
++++ b/config_host.mk.in
+@@ -381,6 +381,7 @@ export LIBTOOL=@LIBTOOL@
+ export LIBXML_CFLAGS=$(gb_SPACE)@LIBXML_CFLAGS@
+ export LIBXML_JAR=@LIBXML_JAR@
+ export LIBXML_LIBS=$(gb_SPACE)@LIBXML_LIBS@
++export LIBXML_LIBTOOL_LIBS=@LIBXML_LIBTOOL_LIBS@
+ export LIBXSLT_CFLAGS=$(gb_SPACE)@LIBXSLT_CFLAGS@
+ export LIBXSLT_LIBS=$(gb_SPACE)@LIBXSLT_LIBS@
+ @x_Cygwin@ export LS=@WIN_LS@
+@@ -622,6 +623,11 @@ export VCVER=@VCVER@
+ export DEVENV=@DEVENV@
+ export VISIO_CFLAGS=$(gb_SPACE)@VISIO_CFLAGS@
+ export VISIO_LIBS=$(gb_SPACE)@VISIO_LIBS@
++export EXPAT_CFLAGS=$(gb_SPACE)@EXPAT_CFLAGS@
++export EXPAT_LIBS=$(gb_SPACE)@EXPAT_LIBS@
++export BREAKPAD_CFLAGS=$(gb_SPACE)@BREAKPAD_CFLAGS@
++export BREAKPAD_LIBS=$(gb_SPACE)@BREAKPAD_LIBS@
++export LIBPATH=@LIBPATH@
+ export WGET=@WGET@
+ export WINDOWS_BUILD_SIGNING=@WINDOWS_BUILD_SIGNING@
+ export WINDOWS_SDK_HOME=@WINDOWS_SDK_HOME@
+diff --git a/config_host/config_oauth2.h.in b/config_host/config_oauth2.h.in
+index f3616ee38162..5605f6027f23 100644
+--- a/config_host/config_oauth2.h.in
++++ b/config_host/config_oauth2.h.in
+@@ -15,6 +15,7 @@
+ 
+ 
+ /* Google Drive settings */
++
+ #define GDRIVE_BASE_URL "https://www.googleapis.com/drive/v2"
+ #define GDRIVE_CLIENT_ID ""
+ #define GDRIVE_CLIENT_SECRET ""
+diff --git a/config_host/config_options.h.in b/config_host/config_options.h.in
+index e87c119e648a..96d59b57bc63 100644
+--- a/config_host/config_options.h.in
++++ b/config_host/config_options.h.in
+@@ -1,21 +1,21 @@
+-/*
+- * General configuration settings for various options.
+- */
+-
+-#ifndef CONFIG_OPTIONS_H
+-#define CONFIG_OPTIONS_H
+-
+-#define ENABLE_MERGELIBS 0
+-
+-#define ENABLE_RUNTIME_OPTIMIZATIONS 0
+-
+-// Used to turn off visibility for some classes/symbols when linking with --enable-mergelibs
+-//
+-#if ENABLE_MERGELIBS
+-#define UNLESS_MERGELIBS(x)
+-#else
+-#define UNLESS_MERGELIBS(x) x
+-#endif
+-
+-
+-#endif
++/*
++ * General configuration settings for various options.
++ */
++
++#ifndef CONFIG_OPTIONS_H
++#define CONFIG_OPTIONS_H
++
++#define ENABLE_MERGELIBS 0
++
++#define ENABLE_RUNTIME_OPTIMIZATIONS 0
++
++// Used to turn off visibility for some classes/symbols when linking with --enable-mergelibs
++//
++#if ENABLE_MERGELIBS
++#define UNLESS_MERGELIBS(x)
++#else
++#define UNLESS_MERGELIBS(x) x
++#endif
++
++
++#endif
