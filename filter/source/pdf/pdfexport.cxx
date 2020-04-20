@@ -292,25 +292,25 @@ public:
 void PDFExportStreamDoc::write( const Reference< XOutputStream >& xStream )
 {
     Reference< css::frame::XStorable > xStore( m_xSrcDoc, UNO_QUERY );
-    if( xStore.is() )
-    {
-        Sequence< beans::PropertyValue > aArgs( 2 + (m_aPreparedPassword.hasElements() ? 1 : 0) );
-        aArgs.getArray()[0].Name = "FilterName";
-        aArgs.getArray()[1].Name = "OutputStream";
-        aArgs.getArray()[1].Value <<= xStream;
-        if( m_aPreparedPassword.hasElements() )
-        {
-            aArgs.getArray()[2].Name = "EncryptionData";
-            aArgs.getArray()[2].Value <<= m_aPreparedPassword;
-        }
+    if( !xStore.is() )
+        return;
 
-        try
-        {
-            xStore->storeToURL( "private:stream", aArgs );
-        }
-        catch( const IOException& )
-        {
-        }
+    Sequence< beans::PropertyValue > aArgs( 2 + (m_aPreparedPassword.hasElements() ? 1 : 0) );
+    aArgs.getArray()[0].Name = "FilterName";
+    aArgs.getArray()[1].Name = "OutputStream";
+    aArgs.getArray()[1].Value <<= xStream;
+    if( m_aPreparedPassword.hasElements() )
+    {
+        aArgs.getArray()[2].Name = "EncryptionData";
+        aArgs.getArray()[2].Value <<= m_aPreparedPassword;
+    }
+
+    try
+    {
+        xStore->storeToURL( "private:stream", aArgs );
+    }
+    catch( const IOException& )
+    {
     }
 }
 
@@ -591,7 +591,7 @@ bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue >& 
             {
             default:
             case 0:
-                aContext.Version    = vcl::PDFWriter::PDFVersion::PDF_1_5;
+                aContext.Version = vcl::PDFWriter::PDFVersion::PDF_1_6;
                 break;
             case 1:
                 aContext.Version    = vcl::PDFWriter::PDFVersion::PDF_A_1;
@@ -613,6 +613,9 @@ bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue >& 
                 mbRemoveTransparencies = false; // does allow transparencies
                 mbEncrypt = false;              // no encryption
                 xEnc.clear();
+                break;
+            case 15:
+                aContext.Version = vcl::PDFWriter::PDFVersion::PDF_1_5;
                 break;
             case 16:
                 aContext.Version = vcl::PDFWriter::PDFVersion::PDF_1_6;

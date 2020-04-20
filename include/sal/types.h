@@ -27,10 +27,6 @@
 #include "sal/macros.h"
 #include "sal/typesizes.h"
 
-#if defined LIBO_INTERNAL_ONLY
-#include "config_global.h"
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -455,10 +451,12 @@ template< typename T1, typename T2 > inline T1 static_int_cast(T2 n) {
         SAL_DEPRECATED("Don't use, it's evil.") void doit(int nPara);
 */
 
-#if HAVE_GCC_DEPRECATED_MESSAGE
+#if defined __GNUC__ || defined __clang__
+#if defined LIBO_INTERNAL_ONLY
 #    define SAL_DEPRECATED(message) __attribute__((deprecated(message)))
-#elif defined __GNUC__ || defined __clang__
+#else
 #    define SAL_DEPRECATED(message) __attribute__((deprecated))
+#endif
 #elif defined(_MSC_VER)
 #    define SAL_DEPRECATED(message) __declspec(deprecated(message))
 #else
@@ -489,7 +487,7 @@ template< typename T1, typename T2 > inline T1 static_int_cast(T2 n) {
         SAL_WNODEPRECATED_DECLARATIONS_POP
 */
 
-#if HAVE_GCC_PRAGMA_OPERATOR
+#if defined LIBO_INTERNAL_ONLY && defined __GNUC__
 #define SAL_WNODEPRECATED_DECLARATIONS_PUSH \
     _Pragma(SAL_STRINGIFY_ARG(GCC diagnostic push)) \
     _Pragma(SAL_STRINGIFY_ARG(GCC diagnostic ignored "-Wdeprecated-declarations"))

@@ -18,6 +18,7 @@
 
 #include <svx/svdotext.hxx>
 #include <svx/svdomedia.hxx>
+#include <svx/svdotable.hxx>
 #include <svx/xlineit0.hxx>
 #include <svx/xlndsit.hxx>
 #include <rtl/ustring.hxx>
@@ -88,6 +89,9 @@ public:
     void testBnc822341();
     void testMathObject();
     void testMathObjectPPT2010();
+    void testTdf119015();
+    void testTdf123090();
+    void testTdf126324();
     void testTdf80224();
     void testExportTransitionsPPTX();
     void testPresetShapesExport();
@@ -119,6 +123,7 @@ public:
     void testTdf112333();
     void testTdf112552();
     void testTdf112557();
+    void testTdf106026();
     void testTdf112334();
     void testTdf112089();
     void testTdf112086();
@@ -135,6 +140,7 @@ public:
     void testTdf114848();
     void testTdf68759();
     void testTdf127901();
+    void testTdf48735();
     void testTdf90626();
     void testTdf107608();
     void testTdf111786();
@@ -182,6 +188,7 @@ public:
     void testTdf127372();
     void testTdf127379();
     void testTdf98603();
+    void testTdf129372();
     void testShapeGlowEffect();
     void testTdf131554();
 
@@ -192,6 +199,9 @@ public:
     CPPUNIT_TEST(testBnc822341);
     CPPUNIT_TEST(testMathObject);
     CPPUNIT_TEST(testMathObjectPPT2010);
+    CPPUNIT_TEST(testTdf119015);
+    CPPUNIT_TEST(testTdf123090);
+    CPPUNIT_TEST(testTdf126324);
     CPPUNIT_TEST(testTdf80224);
     CPPUNIT_TEST(testExportTransitionsPPTX);
     CPPUNIT_TEST(testPresetShapesExport);
@@ -223,6 +233,7 @@ public:
     CPPUNIT_TEST(testTdf112333);
     CPPUNIT_TEST(testTdf112552);
     CPPUNIT_TEST(testTdf112557);
+    CPPUNIT_TEST(testTdf106026);
     CPPUNIT_TEST(testTdf112334);
     CPPUNIT_TEST(testTdf112089);
     CPPUNIT_TEST(testTdf112086);
@@ -239,6 +250,7 @@ public:
     CPPUNIT_TEST(testTdf114848);
     CPPUNIT_TEST(testTdf68759);
     CPPUNIT_TEST(testTdf127901);
+    CPPUNIT_TEST(testTdf48735);
     CPPUNIT_TEST(testTdf90626);
     CPPUNIT_TEST(testTdf107608);
     CPPUNIT_TEST(testTdf111786);
@@ -284,6 +296,7 @@ public:
     CPPUNIT_TEST(testTdf127372);
     CPPUNIT_TEST(testTdf127379);
     CPPUNIT_TEST(testTdf98603);
+    CPPUNIT_TEST(testTdf129372);
     CPPUNIT_TEST(testShapeGlowEffect);
     CPPUNIT_TEST(testTdf131554);
 
@@ -472,6 +485,75 @@ void SdOOXMLExportTest2::testMathObjectPPT2010()
         CPPUNIT_ASSERT_MESSAGE("no object", pObj != nullptr);
         CPPUNIT_ASSERT_EQUAL(static_cast<sal_uInt16>(OBJ_OLE2), pObj->GetObjIdentifier());
     }
+
+    xDocShRef->DoClose();
+}
+
+void SdOOXMLExportTest2::testTdf119015()
+{
+    ::sd::DrawDocShellRef xDocShRef
+        = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/tdf119015.pptx"), PPTX);
+    xDocShRef = saveAndReload( xDocShRef.get(), PPTX );
+
+    const SdrPage* pPage = GetPage(1, xDocShRef);
+
+    sdr::table::SdrTableObj* pTableObj = dynamic_cast<sdr::table::SdrTableObj*>(pPage->GetObj(0));
+    CPPUNIT_ASSERT(pTableObj);
+    // The position was previously not properly initialized: (0, 0, 100, 100)
+    CPPUNIT_ASSERT_EQUAL(tools::Rectangle(Point(6991, 6902), Size(14099, 1999)),
+                         pTableObj->GetLogicRect());
+    uno::Reference<table::XTable> xTable(pTableObj->getTable());
+
+    // Test that we actually have three cells: this threw css.lang.IndexOutOfBoundsException
+    uno::Reference<text::XTextRange> xTextRange(xTable->getCellByPosition(1, 0),
+                                                uno::UNO_QUERY_THROW);
+    CPPUNIT_ASSERT_EQUAL(OUString("A3"), xTextRange->getString());
+
+    xDocShRef->DoClose();
+}
+
+void SdOOXMLExportTest2::testTdf123090()
+{
+    ::sd::DrawDocShellRef xDocShRef
+        = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/tdf123090.pptx"), PPTX);
+    xDocShRef = saveAndReload( xDocShRef.get(), PPTX );
+
+    const SdrPage* pPage = GetPage(1, xDocShRef);
+
+    sdr::table::SdrTableObj* pTableObj = dynamic_cast<sdr::table::SdrTableObj*>(pPage->GetObj(0));
+    CPPUNIT_ASSERT(pTableObj);
+
+    uno::Reference<table::XTable> xTable(pTableObj->getTable());
+
+    // Test that we actually have two cells: this threw css.lang.IndexOutOfBoundsException
+    uno::Reference<text::XTextRange> xTextRange(xTable->getCellByPosition(1, 0),
+                                                uno::UNO_QUERY_THROW);
+    CPPUNIT_ASSERT_EQUAL(OUString("aaa"), xTextRange->getString());
+
+    sal_Int32 nWidth;
+    const OUString sWidth("Width");
+    uno::Reference< css::table::XTableColumns > xColumns( xTable->getColumns(), uno::UNO_SET_THROW);
+    uno::Reference< beans::XPropertySet > xRefColumn( xColumns->getByIndex(1), uno::UNO_QUERY_THROW );
+    xRefColumn->getPropertyValue( sWidth ) >>= nWidth;
+    CPPUNIT_ASSERT_EQUAL( sal_Int32(9136), nWidth);
+
+    xDocShRef->DoClose();
+}
+
+void SdOOXMLExportTest2::testTdf126324()
+{
+    sd::DrawDocShellRef xDocShRef
+        = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/tdf126324.pptx"), PPTX);
+    xDocShRef = saveAndReload( xDocShRef.get(), PPTX );
+    uno::Reference<drawing::XDrawPagesSupplier> xDoc(xDocShRef->GetDoc()->getUnoModel(),
+                                                     uno::UNO_QUERY);
+    CPPUNIT_ASSERT(xDoc.is());
+    uno::Reference<drawing::XDrawPage> xPage(xDoc->getDrawPages()->getByIndex(0), uno::UNO_QUERY);
+    CPPUNIT_ASSERT(xPage.is());
+    uno::Reference<beans::XPropertySet> xShape(getShape(0, xPage));
+    CPPUNIT_ASSERT(xShape.is());
+    uno::Reference< text::XText > xText = uno::Reference< text::XTextRange>( xShape, uno::UNO_QUERY_THROW )->getText();
+    CPPUNIT_ASSERT_EQUAL(OUString("17"), xText->getString());
 
     xDocShRef->DoClose();
 }
@@ -1306,6 +1388,31 @@ void SdOOXMLExportTest2::testTdf112557()
     xDocShRef->DoClose();
 }
 
+void SdOOXMLExportTest2::testTdf106026()
+{
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/odp/tdf106026.odp"), ODP);
+    utl::TempFile tempFile;
+    xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
+
+    xmlDocPtr pXmlMasterContent = parseExport(tempFile, "ppt/slideMasters/slideMaster1.xml");
+    assertXPath(pXmlMasterContent, "/p:sldMaster/p:cSld/p:spTree/p:sp/p:txBody/a:p[1]/a:pPr/a:spcBef/a:spcPts", "val", "1417");
+    assertXPath(pXmlMasterContent, "/p:sldMaster/p:cSld/p:spTree/p:sp/p:txBody/a:p[2]/a:pPr/a:spcBef/a:spcPts", "val", "1134");
+    assertXPath(pXmlMasterContent, "/p:sldMaster/p:cSld/p:spTree/p:sp/p:txBody/a:p[3]/a:pPr/a:spcBef/a:spcPts", "val", "850");
+    assertXPath(pXmlMasterContent, "/p:sldMaster/p:cSld/p:spTree/p:sp/p:txBody/a:p[4]/a:pPr/a:spcBef/a:spcPts", "val", "567");
+    assertXPath(pXmlMasterContent, "/p:sldMaster/p:cSld/p:spTree/p:sp/p:txBody/a:p[5]/a:pPr/a:spcBef/a:spcPts", "val", "283");
+    assertXPath(pXmlMasterContent, "/p:sldMaster/p:cSld/p:spTree/p:sp/p:txBody/a:p[6]/a:pPr/a:spcBef/a:spcPts", "val", "283");
+    assertXPath(pXmlMasterContent, "/p:sldMaster/p:cSld/p:spTree/p:sp/p:txBody/a:p[7]/a:pPr/a:spcBef/a:spcPts", "val", "283");
+
+    xmlDocPtr pXmlSlideContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    assertXPath(pXmlSlideContent,
+                       "/p:sld/p:cSld/p:spTree/p:sp[2]/p:txBody/a:p[1]/a:pPr/a:spcAft/a:spcPts", "val", "11339");
+    assertXPath(pXmlSlideContent,
+                       "/p:sld/p:cSld/p:spTree/p:sp[2]/p:txBody/a:p[2]/a:pPr/a:spcAft/a:spcPts", "val", "11339");
+    assertXPath(pXmlSlideContent,
+                       "/p:sld/p:cSld/p:spTree/p:sp[2]/p:txBody/a:p[3]/a:pPr/a:spcAft/a:spcPts", "val", "11339");
+    xDocShRef->DoClose();
+}
+
 void SdOOXMLExportTest2::testTdf112334()
 {
     ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("sd/qa/unit/data/pptx/tdf112334.pptx"), PPTX);
@@ -1561,6 +1668,20 @@ void SdOOXMLExportTest2::testTdf127901()
     xmlDocPtr pXmlDocContent3 = parseExport(tempFile, "ppt/slides/slide3.xml");
     assertXPath(pXmlDocContent3, "/p:sld/p:cSld/p:spTree/p:pic/p:blipFill/a:blip/a:biLevel", "thresh", "50000");
 
+}
+
+void SdOOXMLExportTest2::testTdf48735()
+{
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("sd/qa/unit/data/odp/tdf48735.odp"), ODP);
+    utl::TempFile tempFile;
+    xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
+    xDocShRef->DoClose();
+
+    xmlDocPtr pXmlDocContent1 = parseExport(tempFile, "ppt/slides/slide1.xml");
+    assertXPath(pXmlDocContent1, "/p:sld/p:cSld/p:spTree/p:pic/p:blipFill/a:srcRect", "b", "23627");
+    assertXPath(pXmlDocContent1, "/p:sld/p:cSld/p:spTree/p:pic/p:blipFill/a:srcRect", "l", "23627");
+    assertXPath(pXmlDocContent1, "/p:sld/p:cSld/p:spTree/p:pic/p:blipFill/a:srcRect", "r", "23627");
+    assertXPath(pXmlDocContent1, "/p:sld/p:cSld/p:spTree/p:pic/p:blipFill/a:srcRect", "t", "18842");
 }
 
 void SdOOXMLExportTest2::testTdf90626()
@@ -2635,6 +2756,18 @@ void SdOOXMLExportTest2::testTdf98603()
     xPropSet->getPropertyValue("CharLocaleComplex") >>= aLocale;
     CPPUNIT_ASSERT_EQUAL(OUString("he"), aLocale.Language);
     CPPUNIT_ASSERT_EQUAL(OUString("IL"), aLocale.Country);
+}
+
+void SdOOXMLExportTest2::testTdf129372()
+{
+    //Without the fix in place, it would crash at import time
+    ::sd::DrawDocShellRef xDocShRef = loadURL( m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/tdf129372.pptx"), PPTX);
+    xDocShRef = saveAndReload( xDocShRef.get(), PPTX );
+    const SdrPage *pPage = GetPage( 1, xDocShRef.get() );
+
+    const SdrObject* pObj = pPage->GetObj(0);
+    CPPUNIT_ASSERT_MESSAGE( "no object", pObj != nullptr);
+    CPPUNIT_ASSERT_EQUAL( static_cast<sal_uInt16>(OBJ_OLE2), pObj->GetObjIdentifier() );
 }
 
 void SdOOXMLExportTest2::testShapeGlowEffect()

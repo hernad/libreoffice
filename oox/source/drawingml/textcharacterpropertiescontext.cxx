@@ -211,10 +211,12 @@ ContextHandlerRef TextCharacterPropertiesContext::onCreateContext( sal_Int32 aEl
         case W_TOKEN( bCs ):
             break;
         case W_TOKEN( strike ):
-            mrTextCharacterProperties.moStrikeout = XML_sngStrike;
+            if (rAttribs.getBool(W_TOKEN(val), true))
+                mrTextCharacterProperties.moStrikeout = XML_sngStrike;
             break;
         case W_TOKEN( dstrike ):
-            mrTextCharacterProperties.moStrikeout = XML_dblStrike;
+            if (rAttribs.getBool(W_TOKEN(val), true))
+                mrTextCharacterProperties.moStrikeout = XML_dblStrike;
             break;
         case W_TOKEN( color ):
             if (rAttribs.getInteger(W_TOKEN(val)).has())
@@ -260,6 +262,9 @@ ContextHandlerRef TextCharacterPropertiesContext::onCreateContext( sal_Int32 aEl
                 mrTextCharacterProperties.moBaseline = -25000;
             break;
         }
+        case W_TOKEN(lang):
+            mrTextCharacterProperties.moLang = rAttribs.getString(W_TOKEN(val), OUString());
+            break;
         case OOX_TOKEN(w14, glow):
         case OOX_TOKEN(w14, shadow):
         case OOX_TOKEN(w14, reflection):

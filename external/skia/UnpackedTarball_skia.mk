@@ -23,7 +23,7 @@ skia_patches := \
     Wdeprecated-copy-dtor.patch.0 \
     fix-msvc.patch.1 \
     fix-gcc-x86.patch.1	\
-    msvc-vectorcall-sse.patch.1 \
+    fix-sse.patch.1 \
     clang11-flax-vector-conversion.patch.0 \
     clang-attributes-warning.patch.1 \
     fontconfig-get-typeface.patch.0 \
@@ -33,6 +33,7 @@ skia_patches := \
     operator-eq-bool.patch.0 \
     fix-without-gl.patch.0 \
     extend-rgb-to-rgba.patch.0 \
+    windows-typeface-directwrite.patch.0 \
 
 $(eval $(call gb_UnpackedTarball_set_patchlevel,skia,1))
 

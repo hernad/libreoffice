@@ -45,6 +45,8 @@
 
 #include <basegfx/vector/b2ivector.hxx>
 
+#include <dlfcn.h>
+
 #include <algorithm>
 
 #if OSL_DEBUG_LEVEL > 1
@@ -355,20 +357,20 @@ bool GtkSalFrame::doKeyCallback( guint state,
             // shift-zero forces a re-draw and event is swallowed
             if (keyval == GDK_KEY_0)
             {
-                fprintf( stderr, "force widget_queue_draw\n");
+                SAL_INFO("vcl.gtk3", "force widget_queue_draw.");
                 gtk_widget_queue_draw(GTK_WIDGET(m_pFixedContainer));
                 return false;
             }
             else if (keyval == GDK_KEY_1)
             {
-                fprintf( stderr, "force repaint all\n");
+                SAL_INFO("vcl.gtk3", "force repaint all.");
                 TriggerPaintEvent();
                 return false;
             }
             else if (keyval == GDK_KEY_2)
             {
                 dumpframes = !dumpframes;
-                fprintf(stderr, "toggle dump frames to %d\n", dumpframes);
+                SAL_INFO("vcl.gtk3", "toggle dump frames to " << dumpframes);
                 return false;
             }
         }
@@ -926,6 +928,7 @@ void GtkSalFrame::InitCommon()
     m_pDropTarget       = nullptr;
     m_pDragSource       = nullptr;
     m_bGeometryIsProvisional = false;
+    m_bTooltipBlocked   = false;
     m_ePointerStyle     = static_cast<PointerStyle>(0xffff);
     m_pSalMenu          = nullptr;
     m_nWatcherId        = 0;
@@ -2342,7 +2345,7 @@ gboolean GtkSalFrame::signalTooltipQuery(GtkWidget*, gint /*x*/, gint /*y*/,
                                      gpointer frame)
 {
     GtkSalFrame* pThis = static_cast<GtkSalFrame*>(frame);
-    if (pThis->m_aTooltip.isEmpty())
+    if (pThis->m_aTooltip.isEmpty() || pThis->m_bTooltipBlocked)
         return false;
     gtk_tooltip_set_text(tooltip,
         OUStringToOString(pThis->m_aTooltip, RTL_TEXTENCODING_UTF8).getStr());
@@ -2365,10 +2368,21 @@ bool GtkSalFrame::ShowTooltip(const OUString& rHelpText, const tools::Rectangle&
     return true;
 }
 
+void GtkSalFrame::BlockTooltip()
+{
+    m_bTooltipBlocked = true;
+}
+
+void GtkSalFrame::UnblockTooltip()
+{
+    m_bTooltipBlocked = false;
+}
+
 void GtkSalFrame::HideTooltip()
 {
     m_aTooltip.clear();
-    gtk_widget_trigger_tooltip_query(getMouseEventWidget());
+    GtkWidget* pEventWidget = getMouseEventWidget();
+    gtk_widget_trigger_tooltip_query(pEventWidget);
 }
 
 namespace
@@ -2908,7 +2922,6 @@ void GtkSalFrame::sizeAllocated(GtkWidget* pWidget, GdkRectangle *pAllocation, g
         pThis->TriggerPaintEvent();
 }
 
-#if GTK_CHECK_VERSION(3,23,0)
 namespace {
 
 void swapDirection(GdkGravity& gravity)
@@ -2924,7 +2937,6 @@ void swapDirection(GdkGravity& gravity)
 }
 
 }
-#endif
 
 void GtkSalFrame::signalRealize(GtkWidget*, gpointer frame)
 {
@@ -2934,8 +2946,13 @@ void GtkSalFrame::signalRealize(GtkWidget*, gpointer frame)
         return;
     pThis->TriggerPaintEvent();
 
-#if GTK_CHECK_VERSION(3,23,0)
-    if (gtk_check_version(3, 23, 0) == nullptr && pThis->m_bFloatPositioned)
+    if (!pThis->m_bFloatPositioned)
+        return;
+
+    static auto window_move_to_rect = reinterpret_cast<void (*) (GdkWindow*, const GdkRectangle*, GdkGravity,
+                                                                 GdkGravity, GdkAnchorHints, gint, gint)>(
+                                                                    dlsym(nullptr, "gdk_window_move_to_rect"));
+    if (window_move_to_rect)
     {
         GdkGravity rect_anchor = GDK_GRAVITY_SOUTH_WEST, menu_anchor = GDK_GRAVITY_NORTH_WEST;
 
@@ -2969,9 +2986,8 @@ void GtkSalFrame::signalRealize(GtkWidget*, gpointer frame)
                            static_cast<int>(aFloatRect.GetWidth()), static_cast<int>(aFloatRect.GetHeight())};
 
         GdkWindow* gdkWindow = gtk_widget_get_window(pThis->m_pWindow);
-        gdk_window_move_to_rect(gdkWindow, &rect, rect_anchor, menu_anchor, GDK_ANCHOR_FLIP, 0, 0);
+        window_move_to_rect(gdkWindow, &rect, rect_anchor, menu_anchor, GDK_ANCHOR_FLIP, 0, 0);
     }
-#endif
 }
 
 gboolean GtkSalFrame::signalConfigure(GtkWidget*, GdkEventConfigure* pEvent, gpointer frame)
@@ -3298,14 +3314,18 @@ gboolean GtkSalFrame::signalWindowState( GtkWidget*, GdkEvent* pEvent, gpointer 
 
     pThis->m_nState = pEvent->window_state.new_window_state;
 
-    #if OSL_DEBUG_LEVEL > 1
-    if( (pEvent->window_state.changed_mask & GDK_WINDOW_STATE_FULLSCREEN) )
-    {
-        fprintf( stderr, "window %p %s full screen state\n",
-            pThis,
-            (pEvent->window_state.new_window_state & GDK_WINDOW_STATE_FULLSCREEN) ? "enters" : "leaves");
-    }
-    #endif
+#if OSL_DEBUG_LEVEL > 1
+    SAL_INFO_IF((pEvent->window_state.changed_mask &
+                GDK_WINDOW_STATE_FULLSCREEN),
+            "vcl.gtk3", "window "
+            << pThis
+            << " "
+            << ((pEvent->window_state.new_window_state &
+                    GDK_WINDOW_STATE_FULLSCREEN) ?
+                "enters" :
+                "leaves")
+            << " full screen state.");
+#endif
 
     return false;
 }

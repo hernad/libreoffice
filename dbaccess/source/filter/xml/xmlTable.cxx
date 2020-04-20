@@ -76,7 +76,7 @@ OXMLTable::OXMLTable( ODBFilter& _rImport
                 m_bApplyOrder = sValue == "true";
                 break;
             default:
-                SAL_WARN("dbaccess", "unknown attribute " << SvXMLImport::getNameFromToken(aIter.getToken()) << "=" << aIter.toString());
+                SAL_WARN("dbaccess", "unknown attribute " << SvXMLImport::getPrefixAndNameFromToken(aIter.getToken()) << "=" << aIter.toString());
         }
     }
     uno::Sequence<uno::Any> aArguments(comphelper::InitAnyPropertySequence(
@@ -161,34 +161,34 @@ void OXMLTable::setProperties(uno::Reference< XPropertySet > & _xProp )
 void OXMLTable::endFastElement(sal_Int32 )
 {
     uno::Reference<XNameContainer> xNameContainer(m_xParentContainer,UNO_QUERY);
-    if ( xNameContainer.is() )
-    {
-        try
-        {
-            if ( m_xTable.is() )
-            {
-                setProperties(m_xTable);
+    if ( !xNameContainer.is() )
+        return;
 
-                if ( !m_sStyleName.isEmpty() )
+    try
+    {
+        if ( m_xTable.is() )
+        {
+            setProperties(m_xTable);
+
+            if ( !m_sStyleName.isEmpty() )
+            {
+                const SvXMLStylesContext* pAutoStyles = GetOwnImport().GetAutoStyles();
+                if ( pAutoStyles )
                 {
-                    const SvXMLStylesContext* pAutoStyles = GetOwnImport().GetAutoStyles();
-                    if ( pAutoStyles )
+                    OTableStyleContext* pAutoStyle = const_cast<OTableStyleContext*>(dynamic_cast< const OTableStyleContext* >(pAutoStyles->FindStyleChildContext(XmlStyleFamily::TABLE_TABLE,m_sStyleName)));
+                    if ( pAutoStyle )
                     {
-                        OTableStyleContext* pAutoStyle = const_cast<OTableStyleContext*>(dynamic_cast< const OTableStyleContext* >(pAutoStyles->FindStyleChildContext(XmlStyleFamily::TABLE_TABLE,m_sStyleName)));
-                        if ( pAutoStyle )
-                        {
-                            pAutoStyle->FillPropertySet(m_xTable);
-                        }
+                        pAutoStyle->FillPropertySet(m_xTable);
                     }
                 }
-
-                xNameContainer->insertByName(m_sName,makeAny(m_xTable));
             }
+
+            xNameContainer->insertByName(m_sName,makeAny(m_xTable));
         }
-        catch(Exception&)
-        {
-            OSL_FAIL("OXMLQuery::EndElement -> exception caught");
-        }
+    }
+    catch(Exception&)
+    {
+        OSL_FAIL("OXMLQuery::EndElement -> exception caught");
     }
 
 }
@@ -221,7 +221,7 @@ void OXMLTable::fillAttributes(const uno::Reference< XFastAttributeList > & _xAt
                 _rsTableName = sValue;
                 break;
             default:
-                SAL_WARN("dbaccess", "unknown attribute " << SvXMLImport::getNameFromToken(aIter.getToken()) << " value=" << aIter.toString());
+                SAL_WARN("dbaccess", "unknown attribute " << SvXMLImport::getPrefixAndNameFromToken(aIter.getToken()) << "=" << aIter.toString());
         }
     }
 }

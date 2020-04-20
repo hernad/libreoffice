@@ -35,6 +35,7 @@
 
 #include <memory>
 
+#include <comphelper/lok.hxx>
 #include <i18nutil/unicode.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/stdtext.hxx>
@@ -264,13 +265,15 @@ SdFontPropertyBox::SdFontPropertyBox(weld::Label* pLabel, weld::Container* pPare
     pLabel->set_mnemonic_widget(mxControl.get());
 
     SfxObjectShell* pDocSh = SfxObjectShell::Current();
-    const SfxPoolItem* pItem;
-
     const FontList* pFontList = nullptr;
     bool bMustDelete = false;
 
-    if (pDocSh && ( (pItem = pDocSh->GetItem( SID_ATTR_CHAR_FONTLIST ) ) != nullptr))
-        pFontList = static_cast<const SvxFontListItem*>(pItem)->GetFontList();
+    if (pDocSh)
+    {
+        auto pItem = pDocSh->GetItem( SID_ATTR_CHAR_FONTLIST );
+        if (pItem)
+            pFontList = static_cast<const SvxFontListItem*>(pItem)->GetFontList();
+    }
 
     if (!pFontList)
     {
@@ -1109,8 +1112,18 @@ void CustomAnimationEffectTabPage::updateControlStates()
         mxFTTextDelay->set_sensitive( nPos != 0 );
     }
 
-    nPos = mxLBSound->get_active();
-    mxPBSoundPreview->set_sensitive( nPos >= 2 );
+    if (comphelper::LibreOfficeKit::isActive())
+    {
+        mxFTSound->hide();
+        mxLBSound->hide();
+        mxPBSoundPreview->hide();
+    }
+    else
+    {
+        nPos = mxLBSound->get_active();
+        mxPBSoundPreview->set_sensitive( nPos >= 2 );
+    }
+
 }
 
 IMPL_LINK(CustomAnimationEffectTabPage, implClickHdl, weld::Button&, rBtn, void)

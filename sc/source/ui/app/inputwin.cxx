@@ -409,6 +409,8 @@ void ScInputWindow::Select()
                 EditView* pView = aTextWindow.GetEditView();
                 if (pView)
                 {
+                    if (comphelper::LibreOfficeKit::isActive())
+                        TextGrabFocus();
                     pView->SetSelection( ESelection(0, nStartPos, 0, nEndPos) );
                     pScMod->InputChanged(pView);
                     SetOkCancelMode();
@@ -518,7 +520,7 @@ void ScInputWindow::NotifyLOKClient()
     if (const vcl::ILibreOfficeKitNotifier* pNotifier = GetLOKNotifier())
     {
         Size aSize = GetSizePixel();
-        if (aSize.Width() != 0 && aSize.Height() != 0)
+        if (!aSize.IsEmpty())
         {
             std::vector<vcl::LOKPayloadItem> aItems;
             aItems.emplace_back("type", "calc-input-win");

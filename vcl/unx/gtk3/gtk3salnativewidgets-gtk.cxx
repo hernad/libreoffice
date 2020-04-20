@@ -488,7 +488,7 @@ void GtkSalGraphics::PaintScrollbar(GtkStyleContext *context,
 
         // Find the overall bounding rect of the control
         scrollbarRect = rControlRectangle;
-        if (scrollbarRect.GetWidth() <= 0 || scrollbarRect.GetHeight() <= 0)
+        if (scrollbarRect.IsEmpty())
             return;
 
         gint slider_side;
@@ -599,7 +599,7 @@ void GtkSalGraphics::PaintScrollbar(GtkStyleContext *context,
             button22BoundRect.SetSize( Size( slider_width, stepper_size ) );
         }
 
-        bool has_slider = ( thumbRect.GetWidth() > 0 && thumbRect.GetHeight() > 0 );
+        bool has_slider = !thumbRect.IsEmpty();
 
         // ----------------- CONTENTS
         GtkStyleContext* pScrollbarContentsStyle = scrollbarOrientation == GTK_ORIENTATION_VERTICAL ?
@@ -914,7 +914,7 @@ void GtkSalGraphics::PaintScrollbar(GtkStyleContext *context,
         thumbRect.Move( (scrollbarRect.GetWidth() - slider_width) / 2, 0 );
     }
 
-    bool has_slider = ( thumbRect.GetWidth() > 0 && thumbRect.GetHeight() > 0 );
+    bool has_slider = !thumbRect.IsEmpty();
 
     // ----------------- CONTENTS
     GtkStyleContext* pScrollbarContentsStyle = scrollbarOrientation == GTK_ORIENTATION_VERTICAL ?
@@ -2702,7 +2702,7 @@ bool GtkSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, co
 
     cairo_destroy(cr); // unref
 
-    if (rControlRegion.GetWidth() >= 0 && rControlRegion.GetHeight() >= 0)
+    if (!rControlRegion.IsEmpty())
         mpFrame->damaged(rControlRegion.Left(), rControlRegion.Top(), rControlRegion.GetWidth(), rControlRegion.GetHeight());
 
     return true;
@@ -2960,16 +2960,19 @@ vcl::Font pango_to_vcl(const PangoFontDescription* font, const css::lang::Locale
     }
 
 #if OSL_DEBUG_LEVEL > 1
-    fprintf( stderr, "font name BEFORE system match: \"%s\"\n", aFamily.getStr() );
+    SAL_INFO("vcl.gtk3", "font name BEFORE system match: \""
+            << aFamily << "\".");
 #endif
 
     // match font to e.g. resolve "Sans"
     psp::PrintFontManager::get().matchFont(aInfo, rLocale);
 
 #if OSL_DEBUG_LEVEL > 1
-    fprintf( stderr, "font match %s, name AFTER: \"%s\"\n",
-                  aInfo.m_nID != 0 ? "succeeded" : "failed",
-                  OUStringToOString( aInfo.m_aFamilyName, RTL_TEXTENCODING_ISO_8859_1 ).getStr() );
+    SAL_INFO("vcl.gtk3", "font match "
+            << (aInfo.m_nID != 0 ? "succeeded" : "failed")
+            << ", name AFTER: \""
+            << aInfo.m_aFamilyName
+            << "\".");
 #endif
 
     int nPointHeight = nPangoHeight/PANGO_SCALE;
@@ -3331,7 +3334,9 @@ bool GtkSalGraphics::updateSettings(AllSettings& rSettings)
 #if OSL_DEBUG_LEVEL > 1
     gchar* pThemeName = NULL;
     g_object_get( pSettings, "gtk-theme-name", &pThemeName, nullptr );
-    fprintf( stderr, "Theme name is \"%s\"\n", pThemeName );
+    SAL_INFO("vcl.gtk3", "Theme name is \""
+            << pThemeName
+            << "\".");
     g_free(pThemeName);
 #endif
 

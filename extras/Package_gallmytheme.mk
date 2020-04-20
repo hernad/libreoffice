@@ -21,10 +21,16 @@ $(eval $(call gb_Package_add_files,extras_gallmytheme,$(LIBO_SHARE_PRESETS_FOLDE
 	flowchart.sdg \
 	flowchart.sdv \
 	flowchart.thm \
-	symbol.sdg \
-	symbol.sdv \
-	symbol.thm \
+	icons.sdg \
+	icons.sdv \
+	icons.thm \
 	shapes.sdg \
 	shapes.sdv \
 	shapes.thm \
+	network.sdg \
+	network.sdv \
+	network.thm \
+	diagrams.sdg \
+	diagrams.sdv \
+	diagrams.thm \
 ))

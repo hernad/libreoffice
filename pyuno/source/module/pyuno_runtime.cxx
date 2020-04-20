@@ -178,8 +178,8 @@ static PyRef importUnoModule( )
         OUStringBuffer buf;
         buf.append( "python object raised an unknown exception (" );
         PyRef valueRep( PyObject_Repr( excValue.get() ), SAL_NO_ACQUIRE );
-        buf.appendAscii( PyStr_AsString( valueRep.get())).append( ", traceback follows\n" );
-        buf.appendAscii( PyStr_AsString( str.get() ) );
+        buf.appendAscii( PyUnicode_AsUTF8( valueRep.get())).append( ", traceback follows\n" );
+        buf.appendAscii( PyUnicode_AsUTF8( str.get() ) );
         buf.append( ")" );
         throw RuntimeException( buf.makeStringAndClear() );
     }
@@ -589,7 +589,7 @@ lcl_ExceptionMessage(PyObject *const o, OUString const*const pWrapped)
     OUStringBuffer buf;
     buf.append("Couldn't convert ");
     PyRef reprString( PyObject_Str(o), SAL_NO_ACQUIRE );
-    buf.appendAscii( PyStr_AsString(reprString.get()) );
+    buf.appendAscii( PyUnicode_AsUTF8(reprString.get()) );
     buf.append(" to a UNO type");
     if (pWrapped)
     {
@@ -642,41 +642,8 @@ Any Runtime::pyObject2Any ( const PyRef & source, enum ConversionMode mode ) con
     {
 
     }
-    // In Python 3, there is no PyInt type.
-#if PY_MAJOR_VERSION < 3
-    else if (PyInt_Check (o))
-    {
-        if( o == Py_True )
-        {
-            a <<= true;
-        }
-        else if ( o == Py_False )
-        {
-            a <<= false;
-        }
-        else
-        {
-            sal_Int32 l = (sal_Int32) PyLong_AsLong( o );
-            if( l < 128 && l >= -128 )
-            {
-                sal_Int8 b = (sal_Int8 ) l;
-                a <<= b;
-            }
-            else if( l <= 0x7fff && l >= -0x8000 )
-            {
-                sal_Int16 s = (sal_Int16) l;
-                a <<= s;
-            }
-            else
-            {
-                a <<= l;
-            }
-        }
-    }
-#endif /* PY_MAJOR_VERSION < 3 */
     else if (PyLong_Check (o))
     {
-#if PY_MAJOR_VERSION >= 3
         // Convert the Python 3 booleans that are actually of type PyLong.
         if(o == Py_True)
         {
@@ -688,7 +655,6 @@ Any Runtime::pyObject2Any ( const PyRef & source, enum ConversionMode mode ) con
         }
         else
         {
-#endif /* PY_MAJOR_VERSION >= 3 */
         sal_Int64 l = static_cast<sal_Int64>(PyLong_AsLong (o));
         if( l < 128 && l >= -128 )
         {
@@ -710,16 +676,14 @@ Any Runtime::pyObject2Any ( const PyRef & source, enum ConversionMode mode ) con
         {
             a <<= l;
         }
-#if PY_MAJOR_VERSION >= 3
         }
-#endif
     }
     else if (PyFloat_Check (o))
     {
         double d = PyFloat_AsDouble (o);
         a <<= d;
     }
-    else if (PyStrBytes_Check(o) || PyUnicode_Check(o))
+    else if (PyBytes_Check(o) || PyUnicode_Check(o))
     {
         a <<= pyString2ustring(o);
     }
@@ -750,10 +714,10 @@ Any Runtime::pyObject2Any ( const PyRef & source, enum ConversionMode mode ) con
         {
             PyRef str(PyObject_GetAttrString( o , "value" ),SAL_NO_ACQUIRE);
             Sequence< sal_Int8 > seq;
-            if( PyStrBytes_Check( str.get() ) )
+            if( PyBytes_Check( str.get() ) )
             {
                 seq = Sequence<sal_Int8 > (
-                    reinterpret_cast<sal_Int8*>(PyStrBytes_AsString(str.get())), PyStrBytes_Size(str.get()));
+                    reinterpret_cast<sal_Int8*>(PyBytes_AsString(str.get())), PyBytes_Size(str.get()));
             }
             a <<= seq;
         }
@@ -905,7 +869,7 @@ Any Runtime::extractUnoException( const PyRef & excType, const PyRef &excValue, 
                 PyRef args( PyTuple_New( 1), SAL_NO_ACQUIRE, NOT_NULL );
                 PyTuple_SetItem( args.get(), 0, excTraceback.getAcquired() );
                 PyRef pyStr( PyObject_CallObject( extractTraceback.get(),args.get() ), SAL_NO_ACQUIRE);
-                str = OUString::createFromAscii( PyStr_AsString(pyStr.get()) );
+                str = OUString::createFromAscii( PyUnicode_AsUTF8(pyStr.get()) );
             }
             else
             {
@@ -938,7 +902,7 @@ Any Runtime::extractUnoException( const PyRef & excType, const PyRef &excValue, 
         PyRef typeName( PyObject_Str( excType.get() ), SAL_NO_ACQUIRE );
         if( typeName.is() )
         {
-            buf.appendAscii( PyStr_AsString( typeName.get() ) );
+            buf.appendAscii( PyUnicode_AsUTF8( typeName.get() ) );
         }
         else
         {
@@ -948,7 +912,7 @@ Any Runtime::extractUnoException( const PyRef & excType, const PyRef &excValue, 
         PyRef valueRep( PyObject_Str( excValue.get() ), SAL_NO_ACQUIRE );
         if( valueRep.is() )
         {
-            buf.appendAscii( PyStr_AsString( valueRep.get()));
+            buf.appendAscii( PyUnicode_AsUTF8( valueRep.get()));
         }
         else
         {

@@ -44,6 +44,16 @@ protected:
     }
 };
 
+DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf78749, "tdf78749.docx")
+{
+    //Shape lost the background image before, now check if it still has...
+    auto xShape = getShape(1);
+    uno::Reference<beans::XPropertySet> xShpProps(xShape, uno::UNO_QUERY);
+    OUString aPropertyVal;
+    xShpProps->getPropertyValue("FillBitmapName") >>= aPropertyVal;
+    CPPUNIT_ASSERT(!aPropertyVal.isEmpty());
+}
+
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf128207, "tdf128207.docx")
 {
     //There was the charts on each other, because their horizontal and vertical position was 0!
@@ -780,17 +790,37 @@ DECLARE_OOXMLEXPORT_TEST(testStrikeoutGroupShapeText, "tdf131776_StrikeoutGroupS
     if (!pXml)
         return;
 
-    // double strike
+    // double strike (dstrike)
+    //   no "val" attribute
     assertXPath(pXml, "/w:document/w:body/w:p/w:r/mc:AlternateContent/mc:Choice/w:drawing/wp:anchor/a:graphic/a:graphicData/wpg:wgp/"
         "wps:wsp[1]/wps:txbx/w:txbxContent/w:p/w:r/w:rPr/w:dstrike");
     assertXPathNoAttribute(pXml, "/w:document/w:body/w:p/w:r/mc:AlternateContent/mc:Choice/w:drawing/wp:anchor/a:graphic/a:graphicData/wpg:wgp/"
         "wps:wsp[1]/wps:txbx/w:txbxContent/w:p/w:r/w:rPr/w:dstrike", "val");
-
-    // simple strike
+    //   "val" attribute is true, this is used in this test file. However, LO is going to export this element without the "val" attribute
+    //   because if the element appears, but without an attribute its "val" true by default.
     assertXPath(pXml, "/w:document/w:body/w:p/w:r/mc:AlternateContent/mc:Choice/w:drawing/wp:anchor/a:graphic/a:graphicData/wpg:wgp/"
-        "wps:wsp[2]/wps:txbx/w:txbxContent/w:p/w:r/w:rPr/w:strike");
+        "wps:wsp[2]/wps:txbx/w:txbxContent/w:p/w:r/w:rPr/w:dstrike");
     assertXPathNoAttribute(pXml, "/w:document/w:body/w:p/w:r/mc:AlternateContent/mc:Choice/w:drawing/wp:anchor/a:graphic/a:graphicData/wpg:wgp/"
-        "wps:wsp[2]/wps:txbx/w:txbxContent/w:p/w:r/w:rPr/w:strike", "val");
+        "wps:wsp[2]/wps:txbx/w:txbxContent/w:p/w:r/w:rPr/w:dstrike", "val");
+    //   "val" attribute is false (this was missing, resulting the regression)
+    assertXPath(pXml, "/w:document/w:body/w:p/w:r/mc:AlternateContent/mc:Choice/w:drawing/wp:anchor/a:graphic/a:graphicData/wpg:wgp/"
+        "wps:wsp[3]/wps:txbx/w:txbxContent/w:p/w:r/w:rPr/w:dstrike", "val", "false");
+
+    // simple strike (strike)
+        //   no "val" attribute
+    assertXPath(pXml, "/w:document/w:body/w:p/w:r/mc:AlternateContent/mc:Choice/w:drawing/wp:anchor/a:graphic/a:graphicData/wpg:wgp/"
+        "wps:wsp[4]/wps:txbx/w:txbxContent/w:p/w:r/w:rPr/w:strike");
+    assertXPathNoAttribute(pXml, "/w:document/w:body/w:p/w:r/mc:AlternateContent/mc:Choice/w:drawing/wp:anchor/a:graphic/a:graphicData/wpg:wgp/"
+        "wps:wsp[4]/wps:txbx/w:txbxContent/w:p/w:r/w:rPr/w:strike", "val");
+    //   "val" attribute is true, this is used in this test file. However, LO is going to export this element without the "val" attribute
+    //   because if the element appears, but without an attribute its "val" true by default.
+    assertXPath(pXml, "/w:document/w:body/w:p/w:r/mc:AlternateContent/mc:Choice/w:drawing/wp:anchor/a:graphic/a:graphicData/wpg:wgp/"
+        "wps:wsp[5]/wps:txbx/w:txbxContent/w:p/w:r/w:rPr/w:strike");
+    assertXPathNoAttribute(pXml, "/w:document/w:body/w:p/w:r/mc:AlternateContent/mc:Choice/w:drawing/wp:anchor/a:graphic/a:graphicData/wpg:wgp/"
+        "wps:wsp[5]/wps:txbx/w:txbxContent/w:p/w:r/w:rPr/w:strike", "val");
+    //   "val" attribute is false
+    assertXPath(pXml, "/w:document/w:body/w:p/w:r/mc:AlternateContent/mc:Choice/w:drawing/wp:anchor/a:graphic/a:graphicData/wpg:wgp/"
+        "wps:wsp[6]/wps:txbx/w:txbxContent/w:p/w:r/w:rPr/w:strike", "val", "false");
 }
 
 CPPUNIT_PLUGIN_IMPLEMENT();

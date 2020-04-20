@@ -224,7 +224,7 @@ private:
     // returns true if there's no need to print the shape/text/frame
     bool IsInvisible( PictDrawingMethod eMethod ) const {
       if ( eActROP == RasterOp::N1 ) return true;
-      if ( eMethod == PictDrawingMethod::FRAME && ( nActPenSize.Width() == 0 || nActPenSize.Height() == 0 ) ) return true;
+      if ( eMethod == PictDrawingMethod::FRAME && nActPenSize.IsEmpty() ) return true;
       return false;
     }
 
@@ -454,6 +454,13 @@ void PictReader::ReadRectangle(tools::Rectangle & rRect)
 
     aTopLeft=ReadPoint();
     aBottomRight=ReadPoint();
+    if (aTopLeft.X() > aBottomRight.X() || aTopLeft.Y() > aBottomRight.Y())
+    {
+        SAL_WARN("filter.pict", "broken rectangle");
+        pPict->SetError( SVSTREAM_FILEFORMAT_ERROR );
+        rRect = tools::Rectangle();
+        return;
+    }
     rRect=tools::Rectangle(aTopLeft,aBottomRight);
 
     SAL_INFO("filter.pict", "ReadRectangle: " << rRect);

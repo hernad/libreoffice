@@ -848,7 +848,7 @@ void Window::ImplInvalidate( const vcl::Region* pRegion, InvalidateFlags nFlags 
     }
 
     if ( nFlags & InvalidateFlags::Update )
-        pOpaqueWindow->Update();        // start painting at the opaque parent
+        pOpaqueWindow->PaintImmediately();        // start painting at the opaque parent
 }
 
 void Window::ImplMoveInvalidateRegion( const tools::Rectangle& rRect,
@@ -1221,7 +1221,7 @@ void Window::PixelInvalidate(const tools::Rectangle* pRectangle)
         return;
 
     Size aSize = GetSizePixel();
-    if (aSize.getWidth() <= 0 || aSize.getHeight() <= 0)
+    if (aSize.IsEmpty())
         return;
 
     if (const vcl::ILibreOfficeKitNotifier* pNotifier = GetLOKNotifier())
@@ -1281,11 +1281,11 @@ bool Window::HasPaintEvent() const
     return false;
 }
 
-void Window::Update()
+void Window::PaintImmediately()
 {
     if ( mpWindowImpl->mpBorderWindow )
     {
-        mpWindowImpl->mpBorderWindow->Update();
+        mpWindowImpl->mpBorderWindow->PaintImmediately();
         return;
     }
 
@@ -1337,7 +1337,7 @@ void Window::Update()
         vcl::Window* pUpdateOverlapWindow = ImplGetFirstOverlapWindow()->mpWindowImpl->mpFirstOverlap;
         while ( pUpdateOverlapWindow )
         {
-             pUpdateOverlapWindow->Update();
+             pUpdateOverlapWindow->PaintImmediately();
              pUpdateOverlapWindow = pUpdateOverlapWindow->mpWindowImpl->mpNext;
         }
 
@@ -1824,7 +1824,7 @@ void Window::ImplScroll( const tools::Rectangle& rRect,
     }
 
     if ( nFlags & ScrollFlags::Update )
-        Update();
+        PaintImmediately();
 
     if ( mpWindowImpl->mpCursor )
         mpWindowImpl->mpCursor->ImplResume();

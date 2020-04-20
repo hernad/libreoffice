@@ -548,6 +548,7 @@ PDFPage::PDFPage( PDFWriterImpl* pWriter, double nPageWidth, double nPageHeight,
         m_pWriter( pWriter ),
         m_nPageWidth( nPageWidth ),
         m_nPageHeight( nPageHeight ),
+        m_nUserUnit( 1 ),
         m_eOrientation( eOrientation ),
         m_nPageObject( 0 ),  // invalid object number
         m_nStreamLengthObject( 0 ),
@@ -557,6 +558,16 @@ PDFPage::PDFPage( PDFWriterImpl* pWriter, double nPageWidth, double nPageHeight,
 {
     // object ref must be only ever updated in emit()
     m_nPageObject = m_pWriter->createObject();
+
+    switch (m_pWriter->m_aContext.Version)
+    {
+        case PDFWriter::PDFVersion::PDF_1_6:
+            m_nUserUnit = std::ceil(std::max(nPageWidth, nPageHeight) / 14400.0);
+            break;
+        default:
+            // 1.2 -> 1.5
+            break;
+    }
 }
 
 void PDFPage::beginStream()
@@ -635,10 +646,15 @@ bool PDFPage::emit(sal_Int32 nParentObject )
     if( m_nPageWidth && m_nPageHeight )
     {
         aLine.append( "/MediaBox[0 0 " );
-        aLine.append( m_nPageWidth );
+        aLine.append(m_nPageWidth / m_nUserUnit);
         aLine.append( ' ' );
-        aLine.append( m_nPageHeight );
+        aLine.append(m_nPageHeight / m_nUserUnit);
         aLine.append( "]" );
+        if (m_nUserUnit > 1)
+        {
+            aLine.append("\n/UserUnit ");
+            aLine.append(m_nUserUnit);
+        }
     }
     switch( m_eOrientation )
     {
@@ -1116,6 +1132,18 @@ void PDFPage::appendMatrix3(Matrix3 const & rMatrix, OStringBuffer& rBuffer)
     appendPoint(Point(long(rMatrix.get(4)), long(rMatrix.get(5))), rBuffer);
 }
 
+double PDFPage::getHeight() const
+{
+    double fRet = m_nPageHeight ? m_nPageHeight : vcl::pdf::g_nInheritedPageHeight;
+
+    if (m_nUserUnit > 1)
+    {
+        fRet /= m_nUserUnit;
+    }
+
+    return fRet;
+}
+
 PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext,
                                const css::uno::Reference< css::beans::XMaterialHolder >& xEnc,
                                PDFWriter& i_rOuterFace)
@@ -1210,8 +1238,8 @@ PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext,
         case PDFWriter::PDFVersion::PDF_1_3: aBuffer.append( "1.3" );break;
         case PDFWriter::PDFVersion::PDF_A_1:
         case PDFWriter::PDFVersion::PDF_1_4: aBuffer.append( "1.4" );break;
-        default:
         case PDFWriter::PDFVersion::PDF_1_5: aBuffer.append( "1.5" );break;
+        default:
         case PDFWriter::PDFVersion::PDF_1_6: aBuffer.append( "1.6" );break;
     }
     // append something binary as comment (suggested in PDF Reference)
@@ -1612,6 +1640,14 @@ void PDFWriterImpl::newPage( double nPageWidth, double nPageHeight, PDFWriter::O
     endPage();
     m_nCurrentPage = m_aPages.size();
     m_aPages.emplace_back(this, nPageWidth, nPageHeight, eOrientation );
+
+    sal_Int32 nUserUnit = m_aPages.back().m_nUserUnit;
+    if (nUserUnit > 1)
+    {
+        m_aMapMode = MapMode(MapUnit::MapPoint, Point(), Fraction(nUserUnit, pointToPixel(1)),
+                             Fraction(nUserUnit, pointToPixel(1)));
+    }
+
     m_aPages.back().beginStream();
 
     // setup global graphics state
@@ -4409,6 +4445,7 @@ bool PDFWriterImpl::emitCatalog()
 
     sal_Int32 nMediaBoxWidth = 0;
     sal_Int32 nMediaBoxHeight = 0;
+    sal_Int32 nUserUnit = 1;
     if( m_aPages.empty() ) // sanity check, this should not happen
     {
         nMediaBoxWidth = g_nInheritedPageWidth;
@@ -4419,17 +4456,29 @@ bool PDFWriterImpl::emitCatalog()
         for (auto const& page : m_aPages)
         {
             if( page.m_nPageWidth > nMediaBoxWidth )
+            {
                 nMediaBoxWidth = page.m_nPageWidth;
+                nUserUnit = page.m_nUserUnit;
+            }
             if( page.m_nPageHeight > nMediaBoxHeight )
+            {
                 nMediaBoxHeight = page.m_nPageHeight;
+                nUserUnit = page.m_nUserUnit;
+            }
         }
     }
     aLine.append( "/MediaBox[ 0 0 " );
-    aLine.append( nMediaBoxWidth );
+    aLine.append(nMediaBoxWidth / nUserUnit);
     aLine.append( ' ' );
-    aLine.append( nMediaBoxHeight );
-    aLine.append( " ]\n"
-                  "/Kids[ " );
+    aLine.append(nMediaBoxHeight / nUserUnit);
+    aLine.append(" ]\n");
+    if (nUserUnit > 1)
+    {
+        aLine.append("/UserUnit ");
+        aLine.append(nUserUnit);
+        aLine.append("\n");
+    }
+    aLine.append("/Kids[ ");
     unsigned int i = 0;
     for (const auto & page : m_aPages)
     {
@@ -9978,7 +10027,8 @@ sal_Int32 PDFWriterImpl::createDest( const tools::Rectangle& rRect, sal_Int32 nP
 
 sal_Int32 PDFWriterImpl::registerDestReference( sal_Int32 nDestId, const tools::Rectangle& rRect, sal_Int32 nPageNr, PDFWriter::DestAreaType eType )
 {
-    return m_aDestinationIdTranslation[ nDestId ] = createDest( rRect, nPageNr, eType );
+    m_aDestinationIdTranslation[ nDestId ] = createDest( rRect, nPageNr, eType );
+    return m_aDestinationIdTranslation[ nDestId ];
 }
 
 void PDFWriterImpl::setLinkDest( sal_Int32 nLinkId, sal_Int32 nDestId )

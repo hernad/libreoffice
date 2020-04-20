@@ -932,19 +932,19 @@ void FormulaCompiler::InitSymbolsOOXML() const
 void FormulaCompiler::loadSymbols(const std::pair<const char*, int>* pSymbols, FormulaGrammar::Grammar eGrammar,
         NonConstOpCodeMapPtr& rxMap, SeparatorType eSepType) const
 {
-    if ( !rxMap.get() )
-    {
-        // not Core
-        rxMap = std::make_shared<OpCodeMap>( SC_OPCODE_LAST_OPCODE_ID + 1, eGrammar != FormulaGrammar::GRAM_ODFF, eGrammar );
-        OpCodeList aOpCodeList(false, pSymbols, rxMap, eSepType);
+    if ( rxMap.get() )
+        return;
 
-        fillFromAddInMap( rxMap, eGrammar);
-        // Fill from collection for AddIns not already present.
-        if ( FormulaGrammar::GRAM_ENGLISH != eGrammar )
-            fillFromAddInCollectionUpperName( rxMap);
-        else
-            fillFromAddInCollectionEnglishName( rxMap);
-    }
+    // not Core
+    rxMap = std::make_shared<OpCodeMap>( SC_OPCODE_LAST_OPCODE_ID + 1, eGrammar != FormulaGrammar::GRAM_ODFF, eGrammar );
+    OpCodeList aOpCodeList(false, pSymbols, rxMap, eSepType);
+
+    fillFromAddInMap( rxMap, eGrammar);
+    // Fill from collection for AddIns not already present.
+    if ( FormulaGrammar::GRAM_ENGLISH != eGrammar )
+        fillFromAddInCollectionUpperName( rxMap);
+    else
+        fillFromAddInCollectionEnglishName( rxMap);
 }
 
 void FormulaCompiler::fillFromAddInCollectionUpperName( const NonConstOpCodeMapPtr& /*xMap */) const
@@ -1396,17 +1396,19 @@ void FormulaCompiler::Factor()
             eOp = Expression();
             // Do not ignore error here, regardless of mbStopOnError, to not
             // change the formula expression in case of an unexpected state.
-            if (pArr->GetCodeError() == FormulaError::NONE)
+            if (pArr->GetCodeError() == FormulaError::NONE && pc >= 2)
             {
                 // Left and right operands must be reference or function
                 // returning reference to form a range list.
-                const FormulaToken* p;
-                if (pc >= 2
-                        && ((p = pCode[-2]) != nullptr) && isPotentialRangeType( p, true, false)
-                        && ((p = pCode[-1]) != nullptr) && isPotentialRangeType( p, true, true))
+                const FormulaToken* p = pCode[-2];
+                if (p && isPotentialRangeType( p, true, false))
                 {
-                    pFacToken->NewOpCode( ocUnion, FormulaToken::PrivateAccess());
-                    PutCode( pFacToken);
+                    p = pCode[-1];
+                    if (p && isPotentialRangeType( p, true, true))
+                    {
+                        pFacToken->NewOpCode( ocUnion, FormulaToken::PrivateAccess());
+                        PutCode( pFacToken);
+                    }
                 }
             }
         }
@@ -2142,26 +2144,26 @@ bool FormulaCompiler::CompileTokenArray()
 
 void FormulaCompiler::PopTokenArray()
 {
-    if( pStack )
-    {
-        FormulaArrayStack* p = pStack;
-        pStack = p->pNext;
-        // obtain special RecalcMode from SharedFormula
-        if ( pArr->IsRecalcModeAlways() )
-            p->pArr->SetExclusiveRecalcModeAlways();
-        else if ( !pArr->IsRecalcModeNormal() && p->pArr->IsRecalcModeNormal() )
-            p->pArr->SetMaskedRecalcMode( pArr->GetRecalcMode() );
-        p->pArr->SetCombinedBitsRecalcMode( pArr->GetRecalcMode() );
-        if ( pArr->IsHyperLink() )  // fdo 87534
-            p->pArr->SetHyperLink( true );
-        if( p->bTemp )
-            delete pArr;
-        pArr = p->pArr;
-        maArrIterator = FormulaTokenArrayPlainIterator(*pArr);
-        maArrIterator.Jump(p->nIndex);
-        mpLastToken = p->mpLastToken;
-        delete p;
-    }
+    if( !pStack )
+        return;
+
+    FormulaArrayStack* p = pStack;
+    pStack = p->pNext;
+    // obtain special RecalcMode from SharedFormula
+    if ( pArr->IsRecalcModeAlways() )
+        p->pArr->SetExclusiveRecalcModeAlways();
+    else if ( !pArr->IsRecalcModeNormal() && p->pArr->IsRecalcModeNormal() )
+        p->pArr->SetMaskedRecalcMode( pArr->GetRecalcMode() );
+    p->pArr->SetCombinedBitsRecalcMode( pArr->GetRecalcMode() );
+    if ( pArr->IsHyperLink() )  // fdo 87534
+        p->pArr->SetHyperLink( true );
+    if( p->bTemp )
+        delete pArr;
+    pArr = p->pArr;
+    maArrIterator = FormulaTokenArrayPlainIterator(*pArr);
+    maArrIterator.Jump(p->nIndex);
+    mpLastToken = p->mpLastToken;
+    delete p;
 }
 
 void FormulaCompiler::CreateStringFromTokenArray( OUString& rFormula )
@@ -2738,28 +2740,28 @@ void FormulaCompiler::ForceArrayOperator( FormulaTokenRef const & rCurr )
         return;
     }
 
-    if (nCurrentFactorParam > 0)
-    {
-        // Actual current parameter's class.
-        const formula::ParamClass eType = GetForceArrayParameter(
-                pCurrentFactorToken.get(), static_cast<sal_uInt16>(nCurrentFactorParam - 1));
-        if (eType == ParamClass::ForceArray)
-            rCurr->SetInForceArray( eType);
-        else if (eType == ParamClass::ReferenceOrForceArray)
-        {
-            if (GetForceArrayParameter( rCurr.get(), SAL_MAX_UINT16) != ParamClass::Reference)
-                rCurr->SetInForceArray( eType);
-            else
-                rCurr->SetInForceArray( formula::ParamClass::SuppressedReferenceOrForceArray);
-        }
+    if (nCurrentFactorParam <= 0)
+        return;
 
-        // Propagate a ForceArrayReturn to caller if the called function
-        // returns one and the caller so far does not have a stronger array
-        // mode set.
-        if (pCurrentFactorToken->GetInForceArray() == ParamClass::Unknown
-                && GetForceArrayParameter( rCurr.get(), SAL_MAX_UINT16) == ParamClass::ForceArrayReturn)
-            pCurrentFactorToken->SetInForceArray( ParamClass::ForceArrayReturn);
+    // Actual current parameter's class.
+    const formula::ParamClass eType = GetForceArrayParameter(
+            pCurrentFactorToken.get(), static_cast<sal_uInt16>(nCurrentFactorParam - 1));
+    if (eType == ParamClass::ForceArray)
+        rCurr->SetInForceArray( eType);
+    else if (eType == ParamClass::ReferenceOrForceArray)
+    {
+        if (GetForceArrayParameter( rCurr.get(), SAL_MAX_UINT16) != ParamClass::Reference)
+            rCurr->SetInForceArray( eType);
+        else
+            rCurr->SetInForceArray( formula::ParamClass::SuppressedReferenceOrForceArray);
     }
+
+    // Propagate a ForceArrayReturn to caller if the called function
+    // returns one and the caller so far does not have a stronger array
+    // mode set.
+    if (pCurrentFactorToken->GetInForceArray() == ParamClass::Unknown
+            && GetForceArrayParameter( rCurr.get(), SAL_MAX_UINT16) == ParamClass::ForceArrayReturn)
+        pCurrentFactorToken->SetInForceArray( ParamClass::ForceArrayReturn);
 }
 
 void FormulaCompiler::CheckSetForceArrayParameter( FormulaTokenRef const & rCurr, sal_uInt8 nParam )

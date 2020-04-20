@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <ostream>
 #include <config_options.h>
+#include <cassert>
 
 class SvStream;
 namespace rtl
@@ -195,6 +196,8 @@ public:
     long            getHeight() const { return Height(); }
     void            setWidth(long nWidth)  { nA = nWidth; }
     void            setHeight(long nHeight)  { nB = nHeight; }
+
+    bool            IsEmpty() const { return nA <= 0 || nB <= 0; }
 
     void extendBy(long x, long y)
     {
@@ -383,6 +386,8 @@ public:
     /// Constructs an empty Rectangle, with top/left at the specified params
                         Rectangle( long nLeft, long nTop );
                         Rectangle( const Point& rLT, const Size& rSize );
+
+    static Rectangle    Justify( const Point& rLT, const Point& rRB );
 
     long                Left() const    { return nLeft;   }
     long                Right() const;

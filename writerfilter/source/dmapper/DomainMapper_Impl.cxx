@@ -914,6 +914,12 @@ uno::Any DomainMapper_Impl::GetAnyProperty(PropertyIds eId, const PropertyMapPtr
     return GetPropertyFromParaStyleSheet(eId);
 }
 
+OUString DomainMapper_Impl::GetListStyleName(sal_Int32 nListId)
+{
+    auto const pList(GetListTable()->GetList( nListId ));
+    return pList ? pList->GetStyleName() : OUString();
+}
+
 ListsManager::Pointer const & DomainMapper_Impl::GetListTable()
 {
     if(!m_pListTable)
@@ -1378,7 +1384,7 @@ void DomainMapper_Impl::finishParagraph( const PropertyMapPtr& pPropertyMap, con
         auto const pList(GetListTable()->GetList(nListId));
         if (pList && nListId >= 0 && !pParaContext->isSet(PROP_NUMBERING_STYLE_NAME))
         {
-            pParaContext->Insert( PROP_NUMBERING_STYLE_NAME, uno::makeAny( pList->GetStyleName(nListId) ), false);
+            pParaContext->Insert( PROP_NUMBERING_STYLE_NAME, uno::makeAny( pList->GetStyleName() ), false);
             isNumberingViaStyle = true;
 
             // Indent properties from the paragraph style have priority
@@ -1389,11 +1395,15 @@ void DomainMapper_Impl::finishParagraph( const PropertyMapPtr& pPropertyMap, con
             const StyleSheetEntryPtr pParent = (!pEntry->sBaseStyleIdentifier.isEmpty()) ? GetStyleSheetTable()->FindStyleSheetByISTD(pEntry->sBaseStyleIdentifier) : nullptr;
             const StyleSheetPropertyMap* pParentProperties = dynamic_cast<const StyleSheetPropertyMap*>(pParent ? pParent->pProperties.get() : nullptr);
             if (!pEntry->sBaseStyleIdentifier.isEmpty())
-                if ( (oProperty = pStyleSheetProperties->getProperty(PROP_PARA_FIRST_LINE_INDENT))
+            {
+                oProperty = pStyleSheetProperties->getProperty(PROP_PARA_FIRST_LINE_INDENT);
+                if ( oProperty
                     // If the numbering comes from a base style, indent of the base style has also priority.
                     || (bNumberingFromBaseStyle && pParentProperties && (oProperty = pParentProperties->getProperty(PROP_PARA_FIRST_LINE_INDENT))) )
                     pParaContext->Insert(PROP_PARA_FIRST_LINE_INDENT, oProperty->second, /*bOverwrite=*/false);
-            if ( (oProperty = pStyleSheetProperties->getProperty(PROP_PARA_LEFT_MARGIN))
+            }
+            oProperty = pStyleSheetProperties->getProperty(PROP_PARA_LEFT_MARGIN);
+            if ( oProperty
                 || (bNumberingFromBaseStyle && pParentProperties && (oProperty = pParentProperties->getProperty(PROP_PARA_LEFT_MARGIN))) )
                 pParaContext->Insert(PROP_PARA_LEFT_MARGIN, oProperty->second, /*bOverwrite=*/false);
 
@@ -3062,7 +3072,14 @@ static sal_Int16 lcl_ParseNumberingType( const OUString& rCommand )
     sal_Int16 nRet = style::NumberingType::PAGE_DESCRIPTOR;
 
     //  The command looks like: " PAGE \* Arabic "
-    OUString sNumber = msfilter::util::findQuotedText(rCommand, "\\* ", ' ');
+    // tdf#132185: but may as well be "PAGE \* Arabic"
+    OUString sNumber;
+    constexpr OUStringLiteral rSeparator("\\* ");
+    if (sal_Int32 nStartIndex = rCommand.indexOf(rSeparator); nStartIndex >= 0)
+    {
+        nStartIndex += rSeparator.getLength();
+        sNumber = rCommand.getToken(0, ' ', nStartIndex);
+    }
 
     if( !sNumber.isEmpty() )
     {
@@ -4009,7 +4026,15 @@ void  DomainMapper_Impl::handleRubyEQField( const FieldContextPtr& pContext)
     }
 
     nIndex = rCommand.indexOf("\\o");
-    if (nIndex == -1 || (nIndex = rCommand.indexOf('(', nIndex)) == -1 || (nEnd = rCommand.lastIndexOf(')'))==-1 || nEnd <= nIndex)
+    if (nIndex == -1)
+        return;
+    nIndex = rCommand.indexOf('(', nIndex);
+    if (nIndex == -1)
+        return;
+    nEnd = rCommand.lastIndexOf(')');
+    if (nEnd == -1)
+        return;
+    if (nEnd <= nIndex)
         return;
 
     OUString sRubyParts = rCommand.copy(nIndex+1,nEnd-nIndex-1);
@@ -6439,10 +6464,19 @@ void DomainMapper_Impl::ExecuteFrameConversion()
                 uno::Reference< text::XTextRange > xRange;
                 aFramedRedlines[i] >>= xRange;
                 uno::Reference<text::XTextCursor> xRangeCursor = GetTopTextAppend()->createTextCursorByRange( xRange );
-                sal_Int32 nLen = xRange->getString().getLength();
-                redLen.push_back(nLen);
-                xRangeCursor->gotoRange(m_xFrameStartRange, true);
-                redPos.push_back(xRangeCursor->getString().getLength() - nLen);
+                if (xRangeCursor.is())
+                {
+                    sal_Int32 nLen = xRange->getString().getLength();
+                    redLen.push_back(nLen);
+                    xRangeCursor->gotoRange(m_xFrameStartRange, true);
+                    redPos.push_back(xRangeCursor->getString().getLength() - nLen);
+                }
+                else
+                {
+                    // failed createTextCursorByRange(), for example, table inside the frame
+                    redLen.push_back(-1);
+                    redPos.push_back(-1);
+                }
             }
 
             const uno::Reference< text::XTextContent >& xTextContent = xTextAppendAndConvert->convertToTextFrame(
@@ -6455,6 +6489,9 @@ void DomainMapper_Impl::ExecuteFrameConversion()
             {
                 OUString sType;
                 beans::PropertyValues aRedlineProperties( 3 );
+                // skip failed createTextCursorByRange()
+                if (redPos[i/3] == -1)
+                    continue;
                 aFramedRedlines[i+1] >>= sType;
                 aFramedRedlines[i+2] >>= aRedlineProperties;
                 uno::Reference< text::XTextFrame > xFrame( xTextContent, uno::UNO_QUERY_THROW );
@@ -6512,10 +6549,8 @@ void DomainMapper_Impl::SetCurrentRedlineIsRead()
 
 sal_Int32 DomainMapper_Impl::GetCurrentRedlineToken(  ) const
 {
-    sal_Int32 nToken = 0;
-    assert( m_currentRedline.get());
-    nToken = m_currentRedline->m_nToken;
-    return nToken;
+    assert(m_currentRedline.get());
+    return m_currentRedline->m_nToken;
 }
 
 void DomainMapper_Impl::SetCurrentRedlineAuthor( const OUString& sAuthor )
@@ -6567,13 +6602,13 @@ void DomainMapper_Impl::SetCurrentRedlineId( sal_Int32 sId )
 
 void DomainMapper_Impl::SetCurrentRedlineToken( sal_Int32 nToken )
 {
-    assert( m_currentRedline.get());
+    assert(m_currentRedline.get());
     m_currentRedline->m_nToken = nToken;
 }
 
 void DomainMapper_Impl::SetCurrentRedlineRevertProperties( const uno::Sequence<beans::PropertyValue>& aProperties )
 {
-    assert( m_currentRedline.get());
+    assert(m_currentRedline.get());
     m_currentRedline->m_aRevertProperties = aProperties;
 }
 
@@ -6638,6 +6673,10 @@ void DomainMapper_Impl::ApplySettingsTable()
             if( m_pSettingsTable->GetEmbedSystemFonts())
                 xSettings->setPropertyValue( getPropertyName( PROP_EMBED_SYSTEM_FONTS ), uno::makeAny(true) );
             xSettings->setPropertyValue("AddParaTableSpacing", uno::makeAny(m_pSettingsTable->GetDoNotUseHTMLParagraphAutoSpacing()));
+            if (m_pSettingsTable->GetNoLeading())
+            {
+                xSettings->setPropertyValue("AddExternalLeading", uno::makeAny(!m_pSettingsTable->GetNoLeading()));
+            }
             if( m_pSettingsTable->GetProtectForm() )
                 xSettings->setPropertyValue("ProtectForm", uno::makeAny( true ));
             if( m_pSettingsTable->GetReadOnly() )
@@ -6674,7 +6713,7 @@ uno::Reference<container::XIndexAccess> DomainMapper_Impl::GetCurrentNumberingRu
         OUString aListName;
         if (pList)
         {
-            aListName = pList->GetStyleName(nListId);
+            aListName = pList->GetStyleName();
         }
         uno::Reference< style::XStyleFamiliesSupplier > xStylesSupplier(GetTextDocument(), uno::UNO_QUERY_THROW);
         uno::Reference< container::XNameAccess > xStyleFamilies = xStylesSupplier->getStyleFamilies();
@@ -6795,7 +6834,7 @@ sal_Int32 DomainMapper_Impl::getNumberingProperty(const sal_Int32 nListId, sal_I
 
         auto const pList(GetListTable()->GetList(nListId));
         assert(pList);
-        const OUString aListName = pList->GetStyleName(nListId);
+        const OUString aListName = pList->GetStyleName();
         const uno::Reference< style::XStyleFamiliesSupplier > xStylesSupplier(GetTextDocument(), uno::UNO_QUERY_THROW);
         const uno::Reference< container::XNameAccess > xStyleFamilies = xStylesSupplier->getStyleFamilies();
         uno::Reference<container::XNameAccess> xNumberingStyles;

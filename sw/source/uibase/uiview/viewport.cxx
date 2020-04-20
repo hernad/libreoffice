@@ -225,7 +225,7 @@ void SwView::SetVisArea( const tools::Rectangle &rRect, bool bUpdateScrollbar )
         return;
 
     const Size aSize( aLR.GetSize() );
-    if( aSize.Width() < 0 || aSize.Height() < 0 )
+    if( aSize.IsEmpty() )
         return;
 
     // Before the data can be changed, call an update if necessary. This
@@ -235,7 +235,7 @@ void SwView::SetVisArea( const tools::Rectangle &rRect, bool bUpdateScrollbar )
     // shell, because then it is not really drawn but the rectangles will
     // be only marked (in document coordinates).
     if ( m_pWrtShell && m_pWrtShell->ActionPend() )
-        m_pWrtShell->GetWin()->Update();
+        m_pWrtShell->GetWin()->PaintImmediately();
 
     m_aVisArea = aLR;
 
@@ -942,7 +942,7 @@ void SwView::ShowAtResize()
 void SwView::InnerResizePixel( const Point &rOfst, const Size &rSize, bool )
 {
     Size aObjSize = GetObjectShell()->GetVisArea().GetSize();
-    if ( aObjSize.Width() > 0 && aObjSize.Height() > 0 )
+    if ( !aObjSize.IsEmpty() )
     {
         SvBorder aBorder( GetBorderPixel() );
         Size aSize( rSize );
@@ -1089,8 +1089,7 @@ void SwView::OuterResizePixel( const Point &rOfst, const Size &rSize )
         m_pWrtShell->ResetCursorStack();
 
         OSL_ENSURE( !GetEditWin().IsVisible() ||
-                    (( aEditSz.Width() > 0 && aEditSz.Height() > 0 )
-                        || !m_aVisArea.IsEmpty()), "Small world, isn't it?" );
+                    !aEditSz.IsEmpty() || !m_aVisArea.IsEmpty(), "Small world, isn't it?" );
 
         // Never set EditWin!
 

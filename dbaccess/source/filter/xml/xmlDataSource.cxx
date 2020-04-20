@@ -150,7 +150,7 @@ OXMLDataSource::OXMLDataSource( ODBFilter& rImport,
                     aProperty.Name = "JavaDriverClassPath";
                     break;
                 default:
-                    SAL_WARN("dbaccess", "unknown attribute " << SvXMLImport::getNameFromToken(aIter.getToken()) << " value=" << aIter.toString());
+                    SAL_WARN("dbaccess", "unknown attribute " << SvXMLImport::getPrefixAndNameFromToken(aIter.getToken()) << "=" << aIter.toString());
             }
             if ( !aProperty.Name.isEmpty() )
             {
@@ -160,36 +160,36 @@ OXMLDataSource::OXMLDataSource( ODBFilter& rImport,
             }
         }
     }
-    if ( rImport.isNewFormat() )
+    if ( !rImport.isNewFormat() )
+        return;
+
+    if ( !bFoundTableNameLengthLimited && ( _eUsedFor == eAppSettings ) )
     {
-        if ( !bFoundTableNameLengthLimited && ( _eUsedFor == eAppSettings ) )
+        aProperty.Name = INFO_ALLOWLONGTABLENAMES;
+        aProperty.Value <<= true;
+        rImport.addInfo(aProperty);
+    }
+    if ( !bFoundParamNameSubstitution && ( _eUsedFor == eDriverSettings ) )
+    {
+        aProperty.Name = INFO_PARAMETERNAMESUBST;
+        aProperty.Value <<= true;
+        rImport.addInfo(aProperty);
+    }
+    if ( !bFoundAppendTableAliasName && ( _eUsedFor == eAppSettings ) )
+    {
+        aProperty.Name = INFO_APPEND_TABLE_ALIAS;
+        aProperty.Value <<= true;
+        rImport.addInfo(aProperty);
+    }
+    if ( !bFoundSuppressVersionColumns && ( _eUsedFor == eAppSettings ) )
+    {
+        try
         {
-            aProperty.Name = INFO_ALLOWLONGTABLENAMES;
-            aProperty.Value <<= true;
-            rImport.addInfo(aProperty);
+            xDataSource->setPropertyValue(PROPERTY_SUPPRESSVERSIONCL,makeAny(true));
         }
-        if ( !bFoundParamNameSubstitution && ( _eUsedFor == eDriverSettings ) )
+        catch(const Exception&)
         {
-            aProperty.Name = INFO_PARAMETERNAMESUBST;
-            aProperty.Value <<= true;
-            rImport.addInfo(aProperty);
-        }
-        if ( !bFoundAppendTableAliasName && ( _eUsedFor == eAppSettings ) )
-        {
-            aProperty.Name = INFO_APPEND_TABLE_ALIAS;
-            aProperty.Value <<= true;
-            rImport.addInfo(aProperty);
-        }
-        if ( !bFoundSuppressVersionColumns && ( _eUsedFor == eAppSettings ) )
-        {
-            try
-            {
-                xDataSource->setPropertyValue(PROPERTY_SUPPRESSVERSIONCL,makeAny(true));
-            }
-            catch(const Exception&)
-            {
-                DBG_UNHANDLED_EXCEPTION("dbaccess");
-            }
+            DBG_UNHANDLED_EXCEPTION("dbaccess");
         }
     }
 }

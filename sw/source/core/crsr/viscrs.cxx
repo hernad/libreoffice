@@ -230,7 +230,7 @@ void SwVisibleCursor::SetPosAndShow(SfxViewShell const * pViewShell)
 
         // is cursor at a misspelled word ?
         bool bIsWrong = false;
-        if (pView)
+        if (pView && pView->GetWrtShellPtr())
         {
             const SwViewOption* pVOpt = pView->GetWrtShell().GetViewOptions();
             if(pVOpt && pVOpt->IsOnlineSpell())
@@ -579,9 +579,9 @@ void SwSelPaintRects::Invalidate( const SwRect& rRect )
         {
             SwRect& rRectIt = *it;
             if( rRectIt.Right() == GetShell()->m_aOldRBPos.X() )
-                rRectIt.Right( rRectIt.Right() + s_nPixPtX );
+                rRectIt.AddRight( s_nPixPtX );
             if( rRectIt.Bottom() == GetShell()->m_aOldRBPos.Y() )
-                rRectIt.Bottom( rRectIt.Bottom() + s_nPixPtY );
+                rRectIt.AddBottom( s_nPixPtY );
         }
     }
 }

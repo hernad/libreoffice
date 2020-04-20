@@ -23,7 +23,6 @@
 #include <osl/mutex.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/threadpool.hxx>
-#include <ucbhelper/content.hxx>
 #include <cppuhelper/implbase.hxx>
 #include <tools/fract.hxx>
 #include <unotools/configmgr.hxx>
@@ -57,8 +56,6 @@
 #include <com/sun/star/svg/XSVGWriter.hpp>
 #include <com/sun/star/xml/sax/XDocumentHandler.hpp>
 #include <com/sun/star/xml/sax/Writer.hpp>
-#include <com/sun/star/ucb/CommandAbortedException.hpp>
-#include <com/sun/star/ucb/ContentCreationException.hpp>
 #include <unotools/ucbstreamhelper.hxx>
 #include <rtl/bootstrap.hxx>
 #include <rtl/instance.hxx>
@@ -1576,7 +1573,7 @@ ErrCode GraphicFilter::ImportGraphic( Graphic& rGraphic, const OUString& rPath, 
 
                         if(!aMemStream.GetError() )
                         {
-                            VectorGraphicDataPtr aVectorGraphicDataPtr = std::make_shared<VectorGraphicData>(aNewData, rPath, VectorGraphicDataType::Svg);
+                            auto aVectorGraphicDataPtr = std::make_shared<VectorGraphicData>(aNewData, rPath, VectorGraphicDataType::Svg);
                             rGraphic = Graphic(aVectorGraphicDataPtr);
                             bOkay = true;
                         }
@@ -1589,7 +1586,7 @@ ErrCode GraphicFilter::ImportGraphic( Graphic& rGraphic, const OUString& rPath, 
 
                     if(!rIStream.GetError())
                     {
-                        VectorGraphicDataPtr aVectorGraphicDataPtr = std::make_shared<VectorGraphicData>(aNewData, rPath, VectorGraphicDataType::Svg);
+                        auto aVectorGraphicDataPtr = std::make_shared<VectorGraphicData>(aNewData, rPath, VectorGraphicDataType::Svg);
                         rGraphic = Graphic(aVectorGraphicDataPtr);
                         bOkay = true;
                     }
@@ -1659,7 +1656,7 @@ ErrCode GraphicFilter::ImportGraphic( Graphic& rGraphic, const OUString& rPath, 
             {
                 const bool bIsWmf(aFilterName.equalsIgnoreAsciiCase(IMP_WMF));
                 const VectorGraphicDataType aDataType(bIsWmf ? VectorGraphicDataType::Wmf : VectorGraphicDataType::Emf);
-                VectorGraphicDataPtr aVectorGraphicDataPtr =
+                auto aVectorGraphicDataPtr =
                     std::make_shared<VectorGraphicData>(
                         aNewData,
                         rPath,
@@ -1927,13 +1924,13 @@ ErrCode GraphicFilter::ExportGraphic( const Graphic& rGraphic, const OUString& r
                 bool bDone(false);
 
                 // do we have a native Vector Graphic Data RenderGraphic, whose data can be written directly?
-                const VectorGraphicDataPtr& aVectorGraphicDataPtr(rGraphic.getVectorGraphicData());
+                auto const & rVectorGraphicDataPtr(rGraphic.getVectorGraphicData());
 
-                if (aVectorGraphicDataPtr.get()
-                    && aVectorGraphicDataPtr->getVectorGraphicDataArrayLength()
-                    && VectorGraphicDataType::Wmf == aVectorGraphicDataPtr->getVectorGraphicDataType())
+                if (rVectorGraphicDataPtr
+                    && rVectorGraphicDataPtr->getVectorGraphicDataArrayLength()
+                    && VectorGraphicDataType::Wmf == rVectorGraphicDataPtr->getVectorGraphicDataType())
                 {
-                    rOStm.WriteBytes(aVectorGraphicDataPtr->getVectorGraphicDataArray().getConstArray(), aVectorGraphicDataPtr->getVectorGraphicDataArrayLength());
+                    rOStm.WriteBytes(rVectorGraphicDataPtr->getVectorGraphicDataArray().getConstArray(), rVectorGraphicDataPtr->getVectorGraphicDataArrayLength());
 
                     if (rOStm.GetError())
                     {
@@ -1960,13 +1957,13 @@ ErrCode GraphicFilter::ExportGraphic( const Graphic& rGraphic, const OUString& r
                 bool bDone(false);
 
                 // do we have a native Vector Graphic Data RenderGraphic, whose data can be written directly?
-                const VectorGraphicDataPtr& aVectorGraphicDataPtr(rGraphic.getVectorGraphicData());
+                auto const & rVectorGraphicDataPtr(rGraphic.getVectorGraphicData());
 
-                if (aVectorGraphicDataPtr.get()
-                    && aVectorGraphicDataPtr->getVectorGraphicDataArrayLength()
-                    && VectorGraphicDataType::Emf == aVectorGraphicDataPtr->getVectorGraphicDataType())
+                if (rVectorGraphicDataPtr
+                    && rVectorGraphicDataPtr->getVectorGraphicDataArrayLength()
+                    && VectorGraphicDataType::Emf == rVectorGraphicDataPtr->getVectorGraphicDataType())
                 {
-                    rOStm.WriteBytes(aVectorGraphicDataPtr->getVectorGraphicDataArray().getConstArray(), aVectorGraphicDataPtr->getVectorGraphicDataArrayLength());
+                    rOStm.WriteBytes(rVectorGraphicDataPtr->getVectorGraphicDataArray().getConstArray(), rVectorGraphicDataPtr->getVectorGraphicDataArrayLength());
 
                     if (rOStm.GetError())
                     {
@@ -2054,13 +2051,13 @@ ErrCode GraphicFilter::ExportGraphic( const Graphic& rGraphic, const OUString& r
                 bool bDone(false);
 
                 // do we have a native Vector Graphic Data RenderGraphic, whose data can be written directly?
-                const VectorGraphicDataPtr& aVectorGraphicDataPtr(rGraphic.getVectorGraphicData());
+                auto const & rVectorGraphicDataPtr(rGraphic.getVectorGraphicData());
 
-                if (aVectorGraphicDataPtr.get()
-                    && aVectorGraphicDataPtr->getVectorGraphicDataArrayLength()
-                    && VectorGraphicDataType::Svg == aVectorGraphicDataPtr->getVectorGraphicDataType())
+                if (rVectorGraphicDataPtr
+                    && rVectorGraphicDataPtr->getVectorGraphicDataArrayLength()
+                    && VectorGraphicDataType::Svg == rVectorGraphicDataPtr->getVectorGraphicDataType())
                 {
-                    rOStm.WriteBytes(aVectorGraphicDataPtr->getVectorGraphicDataArray().getConstArray(), aVectorGraphicDataPtr->getVectorGraphicDataArrayLength());
+                    rOStm.WriteBytes(rVectorGraphicDataPtr->getVectorGraphicDataArray().getConstArray(), rVectorGraphicDataPtr->getVectorGraphicDataArrayLength());
 
                     if( rOStm.GetError() )
                     {

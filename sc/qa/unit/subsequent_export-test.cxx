@@ -194,7 +194,9 @@ public:
     void testPreserveTextWhitespaceXLSX();
     void testPreserveTextWhitespace2XLSX();
     void testTextDirectionXLSX();
+    void testTdf55417();
     void testTdf129985();
+    void testTdf73063();
 
     void testRefStringXLSX();
     void testRefStringConfigXLSX();
@@ -202,6 +204,8 @@ public:
     void testHeaderImageODS();
 
     void testTdf88657ODS();
+    void testTdf41722();
+    void testTdf113621();
     void testEscapeCharInNumberFormatXLSX();
     void testNatNumInNumberFormatXLSX();
     void testExponentWithoutSignFormatXLSX();
@@ -212,8 +216,10 @@ public:
     void testOpenDocumentAsReadOnly();
     void testKeepSettingsOfBlankRows();
 
+    void testTdf105272();
     void testTdf118990();
     void testTdf121612();
+    void testTdf112936();
     void testPivotCacheAfterExportXLSX();
     void testTdf114969XLSX();
     void testTdf115192XLSX();
@@ -330,7 +336,9 @@ public:
     CPPUNIT_TEST(testMoveCellAnchoredShapesODS);
     CPPUNIT_TEST(testMatrixMultiplicationXLSX);
     CPPUNIT_TEST(testTextDirectionXLSX);
+    CPPUNIT_TEST(testTdf55417);
     CPPUNIT_TEST(testTdf129985);
+    CPPUNIT_TEST(testTdf73063);
 
     CPPUNIT_TEST(testRefStringXLSX);
     CPPUNIT_TEST(testRefStringConfigXLSX);
@@ -338,6 +346,8 @@ public:
     CPPUNIT_TEST(testHeaderImageODS);
 
     CPPUNIT_TEST(testTdf88657ODS);
+    CPPUNIT_TEST(testTdf41722);
+    CPPUNIT_TEST(testTdf113621);
     CPPUNIT_TEST(testEscapeCharInNumberFormatXLSX);
     CPPUNIT_TEST(testNatNumInNumberFormatXLSX);
     CPPUNIT_TEST(testExponentWithoutSignFormatXLSX);
@@ -348,8 +358,10 @@ public:
     CPPUNIT_TEST(testOpenDocumentAsReadOnly);
     CPPUNIT_TEST(testKeepSettingsOfBlankRows);
 
+    CPPUNIT_TEST(testTdf105272);
     CPPUNIT_TEST(testTdf118990);
     CPPUNIT_TEST(testTdf121612);
+    CPPUNIT_TEST(testTdf112936);
     CPPUNIT_TEST(testPivotCacheAfterExportXLSX);
     CPPUNIT_TEST(testTdf114969XLSX);
     CPPUNIT_TEST(testTdf115192XLSX);
@@ -4008,6 +4020,19 @@ void ScExportTest::testTextDirectionXLSX()
     xDocSh->DoClose();
 }
 
+void ScExportTest::testTdf55417()
+{
+    ScDocShellRef xDocSh = loadDoc("tdf55417.", FORMAT_XLSX);
+    CPPUNIT_ASSERT(xDocSh.is());
+
+    xmlDocPtr pDoc = XPathHelper::parseExport2(*this, *xDocSh, m_xSFactory, "xl/styles.xml", FORMAT_XLSX);
+    CPPUNIT_ASSERT(pDoc);
+    assertXPath(pDoc, "/x:styleSheet/x:cellXfs/x:xf[1]/x:alignment", 1);
+    assertXPath(pDoc, "/x:styleSheet/x:cellXfs/x:xf[2]/x:alignment", 1);
+
+    xDocSh->DoClose();
+}
+
 void ScExportTest::testTdf129985()
 {
     ScDocShellRef xDocSh = loadDoc("tdf129985.", FORMAT_XLSX);
@@ -4017,6 +4042,19 @@ void ScExportTest::testTdf129985()
     CPPUNIT_ASSERT(pDoc);
 
     assertXPath(pDoc, "/x:styleSheet/x:numFmts/x:numFmt[2]", "formatCode", "m/d/yyyy");
+
+    xDocSh->DoClose();
+}
+
+void ScExportTest::testTdf73063()
+{
+    ScDocShellRef xDocSh = loadDoc("tdf73063.", FORMAT_XLSX);
+    CPPUNIT_ASSERT(xDocSh.is());
+
+    xmlDocPtr pDoc = XPathHelper::parseExport2(*this, *xDocSh, m_xSFactory, "xl/styles.xml", FORMAT_XLSX);
+    CPPUNIT_ASSERT(pDoc);
+
+    assertXPath(pDoc, "/x:styleSheet/x:numFmts/x:numFmt[2]", "formatCode", "[$-1C1A]dddd\", \"d\". \"mmmm\\ yyyy;@");
 
     xDocSh->DoClose();
 }
@@ -4117,6 +4155,34 @@ void ScExportTest::testConditionalFormatOriginXLSX()
     // tdf#124953 : The range-list is B3:C6 F1:G2, origin address in the formula should be B1, not B3.
     OUString aFormula = getXPathContent(pDoc, "//x:conditionalFormatting/x:cfRule/x:formula");
     CPPUNIT_ASSERT_EQUAL_MESSAGE("Wrong origin address in formula", OUString("NOT(ISERROR(SEARCH(\"BAC\",B1)))"), aFormula);
+
+    xDocSh->DoClose();
+}
+
+void ScExportTest::testTdf41722()
+{
+    ScDocShellRef xDocSh = loadDoc("tdf41722.", FORMAT_XLSX);
+    CPPUNIT_ASSERT(xDocSh.is());
+
+    xmlDocPtr pDoc = XPathHelper::parseExport2(*this, *xDocSh, m_xSFactory, "xl/worksheets/sheet1.xml", FORMAT_XLSX);
+    CPPUNIT_ASSERT(pDoc);
+
+    assertXPath(pDoc, "//x:conditionalFormatting/x:cfRule[1]", "operator", "containsText");
+    assertXPath(pDoc, "//x:conditionalFormatting/x:cfRule[2]", "operator", "containsText");
+    assertXPath(pDoc, "//x:conditionalFormatting/x:cfRule[3]", "operator", "containsText");
+
+    xDocSh->DoClose();
+}
+
+void ScExportTest::testTdf113621()
+{
+    ScDocShellRef xDocSh = loadDoc("tdf113621.", FORMAT_XLSX);
+    CPPUNIT_ASSERT(xDocSh.is());
+
+    xmlDocPtr pDoc = XPathHelper::parseExport2(*this, *xDocSh, m_xSFactory, "xl/worksheets/sheet1.xml", FORMAT_XLSX);
+    CPPUNIT_ASSERT(pDoc);
+
+    assertXPath(pDoc, "//x:conditionalFormatting", "sqref", "A1:A1048576");
 
     xDocSh->DoClose();
 }
@@ -4297,6 +4363,21 @@ void ScExportTest::testKeepSettingsOfBlankRows()
     xDocSh->DoClose();
 }
 
+void ScExportTest::testTdf105272()
+{
+    ScDocShellRef xDocSh = loadDoc("tdf105272.", FORMAT_XLSX);
+    CPPUNIT_ASSERT(xDocSh.is());
+    xDocSh = saveAndReload(xDocSh.get(), FORMAT_XLSX);
+    ScDocument& rDoc = xDocSh->GetDocument();
+    //without the fix in place,it would fail
+    //Expected: Table1[[#This Row],[Total]]/Table1[[#This Row],['# Athletes]]
+    //Actual  : table1[[#this row],[total]]/table1[[#this row],['# athletes]]
+
+    ASSERT_FORMULA_EQUAL(rDoc, ScAddress(7, 3, 0),
+                         "Table1[[#This Row],[Total]]/Table1[[#This Row],['# Athletes]]",
+                         "Wrong formula");
+}
+
 void ScExportTest::testTdf118990()
 {
     ScDocShellRef xDocSh = loadDoc("tdf118990.", FORMAT_XLSX);
@@ -4335,6 +4416,20 @@ void ScExportTest::testTdf121612()
     ScDPCollection* pDPColl = rDoc.GetDPCollection();
     CPPUNIT_ASSERT(pDPColl);
     CPPUNIT_ASSERT_EQUAL(size_t(1), pDPColl->GetCount());
+
+    xDocSh->DoClose();
+}
+
+void ScExportTest::testTdf112936()
+{
+    ScDocShellRef xDocSh = loadDoc("tdf112936.", FORMAT_XLSX);
+    CPPUNIT_ASSERT(xDocSh.is());
+
+    xmlDocPtr pDoc = XPathHelper::parseExport2(*this, *xDocSh, m_xSFactory, "xl/pivotCache/pivotCacheDefinition1.xml", FORMAT_XLSX);
+    CPPUNIT_ASSERT(pDoc);
+
+    assertXPath(pDoc, "//x:pivotCacheDefinition", "recordCount", "4");
+    assertXPath(pDoc, "//x:pivotCacheDefinition", "createdVersion", "3");
 
     xDocSh->DoClose();
 }

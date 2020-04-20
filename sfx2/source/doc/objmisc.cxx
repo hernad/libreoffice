@@ -1058,12 +1058,6 @@ void SfxObjectShell::InitOwnModel_Impl()
 
 void SfxObjectShell::FinishedLoading( SfxLoadedFlags nFlags )
 {
-    std::shared_ptr<const SfxFilter> pFlt = pMedium->GetFilter();
-    if( pFlt )
-    {
-        SetFormatSpecificCompatibilityOptions( pFlt->GetTypeName() );
-    }
-
     bool bSetModifiedTRUE = false;
     const SfxStringItem* pSalvageItem = SfxItemSet::GetItem<SfxStringItem>(pMedium->GetItemSet(), SID_DOC_SALVAGE, false);
     if( ( nFlags & SfxLoadedFlags::MAINDOCUMENT ) && !(pImpl->nLoadedFlags & SfxLoadedFlags::MAINDOCUMENT )
@@ -1878,6 +1872,42 @@ bool SfxObjectShell::isEditDocLocked()
         return true;
     comphelper::NamedValueCollection aArgs(xModel->getArgs());
     return aArgs.getOrDefault("LockEditDoc", false);
+}
+
+bool SfxObjectShell::isContentExtractionLocked()
+{
+    Reference<XModel> xModel = GetModel();
+    if (!xModel.is())
+        return false;
+    comphelper::NamedValueCollection aArgs(xModel->getArgs());
+    return aArgs.getOrDefault("LockContentExtraction", false);
+}
+
+bool SfxObjectShell::isExportLocked()
+{
+    Reference<XModel> xModel = GetModel();
+    if (!xModel.is())
+        return false;
+    comphelper::NamedValueCollection aArgs(xModel->getArgs());
+    return aArgs.getOrDefault("LockExport", false);
+}
+
+bool SfxObjectShell::isPrintLocked()
+{
+    Reference<XModel> xModel = GetModel();
+    if (!xModel.is())
+        return false;
+    comphelper::NamedValueCollection aArgs(xModel->getArgs());
+    return aArgs.getOrDefault("LockPrint", false);
+}
+
+bool SfxObjectShell::isSaveLocked()
+{
+    Reference<XModel> xModel = GetModel();
+    if (!xModel.is())
+        return false;
+    comphelper::NamedValueCollection aArgs(xModel->getArgs());
+    return aArgs.getOrDefault("LockSave", false);
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
