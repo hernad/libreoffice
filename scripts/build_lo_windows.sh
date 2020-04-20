@@ -1,10 +1,10 @@
 #!/bin/bash
 
 #32bit
-#BUILD_ARCH=x86 ENVARS_ONLY=0 MAKE_ONLY=0 PARALLELISM=12 scripts/build_lo.sh
+#BUILD_ARCH=x86 ENVARS_ONLY=0 MAKE_ONLY=0 PARALLELISM=12 scripts/build_lo_windows.sh
 
 #64bit
-#BUILD_ARCH=x64 ENVARS_ONLY=0 MAKE_ONLY=0 PARALLELISM=12 scripts/build_lo.sh
+#BUILD_ARCH=x64 ENVARS_ONLY=0 MAKE_ONLY=0 PARALLELISM=12 scripts/build_lo_windows.sh
 
 
 # The __imp__ prefix appears whenever you are linking to a DLL. 
