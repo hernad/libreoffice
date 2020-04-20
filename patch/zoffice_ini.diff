@@ -1,0 +1,57 @@
+diff --git a/instsetoo_native/CustomTarget_setup.mk b/instsetoo_native/CustomTarget_setup.mk
+index d9f0d6d51ac4..182ea5d6d869 100644
+--- a/instsetoo_native/CustomTarget_setup.mk
++++ b/instsetoo_native/CustomTarget_setup.mk
+@@ -16,7 +16,7 @@ $(eval $(call gb_CustomTarget_register_targets,instsetoo_native/setup,\
+ 	$(if $(filter DESKTOP,$(BUILD_TYPE)),$(if $(filter-out MACOSX,$(OS)), \
+ 	    $(call gb_Helper_get_rcfile,redirect))) \
+ 	$(call gb_Helper_get_rcfile,setup) \
+-	$(call gb_Helper_get_rcfile,soffice) \
++	$(call gb_Helper_get_rcfile,zoffice) \
+ 	$(call gb_Helper_get_rcfile,uno) \
+ 	$(call gb_Helper_get_rcfile,version) \
+ 	$(call gb_Helper_get_rcfile,crashreport) \
+@@ -27,7 +27,7 @@ $(call gb_CustomTarget_get_workdir,instsetoo_native/setup)/$(call gb_Helper_get_
+ $(call gb_CustomTarget_get_workdir,instsetoo_native/setup)/$(call gb_Helper_get_rcfile,louno) \
+ $(call gb_CustomTarget_get_workdir,instsetoo_native/setup)/$(call gb_Helper_get_rcfile,redirect) \
+ $(call gb_CustomTarget_get_workdir,instsetoo_native/setup)/$(call gb_Helper_get_rcfile,setup) \
+-$(call gb_CustomTarget_get_workdir,instsetoo_native/setup)/$(call gb_Helper_get_rcfile,soffice) \
++$(call gb_CustomTarget_get_workdir,instsetoo_native/setup)/$(call gb_Helper_get_rcfile,zoffice) \
+ $(call gb_CustomTarget_get_workdir,instsetoo_native/setup)/$(call gb_Helper_get_rcfile,uno) \
+ $(call gb_CustomTarget_get_workdir,instsetoo_native/setup)/$(call gb_Helper_get_rcfile,version) \
+ $(call gb_CustomTarget_get_workdir,instsetoo_native/setup)/$(call gb_Helper_get_rcfile,crashreport) \
+@@ -124,7 +124,7 @@ $(call gb_CustomTarget_get_workdir,instsetoo_native/setup)/$(call gb_Helper_get_
+ #                                           2 : everything in the user config directory
+ #  SecureUserConfigExtensions:  boolean - defines to also safe the extension configuration (which extensions
+ #                                         are installed, which are activated) - default is true
+-$(call gb_CustomTarget_get_workdir,instsetoo_native/setup)/$(call gb_Helper_get_rcfile,soffice) :
++$(call gb_CustomTarget_get_workdir,instsetoo_native/setup)/$(call gb_Helper_get_rcfile,zoffice) :
+ 	$(call gb_Output_announce,$(subst $(WORKDIR)/,,$@),$(true),ECH,1)
+ 	$(call gb_Trace_StartRange,$(subst $(WORKDIR)/,,$@),ECH)
+ 	( \
+diff --git a/instsetoo_native/Package_setup.mk b/instsetoo_native/Package_setup.mk
+index 5b1e42794532..bcf4834a69da 100644
+--- a/instsetoo_native/Package_setup.mk
++++ b/instsetoo_native/Package_setup.mk
+@@ -15,7 +15,7 @@ $(eval $(call gb_Package_add_files,instsetoo_native_setup,$(LIBO_ETC_FOLDER),\
+ 	$(if $(filter DESKTOP,$(BUILD_TYPE)),$(if $(filter-out MACOSX,$(OS)), \
+ 	    $(call gb_Helper_get_rcfile,redirect))) \
+ 	$(call gb_Helper_get_rcfile,setup) \
+-	$(call gb_Helper_get_rcfile,soffice) \
++	$(call gb_Helper_get_rcfile,zoffice) \
+ 	$(call gb_Helper_get_rcfile,louno) \
+ 	$(call gb_Helper_get_rcfile,version) \
+ ))
+diff --git a/sal/osl/w32/profile.cxx b/sal/osl/w32/profile.cxx
+index 17540f65e424..1bee772ac5b6 100644
+--- a/sal/osl/w32/profile.cxx
++++ b/sal/osl/w32/profile.cxx
+@@ -66,7 +66,7 @@ static void copy_ustr_n( void *dest, const void *source, size_t length ) { memcp
+ #define SVERSION_NAME       "sversion"
+ #define SVERSION_SECTION    "Versions"
+ #define SVERSION_SOFFICE    "StarOffice"
+-#define SVERSION_PROFILE    "soffice.ini"
++#define SVERSION_PROFILE    "zoffice.ini"
+ #define SVERSION_DIRS       { "bin", "program" }
+ #define SVERSION_USER       "user"
+ 
