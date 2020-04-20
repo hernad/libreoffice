@@ -109,6 +109,14 @@ export PDF_IMPORT=
 #export TLS_METHOD="--with-tls=openssl"
 export TLS_METHOD="--with-tls=nss"
 
+#export ODK_FEATURE=" --disable-odk"
+ODK_FEATURE=
+#EXTENSIONS=" --disable-extension-integration"
+EXTENSIONS=
+
+GALLERY=" --with-galleries=no"
+GALLERY=
+
 #make basegfx.build
 #make comphelper.build
 
@@ -263,18 +271,15 @@ rm -f config_host/*.h
     --disable-scripting-javascript \
     --disable-lotuswordpro \
     --disable-firebird-sdbc \
-    --disable-cve-tests \
-    --disable-odk \
-    --with-galleries=no \
+    --disable-cve-tests $ODK_FEATURE $GALLERY \
     --disable-report-builder \
     --disable-lpsolve \
     --disable-coinmp \
-    --disable-report-builder \
     --with-help=no \
     --disable-online-update \
     --disable-sdremote \
     --disable-sdremote-bluetooth \
-    --disable-extension-integration $PDF_IMPORT $WEBDAV $WITH_SYSTEM $LO_DEBUG \
+    $EXTENSIONS $PDF_IMPORT $WEBDAV $WITH_SYSTEM $LO_DEBUG \
     --disable-skia \
     --enable-breakpad       #Enables breakpad for crash reporting.
 
