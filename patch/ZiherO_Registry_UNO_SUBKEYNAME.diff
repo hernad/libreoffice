@@ -1,0 +1,63 @@
+diff --git a/cli_ure/source/native/native_bootstrap.cxx b/cli_ure/source/native/native_bootstrap.cxx
+index f26a634c2aa1..16aabfe3f284 100644
+--- a/cli_ure/source/native/native_bootstrap.cxx
++++ b/cli_ure/source/native/native_bootstrap.cxx
+@@ -28,7 +28,7 @@
+ #include <windows.h>
+ #include <delayimp.h>
+ 
+-#define INSTALL_PATH L"Software\\LibreOffice\\UNO\\InstallPath"
++#define INSTALL_PATH L"Software\\ZiherO\\UNO\\InstallPath"
+ #define UNO_PATH L"UNO_PATH"
+ 
+ namespace {
+@@ -73,7 +73,7 @@ WCHAR* getPathFromRegistryKey( HKEY hroot, LPCWSTR subKeyName )
+ /* Returns the path to the program folder of the brand layer,
+    for example C:/Program Files/LibreOffice/program
+    This path is either obtained from the environment variable UNO_PATH
+-   or the registry item "Software\\LibreOffice\\UNO\\InstallPath"
++   or the registry item "Software\\ZiherO\\UNO\\InstallPath"
+    either in HKEY_CURRENT_USER or HKEY_LOCAL_MACHINE
+    The return value must be freed with delete[]
+ */
+diff --git a/cppuhelper/source/findsofficepath.c b/cppuhelper/source/findsofficepath.c
+index 75d370981968..9fea706cf5d7 100644
+--- a/cppuhelper/source/findsofficepath.c
++++ b/cppuhelper/source/findsofficepath.c
+@@ -99,7 +99,7 @@ static wchar_t* platformSpecific()
+         return wcsdup(env);
+     }
+ 
+-    const wchar_t* SUBKEYNAME = L"Software\\LibreOffice\\UNO\\InstallPath";
++    const wchar_t* SUBKEYNAME = L"Software\\ZiherO\\UNO\\InstallPath";
+ 
+     /* read the key's default value from HKEY_CURRENT_USER */
+     wchar_t* path = getPathFromRegistryKey( HKEY_CURRENT_USER, SUBKEYNAME );
+diff --git a/odk/config/cfgWin.js b/odk/config/cfgWin.js
+index 9ca5888f33ef..2a5140605acc 100644
+--- a/odk/config/cfgWin.js
++++ b/odk/config/cfgWin.js
+@@ -19,8 +19,8 @@
+ // examples of the Office Development Kit. The script duplicates the template
+ // script and inserts the variables into the copied script.
+ // The Script was developed for the operating systems Microsoft Windows.
+-var regKeyOfficeCurrentUser = "HKEY_CURRENT_USER\\Software\\LibreOffice\\UNO\\InstallPath\\";
+-var regKeyOfficeLocaleMachine = "HKEY_LOCAL_MACHINE\\Software\\LibreOffice\\UNO\\InstallPath\\";
++var regKeyOfficeCurrentUser = "HKEY_CURRENT_USER\\Software\\ZiherO\\UNO\\InstallPath\\";
++var regKeyOfficeLocaleMachine = "HKEY_LOCAL_MACHINE\\Software\\ZiherO\\UNO\\InstallPath\\";
+ var regKeyDotNetInstallRoot = "HKEY_LOCAL_MACHINE\\Software\\Microsoft\\.NETFramework\\InstallRoot";
+ var regKeyDotNet1_1 = "HKLM\\Software\\Microsoft\\.NETFramework\\policy\\v1.1\\4322";
+ var sDirDotNet1_1 = "v1.1.4322";
+diff --git a/odk/source/com/sun/star/lib/loader/InstallationFinder.java b/odk/source/com/sun/star/lib/loader/InstallationFinder.java
+index 5caef5445a15..5cb04f9cb515 100644
+--- a/odk/source/com/sun/star/lib/loader/InstallationFinder.java
++++ b/odk/source/com/sun/star/lib/loader/InstallationFinder.java
+@@ -189,7 +189,7 @@ final class InstallationFinder {
+      */
+     private static String getPathFromWindowsRegistry() {
+ 
+-        final String SUBKEYNAME = "Software\\LibreOffice\\UNO\\InstallPath";
++        final String SUBKEYNAME = "Software\\ZiherO\\UNO\\InstallPath";
+ 
+         String path = null;
+ 
