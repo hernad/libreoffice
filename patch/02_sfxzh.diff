@@ -28,7 +28,7 @@ index 2d6bdca787b1..4c867cb7a8f6 100644
 -                             || sClassId == "sfxlo-PriorityMergedHBox"
 +                    else if (sClassId == "sfxzh-PriorityHBox"
 +                             || sClassId == "sfxzh-PriorityMergedHBox"
-                              || sClassId == "svtlo-ManagedMenuButton")
+                              || sClassId == "svtzh-ManagedMenuButton")
                      {
                          nodeEntries.sClassId = sClassId;
 @@ -432,8 +432,8 @@ void SvxNotebookbarConfigPage::SelectElement()
@@ -127,7 +127,7 @@ index cb5b695f86da..e5b43d503d07 100644
 +    <glade-widget-class title="Vertical box hiding children depending on context" name="sfxzh-ContextVBox"
                          generic-name="ContextVBox" parent="GtkBox"
                          icon-name="widget-gtk-box"/>
-     <glade-widget-class title="Managed Menu Button" name="svtlo-ManagedMenuButton"
+     <glade-widget-class title="Managed Menu Button" name="svtzh-ManagedMenuButton"
 diff --git a/sc/uiconfig/scalc/ui/notebookbar.ui b/sc/uiconfig/scalc/ui/notebookbar.ui
 index b945e4a0a362..e5c39aec42b0 100644
 --- a/sc/uiconfig/scalc/ui/notebookbar.ui
