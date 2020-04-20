@@ -4595,9 +4595,3 @@ index 57abeaec6098..57811595f9e7 100644
                                  <property name="label" translatable="yes" context="notebookbar_single|ExtensionMenuButton">E_xtension</property>
                                  <property name="visible">True</property>
                                  <property name="can_focus">True</property>
-diff --git a/translations b/translations
---- a/translations
-+++ b/translations
-@@ -1 +1 @@
--Subproject commit 7b4a46ae144ea71701de6d479c3c6ef74610e52c
-+Subproject commit 7b4a46ae144ea71701de6d479c3c6ef74610e52c-dirty
