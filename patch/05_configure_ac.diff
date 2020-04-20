@@ -1,5 +1,5 @@
 diff --git a/configure.ac b/configure.ac
-index 2c4a018b0dd8..6b5959fb68f8 100644
+index 2c4a018b0dd8..07285d2e7723 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -60,8 +60,9 @@ FilterLibs()
@@ -327,6 +327,17 @@ index 2c4a018b0dd8..6b5959fb68f8 100644
 +dnl libo_CHECK_SYSTEM_MODULE([librevenge],[REVENGE],[librevenge-0.0 >= 0.0.1],["-I${WORKDIR}/UnpackedTarball/librevenge/inc"],["-L${librevenge_libdir} -lrevenge-0.0"])
  
  libo_CHECK_SYSTEM_MODULE([libodfgen],[ODFGEN],[libodfgen-0.1])
+ 
+@@ -8557,8 +8577,8 @@ libo_CHECK_SYSTEM_MODULE([libmspub],[MSPUB],[libmspub-0.1])
+ libo_CHECK_SYSTEM_MODULE([libmwaw],[MWAW],[libmwaw-0.3 >= 0.3.1])
+ libo_PKG_VERSION([MWAW], [libmwaw-0.3], [0.3.16])
+ 
+-libo_CHECK_SYSTEM_MODULE([libetonyek],[ETONYEK],[libetonyek-0.1])
+-libo_PKG_VERSION([ETONYEK], [libetonyek-0.1], [0.1.8])
++dnl libo_CHECK_SYSTEM_MODULE([libetonyek],[ETONYEK],[libetonyek-0.1])
++dnl libo_PKG_VERSION([ETONYEK], [libetonyek-0.1], [0.1.8])
+ 
+ libo_CHECK_SYSTEM_MODULE([libfreehand],[FREEHAND],[libfreehand-0.1])
  
 @@ -8987,7 +9007,25 @@ AC_SUBST(PYTHON_VERSION)
  AC_SUBST(PYTHON_VERSION_MAJOR)
