@@ -1,5 +1,5 @@
 diff --git a/configure.ac b/configure.ac
-index 5447d184fc3f..cf68b1e47ea6 100644
+index 2c4a018b0dd8..6b5959fb68f8 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -60,8 +60,9 @@ FilterLibs()
@@ -219,7 +219,7 @@ index 5447d184fc3f..cf68b1e47ea6 100644
      CSC_PATH="$formatted_path"
  fi
  
-@@ -8292,10 +8300,14 @@ AC_MSG_CHECKING([which zlib to use])
+@@ -8254,10 +8262,14 @@ AC_MSG_CHECKING([which zlib to use])
  if test "$with_system_zlib" = "yes"; then
      AC_MSG_RESULT([external])
      SYSTEM_ZLIB=TRUE
@@ -238,7 +238,7 @@ index 5447d184fc3f..cf68b1e47ea6 100644
  else
      AC_MSG_RESULT([internal])
      SYSTEM_ZLIB=
-@@ -8508,41 +8520,49 @@ dnl ===================================================================
+@@ -8470,41 +8482,49 @@ dnl ===================================================================
  dnl we should rather be using
  dnl libo_CHECK_SYSTEM_MODULE([clucence],[CLUCENE],[liblucence-core]) here
  dnl but the contribs-lib check seems tricky
@@ -319,103 +319,16 @@ index 5447d184fc3f..cf68b1e47ea6 100644
  
  dnl ===================================================================
  dnl Check for system xmlsec
-@@ -8562,57 +8582,61 @@ else
- fi
- AC_SUBST([ENABLE_EOT])
- 
--dnl ===================================================================
--dnl Check for DLP libs
--dnl ===================================================================
--AS_IF([test "$COM" = "MSC"],
--      [librevenge_libdir="${WORKDIR}/LinkTarget/Library"],
--      [librevenge_libdir="${WORKDIR}/UnpackedTarball/librevenge/src/lib/.libs"]
--)
+@@ -8531,7 +8551,7 @@ AS_IF([test "$COM" = "MSC"],
+       [librevenge_libdir="${WORKDIR}/LinkTarget/Library"],
+       [librevenge_libdir="${WORKDIR}/UnpackedTarball/librevenge/src/lib/.libs"]
+ )
 -libo_CHECK_SYSTEM_MODULE([librevenge],[REVENGE],[librevenge-0.0 >= 0.0.1],["-I${WORKDIR}/UnpackedTarball/librevenge/inc"],["-L${librevenge_libdir} -lrevenge-0.0"])
++dnl libo_CHECK_SYSTEM_MODULE([librevenge],[REVENGE],[librevenge-0.0 >= 0.0.1],["-I${WORKDIR}/UnpackedTarball/librevenge/inc"],["-L${librevenge_libdir} -lrevenge-0.0"])
  
--libo_CHECK_SYSTEM_MODULE([libodfgen],[ODFGEN],[libodfgen-0.1])
-+dnl libo_CHECK_SYSTEM_MODULE([libodfgen],[ODFGEN],[libodfgen-0.1])
+ libo_CHECK_SYSTEM_MODULE([libodfgen],[ODFGEN],[libodfgen-0.1])
  
--libo_CHECK_SYSTEM_MODULE([libepubgen],[EPUBGEN],[libepubgen-0.1])
-+dnl libo_CHECK_SYSTEM_MODULE([libepubgen],[EPUBGEN],[libepubgen-0.1])
- 
--AS_IF([test "$COM" = "MSC"],
--      [libwpd_libdir="${WORKDIR}/LinkTarget/Library"],
--      [libwpd_libdir="${WORKDIR}/UnpackedTarball/libwpd/src/lib/.libs"]
--)
--libo_CHECK_SYSTEM_MODULE([libwpd],[WPD],[libwpd-0.10],["-I${WORKDIR}/UnpackedTarball/libwpd/inc"],["-L${libwpd_libdir} -lwpd-0.10"])
-+dnl AS_IF([test "$COM" = "MSC"],
-+dnl       [libwpd_libdir="${WORKDIR}/LinkTarget/Library"],
-+dnl       [libwpd_libdir="${WORKDIR}/UnpackedTarball/libwpd/src/lib/.libs"]
-+dnl )
-+dnl libo_CHECK_SYSTEM_MODULE([libwpd],[WPD],[libwpd-0.10],["-I${WORKDIR}/UnpackedTarball/libwpd/inc"],["-L${libwpd_libdir} -lwpd-0.10"])
- 
--libo_CHECK_SYSTEM_MODULE([libwpg],[WPG],[libwpg-0.3])
-+dnl ========= WordPerfect graphics filter OFF ========================
-+dnl libo_CHECK_SYSTEM_MODULE([libwpg],[WPG],[libwpg-0.3])
- 
--libo_CHECK_SYSTEM_MODULE([libwps],[WPS],[libwps-0.4])
--libo_PKG_VERSION([WPS], [libwps-0.4], [0.4.10])
-+dnl ========= Microsoft Works documents OFF ========================
-+dnl libo_CHECK_SYSTEM_MODULE([libwps],[WPS],[libwps-0.4])
-+dnl libo_PKG_VERSION([WPS], [libwps-0.4], [0.4.10])
-+dnl ========================================================================
- 
--libo_CHECK_SYSTEM_MODULE([libvisio],[VISIO],[libvisio-0.1])
-+dnl libo_CHECK_SYSTEM_MODULE([libvisio],[VISIO],[libvisio-0.1])
- 
--libo_CHECK_SYSTEM_MODULE([libcdr],[CDR],[libcdr-0.1])
-+dnl libo_CHECK_SYSTEM_MODULE([libcdr],[CDR],[libcdr-0.1])
- 
--libo_CHECK_SYSTEM_MODULE([libmspub],[MSPUB],[libmspub-0.1])
-+dnl libo_CHECK_SYSTEM_MODULE([libmspub],[MSPUB],[libmspub-0.1])
- 
--libo_CHECK_SYSTEM_MODULE([libmwaw],[MWAW],[libmwaw-0.3 >= 0.3.1])
--libo_PKG_VERSION([MWAW], [libmwaw-0.3], [0.3.15])
-+dnl ====================MWAW - old Macintosh formats OFF ======================
-+dnl libo_CHECK_SYSTEM_MODULE([libmwaw],[MWAW],[libmwaw-0.3 >= 0.3.1])
-+dnl libo_PKG_VERSION([MWAW], [libmwaw-0.3], [0.3.15])
-+WITH_OLD_MACINTOSH=
-+AC_SUBST(WITH_OLD_MACINTOSH)
- 
--libo_CHECK_SYSTEM_MODULE([libetonyek],[ETONYEK],[libetonyek-0.1])
--libo_PKG_VERSION([ETONYEK], [libetonyek-0.1], [0.1.8])
-+dnl ====================ETONYEK - Apple Keynote presentations OFF ======================
-+dnl libo_CHECK_SYSTEM_MODULE([libetonyek],[ETONYEK],[libetonyek-0.1])
-+dnl libo_PKG_VERSION([ETONYEK], [libetonyek-0.1], [0.1.8])
-+dnl =====================================================================================
- 
--libo_CHECK_SYSTEM_MODULE([libfreehand],[FREEHAND],[libfreehand-0.1])
-+dnl libo_CHECK_SYSTEM_MODULE([libfreehand],[FREEHAND],[libfreehand-0.1])
- 
--libo_CHECK_SYSTEM_MODULE([libebook],[EBOOK],[libe-book-0.1])
--libo_PKG_VERSION([EBOOK], [libe-book-0.1], [0.1.2])
-+dnl ====================EBOOK OFF ======================
-+dnl libo_CHECK_SYSTEM_MODULE([libebook],[EBOOK],[libe-book-0.1])
-+dnl libo_PKG_VERSION([EBOOK], [libe-book-0.1], [0.1.2])
- 
--libo_CHECK_SYSTEM_MODULE([libabw],[ABW],[libabw-0.1])
-+dnl libo_CHECK_SYSTEM_MODULE([libabw],[ABW],[libabw-0.1])
- 
--libo_CHECK_SYSTEM_MODULE([libpagemaker],[PAGEMAKER],[libpagemaker-0.0])
-+dnl libo_CHECK_SYSTEM_MODULE([libpagemaker],[PAGEMAKER],[libpagemaker-0.0])
- 
--libo_CHECK_SYSTEM_MODULE([libqxp],[QXP],[libqxp-0.0])
-+dnl libo_CHECK_SYSTEM_MODULE([libqxp],[QXP],[libqxp-0.0])
- 
--libo_CHECK_SYSTEM_MODULE([libzmf],[ZMF],[libzmf-0.0])
-+dnl libo_CHECK_SYSTEM_MODULE([libzmf],[ZMF],[libzmf-0.0])
- 
--libo_CHECK_SYSTEM_MODULE([libstaroffice],[STAROFFICE],[libstaroffice-0.0])
--libo_PKG_VERSION([STAROFFICE], [libstaroffice-0.0], [0.0.6])
-+dnl ====================STAROFFICE OFF ======================
-+dnl libo_CHECK_SYSTEM_MODULE([libstaroffice],[STAROFFICE],[libstaroffice-0.0])
-+dnl libo_PKG_VERSION([STAROFFICE], [libstaroffice-0.0], [0.0.6])
-+WITH_STAROFFICE=
-+AC_SUBST(WITH_STAROFFICE)
- 
- dnl ===================================================================
- dnl Check for system lcms2
-@@ -9027,7 +9058,25 @@ AC_SUBST(PYTHON_VERSION)
+@@ -8987,7 +9007,25 @@ AC_SUBST(PYTHON_VERSION)
  AC_SUBST(PYTHON_VERSION_MAJOR)
  AC_SUBST(PYTHON_VERSION_MINOR)
  
@@ -442,7 +355,7 @@ index 5447d184fc3f..cf68b1e47ea6 100644
  if test "$_os" = "Android" -o "$_os" = "iOS" -o "$enable_mpl_subset" = "yes"; then
      ENABLE_MARIADBC=
  fi
-@@ -9104,7 +9153,7 @@ if test "$ENABLE_MARIADBC" = "TRUE"; then
+@@ -9064,7 +9102,7 @@ if test "$ENABLE_MARIADBC" = "TRUE"; then
              AC_MSG_CHECKING([for $LIBMARIADB in $LIBMARIADB_PATH])
              if test -e "$LIBMARIADB_PATH/$LIBMARIADB"; then
                  AC_MSG_RESULT([found.])
@@ -451,7 +364,7 @@ index 5447d184fc3f..cf68b1e47ea6 100644
                  LIBMARIADB_PATH="$formatted_path"
              else
                  AC_MSG_ERROR([not found.])
-@@ -9229,12 +9278,17 @@ if test "x$enable_postgresql_sdbc" != "xno"; then
+@@ -9189,12 +9227,17 @@ if test "x$enable_postgresql_sdbc" != "xno"; then
              POSTGRESQL_INC=-I$(${PGCONFIG} --includedir)
              POSTGRESQL_LIB="-L$(${PGCONFIG} --libdir)"
          else
@@ -475,7 +388,7 @@ index 5447d184fc3f..cf68b1e47ea6 100644
          fi
          FilterLibs "${POSTGRESQL_LIB}"
          POSTGRESQL_LIB="${filteredlibs}"
-@@ -9343,9 +9397,13 @@ if test "x$enable_postgresql_sdbc" != "xno"; then
+@@ -9303,9 +9346,13 @@ if test "x$enable_postgresql_sdbc" != "xno"; then
          save_LIBS=$LIBS
          CPPFLAGS="${CPPFLAGS} ${POSTGRESQL_INC}"
          LIBS="${LIBS} ${POSTGRESQL_LIB}"
@@ -492,7 +405,7 @@ index 5447d184fc3f..cf68b1e47ea6 100644
          CFLAGS=$save_CFLAGS
          CPPFLAGS=$save_CPPFLAGS
          LIBS=$save_LIBS
-@@ -9484,6 +9542,7 @@ if test "$with_system_curl" = "auto"; then
+@@ -9444,6 +9491,7 @@ if test "$with_system_curl" = "auto"; then
  fi
  
  if test "$with_system_curl" = "yes"; then
@@ -500,7 +413,7 @@ index 5447d184fc3f..cf68b1e47ea6 100644
      AC_MSG_RESULT([external])
      SYSTEM_CURL=TRUE
  
-@@ -9513,7 +9572,6 @@ if test "$with_system_curl" = "yes"; then
+@@ -9473,7 +9521,6 @@ if test "$with_system_curl" = "yes"; then
              ;;
          esac
      fi
@@ -508,7 +421,7 @@ index 5447d184fc3f..cf68b1e47ea6 100644
      ENABLE_CURL=TRUE
  elif test $_os = iOS; then
      # Let's see if we need curl, I think not?
-@@ -9537,23 +9595,28 @@ AC_MSG_CHECKING([which boost to use])
+@@ -9497,23 +9544,28 @@ AC_MSG_CHECKING([which boost to use])
  if test "$with_system_boost" = "yes"; then
      AC_MSG_RESULT([external])
      SYSTEM_BOOST=TRUE
@@ -554,7 +467,7 @@ index 5447d184fc3f..cf68b1e47ea6 100644
  else
      AC_MSG_RESULT([internal])
      BUILD_TYPE="$BUILD_TYPE BOOST"
-@@ -9603,7 +9666,7 @@ if test "$with_system_odbc" = "yes" -o '(' "$with_system_headers" = "yes" -a "$w
+@@ -9563,7 +9615,7 @@ if test "$with_system_odbc" = "yes" -o '(' "$with_system_headers" = "yes" -a "$w
      if test "$build_os" = "cygwin"; then
          save_CPPFLAGS=$CPPFLAGS
          find_winsdk
@@ -563,7 +476,7 @@ index 5447d184fc3f..cf68b1e47ea6 100644
          CPPFLAGS="$CPPFLAGS -I$formatted_path/include/um -I$formatted_path/Include/$winsdklibsubdir/um -I$formatted_path/include -I$formatted_path/include/shared -I$formatted_path/include/$winsdklibsubdir/shared"
          AC_CHECK_HEADER(sqlext.h, [],
              [AC_MSG_ERROR(odbc not found. install odbc)],
-@@ -9661,6 +9724,7 @@ AC_SUBST(SYSTEM_OPENLDAP)
+@@ -9621,6 +9673,7 @@ AC_SUBST(SYSTEM_OPENLDAP)
  dnl ===================================================================
  dnl Check for system NSS
  dnl ===================================================================
@@ -571,7 +484,7 @@ index 5447d184fc3f..cf68b1e47ea6 100644
  if test $_os != iOS -a "$enable_fuzzers" != "yes"; then
      libo_CHECK_SYSTEM_MODULE([nss],[NSS],[nss >= 3.9.3 nspr >= 4.8])
      AC_DEFINE(HAVE_FEATURE_NSS)
-@@ -9737,7 +9801,17 @@ ICU_RECLASSIFIED_PREPEND_SET_EMPTY="TRUE"
+@@ -9697,7 +9750,17 @@ ICU_RECLASSIFIED_PREPEND_SET_EMPTY="TRUE"
  ICU_RECLASSIFIED_CONDITIONAL_JAPANESE_STARTER="TRUE"
  ICU_RECLASSIFIED_HEBREW_LETTER="TRUE"
  AC_MSG_CHECKING([which icu to use])
@@ -589,7 +502,7 @@ index 5447d184fc3f..cf68b1e47ea6 100644
      AC_MSG_RESULT([external])
      SYSTEM_ICU=TRUE
      AC_LANG_PUSH([C++])
-@@ -9800,6 +9874,8 @@ You can use --with-system-icu-for-build=force to use it anyway.])
+@@ -9760,6 +9823,8 @@ You can use --with-system-icu-for-build=force to use it anyway.])
              ICU_MINOR=""
          fi
      fi
@@ -598,7 +511,7 @@ index 5447d184fc3f..cf68b1e47ea6 100644
  else
      AC_MSG_RESULT([internal])
      SYSTEM_ICU=
-@@ -9840,29 +9916,36 @@ AC_MSG_CHECKING([whether to enable breakpad])
+@@ -9800,29 +9865,36 @@ AC_MSG_CHECKING([whether to enable breakpad])
  if test "$enable_breakpad" != yes; then
      AC_MSG_RESULT([no])
  else
@@ -612,10 +525,7 @@ index 5447d184fc3f..cf68b1e47ea6 100644
 -    if test "$enable_crashdump" = no; then
 -        DEFAULT_CRASHDUMP_VALUE="false"
 -        AC_MSG_RESULT([yes])
-+    if test "$BREAKPAD_CFLAGS" != ""; then
-+        SYSTEM_BREAKPAD=TRUE
-+        AC_MSG_CHECKING([BREAKPAD EXTERNAL])
-     else
+-    else
 -       AC_MSG_RESULT([no])
 -    fi
 -
@@ -623,7 +533,10 @@ index 5447d184fc3f..cf68b1e47ea6 100644
 -    if test "$with_symbol_config" = "no"; then
 -        BREAKPAD_SYMBOL_CONFIG="invalid"
 -        AC_MSG_RESULT([no])
--    else
++    if test "$BREAKPAD_CFLAGS" != ""; then
++        SYSTEM_BREAKPAD=TRUE
++        AC_MSG_CHECKING([BREAKPAD EXTERNAL])
+     else
 -        BREAKPAD_SYMBOL_CONFIG="$with_symbol_config"
 -        AC_DEFINE(BREAKPAD_SYMBOL_CONFIG)
          AC_MSG_RESULT([yes])
@@ -655,7 +568,7 @@ index 5447d184fc3f..cf68b1e47ea6 100644
      AC_SUBST(BREAKPAD_SYMBOL_CONFIG)
  fi
  AC_SUBST(ENABLE_BREAKPAD)
-@@ -10151,12 +10234,16 @@ if test "$enable_openssl" = "yes"; then
+@@ -10111,12 +10183,16 @@ if test "$enable_openssl" = "yes"; then
          libo_CHECK_SYSTEM_MODULE([openssl],[OPENSSL],[openssl])
      fi
      if test "$with_system_openssl" = "yes"; then
@@ -678,7 +591,7 @@ index 5447d184fc3f..cf68b1e47ea6 100644
      fi
  else
      AC_MSG_RESULT([yes])
-@@ -12212,9 +12299,9 @@ EOF
+@@ -12213,9 +12289,9 @@ EOF
      if test -z "$ANT_HOME"; then
          ANT_HOME="NO_ANT_HOME"
      else
@@ -690,7 +603,7 @@ index 5447d184fc3f..cf68b1e47ea6 100644
          ANT="$formatted_path"
      fi
      AC_SUBST(ANT_HOME)
-@@ -12248,7 +12335,7 @@ EOF
+@@ -12249,7 +12325,7 @@ EOF
                  fi
              fi
          fi
@@ -699,7 +612,7 @@ index 5447d184fc3f..cf68b1e47ea6 100644
          ANT_LIB="$formatted_path"
          AC_MSG_RESULT([Ant lib directory found.])
      fi
-@@ -12294,7 +12381,7 @@ if test "$ENABLE_JAVA" != "" -a "$with_junit" != "no"; then
+@@ -12295,7 +12371,7 @@ if test "$ENABLE_JAVA" != "" -a "$with_junit" != "no"; then
          OOO_JUNIT_JAR=$with_junit
      fi
      if test "$_os" = "WINNT"; then
@@ -708,7 +621,7 @@ index 5447d184fc3f..cf68b1e47ea6 100644
      fi
      printf 'import org.junit.Before;' > conftest.java
      if "$JAVACOMPILER" -classpath "$OOO_JUNIT_JAR" conftest.java >&5 2>&5; then
-@@ -12332,7 +12419,7 @@ if test "$ENABLE_JAVA" != "" -a "$with_junit" != "no"; then
+@@ -12333,7 +12409,7 @@ if test "$ENABLE_JAVA" != "" -a "$with_junit" != "no"; then
              HAMCREST_JAR=$with_hamcrest
          fi
          if test "$_os" = "WINNT"; then
@@ -717,7 +630,7 @@ index 5447d184fc3f..cf68b1e47ea6 100644
          fi
          if "$JAVACOMPILER" -classpath "$HAMCREST_JAR" conftest.java >&5 2>&5; then
              AC_MSG_RESULT([$HAMCREST_JAR])
-@@ -12843,7 +12930,7 @@ if test "$build_os" = "cygwin"; then
+@@ -12844,7 +12920,7 @@ if test "$build_os" = "cygwin"; then
              ILIB="$ILIB;$WINDOWS_SDK_HOME/lib/$winsdklibsubdir/um/x64"
              ILIB1="$ILIB1 -LIBPATH:$WINDOWS_SDK_HOME/lib/$winsdklibsubdir/um/x64"
          fi
@@ -726,7 +639,7 @@ index 5447d184fc3f..cf68b1e47ea6 100644
          ucrtlibpath_formatted=$formatted_path
          ILIB="$ILIB;$ucrtlibpath_formatted"
          ILIB1="$ILIB1 -LIBPATH:$ucrtlibpath_formatted"
-@@ -12856,7 +12943,7 @@ if test "$build_os" = "cygwin"; then
+@@ -12857,7 +12933,7 @@ if test "$build_os" = "cygwin"; then
              ILIB="$ILIB;$WINDOWS_SDK_HOME/lib/$winsdklibsubdir/um/x86"
              ILIB1="$ILIB1 -LIBPATH:$WINDOWS_SDK_HOME/lib/$winsdklibsubdir/um/x86"
          fi
@@ -735,7 +648,7 @@ index 5447d184fc3f..cf68b1e47ea6 100644
          ucrtlibpath_formatted=$formatted_path
          ILIB="$ILIB;$ucrtlibpath_formatted"
          ILIB1="$ILIB1 -LIBPATH:$ucrtlibpath_formatted"
-@@ -13053,15 +13140,15 @@ if test "$build_os" = "cygwin"; then
+@@ -13054,15 +13130,15 @@ if test "$build_os" = "cygwin"; then
      ATL_INCLUDE=`win_short_path_for_make "$ATL_INCLUDE"`
  
      # sort.exe and find.exe also exist in C:/Windows/system32 so need /usr/bin/
@@ -756,7 +669,7 @@ index 5447d184fc3f..cf68b1e47ea6 100644
      WIN_TOUCH="$formatted_path"
  else
      FIND=find
-@@ -13080,7 +13167,7 @@ AC_SUBST(BUILD_TYPE)
+@@ -13081,7 +13157,7 @@ AC_SUBST(BUILD_TYPE)
  
  AC_SUBST(SOLARINC)
  
@@ -765,7 +678,7 @@ index 5447d184fc3f..cf68b1e47ea6 100644
  PERL="$formatted_path"
  AC_SUBST(PERL)
  
-@@ -13090,7 +13177,7 @@ else
+@@ -13091,7 +13167,7 @@ else
      TEMP_DIRECTORY="/tmp"
  fi
  if test "$build_os" = "cygwin"; then
@@ -774,7 +687,7 @@ index 5447d184fc3f..cf68b1e47ea6 100644
  fi
  AC_SUBST(TEMP_DIRECTORY)
  
-@@ -13220,7 +13306,7 @@ AC_CONFIG_HEADERS([config_host/config_version.h])
+@@ -13221,7 +13297,7 @@ AC_CONFIG_HEADERS([config_host/config_version.h])
  AC_CONFIG_HEADERS([config_host/config_oauth2.h])
  AC_CONFIG_HEADERS([config_host/config_poppler.h])
  AC_CONFIG_HEADERS([config_host/config_python.h])
