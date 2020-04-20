@@ -23,4 +23,3 @@ index e28cc7466e43..8b5688465359 100644
  #include <windows.h>
  
  extern WCHAR APPLICATION_SWITCH[];
- 
