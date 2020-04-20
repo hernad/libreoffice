@@ -275,6 +275,7 @@ rm -f config_host/*.h
     --disable-sdremote \
     --disable-sdremote-bluetooth \
     --disable-extension-integration $PDF_IMPORT $WEBDAV $WITH_SYSTEM $LO_DEBUG \
+    --disable-skia \
     --enable-breakpad       #Enables breakpad for crash reporting.
 
 fi

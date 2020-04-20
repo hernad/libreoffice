@@ -13,15 +13,6 @@ index 5447d184fc3f..cf68b1e47ea6 100644
      if test "$build_os" = "cygwin"; then
          pf_conv_to_dos=
          # spaces,parentheses,brackets,braces are problematic in pathname
-@@ -251,7 +252,7 @@ AC_PROG_EGREP
- AC_PATH_PROG(GREP, grep)
- 
- BUILDDIR=`pwd`
--cd $srcdir
-+#cd $srcdir
- SRC_ROOT=`pwd`
- cd $BUILDDIR
- x_Cygwin=[\#]
 @@ -315,9 +316,9 @@ win_short_path_for_make()
  
  
@@ -228,42 +219,6 @@ index 5447d184fc3f..cf68b1e47ea6 100644
      CSC_PATH="$formatted_path"
  fi
  
-@@ -6506,7 +6514,7 @@ if test -z "$GPERF"; then
-     AC_MSG_ERROR([gperf not found but needed. Install it.])
- fi
- if test "$GNUMAKE_WIN_NATIVE" = "TRUE" ; then
--    GPERF=`cygpath -m $GPERF`
-+    GPERF=`cygpath -m $GPERF `
- fi
- AC_MSG_CHECKING([whether gperf is new enough])
- my_gperf_ver1=$($GPERF --version | head -n 1)
-@@ -7777,7 +7785,7 @@ _ACEOF
-             add_warning "in case JAVA_HOME is incorrectly set, some projects will not be built correctly"
-         fi
-     fi
--    PathFormat "$JAVA_HOME"
-+    PathFormat "$JAVA_HOME" javahome
-     JAVA_HOME="$formatted_path"
- fi
- 
-@@ -7953,7 +7961,7 @@ if test "$with_export_validation" != "no"; then
-             # so we need to run bash and absolute path to validator
-             # so instead of "odfvalidator" it will be
-             # something like "bash.exe C:\cygwin\opt\lo\bin\odfvalidator"
--            ODFVALIDATOR="bash.exe `cygpath -m "$ODFVALIDATOR"`"
-+            ODFVALIDATOR="bash.exe `cygpath -m "$ODFVALIDATOR"` "
-         else
-             ODFVALIDATOR="sh $ODFVALIDATOR"
-         fi
-@@ -7986,7 +7994,7 @@ if test "$with_export_validation" != "no"; then
-             # so we need to run bash and absolute path to validator
-             # so instead of "odfvalidator" it will be
-             # something like "bash.exe C:\cygwin\opt\lo\bin\odfvalidator"
--            OFFICEOTRON="bash.exe `cygpath -m "$OFFICEOTRON"`"
-+            OFFICEOTRON="bash.exe `cygpath -m "$OFFICEOTRON" `"
-         else
-             OFFICEOTRON="sh $OFFICEOTRON"
-         fi
 @@ -8292,10 +8300,14 @@ AC_MSG_CHECKING([which zlib to use])
  if test "$with_system_zlib" = "yes"; then
      AC_MSG_RESULT([external])
@@ -460,103 +415,6 @@ index 5447d184fc3f..cf68b1e47ea6 100644
  
  dnl ===================================================================
  dnl Check for system lcms2
-@@ -8747,6 +8771,8 @@ if test "$with_system_libxml" = "yes"; then
-         LIBXML_CFLAGS="-I$MACOSX_SDK_PATH/usr/include/libxml2"
-         dnl omit -L/usr/lib
-         LIBXML_LIBS="-lxml2 -lz -lpthread -liconv -lm"
-+    elif test $_os = WINNT; then
-+        AC_MSG_NOTICE([Cygwin - libmxl skip])
-     elif test $_os = iOS; then
-         dnl make sure to use SDK path
-         usr=`echo '#include <stdlib.h>' | $CC -E -MD - | grep usr/include/stdlib.h | head -1 | sed -e 's,# 1 ",,' -e 's,/usr/include/.*,/usr,'`
-@@ -8785,6 +8811,7 @@ fi
- AC_SUBST(SYSTEM_LIBXML_FOR_BUILD)
- AC_SUBST(LIBXML_CFLAGS)
- AC_SUBST(LIBXML_LIBS)
-+AC_SUBST(LIBXML_LIBTOOL_LIBS)
- AC_SUBST(XMLLINT)
- 
- # =====================================================================
-@@ -8879,7 +8906,7 @@ if test $enable_python = system; then
-     if test -n "$PYTHON_CFLAGS" -a -n "$PYTHON_LIBS"; then
-         # Fallback: Accept these in the environment, or as set above
-         # for MacOSX.
--        :
-+        AC_MSG_WARN([Python-system CFLAGS and LIBS set up])
-     elif test "$cross_compiling" != yes; then
-         # Unset variables set by the above AM_PATH_PYTHON so that
-         # we actually do check anew.
-@@ -8915,12 +8942,13 @@ if test $enable_python = system; then
-         test -n "$PYTHON_CFLAGS" && break
-     fi
- 
--    dnl Check if the headers really work
--    save_CPPFLAGS="$CPPFLAGS"
--    CPPFLAGS="$CPPFLAGS $PYTHON_CFLAGS"
--    AC_CHECK_HEADER(Python.h)
--    CPPFLAGS="$save_CPPFLAGS"
--
-+    if test $build_os != cygwin; then
-+        dnl Check if the headers really work
-+        save_CPPFLAGS="$CPPFLAGS"
-+        CPPFLAGS="$CPPFLAGS $PYTHON_CFLAGS"
-+        AC_CHECK_HEADER(Python.h)
-+        CPPFLAGS="$save_CPPFLAGS"
-+    fi
-     # let the PYTHON_FOR_BUILD match the same python installation that
-     # provides PYTHON_CFLAGS/PYTHON_LDFLAGS for pyuno, which should be
-     # better for PythonTests.
-@@ -8970,28 +8998,31 @@ case $enable_python in
- system)
-     SYSTEM_PYTHON=TRUE
- 
--    if test "x$ac_cv_header_Python_h" != "xyes"; then
--       AC_MSG_ERROR([Python headers not found. You probably want to set both the PYTHON_CFLAGS and PYTHON_LIBS environment variables.])
--    fi
--
--    AC_LANG_PUSH(C)
--    CFLAGS="$CFLAGS $PYTHON_CFLAGS"
--    AC_MSG_CHECKING([for correct python library version])
--       AC_RUN_IFELSE([AC_LANG_SOURCE([[
--#include <Python.h>
-+    if test $build_os != cygwin; then
-+        if test "x$ac_cv_header_Python_h" != "xyes"; then
-+            AC_MSG_ERROR([Python headers not found. You probably want to set both the PYTHON_CFLAGS and PYTHON_LIBS environment variables.])
-+        fi
-+        AC_LANG_PUSH(C)
-+        CFLAGS="$CFLAGS $PYTHON_CFLAGS"
-+        AC_MSG_CHECKING([for correct python library version])
-+        AC_RUN_IFELSE([AC_LANG_SOURCE([[
-+        #include <Python.h>
- 
--int main(int argc, char **argv) {
--   if ((PY_MAJOR_VERSION == 2 && PY_MINOR_VERSION >= 7) ||
--       (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 3)) return 0;
--   else return 1;
--}
--       ]])],[AC_MSG_RESULT([ok])],[AC_MSG_ERROR([Python >= 3.3 is needed when building with Python 3, or Python >= 2.7 when building with Python 2])],[AC_MSG_RESULT([skipped; cross-compiling])])
--    CFLAGS=$save_CFLAGS
--    AC_LANG_POP(C)
-+        int main(int argc, char **argv) {
-+        if ((PY_MAJOR_VERSION == 2 && PY_MINOR_VERSION >= 7) ||
-+            (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 3)) return 0;
-+        else return 1;
-+        }
-+        ]])],[AC_MSG_RESULT([ok])],[AC_MSG_ERROR([Python >= 3.3 is needed when building with Python 3, or Python >= 2.7 when building with Python 2])],[AC_MSG_RESULT([skipped; cross-compiling])])
-+        CFLAGS=$save_CFLAGS
-+        AC_LANG_POP(C)
- 
--    dnl FIXME Check if the Python library can be linked with, too?
-+        dnl FIXME Check if the Python library can be linked with, too?
-+    else
-+        CFLAGS="$CFLAGS $PYTHON_CFLAGS"
-+        AC_DEFINE_UNQUOTED([PYTHON_VERSION_STRING], [L"${PYTHON_VERSION}"])
-+    fi
-     ;;
--
- internal)
-     SYSTEM_PYTHON=
-     PYTHON_VERSION_MAJOR=3
 @@ -9027,7 +9058,25 @@ AC_SUBST(PYTHON_VERSION)
  AC_SUBST(PYTHON_VERSION_MAJOR)
  AC_SUBST(PYTHON_VERSION_MINOR)
@@ -820,42 +678,6 @@ index 5447d184fc3f..cf68b1e47ea6 100644
      fi
  else
      AC_MSG_RESULT([yes])
-@@ -10533,7 +10620,7 @@ AC_SUBST([BISON])
- 
- AC_PATH_PROG(FLEX, flex)
- if test "$GNUMAKE_WIN_NATIVE" = "TRUE" ; then
--    FLEX=`cygpath -m $FLEX`
-+    FLEX=`cygpath -m $FLEX `
- fi
- if test -z "$FLEX"; then
-     AC_MSG_ERROR([no flex found in \$PATH, install it])
-@@ -10576,7 +10663,7 @@ else
- fi
- 
- if test "$GNUMAKE_WIN_NATIVE" = "TRUE" ; then
--    GNUPATCH=`cygpath -m $GNUPATCH`
-+    GNUPATCH=`cygpath -m $GNUPATCH `
- fi
- 
- dnl We also need to check for --with-gnu-cp
-@@ -10600,7 +10687,7 @@ else
- fi
- 
- if test "$GNUMAKE_WIN_NATIVE" = "TRUE" ; then
--    GNUCP=`cygpath -m $GNUCP`
-+    GNUCP=`cygpath -m $GNUCP `
- fi
- 
- AC_MSG_CHECKING([whether $GNUCP is GNU cp from coreutils with preserve= support])
-@@ -12132,7 +12219,7 @@ if test "$ENABLE_JAVA" != "" -a "$NEED_ANT" = "TRUE"; then
-     if test -z "$with_ant_home" -a -n "$LODE_HOME" ; then
-         if test -x "$LODE_HOME/opt/ant/bin/ant" ; then
-             if test "$_os" = "WINNT"; then
--                with_ant_home="`cygpath -m $LODE_HOME/opt/ant`"
-+                with_ant_home="`cygpath -m $LODE_HOME/opt/ant `"
-             else
-                 with_ant_home="$LODE_HOME/opt/ant"
-             fi
 @@ -12212,9 +12299,9 @@ EOF
      if test -z "$ANT_HOME"; then
          ANT_HOME="NO_ANT_HOME"
@@ -952,20 +774,11 @@ index 5447d184fc3f..cf68b1e47ea6 100644
  fi
  AC_SUBST(TEMP_DIRECTORY)
  
-@@ -13211,7 +13298,6 @@ AC_CONFIG_HEADERS([config_host/config_mpl.h])
- AC_CONFIG_HEADERS([config_host/config_oox.h])
- AC_CONFIG_HEADERS([config_host/config_options.h])
- AC_CONFIG_HEADERS([config_host/config_options_calc.h])
--AC_CONFIG_HEADERS([config_host/config_skia.h])
- AC_CONFIG_HEADERS([config_host/config_typesizes.h])
- AC_CONFIG_HEADERS([config_host/config_vendor.h])
- AC_CONFIG_HEADERS([config_host/config_vcl.h])
 @@ -13220,7 +13306,7 @@ AC_CONFIG_HEADERS([config_host/config_version.h])
  AC_CONFIG_HEADERS([config_host/config_oauth2.h])
  AC_CONFIG_HEADERS([config_host/config_poppler.h])
  AC_CONFIG_HEADERS([config_host/config_python.h])
 -AC_CONFIG_HEADERS([config_host/config_writerperfect.h])
-+AC_CONFIG_HEADERS([config_host/config_skia.h])
  AC_OUTPUT
  
  if test "$CROSS_COMPILING" = TRUE; then
