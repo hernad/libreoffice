@@ -44,10 +44,10 @@ if [ "$BUILD_ARCH" == "x64" ] ; then
   #export VCPKG_DIR=c:/dev/vcpkg/installed/x64-windows
   #export VCPKG_STATIC_DIR=c:/dev/vcpkg/installed/x64-windows-static
   
-  #export CONAN_DEPLOY_DIR=c:/dev/libreoffice/conan/deploy_x64
-  #export PYTHON=C:/dev/vcpkg/downloads/tools/python/python-3.7.3-x64/python.exe
-  #export PYTHON_CFLAGS="-Ic:/dev/vcpkg/installed/x64-windows/include/python3.7"
-  #export PYTHON_LIBS="c:/dev/vcpkg/installed/x64-windows/lib/python37.lib"
+  export CONAN_DEPLOY_DIR=c:/dev/libreoffice/conan/deploy_x64
+  export PYTHON=C:/dev/vcpkg/downloads/tools/python/python-3.7.3-x64/python.exe
+  export PYTHON_CFLAGS="-Ic:/dev/vcpkg/installed/x64-windows/include/python3.7"
+  export PYTHON_LIBS="c:/dev/vcpkg/installed/x64-windows/lib/python37.lib"
 
 else
   ENABLE_64_BIT=
@@ -114,7 +114,7 @@ ODK_FEATURE=
 #EXTENSIONS=" --disable-extension-integration"
 EXTENSIONS=
 
-GALLERY=" --with-galleries=no"
+#GALLERY=" --with-galleries=no"
 GALLERY=
 
 #make basegfx.build
@@ -146,55 +146,69 @@ export PATH=$PATH:/usr/sbin
 
 
 WITH_SYSTEM=
-  #echo PYTHON_CFLAGS=$PYTHON_CFLAGS, PYTHON_LIBS=$PYTHON_LIBS
-  #WITH_SYSTEM+=" --enable-python=system"
-
-  #WITH_SYSTEM+=" --with-system-zlib=yes"
   
-  #H#export ZLIB_CFLAGS="-I$CONAN_DEPLOY_DIR/zlib/include"
-  #H#export ZLIB_LIBS="$CONAN_DEPLOY_DIR/zlib/lib/zlib.lib"
+  echo PYTHON_CFLAGS=$PYTHON_CFLAGS, PYTHON_LIBS=$PYTHON_LIBS
+  WITH_SYSTEM+=" --enable-python=system"
+
+  WITH_SYSTEM+=" --with-system-zlib=yes"
+  export ZLIB_CFLAGS="-I$CONAN_DEPLOY_DIR/zlib/include"
+  export ZLIB_LIBS="$CONAN_DEPLOY_DIR/zlib/lib/zlib.lib"
  
-  #H#WITH_SYSTEM+=" --with-system-libpng=yes"
-  #H#export LIBPNG_CFLAGS="-I$CONAN_DEPLOY_DIR/libpng/include"
-  #H#export LIBPNG_LIBS="$CONAN_DEPLOY_DIR/libpng/lib/libpng16.lib $ZLIB_LIBS"
+  WITH_SYSTEM+=" --with-system-libpng=yes"
+  export LIBPNG_CFLAGS="-I$CONAN_DEPLOY_DIR/libpng/include"
+  export LIBPNG_LIBS="$CONAN_DEPLOY_DIR/libpng/lib/libpng16.lib $ZLIB_LIBS"
 
+  WITH_SYSTEM+=" --with-system-jpeg=yes"
+  export LIBJPEG_CFLAGS="-I$CONAN_DEPLOY_DIR/libjpeg-turbo/include"
+  export LIBJPEG_LIBS="$CONAN_DEPLOY_DIR/libjpeg-turbo/lib/turbojpeg-static.lib"
 
-  #WITH_SYSTEM+=" --with-system-boost"
-  #export BOOST_CPPFLAGS="-I$CONAN_DEPLOY_DIR/boost/include -I$CONAN_DEPLOY_DIR/bzip2/include"
-  #export BOOST_CXXFLAGS=$BOOST_CPPFLAGS
-  #export BOOST_LDFLAGS=""
-  #export BOOST_LOCALE_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/boost_locale.lib $ZLIB_LIBS"
-  #export BOOST_DATE_TIME_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/boost_date_time.lib $ZLIB_LIBS"
-  #export BOOST_FILESYSTEM_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/boost_filesystem.lib $ZLIB_LIBS"
-  #export BOOST_IOSTREAMS_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/boost_iostreams.lib $ZLIB_LIBS"
-  #export BOOST_SYSTEM_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/boost_system.lib $ZLIB_LIBS"
+  WITH_SYSTEM+=" --with-system-boost"
+  export BOOST_CPPFLAGS="-I$CONAN_DEPLOY_DIR/boost/include -I$CONAN_DEPLOY_DIR/bzip2/include"
+  export BOOST_CXXFLAGS=$BOOST_CPPFLAGS
+  export BOOST_LDFLAGS=""
+  export BOOST_LOCALE_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/libboost_locale.lib $ZLIB_LIBS"
+  export BOOST_DATE_TIME_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/libboost_date_time.lib $ZLIB_LIBS"
+  export BOOST_FILESYSTEM_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/libboost_filesystem.lib $ZLIB_LIBS"
+  export BOOST_IOSTREAMS_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/libboost_iostreams.lib $ZLIB_LIBS"
+  export BOOST_SYSTEM_LIB="bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/libboost_system.lib $ZLIB_LIBS"
   
+  WITH_SYSTEM+=" --with-system-openssl=yes"
+  export OPENSSL_CFLAGS="-I$CONAN_DEPLOY_DIR/openssl/include"
+  export OPENSSL_LIBS="$CONAN_DEPLOY_DIR/openssl/lib/libeay32.lib $CONAN_DEPLOY_DIR/openssl/lib/ssleay32.lib"
+
+  WITH_SYSTEM+=" --with-system-curl=yes"
+  export CURL_CFLAGS="-I$CONAN_DEPLOY_DIR/libcurl/include" 
+  export CURL_LIBS="$CONAN_DEPLOY_DIR/libcurl/lib/libcurl_imp.lib"
+ 
+  WITH_SYSTEM+=" --with-system-postgresql=yes"
+  export POSTGRESQL_CFLAGS="-I$CONAN_DEPLOY_DIR/libpq/include"
+  export POSTGRESQL_LIBS="$CONAN_DEPLOY_DIR/libpq/lib/libpq.lib secur32.lib Ws2_32.lib $OPENSSL_LIBS"
+
+  WITH_SYSTEM+=" --with-system-libxml=yes"
+  export LIBXML_CFLAGS="-I$CONAN_DEPLOY_DIR/libxml2/include/libxml2 -I$CONAN_DEPLOY_DIR/libiconv/include"
+  LIBXML_LIBS="$CONAN_DEPLOY_DIR/libxml2/lib/libxml2_a.lib" 
+  export LIBXML_LIBS+=" Ws2_32.lib $ZLIB_LIBS $CONAN_DEPLOY_DIR/libiconv/lib/iconv.lib $CONAN_DEPLOY_DIR/libiconv/lib/charset.lib"
+
+  export LIBXML_LIBTOOL_LIBS="-L$CONAN_DEPLOY_DIR/libxml2/lib -L$CONAN_DEPLOY_DIR/libiconv/lib -L$CONAN_DEPLOY_DIR/zlib/lib -llibxml2_a -liconv -lcharset -lWs2_32 -lzlib"
+  export LIBEXSLT_CFLAGS="-I$CONAN_DEPLOY_DIR/libxslt/include"
+  export LIBEXSLT_LIBS="$CONAN_DEPLOY_DIR/libxslt/lib/libexslt_a.lib"
+  export LIBXSLT_CFLAGS="-I$CONAN_DEPLOY_DIR/libxslt/include"
+  export LIBXSLT_LIBS="$CONAN_DEPLOY_DIR/libxslt/lib/libxslt_a.lib"
+
+  #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! c:/dev/xmlsec ---------------------------------------------------------
+  #WITH_SYSTEM+=" --with-system-xmlsec=yes"
+  #export XMLSEC_CFLAGS="-Ic:/dev/xmlsec/win32/include"
+  #export XMLSEC_LIBS="c:/dev/xmlsec/win32/lib/libxmlsec.lib c:/dev/xmlsec/win32/lib/libxmlsec-mscng.lib"
 
   #WITH_SYSTEM+=" --with-system-expat=yes"
   #export EXPAT_CFLAGS="-I$VCPKG_DIR/include"
   #export EXPAT_LIBS="$VCPKG_DIR/lib/expat.lib"
-#
 
-#
   #export BREAKPAD_CFLAGS="-I$VCPKG_DIR/include"
   #export BREAKPAD_LIBS="$VCPKG_STATIC_DIR/lib/libbreakpad.lib"
-#
-  #
-  #WITH_SYSTEM+=" --with-system-curl=yes"
-  #export CURL_CFLAGS="-I$VCPKG_DIR/include" 
-  #export CURL_LIBS="$VCPKG_DIR/lib/libcurl.lib"
-#
-  ##WITH_SYSTEM+=" --with-system-icu=yes" 
-  ##export ICU_CFLAGS="-I$VCPKG_DIR/include"
-  ##export ICU_LIBS="$VCPKG_DIR/lib/icudt.lib $VCPKG_DIR/lib/icuin.lib $VCPKG_DIR/lib/icuio.lib $VCPKG_DIR/lib/icutu.lib $VCPKG_DIR/lib/icuuc.lib"
-  ##export ICU_VERSION="65.1"
-#
-  #WITH_SYSTEM+=" --with-system-postgresql=yes"
-  #export POSTGRESQL_CFLAGS="-I$VCPKG_DIR/include"
-  #export POSTGRESQL_LIBS="$VCPKG_DIR/lib/libpq.lib $VCPKG_DIR/lib/libssl.lib $VCPKG_DIR/lib/libcrypto.lib"
 
 
-#if [ "$WITH_VCPKG_LIBXML" == "1" ] ; then
+
   #C:/cygwin64/bin/sh.exe ../libtool  --tag=CC  --mode=link 
   #C:/dev/libreoffice-core-meson/workdir/LinkTarget/Executable/gcc-wrapper.exe -DLT_MODULE_PREFIX=lt_module_ext_t  
   #-O2 -Oy-   -w  -avoid-version -module 
@@ -214,16 +228,7 @@ WITH_SYSTEM=
   #Copyright (C) Microsoft Corporation.  All rights reserved.
   #LINK : fatal error LNK1181: cannot open input file 'libxml2.lib'
 
-#  WITH_SYSTEM+=" --with-system-libxml=yes"
-#  export LIBXML_CFLAGS="-I$VCPKG_DIR/include"
-#  #export LDFLAGS="-LIBPATH:${VCPKG_DIR/lib}"
-#  export LIBXML_LIBS="$VCPKG_DIR/lib/libxml2.lib" 
-#  export LIBXML_LIBTOOL_LIBS="-L$VCPKG_DIR/lib -llibxml2"
-#  export LIBXSLT_CFLAGS="-I$VCPKG_DIR/include"
-#  export LIBXSLT_LIBS="$VCPKG_DIR/lib/libxslt.lib"
-#  export LIBEXSLT_CFLAGS="-I$VCPKG_DIR/include"
-#  export LIBEXSLT_LIBS="$VCPKG_DIR/lib/libexslt.lib"
-#fi
+
 
 
 #if [ "$WITH_VCPKG" == "1" ] ; then
