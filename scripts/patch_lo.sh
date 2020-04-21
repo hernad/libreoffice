@@ -11,3 +11,5 @@ patch -p1 < patch/06_mk_modules.diff
 patch -p1 < patch/ado_cut.patch
 patch -p1 < patch/help.diff
 patch -p1 < patch/init_bs.diff
+
+patch -p1 < patch/conan_libs.diff
