@@ -66,47 +66,6 @@ index 2c4a018b0dd8..8039c3f5d541 100644
  
      dnl FIXME Check if the Python library can be linked with, too?
      ;;
-@@ -9189,12 +9235,17 @@ if test "x$enable_postgresql_sdbc" != "xno"; then
-             POSTGRESQL_INC=-I$(${PGCONFIG} --includedir)
-             POSTGRESQL_LIB="-L$(${PGCONFIG} --libdir)"
-         else
--            PKG_CHECK_MODULES(POSTGRESQL, libpq, [
--              POSTGRESQL_INC=$POSTGRESQL_CFLAGS
--              POSTGRESQL_LIB=$POSTGRESQL_LIBS
--            ],[
--              AC_MSG_ERROR([pg_config or 'pkg-config libpq' needed; set PGCONFIG if not in PATH])
--            ])
-+            if test $build_os = cygwin; then
-+                POSTGRESQL_INC=$POSTGRESQL_CFLAGS
-+                POSTGRESQL_LIB=$POSTGRESQL_LIBS
-+            else
-+                PKG_CHECK_MODULES(POSTGRESQL, libpq, [
-+                POSTGRESQL_INC=$POSTGRESQL_CFLAGS
-+                POSTGRESQL_LIB=$POSTGRESQL_LIBS
-+                ],[
-+                AC_MSG_ERROR([pg_config or 'pkg-config libpq' needed; set PGCONFIG if not in PATH])
-+                ])
-+            fi
-         fi
-         FilterLibs "${POSTGRESQL_LIB}"
-         POSTGRESQL_LIB="${filteredlibs}"
-@@ -9303,9 +9354,13 @@ if test "x$enable_postgresql_sdbc" != "xno"; then
-         save_LIBS=$LIBS
-         CPPFLAGS="${CPPFLAGS} ${POSTGRESQL_INC}"
-         LIBS="${LIBS} ${POSTGRESQL_LIB}"
--        AC_CHECK_HEADER([libpq-fe.h], [], [AC_MSG_ERROR([libpq-fe.h is needed])], [])
--        AC_CHECK_LIB([pq], [PQconnectdbParams], [:],
--            [AC_MSG_ERROR(libpq not found or too old. Need >= 9.0)], [])
-+        if test "$build_os" = "cygwin"; then
-+            AC_MSG_NOTICE([cygwin system - skip PostgreSQL check])
-+        else
-+            AC_CHECK_HEADER([libpq-fe.h], [], [AC_MSG_ERROR([libpq-fe.h is needed])], [])
-+            AC_CHECK_LIB([pq], [PQconnectdbParams], [:],
-+                [AC_MSG_ERROR(libpq not found or too old. Need >= 9.0)], [])
-+        fi
-         CFLAGS=$save_CFLAGS
-         CPPFLAGS=$save_CPPFLAGS
-         LIBS=$save_LIBS
 @@ -9320,6 +9375,8 @@ AC_SUBST(GSSAPI_LIBS)
  AC_SUBST(KRB5_LIBS)
  AC_SUBST(BUILD_POSTGRESQL_SDBC)

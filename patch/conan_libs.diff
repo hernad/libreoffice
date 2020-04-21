@@ -175,3 +175,16 @@ index bd2cb6abef20..464405a4a7c6 100644
  $(eval $(call gb_Library_use_system_win32_libs,xsec_xmlsec,\
  	crypt32 \
  	advapi32 \
+diff --git a/config_host.mk.in b/config_host.mk.in
+index d5b68a7a1851..381983cd6668 100644
+--- a/config_host.mk.in
++++ b/config_host.mk.in
+@@ -587,6 +587,8 @@ export SYSTEM_OPENSSL=@SYSTEM_OPENSSL@
+ export SYSTEM_PAGEMAKER=@SYSTEM_PAGEMAKER@
+ export SYSTEM_POPPLER=@SYSTEM_POPPLER@
+ export SYSTEM_POSTGRESQL=@SYSTEM_POSTGRESQL@
++export POSTGRESQL_LIBS=@POSTGRESQL_LIBS@
++export POSTGRESQL_CFLAGS=@POSTGRESQL_CFLAGS@
+ export SYSTEM_PYTHON=@SYSTEM_PYTHON@
+ export SYSTEM_QRCODEGEN=@SYSTEM_QRCODEGEN@
+ export SYSTEM_QXP=@SYSTEM_QXP@
