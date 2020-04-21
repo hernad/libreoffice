@@ -2,25 +2,6 @@ diff --git a/configure.ac b/configure.ac
 index 2c4a018b0dd8..8039c3f5d541 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -8254,10 +8262,14 @@ AC_MSG_CHECKING([which zlib to use])
- if test "$with_system_zlib" = "yes"; then
-     AC_MSG_RESULT([external])
-     SYSTEM_ZLIB=TRUE
--    AC_CHECK_HEADER(zlib.h, [],
--        [AC_MSG_ERROR(zlib.h not found. install zlib)], [])
--    AC_CHECK_LIB(z, deflate, [ ZLIB_LIBS=-lz ],
--        [AC_MSG_ERROR(zlib not found or functional)], [])
-+    if test "$build_os" = "cygwin"; then
-+        AC_MSG_NOTICE([cygwin - zlib system skip check])
-+    else
-+        AC_CHECK_HEADER(zlib.h, [],
-+            [AC_MSG_ERROR(zlib.h not found. install zlib)], [])
-+        AC_CHECK_LIB(z, deflate, [ ZLIB_LIBS=-lz ],
-+            [AC_MSG_ERROR(zlib not found or functional)], [])
-+    fi
- else
-     AC_MSG_RESULT([internal])
-     SYSTEM_ZLIB=
 @@ -8276,10 +8288,14 @@ AC_MSG_CHECKING([which libjpeg to use])
  if test "$with_system_jpeg" = "yes"; then
      AC_MSG_RESULT([external])
@@ -134,4 +115,3 @@ index 2c4a018b0dd8..8039c3f5d541 100644
 +AC_SUBST(POSTGRESQL_LIBS)
  AC_SUBST(POSTGRESQL_INC)
  AC_SUBST(POSTGRESQL_LIB)
- 

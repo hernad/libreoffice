@@ -13,4 +13,4 @@ patch -p1 < patch/help.diff
 patch -p1 < patch/init_bs.diff
 
 patch -p1 < patch/conan_libs.diff
-#patch -p1 < patch/conan_libs_configure_ac.diff
+patch -p1 < patch/conan_libs_configure_ac.diff
