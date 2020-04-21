@@ -1,0 +1,137 @@
+diff --git a/configure.ac b/configure.ac
+index 2c4a018b0dd8..8039c3f5d541 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -8254,10 +8262,14 @@ AC_MSG_CHECKING([which zlib to use])
+ if test "$with_system_zlib" = "yes"; then
+     AC_MSG_RESULT([external])
+     SYSTEM_ZLIB=TRUE
+-    AC_CHECK_HEADER(zlib.h, [],
+-        [AC_MSG_ERROR(zlib.h not found. install zlib)], [])
+-    AC_CHECK_LIB(z, deflate, [ ZLIB_LIBS=-lz ],
+-        [AC_MSG_ERROR(zlib not found or functional)], [])
++    if test "$build_os" = "cygwin"; then
++        AC_MSG_NOTICE([cygwin - zlib system skip check])
++    else
++        AC_CHECK_HEADER(zlib.h, [],
++            [AC_MSG_ERROR(zlib.h not found. install zlib)], [])
++        AC_CHECK_LIB(z, deflate, [ ZLIB_LIBS=-lz ],
++            [AC_MSG_ERROR(zlib not found or functional)], [])
++    fi
+ else
+     AC_MSG_RESULT([internal])
+     SYSTEM_ZLIB=
+@@ -8276,10 +8288,14 @@ AC_MSG_CHECKING([which libjpeg to use])
+ if test "$with_system_jpeg" = "yes"; then
+     AC_MSG_RESULT([external])
+     SYSTEM_LIBJPEG=TRUE
+-    AC_CHECK_HEADER(jpeglib.h, [ LIBJPEG_CFLAGS= ],
+-        [AC_MSG_ERROR(jpeg.h not found. install libjpeg)], [])
+-    AC_CHECK_LIB(jpeg, jpeg_resync_to_restart, [ LIBJPEG_LIBS="-ljpeg" ],
+-        [AC_MSG_ERROR(jpeg library not found or functional)], [])
++    if test "$build_os" = "cygwin"; then
++        AC_MSG_NOTICE([cygwin - LIBJPEG SKIP CHECK])
++    else
++        AC_CHECK_HEADER(jpeglib.h, [ LIBJPEG_CFLAGS= ],
++            [AC_MSG_ERROR(jpeg.h not found. install libjpeg)], [])
++        AC_CHECK_LIB(jpeg, jpeg_resync_to_restart, [ LIBJPEG_LIBS="-ljpeg" ],
++            [AC_MSG_ERROR(jpeg library not found or functional)], [])
++    fi
+ else
+     SYSTEM_LIBJPEG=
+     AC_MSG_RESULT([internal, libjpeg-turbo])
+@@ -8930,24 +8954,28 @@ dnl By now enable_python should be "system", "internal" or "no"
+ case $enable_python in
+ system)
+     SYSTEM_PYTHON=TRUE
++    if test "$build_os" = "cygwin"; then
++        AC_MSG_RESULT([cygwin skip - check python cflags])
++        AC_DEFINE_UNQUOTED([PYTHON_VERSION_STRING], [L"${PYTHON_VERSION}"])
++    else
++        if test "x$ac_cv_header_Python_h" != "xyes"; then
++            AC_MSG_ERROR([Python headers not found. You probably want to set both the PYTHON_CFLAGS and PYTHON_LIBS environment variables.])
++        fi
+ 
+-    if test "x$ac_cv_header_Python_h" != "xyes"; then
+-       AC_MSG_ERROR([Python headers not found. You probably want to set both the PYTHON_CFLAGS and PYTHON_LIBS environment variables.])
+-    fi
+-
+-    AC_LANG_PUSH(C)
+-    CFLAGS="$CFLAGS $PYTHON_CFLAGS"
+-    AC_MSG_CHECKING([for correct python library version])
+-       AC_RUN_IFELSE([AC_LANG_SOURCE([[
+-#include <Python.h>
++        AC_LANG_PUSH(C)
++        CFLAGS="$CFLAGS $PYTHON_CFLAGS"
++        AC_MSG_CHECKING([for correct python library version])
++        AC_RUN_IFELSE([AC_LANG_SOURCE([[
++    #include <Python.h>
+ 
+-int main(int argc, char **argv) {
+-   if ((PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 3)) return 0;
+-   else return 1;
+-}
+-       ]])],[AC_MSG_RESULT([ok])],[AC_MSG_ERROR([Python >= 3.3 is needed when building with Python 3])],[AC_MSG_RESULT([skipped; cross-compiling])])
+-    CFLAGS=$save_CFLAGS
+-    AC_LANG_POP(C)
++    int main(int argc, char **argv) {
++    if ((PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 3)) return 0;
++    else return 1;
++    }
++        ]])],[AC_MSG_RESULT([ok])],[AC_MSG_ERROR([Python >= 3.3 is needed when building with Python 3])],[AC_MSG_RESULT([skipped; cross-compiling])])
++        CFLAGS=$save_CFLAGS
++        AC_LANG_POP(C)
++    fi
+ 
+     dnl FIXME Check if the Python library can be linked with, too?
+     ;;
+@@ -9189,12 +9235,17 @@ if test "x$enable_postgresql_sdbc" != "xno"; then
+             POSTGRESQL_INC=-I$(${PGCONFIG} --includedir)
+             POSTGRESQL_LIB="-L$(${PGCONFIG} --libdir)"
+         else
+-            PKG_CHECK_MODULES(POSTGRESQL, libpq, [
+-              POSTGRESQL_INC=$POSTGRESQL_CFLAGS
+-              POSTGRESQL_LIB=$POSTGRESQL_LIBS
+-            ],[
+-              AC_MSG_ERROR([pg_config or 'pkg-config libpq' needed; set PGCONFIG if not in PATH])
+-            ])
++            if test $build_os = cygwin; then
++                POSTGRESQL_INC=$POSTGRESQL_CFLAGS
++                POSTGRESQL_LIB=$POSTGRESQL_LIBS
++            else
++                PKG_CHECK_MODULES(POSTGRESQL, libpq, [
++                POSTGRESQL_INC=$POSTGRESQL_CFLAGS
++                POSTGRESQL_LIB=$POSTGRESQL_LIBS
++                ],[
++                AC_MSG_ERROR([pg_config or 'pkg-config libpq' needed; set PGCONFIG if not in PATH])
++                ])
++            fi
+         fi
+         FilterLibs "${POSTGRESQL_LIB}"
+         POSTGRESQL_LIB="${filteredlibs}"
+@@ -9303,9 +9354,13 @@ if test "x$enable_postgresql_sdbc" != "xno"; then
+         save_LIBS=$LIBS
+         CPPFLAGS="${CPPFLAGS} ${POSTGRESQL_INC}"
+         LIBS="${LIBS} ${POSTGRESQL_LIB}"
+-        AC_CHECK_HEADER([libpq-fe.h], [], [AC_MSG_ERROR([libpq-fe.h is needed])], [])
+-        AC_CHECK_LIB([pq], [PQconnectdbParams], [:],
+-            [AC_MSG_ERROR(libpq not found or too old. Need >= 9.0)], [])
++        if test "$build_os" = "cygwin"; then
++            AC_MSG_NOTICE([cygwin system - skip PostgreSQL check])
++        else
++            AC_CHECK_HEADER([libpq-fe.h], [], [AC_MSG_ERROR([libpq-fe.h is needed])], [])
++            AC_CHECK_LIB([pq], [PQconnectdbParams], [:],
++                [AC_MSG_ERROR(libpq not found or too old. Need >= 9.0)], [])
++        fi
+         CFLAGS=$save_CFLAGS
+         CPPFLAGS=$save_CPPFLAGS
+         LIBS=$save_LIBS
+@@ -9320,6 +9375,8 @@ AC_SUBST(GSSAPI_LIBS)
+ AC_SUBST(KRB5_LIBS)
+ AC_SUBST(BUILD_POSTGRESQL_SDBC)
+ AC_SUBST(SYSTEM_POSTGRESQL)
++AC_SUBST(POSTGRESQL_CFLAGS)
++AC_SUBST(POSTGRESQL_LIBS)
+ AC_SUBST(POSTGRESQL_INC)
+ AC_SUBST(POSTGRESQL_LIB)
+ 
