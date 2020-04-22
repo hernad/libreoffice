@@ -10,6 +10,7 @@ libxml2/2.9.9
 libxslt/1.1.33@hernad/stable
 libjpeg-turbo/2.0.4
 libiconv/1.16@hernad/stable
+xmlsec/1.2.29@hernad/stable
 
 [generators]
 deploy

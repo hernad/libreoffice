@@ -15,7 +15,8 @@ conan install .. --install-folder c:/dev/libreoffice/conan/deploy_x86 ^
      --build libxslt ^
      --build openssl ^
      --build libcurl ^
-     --build libjpeg-turbo
-
+     --build libjpeg-turbo ^
+     --build xmlsec
+ 
 
 REM     --settings arch=x86_64 --settings compiler.runtime="MT" --settings compiler.version="16"

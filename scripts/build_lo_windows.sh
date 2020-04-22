@@ -50,18 +50,14 @@ if [ "$BUILD_ARCH" == "x64" ] ; then
 
 else
   ENABLE_64_BIT=
-  #export VCPKG_DIR=c:/dev/vcpkg/installed/x86-windows
-  #export VCPKG_STATIC_DIR=c:/dev/vcpkg/installed/x86-windows-static
-  #export PYTHON_DIR=c:/dev/Python37-32
-  #export PYTHON=$PYTHON_DIR/python.exe
-  #export PYTHON_CFLAGS="-I$PYTHON_DIR/include"
-  #export PYTHON_LIBS="$PYTHON_DIR/libs/python37.lib"
-  #export PYTHON_VERSION="3.7.7"
-  
-  #export PYTHON_VERSION="3.7.3"
-  #export PYTHON=C:/dev/vcpkg/downloads/tools/python/python-3.7.3-x86/python.exe
-  #export PYTHON_CFLAGS="-I$VCPKG_DIR/include/python3.7"
-  #export PYTHON_LIBS="$VCPKG_DIR/lib/python37.lib"
+  export PYTHON_VERSION_MAJOR=3
+  export PYTHON_VERSION_MINOR=7
+  export PYTHON_VERSION="3.7.3"
+  export CONAN_DEPLOY_DIR=c:/dev/libreoffice/conan/deploy_x86
+  export PYTHON=C:/dev/vcpkg/downloads/tools/python/python-3.7.3-x86/python.exe
+  export PYTHON_CFLAGS="-Ic:/dev/vcpkg/installed/x86-windows/include/python3.7"
+  export PYTHON_LIBS="c:/dev/vcpkg/installed/x86-windows/lib/python37.lib"
+
 fi
 
 
@@ -87,13 +83,7 @@ fi
 
 # ---------------------------------------------------------
 
-#cp -av /cygdrive/c/dev/vcpkg/buildtrees/xmlsec/src/sec-1_2_29-18300c1e02/include/xmlsec/nss /cygdrive/c/dev/vcpkg/installed/x86-windows/include/xmlsec/
-#cp -av /cygdrive/c/dev/vcpkg/buildtrees/xmlsec/src/sec-1_2_29-18300c1e02/include/xmlsec/mscng /cygdrive/c/dev/vcpkg/installed/x86-windows/include/xmlsec/
-
 # xmlsec/nss/crypto.h
-
-#export XMLSEC_CFLAGS="-I$VCPKG_DIR/include"
-#export XMLSEC_LIBS="$VCPKG_DIR/lib/libxmlsec.lib"
 
 #export LIBS="$ICU_LIBS"
 
@@ -130,7 +120,6 @@ GALLERY=
 
 # /usr/sbin/gencmn.exe
 export PATH=$PATH:/usr/sbin
-
 
 
 # export verbose="V=1"
@@ -196,10 +185,9 @@ WITH_SYSTEM=
   export LIBXSLT_CFLAGS="-I$CONAN_DEPLOY_DIR/libxslt/include"
   export LIBXSLT_LIBS="$CONAN_DEPLOY_DIR/libxslt/lib/libxslt_a.lib"
 
-  #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! c:/dev/xmlsec ---------------------------------------------------------
   WITH_SYSTEM+=" --with-system-xmlsec=yes"
-  export XMLSEC_CFLAGS="-Ic:/dev/xmlsec/win32/include"
-  export XMLSEC_LIBS="c:/dev/xmlsec/win32/lib/libxmlsec.lib c:/dev/xmlsec/win32/lib/libxmlsec-mscng.lib"
+  export XMLSEC_CFLAGS="-I$CONAN_DEPLOY_DIR/xmlsec/include"
+  export XMLSEC_LIBS="$CONAN_DEPLOY_DIR/xmlsec/lib/libxmlsec_a.lib $CONAN_DEPLOY_DIR/xmlsec/lib/libxmlsec-mscng_a.lib"
 
   #WITH_SYSTEM+=" --with-system-expat=yes"
   #export EXPAT_CFLAGS="-I$VCPKG_DIR/include"
