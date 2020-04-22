@@ -14,3 +14,5 @@ patch -p1 < patch/init_bs.diff
 
 patch -p1 < patch/conan_libs.diff
 patch -p1 < patch/conan_libs_configure_ac.diff
+
+patch -p1 < patch/init_skia_off_show_tooltip_of_the_day_off.diff
