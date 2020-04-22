@@ -47,6 +47,7 @@ if [ "$BUILD_ARCH" == "x64" ] ; then
   export PYTHON=C:/dev/vcpkg/downloads/tools/python/python-3.7.3-x64/python.exe
   export PYTHON_CFLAGS="-Ic:/dev/vcpkg/installed/x64-windows/include/python3.7"
   export PYTHON_LIBS="c:/dev/vcpkg/installed/x64-windows/lib/python37.lib"
+  BOOST_NODEFAULT_SUFIX="vc142-mt-x64-1_72.lib"
 
 else
   ENABLE_64_BIT=
@@ -57,6 +58,7 @@ else
   export PYTHON=C:/dev/vcpkg/downloads/tools/python/python-3.7.3-x86/python.exe
   export PYTHON_CFLAGS="-Ic:/dev/vcpkg/installed/x86-windows/include/python3.7"
   export PYTHON_LIBS="c:/dev/vcpkg/installed/x86-windows/lib/python37.lib"
+  BOOST_NODEFAULT_SUFIX="vc142-mt-x32-1_72.lib"
 
 fi
 
@@ -155,12 +157,12 @@ WITH_SYSTEM=
   export BOOST_CXXFLAGS=$BOOST_CPPFLAGS
   export BOOST_LDFLAGS=""
 
-  BOOST_DEFAULT="vc142-mt-x64-1_72.lib"
-  export BOOST_LOCALE_LIB="-NODEFAULTLIB:libboost_locale-$BOOST_DEFAULT bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/libboost_locale.lib $ZLIB_LIBS"
-  export BOOST_DATE_TIME_LIB="-NODEFAULTLIB:libboost_date_time-$BOOST_DEFAULT bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/libboost_date_time.lib $ZLIB_LIBS"
-  export BOOST_FILESYSTEM_LIB="-NODEFAULTLIB:libboost_filesystem-$BOOST_DEFAULT bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/libboost_filesystem.lib $ZLIB_LIBS"
-  export BOOST_IOSTREAMS_LIB="-NODEFAULTLIB:libboost_iostreams-$BOOST_DEFAULT bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/libboost_iostreams.lib $ZLIB_LIBS"
-  export BOOST_SYSTEM_LIB="-NODEFAULTLIB:libboost_system-$BOOST_DEFAULT bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/libboost_system.lib $ZLIB_LIBS"
+  
+  export BOOST_LOCALE_LIB="-NODEFAULTLIB:libboost_locale-$BOOST_NODEFAULT_SUFIX bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/libboost_locale.lib $ZLIB_LIBS"
+  export BOOST_DATE_TIME_LIB="-NODEFAULTLIB:libboost_date_time-$BOOST_NODEFAULT_SUFIX bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/libboost_date_time.lib $ZLIB_LIBS"
+  export BOOST_FILESYSTEM_LIB="-NODEFAULTLIB:libboost_filesystem-$BOOST_NODEFAULT_SUFIX bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/libboost_filesystem.lib $ZLIB_LIBS"
+  export BOOST_IOSTREAMS_LIB="-NODEFAULTLIB:libboost_iostreams-$BOOST_NODEFAULT_SUFIX bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/libboost_iostreams.lib $ZLIB_LIBS"
+  export BOOST_SYSTEM_LIB="-NODEFAULTLIB:libboost_system-$BOOST_NODEFAULT_SUFIX bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/libboost_system.lib $ZLIB_LIBS"
   
   WITH_SYSTEM+=" --with-system-openssl=yes"
   export OPENSSL_CFLAGS="-I$CONAN_DEPLOY_DIR/openssl/include"
@@ -187,7 +189,7 @@ WITH_SYSTEM=
 
   WITH_SYSTEM+=" --with-system-xmlsec=yes"
   export XMLSEC_CFLAGS="-I$CONAN_DEPLOY_DIR/xmlsec/include"
-  export XMLSEC_LIBS="$CONAN_DEPLOY_DIR/xmlsec/lib/libxmlsec_a.lib $CONAN_DEPLOY_DIR/xmlsec/lib/libxmlsec-mscng_a.lib"
+  export XMLSEC_LIBS="$CONAN_DEPLOY_DIR/xmlsec/lib/libxmlsec.lib $CONAN_DEPLOY_DIR/xmlsec/lib/libxmlsec-mscng.lib"
 
   #WITH_SYSTEM+=" --with-system-expat=yes"
   #export EXPAT_CFLAGS="-I$VCPKG_DIR/include"
@@ -301,6 +303,9 @@ function copy_dlls() {
   cp -av $CONAN_DEPLOY_DIR/libcurl/bin/libcurl.dll $DEST/
   cp -av $CONAN_DEPLOY_DIR/openssl/bin/*.dll $DEST/
   cp -av $CONAN_DEPLOY_DIR/icu/bin/*.dll $DEST/
+  cp -av $CONAN_DEPLOY_DIR/xmlsec/binaries/libxmlsec.dll $DEST/
+  cp -av $CONAN_DEPLOY_DIR/xmlsec/binaries/libxmlsec-mscng.dll $DEST/
+
 }
 
 if [ "$ENVARS_ONLY" == "0" ] ; then
