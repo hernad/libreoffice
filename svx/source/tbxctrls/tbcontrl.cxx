@@ -25,16 +25,19 @@
 #include <svl/poolitem.hxx>
 #include <svl/itemset.hxx>
 #include <vcl/commandinfoprovider.hxx>
+#include <vcl/combobox.hxx>
 #include <vcl/event.hxx>
 #include <vcl/menubtn.hxx>
 #include <vcl/toolbox.hxx>
 #include <vcl/customweld.hxx>
 #include <vcl/vclptr.hxx>
+#include <vcl/weldutils.hxx>
 #include <svtools/valueset.hxx>
 #include <svtools/ctrlbox.hxx>
 #include <svl/style.hxx>
 #include <svtools/ctrltool.hxx>
 #include <svtools/borderhelper.hxx>
+#include <sfx2/InterimItemWindow.hxx>
 #include <sfx2/tplpitem.hxx>
 #include <sfx2/sfxstatuslistener.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
@@ -176,23 +179,56 @@ private:
 
 namespace {
 
-class SvxFontNameBox_Impl : public FontNameBox
+class SvxFontNameBox_Impl;
+class SvxFontNameBox_Base;
+
+class SvxFontNameToolBoxControl : public cppu::ImplInheritanceHelper< svt::ToolboxController,
+                                                                      css::lang::XServiceInfo >
 {
+public:
+    SvxFontNameToolBoxControl();
+
+    // XStatusListener
+    virtual void SAL_CALL statusChanged( const css::frame::FeatureStateEvent& rEvent ) override;
+
+    // XToolbarController
+    virtual css::uno::Reference< css::awt::XWindow > SAL_CALL createItemWindow( const css::uno::Reference< css::awt::XWindow >& rParent ) override;
+
+    // XComponent
+    virtual void SAL_CALL dispose() override;
+
+    // XServiceInfo
+    virtual OUString SAL_CALL getImplementationName() override;
+    virtual sal_Bool SAL_CALL supportsService( const OUString& rServiceName ) override;
+    virtual css::uno::Sequence< OUString > SAL_CALL getSupportedServiceNames() override;
+
 private:
+    VclPtr<SvxFontNameBox_Impl> m_xVclBox;
+    std::unique_ptr<SvxFontNameBox_Base> m_xWeldBox;
+    SvxFontNameBox_Base* m_pBox;
+};
+
+class SvxFontNameBox_Base
+{
+protected:
+    SvxFontNameToolBoxControl& m_rCtrl;
+    int m_nCharWidth;
+
+    std::unique_ptr<FontNameBox>   m_xWidget;
     const FontList*                pFontList;
     ::std::unique_ptr<FontList>    m_aOwnFontList;
     vcl::Font                      aCurFont;
-    Size                           aLogicalSize;
     OUString                       aCurText;
     sal_uInt16                     nFtCount;
     bool                           bRelease;
     Reference< XDispatchProvider > m_xDispatchProvider;
     Reference< XFrame >            m_xFrame;
-    bool            mbEndPreview;
     bool            mbCheckingUnknownFont;
 
     void            ReleaseFocus_Impl();
     void            EnableControls_Impl();
+
+    void            Select(bool bNonTravelSelect);
 
     void            EndPreview()
     {
@@ -201,35 +237,89 @@ private:
                                          ".uno:CharEndPreviewFontName",
                                          aArgs );
     }
-    DECL_LINK( CheckAndMarkUnknownFont, VclWindowEvent&, void );
-
-    void            SetOptimalSize();
-
-protected:
-    virtual void    Select() override;
-    virtual void    DataChanged( const DataChangedEvent& rDCEvt ) override;
+    void            CheckAndMarkUnknownFont();
 
 public:
-    SvxFontNameBox_Impl( vcl::Window* pParent, const Reference< XDispatchProvider >& rDispatchProvider,const Reference< XFrame >& _xFrame
-        , WinBits nStyle
-        );
-    virtual ~SvxFontNameBox_Impl() override;
-    virtual void dispose() override;
+    SvxFontNameBox_Base(std::unique_ptr<weld::ComboBox> xWidget, const Reference<XDispatchProvider>& rDispatchProvider,
+                        const Reference<XFrame>& rFrame, SvxFontNameToolBoxControl& rCtrl);
+    virtual ~SvxFontNameBox_Base()
+    {
+    }
 
     void            FillList();
     void            Update( const css::awt::FontDescriptor* pFontDesc );
     sal_uInt16      GetListCount() const { return nFtCount; }
-    void            Clear() { FontNameBox::Clear(); nFtCount = 0; }
+    void            Clear() { m_xWidget->clear(); nFtCount = 0; }
     void            Fill( const FontList* pList )
-                        { FontNameBox::Fill( pList );
-                          nFtCount = pList->GetFontNameCount(); }
-    virtual void    UserDraw( const UserDrawEvent& rUDEvt ) override;
-    virtual bool    PreNotify( NotifyEvent& rNEvt ) override;
-    virtual bool    EventNotify( NotifyEvent& rNEvt ) override;
-    virtual Reference< css::accessibility::XAccessible > CreateAccessible() override;
-    void     SetOwnFontList(::std::unique_ptr<FontList> && _aOwnFontList) { m_aOwnFontList = std::move(_aOwnFontList); }
-    virtual boost::property_tree::ptree DumpAsPropertyTree() override;
+    {
+        m_xWidget->Fill(pList);
+        nFtCount = pList->GetFontNameCount();
+    }
+
+    void SetOwnFontList(::std::unique_ptr<FontList> && _aOwnFontList) { m_aOwnFontList = std::move(_aOwnFontList); }
+
+    virtual void set_sensitive(bool bSensitive)
+    {
+        m_xWidget->set_sensitive(bSensitive);
+    }
+
+    void set_active_or_entry_text(const OUString& rText);
+
+    void statusChanged_Impl(const css::frame::FeatureStateEvent& rEvent);
+
+    virtual bool DoKeyInput(const KeyEvent& rKEvt);
+
+    DECL_LINK(SelectHdl, weld::ComboBox&, void);
+    DECL_LINK(KeyInputHdl, const KeyEvent&, bool);
+    DECL_LINK(ActivateHdl, weld::ComboBox&, bool);
+    DECL_LINK(FocusInHdl, weld::Widget&, void);
+    DECL_LINK(FocusOutHdl, weld::Widget&, void);
+    DECL_LINK(DumpAsPropertyTreeHdl, boost::property_tree::ptree&, void);
 };
+
+class SvxFontNameBox_Impl final : public InterimItemWindow
+                                , public SvxFontNameBox_Base
+{
+private:
+    virtual void DataChanged( const DataChangedEvent& rDCEvt ) override;
+    virtual void GetFocus() override
+    {
+        if (m_xWidget)
+            m_xWidget->grab_focus();
+        InterimItemWindow::GetFocus();
+    }
+
+    void            SetOptimalSize();
+
+    virtual bool DoKeyInput(const KeyEvent& rKEvt) override;
+
+public:
+    SvxFontNameBox_Impl(vcl::Window* pParent, const Reference<XDispatchProvider>& rDispatchProvider,
+                        const Reference<XFrame>& rFrame, SvxFontNameToolBoxControl& rCtrl);
+
+    virtual void dispose() override
+    {
+        m_xWidget.reset();
+        InterimItemWindow::dispose();
+    }
+
+    virtual ~SvxFontNameBox_Impl() override
+    {
+        disposeOnce();
+    }
+
+    virtual Reference< css::accessibility::XAccessible > CreateAccessible() override;
+
+    virtual void set_sensitive(bool bSensitive) override
+    {
+        m_xWidget->set_sensitive(bSensitive);
+        if (bSensitive)
+            InterimItemWindow::Enable();
+        else
+            InterimItemWindow::Disable();
+    }
+};
+
 
 // SelectHdl needs the Modifiers, get them in MouseButtonUp
 class SvxFrmValueSet_Impl final : public SvtValueSet
@@ -1177,7 +1267,7 @@ IMPL_LINK(SvxStyleBox_Impl, CalcOptimalExtraUserWidth, VclWindowEvent&, event, v
         nMaxUserDrawFontWidth = std::max(nWidth, nMaxUserDrawFontWidth);
     }
 
-    SetUserItemSize(Size(nMaxUserDrawFontWidth - nMaxNormalFontWidth, ITEM_HEIGHT));
+    SetUserItemSize(Size(nMaxUserDrawFontWidth, ITEM_HEIGHT));
 }
 
 // test is the color between Font- and background-color to be identify
@@ -1235,7 +1325,7 @@ boost::property_tree::ptree SvxStyleBox_Impl::DumpAsPropertyTree()
 }
 
 
-static bool lcl_GetDocFontList( const FontList** ppFontList, SvxFontNameBox_Impl* pBox )
+static bool lcl_GetDocFontList(const FontList** ppFontList, SvxFontNameBox_Base* pBox)
 {
     bool bChanged = false;
     const SfxObjectShell* pDocSh = SfxObjectShell::Current();
@@ -1246,7 +1336,7 @@ static bool lcl_GetDocFontList( const FontList** ppFontList, SvxFontNameBox_Impl
             static_cast<const SvxFontListItem*>(pDocSh->GetItem( SID_ATTR_CHAR_FONTLIST ));
     else
     {
-        ::std::unique_ptr<FontList> aFontList(new FontList( pBox->GetParent() ));
+        ::std::unique_ptr<FontList> aFontList(new FontList(Application::GetDefaultDevice()));
         *ppFontList = aFontList.get();
         pBox->SetOwnFontList(std::move(aFontList));
         bChanged = true;
@@ -1280,7 +1370,7 @@ static bool lcl_GetDocFontList( const FontList** ppFontList, SvxFontNameBox_Impl
         }
 
         if ( pBox )
-            pBox->Enable();
+            pBox->set_sensitive(true);
     }
     else if ( pBox && ( pDocSh || !ppFontList ))
     {
@@ -1291,7 +1381,7 @@ static bool lcl_GetDocFontList( const FontList** ppFontList, SvxFontNameBox_Impl
         // the help window with F1. After closing the help window, we disable the font name
         // combo box. The SfxObjectShell::Current() method returns in that case zero. But the
         // font list hasn't changed and therefore the combo box shouldn't be disabled!
-        pBox->Disable();
+        pBox->set_sensitive(false);
     }
 
     // Fill the FontBox, also the new list if necessary
@@ -1305,63 +1395,74 @@ static bool lcl_GetDocFontList( const FontList** ppFontList, SvxFontNameBox_Impl
     return bChanged;
 }
 
-SvxFontNameBox_Impl::SvxFontNameBox_Impl( vcl::Window* pParent, const Reference< XDispatchProvider >& rDispatchProvider,const Reference< XFrame >& _xFrame, WinBits nStyle ) :
-
-    FontNameBox        ( pParent, nStyle | WinBits( WB_DROPDOWN | WB_AUTOHSCROLL ) ),
-    pFontList          ( nullptr ),
-    aLogicalSize       ( 60,160 ),
-    nFtCount           ( 0 ),
-    bRelease           ( true ),
-    m_xDispatchProvider( rDispatchProvider ),
-    m_xFrame (_xFrame),
-    mbEndPreview(false),
-    mbCheckingUnknownFont(false)
+SvxFontNameBox_Base::SvxFontNameBox_Base(std::unique_ptr<weld::ComboBox> xWidget,
+                                         const Reference<XDispatchProvider>& rDispatchProvider,
+                                         const Reference<XFrame>& rFrame,
+                                         SvxFontNameToolBoxControl& rCtrl)
+    : m_rCtrl(rCtrl)
+    , m_nCharWidth(xWidget->get_approximate_digit_width() * 15)
+    , m_xWidget(new FontNameBox(std::move(xWidget)))
+    , pFontList(nullptr)
+    , nFtCount(0)
+    , bRelease(true)
+    , m_xDispatchProvider(rDispatchProvider)
+    , m_xFrame(rFrame)
+    , mbCheckingUnknownFont(false)
 {
-    SetOptimalSize();
     EnableControls_Impl();
-    GetSubEdit()->AddEventListener( LINK( this, SvxFontNameBox_Impl, CheckAndMarkUnknownFont ));
+
+    m_xWidget->connect_changed(LINK(this, SvxFontNameBox_Base, SelectHdl));
+    m_xWidget->connect_key_press(LINK(this, SvxFontNameBox_Base, KeyInputHdl));
+    m_xWidget->connect_entry_activate(LINK(this, SvxFontNameBox_Base, ActivateHdl));
+    m_xWidget->connect_focus_in(LINK(this, SvxFontNameBox_Base, FocusInHdl));
+    m_xWidget->connect_focus_out(LINK(this, SvxFontNameBox_Base, FocusOutHdl));
+    m_xWidget->connect_get_property_tree(LINK(this, SvxFontNameBox_Base, DumpAsPropertyTreeHdl));
+
+    // set width in chars low so the size request will not be overridden
+    m_xWidget->set_entry_width_chars(1);
+    m_xWidget->set_size_request(m_nCharWidth, -1);
+}
+
+SvxFontNameBox_Impl::SvxFontNameBox_Impl(vcl::Window* pParent, const Reference<XDispatchProvider>& rDispatchProvider,
+                                         const Reference<XFrame>& rFrame, SvxFontNameToolBoxControl& rCtrl)
+    : InterimItemWindow(pParent, "svx/ui/fontnamebox.ui", "FontNameBox")
+    , SvxFontNameBox_Base(m_xBuilder->weld_combo_box("fontnamecombobox"), rDispatchProvider, rFrame, rCtrl)
+{
     set_id("fontnamecombobox");
+    SetOptimalSize();
 }
 
-SvxFontNameBox_Impl::~SvxFontNameBox_Impl()
+void SvxFontNameBox_Base::FillList()
 {
-    disposeOnce();
-}
-
-void SvxFontNameBox_Impl::dispose()
-{
-    GetSubEdit()->RemoveEventListener( LINK( this, SvxFontNameBox_Impl, CheckAndMarkUnknownFont ));
-    FontNameBox::dispose();
-}
-
-void SvxFontNameBox_Impl::FillList()
-{
-    // Save old Selection, set back in the end
-    Selection aOldSel = GetSelection();
-    // Did Doc-Fontlist change?
-    lcl_GetDocFontList( &pFontList, this );
-    aCurText = GetText();
-    SetSelection( aOldSel );
-}
-
-IMPL_LINK( SvxFontNameBox_Impl, CheckAndMarkUnknownFont, VclWindowEvent&, event, void )
-{
-    if( event.GetId() != VclEventId::EditModify )
+    if (!m_xWidget) // e.g. disposed
         return;
+    // Save old Selection, set back in the end
+    int nStartPos, nEndPos;
+    m_xWidget->get_entry_selection_bounds(nStartPos, nEndPos);
+
+    // Did Doc-Fontlist change?
+    lcl_GetDocFontList(&pFontList, this);
+
+    aCurText = m_xWidget->get_active_text();
+    m_xWidget->select_entry_region(nStartPos, nEndPos);
+}
+
+void SvxFontNameBox_Base::CheckAndMarkUnknownFont()
+{
     if (mbCheckingUnknownFont) //tdf#117537 block rentry
         return;
     mbCheckingUnknownFont = true;
-    OUString fontname = GetSubEdit()->GetText();
+    OUString fontname = m_xWidget->get_active_text();
     lcl_GetDocFontList( &pFontList, this );
     // If the font is unknown, show it in italic.
-    vcl::Font font = GetControlFont();
+    vcl::Font font = m_xWidget->get_entry_font();
     if( pFontList != nullptr && pFontList->IsAvailable( fontname ))
     {
         if( font.GetItalic() != ITALIC_NONE )
         {
             font.SetItalic( ITALIC_NONE );
-            SetControlFont( font );
-            SetQuickHelpText( SvxResId( RID_SVXSTR_CHARFONTNAME ));
+            m_xWidget->set_entry_font(font);
+            m_xWidget->set_tooltip_text(SvxResId(RID_SVXSTR_CHARFONTNAME));
         }
     }
     else
@@ -1369,14 +1470,14 @@ IMPL_LINK( SvxFontNameBox_Impl, CheckAndMarkUnknownFont, VclWindowEvent&, event,
         if( font.GetItalic() != ITALIC_NORMAL )
         {
             font.SetItalic( ITALIC_NORMAL );
-            SetControlFont( font );
-            SetQuickHelpText( SvxResId( RID_SVXSTR_CHARFONTNAME_NOTAVAILABLE ));
+            m_xWidget->set_entry_font(font);
+            m_xWidget->set_tooltip_text(SvxResId(RID_SVXSTR_CHARFONTNAME_NOTAVAILABLE));
         }
     }
     mbCheckingUnknownFont = false;
 }
 
-void SvxFontNameBox_Impl::Update( const css::awt::FontDescriptor* pFontDesc )
+void SvxFontNameBox_Base::Update( const css::awt::FontDescriptor* pFontDesc )
 {
     if ( pFontDesc )
     {
@@ -1387,72 +1488,73 @@ void SvxFontNameBox_Impl::Update( const css::awt::FontDescriptor* pFontDesc )
         aCurFont.SetCharSet     ( rtl_TextEncoding( pFontDesc->CharSet ) );
     }
     OUString aCurName = aCurFont.GetFamilyName();
-    if ( GetText() != aCurName )
-        SetText( aCurName );
+    OUString aText = m_xWidget->get_active_text();
+    if (aText != aCurName)
+        set_active_or_entry_text(aCurName);
 }
 
-bool SvxFontNameBox_Impl::PreNotify( NotifyEvent& rNEvt )
+void SvxFontNameBox_Base::set_active_or_entry_text(const OUString& rText)
 {
-    MouseNotifyEvent nType = rNEvt.GetType();
-
-    if ( MouseNotifyEvent::MOUSEBUTTONDOWN == nType || MouseNotifyEvent::GETFOCUS == nType )
-    {
-        EnableControls_Impl();
-        FillList();
-    }
-    return FontNameBox::PreNotify( rNEvt );
+    m_xWidget->set_active_or_entry_text(rText);
+    CheckAndMarkUnknownFont();
 }
 
-bool SvxFontNameBox_Impl::EventNotify( NotifyEvent& rNEvt )
+IMPL_LINK_NOARG(SvxFontNameBox_Base, FocusInHdl, weld::Widget&, void)
+{
+    EnableControls_Impl();
+    FillList();
+}
+
+IMPL_LINK(SvxFontNameBox_Base, KeyInputHdl, const KeyEvent&, rKEvt, bool)
+{
+    return DoKeyInput(rKEvt);
+}
+
+bool SvxFontNameBox_Base::DoKeyInput(const KeyEvent& rKEvt)
 {
     bool bHandled = false;
-    mbEndPreview = false;
-    if ( rNEvt.GetType() == MouseNotifyEvent::KEYUP )
-        mbEndPreview = true;
 
-    if ( rNEvt.GetType() == MouseNotifyEvent::KEYINPUT )
+    sal_uInt16 nCode = rKEvt.GetKeyCode().GetCode();
+
+    switch (nCode)
     {
-        sal_uInt16 nCode = rNEvt.GetKeyEvent()->GetKeyCode().GetCode();
+        case KEY_TAB:
+            bRelease = false;
+            Select(true);
+            break;
 
-        switch ( nCode )
-        {
-            case KEY_RETURN:
-            case KEY_TAB:
+        case KEY_ESCAPE:
+            set_active_or_entry_text(aCurText);
+            if (!m_rCtrl.IsInSidebar())
             {
-                if ( KEY_TAB == nCode )
-                    bRelease = false;
-                else
-                    bHandled = true;
-                Select();
-                break;
+                ReleaseFocus_Impl();
+                bHandled = true;
             }
-
-            case KEY_ESCAPE:
-                SetText( aCurText );
-                if ( typeid( *GetParent() ) != typeid( sfx2::sidebar::SidebarToolBox ) )
-                    ReleaseFocus_Impl();
-                EndPreview();
-                break;
-        }
+            EndPreview();
+            break;
     }
-    else if ( MouseNotifyEvent::LOSEFOCUS == rNEvt.GetType() )
+
+    return bHandled;
+}
+
+bool SvxFontNameBox_Impl::DoKeyInput(const KeyEvent& rKEvt)
+{
+    return SvxFontNameBox_Base::DoKeyInput(rKEvt) || ChildKeyInput(rKEvt);
+}
+
+IMPL_LINK_NOARG(SvxFontNameBox_Base, FocusOutHdl, weld::Widget&, void)
+{
+    if (!m_xWidget->has_focus()) // a combobox can be comprised of different subwidget so double-check if none of those has focus
     {
-        vcl::Window* pFocusWin = Application::GetFocusWindow();
-        if ( !HasFocus() && GetSubEdit() != pFocusWin )
-            SetText( GetSavedValue() );
+        set_active_or_entry_text(m_xWidget->get_saved_value());
         // send EndPreview
         EndPreview();
     }
-
-    return bHandled || FontNameBox::EventNotify( rNEvt );
 }
 
 void SvxFontNameBox_Impl::SetOptimalSize()
 {
-    Size aSize(LogicToPixel(aLogicalSize, MapMode(MapUnit::MapAppFont)));
-    set_width_request(aSize.Width());
-    set_height_request(aSize.Height());
-    SetSizePixel(aSize);
+    SetSizePixel(get_preferred_size());
 }
 
 void SvxFontNameBox_Impl::DataChanged( const DataChangedEvent& rDCEvt )
@@ -1469,11 +1571,9 @@ void SvxFontNameBox_Impl::DataChanged( const DataChangedEvent& rDCEvt )
         // the new one before doing anything further.
         lcl_GetDocFontList( &pFontList, this );
     }
-
-    FontNameBox::DataChanged( rDCEvt );
 }
 
-void SvxFontNameBox_Impl::ReleaseFocus_Impl()
+void SvxFontNameBox_Base::ReleaseFocus_Impl()
 {
     if ( !bRelease )
     {
@@ -1484,70 +1584,41 @@ void SvxFontNameBox_Impl::ReleaseFocus_Impl()
         m_xFrame->getContainerWindow()->setFocus();
 }
 
-void SvxFontNameBox_Impl::EnableControls_Impl()
+void SvxFontNameBox_Base::EnableControls_Impl()
 {
     SvtFontOptions aFontOpt;
     bool bEnable = aFontOpt.IsFontHistoryEnabled();
     sal_uInt16 nEntries = bEnable ? MAX_MRU_FONTNAME_ENTRIES : 0;
-    if ( GetMaxMRUCount() != nEntries )
+    if (m_xWidget->get_max_mru_count() != nEntries)
     {
         // refill in the next GetFocus-Handler
         pFontList = nullptr;
         Clear();
-        SetMaxMRUCount( nEntries );
+        m_xWidget->set_max_mru_count(nEntries);
     }
 
-    bEnable = aFontOpt.IsFontWYSIWYGEnabled();
-    EnableWYSIWYG( bEnable );
+    if (aFontOpt.IsFontWYSIWYGEnabled())
+        m_xWidget->EnableWYSIWYG();
 }
 
-void SvxFontNameBox_Impl::UserDraw( const UserDrawEvent& rUDEvt )
+IMPL_LINK(SvxFontNameBox_Base, SelectHdl, weld::ComboBox&, rCombo, void)
 {
-    FontNameBox::UserDraw( rUDEvt );
-
-    // Hack - GetStyle now contains the currently
-    // selected item in the list box
-    // ItemId contains the id of the current item to draw
-    // or select
-    if (  rUDEvt.GetItemId() == rUDEvt.GetStyle() )
-    {
-        OUString fontName(GetText());
-        if (IsInDropDown())
-        {
-            /*
-             * when in dropdown mode the selected item should be
-             * used and not the current selection
-             */
-             fontName = GetEntry(rUDEvt.GetItemId());
-        }
-        Sequence< PropertyValue > aArgs( 1 );
-        FontMetric aFontMetric( pFontList->Get( fontName,
-            aCurFont.GetWeight(),
-            aCurFont.GetItalic() ) );
-
-        SvxFontItem aFontItem( aFontMetric.GetFamilyType(),
-            aFontMetric.GetFamilyName(),
-            aFontMetric.GetStyleName(),
-            aFontMetric.GetPitch(),
-            aFontMetric.GetCharSet(),
-            SID_ATTR_CHAR_FONT );
-        aFontItem.QueryValue( aArgs[0].Value );
-        aArgs[0].Name   = "CharPreviewFontName";
-        SfxToolBoxControl::Dispatch( m_xDispatchProvider,
-            ".uno:CharPreviewFontName",
-                aArgs );
-    }
+    Select(rCombo.changed_by_direct_pick()); // only when picked from the list
 }
 
-void SvxFontNameBox_Impl::Select()
+IMPL_LINK_NOARG(SvxFontNameBox_Base, ActivateHdl, weld::ComboBox&, bool)
 {
-    FontNameBox::Select();
+    Select(true);
+    return true;
+}
 
+void SvxFontNameBox_Base::Select(bool bNonTravelSelect)
+{
     Sequence< PropertyValue > aArgs( 1 );
     std::unique_ptr<SvxFontItem> pFontItem;
     if ( pFontList )
     {
-        FontMetric aFontMetric( pFontList->Get( GetText(),
+        FontMetric aFontMetric( pFontList->Get(m_xWidget->get_active_text(),
             aCurFont.GetWeight(),
             aCurFont.GetItalic() ) );
         aCurFont = aFontMetric;
@@ -1563,8 +1634,10 @@ void SvxFontNameBox_Impl::Select()
         pFontItem->QueryValue( a );
         aArgs[0].Value  = a;
     }
-    if ( !IsTravelSelect() )
+
+    if (bNonTravelSelect)
     {
+        CheckAndMarkUnknownFont();
         //  #i33380# DR 2004-09-03 Moved the following line above the Dispatch() call.
         //  This instance may be deleted in the meantime (i.e. when a dialog is opened
         //  while in Dispatch()), accessing members will crash in this case.
@@ -1580,11 +1653,6 @@ void SvxFontNameBox_Impl::Select()
     }
     else
     {
-        if ( mbEndPreview )
-        {
-            EndPreview();
-            return;
-        }
         if (pFontItem)
         {
             aArgs[0].Name   = "CharPreviewFontName";
@@ -1595,35 +1663,32 @@ void SvxFontNameBox_Impl::Select()
     }
 }
 
-boost::property_tree::ptree SvxFontNameBox_Impl::DumpAsPropertyTree()
+IMPL_LINK(SvxFontNameBox_Base, DumpAsPropertyTreeHdl, boost::property_tree::ptree&, rTree, void)
 {
-    boost::property_tree::ptree aTree(FontNameBox::DumpAsPropertyTree());
-
     boost::property_tree::ptree aEntries;
 
-    for (int i = 0; i < GetEntryCount(); ++i)
+    for (int i = 0, nEntryCount = m_xWidget->get_count(); i < nEntryCount; ++i)
     {
         boost::property_tree::ptree aEntry;
-        aEntry.put("", GetEntry(i));
+        aEntry.put("", m_xWidget->get_text(i));
         aEntries.push_back(std::make_pair("", aEntry));
     }
 
-    aTree.add_child("entries", aEntries);
+    rTree.add_child("entries", aEntries);
 
     boost::property_tree::ptree aSelected;
 
-    for (int i = 0; i < GetSelectedEntryCount(); ++i)
+    int nSelectedEntry = m_xWidget->get_active();
+    if (nSelectedEntry != -1)
     {
         boost::property_tree::ptree aEntry;
-        aEntry.put("", GetSelectedEntryPos(i));
+        aEntry.put("", m_xWidget->get_text(nSelectedEntry));
         aSelected.push_back(std::make_pair("", aEntry));
     }
 
-    aTree.put("selectedCount", GetSelectedEntryCount());
-    aTree.add_child("selectedEntries", aSelected);
-    aTree.put("command", ".uno:CharFontName");
-
-    return aTree;
+    rTree.put("selectedCount", nSelectedEntry == -1 ? 0 : 1);
+    rTree.add_child("selectedEntries", aSelected);
+    rTree.put("command", ".uno:CharFontName");
 }
 
 ColorWindow::ColorWindow(const OUString& rCommand,
@@ -2853,79 +2918,89 @@ VclPtr<vcl::Window> SvxStyleToolBoxControl::CreateItemWindow( vcl::Window *pPare
     return pBox.get();
 }
 
-namespace {
-
-class SvxFontNameToolBoxControl : public cppu::ImplInheritanceHelper< svt::ToolboxController,
-                                                                      css::lang::XServiceInfo >
-{
-public:
-    SvxFontNameToolBoxControl();
-
-    // XStatusListener
-    virtual void SAL_CALL statusChanged( const css::frame::FeatureStateEvent& rEvent ) override;
-
-    // XToolbarController
-    virtual css::uno::Reference< css::awt::XWindow > SAL_CALL createItemWindow( const css::uno::Reference< css::awt::XWindow >& rParent ) override;
-
-    // XComponent
-    virtual void SAL_CALL dispose() override;
-
-    // XServiceInfo
-    virtual OUString SAL_CALL getImplementationName() override;
-    virtual sal_Bool SAL_CALL supportsService( const OUString& rServiceName ) override;
-    virtual css::uno::Sequence< OUString > SAL_CALL getSupportedServiceNames() override;
-
-private:
-    VclPtr<SvxFontNameBox_Impl> m_pBox;
-};
-
-}
-
 SvxFontNameToolBoxControl::SvxFontNameToolBoxControl()
 {
+}
+
+void SvxFontNameBox_Base::statusChanged_Impl( const css::frame::FeatureStateEvent& rEvent )
+{
+    if ( !rEvent.IsEnabled )
+    {
+        set_sensitive(false);
+        Update( nullptr );
+    }
+    else
+    {
+        set_sensitive(true);
+
+        css::awt::FontDescriptor aFontDesc;
+        if ( rEvent.State >>= aFontDesc )
+            Update(&aFontDesc);
+        else
+            set_active_or_entry_text("");
+        m_xWidget->save_value();
+    }
 }
 
 void SvxFontNameToolBoxControl::statusChanged( const css::frame::FeatureStateEvent& rEvent )
 {
     SolarMutexGuard aGuard;
-    ToolBox* pToolBox = nullptr;
-    sal_uInt16 nId = 0;
-    if ( !getToolboxId( nId, &pToolBox ) )
-        return;
+    m_pBox->statusChanged_Impl(rEvent);
 
-    if ( !rEvent.IsEnabled )
-    {
-        m_pBox->Disable();
-        m_pBox->Update( nullptr );
-    }
+    if (m_pToolbar)
+        m_pToolbar->set_item_sensitive(m_aCommandURL.toUtf8(), rEvent.IsEnabled);
     else
     {
-        m_pBox->Enable();
-
-        css::awt::FontDescriptor aFontDesc;
-        if ( rEvent.State >>= aFontDesc )
-            m_pBox->Update( &aFontDesc );
-        else
-            m_pBox->SetText( "" );
-        m_pBox->SaveValue();
+        ToolBox* pToolBox = nullptr;
+        sal_uInt16 nId = 0;
+        if (!getToolboxId( nId, &pToolBox ) )
+            return;
+        pToolBox->EnableItem( nId, rEvent.IsEnabled );
     }
-
-    pToolBox->EnableItem( nId, rEvent.IsEnabled );
 }
 
 css::uno::Reference< css::awt::XWindow > SvxFontNameToolBoxControl::createItemWindow( const css::uno::Reference< css::awt::XWindow >& rParent )
 {
-    SolarMutexGuard aGuard;
-    m_pBox = VclPtr<SvxFontNameBox_Impl>::Create( VCLUnoHelper::GetWindow( rParent ),
-                                                  Reference< XDispatchProvider >( m_xFrame->getController(), UNO_QUERY ),
-                                                  m_xFrame, 0);
-    return VCLUnoHelper::GetInterface( m_pBox );
+    uno::Reference< awt::XWindow > xItemWindow;
+
+    if (m_pBuilder)
+    {
+        SolarMutexGuard aSolarMutexGuard;
+
+        std::unique_ptr<weld::ComboBox> xWidget(m_pBuilder->weld_combo_box("fontnamecombobox"));
+
+        xItemWindow = css::uno::Reference<css::awt::XWindow>(new weld::TransportAsXWindow(xWidget.get()));
+
+        m_xWeldBox.reset(new SvxFontNameBox_Base(std::move(xWidget),
+                                                 Reference<XDispatchProvider>(m_xFrame->getController(), UNO_QUERY),
+                                                 m_xFrame, *this));
+        m_pBox = m_xWeldBox.get();
+    }
+    else
+    {
+        VclPtr<vcl::Window> pParent = VCLUnoHelper::GetWindow(rParent);
+        if ( pParent )
+        {
+            SolarMutexGuard aSolarMutexGuard;
+            m_xVclBox = VclPtr<SvxFontNameBox_Impl>::Create(pParent,
+                                                            Reference<XDispatchProvider>(m_xFrame->getController(), UNO_QUERY),
+                                                            m_xFrame, *this);
+            m_pBox = m_xVclBox.get();
+            xItemWindow = VCLUnoHelper::GetInterface(m_xVclBox);
+        }
+    }
+
+    return xItemWindow;
 }
 
 void SvxFontNameToolBoxControl::dispose()
 {
-    m_pBox.disposeAndClear();
     ToolboxController::dispose();
+
+    SolarMutexGuard aSolarMutexGuard;
+    m_xVclBox.disposeAndClear();
+    m_xWeldBox.reset();
+    m_pBox = nullptr;
 }
 
 OUString SvxFontNameToolBoxControl::getImplementationName()
@@ -3549,7 +3624,7 @@ com_sun_star_comp_svx_CurrencyToolBoxControl_get_implementation(
 Reference< css::accessibility::XAccessible > SvxFontNameBox_Impl::CreateAccessible()
 {
     FillList();
-    return FontNameBox::CreateAccessible();
+    return InterimItemWindow::CreateAccessible();
 }
 
 //static
