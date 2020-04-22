@@ -667,16 +667,18 @@ void ImplListBoxWindow::ImplUpdateEntryMetrics( ImplEntryType& rEntry )
         aMetrics.nEntryHeight = std::max( aMetrics.nImgHeight, aMetrics.nEntryHeight );
 
     }
-    if ( IsUserDrawEnabled() || aMetrics.bImage )
+
+    bool bIsUserDrawEnabled = IsUserDrawEnabled();
+    if (bIsUserDrawEnabled || aMetrics.bImage)
     {
         aMetrics.nEntryWidth = std::max( aMetrics.nImgWidth, maUserItemSize.Width() );
-        if ( aMetrics.bText )
+        if (!bIsUserDrawEnabled && aMetrics.bText)
             aMetrics.nEntryWidth += aMetrics.nTextWidth + IMG_TXT_DISTANCE;
         aMetrics.nEntryHeight = std::max( std::max( mnMaxImgHeight, maUserItemSize.Height() ) + 2,
                                      aMetrics.nEntryHeight );
     }
 
-    if ( !aMetrics.bText && !aMetrics.bImage && !IsUserDrawEnabled() )
+    if (!aMetrics.bText && !aMetrics.bImage && !bIsUserDrawEnabled)
     {
         // entries which have no (aka an empty) text, and no image,
         // and are not user-drawn, should be shown nonetheless
@@ -1714,7 +1716,8 @@ void ImplListBoxWindow::ImplPaint(vcl::RenderContext& rRenderContext, sal_Int32 
     long nY = mpEntryList->GetAddedHeight(nPos, mnTop);
     tools::Rectangle aRect(Point(0, nY), Size(nWidth, pEntry->getHeightWithMargin()));
 
-    if (mpEntryList->IsEntryPosSelected(nPos))
+    bool bSelected = mpEntryList->IsEntryPosSelected(nPos);
+    if (bSelected)
     {
         rRenderContext.SetTextColor(!IsEnabled() ? rStyleSettings.GetDisableColor() : rStyleSettings.GetHighlightTextColor());
         rRenderContext.SetFillColor(rStyleSettings.GetHighlightColor());
@@ -1737,12 +1740,8 @@ void ImplListBoxWindow::ImplPaint(vcl::RenderContext& rRenderContext, sal_Int32 
         if (nPos < GetEntryList()->GetMRUCount())
             nPos = GetEntryList()->FindEntry(GetEntryList()->GetEntryText(nPos));
         nPos = nPos - GetEntryList()->GetMRUCount();
-        sal_Int32 nCurr = mnCurrentPos;
-        if (mnCurrentPos < GetEntryList()->GetMRUCount())
-            nCurr = GetEntryList()->FindEntry(GetEntryList()->GetEntryText(nCurr));
-        nCurr = sal::static_int_cast<sal_Int32>(nCurr - GetEntryList()->GetMRUCount());
 
-        UserDrawEvent aUDEvt(this, &rRenderContext, aRect, nPos, nCurr);
+        UserDrawEvent aUDEvt(this, &rRenderContext, aRect, nPos, bSelected);
         maUserDrawHdl.Call( &aUDEvt );
         mbInUserDraw = false;
     }
@@ -2753,7 +2752,7 @@ void ImplWin::ImplDraw(vcl::RenderContext& rRenderContext, bool bLayout)
 
     if ( IsUserDrawEnabled() )
     {
-        UserDrawEvent aUDEvt(this, &rRenderContext, maFocusRect, mnItemPos, 0);
+        UserDrawEvent aUDEvt(this, &rRenderContext, maFocusRect, mnItemPos);
         maUserDrawHdl.Call( &aUDEvt );
     }
     else

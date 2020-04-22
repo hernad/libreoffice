@@ -8,7 +8,7 @@
  *
  */
 
-#include <font/OpenTypeFeatureDefinitonList.hxx>
+#include <font/OpenTypeFeatureDefinitionList.hxx>
 #include <font/OpenTypeFeatureStrings.hrc>
 
 #include <rtl/character.hxx>
@@ -17,9 +17,9 @@
 
 namespace vcl::font
 {
-OpenTypeFeatureDefinitonListPrivate::OpenTypeFeatureDefinitonListPrivate() { init(); }
+OpenTypeFeatureDefinitionListPrivate::OpenTypeFeatureDefinitionListPrivate() { init(); }
 
-void OpenTypeFeatureDefinitonListPrivate::init()
+void OpenTypeFeatureDefinitionListPrivate::init()
 {
     m_aFeatureDefinition.assign({
         { featureCode("aalt"), STR_FONT_FEATURE_ID_AALT },
@@ -40,7 +40,8 @@ void OpenTypeFeatureDefinitonListPrivate::init()
         { featureCode("expt"), STR_FONT_FEATURE_ID_EXPT },
         { featureCode("falt"), STR_FONT_FEATURE_ID_FALT },
         { featureCode("frac"), STR_FONT_FEATURE_ID_FRAC,
-          std::vector<FeatureParameter>{ { 1, STR_FONT_FEATURE_ID_FRAC_PARAM_1 },
+          std::vector<FeatureParameter>{ { 0, STR_FONT_FEATURE_ID_FRAC_PARAM_0 },
+                                         { 1, STR_FONT_FEATURE_ID_FRAC_PARAM_1 },
                                          { 2, STR_FONT_FEATURE_ID_FRAC_PARAM_2 } } },
         { featureCode("fwid"), STR_FONT_FEATURE_ID_FWID },
         { featureCode("halt"), STR_FONT_FEATURE_ID_HALT },
@@ -150,13 +151,13 @@ OUString getNumericLowerPart(sal_uInt32 nFeatureCode)
 
 } // end anonymous namespace
 
-bool OpenTypeFeatureDefinitonListPrivate::isSpecialFeatureCode(sal_uInt32 nFeatureCode)
+bool OpenTypeFeatureDefinitionListPrivate::isSpecialFeatureCode(sal_uInt32 nFeatureCode)
 {
     return isCharacterVariantCode(nFeatureCode) || isStylisticSetCode(nFeatureCode);
 }
 
 FeatureDefinition
-OpenTypeFeatureDefinitonListPrivate::handleSpecialFeatureCode(sal_uInt32 nFeatureCode)
+OpenTypeFeatureDefinitionListPrivate::handleSpecialFeatureCode(sal_uInt32 nFeatureCode)
 {
     FeatureDefinition aFeatureDefinition;
     OUString sNumericPart = getNumericLowerPart(nFeatureCode);
@@ -170,7 +171,7 @@ OpenTypeFeatureDefinitonListPrivate::handleSpecialFeatureCode(sal_uInt32 nFeatur
     return aFeatureDefinition;
 }
 
-FeatureDefinition OpenTypeFeatureDefinitonListPrivate::getDefinition(sal_uInt32 nFeatureCode)
+FeatureDefinition OpenTypeFeatureDefinitionListPrivate::getDefinition(sal_uInt32 nFeatureCode)
 {
     if (isSpecialFeatureCode(nFeatureCode))
     {
@@ -185,7 +186,7 @@ FeatureDefinition OpenTypeFeatureDefinitonListPrivate::getDefinition(sal_uInt32 
     return FeatureDefinition();
 }
 
-bool OpenTypeFeatureDefinitonListPrivate::isRequired(sal_uInt32 nFeatureCode)
+bool OpenTypeFeatureDefinitionListPrivate::isRequired(sal_uInt32 nFeatureCode)
 {
     return std::find(m_aRequiredFeatures.begin(), m_aRequiredFeatures.end(), nFeatureCode)
            != m_aRequiredFeatures.end();
