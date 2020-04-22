@@ -105,6 +105,10 @@ ODK_FEATURE=
 #EXTENSIONS=" --disable-extension-integration"
 EXTENSIONS=
 
+#SKIA_FEATURE="--disable-skia"
+SKIA_FEATURE=
+
+
 #GALLERY=" --with-galleries=no"
 GALLERY=
 
@@ -275,8 +279,7 @@ rm -f config_host/*.h
     --disable-online-update \
     --disable-sdremote \
     --disable-sdremote-bluetooth \
-    $EXTENSIONS $PDF_IMPORT $WEBDAV $WITH_SYSTEM $LO_DEBUG \
-    --disable-skia \
+    $EXTENSIONS $PDF_IMPORT $WEBDAV $WITH_SYSTEM $LO_DEBUG $SKIA_FEATURE \
     --enable-breakpad       #Enables breakpad for crash reporting.
 
 fi
