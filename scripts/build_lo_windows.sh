@@ -30,7 +30,7 @@ THEME=colibre
 #THEME=sukapura_svg
 
 LO_PRODUCT_NAME=ZiherO
-LO_PRODUCT_VERSION=7.0.0.510
+LO_PRODUCT_VERSION=7.0.0.520
 
 #LO_DEBUG=" --enable-dbgutil"
 
@@ -48,6 +48,7 @@ if [ "$BUILD_ARCH" == "x64" ] ; then
   export PYTHON_CFLAGS="-Ic:/dev/vcpkg/installed/x64-windows/include/python3.7"
   export PYTHON_LIBS="c:/dev/vcpkg/installed/x64-windows/lib/python37.lib"
   BOOST_NODEFAULT_SUFIX="vc142-mt-x64-1_72.lib"
+  JAVA_DIR=/cygdrive/c/openjdk-panama-foreign/x64/jdk
 
 else
   ENABLE_64_BIT=
@@ -59,9 +60,16 @@ else
   export PYTHON_CFLAGS="-Ic:/dev/vcpkg/installed/x86-windows/include/python3.7"
   export PYTHON_LIBS="c:/dev/vcpkg/installed/x86-windows/lib/python37.lib"
   BOOST_NODEFAULT_SUFIX="vc142-mt-x32-1_72.lib"
+  JAVA_DIR=/cygdrive/c/openjdk-panama-foreign/x86/jdk
 
 fi
 
+
+JAVA_HOME=`cygpath -w $JAVA_DIR`
+export JAVA_HOME
+echo "JAVA_HOME=$JAVA_HOME"
+#JAVA_FEATURE="--without-java"
+JAVA_FEATURE=" --with-jdk-home=$JAVA_HOME"
 
 # gb_LinkTarget__command => link.exe ...
 
@@ -125,7 +133,7 @@ GALLERY=
 #export LIBPATH=c:/dev/lib
 
 # /usr/sbin/gencmn.exe
-export PATH=$PATH:/usr/sbin
+export PATH=$JAVA_HOME/bin:$PATH:/usr/sbin
 
 
 # export verbose="V=1"
@@ -263,7 +271,6 @@ rm -f config_host/*.h
    --with-theme="$THEME" \
     --with-visual-studio=$VS_VERSION \
     --without-doxygen \
-    --without-java \
     --with-product-name="$LO_PRODUCT_NAME" \
     --with-package-version="$LO_PRODUCT_VERSION" \
     --enable-release-build \
@@ -279,7 +286,7 @@ rm -f config_host/*.h
     --disable-online-update \
     --disable-sdremote \
     --disable-sdremote-bluetooth \
-    $EXTENSIONS $PDF_IMPORT $WEBDAV $WITH_SYSTEM $LO_DEBUG $SKIA_FEATURE \
+    $EXTENSIONS $PDF_IMPORT $WEBDAV $WITH_SYSTEM $LO_DEBUG $SKIA_FEATURE $JAVA_FEATURE \
     --enable-breakpad       #Enables breakpad for crash reporting.
 
 fi
