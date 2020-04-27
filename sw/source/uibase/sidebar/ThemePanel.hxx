@@ -12,7 +12,7 @@
 #define INCLUDED_SW_SOURCE_UIBASE_SIDEBAR_THEMEPANEL_HXX
 
 #include <com/sun/star/frame/XFrame.hpp>
-#include <svx/sidebar/PanelLayout.hxx>
+#include <sfx2/sidebar/PanelLayout.hxx>
 #include <sfx2/sidebar/ControllerItem.hxx>
 #include <svtools/valueset.hxx>
 #include <svx/ColorSets.hxx>
@@ -43,7 +43,7 @@ private:
     virtual void dispose() override;
 
     std::unique_ptr<weld::TreeView> mxListBoxFonts;
-    std::unique_ptr<SvtValueSet> mxValueSetColors;
+    std::unique_ptr<ValueSet> mxValueSetColors;
     std::unique_ptr<weld::CustomWeld> mxValueSetColorsWin;
     std::unique_ptr<weld::Button> mxApplyButton;
 
@@ -51,7 +51,7 @@ private:
 
     DECL_LINK(ClickHdl, weld::Button&, void);
     DECL_LINK(DoubleClickHdl, weld::TreeView&, bool);
-    DECL_LINK(DoubleClickValueSetHdl, SvtValueSet*, void);
+    DECL_LINK(DoubleClickValueSetHdl, ValueSet*, void);
     void DoubleClickHdl();
 
 };

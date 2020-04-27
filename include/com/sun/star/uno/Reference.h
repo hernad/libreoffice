@@ -24,6 +24,10 @@
 #include <cassert>
 #include <cstddef>
 
+#if defined LIBO_INTERNAL_ONLY
+#include <type_traits>
+#endif
+
 #include "rtl/alloc.h"
 
 namespace com
@@ -167,57 +171,6 @@ enum UnoReference_SetThrow
     UNO_SET_THROW
 };
 
-/// @cond INTERNAL
-namespace detail {
-
-// A mechanism to enable up-casts, used by the Reference conversion constructor,
-// but at the same time disable up-casts to XInterface, so that the conversion
-// operator for that special case is used in an expression like
-// Reference< XInterface >(x); heavily borrowed from boost::is_base_and_derived
-// (which manages to avoid compilation problems with ambiguous bases and cites
-// comp.lang.c++.moderated mail <http://groups.google.com/groups?
-// selm=df893da6.0301280859.522081f7%40posting.google.com> "SuperSubclass
-// (is_base_and_derived) complete implementation!" by Rani Sharoni and cites
-// Aleksey Gurtovoy for the workaround for MSVC), to avoid including Boost
-// headers in URE headers (could ultimately be based on C++11 std::is_base_of):
-
-template< typename T1, typename T2 > struct UpCast {
-private:
-    template< bool, typename U1, typename > struct C
-    { typedef U1 t; };
-
-    template< typename U1, typename U2 > struct C< false, U1, U2 >
-    { typedef U2 t; };
-
-    struct S { char c[2]; };
-
-#if defined _MSC_VER && _MSC_VER < 1800
-    static char f(T2 *, long);
-    static S f(T1 * const &, int);
-#else
-    template< typename U > static char f(T2 *, U);
-    static S f(T1 *, int);
-#endif
-
-    struct H {
-        H(); // avoid C2514 "class has no constructors" from MSVC
-#if defined _MSC_VER && _MSC_VER < 1800
-        operator T1 * const & () const;
-#else
-        operator T1 * () const;
-#endif
-        operator T2 * ();
-    };
-
-public:
-    typedef typename C< sizeof (f(H(), 0)) == 1, void *, void >::t t;
-};
-
-template< typename T2 > struct UpCast< XInterface, T2 > {};
-
-}
-/// @endcond
-
 /** Template reference class for interface type derived from BaseReference.
     A special constructor given the UNO_QUERY identifier queries interfaces
     for reference type.
@@ -308,7 +261,6 @@ public:
         @param rRef another reference
     */
     inline Reference( Reference< interface_type > && rRef ) noexcept;
-#endif
 
     /** Up-casting conversion constructor: Copies interface reference.
 
@@ -321,7 +273,10 @@ public:
     template< class derived_type >
     inline Reference(
         const Reference< derived_type > & rRef,
-        typename detail::UpCast< interface_type, derived_type >::t = 0 );
+        std::enable_if_t<
+            std::is_base_of_v<interface_type, derived_type>
+            && !std::is_same_v<interface_type, XInterface>, void *> = nullptr);
+#endif
 
     /** Constructor: Sets given interface pointer.
 

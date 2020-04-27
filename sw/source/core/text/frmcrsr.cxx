@@ -53,7 +53,7 @@ using namespace ::com::sun::star;
 /*
  * - SurvivalKit: For how long do we get past the last char of the line.
  * - RightMargin abstains from adjusting position with -1
- * - GetCharRect returns a GetEndCharRect for MV_RIGHTMARGIN
+ * - GetCharRect returns a GetEndCharRect for CursorMoveState::RightMargin
  * - GetEndCharRect sets bRightMargin to true
  * - SwTextCursor::bRightMargin is set to false by CharCursorToLine
  */
@@ -190,7 +190,7 @@ bool SwTextFrame::GetCharRect( SwRect& rOrig, const SwPosition &rPos,
     //   needs to be formatted
 
     // Optimisation: reading ahead saves us a GetAdjFrameAtPos
-    const bool bRightMargin = pCMS && ( MV_RIGHTMARGIN == pCMS->m_eState );
+    const bool bRightMargin = pCMS && ( CursorMoveState::RightMargin == pCMS->m_eState );
     const bool bNoScroll = pCMS && pCMS->m_bNoScroll;
     SwTextFrame *pFrame = GetAdjFrameAtPos( const_cast<SwTextFrame*>(this), rPos, bRightMargin,
                                      bNoScroll );
@@ -425,7 +425,7 @@ bool SwTextFrame::GetAutoPos( SwRect& rOrig, const SwPosition &rPos ) const
 
         SwTextSizeInfo aInf( pFrame );
         SwTextCursor aLine( pFrame, &aInf );
-        SwCursorMoveState aTmpState( MV_SETONLYTEXT );
+        SwCursorMoveState aTmpState( CursorMoveState::SetOnlyText );
         aTmpState.m_bRealHeight = true;
         aLine.GetCharRect( &rOrig, nOffset, &aTmpState, nMaxY );
         if( aTmpState.m_aRealHeight.X() >= 0 )
@@ -603,8 +603,8 @@ bool SwTextFrame::GetModelPositionForViewPoint_(SwPosition* pPos, const Point& r
 
         TextFrameIndex nOffset = aLine.GetModelPositionForViewPoint(pPos, rPoint, bChgFrame, pCMS);
 
-        if( pCMS && pCMS->m_eState == MV_NONE && aLine.GetEnd() == nOffset )
-            pCMS->m_eState = MV_RIGHTMARGIN;
+        if( pCMS && pCMS->m_eState == CursorMoveState::NONE && aLine.GetEnd() == nOffset )
+            pCMS->m_eState = CursorMoveState::RightMargin;
 
     // pPos is a pure IN parameter and must not be evaluated.
     // pIter->GetModelPositionForViewPoint returns from a nesting with COMPLETE_STRING.
@@ -661,7 +661,7 @@ bool SwTextFrame::GetModelPositionForViewPoint_(SwPosition* pPos, const Point& r
 bool SwTextFrame::GetModelPositionForViewPoint(SwPosition* pPos, Point& rPoint,
                                SwCursorMoveState* pCMS, bool ) const
 {
-    const bool bChgFrame = !(pCMS && MV_UPDOWN == pCMS->m_eState);
+    const bool bChgFrame = !(pCMS && CursorMoveState::UpDown == pCMS->m_eState);
     return GetModelPositionForViewPoint_( pPos, rPoint, bChgFrame, pCMS );
 }
 
@@ -1438,7 +1438,7 @@ void SwTextFrame::FillCursorPos( SwFillData& rFill ) const
             SwTwips nRight = rFill.Right() - rLRSpace.GetRight();
             SwTwips nCenter = ( nLeft + nRight ) / 2;
             rRect.Left( nLeft );
-            if( FILL_MARGIN == rFill.Mode() )
+            if( SwFillMode::Margin == rFill.Mode() )
             {
                 if( rFill.bEmpty )
                 {
@@ -1468,7 +1468,7 @@ void SwTextFrame::FillCursorPos( SwFillData& rFill ) const
             else
             {
                 SwTwips nSpace = 0;
-                if( FILL_TAB != rFill.Mode() )
+                if( SwFillMode::Tab != rFill.Mode() )
                 {
                     const OUString aTmp("  ");
                     SwDrawTextInfo aDrawInf( pSh, *pOut, aTmp, 0, 2 );
@@ -1476,7 +1476,7 @@ void SwTextFrame::FillCursorPos( SwFillData& rFill ) const
                 }
                 if( rFill.X() >= nRight )
                 {
-                    if( FILL_INDENT != rFill.Mode() && ( rFill.bEmpty ||
+                    if( SwFillMode::Indent != rFill.Mode() && ( rFill.bEmpty ||
                         rFill.X() > rFill.nLineWidth + FILL_MIN_DIST ) )
                     {
                         rFill.SetOrient( text::HoriOrientation::RIGHT );
@@ -1485,7 +1485,7 @@ void SwTextFrame::FillCursorPos( SwFillData& rFill ) const
                     else
                         bFill = false;
                 }
-                else if( FILL_INDENT == rFill.Mode() )
+                else if( SwFillMode::Indent == rFill.Mode() )
                 {
                     SwTwips nIndent = rFill.X();
                     if( !rFill.bEmpty || nIndent > nRight )
@@ -1555,7 +1555,7 @@ void SwTextFrame::FillCursorPos( SwFillData& rFill ) const
                     }
                     while( rFill.X() > nRightTab );
                     --nTabCnt;
-                    if( FILL_TAB_SPACE == rFill.Mode() )
+                    if( SwFillMode::TabSpace == rFill.Mode() )
                     {
                         if( nSpace > 0 )
                         {
@@ -1606,7 +1606,7 @@ void SwTextFrame::FillCursorPos( SwFillData& rFill ) const
                             }
                         }
                     }
-                    else if( FILL_SPACE == rFill.Mode() )
+                    else if( SwFillMode::Space == rFill.Mode() )
                     {
                         SwTwips nLeftSpace = nLeft;
                         while( nLeftSpace < rFill.X() )

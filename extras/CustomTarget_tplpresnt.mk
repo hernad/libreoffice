@@ -50,7 +50,6 @@ extras_PRESENTATIONS_XMLFILES := \
 	Blue_Curve/content.xml \
 	Blue_Curve/META-INF/manifest.xml \
 	Blue_Curve/meta.xml \
-	Blue_Curve/Pictures/1000000000000421000000B8A3E59788A01B5109.jpg \
 	Blue_Curve/styles.xml \
 	Blue_Curve/Thumbnails/thumbnail.png \
 	Blueprint_Plans/content.xml \
@@ -64,8 +63,6 @@ extras_PRESENTATIONS_XMLFILES := \
 	BrightBlue/content.xml \
 	BrightBlue/META-INF/manifest.xml \
 	BrightBlue/meta.xml \
-	BrightBlue/Pictures/1000020100000520000000CCF41AC5B79CBB20DE.png \
-	BrightBlue/Pictures/100010580000879200001508D21A14F0A9096EB5.svg \
 	BrightBlue/styles.xml \
 	BrightBlue/Thumbnails/thumbnail.png \
 	Classy_Red/content.xml \
@@ -82,7 +79,6 @@ extras_PRESENTATIONS_XMLFILES := \
 	DNA/content.xml \
 	DNA/META-INF/manifest.xml \
 	DNA/meta.xml \
-	DNA/Pictures/100000000000055600000300C32362E53F69C13D.png \
 	DNA/styles.xml \
 	DNA/Thumbnails/thumbnail.png \
 	Focus/content.xml \

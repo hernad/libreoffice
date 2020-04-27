@@ -920,11 +920,6 @@ sal_Int32 ComboBox::InsertEntryWithImage(
     return nRealPos;
 }
 
-void ComboBox::RemoveEntry( const OUString& rStr )
-{
-    RemoveEntryAt(GetEntryPos(rStr));
-}
-
 void ComboBox::RemoveEntryAt(sal_Int32 const nPos)
 {
     const sal_Int32 nMRUCount = m_pImpl->m_pImplLB->GetEntryList()->GetMRUCount();
@@ -1284,10 +1279,10 @@ void ComboBox::EnableUserDraw( bool bUserDraw )
     m_pImpl->m_pImplLB->GetMainWindow()->EnableUserDraw( bUserDraw );
 }
 
-void ComboBox::DrawEntry(const UserDrawEvent& rEvt, bool bDrawImage, bool bDrawText, bool bDrawTextAtImagePos)
+void ComboBox::DrawEntry(const UserDrawEvent& rEvt, bool bDrawText, bool bDrawTextAtImagePos)
 {
     SAL_WARN_IF(rEvt.GetWindow() != m_pImpl->m_pImplLB->GetMainWindow(), "vcl", "DrawEntry?!");
-    m_pImpl->m_pImplLB->GetMainWindow()->DrawEntry(*rEvt.GetRenderContext(), rEvt.GetItemId(), bDrawImage, bDrawText, bDrawTextAtImagePos);
+    m_pImpl->m_pImplLB->GetMainWindow()->DrawEntry(*rEvt.GetRenderContext(), rEvt.GetItemId(), /*bDrawImage*/false, bDrawText, bDrawTextAtImagePos);
 }
 
 void ComboBox::SetSeparatorPos( sal_Int32 n )

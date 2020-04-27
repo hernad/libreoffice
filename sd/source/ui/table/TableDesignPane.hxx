@@ -21,7 +21,7 @@
 #define INCLUDED_SD_SOURCE_UI_TABLE_TABLEDESIGNPANE_HXX
 
 #include <svtools/valueset.hxx>
-#include <svx/sidebar/PanelLayout.hxx>
+#include <sfx2/sidebar/PanelLayout.hxx>
 #include <vcl/weld.hxx>
 
 namespace com { namespace sun { namespace star { namespace beans { class XPropertySet; } } } }
@@ -48,7 +48,7 @@ enum TableCheckBox : sal_uInt16
     CB_COUNT            = CB_BANDED_COLUMNS + 1
 };
 
-class TableValueSet : public SvtValueSet
+class TableValueSet : public ValueSet
 {
 private:
     bool m_bModal;
@@ -80,7 +80,7 @@ private:
     void FillDesignPreviewControl();
 
     DECL_LINK(EventMultiplexerListener, tools::EventMultiplexerEvent&, void);
-    DECL_LINK(implValueSetHdl, SvtValueSet*, void);
+    DECL_LINK(implValueSetHdl, ValueSet*, void);
     DECL_LINK(implCheckBoxHdl, weld::ToggleButton&, void);
 
 private:
@@ -102,7 +102,7 @@ private:
 public:
     TableDesignPane( vcl::Window* pParent, ViewShellBase& rBase )
         : PanelLayout(pParent, "TableDesignPanel",
-            "modules/simpress/ui/tabledesignpanel.ui", css::uno::Reference<css::frame::XFrame>(), true)
+            "modules/simpress/ui/tabledesignpanel.ui", css::uno::Reference<css::frame::XFrame>())
         , m_xImpl(new TableDesignWidget(*m_xBuilder, rBase))
     {
     }

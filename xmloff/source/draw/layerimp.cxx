@@ -22,6 +22,7 @@
 #include <sal/log.hxx>
 #include <com/sun/star/drawing/XLayerManager.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/xml/sax/XAttributeList.hpp>
 #include <com/sun/star/drawing/XLayerSupplier.hpp>
 #include <xmloff/xmltoken.hxx>
@@ -149,6 +150,15 @@ void SdXMLLayerContext::EndElement()
             if ( !msProtected.isEmpty() )
                 bIsLocked = (msProtected == "true");
             xLayer->setPropertyValue("IsLocked", Any( bIsLocked ) );
+
+            // tdf#129898 repair layer "DrawnInSlideshow", which was wrongly written
+            // in LO 6.2 to 6.4. It should always have ODF defaults.
+            if (msName == "DrawnInSlideshow")
+            {
+                xLayer->setPropertyValue("IsVisible", Any(true));
+                xLayer->setPropertyValue("IsPrintable", Any(true));
+                xLayer->setPropertyValue("IsLocked", Any(false));
+            }
         }
     }
     catch( Exception& )

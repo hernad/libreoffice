@@ -22,12 +22,13 @@
 #include <sfx2/sidebar/ControllerItem.hxx>
 #include <sfx2/sidebar/IContextChangeReceiver.hxx>
 #include <sfx2/weldutils.hxx>
-#include <svx/sidebar/PanelLayout.hxx>
+#include <sfx2/sidebar/PanelLayout.hxx>
 #include <svl/poolitem.hxx>
 #include <tools/fldunit.hxx>
 #include <tools/fract.hxx>
 #include <com/sun/star/ui/XSidebar.hpp>
 #include <basegfx/range/b2drange.hxx>
+#include <vcl/EnumContext.hxx>
 #include <vcl/customweld.hxx>
 #include <vcl/weld.hxx>
 

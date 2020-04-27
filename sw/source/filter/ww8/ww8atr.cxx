@@ -345,7 +345,7 @@ void MSWordExportBase::OutputItemSet( const SfxItemSet& rSet, bool bPapFormat, b
             if (pXFillStyleItem && pXFillStyleItem->GetValue() == drawing::FillStyle_SOLID && !rSet.HasItem(RES_BACKGROUND))
             {
                 // Construct an SvxBrushItem, as expected by the exporters.
-                std::shared_ptr<SvxBrushItem> aBrush(getSvxBrushItemFromSourceSet(rSet, RES_BACKGROUND));
+                std::unique_ptr<SvxBrushItem> aBrush(getSvxBrushItemFromSourceSet(rSet, RES_BACKGROUND));
                 AttrOutput().OutputItem(*aBrush);
             }
         }
@@ -889,7 +889,7 @@ void MSWordExportBase::OutputFormat( const SwFormat& rFormat, bool bPapFormat, b
                     case drawing::FillStyle_SOLID:
                     {
                         // Construct an SvxBrushItem, as expected by the exporters.
-                        std::shared_ptr<SvxBrushItem> aBrush(getSvxBrushItemFromSourceSet(rFrameFormat.GetAttrSet(), RES_BACKGROUND));
+                        std::unique_ptr<SvxBrushItem> aBrush(getSvxBrushItemFromSourceSet(rFrameFormat.GetAttrSet(), RES_BACKGROUND));
                         aSet.Put(*aBrush);
                         break;
                     }
@@ -4512,6 +4512,9 @@ void WW8Export::Out_SwFormatTableBox( ww::bytes& rO, const SvxBoxItem * pBox )
 void WW8Export::Out_CellRangeBorders( const SvxBoxItem * pBox, sal_uInt8 nStart,
        sal_uInt8 nLimit )
 {
+    if ( !pBox )
+        return;
+
     static const SvxBoxItemLine aBorders[] =
     {
         SvxBoxItemLine::TOP, SvxBoxItemLine::LEFT, SvxBoxItemLine::BOTTOM, SvxBoxItemLine::RIGHT
@@ -4519,9 +4522,7 @@ void WW8Export::Out_CellRangeBorders( const SvxBoxItem * pBox, sal_uInt8 nStart,
 
     for( int i = 0; i < 4; ++i )
     {
-        const SvxBorderLine* pLn = nullptr;
-        if (pBox != nullptr)
-            pLn = pBox->GetLine( aBorders[i] );
+        const SvxBorderLine* pLn = pBox->GetLine( aBorders[i] );
         if (!pLn)
             continue;
 

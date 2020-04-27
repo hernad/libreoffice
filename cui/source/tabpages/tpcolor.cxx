@@ -46,8 +46,8 @@ SvxColorTabPage::SvxColorTabPage(weld::Container* pPage, weld::DialogController*
     , rXFSet( aXFillAttr.GetItemSet() )
     , eCM( ColorModel::RGB )
     , m_context(comphelper::getProcessComponentContext())
-    , m_xValSetColorList(new ColorValueSet(m_xBuilder->weld_scrolled_window("colorsetwin")))
-    , m_xValSetRecentList(new ColorValueSet(nullptr))
+    , m_xValSetColorList(new SvxColorValueSet(m_xBuilder->weld_scrolled_window("colorsetwin")))
+    , m_xValSetRecentList(new SvxColorValueSet(nullptr))
     , m_xSelectPalette(m_xBuilder->weld_combo_box("paletteselector"))
     , m_xRbRGB(m_xBuilder->weld_radio_button("RGB"))
     , m_xRbCMYK(m_xBuilder->weld_radio_button("CMYK"))
@@ -97,7 +97,7 @@ SvxColorTabPage::SvxColorTabPage(weld::Container* pPage, weld::DialogController*
 
     // set handler
     m_xSelectPalette->connect_changed(LINK(this, SvxColorTabPage, SelectPaletteLBHdl));
-    Link<SvtValueSet*, void> aValSelectLink = LINK(this, SvxColorTabPage, SelectValSetHdl_Impl);
+    Link<ValueSet*, void> aValSelectLink = LINK(this, SvxColorTabPage, SelectValSetHdl_Impl);
     m_xValSetColorList->SetSelectHdl(aValSelectLink);
     m_xValSetRecentList->SetSelectHdl(aValSelectLink);
 
@@ -459,7 +459,7 @@ IMPL_LINK_NOARG(SvxColorTabPage, SelectPaletteLBHdl, weld::ComboBox&, void)
     m_xValSetColorList->Resize();
 }
 
-IMPL_LINK(SvxColorTabPage, SelectValSetHdl_Impl, SvtValueSet*, pValSet, void)
+IMPL_LINK(SvxColorTabPage, SelectValSetHdl_Impl, ValueSet*, pValSet, void)
 {
     sal_Int32 nPos = pValSet->GetSelectedItemId();
     if( nPos == 0 )

@@ -1756,6 +1756,7 @@ void DrawViewShell::SetPageProperties (SfxRequest& rReq)
         SdrPageProperties& rPageProperties = pPage->getSdrPageProperties();
         const SfxItemSet &aPageItemSet = rPageProperties.GetItemSet();
         std::unique_ptr<SfxItemSet> pTempSet = aPageItemSet.Clone(false, &mpDrawView->GetModel()->GetItemPool());
+        const SfxPoolItem* pItem = nullptr;
 
         rPageProperties.ClearItem(XATTR_FILLSTYLE);
         rPageProperties.ClearItem(XATTR_FILLGRADIENT);
@@ -1776,23 +1777,58 @@ void DrawViewShell::SetPageProperties (SfxRequest& rReq)
 
             case SID_ATTR_PAGE_COLOR:
             {
-                XFillColorItem aColorItem( pArgs->Get( XATTR_FILLCOLOR ) );
-                rPageProperties.PutItem( XFillStyleItem( drawing::FillStyle_SOLID ) );
-                rPageProperties.PutItem( aColorItem );
+                if (SfxItemState::SET == pArgs->GetItemState(SID_ATTR_COLOR_STR, false, &pItem))
+                {
+                    Color aColor;
+                    OUString sColor;
+
+                    sColor = static_cast<const SfxStringItem*>(pItem)->GetValue();
+
+                    if (sColor == "transparent")
+                        aColor = COL_TRANSPARENT;
+                    else
+                        aColor = Color(sColor.toInt32(16));
+
+                    XFillColorItem aColorItem(OUString(), aColor);
+                    rPageProperties.PutItem( XFillStyleItem( drawing::FillStyle_SOLID ) );
+                    rPageProperties.PutItem( aColorItem );
+                }
+                else
+                {
+                    XFillColorItem aColorItem( pArgs->Get( XATTR_FILLCOLOR ) );
+                    rPageProperties.PutItem( XFillStyleItem( drawing::FillStyle_SOLID ) );
+                    rPageProperties.PutItem( aColorItem );
+                }
             }
             break;
 
             case SID_ATTR_PAGE_GRADIENT:
             {
-                XFillGradientItem aGradientItem( pArgs->Get( XATTR_FILLGRADIENT ) );
+                if (SfxItemState::SET == pArgs->GetItemState(SID_FILL_GRADIENT_JSON, false, &pItem))
+                {
+                    const SfxStringItem* pJSON = static_cast<const SfxStringItem*>(pItem);
+                    XFillGradientItem aGradientItem( XGradient::fromJSON(pJSON->GetValue()) );
 
-                // MigrateItemSet guarantees unique gradient names
-                SfxItemSet aMigrateSet( mpDrawView->GetModel()->GetItemPool(), svl::Items<XATTR_FILLGRADIENT, XATTR_FILLGRADIENT>{} );
-                aMigrateSet.Put( aGradientItem );
-                SdrModel::MigrateItemSet( &aMigrateSet, pTempSet.get(), mpDrawView->GetModel() );
+                    // MigrateItemSet guarantees unique gradient names
+                    SfxItemSet aMigrateSet( mpDrawView->GetModel()->GetItemPool(), svl::Items<XATTR_FILLGRADIENT, XATTR_FILLGRADIENT>{} );
+                    aMigrateSet.Put( aGradientItem );
+                    SdrModel::MigrateItemSet( &aMigrateSet, pTempSet.get(), mpDrawView->GetModel() );
 
-                rPageProperties.PutItemSet( *pTempSet );
-                rPageProperties.PutItem( XFillStyleItem( drawing::FillStyle_GRADIENT ) );
+                    rPageProperties.PutItem( XFillStyleItem( drawing::FillStyle_GRADIENT ) );
+                    rPageProperties.PutItemSet( *pTempSet );
+                }
+                else
+                {
+                    XFillGradientItem aGradientItem( pArgs->Get( XATTR_FILLGRADIENT ) );
+
+                    // MigrateItemSet guarantees unique gradient names
+                    SfxItemSet aMigrateSet( mpDrawView->GetModel()->GetItemPool(), svl::Items<XATTR_FILLGRADIENT, XATTR_FILLGRADIENT>{} );
+                    aMigrateSet.Put( aGradientItem );
+                    SdrModel::MigrateItemSet( &aMigrateSet, pTempSet.get(), mpDrawView->GetModel() );
+
+                    rPageProperties.PutItem( XFillStyleItem( drawing::FillStyle_GRADIENT ) );
+                    rPageProperties.PutItemSet( *pTempSet );
+                }
             }
             break;
 

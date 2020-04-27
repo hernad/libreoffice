@@ -20,15 +20,12 @@
 #include <QueryDesignView.hxx>
 #include <QueryTableView.hxx>
 #include "QTableWindow.hxx"
-#include <vcl/toolbox.hxx>
 #include <querycontroller.hxx>
 #include <sqlbison.hxx>
 #include <vcl/split.hxx>
-#include <svl/undo.hxx>
 #include <tools/diagnose_ex.h>
 #include <o3tl/safeint.hxx>
 #include <osl/diagnose.h>
-#include <adtabdlg.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/combobox.hxx>
 #include <vcl/weld.hxx>
@@ -36,24 +33,19 @@
 #include "SelectionBrowseBox.hxx"
 #include <strings.hrc>
 #include <strings.hxx>
-#include <unotools/configmgr.hxx>
 #include <comphelper/string.hxx>
 #include <connectivity/dbtools.hxx>
 #include <connectivity/dbexception.hxx>
-#include <com/sun/star/i18n/XLocaleData.hpp>
 #include <com/sun/star/sdbc/DataType.hpp>
 #include <com/sun/star/container/XNameAccess.hpp>
 #include <com/sun/star/sdbc/ColumnValue.hpp>
 #include <connectivity/PColumn.hxx>
 #include "QTableConnection.hxx"
-#include <ConnectionLine.hxx>
 #include <ConnectionLineData.hxx>
 #include "QTableConnectionData.hxx"
 #include <core_resource.hxx>
-#include <stringconstants.hxx>
 #include <UITools.hxx>
 #include <querycontainerwindow.hxx>
-#include <sqlmessage.hxx>
 #include <unotools/localedatawrapper.hxx>
 #include <unotools/syslocale.hxx>
 #include <memory>
@@ -132,25 +124,24 @@ namespace
 
         if ( !pConn )
         {
-            OQueryTableConnectionData* pInfoData = new OQueryTableConnectionData();
-            TTableConnectionData::value_type aInfoData(pInfoData);
-            pInfoData->InitFromDrag(_aDragLeft, _aDragRight);
-            pInfoData->SetJoinType(_eJoinType);
+            auto xInfoData = std::make_shared<OQueryTableConnectionData>();
+            xInfoData->InitFromDrag(_aDragLeft, _aDragRight);
+            xInfoData->SetJoinType(_eJoinType);
 
             if ( _bNatural )
             {
-                aInfoData->ResetConnLines();
-                pInfoData->setNatural(_bNatural);
+                xInfoData->ResetConnLines();
+                xInfoData->setNatural(_bNatural);
                 try
                 {
-                    Reference<XNameAccess> xReferencedTableColumns(aInfoData->getReferencedTable()->getColumns());
-                    Sequence< OUString> aSeq = aInfoData->getReferencingTable()->getColumns()->getElementNames();
+                    Reference<XNameAccess> xReferencedTableColumns(xInfoData->getReferencedTable()->getColumns());
+                    Sequence< OUString> aSeq = xInfoData->getReferencingTable()->getColumns()->getElementNames();
                     const OUString* pIter = aSeq.getConstArray();
                     const OUString* pEnd   = pIter + aSeq.getLength();
                     for(;pIter != pEnd;++pIter)
                     {
                         if ( xReferencedTableColumns->hasByName(*pIter) )
-                            aInfoData->AppendConnLine(*pIter,*pIter);
+                            xInfoData->AppendConnLine(*pIter,*pIter);
                     }
                 }
                 catch( const Exception& )
@@ -159,9 +150,9 @@ namespace
                 }
             }
 
-            ScopedVclPtrInstance< OQueryTableConnection > aInfo(pTableView, aInfoData);
+            ScopedVclPtrInstance< OQueryTableConnection > aInfo(pTableView, xInfoData);
             // Because OQueryTableConnection never takes ownership of the data passed to it, but only remembers the pointer,
-            // this pointer to a local variable is not critical, as aInfoData and aInfo have the same lifetime
+            // this pointer to a local variable is not critical, as xInfoData and aInfo have the same lifetime
             pTableView->NotifyTabConnection( *aInfo );
         }
         else

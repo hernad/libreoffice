@@ -82,18 +82,12 @@ public:
     // Getters
     const OUString& GetBulletChar( ) const { return m_sBulletChar; };
     const tools::SvRef< StyleSheetEntry >& GetParaStyle( ) const { return m_pParaStyle; };
-    sal_Int32 GetStartAt() const { return m_nIStartAt; };
     bool isOutlineNumbering() const { return m_outline; }
     sal_Int32 GetStartOverride() const { return m_nStartOverride; };
     /// Determines if SetValue() was called at least once.
     bool HasValues() const;
 
     // UNO mapping functions
-
-    // rPrefix and rSuffix are out parameters
-    static sal_Int16 GetParentNumbering( const OUString& sText, sal_Int16 nLevel,
-        OUString& rPrefix, OUString& rSuffix );
-
     css::uno::Sequence<css::beans::PropertyValue> GetProperties(bool bDefaults);
 
     css::uno::Sequence<css::beans::PropertyValue> GetCharStyleProperties();

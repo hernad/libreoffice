@@ -21,7 +21,8 @@
 
 #include <sfx2/sidebar/IContextChangeReceiver.hxx>
 #include <sfx2/sidebar/SidebarModelUpdate.hxx>
-#include <svx/sidebar/PanelLayout.hxx>
+#include <sfx2/sidebar/PanelLayout.hxx>
+#include <vcl/EnumContext.hxx>
 #include "ChartSidebarModifyListener.hxx"
 #include <ChartTypeDialogController.hxx>
 #include <ChartTypeTemplateProvider.hxx>
@@ -98,7 +99,7 @@ private:
     void selectMainType();
 
     DECL_LINK(SelectMainTypeHdl, weld::ComboBox&, void);
-    DECL_LINK(SelectSubTypeHdl, SvtValueSet*, void);
+    DECL_LINK(SelectSubTypeHdl, ValueSet*, void);
 
     vcl::EnumContext maContext;
 
@@ -125,7 +126,7 @@ private:
     TimerTriggeredControllerLock m_aTimerTriggeredControllerLock;
 
     std::unique_ptr<weld::ComboBox> m_xMainTypeList;
-    std::unique_ptr<SvtValueSet> m_xSubTypeList;
+    std::unique_ptr<ValueSet> m_xSubTypeList;
     std::unique_ptr<weld::CustomWeld> m_xSubTypeListWin;
 };
 }

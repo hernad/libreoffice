@@ -40,7 +40,7 @@ namespace framework
 // Unfortunaltly the events are notified through virtual methods instead
 // of Listeners.
 
-class EditControl : public InterimItemWindow
+class EditControl final : public InterimItemWindow
 {
 public:
     EditControl(vcl::Window* pParent, EditToolbarController* pEditToolbarController);
@@ -102,7 +102,6 @@ IMPL_LINK_NOARG(EditControl, FocusOutHdl, weld::Widget&, void)
     if ( m_pEditToolbarController )
         m_pEditToolbarController->LoseFocus();
 }
-
 
 IMPL_LINK_NOARG(EditControl, ActivateHdl, weld::Entry&, bool)
 {

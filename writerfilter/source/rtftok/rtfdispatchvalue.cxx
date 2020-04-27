@@ -26,22 +26,10 @@
 #include "rtfreferenceproperties.hxx"
 #include "rtfskipdestination.hxx"
 
-#include <officecfg/Setup.hxx>
-#include <officecfg/Office/Linguistic.hxx>
+#include <unotools/defaultencoding.hxx>
 #include <unotools/wincodepage.hxx>
 
 using namespace com::sun::star;
-
-namespace
-{
-OUString getLODefaultLanguage()
-{
-    OUString result(::officecfg::Office::Linguistic::General::DefaultLocale::get());
-    if (result.isEmpty())
-        result = ::officecfg::Setup::L10N::ooSetupSystemLocale::get();
-    return result;
-}
-}
 
 namespace writerfilter
 {
@@ -842,7 +830,7 @@ RTFError RTFDocumentImpl::dispatchValue(RTFKeyword nKeyword, int nParam)
         {
             rtl_TextEncoding nEncoding
                 = (nParam == 0)
-                      ? utl_getWinTextEncodingFromLangStr(getLODefaultLanguage().toUtf8().getStr())
+                      ? utl_getWinTextEncodingFromLangStr(utl_getLocaleForGlobalDefaultEncoding())
                       : rtl_getTextEncodingFromWindowsCodePage(nParam);
             if (nKeyword == RTF_ANSICPG)
                 m_aDefaultState.setCurrentEncoding(nEncoding);

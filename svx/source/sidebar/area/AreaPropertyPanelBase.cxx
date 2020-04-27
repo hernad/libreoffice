@@ -61,7 +61,7 @@ const sal_Int32 AreaPropertyPanelBase::DEFAULT_BORDER = 0;
 AreaPropertyPanelBase::AreaPropertyPanelBase(
     vcl::Window* pParent,
     const css::uno::Reference<css::frame::XFrame>& rxFrame)
-    : PanelLayout(pParent, "AreaPropertyPanel", "svx/ui/sidebararea.ui", rxFrame, true),
+    : PanelLayout(pParent, "AreaPropertyPanel", "svx/ui/sidebararea.ui", rxFrame),
       meLastXFS(static_cast<sal_uInt16>(-1)),
       mnLastPosHatch(0),
       mnLastPosBitmap(0),
@@ -74,7 +74,7 @@ AreaPropertyPanelBase::AreaPropertyPanelBase(
       maGradientSquare(),
       maGradientRect(),
       mxColorTextFT(m_xBuilder->weld_label("filllabel")),
-      mxLbFillType(m_xBuilder->weld_combo_box("fillstyle")),
+      mxLbFillType(m_xBuilder->weld_combo_box("fillstylearea")),
       mxLbFillAttr(m_xBuilder->weld_combo_box("fillattr")),
       mxLbFillGradFrom(new ColorListBox(m_xBuilder->weld_menu_button("fillgrad1"), GetFrameWeld())),
       mxLbFillGradTo(new ColorListBox(m_xBuilder->weld_menu_button("fillgrad2"), GetFrameWeld())),

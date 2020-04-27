@@ -384,9 +384,14 @@ namespace drawinglayer::primitive2d
                     const basegfx::B2DVector aOffset(
                         static_cast<double>(rSet.Get(SDRATTR_SHADOWXDIST).GetValue()),
                         static_cast<double>(rSet.Get(SDRATTR_SHADOWYDIST).GetValue()));
+
+                    const basegfx::B2DVector aSize(
+                        static_cast<double>(rSet.Get(SDRATTR_SHADOWSIZEX).GetValue()),
+                        static_cast<double>(rSet.Get(SDRATTR_SHADOWSIZEY).GetValue()));
+
                     const Color aColor(rSet.Get(SDRATTR_SHADOWCOLOR).GetColorValue());
 
-                    return attribute::SdrShadowAttribute(aOffset, static_cast<double>(nTransparence) * 0.01, aColor.getBColor());
+                    return attribute::SdrShadowAttribute(aOffset, aSize, static_cast<double>(nTransparence) * 0.01, aColor.getBColor());
                 }
             }
 
@@ -751,7 +756,6 @@ namespace drawinglayer::primitive2d
             attribute::SdrLineAttribute aLine;
             attribute::SdrLineStartEndAttribute aLineStartEnd;
             attribute::SdrTextAttribute aText;
-            attribute::SdrGlowAttribute aGlow;
             bool bFontworkHideContour(false);
 
             // look for text first
@@ -785,7 +789,7 @@ namespace drawinglayer::primitive2d
             {
                 // try shadow
                 const attribute::SdrShadowAttribute aShadow(createNewSdrShadowAttribute(rSet));
-                aGlow = createNewSdrGlowAttribute(rSet);
+                attribute::SdrGlowAttribute aGlow = createNewSdrGlowAttribute(rSet);
 
                 return attribute::SdrLineShadowTextAttribute(aLine, aLineStartEnd, aShadow, aText, aGlow);
             }
@@ -801,10 +805,8 @@ namespace drawinglayer::primitive2d
             attribute::SdrLineAttribute aLine;
             attribute::SdrFillAttribute aFill;
             attribute::SdrLineStartEndAttribute aLineStartEnd;
-            attribute::SdrShadowAttribute aShadow;
             attribute::FillGradientAttribute aFillFloatTransGradient;
             attribute::SdrTextAttribute aText;
-            attribute::SdrGlowAttribute aGlow;
             bool bFontworkHideContour(false);
 
             // look for text first
@@ -848,10 +850,10 @@ namespace drawinglayer::primitive2d
             if(bHasContent || !aLine.isDefault() || !aFill.isDefault() || !aText.isDefault())
             {
                 // try shadow
-                aShadow = createNewSdrShadowAttribute(rSet);
+                attribute::SdrShadowAttribute aShadow = createNewSdrShadowAttribute(rSet);
 
                 // glow
-                aGlow = createNewSdrGlowAttribute(rSet);
+                attribute::SdrGlowAttribute aGlow = createNewSdrGlowAttribute(rSet);
 
                 return attribute::SdrLineFillShadowTextAttribute(
                     aLine, aFill, aLineStartEnd, aShadow, aFillFloatTransGradient, aText, aGlow);

@@ -136,7 +136,6 @@ public:
     void*           GetEntryData( sal_Int32  nPos ) const;
 
     void              SetEntryFlags( sal_Int32  nPos, ListBoxEntryFlags nFlags );
-    ListBoxEntryFlags GetEntryFlags( sal_Int32  nPos ) const;
 
     void            SelectEntry( sal_Int32  nPos, bool bSelect );
 
@@ -276,7 +275,7 @@ public:
     sal_uInt16      GetDisplayLineCount() const;
     void            SetEntryFlags( sal_Int32  nPos, ListBoxEntryFlags nFlags );
 
-    void            DrawEntry(vcl::RenderContext& rRenderContext, sal_Int32  nPos, bool bDrawImage, bool bDrawText, bool bDrawTextAtImagePos = false);
+    void            DrawEntry(vcl::RenderContext& rRenderContext, sal_Int32  nPos, bool bDrawImage, bool bDrawText, bool bDrawTextAtImagePos);
 
     void            SelectEntry( sal_Int32  nPos, bool bSelect );
     void            DeselectAll();
@@ -552,9 +551,7 @@ private:
     tools::Rectangle       maFocusRect;
 
     Link<void*,void> maMBDownHdl;
-    Link<UserDrawEvent*, void> maUserDrawHdl;
 
-    bool            mbUserDrawEnabled : 1;
     bool            mbEdgeBlending : 1;
 
     void ImplDraw(vcl::RenderContext& rRenderContext, bool bLayout = false);
@@ -579,10 +576,6 @@ public:
     void            SetImage( const Image& rImg ) { maImage = rImg; }
 
     void            SetMBDownHdl( const Link<void*,void>& rLink ) { maMBDownHdl = rLink; }
-    void            SetUserDrawHdl( const Link<UserDrawEvent*, void>& rLink ) { maUserDrawHdl = rLink; }
-
-    void            EnableUserDraw( bool bUserDraw )    { mbUserDrawEnabled = bUserDraw; }
-    bool            IsUserDrawEnabled() const           { return mbUserDrawEnabled; }
 
     void DrawEntry(vcl::RenderContext& rRenderContext, bool bLayout);
 

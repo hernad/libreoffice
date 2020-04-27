@@ -82,6 +82,7 @@
 #include <com/sun/star/ui/theWindowStateConfiguration.hpp>
 #include <com/sun/star/ui/dialogs/ExtendedFilePickerElementIds.hpp>
 #include <com/sun/star/ui/dialogs/TemplateDescription.hpp>
+#include <com/sun/star/ui/dialogs/XFilePicker3.hpp>
 #include <com/sun/star/ui/dialogs/XFilePickerControlAccess.hpp>
 #include <com/sun/star/util/thePathSettings.hpp>
 #include <comphelper/documentinfo.hxx>
@@ -2634,7 +2635,7 @@ SvxIconSelectorDialog::SvxIconSelectorDialog(weld::Window *pWindow,
     : GenericDialogController(pWindow, "cui/ui/iconselectordialog.ui", "IconSelector")
     , m_xImageManager(rXImageManager)
     , m_xParentImageManager(rXParentImageManager)
-    , m_xTbSymbol(new SvtValueSet(m_xBuilder->weld_scrolled_window("symbolswin")))
+    , m_xTbSymbol(new ValueSet(m_xBuilder->weld_scrolled_window("symbolswin")))
     , m_xTbSymbolWin(new weld::CustomWeld(*m_xBuilder, "symbolsToolbar", *m_xTbSymbol))
     , m_xFtNote(m_xBuilder->weld_label("noteLabel"))
     , m_xBtnImport(m_xBuilder->weld_button("importButton"))
@@ -2803,7 +2804,7 @@ uno::Reference< graphic::XGraphic> SvxIconSelectorDialog::GetSelectedIcon()
     return result;
 }
 
-IMPL_LINK_NOARG(SvxIconSelectorDialog, SelectHdl, SvtValueSet*, void)
+IMPL_LINK_NOARG(SvxIconSelectorDialog, SelectHdl, ValueSet*, void)
 {
     sal_uInt16 nId = m_xTbSymbol->GetSelectedItemId();
 

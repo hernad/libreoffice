@@ -46,13 +46,13 @@ private:
     std::unique_ptr<weld::Button> m_xPBDefault;
     std::unique_ptr<weld::Button> m_xPBAdd;
     std::unique_ptr<weld::Button> m_xPBRemove;
-    std::unique_ptr<ColorValueSet> m_xValSetColorBox;
+    std::unique_ptr<SvxColorValueSet> m_xValSetColorBox;
     std::unique_ptr<weld::CustomWeld> m_xValSetColorBoxWin;
 
     DECL_LINK(ResetToDefaults, weld::Button&, void);
     DECL_LINK(AddChartColor, weld::Button&, void);
     DECL_LINK(RemoveChartColor, weld::Button&, void);
-    DECL_LINK(BoxClickedHdl, SvtValueSet*, void);
+    DECL_LINK(BoxClickedHdl, ValueSet*, void);
     DECL_LINK(SelectPaletteLbHdl, weld::ComboBox&, void);
 
     void FillPaletteLB();

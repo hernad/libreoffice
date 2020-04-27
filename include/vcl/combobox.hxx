@@ -85,7 +85,6 @@ public:
     sal_Int32       InsertEntry(const OUString& rStr, sal_Int32  nPos = COMBOBOX_APPEND);
     sal_Int32       InsertEntryWithImage( const OUString& rStr, const Image& rImage, sal_Int32  nPos = COMBOBOX_APPEND );
 
-    void            RemoveEntry( const OUString& rStr );
     void            RemoveEntryAt(sal_Int32  nPos);
 
     void            Clear();
@@ -101,7 +100,7 @@ public:
     void            SetUserItemSize( const Size& rSz );
     void            EnableUserDraw( bool bUserDraw );
 
-    void            DrawEntry( const UserDrawEvent& rEvt, bool bDrawImage, bool bDrawText, bool bDrawTextAtImagePos = false );
+    void            DrawEntry( const UserDrawEvent& rEvt, bool bDrawText, bool bDrawTextAtImagePos );
     void            SetBorderStyle( WindowBorderStyle nBorderStyle );
 
     void            SetSeparatorPos( sal_Int32  n );

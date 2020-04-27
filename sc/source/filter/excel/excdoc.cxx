@@ -48,6 +48,7 @@
 #include <xltools.hxx>
 
 #include <com/sun/star/document/XDocumentPropertiesSupplier.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <o3tl/safeint.hxx>
 #include <oox/token/tokens.hxx>
 #include <oox/token/namespaces.hxx>
@@ -111,7 +112,7 @@ ExcTable::ExcTable( const XclExpRoot& rRoot ) :
     XclExpRoot( rRoot ),
     mnScTab( SCTAB_GLOBAL ),
     nExcTab( EXC_NOTAB ),
-    mxNoteList( std::make_shared<XclExpNoteList>() )
+    mxNoteList( new XclExpNoteList )
 {
 }
 
@@ -119,7 +120,7 @@ ExcTable::ExcTable( const XclExpRoot& rRoot, SCTAB nScTab ) :
     XclExpRoot( rRoot ),
     mnScTab( nScTab ),
     nExcTab( rRoot.GetTabInfo().GetXclTab( nScTab ) ),
-    mxNoteList( std::make_shared<XclExpNoteList>() )
+    mxNoteList( new XclExpNoteList )
 {
 }
 
@@ -258,7 +259,7 @@ void ExcTable::FillAsHeaderBinary( ExcBoundsheetList& rBoundsheetList )
         for( nC = 0 ; nC < nScTabCount ; nC++ )
             if( rTabInfo.IsExportTab( nC ) )
             {
-                ExcBoundsheetList::RecordRefType xBoundsheet = std::make_shared<ExcBundlesheet>( rR, nC );
+                ExcBoundsheetList::RecordRefType xBoundsheet = new ExcBundlesheet( rR, nC );
                 aRecList.AppendRecord( xBoundsheet );
                 rBoundsheetList.AppendRecord( xBoundsheet );
             }
@@ -283,7 +284,7 @@ void ExcTable::FillAsHeaderBinary( ExcBoundsheetList& rBoundsheetList )
         for( nC = 0 ; nC < nScTabCount ; nC++ )
             if( rTabInfo.IsExportTab( nC ) )
             {
-                ExcBoundsheetList::RecordRefType xBoundsheet = std::make_shared<ExcBundlesheet8>( rR, nC );
+                ExcBoundsheetList::RecordRefType xBoundsheet = new ExcBundlesheet8( rR, nC );
                 aRecList.AppendRecord( xBoundsheet );
                 rBoundsheetList.AppendRecord( xBoundsheet );
             }
@@ -292,7 +293,7 @@ void ExcTable::FillAsHeaderBinary( ExcBoundsheetList& rBoundsheetList )
         for( SCTAB nAdd = 0; nC < static_cast<SCTAB>(nCodenames) ; nC++, nAdd++ )
         {
             aTmpString = lcl_GetVbaTabName( nAdd );
-            ExcBoundsheetList::RecordRefType xBoundsheet = std::make_shared<ExcBundlesheet8>( aTmpString );
+            ExcBoundsheetList::RecordRefType xBoundsheet = new ExcBundlesheet8( aTmpString );
             aRecList.AppendRecord( xBoundsheet );
             rBoundsheetList.AppendRecord( xBoundsheet );
         }
@@ -375,7 +376,7 @@ void ExcTable::FillAsHeaderXml( ExcBoundsheetList& rBoundsheetList )
     for( nC = 0 ; nC < nScTabCount ; nC++ )
         if( rTabInfo.IsExportTab( nC ) )
         {
-            ExcBoundsheetList::RecordRefType xBoundsheet = std::make_shared<ExcBundlesheet8>( rR, nC );
+            ExcBoundsheetList::RecordRefType xBoundsheet = new ExcBundlesheet8( rR, nC );
             aRecList.AppendRecord( xBoundsheet );
             rBoundsheetList.AppendRecord( xBoundsheet );
         }
@@ -385,7 +386,7 @@ void ExcTable::FillAsHeaderXml( ExcBoundsheetList& rBoundsheetList )
     for( SCTAB nAdd = 0; nC < static_cast<SCTAB>(nCodenames) ; nC++, nAdd++ )
     {
         aTmpString = lcl_GetVbaTabName( nAdd );
-        ExcBoundsheetList::RecordRefType xBoundsheet = std::make_shared<ExcBundlesheet8>( aTmpString );
+        ExcBoundsheetList::RecordRefType xBoundsheet = new ExcBundlesheet8( aTmpString );
         aRecList.AppendRecord( xBoundsheet );
         rBoundsheetList.AppendRecord( xBoundsheet );
     }
@@ -418,7 +419,7 @@ void ExcTable::FillAsTableBinary( SCTAB nCodeNameIdx )
         GetObjectManager().StartSheet();
 
     // cell table: DEFROWHEIGHT, DEFCOLWIDTH, COLINFO, DIMENSIONS, ROW, cell records
-    mxCellTable = std::make_shared<XclExpCellTable>( GetRoot() );
+    mxCellTable = new XclExpCellTable( GetRoot() );
 
     //export cell notes
     std::vector<sc::NoteEntry> aNotes;
@@ -432,7 +433,7 @@ void ExcTable::FillAsTableBinary( SCTAB nCodeNameIdx )
     }
 
     // WSBOOL needs data from page settings, create it here, add it later
-    auto xPageSett = std::make_shared<XclExpPageSettings>( GetRoot() );
+    rtl::Reference<XclExpPageSettings> xPageSett = new XclExpPageSettings( GetRoot() );
     bool bFitToPages = xPageSett->GetPageData().mbFitToPages;
 
     if( eBiff <= EXC_BIFF5 )
@@ -559,7 +560,7 @@ void ExcTable::FillAsTableXml()
     GetObjectManager().StartSheet();
 
     // cell table: DEFROWHEIGHT, DEFCOLWIDTH, COLINFO, DIMENSIONS, ROW, cell records
-    mxCellTable = std::make_shared<XclExpCellTable>( GetRoot() );
+    mxCellTable = new XclExpCellTable( GetRoot() );
 
     //export cell notes
     std::vector<sc::NoteEntry> aNotes;
@@ -573,8 +574,8 @@ void ExcTable::FillAsTableXml()
     }
 
     // WSBOOL needs data from page settings, create it here, add it later
-    auto xPageSett = std::make_shared<XclExpPageSettings>( GetRoot() );
-    XclExtLstRef xExtLst = std::make_shared<XclExtLst>( GetRoot() );
+    rtl::Reference<XclExpPageSettings> xPageSett = new XclExpPageSettings( GetRoot() );
+    XclExtLstRef xExtLst = new XclExtLst( GetRoot() );
     bool bFitToPages = xPageSett->GetPageData().mbFitToPages;
 
     Color aTabColor = GetRoot().GetDoc().GetTabBgColor(mnScTab);
@@ -630,7 +631,7 @@ void ExcTable::FillAsTableXml()
 
     XclExpImgData* pImgData = xPageSett->getGraphicExport();
     if (pImgData)
-        aRecList.AppendRecord(std::shared_ptr<XclExpRecordBase>(pImgData));
+        aRecList.AppendRecord(pImgData);
 
     // <tableParts> after <drawing> and before <extLst>
     aRecList.AppendRecord( GetTablesManager().GetTablesBySheet( mnScTab));
@@ -735,7 +736,7 @@ void ExcDocument::ReadDoc()
     {
         if( GetTabInfo().IsExportTab( nScTab ) )
         {
-            ExcTableList::RecordRefType xTab = std::make_shared<ExcTable>( GetRoot(), nScTab );
+            ExcTableList::RecordRefType xTab = new ExcTable( GetRoot(), nScTab );
             maTableList.AppendRecord( xTab );
             if (GetOutput() == EXC_OUTPUT_BINARY)
                 xTab->FillAsTableBinary(nCodeNameIdx);
@@ -747,7 +748,7 @@ void ExcDocument::ReadDoc()
     }
     for( ; nCodeNameIdx < nCodeNameCount; ++nScTab, ++nCodeNameIdx )
     {
-        ExcTableList::RecordRefType xTab = std::make_shared<ExcTable>( GetRoot(), nScTab );
+        ExcTableList::RecordRefType xTab = new ExcTable( GetRoot(), nScTab );
         maTableList.AppendRecord( xTab );
         xTab->FillAsEmptyTable( nCodeNameIdx );
     }
@@ -853,8 +854,8 @@ void ExcDocument::WriteXml( XclExpXmlStream& rStrm )
     if ( rCalcConfig.mbHasStringRefSyntax ||
          (eConv != formula::FormulaGrammar::CONV_XL_A1) )
     {
-        XclExtLstRef xExtLst = std::make_shared<XclExtLst>( GetRoot()  );
-        xExtLst->AddRecord( std::make_shared<XclExpExtCalcPr>( GetRoot(), eConv )  );
+        XclExtLstRef xExtLst = new XclExtLst( GetRoot()  );
+        xExtLst->AddRecord( new XclExpExtCalcPr( GetRoot(), eConv )  );
         xExtLst->SaveXml(rStrm);
     }
 

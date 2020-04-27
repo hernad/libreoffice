@@ -24,6 +24,7 @@
 #include <com/sun/star/form/FormComponentType.hpp>
 #include <com/sun/star/awt/VisualEffect.hpp>
 #include <com/sun/star/awt/ScrollBarOrientation.hpp>
+#include <com/sun/star/awt/XControlModel.hpp>
 #include <com/sun/star/drawing/XShape.hpp>
 #include <com/sun/star/form/binding/XBindableValue.hpp>
 #include <com/sun/star/form/binding/XListEntrySink.hpp>
@@ -1487,17 +1488,17 @@ XclExpDffAnchorBase* XclExpObjectManager::CreateDffAnchor() const
     return new XclExpDffSheetAnchor( GetRoot() );
 }
 
-std::shared_ptr< XclExpRecordBase > XclExpObjectManager::CreateDrawingGroup()
+rtl::Reference< XclExpRecordBase > XclExpObjectManager::CreateDrawingGroup()
 {
-    return std::make_shared<XclExpMsoDrawingGroup>( *mxEscherEx );
+    return new XclExpMsoDrawingGroup( *mxEscherEx );
 }
 
 void XclExpObjectManager::StartSheet()
 {
-    mxObjList = std::make_shared<XclExpObjList>( GetRoot(), *mxEscherEx );
+    mxObjList = new XclExpObjList( GetRoot(), *mxEscherEx );
 }
 
-std::shared_ptr< XclExpRecordBase > XclExpObjectManager::ProcessDrawing( const SdrPage* pSdrPage )
+rtl::Reference< XclExpRecordBase > XclExpObjectManager::ProcessDrawing( const SdrPage* pSdrPage )
 {
     if( pSdrPage )
         mxEscherEx->AddSdrPage( *pSdrPage );
@@ -1509,7 +1510,7 @@ std::shared_ptr< XclExpRecordBase > XclExpObjectManager::ProcessDrawing( const S
     return mxObjList;
 }
 
-std::shared_ptr< XclExpRecordBase > XclExpObjectManager::ProcessDrawing( const Reference< XShapes >& rxShapes )
+rtl::Reference< XclExpRecordBase > XclExpObjectManager::ProcessDrawing( const Reference< XShapes >& rxShapes )
 {
     if( rxShapes.is() )
         mxEscherEx->AddUnoShapes( rxShapes );

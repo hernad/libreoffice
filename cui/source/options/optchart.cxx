@@ -95,7 +95,7 @@ SvxDefaultColorOptPage::SvxDefaultColorOptPage(weld::Container* pPage, weld::Dia
     , m_xPBDefault(m_xBuilder->weld_button("default"))
     , m_xPBAdd(m_xBuilder->weld_button("add"))
     , m_xPBRemove(m_xBuilder->weld_button("delete"))
-    , m_xValSetColorBox(new ColorValueSet(m_xBuilder->weld_scrolled_window("tablewin")))
+    , m_xValSetColorBox(new SvxColorValueSet(m_xBuilder->weld_scrolled_window("tablewin")))
     , m_xValSetColorBoxWin(new weld::CustomWeld(*m_xBuilder, "table", *m_xValSetColorBox))
 {
     m_xLbChartColors->set_size_request(-1, m_xLbChartColors->get_height_rows(16));
@@ -258,7 +258,7 @@ IMPL_LINK_NOARG( SvxDefaultColorOptPage, SelectPaletteLbHdl, weld::ComboBox&, vo
     m_xValSetColorBox->Resize();
 }
 
-IMPL_LINK_NOARG(SvxDefaultColorOptPage, BoxClickedHdl, SvtValueSet*, void)
+IMPL_LINK_NOARG(SvxDefaultColorOptPage, BoxClickedHdl, ValueSet*, void)
 {
     sal_Int32 nIdx = m_xLbChartColors->get_selected_index();
     if (nIdx != -1)

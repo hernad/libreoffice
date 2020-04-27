@@ -20,6 +20,7 @@
 #ifndef INCLUDED_VCL_INC_IMPGRAPH_HXX
 #define INCLUDED_VCL_INC_IMPGRAPH_HXX
 
+#include <vcl/dllapi.h>
 #include <vcl/GraphicExternalLink.hxx>
 #include <vcl/gdimtf.hxx>
 #include <vcl/graph.hxx>
@@ -42,11 +43,11 @@ struct ImpSwapInfo
 
 class OutputDevice;
 class GfxLink;
-struct ImpSwapFile;
+class ImpSwapFile;
 class GraphicConversionParameters;
 class ImpGraphic;
 
-class ImpGraphic final
+class VCL_DLLPUBLIC ImpGraphic final
 {
     friend class Graphic;
     friend class GraphicID;
@@ -55,8 +56,8 @@ class ImpGraphic final
 private:
 
     GDIMetaFile                  maMetaFile;
-    BitmapEx                     maEx;
-    /// If maEx is empty, this preferred size will be set on it when it gets initialized.
+    BitmapEx                     maBitmapEx;
+    /// If maBitmapEx is empty, this preferred size will be set on it when it gets initialized.
     Size                         maExPrefSize;
     ImpSwapInfo                  maSwapInfo;
     std::unique_ptr<Animation>   mpAnimation;
@@ -115,7 +116,7 @@ private:
         return mpGraphicID->getIDString();
     }
 
-    void                ImplCreateSwapInfo();
+    void                createSwapInfo();
     void                ImplClearGraphics();
     void                ImplClear();
 
@@ -175,13 +176,8 @@ private:
     bool                ImplReadEmbedded( SvStream& rIStream );
     bool                ImplWriteEmbedded( SvStream& rOStream );
 
-    bool                ImplSwapIn();
-    bool                ImplSwapIn( SvStream* pIStm );
+    bool                swapInFromStream(SvStream* pIStm);
 
-    bool                ImplSwapOut();
-    bool                ImplSwapOut( SvStream* pOStm );
-
-    bool                ImplIsSwapOut() const { return mbSwapOut;}
     bool                ImplIsDummyContext() const { return mbDummyContext; }
     void                ImplSetLink( const std::shared_ptr<GfxLink>& );
     std::shared_ptr<GfxLink> ImplGetSharedGfxLink() const;
@@ -205,6 +201,12 @@ private:
     bool loadPrepared();
 
     sal_Int32 getPageNumber() const;
+
+public:
+    bool swapIn();
+    bool swapOut();
+    bool isSwappedOut() const { return mbSwapOut; }
+    OUString getSwapFileURL();
 };
 
 #endif // INCLUDED_VCL_INC_IMPGRAPH_HXX
