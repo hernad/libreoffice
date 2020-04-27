@@ -24,9 +24,3 @@ index b405ea981d53..de0d9158731c 100644
        </prop>
        <prop oor:name="LastTipOfTheDayShown" oor:type="xs:int" oor:nillable="false">
            <info>
-diff --git a/translations b/translations
---- a/translations
-+++ b/translations
-@@ -1 +1 @@
--Subproject commit 7b4a46ae144ea71701de6d479c3c6ef74610e52c
-+Subproject commit 7b4a46ae144ea71701de6d479c3c6ef74610e52c-dirty
