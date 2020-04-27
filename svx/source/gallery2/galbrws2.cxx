@@ -41,6 +41,7 @@
 #include <comphelper/processfactory.hxx>
 #include <com/sun/star/frame/FrameSearchFlag.hpp>
 #include <com/sun/star/frame/XDispatchProvider.hpp>
+#include <com/sun/star/frame/XFrame.hpp>
 #include <com/sun/star/gallery/GalleryItemType.hpp>
 #include <com/sun/star/graphic/XGraphic.hpp>
 #include <com/sun/star/lang/XComponent.hpp>
@@ -1227,7 +1228,7 @@ OUString GalleryBrowser2::GetFilterName() const
     return aFilterName;
 }
 
-IMPL_LINK_NOARG(GalleryBrowser2, SelectObjectValueSetHdl, SvtValueSet*, void)
+IMPL_LINK_NOARG(GalleryBrowser2, SelectObjectValueSetHdl, ValueSet*, void)
 {
     ImplUpdateSelection();
 }

@@ -28,7 +28,7 @@
 #include <vcl/button.hxx>
 #include <vcl/tabpage.hxx>
 #include <vcl/tabctrl.hxx>
-#include <vcl/controllayout.hxx>
+#include <vcl/toolkit/controllayout.hxx>
 #include <vcl/layout.hxx>
 #include <vcl/lstbox.hxx>
 #include <vcl/settings.hxx>
@@ -2345,10 +2345,14 @@ bool NotebookbarTabControlBase::ImplPlaceTabs( long nWidth )
 
     // position the shortcutbox
     if (m_pShortcuts)
-        m_pShortcuts->SetPosPixel(Point(0, 0));
+    {
+        long nPosY = (m_nHeaderHeight - m_pShortcuts->GetSizePixel().getHeight()) / 2;
+        m_pShortcuts->SetPosPixel(Point(0, nPosY));
+    }
 
+    long nPosY = (m_nHeaderHeight - m_pOpenMenu->GetSizePixel().getHeight()) / 2;
     // position the menu
-    m_pOpenMenu->SetPosPixel(Point(nWidth - HAMBURGER_DIM, 0));
+    m_pOpenMenu->SetPosPixel(Point(nWidth - HAMBURGER_DIM, nPosY));
 
     return true;
 }

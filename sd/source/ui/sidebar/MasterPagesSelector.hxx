@@ -25,7 +25,7 @@
 #include "MasterPageContainer.hxx"
 #include "PreviewValueSet.hxx"
 #include <sfx2/sidebar/ILayoutableWindow.hxx>
-#include <svx/sidebar/PanelLayout.hxx>
+#include <sfx2/sidebar/PanelLayout.hxx>
 
 #include <osl/mutex.hxx>
 
@@ -162,7 +162,7 @@ private:
         last seen.  This value is used heuristically to speed up the lookup
         of an index for a token.
     */
-    DECL_LINK(ClickHandler, SvtValueSet*, void);
+    DECL_LINK(ClickHandler, ValueSet*, void);
     DECL_LINK(RightClickHandler, const MouseEvent&, void);
     DECL_LINK(ContainerChangeListener, MasterPageContainerChangeEvent&, void);
     DECL_LINK(OnMenuItemSelected, Menu*, bool);

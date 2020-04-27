@@ -22,7 +22,7 @@
 #include "SlideSorterViewShell.hxx"
 
 #include <svtools/valueset.hxx>
-#include <svx/sidebar/PanelLayout.hxx>
+#include <sfx2/sidebar/PanelLayout.hxx>
 #include <vcl/weld.hxx>
 
 #include <vector>
@@ -88,7 +88,7 @@ private:
     DECL_LINK( PlayButtonClicked, weld::Button&, void );
     DECL_LINK( AutoPreviewClicked, weld::ToggleButton&, void );
 
-    DECL_LINK( TransitionSelected, SvtValueSet*, void );
+    DECL_LINK( TransitionSelected, ValueSet*, void );
     DECL_LINK( AdvanceSlideRadioButtonToggled, weld::ToggleButton&, void );
     DECL_LINK( AdvanceTimeModified, weld::MetricSpinButton&, void );
     DECL_LINK( VariantListBoxSelected, weld::ComboBox&, void );

@@ -24,7 +24,6 @@
 
 #include <dbu_reghelper.hxx>
 #include <uiservices.hxx>
-#include <sfx2/sfxsids.hrc>
 #include <strings.hrc>
 #include <strings.hxx>
 #include <vcl/svapp.hxx>
@@ -32,28 +31,16 @@
 #include <browserids.hxx>
 #include <comphelper/types.hxx>
 #include <core_resource.hxx>
-#include <stringconstants.hxx>
 #include <connectivity/dbtools.hxx>
 #include <comphelper/processfactory.hxx>
-#include <com/sun/star/container/XChild.hpp>
-#include <com/sun/star/container/XNameContainer.hpp>
-#include <com/sun/star/sdbcx/XDataDescriptorFactory.hpp>
 #include <com/sun/star/sdbcx/XTablesSupplier.hpp>
 #include <com/sun/star/sdbcx/KeyType.hpp>
-#include <com/sun/star/sdbcx/XDrop.hpp>
-#include <com/sun/star/sdbcx/XAlterTable.hpp>
-#include <com/sun/star/sdbcx/XAppend.hpp>
 #include <com/sun/star/sdbcx/XKeysSupplier.hpp>
 #include <com/sun/star/sdbcx/XColumnsSupplier.hpp>
-#include <com/sun/star/sdb/SQLContext.hpp>
-#include <com/sun/star/sdbc/SQLWarning.hpp>
-#include <com/sun/star/sdbc/ColumnValue.hpp>
+#include <com/sun/star/sdbc/SQLException.hpp>
 #include <com/sun/star/sdbc/XRow.hpp>
 #include <connectivity/dbexception.hxx>
 #include <connectivity/dbmetadata.hxx>
-#include <com/sun/star/ui/dialogs/XExecutableDialog.hpp>
-#include <com/sun/star/io/XActiveDataSource.hpp>
-#include <com/sun/star/io/XActiveDataSink.hpp>
 #include <sqlmessage.hxx>
 #include <RelationController.hxx>
 #include <TableWindowData.hxx>
@@ -61,7 +48,6 @@
 #include <RTableConnectionData.hxx>
 #include <RelationTableView.hxx>
 #include <RelationDesignView.hxx>
-#include <tools/debug.hxx>
 #include <tools/diagnose_ex.h>
 #include <osl/thread.hxx>
 #include <osl/mutex.hxx>
@@ -398,8 +384,8 @@ namespace
                 OUString sKeyName;
                 xKey->getPropertyValue(PROPERTY_NAME) >>= sKeyName;
                 // insert connection
-                ORelationTableConnectionData* pTabConnData = new ORelationTableConnectionData( pReferencingTable, pReferencedTable, sKeyName );
-                m_vTableConnectionData.push_back(TTableConnectionData::value_type(pTabConnData));
+                auto xTabConnData = std::make_shared<ORelationTableConnectionData>( pReferencingTable, pReferencedTable, sKeyName );
+                m_vTableConnectionData.push_back(xTabConnData);
                 // insert columns
                 const Reference<XColumnsSupplier> xColsSup(xKey,UNO_QUERY);
                 OSL_ENSURE(xColsSup.is(),"Key is no XColumnsSupplier!");
@@ -415,7 +401,7 @@ namespace
                         xPropSet->getPropertyValue(PROPERTY_NAME)           >>= sColumnName;
                         xPropSet->getPropertyValue(PROPERTY_RELATEDCOLUMN)  >>= sRelatedName;
                     }
-                    pTabConnData->SetConnLine( j, sColumnName, sRelatedName );
+                    xTabConnData->SetConnLine( j, sColumnName, sRelatedName );
                 }
                 // set update/del flags
                 sal_Int32   nUpdateRule = 0;
@@ -423,11 +409,11 @@ namespace
                 xKey->getPropertyValue(PROPERTY_UPDATERULE) >>= nUpdateRule;
                 xKey->getPropertyValue(PROPERTY_DELETERULE) >>= nDeleteRule;
 
-                pTabConnData->SetUpdateRules( nUpdateRule );
-                pTabConnData->SetDeleteRules( nDeleteRule );
+                xTabConnData->SetUpdateRules( nUpdateRule );
+                xTabConnData->SetDeleteRules( nDeleteRule );
 
                 // set cardinality
-                pTabConnData->SetCardinality();
+                xTabConnData->SetCardinality();
             }
         }
     }

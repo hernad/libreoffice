@@ -505,8 +505,9 @@ void SkiaSalGraphicsImpl::applyXor()
     // in each operation by extending mXorRegion with the area that should be
     // updated.
     assert(mXorMode);
-    if (!mXorRegion.op(SkIRect::MakeXYWH(0, 0, mSurface->width(), mSurface->height()),
-                       SkRegion::kIntersect_Op))
+    if (!mSurface
+        || !mXorRegion.op(SkIRect::MakeXYWH(0, 0, mSurface->width(), mSurface->height()),
+                          SkRegion::kIntersect_Op))
     {
         mXorRegion.setEmpty();
         return;
@@ -625,9 +626,9 @@ void SkiaSalGraphicsImpl::privateDrawAlphaRect(long nX, long nY, long nWidth, lo
                                                double fTransparency, bool blockAA)
 {
     preDraw();
-    SAL_INFO("vcl.skia.trace", "privatedrawrect(" << this << "): " << Point(nX, nY) << "/"
-                                                  << Size(nWidth, nHeight) << ":" << mLineColor
-                                                  << ":" << mFillColor << ":" << fTransparency);
+    SAL_INFO("vcl.skia.trace",
+             "privatedrawrect(" << this << "): " << SkIRect::MakeXYWH(nX, nY, nWidth, nHeight)
+                                << ":" << mLineColor << ":" << mFillColor << ":" << fTransparency);
     SkCanvas* canvas = getDrawCanvas();
     SkPaint paint;
     paint.setAntiAlias(!blockAA && mParent.getAntiAliasB2DDraw());
@@ -641,7 +642,11 @@ void SkiaSalGraphicsImpl::privateDrawAlphaRect(long nX, long nY, long nWidth, lo
     {
         paint.setColor(toSkColorWithTransparency(mLineColor, fTransparency));
         paint.setStyle(SkPaint::kStroke_Style);
-        canvas->drawIRect(SkIRect::MakeXYWH(nX, nY, nWidth - 1, nHeight - 1), paint);
+        // The obnoxious "-1 DrawRect()" hack that I don't understand the purpose of (and I'm not sure
+        // if anybody does), but without it some cases do not work. The max() is needed because Skia
+        // will not drawn anything if width or height is 0.
+        canvas->drawIRect(
+            SkIRect::MakeXYWH(nX, nY, std::max(1L, nWidth - 1), std::max(1L, nHeight - 1)), paint);
     }
     addXorRegion(SkRect::MakeXYWH(nX, nY, nWidth, nHeight));
     postDraw();
@@ -921,9 +926,9 @@ void SkiaSalGraphicsImpl::copyArea(long nDestX, long nDestY, long nSrcX, long nS
     if (nDestX == nSrcX && nDestY == nSrcY)
         return;
     preDraw();
-    SAL_INFO("vcl.skia.trace", "copyarea(" << this << "): " << Point(nSrcX, nSrcY) << "->"
-                                           << Point(nDestX, nDestY) << "/"
-                                           << Size(nSrcWidth, nSrcHeight));
+    SAL_INFO("vcl.skia.trace", "copyarea("
+                                   << this << "): " << Point(nSrcX, nSrcY) << "->"
+                                   << SkIRect::MakeXYWH(nDestX, nDestY, nSrcWidth, nSrcHeight));
     assert(!mXorMode);
     ::copyArea(getDrawCanvas(), mSurface, nDestX, nDestY, nSrcX, nSrcY, nSrcWidth, nSrcHeight);
     addXorRegion(SkRect::MakeXYWH(nDestX, nDestY, nSrcWidth, nSrcHeight));
@@ -1094,7 +1099,7 @@ std::shared_ptr<SalBitmap> SkiaSalGraphicsImpl::getBitmap(long nX, long nY, long
     SkiaZone zone;
     checkSurface();
     SAL_INFO("vcl.skia.trace",
-             "getbitmap(" << this << "): " << Point(nX, nY) << "/" << Size(nWidth, nHeight));
+             "getbitmap(" << this << "): " << SkIRect::MakeXYWH(nX, nY, nWidth, nHeight));
     flushDrawing();
     // TODO makeImageSnapshot(rect) may copy the data, which may be a waste if this is used
     // e.g. for VirtualDevice's lame alpha blending, in which case the image will eventually end up
@@ -1345,7 +1350,9 @@ bool SkiaSalGraphicsImpl::drawTransformedBitmap(const basegfx::B2DPoint& rNull,
     {
         SkAutoCanvasRestore autoRestore(getDrawCanvas(), true);
         getDrawCanvas()->concat(aMatrix);
-        getDrawCanvas()->drawImage(tmpSurface->makeImageSnapshot(), 0, 0);
+        SkPaint paint;
+        paint.setFilterQuality(kHigh_SkFilterQuality);
+        getDrawCanvas()->drawImage(tmpSurface->makeImageSnapshot(), 0, 0, &paint);
     }
     assert(!mXorMode);
     postDraw();

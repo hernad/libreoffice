@@ -23,6 +23,7 @@
 #include <o3tl/any.hxx>
 #include <vcl/graphicfilter.hxx>
 #include <com/sun/star/sdb/DatabaseContext.hpp>
+#include <com/sun/star/ui/dialogs/XFilePicker3.hpp>
 #include <com/sun/star/ui/dialogs/XFilePickerControlAccess.hpp>
 #include <com/sun/star/ui/dialogs/ExtendedFilePickerElementIds.hpp>
 #include <com/sun/star/ui/dialogs/ListboxControlActions.hpp>
@@ -53,6 +54,7 @@
 #include <sfx2/bindings.hxx>
 #include <editeng/lrspitem.hxx>
 #include <unotools/localedatawrapper.hxx>
+#include <unotools/syslocale.hxx>
 #include <editeng/unolingu.hxx>
 #include <vcl/weld.hxx>
 #include <editeng/tstpitem.hxx>

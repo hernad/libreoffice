@@ -21,7 +21,7 @@
 #define INCLUDED_SD_SOURCE_UI_SIDEBAR_LAYOUTMENU_HXX
 
 #include <sfx2/sidebar/ILayoutableWindow.hxx>
-#include <svx/sidebar/PanelLayout.hxx>
+#include <sfx2/sidebar/PanelLayout.hxx>
 
 #include <svtools/valueset.hxx>
 #include <vcl/transfer.hxx>
@@ -164,7 +164,7 @@ private:
 
     /** When clicked then set the current page of the view in the center pane.
     */
-    DECL_LINK(ClickHandler, SvtValueSet*, void);
+    DECL_LINK(ClickHandler, ValueSet*, void);
     DECL_LINK(StateChangeHandler, const OUString&, void);
     DECL_LINK(EventMultiplexerListener, ::sd::tools::EventMultiplexerEvent&, void);
     DECL_LINK(WindowEventHandler, VclWindowEvent&, void);

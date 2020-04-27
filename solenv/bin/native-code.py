@@ -257,6 +257,7 @@ core_constructor_list = [
     "com_sun_star_comp_svx_FontNameToolBoxControl_get_implementation",
     "com_sun_star_comp_Svx_GraphicExportHelper_get_implementation",
     "com_sun_star_comp_Svx_GraphicImportHelper_get_implementation",
+    "com_sun_star_comp_svx_StyleToolBoxControl_get_implementation",
 # toolkit/util/tk.component
     "stardiv_Toolkit_StdTabController_get_implementation",
     "stardiv_Toolkit_UnoButtonControl_get_implementation",
@@ -330,6 +331,7 @@ core_constructor_list = [
     "com_sun_star_comp_Chart_XMLOasisStylesExporter_get_implementation",
     "com_sun_star_comp_Chart_XMLOasisContentExporter_get_implementation",
     "com_sun_star_comp_Chart_XMLExporter_get_implementation",
+    "com_sun_star_comp_Chart_XMLStylesExporter_get_implementation",
     "com_sun_star_comp_Chart_XMLOasisStylesImporter_get_implementation",
     "com_sun_star_comp_Chart_XMLOasisContentImporter_get_implementation",
     "com_sun_star_comp_Chart_XMLOasisExporter_get_implementation",
@@ -374,6 +376,7 @@ edit_constructor_list = [
     "Calc_XMLOasisSettingsExporter_get_implementation",
     "Calc_XMLOasisStylesExporter_get_implementation",
 # starmath/util/sm.component
+    "Math_XMLContentExporter_get_implementation",
     "Math_XMLOasisMetaExporter_get_implementation",
     "Math_XMLOasisSettingsExporter_get_implementation",
     "Math_XMLImporter_get_implementation",
@@ -470,6 +473,7 @@ writer_factory_list = [
 
 writer_constructor_list = [
 # basic/util/sb.component
+    ("com_sun_star_comp_sfx2_DialogLibraryContainer_get_implementation","#if HAVE_FEATURE_SCRIPTING"),
     ("com_sun_star_comp_sfx2_ScriptLibraryContainer_get_implementation", "#if HAVE_FEATURE_SCRIPTING"),
 # filter/source/textfilterdetect/textfd.component
     "com_sun_star_comp_filters_PlainTextFilterDetect_get_implementation",

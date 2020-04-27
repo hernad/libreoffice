@@ -17,10 +17,10 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_VCL_GRAPHICNATIVEMETADATA_HXX
-#define INCLUDED_VCL_GRAPHICNATIVEMETADATA_HXX
+#pragma once
 
 #include <vcl/graph.hxx>
+#include <tools/stream.hxx>
 
 class VCL_DLLPUBLIC GraphicNativeMetadata final
 {
@@ -30,10 +30,11 @@ public:
     GraphicNativeMetadata();
     ~GraphicNativeMetadata();
 
-    bool read(Graphic const & rGraphic);
-    sal_uInt16 getRotation() const { return mRotation;}
-};
+    bool read(Graphic const& rGraphic);
+    bool read(SvStream& rStream);
 
-#endif // INCLUDED_VCL_GRAPHICNATIVEMETADATA_HXX
+    // counter-clock-wise rotation in permille
+    sal_uInt16 getRotation() const { return mRotation; }
+};
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

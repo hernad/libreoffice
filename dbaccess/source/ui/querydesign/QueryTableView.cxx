@@ -18,7 +18,6 @@
  */
 
 #include <QueryTableView.hxx>
-#include "TableFieldInfo.hxx"
 #include <TableFieldDescription.hxx>
 #include <tools/diagnose_ex.h>
 #include <osl/diagnose.h>
@@ -27,24 +26,19 @@
 #include "QTableConnection.hxx"
 #include "QTableConnectionData.hxx"
 #include <QueryDesignView.hxx>
-#include <querycontroller.hxx>
 #include "QueryAddTabConnUndoAction.hxx"
 #include "QueryTabWinShowUndoAct.hxx"
 #include <browserids.hxx>
-#include <com/sun/star/sdbcx/XTablesSupplier.hpp>
 #include <com/sun/star/sdbc/XConnection.hpp>
-#include <com/sun/star/sdbcx/XKeysSupplier.hpp>
 #include <com/sun/star/sdbcx/XColumnsSupplier.hpp>
 #include <com/sun/star/accessibility/AccessibleEventId.hpp>
 #include <JAccess.hxx>
 #include <com/sun/star/sdbcx/KeyType.hpp>
 #include <com/sun/star/container/XIndexAccess.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
-#include <stringconstants.hxx>
 #include <connectivity/dbtools.hxx>
 #include <comphelper/sequence.hxx>
 #include "querydlg.hxx"
-#include <JoinExchange.hxx>
 #include <core_resource.hxx>
 #include <strings.hrc>
 #include <strings.hxx>
@@ -130,8 +124,7 @@ namespace
         // we found a table in our view where we can insert some connections
         // the key columns have a property called RelatedColumn
         // build OQueryTableConnectionData
-        OQueryTableConnectionData* pNewConnData = new OQueryTableConnectionData( _rSource.GetData(), _rDest.GetData() );
-        TTableConnectionData::value_type aNewConnData(pNewConnData);
+        auto xNewConnData = std::make_shared<OQueryTableConnectionData>( _rSource.GetData(), _rDest.GetData() );
 
         OUString sRelatedColumn;
 
@@ -151,7 +144,7 @@ namespace
             {
                 sal_Int32 nFindIndex = ::comphelper::findValue(_rSource.GetOriginalColumns()->getElementNames(),rElement);
                 if(nFindIndex != -1)
-                    pNewConnData->SetFieldIndex(JTCS_FROM,nFindIndex+1);
+                    xNewConnData->SetFieldIndex(JTCS_FROM,nFindIndex+1);
                 else
                     OSL_FAIL("Column not found!");
             }
@@ -161,14 +154,14 @@ namespace
             {
                 sal_Int32 nFindIndex = ::comphelper::findValue(xRefColumns->getElementNames(),sRelatedColumn);
                 if(nFindIndex != -1)
-                    pNewConnData->SetFieldIndex(JTCS_TO,nFindIndex+1);
+                    xNewConnData->SetFieldIndex(JTCS_TO,nFindIndex+1);
                 else
                     OSL_FAIL("Column not found!");
             }
-            pNewConnData->AppendConnLine(rElement,sRelatedColumn);
+            xNewConnData->AppendConnLine(rElement,sRelatedColumn);
 
             // now add the Conn itself
-            ScopedVclPtrInstance< OQueryTableConnection > aNewConn(_pView, aNewConnData);
+            ScopedVclPtrInstance< OQueryTableConnection > aNewConn(_pView, xNewConnData);
             // referring to the local variable is not important, as NotifyQueryTabConn creates a new copy
             // to add me (if not existent)
             _pView->NotifyTabConnection(*aNewConn, false);
@@ -310,21 +303,20 @@ void OQueryTableView::NotifyTabConnection(const OQueryTableConnection& rNewConn,
     if (pTabConn == nullptr)
     {
         // the new data ...
-        OQueryTableConnectionData* pNewData = static_cast< OQueryTableConnectionData*>(rNewConn.GetData()->NewInstance());
+        auto pNewData = std::static_pointer_cast<OQueryTableConnectionData>(rNewConn.GetData()->NewInstance());
         pNewData->CopyFrom(*rNewConn.GetData());
-        TTableConnectionData::value_type aData(pNewData);
-        VclPtrInstance<OQueryTableConnection> pNewConn(this, aData);
+        VclPtrInstance<OQueryTableConnection> pNewConn(this, pNewData);
         GetConnection(pNewConn);
 
         connectionModified(this,pNewConn,_bCreateUndoAction);
     }
 }
 
-OTableWindowData* OQueryTableView::CreateImpl(const OUString& _rComposedName
+std::shared_ptr<OTableWindowData> OQueryTableView::CreateImpl(const OUString& _rComposedName
                                              ,const OUString& _sTableName
                                              ,const OUString& _rWinName)
 {
-    return new OQueryTableWindowData( _rComposedName, _sTableName,_rWinName );
+    return std::make_shared<OQueryTableWindowData>( _rComposedName, _sTableName,_rWinName );
 }
 
 void OQueryTableView::AddTabWin(const OUString& _rTableName, const OUString& _rAliasName, bool bNewTable)
@@ -543,8 +535,7 @@ void OQueryTableView::AddConnection(const OJoinExchangeData& jxdSource, const OJ
     if ( !pConn )
     {
         // new data object
-        OQueryTableConnectionData* pNewConnectionData = new OQueryTableConnectionData(pSourceWin->GetData(), pDestWin->GetData());
-        TTableConnectionData::value_type aNewConnectionData(pNewConnectionData);
+        auto xNewConnectionData = std::make_shared<OQueryTableConnectionData>(pSourceWin->GetData(), pDestWin->GetData());
 
         sal_uInt32          nSourceFieldIndex, nDestFieldIndex;
 
@@ -555,12 +546,12 @@ void OQueryTableView::AddConnection(const OJoinExchangeData& jxdSource, const OJ
         nDestFieldIndex = jxdDest.pListBox->GetModel()->GetAbsPos(jxdDest.pEntry);
 
         // ... and set them
-        pNewConnectionData->SetFieldIndex(JTCS_FROM, nSourceFieldIndex);
-        pNewConnectionData->SetFieldIndex(JTCS_TO, nDestFieldIndex);
+        xNewConnectionData->SetFieldIndex(JTCS_FROM, nSourceFieldIndex);
+        xNewConnectionData->SetFieldIndex(JTCS_TO, nDestFieldIndex);
 
-        pNewConnectionData->AppendConnLine( aSourceFieldName,aDestFieldName );
+        xNewConnectionData->AppendConnLine( aSourceFieldName,aDestFieldName );
 
-        ScopedVclPtrInstance< OQueryTableConnection > aNewConnection(this, aNewConnectionData);
+        ScopedVclPtrInstance< OQueryTableConnection > aNewConnection(this, xNewConnectionData);
         NotifyTabConnection(*aNewConnection);
         // As usual with NotifyTabConnection, using a local variable is fine because a copy is made
     }

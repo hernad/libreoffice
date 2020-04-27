@@ -95,7 +95,7 @@ IMPL_LINK_NOARG(ScTabBgColorDlg, SelectPaletteLBHdl, weld::ComboBox&, void)
 }
 
 //    Handler, called when color selection is changed
-IMPL_LINK_NOARG(ScTabBgColorDlg, TabBgColorDblClickHdl_Impl, SvtValueSet*, void)
+IMPL_LINK_NOARG(ScTabBgColorDlg, TabBgColorDblClickHdl_Impl, ValueSet*, void)
 {
     sal_uInt16 nItemId = m_xTabBgColorSet->GetSelectedItemId();
     Color aColor = nItemId ? ( m_xTabBgColorSet->GetItemColor( nItemId ) ) : COL_AUTO;
@@ -113,7 +113,7 @@ IMPL_LINK_NOARG(ScTabBgColorDlg, TabBgColorOKHdl_Impl, weld::Button&, void)
 }
 
 ScTabBgColorDlg::ScTabBgColorValueSet::ScTabBgColorValueSet(std::unique_ptr<weld::ScrolledWindow> pWindow)
-    : ColorValueSet(std::move(pWindow))
+    : SvxColorValueSet(std::move(pWindow))
     , m_pTabBgColorDlg(nullptr)
 {
 }
@@ -137,7 +137,7 @@ bool ScTabBgColorDlg::ScTabBgColorValueSet::KeyInput( const KeyEvent& rKEvt )
         }
         break;
     }
-    return ColorValueSet::KeyInput(rKEvt);
+    return SvxColorValueSet::KeyInput(rKEvt);
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

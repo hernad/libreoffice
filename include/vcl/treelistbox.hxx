@@ -149,17 +149,15 @@ enum class DragDropMode
     NONE            = 0x0000,
     CTRL_MOVE       = 0x0001,
     CTRL_COPY       = 0x0002,
-    APP_MOVE        = 0x0004,
-    APP_COPY        = 0x0008,
-    APP_DROP        = 0x0010,
+    APP_COPY        = 0x0004,
     // Entries may be dropped via the uppermost Entry
     // The DropTarget is 0 in that case
-    ENABLE_TOP      = 0x0020,
-    ALL             = 0x003f,
+    ENABLE_TOP      = 0x0010,
+    ALL             = 0x0017,
 };
 namespace o3tl
 {
-    template<> struct typed_flags<DragDropMode> : is_typed_flags<DragDropMode, 0x003f> {};
+    template<> struct typed_flags<DragDropMode> : is_typed_flags<DragDropMode, 0x0017> {};
 }
 
 enum class SvTreeListBoxFlags
@@ -683,8 +681,8 @@ public:
     void            SetDragDropMode( DragDropMode );
     void            SetSelectionMode( SelectionMode );
 
-    virtual bool    Expand( SvTreeListEntry* pParent );
-    virtual bool    Collapse( SvTreeListEntry* pParent );
+    bool            Expand( SvTreeListEntry* pParent );
+    bool            Collapse( SvTreeListEntry* pParent );
     virtual bool    Select( SvTreeListEntry* pEntry, bool bSelect=true );
     sal_uLong       SelectChildren( SvTreeListEntry* pParent, bool bSelect );
     void            SelectAll( bool bSelect );
@@ -708,11 +706,9 @@ public:
                         SvTreeListEntry* pEntry2, sal_uLong nPos ) override;
 
     void            EndSelection();
-    ScrollBar*      GetVScroll();
 
     SvTreeListEntry*    GetFirstEntryInView() const;
     SvTreeListEntry*    GetNextEntryInView(SvTreeListEntry*) const;
-    SvTreeListEntry*    GetLastEntryInView() const;
     void            ScrollToAbsPos( long nPos );
 
     void            ShowFocusRect( const SvTreeListEntry* pEntry );
@@ -736,35 +732,6 @@ public:
     virtual FactoryFunction GetUITestFactory() const override;
 
     void            SetDragHelper(rtl::Reference<TransferDataContainer>& rHelper, sal_uInt8 eDNDConstants);
-};
-
-class SvInplaceEdit2
-{
-    Link<SvInplaceEdit2&,void> aCallBackHdl;
-    Accelerator   aAccReturn;
-    Accelerator   aAccEscape;
-    Idle          aIdle;
-    VclPtr<Edit>  pEdit;
-    bool          bCanceled;
-    bool          bAlreadyInCallBack;
-
-    void        CallCallBackHdl_Impl();
-    DECL_LINK( Timeout_Impl, Timer *, void );
-    DECL_LINK( ReturnHdl_Impl, Accelerator&, void );
-    DECL_LINK( EscapeHdl_Impl, Accelerator&, void );
-
-public:
-                SvInplaceEdit2( vcl::Window* pParent, const Point& rPos, const Size& rSize,
-                   const OUString& rData, const Link<SvInplaceEdit2&,void>& rNotifyEditEnd,
-                   const Selection& );
-               ~SvInplaceEdit2();
-    bool        KeyInput( const KeyEvent& rKEvt );
-    void        LoseFocus();
-    bool        EditingCanceled() const { return bCanceled; }
-    OUString    GetText() const;
-    OUString const & GetSavedValue() const;
-    void        StopEditing( bool bCancel );
-    void        Hide();
 };
 
 #endif

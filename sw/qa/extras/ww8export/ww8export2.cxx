@@ -294,6 +294,15 @@ DECLARE_WW8EXPORT_TEST(testTdf80635_pageLeft, "tdf80635_pageLeft.doc")
     CPPUNIT_ASSERT_DOUBLES_EQUAL_MESSAGE("Table Indent", long(-2750), getProperty<long>(xTable, "LeftMargin"), 100);
 }
 
+DECLARE_WW8EXPORT_TEST(testTdf99197_defaultLTR, "tdf99197_defaultLTR.doc")
+{
+    CPPUNIT_ASSERT_EQUAL_MESSAGE( "Default Paragraph style, LTR",
+        text::WritingMode2::LR_TB, getProperty<sal_Int16>(getParagraph(1), "WritingMode") );
+
+    CPPUNIT_ASSERT_EQUAL_MESSAGE( "myDefaultStyle - no base style, LTR",
+        text::WritingMode2::LR_TB, getProperty<sal_Int16>(getParagraph(2), "WritingMode") );
+}
+
 DECLARE_WW8EXPORT_TEST(testTdf107773, "tdf107773.doc")
 {
     uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
@@ -478,6 +487,13 @@ DECLARE_WW8EXPORT_TEST( testActiveXCheckbox, "checkbox_control.odt" )
     // Check anchor type
     xPropertySet2.set(xControlShape, uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(text::TextContentAnchorType_AS_CHARACTER,getProperty<text::TextContentAnchorType>(xPropertySet2,"AnchorType"));
+}
+
+DECLARE_WW8EXPORT_TEST( testTdf115896_layoutInCell, "tdf115896_layoutInCell.doc" )
+{
+    // Check anchor type - was anchored to page because of unknown version of Word
+    uno::Reference<beans::XPropertySet> xPropertySet(getShape(1), uno::UNO_QUERY_THROW);
+    CPPUNIT_ASSERT_EQUAL(text::TextContentAnchorType_AT_CHARACTER,getProperty<text::TextContentAnchorType>(xPropertySet,"AnchorType"));
 }
 
 DECLARE_WW8EXPORT_TEST(testTdf67207_MERGEFIELD, "mailmerge.doc")

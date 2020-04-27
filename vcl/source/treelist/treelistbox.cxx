@@ -58,6 +58,35 @@ static VclPtr<SvTreeListBox> g_pDDTarget;
 #define SVLBOX_ACC_RETURN 1
 #define SVLBOX_ACC_ESCAPE 2
 
+class SvInplaceEdit2
+{
+    Link<SvInplaceEdit2&,void> aCallBackHdl;
+    Accelerator   aAccReturn;
+    Accelerator   aAccEscape;
+    Idle          aIdle;
+    VclPtr<Edit>  pEdit;
+    bool          bCanceled;
+    bool          bAlreadyInCallBack;
+
+    void        CallCallBackHdl_Impl();
+    DECL_LINK( Timeout_Impl, Timer *, void );
+    DECL_LINK( ReturnHdl_Impl, Accelerator&, void );
+    DECL_LINK( EscapeHdl_Impl, Accelerator&, void );
+
+public:
+                SvInplaceEdit2( vcl::Window* pParent, const Point& rPos, const Size& rSize,
+                   const OUString& rData, const Link<SvInplaceEdit2&,void>& rNotifyEditEnd,
+                   const Selection& );
+               ~SvInplaceEdit2();
+    bool        KeyInput( const KeyEvent& rKEvt );
+    void        LoseFocus();
+    bool        EditingCanceled() const { return bCanceled; }
+    OUString    GetText() const;
+    OUString const & GetSavedValue() const;
+    void        StopEditing( bool bCancel );
+    void        Hide();
+};
+
 // ***************************************************************
 
 namespace {
@@ -479,18 +508,7 @@ bool SvTreeListBox::CheckDragAndDropMode( SvTreeListBox const * pSource, sal_Int
     }
     else
     {
-        if ( !(nDragDropMode & DragDropMode::APP_DROP ) )
-            return false; // no drop
-        if ( DND_ACTION_MOVE == nAction )
-        {
-            if ( !(nDragDropMode & DragDropMode::APP_MOVE) )
-                return false; // no global move
-        }
-        else
-        {
-            if ( !(nDragDropMode & DragDropMode::APP_COPY))
-                return false; // no global copy
-        }
+        return false; // no drop
     }
     return true;
 }
@@ -3397,11 +3415,6 @@ void SvTreeListBox::EndSelection()
     pImpl->EndSelection();
 }
 
-ScrollBar *SvTreeListBox::GetVScroll()
-{
-    return pImpl->m_aVerSBar.get();
-}
-
 SvTreeListEntry* SvTreeListBox::GetFirstEntryInView() const
 {
     return GetEntry( Point() );
@@ -3420,27 +3433,6 @@ SvTreeListEntry* SvTreeListBox::GetNextEntryInView(SvTreeListEntry* pEntry ) con
     return pNext;
 }
 
-SvTreeListEntry* SvTreeListBox::GetLastEntryInView() const
-{
-    SvTreeListEntry* pEntry = GetFirstEntryInView();
-    SvTreeListEntry* pNext = nullptr;
-    while( pEntry )
-    {
-        pNext = NextVisible( pEntry );
-        if( pNext )
-        {
-          Point aPos( GetEntryPosition(pNext) );
-          const Size& rSize = pImpl->GetOutputSize();
-          if( aPos.Y() < 0 || aPos.Y() + GetEntryHeight() >= rSize.Height() )
-              break;
-          else
-              pEntry = pNext;
-        }
-        else
-            break;
-    }
-    return pEntry;
-}
 
 void SvTreeListBox::ShowFocusRect( const SvTreeListEntry* pEntry )
 {

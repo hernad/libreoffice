@@ -90,8 +90,8 @@ private:
     ColorStatus&  mrColorStatus;
     ColorSelectFunction  maColorSelectFunction;
 
-    std::unique_ptr<ColorValueSet> mxColorSet;
-    std::unique_ptr<ColorValueSet> mxRecentColorSet;
+    std::unique_ptr<SvxColorValueSet> mxColorSet;
+    std::unique_ptr<SvxColorValueSet> mxRecentColorSet;
     std::unique_ptr<weld::ComboBox> mxPaletteListBox;
     std::unique_ptr<weld::Button> mxButtonAutoColor;
     std::unique_ptr<weld::Button> mxButtonNoneColor;
@@ -102,13 +102,13 @@ private:
     weld::Button* mpDefaultButton;
 
     Link<const NamedColor&, void> maSelectedLink;
-    DECL_LINK(SelectHdl, SvtValueSet*, void);
+    DECL_LINK(SelectHdl, ValueSet*, void);
     DECL_LINK(SelectPaletteHdl, weld::ComboBox&, void);
     DECL_LINK(AutoColorClickHdl, weld::Button&, void);
     DECL_LINK(OpenPickerClickHdl, weld::Button&, void);
 
-    static bool SelectValueSetEntry(ColorValueSet* pColorSet, const Color& rColor);
-    static NamedColor GetSelectEntryColor(SvtValueSet const * pColorSet);
+    static bool SelectValueSetEntry(SvxColorValueSet* pColorSet, const Color& rColor);
+    static NamedColor GetSelectEntryColor(ValueSet const * pColorSet);
     NamedColor GetAutoColor() const;
 
 public:
