@@ -5,10 +5,15 @@ sudo yum -y install texinfo
 sudo yum -y install  gettext-devel
 sudo yum -y install help2man
 
+sudo yum -y install gcc openssl-devel bzip2-devel libffi-devel
+
 sudo yum -y install gtk3-devel gstreamer1-devel gstreamer1-plugins-base-devel gstreamer1-plugins-bad-free-devel
 echo "GCC 7 potreban. Ako treba, ukucati:"
 echo "scl enable devtoolset-7 bash"
 gcc --version
+
+
+sudo pip3 install conan-package-tools
 
 
 function install_gperf_31() {
@@ -40,6 +45,21 @@ cd ..
 }
 
 
+function install_python38() {
+
+CURDIR=`pwd`
+cd $HOME
+
+wget https://www.python.org/ftp/python/3.8.2/Python-3.8.2.tgz
+tar xzf Python-3.8.2.tgz
+
+cd Python-3.8.2
+./configure --enable-optimizations --prefix=$HOME/python38
+make install
+
+cd $CURDIR
+}
+
 GPERF=`gperf --version | grep 3\.1`
 if [ "$GPERF" == "GNU gperf 3.1" ]  ; then
   echo instaliran gperf31 
@@ -48,5 +68,5 @@ else
 fi
 
 #install_flex
-
+install_python38
 

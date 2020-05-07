@@ -12,35 +12,17 @@ LO_PRODUCT_VERSION=7.0.0.530
 
 #LO_DEBUG=" --enable-dbgutil"
 
-export VS_VERSION="2019"
-
-
-if [ "$BUILD_ARCH" == "x64" ] ; then
-
-  ENABLE_64_BIT=--enable-64-bit
-  export PYTHON_VERSION_MAJOR=3
-  export PYTHON_VERSION_MINOR=7
-  export PYTHON_VERSION="3.7.3"
-  export CONAN_DEPLOY_DIR=c:/dev/libreoffice/conan/deploy_x64
-  export PYTHON=C:/dev/vcpkg/downloads/tools/python/python-3.7.3-x64/python.exe
-  export PYTHON_CFLAGS="-Ic:/dev/vcpkg/installed/x64-windows/include/python3.7"
-  export PYTHON_LIBS="c:/dev/vcpkg/installed/x64-windows/lib/python37.lib"
-  BOOST_NODEFAULT_SUFIX="vc142-mt-x64-1_72.lib"
-  JAVA_DIR=/cygdrive/c/openjdk-panama-foreign/x64/jdk
-
-else
-  ENABLE_64_BIT=
-  export PYTHON_VERSION_MAJOR=3
-  export PYTHON_VERSION_MINOR=7
-  export PYTHON_VERSION="3.7.3"
-  export CONAN_DEPLOY_DIR=c:/dev/libreoffice/conan/deploy_x86
-  export PYTHON=C:/dev/vcpkg/downloads/tools/python/python-3.7.3-x86/python.exe
-  export PYTHON_CFLAGS="-Ic:/dev/vcpkg/installed/x86-windows/include/python3.7"
-  export PYTHON_LIBS="c:/dev/vcpkg/installed/x86-windows/lib/python37.lib"
-  BOOST_NODEFAULT_SUFIX="vc142-mt-x32-1_72.lib"
-  JAVA_DIR=/cygdrive/c/openjdk-panama-foreign/x86/jdk
-
-fi
+ENABLE_64_BIT=--enable-64-bit
+export PYTHON_VERSION_MAJOR=3
+export PYTHON_VERSION_MINOR=8
+export PYTHON_VERSION="3.8.2"
+export CONAN_DEPLOY_DIR=$HOME/libreoffice/conan/deploy_x64
+export PYTHON=$HOME/python38/bin/python3
+export PYTHON_CFLAGS="-I$HOME/python38/include/python3.8"
+export PYTHON_LIBS="$HOME/python38/lib/libpython38.a"
+  
+#BOOST_NODEFAULT_SUFIX="vc142-mt-x64-1_72.lib"
+#JAVA_DIR=/cygdrive/c/openjdk-panama-foreign/x64/jdk
 
 JAVA_HOME="$HOME/jdk-14.0.1+7"
 ANT_HOME="$HOME/apache-ant-1.9.14"
@@ -92,70 +74,68 @@ GALLERY=
 [ -z "$MAKE_ONLY" ] && MAKE_ONLY=0
 [ -z "$ENVARS_ONLY" ] && ENVARS_ONLY=0
 [ -z "$PARALLELISM" ] && PARALLELISM=12
-#[ -z "$WITH_VCPKG" ] && WITH_VCPKG=0  # WITH_VCPKG=0 => don't use vcpkg
-#[ -z "$WITH_VCPKG_ZERO" ] && WITH_VCPKG_ZERO=1  # WITH_VCPKG=0 => don't use vcpkg
 
-
-WITH_SYSTEM=
-export PYTHON_CFLAGS=
-export PYTHON_LIBS=
-
-  echo PYTHON_CFLAGS=$PYTHON_CFLAGS, PYTHON_LIBS=$PYTHON_LIBS
-  WITH_SYSTEM+=" --enable-python=system"
-
-  WITH_SYSTEM+=" --with-system-zlib=yes"
-  export ZLIB_CFLAGS="-I$CONAN_DEPLOY_DIR/zlib/include"
-  export ZLIB_LIBS="$CONAN_DEPLOY_DIR/zlib/lib/zlib.lib"
- 
-  WITH_SYSTEM+=" --with-system-libpng=yes"
-  export LIBPNG_CFLAGS="-I$CONAN_DEPLOY_DIR/libpng/include"
-  export LIBPNG_LIBS="$CONAN_DEPLOY_DIR/libpng/lib/libpng16.lib $ZLIB_LIBS"
-
-  WITH_SYSTEM+=" --with-system-jpeg=yes"
-  export LIBJPEG_CFLAGS="-I$CONAN_DEPLOY_DIR/libjpeg-turbo/include"
-  export LIBJPEG_LIBS="$CONAN_DEPLOY_DIR/libjpeg-turbo/lib/turbojpeg-static.lib"
-
-  WITH_SYSTEM+=" --with-system-boost"
-  export BOOST_CPPFLAGS="-I$CONAN_DEPLOY_DIR/boost/include -I$CONAN_DEPLOY_DIR/bzip2/include"
-  export BOOST_CXXFLAGS=$BOOST_CPPFLAGS
-  export BOOST_LDFLAGS=""
-
-  
-  export BOOST_LOCALE_LIB="-NODEFAULTLIB:libboost_locale-$BOOST_NODEFAULT_SUFIX bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/libboost_locale.lib $ZLIB_LIBS"
-  export BOOST_DATE_TIME_LIB="-NODEFAULTLIB:libboost_date_time-$BOOST_NODEFAULT_SUFIX bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/libboost_date_time.lib $ZLIB_LIBS"
-  export BOOST_FILESYSTEM_LIB="-NODEFAULTLIB:libboost_filesystem-$BOOST_NODEFAULT_SUFIX bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/libboost_filesystem.lib $ZLIB_LIBS"
-  export BOOST_IOSTREAMS_LIB="-NODEFAULTLIB:libboost_iostreams-$BOOST_NODEFAULT_SUFIX bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/libboost_iostreams.lib $ZLIB_LIBS"
-  export BOOST_SYSTEM_LIB="-NODEFAULTLIB:libboost_system-$BOOST_NODEFAULT_SUFIX bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/libboost_system.lib $ZLIB_LIBS"
-  
-  WITH_SYSTEM+=" --with-system-openssl=yes"
-  export OPENSSL_CFLAGS="-I$CONAN_DEPLOY_DIR/openssl/include"
-  export OPENSSL_LIBS="$CONAN_DEPLOY_DIR/openssl/lib/libeay32.lib $CONAN_DEPLOY_DIR/openssl/lib/ssleay32.lib"
-
-  WITH_SYSTEM+=" --with-system-curl=yes"
-  export CURL_CFLAGS="-I$CONAN_DEPLOY_DIR/libcurl/include" 
-  export CURL_LIBS="$CONAN_DEPLOY_DIR/libcurl/lib/libcurl_imp.lib"
- 
-  WITH_SYSTEM+=" --with-system-postgresql=yes"
-  export POSTGRESQL_CFLAGS="-I$CONAN_DEPLOY_DIR/libpq/include"
-  export POSTGRESQL_LIBS="$CONAN_DEPLOY_DIR/libpq/lib/libpq.lib secur32.lib Ws2_32.lib $OPENSSL_LIBS"
-
-  WITH_SYSTEM+=" --with-system-libxml=yes"
-  export LIBXML_CFLAGS="-I$CONAN_DEPLOY_DIR/libxml2/include/libxml2 -I$CONAN_DEPLOY_DIR/libiconv/include"
-  LIBXML_LIBS="$CONAN_DEPLOY_DIR/libxml2/lib/libxml2_a.lib" 
-  export LIBXML_LIBS+=" Ws2_32.lib $ZLIB_LIBS $CONAN_DEPLOY_DIR/libiconv/lib/iconv.lib $CONAN_DEPLOY_DIR/libiconv/lib/charset.lib"
-
-  export LIBXML_LIBTOOL_LIBS="-L$CONAN_DEPLOY_DIR/libxml2/lib -L$CONAN_DEPLOY_DIR/libiconv/lib -L$CONAN_DEPLOY_DIR/zlib/lib -llibxml2_a -liconv -lcharset -lWs2_32 -lzlib"
-  export LIBEXSLT_CFLAGS="-I$CONAN_DEPLOY_DIR/libxslt/include"
-  export LIBEXSLT_LIBS="$CONAN_DEPLOY_DIR/libxslt/lib/libexslt_a.lib"
-  export LIBXSLT_CFLAGS="-I$CONAN_DEPLOY_DIR/libxslt/include"
-  export LIBXSLT_LIBS="$CONAN_DEPLOY_DIR/libxslt/lib/libxslt_a.lib"
-
-  WITH_SYSTEM+=" --with-system-xmlsec=yes"
-  export XMLSEC_CFLAGS="-I$CONAN_DEPLOY_DIR/xmlsec/include"
-  export XMLSEC_LIBS="$CONAN_DEPLOY_DIR/xmlsec/lib/libxmlsec.lib $CONAN_DEPLOY_DIR/xmlsec/lib/libxmlsec-mscng.lib"
 
 
 WITH_SYSTEM=
+
+echo PYTHON_CFLAGS=$PYTHON_CFLAGS, PYTHON_LIBS=$PYTHON_LIBS
+WITH_SYSTEM+=" --enable-python=system"
+
+WITH_SYSTEM+=" --with-system-zlib=yes"
+export ZLIB_CFLAGS="-I$CONAN_DEPLOY_DIR/zlib/include"
+export ZLIB_LIBS="-L$CONAN_DEPLOY_DIR/zlib/ -lz"
+ 
+WITH_SYSTEM+=" --with-system-libpng=yes"
+export LIBPNG_CFLAGS="-I$CONAN_DEPLOY_DIR/libpng/include"
+export LIBPNG_LIBS="$CONAN_DEPLOY_DIR/libpng/lib/libpng16.a $ZLIB_LIBS"
+
+WITH_SYSTEM+=" --with-system-jpeg=yes"
+export LIBJPEG_CFLAGS="-I$CONAN_DEPLOY_DIR/libjpeg-turbo/include"
+export LIBJPEG_LIBS="-L$CONAN_DEPLOY_DIR/libjpeg-turbo/lib -lturbojpeg"
+
+WITH_SYSTEM+=" --with-system-boost"
+export BOOST_CPPFLAGS="-I$CONAN_DEPLOY_DIR/boost/include -I$CONAN_DEPLOY_DIR/bzip2/include"
+export BOOST_CXXFLAGS=$BOOST_CPPFLAGS
+  
+
+BZIP2_LIB="-L$CONAN_DEPLOY_DIR/bzip2/lib -lbz2"
+export BOOST_ROOT="$CONAN_DEPLOY_DIR/boost"
+export BOOST_LOCALE_LIB="$BZIP2_LIB -L$CONAN_DEPLOY_DIR/boost/lib -lboost_locale $ZLIB_LIBS"
+export BOOST_DATE_TIME_LIB="$BZIP2_LIB -L$CONAN_DEPLOY_DIR/boost/lib -lboost_date_time $ZLIB_LIBS"
+export BOOST_FILESYSTEM_LIB="$BZIP2_LIB -L$CONAN_DEPLOY_DIR/boost/lib -lboost_filesystem $ZLIB_LIBS"
+export BOOST_IOSTREAMS_LIB="$BZIP2_LIB -L$CONAN_DEPLOY_DIR/boost/lib -lboost_iostreams $ZLIB_LIBS"
+export BOOST_SYSTEM_LIB="$BZIP2_LIB -L$CONAN_DEPLOY_DIR/boost/lib -lboost_system $ZLIB_LIBS"
+export BOOST_LDFLAGS="$BOOST_LOCALE_LIB $BOOST_DATE_TIME_LIB $BOOST_FILESYSTEM_LIB $BOOST_IOSTREAMS_LIB $BOOST_SYSTEM_LIB"
+
+WITH_SYSTEM+=" --with-system-openssl=yes"
+export OPENSSL_CFLAGS="-I$CONAN_DEPLOY_DIR/openssl/include"
+export OPENSSL_LIBS="-L$CONAN_DEPLOY_DIR/openssl/lib -lcrypto -lssl"
+
+WITH_SYSTEM+=" --with-system-curl=yes"
+export CURL_CFLAGS="-I$CONAN_DEPLOY_DIR/libcurl/include" 
+export CURL_LIBS="-L$CONAN_DEPLOY_DIR/libcurl/lib -lcurl"
+ 
+WITH_SYSTEM+=" --with-system-postgresql=yes"
+export POSTGRESQL_CFLAGS="-I$CONAN_DEPLOY_DIR/libpq/include"
+export POSTGRESQL_LIBS="-L$CONAN_DEPLOY_DIR/libpq/lib -lpq $OPENSSL_LIBS"
+
+WITH_SYSTEM+=" --with-system-libxml=yes"
+export LIBXML_CFLAGS="-I$CONAN_DEPLOY_DIR/libxml2/include/libxml2 -I$CONAN_DEPLOY_DIR/libiconv/include"
+export LIBXML_LIBS="-L$CONAN_DEPLOY_DIR/libxml2/lib -lxml2" 
+export LIBXML_LIBS+=" $ZLIB_LIBS -L$CONAN_DEPLOY_DIR/libiconv/lib -lcharset -liconv -lm"
+
+export LIBXML_LIBTOOL_LIBS="-L$CONAN_DEPLOY_DIR/libxml2/lib -L$CONAN_DEPLOY_DIR/libiconv/lib -L$CONAN_DEPLOY_DIR/zlib/lib -lxml2 -liconv -lcharset -lz -lm"
+export LIBEXSLT_CFLAGS="-I$CONAN_DEPLOY_DIR/libxslt/include"
+export LIBEXSLT_LIBS="-L$CONAN_DEPLOY_DIR/libxslt/lib -lexslt"
+export LIBXSLT_CFLAGS="-I$CONAN_DEPLOY_DIR/libxslt/include"
+export LIBXSLT_LIBS="-L$CONAN_DEPLOY_DIR/libxslt/lib -lxslt"
+
+WITH_SYSTEM+=" --with-system-xmlsec=yes"
+export XMLSEC_CFLAGS="-I$CONAN_DEPLOY_DIR/xmlsec/include"
+export XMLSEC_LIBS="-L$CONAN_DEPLOY_DIR/xmlsec/lib -lxmlsec1 -lxmlsec1-openssl"
+
+
 
 if [ "$MAKE_ONLY" == "0" ]; then
 make clean

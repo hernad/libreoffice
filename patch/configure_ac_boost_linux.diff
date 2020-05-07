@@ -1,0 +1,49 @@
+diff --git a/configure.ac b/configure.ac
+index 925edc81b9bf..bd4c1a740ba9 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -9512,23 +9566,12 @@ AC_MSG_CHECKING([which boost to use])
+ if test "$with_system_boost" = "yes"; then
+     AC_MSG_RESULT([external])
+     SYSTEM_BOOST=TRUE
+-    AX_BOOST_BASE([1.66],,[AC_MSG_ERROR([no suitable Boost found])])
+-    AX_BOOST_DATE_TIME
+-    AX_BOOST_FILESYSTEM
+-    AX_BOOST_IOSTREAMS
+-    AX_BOOST_LOCALE
+-    AC_LANG_PUSH([C++])
+-    save_CXXFLAGS=$CXXFLAGS
+-    CXXFLAGS="$CXXFLAGS $BOOST_CPPFLAGS $CXXFLAGS_CXX11"
+-    AC_CHECK_HEADER(boost/shared_ptr.hpp, [],
+-       [AC_MSG_ERROR(boost/shared_ptr.hpp not found. install boost)], [])
+-    AC_CHECK_HEADER(boost/spirit/include/classic_core.hpp, [],
+-       [AC_MSG_ERROR(boost/spirit/include/classic_core.hpp not found. install boost >= 1.36)], [])
+-    CXXFLAGS=$save_CXXFLAGS
+-    AC_LANG_POP([C++])
+-    # this is in m4/ax_boost_base.m4
+-    FilterLibs "${BOOST_LDFLAGS}"
+-    BOOST_LDFLAGS="${filteredlibs}"
++    if test "$build_os" = "cygwin" ; then
++
++        AC_MSG_RESULT([Cygwin boost system $BOOST_SYSTEM_LIB])
++    else  
++        AC_MSG_RESULT([linux boost check skip $BOOST_SYSTEM_LIB])
++    fi
+ else
+     AC_MSG_RESULT([internal])
+     BUILD_TYPE="$BUILD_TYPE BOOST"
+@@ -9540,6 +9583,13 @@ else
+         BOOST_CPPFLAGS="-I${WORKDIR}/UnpackedTarball/boost"
+     fi
+ fi
++AC_SUBST(BOOST_CPPFLAGS)
++AC_SUBST(BOOST_CXXFLAGS)
++AC_SUBST(BOOST_LOCALE_LIB)
++AC_SUBST(BOOST_DATE_TIME_LIB)
++AC_SUBST(BOOST_FILESYSTEM_LIB)
++AC_SUBST(BOOST_IOSTREAMS_LIB)
++AC_SUBST(BOOST_LDFLAGS)
+ AC_SUBST(SYSTEM_BOOST)
+ 
+ dnl ===================================================================
+

@@ -1,0 +1,33 @@
+diff --git a/external/liborcus/ExternalProject_liborcus.mk b/external/liborcus/ExternalProject_liborcus.mk
+index 38658cc81908..f64697a06473 100644
+--- a/external/liborcus/ExternalProject_liborcus.mk
++++ b/external/liborcus/ExternalProject_liborcus.mk
+@@ -66,9 +66,9 @@ endif
+ 
+ liborcus_CXXFLAGS=$(CXXFLAGS) $(gb_VISIBILITY_FLAGS) $(gb_VISIBILITY_FLAGS_CXX) $(CXXFLAGS_CXX11) -DBOOST_SYSTEM_NO_DEPRECATED
+ liborcus_LDFLAGS=$(LDFLAGS) $(gb_LTOFLAGS)
+-ifeq ($(COM),MSC)
++#ifeq ($(COM),MSC)
+ liborcus_CXXFLAGS+=$(BOOST_CXXFLAGS)
+-endif
++#endif
+ ifeq ($(SYSTEM_BOOST),)
+ liborcus_CXXFLAGS+=${BOOST_CPPFLAGS}
+ else
+@@ -93,6 +93,7 @@ endif
+ $(call gb_ExternalProject_get_state_target,liborcus,build) :
+ 	$(call gb_Trace_StartRange,liborcus,EXTERNAL)
+ 	$(call gb_ExternalProject_run,build,\
++        $(call gb_Output_announce,liborcus - CXXFLAGS $(liborcus_CXXFLAGS),build,3) \
+ 		$(if $(liborcus_LIBS),LIBS='$(liborcus_LIBS)') \
+ 		$(if $(liborcus_CXXFLAGS),CXXFLAGS='$(liborcus_CXXFLAGS)') \
+ 		$(if $(liborcus_CPPFLAGS),CPPFLAGS='$(liborcus_CPPFLAGS)') \
+@@ -112,7 +113,7 @@ $(call gb_ExternalProject_get_state_target,liborcus,build) :
+                        --disable-python \
+                        --disable-werror \
+                        $(if $(filter MACOSX,$(OS)),--prefix=/@.__________________________________________________OOO) \
+-                       $(if $(SYSTEM_BOOST),,\
++                       $(if $(SYSTEM_BOOST),--with-boost=$(BOOST_ROOT),\
+ 				--with-boost=$(WORKDIR)/UnpackedTarball/boost \
+ 				boost_cv_lib_iostreams=yes \
+ 				boost_cv_lib_system=yes \
