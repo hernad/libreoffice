@@ -84,7 +84,7 @@ WITH_SYSTEM+=" --enable-python=system"
 
 WITH_SYSTEM+=" --with-system-zlib=yes"
 export ZLIB_CFLAGS="-I$CONAN_DEPLOY_DIR/zlib/include"
-export ZLIB_LIBS="-L$CONAN_DEPLOY_DIR/zlib/ -lz"
+export ZLIB_LIBS="-L$CONAN_DEPLOY_DIR/zlib/lib -lz"
  
 WITH_SYSTEM+=" --with-system-libpng=yes"
 export LIBPNG_CFLAGS="-I$CONAN_DEPLOY_DIR/libpng/include"
