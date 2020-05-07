@@ -1,6 +1,7 @@
 #!/bin/bash
 
 patch -p1 < patch/04_mk_solenv.diff
+patch -p1 < patch/configure_ac_libjpeg_linux.diff
 patch -p1 < patch/configure_ac_boost_linux.diff
 patch -p1 < patch/05_configure_ac.diff
 patch -p1 < patch/06_mk_modules.diff

@@ -1,0 +1,24 @@
+diff --git a/configure.ac b/configure.ac
+index 925edc81b9bf..436ac2fc59e7 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -8291,10 +8303,14 @@ AC_MSG_CHECKING([which libjpeg to use])
+ if test "$with_system_jpeg" = "yes"; then
+     AC_MSG_RESULT([external])
+     SYSTEM_LIBJPEG=TRUE
+-    AC_CHECK_HEADER(jpeglib.h, [ LIBJPEG_CFLAGS= ],
+-        [AC_MSG_ERROR(jpeg.h not found. install libjpeg)], [])
+-    AC_CHECK_LIB(jpeg, jpeg_resync_to_restart, [ LIBJPEG_LIBS="-ljpeg" ],
+-        [AC_MSG_ERROR(jpeg library not found or functional)], [])
++    if test "$build_os" = "cygwin"; then
++        AC_MSG_NOTICE([cygwin - LIBJPEG SKIP CHECK])
++    else
++        AC_CHECK_HEADER(jpeglib.h, [],
++            [AC_MSG_ERROR(jpeg.h not found. install libjpeg)], [])
++        AC_CHECK_LIB(jpeg, jpeg_resync_to_restart, [ LIBJPEG_LIBS="-ljpeg" ],
++            [AC_MSG_ERROR(jpeg library not found or functional)], [])
++    fi
+ else
+     SYSTEM_LIBJPEG=
+     AC_MSG_RESULT([internal, libjpeg-turbo])
+
