@@ -88,11 +88,11 @@ export ZLIB_LIBS="-L$CONAN_DEPLOY_DIR/zlib/ -lz"
  
 WITH_SYSTEM+=" --with-system-libpng=yes"
 export LIBPNG_CFLAGS="-I$CONAN_DEPLOY_DIR/libpng/include"
-export LIBPNG_LIBS="$CONAN_DEPLOY_DIR/libpng/lib/libpng16.a $ZLIB_LIBS"
+export LIBPNG_LIBS="-L$CONAN_DEPLOY_DIR/libpng/lib -lpng16 $ZLIB_LIBS"
 
 WITH_SYSTEM+=" --with-system-jpeg=yes"
 export LIBJPEG_CFLAGS="-I$CONAN_DEPLOY_DIR/libjpeg-turbo/include"
-export LIBJPEG_LIBS="-L$CONAN_DEPLOY_DIR/libjpeg-turbo/lib -lturbojpeg"
+export LIBJPEG_LIBS="-L$CONAN_DEPLOY_DIR/libjpeg-turbo/lib -lturbojpeg $ZLIB_LIBS"
 
 WITH_SYSTEM+=" --with-system-boost"
 export BOOST_CPPFLAGS="-I$CONAN_DEPLOY_DIR/boost/include -I$CONAN_DEPLOY_DIR/bzip2/include"
