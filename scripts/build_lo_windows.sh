@@ -105,8 +105,8 @@ export WEBDAV="--with-webdav=no"
 #export PDF_IMPORT="--disable-pdfimport"
 export PDF_IMPORT=
 
-#export TLS_METHOD="--with-tls=openssl"
-export TLS_METHOD="--with-tls=nss"
+export TLS_METHOD="--with-tls=openssl"
+#export TLS_METHOD="--with-tls=nss"
 
 #export ODK_FEATURE=" --disable-odk"
 ODK_FEATURE=

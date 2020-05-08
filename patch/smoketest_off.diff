@@ -1,0 +1,100 @@
+diff --git a/Repository.mk b/Repository.mk
+index 4479ed901e23..2d36c00f4f17 100644
+--- a/Repository.mk
++++ b/Repository.mk
+@@ -523,28 +523,6 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,writer, \
+ 	$(call gb_Helper_optional,DBCONNECTIVITY,writer) \
+ ))
+ 
+-# cli_cppuhelper is NONE even though it is actually in URE because it is CliNativeLibrary
+-$(eval $(call gb_Helper_register_libraries,PLAINLIBS_NONE, \
+-	smoketest \
+-	subsequenttest \
+-	test \
+-	test-setupvcl \
+-	testtools_cppobj \
+-	testtools_bridgetest \
+-	testtools_bridgetest-common \
+-	testtools_constructors \
+-	unobootstrapprotector \
+-	unoexceptionprotector \
+-	unotest \
+-	vclbootstrapprotector \
+-	scqahelper \
+-	unowinreg \
+-	wpftqahelper \
+-	precompiled_system \
+-	$(if $(filter MSC,$(COM)),cli_cppuhelper) \
+-	$(if $(filter $(OS),ANDROID),lo-bootstrap) \
+-	$(if $(filter $(OS),MACOSX),OOoSpotlightImporter) \
+-))
+ 
+ $(eval $(call gb_Helper_register_libraries_for_install,PLAINLIBS_URE,ure, \
+ 	affine_uno_uno \
+@@ -742,7 +720,6 @@ $(eval $(call gb_Helper_register_jars_for_install,OOO,ooo, \
+ 	query \
+ 	report \
+ 	sdbc_hsqldb \
+-	smoketest \
+ 	table \
+ 	unoil \
+ 	xmerge \
+diff --git a/RepositoryModule_host.mk b/RepositoryModule_host.mk
+index 3155224ffd72..4eb44b105245 100644
+--- a/RepositoryModule_host.mk
++++ b/RepositoryModule_host.mk
+@@ -115,7 +115,6 @@ $(eval $(call gb_Module_add_moduledirs,libreoffice,\
+ 	sfx2 \
+ 	shell \
+ 	slideshow \
+-	smoketest \
+ 	solenv \
+ 	soltools \
+ 	sot \
+@@ -130,19 +129,15 @@ $(eval $(call gb_Module_add_moduledirs,libreoffice,\
+ 	sw \
+ 	swext \
+ 	sysui \
+-	test \
+-	testtools \
+ 	toolkit \
+ 	tools \
+ 	ucb \
+ 	ucbhelper \
+ 	udkapi \
+-	$(call gb_Helper_optional,PYUNO,uitest) \
+ 	UnoControls \
+ 	unodevtools \
+ 	unoil \
+ 	unoidl \
+-	unotest \
+ 	unotools \
+ 	unoxml \
+ 	ure \
+diff --git a/offapi/UnoApi_offapi.mk b/offapi/UnoApi_offapi.mk
+index 8f4079009f12..a7e565f1390b 100644
+--- a/offapi/UnoApi_offapi.mk
++++ b/offapi/UnoApi_offapi.mk
+@@ -115,9 +115,6 @@ $(eval $(call gb_UnoApi_add_idlfiles_nohdl,offapi,com/sun/star/deployment,\
+ 	UpdateInformationProvider \
+ 	thePackageManagerFactory \
+ ))
+-$(eval $(call gb_UnoApi_add_idlfiles_nohdl,offapi,com/sun/star/deployment/test,\
+-	SmoketestCommandEnvironment \
+-))
+ $(eval $(call gb_UnoApi_add_idlfiles_nohdl,offapi,com/sun/star/deployment/ui,\
+ 	LicenseDialog \
+ 	PackageManagerDialog \
+diff --git a/postprocess/Rdb_services.mk b/postprocess/Rdb_services.mk
+index b521dfb346fe..99d40f262c24 100644
+--- a/postprocess/Rdb_services.mk
++++ b/postprocess/Rdb_services.mk
+@@ -222,7 +224,6 @@ $(eval $(call gb_Rdb_add_components,services,\
+ 		xmerge/source/bridge/XMergeBridge \
+ 		scripting/java/ScriptFramework \
+ 		scripting/java/ScriptProviderForJava \
+-		smoketest/org/libreoffice/smoketest/smoketest \
+ 		wizards/com/sun/star/wizards/form/form \
+ 		wizards/com/sun/star/wizards/query/query \
+ 		wizards/com/sun/star/wizards/report/report \
+

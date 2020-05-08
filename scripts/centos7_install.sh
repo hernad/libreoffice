@@ -44,6 +44,29 @@ sudo make install
 cd ..
 }
 
+function install_python37() {
+
+CURDIR=`pwd`
+cd $HOME
+
+VERSION="3.7.7"
+VERSION_MAJOR_MINOR="37"
+rm -f Python-${VERSION}.tgz
+wget https://www.python.org/ftp/python/${VERSION}/Python-${VERSION}.tgz
+tar xzf Python-${VERSION}.tgz
+
+cd Python-${VERSION}
+./configure --enable-optimizations  \
+    --enable-shared \
+    --prefix=$HOME/python${VERSION_MAJOR_MINOR}
+make install
+
+cd $CURDIR
+}
+
+
+
+
 
 function install_python38() {
 
@@ -54,11 +77,15 @@ wget https://www.python.org/ftp/python/3.8.2/Python-3.8.2.tgz
 tar xzf Python-3.8.2.tgz
 
 cd Python-3.8.2
-./configure --enable-optimizations --prefix=$HOME/python38
+./configure --enable-optimizations  \
+    --enable-shared \
+    --prefix=$HOME/python38
 make install
 
 cd $CURDIR
 }
+
+
 
 GPERF=`gperf --version | grep 3\.1`
 if [ "$GPERF" == "GNU gperf 3.1" ]  ; then
@@ -68,5 +95,6 @@ else
 fi
 
 #install_flex
-install_python38
+#install_python38
+install_python37
 

@@ -14,12 +14,13 @@ LO_PRODUCT_VERSION=7.0.0.530
 
 ENABLE_64_BIT=--enable-64-bit
 export PYTHON_VERSION_MAJOR=3
-export PYTHON_VERSION_MINOR=8
-export PYTHON_VERSION="3.8.2"
+export PYTHON_VERSION_MINOR=7
+export PYTHON_VERSION="3.7.7"
 export CONAN_DEPLOY_DIR=$HOME/libreoffice/conan/deploy_x64
-export PYTHON=$HOME/python38/bin/python3
-export PYTHON_CFLAGS="-I$HOME/python38/include/python3.8"
-export PYTHON_LIBS="$HOME/python38/lib/libpython38.a"
+export PYTHON_ROOT=$HOME/python${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}
+export PYTHON=${PYTHON_ROOT}/bin/python${PYTHON_VERSION_MAJOR}
+export PYTHON_CFLAGS="-I${PYTHON_ROOT}/include/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}m" # python3.7m
+export PYTHON_LIBS="-L${PYTHON_ROOT}/lib -lpython${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}m "  # libpython3.7m.so
   
 #BOOST_NODEFAULT_SUFIX="vc142-mt-x64-1_72.lib"
 #JAVA_DIR=/cygdrive/c/openjdk-panama-foreign/x64/jdk
@@ -66,6 +67,8 @@ GALLERY=
 # /usr/sbin/gencmn.exe
 # export PATH=$JAVA_HOME/bin:$PATH:/usr/sbin
 
+export PATH=$HOME/python38/bin:$PATH
+export LD_LIBRARY_PATH=$PYTHON_ROOT/lib:$LD_LIBRARY_PATH 
 
 # export verbose="V=1"
 
@@ -132,7 +135,7 @@ export LIBXSLT_CFLAGS="-I$CONAN_DEPLOY_DIR/libxslt/include"
 export LIBXSLT_LIBS="-L$CONAN_DEPLOY_DIR/libxslt/lib -lxslt"
 
 WITH_SYSTEM+=" --with-system-xmlsec=yes"
-export XMLSEC_CFLAGS="-I$CONAN_DEPLOY_DIR/xmlsec/include"
+export XMLSEC_CFLAGS="-I$CONAN_DEPLOY_DIR/xmlsec/include/xmlsec1"
 export XMLSEC_LIBS="-L$CONAN_DEPLOY_DIR/xmlsec/lib -lxmlsec1 -lxmlsec1-openssl"
 
 
