@@ -1,0 +1,8 @@
+[requires]
+expat/2.2.9
+
+[generators]
+deploy
+
+[options]
+expat:shared=False
