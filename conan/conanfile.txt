@@ -1,16 +1,18 @@
 [requires]
 zlib/1.2.11
 libpng/1.6.37
-boost/1.72.0@hernad/stable
+boost/1.72.0
 libcurl/7.69.1
 libpq/11.5@bincrafters/stable
 openssl/1.0.2t
-icu/65.1@hernad/standard
+icu/65.1@hernad/stable
 libxml2/2.9.9
 libxslt/1.1.33@hernad/stable
 libjpeg-turbo/2.0.4
 libiconv/1.16@hernad/stable
 xmlsec/1.2.29@hernad/stable
+expat/2.2.9
+nss/3.47.1@hernad/stable
 
 [generators]
 deploy
