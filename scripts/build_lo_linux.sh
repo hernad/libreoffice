@@ -25,14 +25,22 @@ export PYTHON_LIBS="-L${PYTHON_ROOT}/lib -lpython${PYTHON_VERSION_MAJOR}.${PYTHO
 #BOOST_NODEFAULT_SUFIX="vc142-mt-x64-1_72.lib"
 #JAVA_DIR=/cygdrive/c/openjdk-panama-foreign/x64/jdk
 
-JAVA_HOME="$HOME/jdk-14.0.1+7"
+JAVA_HOME="$HOME/jdk dk-14.0.1+7"
+#JAVA_HOME="$HOME/openjdk-panama-foreign/jdk"
 ANT_HOME="$HOME/apache-ant-1.9.14"
 JUNIT4="$HOME/junit-4.13.jar"
 HAMCREST="$HOME/hamcrest-2.2.jar"
 
-#JAVA_HOME=`cygpath -w $JAVA_DIR`
+# /usr/sbin/gencmn.exe
+export PATH=$JAVA_HOME/bin:$ANT_HOME/bin:$PATH
+export PATH=$HOME/$PYTHON_ROOT/bin:$PATH
+export LD_LIBRARY_PATH=$PYTHON_ROOT/lib:$LD_LIBRARY_PATH 
+
 export JAVA_HOME
-echo "JAVA_HOME=$JAVA_HOME"
+echo "JAVA_HOME=$JAVA_HOME ANT_HOME=$ANT_HOME"
+java -version
+$ANT_HOME/bin/ant -version
+
 #JAVA_FEATURE="--without-java"
 JAVA_FEATURE=" --with-jdk-home=$JAVA_HOME --with-ant-home=$ANT_HOME --with-junit=$JUNIT4 --with-hamcrest=$HAMCREST"
 
@@ -64,11 +72,6 @@ GALLERY=
 
 
 
-# /usr/sbin/gencmn.exe
-# export PATH=$JAVA_HOME/bin:$PATH:/usr/sbin
-
-export PATH=$HOME/python38/bin:$PATH
-export LD_LIBRARY_PATH=$PYTHON_ROOT/lib:$LD_LIBRARY_PATH 
 
 # export verbose="V=1"
 
@@ -117,7 +120,7 @@ export OPENSSL_LIBS="-L$CONAN_DEPLOY_DIR/openssl/lib -lcrypto -lssl"
 
 WITH_SYSTEM+=" --with-system-curl=yes"
 export CURL_CFLAGS="-I$CONAN_DEPLOY_DIR/libcurl/include" 
-export CURL_LIBS="-L$CONAN_DEPLOY_DIR/libcurl/lib -lcurl"
+export CURL_LIBS="-L$CONAN_DEPLOY_DIR/libcurl/lib -lcurl $OPENSSL_LIBS"
  
 WITH_SYSTEM+=" --with-system-postgresql=yes"
 export POSTGRESQL_CFLAGS="-I$CONAN_DEPLOY_DIR/libpq/include"
@@ -138,7 +141,17 @@ WITH_SYSTEM+=" --with-system-xmlsec=yes"
 export XMLSEC_CFLAGS="-I$CONAN_DEPLOY_DIR/xmlsec/include/xmlsec1"
 export XMLSEC_LIBS="-L$CONAN_DEPLOY_DIR/xmlsec/lib -lxmlsec1 -lxmlsec1-openssl"
 
+WITH_SYSTEM+=" --with-system-expat=yes"
+export EXPAT_CFLAGS="-I$CONAN_DEPLOY_DIR/expat/include"
+export EXPAT_LIBS="-L$CONAN_DEPLOY_DIR/expat/lib -lexpat"
 
+export NSS_CFLAGS="-I$CONAN_DEPLOY_DIR/nss/include/nss -I$CONAN_DEPLOY_DIR/nss/include/nspr"
+export NSS_LIBS="-L$CONAN_DEPLOY_DIR/nss/lib -lnspr4 -lnss3 -lssl3 -lsmime3 -lplc4"
+
+export CFLAGS="$NSS_CFLAGS"
+export LDFLAGS="$NSS_LIBS"
+export CPPFLAGS="$CFLAGS"
+export CXXFLAGS="$CFLAGS"
 
 if [ "$MAKE_ONLY" == "0" ]; then
 make clean
@@ -168,7 +181,8 @@ rm -f config_host/*.h
     --disable-sdremote \
     --disable-sdremote-bluetooth \
     $EXTENSIONS $PDF_IMPORT $WEBDAV $WITH_SYSTEM $LO_DEBUG $SKIA_FEATURE $JAVA_FEATURE \
-    --enable-breakpad
+    --enable-breakpad \
+    --disable-ldap 
 
 fi
 
