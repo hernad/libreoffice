@@ -9,7 +9,7 @@ dnl in order to create a configure script.
 # several non-alphanumeric characters, those are split off and used only for the
 # ABOUTBOXPRODUCTVERSIONSUFFIX in openoffice.lst. Why that is necessary, no idea.
 
-AC_INIT([LibreOffice],[7.1.0.0.alpha0+],[],[],[http://documentfoundation.org/])
+AC_INIT([LibreOffice],[7.0.0.0.beta1+],[],[],[http://documentfoundation.org/])
 
 dnl libnumbertext needs autoconf 2.68, but that can pick up autoconf268 just fine if it is installed
 dnl whereas aclocal (as run by autogen.sh) insists on using autoconf and fails hard
@@ -1960,11 +1960,6 @@ AC_ARG_WITH(system-qrcodegen,
     AS_HELP_STRING([--with-system-qrcodegen],
         [Use libqrcodegen already on system.]),,
     [with_system_qrcodegen="$with_system_libs"])
-
-AC_ARG_WITH(system-box2d,
-    AS_HELP_STRING([--with-system-box2d],
-        [Use box2d already on system.]),,
-    [with_system_box2d="$with_system_libs"])
 
 AC_ARG_WITH(system-mythes,
     AS_HELP_STRING([--with-system-mythes],
@@ -10219,32 +10214,6 @@ fi
 AC_SUBST(SYSTEM_QRCODEGEN)
 AC_SUBST(QRCODEGEN_CFLAGS)
 AC_SUBST(QRCODEGEN_LIBS)
-
-dnl ===================================================================
-dnl Check for system box2d
-dnl ===================================================================
-AC_MSG_CHECKING([which box2d to use])
-if test "$with_system_box2d" = "yes"; then
-    AC_MSG_RESULT([external])
-    SYSTEM_BOX2D=TRUE
-    AC_LANG_PUSH([C++])
-    AC_CHECK_HEADER(Box2D/Box2D.h, [],
-        [AC_MSG_ERROR(box2d headers not found.)], [])
-    AC_CHECK_LIB([Box2D], [main], [:],
-        [ AC_MSG_ERROR(box2d library not found.) ], [])
-    BOX2D_LIBS=-lBox2D
-    AC_LANG_POP([C++])
-    BOX2D_CFLAGS=$(printf '%s' "$BOX2D_CFLAGS" | sed -e "s/-I/${ISYSTEM?}/g")
-    FilterLibs "${BOX2D_LIBS}"
-    BOX2D_LIBS="${filteredlibs}"
-else
-    AC_MSG_RESULT([internal])
-    SYSTEM_BOX2D=
-    BUILD_TYPE="$BUILD_TYPE BOX2D"
-fi
-AC_SUBST(SYSTEM_BOX2D)
-AC_SUBST(BOX2D_CFLAGS)
-AC_SUBST(BOX2D_LIBS)
 
 dnl ===================================================================
 dnl Checking for altlinuxhyph
