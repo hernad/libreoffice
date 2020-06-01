@@ -997,20 +997,27 @@ void OutputDevice::DrawWaveLine(const Point& rStartPos, const Point& rEndPos, lo
     if (nWaveHeight > pFontInstance->mxFontMetric->GetWavelineUnderlineSize())
     {
         nWaveHeight = pFontInstance->mxFontMetric->GetWavelineUnderlineSize();
-        nLineWidth = 1;
+        // tdf#124848 hairline
+        nLineWidth = 0;
     }
 
     const basegfx::B2DRectangle aWaveLineRectangle(nStartX, nStartY, nEndX, nEndY + nWaveHeight);
     const basegfx::B2DPolygon aWaveLinePolygon = basegfx::createWaveLinePolygon(aWaveLineRectangle);
     const basegfx::B2DHomMatrix aRotationMatrix = basegfx::utils::createRotateAroundPoint(nStartX, nStartY, basegfx::deg2rad(-fOrientation));
-    const basegfx::B2DVector aLineWidth(nLineWidth, nLineWidth);
     const bool bPixelSnapHairline(mnAntialiasing & AntialiasingFlags::PixelSnapHairline);
 
     mpGraphics->SetLineColor(GetLineColor());
     mpGraphics->DrawPolyLine(
-            aRotationMatrix, aWaveLinePolygon, 0.0, aLineWidth,
-            basegfx::B2DLineJoin::NONE, css::drawing::LineCap_BUTT,
-            basegfx::deg2rad(15.0), bPixelSnapHairline, this);
+            aRotationMatrix,
+            aWaveLinePolygon,
+            0.0,
+            nLineWidth,
+            nullptr, // MM01
+            basegfx::B2DLineJoin::NONE,
+            css::drawing::LineCap_BUTT,
+            basegfx::deg2rad(15.0),
+            bPixelSnapHairline,
+            this);
 
     if( mpAlphaVDev )
         mpAlphaVDev->DrawWaveLine( rStartPos, rEndPos, nLineWidth );

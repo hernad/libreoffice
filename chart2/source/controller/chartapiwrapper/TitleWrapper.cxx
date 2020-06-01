@@ -26,6 +26,7 @@
 #include <com/sun/star/beans/PropertyAttribute.hpp>
 #include <com/sun/star/chart2/RelativePosition.hpp>
 #include <com/sun/star/chart2/XTitle.hpp>
+#include <com/sun/star/chart2/XChartDocument.hpp>
 #include <com/sun/star/frame/XModel.hpp>
 
 #include <CharacterProperties.hxx>
@@ -89,12 +90,12 @@ Any WrappedTitleStringProperty::getPropertyValue( const Reference< beans::XPrope
     Reference< chart2::XTitle > xTitle(xInnerPropertySet,uno::UNO_QUERY);
     if(xTitle.is())
     {
-        Sequence< Reference< chart2::XFormattedString > > aStrings( xTitle->getText());
+        const Sequence< Reference< chart2::XFormattedString > > aStrings( xTitle->getText());
 
         OUStringBuffer aBuf;
-        for( sal_Int32 i = 0; i < aStrings.getLength(); ++i )
+        for( Reference< chart2::XFormattedString > const & formattedStr : aStrings )
         {
-            aBuf.append( aStrings[ i ]->getString());
+            aBuf.append( formattedStr->getString());
         }
         aRet <<= aBuf.makeStringAndClear();
     }
@@ -195,7 +196,7 @@ TitleWrapper::TitleWrapper( ::chart::TitleHelper::eTitleType eTitleType,
         m_aEventListenerContainer( m_aMutex ),
         m_eTitleType(eTitleType)
 {
-    ControllerLockGuardUNO aCtrlLockGuard( Reference< frame::XModel >( m_spChart2ModelContact->getChart2Document(), uno::UNO_QUERY ));
+    ControllerLockGuardUNO aCtrlLockGuard( m_spChart2ModelContact->getChart2Document() );
     if( !getTitleObject().is() ) //#i83831# create an empty title at the model, thus references to properties can be mapped correctly
         TitleHelper::createTitle( m_eTitleType, OUString(), m_spChart2ModelContact->getChartModel(), m_spChart2ModelContact->m_xContext );
 }
@@ -307,21 +308,21 @@ void TitleWrapper::setFastCharacterPropertyValue(
                 nHandle < CharacterProperties::FAST_PROPERTY_ID_END_CHAR_PROP );
 
     Reference< chart2::XTitle > xTitle( getTitleObject() );
-    if( xTitle.is())
+    if( !xTitle.is())
+        return;
+
+    const Sequence< Reference< chart2::XFormattedString > > aStrings( xTitle->getText());
+    const WrappedProperty* pWrappedProperty = getWrappedProperty( nHandle );
+
+    for( Reference< chart2::XFormattedString > const & formattedStr : aStrings )
     {
-        Sequence< Reference< chart2::XFormattedString > > aStrings( xTitle->getText());
-        const WrappedProperty* pWrappedProperty = getWrappedProperty( nHandle );
+        Reference< beans::XFastPropertySet > xFastPropertySet( formattedStr, uno::UNO_QUERY );
+        Reference< beans::XPropertySet > xPropSet( xFastPropertySet, uno::UNO_QUERY );
 
-        for( sal_Int32 i = 0; i < aStrings.getLength(); ++i )
-        {
-            Reference< beans::XFastPropertySet > xFastPropertySet( aStrings[ i ], uno::UNO_QUERY );
-            Reference< beans::XPropertySet > xPropSet( xFastPropertySet, uno::UNO_QUERY );
-
-            if( pWrappedProperty )
-                pWrappedProperty->setPropertyValue( rValue, xPropSet );
-            else if( xFastPropertySet.is() )
-                xFastPropertySet->setFastPropertyValue( nHandle, rValue );
-        }
+        if( pWrappedProperty )
+            pWrappedProperty->setPropertyValue( rValue, xPropSet );
+        else if( xFastPropertySet.is() )
+            xFastPropertySet->setFastPropertyValue( nHandle, rValue );
     }
 }
 

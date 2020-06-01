@@ -33,9 +33,9 @@
 #include <rtl/ustring.hxx>
 #include <sal/types.h>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace io { class XInputStream; }
-} } }
+}
 
 namespace oox {
 
@@ -372,7 +372,7 @@ private:
 
 private:
     BinaryInputStream*  mpInStrm;
-    sal_Int64 const     mnStartPos;
+    sal_Int64           mnStartPos;
     sal_Int64           mnRelPos;
     sal_Int64           mnSize;
 };

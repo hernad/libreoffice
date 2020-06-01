@@ -44,9 +44,9 @@ void ScXMLNamedExpressionsContext::SheetLocalInserter::insert(ScMyNamedExpressio
 
 ScXMLNamedExpressionsContext::ScXMLNamedExpressionsContext(
     ScXMLImport& rImport,
-    Inserter* pInserter ) :
+    std::shared_ptr<Inserter> pInserter ) :
     ScXMLImportContext( rImport ),
-    mpInserter(pInserter)
+    mpInserter(std::move(pInserter))
 {
     rImport.LockSolarMutex();
 }
@@ -61,7 +61,7 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL ScXMLNamedExpressionsCo
 {
     SvXMLImportContext *pContext(nullptr);
     sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
+        &sax_fastparser::castToFastAttributeList( xAttrList );
 
     switch (nElement)
     {

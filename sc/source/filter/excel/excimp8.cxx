@@ -55,6 +55,7 @@
 #include <com/sun/star/document/XDocumentPropertiesSupplier.hpp>
 #include <com/sun/star/container/XIndexContainer.hpp>
 #include <com/sun/star/container/XNameContainer.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <cppuhelper/implbase.hxx>
 #include "xltoolbar.hxx"
 #include <oox/ole/vbaproject.hxx>
@@ -348,7 +349,7 @@ void ImportExcel8::ReadBasic()
             uno::Reference< io::XInputStream > xIn = rMedium.GetInputStream();
             oox::ole::OleStorage root( aCtx, xIn, false );
             oox::StorageRef vbaStg = root.openSubStorage( "_VBA_PROJECT_CUR", false );
-            if ( vbaStg.get() )
+            if ( vbaStg )
             {
                 oox::ole::VbaProject aVbaPrj( aCtx, pShell->GetModel(), "Calc" );
                 // collect names of embedded form controls, as specified in the VBA project
@@ -478,7 +479,7 @@ OUString CreateFromDouble( double fVal )
 {
     return rtl::math::doubleToUString(fVal,
                 rtl_math_StringFormat_Automatic, rtl_math_DecimalPlaces_Max,
-                ScGlobal::pLocaleData->getNumDecimalSep()[0], true);
+                ScGlobal::getLocaleDataPtr()->getNumDecimalSep()[0], true);
 }
 
 }

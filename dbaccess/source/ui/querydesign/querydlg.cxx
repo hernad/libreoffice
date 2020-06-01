@@ -18,17 +18,16 @@
  */
 
 #include "querydlg.hxx"
+#include <JoinController.hxx>
+#include <JoinDesignView.hxx>
 #include <strings.hrc>
-#include <tools/debug.hxx>
 #include <tools/diagnose_ex.h>
 #include "QTableConnectionData.hxx"
 #include <core_resource.hxx>
-#include <querycontroller.hxx>
 #include <QueryTableView.hxx>
-#include <QueryDesignView.hxx>
 #include <com/sun/star/sdbc/XDatabaseMetaData.hpp>
+#include <com/sun/star/sdbc/SQLException.hpp>
 #include <RelationControl.hxx>
-#include <vcl/settings.hxx>
 
 #define ID_INNER_JOIN       1
 #define ID_LEFT_JOIN        2
@@ -62,7 +61,7 @@ DlgQryJoin::DlgQryJoin(const OQueryTableView* pParent,
     m_xML_HelpText->set_size_request(aSize.Width(), aSize.Height());
 
     // Copy connection
-    m_pConnData.reset(_pData->NewInstance());
+    m_pConnData = _pData->NewInstance();
     m_pConnData->CopyFrom(*_pData);
 
     m_xTableControl.reset(new OTableListBoxControl(m_xBuilder.get(), _pTableMap, this));
@@ -120,7 +119,7 @@ DlgQryJoin::DlgQryJoin(const OQueryTableView* pParent,
     {
         for (sal_Int32 i = 0; i < m_xLB_JoinType->get_count();)
         {
-            const sal_IntPtr nJoinTyp = m_xLB_JoinType->get_id(i).toInt32();
+            const sal_Int32 nJoinTyp = m_xLB_JoinType->get_id(i).toInt32();
             if ( !bSupportFullJoin && nJoinTyp == ID_FULL_JOIN )
                 m_xLB_JoinType->remove(i);
             else if ( !bSupportOuterJoin && (nJoinTyp == ID_LEFT_JOIN || nJoinTyp == ID_RIGHT_JOIN) )
@@ -153,7 +152,7 @@ IMPL_LINK_NOARG( DlgQryJoin, LBChangeHdl, weld::ComboBox&, void )
     const EJoinType eOldJoinType = eJoinType;
     const char* pResId = nullptr;
     const sal_Int32 nPos = m_xLB_JoinType->get_active();
-    const sal_IntPtr nJoinType = m_xLB_JoinType->get_id(nPos).toInt32();
+    const sal_Int32 nJoinType = m_xLB_JoinType->get_id(nPos).toInt32();
     bool bAddHint = true;
     switch ( nJoinType )
     {
@@ -236,28 +235,28 @@ IMPL_LINK_NOARG(DlgQryJoin, NaturalToggleHdl, weld::ToggleButton&, void)
     bool bChecked = m_xCBNatural->get_active();
     static_cast<OQueryTableConnectionData*>(m_pConnData.get())->setNatural(bChecked);
     m_xTableControl->enableRelation(!bChecked);
-    if ( bChecked )
+    if ( !bChecked )
+        return;
+
+    m_pConnData->ResetConnLines();
+    try
     {
-        m_pConnData->ResetConnLines();
-        try
+        Reference<XNameAccess> xReferencedTableColumns(m_pConnData->getReferencedTable()->getColumns());
+        Sequence< OUString> aSeq = m_pConnData->getReferencingTable()->getColumns()->getElementNames();
+        const OUString* pIter = aSeq.getConstArray();
+        const OUString* pEnd   = pIter + aSeq.getLength();
+        for(;pIter != pEnd;++pIter)
         {
-            Reference<XNameAccess> xReferencedTableColumns(m_pConnData->getReferencedTable()->getColumns());
-            Sequence< OUString> aSeq = m_pConnData->getReferencingTable()->getColumns()->getElementNames();
-            const OUString* pIter = aSeq.getConstArray();
-            const OUString* pEnd   = pIter + aSeq.getLength();
-            for(;pIter != pEnd;++pIter)
-            {
-                if ( xReferencedTableColumns->hasByName(*pIter) )
-                    m_pConnData->AppendConnLine(*pIter,*pIter);
-            }
+            if ( xReferencedTableColumns->hasByName(*pIter) )
+                m_pConnData->AppendConnLine(*pIter,*pIter);
         }
-        catch( const Exception& )
-        {
-            DBG_UNHANDLED_EXCEPTION("dbaccess");
-        }
-        m_xTableControl->NotifyCellChange();
-        m_xTableControl->Invalidate();
     }
+    catch( const Exception& )
+    {
+        DBG_UNHANDLED_EXCEPTION("dbaccess");
+    }
+    m_xTableControl->NotifyCellChange();
+    m_xTableControl->Invalidate();
 }
 
 void DlgQryJoin::setValid(bool _bValid)
@@ -277,7 +276,7 @@ void DlgQryJoin::setJoinType(EJoinType _eNewJoinType)
     eJoinType = _eNewJoinType;
     m_xCBNatural->set_sensitive(eJoinType != CROSS_JOIN);
 
-    sal_IntPtr nJoinType = 0;
+    sal_Int32 nJoinType = 0;
     switch ( eJoinType )
     {
         default:

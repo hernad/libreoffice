@@ -31,13 +31,13 @@ public:
     virtual css::uno::Reference<css::uno::XInterface> init() = 0;
     void testReplaceByName();
 
-    void setReplacementElement(const css::uno::Any& rElement) { m_aReplacementElement = rElement; }
+    void setElement(const css::uno::Any& rElement) { m_aReplacementElement = rElement; }
 
 protected:
     ~XNameReplace() {}
 
 private:
-    OUString const m_aReplacementName;
+    OUString m_aReplacementName;
     css::uno::Any m_aReplacementElement;
 };
 

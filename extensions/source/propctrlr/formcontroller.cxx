@@ -18,11 +18,11 @@
  */
 
 #include "formcontroller.hxx"
+#include "modulepcr.hxx"
 #include "pcrcommon.hxx"
 #include "pcrservices.hxx"
 #include "formstrings.hxx"
 #include "defaultforminspection.hxx"
-#include <propctrlr.h>
 
 #include <com/sun/star/beans/PropertyAttribute.hpp>
 #include <com/sun/star/util/VetoException.hpp>

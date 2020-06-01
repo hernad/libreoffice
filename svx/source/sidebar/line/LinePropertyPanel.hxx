@@ -22,7 +22,7 @@
 #include <sfx2/sidebar/ControllerItem.hxx>
 #include <sfx2/sidebar/IContextChangeReceiver.hxx>
 #include <svx/sidebar/LinePropertyPanelBase.hxx>
-
+#include <vcl/EnumContext.hxx>
 
 class XLineStyleItem;
 class XLineDashItem;
@@ -60,6 +60,10 @@ public:
         const SfxItemState eState,
         const SfxPoolItem* pState) override;
 
+    virtual void GetControlState(
+        const sal_uInt16 /*nSId*/,
+        boost::property_tree::ptree& /*rState*/) override {};
+
     SfxBindings* GetBindings() { return mpBindings;}
 
     // constructor/destructor
@@ -85,7 +89,7 @@ private:
     sfx2::sidebar::ControllerItem maEdgeStyle;
     sfx2::sidebar::ControllerItem maCapStyle;
 
-    SfxBindings* const mpBindings;
+    SfxBindings* mpBindings;
     vcl::EnumContext maContext;
 };
 

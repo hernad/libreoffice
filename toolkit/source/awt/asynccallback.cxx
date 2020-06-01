@@ -55,7 +55,7 @@ private:
             xCallback( rCallback ), aData( rAny ) {}
 
         css::uno::Reference< css::awt::XCallback > xCallback;
-        css::uno::Any const                        aData;
+        css::uno::Any                              aData;
     };
 
     DECL_STATIC_LINK( AsyncCallback, Notify_Impl, void*, void );
@@ -76,8 +76,7 @@ sal_Bool SAL_CALL AsyncCallback::supportsService(OUString const & serviceName)
 
 css::uno::Sequence< OUString > SAL_CALL AsyncCallback::getSupportedServiceNames()
 {
-    css::uno::Sequence< OUString > s { "com.sun.star.awt.AsyncCallback" };
-    return s;
+    return css::uno::Sequence< OUString >{ "com.sun.star.awt.AsyncCallback" };
 }
 
 // css::awt::XRequestCallback:

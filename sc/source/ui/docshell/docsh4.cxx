@@ -105,6 +105,8 @@ using namespace ::com::sun::star;
 #include <memory>
 #include <sfx2/notebookbar/SfxNotebookBar.hxx>
 #include <helpids.h>
+#include <editeng/eeitem.hxx>
+#include <editeng/langitem.hxx>
 
 #include <svx/xdef.hxx>
 
@@ -259,7 +261,7 @@ void ScDocShell::Execute( SfxRequest& rReq )
                 if (bIsNewArea)
                 {
                     ScDBCollection* pDBColl = m_aDocument.GetDBCollection();
-                    if ( !pDBColl || !pDBColl->getNamedDBs().findByUpperName(ScGlobal::pCharClass->uppercase(sTarget)) )
+                    if ( !pDBColl || !pDBColl->getNamedDBs().findByUpperName(ScGlobal::getCharClassPtr()->uppercase(sTarget)) )
                     {
                         ScAddress aPos;
                         if ( aPos.Parse( sTarget, &m_aDocument, m_aDocument.GetAddressConvention() ) & ScRefFlags::VALID )
@@ -746,7 +748,7 @@ void ScDocShell::Execute( SfxRequest& rReq )
                     ScDocumentLoader::RemoveAppPrefix( aFilterName );
 
                     std::shared_ptr<const SfxFilter> pFilter = ScDocShell::Factory().GetFilterContainer()->GetFilter4FilterName( aFilterName );
-                    std::unique_ptr<SfxItemSet> pSet(new SfxAllItemSet( pApp->GetPool() ));
+                    auto pSet = std::make_shared<SfxAllItemSet>( pApp->GetPool() );
                     if (!aOptions.isEmpty())
                         pSet->Put( SfxStringItem( SID_FILE_FILTEROPTIONS, aOptions ) );
                     if ( nVersion != 0 )
@@ -1166,9 +1168,14 @@ void ScDocShell::Execute( SfxRequest& rReq )
             if ( !aLangText.isEmpty() )
             {
                 LanguageType eLang, eLatin, eCjk, eCtl;
+                const OUString aSelectionLangPrefix("Current_");
+                const OUString aParagraphLangPrefix("Paragraph_");
                 const OUString aDocLangPrefix("Default_");
                 const OUString aNoLang("LANGUAGE_NONE");
                 const OUString aResetLang("RESET_LANGUAGES");
+
+                bool bSelection = false;
+                bool bParagraph = false;
 
                 ScDocument& rDoc = GetDocument();
                 rDoc.GetLanguage( eLatin, eCjk, eCtl );
@@ -1211,8 +1218,52 @@ void ScDocShell::Execute( SfxRequest& rReq )
                         }
                     }
                 }
+                else if (-1 != (nPos = aLangText.indexOf( aSelectionLangPrefix )))
+                {
+                    bSelection = true;
+                    aLangText = aLangText.replaceAt( nPos, aSelectionLangPrefix.getLength(), "" );
+                }
+                else if (-1 != (nPos = aLangText.indexOf( aParagraphLangPrefix )))
+                {
+                    bParagraph = true;
+                    aLangText = aLangText.replaceAt( nPos, aParagraphLangPrefix.getLength(), "" );
+                }
 
-                if ( eLang != eLatin )
+                if (bSelection || bParagraph)
+                {
+                    ScViewData* pViewData = GetViewData();
+                    if (!pViewData)
+                        return;
+
+                    EditView* pEditView = pViewData->GetEditView(pViewData->GetActivePart());
+                    if (!pEditView)
+                        return;
+
+                    const LanguageType nLangToUse = SvtLanguageTable::GetLanguageType( aLangText );
+                    SvtScriptType nScriptType = SvtLanguageOptions::GetScriptTypeOfLanguage( nLangToUse );
+
+                    SfxItemSet aAttrs = pEditView->GetEditEngine()->GetEmptyItemSet();
+                    if (nScriptType == SvtScriptType::LATIN)
+                        aAttrs.Put( SvxLanguageItem( nLangToUse, EE_CHAR_LANGUAGE ) );
+                    if (nScriptType == SvtScriptType::COMPLEX)
+                        aAttrs.Put( SvxLanguageItem( nLangToUse, EE_CHAR_LANGUAGE_CTL ) );
+                    if (nScriptType == SvtScriptType::ASIAN)
+                        aAttrs.Put( SvxLanguageItem( nLangToUse, EE_CHAR_LANGUAGE_CJK ) );
+                    ESelection aOldSel;
+                    if (bParagraph)
+                    {
+                        ESelection aSel = pEditView->GetSelection();
+                        aOldSel = aSel;
+                        aSel.nStartPos = 0;
+                        aSel.nEndPos = EE_TEXTPOS_ALL;
+                        pEditView->SetSelection( aSel );
+                    }
+
+                    pEditView->SetAttribs( aAttrs );
+                    if (bParagraph)
+                        pEditView->SetSelection( aOldSel );
+                }
+                else if ( eLang != eLatin )
                 {
                     if ( ScTabViewShell* pViewSh = ScTabViewShell::GetActiveViewShell() )
                     {
@@ -1227,6 +1278,54 @@ void ScDocShell::Execute( SfxRequest& rReq )
                     Broadcast(SfxHint(SfxHintId::LanguageChanged));
                     PostPaintGridAll();
                 }
+            }
+        }
+        break;
+        case SID_SPELLCHECK_IGNORE_ALL:
+        {
+            ScViewData* pViewData = GetViewData();
+            if (!pViewData)
+                return;
+
+            EditView* pEditView = pViewData->GetEditView(pViewData->GetActivePart());
+            if (!pEditView)
+                return;
+
+            OUString sIgnoreText;
+            const SfxStringItem* pItem2 = rReq.GetArg<SfxStringItem>(FN_PARAM_1);
+            if (pItem2)
+                sIgnoreText = pItem2->GetValue();
+
+            const OUString sSpellingType("Spelling");
+            if(sIgnoreText == sSpellingType)
+            {
+                ESelection aOldSel = pEditView->GetSelection();
+                pEditView->SpellIgnoreWord();
+                pEditView->SetSelection( aOldSel );
+            }
+        }
+        break;
+        case SID_SPELLCHECK_APPLY_SUGGESTION:
+        {
+            ScViewData* pViewData = GetViewData();
+            if (!pViewData)
+                return;
+
+            EditView* pEditView = pViewData->GetEditView(pViewData->GetActivePart());
+            if (!pEditView)
+                return;
+
+            OUString sApplyText;
+            const SfxStringItem* pItem2 = rReq.GetArg<SfxStringItem>(FN_PARAM_1);
+            if (pItem2)
+                sApplyText = pItem2->GetValue();
+
+            const OUString sSpellingRule("Spelling_");
+            sal_Int32 nPos = 0;
+            if(-1 != (nPos = sApplyText.indexOf( sSpellingRule )))
+            {
+                sApplyText = sApplyText.replaceAt(nPos, sSpellingRule.getLength(), "");
+                pEditView->InsertText( sApplyText );
             }
         }
         break;
@@ -1976,7 +2075,7 @@ void ScDocShell::GetState( SfxItemSet &rSet )
 
             case SID_SHARE_DOC:
                 {
-                    if ( IsReadOnly() || GetBestViewShell()->isExportLocked() )
+                    if ( IsReadOnly() || GetObjectShell()->isExportLocked() )
                     {
                         rSet.DisableItem( nWhich );
                     }
@@ -2113,8 +2212,6 @@ tools::Rectangle ScDocShell::GetVisArea( sal_uInt16 nAspect ) const
             nStartRow = nEndRow;
         tools::Rectangle aNewArea = m_aDocument
                                 .GetMMRect( nStartCol,nStartRow, nEndCol,nEndRow, nVisTab );
-        //TODO/LATER: different methods for setting VisArea?!
-        const_cast<ScDocShell*>(this)->SfxObjectShell::SetVisArea( aNewArea );
         return aNewArea;
     }
     else
@@ -2349,7 +2446,7 @@ bool ScDocShell::DdeSetData( const OUString& rItem,
     ScRangeName* pRange = m_aDocument.GetRangeName();
     if( pRange )
     {
-        const ScRangeData* pData = pRange->findByUpperName(ScGlobal::pCharClass->uppercase(aPos));
+        const ScRangeData* pData = pRange->findByUpperName(ScGlobal::getCharClassPtr()->uppercase(aPos));
         if (pData)
         {
             if( pData->HasType( ScRangeData::Type::RefArea    )

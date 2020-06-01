@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_DRAWINGLAYER_PRIMITIVE2D_SHADOWPRIMITIVE2D_HXX
-#define INCLUDED_DRAWINGLAYER_PRIMITIVE2D_SHADOWPRIMITIVE2D_HXX
+#pragma once
 
 #include <drawinglayer/drawinglayerdllapi.h>
 
@@ -27,17 +26,15 @@
 #include <basegfx/color/bcolor.hxx>
 
 
-namespace drawinglayer
+namespace drawinglayer::primitive2d
 {
-    namespace primitive2d
-    {
         /** ShadowPrimitive2D class
 
             This primitive defines a generic shadow geometry construction
             for 2D objects. It decomposes to a TransformPrimitive2D embedded
             into a ModifiedColorPrimitive2D.
 
-            It's for primtive usage convenience, so that not everyone has
+            It's for primitive usage convenience, so that not everyone has
             to implement the generic shadow construction by himself.
 
             The same geometry as sequence of primitives is used as geometry and
@@ -77,10 +74,7 @@ namespace drawinglayer
             /// provide unique ID
             virtual sal_uInt32 getPrimitive2DID() const override;
         };
-    } // end of namespace primitive2d
-} // end of namespace drawinglayer
+} // end of namespace drawinglayer::primitive2d
 
-
-#endif //INCLUDED_DRAWINGLAYER_PRIMITIVE2D_SHADOWPRIMITIVE2D_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

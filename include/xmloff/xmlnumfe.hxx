@@ -28,9 +28,9 @@
 #include <i18nlangtag/lang.h>
 #include <memory>
 
-namespace com { namespace sun { namespace star { namespace lang { struct Locale; } } } }
-namespace com { namespace sun { namespace star { namespace uno { template <typename > class Reference; } } } }
-namespace com { namespace sun { namespace star { namespace util { class XNumberFormatsSupplier; } } } }
+namespace com::sun::star::lang { struct Locale; }
+namespace com::sun::star::uno { template <typename > class Reference; }
+namespace com::sun::star::util { class XNumberFormatsSupplier; }
 
 #define XML_WRITTENNUMBERSTYLES "WrittenNumberStyles"
 
@@ -48,7 +48,7 @@ class XMLOFF_DLLPUBLIC SvXMLNumFmtExport final
 {
 private:
     SvXMLExport&                rExport;
-    OUString const              sPrefix;
+    OUString                    sPrefix;
     SvNumberFormatter*          pFormatter;
     OUStringBuffer       sTextContent;
     std::unique_ptr<SvXMLNumUsedList_Impl>      pUsedList;

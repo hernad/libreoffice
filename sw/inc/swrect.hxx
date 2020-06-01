@@ -26,6 +26,7 @@
 #include "swdllapi.h"
 
 class SvStream;
+typedef struct _xmlTextWriter* xmlTextWriterPtr;
 
 /// *Of course* Writer needs its own rectangles.
 /// This is half-open so m_Point.X() + m_Size.getWidth() is *not* included.
@@ -71,7 +72,6 @@ public:
 
     // In order to be able to access the members of Pos and SSize from the layout side.
     inline Point &Pos();
-    inline Size  &SSize();
 
     Point Center() const;
 
@@ -104,7 +104,7 @@ public:
 
     // Output operator for debugging.
     friend SvStream& WriteSwRect( SvStream &rStream, const SwRect &rRect );
-
+    void dumpAsXmlAttributes(xmlTextWriterPtr writer) const;
 
     void Top_(      const long nTop );
     void Bottom_(   const long nBottom );
@@ -119,7 +119,9 @@ public:
     long Width_()   const;
     long Height_()  const;
     void SubTop(    const long nSub );
+    void AddTop(    const long nAdd );
     void AddBottom( const long nAdd );
+    void AddLeft(   const long nAdd );
     void SubLeft(   const long nSub );
     void AddRight(  const long nAdd );
     void AddWidth(  const long nAdd );
@@ -219,10 +221,6 @@ inline Point &SwRect::Pos()
     return m_Point;
 }
 inline const Size  &SwRect::SSize() const
-{
-    return m_Size;
-}
-inline Size  &SwRect::SSize()
 {
     return m_Size;
 }

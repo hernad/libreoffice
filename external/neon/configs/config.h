@@ -1,4 +1,4 @@
-/* Contents kept in sync with config.h.in from neon 0.29.5 */
+/* Contents kept in sync with config.h.in from neon 0.31.1 */
 
 /* Define if building universal (internal helper macro) */
 /* #undef AC_APPLE_UNIVERSAL_BUILD */
@@ -216,7 +216,7 @@
 #define HAVE_SETLOCALE 1
 
 /* Define to 1 if you have the `setsockopt' function. */
-#if defined (LINUX) || defined (_WIN32)
+#if defined(LINUX) || defined(_WIN32)
 #define HAVE_SETSOCKOPT 1
 #endif
 
@@ -235,7 +235,7 @@
 #define HAVE_SIGNAL_H 1
 
 /* Define to 1 if you have the `snprintf' function. */
-#if defined( UNX ) || defined(_MSC_VER)
+#if defined(UNX) || defined(_MSC_VER)
 #define HAVE_SNPRINTF 1
 #endif
 
@@ -370,7 +370,7 @@
 #define NEON_IS_LIBRARY 1
 
 /* Define to be the neon version string */
-#define NEON_VERSION "0.29.5"
+#define NEON_VERSION "0.31.1"
 
 /* Define to enable debugging */
 /* #undef NE_DEBUGGING */
@@ -432,10 +432,10 @@
 #define NE_VERSION_MAJOR (0)
 
 /* Define to be neon library minor version */
-#define NE_VERSION_MINOR (29)
+#define NE_VERSION_MINOR (31)
 
 /* Define to be neon library patch version */
-#define NE_VERSION_PATCH (5)
+#define NE_VERSION_PATCH (1)
 
 /* Define to the address where bug reports for this package should be sent. */
 #define PACKAGE_BUGREPORT "neon@webdav.org"
@@ -444,13 +444,13 @@
 #define PACKAGE_NAME "neon"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "neon 0.29.5"
+#define PACKAGE_STRING "neon 0.31.1"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "neon"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "0.29.5"
+#define PACKAGE_VERSION "0.31.1"
 
 /* The size of `int', as computed by sizeof. */
 #define SIZEOF_INT 4
@@ -500,29 +500,28 @@
 
 /* Enable extensions on AIX 3, Interix.  */
 #ifndef _ALL_SOURCE
-# undef _ALL_SOURCE
+#undef _ALL_SOURCE
 #endif
 /* Enable GNU extensions on systems that have them.  */
 #ifndef _GNU_SOURCE
-# undef _GNU_SOURCE
+#undef _GNU_SOURCE
 #endif
 /* Enable threading extensions on Solaris.  */
 #ifndef _POSIX_PTHREAD_SEMANTICS
-# undef _POSIX_PTHREAD_SEMANTICS
+#undef _POSIX_PTHREAD_SEMANTICS
 #endif
 /* Enable extensions on HP NonStop.  */
 #ifndef _TANDEM_SOURCE
-# undef _TANDEM_SOURCE
+#undef _TANDEM_SOURCE
 #endif
 /* Enable general extensions on Solaris.  */
 #ifndef __EXTENSIONS__
-# undef __EXTENSIONS__
+#undef __EXTENSIONS__
 #endif
-
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */
-#if defined (__sun) && defined (SPARC)
+#if defined(__sun) && defined(SPARC)
 #define WORDS_BIGENDIAN 1
 #endif
 
@@ -548,7 +547,7 @@
 /* Define to `__inline__' or `__inline' if that's what the C compiler
    calls it, or to nothing if 'inline' is not supported under any name.  */
 #ifndef __cplusplus
-#if defined (__sun) && defined (__SUNPRO_C)
+#if defined(__sun) && defined(__SUNPRO_C)
 #define inline
 #endif
 #endif
@@ -570,14 +569,13 @@
 /* beast we need a workaround */
 #define IIS_LOCK_BUG_WORKAROUND 1
 
-
 /* Enable leak-tracking versions of ne_*alloc when NEON_MEMLEAK is enabled */
 #ifdef NEON_MEMLEAK
-# include "memleak.h"
+#include "memleak.h"
 #endif
 
 #if defined(HAVE_STPCPY) && defined(HAVE_DECL_STPCPY) && !HAVE_DECL_STPCPY && !defined(stpcpy)
-char *stpcpy(char *, const char *);
+char* stpcpy(char*, const char*);
 #endif
 
 #ifdef _WIN32
@@ -587,7 +585,7 @@ char *stpcpy(char *, const char *);
 #define HAVE_MEMCPY 1
 
 #define strncasecmp strnicmp
-#define inline      __inline
+#define inline __inline
 #define WIN32_LEAN_AND_MEAN
 #define NOUSER
 #define NOGDI

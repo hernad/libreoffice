@@ -8,7 +8,7 @@
  */
 
 #include <sfx2/thumbnailview.hxx>
-#include <sfx2/thumbnailviewitem.hxx>
+#include <thumbnailviewitem.hxx>
 
 #include <utility>
 
@@ -17,7 +17,7 @@
 #include <basegfx/color/bcolortools.hxx>
 #include <comphelper/processfactory.hxx>
 #include <drawinglayer/attribute/fontattribute.hxx>
-#include <drawinglayer/primitive2d/polypolygonprimitive2d.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonColorPrimitive2D.hxx>
 #include <drawinglayer/primitive2d/textlayoutdevice.hxx>
 #include <drawinglayer/processor2d/baseprocessor2d.hxx>
 #include <drawinglayer/processor2d/processorfromoutputdevice.hxx>
@@ -207,7 +207,7 @@ void ThumbnailView::DrawItem(ThumbnailViewItem const *pItem)
     {
         ::tools::Rectangle aRect = pItem->getDrawArea();
 
-        if ((aRect.GetHeight() > 0) && (aRect.GetWidth() > 0))
+        if (!aRect.IsEmpty())
             Invalidate(aRect);
     }
 }
@@ -263,7 +263,7 @@ void ThumbnailView::CalculateItemPositions (bool bScrollBarUsed)
     float nScrollRatio;
     if( bScrollBarUsed && mpScrBar )
         nScrollRatio = static_cast<float>(mpScrBar->GetThumbPos()) /
-                        static_cast<float>(mpScrBar->GetRangeMax()-2);
+                        static_cast<float>(mpScrBar->GetRangeMax() - mpScrBar->GetVisibleSize());
     else
         nScrollRatio = 0;
 
@@ -296,11 +296,10 @@ void ThumbnailView::CalculateItemPositions (bool bScrollBarUsed)
 
     mbHasVisibleItems = true;
 
+    long nFullSteps = (mnLines > mnVisLines) ? mnLines - mnVisLines + 1 : 1;
+
     long nItemHeightOffset = mnItemHeight + nVItemSpace;
-    long nHiddenLines = (static_cast<long>(
-        ( mnLines - 1 ) * nItemHeightOffset * nScrollRatio ) -
-        nVItemSpace ) /
-        nItemHeightOffset;
+    long nHiddenLines = static_cast<long>((nFullSteps - 1) * nScrollRatio);
 
     // calculate offsets
     long nStartX = nHItemSpace;
@@ -308,8 +307,7 @@ void ThumbnailView::CalculateItemPositions (bool bScrollBarUsed)
 
     // calculate and draw items
     long x = nStartX;
-    long y = nStartY - ( mnLines - 1 ) * nItemHeightOffset * nScrollRatio +
-        nHiddenLines * nItemHeightOffset;
+    long y = nStartY - ((nFullSteps - 1) * nScrollRatio - nHiddenLines) * nItemHeightOffset;
 
     // draw items
     // Unless we are scrolling (via scrollbar) we just use the precalculated
@@ -387,8 +385,8 @@ void ThumbnailView::CalculateItemPositions (bool bScrollBarUsed)
         Size aSize( nScrBarWidth, aWinSize.Height() );
 
         mpScrBar->SetPosSizePixel( aPos, aSize );
-        mpScrBar->SetRangeMax( (nCurCount+mnCols-1)*gnFineness/mnCols);
-        mpScrBar->SetVisibleSize( mnVisLines );
+        mpScrBar->SetRangeMax(mnLines * gnFineness);
+        mpScrBar->SetVisibleSize(mnVisLines * gnFineness);
         if (!bScrollBarUsed)
             mpScrBar->SetThumbPos( static_cast<long>(mnFirstLine)*gnFineness );
         long nPageSize = mnVisLines;
@@ -396,6 +394,7 @@ void ThumbnailView::CalculateItemPositions (bool bScrollBarUsed)
             nPageSize = 1;
         mpScrBar->SetPageSize( nPageSize );
         mpScrBar->Show( mbScroll );
+        mpScrBar->Enable( mbScroll );
     }
 
     // delete ScrollBar
@@ -1008,7 +1007,7 @@ void ThumbnailView::SelectItem( sal_uInt16 nItemId )
         {
             mnFirstLine = nNewLine;
         }
-        else if ( nNewLine > o3tl::make_unsigned(mnFirstLine+mnVisLines-1) )
+        else if ( mnVisLines != 0 && nNewLine > o3tl::make_unsigned(mnFirstLine+mnVisLines-1) )
         {
             mnFirstLine = static_cast<sal_uInt16>(nNewLine-mnVisLines+1);
         }
@@ -1382,7 +1381,7 @@ void SfxThumbnailView::DrawItem(ThumbnailViewItem const *pItem)
     {
         ::tools::Rectangle aRect = pItem->getDrawArea();
 
-        if ((aRect.GetHeight() > 0) && (aRect.GetWidth() > 0))
+        if (!aRect.IsEmpty())
             Invalidate(aRect);
     }
 }
@@ -2176,7 +2175,7 @@ void SfxThumbnailView::SelectItem( sal_uInt16 nItemId )
         {
             mnFirstLine = nNewLine;
         }
-        else if ( nNewLine > o3tl::make_unsigned(mnFirstLine+mnVisLines-1) )
+        else if ( mnVisLines != 0 && nNewLine > o3tl::make_unsigned(mnFirstLine+mnVisLines-1) )
         {
             mnFirstLine = static_cast<sal_uInt16>(nNewLine-mnVisLines+1);
         }

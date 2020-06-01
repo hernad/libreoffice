@@ -55,7 +55,6 @@ private:
     OUString                m_pClassPath;
 #endif
     OUString                m_sInstallText;
-    OUString                m_sAccessibilityText;
     OUString                m_sAddDialogText;
     Idle                    m_aResetIdle;
 
@@ -78,14 +77,12 @@ private:
     std::unique_ptr<weld::CheckButton> m_xExperimentalCB;
     std::unique_ptr<weld::CheckButton> m_xMacroCB;
 
-    std::unique_ptr<weld::Label> m_xAccessibilityText;
     std::unique_ptr<weld::Label> m_xAddDialogText;
 
     std::unique_ptr<weld::Widget> m_xJavaFrame;
 
     DECL_LINK(EnableHdl_Impl, weld::Button&, void);
-    typedef std::pair<int, int> row_col;
-    DECL_LINK(CheckHdl_Impl, const row_col&, void);
+    DECL_LINK(CheckHdl_Impl, const weld::TreeView::iter_col&, void);
     DECL_LINK(SelectHdl_Impl, weld::TreeView&, void);
     DECL_LINK(AddHdl_Impl, weld::Button&, void);
     DECL_LINK(ParameterHdl_Impl, weld::Button&, void);

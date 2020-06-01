@@ -18,6 +18,7 @@
  */
 
 #include <com/sun/star/container/XNameAccess.hpp>
+#include <com/sun/star/sdbc/XConnection.hpp>
 #include <com/sun/star/sdbcx/XTablesSupplier.hpp>
 #include <com/sun/star/sdbcx/XColumnsSupplier.hpp>
 #include <com/sun/star/sdb/DatabaseContext.hpp>
@@ -416,7 +417,7 @@ void SwDBTreeList::ShowColumns(bool bShowCol)
                 while (m_xTreeView->iter_has_child(*xIter))
                 {
                     m_xTreeView->copy_iterator(*xIter, *xChild);
-                    m_xTreeView->iter_children(*xChild);
+                    (void)m_xTreeView->iter_children(*xChild);
                     m_xTreeView->remove(*xChild);
                 }
             } while (m_xTreeView->iter_next(*xIter));

@@ -180,8 +180,8 @@
 #define STR_POOLCOLL_TOX_AUTHORITIESH           NC_("STR_POOLCOLL_TOX_AUTHORITIESH", "Bibliography Heading")
 #define STR_POOLCOLL_TOX_AUTHORITIES1           NC_("STR_POOLCOLL_TOX_AUTHORITIES1", "Bibliography 1")
 // Document title style, not to be confused with Heading style
-#define STR_POOLCOLL_DOC_TITEL                  NC_("STR_POOLCOLL_DOC_TITEL", "Title")
-#define STR_POOLCOLL_DOC_SUBTITEL               NC_("STR_POOLCOLL_DOC_SUBTITEL", "Subtitle")
+#define STR_POOLCOLL_DOC_TITLE                  NC_("STR_POOLCOLL_DOC_TITEL", "Title")
+#define STR_POOLCOLL_DOC_SUBTITLE               NC_("STR_POOLCOLL_DOC_SUBTITEL", "Subtitle")
 #define STR_POOLCOLL_DOC_APPENDIX               NC_("STR_POOLCOLL_DOC_APPENDIX", "Appendix")
 #define STR_POOLCOLL_HTML_BLOCKQUOTE            NC_("STR_POOLCOLL_HTML_BLOCKQUOTE", "Quotations")
 #define STR_POOLCOLL_HTML_PRE                   NC_("STR_POOLCOLL_HTML_PRE", "Preformatted Text")
@@ -221,7 +221,7 @@
 #define STR_COLUMN_VALUESET_ITEM3               NC_("STR_COLUMN_VALUESET_ITEM3", "2 columns with different size (left > right)")
 #define STR_COLUMN_VALUESET_ITEM4               NC_("STR_COLUMN_VALUESET_ITEM4", "2 columns with different size (left < right)")
 // Table styles, Writer internal, others are taken from Svx
-#define STR_TABSTYLE_DEFAULT                    NC_("STR_TABSTYLE_DEFAULT", "Default Style")
+#define STR_TABSTYLE_DEFAULT                    NC_("STR_TABSTYLE_DEFAULT", "Default Table Style")
 
 #define STR_PARAGRAPHSTYLEFAMILY                NC_("STR_PARAGRAPHSTYLEFAMILY", "Paragraph Styles")
 #define STR_CHARACTERSTYLEFAMILY                NC_("STR_CHARACTERSTYLEFAMILY", "Character Styles")
@@ -240,10 +240,6 @@
 #define STR_LOAD_HTML_DOC                       NC_("STR_LOAD_HTML_DOC", "Name and Path of the HTML Document")
 #define STR_JAVA_EDIT                           NC_("STR_JAVA_EDIT", "Edit Script")
 #define STR_BOOKMARK_DEF_NAME                   NC_("STR_BOOKMARK_DEF_NAME", "Bookmark")
-#define STR_BOOKMARK_NAME                       NC_("STR_BOOKMARK_NAME", "Name")
-#define STR_BOOKMARK_TEXT                       NC_("STR_BOOKMARK_TEXT", "Text")
-#define STR_BOOKMARK_HIDDEN                     NC_("STR_BOOKMARK_HIDDEN", "Hidden")
-#define STR_BOOKMARK_CONDITION                  NC_("STR_BOOKMARK_CONDITION", "Condition")
 #define STR_BOOKMARK_YES                        NC_("STR_BOOKMARK_YES", "Yes")
 #define STR_BOOKMARK_NO                         NC_("STR_BOOKMARK_NO", "No")
 #define STR_BOOKMARK_FORBIDDENCHARS             NC_("STR_BOOKMARK_FORBIDDENCHARS", "Forbidden characters:")
@@ -394,7 +390,7 @@
 #define RID_STR_SYSTEM                          NC_("RID_STR_SYSTEM", "[System]")
 #define STR_MULT_INTERACT_HYPH_WARN             NC_("STR_MULT_INTERACT_HYPH_WARN", "The interactive hyphenation is already active\nin a different document")
 #define STR_HYPH_TITLE                          NC_("STR_HYPH_TITLE", "Hyphenation")
-#define STR_HYPH_MISSING                        NC_("STR_HYPH_MISSING", "Missing hyphenation info")
+#define STR_HYPH_MISSING                        NC_("STR_HYPH_MISSING", "Missing hyphenation data")
 #define STR_HYPH_MISSING_DETAIL                 NC_("STR_HYPH_MISSING", "Please install the hyphenation package for locale “%1”.")
 
 // Undo
@@ -551,8 +547,7 @@
 #define STR_GRAPHIC                             NC_("STR_GRAPHIC", "image")
 #define STR_DRAWING_OBJECTS                     NC_("STR_DRAWING_OBJECTS", "drawing object(s)")
 #define STR_TABLE_NAME                          NC_("STR_TABLE_NAME", "table: $1$2$3")
-#define STR_CHAPTER_NAME                        NC_("STR_CHAPTER_NAME", "chapter")
-#define STR_CHAPTERS_NAME                       NC_("STR_CHAPTERS_NAME", "chapters")
+#define STR_CHAPTERS                            NNC_("STR_CHAPTERS", "chapter", "chapters")
 #define STR_PARAGRAPH_UNDO                      NC_("STR_PARAGRAPH_UNDO", "paragraph")
 #define STR_PARAGRAPH_SIGN_UNDO                 NC_("STR_PARAGRAPH_SIGN_UNDO", "Paragraph sign")
 #define STR_UNDO_FLYFRMFMT_TITLE                NC_("STR_UNDO_FLYFRMFMT_TITLE", "Change object title of $1")
@@ -625,7 +620,7 @@
 #define STR_PRINTOPTUI_BROCHURE                 NC_("STR_PRINTOPTUI_BROCHURE", "Broch~ure")
 #define STR_PRINTOPTUI_LEFT_SCRIPT              NC_("STR_PRINTOPTUI_LEFT_SCRIPT", "Left-to-right script")
 #define STR_PRINTOPTUI_RIGHT_SCRIPT             NC_("STR_PRINTOPTUI_RIGHT_SCRIPT", "Right-to-left script")
-#define STR_PRINTOPTUI_PRINTALLPAGES            NC_("STR_PRINTOPTUI_PRINTALLPAGES", "All ~Pages")
+#define STR_PRINTOPTUI_PRINTALLPAGES            NC_("STR_PRINTOPTUI_PRINTALLPAGES", "~All Pages")
 #define STR_PRINTOPTUI_PRINTPAGES               NC_("STR_PRINTOPTUI_PRINTPAGES", "Pa~ges:")
 #define STR_PRINTOPTUI_PRINTEVENPAGES           NC_("STR_PRINTOPTUI_PRINTEVENPAGES", "~Even pages")
 #define STR_PRINTOPTUI_PRINTODDPAGES            NC_("STR_PRINTOPTUI_PRINTODDPAGES", "~Odd pages")
@@ -644,11 +639,11 @@
 #define STR_OUTLINE_LEVEL                       NC_("STR_OUTLINE_LEVEL", "Outline Level")
 #define STR_DRAGMODE                            NC_("STR_DRAGMODE", "Drag Mode")
 #define STR_SEND_OUTLINE_TO_CLIPBOARD_ENTRY     NC_("STR_SEND_OUTLINE_TO_CLIPBOARD_ENTRY", "Send Outline to Clipboard")
-#define STR_SELECT                              NC_("STR_SELECT", "Select")
-#define STR_DEMOTE_CHAPTER                      NC_("STR_DEMOTE_CHAPTER", "Demote Chapter")
-#define STR_PROMOTE_CHAPTER                     NC_("STR_PROMOTE_CHAPTER", "Promote Chapter")
-#define STR_DEMOTE_LEVEL                        NC_("STR_DEMOTE_LEVEL", "Demote Level")
-#define STR_PROMOTE_LEVEL                       NC_("STR_PROMOTE_LEVEL", "Promote Level")
+#define STR_OUTLINE_TRACKING                    NC_("STR_OUTLINE_TRACKING", "Outline Tracking")
+#define STR_OUTLINE_TRACKING_DEFAULT            NC_("STR_OUTLINE_TRACKING_DEFAULT", "Default")
+#define STR_OUTLINE_TRACKING_FOCUS              NC_("STR_OUTLINE_TRACKING_FOCUS", "Focus")
+#define STR_OUTLINE_TRACKING_OFF                NC_("STR_OUTLINE_TRACKING_OFF", "Off")
+
 #define STR_EXPANDALL                           NC_("STR_EXPANDALL", "Expand All")
 #define STR_COLLAPSEALL                         NC_("STR_COLLAPSEALL", "Collapse All")
 #define STR_HYPERLINK                           NC_("STR_HYPERLINK", "Insert as Hyperlink")
@@ -674,17 +669,11 @@
 #define STR_UPDATE_INDEX                        NC_("STR_UPDATE_INDEX", "Indexes")
 #define STR_UPDATE_LINK                         NC_("STR_UPDATE_LINK", "Links")
 #define STR_UPDATE_ALL                          NC_("STR_UPDATE_ALL", "All")
-#define STR_REMOVE_INDEX                        NC_("STR_REMOVE_INDEX", "~Remove Index")
-#define STR_REMOVE_TBL_PROTECTION               NC_("STR_REMOVE_TBL_PROTECTION", "~Unprotect")
+
 #define STR_INVISIBLE                           NC_("STR_INVISIBLE", "hidden")
 #define STR_BROKEN_LINK                         NC_("STR_BROKEN_LINK", "File not found: ")
-#define STR_RENAME                              NC_("STR_RENAME", "~Rename...")
-#define STR_READONLY_IDX                        NC_("STR_READONLY_IDX", "Read-~only")
-#define STR_POSTIT_SHOW                         NC_("STR_POSTIT_SHOW", "Show All")
-#define STR_POSTIT_HIDE                         NC_("STR_POSTIT_HIDE", "Hide All")
-#define STR_POSTIT_DELETE                       NC_("STR_POSTIT_DELETE", "Delete All")
+
 #define STR_RESOLVED                            NC_("STR_RESOLVED", "RESOLVED")
-#define STR_PROTECTED                           NC_("STR_PROTECTED", "Protected")
 
 #define STR_MARGIN_TOOLTIP_LEFT                 NC_("STR_MARGIN_TOOLTIP_LEFT", "Left: ")
 #define STR_MARGIN_TOOLTIP_RIGHT                NC_("STR_MARGIN_TOOLTIP_RIGHT", ". Right: ")
@@ -717,8 +706,8 @@
 #define STR_TOX_OBJ                             NC_("STR_TOX_OBJ", "Table of Objects")
 #define STR_TOX_ILL                             NC_("STR_TOX_ILL", "Table of Figures")
 // SubType DocInfo
-#define FLD_DOCINFO_TITEL                       NC_("FLD_DOCINFO_TITEL", "Title")
-#define FLD_DOCINFO_THEMA                       NC_("FLD_DOCINFO_THEMA", "Subject")
+#define FLD_DOCINFO_TITLE                       NC_("FLD_DOCINFO_TITEL", "Title")
+#define FLD_DOCINFO_SUBJECT                     NC_("FLD_DOCINFO_THEMA", "Subject")
 #define FLD_DOCINFO_KEYS                        NC_("FLD_DOCINFO_KEYS", "Keywords")
 #define FLD_DOCINFO_COMMENT                     NC_("FLD_DOCINFO_COMMENT", "Comments")
 #define FLD_DOCINFO_CREATE                      NC_("FLD_DOCINFO_CREATE", "Created")
@@ -1060,8 +1049,6 @@
 #define STR_COLS                                NC_("STR_COLS", "Columns")
 #define STR_ROWS                                NC_("STR_ROWS", "Rows")
 
-#define STR_SERVICE_UNAVAILABLE                 NC_("STR_SERVICE_UNAVAILABLE", "The following service is not available: ")
-
 #define STR_WORDCOUNT_HINT                      NC_("STR_WORDCOUNT_HINT", "Word and character count. Click to open Word Count dialog.")
 #define STR_VIEWLAYOUT_ONE                      NC_("STR_VIEWLAYOUT_ONE", "Single-page view")
 #define STR_VIEWLAYOUT_MULTI                    NC_("STR_VIEWLAYOUT_MULTI", "Multiple-page view")
@@ -1352,11 +1339,6 @@
 #define STR_SENDER_TOKENS                       NC_("STR_SENDER_TOKENS", "COMPANY;CR;FIRSTNAME; ;LASTNAME;CR;ADDRESS;CR;CITY; ;STATEPROV; ;POSTALCODE;CR;COUNTRY;CR;")
 
 #define STR_TBL_FORMULA                         NC_("STR_TBL_FORMULA", "Text formula")
-
-#define STR_MENU_ZOOM                           NC_("STR_MENU_ZOOM", "~Zoom")
-#define STR_MENU_UP                             NC_("STR_MENU_UP", "~Upwards")
-#define STR_MENU_DOWN                           NC_("STR_MENU_DOWN", "Do~wnwards")
-
 
 #define STR_DROP_DOWN_EMPTY_LIST                NC_("STR_DROP_DOWN_EMPTY_LIST", "No Item specified")
 

@@ -41,6 +41,7 @@ $(eval $(call gb_UIConfig_add_uifiles,modules/schart,\
 	chart2/uiconfig/ui/chartdatadialog \
 	chart2/uiconfig/ui/charttypedialog \
 	chart2/uiconfig/ui/columnfragment \
+	chart2/uiconfig/ui/combobox \
 	chart2/uiconfig/ui/datarangedialog \
 	chart2/uiconfig/ui/dlg_DataLabel \
 	chart2/uiconfig/ui/dlg_InsertErrorBars \
@@ -65,6 +66,7 @@ $(eval $(call gb_UIConfig_add_uifiles,modules/schart,\
 	chart2/uiconfig/ui/tp_AxisPositions \
 	chart2/uiconfig/ui/tp_ChartType \
 	chart2/uiconfig/ui/tp_DataLabel \
+	chart2/uiconfig/ui/tp_DataPointOption \
 	chart2/uiconfig/ui/tp_DataSource \
 	chart2/uiconfig/ui/tp_ErrorBars \
 	chart2/uiconfig/ui/tp_LegendPosition \

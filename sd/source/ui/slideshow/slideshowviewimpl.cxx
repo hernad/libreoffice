@@ -43,9 +43,7 @@
 
 using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::WeakReference;
-using ::com::sun::star::uno::RuntimeException;
 using ::com::sun::star::uno::Exception;
-using ::com::sun::star::presentation::XSlideShowView;
 
 using namespace ::com::sun::star;
 
@@ -293,7 +291,7 @@ Reference< rendering::XSpriteCanvas > SAL_CALL SlideShowView::getCanvas(  )
 {
     ::osl::MutexGuard aGuard( m_aMutex );
 
-    return mpCanvas.get() ? mpCanvas->getUNOSpriteCanvas() : Reference< rendering::XSpriteCanvas >();
+    return mpCanvas ? mpCanvas->getUNOSpriteCanvas() : Reference< rendering::XSpriteCanvas >();
 }
 
 void SAL_CALL SlideShowView::clear()
@@ -313,7 +311,7 @@ void SAL_CALL SlideShowView::clear()
     ::cppcanvas::PolyPolygonSharedPtr pPolyPoly(
         ::cppcanvas::BaseGfxFactory::createPolyPolygon( mpCanvas, aPoly ) );
 
-    if( pPolyPoly.get() )
+    if( pPolyPoly )
     {
         pPolyPoly->setRGBAFillColor( 0x000000FFU );
         pPolyPoly->draw();
@@ -332,7 +330,7 @@ geometry::AffineMatrix2D SAL_CALL SlideShowView::getTransformation(  )
 
     const Size& rTmpSize( mrOutputWindow.GetSizePixel() );
 
-    if (rTmpSize.Width()<=0 || rTmpSize.Height()<=0)
+    if (rTmpSize.IsEmpty())
     {
         return geometry::AffineMatrix2D (1,0,0,0,1,0);
     }

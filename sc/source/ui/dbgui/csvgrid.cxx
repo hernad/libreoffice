@@ -53,7 +53,7 @@ namespace {
 
 struct Func_SetType
 {
-    sal_Int32 const      mnType;
+    sal_Int32                   mnType;
     explicit                    Func_SetType( sal_Int32 nType ) : mnType( nType ) {}
     void                 operator()( ScCsvColState& rState ) const
         { rState.mnType = mnType; }
@@ -61,7 +61,7 @@ struct Func_SetType
 
 struct Func_Select
 {
-    bool const           mbSelect;
+    bool                        mbSelect;
     explicit                    Func_Select( bool bSelect ) : mbSelect( bSelect ) {}
     void                 operator()( ScCsvColState& rState ) const
         { rState.Select( mbSelect ); }
@@ -156,7 +156,13 @@ void ScCsvGrid::UpdateOffsetX()
 {
     sal_Int32 nLastLine = GetLastVisLine() + 1;
     sal_Int32 nDigits = 2;
-    while( nLastLine /= 10 ) ++nDigits;
+    for (;;)
+    {
+        nLastLine /= 10;
+        if (!nLastLine)
+            break;
+        ++nDigits;
+    }
     nDigits = std::max( nDigits, sal_Int32( 3 ) );
     Execute(CSVCMD_SETHDRWIDTH, GetDrawingArea()->get_approximate_digit_width() * nDigits);
 }

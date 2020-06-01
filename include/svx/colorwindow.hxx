@@ -24,8 +24,6 @@
 #include <rtl/ustring.hxx>
 #include <svx/SvxColorValueSet.hxx>
 #include <svx/Palette.hxx>
-#include <vcl/lstbox.hxx>
-#include <vcl/fixed.hxx>
 #include <vcl/toolbox.hxx>
 
 #include <functional>
@@ -50,61 +48,6 @@ class Button;
 typedef std::function<void(const OUString&, const NamedColor&)> ColorSelectFunction;
 
 #define COL_NONE_COLOR    ::Color(0x80, 0xFF, 0xFF, 0xFF)
-
-class SVXCORE_DLLPUBLIC SvxColorWindow final : public svtools::ToolbarPopup
-{
-private:
-    const sal_uInt16    theSlotId;
-    VclPtr<SvxColorValueSet>   mpColorSet;
-    VclPtr<SvxColorValueSet>   mpRecentColorSet;
-
-    VclPtr<ListBox>     mpPaletteListBox;
-    VclPtr<PushButton>  mpButtonAutoColor;
-    VclPtr<PushButton>  mpButtonNoneColor;
-    VclPtr<PushButton>  mpButtonPicker;
-    VclPtr<FixedLine>   mpAutomaticSeparator;
-    OUString const      maCommand;
-    Link<const NamedColor&, void> maSelectedLink;
-
-    VclPtr<vcl::Window> mxParentWindow;
-    std::shared_ptr<PaletteManager> mxPaletteManager;
-    ColorStatus&  mrColorStatus;
-
-    ColorSelectFunction const maColorSelectFunction;
-    bool const mbReuseParentForPicker;
-
-    DECL_LINK( SelectHdl, ValueSet*, void );
-    DECL_LINK( SelectPaletteHdl, ListBox&, void);
-    DECL_LINK( AutoColorClickHdl, Button*, void );
-    DECL_LINK( OpenPickerClickHdl, Button*, void );
-
-    static bool SelectValueSetEntry(SvxColorValueSet* pColorSet, const Color& rColor);
-    static NamedColor GetSelectEntryColor(ValueSet const * pColorSet);
-    NamedColor GetAutoColor() const;
-
-public:
-    SvxColorWindow(const OUString& rCommand,
-                   std::shared_ptr<PaletteManager> const & rPaletteManager,
-                   ColorStatus& rColorStatus,
-                   sal_uInt16 nSlotId,
-                   const css::uno::Reference< css::frame::XFrame >& rFrame,
-                   vcl::Window* pParentWindow,
-                   // tdf#118251 When true, reuse pParentWindow as the parent of the color picker
-                   // that appears from the 'custom color' button. When false use the window of
-                   // rFrame. true is helpful when launched from a dialog, false for launched
-                   // from a toolbar
-                   bool bReuseParentForPicker,
-                   ColorSelectFunction const& rColorSelectFunction);
-    virtual ~SvxColorWindow() override;
-    virtual void        dispose() override;
-    void                SetNoSelection();
-    void                SelectEntry(const NamedColor& rColor);
-    void                SelectEntry(const Color& rColor);
-    NamedColor          GetSelectEntryColor() const;
-
-    virtual void        KeyInput( const KeyEvent& rKEvt ) override;
-    virtual void        statusChanged( const css::frame::FeatureStateEvent& rEvent ) override;
-};
 
 class SvxColorToolBoxControl;
 
@@ -141,14 +84,14 @@ class SVXCORE_DLLPUBLIC ColorWindow final : public WeldToolbarPopup
 private:
     const sal_uInt16    theSlotId;
     OUString            maCommand;
-    weld::Window* const mpParentWindow;
+    weld::Window*       mpParentWindow;
     MenuOrToolMenuButton maMenuButton;
     std::shared_ptr<PaletteManager> mxPaletteManager;
     ColorStatus&  mrColorStatus;
-    ColorSelectFunction const maColorSelectFunction;
+    ColorSelectFunction  maColorSelectFunction;
 
-    std::unique_ptr<ColorValueSet> mxColorSet;
-    std::unique_ptr<ColorValueSet> mxRecentColorSet;
+    std::unique_ptr<SvxColorValueSet> mxColorSet;
+    std::unique_ptr<SvxColorValueSet> mxRecentColorSet;
     std::unique_ptr<weld::ComboBox> mxPaletteListBox;
     std::unique_ptr<weld::Button> mxButtonAutoColor;
     std::unique_ptr<weld::Button> mxButtonNoneColor;
@@ -159,13 +102,13 @@ private:
     weld::Button* mpDefaultButton;
 
     Link<const NamedColor&, void> maSelectedLink;
-    DECL_LINK(SelectHdl, SvtValueSet*, void);
+    DECL_LINK(SelectHdl, ValueSet*, void);
     DECL_LINK(SelectPaletteHdl, weld::ComboBox&, void);
     DECL_LINK(AutoColorClickHdl, weld::Button&, void);
     DECL_LINK(OpenPickerClickHdl, weld::Button&, void);
 
-    static bool SelectValueSetEntry(ColorValueSet* pColorSet, const Color& rColor);
-    static NamedColor GetSelectEntryColor(SvtValueSet const * pColorSet);
+    static bool SelectValueSetEntry(SvxColorValueSet* pColorSet, const Color& rColor);
+    static NamedColor GetSelectEntryColor(ValueSet const * pColorSet);
     NamedColor GetAutoColor() const;
 
 public:

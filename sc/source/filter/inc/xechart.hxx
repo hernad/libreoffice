@@ -33,7 +33,7 @@
 class Size;
 namespace tools { class Rectangle; }
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace awt
     {
         struct Rectangle;
@@ -64,7 +64,7 @@ namespace com { namespace sun { namespace star {
             class XLabeledDataSequence;
         }
     }
-} } }
+}
 
 // Common =====================================================================
 
@@ -218,7 +218,7 @@ private:
     XclChFramePos       maData;             /// Position of the frame.
 };
 
-typedef std::shared_ptr< XclExpChFramePos > XclExpChFramePosRef;
+typedef rtl::Reference< XclExpChFramePos > XclExpChFramePosRef;
 
 class XclExpChLineFormat : public XclExpRecord
 {
@@ -251,7 +251,7 @@ private:
     sal_uInt32          mnColorId;          /// Line color identifier.
 };
 
-typedef std::shared_ptr< XclExpChLineFormat > XclExpChLineFormatRef;
+typedef rtl::Reference< XclExpChLineFormat > XclExpChLineFormatRef;
 
 class XclExpChAreaFormat : public XclExpRecord
 {
@@ -283,7 +283,7 @@ private:
     sal_uInt32          mnBackColorId;      /// Pattern background color identifier.
 };
 
-typedef std::shared_ptr< XclExpChAreaFormat > XclExpChAreaFormatRef;
+typedef rtl::Reference< XclExpChAreaFormat > XclExpChAreaFormatRef;
 
 class XclExpChEscherFormat : public XclExpChGroupBase
 {
@@ -316,7 +316,7 @@ private:
     sal_uInt32          mnColor2Id;         /// Second fill color identifier.
 };
 
-typedef std::shared_ptr< XclExpChEscherFormat > XclExpChEscherFormatRef;
+typedef rtl::Reference< XclExpChEscherFormat > XclExpChEscherFormatRef;
 
 /** Base class for record groups containing frame formatting.
 
@@ -383,7 +383,7 @@ private:
     XclChObjectType     meObjType;          /// Type of the represented object.
 };
 
-typedef std::shared_ptr< XclExpChFrame > XclExpChFrameRef;
+typedef rtl::Reference< XclExpChFrame > XclExpChFrameRef;
 
 // Source links ===============================================================
 
@@ -418,7 +418,7 @@ private:
     XclExpStringRef     mxString;           /// Text data (CHSTRING record).
 };
 
-typedef std::shared_ptr< XclExpChSourceLink > XclExpChSourceLinkRef;
+typedef rtl::Reference< XclExpChSourceLink > XclExpChSourceLinkRef;
 
 // Text =======================================================================
 
@@ -429,7 +429,7 @@ public:
     explicit            XclExpChFont( sal_uInt16 nFontIdx );
 };
 
-typedef std::shared_ptr< XclExpChFont > XclExpChFontRef;
+typedef rtl::Reference< XclExpChFont > XclExpChFontRef;
 
 /** The CHOBJECTLINK record linking a text object to a specific chart object. */
 class XclExpChObjectLink : public XclExpRecord
@@ -444,7 +444,7 @@ private:
     XclChObjectLink     maData;             /// Contents of the CHOBJECTLINK record.
 };
 
-typedef std::shared_ptr< XclExpChObjectLink > XclExpChObjectLinkRef;
+typedef rtl::Reference< XclExpChObjectLink > XclExpChObjectLinkRef;
 
 /** Additional data label settings in the future record CHFRLABELPROPS. */
 class XclExpChFrLabelProps : public XclExpChFutureRecordBase
@@ -465,7 +465,7 @@ private:
     XclChFrLabelProps   maData;             /// Contents of the CHFRLABELPROPS record.
 };
 
-typedef std::shared_ptr< XclExpChFrLabelProps > XclExpChFrLabelPropsRef;
+typedef rtl::Reference< XclExpChFrLabelProps > XclExpChFrLabelPropsRef;
 
 /** Base class for objects with font settings. Provides font conversion helper functions. */
 class XclExpChFontBase
@@ -533,7 +533,7 @@ private:
     sal_uInt32          mnTextColorId;      /// Text color identifier.
 };
 
-typedef std::shared_ptr< XclExpChText > XclExpChTextRef;
+typedef rtl::Reference< XclExpChText > XclExpChTextRef;
 
 // Data series ================================================================
 
@@ -569,7 +569,7 @@ private:
     sal_uInt32          mnFillColorId;      /// Fill color identifier.
 };
 
-typedef std::shared_ptr< XclExpChMarkerFormat > XclExpChMarkerFormatRef;
+typedef rtl::Reference< XclExpChMarkerFormat > XclExpChMarkerFormatRef;
 
 /** The CHPIEFORMAT record containing data point formatting data for pie segments. */
 class XclExpChPieFormat : public XclExpUInt16Record
@@ -581,7 +581,7 @@ public:
     void                Convert( const ScfPropertySet& rPropSet );
 };
 
-typedef std::shared_ptr< XclExpChPieFormat > XclExpChPieFormatRef;
+typedef rtl::Reference< XclExpChPieFormat > XclExpChPieFormatRef;
 
 /** The CH3DDATAFORMAT record containing the bar type in 3D bar charts. */
 class XclExpCh3dDataFormat : public XclExpRecord
@@ -599,7 +599,7 @@ private:
     XclCh3dDataFormat   maData;             /// Contents of the CH3DDATAFORMAT record.
 };
 
-typedef std::shared_ptr< XclExpCh3dDataFormat > XclExpCh3dDataFormatRef;
+typedef rtl::Reference< XclExpCh3dDataFormat > XclExpCh3dDataFormatRef;
 
 /** The CHATTACHEDLABEL record that contains the type of a data point label. */
 class XclExpChAttachedLabel : public XclExpUInt16Record
@@ -608,7 +608,7 @@ public:
     explicit            XclExpChAttachedLabel( sal_uInt16 nFlags );
 };
 
-typedef std::shared_ptr< XclExpChAttachedLabel > XclExpChAttLabelRef;
+typedef rtl::Reference< XclExpChAttachedLabel > XclExpChAttLabelRef;
 
 /** Represents the CHDATAFORMAT record group containing data point properties.
 
@@ -647,7 +647,7 @@ private:
     XclExpChAttLabelRef mxAttLabel;         /// Data point label type (CHATTACHEDLABEL record).
 };
 
-typedef std::shared_ptr< XclExpChDataFormat > XclExpChDataFormatRef;
+typedef rtl::Reference< XclExpChDataFormat > XclExpChDataFormatRef;
 
 /** Represents the CHSERTRENDLINE record containing settings for a trend line. */
 class XclExpChSerTrendLine : public XclExpRecord, protected XclExpChRoot
@@ -673,7 +673,7 @@ private:
     XclExpChTextRef     mxLabel;            /// Formatting of the equation text box.
 };
 
-typedef std::shared_ptr< XclExpChSerTrendLine > XclExpChSerTrendLineRef;
+typedef rtl::Reference< XclExpChSerTrendLine > XclExpChSerTrendLineRef;
 
 /** Represents the CHSERERRORBAR record containing settings for error bars. */
 class XclExpChSerErrorBar : public XclExpRecord, protected XclExpChRoot
@@ -691,7 +691,7 @@ private:
     XclChSerErrorBar    maData;             /// Contents of the CHSERERRORBAR record.
 };
 
-typedef std::shared_ptr< XclExpChSerErrorBar > XclExpChSerErrorBarRef;
+typedef rtl::Reference< XclExpChSerErrorBar > XclExpChSerErrorBarRef;
 
 /** Represents the CHSERIES record group describing a data series in a chart.
 
@@ -742,7 +742,6 @@ private:
     virtual void        WriteBody( XclExpStream& rStrm ) override;
 
 private:
-    typedef XclExpRecordList< XclExpChDataFormat > XclExpChDataFormatList;
 
 private:
     XclChSeries         maData;             /// Contents of the CHSERIES record.
@@ -751,7 +750,8 @@ private:
     XclExpChSourceLinkRef mxCategLink;      /// Link data for series category names.
     XclExpChSourceLinkRef mxBubbleLink;     /// Link data for series bubble sizes.
     XclExpChDataFormatRef mxSeriesFmt;      /// CHDATAFORMAT group for series format.
-    XclExpChDataFormatList maPointFmts;     /// CHDATAFORMAT groups for data point formats.
+    XclExpRecordList< XclExpChDataFormat >
+                          maPointFmts;     /// CHDATAFORMAT groups for data point formats.
     XclExpChSerTrendLineRef mxTrendLine;    /// Trend line settings (CHSERTRENDLINE record).
     XclExpChSerErrorBarRef mxErrorBar;      /// Error bar settings (CHSERERRORBAR record).
     sal_uInt16          mnGroupIdx;         /// Chart type group (CHTYPEGROUP group) this series is assigned to.
@@ -759,7 +759,7 @@ private:
     sal_uInt16          mnParentIdx;        /// 0-based index of parent series (trend lines and error bars).
 };
 
-typedef std::shared_ptr< XclExpChSeries > XclExpChSeriesRef;
+typedef rtl::Reference< XclExpChSeries > XclExpChSeriesRef;
 
 // Chart type groups ==========================================================
 
@@ -810,7 +810,7 @@ private:
     XclChChart3d        maData;             /// Contents of the CHCHART3D record.
 };
 
-typedef std::shared_ptr< XclExpChChart3d > XclExpChChart3dRef;
+typedef rtl::Reference< XclExpChChart3d > XclExpChChart3dRef;
 
 /** Represents the CHLEGEND record group describing the chart legend.
 
@@ -838,7 +838,7 @@ private:
     XclExpChFrameRef    mxFrame;            /// Legend frame format (CHFRAME group).
 };
 
-typedef std::shared_ptr< XclExpChLegend > XclExpChLegendRef;
+typedef rtl::Reference< XclExpChLegend > XclExpChLegendRef;
 
 /** Represents the CHDROPBAR record group describing pos/neg bars in line charts.
 
@@ -863,7 +863,7 @@ private:
     XclChObjectType     meObjType;          /// Type of the dropbar.
 };
 
-typedef std::shared_ptr< XclExpChDropBar > XclExpChDropBarRef;
+typedef rtl::Reference< XclExpChDropBar > XclExpChDropBarRef;
 
 /** Represents the CHTYPEGROUP record group describing a group of series.
 
@@ -925,7 +925,6 @@ private:
 
 private:
     typedef XclExpRecordList< XclExpChSeries >          XclExpChSeriesList;
-    typedef ::std::map<sal_uInt16, std::unique_ptr<XclExpChLineFormat>> XclExpChLineFormatMap;
 
     XclChTypeGroup      maData;             /// Contents of the CHTYPEGROUP record.
     XclExpChType        maType;             /// Chart type (e.g. CHBAR, CHLINE, ...).
@@ -935,10 +934,11 @@ private:
     XclExpChLegendRef   mxLegend;           /// Chart legend (CHLEGEND group).
     XclExpChDropBarRef  mxUpBar;            /// White dropbars (CHDROPBAR group).
     XclExpChDropBarRef  mxDownBar;          /// Black dropbars (CHDROPBAR group).
-    XclExpChLineFormatMap m_ChartLines;     /// Global line formats (CHCHARTLINE group).
+    std::map<sal_uInt16, std::unique_ptr<XclExpChLineFormat>>
+                        m_ChartLines;     /// Global line formats (CHCHARTLINE group).
 };
 
-typedef std::shared_ptr< XclExpChTypeGroup > XclExpChTypeGroupRef;
+typedef rtl::Reference< XclExpChTypeGroup > XclExpChTypeGroupRef;
 
 // Axes =======================================================================
 
@@ -965,7 +965,7 @@ private:
     XclChDateRange      maDateData;         /// Contents of the CHDATERANGE record.
 };
 
-typedef std::shared_ptr< XclExpChLabelRange > XclExpChLabelRangeRef;
+typedef rtl::Reference< XclExpChLabelRange > XclExpChLabelRangeRef;
 
 class XclExpChValueRange : public XclExpRecord, protected XclExpChRoot
 {
@@ -984,7 +984,7 @@ private:
     XclChValueRange     maData;             /// Contents of the CHVALUERANGE record.
 };
 
-typedef std::shared_ptr< XclExpChValueRange > XclExpChValueRangeRef;
+typedef rtl::Reference< XclExpChValueRange > XclExpChValueRangeRef;
 
 class XclExpChTick : public XclExpRecord, protected XclExpChRoot
 {
@@ -1006,7 +1006,7 @@ private:
     sal_uInt32          mnTextColorId;      /// Axis labels text color identifier.
 };
 
-typedef std::shared_ptr< XclExpChTick > XclExpChTickRef;
+typedef rtl::Reference< XclExpChTick > XclExpChTickRef;
 
 /** Represents the CHAXIS record group describing an entire chart axis.
 
@@ -1056,7 +1056,7 @@ private:
     sal_uInt16          mnNumFmtIdx;        /// Index into number format buffer (CHFORMAT record).
 };
 
-typedef std::shared_ptr< XclExpChAxis > XclExpChAxisRef;
+typedef rtl::Reference< XclExpChAxis > XclExpChAxisRef;
 
 /** Represents the CHAXESSET record group describing an axes set (X/Y/Z axes).
 
@@ -1102,8 +1102,6 @@ private:
     virtual void        WriteBody( XclExpStream& rStrm ) override;
 
 private:
-    typedef XclExpRecordList< XclExpChTypeGroup > XclExpChTypeGroupList;
-
     XclChAxesSet        maData;             /// Contents of the CHAXESSET record.
     XclExpChFramePosRef mxFramePos;         /// Outer plot area position (CHFRAMEPOS record).
     XclExpChAxisRef     mxXAxis;            /// The X axis (CHAXIS group).
@@ -1113,7 +1111,8 @@ private:
     XclExpChTextRef     mxYAxisTitle;       /// The Y axis title (CHTEXT group).
     XclExpChTextRef     mxZAxisTitle;       /// The Z axis title (CHTEXT group).
     XclExpChFrameRef    mxPlotFrame;        /// Plot area (CHPLOTFRAME group).
-    XclExpChTypeGroupList maTypeGroups;     /// Chart type groups (CHTYPEGROUP group).
+    XclExpRecordList< XclExpChTypeGroup >
+                        maTypeGroups;     /// Chart type groups (CHTYPEGROUP group).
 };
 
 typedef std::shared_ptr< XclExpChAxesSet > XclExpChAxesSetRef;
@@ -1150,7 +1149,6 @@ private:
 
 private:
     typedef XclExpRecordList< XclExpChSeries >  XclExpChSeriesList;
-    typedef XclExpRecordList< XclExpChText >    XclExpChTextList;
 
     XclChRectangle      maRect;             /// Position of the chart on the sheet (CHCHART record).
     XclExpChSeriesList  maSeries;           /// List of series data (CHSERIES groups).
@@ -1159,7 +1157,8 @@ private:
     XclExpChAxesSetRef  mxPrimAxesSet;      /// Primary axes set (CHAXESSET group).
     XclExpChAxesSetRef  mxSecnAxesSet;      /// Secondary axes set (CHAXESSET group).
     XclExpChTextRef     mxTitle;            /// Chart title (CHTEXT group).
-    XclExpChTextList    maLabels;           /// Data point labels (CHTEXT groups).
+    XclExpRecordList< XclExpChText >
+                        maLabels;           /// Data point labels (CHTEXT groups).
 };
 
 /** Represents the group of DFF and OBJ records containing all drawing shapes
@@ -1178,7 +1177,7 @@ public:
 
 private:
     std::shared_ptr< XclExpObjectManager > mxObjMgr;
-    std::shared_ptr< XclExpRecordBase > mxObjRecs;
+    rtl::Reference< XclExpRecordBase > mxObjRecs;
 };
 
 /** Represents the entire chart substream (all records in BOF/EOF block). */

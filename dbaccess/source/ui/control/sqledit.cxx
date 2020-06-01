@@ -23,15 +23,15 @@
 
 #include <com/sun/star/beans/XMultiPropertySet.hpp>
 #include <com/sun/star/beans/XPropertiesChangeListener.hpp>
+#include <com/sun/star/container/XHierarchicalNameAccess.hpp>
 #include <officecfg/Office/Common.hxx>
 #include <sqledit.hxx>
 #include <QueryTextView.hxx>
 #include <querycontainerwindow.hxx>
 #include <helpids.h>
-#include <browserids.hxx>
-#include <querycontroller.hxx>
 #include <undosqledit.hxx>
 #include <QueryDesignView.hxx>
+#include <svx/svxids.hrc>
 #include <vcl/settings.hxx>
 #include <cppuhelper/implbase.hxx>
 #include <i18nlangtag/languagetag.hxx>
@@ -152,20 +152,20 @@ void OSqlEdit::GetFocus()
 IMPL_LINK_NOARG(OSqlEdit, OnUndoActionTimer, Timer *, void)
 {
     OUString aText = GetText();
-    if(aText != m_strOrigText)
-    {
-        OJoinController& rController = m_pView->getContainerWindow()->getDesignView()->getController();
-        SfxUndoManager& rUndoMgr = rController.GetUndoManager();
-        std::unique_ptr<OSqlEditUndoAct> pUndoAct(new OSqlEditUndoAct( this ));
+    if(aText == m_strOrigText)
+        return;
 
-        pUndoAct->SetOriginalText( m_strOrigText );
-        rUndoMgr.AddUndoAction( std::move(pUndoAct) );
+    OJoinController& rController = m_pView->getContainerWindow()->getDesignView()->getController();
+    SfxUndoManager& rUndoMgr = rController.GetUndoManager();
+    std::unique_ptr<OSqlEditUndoAct> pUndoAct(new OSqlEditUndoAct( this ));
 
-        rController.InvalidateFeature(SID_UNDO);
-        rController.InvalidateFeature(SID_REDO);
+    pUndoAct->SetOriginalText( m_strOrigText );
+    rUndoMgr.AddUndoAction( std::move(pUndoAct) );
 
-        m_strOrigText  =aText;
-    }
+    rController.InvalidateFeature(SID_UNDO);
+    rController.InvalidateFeature(SID_REDO);
+
+    m_strOrigText  =aText;
 }
 
 IMPL_LINK_NOARG(OSqlEdit, OnInvalidateTimer, Timer *, void)

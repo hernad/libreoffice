@@ -23,9 +23,7 @@
 #include <bitmaps.hlst>
 #include <ReportController.hxx>
 #include <UITools.hxx>
-#include <RptUndo.hxx>
 #include <reportformula.hxx>
-#include <com/sun/star/container/XContainerListener.hpp>
 #include <com/sun/star/report/XReportDefinition.hpp>
 #include <com/sun/star/report/XFixedText.hpp>
 #include <com/sun/star/report/XFixedLine.hpp>
@@ -39,15 +37,15 @@
 #include <comphelper/containermultiplexer.hxx>
 #include <cppuhelper/basemutex.hxx>
 #include <comphelper/SelectionMultiplex.hxx>
+#include <vcl/svapp.hxx>
 #include <vcl/weld.hxx>
 #include <vcl/commandevent.hxx>
-#include <svl/solar.hrc>
 #include <ReportVisitor.hxx>
 #include <core_resource.hxx>
 #include <rtl/ref.hxx>
+#include <svx/svxids.hrc>
 
 #include <memory>
-#include <algorithm>
 
 namespace rptui
 {
@@ -563,35 +561,35 @@ void NavigatorTree::traverseDetail(const uno::Reference< report::XSection>& xSec
 void NavigatorTree::_propertyChanged(const beans::PropertyChangeEvent& _rEvent)
 {
     uno::Reference< report::XReportDefinition> xReport(_rEvent.Source,uno::UNO_QUERY);
-    if ( xReport.is() )
+    if ( !xReport.is() )
+        return;
+
+    bool bEnabled = false;
+    _rEvent.NewValue >>= bEnabled;
+    if ( !bEnabled )
+        return;
+
+    std::unique_ptr<weld::TreeIter> xParent = m_xTreeView->make_iterator();
+    bool bParent = find(xReport, *xParent);
+    if (!bParent)
+        xParent.reset();
+    if ( _rEvent.PropertyName == PROPERTY_REPORTHEADERON )
     {
-        bool bEnabled = false;
-        _rEvent.NewValue >>= bEnabled;
-        if ( bEnabled )
-        {
-            std::unique_ptr<weld::TreeIter> xParent = m_xTreeView->make_iterator();
-            bool bParent = find(xReport, *xParent);
-            if (!bParent)
-                xParent.reset();
-            if ( _rEvent.PropertyName == PROPERTY_REPORTHEADERON )
-            {
-                sal_uLong nPos = xReport->getReportHeaderOn() ? 2 : 1;
-                traverseSection(xReport->getReportHeader(),xParent.get(),RID_SVXBMP_REPORTHEADERFOOTER,nPos);
-            }
-            else if ( _rEvent.PropertyName == PROPERTY_PAGEHEADERON )
-            {
-                traverseSection(xReport->getPageHeader(),xParent.get(), RID_SVXBMP_PAGEHEADERFOOTER,1);
-            }
-            else if ( _rEvent.PropertyName == PROPERTY_PAGEFOOTERON )
-                traverseSection(xReport->getPageFooter(),xParent.get(), RID_SVXBMP_PAGEHEADERFOOTER);
-            else if ( _rEvent.PropertyName == PROPERTY_REPORTFOOTERON )
-            {
-                int nPos = -1;
-                if (xReport->getPageFooterOn() && xParent)
-                    nPos = m_xTreeView->iter_n_children(*xParent) - 1;
-                traverseSection(xReport->getReportFooter(),xParent.get(),RID_SVXBMP_REPORTHEADERFOOTER,nPos);
-            }
-        }
+        sal_uLong nPos = xReport->getReportHeaderOn() ? 2 : 1;
+        traverseSection(xReport->getReportHeader(),xParent.get(),RID_SVXBMP_REPORTHEADERFOOTER,nPos);
+    }
+    else if ( _rEvent.PropertyName == PROPERTY_PAGEHEADERON )
+    {
+        traverseSection(xReport->getPageHeader(),xParent.get(), RID_SVXBMP_PAGEHEADERFOOTER,1);
+    }
+    else if ( _rEvent.PropertyName == PROPERTY_PAGEFOOTERON )
+        traverseSection(xReport->getPageFooter(),xParent.get(), RID_SVXBMP_PAGEHEADERFOOTER);
+    else if ( _rEvent.PropertyName == PROPERTY_REPORTFOOTERON )
+    {
+        int nPos = -1;
+        if (xReport->getPageFooterOn() && xParent)
+            nPos = m_xTreeView->iter_n_children(*xParent) - 1;
+        traverseSection(xReport->getReportFooter(),xParent.get(),RID_SVXBMP_REPORTHEADERFOOTER,nPos);
     }
 }
 
@@ -798,13 +796,11 @@ public:
     ONavigatorImpl& operator=(const ONavigatorImpl&) = delete;
 
     uno::Reference< report::XReportDefinition>  m_xReport;
-    ::rptui::OReportController&                 m_rController;
     std::unique_ptr<NavigatorTree>              m_xNavigatorTree;
 };
 
 ONavigatorImpl::ONavigatorImpl(OReportController& rController, weld::Builder& rBuilder)
     : m_xReport(rController.getReportDefinition())
-    , m_rController(rController)
     , m_xNavigatorTree(std::make_unique<NavigatorTree>(rBuilder.weld_tree_view("treeview"), rController))
 {
     reportdesign::OReportVisitor aVisitor(m_xNavigatorTree.get());
@@ -812,7 +808,7 @@ ONavigatorImpl::ONavigatorImpl(OReportController& rController, weld::Builder& rB
     std::unique_ptr<weld::TreeIter> xScratch = m_xNavigatorTree->make_iterator();
     if (m_xNavigatorTree->find(m_xReport, *xScratch))
         m_xNavigatorTree->expand_row(*xScratch);
-    lang::EventObject aEvent(m_rController);
+    lang::EventObject aEvent(rController);
     m_xNavigatorTree->_selectionChanged(aEvent);
 }
 

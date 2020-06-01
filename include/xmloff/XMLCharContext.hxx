@@ -22,13 +22,13 @@
 #include <xmloff/dllapi.h>
 #include <xmloff/xmlictxt.hxx>
 
-namespace com { namespace sun { namespace star { namespace uno { template <typename > class Reference; } } } }
+namespace com::sun::star::uno { template <typename > class Reference; }
 
 class XMLOFF_DLLPUBLIC XMLCharContext : public SvXMLImportContext
 {
     XMLCharContext(const XMLCharContext&) = delete;
     void operator =(const XMLCharContext&) = delete;
-    sal_Int16 const   m_nControl;
+    sal_Int16   m_nControl;
 protected:
     sal_uInt16  m_nCount;
     sal_Unicode m_c;
@@ -59,6 +59,9 @@ public:
 
     virtual ~XMLCharContext() override;
 
+    virtual void SAL_CALL startFastElement(
+            sal_Int32 /*nElement*/,
+            const css::uno::Reference< css::xml::sax::XFastAttributeList >& /*xAttrList*/ ) override {}
     // EndElement is called before a context will be destructed, but
     // after an elements context has been parsed. It may be used for actions
     // that require virtual methods. The default is to do nothing.

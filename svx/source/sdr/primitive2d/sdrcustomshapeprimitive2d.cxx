@@ -21,10 +21,11 @@
 #include <basegfx/polygon/b2dpolygon.hxx>
 #include <basegfx/polygon/b2dpolygontools.hxx>
 #include <basegfx/polygon/b2dpolypolygon.hxx>
-#include <svx/sdr/primitive2d/sdrdecompositiontools.hxx>
-#include <drawinglayer/primitive2d/groupprimitive2d.hxx>
+#include <sdr/primitive2d/sdrdecompositiontools.hxx>
 #include <svx/sdr/primitive2d/svx_primitivetypes2d.hxx>
 #include <drawinglayer/attribute/sdrlineattribute.hxx>
+
+#include <sal/log.hxx>
 
 
 using namespace com::sun::star;
@@ -35,6 +36,13 @@ namespace drawinglayer::primitive2d
         void SdrCustomShapePrimitive2D::create2DDecomposition(Primitive2DContainer& rContainer, const geometry::ViewInformation2D& /*aViewInformation*/) const
         {
             Primitive2DContainer aRetval(getSubPrimitives());
+
+            // Soft edges should be before text, since text is not affected by soft edges
+            if (!aRetval.empty() && getSdrSTAttribute().getSoftEdgeRadius())
+            {
+                aRetval = createEmbeddedSoftEdgePrimitive(aRetval,
+                                                          getSdrSTAttribute().getSoftEdgeRadius());
+            }
 
             // add text
             if(!getSdrSTAttribute().getText().isDefault())
@@ -49,6 +57,13 @@ namespace drawinglayer::primitive2d
                         attribute::SdrLineAttribute(),
                         false,
                         getWordWrap()));
+            }
+
+            // tdf#132199: put glow before shadow, to have shadow of the glow, not the opposite
+            if (!aRetval.empty() && !getSdrSTAttribute().getGlow().isDefault())
+            {
+                // glow
+                aRetval = createEmbeddedGlowPrimitive(aRetval, getSdrSTAttribute().getGlow());
             }
 
             // add shadow
@@ -66,7 +81,8 @@ namespace drawinglayer::primitive2d
                 // shadow will be correct (using ColorModifierStack), but expensive.
                 if(!get3DShape())
                 {
-                    aRetval = createEmbeddedShadowPrimitive(aRetval, getSdrSTAttribute().getShadow());
+                    aRetval = createEmbeddedShadowPrimitive(aRetval, getSdrSTAttribute().getShadow(),
+                                                            maTransform);
                 }
             }
 
@@ -74,17 +90,19 @@ namespace drawinglayer::primitive2d
         }
 
         SdrCustomShapePrimitive2D::SdrCustomShapePrimitive2D(
-            const attribute::SdrShadowTextAttribute& rSdrSTAttribute,
+            const attribute::SdrEffectsTextAttribute& rSdrSTAttribute,
             const Primitive2DContainer& rSubPrimitives,
             const basegfx::B2DHomMatrix& rTextBox,
             bool bWordWrap,
-            bool b3DShape)
+            bool b3DShape,
+            const basegfx::B2DHomMatrix& rTransform)
         :   BufferedDecompositionPrimitive2D(),
             maSdrSTAttribute(rSdrSTAttribute),
             maSubPrimitives(rSubPrimitives),
             maTextBox(rTextBox),
             mbWordWrap(bWordWrap),
-            mb3DShape(b3DShape)
+            mb3DShape(b3DShape),
+            maTransform(rTransform)
         {
         }
 

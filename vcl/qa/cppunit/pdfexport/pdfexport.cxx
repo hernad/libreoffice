@@ -26,6 +26,7 @@
 #include <com/sun/star/document/XExporter.hpp>
 #include <com/sun/star/io/XOutputStream.hpp>
 
+#include <comphelper/scopeguard.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/propertysequence.hxx>
 #include <test/bootstrapfixture.hxx>
@@ -81,7 +82,6 @@ using PageHolder =
 /// Tests the PDF export filter.
 class PdfExportTest : public test::BootstrapFixture, public unotest::MacrosTest
 {
-    uno::Reference<uno::XComponentContext> mxComponentContext;
     uno::Reference<lang::XComponent> mxComponent;
     utl::TempFile maTempFile;
     SvMemoryStream maMemory;
@@ -92,7 +92,7 @@ public:
     PdfExportTest();
     virtual void setUp() override;
     virtual void tearDown() override;
-    void topdf(const OUString& rFile);
+    void saveAsPDF(const OUString& rFile);
     void load(const OUString& rFile, vcl::filter::PDFDocument& rDocument);
     /// Tests that a pdf image is roundtripped back to PDF as a vector format.
     void testTdf106059();
@@ -143,6 +143,12 @@ public:
     void testPdfImageResourceInlineXObjectRef();
     void testReduceSmallImage();
     void testReduceImage();
+    void testLinkWrongPage();
+    void testLargePage();
+    void testVersion15();
+    void testDefaultVersion();
+    void testMultiPagePDF();
+
 
     CPPUNIT_TEST_SUITE(PdfExportTest);
     CPPUNIT_TEST(testTdf106059);
@@ -182,6 +188,11 @@ public:
     CPPUNIT_TEST(testPdfImageResourceInlineXObjectRef);
     CPPUNIT_TEST(testReduceSmallImage);
     CPPUNIT_TEST(testReduceImage);
+    CPPUNIT_TEST(testLinkWrongPage);
+    CPPUNIT_TEST(testLargePage);
+    CPPUNIT_TEST(testVersion15);
+    CPPUNIT_TEST(testDefaultVersion);
+    CPPUNIT_TEST(testMultiPagePDF);
     CPPUNIT_TEST_SUITE_END();
 };
 
@@ -204,7 +215,7 @@ DocumentHolder PdfExportTest::exportAndParse(const OUString& rURL, const utl::Me
     maMemory.WriteStream(aFile);
     DocumentHolder pPdfDocument(
         FPDF_LoadMemDocument(maMemory.GetData(), maMemory.GetSize(), /*password=*/nullptr));
-    CPPUNIT_ASSERT(pPdfDocument.get());
+    CPPUNIT_ASSERT(pPdfDocument);
     return pPdfDocument;
 }
 
@@ -212,7 +223,6 @@ void PdfExportTest::setUp()
 {
     test::BootstrapFixture::setUp();
 
-    mxComponentContext.set(comphelper::getComponentContext(getMultiServiceFactory()));
     mxDesktop.set(frame::Desktop::create(mxComponentContext));
 
     FPDF_LIBRARY_CONFIG config;
@@ -235,7 +245,7 @@ void PdfExportTest::tearDown()
 
 char const DATA_DIRECTORY[] = "/vcl/qa/cppunit/pdfexport/data/";
 
-void PdfExportTest::topdf(const OUString& rFile)
+void PdfExportTest::saveAsPDF(const OUString& rFile)
 {
     // Import the bugdoc and export as PDF.
     OUString aURL = m_directories.getURLFromSrc(DATA_DIRECTORY) + rFile;
@@ -250,7 +260,7 @@ void PdfExportTest::topdf(const OUString& rFile)
 
 void PdfExportTest::load(const OUString& rFile, vcl::filter::PDFDocument& rDocument)
 {
-    topdf(rFile);
+    saveAsPDF(rFile);
 
     // Parse the export result.
     SvFileStream aStream(maTempFile.GetURL(), StreamMode::READ);
@@ -352,12 +362,12 @@ void PdfExportTest::testTdf105461()
     SvMemoryStream aMemory;
     aMemory.WriteStream(aFile);
     DocumentHolder pPdfDocument(FPDF_LoadMemDocument(aMemory.GetData(), aMemory.GetSize(), /*password=*/nullptr));
-    CPPUNIT_ASSERT(pPdfDocument.get());
+    CPPUNIT_ASSERT(pPdfDocument);
 
     // The document has one page.
     CPPUNIT_ASSERT_EQUAL(1, FPDF_GetPageCount(pPdfDocument.get()));
     PageHolder pPdfPage(FPDF_LoadPage(pPdfDocument.get(), /*page_index=*/0));
-    CPPUNIT_ASSERT(pPdfPage.get());
+    CPPUNIT_ASSERT(pPdfPage);
 
     // Make sure there is a filled rectangle inside.
     int nPageObjectCount = FPDFPage_CountObjects(pPdfPage.get());
@@ -405,7 +415,7 @@ void PdfExportTest::testTdf107868()
     SvMemoryStream aMemory;
     aMemory.WriteStream(aFile);
     DocumentHolder pPdfDocument(FPDF_LoadMemDocument(aMemory.GetData(), aMemory.GetSize(), /*password=*/nullptr));
-    if (!pPdfDocument.get())
+    if (!pPdfDocument)
         // Printing to PDF failed in a non-interesting way, e.g. CUPS is not
         // running, there is no printer defined, etc.
         return;
@@ -413,7 +423,7 @@ void PdfExportTest::testTdf107868()
     // The document has one page.
     CPPUNIT_ASSERT_EQUAL(1, FPDF_GetPageCount(pPdfDocument.get()));
     PageHolder pPdfPage(FPDF_LoadPage(pPdfDocument.get(), /*page_index=*/0));
-    CPPUNIT_ASSERT(pPdfPage.get());
+    CPPUNIT_ASSERT(pPdfPage);
 
     // Make sure there is no filled rectangle inside.
     int nPageObjectCount = FPDFPage_CountObjects(pPdfPage.get());
@@ -671,7 +681,7 @@ void PdfExportTest::testSofthyphenPos()
     // The document has one page.
     CPPUNIT_ASSERT_EQUAL(1, FPDF_GetPageCount(pPdfDocument.get()));
     PageHolder pPdfPage(FPDF_LoadPage(pPdfDocument.get(), /*page_index=*/0));
-    CPPUNIT_ASSERT(pPdfPage.get());
+    CPPUNIT_ASSERT(pPdfPage);
 
     // tdf#96892 incorrect fractional part of font size caused soft-hyphen to
     // be positioned inside preceding text (incorrect = 11.1, correct = 11.05)
@@ -825,15 +835,17 @@ void PdfExportTest::testTdf99680()
     aZCodec.Decompress(rObjectStream, aUncompressed);
     CPPUNIT_ASSERT(aZCodec.EndCompression());
 
-    // Make sure there are no empty clipping regions.
-    OString aEmptyRegion("0 0 m h W* n");
-    auto pStart = static_cast<const char*>(aUncompressed.GetData());
-    const char* pEnd = pStart + aUncompressed.GetSize();
-    auto it = std::search(pStart, pEnd, aEmptyRegion.getStr(), aEmptyRegion.getStr() + aEmptyRegion.getLength());
-    CPPUNIT_ASSERT_EQUAL_MESSAGE("Empty clipping region detected!", it, pEnd);
+    // tdf#130150 See infos in task - short: tdf#99680 was not the
+    // correct fix, so empty clip regions are valid - allow again in tests
+    //      Make sure there are no empty clipping regions.
+    //      OString aEmptyRegion("0 0 m h W* n");
+    //      auto it = std::search(pStart, pEnd, aEmptyRegion.getStr(), aEmptyRegion.getStr() + aEmptyRegion.getLength());
+    //      CPPUNIT_ASSERT_EQUAL_MESSAGE("Empty clipping region detected!", it, pEnd);
 
     // Count save graphic state (q) and restore (Q) operators
     // and ensure their amount is equal
+    auto pStart = static_cast<const char*>(aUncompressed.GetData());
+    const char* pEnd = pStart + aUncompressed.GetSize();
     size_t nSaveCount = std::count(pStart, pEnd, 'q');
     size_t nRestoreCount = std::count(pStart, pEnd, 'Q');
     CPPUNIT_ASSERT_EQUAL_MESSAGE("Save/restore graphic state operators count mismatch!", nSaveCount, nRestoreCount);
@@ -864,15 +876,17 @@ void PdfExportTest::testTdf99680_2()
         aZCodec.Decompress(rObjectStream, aUncompressed);
         CPPUNIT_ASSERT(aZCodec.EndCompression());
 
-        // Make sure there are no empty clipping regions.
-        OString aEmptyRegion("0 0 m h W* n");
-        auto pStart = static_cast<const char*>(aUncompressed.GetData());
-        const char* pEnd = pStart + aUncompressed.GetSize();
-        auto it = std::search(pStart, pEnd, aEmptyRegion.getStr(), aEmptyRegion.getStr() + aEmptyRegion.getLength());
-        CPPUNIT_ASSERT_EQUAL_MESSAGE("Empty clipping region detected!", it, pEnd);
+        // tdf#130150 See infos in task - short: tdf#99680 was not the
+        // correct fix, so empty clip regions are valid - allow again in tests
+        //      Make sure there are no empty clipping regions.
+        //      OString aEmptyRegion("0 0 m h W* n");
+        //      auto it = std::search(pStart, pEnd, aEmptyRegion.getStr(), aEmptyRegion.getStr() + aEmptyRegion.getLength());
+        //      CPPUNIT_ASSERT_EQUAL_MESSAGE("Empty clipping region detected!", it, pEnd);
 
         // Count save graphic state (q) and restore (Q) operators
         // and ensure their amount is equal
+        auto pStart = static_cast<const char*>(aUncompressed.GetData());
+        const char* pEnd = pStart + aUncompressed.GetSize();
         size_t nSaveCount = std::count(pStart, pEnd, 'q');
         size_t nRestoreCount = std::count(pStart, pEnd, 'Q');
         CPPUNIT_ASSERT_EQUAL_MESSAGE("Save/restore graphic state operators count mismatch!", nSaveCount, nRestoreCount);
@@ -896,12 +910,12 @@ void PdfExportTest::testTdf108963()
     SvMemoryStream aMemory;
     aMemory.WriteStream(aFile);
     DocumentHolder pPdfDocument(FPDF_LoadMemDocument(aMemory.GetData(), aMemory.GetSize(), /*password=*/nullptr));
-    CPPUNIT_ASSERT(pPdfDocument.get());
+    CPPUNIT_ASSERT(pPdfDocument);
 
     // The document has one page.
     CPPUNIT_ASSERT_EQUAL(1, FPDF_GetPageCount(pPdfDocument.get()));
     PageHolder pPdfPage(FPDF_LoadPage(pPdfDocument.get(), /*page_index=*/0));
-    CPPUNIT_ASSERT(pPdfPage.get());
+    CPPUNIT_ASSERT(pPdfPage);
 
     // FIXME: strangely this fails on some Win systems after a pdfium update, expected: 793.7; actual: 793
 #if !defined _WIN32
@@ -1144,12 +1158,12 @@ void PdfExportTest::testTdf115117_1a()
     SvMemoryStream aMemory;
     aMemory.WriteStream(aFile);
     DocumentHolder pPdfDocument(FPDF_LoadMemDocument(aMemory.GetData(), aMemory.GetSize(), /*password=*/nullptr));
-    CPPUNIT_ASSERT(pPdfDocument.get());
+    CPPUNIT_ASSERT(pPdfDocument);
 
     // The document has one page.
     CPPUNIT_ASSERT_EQUAL(1, FPDF_GetPageCount(pPdfDocument.get()));
     PageHolder pPdfPage(FPDF_LoadPage(pPdfDocument.get(), /*page_index=*/0));
-    CPPUNIT_ASSERT(pPdfPage.get());
+    CPPUNIT_ASSERT(pPdfPage);
 
     auto pPdfTextPage = FPDFText_LoadPage(pPdfPage.get());
     CPPUNIT_ASSERT(pPdfTextPage);
@@ -1166,6 +1180,8 @@ void PdfExportTest::testTdf115117_1a()
         aChars[i] = FPDFText_GetUnicode(pPdfTextPage, i);
     OUString aActualText(aChars.data(), aChars.size());
     CPPUNIT_ASSERT_EQUAL(aExpectedText, aActualText);
+
+    FPDFText_ClosePage(pPdfTextPage);
 #endif
 }
 
@@ -1189,12 +1205,12 @@ void PdfExportTest::testTdf115117_2a()
     SvMemoryStream aMemory;
     aMemory.WriteStream(aFile);
     DocumentHolder pPdfDocument(FPDF_LoadMemDocument(aMemory.GetData(), aMemory.GetSize(), /*password=*/nullptr));
-    CPPUNIT_ASSERT(pPdfDocument.get());
+    CPPUNIT_ASSERT(pPdfDocument);
 
     // The document has one page.
     CPPUNIT_ASSERT_EQUAL(1, FPDF_GetPageCount(pPdfDocument.get()));
     PageHolder pPdfPage(FPDF_LoadPage(pPdfDocument.get(), /*page_index=*/0));
-    CPPUNIT_ASSERT(pPdfPage.get());
+    CPPUNIT_ASSERT(pPdfPage);
 
     auto pPdfTextPage = FPDFText_LoadPage(pPdfPage.get());
     CPPUNIT_ASSERT(pPdfTextPage);
@@ -1208,6 +1224,8 @@ void PdfExportTest::testTdf115117_2a()
         aChars[i] = FPDFText_GetUnicode(pPdfTextPage, i);
     OUString aActualText(aChars.data(), aChars.size());
     CPPUNIT_ASSERT_EQUAL(aExpectedText, aActualText);
+
+    FPDFText_ClosePage(pPdfTextPage);
 #endif
 }
 
@@ -1501,12 +1519,12 @@ void PdfExportTest::testTdf105954()
     aMemory.WriteStream(aFile);
     DocumentHolder pPdfDocument(
         FPDF_LoadMemDocument(aMemory.GetData(), aMemory.GetSize(), /*password=*/nullptr));
-    CPPUNIT_ASSERT(pPdfDocument.get());
+    CPPUNIT_ASSERT(pPdfDocument);
 
     // The document has one page.
     CPPUNIT_ASSERT_EQUAL(1, FPDF_GetPageCount(pPdfDocument.get()));
     PageHolder pPdfPage(FPDF_LoadPage(pPdfDocument.get(), /*page_index=*/0));
-    CPPUNIT_ASSERT(pPdfPage.get());
+    CPPUNIT_ASSERT(pPdfPage);
 
     // There is a single image on the page.
     int nPageObjectCount = FPDFPage_CountObjects(pPdfPage.get());
@@ -1534,7 +1552,7 @@ void PdfExportTest::testTdf128630()
 
     // Assert the aspect ratio of the only bitmap on the page.
     PageHolder pPdfPage(FPDF_LoadPage(pPdfDocument.get(), /*page_index=*/0));
-    CPPUNIT_ASSERT(pPdfPage.get());
+    CPPUNIT_ASSERT(pPdfPage);
     int nPageObjectCount = FPDFPage_CountObjects(pPdfPage.get());
     for (int i = 0; i < nPageObjectCount; ++i)
     {
@@ -1568,7 +1586,7 @@ void PdfExportTest::testTdf106702()
 
     // First page already has the correct image position.
     PageHolder pPdfPage(FPDF_LoadPage(pPdfDocument.get(), /*page_index=*/0));
-    CPPUNIT_ASSERT(pPdfPage.get());
+    CPPUNIT_ASSERT(pPdfPage);
     int nExpected = 0;
     int nPageObjectCount = FPDFPage_CountObjects(pPdfPage.get());
     for (int i = 0; i < nPageObjectCount; ++i)
@@ -1585,7 +1603,7 @@ void PdfExportTest::testTdf106702()
 
     // Second page had an incorrect image position.
     pPdfPage.reset(FPDF_LoadPage(pPdfDocument.get(), /*page_index=*/1));
-    CPPUNIT_ASSERT(pPdfPage.get());
+    CPPUNIT_ASSERT(pPdfPage);
     int nActual = 0;
     nPageObjectCount = FPDFPage_CountObjects(pPdfPage.get());
     for (int i = 0; i < nPageObjectCount; ++i)
@@ -1626,7 +1644,7 @@ void PdfExportTest::testTdf113143()
 
     // First has the original (larger) image.
     PageHolder pPdfPage(FPDF_LoadPage(pPdfDocument.get(), /*page_index=*/0));
-    CPPUNIT_ASSERT(pPdfPage.get());
+    CPPUNIT_ASSERT(pPdfPage);
     int nLarger = 0;
     int nPageObjectCount = FPDFPage_CountObjects(pPdfPage.get());
     for (int i = 0; i < nPageObjectCount; ++i)
@@ -1643,7 +1661,7 @@ void PdfExportTest::testTdf113143()
 
     // Second page has the scaled (smaller) image.
     pPdfPage.reset(FPDF_LoadPage(pPdfDocument.get(), /*page_index=*/1));
-    CPPUNIT_ASSERT(pPdfPage.get());
+    CPPUNIT_ASSERT(pPdfPage);
     int nSmaller = 0;
     nPageObjectCount = FPDFPage_CountObjects(pPdfPage.get());
     for (int i = 0; i < nPageObjectCount; ++i)
@@ -1671,7 +1689,7 @@ void PdfExportTest::testTdf113143()
 void PdfExportTest::testForcePoint71()
 {
     // I just care it doesn't crash
-    topdf("forcepoint71.key");
+    saveAsPDF("forcepoint71.key");
 }
 
 void PdfExportTest::testTdf115262()
@@ -1684,7 +1702,7 @@ void PdfExportTest::testTdf115262()
 
     // Get the 6th page.
     PageHolder pPdfPage(FPDF_LoadPage(pPdfDocument.get(), /*page_index=*/5));
-    CPPUNIT_ASSERT(pPdfPage.get());
+    CPPUNIT_ASSERT(pPdfPage);
 
     // Look up the position of the first image and the 400th row.
     FPDF_TEXTPAGE pTextPage = FPDFText_LoadPage(pPdfPage.get());
@@ -1728,7 +1746,7 @@ void PdfExportTest::testTdf121962()
 
     // Get the first page
     PageHolder pPdfPage(FPDF_LoadPage(pPdfDocument.get(), /*page_index=*/0));
-    CPPUNIT_ASSERT(pPdfPage.get());
+    CPPUNIT_ASSERT(pPdfPage);
     FPDF_TEXTPAGE pTextPage = FPDFText_LoadPage(pPdfPage.get());
 
     // Make sure the table sum is displayed as "0", not faulty expression.
@@ -1745,6 +1763,7 @@ void PdfExportTest::testTdf121962()
         CPPUNIT_ASSERT(sText != "** Expression is faulty **");
     }
 
+    FPDFText_ClosePage(pTextPage);
 }
 
 void PdfExportTest::testTdf115967()
@@ -1757,7 +1776,7 @@ void PdfExportTest::testTdf115967()
 
     // Get the first page
     PageHolder pPdfPage(FPDF_LoadPage(pPdfDocument.get(), /*page_index=*/0));
-    CPPUNIT_ASSERT(pPdfPage.get());
+    CPPUNIT_ASSERT(pPdfPage);
     FPDF_TEXTPAGE pTextPage = FPDFText_LoadPage(pPdfPage.get());
 
     // Make sure the elements inside a formula in a RTL document are exported
@@ -1776,6 +1795,8 @@ void PdfExportTest::testTdf115967()
         sText += sChar.trim();
     }
     CPPUNIT_ASSERT_EQUAL(OUString("m=750abc"), sText);
+
+    FPDFText_ClosePage(pTextPage);
 }
 
 void PdfExportTest::testTdf121615()
@@ -1852,11 +1873,11 @@ void PdfExportTest::testTocLink()
     maMemory.WriteStream(aFile);
     DocumentHolder pPdfDocument(
         FPDF_LoadMemDocument(maMemory.GetData(), maMemory.GetSize(), /*password=*/nullptr));
-    CPPUNIT_ASSERT(pPdfDocument.get());
+    CPPUNIT_ASSERT(pPdfDocument);
     CPPUNIT_ASSERT_EQUAL(1, FPDF_GetPageCount(pPdfDocument.get()));
 
     PageHolder pPdfPage(FPDF_LoadPage(pPdfDocument.get(), /*page_index=*/0));
-    CPPUNIT_ASSERT(pPdfPage.get());
+    CPPUNIT_ASSERT(pPdfPage);
 
     // Ensure there is a link on the first page (in the ToC).
     int nStartPos = 0;
@@ -1883,10 +1904,10 @@ void PdfExportTest::testReduceSmallImage()
     maMemory.WriteStream(aFile);
     DocumentHolder pPdfDocument(
     FPDF_LoadMemDocument(maMemory.GetData(), maMemory.GetSize(), /*password=*/nullptr));
-    CPPUNIT_ASSERT(pPdfDocument.get());
+    CPPUNIT_ASSERT(pPdfDocument);
     CPPUNIT_ASSERT_EQUAL(1, FPDF_GetPageCount(pPdfDocument.get()));
     PageHolder pPdfPage(FPDF_LoadPage(pPdfDocument.get(), /*page_index=*/0));
-    CPPUNIT_ASSERT(pPdfPage.get());
+    CPPUNIT_ASSERT(pPdfPage);
     CPPUNIT_ASSERT_EQUAL(1, FPDFPage_CountObjects(pPdfPage.get()));
     FPDF_PAGEOBJECT pPageObject = FPDFPage_GetObject(pPdfPage.get(), 0);
     CPPUNIT_ASSERT_EQUAL(FPDF_PAGEOBJ_IMAGE, FPDFPageObj_GetType(pPageObject));
@@ -1938,10 +1959,10 @@ void PdfExportTest::testReduceImage()
     maMemory.WriteStream(aFile);
     DocumentHolder pPdfDocument(
         FPDF_LoadMemDocument(maMemory.GetData(), maMemory.GetSize(), /*password=*/nullptr));
-    CPPUNIT_ASSERT(pPdfDocument.get());
+    CPPUNIT_ASSERT(pPdfDocument);
     CPPUNIT_ASSERT_EQUAL(1, FPDF_GetPageCount(pPdfDocument.get()));
     PageHolder pPdfPage(FPDF_LoadPage(pPdfDocument.get(), /*page_index=*/0));
-    CPPUNIT_ASSERT(pPdfPage.get());
+    CPPUNIT_ASSERT(pPdfPage);
     CPPUNIT_ASSERT_EQUAL(1, FPDFPage_CountObjects(pPdfPage.get()));
     FPDF_PAGEOBJECT pPageObject = FPDFPage_GetObject(pPdfPage.get(), 0);
     CPPUNIT_ASSERT_EQUAL(FPDF_PAGEOBJ_IMAGE, FPDFPageObj_GetType(pPageObject));
@@ -1958,6 +1979,59 @@ void PdfExportTest::testReduceImage()
     // i.e. the image was scaled down even with ReduceImageResolution=false.
     CPPUNIT_ASSERT_EQUAL(160, nWidth);
     CPPUNIT_ASSERT_EQUAL(160, nHeight);
+}
+
+bool HasLinksOnPage(PageHolder& pPdfPage)
+{
+    int nStartPos = 0;
+    FPDF_LINK pLinkAnnot = nullptr;
+    return FPDFLink_Enumerate(pPdfPage.get(), &nStartPos, &pLinkAnnot);
+}
+
+void PdfExportTest::testLinkWrongPage()
+{
+    // Import the bugdoc and export as PDF.
+    OUString aURL = m_directories.getURLFromSrc(DATA_DIRECTORY) + "link-wrong-page.odp";
+    utl::MediaDescriptor aMediaDescriptor;
+    aMediaDescriptor["FilterName"] <<= OUString("impress_pdf_Export");
+    DocumentHolder pPdfDocument = exportAndParse(aURL, aMediaDescriptor);
+
+    // The document has 2 pages.
+    CPPUNIT_ASSERT_EQUAL(2, FPDF_GetPageCount(pPdfDocument.get()));
+
+    // First page should have 1 link (2nd slide, 1st was hidden).
+    PageHolder pPdfPage(FPDF_LoadPage(pPdfDocument.get(), /*page_index=*/0));
+    CPPUNIT_ASSERT(pPdfPage);
+
+    // Without the accompanying fix in place, this test would have failed, as the link of the first
+    // page went to the second page due to the hidden first slide.
+    CPPUNIT_ASSERT(HasLinksOnPage(pPdfPage));
+
+    // Second page should have no links (3rd slide).
+    PageHolder pPdfPage2(FPDF_LoadPage(pPdfDocument.get(), /*page_index=*/1));
+    CPPUNIT_ASSERT(pPdfPage2);
+    CPPUNIT_ASSERT(!HasLinksOnPage(pPdfPage2));
+}
+
+void PdfExportTest::testLargePage()
+{
+    // Import the bugdoc and export as PDF.
+    OUString aURL = m_directories.getURLFromSrc(DATA_DIRECTORY) + "6m-wide.odg";
+    utl::MediaDescriptor aMediaDescriptor;
+    aMediaDescriptor["FilterName"] <<= OUString("draw_pdf_Export");
+    DocumentHolder pPdfDocument = exportAndParse(aURL, aMediaDescriptor);
+
+    // The document has 1 page.
+    CPPUNIT_ASSERT_EQUAL(1, FPDF_GetPageCount(pPdfDocument.get()));
+
+    // Check the value (not the unit) of the page size.
+    FS_SIZEF aSize;
+    FPDF_GetPageSizeByIndexF(pPdfDocument.get(), 0, &aSize);
+    // Without the accompanying fix in place, this test would have failed with:
+    // - Expected: 8503.94
+    // - Actual  : 17007.875
+    // i.e. the value for 600 cm was larger than the 14 400 limit set in the spec.
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(8503.94, static_cast<double>(aSize.width), 0.01);
 }
 
 void PdfExportTest::testPdfImageResourceInlineXObjectRef()
@@ -2000,12 +2074,12 @@ void PdfExportTest::testPdfImageResourceInlineXObjectRef()
     maMemory.WriteStream(aFile);
     DocumentHolder pPdfDocument(
         FPDF_LoadMemDocument(maMemory.GetData(), maMemory.GetSize(), /*password=*/nullptr));
-    CPPUNIT_ASSERT(pPdfDocument.get());
+    CPPUNIT_ASSERT(pPdfDocument);
     CPPUNIT_ASSERT_EQUAL(1, FPDF_GetPageCount(pPdfDocument.get()));
 
     // Make sure that the page -> form -> form has a child image.
     PageHolder pPdfPage(FPDF_LoadPage(pPdfDocument.get(), /*page_index=*/0));
-    CPPUNIT_ASSERT(pPdfPage.get());
+    CPPUNIT_ASSERT(pPdfPage);
     CPPUNIT_ASSERT_EQUAL(1, FPDFPage_CountObjects(pPdfPage.get()));
     FPDF_PAGEOBJECT pPageObject = FPDFPage_GetObject(pPdfPage.get(), 0);
     CPPUNIT_ASSERT_EQUAL(FPDF_PAGEOBJ_FORM, FPDFPageObj_GetType(pPageObject));
@@ -2040,6 +2114,188 @@ void PdfExportTest::testPdfImageResourceInlineXObjectRef()
     // - Actual  : 0
     // i.e. rotation was lost on pdf export.
     CPPUNIT_ASSERT_EQUAL(-90, nRotateDeg);
+}
+
+void PdfExportTest::testDefaultVersion()
+{
+    // Create an empty document.
+    mxComponent = loadFromDesktop("private:factory/swriter");
+    CPPUNIT_ASSERT(mxComponent.is());
+
+    // Save as PDF.
+    uno::Reference<frame::XStorable> xStorable(mxComponent, uno::UNO_QUERY);
+    utl::MediaDescriptor aMediaDescriptor;
+    aMediaDescriptor["FilterName"] <<= OUString("writer_pdf_Export");
+    xStorable->storeToURL(maTempFile.GetURL(), aMediaDescriptor.getAsConstPropertyValueList());
+
+    // Parse the export result.
+    SvFileStream aFile(maTempFile.GetURL(), StreamMode::READ);
+    maMemory.WriteStream(aFile);
+    DocumentHolder pPdfDocument(
+        FPDF_LoadMemDocument(maMemory.GetData(), maMemory.GetSize(), /*password=*/nullptr));
+    CPPUNIT_ASSERT(pPdfDocument);
+    int nFileVersion = 0;
+    FPDF_GetFileVersion(pPdfDocument.get(), &nFileVersion);
+    CPPUNIT_ASSERT_EQUAL(16, nFileVersion);
+}
+
+void PdfExportTest::testVersion15()
+{
+    // Create an empty document.
+    mxComponent = loadFromDesktop("private:factory/swriter");
+    CPPUNIT_ASSERT(mxComponent.is());
+
+    // Save as PDF.
+    uno::Reference<frame::XStorable> xStorable(mxComponent, uno::UNO_QUERY);
+    uno::Sequence<beans::PropertyValue> aFilterData(comphelper::InitPropertySequence(
+        { { "SelectPdfVersion", uno::makeAny(static_cast<sal_Int32>(15)) } }));
+    utl::MediaDescriptor aMediaDescriptor;
+    aMediaDescriptor["FilterName"] <<= OUString("writer_pdf_Export");
+    aMediaDescriptor["FilterData"] <<= aFilterData;
+    xStorable->storeToURL(maTempFile.GetURL(), aMediaDescriptor.getAsConstPropertyValueList());
+
+    // Parse the export result.
+    SvFileStream aFile(maTempFile.GetURL(), StreamMode::READ);
+    maMemory.WriteStream(aFile);
+    DocumentHolder pPdfDocument(
+        FPDF_LoadMemDocument(maMemory.GetData(), maMemory.GetSize(), /*password=*/nullptr));
+    CPPUNIT_ASSERT(pPdfDocument);
+    int nFileVersion = 0;
+    FPDF_GetFileVersion(pPdfDocument.get(), &nFileVersion);
+    CPPUNIT_ASSERT_EQUAL(15, nFileVersion);
+}
+
+// Check round-trip of importing and exporting the PDF with PDFium filter,
+// which imports the PDF document as multiple PDFs as graphic object.
+// Each page in the document has one PDF graphic object which content is
+// the corresponding page in the PDF. When such a document is exported,
+// the PDF graphic gets embedded into the exported PDF document (as a
+// Form XObject).
+void PdfExportTest::testMultiPagePDF()
+{
+// setenv only works on unix based systems
+#ifndef _WIN32
+    // We need to enable PDFium import (and make sure to disable after the test)
+    bool bResetEnvVar = false;
+    if (getenv("LO_IMPORT_USE_PDFIUM") == nullptr)
+    {
+        bResetEnvVar = true;
+        setenv("LO_IMPORT_USE_PDFIUM", "1", false);
+    }
+    comphelper::ScopeGuard aPDFiumEnvVarGuard([&]() {
+        if (bResetEnvVar)
+            unsetenv("LO_IMPORT_USE_PDFIUM");
+    });
+
+    // Load the PDF and save as PDF
+    OUString aURL = m_directories.getURLFromSrc(DATA_DIRECTORY) + "SimpleMultiPagePDF.pdf";
+    mxComponent = loadFromDesktop(aURL);
+    CPPUNIT_ASSERT(mxComponent.is());
+
+    uno::Reference<frame::XStorable> xStorable(mxComponent, uno::UNO_QUERY);
+    utl::MediaDescriptor aMediaDescriptor;
+    aMediaDescriptor["FilterName"] <<= OUString("writer_pdf_Export");
+    xStorable->storeToURL(maTempFile.GetURL(), aMediaDescriptor.getAsConstPropertyValueList());
+
+    // Parse the export result.
+    vcl::filter::PDFDocument aDocument;
+    SvFileStream aStream(maTempFile.GetURL(), StreamMode::READ);
+    CPPUNIT_ASSERT(aDocument.Read(aStream));
+
+    std::vector<vcl::filter::PDFObjectElement*> aPages = aDocument.GetPages();
+    CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(3), aPages.size());
+
+    vcl::filter::PDFObjectElement* pResources = aPages[0]->LookupObject("Resources");
+    CPPUNIT_ASSERT(pResources);
+
+    auto pXObjects = dynamic_cast<vcl::filter::PDFDictionaryElement*>(pResources->Lookup("XObject"));
+    CPPUNIT_ASSERT(pXObjects);
+
+    CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(3), pXObjects->GetItems().size()); // 3 PDFs as Form XObjects
+
+    std::vector<OString> rIDs;
+    for (auto const & rPair : pXObjects->GetItems()) {
+        rIDs.push_back(rPair.first);
+    }
+
+    // Let's check the embedded PDF pages - just make sure the size differs,
+    // which should indicate we don't have 3 times the same page.
+
+    {   // embedded PDF page 1
+        vcl::filter::PDFObjectElement* pXObject1 = pXObjects->LookupObject(rIDs[0]);
+        CPPUNIT_ASSERT(pXObject1);
+        CPPUNIT_ASSERT_EQUAL(OString("Im19"), rIDs[0]);
+
+        auto pSubtype1 = dynamic_cast<vcl::filter::PDFNameElement*>(pXObject1->Lookup("Subtype"));
+        CPPUNIT_ASSERT(pSubtype1);
+        CPPUNIT_ASSERT_EQUAL(OString("Form"), pSubtype1->GetValue());
+
+        auto pXObjectResources = dynamic_cast<vcl::filter::PDFDictionaryElement*>(pXObject1->Lookup("Resources"));
+        CPPUNIT_ASSERT(pXObjectResources);
+        auto pXObjectForms = dynamic_cast<vcl::filter::PDFDictionaryElement*>(pXObjectResources->LookupElement("XObject"));
+        CPPUNIT_ASSERT(pXObjectForms);
+        vcl::filter::PDFObjectElement* pForm = pXObjectForms->LookupObject(pXObjectForms->GetItems().begin()->first);
+        CPPUNIT_ASSERT(pForm);
+
+        vcl::filter::PDFStreamElement* pStream = pForm->GetStream();
+        CPPUNIT_ASSERT(pStream);
+        SvMemoryStream& rObjectStream = pStream->GetMemory();
+        rObjectStream.Seek(STREAM_SEEK_TO_BEGIN);
+
+        // Just check that the size of the page stream is what is expected.
+        CPPUNIT_ASSERT_EQUAL(sal_uInt64(230), rObjectStream.remainingSize());
+    }
+
+    {   // embedded PDF page 2
+        vcl::filter::PDFObjectElement* pXObject2 = pXObjects->LookupObject(rIDs[1]);
+        CPPUNIT_ASSERT(pXObject2);
+        CPPUNIT_ASSERT_EQUAL(OString("Im34"), rIDs[1]);
+
+        auto pSubtype2 = dynamic_cast<vcl::filter::PDFNameElement*>(pXObject2->Lookup("Subtype"));
+        CPPUNIT_ASSERT(pSubtype2);
+        CPPUNIT_ASSERT_EQUAL(OString("Form"), pSubtype2->GetValue());
+
+        auto pXObjectResources = dynamic_cast<vcl::filter::PDFDictionaryElement*>(pXObject2->Lookup("Resources"));
+        CPPUNIT_ASSERT(pXObjectResources);
+        auto pXObjectForms = dynamic_cast<vcl::filter::PDFDictionaryElement*>(pXObjectResources->LookupElement("XObject"));
+        CPPUNIT_ASSERT(pXObjectForms);
+        vcl::filter::PDFObjectElement* pForm = pXObjectForms->LookupObject(pXObjectForms->GetItems().begin()->first);
+        CPPUNIT_ASSERT(pForm);
+
+        vcl::filter::PDFStreamElement* pStream = pForm->GetStream();
+        CPPUNIT_ASSERT(pStream);
+        SvMemoryStream& rObjectStream = pStream->GetMemory();
+        rObjectStream.Seek(STREAM_SEEK_TO_BEGIN);
+
+        // Just check that the size of the page stream is what is expected
+        CPPUNIT_ASSERT_EQUAL(sal_uInt64(309), rObjectStream.remainingSize());
+    }
+
+    {   // embedded PDF page 3
+        vcl::filter::PDFObjectElement* pXObject3 = pXObjects->LookupObject(rIDs[2]);
+        CPPUNIT_ASSERT(pXObject3);
+        CPPUNIT_ASSERT_EQUAL(OString("Im4"), rIDs[2]);
+
+        auto pSubtype3 = dynamic_cast<vcl::filter::PDFNameElement*>(pXObject3->Lookup("Subtype"));
+        CPPUNIT_ASSERT(pSubtype3);
+        CPPUNIT_ASSERT_EQUAL(OString("Form"), pSubtype3->GetValue());
+
+        auto pXObjectResources = dynamic_cast<vcl::filter::PDFDictionaryElement*>(pXObject3->Lookup("Resources"));
+        CPPUNIT_ASSERT(pXObjectResources);
+        auto pXObjectForms = dynamic_cast<vcl::filter::PDFDictionaryElement*>(pXObjectResources->LookupElement("XObject"));
+        CPPUNIT_ASSERT(pXObjectForms);
+        vcl::filter::PDFObjectElement* pForm = pXObjectForms->LookupObject(pXObjectForms->GetItems().begin()->first);
+        CPPUNIT_ASSERT(pForm);
+
+        vcl::filter::PDFStreamElement* pStream = pForm->GetStream();
+        CPPUNIT_ASSERT(pStream);
+        SvMemoryStream& rObjectStream = pStream->GetMemory();
+        rObjectStream.Seek(STREAM_SEEK_TO_BEGIN);
+
+        // Just check that the size of the page stream is what is expected
+        CPPUNIT_ASSERT_EQUAL(sal_uInt64(193), rObjectStream.remainingSize());
+    }
+#endif
 }
 
 CPPUNIT_TEST_SUITE_REGISTRATION(PdfExportTest);

@@ -336,7 +336,7 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL
     const uno::Reference< xml::sax::XFastAttributeList > & xAttrList )
 {
     sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
+        &sax_fastparser::castToFastAttributeList( xAttrList );
     return GetScImport().CreateBodyContext( pAttribList );
 }
 
@@ -396,42 +396,6 @@ void SAL_CALL ScXMLDocContext_Impl::endFastElement(sal_Int32 /*nElement*/)
 void SAL_CALL ScXMLDocContext_Impl::characters(const OUString &)
 {
 }
-
-const SvXMLTokenMap& ScXMLImport::GetContentValidationElemTokenMap()
-{
-    if( !pContentValidationElemTokenMap )
-    {
-        static const SvXMLTokenMapEntry aContentValidationElemTokenMap[] =
-        {
-            { XML_NAMESPACE_TABLE,  XML_HELP_MESSAGE,    XML_TOK_CONTENT_VALIDATION_ELEM_HELP_MESSAGE    },
-            { XML_NAMESPACE_TABLE,  XML_ERROR_MESSAGE,   XML_TOK_CONTENT_VALIDATION_ELEM_ERROR_MESSAGE   },
-            { XML_NAMESPACE_TABLE,  XML_ERROR_MACRO,     XML_TOK_CONTENT_VALIDATION_ELEM_ERROR_MACRO     },
-            { XML_NAMESPACE_OFFICE, XML_EVENT_LISTENERS, XML_TOK_CONTENT_VALIDATION_ELEM_EVENT_LISTENERS },
-            XML_TOKEN_MAP_END
-        };
-
-        pContentValidationElemTokenMap.reset(new SvXMLTokenMap( aContentValidationElemTokenMap ));
-    } // if( !pContentValidationElemTokenMap )
-
-    return *pContentValidationElemTokenMap;
-}
-
-const SvXMLTokenMap& ScXMLImport::GetContentValidationMessageElemTokenMap()
-{
-    if( !pContentValidationMessageElemTokenMap )
-    {
-        static const SvXMLTokenMapEntry aContentValidationMessageElemTokenMap[] =
-        {
-            { XML_NAMESPACE_TEXT, XML_P,    XML_TOK_P   },
-            XML_TOKEN_MAP_END
-        };
-
-        pContentValidationMessageElemTokenMap.reset(new SvXMLTokenMap( aContentValidationMessageElemTokenMap ));
-    } // if( !pContentValidationMessageElemTokenMap )
-
-    return *pContentValidationMessageElemTokenMap;
-}
-
 
 const SvXMLTokenMap& ScXMLImport::GetTableElemTokenMap()
 {
@@ -651,8 +615,6 @@ ScXMLImport::ScXMLImport(
 ScXMLImport::~ScXMLImport() throw()
 {
     //  delete pI18NMap;
-    pContentValidationElemTokenMap.reset();
-    pContentValidationMessageElemTokenMap.reset();
     pTableElemTokenMap.reset();
     pTableRowsElemTokenMap.reset();
     pTableRowElemTokenMap.reset();
@@ -1288,7 +1250,7 @@ void ScXMLImport::SetStyleToRanges()
             XMLTableStyleContext* pStyle = nullptr;
             if ( pStyles )
                 pStyle = const_cast<XMLTableStyleContext*>(static_cast<const XMLTableStyleContext *>(pStyles->FindStyleChildContext(
-                        XML_STYLE_FAMILY_TABLE_CELL, sPrevStyleName, true)));
+                        XmlStyleFamily::TABLE_CELL, sPrevStyleName, true)));
             if (pStyle)
             {
                 pStyle->FillPropertySet(xProperties);
@@ -1321,7 +1283,7 @@ void ScXMLImport::SetStyleToRanges()
             }
             else
             {
-                xProperties->setPropertyValue(gsCellStyle, uno::makeAny(GetStyleDisplayName( XML_STYLE_FAMILY_TABLE_CELL, sPrevStyleName )));
+                xProperties->setPropertyValue(gsCellStyle, uno::makeAny(GetStyleDisplayName( XmlStyleFamily::TABLE_CELL, sPrevStyleName )));
                 sal_Int32 nNumberFormat(GetStyleNumberFormats()->GetStyleNumberFormat(sPrevStyleName));
                 bool bInsert(nNumberFormat == -1);
                 SetType(xProperties, nNumberFormat, nPrevCellType, sPrevCurrency);
@@ -1549,7 +1511,7 @@ namespace {
 
 class RangeNameInserter
 {
-    ScDocument* const mpDoc;
+    ScDocument*  mpDoc;
     ScRangeName& mrRangeName;
 
 public:

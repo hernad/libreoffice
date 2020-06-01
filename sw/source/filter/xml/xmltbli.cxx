@@ -19,6 +19,7 @@
 
 #include <hintids.hxx>
 
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/lang/IndexOutOfBoundsException.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/text/XTextTable.hpp>
@@ -60,6 +61,7 @@
 #include "xmltbli.hxx"
 #include <vcl/svapp.hxx>
 #include <ndtxt.hxx>
+#include <SwStyleNameMapper.hxx>
 
 #include <algorithm>
 #include <vector>
@@ -386,7 +388,7 @@ class SwXMLTableCellContext_Impl : public SvXMLImportContext
     OUString m_sSaveParaDefault;
     OUString m_StringValue;
 
-    SvXMLImportContextRef const   m_xMyTable;
+    SvXMLImportContextRef   m_xMyTable;
 
     double m_fValue;
     bool m_bHasValue;
@@ -686,7 +688,7 @@ void SwXMLTableCellContext_Impl::EndElement()
                     assert(pDstTextCursor && "SwXTextCursor missing");
                     SwPaM aSrcPaM(*pSrcPaM->GetMark(), *pSrcPaM->GetPoint());
                     SwPosition aDstPos( *pDstTextCursor->GetPaM()->GetPoint() );
-                    pDoc->getIDocumentContentOperations().CopyRange( aSrcPaM, aDstPos, /*bCopyAll=*/false, /*bCheckPos=*/true, /*bCopyText=*/false );
+                    pDoc->getIDocumentContentOperations().CopyRange(aSrcPaM, aDstPos, SwCopyFlags::CheckPosInFly);
 
                     m_nColRepeat--;
                 }
@@ -712,7 +714,7 @@ namespace {
 
 class SwXMLTableColContext_Impl : public SvXMLImportContext
 {
-    SvXMLImportContextRef const   xMyTable;
+    SvXMLImportContextRef   xMyTable;
 
     SwXMLTableContext *GetTable() { return static_cast<SwXMLTableContext *>(xMyTable.get()); }
 
@@ -778,7 +780,7 @@ SwXMLTableColContext_Impl::SwXMLTableColContext_Impl(
         const SfxPoolItem *pItem;
         const SfxItemSet *pAutoItemSet = nullptr;
         if( GetSwImport().FindAutomaticStyle(
-                    XML_STYLE_FAMILY_TABLE_COLUMN,
+                    XmlStyleFamily::TABLE_COLUMN,
                                               aStyleName, &pAutoItemSet ) &&
             pAutoItemSet &&
             SfxItemState::SET == pAutoItemSet->GetItemState( RES_FRM_SIZE, false,
@@ -801,7 +803,7 @@ namespace {
 
 class SwXMLTableColsContext_Impl : public SvXMLImportContext
 {
-    SvXMLImportContextRef const   xMyTable;
+    SvXMLImportContextRef   xMyTable;
 
     SwXMLTableContext *GetTable() { return static_cast<SwXMLTableContext *>(xMyTable.get()); }
 
@@ -850,7 +852,7 @@ namespace {
 
 class SwXMLTableRowContext_Impl : public SvXMLImportContext
 {
-    SvXMLImportContextRef const xMyTable;
+    SvXMLImportContextRef   xMyTable;
 
     sal_uInt32                  nRowRepeat;
 
@@ -967,9 +969,9 @@ namespace {
 
 class SwXMLTableRowsContext_Impl : public SvXMLImportContext
 {
-    SvXMLImportContextRef const   xMyTable;
+    SvXMLImportContextRef   xMyTable;
 
-    bool const bHeader;
+    bool bHeader;
 
     SwXMLTableContext *GetTable() { return static_cast<SwXMLTableContext *>(xMyTable.get()); }
 
@@ -1187,9 +1189,9 @@ static SwDDEFieldType* lcl_GetDDEFieldType(SwXMLDDETableContext_Impl* pContext,
 class TableBoxIndex
 {
 public:
-    OUString const msName;
-    sal_Int32 const mnWidth;
-    bool const mbProtected;
+    OUString msName;
+    sal_Int32 mnWidth;
+    bool mbProtected;
 
     TableBoxIndex( const OUString& rName, sal_Int32 nWidth,
                    bool bProtected ) :
@@ -1987,7 +1989,7 @@ SwTableBox *SwXMLTableContext::MakeTableBox(
         const SfxItemSet *pAutoItemSet = nullptr;
         if( pCell->GetStartNode() && !sStyleName.isEmpty() &&
             GetSwImport().FindAutomaticStyle(
-                XML_STYLE_FAMILY_TABLE_CELL, sStyleName, &pAutoItemSet ) )
+                XmlStyleFamily::TABLE_CELL, sStyleName, &pAutoItemSet ) )
         {
             if( pAutoItemSet )
                 pBoxFormat2->SetFormatAttr( *pAutoItemSet );
@@ -2149,7 +2151,7 @@ SwTableLine *SwXMLTableContext::MakeTableLine( SwTableBox *pUpper,
     if( 1 == (nBottomRow - nTopRow) &&
         !rStyleName.isEmpty() &&
         GetSwImport().FindAutomaticStyle(
-            XML_STYLE_FAMILY_TABLE_ROW, rStyleName, &pAutoItemSet ) )
+            XmlStyleFamily::TABLE_ROW, rStyleName, &pAutoItemSet ) )
     {
         if( pAutoItemSet )
             pFrameFormat->SetFormatAttr( *pAutoItemSet );
@@ -2613,14 +2615,16 @@ void SwXMLTableContext::MakeTable()
 
     sal_uInt8 nPercentWidth = 0U;
 
+    OUString sStyleName;
+    SwStyleNameMapper::FillUIName( m_aTemplateName, sStyleName, SwGetPoolIdFromName::TabStyle );
+    m_pTableNode->GetTable().SetTableStyleName( sStyleName );
     m_pTableNode->GetTable().SetRowsToRepeat( m_nHeaderRows );
     m_pTableNode->GetTable().SetTableModel( !m_bHasSubTables );
-    m_pTableNode->GetTable().SetTableStyleName( m_aTemplateName );
 
     const SfxItemSet *pAutoItemSet = nullptr;
     if( !m_aStyleName.isEmpty() &&
         rSwImport.FindAutomaticStyle(
-            XML_STYLE_FAMILY_TABLE_TABLE, m_aStyleName, &pAutoItemSet ) &&
+            XmlStyleFamily::TABLE_TABLE, m_aStyleName, &pAutoItemSet ) &&
          pAutoItemSet )
     {
         const SfxPoolItem *pItem;

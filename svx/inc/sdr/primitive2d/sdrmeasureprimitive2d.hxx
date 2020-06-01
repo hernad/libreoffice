@@ -21,12 +21,12 @@
 #define INCLUDED_SVX_INC_SDR_PRIMITIVE2D_SDRMEASUREPRIMITIVE2D_HXX
 
 #include <drawinglayer/primitive2d/baseprimitive2d.hxx>
-#include <svx/sdr/attribute/sdrlineshadowtextattribute.hxx>
+#include <sdr/attribute/sdrlineeffectstextattribute.hxx>
 
 
 // predefines
 
-namespace drawinglayer { namespace primitive2d {
+namespace drawinglayer::primitive2d {
     enum MeasureTextPosition
     {
         MEASURETEXTPOSITION_AUTOMATIC,
@@ -34,11 +34,11 @@ namespace drawinglayer { namespace primitive2d {
         MEASURETEXTPOSITION_CENTERED,
         MEASURETEXTPOSITION_POSITIVE
     };
-}}
+}
 
-namespace drawinglayer { namespace attribute {
+namespace drawinglayer::attribute {
     class SdrLineAttribute;
-}}
+}
 
 
 namespace drawinglayer
@@ -48,20 +48,20 @@ namespace drawinglayer
         class SdrMeasurePrimitive2D final : public BufferedDecompositionPrimitive2D
         {
         private:
-            attribute::SdrLineShadowTextAttribute const       maSdrLSTAttribute;
-            basegfx::B2DPoint const                           maStart;
-            basegfx::B2DPoint const                           maEnd;
-            MeasureTextPosition const                         meHorizontal;
-            MeasureTextPosition const                         meVertical;
-            double const                                      mfDistance;
-            double const                                      mfUpper;
-            double const                                      mfLower;
-            double const                                      mfLeftDelta;
-            double const                                      mfRightDelta;
+            attribute::SdrLineEffectsTextAttribute       maSdrLSTAttribute;
+            basegfx::B2DPoint                           maStart;
+            basegfx::B2DPoint                           maEnd;
+            MeasureTextPosition                         meHorizontal;
+            MeasureTextPosition                         meVertical;
+            double                                      mfDistance;
+            double                                      mfUpper;
+            double                                      mfLower;
+            double                                      mfLeftDelta;
+            double                                      mfRightDelta;
 
-            bool const                                        mbBelow : 1;
-            bool const                                        mbTextRotation : 1;
-            bool const                                        mbTextAutoAngle : 1;
+            bool                                        mbBelow : 1;
+            bool                                        mbTextRotation : 1;
+            bool                                        mbTextAutoAngle : 1;
 
             // internal decomposition helper
             Primitive2DReference impCreatePart(
@@ -77,7 +77,7 @@ namespace drawinglayer
 
         public:
             SdrMeasurePrimitive2D(
-                const attribute::SdrLineShadowTextAttribute& rSdrLSTAttribute,
+                const attribute::SdrLineEffectsTextAttribute& rSdrLSTAttribute,
                 const basegfx::B2DPoint& rStart,
                 const basegfx::B2DPoint& rEnd,
                 MeasureTextPosition eHorizontal,
@@ -92,7 +92,7 @@ namespace drawinglayer
                 bool bTextAutoAngle);
 
             // data access
-            const attribute::SdrLineShadowTextAttribute& getSdrLSTAttribute() const { return maSdrLSTAttribute; }
+            const attribute::SdrLineEffectsTextAttribute& getSdrLSTAttribute() const { return maSdrLSTAttribute; }
             const basegfx::B2DPoint& getStart() const { return maStart; }
             const basegfx::B2DPoint& getEnd() const { return maEnd; }
             MeasureTextPosition getHorizontal() const { return meHorizontal; }
@@ -110,7 +110,7 @@ namespace drawinglayer
             virtual bool operator==(const BasePrimitive2D& rPrimitive) const override;
 
             // provide unique ID
-            DeclPrimitive2DIDBlock()
+            virtual sal_uInt32 getPrimitive2DID() const override;
         };
     } // end of namespace primitive2d
 } // end of namespace drawinglayer

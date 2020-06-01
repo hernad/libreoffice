@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # This file is part of the LibreOffice project.
 #
 # This Source Code Form is subject to the terms of the Mozilla Public
@@ -40,6 +40,7 @@ core_factory_list = [
     ("libsrtrs1.a", "srtrs1_component_getFactory"),
     ("libstoragefdlo.a", "storagefd_component_getFactory"),
     ("libucb1.a", "ucb_component_getFactory"),
+    ("libucpexpand1lo.a", "ucpexpand1_component_getFactory", "#ifdef ANDROID"),
     ("libucpfile1.a", "ucpfile_component_getFactory"),
     ("libucphier1.a", "ucphier1_component_getFactory"),
     ("libucptdoc1lo.a", "ucptdoc1_component_getFactory"),
@@ -137,10 +138,16 @@ core_constructor_list = [
     "com_sun_star_comp_util_OfficeInstallationDirectories",
 # dbaccess/util/dba.component
     "com_sun_star_comp_dba_ORowSet_get_implementation",
+# extensions/source/logging/log.component
+    ("com_sun_star_comp_extensions_FileHandler", "#ifdef ANDROID"),
+    ("com_sun_star_comp_extensions_LoggerPool", "#ifdef ANDROID"),
+    ("com_sun_star_comp_extensions_PlainTextFormatter", "#ifdef ANDROID"),
+    ("com_sun_star_comp_extensions_SimpleTextFormatter", "#ifdef ANDROID"),
 # forms/util/frm.component
     ("com_sun_star_comp_forms_FormOperations_get_implementation", "#if HAVE_FEATURE_DBCONNECTIVITY"),
     ("com_sun_star_comp_forms_ODatabaseForm_get_implementation", "#if HAVE_FEATURE_DBCONNECTIVITY"),
     ("com_sun_star_comp_forms_OFormattedFieldWrapper_ForcedFormatted_get_implementation", "#if HAVE_FEATURE_DBCONNECTIVITY"),
+    ("com_sun_star_comp_form_ORichTextControl_get_implementation", "#if HAVE_FEATURE_DBCONNECTIVITY"),
     ("com_sun_star_comp_forms_ORichTextModel_get_implementation", "#if HAVE_FEATURE_DBCONNECTIVITY"),
     ("com_sun_star_comp_forms_OScrollBarModel_get_implementation", "#if HAVE_FEATURE_DBCONNECTIVITY"),
     ("com_sun_star_comp_forms_OSpinButtonModel_get_implementation", "#if HAVE_FEATURE_DBCONNECTIVITY"),
@@ -159,8 +166,10 @@ core_constructor_list = [
     ("com_sun_star_form_OFormsCollection_get_implementation", "#if HAVE_FEATURE_DBCONNECTIVITY"),
     ("com_sun_star_form_OGridControlModel_get_implementation", "#if HAVE_FEATURE_DBCONNECTIVITY"),
     ("com_sun_star_form_OGroupBoxModel_get_implementation", "#if HAVE_FEATURE_DBCONNECTIVITY"),
+    ("com_sun_star_form_OListBoxControl_get_implementation", "#if HAVE_FEATURE_DBCONNECTIVITY"),
     ("com_sun_star_form_OListBoxModel_get_implementation", "#if HAVE_FEATURE_DBCONNECTIVITY"),
     ("com_sun_star_form_ONumericModel_get_implementation", "#if HAVE_FEATURE_DBCONNECTIVITY"),
+    ("com_sun_star_form_ORadioButtonControl_get_implementation", "#if HAVE_FEATURE_DBCONNECTIVITY"),
     ("com_sun_star_form_ORadioButtonModel_get_implementation", "#if HAVE_FEATURE_DBCONNECTIVITY"),
     ("com_sun_star_form_XForms_get_implementation", "#if HAVE_FEATURE_DBCONNECTIVITY"),
 # framework/util/fwk.component
@@ -248,6 +257,7 @@ core_constructor_list = [
     "com_sun_star_comp_svx_FontNameToolBoxControl_get_implementation",
     "com_sun_star_comp_Svx_GraphicExportHelper_get_implementation",
     "com_sun_star_comp_Svx_GraphicImportHelper_get_implementation",
+    "com_sun_star_comp_svx_StyleToolBoxControl_get_implementation",
 # toolkit/util/tk.component
     "stardiv_Toolkit_StdTabController_get_implementation",
     "stardiv_Toolkit_UnoButtonControl_get_implementation",
@@ -268,6 +278,9 @@ core_constructor_list = [
     "stardiv_Toolkit_UnoControlRadioButtonModel_get_implementation",
     "stardiv_Toolkit_UnoControlScrollBarModel_get_implementation",
     "stardiv_Toolkit_UnoDateFieldControl_get_implementation",
+    "stardiv_Toolkit_UnoGroupBoxControl_get_implementation",
+    "stardiv_Toolkit_UnoListBoxControl_get_implementation",
+    "stardiv_Toolkit_UnoRadioButtonControl_get_implementation",
     "stardiv_Toolkit_UnoSpinButtonModel_get_implementation",
     "stardiv_Toolkit_VCLXPointer_get_implementation",
     "stardiv_Toolkit_VCLXPopupMenu_get_implementation",
@@ -277,6 +290,7 @@ core_constructor_list = [
     "com_sun_star_comp_uui_UUIInteractionRequestStringResolver_get_implementation",
 # xmloff/util/xo.component
     "XMLMetaExportComponent_get_implementation",
+    "XMLMetaExportOOo_get_implementation",
     "XMLMetaImportComponent_get_implementation",
     "XMLVersionListPersistence_get_implementation",
     "com_sun_star_comp_Impress_XMLOasisImporter_get_implementation",
@@ -312,11 +326,21 @@ core_constructor_list = [
     "com_sun_star_comp_Xmloff_AnimationsImport",
     "com_sun_star_comp_DrawingLayer_XMLExporter_get_implementation",
     "com_sun_star_comp_Impress_XMLClipboardExporter_get_implementation",
+    "com_sun_star_comp_Chart_XMLOasisImporter_get_implementation",
+    "com_sun_star_comp_Chart_XMLOasisMetaImporter_get_implementation",
+    "com_sun_star_comp_Chart_XMLOasisMetaExporter_get_implementation",
+    "com_sun_star_comp_Chart_XMLOasisStylesExporter_get_implementation",
+    "com_sun_star_comp_Chart_XMLOasisContentExporter_get_implementation",
+    "com_sun_star_comp_Chart_XMLExporter_get_implementation",
+    "com_sun_star_comp_Chart_XMLStylesExporter_get_implementation",
+    "com_sun_star_comp_Chart_XMLContentExporter_get_implementation",
+    "com_sun_star_comp_Chart_XMLOasisStylesImporter_get_implementation",
+    "com_sun_star_comp_Chart_XMLOasisContentImporter_get_implementation",
+    "com_sun_star_comp_Chart_XMLOasisExporter_get_implementation",
+    "com_sun_star_comp_Writer_XMLOasisAutotextEventsExporter_get_implementation",
 # xmlscript/util/xmlscript.component
     "com_sun_star_comp_xmlscript_XMLBasicExporter",
-    "com_sun_star_comp_xmlscript_XMLBasicImporter",
     "com_sun_star_comp_xmlscript_XMLOasisBasicExporter",
-    "com_sun_star_comp_xmlscript_XMLOasisBasicImporter",
 # xmlsecurity/util/xmlsecurity.component
     ("com_sun_star_security_CertificateContainer_get_implementation", "#if HAVE_FEATURE_NSS"),
     ("com_sun_star_security_DocumentDigitalSignatures_get_implementation", "#if HAVE_FEATURE_NSS"),
@@ -335,6 +359,7 @@ core_constructor_list = [
     "com_sun_star_comp_oox_docprop_DocumentPropertiesImporter_get_implementation",
     "com_sun_star_comp_oox_ppt_PowerPointImport_get_implementation",
     "com_sun_star_comp_oox_ShapeContextHandler_get_implementation",
+    "com_sun_star_comp_oox_crypto_StrongEncryptionDataSpace_get_implementation",
     ]
 
 # edit group for apps, where you can edit documents
@@ -355,6 +380,7 @@ edit_constructor_list = [
     "Calc_XMLOasisSettingsExporter_get_implementation",
     "Calc_XMLOasisStylesExporter_get_implementation",
 # starmath/util/sm.component
+    "Math_XMLContentExporter_get_implementation",
     "Math_XMLOasisMetaExporter_get_implementation",
     "Math_XMLOasisSettingsExporter_get_implementation",
     "Math_XMLImporter_get_implementation",
@@ -364,6 +390,7 @@ edit_constructor_list = [
     "math_FormatDetector_get_implementation",
 # sw/util/sw.component
     "com_sun_star_comp_Writer_XMLOasisContentExporter_get_implementation",
+    "com_sun_star_comp_Writer_XMLOasisExporter_get_implementation",
     "com_sun_star_comp_Writer_XMLOasisMetaExporter_get_implementation",
     "com_sun_star_comp_Writer_XMLOasisSettingsExporter_get_implementation",
     "com_sun_star_comp_Writer_XMLOasisStylesExporter_get_implementation",
@@ -450,6 +477,7 @@ writer_factory_list = [
 
 writer_constructor_list = [
 # basic/util/sb.component
+    ("com_sun_star_comp_sfx2_DialogLibraryContainer_get_implementation","#if HAVE_FEATURE_SCRIPTING"),
     ("com_sun_star_comp_sfx2_ScriptLibraryContainer_get_implementation", "#if HAVE_FEATURE_SCRIPTING"),
 # filter/source/textfilterdetect/textfd.component
     "com_sun_star_comp_filters_PlainTextFilterDetect_get_implementation",
@@ -468,6 +496,8 @@ writer_constructor_list = [
 # writerfilter/util/writerfilter.component
     "com_sun_star_comp_Writer_RtfFilter_get_implementation",
     "com_sun_star_comp_Writer_WriterFilter_get_implementation",
+# writerperfect/source/writer/wpftwriter.component
+    "com_sun_star_comp_Writer_EPUBExportFilter_get_implementation",
     ]
 
 factory_map = {
@@ -489,31 +519,15 @@ constructor_map = {
     }
 
 custom_widgets = [
-    'BookmarksBox',
-    'CategoryListBox',
-    'ColumnEdit',
-    'ContentListBox',
     'ContextVBox',
-    'CustomAnimationList',
     'DataTreeListBox',
     'DropdownBox',
     'EmojiView',
-    'FontNameBox',
-    'FontSizeBox',
-    'IndexBox',
-    'IndexBox',
     'ManagedMenuButton',
-    'OptionalBox',
     'PriorityHBox',
     'PriorityMergedHBox',
-    'PropertyControl',
     'RecentDocsView',
-    'RowEdit',
-    'SdPageObjsTLB',
-    'SearchBox',
-    'SearchResultsBox',
     'SidebarToolBox',
-    'SvxColorValueSet',
     'TemplateDefaultView',
     ]
 

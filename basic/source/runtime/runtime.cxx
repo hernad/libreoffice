@@ -621,6 +621,20 @@ void SbiRuntime::SetVBAEnabled(bool bEnabled )
     }
 }
 
+// tdf#79426, tdf#125180 - adds the information about a missing parameter
+void SbiRuntime::SetIsMissing( SbxVariable* pVar )
+{
+    SbxInfo* pInfo = pVar->GetInfo() ? pVar->GetInfo() : new SbxInfo();
+    pInfo->AddParam( pVar->GetName(), SbxMISSING, pVar->GetFlags() );
+    pVar->SetInfo( pInfo );
+}
+
+// tdf#79426, tdf#125180 - checks if a variable contains the information about a missing parameter
+bool SbiRuntime::IsMissing( SbxVariable* pVar, sal_uInt16 nIdx )
+{
+    return pVar->GetInfo() && pVar->GetInfo()->GetParam( nIdx ) && pVar->GetInfo()->GetParam( nIdx )->eType & SbxMISSING;
+}
+
 // Construction of the parameter list. All ByRef-parameters are directly
 // taken over; copies of ByVal-parameters are created. If a particular
 // data type is requested, it is converted.
@@ -671,7 +685,11 @@ void SbiRuntime::SetParameters( SbxArray* pParams )
             if( p )
             {
                 bByVal |= ( p->eType & SbxBYREF ) == 0;
-                t = static_cast<SbxDataType>( p->eType & 0x0FFF );
+                // tdf#79426, tdf#125180 - don't convert missing arguments to the requested parameter type
+                if ( t != SbxEMPTY && !IsMissing( v, 1 ) )
+                {
+                    t = static_cast<SbxDataType>( p->eType & 0x0FFF );
+                }
 
                 if( !bByVal && t != SbxVARIANT &&
                     (!v->IsFixed() || static_cast<SbxDataType>(v->GetType() & 0x0FFF ) != t) )
@@ -683,18 +701,25 @@ void SbiRuntime::SetParameters( SbxArray* pParams )
             }
             if( bByVal )
             {
-                if( bTargetTypeIsArray )
+                // tdf#79426, tdf#125180 - don't convert missing arguments to the requested parameter type
+                if( bTargetTypeIsArray && !IsMissing( v, 1 ) )
                 {
                     t = SbxOBJECT;
                 }
                 SbxVariable* v2 = new SbxVariable( t );
                 v2->SetFlag( SbxFlagBits::ReadWrite );
+                // tdf#79426, tdf#125180 - if parameter was missing, readd additional information about a missing parameter
+                if ( IsMissing( v, 1 ) )
+                {
+                    SetIsMissing( v2 );
+                }
                 *v2 = *v;
                 refParams->Put32( v2, i );
             }
             else
             {
-                if( t != SbxVARIANT && t != ( v->GetType() & 0x0FFF ) )
+                // tdf#79426, tdf#125180 - don't convert missing arguments to the requested parameter type
+                if( t != SbxVARIANT && !IsMissing( v, 1 ) && t != ( v->GetType() & 0x0FFF ) )
                 {
                     if( p && (p->eType & SbxARRAY) )
                     {
@@ -715,19 +740,19 @@ void SbiRuntime::SetParameters( SbxArray* pParams )
     }
 
     // ParamArray for missing parameter
-    if( pInfo )
+    if( !pInfo )
+        return;
+
+    // #111897 Check first missing parameter for ParamArray
+    const SbxParamInfo* p = pInfo->GetParam(sal::static_int_cast<sal_uInt16>(nParamCount));
+    if( p && (p->nUserData & PARAM_INFO_PARAMARRAY) != 0 )
     {
-        // #111897 Check first missing parameter for ParamArray
-        const SbxParamInfo* p = pInfo->GetParam(sal::static_int_cast<sal_uInt16>(nParamCount));
-        if( p && (p->nUserData & PARAM_INFO_PARAMARRAY) != 0 )
-        {
-            SbxDimArray* pArray = new SbxDimArray( SbxVARIANT );
-            pArray->unoAddDim32( 0, -1 );
-            SbxVariable* pArrayVar = new SbxVariable( SbxVARIANT );
-            pArrayVar->SetFlag( SbxFlagBits::ReadWrite );
-            pArrayVar->PutObject( pArray );
-            refParams->Put32( pArrayVar, nParamCount );
-        }
+        SbxDimArray* pArray = new SbxDimArray( SbxVARIANT );
+        pArray->unoAddDim32( 0, -1 );
+        SbxVariable* pArrayVar = new SbxVariable( SbxVARIANT );
+        pArrayVar->SetFlag( SbxFlagBits::ReadWrite );
+        pArrayVar->PutObject( pArray );
+        refParams->Put32( pArrayVar, nParamCount );
     }
 }
 
@@ -882,40 +907,40 @@ bool SbiRuntime::Step()
 
 void SbiRuntime::Error( ErrCode n, bool bVBATranslationAlreadyDone )
 {
-    if( n )
+    if( !n )
+        return;
+
+    nError = n;
+    if( !(isVBAEnabled() && !bVBATranslationAlreadyDone) )
+        return;
+
+    OUString aMsg = pInst->GetErrorMsg();
+    sal_Int32 nVBAErrorNumber = translateErrorToVba( nError, aMsg );
+    SbxVariable* pSbxErrObjVar = SbxErrObject::getErrObject().get();
+    SbxErrObject* pGlobErr = static_cast< SbxErrObject* >( pSbxErrObjVar );
+    if( pGlobErr != nullptr )
     {
-        nError = n;
-        if( isVBAEnabled() && !bVBATranslationAlreadyDone )
-        {
-            OUString aMsg = pInst->GetErrorMsg();
-            sal_Int32 nVBAErrorNumber = translateErrorToVba( nError, aMsg );
-            SbxVariable* pSbxErrObjVar = SbxErrObject::getErrObject().get();
-            SbxErrObject* pGlobErr = static_cast< SbxErrObject* >( pSbxErrObjVar );
-            if( pGlobErr != nullptr )
-            {
-                pGlobErr->setNumberAndDescription( nVBAErrorNumber, aMsg );
-            }
-            pInst->aErrorMsg = aMsg;
-            nError = ERRCODE_BASIC_COMPAT;
-        }
+        pGlobErr->setNumberAndDescription( nVBAErrorNumber, aMsg );
     }
+    pInst->aErrorMsg = aMsg;
+    nError = ERRCODE_BASIC_COMPAT;
 }
 
 void SbiRuntime::Error( ErrCode _errCode, const OUString& _details )
 {
-    if ( _errCode )
+    if ( !_errCode )
+        return;
+
+    // Not correct for class module usage, remove for now
+    //OSL_WARN_IF( pInst->pRun != this, "basic", "SbiRuntime::Error: can't propagate the error message details!" );
+    if ( pInst->pRun == this )
     {
-        // Not correct for class module usage, remove for now
-        //OSL_WARN_IF( pInst->pRun != this, "basic", "SbiRuntime::Error: can't propagate the error message details!" );
-        if ( pInst->pRun == this )
-        {
-            pInst->Error( _errCode, _details );
-            //OSL_WARN_IF( nError != _errCode, "basic", "SbiRuntime::Error: the instance is expected to propagate the error code back to me!" );
-        }
-        else
-        {
-            nError = _errCode;
-        }
+        pInst->Error( _errCode, _details );
+        //OSL_WARN_IF( nError != _errCode, "basic", "SbiRuntime::Error: the instance is expected to propagate the error code back to me!" );
+    }
+    else
+    {
+        nError = _errCode;
     }
 }
 
@@ -2749,6 +2774,8 @@ void SbiRuntime::StepEMPTY()
     // to simplify matters.
     SbxVariableRef xVar = new SbxVariable( SbxVARIANT );
     xVar->PutErr( 448 );
+    // tdf#79426, tdf#125180 - add additional information about a missing parameter
+    SetIsMissing( xVar.get() );
     PushVar( xVar.get() );
 }
 
@@ -2773,8 +2800,6 @@ void SbiRuntime::StepERROR()
 
 void SbiRuntime::StepLOADNC( sal_uInt32 nOp1 )
 {
-    SbxVariable* p = new SbxVariable( SbxDOUBLE );
-
     // #57844 use localized function
     OUString aStr = pImg->GetString( static_cast<short>( nOp1 ) );
     // also allow , !!!
@@ -2783,8 +2808,24 @@ void SbiRuntime::StepLOADNC( sal_uInt32 nOp1 )
     {
         aStr = aStr.replaceAt(iComma, 1, ".");
     }
-    double n = ::rtl::math::stringToDouble( aStr, '.', ',' );
+    sal_Int32 nParseEnd = 0;
+    rtl_math_ConversionStatus eStatus = rtl_math_ConversionStatus_Ok;
+    double n = ::rtl::math::stringToDouble( aStr, '.', ',', &eStatus, &nParseEnd );
 
+    // tdf#131296 - retrieve data type put in SbiExprNode::Gen
+    SbxDataType eType = SbxDOUBLE;
+    if ( nParseEnd < aStr.getLength() )
+    {
+        switch ( aStr[nParseEnd] )
+        {
+            // See GetSuffixType in basic/source/comp/scanner.cxx for type characters
+            case '%': eType = SbxINTEGER; break;
+            case '&': eType = SbxLONG; break;
+            case '!': eType = SbxSINGLE; break;
+            case '@': eType = SbxCURRENCY; break;
+        }
+    }
+    SbxVariable* p = new SbxVariable( eType );
     p->PutDouble( n );
     PushVar( p );
 }
@@ -2799,22 +2840,13 @@ void SbiRuntime::StepLOADSC( sal_uInt32 nOp1 )
 }
 
 // Immediate Load (+value)
+// The opcode is not generated in SbiExprNode::Gen anymore; used for legacy images
 
 void SbiRuntime::StepLOADI( sal_uInt32 nOp1 )
 {
     SbxVariable* p = new SbxVariable;
-
-    OUString aStr = pImg->GetString(static_cast<short>(nOp1));
-    double n = ::rtl::math::stringToDouble(aStr, '.', ',');
-    if (n >= SbxMININT && n <= SbxMAXINT)
-    {
-        p->PutInteger(static_cast<sal_Int16>(n));
-    }
-    else
-    {
-        p->PutLong(static_cast<sal_Int32>(n));
-    }
-    PushVar(p);
+    p->PutInteger( static_cast<sal_Int16>( nOp1 ) );
+    PushVar( p );
 }
 
 // store a named argument in Argv (+Arg-no. from 1!)
@@ -2896,19 +2928,19 @@ void SbiRuntime::StepPAD( sal_uInt32 nOp1 )
     SbxVariable* p = GetTOS();
     OUString s = p->GetOUString();
     sal_Int32 nLen(nOp1);
-    if( s.getLength() != nLen )
+    if( s.getLength() == nLen )
+        return;
+
+    OUStringBuffer aBuf(s);
+    if (aBuf.getLength() > nLen)
     {
-        OUStringBuffer aBuf(s);
-        if (aBuf.getLength() > nLen)
-        {
-            comphelper::string::truncateToLength(aBuf, nLen);
-        }
-        else
-        {
-            comphelper::string::padToLength(aBuf, nLen, ' ');
-        }
-        s = aBuf.makeStringAndClear();
+        comphelper::string::truncateToLength(aBuf, nLen);
     }
+    else
+    {
+        comphelper::string::padToLength(aBuf, nLen, ' ');
+    }
+    s = aBuf.makeStringAndClear();
 }
 
 // jump (+target)
@@ -3189,11 +3221,14 @@ bool SbiRuntime::implIsClass( SbxObject const * pObj, const OUString& aClass )
         {
             const OUString& aObjClass = pObj->GetClassName();
             SbModule* pClassMod = GetSbData()->pClassFac->FindClass( aObjClass );
-            SbClassData* pClassData;
-            if( pClassMod && (pClassData=pClassMod->pClassData.get()) != nullptr )
+            if( pClassMod )
             {
-                SbxVariable* pClassVar = pClassData->mxIfaces->Find( aClass, SbxClassType::DontCare );
-                bRet = (pClassVar != nullptr);
+                SbClassData* pClassData = pClassMod->pClassData.get();
+                if (pClassData != nullptr )
+                {
+                    SbxVariable* pClassVar = pClassData->mxIfaces->Find( aClass, SbxClassType::DontCare );
+                    bRet = (pClassVar != nullptr);
+                }
             }
         }
     }
@@ -4015,49 +4050,43 @@ void SbiRuntime::StepELEM( sal_uInt32 nOp1, sal_uInt32 nOp2 )
     PushVar( FindElement( pObj, nOp1, nOp2, ERRCODE_BASIC_NO_METHOD, false ) );
 }
 
-// loading a parameter (+offset+type)
-// If the data type is wrong, create a copy.
-// The data type SbxEMPTY shows that no parameters are given.
-// Get( 0 ) may be EMPTY
+/** Loading of a parameter (+offset+type)
+    If the data type is wrong, create a copy and search for optionals including
+    the default value. The data type SbxEMPTY shows that no parameters are given.
+    Get( 0 ) may be EMPTY
 
+    @param nOp1
+    the index of the current parameter being processed,
+    where the entry of the index 0 is for the return value.
+
+    @param nOp2
+    the data type of the parameter.
+ */
 void SbiRuntime::StepPARAM( sal_uInt32 nOp1, sal_uInt32 nOp2 )
 {
-    sal_uInt16 i = static_cast<sal_uInt16>( nOp1 & 0x7FFF );
-    SbxDataType t = static_cast<SbxDataType>(nOp2);
-    SbxVariable* p;
+    sal_uInt16 nIdx = static_cast<sal_uInt16>( nOp1 & 0x7FFF );
+    SbxDataType eType = static_cast<SbxDataType>(nOp2);
+    SbxVariable* pVar;
 
     // #57915 solve missing in a cleaner way
     sal_uInt32 nParamCount = refParams->Count32();
-    if( i >= nParamCount )
+    if( nIdx >= nParamCount )
     {
-        sal_uInt16 iLoop = i;
+        sal_uInt16 iLoop = nIdx;
         while( iLoop >= nParamCount )
         {
-            p = new SbxVariable();
-
-            if( SbiRuntime::isVBAEnabled() &&
-                (t == SbxOBJECT || t == SbxSTRING) )
-            {
-                if( t == SbxOBJECT )
-                {
-                    p->PutObject( nullptr );
-                }
-                else
-                {
-                    p->PutString( OUString() );
-                }
-            }
-            else
-            {
-                p->PutErr( 448 );       // like in VB: Error-Code 448 (ERRCODE_BASIC_NAMED_NOT_FOUND)
-            }
-            refParams->Put32( p, iLoop );
+            pVar = new SbxVariable();
+            pVar->PutErr( 448 );       // like in VB: Error-Code 448 (ERRCODE_BASIC_NAMED_NOT_FOUND)
+            // tdf#79426, tdf#125180 - add additional information about a missing parameter
+            SetIsMissing( pVar );
+            refParams->Put32( pVar, iLoop );
             iLoop--;
         }
     }
-    p = refParams->Get32( i );
+    pVar = refParams->Get32( nIdx );
 
-    if( p->GetType() == SbxERROR && i )
+    // tdf#79426, tdf#125180 - check for optionals only if the parameter is actually missing
+    if( pVar->GetType() == SbxERROR && IsMissing( pVar, 1 ) && nIdx )
     {
         // if there's a parameter missing, it can be OPTIONAL
         bool bOpt = false;
@@ -4066,7 +4095,7 @@ void SbiRuntime::StepPARAM( sal_uInt32 nOp1, sal_uInt32 nOp2 )
             SbxInfo* pInfo = pMeth->GetInfo();
             if ( pInfo )
             {
-                const SbxParamInfo* pParam = pInfo->GetParam( i );
+                const SbxParamInfo* pParam = pInfo->GetParam( nIdx );
                 if( pParam && ( pParam->nFlags & SbxFlagBits::Optional ) )
                 {
                     // Default value?
@@ -4074,9 +4103,15 @@ void SbiRuntime::StepPARAM( sal_uInt32 nOp1, sal_uInt32 nOp2 )
                     if( nDefaultId > 0 )
                     {
                         OUString aDefaultStr = pImg->GetString( nDefaultId );
-                        p = new SbxVariable(pParam-> eType);
-                        p->PutString( aDefaultStr );
-                        refParams->Put32( p, i );
+                        pVar = new SbxVariable(pParam-> eType);
+                        pVar->PutString( aDefaultStr );
+                        refParams->Put32( pVar, nIdx );
+                    }
+                    else if ( SbiRuntime::isVBAEnabled() && eType != SbxVARIANT )
+                    {
+                        // tdf#36737 - initialize the parameter with the default value of its type
+                        pVar = new SbxVariable( pParam->eType );
+                        refParams->Put32( pVar, nIdx );
                     }
                     bOpt = true;
                 }
@@ -4087,19 +4122,19 @@ void SbiRuntime::StepPARAM( sal_uInt32 nOp1, sal_uInt32 nOp2 )
             Error( ERRCODE_BASIC_NOT_OPTIONAL );
         }
     }
-    else if( t != SbxVARIANT && static_cast<SbxDataType>(p->GetType() & 0x0FFF ) != t )
+    else if( eType != SbxVARIANT && static_cast<SbxDataType>(pVar->GetType() & 0x0FFF ) != eType )
     {
-        SbxVariable* q = new SbxVariable( t );
+        SbxVariable* q = new SbxVariable( eType );
         aRefSaved.emplace_back(q );
-        *q = *p;
-        p = q;
-        if ( i )
+        *q = *pVar;
+        pVar = q;
+        if ( nIdx )
         {
-            refParams->Put32( p, i );
+            refParams->Put32( pVar, nIdx );
         }
     }
-    SetupArgs( p, nOp1 );
-    PushVar( CheckArray( p ) );
+    SetupArgs( pVar, nOp1 );
+    PushVar( CheckArray( pVar ) );
 }
 
 // Case-Test (+True-Target+Test-Opcode)
@@ -4320,52 +4355,53 @@ void SbiRuntime::StepDCREATE_IMPL( sal_uInt32 nOp1, sal_uInt32 nOp2 )
         return;
     }
 
-    if (SbxDimArray* pArray = dynamic_cast<SbxDimArray*>(pObj))
+    SbxDimArray* pArray = dynamic_cast<SbxDimArray*>(pObj);
+    if (!pArray)
+        return;
+
+    const sal_Int32 nDims = pArray->GetDims32();
+    sal_Int32 nTotalSize = nDims > 0 ? 1 : 0;
+
+    // must be a one-dimensional array
+    sal_Int32 nLower, nUpper;
+    for( sal_Int32 i = 0 ; i < nDims ; ++i )
     {
-        const sal_Int32 nDims = pArray->GetDims32();
-        sal_Int32 nTotalSize = nDims > 0 ? 1 : 0;
+        pArray->GetDim32( i+1, nLower, nUpper );
+        const sal_Int32 nSize = nUpper - nLower + 1;
+        nTotalSize *= nSize;
+    }
 
-        // must be a one-dimensional array
-        sal_Int32 nLower, nUpper;
-        for( sal_Int32 i = 0 ; i < nDims ; ++i )
+    // Optimization: pre-allocate underlying container
+    if (nTotalSize > 0)
+        pArray->SbxArray::GetRef32(nTotalSize - 1);
+
+    // First, fill those parts of the array that are preserved
+    bool bWasError = false;
+    const bool bRestored = implRestorePreservedArray(pArray, refRedimpArray, &bWasError);
+    if (bWasError)
+        nTotalSize = 0; // on error, don't create objects
+
+    // create objects and insert them into the array
+    OUString aClass( pImg->GetString( static_cast<short>( nOp2 ) ) );
+    OUString aName;
+    for( sal_Int32 i = 0 ; i < nTotalSize ; ++i )
+    {
+        if (!bRestored || !pArray->SbxArray::GetRef32(i)) // For those left unset after preserve
         {
-            pArray->GetDim32( i+1, nLower, nUpper );
-            const sal_Int32 nSize = nUpper - nLower + 1;
-            nTotalSize *= nSize;
-        }
-
-        // Optimization: pre-allocate underlying container
-        if (nTotalSize > 0)
-            pArray->SbxArray::GetRef32(nTotalSize - 1);
-
-        // First, fill those parts of the array that are preserved
-        bool bWasError = false;
-        const bool bRestored = implRestorePreservedArray(pArray, refRedimpArray, &bWasError);
-        if (bWasError)
-            nTotalSize = 0; // on error, don't create objects
-
-        // create objects and insert them into the array
-        OUString aClass( pImg->GetString( static_cast<short>( nOp2 ) ) );
-        OUString aName;
-        for( sal_Int32 i = 0 ; i < nTotalSize ; ++i )
-        {
-            if (!bRestored || !pArray->SbxArray::GetRef32(i)) // For those left unset after preserve
+            SbxObject* pClassObj = SbxBase::CreateObject(aClass);
+            if (!pClassObj)
             {
-                SbxObject* pClassObj = SbxBase::CreateObject(aClass);
-                if (!pClassObj)
-                {
-                    Error(ERRCODE_BASIC_INVALID_OBJECT);
-                    break;
-                }
-                else
-                {
-                    if (aName.isEmpty())
-                        aName = pImg->GetString(static_cast<short>(nOp1));
-                    pClassObj->SetName(aName);
-                    // the object must be able to call the basic
-                    pClassObj->SetParent(&rBasic);
-                    pArray->SbxArray::Put32(pClassObj, i);
-                }
+                Error(ERRCODE_BASIC_INVALID_OBJECT);
+                break;
+            }
+            else
+            {
+                if (aName.isEmpty())
+                    aName = pImg->GetString(static_cast<short>(nOp1));
+                pClassObj->SetName(aName);
+                // the object must be able to call the basic
+                pClassObj->SetParent(&rBasic);
+                pArray->SbxArray::Put32(pClassObj, i);
             }
         }
     }

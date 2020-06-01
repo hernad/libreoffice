@@ -17,21 +17,21 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <svx/XPropertyTable.hxx>
+#include <XPropertyTable.hxx>
 #include <vcl/svapp.hxx>
 
 #include <vcl/virdev.hxx>
 #include <vcl/settings.hxx>
 #include <svx/strings.hrc>
 #include <svx/dialmgr.hxx>
-#include <svx/xpool.hxx>
 
 #include <drawinglayer/attribute/fillhatchattribute.hxx>
-#include <drawinglayer/primitive2d/polypolygonprimitive2d.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonHatchPrimitive2D.hxx>
 #include <drawinglayer/primitive2d/polygonprimitive2d.hxx>
 #include <drawinglayer/processor2d/baseprocessor2d.hxx>
 #include <drawinglayer/processor2d/processor2dtools.hxx>
 #include <basegfx/polygon/b2dpolygontools.hxx>
+#include <rtl/ustrbuf.hxx>
 #include <memory>
 
 using namespace ::com::sun::star;

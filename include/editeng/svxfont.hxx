@@ -49,11 +49,13 @@ public:
     // Methods for Superscript/Subscript
     short GetEscapement() const { return nEsc; }
     void SetEscapement( const short nNewEsc ) { nEsc = nNewEsc; }
+    // set specific values instead of automatic, and ensure valid value. Depends on nPropr being set already.
+    void SetNonAutoEscapement(short nNewEsc, const OutputDevice* pOutDev = nullptr);
 
     sal_uInt8 GetPropr() const { return nPropr; }
     void SetPropr( const sal_uInt8 nNewPropr ) { nPropr = nNewPropr; }
     void SetProprRel( const sal_uInt8 nNewPropr )
-        { SetPropr( static_cast<sal_uInt8>( static_cast<long>(nNewPropr) * static_cast<long>(nPropr) / 100L ) ); }
+        { SetPropr( static_cast<sal_uInt8>( static_cast<long>(nNewPropr) * static_cast<long>(nPropr) / 100 ) ); }
 
     // Kerning
     short GetFixKerning() const { return nKern; }

@@ -105,6 +105,44 @@ void setLegendVisible(const css::uno::Reference<css::frame::XModel>& xModel, boo
         LegendHelper::hideLegend(*pModel);
 }
 
+bool isLegendOverlay(const css::uno::Reference<css::frame::XModel>& xModel)
+{
+    ChartModel* pModel = getChartModel(xModel);
+    if (!pModel)
+        return false;
+
+    Reference< beans::XPropertySet > xLegendProp(LegendHelper::getLegend(*pModel), uno::UNO_QUERY);
+    if( xLegendProp.is())
+    {
+        try
+        {
+            bool bOverlay = false;
+            if(xLegendProp->getPropertyValue("Overlay") >>= bOverlay)
+            {
+                return bOverlay;
+            }
+        }
+        catch(const uno::Exception &)
+        {
+        }
+    }
+
+    return false;
+}
+
+void setLegendOverlay(const css::uno::Reference<css::frame::XModel>& xModel, bool bOverlay)
+{
+    ChartModel* pModel = getChartModel(xModel);
+    if (!pModel)
+        return;
+
+    Reference<beans::XPropertySet> xLegendProp(LegendHelper::getLegend(*pModel), uno::UNO_QUERY);
+    if (!xLegendProp.is())
+        return;
+
+    xLegendProp->setPropertyValue("Overlay", css::uno::Any(bOverlay));
+}
+
 bool isTitleVisisble(const css::uno::Reference<css::frame::XModel>& xModel, TitleHelper::eTitleType eTitle)
 {
     css::uno::Reference<css::uno::XInterface> xTitle = TitleHelper::getTitle(eTitle, xModel);
@@ -137,21 +175,21 @@ bool isGridVisible(const css::uno::Reference<css::frame::XModel>& xModel, GridTy
 void setGridVisible(const css::uno::Reference<css::frame::XModel>& xModel, GridType eType, bool bVisible)
 {
     Reference< chart2::XDiagram > xDiagram(ChartModelHelper::findDiagram(xModel));
-    if(xDiagram.is())
-    {
-        sal_Int32 nDimensionIndex = 0;
-        if (eType == GridType::HOR_MAJOR || eType == GridType::HOR_MINOR)
-            nDimensionIndex = 1;
-        sal_Int32 nCooSysIndex = 0;
+    if(!xDiagram.is())
+        return;
 
-        bool bMajor = (eType == GridType::HOR_MAJOR || eType == GridType::VERT_MAJOR);
+    sal_Int32 nDimensionIndex = 0;
+    if (eType == GridType::HOR_MAJOR || eType == GridType::HOR_MINOR)
+        nDimensionIndex = 1;
+    sal_Int32 nCooSysIndex = 0;
 
-        if (bVisible)
-            AxisHelper::showGrid(nDimensionIndex, nCooSysIndex, bMajor,
-                    xDiagram);
-        else
-            AxisHelper::hideGrid(nDimensionIndex, nCooSysIndex, bMajor, xDiagram);
-    }
+    bool bMajor = (eType == GridType::HOR_MAJOR || eType == GridType::VERT_MAJOR);
+
+    if (bVisible)
+        AxisHelper::showGrid(nDimensionIndex, nCooSysIndex, bMajor,
+                xDiagram);
+    else
+        AxisHelper::hideGrid(nDimensionIndex, nCooSysIndex, bMajor, xDiagram);
 }
 
 bool isAxisVisible(const css::uno::Reference<css::frame::XModel>& xModel, AxisType eType)
@@ -165,7 +203,7 @@ bool isAxisVisible(const css::uno::Reference<css::frame::XModel>& xModel, AxisTy
         else if (eType == AxisType::Z_MAIN)
             nDimensionIndex = 2;
 
-        bool bMajor = !(eType == AxisType::X_SECOND || eType == AxisType::Y_SECOND);
+        bool bMajor = (eType != AxisType::X_SECOND && eType != AxisType::Y_SECOND);
 
         bool bHasAxis = AxisHelper::isAxisShown(nDimensionIndex, bMajor, xDiagram);
         return bHasAxis;
@@ -176,34 +214,34 @@ bool isAxisVisible(const css::uno::Reference<css::frame::XModel>& xModel, AxisTy
 void setAxisVisible(const css::uno::Reference<css::frame::XModel>& xModel, AxisType eType, bool bVisible)
 {
     Reference< chart2::XDiagram > xDiagram(ChartModelHelper::findDiagram(xModel));
-    if(xDiagram.is())
-    {
-        sal_Int32 nDimensionIndex = 0;
-        if (eType == AxisType::Y_MAIN || eType == AxisType::Y_SECOND)
-            nDimensionIndex = 1;
-        else if (eType == AxisType::Z_MAIN)
-            nDimensionIndex = 2;
+    if(!xDiagram.is())
+        return;
 
-        bool bMajor = !(eType == AxisType::X_SECOND || eType == AxisType::Y_SECOND);
+    sal_Int32 nDimensionIndex = 0;
+    if (eType == AxisType::Y_MAIN || eType == AxisType::Y_SECOND)
+        nDimensionIndex = 1;
+    else if (eType == AxisType::Z_MAIN)
+        nDimensionIndex = 2;
 
-        if (bVisible)
-            AxisHelper::showAxis(nDimensionIndex, bMajor, xDiagram, comphelper::getProcessComponentContext());
-        else
-            AxisHelper::hideAxis(nDimensionIndex, bMajor, xDiagram);
-    }
+    bool bMajor = (eType != AxisType::X_SECOND && eType != AxisType::Y_SECOND);
+
+    if (bVisible)
+        AxisHelper::showAxis(nDimensionIndex, bMajor, xDiagram, comphelper::getProcessComponentContext());
+    else
+        AxisHelper::hideAxis(nDimensionIndex, bMajor, xDiagram);
 }
 
 sal_Int32 getLegendPos(const css::uno::Reference<css::frame::XModel>& xModel)
 {
     ChartModel* pModel = getChartModel(xModel);
     if (!pModel)
-        return 4;
+        return -1;
 
     Reference< beans::XPropertySet > xLegendProp( LegendHelper::getLegend(*pModel), uno::UNO_QUERY );
     if (!xLegendProp.is())
-        return 4;
+        return -1;
 
-    chart2::LegendPosition eLegendPos = chart2::LegendPosition_CUSTOM;
+    chart2::LegendPosition eLegendPos = chart2::LegendPosition_LINE_END;
     xLegendProp->getPropertyValue("AnchorPosition") >>= eLegendPos;
     switch(eLegendPos)
     {
@@ -216,7 +254,7 @@ sal_Int32 getLegendPos(const css::uno::Reference<css::frame::XModel>& xModel)
         case chart2::LegendPosition_PAGE_END:
             return 2;
         default:
-            return 4;
+            return -1;
     }
 }
 
@@ -230,7 +268,7 @@ void setLegendPos(const css::uno::Reference<css::frame::XModel>& xModel, sal_Int
     if (!xLegendProp.is())
         return;
 
-    chart2::LegendPosition eLegendPos = chart2::LegendPosition_CUSTOM;
+    chart2::LegendPosition eLegendPos = chart2::LegendPosition_LINE_END;
     css::chart::ChartLegendExpansion eExpansion = css::chart::ChartLegendExpansion_HIGH;
     switch(nPos)
     {
@@ -248,20 +286,13 @@ void setLegendPos(const css::uno::Reference<css::frame::XModel>& xModel, sal_Int
             eLegendPos = chart2::LegendPosition_PAGE_END;
             eExpansion = css::chart::ChartLegendExpansion_WIDE;
             break;
-        case 4:
-            eLegendPos = chart2::LegendPosition_CUSTOM;
-            break;
         default:
             assert(false);
     }
 
     xLegendProp->setPropertyValue("AnchorPosition", css::uno::Any(eLegendPos));
     xLegendProp->setPropertyValue("Expansion", css::uno::Any(eExpansion));
-
-    if (eLegendPos != chart2::LegendPosition_CUSTOM)
-    {
-        xLegendProp->setPropertyValue("RelativePosition", uno::Any());
-    }
+    xLegendProp->setPropertyValue("RelativePosition", uno::Any());
 }
 
 }
@@ -269,7 +300,7 @@ void setLegendPos(const css::uno::Reference<css::frame::XModel>& xModel, sal_Int
 ChartElementsPanel::ChartElementsPanel(
     vcl::Window* pParent, const css::uno::Reference<css::frame::XFrame>& rxFrame,
     ChartController* pController)
-    : PanelLayout(pParent, "ChartElementsPanel", "modules/schart/ui/sidebarelements.ui", rxFrame, true)
+    : PanelLayout(pParent, "ChartElementsPanel", "modules/schart/ui/sidebarelements.ui", rxFrame)
     , mxCBTitle(m_xBuilder->weld_check_button("checkbutton_title"))
     , mxCBSubtitle(m_xBuilder->weld_check_button("checkbutton_subtitle"))
     , mxCBXAxis(m_xBuilder->weld_check_button("checkbutton_x_axis"))
@@ -283,6 +314,7 @@ ChartElementsPanel::ChartElementsPanel(
     , mxCB2ndYAxis(m_xBuilder->weld_check_button("checkbutton_2nd_y_axis"))
     , mxCB2ndYAxisTitle(m_xBuilder->weld_check_button("checkbutton_2nd_y_axis_title"))
     , mxCBLegend(m_xBuilder->weld_check_button("checkbutton_legend"))
+    , mxCBLegendNoOverlay(m_xBuilder->weld_check_button("checkbutton_no_overlay"))
     , mxCBGridVerticalMajor(m_xBuilder->weld_check_button("checkbutton_gridline_vertical_major"))
     , mxCBGridHorizontalMajor(m_xBuilder->weld_check_button("checkbutton_gridline_horizontal_major"))
     , mxCBGridVerticalMinor(m_xBuilder->weld_check_button("checkbutton_gridline_vertical_minor"))
@@ -326,6 +358,7 @@ void ChartElementsPanel::dispose()
     mxCB2ndYAxis.reset();
     mxCB2ndYAxisTitle.reset();
     mxCBLegend.reset();
+    mxCBLegendNoOverlay.reset();
     mxCBGridVerticalMajor.reset();
     mxCBGridHorizontalMajor.reset();
     mxCBGridVerticalMinor.reset();
@@ -363,6 +396,7 @@ void ChartElementsPanel::Initialize()
     mxCB2ndYAxis->connect_toggled(aLink);
     mxCB2ndYAxisTitle->connect_toggled(aLink);
     mxCBLegend->connect_toggled(aLink);
+    mxCBLegendNoOverlay->connect_toggled(aLink);
     mxCBGridVerticalMajor->connect_toggled(aLink);
     mxCBGridHorizontalMajor->connect_toggled(aLink);
     mxCBGridVerticalMinor->connect_toggled(aLink);
@@ -410,7 +444,9 @@ void ChartElementsPanel::updateData()
     SolarMutexGuard aGuard;
 
     mxCBLegend->set_active(isLegendVisible(mxModel));
-    mxBoxLegend->set_sensitive( isLegendVisible(mxModel) );
+    mxCBLegendNoOverlay->set_sensitive(isLegendVisible(mxModel));
+    mxCBLegendNoOverlay->set_active(!isLegendOverlay(mxModel));
+    mxBoxLegend->set_sensitive(isLegendVisible(mxModel));
     mxCBTitle->set_active(isTitleVisisble(mxModel, TitleHelper::MAIN_TITLE));
     mxCBSubtitle->set_active(isTitleVisisble(mxModel, TitleHelper::SUB_TITLE));
     mxCBXAxisTitle->set_active(isTitleVisisble(mxModel, TitleHelper::X_AXIS_TITLE));
@@ -558,9 +594,12 @@ IMPL_LINK(ChartElementsPanel, CheckBoxHdl, weld::ToggleButton&, rCheckBox, void)
         setTitleVisible(TitleHelper::SECONDARY_Y_AXIS_TITLE, bChecked);
     else if (&rCheckBox == mxCBLegend.get())
     {
-        mxBoxLegend->set_sensitive( bChecked );
+        mxBoxLegend->set_sensitive(bChecked);
+        mxCBLegendNoOverlay->set_sensitive(bChecked);
         setLegendVisible(mxModel, bChecked);
     }
+    else if (&rCheckBox == mxCBLegendNoOverlay.get())
+        setLegendOverlay(mxModel, !bChecked);
     else if (&rCheckBox == mxCBGridVerticalMajor.get())
         setGridVisible(mxModel, GridType::VERT_MAJOR, bChecked);
     else if (&rCheckBox == mxCBGridHorizontalMajor.get())

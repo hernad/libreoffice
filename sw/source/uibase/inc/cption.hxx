@@ -31,7 +31,7 @@ class SwView;
 
 class SwCaptionDialog : public SfxDialogController
 {
-    OUString const      m_sNone;
+    OUString m_sNone;
     TextFilterAutoConvert m_aTextFilter;
     SwView       &rView; // search per active, avoid View
     std::unique_ptr<SwFieldMgr> pMgr;      // pointer to save the include
@@ -64,7 +64,6 @@ class SwCaptionDialog : public SfxDialogController
     DECL_LINK(ModifyComboHdl, weld::ComboBox&, void);
     DECL_LINK(OptionHdl, weld::Button&, void);
     DECL_LINK(CaptionHdl, weld::Button&, void);
-    DECL_LINK(TextFilterHdl, OUString&, bool);
 
     void Apply();
 

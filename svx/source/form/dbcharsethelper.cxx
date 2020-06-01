@@ -17,9 +17,8 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <svx/dbcharsethelper.hxx>
+#include <dbcharsethelper.hxx>
 
-#include <connectivity/dbtools.hxx>
 #include <connectivity/dbcharset.hxx>
 
 using namespace ::dbtools;

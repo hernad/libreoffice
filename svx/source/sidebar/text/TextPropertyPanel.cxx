@@ -20,7 +20,6 @@
 #include "TextPropertyPanel.hxx"
 
 #include <com/sun/star/lang/IllegalArgumentException.hpp>
-#include <vcl/toolbox.hxx>
 #include <comphelper/lok.hxx>
 #include <sfx2/lokhelper.hxx>
 
@@ -42,19 +41,35 @@ VclPtr<vcl::Window> TextPropertyPanel::Create (
 
 TextPropertyPanel::TextPropertyPanel ( vcl::Window* pParent, const css::uno::Reference<css::frame::XFrame>& rxFrame )
     : PanelLayout(pParent, "SidebarTextPanel", "svx/ui/sidebartextpanel.ui", rxFrame)
+    , mxFont(m_xBuilder->weld_toolbar("font"))
+    , mxFontDispatch(new ToolbarUnoDispatcher(*mxFont, *m_xBuilder, rxFrame))
+    , mxFontHeight(m_xBuilder->weld_toolbar("fontheight"))
+    , mxFontHeightDispatch(new ToolbarUnoDispatcher(*mxFontHeight, *m_xBuilder, rxFrame))
+    , mxFontEffects(m_xBuilder->weld_toolbar("fonteffects"))
+    , mxFontEffectsDispatch(new ToolbarUnoDispatcher(*mxFontEffects, *m_xBuilder, rxFrame))
+    , mxFontAdjust(m_xBuilder->weld_toolbar("fontadjust"))
+    , mxFontAdjustDispatch(new ToolbarUnoDispatcher(*mxFontAdjust, *m_xBuilder, rxFrame))
+    , mxToolBoxFontColorSw(m_xBuilder->weld_toolbar("colorbar_writer"))
+    , mxToolBoxFontColorSwDispatch(new ToolbarUnoDispatcher(*mxToolBoxFontColorSw, *m_xBuilder, rxFrame))
+    , mxToolBoxFontColor(m_xBuilder->weld_toolbar("colorbar_others"))
+    , mxToolBoxFontColorDispatch(new ToolbarUnoDispatcher(*mxToolBoxFontColor, *m_xBuilder, rxFrame))
+    , mxToolBoxBackgroundColor(m_xBuilder->weld_toolbar("colorbar_background"))
+    , mxToolBoxBackgroundColorDispatch(new ToolbarUnoDispatcher(*mxToolBoxBackgroundColor, *m_xBuilder, rxFrame))
+    , mxResetBar(m_xBuilder->weld_toolbar("resetattr"))
+    , mxResetBarDispatch(new ToolbarUnoDispatcher(*mxResetBar, *m_xBuilder, rxFrame))
+    , mxDefaultBar(m_xBuilder->weld_toolbar("defaultattr"))
+    , mxDefaultBarDispatch(new ToolbarUnoDispatcher(*mxDefaultBar, *m_xBuilder, rxFrame))
+    , mxPositionBar(m_xBuilder->weld_toolbar("position"))
+    , mxPositionBarDispatch(new ToolbarUnoDispatcher(*mxPositionBar, *m_xBuilder, rxFrame))
+    , mxSpacingBar(m_xBuilder->weld_toolbar("spacingbar"))
+    , mxSpacingBarDispatch(new ToolbarUnoDispatcher(*mxSpacingBar, *m_xBuilder, rxFrame))
 {
-    get(mpToolBoxFontColorSw, "colorbar_writer");
-    get(mpToolBoxFontColor, "colorbar_others");
-    get(mpToolBoxBackgroundColor, "colorbar_background");
-
-    bool isMobile = false;
+    bool isMobilePhone = false;
+    const SfxViewShell* pViewShell = SfxViewShell::Current();
     if (comphelper::LibreOfficeKit::isActive() &&
-        comphelper::LibreOfficeKit::isMobile(SfxLokHelper::getView()))
-        isMobile = true;
-    VclPtr<ToolBox> xSpacingBar;
-    get(xSpacingBar, "spacingbar");
-    xSpacingBar->Show(!isMobile);
-    xSpacingBar->ShowItem(0, !isMobile);
+            pViewShell && pViewShell->isLOKMobilePhone())
+        isMobilePhone = true;
+    mxSpacingBar->set_visible(!isMobilePhone);
 }
 
 TextPropertyPanel::~TextPropertyPanel()
@@ -64,9 +79,29 @@ TextPropertyPanel::~TextPropertyPanel()
 
 void TextPropertyPanel::dispose()
 {
-    mpToolBoxFontColorSw.clear();
-    mpToolBoxFontColor.clear();
-    mpToolBoxBackgroundColor.clear();
+    mxResetBarDispatch.reset();
+    mxDefaultBarDispatch.reset();
+    mxPositionBarDispatch.reset();
+    mxSpacingBarDispatch.reset();
+    mxToolBoxFontColorSwDispatch.reset();
+    mxToolBoxFontColorDispatch.reset();
+    mxToolBoxBackgroundColorDispatch.reset();
+    mxFontAdjustDispatch.reset();
+    mxFontEffectsDispatch.reset();
+    mxFontHeightDispatch.reset();
+    mxFontDispatch.reset();
+
+    mxResetBar.reset();
+    mxDefaultBar.reset();
+    mxPositionBar.reset();
+    mxSpacingBar.reset();
+    mxToolBoxFontColorSw.reset();
+    mxToolBoxFontColor.reset();
+    mxToolBoxBackgroundColor.reset();
+    mxFontAdjust.reset();
+    mxFontEffects.reset();
+    mxFontHeight.reset();
+    mxFont.reset();
 
     PanelLayout::dispose();
 }
@@ -81,6 +116,7 @@ void TextPropertyPanel::HandleContextChange (
 
     bool bWriterText = false;
     bool bDrawText = false;
+    bool bCalcText = false;
 
     switch (maContext.GetCombinedContext_DI())
     {
@@ -102,13 +138,23 @@ void TextPropertyPanel::HandleContextChange (
             bWriterText = true;
             break;
 
+        case CombinedEnumContext(Application::Calc, Context::Text):
+        case CombinedEnumContext(Application::Calc, Context::Table):
+        case CombinedEnumContext(Application::Calc, Context::Cell):
+        case CombinedEnumContext(Application::Calc, Context::EditCell):
+        case CombinedEnumContext(Application::Calc, Context::Grid):
+            bCalcText = true;
+            break;
+
         default:
             break;
     }
 
-    mpToolBoxFontColor->Show(!bWriterText);
-    mpToolBoxFontColorSw->Show(bWriterText);
-    mpToolBoxBackgroundColor->Show(bDrawText);
+    mxToolBoxFontColor->set_visible(!bWriterText);
+    mxToolBoxFontColorSw->set_visible(bWriterText);
+    mxToolBoxBackgroundColor->set_visible(bDrawText);
+    mxResetBar->set_visible(bWriterText || bCalcText);
+    mxDefaultBar->set_visible(bDrawText);
 }
 
 } // end of namespace svx::sidebar

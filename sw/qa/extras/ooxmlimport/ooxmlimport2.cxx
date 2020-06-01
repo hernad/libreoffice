@@ -25,6 +25,8 @@
 #include <IMark.hxx>
 #include <sortedobjs.hxx>
 #include <anchoredobject.hxx>
+#include <fmtftn.hxx>
+#include <ftnidx.hxx>
 
 class Test : public SwModelTestBase
 {
@@ -108,6 +110,15 @@ DECLARE_OOXMLIMPORT_TEST(testTdf97038, "tdf97038.docx")
     // Without the accompanying fix in place, this test would have failed, as the importer lost the
     // fLayoutInCell shape property for wrap-though shapes.
     CPPUNIT_ASSERT(getProperty<bool>(getShapeByName("Kep2"), "IsFollowingTextFlow"));
+}
+
+DECLARE_OOXMLIMPORT_TEST(testTdf114212, "tdf114212.docx")
+{
+    // Without the accompanying fix in place, this test would have failed with:
+    // - Expected: 1427
+    // - Actual  : 387
+    OUString aTop = parseDump("//fly[1]/infos/bounds", "top");
+    CPPUNIT_ASSERT_EQUAL(OUString("1427"), aTop);
 }
 
 DECLARE_OOXMLIMPORT_TEST(testTdf109524, "tdf109524.docx")
@@ -269,6 +280,18 @@ DECLARE_OOXMLIMPORT_TEST(testTdf43017, "tdf43017.docx")
                                  getProperty<sal_Int32>(xText, "CharColor"));
 }
 
+CPPUNIT_TEST_FIXTURE(Test, testTdf127778)
+{
+    load(mpTestDocumentPath, "tdf127778.docx");
+    xmlDocUniquePtr pLayout = parseLayoutDump();
+    // Without the accompanying fix in place, this test would have failed with:
+    // equality assertion failed
+    // - Expected: 0
+    // - Actual  : 1
+    // i.e. the 2nd page had an unexpected header.
+    assertXPath(pLayout, "//page[2]/header", 0);
+}
+
 // related tdf#43017
 DECLARE_OOXMLIMPORT_TEST(testTdf124754, "tdf124754.docx")
 {
@@ -391,10 +414,8 @@ DECLARE_OOXMLIMPORT_TEST(testTdf121804, "tdf121804.docx")
 
 DECLARE_OOXMLIMPORT_TEST(testTdf114217, "tdf114217.docx")
 {
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<drawing::XDrawPage> xDrawPage = xDrawPageSupplier->getDrawPage();
     // This was 1, multi-page table was imported as a floating one.
-    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(0), xDrawPage->getCount());
+    CPPUNIT_ASSERT_EQUAL(0, getShapes());
 }
 
 DECLARE_OOXMLIMPORT_TEST(testTdf116486, "tdf116486.docx")
@@ -420,9 +441,7 @@ DECLARE_OOXMLIMPORT_TEST(testTdf115094, "tdf115094.docx")
 {
     // anchor of graphic has to be the text in the text frame
     // xray ThisComponent.DrawPage(1).Anchor.Text
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDrawPage = xDrawPageSupplier->getDrawPage();
-    uno::Reference<text::XTextContent> xShape(xDrawPage->getByIndex(1), uno::UNO_QUERY);
+    uno::Reference<text::XTextContent> xShape(getShape(2), uno::UNO_QUERY);
     uno::Reference<text::XTextRange> xText1 = xShape->getAnchor()->getText();
 
     // xray ThisComponent.TextTables(0).getCellByName("A1")
@@ -520,12 +539,11 @@ DECLARE_OOXMLIMPORT_TEST(testTdf103345, "numbering-circle.docx")
     uno::Sequence<beans::PropertyValue> aProps;
     xLevels->getByIndex(0) >>= aProps; // 1st level
 
-    for (int i = 0; i < aProps.getLength(); ++i)
+    for (beans::PropertyValue const& prop : std::as_const(aProps))
     {
-        if (aProps[i].Name == "NumberingType")
+        if (prop.Name == "NumberingType")
         {
-            CPPUNIT_ASSERT_EQUAL(style::NumberingType::CIRCLE_NUMBER,
-                                 aProps[i].Value.get<sal_Int16>());
+            CPPUNIT_ASSERT_EQUAL(style::NumberingType::CIRCLE_NUMBER, prop.Value.get<sal_Int16>());
             return;
         }
     }
@@ -539,6 +557,40 @@ DECLARE_OOXMLIMPORT_TEST(testTdf130214, "tdf130214.docx")
 DECLARE_OOXMLIMPORT_TEST(testTdf129659, "tdf129659.docx")
 {
     // don't crash on footnote with page break
+}
+
+DECLARE_OOXMLIMPORT_TEST(testTdf129912, "tdf129912.docx")
+{
+    SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
+    CPPUNIT_ASSERT(pTextDoc);
+    SwWrtShell* pWrtShell = pTextDoc->GetDocShell()->GetWrtShell();
+    CPPUNIT_ASSERT(pWrtShell);
+
+    // Goto*FootnoteAnchor iterates the footnotes in a ring, so we need the amount of footnotes to stop the loop
+    sal_Int32 nCount = pWrtShell->GetDoc()->GetFootnoteIdxs().size();
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(5), nCount);
+
+    // the expected footnote labels
+    // TODO: the 5th label is actually wrong (missing the "PR" after the symbol part), but the "b" is there?!
+    const sal_Unicode pLabel5[] = { u'\xF0D1', u'\xF031', u'\xF032', u'\x0062' };
+    const OUString sFootnoteLabels[] = {
+        OUString(u'\xF0A7'), "1", "2", OUString(u'\xF020'), { pLabel5, SAL_N_ELEMENTS(pLabel5) }
+    };
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(SAL_N_ELEMENTS(sFootnoteLabels)), nCount);
+
+    pWrtShell->GotoPrevFootnoteAnchor();
+    nCount--;
+    while (nCount >= 0)
+    {
+        SwFormatFootnote aFootnoteNote;
+        CPPUNIT_ASSERT(pWrtShell->GetCurFootnote(&aFootnoteNote));
+        OUString sNumStr = aFootnoteNote.GetNumStr();
+        if (sNumStr.isEmpty())
+            sNumStr = OUString::number(aFootnoteNote.GetNumber());
+        CPPUNIT_ASSERT_EQUAL(sFootnoteLabels[nCount], sNumStr);
+        pWrtShell->GotoPrevFootnoteAnchor();
+        nCount--;
+    }
 }
 
 // tests should only be added to ooxmlIMPORT *if* they fail round-tripping in ooxmlEXPORT

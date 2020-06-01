@@ -11,8 +11,6 @@
 #define INCLUDED_DBACCESS_SOURCE_UI_INC_QUERYPROPERTIESDIALOG_HXX
 
 #include <vcl/weld.hxx>
-#include <rtl/ustring.hxx>
-#include "LimitBox.hxx"
 
 namespace dbaui
 {

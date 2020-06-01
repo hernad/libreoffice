@@ -32,7 +32,7 @@
 #include <vcl/ptrstyle.hxx>
 #include <vcl/errcode.hxx>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace awt { class XControl; }
     namespace awt { class XDevice; }
     namespace awt { class XUnitConversion; }
@@ -45,7 +45,7 @@ namespace com { namespace sun { namespace star {
     namespace script { class XTypeConverter; }
     namespace uno { class Exception; }
     namespace uno { class XComponentContext; }
-} } }
+}
 
 class SfxObjectShell;
 class SfxViewFrame;
@@ -241,9 +241,9 @@ private:
     css::uno::Reference< css::awt::XWindow > mxWindow;
     css::uno::Reference< css::beans::XPropertySet > mxModelProps;
     css::uno::Reference< css::awt::XUnitConversion > mxUnitConv;
-    double const mfOffsetX;
-    double const mfOffsetY;
-    bool const mbDialog;
+    double mfOffsetX;
+    double mfOffsetY;
+    bool mbDialog;
 };
 
 class VBAHELPER_DLLPUBLIC ContainerUtilities

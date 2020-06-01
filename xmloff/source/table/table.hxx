@@ -26,12 +26,12 @@ struct XMLPropertyMapEntry;
 
 struct TableStyleElement
 {
-    ::xmloff::token::XMLTokenEnum const meElement;
+    ::xmloff::token::XMLTokenEnum meElement;
     OUString msStyleName;
 };
 
 extern const TableStyleElement* getTableStyleMap();
-extern const TableStyleElement*  getWriterSpecificTableStyleMap();
+extern const TableStyleElement* getWriterSpecificTableStyleMap();
 extern const XMLPropertyMapEntry* getColumnPropertiesMap();
 extern const XMLPropertyMapEntry* getRowPropertiesMap();
 extern const XMLPropertyMapEntry* getCellPropertiesMap();

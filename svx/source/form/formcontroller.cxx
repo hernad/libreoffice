@@ -55,9 +55,7 @@
 #include <com/sun/star/sdb/SQLFilterOperator.hpp>
 #include <com/sun/star/sdb/XInteractionSupplyParameters.hpp>
 #include <com/sun/star/sdbc/ColumnValue.hpp>
-#include <com/sun/star/sdbc/DataType.hpp>
 #include <com/sun/star/task/InteractionHandler.hpp>
-#include <com/sun/star/util/XURLTransformer.hpp>
 #include <com/sun/star/form/runtime/FormOperations.hpp>
 #include <com/sun/star/form/runtime/FormFeature.hpp>
 #include <com/sun/star/container/XContainer.hpp>
@@ -73,9 +71,7 @@
 #include <comphelper/sequence.hxx>
 #include <comphelper/flagguard.hxx>
 #include <comphelper/types.hxx>
-#include <cppuhelper/queryinterface.hxx>
 #include <cppuhelper/supportsservice.hxx>
-#include <cppuhelper/typeprovider.hxx>
 #include <connectivity/IParseContext.hxx>
 #include <connectivity/dbtools.hxx>
 #include <connectivity/sqlparse.hxx>
@@ -93,8 +89,6 @@
 
 #include <algorithm>
 #include <iterator>
-
-#include <o3tl/functional.hxx>
 
 using namespace ::com::sun::star;
 using namespace ::comphelper;
@@ -128,7 +122,6 @@ namespace svxform
     using ::com::sun::star::uno::Reference;
     using ::com::sun::star::beans::XPropertySetInfo;
     using ::com::sun::star::beans::PropertyValue;
-    using ::com::sun::star::uno::RuntimeException;
     using ::com::sun::star::lang::IndexOutOfBoundsException;
     using ::com::sun::star::sdb::XInteractionSupplyParameters;
     using ::com::sun::star::awt::XTextComponent;
@@ -155,7 +148,6 @@ namespace svxform
     using ::com::sun::star::form::runtime::XFilterControllerListener;
     using ::com::sun::star::awt::XControlContainer;
     using ::com::sun::star::container::XIdentifierReplace;
-    using ::com::sun::star::lang::WrappedTargetException;
     using ::com::sun::star::form::XFormControllerListener;
     using ::com::sun::star::awt::XWindow;
     using ::com::sun::star::sdbc::XResultSet;
@@ -805,7 +797,7 @@ void FormController::getFastPropertyValue( Any& rValue, sal_Int32 nHandle ) cons
                             OUString sFilterValue( condition->second );
 
                             OUString sErrorMsg, sCriteria;
-                            const std::shared_ptr< OSQLParseNode > pParseNode =
+                            const std::unique_ptr< OSQLParseNode > pParseNode =
                                 predicateTree( sErrorMsg, sFilterValue, xFormatter, xField );
                             OSL_ENSURE( pParseNode != nullptr, "FormController::getFastPropertyValue: could not parse the field value predicate!" );
                             if ( pParseNode != nullptr )
@@ -3120,7 +3112,7 @@ void FormController::setFilter(::std::vector<FmFieldInfo>& rFieldInfos)
                         {
                             OUString sPredicate,sErrorMsg;
                             rRefValue.Value >>= sPredicate;
-                            std::shared_ptr< OSQLParseNode > pParseNode = predicateTree(sErrorMsg, sPredicate, xFormatter, xField);
+                            std::unique_ptr< OSQLParseNode > pParseNode = predicateTree(sErrorMsg, sPredicate, xFormatter, xField);
                             if ( pParseNode != nullptr )
                             {
                                 OUString sCriteria;

@@ -23,7 +23,7 @@
 #include <smarttag.hxx>
 #include "annotationwindow.hxx"
 
-namespace com { namespace sun { namespace star { namespace office { class XAnnotation; } } } }
+namespace com::sun::star::office { class XAnnotation; }
 
 namespace sd {
 
@@ -75,8 +75,8 @@ private:
     AnnotationManagerImpl& mrManager;
     css::uno::Reference< css::office::XAnnotation > mxAnnotation;
     VclPtr<AnnotationWindow>                        mpAnnotationWindow;
-    Color const                                     maColor;
-    int const                                       mnIndex;
+    Color                                           maColor;
+    int                                             mnIndex;
     const vcl::Font&                                mrFont;
     Size                                            maSize;
     ImplSVEvent *                                   mnClosePopupEvent;

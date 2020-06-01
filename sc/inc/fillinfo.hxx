@@ -28,7 +28,7 @@
 #include "colorscale.hxx"
 #include "cellvalue.hxx"
 #include <o3tl/typed_flags_set.hxx>
-#include <o3tl/optional.hxx>
+#include <optional>
 
 class SfxItemSet;
 class SvxBrushItem;
@@ -134,7 +134,7 @@ struct CellInfo
 
     const ScPatternAttr*        pPatternAttr;
     const SfxItemSet*           pConditionSet;
-    o3tl::optional<Color>      mxColorScale;
+    std::optional<Color>      mxColorScale;
     std::unique_ptr<const ScDataBarInfo> pDataBar;
     std::unique_ptr<const ScIconSetInfo> pIconSet;
 
@@ -194,7 +194,7 @@ struct ScTableInfo
     std::unique_ptr<RowInfo[]>
                         mpRowInfo;
     SCSIZE              mnArrCount;
-    SCSIZE const              mnArrCapacity;
+    SCSIZE              mnArrCapacity;
     bool                mbPageMode;
 
     explicit            ScTableInfo(const SCSIZE capacity = 1024);

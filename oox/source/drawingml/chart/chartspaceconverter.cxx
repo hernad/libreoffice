@@ -28,13 +28,10 @@
 #include <com/sun/star/chart2/XDataSeriesContainer.hpp>
 #include <com/sun/star/chart2/XTitled.hpp>
 #include <com/sun/star/drawing/XDrawPageSupplier.hpp>
-#include <com/sun/star/drawing/FillStyle.hpp>
 #include <oox/core/xmlfilterbase.hxx>
 #include <oox/drawingml/chart/chartconverter.hxx>
-#include <oox/token/namespaces.hxx>
 #include <oox/token/properties.hxx>
 #include <oox/token/tokens.hxx>
-#include <oox/helper/graphichelper.hxx>
 #include <drawingml/chart/chartdrawingfragment.hxx>
 #include <drawingml/chart/chartspacemodel.hxx>
 #include <drawingml/chart/plotareaconverter.hxx>
@@ -176,7 +173,10 @@ void ChartSpaceConverter::convertFromModel( const Reference< XShapes >& rxExtern
     }
 
     // chart title
-    if( !mrModel.mbAutoTitleDel ) try
+    /* tdf#119138 autoTitleDeleted might be omitted by generators other than Excel
+       while providing custom title. mbAutoTitleDel is set only based on the attribute value
+       and the default also varies on whether MSO 2007 or newer is the generator, see tdf#78080 */
+    if( !mrModel.mbAutoTitleDel || mrModel.mxTitle.is() ) try
     {
         /*  If the title model is missing, but the chart shows exactly one
             series, the series title is shown as chart title. */

@@ -72,10 +72,13 @@
       </node>
       <node oor:name=".uno:FontworkGalleryFloater" oor:op="replace">
         <prop oor:name="Label" oor:type="xs:string">
-          <value xml:lang="en-US">Fontwork Style</value>
+          <value xml:lang="en-US">Insert Fontwork</value>
         </prop>
         <prop oor:name="ContextLabel" oor:type="xs:string">
           <value xml:lang="en-US">Fontwork...</value>
+        </prop>
+        <prop oor:name="TooltipLabel" oor:type="xs:string">
+          <value xml:lang="en-US">Insert Fontwork Text</value>
         </prop>
         <prop oor:name="Properties" oor:type="xs:int">
           <value>9</value>
@@ -1730,7 +1733,7 @@
       </node>
       <node oor:name=".uno:BasicIDEAppear" oor:op="replace">
         <prop oor:name="Label" oor:type="xs:string">
-          <value xml:lang="en-US">Edit Macros</value>
+          <value xml:lang="en-US">Edit Macros...</value>
         </prop>
         <prop oor:name="Properties" oor:type="xs:int">
           <value>1</value>
@@ -3848,9 +3851,6 @@
         <prop oor:name="Label" oor:type="xs:string">
           <value xml:lang="en-US">F~ontwork</value>
         </prop>
-        <prop oor:name="TooltipLabel" oor:type="xs:string">
-          <value xml:lang="en-US">Insert Fontwork Text</value>
-        </prop>
         <prop oor:name="Properties" oor:type="xs:int">
           <value>1</value>
         </prop>
@@ -5423,7 +5423,7 @@
       </node>
       <node oor:name=".uno:SearchDialog" oor:op="replace">
         <prop oor:name="Label" oor:type="xs:string">
-          <value xml:lang="en-US">Find &amp; Rep~lace...</value>
+          <value xml:lang="en-US">Find and Rep~lace...</value>
         </prop>
         <prop oor:name="Properties" oor:type="xs:int">
           <value>9</value>
@@ -6867,7 +6867,7 @@
       </node>
       <node oor:name=".uno:InsertNarrowNobreakSpace" oor:op="replace">
         <prop oor:name="Label" oor:type="xs:string">
-          <value xml:lang="en-US">Insert n~arrow no-break space (U+202F)</value>
+          <value xml:lang="en-US">Insert N~arrow No-break Space</value>
         </prop>
         <prop oor:name="Properties" oor:type="xs:int">
           <value>1</value>
@@ -7000,6 +7000,9 @@
       <node oor:name=".uno:ExternalEdit" oor:op="replace">
         <prop oor:name="Label" oor:type="xs:string">
           <value xml:lang="en-US">Edit with External Tool</value>
+        </prop>
+        <prop oor:name="Properties" oor:type="xs:int">
+          <value>1</value>
         </prop>
       </node>
       <node oor:name=".uno:ClassificationApply" oor:op="replace">

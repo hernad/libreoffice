@@ -25,7 +25,6 @@
 #include <com/sun/star/awt/FontUnderline.hpp>
 #include <com/sun/star/container/XNameContainer.hpp>
 #include <com/sun/star/script/XInvocation.hpp>
-#include <com/sun/star/lang/WrappedTargetException.hpp>
 #include <com/sun/star/lang/WrappedTargetRuntimeException.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 
@@ -33,7 +32,6 @@
 #include "vbacontrol.hxx"
 #include <cppuhelper/exc_hlp.hxx>
 #include <cppuhelper/implbase.hxx>
-#include <ooo/vba/XControlProvider.hpp>
 #include <unordered_map>
 
 using namespace com::sun::star;
@@ -150,8 +148,8 @@ class ControlsEnumWrapper : public EnumerationHelper_BASE
     uno::Reference<container::XIndexAccess > m_xIndexAccess;
     uno::Reference<awt::XControl > m_xDlg;
     uno::Reference< frame::XModel > m_xModel;
-    double const mfOffsetX;
-    double const mfOffsetY;
+    double mfOffsetX;
+    double mfOffsetY;
     sal_Int32 nIndex;
 
 public:

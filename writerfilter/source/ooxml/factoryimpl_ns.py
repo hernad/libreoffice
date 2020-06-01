@@ -7,7 +7,6 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #
 
-from __future__ import print_function
 from xml.dom import minidom
 import sys
 
@@ -400,7 +399,7 @@ def charactersActionForValues(nsNode, refNode):
     ret = []
 
     refName = refNode.getAttribute("name")
-    for defineNode in [i for i in getChildrenByName(getChildByName(nsNode, "grammar"), "define") if defineNode.getAttribute("name") == refName]:
+    for defineNode in [i for i in getChildrenByName(getChildByName(nsNode, "grammar"), "define") if i.getAttribute("name") == refName]:
         ret.append("    {")
         ret.append("    // %s" % defineNode.getAttribute("name"))
         for dataNode in getChildrenByName(defineNode, "data"):

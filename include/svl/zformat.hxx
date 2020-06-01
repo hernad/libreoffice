@@ -28,7 +28,7 @@ namespace utl {
     class DigitGroupingIterator;
 }
 
-namespace com { namespace sun { namespace star { namespace i18n { struct NativeNumberXmlAttributes2; } } } }
+namespace com::sun::star::i18n { struct NativeNumberXmlAttributes2; }
 
 class Color;
 
@@ -296,6 +296,8 @@ public:
     // Subtype of a subformat code nNumFor (0..3)
     // nPos == 0xFFFF => last substring
     short GetNumForType( sal_uInt16 nNumFor, sal_uInt16 nPos ) const;
+
+    OUString GetPercentString( sal_uInt16 nNumFor = 0 ) const;
 
     OUString GetDenominatorString( sal_uInt16 nNumFor ) const;
     OUString GetNumeratorString( sal_uInt16 nNumFor ) const;

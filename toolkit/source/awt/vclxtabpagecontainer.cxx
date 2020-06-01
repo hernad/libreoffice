@@ -17,10 +17,11 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <toolkit/awt/vclxtabpagecontainer.hxx>
+#include <awt/vclxtabpagecontainer.hxx>
 #include <com/sun/star/awt/tab/XTabPageModel.hpp>
 #include <com/sun/star/awt/XControl.hpp>
 #include <sal/log.hxx>
+#include <toolkit/helper/property.hxx>
 #include <vcl/image.hxx>
 #include <vcl/tabpage.hxx>
 #include <vcl/tabctrl.hxx>
@@ -63,12 +64,8 @@ void SAL_CALL VCLXTabPageContainer::draw( sal_Int32 nX, sal_Int32 nY )
         if (pTabPage && pDev)
         {
             ::Point aPos( nX, nY );
-            ::Size  aSize = pTabPage->GetSizePixel();
-
             aPos  = pDev->PixelToLogic( aPos );
-            aSize = pDev->PixelToLogic( aSize );
-
-            pTabPage->Draw( pDev, aPos, aSize, DrawFlags::NONE );
+            pTabPage->Draw( pDev, aPos, DrawFlags::NONE );
         }
     }
 
@@ -206,6 +203,28 @@ void SAL_CALL VCLXTabPageContainer::elementRemoved( const css::container::Contai
 }
 void SAL_CALL VCLXTabPageContainer::elementReplaced( const css::container::ContainerEvent& /*Event*/ )
 {
+}
+
+void VCLXTabPageContainer::propertiesChange(const::css::uno::Sequence<PropertyChangeEvent>& rEvents)
+{
+    SolarMutexGuard aGuard;
+    VclPtr<TabControl> pTabCtrl = GetAs<TabControl>();
+    if (!pTabCtrl)
+        return;
+
+    for (const beans::PropertyChangeEvent& rEvent : rEvents) {
+        // handle property changes for tab pages
+        Reference< css::awt::tab::XTabPageModel > xTabPageModel(rEvent.Source, uno::UNO_QUERY);
+        if (!xTabPageModel.is())
+            continue;
+
+        const sal_Int16 nId = xTabPageModel->getTabPageID();
+        if (rEvent.PropertyName == GetPropertyName(BASEPROPERTY_ENABLED)) {
+            pTabCtrl->SetPageEnabled(nId, xTabPageModel->getEnabled());
+        } else if (rEvent.PropertyName == GetPropertyName(BASEPROPERTY_TITLE)) {
+            pTabCtrl->SetPageText(nId, xTabPageModel->getTitle());
+        }
+    }
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

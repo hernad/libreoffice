@@ -453,7 +453,7 @@ VclPtr<VclAbstractDialog> SdDialogsTest::createDialogByID(sal_uInt32 nID)
             // may be nicer on the long run to take a configuration which represents a selected SdrObject
             SfxStyleSheetBasePool* pStyleSheetPool = getDocShell()->GetStyleSheetPool();
             CPPUNIT_ASSERT(pStyleSheetPool);
-            SfxStyleSheetBase* pStyleSheet = pStyleSheetPool->First();
+            SfxStyleSheetBase* pStyleSheet = pStyleSheetPool->First(SfxStyleFamily::Page);
             CPPUNIT_ASSERT(pStyleSheet);
             vcl::Window* pWin = Application::GetDefDialogParent();
             pRetval = getSdAbstractDialogFactory()->CreateSdPresLayoutTemplateDlg(
@@ -461,7 +461,7 @@ VclPtr<VclAbstractDialog> SdDialogsTest::createDialogByID(sal_uInt32 nID)
                 pWin ? pWin->GetFrameWeld() : nullptr,
                 false,
                 *pStyleSheet,
-                PO_TITLE,
+                PresentationObjects::Title,
                 pStyleSheetPool);
             break;
         }
@@ -482,7 +482,7 @@ VclPtr<VclAbstractDialog> SdDialogsTest::createDialogByID(sal_uInt32 nID)
             // may be nicer on the long run to take a configuration which represents a selected SdrObject
             SfxStyleSheetBasePool* pStyleSheetPool = getDocShell()->GetStyleSheetPool();
             CPPUNIT_ASSERT(pStyleSheetPool);
-            SfxStyleSheetBase* pStyleSheet = pStyleSheetPool->First();
+            SfxStyleSheetBase* pStyleSheet = pStyleSheetPool->First(SfxStyleFamily::Pseudo);
             CPPUNIT_ASSERT(pStyleSheet);
             SdDrawDocument* pDrawDoc = getSdXImpressDocument()->GetDoc();
             CPPUNIT_ASSERT(pDrawDoc);

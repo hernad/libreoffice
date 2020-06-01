@@ -18,10 +18,12 @@
  */
 
 #include "Time.hxx"
-#include <tools/time.hxx>
+#include <property.hxx>
+#include <services.hxx>
 #include <connectivity/dbconversion.hxx>
 #include <com/sun/star/sdbc/DataType.hpp>
 #include <com/sun/star/util/DateTime.hpp>
+#include <com/sun/star/form/FormComponentType.hpp>
 
 using namespace dbtools;
 
@@ -32,7 +34,6 @@ using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::sdb;
 using namespace ::com::sun::star::sdbc;
-using namespace ::com::sun::star::sdbcx;
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::container;
 using namespace ::com::sun::star::form;
@@ -195,18 +196,18 @@ void OTimeModel::onConnectedDbColumn( const Reference< XInterface >& _rxForm )
 {
     OBoundControlModel::onConnectedDbColumn( _rxForm );
     Reference<XPropertySet> xField = getField();
-    if (xField.is())
+    if (!xField.is())
+        return;
+
+    m_bDateTimeField = false;
+    try
     {
-        m_bDateTimeField = false;
-        try
-        {
-            sal_Int32 nFieldType = 0;
-            xField->getPropertyValue(PROPERTY_FIELDTYPE) >>= nFieldType;
-            m_bDateTimeField = (nFieldType == DataType::TIMESTAMP);
-        }
-        catch(const Exception&)
-        {
-        }
+        sal_Int32 nFieldType = 0;
+        xField->getPropertyValue(PROPERTY_FIELDTYPE) >>= nFieldType;
+        m_bDateTimeField = (nFieldType == DataType::TIMESTAMP);
+    }
+    catch(const Exception&)
+    {
     }
 }
 

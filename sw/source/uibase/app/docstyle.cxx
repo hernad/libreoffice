@@ -24,6 +24,7 @@
 #include <cstdlib>
 
 #include <hintids.hxx>
+#include <rtl/ustrbuf.hxx>
 #include <svl/itemiter.hxx>
 #include <svl/eitem.hxx>
 #include <unotools/syslocale.hxx>
@@ -60,6 +61,7 @@
 #include <svx/xdef.hxx>
 #include <SwRewriter.hxx>
 #include <hints.hxx>
+#include <frameformats.hxx>
 #include <svx/xfillit0.hxx>
 #include <svx/xflftrit.hxx>
 #include <svx/drawitem.hxx>
@@ -344,7 +346,7 @@ static const SwBoxAutoFormat* lcl_FindCellStyle(SwDoc& rDoc, const OUString& rNa
                     const sal_uInt32 nBoxIndex = aTableTemplateMap[nBoxFormat];
                     const SwBoxAutoFormat& rBoxFormat = rTableStyle.GetBoxFormat(nBoxIndex);
                     OUString sBoxFormatName;
-                    SwStyleNameMapper::FillProgName(rTableStyle.GetName(), sBoxFormatName, SwGetPoolIdFromName::CellStyle);
+                    SwStyleNameMapper::FillProgName(rTableStyle.GetName(), sBoxFormatName, SwGetPoolIdFromName::TabStyle);
                     sBoxFormatName += rTableStyle.GetTableTemplateCellSubName(rBoxFormat);
                     if (rName == sBoxFormatName)
                         pFormat = &rBoxFormat;
@@ -1140,7 +1142,7 @@ bool  SwDocStyleSheet::SetName(const OUString& rStr, bool bReindexNow)
 
     if( bChg )
     {
-        m_pPool->First();  // internal list has to be updated
+        m_pPool->First(nFamily);  // internal list has to be updated
         m_pPool->Broadcast( SfxStyleSheetHint( SfxHintId::StyleSheetModified, *this ) );
         SwEditShell* pSh = rDoc.GetEditShell();
         if( pSh )
@@ -2725,8 +2727,7 @@ SfxStyleSheetBase*  SwStyleSheetIterator::First()
                 }
 
                 if(  rDoc.getIDocumentSettingAccess().get(DocumentSettingId::HTML_MODE) && !(nId & USER_FMT) &&
-                    !( RES_POOLCHR_HTML_BEGIN <= nId &&
-                          nId < RES_POOLCHR_HTML_END ) &&
+                    ( RES_POOLCHR_HTML_BEGIN > nId || nId >= RES_POOLCHR_HTML_END ) &&
                     RES_POOLCHR_INET_NORMAL != nId &&
                     RES_POOLCHR_INET_VISIT != nId &&
                     RES_POOLCHR_FOOTNOTE  != nId &&
@@ -3069,7 +3070,7 @@ SfxStyleSheetBase*  SwStyleSheetIterator::First()
                     const sal_uInt32 nBoxIndex = aTableTemplateMap[nBoxFormat];
                     const SwBoxAutoFormat& rBoxFormat = rTableStyle.GetBoxFormat(nBoxIndex);
                     OUString sBoxFormatName;
-                    SwStyleNameMapper::FillProgName(rTableStyle.GetName(), sBoxFormatName, SwGetPoolIdFromName::CellStyle);
+                    SwStyleNameMapper::FillProgName(rTableStyle.GetName(), sBoxFormatName, SwGetPoolIdFromName::TabStyle);
                     sBoxFormatName += rTableStyle.GetTableTemplateCellSubName(rBoxFormat);
                     aLst.Append( cCELLSTYLE, sBoxFormatName );
                 }
@@ -3187,7 +3188,8 @@ void SwStyleSheetIterator::AppendStyleList(const std::vector<OUString>& rList,
 
 void SwDocStyleSheetPool::InvalidateIterator()
 {
-    dynamic_cast<SwStyleSheetIterator&>(GetIterator_Impl()).InvalidateIterator();
+    if (SfxStyleSheetIterator* pIter = GetCachedIterator())
+        dynamic_cast<SwStyleSheetIterator&>(*pIter).InvalidateIterator();
 }
 
 void SwStyleSheetIterator::InvalidateIterator()

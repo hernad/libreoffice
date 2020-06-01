@@ -51,6 +51,7 @@
 #include <com/sun/star/beans/PropertyAttribute.hpp>
 #include <com/sun/star/document/XDocumentPropertiesSupplier.hpp>
 #include <com/sun/star/document/XDocumentRecovery.hpp>
+#include <com/sun/star/document/XExtendedFilterDetection.hpp>
 #include <com/sun/star/util/XCloseable.hpp>
 #include <com/sun/star/awt/XWindow2.hpp>
 #include <com/sun/star/task/XStatusIndicatorFactory.hpp>
@@ -2707,21 +2708,21 @@ void lc_removeLockFile(AutoRecovery::TDocumentInfo const & rInfo)
 #if !HAVE_FEATURE_MULTIUSER_ENVIRONMENT || HAVE_FEATURE_MACOSX_SANDBOX
     (void) rInfo;
 #else
-    if ( rInfo.Document.is() )
+    if ( !rInfo.Document.is() )
+        return;
+
+    try
     {
-        try
+        css::uno::Reference< css::frame::XStorable > xStore(rInfo.Document, css::uno::UNO_QUERY_THROW);
+        OUString aURL = xStore->getLocation();
+        if ( !aURL.isEmpty() )
         {
-            css::uno::Reference< css::frame::XStorable > xStore(rInfo.Document, css::uno::UNO_QUERY_THROW);
-            OUString aURL = xStore->getLocation();
-            if ( !aURL.isEmpty() )
-            {
-                ::svt::DocumentLockFile aLockFile( aURL );
-                aLockFile.RemoveFile();
-            }
+            ::svt::DocumentLockFile aLockFile( aURL );
+            aLockFile.RemoveFile();
         }
-        catch( const css::uno::Exception& )
-        {
-        }
+    }
+    catch( const css::uno::Exception& )
+    {
     }
 #endif
 }
@@ -3346,6 +3347,37 @@ void AutoRecovery::implts_openOneDoc(const OUString&               sURL       ,
         }
         else
         {
+            OUString sFilterName;
+            lDescriptor[utl::MediaDescriptor::PROP_FILTERNAME()] >>= sFilterName;
+            if (!sFilterName.isEmpty()
+                && (   sFilterName == "Calc MS Excel 2007 XML"
+                    || sFilterName == "Impress MS PowerPoint 2007 XML"
+                    || sFilterName == "MS Word 2007 XML"))
+                // TODO: Probably need to check other affected formats + templates?
+            {
+                // tdf#129096: in case of recovery of password protected OOXML document it is done not
+                // the same way as ordinal loading. Inside XDocumentRecovery::recoverFromFile
+                // there is a call to XFilter::filter which has constant media descriptor and thus
+                // all encryption data used in document is lost. To avoid this try to walkaround
+                // with explicit call to FormatDetector. It will try to load document, prompt for password
+                // and store this info in media descriptor we will use for recoverFromFile call.
+                Reference< css::document::XExtendedFilterDetection > xDetection(
+                    m_xContext->getServiceManager()->createInstanceWithContext(
+                        "com.sun.star.comp.oox.FormatDetector", m_xContext),
+                    UNO_QUERY_THROW);
+                lDescriptor[utl::MediaDescriptor::PROP_URL()] <<= sURL;
+                Sequence< css::beans::PropertyValue > aDescriptorSeq = lDescriptor.getAsConstPropertyValueList();
+                OUString sType = xDetection->detect(aDescriptorSeq);
+
+                OUString sNewFilterName;
+                lDescriptor[utl::MediaDescriptor::PROP_FILTERNAME()] >>= sNewFilterName;
+                if (!sType.isEmpty() && sNewFilterName == sFilterName)
+                {
+                    // Filter detection was okay, update media descriptor with one received from FilterDetect
+                    lDescriptor = aDescriptorSeq;
+                }
+            }
+
             // let it recover itself
             Reference< XDocumentRecovery > xDocRecover( xModel, UNO_QUERY_THROW );
             xDocRecover->recoverFromFile(
@@ -3450,7 +3482,7 @@ void AutoRecovery::implts_generateNewTempURL(const OUString&               sBack
     OUString sName(sUniqueName.makeStringAndClear());
     OUString sExtension(rInfo.Extension);
     OUString sPath(sBackupPath);
-    ::utl::TempFile aTempFile(sName, true, &sExtension, &sPath);
+    ::utl::TempFile aTempFile(sName, true, &sExtension, &sPath, true);
 
     rInfo.NewTempURL = aTempFile.GetURL();
 }
@@ -3464,20 +3496,20 @@ void AutoRecovery::implts_informListener(      Job                      eJob  ,
 
     // inform listener, which are registered for any URLs(!)
     pListenerForURL = m_lListener.getContainer(sJob);
-    if(pListenerForURL != nullptr)
+    if(pListenerForURL == nullptr)
+        return;
+
+    ::cppu::OInterfaceIteratorHelper pIt(*pListenerForURL);
+    while(pIt.hasMoreElements())
     {
-        ::cppu::OInterfaceIteratorHelper pIt(*pListenerForURL);
-        while(pIt.hasMoreElements())
+        try
         {
-            try
-            {
-                css::uno::Reference< css::frame::XStatusListener > xListener(static_cast<css::frame::XStatusListener*>(pIt.next()), css::uno::UNO_QUERY);
-                xListener->statusChanged(aEvent);
-            }
-            catch(const css::uno::RuntimeException&)
-            {
-                pIt.remove();
-            }
+            css::uno::Reference< css::frame::XStatusListener > xListener(static_cast<css::frame::XStatusListener*>(pIt.next()), css::uno::UNO_QUERY);
+            xListener->statusChanged(aEvent);
+        }
+        catch(const css::uno::RuntimeException&)
+        {
+            pIt.remove();
         }
     }
 }

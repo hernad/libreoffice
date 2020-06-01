@@ -329,7 +329,7 @@ bool SfxNotebookBar::StateMethod(SfxBindings& rBindings, const OUString& rUIFile
 {
     SfxFrame& rFrame = rBindings.GetDispatcher_Impl()->GetFrame()->GetFrame();
     return StateMethod(rFrame.GetSystemWindow(), rFrame.GetFrameInterface(), rUIFile,
-                       bReloadNotebookbar || rBindings.GetDispatcher_Impl()->IsUpdated_Impl());
+                       bReloadNotebookbar);
 }
 
 bool SfxNotebookBar::StateMethod(SystemWindow* pSysWindow,
@@ -415,10 +415,6 @@ bool SfxNotebookBar::StateMethod(SystemWindow* pSysWindow,
 
 void SfxNotebookBar::RemoveListeners(SystemWindow const * pSysWindow)
 {
-    Reference<XContextChangeEventMultiplexer> xMultiplexer
-                        = ContextChangeEventMultiplexer::get(
-                                ::comphelper::getProcessComponentContext());
-
     if (auto pNotebookBar = pSysWindow->GetNotebookBar())
     {
         pNotebookBar->StopListeningAllControllers();
@@ -485,9 +481,6 @@ void SfxNotebookBar::ShowMenubar(SfxViewFrame const * pViewFrame, bool bShow)
         return;
 
     m_bLock = true;
-
-    uno::Reference<uno::XComponentContext> xContext = comphelper::getProcessComponentContext();
-    const Reference<frame::XModuleManager> xModuleManager = frame::ModuleManager::create(xContext);
 
     Reference<frame::XFrame> xFrame = pViewFrame->GetFrame().GetFrameInterface();
     if (xFrame.is())

@@ -16,6 +16,8 @@
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
+#include <numeric>
+#include <algorithm>
 
 #include <basegfx/numeric/ftools.hxx>
 #include <basegfx/polygon/b2dpolygontools.hxx>
@@ -32,8 +34,6 @@
 #include <basegfx/curve/b2dbeziertools.hxx>
 #include <basegfx/matrix/b2dhommatrixtools.hxx>
 
-#include <numeric>
-
 // #i37443#
 #define ANGLE_BOUND_START_VALUE     (2.25)
 #define ANGLE_BOUND_MINIMUM_VALUE   (0.1)
@@ -43,39 +43,39 @@ namespace basegfx::utils
 {
         void openWithGeometryChange(B2DPolygon& rCandidate)
         {
-            if(rCandidate.isClosed())
+            if(!rCandidate.isClosed())
+                return;
+
+            if(rCandidate.count())
             {
-                if(rCandidate.count())
+                rCandidate.append(rCandidate.getB2DPoint(0));
+
+                if(rCandidate.areControlPointsUsed() && rCandidate.isPrevControlPointUsed(0))
                 {
-                    rCandidate.append(rCandidate.getB2DPoint(0));
-
-                    if(rCandidate.areControlPointsUsed() && rCandidate.isPrevControlPointUsed(0))
-                    {
-                        rCandidate.setPrevControlPoint(rCandidate.count() - 1, rCandidate.getPrevControlPoint(0));
-                        rCandidate.resetPrevControlPoint(0);
-                    }
+                    rCandidate.setPrevControlPoint(rCandidate.count() - 1, rCandidate.getPrevControlPoint(0));
+                    rCandidate.resetPrevControlPoint(0);
                 }
-
-                rCandidate.setClosed(false);
             }
+
+            rCandidate.setClosed(false);
         }
 
         void closeWithGeometryChange(B2DPolygon& rCandidate)
         {
-            if(!rCandidate.isClosed())
-            {
-                while(rCandidate.count() > 1 && rCandidate.getB2DPoint(0) == rCandidate.getB2DPoint(rCandidate.count() - 1))
-                {
-                    if(rCandidate.areControlPointsUsed() && rCandidate.isPrevControlPointUsed(rCandidate.count() - 1))
-                    {
-                        rCandidate.setPrevControlPoint(0, rCandidate.getPrevControlPoint(rCandidate.count() - 1));
-                    }
+            if(rCandidate.isClosed())
+                return;
 
-                    rCandidate.remove(rCandidate.count() - 1);
+            while(rCandidate.count() > 1 && rCandidate.getB2DPoint(0) == rCandidate.getB2DPoint(rCandidate.count() - 1))
+            {
+                if(rCandidate.areControlPointsUsed() && rCandidate.isPrevControlPointUsed(rCandidate.count() - 1))
+                {
+                    rCandidate.setPrevControlPoint(0, rCandidate.getPrevControlPoint(rCandidate.count() - 1));
                 }
 
-                rCandidate.setClosed(true);
+                rCandidate.remove(rCandidate.count() - 1);
             }
+
+            rCandidate.setClosed(true);
         }
 
         void checkClosed(B2DPolygon& rCandidate)
@@ -331,15 +331,15 @@ namespace basegfx::utils
                         const B2DPoint aPreviousPoint(aCurrentPoint);
                         aCurrentPoint = aCandidate.getB2DPoint(a);
 
-                        // cross-over in Y?
-                        const bool bCompYA(fTools::more(aPreviousPoint.getY(), rPoint.getY()));
-                        const bool bCompYB(fTools::more(aCurrentPoint.getY(), rPoint.getY()));
+                        // cross-over in Y? tdf#130150 use full precision, no need for epsilon
+                        const bool bCompYA(aPreviousPoint.getY() > rPoint.getY());
+                        const bool bCompYB(aCurrentPoint.getY() > rPoint.getY());
 
                         if(bCompYA != bCompYB)
                         {
-                            // cross-over in X?
-                            const bool bCompXA(fTools::more(aPreviousPoint.getX(), rPoint.getX()));
-                            const bool bCompXB(fTools::more(aCurrentPoint.getX(), rPoint.getX()));
+                            // cross-over in X? tdf#130150 use full precision, no need for epsilon
+                            const bool bCompXA(aPreviousPoint.getX() > rPoint.getX());
+                            const bool bCompXB(aCurrentPoint.getX() > rPoint.getX());
 
                             if(bCompXA == bCompXB)
                             {
@@ -355,7 +355,8 @@ namespace basegfx::utils
                                     (aPreviousPoint.getX() - aCurrentPoint.getX()) /
                                     (aPreviousPoint.getY() - aCurrentPoint.getY()));
 
-                                if(fTools::more(fCompare, rPoint.getX()))
+                                // tdf#130150 use full precision, no need for epsilon
+                                if(fCompare > rPoint.getX())
                                 {
                                     bRetval = !bRetval;
                                 }
@@ -1110,7 +1111,102 @@ namespace basegfx::utils
             return false;
         }
 
-        void applyLineDashing(const B2DPolygon& rCandidate, const std::vector<double>& rDotDashArray, B2DPolyPolygon* pLineTarget, B2DPolyPolygon* pGapTarget, double fDotDashLength)
+        void applyLineDashing(
+            const B2DPolygon& rCandidate,
+            const std::vector<double>& rDotDashArray,
+            B2DPolyPolygon* pLineTarget,
+            B2DPolyPolygon* pGapTarget,
+            double fDotDashLength)
+        {
+            // clear targets in any case
+            if(pLineTarget)
+            {
+                pLineTarget->clear();
+            }
+
+            if(pGapTarget)
+            {
+                pGapTarget->clear();
+            }
+
+            // provide callbacks as lambdas
+            auto aLineCallback(
+                nullptr == pLineTarget
+                ? std::function<void(const basegfx::B2DPolygon&)>()
+                : [&pLineTarget](const basegfx::B2DPolygon& rSnippet){ pLineTarget->append(rSnippet); });
+            auto aGapCallback(
+                nullptr == pGapTarget
+                ? std::function<void(const basegfx::B2DPolygon&)>()
+                : [&pGapTarget](const basegfx::B2DPolygon& rSnippet){ pGapTarget->append(rSnippet); });
+
+            // call version that uses callbacks
+            applyLineDashing(
+                rCandidate,
+                rDotDashArray,
+                aLineCallback,
+                aGapCallback,
+                fDotDashLength);
+        }
+
+        static void implHandleSnippet(
+            const B2DPolygon& rSnippet,
+            std::function<void(const basegfx::B2DPolygon& rSnippet)>& rTargetCallback,
+            B2DPolygon& rFirst,
+            B2DPolygon& rLast)
+        {
+            if(rSnippet.isClosed())
+            {
+                if(!rFirst.count())
+                {
+                    rFirst = rSnippet;
+                }
+                else
+                {
+                    if(rLast.count())
+                    {
+                        rTargetCallback(rLast);
+                    }
+
+                    rLast = rSnippet;
+                }
+            }
+            else
+            {
+                rTargetCallback(rSnippet);
+            }
+        }
+
+        static void implHandleFirstLast(
+            std::function<void(const basegfx::B2DPolygon& rSnippet)>& rTargetCallback,
+            B2DPolygon& rFirst,
+            B2DPolygon& rLast)
+        {
+            if(rFirst.count() && rLast.count()
+                && rFirst.getB2DPoint(0).equal(rLast.getB2DPoint(rLast.count() - 1)))
+            {
+                // start of first and end of last are the same -> merge them
+                rLast.append(rFirst);
+                rLast.removeDoublePoints();
+                rFirst.clear();
+            }
+
+            if(rLast.count())
+            {
+                rTargetCallback(rLast);
+            }
+
+            if(rFirst.count())
+            {
+                rTargetCallback(rFirst);
+            }
+        }
+
+        void applyLineDashing(
+            const B2DPolygon& rCandidate,
+            const std::vector<double>& rDotDashArray,
+            std::function<void(const basegfx::B2DPolygon& rSnippet)> aLineTargetCallback,
+            std::function<void(const basegfx::B2DPolygon& rSnippet)> aGapTargetCallback,
+            double fDotDashLength)
         {
             const sal_uInt32 nPointCount(rCandidate.count());
             const sal_uInt32 nDotDashCount(rDotDashArray.size());
@@ -1120,154 +1216,159 @@ namespace basegfx::utils
                 fDotDashLength = std::accumulate(rDotDashArray.begin(), rDotDashArray.end(), 0.0);
             }
 
-            if(fTools::more(fDotDashLength, 0.0) && (pLineTarget || pGapTarget) && nPointCount)
+            if(fTools::lessOrEqual(fDotDashLength, 0.0) || (!aLineTargetCallback && !aGapTargetCallback) || !nPointCount)
             {
-                // clear targets
-                if(pLineTarget)
+                // parameters make no sense, just add source to targets
+                if(aLineTargetCallback)
                 {
-                    pLineTarget->clear();
+                    aLineTargetCallback(rCandidate);
                 }
 
-                if(pGapTarget)
+                if(aGapTargetCallback)
                 {
-                    pGapTarget->clear();
+                    aGapTargetCallback(rCandidate);
                 }
 
-                // prepare current edge's start
-                B2DCubicBezier aCurrentEdge;
-                const sal_uInt32 nEdgeCount(rCandidate.isClosed() ? nPointCount : nPointCount - 1);
-                aCurrentEdge.setStartPoint(rCandidate.getB2DPoint(0));
+                return;
+            }
 
-                // prepare DotDashArray iteration and the line/gap switching bool
-                sal_uInt32 nDotDashIndex(0);
-                bool bIsLine(true);
-                double fDotDashMovingLength(rDotDashArray[0]);
-                B2DPolygon aSnippet;
+            // precalculate maximal acceptable length of candidate polygon assuming
+            // we want to create a maximum of fNumberOfAllowedSnippets. For
+            // fNumberOfAllowedSnippets use ca. 65536, double due to line & gap.
+            static double fNumberOfAllowedSnippets(65535.0 * 2.0);
+            const double fAllowedLength((fNumberOfAllowedSnippets * fDotDashLength) / double(rDotDashArray.size()));
+            const double fCandidateLength(basegfx::utils::getLength(rCandidate));
+            std::vector<double> aDotDashArray(rDotDashArray);
 
-                // iterate over all edges
-                for(sal_uInt32 a(0); a < nEdgeCount; a++)
+            if(fCandidateLength > fAllowedLength)
+            {
+                // we would produce more than fNumberOfAllowedSnippets, so
+                // adapt aDotDashArray to exactly produce assumed number. Also
+                // assert this to let the caller know about it.
+                // If this asserts: Please think about checking your DotDashArray
+                // before calling this function or evtl. use the callback version
+                // to *not* produce that much of data. Even then, you may still
+                // think about producing too much runtime (!)
+                assert(true && "applyLineDashing: potentially too expensive to do the requested dismantle - please consider stretched LineDash pattern (!)");
+
+                // calculate correcting factor, apply to aDotDashArray and fDotDashLength
+                // to enlarge these as needed
+                const double fFactor(fCandidateLength / fAllowedLength);
+                std::for_each(aDotDashArray.begin(), aDotDashArray.end(), [&fFactor](double &f){ f *= fFactor; });
+                fDotDashLength *= fFactor;
+            }
+
+            // prepare current edge's start
+            B2DCubicBezier aCurrentEdge;
+            const bool bIsClosed(rCandidate.isClosed());
+            const sal_uInt32 nEdgeCount(bIsClosed ? nPointCount : nPointCount - 1);
+            aCurrentEdge.setStartPoint(rCandidate.getB2DPoint(0));
+
+            // prepare DotDashArray iteration and the line/gap switching bool
+            sal_uInt32 nDotDashIndex(0);
+            bool bIsLine(true);
+            double fDotDashMovingLength(aDotDashArray[0]);
+            B2DPolygon aSnippet;
+
+            // remember 1st and last snippets to try to merge after execution
+            // is complete and hand to callback
+            B2DPolygon aFirstLine, aLastLine;
+            B2DPolygon aFirstGap, aLastGap;
+
+            // iterate over all edges
+            for(sal_uInt32 a(0); a < nEdgeCount; a++)
+            {
+                // update current edge (fill in C1, C2 and end point)
+                double fLastDotDashMovingLength(0.0);
+                const sal_uInt32 nNextIndex((a + 1) % nPointCount);
+                aCurrentEdge.setControlPointA(rCandidate.getNextControlPoint(a));
+                aCurrentEdge.setControlPointB(rCandidate.getPrevControlPoint(nNextIndex));
+                aCurrentEdge.setEndPoint(rCandidate.getB2DPoint(nNextIndex));
+
+                // check if we have a trivial bezier segment -> possible fallback to edge
+                aCurrentEdge.testAndSolveTrivialBezier();
+
+                if(aCurrentEdge.isBezier())
                 {
-                    // update current edge (fill in C1, C2 and end point)
-                    double fLastDotDashMovingLength(0.0);
-                    const sal_uInt32 nNextIndex((a + 1) % nPointCount);
-                    aCurrentEdge.setControlPointA(rCandidate.getNextControlPoint(a));
-                    aCurrentEdge.setControlPointB(rCandidate.getPrevControlPoint(nNextIndex));
-                    aCurrentEdge.setEndPoint(rCandidate.getB2DPoint(nNextIndex));
+                    // bezier segment
+                    const B2DCubicBezierHelper aCubicBezierHelper(aCurrentEdge);
+                    const double fEdgeLength(aCubicBezierHelper.getLength());
 
-                    // check if we have a trivial bezier segment -> possible fallback to edge
-                    aCurrentEdge.testAndSolveTrivialBezier();
-
-                    if(aCurrentEdge.isBezier())
+                    if(!fTools::equalZero(fEdgeLength))
                     {
-                        // bezier segment
-                        const B2DCubicBezierHelper aCubicBezierHelper(aCurrentEdge);
-                        const double fEdgeLength(aCubicBezierHelper.getLength());
-
-                        if(!fTools::equalZero(fEdgeLength))
+                        while(fTools::less(fDotDashMovingLength, fEdgeLength))
                         {
-                            while(fTools::less(fDotDashMovingLength, fEdgeLength))
-                            {
-                                // new split is inside edge, create and append snippet [fLastDotDashMovingLength, fDotDashMovingLength]
-                                const bool bHandleLine(bIsLine && pLineTarget);
-                                const bool bHandleGap(!bIsLine && pGapTarget);
-
-                                if(bHandleLine || bHandleGap)
-                                {
-                                    const double fBezierSplitStart(aCubicBezierHelper.distanceToRelative(fLastDotDashMovingLength));
-                                    const double fBezierSplitEnd(aCubicBezierHelper.distanceToRelative(fDotDashMovingLength));
-                                    B2DCubicBezier aBezierSnippet(aCurrentEdge.snippet(fBezierSplitStart, fBezierSplitEnd));
-
-                                    if(!aSnippet.count())
-                                    {
-                                        aSnippet.append(aBezierSnippet.getStartPoint());
-                                    }
-
-                                    aSnippet.appendBezierSegment(aBezierSnippet.getControlPointA(), aBezierSnippet.getControlPointB(), aBezierSnippet.getEndPoint());
-
-                                    if(bHandleLine)
-                                    {
-                                        pLineTarget->append(aSnippet);
-                                    }
-                                    else
-                                    {
-                                        pGapTarget->append(aSnippet);
-                                    }
-
-                                    aSnippet.clear();
-                                }
-
-                                // prepare next DotDashArray step and flip line/gap flag
-                                fLastDotDashMovingLength = fDotDashMovingLength;
-                                fDotDashMovingLength += rDotDashArray[(++nDotDashIndex) % nDotDashCount];
-                                bIsLine = !bIsLine;
-                            }
-
-                            // append closing snippet [fLastDotDashMovingLength, fEdgeLength]
-                            const bool bHandleLine(bIsLine && pLineTarget);
-                            const bool bHandleGap(!bIsLine && pGapTarget);
+                            // new split is inside edge, create and append snippet [fLastDotDashMovingLength, fDotDashMovingLength]
+                            const bool bHandleLine(bIsLine && aLineTargetCallback);
+                            const bool bHandleGap(!bIsLine && aGapTargetCallback);
 
                             if(bHandleLine || bHandleGap)
                             {
-                                B2DCubicBezier aRight;
-                                const double fBezierSplit(aCubicBezierHelper.distanceToRelative(fLastDotDashMovingLength));
-
-                                aCurrentEdge.split(fBezierSplit, nullptr, &aRight);
+                                const double fBezierSplitStart(aCubicBezierHelper.distanceToRelative(fLastDotDashMovingLength));
+                                const double fBezierSplitEnd(aCubicBezierHelper.distanceToRelative(fDotDashMovingLength));
+                                B2DCubicBezier aBezierSnippet(aCurrentEdge.snippet(fBezierSplitStart, fBezierSplitEnd));
 
                                 if(!aSnippet.count())
                                 {
-                                    aSnippet.append(aRight.getStartPoint());
+                                    aSnippet.append(aBezierSnippet.getStartPoint());
                                 }
 
-                                aSnippet.appendBezierSegment(aRight.getControlPointA(), aRight.getControlPointB(), aRight.getEndPoint());
-                            }
+                                aSnippet.appendBezierSegment(aBezierSnippet.getControlPointA(), aBezierSnippet.getControlPointB(), aBezierSnippet.getEndPoint());
 
-                            // prepare move to next edge
-                            fDotDashMovingLength -= fEdgeLength;
-                        }
-                    }
-                    else
-                    {
-                        // simple edge
-                        const double fEdgeLength(aCurrentEdge.getEdgeLength());
-
-                        if(!fTools::equalZero(fEdgeLength))
-                        {
-                            while(fTools::less(fDotDashMovingLength, fEdgeLength))
-                            {
-                                // new split is inside edge, create and append snippet [fLastDotDashMovingLength, fDotDashMovingLength]
-                                const bool bHandleLine(bIsLine && pLineTarget);
-                                const bool bHandleGap(!bIsLine && pGapTarget);
-
-                                if(bHandleLine || bHandleGap)
+                                if(bHandleLine)
                                 {
-                                    if(!aSnippet.count())
-                                    {
-                                        aSnippet.append(interpolate(aCurrentEdge.getStartPoint(), aCurrentEdge.getEndPoint(), fLastDotDashMovingLength / fEdgeLength));
-                                    }
-
-                                    aSnippet.append(interpolate(aCurrentEdge.getStartPoint(), aCurrentEdge.getEndPoint(), fDotDashMovingLength / fEdgeLength));
-
-                                    if(bHandleLine)
-                                    {
-                                        pLineTarget->append(aSnippet);
-                                    }
-                                    else
-                                    {
-                                        pGapTarget->append(aSnippet);
-                                    }
-
-                                    aSnippet.clear();
+                                    implHandleSnippet(aSnippet, aLineTargetCallback, aFirstLine, aLastLine);
                                 }
 
-                                // prepare next DotDashArray step and flip line/gap flag
-                                fLastDotDashMovingLength = fDotDashMovingLength;
-                                fDotDashMovingLength += rDotDashArray[(++nDotDashIndex) % nDotDashCount];
-                                bIsLine = !bIsLine;
+                                if(bHandleGap)
+                                {
+                                    implHandleSnippet(aSnippet, aGapTargetCallback, aFirstGap, aLastGap);
+                                }
+
+                                aSnippet.clear();
                             }
 
-                            // append snippet [fLastDotDashMovingLength, fEdgeLength]
-                            const bool bHandleLine(bIsLine && pLineTarget);
-                            const bool bHandleGap(!bIsLine && pGapTarget);
+                            // prepare next DotDashArray step and flip line/gap flag
+                            fLastDotDashMovingLength = fDotDashMovingLength;
+                            fDotDashMovingLength += aDotDashArray[(++nDotDashIndex) % nDotDashCount];
+                            bIsLine = !bIsLine;
+                        }
+
+                        // append closing snippet [fLastDotDashMovingLength, fEdgeLength]
+                        const bool bHandleLine(bIsLine && aLineTargetCallback);
+                        const bool bHandleGap(!bIsLine && aGapTargetCallback);
+
+                        if(bHandleLine || bHandleGap)
+                        {
+                            B2DCubicBezier aRight;
+                            const double fBezierSplit(aCubicBezierHelper.distanceToRelative(fLastDotDashMovingLength));
+
+                            aCurrentEdge.split(fBezierSplit, nullptr, &aRight);
+
+                            if(!aSnippet.count())
+                            {
+                                aSnippet.append(aRight.getStartPoint());
+                            }
+
+                            aSnippet.appendBezierSegment(aRight.getControlPointA(), aRight.getControlPointB(), aRight.getEndPoint());
+                        }
+
+                        // prepare move to next edge
+                        fDotDashMovingLength -= fEdgeLength;
+                    }
+                }
+                else
+                {
+                    // simple edge
+                    const double fEdgeLength(aCurrentEdge.getEdgeLength());
+
+                    if(!fTools::equalZero(fEdgeLength))
+                    {
+                        while(fTools::less(fDotDashMovingLength, fEdgeLength))
+                        {
+                            // new split is inside edge, create and append snippet [fLastDotDashMovingLength, fDotDashMovingLength]
+                            const bool bHandleLine(bIsLine && aLineTargetCallback);
+                            const bool bHandleGap(!bIsLine && aGapTargetCallback);
 
                             if(bHandleLine || bHandleGap)
                             {
@@ -1276,88 +1377,75 @@ namespace basegfx::utils
                                     aSnippet.append(interpolate(aCurrentEdge.getStartPoint(), aCurrentEdge.getEndPoint(), fLastDotDashMovingLength / fEdgeLength));
                                 }
 
-                                aSnippet.append(aCurrentEdge.getEndPoint());
+                                aSnippet.append(interpolate(aCurrentEdge.getStartPoint(), aCurrentEdge.getEndPoint(), fDotDashMovingLength / fEdgeLength));
+
+                                if(bHandleLine)
+                                {
+                                    implHandleSnippet(aSnippet, aLineTargetCallback, aFirstLine, aLastLine);
+                                }
+
+                                if(bHandleGap)
+                                {
+                                    implHandleSnippet(aSnippet, aGapTargetCallback, aFirstGap, aLastGap);
+                                }
+
+                                aSnippet.clear();
                             }
 
-                            // prepare move to next edge
-                            fDotDashMovingLength -= fEdgeLength;
+                            // prepare next DotDashArray step and flip line/gap flag
+                            fLastDotDashMovingLength = fDotDashMovingLength;
+                            fDotDashMovingLength += aDotDashArray[(++nDotDashIndex) % nDotDashCount];
+                            bIsLine = !bIsLine;
                         }
-                    }
 
-                    // prepare next edge step (end point gets new start point)
-                    aCurrentEdge.setStartPoint(aCurrentEdge.getEndPoint());
-                }
+                        // append snippet [fLastDotDashMovingLength, fEdgeLength]
+                        const bool bHandleLine(bIsLine && aLineTargetCallback);
+                        const bool bHandleGap(!bIsLine && aGapTargetCallback);
 
-                // append last intermediate results (if exists)
-                if(aSnippet.count())
-                {
-                    if(bIsLine && pLineTarget)
-                    {
-                        pLineTarget->append(aSnippet);
-                    }
-                    else if(!bIsLine && pGapTarget)
-                    {
-                        pGapTarget->append(aSnippet);
-                    }
-                }
-
-                // check if start and end polygon may be merged
-                if(pLineTarget)
-                {
-                    const sal_uInt32 nCount(pLineTarget->count());
-
-                    if(nCount > 1)
-                    {
-                        // these polygons were created above, there exists none with less than two points,
-                        // thus direct point access below is allowed
-                        const B2DPolygon aFirst(pLineTarget->getB2DPolygon(0));
-                        B2DPolygon aLast(pLineTarget->getB2DPolygon(nCount - 1));
-
-                        if(aFirst.getB2DPoint(0).equal(aLast.getB2DPoint(aLast.count() - 1)))
+                        if(bHandleLine || bHandleGap)
                         {
-                            // start of first and end of last are the same -> merge them
-                            aLast.append(aFirst);
-                            aLast.removeDoublePoints();
-                            pLineTarget->setB2DPolygon(0, aLast);
-                            pLineTarget->remove(nCount - 1);
+                            if(!aSnippet.count())
+                            {
+                                aSnippet.append(interpolate(aCurrentEdge.getStartPoint(), aCurrentEdge.getEndPoint(), fLastDotDashMovingLength / fEdgeLength));
+                            }
+
+                            aSnippet.append(aCurrentEdge.getEndPoint());
                         }
+
+                        // prepare move to next edge
+                        fDotDashMovingLength -= fEdgeLength;
                     }
                 }
 
-                if(pGapTarget)
+                // prepare next edge step (end point gets new start point)
+                aCurrentEdge.setStartPoint(aCurrentEdge.getEndPoint());
+            }
+
+            // append last intermediate results (if exists)
+            if(aSnippet.count())
+            {
+                const bool bHandleLine(bIsLine && aLineTargetCallback);
+                const bool bHandleGap(!bIsLine && aGapTargetCallback);
+
+                if(bHandleLine)
                 {
-                    const sal_uInt32 nCount(pGapTarget->count());
+                    implHandleSnippet(aSnippet, aLineTargetCallback, aFirstLine, aLastLine);
+                }
 
-                    if(nCount > 1)
-                    {
-                        // these polygons were created above, there exists none with less than two points,
-                        // thus direct point access below is allowed
-                        const B2DPolygon aFirst(pGapTarget->getB2DPolygon(0));
-                        B2DPolygon aLast(pGapTarget->getB2DPolygon(nCount - 1));
-
-                        if(aFirst.getB2DPoint(0).equal(aLast.getB2DPoint(aLast.count() - 1)))
-                        {
-                            // start of first and end of last are the same -> merge them
-                            aLast.append(aFirst);
-                            aLast.removeDoublePoints();
-                            pGapTarget->setB2DPolygon(0, aLast);
-                            pGapTarget->remove(nCount - 1);
-                        }
-                    }
+                if(bHandleGap)
+                {
+                    implHandleSnippet(aSnippet, aGapTargetCallback, aFirstGap, aLastGap);
                 }
             }
-            else
-            {
-                // parameters make no sense, just add source to targets
-                if(pLineTarget)
-                {
-                    pLineTarget->append(rCandidate);
-                }
 
-                if(pGapTarget)
-                {
-                    pGapTarget->append(rCandidate);
-                }
+            if(bIsClosed && aLineTargetCallback)
+            {
+                implHandleFirstLast(aLineTargetCallback, aFirstLine, aLastLine);
+            }
+
+            if(bIsClosed && aGapTargetCallback)
+            {
+                implHandleFirstLast(aGapTargetCallback, aFirstGap, aLastGap);
             }
         }
 
@@ -2090,22 +2178,22 @@ namespace basegfx::utils
         {
             const sal_uInt32 nCount(rCandidate.count());
 
-            if(nCount > 2)
+            if(nCount <= 2)
+                return;
+
+            const B2DPoint aStart(rCandidate.getB2DPoint(0));
+            B2DPoint aLast(rCandidate.getB2DPoint(1));
+
+            for(sal_uInt32 a(2); a < nCount; a++)
             {
-                const B2DPoint aStart(rCandidate.getB2DPoint(0));
-                B2DPoint aLast(rCandidate.getB2DPoint(1));
+                const B2DPoint aCurrent(rCandidate.getB2DPoint(a));
+                rTarget.emplace_back(
+                    aStart,
+                    aLast,
+                    aCurrent);
 
-                for(sal_uInt32 a(2); a < nCount; a++)
-                {
-                    const B2DPoint aCurrent(rCandidate.getB2DPoint(a));
-                    rTarget.emplace_back(
-                        aStart,
-                        aLast,
-                        aCurrent);
-
-                    // prepare next
-                    aLast = aCurrent;
-                }
+                // prepare next
+                aLast = aCurrent;
             }
         }
 
@@ -2114,7 +2202,7 @@ namespace basegfx::utils
             /// return 0 for input of 0, -1 for negative and 1 for positive input
             int lcl_sgn( const double n )
             {
-                return n == 0.0 ? 0 : 1 - 2*int(rtl::math::isSignBitSet(n));
+                return n == 0.0 ? 0 : 1 - 2*int(std::signbit(n));
             }
         }
 

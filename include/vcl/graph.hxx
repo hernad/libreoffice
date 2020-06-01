@@ -32,7 +32,6 @@
 #include <basegfx/vector/b2dsize.hxx>
 #include <vcl/GraphicExternalLink.hxx>
 
-
 enum class GraphicType
 {
     NONE,
@@ -41,7 +40,7 @@ enum class GraphicType
     Default
 };
 
-namespace com { namespace sun { namespace star { namespace graphic { class XGraphic;} } } }
+namespace com::sun::star::graphic { class XGraphic; }
 namespace vcl { class Font; }
 
 class Bitmap;
@@ -49,37 +48,16 @@ class GDIMetaFile;
 class SvStream;
 class ImpGraphic;
 class OutputDevice;
-class ReaderData;
+class GraphicReader;
 
-class GraphicReader
-{
-public:
-    virtual         ~GraphicReader();
-
-    const OUString& GetUpperFilterName() const { return maUpperName; }
-
-    // TODO: when incompatible changes are possible again
-    // the preview size hint should be redone
-    void            DisablePreviewMode();
-    void            SetPreviewSize( const Size& );
-    Size            GetPreviewSize() const;
-
-protected:
-    OUString        maUpperName;
-
-                    GraphicReader();
-private:
-    std::unique_ptr<ReaderData>   mpReaderData;
-};
-
-class VCL_DLLPUBLIC GraphicConversionParameters
+class SAL_WARN_UNUSED VCL_DLLPUBLIC GraphicConversionParameters
 {
 private:
-    Size const            maSizePixel;            // default is (0,0)
+    Size            maSizePixel;            // default is (0,0)
 
-    bool const            mbUnlimitedSize : 1;    // default is false
-    bool const            mbAntiAliase : 1;       // default is false
-    bool const            mbSnapHorVerLines : 1;  // default is false
+    bool            mbUnlimitedSize : 1;    // default is false
+    bool            mbAntiAliase : 1;       // default is false
+    bool            mbSnapHorVerLines : 1;  // default is false
 
 public:
     GraphicConversionParameters(
@@ -105,15 +83,12 @@ class Image;
 class VCL_DLLPUBLIC Graphic
 {
 private:
-
     std::shared_ptr<ImpGraphic> mxImpGraphic;
+    SAL_DLLPRIVATE void ImplTestRefCount();
 
 public:
-
-    SAL_DLLPRIVATE void ImplTestRefCount();
     SAL_DLLPRIVATE ImpGraphic* ImplGetImpGraphic() const { return mxImpGraphic.get(); }
 
-public:
                     Graphic();
                     Graphic( const GraphicExternalLink& rGraphicLink );
                     Graphic( const Graphic& rGraphic );
@@ -121,7 +96,7 @@ public:
                     Graphic( const Bitmap& rBmp );
                     Graphic( const Image& rImage );
                     Graphic( const BitmapEx& rBmpEx );
-                    Graphic( const VectorGraphicDataPtr& rVectorGraphicDataPtr );
+                    Graphic( const std::shared_ptr<VectorGraphicData>& rVectorGraphicDataPtr );
                     Graphic( const Animation& rAnimation );
                     Graphic( const GDIMetaFile& rMtf );
                     Graphic( const css::uno::Reference< css::graphic::XGraphic >& rxGraphic );
@@ -202,16 +177,11 @@ public:
 
     OString getUniqueID() const;
 
-public:
-
-    std::shared_ptr<GraphicReader>& GetContext();
-    void                            SetContext( const std::shared_ptr<GraphicReader> &pReader );
+    std::shared_ptr<GraphicReader>& GetReaderContext();
+    void                            SetReaderContext( const std::shared_ptr<GraphicReader> &pReader );
     void                            SetDummyContext(bool value);
     bool                            IsDummyContext() const;
-private:
-    friend class GraphicObject;
 
-public:
     void            SetGfxLink(const std::shared_ptr<GfxLink>& rGfxLink);
     std::shared_ptr<GfxLink> GetSharedGfxLink() const;
     GfxLink         GetGfxLink() const;
@@ -222,16 +192,8 @@ public:
     friend VCL_DLLPUBLIC void WriteGraphic(SvStream& rOStream, const Graphic& rGraphic);
     friend VCL_DLLPUBLIC void ReadGraphic(SvStream& rIStream, Graphic& rGraphic);
 
-public:
+    const std::shared_ptr<VectorGraphicData>& getVectorGraphicData() const;
 
-    const VectorGraphicDataPtr& getVectorGraphicData() const;
-
-    void setPdfData(const std::shared_ptr<std::vector<sal_Int8>>& rPdfData);
-    const std::shared_ptr<std::vector<sal_Int8>> & getPdfData() const;
-    bool hasPdfData() const;
-
-    /// Set the page number of the multi-page source this Graphic is rendered from.
-    void setPageNumber(sal_Int32 nPageNumber);
     /// Get the page number of the multi-page source this Graphic is rendered from.
     sal_Int32 getPageNumber() const;
 

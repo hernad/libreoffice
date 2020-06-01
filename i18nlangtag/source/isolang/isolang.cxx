@@ -247,7 +247,7 @@ static IsoLanguageCountryEntry const aImplIsoLangEntries[] =
     { LANGUAGE_CZECH,                       "cs", "CZ", k0    },
     { LANGUAGE_CZECH,                       "cz", ""  , kSAME },
     { LANGUAGE_ENGLISH_JAMAICA,             "en", "JM", k0    },
-    { LANGUAGE_ENGLISH_CARRIBEAN,           "en", "BS", k0    },    // not 100%, because AG is Bahamas
+    { LANGUAGE_ENGLISH_CARIBBEAN,           "en", "BS", k0    },    // not 100%, because AG is Bahamas
     { LANGUAGE_ENGLISH_BELIZE,              "en", "BZ", k0    },
     { LANGUAGE_ENGLISH_TRINIDAD,            "en", "TT", k0    },
     { LANGUAGE_ENGLISH_ZIMBABWE,            "en", "ZW", k0    },
@@ -378,7 +378,7 @@ static IsoLanguageCountryEntry const aImplIsoLangEntries[] =
     { LANGUAGE_FRENCH_MOROCCO,              "fr", "MA", k0    },
     { LANGUAGE_FRENCH_REUNION,              "fr", "RE", k0    },
     { LANGUAGE_FRENCH,                      "fr", ""  , k0    },    // needed as a catcher before other "fr" entries!
-    { LANGUAGE_FRENCH_NORTH_AFRICA,         "fr", ""  , k0    },
+    { LANGUAGE_FRENCH_NORTH_AFRICA,         "fr", ""  , k0    },    // MS reserved, "fr-015"
     { LANGUAGE_FRENCH_WEST_INDIES,          "fr", ""  , k0    },    // no ISO country code; MS "Neither defined nor reserved"
     { LANGUAGE_FRISIAN_NETHERLANDS,         "fy", "NL", k0    },
     { LANGUAGE_GAELIC_IRELAND,              "ga", "IE", k0    },
@@ -485,7 +485,7 @@ static IsoLanguageCountryEntry const aImplIsoLangEntries[] =
     { LANGUAGE_ENGLISH_PHILIPPINES,         "en", "PH", k0    },
     { LANGUAGE_IBIBIO_NIGERIA,             "ibb", "NG", k0    },
     { LANGUAGE_YI,                          "ii", "CN", k0    },
-    { LANGUAGE_ENGLISH_ARAB_EMIRATES,       "en", "AE", k0    },    // MS reserved
+    { LANGUAGE_ENGLISH_ARAB_EMIRATES,       "en", "AE", k0    },
     { LANGUAGE_ENGLISH_BAHRAIN,             "en", "BH", k0    },    // MS reserved
     { LANGUAGE_ENGLISH_EGYPT,               "en", "EG", k0    },    // MS reserved
     { LANGUAGE_ENGLISH_JORDAN,              "en", "JO", k0    },    // MS reserved
@@ -685,6 +685,9 @@ static IsoLanguageCountryEntry const aImplIsoLangEntries[] =
     { LANGUAGE_USER_ENGLISH_NIGERIA,        "en", "NG", k0    },
     { LANGUAGE_USER_KABARDIAN,             "kbd", "RU", k0    },    // Cyrillic script
     { LANGUAGE_USER_GUADELOUPEAN_CREOLE_FRENCH, "gcf", "GP", k0 },
+    { LANGUAGE_USER_LIGURIAN,              "lij", "IT", k0    },
+    { LANGUAGE_USER_MINANGKABAU,           "min", "ID", k0    },
+    { LANGUAGE_USER_SUNDANESE,             "sun", "ID", k0    },
     { LANGUAGE_MULTIPLE,                   "mul", ""  , k0    },    // multiple languages, many languages are used
     { LANGUAGE_UNDETERMINED,               "und", ""  , k0    },    // undetermined language, language cannot be identified
     { LANGUAGE_NONE,                       "zxx", ""  , k0    },    // added to ISO 639-2 on 2006-01-11: Used to declare the absence of linguistic information
@@ -771,6 +774,9 @@ static IsoLanguageScriptCountryEntry const aImplIsoLangScriptEntries[] =
     { LANGUAGE_USER_HUNGARIAN_ROVAS,                "hu-Hung", "HU", k0    },
     { LANGUAGE_USER_MALAY_ARABIC_MALAYSIA,          "ms-Arab", "MY", k0    },
     { LANGUAGE_USER_MALAY_ARABIC_BRUNEI,            "ms-Arab", "BN", k0    },
+    { LANGUAGE_KAZAKH_LATIN,                        "kk-Latn", "KZ", k0    },   // MS reserved
+    { LANGUAGE_KAZAKH_LATIN_LSO,                    "kk-Latn", ""  , k0    },   // MS reserved
+    { LANGUAGE_KAZAKH_CYRILLIC_LSO,                 "kk-Cyrl", ""  , k0    },   // MS reserved
     { LANGUAGE_DONTKNOW,                            "",        ""  , k0    }    // marks end of table
 };
 
@@ -869,22 +875,22 @@ static IsoLangEngEntry const aImplIsoLangEngEntries[] =
     { LANGUAGE_ENGLISH_US,                  "GU" },         // Guam
     { LANGUAGE_ENGLISH_US,                  "MH" },         // Marshall Islands
     { LANGUAGE_ENGLISH_US,                  "PW" },         // Palau
-    { LANGUAGE_ENGLISH_CARRIBEAN,           "AI" },         // Anguilla
-    { LANGUAGE_ENGLISH_CARRIBEAN,           "AG" },         // Antigua and Barbuda
-    { LANGUAGE_ENGLISH_CARRIBEAN,           "BS" },         // Bahamas
-    { LANGUAGE_ENGLISH_CARRIBEAN,           "BB" },         // Barbados
-    { LANGUAGE_ENGLISH_CARRIBEAN,           "BM" },         // Bermuda
-    { LANGUAGE_ENGLISH_CARRIBEAN,           "KY" },         // Cayman Islands
-    { LANGUAGE_ENGLISH_CARRIBEAN,           "GD" },         // Grenada
-    { LANGUAGE_ENGLISH_CARRIBEAN,           "DM" },         // Dominica
-    { LANGUAGE_ENGLISH_CARRIBEAN,           "HT" },         // Haiti
-    { LANGUAGE_ENGLISH_CARRIBEAN,           "MS" },         // Montserrat
-    { LANGUAGE_ENGLISH_CARRIBEAN,           "FM" },         // Micronesia
-    { LANGUAGE_ENGLISH_CARRIBEAN,           "VC" },         // St. Vincent / Grenadines
-    { LANGUAGE_ENGLISH_CARRIBEAN,           "LC" },         // Saint Lucia
-    { LANGUAGE_ENGLISH_CARRIBEAN,           "TC" },         // Turks & Caicos Islands
-    { LANGUAGE_ENGLISH_CARRIBEAN,           "GY" },         // Guyana
-    { LANGUAGE_ENGLISH_CARRIBEAN,           "TT" },         // Trinidad and Tobago
+    { LANGUAGE_ENGLISH_CARIBBEAN,           "AI" },         // Anguilla
+    { LANGUAGE_ENGLISH_CARIBBEAN,           "AG" },         // Antigua and Barbuda
+    { LANGUAGE_ENGLISH_CARIBBEAN,           "BS" },         // Bahamas
+    { LANGUAGE_ENGLISH_CARIBBEAN,           "BB" },         // Barbados
+    { LANGUAGE_ENGLISH_CARIBBEAN,           "BM" },         // Bermuda
+    { LANGUAGE_ENGLISH_CARIBBEAN,           "KY" },         // Cayman Islands
+    { LANGUAGE_ENGLISH_CARIBBEAN,           "GD" },         // Grenada
+    { LANGUAGE_ENGLISH_CARIBBEAN,           "DM" },         // Dominica
+    { LANGUAGE_ENGLISH_CARIBBEAN,           "HT" },         // Haiti
+    { LANGUAGE_ENGLISH_CARIBBEAN,           "MS" },         // Montserrat
+    { LANGUAGE_ENGLISH_CARIBBEAN,           "FM" },         // Micronesia
+    { LANGUAGE_ENGLISH_CARIBBEAN,           "VC" },         // St. Vincent / Grenadines
+    { LANGUAGE_ENGLISH_CARIBBEAN,           "LC" },         // Saint Lucia
+    { LANGUAGE_ENGLISH_CARIBBEAN,           "TC" },         // Turks & Caicos Islands
+    { LANGUAGE_ENGLISH_CARIBBEAN,           "GY" },         // Guyana
+    { LANGUAGE_ENGLISH_CARIBBEAN,           "TT" },         // Trinidad and Tobago
     { LANGUAGE_ENGLISH_AUS,                 "CX" },         // Christmas Islands
     { LANGUAGE_ENGLISH_AUS,                 "CC" },         // Cocos (Keeling) Islands
     { LANGUAGE_ENGLISH_AUS,                 "NF" },         // Norfolk Island

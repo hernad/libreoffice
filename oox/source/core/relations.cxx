@@ -17,10 +17,11 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <oox/core/relations.hxx>
+#include <sal/config.h>
 
-#include <rtl/ustrbuf.hxx>
-#include <oox/helper/helper.hxx>
+#include <algorithm>
+
+#include <oox/core/relations.hxx>
 
 namespace oox::core {
 

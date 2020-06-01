@@ -60,8 +60,8 @@
 #ifndef INCLUDED_LOTUSWORDPRO_INC_XFILTER_XFDATE_HXX
 #define INCLUDED_LOTUSWORDPRO_INC_XFILTER_XFDATE_HXX
 
-#include <xfilter/xfglobal.hxx>
 #include <xfilter/xfcontent.hxx>
+#include <xfilter/ixfstream.hxx>
 
 /**
  * @descr   Date object.
@@ -73,22 +73,22 @@ public:
 
     virtual ~XFDate() override;
 
-    virtual void    ToXml(IXFStream *pStrm) override;
+    virtual void ToXml(IXFStream* pStrm) override;
 
 private:
-    OUString  m_strText;
+    OUString m_strText;
 };
 
 class XFDateStart : public XFDate
 {
 public:
-    virtual void    ToXml(IXFStream *pStrm) override;
+    virtual void ToXml(IXFStream* pStrm) override;
 };
 
 class XFDateEnd : public XFContent
 {
 public:
-    virtual void    ToXml(IXFStream *pStrm) override;
+    virtual void ToXml(IXFStream* pStrm) override;
 };
 
 #endif

@@ -19,7 +19,7 @@
 
 #include <toolkit/awt/vclxmenu.hxx>
 #include <toolkit/helper/convert.hxx>
-#include <toolkit/helper/servicenames.hxx>
+#include <helper/servicenames.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
 
 #include <com/sun/star/uno/XComponentContext.hpp>
@@ -187,11 +187,11 @@ css::uno::Sequence< OUString > SAL_CALL VCLXMenu::getSupportedServiceNames(  )
 
     if ( bIsPopupMenu )
         return css::uno::Sequence<OUString>{
-            OUString::createFromAscii(szServiceName2_PopupMenu),
+            "com.sun.star.awt.PopupMenu",
             "stardiv.vcl.PopupMenu"};
     else
         return css::uno::Sequence<OUString>{
-            OUString::createFromAscii(szServiceName2_MenuBar),
+            "com.sun.star.awt.MenuBar",
             "stardiv.vcl.MenuBar"};
 }
 

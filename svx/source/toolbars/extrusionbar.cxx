@@ -26,7 +26,6 @@
 #include <com/sun/star/drawing/ProjectionMode.hpp>
 #include <svx/svxids.hrc>
 #include <svx/svdundo.hxx>
-#include <sfx2/app.hxx>
 #include <sfx2/request.hxx>
 #include <sfx2/objface.hxx>
 #include <sfx2/viewsh.hxx>
@@ -40,6 +39,7 @@
 #include <svx/chrtitem.hxx>
 #include <svx/sdasitm.hxx>
 #include <svl/intitem.hxx>
+#include <rtl/math.hxx>
 
 #include <svx/extrusionbar.hxx>
 #include <extrusiondepthdialog.hxx>

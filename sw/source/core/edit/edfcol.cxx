@@ -1522,6 +1522,10 @@ static void lcl_placeWatermarkInHeader(const SfxWatermarkItem& rWatermark,
 
     // Create and insert the shape.
     uno::Reference<drawing::XShape> xShape(xMultiServiceFactory->createInstance(aShapeServiceName), uno::UNO_QUERY);
+
+    uno::Reference<container::XNamed> xNamed(xShape, uno::UNO_QUERY);
+    xNamed->setName(sWatermark);
+
     basegfx::B2DHomMatrix aTransformation;
     aTransformation.identity();
     aTransformation.scale(nWidth, nHeight);
@@ -1590,8 +1594,6 @@ static void lcl_placeWatermarkInHeader(const SfxWatermarkItem& rWatermark,
     xPropertySet->setPropertyValue(UNO_NAME_HORI_ORIENT, uno::makeAny(text::HoriOrientation::CENTER));
     xPropertySet->setPropertyValue(UNO_NAME_VERT_ORIENT, uno::makeAny(text::VertOrientation::CENTER));
 
-    uno::Reference<container::XNamed> xNamed(xShape, uno::UNO_QUERY);
-    xNamed->setName(sWatermark);
     xLockable->removeActionLock();
 }
 
@@ -1762,8 +1764,9 @@ void SwEditShell::SignParagraph()
 
     // 2. Get certificate.
     uno::Reference<security::XDocumentDigitalSignatures> xSigner(
-        security::DocumentDigitalSignatures::createWithVersion(
-            comphelper::getProcessComponentContext(), "1.2" ) );
+        // here none of the version-dependent methods are called
+        security::DocumentDigitalSignatures::createDefault(
+            comphelper::getProcessComponentContext()));
 
     uno::Sequence<css::beans::PropertyValue> aProperties;
     uno::Reference<security::XCertificate> xCertificate = xSigner->chooseCertificateWithProps(aProperties);

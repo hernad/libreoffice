@@ -206,6 +206,7 @@ OUString getPropertyName( PropertyIds eId )
         case PROP_LEVEL_FOLLOW           :    sName = "LabelFollowedBy"; break;
         case PROP_LEVEL_PARAGRAPH_STYLES :    sName = "LevelParagraphStyles"; break;
         case PROP_LEVEL_FORMAT           :    sName = "LevelFormat"; break;
+        case PROP_LIST_FORMAT            :    sName = "ListFormat"; break;
         case PROP_TOKEN_TYPE             :    sName = "TokenType"; break;
         case PROP_TOKEN_HYPERLINK_START  :    sName = "TokenHyperlinkStart"; break;
         case PROP_TOKEN_HYPERLINK_END    :    sName = "TokenHyperlinkEnd"; break;
@@ -362,6 +363,11 @@ OUString getPropertyName( PropertyIds eId )
 bool isCharacterProperty( const PropertyIds eId )
 {
     return eId > PROP_CHARACTER_STYLES && eId < PROP_CHARACTER_END;
+}
+
+bool isParagraphProperty( const PropertyIds eId )
+{
+    return (eId >= PROP_PARA_ADJUST && eId <= PROP_PARA_WIDOWS) || eId == PROP_FILL_COLOR;
 }
 
 } //namespace writerfilter

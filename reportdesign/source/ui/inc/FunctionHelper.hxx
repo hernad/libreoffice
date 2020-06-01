@@ -74,6 +74,7 @@ public:
     virtual bool isHidden() const override;
     virtual sal_uInt32 getParameterCount() const override ;
     virtual sal_uInt32 getVarArgsStart() const override;
+    virtual sal_uInt32 getVarArgsLimit() const override;
     virtual OUString getParameterName(sal_uInt32 _nPos) const override ;
     virtual OUString getParameterDescription(sal_uInt32 _nPos) const override ;
     virtual bool isParameterOptional(sal_uInt32 _nPos) const override ;
@@ -83,8 +84,8 @@ class FunctionCategory : public formula::IFunctionCategory
 {
     mutable ::std::vector< std::shared_ptr< FunctionDescription > > m_aFunctions;
     css::uno::Reference< css::report::meta::XFunctionCategory> m_xCategory;
-    sal_uInt32 const m_nFunctionCount;
-    sal_uInt32 const m_nNumber;
+    sal_uInt32 m_nFunctionCount;
+    sal_uInt32 m_nNumber;
     const FunctionManager* m_pFunctionManager;
 public:
     FunctionCategory(const FunctionManager* _pFMgr,sal_uInt32 _nPos,const css::uno::Reference< css::report::meta::XFunctionCategory>& _xCategory);

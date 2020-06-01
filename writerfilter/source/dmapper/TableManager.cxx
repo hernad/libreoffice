@@ -18,6 +18,8 @@
  */
 
 #include "TableManager.hxx"
+#include <ooxml/resourceids.hxx>
+#include "TagLogger.hxx"
 #include "DomainMapperTableHandler.hxx"
 #include "DomainMapper_Impl.hxx"
 #include "util.hxx"
@@ -26,12 +28,10 @@
 
 namespace writerfilter::dmapper
 {
+void TableManager::clearData() {}
 
-void TableManager::clearData()
-{
-}
-
-void TableManager::openCell(const css::uno::Reference<css::text::XTextRange>& rHandle, const TablePropertyMapPtr& pProps)
+void TableManager::openCell(const css::uno::Reference<css::text::XTextRange>& rHandle,
+                            const TablePropertyMapPtr& pProps)
 {
 #ifdef DBG_UTIL
     TagLogger::getInstance().startElement("tablemanager.openCell");
@@ -47,18 +47,11 @@ void TableManager::openCell(const css::uno::Reference<css::text::XTextRange>& rH
     }
 }
 
-bool TableManager::isIgnore() const
-{
-    return isRowEnd();
-}
+bool TableManager::isIgnore() const { return isRowEnd(); }
 
-void TableManager::endOfRowAction()
-{
-}
+void TableManager::endOfRowAction() {}
 
-void TableManager::endOfCellAction()
-{
-}
+void TableManager::endOfCellAction() {}
 
 void TableManager::insertTableProps(const TablePropertyMapPtr& pProps)
 {
@@ -66,7 +59,7 @@ void TableManager::insertTableProps(const TablePropertyMapPtr& pProps)
     TagLogger::getInstance().startElement("tablemanager.insertTableProps");
 #endif
 
-    if (getTableProps().get() && getTableProps() != pProps)
+    if (getTableProps() && getTableProps() != pProps)
         getTableProps()->InsertProps(pProps.get());
     else
         mState.setTableProps(pProps);
@@ -82,7 +75,7 @@ void TableManager::insertRowProps(const TablePropertyMapPtr& pProps)
     TagLogger::getInstance().startElement("tablemanager.insertRowProps");
 #endif
 
-    if (getRowProps().get())
+    if (getRowProps())
         getRowProps()->InsertProps(pProps.get());
     else
         mState.setRowProps(pProps);
@@ -98,7 +91,7 @@ void TableManager::cellProps(const TablePropertyMapPtr& pProps)
     TagLogger::getInstance().startElement("tablemanager.cellProps");
 #endif
 
-    if (getCellProps().get())
+    if (getCellProps())
         getCellProps()->InsertProps(pProps.get());
     else
         mState.setCellProps(pProps);
@@ -151,24 +144,24 @@ bool TableManager::sprm(Sprm& rSprm)
     bool bRet = true;
     switch (rSprm.getId())
     {
-    case NS_ooxml::LN_tblDepth:
-    {
-        Value::Pointer_t pValue = rSprm.getValue();
+        case NS_ooxml::LN_tblDepth:
+        {
+            Value::Pointer_t pValue = rSprm.getValue();
 
-        cellDepth(pValue->getInt());
-    }
-    break;
-    case NS_ooxml::LN_inTbl:
-        inCell();
+            cellDepth(pValue->getInt());
+        }
         break;
-    case NS_ooxml::LN_tblCell:
-        endCell();
-        break;
-    case NS_ooxml::LN_tblRow:
-        endRow();
-        break;
-    default:
-        bRet = false;
+        case NS_ooxml::LN_inTbl:
+            inCell();
+            break;
+        case NS_ooxml::LN_tblCell:
+            endCell();
+            break;
+        case NS_ooxml::LN_tblRow:
+            endRow();
+            break;
+        default:
+            bRet = false;
     }
     return bRet;
 }
@@ -292,7 +285,8 @@ void TableManager::resolveCurrentTable()
 
                 for (unsigned int nCell = 0; nCell < nCells; ++nCell)
                 {
-                    mpTableDataHandler->startCell(pRowData->getCellStart(nCell), pRowData->getCellProperties(nCell));
+                    mpTableDataHandler->startCell(pRowData->getCellStart(nCell),
+                                                  pRowData->getCellProperties(nCell));
 
                     mpTableDataHandler->endCell(pRowData->getCellEnd(nCell));
                 }
@@ -366,7 +360,8 @@ void TableManager::startLevel()
     {
         for (unsigned int i = 0; i < mpUnfinishedRow->getCellCount(); ++i)
         {
-            pTableData2->addCell(mpUnfinishedRow->getCellStart(i), mpUnfinishedRow->getCellProperties(i));
+            pTableData2->addCell(mpUnfinishedRow->getCellStart(i),
+                                 mpUnfinishedRow->getCellProperties(i));
             pTableData2->endCell(mpUnfinishedRow->getCellEnd(i));
         }
         mpUnfinishedRow.clear();
@@ -410,7 +405,8 @@ void TableManager::endRow()
     // Add borderless w:gridBefore cell(s) to the row
     if (pTableData)
     {
-        sal_uInt32 nGridBefore = mpTableDataHandler->getDomainMapperImpl().getTableManager().getCurrentGridBefore();
+        sal_uInt32 nGridBefore
+            = mpTableDataHandler->getDomainMapperImpl().getTableManager().getCurrentGridBefore();
         for (unsigned int i = 0; i < nGridBefore; ++i)
         {
             css::table::BorderLine2 aBorderLine;
@@ -422,7 +418,8 @@ void TableManager::endRow()
             pCellProperties->Insert(PROP_LEFT_BORDER, css::uno::makeAny(aBorderLine));
             pCellProperties->Insert(PROP_BOTTOM_BORDER, css::uno::makeAny(aBorderLine));
             pCellProperties->Insert(PROP_RIGHT_BORDER, css::uno::makeAny(aBorderLine));
-            pTableData->getCurrentRow()->addCell(pTableData->getCurrentRow()->getCellStart(0), pCellProperties, /*bAddBefore=*/true);
+            pTableData->getCurrentRow()->addCell(pTableData->getCurrentRow()->getCellStart(0),
+                                                 pCellProperties, /*bAddBefore=*/true);
         }
     }
 
@@ -471,8 +468,10 @@ void TableManager::setCellLastParaAfterAutospacing(bool bIsAfterAutospacing)
 }
 
 TableManager::TableManager()
-    : mnTableDepthNew(0), mnTableDepth(0), mbKeepUnfinishedRow(false),
-      m_bTableStartsAtCellStart(false)
+    : mnTableDepthNew(0)
+    , mnTableDepth(0)
+    , mbKeepUnfinishedRow(false)
+    , m_bTableStartsAtCellStart(false)
 {
     setRowEnd(false);
     setInCell(false);
@@ -481,7 +480,6 @@ TableManager::TableManager()
 }
 
 TableManager::~TableManager() = default;
-
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

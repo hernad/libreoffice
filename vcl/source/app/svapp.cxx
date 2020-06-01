@@ -22,6 +22,7 @@
 #include <osl/file.hxx>
 #include <osl/thread.hxx>
 #include <osl/module.hxx>
+#include <rtl/ustrbuf.hxx>
 
 #include <sal/log.hxx>
 
@@ -32,7 +33,8 @@
 #include <unotools/configmgr.hxx>
 #include <unotools/syslocaleoptions.hxx>
 
-#include <vcl/dialog.hxx>
+#include <vcl/toolkit/dialog.hxx>
+#include <vcl/dialoghelper.hxx>
 #include <vcl/lok.hxx>
 #include <vcl/floatwin.hxx>
 #include <vcl/settings.hxx>
@@ -118,7 +120,7 @@ extern "C" {
 
 struct ImplPostEventData
 {
-    VclEventId const    mnEvent;
+    VclEventId      mnEvent;
     VclPtr<vcl::Window> mpWin;
     ImplSVEvent *   mnEventId;
     KeyEvent        maKeyEvent;
@@ -183,6 +185,10 @@ bool Application::QueryExit()
         return pAppWin->Close();
     else
         return true;
+}
+
+void Application::Shutdown()
+{
 }
 
 void Application::Init()
@@ -259,6 +265,9 @@ void Application::Abort( const OUString& rErrorText )
     //HACK: Dump core iff --norestore command line argument is given (assuming
     // this process is run by developers who are interested in cores, vs. end
     // users who are not):
+#if OSL_DEBUG_LEVEL > 0
+    bool dumpCore = true;
+#else
     bool dumpCore = false;
     sal_uInt16 n = GetCommandLineParamCount();
     for (sal_uInt16 i = 0; i != n; ++i) {
@@ -267,8 +276,6 @@ void Application::Abort( const OUString& rErrorText )
             break;
         }
     }
-#if OSL_DEBUG_LEVEL > 0
-    dumpCore = true;
 #endif
 
     SalAbort( rErrorText, dumpCore );
@@ -299,7 +306,7 @@ IMPL_STATIC_LINK_NOARG( ImplSVAppData, ImplEndAllDialogsMsg, void*, void )
     vcl::Window* pAppWindow = Application::GetFirstTopLevelWindow();
     while (pAppWindow)
     {
-        Dialog::EndAllDialogs(pAppWindow);
+        vcl::EndAllDialogs(pAppWindow);
         pAppWindow = Application::GetNextTopLevelWindow(pAppWindow);
     }
 }
@@ -427,6 +434,8 @@ void Application::Execute()
         Application::Yield();
 
     pSVData->maAppData.mbInAppExecute = false;
+
+    GetpApp()->Shutdown();
 }
 
 static bool ImplYield(bool i_bWait, bool i_bAllEvents)
@@ -512,11 +521,12 @@ void Application::Yield()
 
 IMPL_STATIC_LINK_NOARG( ImplSVAppData, ImplQuitMsg, void*, void )
 {
-    ImplGetSVData()->maAppData.mbAppQuit = true;
+    assert(ImplGetSVData()->maAppData.mbAppQuit);
 }
 
 void Application::Quit()
 {
+    ImplGetSVData()->maAppData.mbAppQuit = true;
     Application::PostUserEvent( LINK( nullptr, ImplSVAppData, ImplQuitMsg ) );
 }
 
@@ -952,7 +962,7 @@ IMPL_STATIC_LINK( Application, PostEventHandler, void*, pCallData, void )
         break;
     }
 
-    if( pData->mpWin && pData->mpWin->mpWindowImpl->mpFrameWindow.get() && pEventData )
+    if( pData->mpWin && pData->mpWin->mpWindowImpl->mpFrameWindow && pEventData )
         ImplWindowFrameProc( pData->mpWin->mpWindowImpl->mpFrameWindow.get(), nEvent, pEventData );
 
     // remove this event from list of posted events, watch for destruction of internal data
@@ -1123,54 +1133,60 @@ OUString Application::GetAppName()
         return OUString();
 }
 
-OUString Application::GetHWOSConfInfo()
+enum {hwAll=0, hwEnv=1, hwUI=2};
+
+OUString Application::GetHWOSConfInfo(const int bSelection)
 {
     ImplSVData* pSVData = ImplGetSVData();
     OUStringBuffer aDetails;
 
-    aDetails.append( VclResId(SV_APP_CPUTHREADS) );
-    aDetails.append( static_cast<sal_Int32>(std::thread::hardware_concurrency()) );
-    aDetails.append( "; " );
+    const auto appendDetails = [&aDetails](const OUStringLiteral& sep, auto&& val) {
+        if (!aDetails.isEmpty() && sep.getLength())
+            aDetails.append(sep);
+        aDetails.append(std::move(val));
+    };
 
-    OUString aVersion;
-    if ( pSVData && pSVData->mpDefInst )
-        aVersion = pSVData->mpDefInst->getOSVersion();
-    else
-        aVersion = "-";
+    if (bSelection != hwUI) {
+        appendDetails("; ", VclResId(SV_APP_CPUTHREADS)
+                                + OUString::number(std::thread::hardware_concurrency()));
 
-    aDetails.append( VclResId(SV_APP_OSVERSION) );
-    aDetails.append( aVersion );
-    aDetails.append( "; " );
+        OUString aVersion;
+        if ( pSVData && pSVData->mpDefInst )
+            aVersion = pSVData->mpDefInst->getOSVersion();
+        else
+            aVersion = "-";
 
-    aDetails.append( VclResId(SV_APP_UIRENDER) );
-#if HAVE_FEATURE_SKIA
-    if ( SkiaHelper::isVCLSkiaEnabled() )
-    {
-        switch(SkiaHelper::renderMethodToUse())
-        {
-            case SkiaHelper::RenderVulkan:
-                aDetails.append( VclResId(SV_APP_SKIA_VULKAN) );
-                break;
-            case SkiaHelper::RenderRaster:
-                aDetails.append( VclResId(SV_APP_SKIA_RASTER) );
-                break;
-        }
+        appendDetails("; ", VclResId(SV_APP_OSVERSION) + aVersion);
     }
-    else
+
+    if (bSelection != hwEnv) {
+        appendDetails("; ", VclResId(SV_APP_UIRENDER));
+#if HAVE_FEATURE_SKIA
+        if ( SkiaHelper::isVCLSkiaEnabled() )
+        {
+            switch(SkiaHelper::renderMethodToUse())
+            {
+                case SkiaHelper::RenderVulkan:
+                    appendDetails("", VclResId(SV_APP_SKIA_VULKAN));
+                    break;
+                case SkiaHelper::RenderRaster:
+                    appendDetails("", VclResId(SV_APP_SKIA_RASTER));
+                    break;
+            }
+        }
+        else
 #endif
 #if HAVE_FEATURE_OPENGL
-    if ( OpenGLWrapper::isVCLOpenGLEnabled() )
-        aDetails.append( VclResId(SV_APP_GL) );
-    else
+        if ( OpenGLWrapper::isVCLOpenGLEnabled() )
+            appendDetails("", VclResId(SV_APP_GL));
+        else
 #endif
-        aDetails.append( VclResId(SV_APP_DEFAULT) );
-    aDetails.append( "; " );
+            appendDetails("", VclResId(SV_APP_DEFAULT));
 
 #if (defined LINUX || defined _WIN32 || defined MACOSX)
-    aDetails.append( SV_APP_VCLBACKEND );
-    aDetails.append( GetToolkitName() );
-    aDetails.append( "; " );
+        appendDetails("; ", SV_APP_VCLBACKEND + GetToolkitName());
 #endif
+    }
 
     return aDetails.makeStringAndClear();
 }
@@ -1236,7 +1252,16 @@ unsigned int Application::GetDisplayExternalScreen()
 tools::Rectangle Application::GetScreenPosSizePixel( unsigned int nScreen )
 {
     SalSystem* pSys = ImplGetSalSystem();
-    return pSys ? pSys->GetDisplayScreenPosSizePixel( nScreen ) : tools::Rectangle();
+    if (!pSys)
+    {
+        SAL_WARN("vcl", "Requesting screen size/pos for screen #" << nScreen << " failed");
+        assert(false);
+        return tools::Rectangle();
+    }
+    tools::Rectangle aRect = pSys->GetDisplayScreenPosSizePixel(nScreen);
+    if (aRect.getHeight() == 0)
+        SAL_WARN("vcl", "Requesting screen size/pos for screen #" << nScreen << " returned 0 height.");
+    return aRect;
 }
 
 namespace {

@@ -34,10 +34,10 @@ class SwDoc;
 class SfxGrabBagItem;
 class SwTextGridItem;
 
-namespace drawinglayer { namespace attribute {
+namespace drawinglayer::attribute {
     class SdrAllFillAttributesHelper;
     typedef std::shared_ptr< SdrAllFillAttributesHelper > SdrAllFillAttributesHelperPtr;
-}}
+}
 
 /// Base class for various Writer styles.
 class SW_DLLPUBLIC SwFormat : public sw::BroadcastingModify
@@ -96,7 +96,7 @@ public:
     }
     SfxItemState GetItemState( sal_uInt16 nWhich, bool bSrchInParent = true,
                                     const SfxPoolItem **ppItem = nullptr ) const;
-    SfxItemState GetBackgroundState(std::shared_ptr<SvxBrushItem>& rItem) const;
+    SfxItemState GetBackgroundState(std::unique_ptr<SvxBrushItem>& rItem) const;
     virtual bool SetFormatAttr( const SfxPoolItem& rAttr );
     virtual bool SetFormatAttr( const SfxItemSet& rSet );
     virtual bool ResetFormatAttr( sal_uInt16 nWhich1, sal_uInt16 nWhich2 = 0 );
@@ -203,7 +203,7 @@ public:
     inline const SvxFormatKeepItem         &GetKeep( bool = true ) const;
 
     // Create SvxBrushItem for Background fill (partially for backwards compatibility)
-    std::shared_ptr<SvxBrushItem> makeBackgroundBrushItem( bool = true ) const;
+    std::unique_ptr<SvxBrushItem> makeBackgroundBrushItem( bool = true ) const;
 
     inline const SvxShadowItem            &GetShadow( bool = true ) const;
     inline const SwFormatPageDesc            &GetPageDesc( bool = true ) const;

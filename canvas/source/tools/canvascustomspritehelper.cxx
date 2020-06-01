@@ -32,7 +32,7 @@
 #include <rtl/math.hxx>
 #include <tools/diagnose_ex.h>
 
-#include <canvas/base/canvascustomspritehelper.hxx>
+#include <base/canvascustomspritehelper.hxx>
 #include <canvas/canvastools.hxx>
 
 using namespace ::com::sun::star;
@@ -164,7 +164,7 @@ namespace canvas
     void CanvasCustomSpriteHelper::init( const geometry::RealSize2D&        rSpriteSize,
                                          const SpriteSurface::Reference&    rOwningSpriteCanvas )
     {
-        ENSURE_OR_THROW( rOwningSpriteCanvas.get(),
+        ENSURE_OR_THROW( rOwningSpriteCanvas,
                           "CanvasCustomSpriteHelper::init(): Invalid owning sprite canvas" );
 
         mpSpriteCanvas = rOwningSpriteCanvas;
@@ -194,36 +194,36 @@ namespace canvas
     {
         // check whether bitmap is non-alpha, and whether its
         // transformed size covers the whole sprite.
-        if( !xBitmap->hasAlpha() )
-        {
-            const geometry::IntegerSize2D& rInputSize(
-                xBitmap->getSize() );
-            const ::basegfx::B2DSize& rOurSize(
-                rSprite->getSizePixel() );
+        if( xBitmap->hasAlpha() )
+            return;
 
-            ::basegfx::B2DHomMatrix aTransform;
-            if( tools::isInside(
-                    ::basegfx::B2DRectangle( 0.0,0.0,
-                                             rOurSize.getX(),
-                                             rOurSize.getY() ),
-                    ::basegfx::B2DRectangle( 0.0,0.0,
-                                             rInputSize.Width,
-                                             rInputSize.Height ),
-                    ::canvas::tools::mergeViewAndRenderTransform(aTransform,
-                                                                 viewState,
-                                                                 renderState) ) )
-            {
-                // bitmap is opaque and will fully cover the sprite,
-                // set flag appropriately
-                mbIsContentFullyOpaque = true;
-            }
+        const geometry::IntegerSize2D& rInputSize(
+            xBitmap->getSize() );
+        const ::basegfx::B2DSize& rOurSize(
+            rSprite->getSizePixel() );
+
+        ::basegfx::B2DHomMatrix aTransform;
+        if( tools::isInside(
+                ::basegfx::B2DRectangle( 0.0,0.0,
+                                         rOurSize.getX(),
+                                         rOurSize.getY() ),
+                ::basegfx::B2DRectangle( 0.0,0.0,
+                                         rInputSize.Width,
+                                         rInputSize.Height ),
+                ::canvas::tools::mergeViewAndRenderTransform(aTransform,
+                                                             viewState,
+                                                             renderState) ) )
+        {
+            // bitmap is opaque and will fully cover the sprite,
+            // set flag appropriately
+            mbIsContentFullyOpaque = true;
         }
     }
 
     void CanvasCustomSpriteHelper::setAlpha( const Sprite::Reference&   rSprite,
                                              double                     alpha )
     {
-        if( !mpSpriteCanvas.get() )
+        if( !mpSpriteCanvas )
             return; // we're disposed
 
         if( alpha != mfAlpha )
@@ -244,7 +244,7 @@ namespace canvas
                                          const rendering::ViewState&    viewState,
                                          const rendering::RenderState&  renderState )
     {
-        if( !mpSpriteCanvas.get() )
+        if( !mpSpriteCanvas )
             return; // we're disposed
 
         ::basegfx::B2DHomMatrix aTransform;
@@ -257,23 +257,23 @@ namespace canvas
             ::basegfx::unotools::b2DPointFromRealPoint2D(aNewPos) );
         aPoint *= aTransform;
 
-        if( aPoint != maPosition )
+        if( aPoint == maPosition )
+            return;
+
+        const ::basegfx::B2DRectangle&  rBounds
+            = getUpdateArea( ::basegfx::B2DRectangle( 0.0, 0.0,
+                                                      maSize.getX(),
+                                                      maSize.getY() ) );
+
+        if( mbActive )
         {
-            const ::basegfx::B2DRectangle&  rBounds
-                = getUpdateArea( ::basegfx::B2DRectangle( 0.0, 0.0,
-                                                          maSize.getX(),
-                                                          maSize.getY() ) );
-
-            if( mbActive )
-            {
-                mpSpriteCanvas->moveSprite( rSprite,
-                                            rBounds.getMinimum(),
-                                            rBounds.getMinimum() - maPosition + aPoint,
-                                            rBounds.getRange() );
-            }
-
-            maPosition = aPoint;
+            mpSpriteCanvas->moveSprite( rSprite,
+                                        rBounds.getMinimum(),
+                                        rBounds.getMinimum() - maPosition + aPoint,
+                                        rBounds.getRange() );
         }
+
+        maPosition = aPoint;
     }
 
     void CanvasCustomSpriteHelper::transform( const Sprite::Reference&          rSprite,
@@ -283,26 +283,26 @@ namespace canvas
         ::basegfx::unotools::homMatrixFromAffineMatrix(aMatrix,
                                                        aTransformation);
 
-        if( maTransform != aMatrix )
+        if( maTransform == aMatrix )
+            return;
+
+        // retrieve bounds before and after transformation change.
+        const ::basegfx::B2DRectangle& rPrevBounds( getUpdateArea() );
+
+        maTransform = aMatrix;
+
+        if( !updateClipState( rSprite ) &&
+            mbActive )
         {
-            // retrieve bounds before and after transformation change.
-            const ::basegfx::B2DRectangle& rPrevBounds( getUpdateArea() );
-
-            maTransform = aMatrix;
-
-            if( !updateClipState( rSprite ) &&
-                mbActive )
-            {
-                mpSpriteCanvas->updateSprite( rSprite,
-                                              maPosition,
-                                              rPrevBounds );
-                mpSpriteCanvas->updateSprite( rSprite,
-                                              maPosition,
-                                              getUpdateArea() );
-            }
-
-            mbTransformDirty = true;
+            mpSpriteCanvas->updateSprite( rSprite,
+                                          maPosition,
+                                          rPrevBounds );
+            mpSpriteCanvas->updateSprite( rSprite,
+                                          maPosition,
+                                          getUpdateArea() );
         }
+
+        mbTransformDirty = true;
     }
 
     void CanvasCustomSpriteHelper::clip( const Sprite::Reference&                           rSprite,
@@ -330,7 +330,7 @@ namespace canvas
     void CanvasCustomSpriteHelper::setPriority( const Sprite::Reference&    rSprite,
                                                 double                      nPriority )
     {
-        if( !mpSpriteCanvas.get() )
+        if( !mpSpriteCanvas )
             return; // we're disposed
 
         if( nPriority != mfPriority )
@@ -348,45 +348,45 @@ namespace canvas
 
     void CanvasCustomSpriteHelper::show( const Sprite::Reference& rSprite )
     {
-        if( !mpSpriteCanvas.get() )
+        if( !mpSpriteCanvas )
             return; // we're disposed
 
-        if( !mbActive )
+        if( mbActive )
+            return;
+
+        mpSpriteCanvas->showSprite( rSprite );
+        mbActive = true;
+
+        // TODO(P1): if clip is the NULL clip (nothing visible),
+        // also save us the update call.
+
+        if( mfAlpha != 0.0 )
         {
-            mpSpriteCanvas->showSprite( rSprite );
-            mbActive = true;
-
-            // TODO(P1): if clip is the NULL clip (nothing visible),
-            // also save us the update call.
-
-            if( mfAlpha != 0.0 )
-            {
-                mpSpriteCanvas->updateSprite( rSprite,
-                                              maPosition,
-                                              getUpdateArea() );
-            }
+            mpSpriteCanvas->updateSprite( rSprite,
+                                          maPosition,
+                                          getUpdateArea() );
         }
     }
 
     void CanvasCustomSpriteHelper::hide( const Sprite::Reference& rSprite )
     {
-        if( !mpSpriteCanvas.get() )
+        if( !mpSpriteCanvas )
             return; // we're disposed
 
-        if( mbActive )
+        if( !mbActive )
+            return;
+
+        mpSpriteCanvas->hideSprite( rSprite );
+        mbActive = false;
+
+        // TODO(P1): if clip is the NULL clip (nothing visible),
+        // also save us the update call.
+
+        if( mfAlpha != 0.0 )
         {
-            mpSpriteCanvas->hideSprite( rSprite );
-            mbActive = false;
-
-            // TODO(P1): if clip is the NULL clip (nothing visible),
-            // also save us the update call.
-
-            if( mfAlpha != 0.0 )
-            {
-                mpSpriteCanvas->updateSprite( rSprite,
-                                              maPosition,
-                                              getUpdateArea() );
-            }
+            mpSpriteCanvas->updateSprite( rSprite,
+                                          maPosition,
+                                          getUpdateArea() );
         }
     }
 

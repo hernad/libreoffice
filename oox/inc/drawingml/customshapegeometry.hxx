@@ -20,12 +20,10 @@
 #ifndef INCLUDED_OOX_DRAWINGML_CUSTOMSHAPEGEOMETRY_HXX
 #define INCLUDED_OOX_DRAWINGML_CUSTOMSHAPEGEOMETRY_HXX
 
-#include <com/sun/star/beans/XPropertySet.hpp>
-#include <oox/helper/propertymap.hxx>
 #include <oox/core/contexthandler2.hxx>
 #include <oox/drawingml/shape.hxx>
 
-namespace oox { namespace drawingml {
+namespace oox::drawingml {
 
 
 // CT_CustomGeometry2D
@@ -63,7 +61,7 @@ private:
     CustomShapeProperties& mrCustomShapeProperties;
 };
 
-} }
+}
 
 #endif // INCLUDED_OOX_DRAWINGML_CUSTOMSHAPEGEOMETRY_HXX
 

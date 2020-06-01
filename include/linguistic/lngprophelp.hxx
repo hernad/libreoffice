@@ -27,15 +27,10 @@
 #include <com/sun/star/linguistic2/XLinguServiceEventBroadcaster.hpp>
 #include <linguistic/lngdllapi.h>
 #include <rtl/ref.hxx>
+#include <config_options.h>
 
-namespace com { namespace sun { namespace star { namespace beans {
-    class   XPropertySet;
-}}}}
-
-namespace com { namespace sun { namespace star { namespace linguistic2 {
-    struct  LinguServiceEvent;
-}}}}
-
+namespace com::sun::star::beans { class XPropertySet; }
+namespace com::sun::star::linguistic2 { struct LinguServiceEvent; }
 namespace com::sun::star::linguistic2 { class XLinguProperties; }
 
 
@@ -57,7 +52,7 @@ typedef cppu::WeakImplHelper
     css::linguistic2::XLinguServiceEventBroadcaster
 > PropertyChgHelperBase;
 
-class LNG_DLLPUBLIC PropertyChgHelper :
+class UNLESS_MERGELIBS(LNG_DLLPUBLIC) PropertyChgHelper :
     public PropertyChgHelperBase
 {
     css::uno::Sequence< OUString >                      aPropNames;
@@ -148,7 +143,7 @@ public:
         propertyChange( const css::beans::PropertyChangeEvent& rEvt ) override;
 };
 
-class LNG_DLLPUBLIC PropertyHelper_Thesaurus
+class UNLESS_MERGELIBS(LNG_DLLPUBLIC) PropertyHelper_Thesaurus
 {
     rtl::Reference< PropertyHelper_Thes >    mxPropHelper;
 
@@ -167,7 +162,7 @@ public:
 };
 
 
-class LNG_DLLPUBLIC PropertyHelper_Spell final :
+class UNLESS_MERGELIBS(LNG_DLLPUBLIC) PropertyHelper_Spell final :
     public PropertyChgHelper
 {
     // default values
@@ -207,7 +202,7 @@ public:
 };
 
 
-class LNG_DLLPUBLIC PropertyHelper_Spelling
+class UNLESS_MERGELIBS(LNG_DLLPUBLIC) PropertyHelper_Spelling
 {
     rtl::Reference< PropertyHelper_Spell >    mxPropHelper;
 
@@ -278,7 +273,7 @@ public:
     bool IsNoHyphenateCaps() const { return bResNoHyphenateCaps; }
 };
 
-class LNG_DLLPUBLIC PropertyHelper_Hyphenation
+class UNLESS_MERGELIBS(LNG_DLLPUBLIC) PropertyHelper_Hyphenation
 {
     rtl::Reference< PropertyHelper_Hyphen >    mxPropHelper;
 

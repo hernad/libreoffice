@@ -131,15 +131,14 @@ namespace basegfx::unotools
 
             if( rPoly.areControlPointsUsed() )
             {
-                uno::Sequence< uno::Sequence< geometry::RealBezierSegment2D > > outputSequence( 1 );
-                outputSequence[0] = bezierSequenceFromB2DPolygon( rPoly );
+                uno::Sequence< uno::Sequence< geometry::RealBezierSegment2D > > outputSequence{ bezierSequenceFromB2DPolygon( rPoly )};
 
                 xRes = xGraphicDevice->createCompatibleBezierPolyPolygon( outputSequence );
             }
             else
             {
-                uno::Sequence< uno::Sequence< geometry::RealPoint2D > > outputSequence( 1 );
-                outputSequence[0] = pointSequenceFromB2DPolygon( rPoly );
+                uno::Sequence< uno::Sequence< geometry::RealPoint2D > > outputSequence{
+                 pointSequenceFromB2DPolygon( rPoly )};
 
                 xRes = xGraphicDevice->createCompatibleLinePolyPolygon( outputSequence );
             }
@@ -196,9 +195,9 @@ namespace basegfx::unotools
         {
             ::basegfx::B2DPolyPolygon aRes;
 
-            for( sal_Int32 nCurrPoly=0; nCurrPoly<points.getLength(); ++nCurrPoly )
+            for( const auto & p : points )
             {
-                aRes.append( polygonFromPoint2DSequence( points[nCurrPoly] ) );
+                aRes.append( polygonFromPoint2DSequence( p ) );
             }
 
             return aRes;
@@ -240,9 +239,9 @@ namespace basegfx::unotools
         {
             ::basegfx::B2DPolyPolygon aRes;
 
-            for( sal_Int32 nCurrPoly=0; nCurrPoly<curves.getLength(); ++nCurrPoly )
+            for( const auto & c : curves )
             {
-                aRes.append( polygonFromBezier2DSequence( curves[nCurrPoly] ) );
+                aRes.append( polygonFromBezier2DSequence( c ) );
             }
 
             return aRes;

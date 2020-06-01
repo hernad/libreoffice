@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_AVMEDIA_SOURCE_WIN_WINDOW_HXX
-#define INCLUDED_AVMEDIA_SOURCE_WIN_WINDOW_HXX
+#pragma once
 
 #include <sal/config.h>
 
@@ -32,7 +31,7 @@
 
 struct IVideoWindow;
 
-namespace avmedia { namespace win {
+namespace avmedia::win {
 
 class Player;
 
@@ -110,9 +109,6 @@ private:
     void                                        ImplLayoutVideoWindow();
 };
 
-} // namespace win
-} // namespace avmedia
-
-#endif // INCLUDED_AVMEDIA_SOURCE_WIN_WINDOW_HXX
+} // namespace avmedia::win
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

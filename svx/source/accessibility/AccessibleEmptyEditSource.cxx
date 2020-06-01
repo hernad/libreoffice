@@ -121,7 +121,7 @@ namespace accessibility
         //XTextCopy
         void        CopyText(const SvxTextForwarder& ) override {}
 
-        OUString    CalcFieldValue( const SvxFieldItem& /*rField*/, sal_Int32 /*nPara*/, sal_Int32 /*nPos*/, o3tl::optional<Color>& /*rpTxtColor*/, o3tl::optional<Color>& /*rpFldColor*/ ) override
+        OUString    CalcFieldValue( const SvxFieldItem& /*rField*/, sal_Int32 /*nPara*/, sal_Int32 /*nPos*/, std::optional<Color>& /*rpTxtColor*/, std::optional<Color>& /*rpFldColor*/ ) override
         {
             return  OUString();
         }
@@ -303,7 +303,7 @@ namespace accessibility
         const SdrHint* pSdrHint = ( rHint.GetId() == SfxHintId::ThisIsAnSdrHint ? static_cast<const SdrHint*>(&rHint) : nullptr );
 
         if( pSdrHint && pSdrHint->GetKind() == SdrHintKind::BeginEdit &&
-            &mrObj == pSdrHint->GetObject() && mpEditSource.get() )
+            &mrObj == pSdrHint->GetObject() && mpEditSource )
         {
             // switch edit source, if not yet done. This is necessary
             // to become a full-fledged EditSource the first time a

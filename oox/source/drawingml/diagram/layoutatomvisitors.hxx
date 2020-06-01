@@ -20,14 +20,12 @@
 #ifndef INCLUDED_OOX_SOURCE_DRAWINGML_DIAGRAM_LAYOUTATOMVISITORS_HXX
 #define INCLUDED_OOX_SOURCE_DRAWINGML_DIAGRAM_LAYOUTATOMVISITORS_HXX
 
-#include <memory>
-
-#include <oox/drawingml/shape.hxx>
+#include <oox/drawingml/drawingmltypes.hxx>
 #include "diagram.hxx"
 #include "diagramlayoutatoms.hxx"
 #include "layoutatomvisitorbase.hxx"
 
-namespace oox { namespace drawingml {
+namespace oox::drawingml {
 
 class ShapeCreationVisitor : public LayoutAtomVisitorBase
 {
@@ -87,7 +85,7 @@ private:
     std::vector<Constraint> maConstraints;
 };
 
-} }
+}
 
 #endif
 

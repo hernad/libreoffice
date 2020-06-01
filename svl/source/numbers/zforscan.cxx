@@ -112,7 +112,7 @@ bool ImpSvNumberformatScan::bStandardColorNeedInitialization = true;
 // This vector will hold *only* the color names in German language.
 ::std::vector<OUString> ImpSvNumberformatScan::sGermanColorNames;
 
-const OUString ImpSvNumberformatScan::sErrStr =  "###";
+const OUString ImpSvNumberformatScan::sErrStr =  "#FMT";
 
 ImpSvNumberformatScan::ImpSvNumberformatScan( SvNumberFormatter* pFormatterP )
     : maNullDate( 30, 12, 1899)
@@ -796,7 +796,7 @@ short ImpSvNumberformatScan::Next_Symbol( const OUString& rStr,
             // "$U" (symbol) of "[$UYU]" (abbreviation).
             if ( nCurrPos >= 0 && sCurString.getLength() > 1 &&
                  nPos-1 + sCurString.getLength() <= rStr.getLength() &&
-                 !(nPos > 1 && rStr[nPos-2] == '[') )
+                 (nPos <= 1 || rStr[nPos-2] != '[') )
             {
                 OUString aTest = pChrCls->uppercase( rStr.copy( nPos-1, sCurString.getLength() ) );
                 if ( aTest == sCurString )

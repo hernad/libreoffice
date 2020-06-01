@@ -84,6 +84,7 @@
 #include <pagedeschint.hxx>
 #include <drawdoc.hxx>
 #include <hints.hxx>
+#include <frameformats.hxx>
 
 #include <ndtxt.hxx>
 
@@ -701,7 +702,7 @@ bool SwFormatPageDesc::QueryValue( uno::Any& rVal, sal_uInt8 nMemberId ) const
     {
         case MID_PAGEDESC_PAGENUMOFFSET:
             {
-                ::o3tl::optional<sal_uInt16> oOffset = GetNumOffset();
+                ::std::optional<sal_uInt16> oOffset = GetNumOffset();
                 if (oOffset)
                 {
                     rVal <<= static_cast<sal_Int16>(*oOffset);
@@ -745,7 +746,7 @@ bool SwFormatPageDesc::PutValue( const uno::Any& rVal, sal_uInt8 nMemberId )
             sal_Int16 nOffset = 0;
             if (!rVal.hasValue())
             {
-                SetNumOffset(o3tl::nullopt);
+                SetNumOffset(std::nullopt);
             }
             else if (rVal >>= nOffset)
                 SetNumOffset( nOffset );
@@ -2535,7 +2536,7 @@ void SwFrameFormat::Modify( const SfxPoolItem* pOld, const SfxPoolItem* pNew )
                 RES_FOOTER, false, reinterpret_cast<const SfxPoolItem**>(&pF) );
 
             // reset fill information
-            if (maFillAttributes.get() && supportsFullDrawingLayerFillAttributeSet())
+            if (maFillAttributes && supportsFullDrawingLayerFillAttributeSet())
             {
                 SfxItemIter aIter(*static_cast<const SwAttrSetChg*>(pNew)->GetChgSet());
                 bool bReset(false);
@@ -2554,7 +2555,7 @@ void SwFrameFormat::Modify( const SfxPoolItem* pOld, const SfxPoolItem* pNew )
         else if(RES_FMT_CHG == nWhich)
         {
             // reset fill information on format change (e.g. style changed)
-            if (maFillAttributes.get() && supportsFullDrawingLayerFillAttributeSet())
+            if (maFillAttributes && supportsFullDrawingLayerFillAttributeSet())
             {
                 maFillAttributes.reset();
             }
@@ -3187,7 +3188,7 @@ bool SwFlyFrameFormat::IsBackgroundTransparent() const
     // NOTE: If background color is "no fill"/"auto fill" (COL_TRANSPARENT)
     //     and there is no background graphic, it "inherites" the background
     //     from its anchor.
-    std::shared_ptr<SvxBrushItem> aBackground(makeBackgroundBrushItem());
+    std::unique_ptr<SvxBrushItem> aBackground(makeBackgroundBrushItem());
     if ( aBackground &&
          (aBackground->GetColor().GetTransparency() != 0) &&
          (aBackground->GetColor() != COL_TRANSPARENT)
@@ -3227,7 +3228,7 @@ bool SwFlyFrameFormat::IsBackgroundBrushInherited() const
     }
     else
     {
-        std::shared_ptr<SvxBrushItem> aBackground(makeBackgroundBrushItem());
+        std::unique_ptr<SvxBrushItem> aBackground(makeBackgroundBrushItem());
         if ( aBackground &&
              (aBackground->GetColor() == COL_TRANSPARENT) &&
              !(aBackground->GetGraphicObject()) )
@@ -3480,7 +3481,7 @@ IMapObject* SwFrameFormat::GetIMapObject( const Point& rPoint,
         aOrigSz = pFly->GetFormat()->GetFrameSize().GetSize();
     }
 
-    if( aOrigSz.Width() != 0 && aOrigSz.Height() != 0 )
+    if( !aOrigSz.IsEmpty() )
     {
         Point aPos( rPoint );
         Size aActSz ( pRef == pFly ? pFly->getFrameArea().SSize() : pRef->getFramePrintArea().SSize() );
@@ -3516,7 +3517,7 @@ drawinglayer::attribute::SdrAllFillAttributesHelperPtr SwFrameFormat::getSdrAllF
     if (supportsFullDrawingLayerFillAttributeSet())
     {
         // create FillAttributes on demand
-        if(!maFillAttributes.get())
+        if(!maFillAttributes)
         {
             const_cast< SwFrameFormat* >(this)->maFillAttributes = std::make_shared<drawinglayer::attribute::SdrAllFillAttributesHelper>(GetAttrSet());
         }

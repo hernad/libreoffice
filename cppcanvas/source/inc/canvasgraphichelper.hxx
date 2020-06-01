@@ -25,12 +25,12 @@
 #include <cppcanvas/canvasgraphic.hxx>
 #include <cppcanvas/canvas.hxx>
 
-#include <o3tl/optional.hxx>
+#include <optional>
 
-namespace com { namespace sun { namespace star { namespace rendering
+namespace com::sun::star::rendering
 {
     class  XGraphicDevice;
-} } } }
+}
 
 
 /* Definition of CanvasGraphicHelper class */
@@ -61,7 +61,7 @@ namespace cppcanvas
         private:
             mutable css::rendering::RenderState                                   maRenderState;
 
-            o3tl::optional<basegfx::B2DPolyPolygon>                              maClipPolyPolygon;
+            std::optional<basegfx::B2DPolyPolygon>                              maClipPolyPolygon;
             CanvasSharedPtr                                                       mpCanvas;
         };
 

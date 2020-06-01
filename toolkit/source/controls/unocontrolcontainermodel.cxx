@@ -18,9 +18,9 @@
  */
 
 #include <com/sun/star/uno/XComponentContext.hpp>
-#include <toolkit/controls/unocontrolcontainermodel.hxx>
+#include <controls/unocontrolcontainermodel.hxx>
 #include <toolkit/helper/property.hxx>
-#include <toolkit/helper/servicenames.hxx>
+#include <helper/servicenames.hxx>
 
 #include <helper/unopropertyarrayhelper.hxx>
 
@@ -41,7 +41,7 @@ UnoControlContainerModel::UnoControlContainerModel( const css::uno::Reference< c
 
 OUString UnoControlContainerModel::getServiceName()
 {
-    return OUString::createFromAscii( szServiceName_UnoControlContainerModel );
+    return "stardiv.vcl.controlmodel.ControlContainer";
 }
 
 OUString UnoControlContainerModel::getImplementationName()

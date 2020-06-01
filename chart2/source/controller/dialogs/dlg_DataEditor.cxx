@@ -22,6 +22,7 @@
 #include <comphelper/stl_types.hxx>
 
 #include <com/sun/star/awt/XWindow.hpp>
+#include <com/sun/star/chart2/XChartDocument.hpp>
 #include <com/sun/star/frame/XStorable.hpp>
 
 using namespace ::com::sun::star;
@@ -57,8 +58,7 @@ DataEditor::DataEditor(weld::Window* pParent,
     m_xBrwData->SetCursorMovedHdl( LINK( this, DataEditor, BrowserCursorMovedHdl ));
 
     m_xBrwData->SetDataFromModel( m_xChartDoc, m_xContext );
-//    m_xDialog->grab_focus();
-//    m_xBrwData->GrabFocus();
+    m_xBrwData->GrabFocus();
 
     bool bReadOnly = true;
     Reference< frame::XStorable > xStor( m_xChartDoc, uno::UNO_QUERY );

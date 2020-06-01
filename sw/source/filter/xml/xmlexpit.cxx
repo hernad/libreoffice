@@ -104,7 +104,7 @@ void SvXMLExportItemMapper::exportXML( const SvXMLExport& rExport,
     }
 }
 
-void SvXMLExportItemMapper::exportXML( const SvXMLExport& rExport,
+void SvXMLExportItemMapper::exportXML(const SvXMLExport&,
                                  SvXMLAttributeList& rAttrList,
                                  const SfxPoolItem& rItem,
                                  const SvXMLItemMapEntry& rEntry,
@@ -120,13 +120,7 @@ void SvXMLExportItemMapper::exportXML( const SvXMLExport& rExport,
             bool bAddAttribute = true;
             if( rEntry.nNameSpace == XML_NAMESPACE_STYLE )
             {
-                if( !(rExport.getExportFlags() & SvXMLExportFlags::SAVEBACKWARDCOMPATIBLE ) ||
-                    !QueryXMLValue(rItem, aValue,
-                    static_cast< sal_uInt16 >( rEntry.nMemberId & MID_SW_FLAG_MASK ),
-                    rUnitConverter ) )
-                {
-                    bAddAttribute = false;
-                }
+                bAddAttribute = false;
             }
             else
             {
@@ -410,10 +404,10 @@ bool SvXMLExportItemMapper::QueryXMLValue(
                 case  MID_FIRST_LINE_INDENT:
                     if (!rLRSpace.IsAutoFirst())
                     {
-                        if (rLRSpace.GetPropTextFirstLineOfst() != 100)
+                        if (rLRSpace.GetPropTextFirstLineOffset() != 100)
                         {
                             ::sax::Converter::convertPercent(
-                                aOut, rLRSpace.GetPropTextFirstLineOfst() );
+                                aOut, rLRSpace.GetPropTextFirstLineOffset() );
                         }
                         else
                         {
@@ -955,7 +949,7 @@ bool SvXMLExportItemMapper::QueryXMLValue(
                     SvxGraphicPosition eGraphicPos = rBrush.GetGraphicPos();
                     if( GPOS_AREA == eGraphicPos )
                     {
-                        aOut.append( GetXMLToken(XML_BACKGROUND_STRETCH)  );
+                        aOut.append( GetXMLToken(XML_STRETCH)  );
                         bOk = true;
                     }
                     else if( GPOS_NONE != eGraphicPos && GPOS_TILED != eGraphicPos  )
@@ -984,7 +978,7 @@ bool SvXMLExportItemMapper::QueryXMLValue(
 
             if( MID_PAGEDESC_PAGENUMOFFSET==nMemberId )
             {
-                ::o3tl::optional<sal_uInt16> oNumOffset = rPageDesc.GetNumOffset();
+                ::std::optional<sal_uInt16> oNumOffset = rPageDesc.GetNumOffset();
                 if (oNumOffset && *oNumOffset > 0)
                 {
                     // #i114163# positiveInteger only!

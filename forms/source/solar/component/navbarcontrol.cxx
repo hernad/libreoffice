@@ -20,16 +20,15 @@
 
 #include "navbarcontrol.hxx"
 #include <frm_strings.hxx>
-#include <FormComponent.hxx>
 #include <componenttools.hxx>
 #include <navtoolbar.hxx>
 #include <commandimageprovider.hxx>
 
 #include <com/sun/star/awt/XView.hpp>
 #include <com/sun/star/awt/PosSize.hpp>
+#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/form/runtime/FormFeature.hpp>
 #include <com/sun/star/awt/XControlModel.hpp>
-#include <com/sun/star/graphic/XGraphic.hpp>
 #include <com/sun/star/frame/ModuleManager.hpp>
 
 #include <tools/debug.hxx>
@@ -115,48 +114,48 @@ namespace frm
     {
         SolarMutexGuard aGuard;
 
-        if (!getPeer().is())
+        if (getPeer().is())
+            return;
+
+        mbCreatingPeer = true;
+
+        // determine the VLC window for the parent
+        vcl::Window* pParentWin = nullptr;
+        if ( _rParentPeer.is() )
         {
-            mbCreatingPeer = true;
-
-            // determine the VLC window for the parent
-            vcl::Window* pParentWin = nullptr;
-            if ( _rParentPeer.is() )
-            {
-                VCLXWindow* pParentXWin = comphelper::getUnoTunnelImplementation<VCLXWindow>( _rParentPeer );
-                if ( pParentXWin )
-                    pParentWin = pParentXWin->GetWindow().get();
-                DBG_ASSERT( pParentWin, "ONavigationBarControl::createPeer: could not obtain the VCL-level parent window!" );
-            }
-
-            // create the peer
-            rtl::Reference<ONavigationBarPeer> pPeer = ONavigationBarPeer::Create( m_xContext, pParentWin, getModel() );
-            assert(pPeer && "ONavigationBarControl::createPeer: invalid peer returned!");
-
-            // announce the peer to the base class
-            setPeer( pPeer.get() );
-
-            // initialize ourself (and thus the peer) with the model properties
-            updateFromModel();
-
-            Reference< XView >  xPeerView( getPeer(), UNO_QUERY );
-            if ( xPeerView.is() )
-            {
-                xPeerView->setZoom( maComponentInfos.nZoomX, maComponentInfos.nZoomY );
-                xPeerView->setGraphics( mxGraphics );
-            }
-
-            // a lot of initial settings from our component infos
-            setPosSize( maComponentInfos.nX, maComponentInfos.nY, maComponentInfos.nWidth, maComponentInfos.nHeight, PosSize::POSSIZE );
-
-            pPeer->setVisible   ( maComponentInfos.bVisible && !mbDesignMode );
-            pPeer->setEnable    ( maComponentInfos.bEnable                   );
-            pPeer->setDesignMode( mbDesignMode                               );
-
-            peerCreated();
-
-            mbCreatingPeer = false;
+            VCLXWindow* pParentXWin = comphelper::getUnoTunnelImplementation<VCLXWindow>( _rParentPeer );
+            if ( pParentXWin )
+                pParentWin = pParentXWin->GetWindow().get();
+            DBG_ASSERT( pParentWin, "ONavigationBarControl::createPeer: could not obtain the VCL-level parent window!" );
         }
+
+        // create the peer
+        rtl::Reference<ONavigationBarPeer> pPeer = ONavigationBarPeer::Create( m_xContext, pParentWin, getModel() );
+        assert(pPeer && "ONavigationBarControl::createPeer: invalid peer returned!");
+
+        // announce the peer to the base class
+        setPeer( pPeer.get() );
+
+        // initialize ourself (and thus the peer) with the model properties
+        updateFromModel();
+
+        Reference< XView >  xPeerView( getPeer(), UNO_QUERY );
+        if ( xPeerView.is() )
+        {
+            xPeerView->setZoom( maComponentInfos.nZoomX, maComponentInfos.nZoomY );
+            xPeerView->setGraphics( mxGraphics );
+        }
+
+        // a lot of initial settings from our component infos
+        setPosSize( maComponentInfos.nX, maComponentInfos.nY, maComponentInfos.nWidth, maComponentInfos.nHeight, PosSize::POSSIZE );
+
+        pPeer->setVisible   ( maComponentInfos.bVisible && !mbDesignMode );
+        pPeer->setEnable    ( maComponentInfos.bEnable                   );
+        pPeer->setDesignMode( mbDesignMode                               );
+
+        peerCreated();
+
+        mbCreatingPeer = false;
     }
 
 
@@ -277,7 +276,6 @@ namespace frm
 
         if ( _rPropertyName == PROPERTY_BACKGROUNDCOLOR )
         {
-            Wallpaper aTest = pNavBar->GetBackground();
             if ( bVoid )
             {
                 pNavBar->SetBackground( pNavBar->GetSettings().GetStyleSettings().GetFaceColor() );

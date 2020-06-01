@@ -25,14 +25,14 @@
 #include <memory>
 
 // some forwards
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace sdb {
         class SQLContext;
     }
     namespace sdbc {
         class SQLException;
     }
-} } }
+}
 
 namespace dbaui
 {
@@ -63,7 +63,7 @@ enum class MessBoxStyle {
 }
 
 namespace o3tl {
-    template<> struct typed_flags<dbaui::MessBoxStyle> : is_typed_flags<dbaui::MessBoxStyle, 0x0fff> {};
+    template<> struct typed_flags<dbaui::MessBoxStyle> : is_typed_flags<dbaui::MessBoxStyle, 0x03ff> {};
 }
 
 

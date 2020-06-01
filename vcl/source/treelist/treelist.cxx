@@ -225,7 +225,7 @@ sal_uLong SvTreeList::Move(SvTreeListEntry* pSrcEntry,SvTreeListEntry* pTargetPa
 
         // Release the original.
         std::unique_ptr<SvTreeListEntry> pOriginal(std::move(*itSrcPos));
-        assert(pOriginal.get());
+        assert(pOriginal);
         rSrc.erase(itSrcPos);
 
         // Determine the insertion position.
@@ -247,7 +247,7 @@ sal_uLong SvTreeList::Move(SvTreeListEntry* pSrcEntry,SvTreeListEntry* pTargetPa
             std::advance(itDstPos, nListPos);
         }
         std::unique_ptr<SvTreeListEntry> pOriginal(std::move(*itSrcPos));
-        assert(pOriginal.get());
+        assert(pOriginal);
         rSrc.erase(itSrcPos);
         rDst.insert(itDstPos, std::move(pOriginal));
     }
@@ -526,8 +526,6 @@ SvTreeListEntry* SvTreeList::Prev( SvTreeListEntry* pActEntry ) const
 {
     DBG_ASSERT(pActEntry!=nullptr,"Entry?");
 
-    sal_uInt16 nDepth = 0;
-
     SvTreeListEntries* pActualList = &pActEntry->pParent->m_Children;
     sal_uLong nActualPos = pActEntry->GetChildListPos();
 
@@ -537,7 +535,6 @@ SvTreeListEntry* SvTreeList::Prev( SvTreeListEntry* pActEntry ) const
         while (!pActEntry->m_Children.empty())
         {
             pActualList = &pActEntry->m_Children;
-            nDepth++;
             pActEntry = pActualList->back().get();
         }
         return pActEntry;
@@ -549,7 +546,6 @@ SvTreeListEntry* SvTreeList::Prev( SvTreeListEntry* pActEntry ) const
 
     if ( pActEntry )
     {
-        nDepth--;
         return pActEntry;
     }
     return nullptr;
@@ -788,16 +784,6 @@ SvTreeListEntry* SvTreeList::NextSelected( const SvListView* pView, SvTreeListEn
     pEntry = Next( pEntry );
     while( pEntry && !pView->IsSelected(pEntry) )
         pEntry = Next( pEntry );
-    return pEntry;
-}
-
-SvTreeListEntry* SvTreeList::PrevSelected( const SvListView* pView, SvTreeListEntry* pEntry) const
-{
-    DBG_ASSERT(pView&&pEntry,"PrevSel:View/Entry?");
-    pEntry = Prev( pEntry );
-    while( pEntry && !pView->IsSelected(pEntry) )
-        pEntry = Prev( pEntry );
-
     return pEntry;
 }
 
@@ -1369,10 +1355,10 @@ bool SvListView::IsAllExpanded( SvTreeListEntry* pEntry ) const
     return true;
 }
 
-bool SvListView::IsSelected( SvTreeListEntry* pEntry ) const
+bool SvListView::IsSelected(const SvTreeListEntry* pEntry) const
 {
     DBG_ASSERT(pEntry,"IsExpanded:No Entry");
-    SvDataTable::const_iterator itr = m_pImpl->m_DataTable.find(pEntry);
+    SvDataTable::const_iterator itr = m_pImpl->m_DataTable.find(const_cast<SvTreeListEntry*>(pEntry));
     if (itr == m_pImpl->m_DataTable.end())
         return false;
     return itr->second->IsSelected();

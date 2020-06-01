@@ -23,7 +23,7 @@
 #include <comphelper/comphelperdllapi.h>
 #include <rtl/ustring.hxx>
 
-#include <o3tl/optional.hxx>
+#include <optional>
 #include <memory>
 
 namespace com::sun::star::uno { template <class interface_type> class Reference; }
@@ -38,7 +38,7 @@ namespace comphelper
     //= EventLogger
 
 
-    namespace log { namespace convert
+    namespace log::convert
     {
         inline const OUString& convertLogArgToString( const OUString& _rValue )
         {
@@ -59,13 +59,13 @@ namespace comphelper
         inline OUString convertLogArgToString( bool    _bValue ) { return OUString::boolean( _bValue ); }
         void convertLogArgToString(sal_Bool) = delete;
 
-    } } // namespace log::convert
+    } // namespace log::convert
 
 
     //= EventLogger
 
     class EventLogger_Impl;
-    typedef ::o3tl::optional< OUString >    OptionalString;
+    typedef ::std::optional< OUString >    OptionalString;
 
     /** encapsulates a css::logging::XLogger
 

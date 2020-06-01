@@ -25,8 +25,8 @@
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <com/sun/star/xml/sax/XFastContextHandler.hpp>
 #include <com/sun/star/xml/sax/XFastShapeContextHandler.hpp>
-#include <oox/mathml/import.hxx>
 #include <oox/mathml/importutils.hxx>
+#include <rtl/ref.hxx>
 #include "OOXMLParserState.hxx"
 #include "OOXMLPropertySet.hxx"
 
@@ -195,6 +195,16 @@ protected:
     Id mnDefine;
     Token_t mnToken;
 
+    // the formula insertion mode: inline/newline(left, center, right)
+    sal_Int8 mnMathJcVal;
+    bool mbIsMathPara;
+    enum eMathParaJc
+    {
+        INLINE, //The equation is anchored as inline to the text
+        CENTER, //The equation is center aligned
+        LEFT,   //The equation is left aligned
+        RIGHT  //The equation is right aligned
+    };
     // the stream to send the stream events to.
     Stream * mpStream;
 
@@ -226,7 +236,8 @@ protected:
     const css::uno::Reference< css::uno::XComponentContext >& getComponentContext() const { return m_xContext;}
 
     bool inPositionV;
-    bool mbLayoutInCell; // o:allowincell
+    bool mbAllowInCell; // o:allowincell
+    bool mbIsVMLfound;
     OOXMLValue::Pointer_t mpGridAfter;
 
 private:

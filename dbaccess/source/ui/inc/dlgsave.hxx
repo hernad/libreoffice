@@ -20,18 +20,16 @@
 #ifndef INCLUDED_DBACCESS_SOURCE_UI_INC_DLGSAVE_HXX
 #define INCLUDED_DBACCESS_SOURCE_UI_INC_DLGSAVE_HXX
 
-#include <apitools.hxx>
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <o3tl/typed_flags_set.hxx>
 #include <vcl/weld.hxx>
 #include <memory>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace sdbc {
         class XConnection;
     }
-}}}
+}
 
 enum class SADFlags {
     NONE                  = 0x0000,

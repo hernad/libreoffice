@@ -20,18 +20,15 @@
 #include <DesignView.hxx>
 #include <ReportController.hxx>
 #include <svtools/acceleratorexecute.hxx>
-#include <unotools/syslocale.hxx>
 #include <unotools/viewoptions.hxx>
 #include <RptDef.hxx>
 #include <UITools.hxx>
 #include <RptObject.hxx>
 #include <propbrw.hxx>
-#include <toolkit/helper/convert.hxx>
 #include <helpids.h>
 #include <SectionView.hxx>
 #include <ReportSection.hxx>
 #include <rptui_slotid.hrc>
-#include <svx/svxids.hrc>
 #include <AddField.hxx>
 #include <ScrollHelper.hxx>
 #include <Navigator.hxx>
@@ -195,7 +192,7 @@ bool ODesignView::PreNotify( NotifyEvent& rNEvt )
             const KeyEvent* pKeyEvent = rNEvt.GetKeyEvent();
             if ( handleKeyEvent(*pKeyEvent) )
                 bRet = true;
-            else if ( bRet && m_pAccel.get() )
+            else if ( bRet && m_pAccel )
             {
                 const vcl::KeyCode& rCode = pKeyEvent->GetKeyCode();
                 util::URL aUrl;
@@ -432,24 +429,24 @@ void ODesignView::togglePropertyBrowser(bool _bToggleOn)
         static_cast<OTaskWindow*>(m_pTaskPane.get())->setPropertyBrowser(m_pPropWin);
         notifySystemWindow(this,m_pPropWin,::comphelper::mem_fun(&TaskPaneList::AddWindow));
     }
-    if ( m_pPropWin && _bToggleOn != m_pPropWin->IsVisible() )
-    {
-        if ( !m_pCurrentView && !m_xReportComponent.is() )
-            m_xReportComponent = getController().getReportDefinition();
+    if ( !(m_pPropWin && _bToggleOn != m_pPropWin->IsVisible()) )
+        return;
 
-        const bool bWillBeVisible = _bToggleOn;
-        m_pPropWin->Show(bWillBeVisible);
-        m_pTaskPane->Show(bWillBeVisible);
-        m_pTaskPane->Invalidate();
+    if ( !m_pCurrentView && !m_xReportComponent.is() )
+        m_xReportComponent = getController().getReportDefinition();
 
-        if ( bWillBeVisible )
-            m_aSplitWin->InsertItem( TASKPANE_ID, m_pTaskPane,START_SIZE_TASKPANE, SPLITWINDOW_APPEND, COLSET_ID, SplitWindowItemFlags::PercentSize);
-        else
-            m_aSplitWin->RemoveItem(TASKPANE_ID);
+    const bool bWillBeVisible = _bToggleOn;
+    m_pPropWin->Show(bWillBeVisible);
+    m_pTaskPane->Show(bWillBeVisible);
+    m_pTaskPane->Invalidate();
 
-        if ( bWillBeVisible )
-            m_aMarkIdle.Start();
-    }
+    if ( bWillBeVisible )
+        m_aSplitWin->InsertItem( TASKPANE_ID, m_pTaskPane,START_SIZE_TASKPANE, SPLITWINDOW_APPEND, COLSET_ID, SplitWindowItemFlags::PercentSize);
+    else
+        m_aSplitWin->RemoveItem(TASKPANE_ID);
+
+    if ( bWillBeVisible )
+        m_aMarkIdle.Start();
 }
 
 void ODesignView::showProperties(const uno::Reference< uno::XInterface>& _xReportComponent)

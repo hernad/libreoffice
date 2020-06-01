@@ -69,8 +69,7 @@ $(eval $(call gb_Helper_register_executables,NONE, \
         svptest \
         svpclient ) \
 	$(if $(filter LINUX %BSD SOLARIS,$(OS)), tilebench) \
-	$(if $(filter LINUX MACOSX SOLARIS WNT %BSD,$(OS)),icontest \
-	    outdevgrind) \
+	$(if $(filter LINUX MACOSX SOLARIS WNT %BSD,$(OS)),icontest) \
 	vcldemo \
 	tiledrendering \
     mtfdemo \
@@ -261,7 +260,6 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,calc, \
 
 $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,graphicfilter, \
 	svgfilter \
-	flash \
 	wpftdraw \
 	graphicfilter \
 ))
@@ -730,6 +728,7 @@ $(eval $(call gb_Helper_register_jars_for_install,URE,ure, \
 	java_uno \
 	juh \
 	jurt \
+	libreoffice \
 	ridl \
 	unoloader \
 ))
@@ -879,11 +878,9 @@ $(eval $(call gb_Helper_register_packages_for_install,ooo,\
 	extras_database \
 	extras_databasebiblio \
 	extras_gallbullets \
-	extras_gallhtmlexpo \
 	extras_gallmytheme \
 	extras_gallroot \
 	extras_gallsystem \
-	extras_gallwwwgraf \
 	extras_glade \
 	extras_labels \
 	$(if $(filter WNT,$(OS)),extras_newfiles) \
@@ -899,6 +896,7 @@ $(eval $(call gb_Helper_register_packages_for_install,ooo,\
 	extras_tploffimisc \
 	extras_tplpresnt \
 	extras_tpl_styles \
+	extras_tpldraw \
 	extras_tplpersonal \
 	extras_tplwizbitmap \
 	extras_tplwizdesktop \
@@ -951,6 +949,8 @@ $(eval $(call gb_Helper_register_packages_for_install,ooo,\
 		vcl_opengl_blacklist \
 	) \
 	$(if $(ENABLE_OPENGL_CANVAS),canvas_opengl_shader) \
+	$(if $(filter SKIA,$(BUILD_TYPE)), \
+		vcl_skia_blacklist ) \
 	$(if $(DISABLE_PYTHON),,$(if $(filter-out AIX,$(OS)), \
 		Pyuno/commonwizards \
 		Pyuno/fax \

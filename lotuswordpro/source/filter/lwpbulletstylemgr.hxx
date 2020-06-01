@@ -63,10 +63,9 @@
 
 #include <memory>
 
-#include <lwpheader.hxx>
+#include <config_lgpl.h>
 #include <lwpfoundry.hxx>
 #include <lwpobjid.hxx>
-#include "lwpnumberingoverride.hxx"
 #include <utility>
 #include <xfilter/xfcontentcontainer.hxx>
 
@@ -89,7 +88,7 @@ public:
     inline void SetCurrentSilverBullet(const LwpObjectID& rNewID);
 
 private:
-    typedef std::pair<std::shared_ptr<LwpBulletOverride>, LwpObjectID> OverridePair;
+    typedef std::pair<std::unique_ptr<LwpBulletOverride>, LwpObjectID> OverridePair;
     std::vector <OUString> m_vStyleNameList;
     std::vector <OverridePair> m_vIDsPairList;
     LwpFoundry* m_pFoundry;

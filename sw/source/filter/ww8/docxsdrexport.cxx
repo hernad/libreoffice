@@ -31,8 +31,9 @@
 #include <comphelper/sequence.hxx>
 #include <comphelper/sequenceashashmap.hxx>
 #include <sal/log.hxx>
-
+#include <frmfmt.hxx>
 #include <IDocumentDrawModelAccess.hxx>
+#include <comphelper/propertysequence.hxx>
 
 using namespace com::sun::star;
 using namespace oox;
@@ -440,8 +441,12 @@ void DocxSdrExport::startDMLAnchorInline(const SwFrameFormat* pFrameFormat, cons
                                     ->getIDocumentDrawModelAccess()
                                     .GetInvisibleHellId();
 
-            nRotation = pObj->GetRotateAngle();
-            lclMovePositionWithRotation(aPos, rSize, nRotation);
+            // Do not do this with lines.
+            if (pObj->GetObjIdentifier() != OBJ_LINE)
+            {
+                nRotation = pObj->GetRotateAngle();
+                lclMovePositionWithRotation(aPos, rSize, nRotation);
+            }
         }
         attrList->add(XML_behindDoc, bOpaque ? "0" : "1");
         // Extend distance with the effect extent if the shape is not rotated, which is the opposite
@@ -465,7 +470,19 @@ void DocxSdrExport::startDMLAnchorInline(const SwFrameFormat* pFrameFormat, cons
         attrList->add(XML_distR, OString::number(nDistR).getStr());
         attrList->add(XML_simplePos, "0");
         attrList->add(XML_locked, "0");
-        attrList->add(XML_layoutInCell, "1");
+        bool bLclInTabCell = true;
+        if (pObj)
+        {
+            uno::Reference<drawing::XShape> xShape((const_cast<SdrObject*>(pObj)->getUnoShape()),
+                                                   uno::UNO_QUERY);
+            uno::Reference<beans::XPropertySet> xShapeProps(xShape, uno::UNO_QUERY);
+            if (xShapeProps.is())
+                xShapeProps->getPropertyValue("IsFollowingTextFlow") >>= bLclInTabCell;
+        }
+        if (bLclInTabCell)
+            attrList->add(XML_layoutInCell, "1");
+        else
+            attrList->add(XML_layoutInCell, "0");
         bool bAllowOverlap = pFrameFormat->GetWrapInfluenceOnObjPos().GetAllowOverlap();
         attrList->add(XML_allowOverlap, bAllowOverlap ? "1" : "0");
         if (pObj != nullptr)
@@ -493,6 +510,9 @@ void DocxSdrExport::startDMLAnchorInline(const SwFrameFormat* pFrameFormat, cons
         {
             case text::RelOrientation::PAGE_PRINT_AREA:
                 relativeFromV = "margin";
+                break;
+            case text::RelOrientation::PAGE_PRINT_AREA_BOTTOM:
+                relativeFromV = "bottomMargin";
                 break;
             case text::RelOrientation::PAGE_FRAME:
                 relativeFromV = "page";
@@ -761,7 +781,8 @@ void DocxSdrExport::startDMLAnchorInline(const SwFrameFormat* pFrameFormat, cons
                                                          "bothSides");
 
                 m_pImpl->getSerializer()->startElementNS(XML_wp, XML_wrapPolygon, XML_edited, "0");
-                tools::Polygon aPoly = sw::util::CorrectWordWrapPolygonForExport(*pPolyPoly, pNd);
+                tools::Polygon aPoly = sw::util::CorrectWordWrapPolygonForExport(
+                    *pPolyPoly, pNd, /*bCorrectCrop=*/true);
                 for (sal_uInt16 i = 0; i < aPoly.GetSize(); ++i)
                     m_pImpl->getSerializer()->singleElementNS(
                         XML_wp, (i == 0 ? XML_start : XML_lineTo), XML_x,
@@ -1100,7 +1121,6 @@ void DocxSdrExport::writeOnlyTextOfFrame(ww8::Frame const* pParentFrame)
 {
     const SwFrameFormat& rFrameFormat = pParentFrame->GetFrameFormat();
     const SwNodeIndex* pNodeIndex = rFrameFormat.GetContent().GetContentIdx();
-    sax_fastparser::FSHelperPtr pFS = m_pImpl->getSerializer();
 
     sal_uLong nStt = pNodeIndex ? pNodeIndex->GetIndex() + 1 : 0;
     sal_uLong nEnd = pNodeIndex ? pNodeIndex->GetNode().EndOfSectionIndex() : 0;
@@ -1110,6 +1130,7 @@ void DocxSdrExport::writeOnlyTextOfFrame(ww8::Frame const* pParentFrame)
 
     m_pImpl->setBodyPrAttrList(sax_fastparser::FastSerializerHelper::createAttrList());
     ::comphelper::FlagRestorationGuard const g(m_pImpl->m_bFlyFrameGraphic, true);
+    comphelper::ValueRestorationGuard vg(m_pImpl->getExport().m_nTextTyp, TXT_TXTBOX);
     m_pImpl->getExport().WriteText();
 }
 
@@ -1365,6 +1386,7 @@ void DocxSdrExport::writeDMLTextFrame(ww8::Frame const* pParentFrame, int nAncho
 
         {
             ::comphelper::FlagRestorationGuard const g(m_pImpl->m_bFlyFrameGraphic, true);
+            comphelper::ValueRestorationGuard vg(m_pImpl->getExport().m_nTextTyp, TXT_TXTBOX);
             m_pImpl->getExport().WriteText();
             if (m_pImpl->getParagraphSdtOpen())
             {
@@ -1515,6 +1537,7 @@ void DocxSdrExport::writeVMLTextFrame(ww8::Frame const* pParentFrame, bool bText
     pFS->startElementNS(XML_w, XML_txbxContent);
     {
         ::comphelper::FlagRestorationGuard const g(m_pImpl->m_bFlyFrameGraphic, true);
+        comphelper::ValueRestorationGuard vg(m_pImpl->getExport().m_nTextTyp, TXT_TXTBOX);
         m_pImpl->getExport().WriteText();
         if (m_pImpl->getParagraphSdtOpen())
         {

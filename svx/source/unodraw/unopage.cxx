@@ -26,12 +26,11 @@
 #include <com/sun/star/lang/IndexOutOfBoundsException.hpp>
 #include <o3tl/safeint.hxx>
 #include <osl/mutex.hxx>
-#include <sfx2/dispatch.hxx>
 #include <comphelper/classids.hxx>
+#include <comphelper/embeddedobjectcontainer.hxx>
 #include <comphelper/sequence.hxx>
 #include <cppuhelper/supportsservice.hxx>
 
-#include <sfx2/objsh.hxx>
 #include <svx/svdpool.hxx>
 #include <svx/svdobj.hxx>
 #include <svx/svdoole2.hxx>
@@ -46,10 +45,8 @@
 #include <svx/dialmgr.hxx>
 #include <svx/globl3d.hxx>
 #include <svx/unoprov.hxx>
-#include <svx/svdopath.hxx>
 #include <svx/unoapi.hxx>
-#include <svx/svdomeas.hxx>
-#include <svx/extrud3d.hxx>
+#include <extrud3d.hxx>
 #include <svx/lathe3d.hxx>
 #include <svx/scene3d.hxx>
 #include <vcl/svapp.hxx>
@@ -614,13 +611,7 @@ void SvxDrawPage::GetTypeAndInventor( sal_uInt16& rType, SdrInventor& rInventor,
 
 SvxShape* SvxDrawPage::CreateShapeByTypeAndInventor( sal_uInt16 nType, SdrInventor nInventor, SdrObject *pObj, SvxDrawPage *mpPage, OUString const & referer )
 {
-#if !HAVE_FEATURE_DESKTOP
-    (void) referer;
-#endif
     SvxShape* pRet = nullptr;
-#if !HAVE_FEATURE_DESKTOP
-    (void)referer;
-#endif
 
     switch( nInventor )
     {
@@ -785,11 +776,9 @@ SvxShape* SvxDrawPage::CreateShapeByTypeAndInventor( sal_uInt16 nType, SdrInvent
                 case OBJ_CUSTOMSHAPE:
                     pRet = new SvxCustomShape( pObj );
                     break;
-#if HAVE_FEATURE_DESKTOP
                 case OBJ_MEDIA:
                     pRet = new SvxMediaShape( pObj, referer );
                     break;
-#endif
                 case OBJ_TABLE:
                     pRet = new SvxTableShape( pObj );
                     break;

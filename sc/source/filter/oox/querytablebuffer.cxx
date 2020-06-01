@@ -23,6 +23,7 @@
 #include <com/sun/star/container/XEnumerationAccess.hpp>
 #include <com/sun/star/sheet/XAreaLink.hpp>
 #include <com/sun/star/sheet/XAreaLinks.hpp>
+#include <com/sun/star/sheet/XSpreadsheetDocument.hpp>
 #include <osl/diagnose.h>
 #include <oox/core/filterbase.hxx>
 #include <oox/helper/binaryinputstream.hxx>
@@ -212,8 +213,8 @@ void QueryTable::importQueryTable( SequenceInputStream& rStrm )
 void QueryTable::finalizeImport()
 {
     ConnectionRef xConnection = getConnections().getConnection( maModel.mnConnId );
-    OSL_ENSURE( xConnection.get(), "QueryTable::finalizeImport - missing connection object" );
-    if( xConnection.get() && (xConnection->getConnectionType() == BIFF12_CONNECTION_HTML) )
+    OSL_ENSURE( xConnection, "QueryTable::finalizeImport - missing connection object" );
+    if( xConnection && (xConnection->getConnectionType() == BIFF12_CONNECTION_HTML) )
     {
         // check that valid web query properties exist
         const WebPrModel* pWebPr = xConnection->getModel().mxWebPr.get();
@@ -225,8 +226,8 @@ void QueryTable::finalizeImport()
                 // resolve destination cell range (stored as defined name containing the range)
                 OUString aDefName = maModel.maDefName.replace( ' ', '_' ).replace( '-', '_' );
                 DefinedNameRef xDefName = getDefinedNames().getByModelName( aDefName, getSheetIndex() );
-                OSL_ENSURE( xDefName.get(), "QueryTable::finalizeImport - missing defined name" );
-                if( xDefName.get() )
+                OSL_ENSURE( xDefName, "QueryTable::finalizeImport - missing defined name" );
+                if( xDefName )
                 {
                     ScRange aDestRange;
                     bool bIsRange = xDefName->getAbsoluteRange( aDestRange ) && (aDestRange.aStart.Tab() == getSheetIndex());

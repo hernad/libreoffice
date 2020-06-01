@@ -18,11 +18,9 @@
  */
 
 #include <svx/svdedtv.hxx>
-#include <editeng/outliner.hxx>
 #include <svx/svdundo.hxx>
 #include <svx/svdogrp.hxx>
 #include <svx/svdoutl.hxx>
-#include <svx/svdovirt.hxx>
 #include <svx/svdopath.hxx>
 #include <svx/svdpage.hxx>
 #include <svx/svdpagv.hxx>
@@ -36,9 +34,8 @@
 #include <svx/xlineit0.hxx>
 #include <svx/xtextit0.hxx>
 #include "svdfmtf.hxx"
-#include "svdpdf.hxx"
+#include <svdpdf.hxx>
 #include <svx/svdetc.hxx>
-#include <sfx2/basedlgs.hxx>
 #include <editeng/outlobj.hxx>
 #include <editeng/eeitem.hxx>
 #include <basegfx/polygon/b2dpolypolygon.hxx>
@@ -52,8 +49,8 @@
 #include <tools/debug.hxx>
 #include <memory>
 #include <vector>
+#include <vcl/graph.hxx>
 
-using ::std::vector;
 using namespace com::sun::star;
 
 SdrObject* SdrEditView::GetMaxToTopObj(SdrObject* /*pObj*/) const
@@ -769,7 +766,7 @@ struct ImpDistributeEntry
 
 }
 
-typedef vector<ImpDistributeEntry> ImpDistributeEntryList;
+typedef std::vector<ImpDistributeEntry> ImpDistributeEntryList;
 
 void SdrEditView::DistributeMarkedObjects(weld::Window* pParent)
 {
@@ -2099,7 +2096,21 @@ void SdrEditView::DoImportMarkedMtf(SvdProgressInfo *pProgrInfo)
         SdrGrafObj*  pGraf = dynamic_cast<SdrGrafObj*>( pObj );
         if (pGraf != nullptr)
         {
-            if (pGraf->HasGDIMetaFile() || pGraf->isEmbeddedVectorGraphicData())
+            Graphic aGraphic = pGraf->GetGraphic();
+            auto const & pVectorGraphicData = aGraphic.getVectorGraphicData();
+
+            if (pVectorGraphicData && pVectorGraphicData->getVectorGraphicDataType() == VectorGraphicDataType::Pdf)
+            {
+#if HAVE_FEATURE_PDFIUM
+                aLogicRect = pGraf->GetLogicRect();
+                ImpSdrPdfImport aFilter(*mpModel, pObj->GetLayer(), aLogicRect, aGraphic);
+                if (aGraphic.getPageNumber() < aFilter.GetPageCount())
+                {
+                    nInsCnt = aFilter.DoImport(*pOL, nInsPos, aGraphic.getPageNumber(), pProgrInfo);
+                }
+#endif // HAVE_FEATURE_PDFIUM
+            }
+            else if (pGraf->HasGDIMetaFile() || pGraf->isEmbeddedVectorGraphicData() )
             {
                 GDIMetaFile aMetaFile(GetMetaFile(pGraf));
                 if (aMetaFile.GetActionSize())
@@ -2108,17 +2119,6 @@ void SdrEditView::DoImportMarkedMtf(SvdProgressInfo *pProgrInfo)
                     ImpSdrGDIMetaFileImport aFilter(*mpModel, pObj->GetLayer(), aLogicRect);
                     nInsCnt = aFilter.DoImport(aMetaFile, *pOL, nInsPos, pProgrInfo);
                 }
-            }
-            else if (pGraf->isEmbeddedPdfData())
-            {
-#if HAVE_FEATURE_PDFIUM
-                aLogicRect = pGraf->GetLogicRect();
-                ImpSdrPdfImport aFilter(*mpModel, pObj->GetLayer(), aLogicRect, pGraf->getEmbeddedPdfData());
-                if (pGraf->getEmbeddedPageNumber() < aFilter.GetPageCount())
-                {
-                    nInsCnt = aFilter.DoImport(*pOL, nInsPos, pGraf->getEmbeddedPageNumber(), pProgrInfo);
-                }
-#endif // HAVE_FEATURE_PDFIUM
             }
         }
 

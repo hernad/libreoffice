@@ -25,17 +25,17 @@
 #include <com/sun/star/text/TextContentAnchorType.hpp>
 #include <xmloff/xmlictxt.hxx>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace text { class XTextCursor; class XTextFrame; }
     namespace beans { class XPropertySet; }
-} } }
+}
 
 class XMLTextFrameHyperlinkContext : public SvXMLImportContext
 {
     OUString              sHRef;
     OUString              sName;
     OUString              sTargetFrameName;
-    css::text::TextContentAnchorType const eDefaultAnchorType;
+    css::text::TextContentAnchorType eDefaultAnchorType;
     SvXMLImportContextRef   xFrameContext;
     bool                    bMap;
 

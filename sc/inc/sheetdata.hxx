@@ -28,6 +28,7 @@
 #include "address.hxx"
 
 class SvXMLNamespaceMap;
+enum class XmlStyleFamily;
 
 struct ScStreamEntry
 {
@@ -50,7 +51,7 @@ struct ScStreamEntry
 struct ScCellStyleEntry
 {
     OUString   maName;
-    ScAddress const       maCellPos;
+    ScAddress       maCellPos;
 
                 ScCellStyleEntry( const OUString& rName, const ScAddress& rPos ) :
                     maName(rName),
@@ -75,9 +76,9 @@ struct ScNoteStyleEntry
 
 struct ScTextStyleEntry
 {
-    OUString const   maName;
-    ScAddress const       maCellPos;
-    ESelection const      maSelection;
+    OUString   maName;
+    ScAddress       maCellPos;
+    ESelection      maSelection;
 
                 ScTextStyleEntry( const OUString& rName, const ScAddress& rPos, const ESelection& rSel ) :
                     maName(rName),
@@ -89,9 +90,9 @@ struct ScTextStyleEntry
 
 struct ScLoadedNamespaceEntry
 {
-    OUString const   maPrefix;
-    OUString const   maName;
-    sal_uInt16 const      mnKey;
+    OUString   maPrefix;
+    OUString   maName;
+    sal_uInt16      mnKey;
 
                 ScLoadedNamespaceEntry( const OUString& rPrefix, const OUString& rName, sal_uInt16 nKey ) :
                     maPrefix(rPrefix),
@@ -134,7 +135,7 @@ public:
     void        AddTableStyle( const OUString& rName, const ScAddress& rCellPos );
 
     void        HandleNoteStyles( const OUString& rStyleName, const OUString& rTextName, const ScAddress& rCellPos );
-    void        AddNoteContentStyle( sal_uInt16 nFamily, const OUString& rName, const ScAddress& rCellPos, const ESelection& rSelection );
+    void        AddNoteContentStyle( XmlStyleFamily nFamily, const OUString& rName, const ScAddress& rCellPos, const ESelection& rSelection );
 
     void        AddTextStyle( const OUString& rName, const ScAddress& rCellPos, const ESelection& rSelection );
 

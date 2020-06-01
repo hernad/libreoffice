@@ -19,7 +19,6 @@
 
 #include <strings.hrc>
 #include <strings.hxx>
-#include <stringconstants.hxx>
 #include <core_resource.hxx>
 #include <sqlmessage.hxx>
 #include <UITools.hxx>
@@ -47,7 +46,6 @@
 #include <com/sun/star/sdbc/XResultSetMetaDataSupplier.hpp>
 #include <com/sun/star/task/InteractionHandler.hpp>
 
-#include <comphelper/types.hxx>
 #include <comphelper/interaction.hxx>
 #include <connectivity/dbtools.hxx>
 #include <connectivity/dbmetadata.hxx>
@@ -55,10 +53,7 @@
 #include <o3tl/safeint.hxx>
 #include <rtl/ustrbuf.hxx>
 #include <sal/log.hxx>
-#include <tools/debug.hxx>
 #include <tools/diagnose_ex.h>
-
-#include <functional>
 
 using namespace ::dbaui;
 using namespace ::com::sun::star::uno;
@@ -734,7 +729,7 @@ bool OCopyTableWizard::CheckColumns(sal_Int32& _rnBreakPos)
         {
             // add extra column for the primary key
             TOTypeInfoSP pTypeInfo = queryPrimaryKeyType(m_aDestTypeInfo);
-            if ( pTypeInfo.get() )
+            if ( pTypeInfo )
             {
                 if ( m_bAddPKFirstTime )
                 {
@@ -809,89 +804,89 @@ IMPL_LINK_NOARG(OCopyTableWizard, ImplOKHdl, weld::Button&, void)
     m_ePressed = WIZARD_FINISH;
     bool bFinish = DeactivatePage();
 
-    if(bFinish)
+    if(!bFinish)
+        return;
+
+    weld::WaitObject aWait(m_xAssistant.get());
+    switch(getOperation())
     {
-        weld::WaitObject aWait(m_xAssistant.get());
-        switch(getOperation())
+        case CopyTableOperation::CopyDefinitionAndData:
+        case CopyTableOperation::CopyDefinitionOnly:
         {
-            case CopyTableOperation::CopyDefinitionAndData:
-            case CopyTableOperation::CopyDefinitionOnly:
+            bool bOnFirstPage = GetCurLevel() == 0;
+            if ( bOnFirstPage )
             {
-                bool bOnFirstPage = GetCurLevel() == 0;
-                if ( bOnFirstPage )
+                // we came from the first page so we have to clear
+                // all column information already collected
+                clearDestColumns();
+                m_mNameMapping.clear();
+            }
+            sal_Int32 nBreakPos = 0;
+            bool bCheckOk = CheckColumns(nBreakPos);
+            if ( bOnFirstPage && !bCheckOk )
+            {
+                showColumnTypeNotSupported(m_vSourceVec[nBreakPos-1]->first);
+                OWizTypeSelect* pPage = static_cast<OWizTypeSelect*>(GetPage(3));
+                if ( pPage )
                 {
-                    // we came from the first page so we have to clear
-                    // all column information already collected
-                    clearDestColumns();
                     m_mNameMapping.clear();
+                    pPage->setDisplayRow(nBreakPos);
+                    ShowPage(3);
+                    return;
                 }
-                sal_Int32 nBreakPos = 0;
-                bool bCheckOk = CheckColumns(nBreakPos);
-                if ( bOnFirstPage && !bCheckOk )
+            }
+            if ( m_xDestConnection.is() )
+            {
+                if ( supportsPrimaryKey() )
                 {
-                    showColumnTypeNotSupported(m_vSourceVec[nBreakPos-1]->first);
-                    OWizTypeSelect* pPage = static_cast<OWizTypeSelect*>(GetPage(3));
-                    if ( pPage )
+                    bool noPrimaryKey = std::none_of(m_vDestColumns.begin(),m_vDestColumns.end(),
+                        [] (const ODatabaseExport::TColumns::value_type& tCol) { return tCol.second->IsPrimaryKey(); });
+                    if ( noPrimaryKey && m_xInteractionHandler.is() )
                     {
-                        m_mNameMapping.clear();
-                        pPage->setDisplayRow(nBreakPos);
-                        ShowPage(3);
-                        return;
-                    }
-                }
-                if ( m_xDestConnection.is() )
-                {
-                    if ( supportsPrimaryKey() )
-                    {
-                        bool noPrimaryKey = std::none_of(m_vDestColumns.begin(),m_vDestColumns.end(),
-                            [] (const ODatabaseExport::TColumns::value_type& tCol) { return tCol.second->IsPrimaryKey(); });
-                        if ( noPrimaryKey && m_xInteractionHandler.is() )
+
+                        OUString sMsg(DBA_RES(STR_TABLEDESIGN_NO_PRIM_KEY));
+                        SQLContext aError;
+                        aError.Message = sMsg;
+                        ::rtl::Reference xRequest( new ::comphelper::OInteractionRequest( makeAny( aError ) ) );
+                        ::rtl::Reference xYes = new ::comphelper::OInteractionApprove;
+                        xRequest->addContinuation( xYes.get() );
+                        xRequest->addContinuation( new ::comphelper::OInteractionDisapprove );
+                        ::rtl::Reference< ::comphelper::OInteractionAbort > xAbort = new ::comphelper::OInteractionAbort;
+                        xRequest->addContinuation( xAbort.get() );
+
+                        m_xInteractionHandler->handle( xRequest.get() );
+
+                        if ( xYes->wasSelected() )
                         {
-
-                            OUString sMsg(DBA_RES(STR_TABLEDESIGN_NO_PRIM_KEY));
-                            SQLContext aError;
-                            aError.Message = sMsg;
-                            ::rtl::Reference xRequest( new ::comphelper::OInteractionRequest( makeAny( aError ) ) );
-                            ::rtl::Reference xYes = new ::comphelper::OInteractionApprove;
-                            xRequest->addContinuation( xYes.get() );
-                            xRequest->addContinuation( new ::comphelper::OInteractionDisapprove );
-                            ::rtl::Reference< ::comphelper::OInteractionAbort > xAbort = new ::comphelper::OInteractionAbort;
-                            xRequest->addContinuation( xAbort.get() );
-
-                            m_xInteractionHandler->handle( xRequest.get() );
-
-                            if ( xYes->wasSelected() )
-                            {
-                                OCopyTable* pPage = static_cast<OCopyTable*>(GetPage(0));
-                                m_bCreatePrimaryKeyColumn = true;
-                                m_aKeyName = pPage->GetKeyName();
-                                if ( m_aKeyName.isEmpty() )
-                                    m_aKeyName = "ID";
-                                m_aKeyName = createUniqueName( m_aKeyName );
-                                sal_Int32 nBreakPos2 = 0;
-                                CheckColumns(nBreakPos2);
-                            }
-                            else if ( xAbort->wasSelected() )
-                            {
-                                ShowPage(3);
-                                return;
-                            }
+                            OCopyTable* pPage = static_cast<OCopyTable*>(GetPage(0));
+                            m_bCreatePrimaryKeyColumn = true;
+                            m_aKeyName = pPage->GetKeyName();
+                            if ( m_aKeyName.isEmpty() )
+                                m_aKeyName = "ID";
+                            m_aKeyName = createUniqueName( m_aKeyName );
+                            sal_Int32 nBreakPos2 = 0;
+                            CheckColumns(nBreakPos2);
+                        }
+                        else if ( xAbort->wasSelected() )
+                        {
+                            ShowPage(3);
+                            return;
                         }
                     }
                 }
-                break;
             }
-            case CopyTableOperation::AppendData:
-            case CopyTableOperation::CreateAsView:
-                break;
-            default:
-            {
-                SAL_WARN("dbaccess.ui", "OCopyTableWizard::ImplOKHdl: invalid creation style!");
-            }
+            break;
         }
-
-        m_xAssistant->response(RET_OK);
+        case CopyTableOperation::AppendData:
+        case CopyTableOperation::CreateAsView:
+            break;
+        default:
+        {
+            SAL_WARN("dbaccess.ui", "OCopyTableWizard::ImplOKHdl: invalid creation style!");
+        }
     }
+
+    m_xAssistant->response(RET_OK);
 }
 
 void OCopyTableWizard::setCreatePrimaryKey( bool _bDoCreate, const OUString& _rSuggestedName )
@@ -964,19 +959,19 @@ void OCopyTableWizard::AddWizardPage(std::unique_ptr<OWizardPage> xPage)
 void OCopyTableWizard::insertColumn(sal_Int32 _nPos,OFieldDescription* _pField)
 {
     OSL_ENSURE(_pField,"FieldDescrioption is null!");
-    if ( _pField )
-    {
-        ODatabaseExport::TColumns::const_iterator aFind = m_vDestColumns.find(_pField->GetName());
-        if ( aFind != m_vDestColumns.end() )
-        {
-            delete aFind->second;
-            m_vDestColumns.erase(aFind);
-        }
+    if ( !_pField )
+        return;
 
-        m_aDestVec.insert(m_aDestVec.begin() + _nPos,
-            m_vDestColumns.emplace(_pField->GetName(),_pField).first);
-        m_mNameMapping[_pField->GetName()] = _pField->GetName();
+    ODatabaseExport::TColumns::const_iterator aFind = m_vDestColumns.find(_pField->GetName());
+    if ( aFind != m_vDestColumns.end() )
+    {
+        delete aFind->second;
+        m_vDestColumns.erase(aFind);
     }
+
+    m_aDestVec.insert(m_aDestVec.begin() + _nPos,
+        m_vDestColumns.emplace(_pField->GetName(),_pField).first);
+    m_mNameMapping[_pField->GetName()] = _pField->GetName();
 }
 
 void OCopyTableWizard::replaceColumn(sal_Int32 _nPos,OFieldDescription* _pField,const OUString& _sOldName)
@@ -1026,7 +1021,7 @@ void OCopyTableWizard::loadData(  const ICopyTableSourceObject& _rSourceObject, 
         // search for type
         bool bForce;
         TOTypeInfoSP pTypeInfo = ::dbaui::getTypeInfoFromType(m_aTypeInfo,nType,sTypeName,sCreateParam,nPrecision,nScale,bAutoIncrement,bForce);
-        if ( !pTypeInfo.get() )
+        if ( !pTypeInfo )
             pTypeInfo = m_pTypeInfo;
 
         pActFieldDescr->FillFromTypeInfo(pTypeInfo,true,false);
@@ -1140,6 +1135,28 @@ Reference< XPropertySet > OCopyTableWizard::createView() const
     return ::dbaui::createView( m_sName, m_xDestConnection, sCommand );
 }
 
+Reference< XPropertySet > OCopyTableWizard::returnTable()
+{
+    if ( getOperation() == CopyTableOperation::AppendData )
+        return getTable();
+    else
+        return createTable();
+}
+
+Reference< XPropertySet > OCopyTableWizard::getTable()
+{
+    Reference< XPropertySet > xTable;
+
+    Reference<XTablesSupplier> xSup( m_xDestConnection, UNO_QUERY );
+    Reference< XNameAccess > xTables;
+    if(xSup.is())
+        xTables = xSup->getTables();
+    if(xTables.is() && xTables->hasByName(m_sName))
+        xTables->getByName(m_sName) >>= xTable;
+
+    return xTable;
+}
+
 Reference< XPropertySet > OCopyTableWizard::createTable()
 {
     Reference< XPropertySet > xTable;
@@ -1148,126 +1165,122 @@ Reference< XPropertySet > OCopyTableWizard::createTable()
     Reference< XNameAccess > xTables;
     if(xSup.is())
         xTables = xSup->getTables();
-    if ( getOperation() != CopyTableOperation::AppendData )
+    Reference<XDataDescriptorFactory> xFact(xTables,UNO_QUERY);
+    OSL_ENSURE(xFact.is(),"No XDataDescriptorFactory available!");
+    if(!xFact.is())
+        return nullptr;
+
+    xTable = xFact->createDataDescriptor();
+    OSL_ENSURE(xTable.is(),"Could not create a new object!");
+    if(!xTable.is())
+        return nullptr;
+
+    OUString sCatalog,sSchema,sTable;
+    Reference< XDatabaseMetaData> xMetaData = m_xDestConnection->getMetaData();
+    ::dbtools::qualifiedNameComponents(xMetaData,
+                                       m_sName,
+                                       sCatalog,
+                                       sSchema,
+                                       sTable,
+                                       ::dbtools::EComposeRule::InDataManipulation);
+
+    if ( sCatalog.isEmpty() && xMetaData->supportsCatalogsInTableDefinitions() )
     {
-        Reference<XDataDescriptorFactory> xFact(xTables,UNO_QUERY);
-        OSL_ENSURE(xFact.is(),"No XDataDescriptorFactory available!");
-        if(!xFact.is())
-            return nullptr;
+        sCatalog = m_xDestConnection->getCatalog();
+    }
 
-        xTable = xFact->createDataDescriptor();
-        OSL_ENSURE(xTable.is(),"Could not create a new object!");
-        if(!xTable.is())
-            return nullptr;
-
-        OUString sCatalog,sSchema,sTable;
-        Reference< XDatabaseMetaData> xMetaData = m_xDestConnection->getMetaData();
-        ::dbtools::qualifiedNameComponents(xMetaData,
-                                            m_sName,
-                                            sCatalog,
-                                            sSchema,
-                                            sTable,
-                                            ::dbtools::EComposeRule::InDataManipulation);
-
-        if ( sCatalog.isEmpty() && xMetaData->supportsCatalogsInTableDefinitions() )
+    if ( sSchema.isEmpty() && xMetaData->supportsSchemasInTableDefinitions() )
+    {
+        // query of current schema is quite inconsistent. In case of some
+        // DBMS's each user has their own schema.
+        sSchema = xMetaData->getUserName();
+        // In case of mysql it is not that simple
+        if(xMetaData->getDatabaseProductName() == "MySQL")
         {
-            sCatalog = m_xDestConnection->getCatalog();
+            Reference< XStatement > xSelect = m_xDestConnection->createStatement();
+            Reference< XResultSet > xRs = xSelect->executeQuery("select database()");
+            (void)xRs->next(); // first and only result
+            Reference< XRow > xRow( xRs, UNO_QUERY_THROW );
+            sSchema = xRow->getString(1);
         }
+    }
 
-        if ( sSchema.isEmpty() && xMetaData->supportsSchemasInTableDefinitions() )
+    xTable->setPropertyValue(PROPERTY_CATALOGNAME,makeAny(sCatalog));
+    xTable->setPropertyValue(PROPERTY_SCHEMANAME,makeAny(sSchema));
+    xTable->setPropertyValue(PROPERTY_NAME,makeAny(sTable));
+
+    Reference< XColumnsSupplier > xSuppDestinationColumns( xTable, UNO_QUERY );
+    // now append the columns
+    const ODatabaseExport::TColumnVector& rVec = getDestVector();
+    appendColumns( xSuppDestinationColumns, &rVec );
+    // now append the primary key
+    Reference<XKeysSupplier> xKeySup(xTable,UNO_QUERY);
+    appendKey(xKeySup, &rVec);
+
+    Reference<XAppend> xAppend(xTables,UNO_QUERY);
+    if(xAppend.is())
+        xAppend->appendByDescriptor(xTable);
+
+    //  xTable = NULL;
+    // we need to reget the table because after appending it, it is no longer valid
+    if(xTables->hasByName(m_sName))
+        xTables->getByName(m_sName) >>= xTable;
+    else
+    {
+        OUString sComposedName(
+            ::dbtools::composeTableName( m_xDestConnection->getMetaData(), xTable, ::dbtools::EComposeRule::InDataManipulation, false ) );
+        if(xTables->hasByName(sComposedName))
         {
-            // query of current schema is quite inconsistent. In case of some
-            // DBMS's each user has their own schema.
-            sSchema = xMetaData->getUserName();
-            // In case of mysql it is not that simple
-            if(xMetaData->getDatabaseProductName() == "MySQL")
-            {
-                Reference< XStatement > xSelect = m_xDestConnection->createStatement();
-                Reference< XResultSet > xRs = xSelect->executeQuery("select database()");
-                (void)xRs->next(); // first and only result
-                Reference< XRow > xRow( xRs, UNO_QUERY_THROW );
-                sSchema = xRow->getString(1);
-            }
+            xTables->getByName(sComposedName) >>= xTable;
+            m_sName = sComposedName;
         }
-
-        xTable->setPropertyValue(PROPERTY_CATALOGNAME,makeAny(sCatalog));
-        xTable->setPropertyValue(PROPERTY_SCHEMANAME,makeAny(sSchema));
-        xTable->setPropertyValue(PROPERTY_NAME,makeAny(sTable));
-
-        Reference< XColumnsSupplier > xSuppDestinationColumns( xTable, UNO_QUERY );
-        // now append the columns
-        const ODatabaseExport::TColumnVector& rVec = getDestVector();
-        appendColumns( xSuppDestinationColumns, &rVec );
-        // now append the primary key
-        Reference<XKeysSupplier> xKeySup(xTable,UNO_QUERY);
-        appendKey(xKeySup, &rVec);
-
-        Reference<XAppend> xAppend(xTables,UNO_QUERY);
-        if(xAppend.is())
-            xAppend->appendByDescriptor(xTable);
-
-        //  xTable = NULL;
-        // we need to reget the table because after appending it, it is no longer valid
-        if(xTables->hasByName(m_sName))
-            xTables->getByName(m_sName) >>= xTable;
         else
+            xTable = nullptr;
+    }
+
+    if(xTable.is())
+    {
+        xSuppDestinationColumns.set( xTable, UNO_QUERY_THROW );
+        // insert new table name into table filter
+        ::dbaui::appendToFilter(m_xDestConnection, m_sName, GetComponentContext(), m_xAssistant.get());
+
+        // copy ui settings
+        m_rSourceObject.copyUISettingsTo( xTable );
+        //copy filter and sorting
+        m_rSourceObject.copyFilterAndSortingTo(m_xDestConnection,xTable);
+        // set column mappings
+        Reference<XNameAccess> xNameAccess = xSuppDestinationColumns->getColumns();
+        Sequence< OUString> aSeq = xNameAccess->getElementNames();
+        const OUString* pIter = aSeq.getConstArray();
+        const OUString* pEnd   = pIter + aSeq.getLength();
+
+        for(sal_Int32 nNewPos=1;pIter != pEnd;++pIter,++nNewPos)
         {
-            OUString sComposedName(
-                ::dbtools::composeTableName( m_xDestConnection->getMetaData(), xTable, ::dbtools::EComposeRule::InDataManipulation, false ) );
-            if(xTables->hasByName(sComposedName))
+            ODatabaseExport::TColumns::const_iterator aDestIter = m_vDestColumns.find(*pIter);
+
+            if ( aDestIter != m_vDestColumns.end() )
             {
-                xTables->getByName(sComposedName) >>= xTable;
-                m_sName = sComposedName;
-            }
-            else
-                xTable = nullptr;
-        }
-        if(xTable.is())
-        {
-            xSuppDestinationColumns.set( xTable, UNO_QUERY_THROW );
-            // insert new table name into table filter
-            ::dbaui::appendToFilter(m_xDestConnection, m_sName, GetComponentContext(), m_xAssistant.get());
+                ODatabaseExport::TColumnVector::const_iterator aFind = std::find(m_aDestVec.begin(),m_aDestVec.end(),aDestIter);
+                sal_Int32 nPos = (aFind - m_aDestVec.begin())+1;
 
-            // copy ui settings
-            m_rSourceObject.copyUISettingsTo( xTable );
-            //copy filter and sorting
-            m_rSourceObject.copyFilterAndSortingTo(m_xDestConnection,xTable);
-            // set column mappings
-            Reference<XNameAccess> xNameAccess = xSuppDestinationColumns->getColumns();
-            Sequence< OUString> aSeq = xNameAccess->getElementNames();
-            const OUString* pIter = aSeq.getConstArray();
-            const OUString* pEnd   = pIter + aSeq.getLength();
-
-            for(sal_Int32 nNewPos=1;pIter != pEnd;++pIter,++nNewPos)
-            {
-                ODatabaseExport::TColumns::const_iterator aDestIter = m_vDestColumns.find(*pIter);
-
-                if ( aDestIter != m_vDestColumns.end() )
-                {
-                    ODatabaseExport::TColumnVector::const_iterator aFind = std::find(m_aDestVec.begin(),m_aDestVec.end(),aDestIter);
-                    sal_Int32 nPos = (aFind - m_aDestVec.begin())+1;
-
-                    ODatabaseExport::TPositions::iterator aPosFind = std::find_if(
-                        m_vColumnPositions.begin(),
-                        m_vColumnPositions.end(),
-                        [nPos] (const ODatabaseExport::TPositions::value_type& tPos) {
-                            return tPos.first == nPos;
-                        }
-                    );
-
-                    if ( m_vColumnPositions.end() != aPosFind )
-                    {
-                        aPosFind->second = nNewPos;
-                        OSL_ENSURE( m_vColumnTypes.size() > o3tl::make_unsigned( aPosFind - m_vColumnPositions.begin() ),
-                            "Invalid index for vector!" );
-                        m_vColumnTypes[ aPosFind - m_vColumnPositions.begin() ] = (*aFind)->second->GetType();
+                ODatabaseExport::TPositions::iterator aPosFind = std::find_if(
+                    m_vColumnPositions.begin(),
+                    m_vColumnPositions.end(),
+                    [nPos] (const ODatabaseExport::TPositions::value_type& tPos) {
+                        return tPos.first == nPos;
                     }
+                );
+
+                if ( m_vColumnPositions.end() != aPosFind )
+                {
+                    aPosFind->second = nNewPos;
+                    OSL_ENSURE( m_vColumnTypes.size() > o3tl::make_unsigned( aPosFind - m_vColumnPositions.begin() ),
+                        "Invalid index for vector!" );
+                    m_vColumnTypes[ aPosFind - m_vColumnPositions.begin() ] = (*aFind)->second->GetType();
                 }
             }
         }
     }
-    else if(xTables.is() && xTables->hasByName(m_sName))
-        xTables->getByName(m_sName) >>= xTable;
 
     return xTable;
 }
@@ -1403,7 +1416,7 @@ TOTypeInfoSP OCopyTableWizard::convertType(const TOTypeInfoSP& _pType, bool& _bN
 
     bool bForce;
     TOTypeInfoSP pType = ::dbaui::getTypeInfoFromType(m_aDestTypeInfo,_pType->nType,_pType->aTypeName,_pType->aCreateParams,_pType->nPrecision,_pType->nMaximumScale,_pType->bAutoIncrement,bForce);
-    if ( !pType.get() || bForce )
+    if ( !pType || bForce )
     { // no type found so we have to find the correct one ourself
         sal_Int32 nDefaultType = DataType::VARCHAR;
         switch(_pType->nType)
@@ -1479,12 +1492,12 @@ TOTypeInfoSP OCopyTableWizard::convertType(const TOTypeInfoSP& _pType, bool& _bN
                 nDefaultType = DataType::VARCHAR;
         }
         pType = ::dbaui::getTypeInfoFromType(m_aDestTypeInfo,nDefaultType,_pType->aTypeName,_pType->aCreateParams,_pType->nPrecision,_pType->nMaximumScale,_pType->bAutoIncrement,bForce);
-        if ( !pType.get() )
+        if ( !pType )
         {
             _bNotConvert = false;
             OUString const sCreate("x");
             pType = ::dbaui::getTypeInfoFromType(m_aDestTypeInfo,DataType::VARCHAR,_pType->aTypeName,sCreate,50,0,false,bForce);
-            if ( !pType.get() )
+            if ( !pType )
                 pType = m_pTypeInfo;
         }
         else if ( bForce )

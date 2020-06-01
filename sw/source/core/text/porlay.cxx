@@ -20,7 +20,6 @@
 #include "porlay.hxx"
 #include "itrform2.hxx"
 #include "porglue.hxx"
-#include <blink.hxx>
 #include "redlnitr.hxx"
 #include "porfly.hxx"
 #include "porrst.hxx"
@@ -35,7 +34,7 @@
 #include <com/sun/star/i18n/XBreakIterator.hpp>
 #include <paratr.hxx>
 #include <sal/log.hxx>
-#include <o3tl/optional.hxx>
+#include <optional>
 #include <editeng/adjustitem.hxx>
 #include <editeng/charhiddenitem.hxx>
 #include <svl/asiancfg.hxx>
@@ -200,8 +199,6 @@ SwLineLayout::~SwLineLayout()
 {
     Truncate();
     DeleteNext();
-    if( pBlink )
-        pBlink->Delete( this );
     m_pLLSpaceAdd.reset();
     m_pKanaComp.reset();
 }
@@ -215,10 +212,9 @@ SwLinePortion *SwLineLayout::Insert( SwLinePortion *pIns )
         if( GetLen() )
         {
             mpNextPortion = SwTextPortion::CopyLinePortion(*this);
-            if( IsBlinking() && pBlink )
+            if( IsBlinking() )
             {
                 SetBlinking( false );
-                pBlink->Replace( this, mpNextPortion );
             }
         }
         else
@@ -729,7 +725,7 @@ SwFontScript SwScriptInfo::WhichFont(sal_Int32 nIdx, OUString const& rText)
 }
 
 static void InitBookmarks(
-    o3tl::optional<std::vector<sw::Extent>::const_iterator> oPrevIter,
+    std::optional<std::vector<sw::Extent>::const_iterator> oPrevIter,
     std::vector<sw::Extent>::const_iterator iter,
     std::vector<sw::Extent>::const_iterator const end,
     TextFrameIndex nOffset,
@@ -917,7 +913,7 @@ void SwScriptInfo::InitScriptInfo(const SwTextNode& rNode,
     {
         SwTextNode const* pNode(nullptr);
         TextFrameIndex nOffset(0);
-        o3tl::optional<std::vector<sw::Extent>::const_iterator> oPrevIter;
+        std::optional<std::vector<sw::Extent>::const_iterator> oPrevIter;
         for (auto iter = pMerged->extents.begin(); iter != pMerged->extents.end();
              oPrevIter = iter, ++iter)
         {

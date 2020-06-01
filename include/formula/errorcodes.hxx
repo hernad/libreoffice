@@ -104,9 +104,9 @@ inline double CreateDoubleError( FormulaError nErr )
 /** Recreate the error code of a coded double error, if any. */
 inline FormulaError GetDoubleErrorValue( double fVal )
 {
-    if ( ::rtl::math::isFinite( fVal ) )
+    if ( std::isfinite( fVal ) )
         return FormulaError::NONE;
-    if ( ::rtl::math::isInf( fVal ) )
+    if ( std::isinf( fVal ) )
         return FormulaError::IllegalFPOperation;       // normal INF
     sal_uInt32 nErr = reinterpret_cast< sal_math_Double * >( &fVal)->nan_parts.fraction_lo;
     if ( nErr & 0xffff0000 )

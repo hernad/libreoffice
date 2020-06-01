@@ -17,24 +17,22 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_BASEGFX_POLYGON_B3DPOLYPOLYGONTOOLS_HXX
-#define INCLUDED_BASEGFX_POLYGON_B3DPOLYPOLYGONTOOLS_HXX
+#pragma once
 
 #include <basegfx/numeric/ftools.hxx>
 #include <basegfx/point/b3dpoint.hxx>
 #include <basegfx/basegfxdllapi.h>
 
-
-namespace com { namespace sun { namespace star { namespace drawing { struct PolyPolygonShape3D; } } } }
+namespace com::sun::star::drawing { struct PolyPolygonShape3D; }
 
 namespace basegfx
 {
-    // predefinitions
     class B3DPolyPolygon;
     class B3DRange;
+}
 
-    namespace utils
-    {
+namespace basegfx::utils
+{
         // B3DPolyPolygon tools
 
         // get size of PolyPolygon. Control vectors are included in that ranges.
@@ -130,9 +128,6 @@ namespace basegfx
             const B3DPolyPolygon& rPolyPolygonSource,
             css::drawing::PolyPolygonShape3D& rPolyPolygonShape3DRetval);
 
-    } // end of namespace utils
-} // end of namespace basegfx
-
-#endif // INCLUDED_BASEGFX_POLYGON_B3DPOLYPOLYGONTOOLS_HXX
+} // end of namespace basegfx::utils
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

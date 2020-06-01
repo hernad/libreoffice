@@ -8,7 +8,7 @@
  */
 
 #include <com/sun/star/frame/XSubToolbarController.hpp>
-#include <sfx2/sidebar/ControllerFactory.hxx>
+#include <sidebar/ControllerFactory.hxx>
 #include <sfx2/weldutils.hxx>
 #include <vcl/commandinfoprovider.hxx>
 #include <vcl/settings.hxx>
@@ -71,10 +71,13 @@ vcl::ImageType ToolbarUnoDispatcher::GetIconSize() const
     return eType;
 }
 
-ToolbarUnoDispatcher::ToolbarUnoDispatcher(weld::Toolbar& rToolbar,
-                                           const css::uno::Reference<css::frame::XFrame>& rFrame)
+ToolbarUnoDispatcher::ToolbarUnoDispatcher(weld::Toolbar& rToolbar, weld::Builder& rBuilder,
+                                           const css::uno::Reference<css::frame::XFrame>& rFrame,
+                                           bool bSideBar)
     : m_xFrame(rFrame)
     , m_pToolbar(&rToolbar)
+    , m_pBuilder(&rBuilder)
+    , m_bSideBar(bSideBar)
 {
     rToolbar.connect_clicked(LINK(this, ToolbarUnoDispatcher, SelectHdl));
     rToolbar.connect_menu_toggled(LINK(this, ToolbarUnoDispatcher, ToggleMenuHdl));
@@ -87,7 +90,10 @@ ToolbarUnoDispatcher::ToolbarUnoDispatcher(weld::Toolbar& rToolbar,
 
     for (int i = 0, nItems = rToolbar.get_n_items(); i < nItems; ++i)
     {
-        OUString sCommand = OUString::fromUtf8(rToolbar.get_item_ident(i));
+        OString sIdent(rToolbar.get_item_ident(i));
+        if (!sIdent.startsWith(".uno:"))
+            continue;
+        OUString sCommand = OUString::fromUtf8(sIdent);
         if (bRTL && lcl_RTLizeCommandURL(sCommand))
             rToolbar.set_item_ident(i, sCommand.toUtf8());
 
@@ -109,7 +115,8 @@ ToolbarUnoDispatcher::ToolbarUnoDispatcher(weld::Toolbar& rToolbar,
 void ToolbarUnoDispatcher::CreateController(const OUString& rCommand)
 {
     css::uno::Reference<css::frame::XToolbarController> xController(
-        sfx2::sidebar::ControllerFactory::CreateToolBoxController(*m_pToolbar, rCommand, m_xFrame));
+        sfx2::sidebar::ControllerFactory::CreateToolBoxController(*m_pToolbar, *m_pBuilder,
+                                                                  rCommand, m_xFrame, m_bSideBar));
 
     if (xController.is())
         maControllers.insert(std::make_pair(rCommand, xController));
@@ -187,6 +194,7 @@ void ToolbarUnoDispatcher::dispose()
 
     m_pToolbar->connect_clicked(Link<const OString&, void>());
     m_pToolbar = nullptr;
+    m_pBuilder = nullptr;
 }
 
 ToolbarUnoDispatcher::~ToolbarUnoDispatcher() { dispose(); }

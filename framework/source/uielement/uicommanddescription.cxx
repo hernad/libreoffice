@@ -286,44 +286,44 @@ void ConfigurationAccess_UICommand::impl_fill(const Reference< XNameAccess >& _x
                                                 std::vector< OUString >& aImageRotateVector,
                                                 std::vector< OUString >& aImageMirrorVector)
 {
-    if ( _xConfigAccess.is() )
+    if ( !_xConfigAccess.is() )
+        return;
+
+    Sequence< OUString> aNameSeq = _xConfigAccess->getElementNames();
+    const sal_Int32 nCount = aNameSeq.getLength();
+    for ( sal_Int32 i = 0; i < nCount; i++ )
     {
-        Sequence< OUString> aNameSeq = _xConfigAccess->getElementNames();
-        const sal_Int32 nCount = aNameSeq.getLength();
-        for ( sal_Int32 i = 0; i < nCount; i++ )
+        try
         {
-            try
+            Reference< XNameAccess > xNameAccess(_xConfigAccess->getByName( aNameSeq[i] ),UNO_QUERY);
+            if ( xNameAccess.is() )
             {
-                Reference< XNameAccess > xNameAccess(_xConfigAccess->getByName( aNameSeq[i] ),UNO_QUERY);
-                if ( xNameAccess.is() )
-                {
-                    CmdToInfoMap aCmdToInfo;
+                CmdToInfoMap aCmdToInfo;
 
-                    aCmdToInfo.bPopup = _bPopup;
-                    xNameAccess->getByName( "Label" )           >>= aCmdToInfo.aLabel;
-                    xNameAccess->getByName( "ContextLabel" )    >>= aCmdToInfo.aContextLabel;
-                    xNameAccess->getByName( "PopupLabel" )      >>= aCmdToInfo.aPopupLabel;
-                    xNameAccess->getByName( "TooltipLabel" )    >>= aCmdToInfo.aTooltipLabel;
-                    xNameAccess->getByName( "TargetURL" )       >>= aCmdToInfo.aTargetURL;
-                    xNameAccess->getByName( "IsExperimental" )  >>= aCmdToInfo.bIsExperimental;
-                    xNameAccess->getByName( m_aPropProperties ) >>= aCmdToInfo.nProperties;
+                aCmdToInfo.bPopup = _bPopup;
+                xNameAccess->getByName( "Label" )           >>= aCmdToInfo.aLabel;
+                xNameAccess->getByName( "ContextLabel" )    >>= aCmdToInfo.aContextLabel;
+                xNameAccess->getByName( "PopupLabel" )      >>= aCmdToInfo.aPopupLabel;
+                xNameAccess->getByName( "TooltipLabel" )    >>= aCmdToInfo.aTooltipLabel;
+                xNameAccess->getByName( "TargetURL" )       >>= aCmdToInfo.aTargetURL;
+                xNameAccess->getByName( "IsExperimental" )  >>= aCmdToInfo.bIsExperimental;
+                xNameAccess->getByName( m_aPropProperties ) >>= aCmdToInfo.nProperties;
 
-                    m_aCmdInfoCache.emplace( aNameSeq[i], aCmdToInfo );
+                m_aCmdInfoCache.emplace( aNameSeq[i], aCmdToInfo );
 
-                    if ( aCmdToInfo.nProperties & COMMAND_PROPERTY_IMAGE )
-                        aImageCommandVector.push_back( aNameSeq[i] );
-                    if ( aCmdToInfo.nProperties & COMMAND_PROPERTY_ROTATE )
-                        aImageRotateVector.push_back( aNameSeq[i] );
-                    if ( aCmdToInfo.nProperties & COMMAND_PROPERTY_MIRROR )
-                        aImageMirrorVector.push_back( aNameSeq[i] );
-                }
+                if ( aCmdToInfo.nProperties & COMMAND_PROPERTY_IMAGE )
+                    aImageCommandVector.push_back( aNameSeq[i] );
+                if ( aCmdToInfo.nProperties & COMMAND_PROPERTY_ROTATE )
+                    aImageRotateVector.push_back( aNameSeq[i] );
+                if ( aCmdToInfo.nProperties & COMMAND_PROPERTY_MIRROR )
+                    aImageMirrorVector.push_back( aNameSeq[i] );
             }
-            catch (const css::lang::WrappedTargetException&)
-            {
-            }
-            catch (const css::container::NoSuchElementException&)
-            {
-            }
+        }
+        catch (const css::lang::WrappedTargetException&)
+        {
+        }
+        catch (const css::container::NoSuchElementException&)
+        {
         }
     }
 }
@@ -349,39 +349,39 @@ void ConfigurationAccess_UICommand::fillCache()
 
 void ConfigurationAccess_UICommand::addGenericInfoToCache()
 {
-    if ( m_xGenericUICommands.is() && !m_bGenericDataRetrieved )
+    if ( !(m_xGenericUICommands.is() && !m_bGenericDataRetrieved) )
+        return;
+
+    Sequence< OUString > aCommandNameSeq;
+    try
     {
-        Sequence< OUString > aCommandNameSeq;
-        try
-        {
-            if ( m_xGenericUICommands->getByName(
-                    UICOMMANDDESCRIPTION_NAMEACCESS_COMMANDROTATEIMAGELIST ) >>= aCommandNameSeq )
-                m_aCommandRotateImageList = comphelper::concatSequences< OUString >( m_aCommandRotateImageList, aCommandNameSeq );
-        }
-        catch (const RuntimeException&)
-        {
-            throw;
-        }
-        catch (const Exception&)
-        {
-        }
-
-        try
-        {
-            if ( m_xGenericUICommands->getByName(
-                    UICOMMANDDESCRIPTION_NAMEACCESS_COMMANDMIRRORIMAGELIST ) >>= aCommandNameSeq )
-                m_aCommandMirrorImageList = comphelper::concatSequences< OUString >( m_aCommandMirrorImageList, aCommandNameSeq );
-        }
-        catch (const RuntimeException&)
-        {
-            throw;
-        }
-        catch (const Exception&)
-        {
-        }
-
-        m_bGenericDataRetrieved = true;
+        if ( m_xGenericUICommands->getByName(
+                UICOMMANDDESCRIPTION_NAMEACCESS_COMMANDROTATEIMAGELIST ) >>= aCommandNameSeq )
+            m_aCommandRotateImageList = comphelper::concatSequences< OUString >( m_aCommandRotateImageList, aCommandNameSeq );
     }
+    catch (const RuntimeException&)
+    {
+        throw;
+    }
+    catch (const Exception&)
+    {
+    }
+
+    try
+    {
+        if ( m_xGenericUICommands->getByName(
+                UICOMMANDDESCRIPTION_NAMEACCESS_COMMANDMIRRORIMAGELIST ) >>= aCommandNameSeq )
+            m_aCommandMirrorImageList = comphelper::concatSequences< OUString >( m_aCommandMirrorImageList, aCommandNameSeq );
+    }
+    catch (const RuntimeException&)
+    {
+        throw;
+    }
+    catch (const Exception&)
+    {
+    }
+
+    m_bGenericDataRetrieved = true;
 }
 
 Any ConfigurationAccess_UICommand::getInfoFromCommand( const OUString& rCommandURL )
@@ -585,21 +585,19 @@ UICommandDescription::~UICommandDescription()
 void UICommandDescription::impl_fillElements(const char* _pName)
 {
     m_xModuleManager.set( ModuleManager::create( m_xContext ) );
-    Sequence< OUString > aElementNames = m_xModuleManager->getElementNames();
-    Sequence< PropertyValue > aSeq;
-    OUString                  aModuleIdentifier;
+    const Sequence< OUString > aElementNames = m_xModuleManager->getElementNames();
 
-    for ( sal_Int32 i = 0; i < aElementNames.getLength(); i++ )
+    for ( OUString const & aModuleIdentifier : aElementNames )
     {
-        aModuleIdentifier = aElementNames[i];
+        Sequence< PropertyValue > aSeq;
         if ( m_xModuleManager->getByName( aModuleIdentifier ) >>= aSeq )
         {
             OUString aCommandStr;
-            for ( sal_Int32 y = 0; y < aSeq.getLength(); y++ )
+            for ( PropertyValue const & prop : std::as_const(aSeq) )
             {
-                if ( aSeq[y].Name.equalsAscii(_pName) )
+                if ( prop.Name.equalsAscii(_pName) )
                 {
-                    aSeq[y].Value >>= aCommandStr;
+                    prop.Value >>= aCommandStr;
                     break;
                 }
             }
@@ -612,7 +610,7 @@ void UICommandDescription::impl_fillElements(const char* _pName)
             if ( pIter == m_aUICommandsHashMap.end() )
                 m_aUICommandsHashMap.emplace( aCommandStr, Reference< XNameAccess >() );
         }
-    } // for ( sal_Int32 i = 0; i < aElementNames.getLength(); i++ )
+    } // for ( sal_Int32 i = 0; i < aElementNames.(); i++ )
 }
 
 Any SAL_CALL UICommandDescription::getByName( const OUString& aName )

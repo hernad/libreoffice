@@ -22,6 +22,8 @@
  * (nodes, attributes, formats and chars).
  */
 
+
+#include <algorithm>
 #include <hintids.hxx>
 
 #include <o3tl/safeint.hxx>
@@ -343,7 +345,7 @@ void MSWordExportBase::OutputItemSet( const SfxItemSet& rSet, bool bPapFormat, b
             if (pXFillStyleItem && pXFillStyleItem->GetValue() == drawing::FillStyle_SOLID && !rSet.HasItem(RES_BACKGROUND))
             {
                 // Construct an SvxBrushItem, as expected by the exporters.
-                std::shared_ptr<SvxBrushItem> aBrush(getSvxBrushItemFromSourceSet(rSet, RES_BACKGROUND));
+                std::unique_ptr<SvxBrushItem> aBrush(getSvxBrushItemFromSourceSet(rSet, RES_BACKGROUND));
                 AttrOutput().OutputItem(*aBrush);
             }
         }
@@ -355,15 +357,7 @@ void MSWordExportBase::GatherChapterFields()
 {
     //If the header/footer contains a chapter field
     SwFieldType* pType = m_pDoc->getIDocumentFieldsAccess().GetSysFieldType( SwFieldIds::Chapter );
-    SwIterator<SwFormatField,SwFieldType> aFormatFields( *pType );
-    for ( SwFormatField* pField = aFormatFields.First(); pField; pField = aFormatFields.Next() )
-    {
-        if (const SwTextField *pTextField = pField->GetTextField())
-        {
-            const SwTextNode &rTextNode = pTextField->GetTextNode();
-            m_aChapterFieldLocs.push_back(rTextNode.GetIndex());
-        }
-    }
+    pType->GatherNodeIndex(m_aChapterFieldLocs);
 }
 
 bool MSWordExportBase::ContentContainsChapterField(const SwFormatContent &rContent) const
@@ -506,7 +500,7 @@ void MSWordExportBase::OutputSectionBreaks( const SfxItemSet *pSet, const SwNode
                 }
             }
         }
-        else if (m_pCurrentPageDesc->GetPoolFormatId() != RES_POOLPAGE_FIRST || !sw::util::IsPlausableSingleWordSection(m_pCurrentPageDesc->GetFirstMaster(), pPageDesc->GetMaster()))
+        else if (!sw::util::IsPlausableSingleWordSection(m_pCurrentPageDesc->GetFirstMaster(), pPageDesc->GetMaster()))
         {
             bBreakSet = true;
             bNewPageDesc = true;
@@ -736,6 +730,14 @@ sal_uInt8 WW8Export::GetNumId( sal_uInt16 eNumType )
 
     // nothing, WW does the same (undocumented)
     case SVX_NUM_NUMBER_NONE:           nRet = 0xff;    break;
+    case SVX_NUM_SYMBOL_CHICAGO:
+        // 0x09, msonfcChiManSty
+        nRet = 9;
+        break;
+    case SVX_NUM_ARABIC_ZERO:
+        // 0x16, msonfcArabicLZ
+        nRet = 22;
+        break;
     }
     return nRet;
 }
@@ -887,7 +889,7 @@ void MSWordExportBase::OutputFormat( const SwFormat& rFormat, bool bPapFormat, b
                     case drawing::FillStyle_SOLID:
                     {
                         // Construct an SvxBrushItem, as expected by the exporters.
-                        std::shared_ptr<SvxBrushItem> aBrush(getSvxBrushItemFromSourceSet(rFrameFormat.GetAttrSet(), RES_BACKGROUND));
+                        std::unique_ptr<SvxBrushItem> aBrush(getSvxBrushItemFromSourceSet(rFrameFormat.GetAttrSet(), RES_BACKGROUND));
                         aSet.Put(*aBrush);
                         break;
                     }
@@ -919,40 +921,22 @@ void MSWordExportBase::OutputFormat( const SwFormat& rFormat, bool bPapFormat, b
     m_pOutFormatNode = pOldMod;
 }
 
-bool MSWordExportBase::HasRefToObject( sal_uInt16 nTyp, const OUString* pName, sal_uInt16 nSeqNo )
+bool MSWordExportBase::HasRefToAttr(const OUString& rName)
 {
+    SwFieldType* pType = m_pDoc->getIDocumentFieldsAccess().GetSysFieldType(SwFieldIds::GetRef);
+    std::vector<SwGetRefField*> vpRFields;
+    pType->GatherRefFields(vpRFields, REF_SETREFATTR);
+    return std::any_of(vpRFields.begin(), vpRFields.end(),
+            [rName](SwGetRefField* pF) { return rName == pF->GetSetRefName(); });
+}
 
-    SwFieldType* pType = m_pDoc->getIDocumentFieldsAccess().GetSysFieldType( SwFieldIds::GetRef );
-    SwIterator<SwFormatField, SwFieldType> aFormatFields( *pType );
-    for ( SwFormatField* pFormatField = aFormatFields.First(); pFormatField; pFormatField = aFormatFields.Next() )
-    {
-        const SwTextNode* pNd;
-        if ( pFormatField->GetTextField() && nTyp == pFormatField->GetField()->GetSubType() &&
-             nullptr != ( pNd  = pFormatField->GetTextField()->GetpTextNode() ) &&
-             pNd->GetNodes().IsDocNodes() )
-        {
-            const SwGetRefField& rRField = *static_cast< SwGetRefField* >( pFormatField->GetField() );
-            switch ( nTyp )
-            {
-                case REF_BOOKMARK:
-                case REF_SETREFATTR:
-                    if ( pName && *pName == rRField.GetSetRefName() )
-                        return true;
-                    break;
-                case REF_FOOTNOTE:
-                case REF_ENDNOTE:
-                    if ( nSeqNo == rRField.GetSeqNo() )
-                        return true;
-                    break;
-                case REF_SEQUENCEFLD:
-                    break;      // ???
-                case REF_OUTLINE:
-                    break;      // ???
-            }
-        }
-    }
-
-    return false;
+bool MSWordExportBase::HasRefToFootOrEndnote(const bool isEndNote, const sal_uInt16 nSeqNo)
+{
+    SwFieldType* pType = m_pDoc->getIDocumentFieldsAccess().GetSysFieldType(SwFieldIds::GetRef);
+    std::vector<SwGetRefField*> vpRFields;
+    pType->GatherRefFields(vpRFields, isEndNote ? REF_ENDNOTE : REF_FOOTNOTE);
+    return std::any_of(vpRFields.begin(), vpRFields.end(),
+            [nSeqNo](SwGetRefField* pF) { return nSeqNo == pF->GetSeqNo(); });
 }
 
 OUString MSWordExportBase::GetBookmarkName( sal_uInt16 nTyp, const OUString* pName, sal_uInt16 nSeqNo )
@@ -1438,7 +1422,7 @@ void WW8AttributeOutput::CharEscapement( const SvxEscapementItem& rEscapement )
     {
         // Lowered by the differences between the descenders (descent = baseline to bottom of lowest letter).
         // The descent is generally about 20% of the total font height.
-        // That is why DFLT_ESC_PROP (58) _originally_ lead to 8% (DFLT_ESC_SUB)
+        // That is why DFLT_ESC_PROP (58) leads to 8% (DFLT_ESC_SUB)
         nEsc = .2 * -(100 - nProp);
     }
 
@@ -2873,7 +2857,7 @@ void AttributeOutputBase::TextField( const SwFormatField& rField )
                 case DI_TITLE:
                     eField = ww::eTITLE;
                     break;
-                case DI_THEMA:
+                case DI_SUBJECT:
                     eField = ww::eSUBJECT;
                     break;
                 case DI_KEYS:
@@ -3495,7 +3479,7 @@ void AttributeOutputBase::TextFootnote( const SwFormatFootnote& rFootnote )
     // if any reference to this footnote/endnote then insert an internal
     // Bookmark.
     OUString sBkmkNm;
-    if ( GetExport().HasRefToObject( nTyp, nullptr, rFootnote.GetTextFootnote()->GetSeqRefNo() ))
+    if ( GetExport().HasRefToFootOrEndnote( rFootnote.IsEndNote(), rFootnote.GetTextFootnote()->GetSeqRefNo()))
     {
         sBkmkNm = MSWordExportBase::GetBookmarkName( nTyp, nullptr,
                                     rFootnote.GetTextFootnote()->GetSeqRefNo() );
@@ -3607,20 +3591,14 @@ void AttributeOutputBase::ParaNumRule( const SwNumRuleItem& rNumRule )
 
                         nLvl = static_cast< sal_uInt8 >(nLevel);
 
-                        if ( pTextNd->IsListRestart() )
-                        {
-                            sal_uInt16 nStartWith = static_cast< sal_uInt16 >( pTextNd->GetActualListStartValue() );
-                            nNumId = GetExport().DuplicateNumRule( pRule, nLvl, nStartWith );
-                            if ( USHRT_MAX != nNumId )
-                                ++nNumId;
-                        }
-                        else if (GetExport().GetExportFormat() == MSWordExportBase::DOCX) // FIXME
+                        if (GetExport().GetExportFormat() == MSWordExportBase::DOCX) // FIXME
                         {
                             // tdf#95848 find the abstract list definition
                             OUString const listId(pTextNd->GetListId());
                             if (!listId.isEmpty()
-                                // default list id uses the 1:1 mapping
-                                && listId != pRule->GetDefaultListId())
+                                && (listId != pRule->GetDefaultListId() // default list id uses the 1:1 mapping
+                                    || pTextNd->IsListRestart())    // or restarting previous list
+                                )
                             {
                                 SwList const*const pList(
                                     GetExport().m_pDoc->getIDocumentListsAccess().getListByName(listId));
@@ -3630,7 +3608,7 @@ void AttributeOutputBase::ParaNumRule( const SwNumRuleItem& rNumRule )
                                         GetExport().m_pDoc->FindNumRulePtr(
                                             pList->GetDefaultListStyleName()));
                                     assert(pAbstractRule);
-                                    if (pAbstractRule == pRule)
+                                    if (pAbstractRule == pRule && !pTextNd->IsListRestart())
                                     {
                                         // different list, but no override
                                         nNumId = GetExport().DuplicateAbsNum(listId, *pAbstractRule);
@@ -3639,6 +3617,14 @@ void AttributeOutputBase::ParaNumRule( const SwNumRuleItem& rNumRule )
                                     {
                                         nNumId = GetExport().OverrideNumRule(
                                                 *pRule, listId, *pAbstractRule);
+
+                                        if (pTextNd->IsListRestart())
+                                        {
+                                            // For restarted lists we should also keep value for
+                                            // future w:lvlOverride / w:startOverride
+                                            GetExport().AddListLevelOverride(nNumId, pTextNd->GetActualListLevel(),
+                                                pTextNd->GetActualListStartValue());
+                                        }
                                     }
                                     assert(nNumId != USHRT_MAX);
                                     ++nNumId;
@@ -3881,7 +3867,8 @@ void AttributeOutputBase::FormatBreak( const SvxFormatBreakItem& rBreak )
                 [[fallthrough]];
             case SvxBreak::ColumnAfter:
             case SvxBreak::ColumnBoth:
-                if ( GetExport().Sections().CurrentNumberOfColumns( *GetExport().m_pDoc ) > 1 || GetExport().SupportsOneColumnBreak() )
+                if ( GetExport().m_pDoc->getIDocumentSettingAccess().get( DocumentSettingId::TREAT_SINGLE_COLUMN_BREAK_AS_PAGE_BREAK )
+                     || GetExport().Sections().CurrentNumberOfColumns( *GetExport().m_pDoc ) > 1 )
                 {
                     nC = msword::ColumnBreak;
                 }
@@ -4526,6 +4513,9 @@ void WW8Export::Out_SwFormatTableBox( ww::bytes& rO, const SvxBoxItem * pBox )
 void WW8Export::Out_CellRangeBorders( const SvxBoxItem * pBox, sal_uInt8 nStart,
        sal_uInt8 nLimit )
 {
+    if ( !pBox )
+        return;
+
     static const SvxBoxItemLine aBorders[] =
     {
         SvxBoxItemLine::TOP, SvxBoxItemLine::LEFT, SvxBoxItemLine::BOTTOM, SvxBoxItemLine::RIGHT
@@ -4533,9 +4523,7 @@ void WW8Export::Out_CellRangeBorders( const SvxBoxItem * pBox, sal_uInt8 nStart,
 
     for( int i = 0; i < 4; ++i )
     {
-        const SvxBorderLine* pLn = nullptr;
-        if (pBox != nullptr)
-            pLn = pBox->GetLine( aBorders[i] );
+        const SvxBorderLine* pLn = pBox->GetLine( aBorders[i] );
         if (!pLn)
             continue;
 

@@ -313,8 +313,8 @@ lcl_checkRangeDimensions(
 class LessByReference
 {
     const ScDocument* mpDoc;
-    ScAddress const maPos;
-    DimensionSelector const maFunc;
+    ScAddress         maPos;
+    DimensionSelector maFunc;
 public:
     LessByReference(const ScDocument* pDoc, const ScAddress& rPos, const DimensionSelector& rFunc) :
         mpDoc(pDoc), maPos(rPos), maFunc(rFunc) {}
@@ -335,8 +335,8 @@ public:
 class AdjacentByReference
 {
     const ScDocument* mpDoc;
-    ScAddress const maPos;
-    DimensionSelector const maFunc;
+    ScAddress         maPos;
+    DimensionSelector maFunc;
 public:
     AdjacentByReference(const ScDocument* pDoc, const ScAddress& rPos, DimensionSelector aFunc) :
         mpDoc(pDoc), maPos(rPos), maFunc(aFunc) {}
@@ -481,9 +481,9 @@ void adjustDBRange(formula::FormulaToken* pToken, ScDocument& rNewDoc, const ScD
 
 struct AreaListenerKey
 {
-    ScRange const maRange;
-    bool const mbStartFixed;
-    bool const mbEndFixed;
+    ScRange maRange;
+    bool mbStartFixed;
+    bool mbEndFixed;
 
     AreaListenerKey( const ScRange& rRange, bool bStartFixed, bool bEndFixed ) :
         maRange(rRange), mbStartFixed(bStartFixed), mbEndFixed(bEndFixed) {}
@@ -881,9 +881,11 @@ ScFormulaCell::ScFormulaCell(const ScFormulaCell& rCell, ScDocument& rDoc, const
     if( !bCompile )
     {   // Name references with references and ColRowNames
         formula::FormulaTokenArrayPlainIterator aIter(*pCode);
-        formula::FormulaToken* t;
-        while ( ( t = aIter.GetNextReferenceOrName() ) != nullptr && !bCompile )
+        for (;;)
         {
+            formula::FormulaToken* t = aIter.GetNextReferenceOrName();
+            if (!t || bCompile)
+                break;
             if ( t->IsExternalRef() )
             {
                 // External name, cell, and area references.
@@ -1094,15 +1096,17 @@ void ScFormulaCell::GetResultDimensions( SCSIZE& rCols, SCSIZE& rRows )
 {
     MaybeInterpret();
 
-    const ScMatrix* pMat = nullptr;
-    if (pCode->GetCodeError() == FormulaError::NONE && aResult.GetType() == svMatrixCell &&
-            ((pMat = aResult.GetToken()->GetMatrix()) != nullptr))
-        pMat->GetDimensions( rCols, rRows );
-    else
+    if (pCode->GetCodeError() == FormulaError::NONE && aResult.GetType() == svMatrixCell)
     {
-        rCols = 0;
-        rRows = 0;
+        const ScMatrix* pMat = aResult.GetToken()->GetMatrix();
+        if (pMat)
+        {
+            pMat->GetDimensions( rCols, rRows );
+            return;
+        }
     }
+    rCols = 0;
+    rRows = 0;
 }
 
 void ScFormulaCell::ResetDirty() { bDirty = bTableOpDirty = mbPostponedDirty = false; }
@@ -1418,7 +1422,7 @@ void ScFormulaCell::CalcAfterLoad( sc::CompileFormulaContext& rCxt, bool bStartL
     // On OS/2 with broken FPU exception, we can somehow store /0 without Err503. Later on in
     // the BLC Lib NumberFormatter crashes when doing a fabs (NAN) (# 32739 #).
     // We iron this out here for all systems, such that we also have an Err503 here.
-    if ( aResult.IsValue() && !::rtl::math::isFinite( aResult.GetDouble() ) )
+    if ( aResult.IsValue() && !std::isfinite( aResult.GetDouble() ) )
     {
         OSL_FAIL("Formula cell INFINITY!!! Where does this document come from?");
         aResult.SetResultError( FormulaError::IllegalFPOperation );
@@ -1699,14 +1703,17 @@ bool ScFormulaCell::Interpret(SCROW nStartOffset, SCROW nEndOffset)
                      * added above with rRecursionHelper.Insert() should always
                      * be 'this', shouldn't it? */
                     ScFormulaCell* pLastCell = nullptr;
-                    if (rRecursionHelper.GetList().size() > 1 &&
-                            ((pLastCell = rRecursionHelper.GetList().back().pCell) != this))
+                    if (rRecursionHelper.GetList().size() > 1)
                     {
-                        pDocument->IncInterpretLevel();
-                        ScInterpreterContextGetterGuard aContextGetterGuard(*pDocument, pDocument->GetFormatTable());
-                        pLastCell->InterpretTail(
-                            *aContextGetterGuard.GetInterpreterContext(), SCITP_CLOSE_ITERATION_CIRCLE);
-                        pDocument->DecInterpretLevel();
+                        pLastCell = rRecursionHelper.GetList().back().pCell;
+                        if (pLastCell != this)
+                        {
+                            pDocument->IncInterpretLevel();
+                            ScInterpreterContextGetterGuard aContextGetterGuard(*pDocument, pDocument->GetFormatTable());
+                            pLastCell->InterpretTail(
+                                *aContextGetterGuard.GetInterpreterContext(), SCITP_CLOSE_ITERATION_CIRCLE);
+                            pDocument->DecInterpretLevel();
+                        }
                     }
                     // Start at 1, init things.
                     rRecursionHelper.StartIteration();
@@ -2039,8 +2046,8 @@ void ScFormulaCell::InterpretTail( ScInterpreterContext& rContext, ScInterpretTa
             const SvNumFormatType nRetType = pInterpreter->GetRetFormatType();
             if (nRetType == SvNumFormatType::LOGICAL)
             {
-                double fVal;
-                if ((fVal = aNewResult.GetDouble()) != 1.0 && fVal != 0.0)
+                double fVal = aNewResult.GetDouble();
+                if (fVal != 1.0 && fVal != 0.0)
                     bForceNumberFormat = false;
                 else
                 {
@@ -2112,10 +2119,14 @@ void ScFormulaCell::InterpretTail( ScInterpreterContext& rContext, ScInterpretTa
                         bSetFormat = false;
                         nFormatType = nOldFormatType;   // that? or number?
                     }
-                    else if ((fVal = aNewResult.GetDouble()) != 1.0 && fVal != 0.0)
+                    else
                     {
-                        bSetFormat = false;
-                        nFormatType = SvNumFormatType::NUMBER;
+                        fVal = aNewResult.GetDouble();
+                        if (fVal != 1.0 && fVal != 0.0)
+                        {
+                            bSetFormat = false;
+                            nFormatType = SvNumFormatType::NUMBER;
+                        }
                     }
                 }
             }
@@ -2234,7 +2245,7 @@ void ScFormulaCell::InterpretTail( ScInterpreterContext& rContext, ScInterpretTa
             if( cMatrixFlag != ScMatrixMode::Formula && !pCode->IsHyperLink() )
                 aResult.SetToken( aResult.GetCellResultToken().get());
         }
-        if ( aResult.IsValue() && !::rtl::math::isFinite( aResult.GetDouble() ) )
+        if ( aResult.IsValue() && !std::isfinite( aResult.GetDouble() ) )
         {
             // Coded double error may occur via filter import.
             FormulaError nErr = GetDoubleErrorValue( aResult.GetDouble());
@@ -4807,10 +4818,10 @@ bool ScFormulaCell::InterpretFormulaGroupThreading(sc::FormulaLogger::GroupScope
             ScDocument* mpDocument;
             ScInterpreterContext* mpContext;
             const ScAddress& mrTopPos;
-            SCCOL const mnStartCol;
-            SCCOL const mnEndCol;
-            SCROW const mnStartOffset;
-            SCROW const mnEndOffset;
+            SCCOL mnStartCol;
+            SCCOL mnEndCol;
+            SCROW mnStartOffset;
+            SCROW mnEndOffset;
 
         public:
             Executor(const std::shared_ptr<comphelper::ThreadTaskTag>& rTag,

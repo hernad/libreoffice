@@ -22,14 +22,11 @@
 #include <com/sun/star/report/XGroups.hpp>
 #include <com/sun/star/report/XGroup.hpp>
 #include <com/sun/star/container/XNameAccess.hpp>
-#include <GroupProperties.hxx>
 #include <comphelper/propmultiplex.hxx>
 #include <cppuhelper/basemutex.hxx>
 #include <rtl/ref.hxx>
 #include <vcl/weld.hxx>
 #include <osl/diagnose.h>
-
-#include <vector>
 
 class Control;
 
@@ -58,7 +55,7 @@ class OGroupsSortingDialog : public weld::GenericDialogController
     ::rtl::Reference< comphelper::OPropertyChangeMultiplexer>                       m_pReportListener;
     css::uno::Reference< css::report::XGroups>            m_xGroups;
     css::uno::Reference< css::container::XNameAccess >    m_xColumns;
-    bool const                                            m_bReadOnly;
+    bool                                                  m_bReadOnly;
 
     std::unique_ptr<weld::Toolbar>          m_xToolBox;
     std::unique_ptr<weld::Widget>           m_xProperties;
@@ -77,7 +74,7 @@ private:
     DECL_LINK( OnWidgetFocusLost, weld::Widget&, void );
     DECL_LINK( OnWidgetFocusGot, weld::Widget&, void );
 
-    DECL_LINK( OnControlFocusGot, Control&, void );
+    DECL_LINK( OnControlFocusGot, weld::Widget&, void );
 
     DECL_LINK( LBChangeHdl, weld::ComboBox&, void );
     DECL_LINK( OnFormatAction, const OString&, void );

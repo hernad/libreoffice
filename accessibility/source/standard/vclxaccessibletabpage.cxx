@@ -141,22 +141,22 @@ OUString VCLXAccessibleTabPage::GetPageText()
 
 void VCLXAccessibleTabPage::Update( bool bNew )
 {
-    if ( m_pTabControl )
+    if ( !m_pTabControl )
+        return;
+
+    TabPage* pTabPage = m_pTabControl->GetTabPage( m_nPageId );
+    if ( !pTabPage )
+        return;
+
+    Reference< XAccessible > xChild( pTabPage->GetAccessible( bNew ) );
+    if ( xChild.is() )
     {
-        TabPage* pTabPage = m_pTabControl->GetTabPage( m_nPageId );
-        if ( pTabPage )
-        {
-            Reference< XAccessible > xChild( pTabPage->GetAccessible( bNew ) );
-            if ( xChild.is() )
-            {
-                Any aOldValue, aNewValue;
-                if ( bNew )
-                    aNewValue <<= xChild;
-                else
-                    aOldValue <<= xChild;
-                NotifyAccessibleEvent( AccessibleEventId::CHILD, aOldValue, aNewValue );
-            }
-        }
+        Any aOldValue, aNewValue;
+        if ( bNew )
+            aNewValue <<= xChild;
+        else
+            aOldValue <<= xChild;
+        NotifyAccessibleEvent( AccessibleEventId::CHILD, aOldValue, aNewValue );
     }
 }
 
@@ -667,6 +667,11 @@ sal_Bool VCLXAccessibleTabPage::copyText( sal_Int32 nStartIndex, sal_Int32 nEndI
     }
 
     return bReturn;
+}
+
+sal_Bool VCLXAccessibleTabPage::scrollSubstringTo( sal_Int32, sal_Int32, AccessibleScrollType )
+{
+    return false;
 }
 
 

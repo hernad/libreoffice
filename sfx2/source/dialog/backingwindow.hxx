@@ -28,8 +28,8 @@
 
 #include <vcl/menubtn.hxx>
 
-#include <sfx2/recentdocsview.hxx>
-#include <sfx2/templatedefaultview.hxx>
+#include <recentdocsview.hxx>
+#include <templatedefaultview.hxx>
 
 #include <svtools/acceleratorexecute.hxx>
 
@@ -78,7 +78,7 @@ class BackingWindow : public vcl::Window, public VclBuilderContainer
 
     std::vector< VclPtr<vcl::Window> > maDndWindows;
 
-    Color const maButtonsTextColor;
+    Color maButtonsTextColor;
     tools::Rectangle maStartCentButtons;
 
     bool mbInitControls;

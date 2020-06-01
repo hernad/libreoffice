@@ -27,6 +27,7 @@
 #include <ObjectIdentifier.hxx>
 
 #include <com/sun/star/chart/DataLabelPlacement.hpp>
+#include <com/sun/star/chart2/XChartType.hpp>
 #include <com/sun/star/chart2/XColorScheme.hpp>
 
 #include <com/sun/star/container/XChild.hpp>
@@ -182,7 +183,10 @@ PieChart::PieChart( const uno::Reference<XChartType>& xChartTypeModel
     m_pPosHelper->m_fRingDistance = 0.0;
 
     uno::Reference< beans::XPropertySet > xChartTypeProps( xChartTypeModel, uno::UNO_QUERY );
-    if( xChartTypeProps.is() ) try
+    if( !xChartTypeProps.is() )
+        return;
+
+    try
     {
         xChartTypeProps->getPropertyValue( "UseRings") >>= m_bUseRings;
         if( m_bUseRings )
@@ -399,7 +403,7 @@ double PieChart::getMinimumX()
 }
 double PieChart::getMaxOffset()
 {
-    if (!::rtl::math::isNan(m_fMaxOffset))
+    if (!std::isnan(m_fMaxOffset))
         // Value already cached.  Use it.
         return m_fMaxOffset;
 
@@ -592,7 +596,7 @@ void PieChart::createShapes()
             {
                 //@todo warn somehow that negative values are treated as positive
             }
-            if( ::rtl::math::isNan(fY) )
+            if( std::isnan(fY) )
                 continue;
             aParam.mfLogicYSum += fabs(fY);
         }
@@ -624,7 +628,7 @@ void PieChart::createShapes()
             uno::Reference< drawing::XShapes > xSeriesGroupShape_Shapes = getSeriesGroupShape(pSeries, xSeriesTarget);
             ///collect data point information (logic coordinates, style ):
             double fLogicYValue = fabs(pSeries->getYValue( nPointIndex ));
-            if( ::rtl::math::isNan(fLogicYValue) )
+            if( std::isnan(fLogicYValue) )
                 continue;
             if(fLogicYValue==0.0)//@todo: continue also if the resolution is too small
                 continue;
@@ -678,7 +682,7 @@ void PieChart::createShapes()
                 if(bHasFillColorMapping)
                 {
                     double nPropVal = pSeries->getValueByProperty(nPointIndex, "FillColor");
-                    if(!rtl::math::isNan(nPropVal))
+                    if(!std::isnan(nPropVal))
                     {
                         uno::Reference< beans::XPropertySet > xProps( xPointShape, uno::UNO_QUERY_THROW );
                         xProps->setPropertyValue("FillColor", uno::Any(static_cast<sal_Int32>( nPropVal)));
@@ -1330,14 +1334,14 @@ bool PieChart::performLabelBestFitInnerPlacement(ShapeParam& rShapeParam, PieLab
     // compute lengths of the nearest edge and of the orthogonal edges
     double fNearestEdgeLength = fLabelWidth;
     double fOrthogonalEdgeLength = fLabelHeight;
-    int nAxisIndex = 0;
-    int nOrthogonalAxisIndex = 1;
+    basegfx::Axis2D eAxis = basegfx::Axis2D::X;
+    basegfx::Axis2D eOrthogonalAxis = basegfx::Axis2D::Y;
     if( nNearestEdgeIndex % 2 == 0 ) // nearest edge is vertical
     {
         fNearestEdgeLength = fLabelHeight;
         fOrthogonalEdgeLength = fLabelWidth;
-        nAxisIndex = 1;
-        nOrthogonalAxisIndex = 0;
+        eAxis = basegfx::Axis2D::Y;
+        eOrthogonalAxis = basegfx::Axis2D::X;
     }
 
     // compute the distance between N and P
@@ -1454,11 +1458,11 @@ bool PieChart::performLabelBestFitInnerPlacement(ShapeParam& rShapeParam, PieLab
 
     // compute vertices N, M and G respect with pie center C
     basegfx::B2DVector aNearestVertex(aPositionalVector);
-    aNearestVertex[nAxisIndex] += -aDirection[nAxisIndex] * fDistanceNP;
+    aNearestVertex.set(eAxis, aNearestVertex.get(eAxis) - aDirection.get(eAxis) * fDistanceNP);
     basegfx::B2DVector aVertexM(aNearestVertex);
-    aVertexM[nAxisIndex] += aDirection[nAxisIndex] * fNearestEdgeLength;
+    aVertexM.set(eAxis, aVertexM.get(eAxis) + aDirection.get(eAxis) * fNearestEdgeLength);
     basegfx::B2DVector aVertexG(aNearestVertex);
-    aVertexG[nOrthogonalAxisIndex] += aDirection[nOrthogonalAxisIndex] * fOrthogonalEdgeLength;
+    aVertexG.set(eOrthogonalAxis, aVertexG.get(eOrthogonalAxis) + aDirection.get(eOrthogonalAxis) * fOrthogonalEdgeLength);
 
     SAL_INFO( "chart2.pie.label.bestfit.inside",
               "      beta = " << basegfx::rad2deg(fBetaRad) );
@@ -1499,8 +1503,8 @@ bool PieChart::performLabelBestFitInnerPlacement(ShapeParam& rShapeParam, PieLab
         return false;
     }
 
-    if( ( aNearestVertex[nAxisIndex] >= 0 && aVertexM[nAxisIndex] <= 0 )
-            || ( aNearestVertex[nAxisIndex] <= 0 && aVertexM[nAxisIndex] >= 0 ) )
+    if( ( aNearestVertex.get(eAxis) >= 0 && aVertexM.get(eAxis) <= 0 )
+            || ( aNearestVertex.get(eAxis) <= 0 && aVertexM.get(eAxis) >= 0 ) )
     {
         // check the angle between CP and CN
         fAngleRad = aPositionalVector.angle(aNearestVertex);
@@ -1531,13 +1535,13 @@ bool PieChart::performLabelBestFitInnerPlacement(ShapeParam& rShapeParam, PieLab
 
     // compute the b.b. center respect with the pie center
     basegfx::B2DVector aBBCenter(aNearestVertex);
-    aBBCenter[nAxisIndex] += aDirection[nAxisIndex] * fNearestEdgeLength / 2;
-    aBBCenter[nOrthogonalAxisIndex] += aDirection[nOrthogonalAxisIndex] * fOrthogonalEdgeLength / 2;
+    aBBCenter.set(eAxis, aBBCenter.get(eAxis) + aDirection.get(eAxis) * fNearestEdgeLength / 2);
+    aBBCenter.set(eOrthogonalAxis, aBBCenter.get(eOrthogonalAxis) + aDirection.get(eOrthogonalAxis) * fOrthogonalEdgeLength / 2);
 
     // compute the b.b. anchor point
     basegfx::B2IVector aNewAnchorPoint = aPieCenter;
-    aNewAnchorPoint[0] += floor(aBBCenter[0]);
-    aNewAnchorPoint[1] -= floor(aBBCenter[1]); // the Y axis on the screen points downward
+    aNewAnchorPoint.setX(aNewAnchorPoint.getX() + floor(aBBCenter.getX()));
+    aNewAnchorPoint.setY(aNewAnchorPoint.getY() - floor(aBBCenter.getY())); // the Y axis on the screen points downward
 
     // compute the translation vector for moving the label from the current
     // screen position to the new one
@@ -1573,21 +1577,21 @@ void PieChart::performLabelBestFit(ShapeParam& rShapeParam, PieLabelInfo const &
     if( m_bUseRings )
         return;
 
-    if( !performLabelBestFitInnerPlacement(rShapeParam, rPieLabelInfo) )
-    {
-        // If it does not fit inside, let's put it outside
-        PolarLabelPositionHelper aPolarPosHelper(m_pPosHelper.get(),m_nDimension,m_xLogicTarget,m_pShapeFactory);
-        auto eAlignment = LABEL_ALIGN_CENTER;
-        awt::Point aScreenPosition2D(
-        aPolarPosHelper.getLabelScreenPositionAndAlignmentForUnitCircleValues(eAlignment, css::chart::DataLabelPlacement::OUTSIDE
-        , rShapeParam.mfUnitCircleStartAngleDegree, rShapeParam.mfUnitCircleWidthAngleDegree
-        , rShapeParam.mfUnitCircleInnerRadius, rShapeParam.mfUnitCircleOuterRadius, rShapeParam.mfLogicZ+0.5, 0 ));
-        basegfx::B2IVector aTranslationVector = rPieLabelInfo.aFirstPosition - rPieLabelInfo.aOrigin;
-        aTranslationVector.setLength(150);
-        aScreenPosition2D.X += aTranslationVector.getX();
-        aScreenPosition2D.Y += aTranslationVector.getY();
-        rPieLabelInfo.xLabelGroupShape->setPosition(aScreenPosition2D);
-    }
+    if( performLabelBestFitInnerPlacement(rShapeParam, rPieLabelInfo) )
+        return;
+
+    // If it does not fit inside, let's put it outside
+    PolarLabelPositionHelper aPolarPosHelper(m_pPosHelper.get(),m_nDimension,m_xLogicTarget,m_pShapeFactory);
+    auto eAlignment = LABEL_ALIGN_CENTER;
+    awt::Point aScreenPosition2D(
+    aPolarPosHelper.getLabelScreenPositionAndAlignmentForUnitCircleValues(eAlignment, css::chart::DataLabelPlacement::OUTSIDE
+    , rShapeParam.mfUnitCircleStartAngleDegree, rShapeParam.mfUnitCircleWidthAngleDegree
+    , rShapeParam.mfUnitCircleInnerRadius, rShapeParam.mfUnitCircleOuterRadius, rShapeParam.mfLogicZ+0.5, 0 ));
+    basegfx::B2IVector aTranslationVector = rPieLabelInfo.aFirstPosition - rPieLabelInfo.aOrigin;
+    aTranslationVector.setLength(150);
+    aScreenPosition2D.X += aTranslationVector.getX();
+    aScreenPosition2D.Y += aTranslationVector.getY();
+    rPieLabelInfo.xLabelGroupShape->setPosition(aScreenPosition2D);
 }
 
 } //namespace chart

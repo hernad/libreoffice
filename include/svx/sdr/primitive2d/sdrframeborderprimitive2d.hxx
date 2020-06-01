@@ -54,6 +54,7 @@ namespace drawinglayer
                 const svx::frame::Style& getStyle() const { return maStyle; }
                 const basegfx::B2DVector& getNormalizedPerpendicular() const { return maNormalizedPerpendicular; }
                 bool getStyleMirrored() const { return  mbStyleMirrored; }
+                bool operator==(const SdrConnectStyleData& rCompare) const;
             };
 
             std::vector<SdrConnectStyleData>   maStart;
@@ -77,6 +78,7 @@ namespace drawinglayer
                 double fMinDiscreteUnit) const;
 
             double getMinimalNonZeroBorderWidth() const;
+            bool operator==(const SdrFrameBorderData& rCompare) const;
         };
 
         typedef std::vector<SdrFrameBorderData> SdrFrameBorderDataVector;
@@ -94,7 +96,6 @@ namespace drawinglayer
             std::shared_ptr<SdrFrameBorderDataVector>   maFrameBorders;
             double                                      mfMinimalNonZeroBorderWidth;
             double                                      mfMinimalNonZeroBorderWidthUsedForDecompose;
-            bool                                        mbMergeResult;
             bool                                        mbForceToSingleDiscreteUnit;
 
             // local decomposition.
@@ -105,7 +106,6 @@ namespace drawinglayer
         public:
             SdrFrameBorderPrimitive2D(
                 std::shared_ptr<SdrFrameBorderDataVector>& rFrameBorders,
-                bool bMergeResult,
                 bool bForceToSingleDiscreteUnit);
 
             // compare operator
@@ -118,11 +118,10 @@ namespace drawinglayer
 
             // data access
             const std::shared_ptr<SdrFrameBorderDataVector>& getFrameBorders() const { return maFrameBorders; }
-            bool doMergeResult() const { return mbMergeResult; }
             bool doForceToSingleDiscreteUnit() const { return mbForceToSingleDiscreteUnit; }
 
             // provide unique ID
-            DeclPrimitive2DIDBlock()
+            virtual sal_uInt32 getPrimitive2DID() const override;
         };
     } // end of namespace primitive2d
 } // end of namespace drawinglayer

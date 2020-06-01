@@ -19,13 +19,13 @@
 
 #pragma once
 
-#include <svtools/table/tablemodel.hxx>
+#include <table/tablemodel.hxx>
 #include <vcl/image.hxx>
 
 #include <memory>
 
 
-namespace svt { namespace table
+namespace svt::table
 {
 
 
@@ -109,7 +109,7 @@ namespace svt { namespace table
                    );
     };
 
-} } // namespace svt::table
+} // namespace svt::table
 
 
 

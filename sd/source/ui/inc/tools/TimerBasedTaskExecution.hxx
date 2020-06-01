@@ -24,7 +24,7 @@
 
 #include <memory>
 
-namespace sd { namespace tools {
+namespace sd::tools {
 
 class AsynchronousTask;
 
@@ -71,7 +71,7 @@ private:
         object when its task has been executed completely.
     */
     std::shared_ptr<TimerBasedTaskExecution> mpSelf;
-    sal_uInt32 const mnMaxTimePerStep;
+    sal_uInt32 mnMaxTimePerStep;
 
     TimerBasedTaskExecution (
         const std::shared_ptr<AsynchronousTask>& rpTask,
@@ -85,7 +85,7 @@ private:
     DECL_LINK(TimerCallback, Timer *, void);
 };
 
-} } // end of namespace ::sd::tools
+} // end of namespace ::sd::tools
 
 #endif
 

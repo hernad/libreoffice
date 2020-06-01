@@ -30,24 +30,22 @@
 class SvXMLTokenMap_Impl;
 
 #define XML_TOK_UNKNOWN 0xffffU
-#define XML_TOKEN_MAP_END { 0xffffU, xmloff::token::XML_TOKEN_INVALID, 0U, 0 }
+#define XML_TOKEN_MAP_END { 0xffffU, xmloff::token::XML_TOKEN_INVALID, 0U }
 
 struct SvXMLTokenMapEntry
 {
-    enum xmloff::token::XMLTokenEnum const eLocalName;
+    enum xmloff::token::XMLTokenEnum eLocalName;
     sal_Int32 nFastToken;
-    sal_uInt16 const  nPrefixKey;
-    sal_uInt16 const  nToken;
+    sal_uInt16 nPrefixKey;
+    sal_uInt16 nToken;
 
     SvXMLTokenMapEntry( sal_uInt16 nPrefix, xmloff::token::XMLTokenEnum eName,
-                        sal_uInt16 nTok, sal_Int32 nFastTok = 0 ) :
+                        sal_uInt16 nTok ) :
         eLocalName( eName ),
         nFastToken( sal_uInt32( nPrefix + 1 ) << 16 | eLocalName ),
         nPrefixKey( nPrefix ),
         nToken( nTok )
     {
-        if ( nFastTok )     // alternative value for duplicate/dummy tokens
-            nFastToken = nFastTok;
     }
 };
 

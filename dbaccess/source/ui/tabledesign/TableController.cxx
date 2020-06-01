@@ -27,25 +27,19 @@
 #include <browserids.hxx>
 #include <core_resource.hxx>
 #include <dbu_reghelper.hxx>
-#include <stringconstants.hxx>
 #include <strings.hrc>
+#include <strings.hxx>
 #include <defaultobjectnamecheck.hxx>
 #include <dlgsave.hxx>
-#include <dsmeta.hxx>
 #include <indexdialog.hxx>
 #include <sqlmessage.hxx>
 #include <uiservices.hxx>
 
-#include <com/sun/star/container/XChild.hpp>
-#include <com/sun/star/container/XNameContainer.hpp>
 #include <com/sun/star/frame/XTitleChangeListener.hpp>
-#include <com/sun/star/io/XActiveDataSink.hpp>
-#include <com/sun/star/io/XActiveDataSource.hpp>
 #include <com/sun/star/sdb/CommandType.hpp>
 #include <com/sun/star/sdb/SQLContext.hpp>
 #include <com/sun/star/sdbc/ColumnValue.hpp>
 #include <com/sun/star/sdbc/SQLWarning.hpp>
-#include <com/sun/star/sdbc/XRow.hpp>
 #include <com/sun/star/sdbcx/KeyType.hpp>
 #include <com/sun/star/sdbcx/XAlterTable.hpp>
 #include <com/sun/star/sdbcx/XAppend.hpp>
@@ -53,15 +47,12 @@
 #include <com/sun/star/sdbcx/XDrop.hpp>
 #include <com/sun/star/sdbcx/XIndexesSupplier.hpp>
 #include <com/sun/star/sdbcx/XTablesSupplier.hpp>
-#include <com/sun/star/ui/dialogs/XExecutableDialog.hpp>
 
 #include <comphelper/processfactory.hxx>
-#include <comphelper/types.hxx>
 #include <connectivity/dbexception.hxx>
 #include <connectivity/dbtools.hxx>
 #include <connectivity/dbmetadata.hxx>
 #include <cppuhelper/exc_hlp.hxx>
-#include <sfx2/sfxsids.hrc>
 #include <tools/diagnose_ex.h>
 #include <vcl/svapp.hxx>
 #include <vcl/weld.hxx>
@@ -606,6 +597,8 @@ void OTableController::describeSupportedFeatures()
     implDescribeSupportedFeature( ".uno:SaveAs",        ID_BROWSER_SAVEASDOC,   CommandGroup::DOCUMENT );
     implDescribeSupportedFeature( ".uno:DBIndexDesign", SID_INDEXDESIGN,        CommandGroup::APPLICATION );
     implDescribeSupportedFeature( ".uno:EditDoc",       ID_BROWSER_EDITDOC,     CommandGroup::EDIT );
+    implDescribeSupportedFeature( ".uno:GetUndoStrings", SID_GETUNDOSTRINGS );
+    implDescribeSupportedFeature( ".uno:GetRedoStrings", SID_GETREDOSTRINGS );
 }
 
 void OTableController::impl_onModifyChanged()
@@ -819,7 +812,7 @@ void OTableController::loadData()
             bool bForce;
             OUString const sCreate("x");
             TOTypeInfoSP pTypeInfo = ::dbaui::getTypeInfoFromType(m_aTypeInfo,nType,sTypeName,sCreate,nPrecision,nScale,bIsAutoIncrement,bForce);
-            if ( !pTypeInfo.get() )
+            if ( !pTypeInfo )
                 pTypeInfo = m_pTypeInfo;
             pTabEdRow->SetFieldType( pTypeInfo, bForce );
 
@@ -928,7 +921,7 @@ bool OTableController::checkColumns(bool _bNew)
         {
             auto pNewRow = std::make_shared<OTableRow>();
             TOTypeInfoSP pTypeInfo = ::dbaui::queryPrimaryKeyType(m_aTypeInfo);
-            if ( !pTypeInfo.get() )
+            if ( !pTypeInfo )
                 break;
 
             pNewRow->SetFieldType( pTypeInfo );
@@ -1331,40 +1324,40 @@ void OTableController::dropPrimaryKey()
 void OTableController::assignTable()
 {
     // get the table
-    if(!m_sName.isEmpty())
+    if(m_sName.isEmpty())
+        return;
+
+    Reference<XNameAccess> xNameAccess;
+    Reference<XTablesSupplier> xSup(getConnection(),UNO_QUERY);
+    if(!xSup.is())
+        return;
+
+    xNameAccess = xSup->getTables();
+    OSL_ENSURE(xNameAccess.is(),"no nameaccess for the queries!");
+
+    if(!xNameAccess->hasByName(m_sName))
+        return;
+
+    Reference<XPropertySet> xProp(xNameAccess->getByName(m_sName), css::uno::UNO_QUERY);
+    if (!xProp.is())
+        return;
+
+    m_xTable = xProp;
+    startTableListening();
+
+    // check if we set the table editable
+    Reference<XDatabaseMetaData> xMeta = getConnection()->getMetaData();
+    setEditable( xMeta.is() && !xMeta->isReadOnly() && (isAlterAllowed() || isDropAllowed() || isAddAllowed()) );
+    if(!isEditable())
     {
-        Reference<XNameAccess> xNameAccess;
-        Reference<XTablesSupplier> xSup(getConnection(),UNO_QUERY);
-        if(xSup.is())
+        for( const auto& rTableRow : m_vRowList )
         {
-            xNameAccess = xSup->getTables();
-            OSL_ENSURE(xNameAccess.is(),"no nameaccess for the queries!");
-
-            if(xNameAccess->hasByName(m_sName))
-            {
-                Reference<XPropertySet> xProp(xNameAccess->getByName(m_sName), css::uno::UNO_QUERY);
-                if (xProp.is())
-                {
-                    m_xTable = xProp;
-                    startTableListening();
-
-                    // check if we set the table editable
-                    Reference<XDatabaseMetaData> xMeta = getConnection()->getMetaData();
-                    setEditable( xMeta.is() && !xMeta->isReadOnly() && (isAlterAllowed() || isDropAllowed() || isAddAllowed()) );
-                    if(!isEditable())
-                    {
-                        for( const auto& rTableRow : m_vRowList )
-                        {
-                            rTableRow->SetReadOnly();
-                        }
-                    }
-                    m_bNew = false;
-                    // be notified when the table is in disposing
-                    InvalidateAll();
-                }
-            }
+            rTableRow->SetReadOnly();
         }
     }
+    m_bNew = false;
+    // be notified when the table is in disposing
+    InvalidateAll();
 }
 
 bool OTableController::isAddAllowed() const

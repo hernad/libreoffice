@@ -26,22 +26,19 @@
 #include <com/sun/star/awt/XBitmap.hpp>
 #include <com/sun/star/graphic/XGraphic.hpp>
 #include <com/sun/star/beans/PropertyValue.hpp>
+#include <com/sun/star/style/NumberingType.hpp>
 #include <com/sun/star/style/TabStop.hpp>
-#include <com/sun/star/text/PositionAndSpaceMode.hpp>
 #include <com/sun/star/style/ParagraphAdjust.hpp>
 #include <com/sun/star/drawing/XDrawPage.hpp>
 
 #include <osl/diagnose.h>
 
-#include <oox/helper/helper.hxx>
 #include <oox/helper/propertyset.hxx>
 #include <oox/core/xmlfilterbase.hxx>
-#include <oox/drawingml/drawingmltypes.hxx>
 #include <oox/token/properties.hxx>
 #include <oox/token/tokens.hxx>
 
 #if OSL_DEBUG_LEVEL > 0
-#include <vcl/unohelp.hxx>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/text/XText.hpp>
 #include <com/sun/star/drawing/XShape.hpp>
@@ -396,7 +393,10 @@ void TextParagraphProperties::pushToPropSet( const ::oox::core::XmlFilterBase* p
 
     sal_Int32 nNumberingType = NumberingType::NUMBER_NONE;
     if ( maBulletList.mnNumberingType.hasValue() )
+    {
         maBulletList.mnNumberingType >>= nNumberingType;
+        aPropSet.setProperty< sal_Int16 >( PROP_NumberingLevel, getLevel() );
+    }
     else if ( pMasterBuList && pMasterBuList->mnNumberingType.hasValue() )
         pMasterBuList->mnNumberingType >>= nNumberingType;
     if ( nNumberingType == NumberingType::NUMBER_NONE )
@@ -409,8 +409,8 @@ void TextParagraphProperties::pushToPropSet( const ::oox::core::XmlFilterBase* p
     if ( maParaBottomMargin.bHasValue || bPushDefaultValues )
         aPropSet.setProperty( PROP_ParaBottomMargin, maParaBottomMargin.toMargin( fCharacterSize != 0.0 ? fCharacterSize : getCharHeightPoints ( 12.0 ) ) );
 
-    o3tl::optional< sal_Int32 > noParaLeftMargin( moParaLeftMargin );
-    o3tl::optional< sal_Int32 > noFirstLineIndentation( moFirstLineIndentation );
+    std::optional< sal_Int32 > noParaLeftMargin( moParaLeftMargin );
+    std::optional< sal_Int32 > noFirstLineIndentation( moFirstLineIndentation );
 
     if ( nNumberingType != NumberingType::NUMBER_NONE )
     {

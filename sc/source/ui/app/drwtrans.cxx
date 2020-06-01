@@ -142,17 +142,18 @@ ScDrawTransferObj::ScDrawTransferObj( std::unique_ptr<SdrModel> pClipModel, ScDo
                                 if ( (aAny >>= sTmp) && !sTmp.isEmpty() )
                                 {
                                     OUString aUrl = sTmp;
-                                    OUString aAbs;
-                                    const SfxMedium* pMedium;
-                                    if (pContainerShell && (pMedium = pContainerShell->GetMedium()) != nullptr)
+                                    OUString aAbs = aUrl;
+                                    if (pContainerShell)
                                     {
-                                        bool bWasAbs = true;
-                                        aAbs = pMedium->GetURLObject().smartRel2Abs( aUrl, bWasAbs ).
-                                                    GetMainURL(INetURLObject::DecodeMechanism::NONE);
-                                        // full path as stored INetBookmark must be encoded
+                                        const SfxMedium* pMedium = pContainerShell->GetMedium();
+                                        if (pMedium)
+                                        {
+                                            bool bWasAbs = true;
+                                            aAbs = pMedium->GetURLObject().smartRel2Abs( aUrl, bWasAbs ).
+                                                        GetMainURL(INetURLObject::DecodeMechanism::NONE);
+                                            // full path as stored INetBookmark must be encoded
+                                        }
                                     }
-                                    else
-                                        aAbs = aUrl;
 
                                     // Label
                                     OUString aLabel;
@@ -584,7 +585,7 @@ void ScDrawTransferObj::DragFinished( sal_Int8 nDropAction )
 
     m_pDragSourceView.reset();
 
-    TransferableHelper::DragFinished( nDropAction );
+    TransferDataContainer::DragFinished( nDropAction );
 }
 
 void ScDrawTransferObj::SetDrawPersist( const SfxObjectShellRef& rRef )
@@ -755,7 +756,7 @@ sal_Int64 SAL_CALL ScDrawTransferObj::getSomething( const css::uno::Sequence< sa
         nRet = reinterpret_cast< sal_Int64 >( this );
     }
     else
-        nRet = TransferableHelper::getSomething(rId);
+        nRet = TransferDataContainer::getSomething(rId);
     return nRet;
 }
 

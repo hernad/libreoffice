@@ -31,7 +31,6 @@
 #include <memory>
 
 using ::std::vector;
-using ::std::advance;
 using ::std::find_if;
 using ::std::for_each;
 using ::formula::FormulaGrammar;
@@ -1318,7 +1317,7 @@ public:
         return false;
     }
 private:
-    ScDocument * const mpDoc;
+    ScDocument *mpDoc;
 };
 
 }

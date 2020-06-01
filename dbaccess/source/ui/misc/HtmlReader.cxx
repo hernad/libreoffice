@@ -18,40 +18,23 @@
  */
 
 #include <HtmlReader.hxx>
-#include <connectivity/dbconversion.hxx>
 #include <connectivity/dbtools.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
 #include <tools/stream.hxx>
 #include <tools/tenccvt.hxx>
 #include <comphelper/string.hxx>
 #include <strings.hrc>
-#include <stringconstants.hxx>
-#include <sfx2/sfxhtml.hxx>
 #include <osl/diagnose.h>
 #include <core_resource.hxx>
-#include <com/sun/star/sdbcx/XDataDescriptorFactory.hpp>
 #include <com/sun/star/sdbcx/XColumnsSupplier.hpp>
-#include <com/sun/star/sdbcx/XAppend.hpp>
-#include <com/sun/star/sdbc/DataType.hpp>
-#include <com/sun/star/sdbc/ColumnValue.hpp>
-#include <com/sun/star/awt/FontDescriptor.hpp>
 #include <com/sun/star/awt/FontWeight.hpp>
 #include <com/sun/star/awt/FontStrikeout.hpp>
 #include <com/sun/star/awt/FontSlant.hpp>
 #include <com/sun/star/awt/FontUnderline.hpp>
-#include <com/sun/star/util/NumberFormat.hpp>
-#include <com/sun/star/util/XNumberFormatTypes.hpp>
 #include <svtools/htmltokn.h>
 #include <svtools/htmlkywd.hxx>
 #include <tools/color.hxx>
-#include <WCopyTable.hxx>
 #include <WExtendPages.hxx>
-#include <WNameMatch.hxx>
-#include <WColumnSelect.hxx>
-#include <QEnumTypes.hxx>
-#include <WCPage.hxx>
-#include <rtl/tencinfo.h>
-#include <UITools.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
 
@@ -156,7 +139,7 @@ void OHTMLReader::NextToken( HtmlTokenId nToken )
                 }
                 break;
             case HtmlTokenId::TABLEROW_ON:
-                if ( !m_pUpdateHelper.get() )
+                if ( !m_pUpdateHelper )
                     m_bError = true;
                 break;
             case HtmlTokenId::TEXTTOKEN:
@@ -193,7 +176,7 @@ void OHTMLReader::NextToken( HtmlTokenId nToken )
                 }
                 break;
             case HtmlTokenId::TABLEROW_OFF:
-                if ( !m_pUpdateHelper.get() )
+                if ( !m_pUpdateHelper )
                 {
                     m_bError = true;
                     break;

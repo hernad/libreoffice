@@ -36,19 +36,19 @@
 #include <ucbhelper/ucbhelperdllapi.h>
 #include <memory>
 
-namespace com { namespace sun { namespace star { namespace ucb {
+namespace com::sun::star::ucb {
     struct CommandInfo;
     class XCommandEnvironment;
     class XCommandInfo;
     class XPersistentPropertySet;
-} } } }
+}
 
-namespace com { namespace sun { namespace star { namespace beans {
+namespace com::sun::star::beans {
     struct Property;
     class XPropertySetInfo;
-} } } }
+}
 
-namespace com { namespace sun { namespace star { namespace uno { class XComponentContext; } } } }
+namespace com::sun::star::uno { class XComponentContext; }
 
 namespace ucbhelper_impl { struct ContentImplHelper_Impl; }
 
@@ -308,10 +308,9 @@ public:
 
     // XInterface
     virtual css::uno::Any SAL_CALL queryInterface( const css::uno::Type & rType ) override;
-    virtual void SAL_CALL acquire()
-        throw() override;
-    virtual void SAL_CALL release()
-        throw() override;
+    virtual void SAL_CALL acquire() throw() override
+    { cppu::OWeakObject::acquire(); }
+    virtual void SAL_CALL release() throw() override;
 
     // XTypeProvider
     virtual css::uno::Sequence< sal_Int8 > SAL_CALL

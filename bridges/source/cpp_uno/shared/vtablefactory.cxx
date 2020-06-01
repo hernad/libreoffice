@@ -77,6 +77,11 @@ extern "C" void * allocExec(
     std::size_t n = (*size + (pagesize - 1)) & ~(pagesize - 1);
     void * p;
 #if defined SAL_UNX
+#if defined MACOSX
+    p = mmap(
+        nullptr, n, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANON | MAP_JIT, -1,
+        0);
+#else
     p = mmap(
         nullptr, n, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1,
         0);
@@ -88,6 +93,7 @@ extern "C" void * allocExec(
         munmap (p, n);
         p = nullptr;
     }
+#endif
 #elif defined _WIN32
     p = VirtualAlloc(nullptr, n, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
 #endif
@@ -336,7 +342,7 @@ sal_Int32 VtableFactory::createVtables(
                 code = addLocalFunctions(
                     &slots, code,
 #ifdef USE_DOUBLE_MMAP
-                    sal_uIntPtr(block.exec) - sal_uIntPtr(block.start),
+                    reinterpret_cast<sal_uIntPtr>(block.exec) - reinterpret_cast<sal_uIntPtr>(block.start),
 #endif
                     type2,
                     baseOffset.getFunctionOffset(type2->aBase.pTypeName),

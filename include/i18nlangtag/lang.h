@@ -193,7 +193,7 @@ namespace o3tl
 #define LANGUAGE_ENGLISH_BAHRAIN            LanguageType(0x5009)
 #define LANGUAGE_ENGLISH_BELIZE             LanguageType(0x2809)
 #define LANGUAGE_ENGLISH_CAN                LanguageType(0x1009)
-#define LANGUAGE_ENGLISH_CARRIBEAN          LanguageType(0x2409)
+#define LANGUAGE_ENGLISH_CARIBBEAN          LanguageType(0x2409)
 #define LANGUAGE_ENGLISH_EGYPT              LanguageType(0x5409)
 #define LANGUAGE_ENGLISH_EIRE               LanguageType(0x1809)
 #define LANGUAGE_ENGLISH_HONG_KONG_SAR      LanguageType(0x3C09)
@@ -275,6 +275,9 @@ namespace o3tl
 #define LANGUAGE_KASHMIRI                   LanguageType(0x0460)
 #define LANGUAGE_KASHMIRI_INDIA             LanguageType(0x0860)
 #define LANGUAGE_KAZAKH                     LanguageType(0x043F)
+#define LANGUAGE_KAZAKH_LATIN               LanguageType(0x083F)
+#define LANGUAGE_KAZAKH_CYRILLIC_LSO        LanguageType(0x783F)
+#define LANGUAGE_KAZAKH_LATIN_LSO           LanguageType(0x7C3F)
 #define LANGUAGE_KHMER                      LanguageType(0x0453)
 #define LANGUAGE_KICHE_GUATEMALA            LanguageType(0x0486)  /* AKA K'iche', West Central Quiche,  */
 #define LANGUAGE_KINYARWANDA_RWANDA         LanguageType(0x0487)  /* obsoletes LANGUAGE_USER_KINYARWANDA 0x0621 */
@@ -754,6 +757,9 @@ namespace o3tl
 #define LANGUAGE_USER_ENGLISH_NIGERIA       LanguageType(0xA809)  /* makeLangID( 0x2A, getPrimaryLanguage( LANGUAGE_ENGLISH_UK)) */
 #define LANGUAGE_USER_KABARDIAN             LanguageType(0x06A4)
 #define LANGUAGE_USER_GUADELOUPEAN_CREOLE_FRENCH    LanguageType(0x06A5)
+#define LANGUAGE_USER_LIGURIAN              LanguageType(0x06A6)
+#define LANGUAGE_USER_MINANGKABAU           LanguageType(0x06A7)
+#define LANGUAGE_USER_SUNDANESE             LanguageType(0x06A8)
 
 
 /* XXX Add new user defined LCIDs ^^^ there.

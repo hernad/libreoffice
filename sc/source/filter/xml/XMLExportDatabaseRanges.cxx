@@ -40,6 +40,7 @@
 #include <svx/dataaccessdescriptor.hxx>
 
 #include <com/sun/star/beans/XPropertySet.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/sheet/DataImportMode.hpp>
 #include <com/sun/star/sheet/XDatabaseRanges.hpp>
 #include <com/sun/star/sheet/XDatabaseRange.hpp>
@@ -177,7 +178,7 @@ namespace {
 class WriteDatabaseRange
 {
     ScXMLExport& mrExport;
-    ScDocument* const mpDoc;
+    ScDocument* mpDoc;
     sal_Int32 mnCounter;
     ScDBCollection::RangeType meRangeType;
 public:

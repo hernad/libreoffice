@@ -27,7 +27,7 @@
 
 extern "C" {
 
-namespace com { namespace sun { namespace star { namespace accessibility {
+namespace com::sun::star::accessibility {
     class XAccessibleAction;
     class XAccessibleComponent;
     class XAccessibleEditableText;
@@ -40,11 +40,11 @@ namespace com { namespace sun { namespace star { namespace accessibility {
     class XAccessibleTextMarkup;
     class XAccessibleTextAttributes;
     class XAccessibleValue;
-} } } }
+}
 
 struct AtkObjectWrapper
 {
-    AtkObject const aParent;
+    AtkObject aParent;
     AtkObject* mpOrig;  //if we're a GtkDrawingArea acting as a custom LibreOffice widget, this is the toolkit default impl
 
     css::uno::Reference<css::accessibility::XAccessible> mpAccessible;

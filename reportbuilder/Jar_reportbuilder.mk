@@ -11,10 +11,7 @@ $(eval $(call gb_Jar_Jar,reportbuilder))
 
 $(eval $(call gb_Jar_use_jars,reportbuilder,\
 	java_uno \
-	juh \
-	jurt \
-	ridl \
-	unoil \
+	libreoffice \
 ))
 
 $(eval $(call gb_Jar_use_externals,reportbuilder,\

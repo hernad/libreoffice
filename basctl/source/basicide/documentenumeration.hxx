@@ -17,19 +17,16 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_BASCTL_SOURCE_BASICIDE_DOCUMENTENUMERATION_HXX
-#define INCLUDED_BASCTL_SOURCE_BASICIDE_DOCUMENTENUMERATION_HXX
+#pragma once
 
 #include <com/sun/star/frame/XController.hpp>
 #include <memory>
 #include <vector>
 
-namespace com { namespace sun { namespace star { namespace uno {
-    class XComponentContext;
-} } } }
+namespace com::sun::star::uno { class XComponentContext; }
 
 
-namespace basctl { namespace docs {
+namespace basctl::docs {
 
 
     typedef std::vector< css::uno::Reference< css::frame::XController > >   Controllers;
@@ -88,9 +85,6 @@ namespace basctl { namespace docs {
     };
 
 
-} } // namespace basctl::docs
-
-
-#endif // INCLUDED_BASCTL_SOURCE_BASICIDE_DOCUMENTENUMERATION_HXX
+} // namespace basctl::docs
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

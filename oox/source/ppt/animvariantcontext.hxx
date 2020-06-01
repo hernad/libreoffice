@@ -25,7 +25,7 @@
 #include <oox/core/fragmenthandler2.hxx>
 #include <oox/drawingml/color.hxx>
 
-namespace oox { namespace ppt {
+namespace oox::ppt {
 
     /** context CT_TLAnimVariant */
     class AnimVariantContext
@@ -38,12 +38,12 @@ namespace oox { namespace ppt {
         virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 aElementToken, const AttributeList& rAttribs ) override;
 
     private:
-        ::sal_Int32 const           mnElement;
+        ::sal_Int32                 mnElement;
         css::uno::Any&              maValue;
         ::oox::drawingml::Color     maColor;
     };
 
-} }
+}
 
 #endif
 

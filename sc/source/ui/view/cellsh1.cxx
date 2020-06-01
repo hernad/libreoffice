@@ -17,7 +17,6 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <globalnames.hxx>
 #include <config_features.h>
 
 #include <com/sun/star/i18n/TextConversionOption.hpp>
@@ -34,6 +33,7 @@
 #include <svl/zformat.hxx>
 #include <sfx2/dispatch.hxx>
 #include <sfx2/request.hxx>
+#include <vcl/commandinfoprovider.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/weld.hxx>
 #include <svx/svxdlg.hxx>
@@ -74,6 +74,7 @@
 #include <condformatdlg.hxx>
 #include <attrib.hxx>
 #include <condformatdlgitem.hxx>
+#include <impex.hxx>
 
 #include <globstr.hrc>
 #include <scresid.hxx>
@@ -627,6 +628,9 @@ void ScCellShell::ExecuteEdit( SfxRequest& rReq )
                     pDoc->GetNumberFormat( nStartCol, nStartRow, nStartTab, nPrivFormat );
                     pDoc->GetCellType( nStartCol, nStartRow, nStartTab,eCellType );
                     const SvNumberformat* pPrivEntry = pFormatter->GetEntry( nPrivFormat );
+                    const SCSIZE nSelectHeight = nEndRow - nStartRow + 1;
+                    const SCSIZE nSelectWidth = nEndCol - nStartCol + 1;
+
                     if (!pPrivEntry)
                     {
                         OSL_FAIL("Numberformat not found !!!");
@@ -707,7 +711,7 @@ void ScCellShell::ExecuteEdit( SfxRequest& rReq )
                                                             *pDoc,
                                                             eFillDir, eFillCmd, eFillDateCmd,
                                                             aStartStr, fIncVal, fMaxVal,
-                                                            nPossDir));
+                                                            nSelectHeight, nSelectWidth, nPossDir));
 
                     if ( nStartCol != nEndCol && nStartRow != nEndRow )
                     {
@@ -1377,9 +1381,9 @@ void ScCellShell::ExecuteEdit( SfxRequest& rReq )
                                     pOwnClip->GetDocument()->GetClipStart( nClipStartX, nClipStartY );
                                     pOwnClip->GetDocument()->GetClipArea( nClipSizeX, nClipSizeY, true );
 
-                                    if ( !( pData->GetSimpleArea( nStartX, nStartY, nStartTab,
-                                                   nEndX, nEndY, nEndTab ) == SC_MARK_SIMPLE &&
-                                                   nStartTab == nEndTab ) )
+                                    if ( pData->GetSimpleArea( nStartX, nStartY, nStartTab,
+                                                   nEndX, nEndY, nEndTab ) != SC_MARK_SIMPLE ||
+                                                   nStartTab != nEndTab )
                                     {
                                         // the destination is not a simple range,
                                         // assume the destination as the current cell
@@ -1493,6 +1497,60 @@ void ScCellShell::ExecuteEdit( SfxRequest& rReq )
                 rReq.SetReturnValue(SfxInt16Item(nSlot, 0));        // 0 = fail
             break;
         }
+        case SID_PASTE_TEXTIMPORT_DIALOG:
+        {
+            vcl::Window* pWin = GetViewData()->GetActiveWin();
+            TransferableDataHelper aDataHelper(
+                TransferableDataHelper::CreateFromSystemClipboard(pWin));
+            const uno::Reference<datatransfer::XTransferable>& xTransferable
+                = aDataHelper.GetTransferable();
+            SotClipboardFormatId format = SotClipboardFormatId::STRING;
+            bool bSuccess = false;
+            if (xTransferable.is() && HasClipboardFormat(format))
+            {
+                OUString sStrBuffer;
+                bSuccess = aDataHelper.GetString(format, sStrBuffer);
+                if (bSuccess)
+                {
+                    auto pStrm = std::make_shared<ScImportStringStream>(sStrBuffer);
+                    ScAbstractDialogFactory* pFact = ScAbstractDialogFactory::Create();
+                    VclPtr<AbstractScImportAsciiDlg> pDlg(pFact->CreateScImportAsciiDlg(
+                        pWin ? pWin->GetFrameWeld() : nullptr, OUString(), pStrm.get(), SC_PASTETEXT));
+                    ScRange aRange;
+                    SCCOL nPosX = 0;
+                    SCROW nPosY = 0;
+                    if (GetViewData()->GetSimpleArea(aRange) == SC_MARK_SIMPLE)
+                    {
+                        nPosX = aRange.aStart.Col();
+                        nPosY = aRange.aStart.Row();
+                    }
+                    else
+                    {
+                        nPosX = GetViewData()->GetCurX();
+                        nPosY = GetViewData()->GetCurY();
+                    }
+                    ScAddress aCellPos(nPosX, nPosY, GetViewData()->GetTabNo());
+                    auto pObj = std::make_shared<ScImportExport>(GetViewData()->GetDocument(), aCellPos);
+                    pObj->SetOverwriting(true);
+                    if (pDlg->Execute()) {
+                        ScAsciiOptions aOptions;
+                        pDlg->GetOptions(aOptions);
+                        pDlg->SaveParameters();
+                        pObj->SetExtOptions(aOptions);
+                        pObj->ImportString(sStrBuffer, format);
+                    }
+                    pDlg->disposeOnce();
+                    rReq.SetReturnValue(SfxInt16Item(nSlot, 1)); // 1 = success, 0 = fail
+                    rReq.Done();
+                }
+            }
+            if (!bSuccess)
+            {
+                rReq.SetReturnValue(SfxInt16Item(nSlot, 0)); // 0 = fail
+                rReq.Ignore();
+            }
+        }
+        break;
         case SID_PASTE_SPECIAL:
             // differentiate between own cell data and draw objects/external data
             // this makes FID_INS_CELL_CONTENTS superfluous
@@ -1556,6 +1614,13 @@ void ScCellShell::ExecuteEdit( SfxRequest& rReq )
                                     aName = "*";
                                 pDlg->Insert( nFormatId, aName );
                             }
+
+                            SfxViewFrame* pViewFrame = pTabViewShell->GetViewFrame();
+                            auto xFrame = pViewFrame->GetFrame().GetFrameInterface();
+                            const OUString aModuleName(vcl::CommandInfoProvider::GetModuleIdentifier(xFrame));
+                            auto aProperties = vcl::CommandInfoProvider::GetCommandProperties(".uno:PasteTextImportDialog", aModuleName);
+                            OUString sLabel(vcl::CommandInfoProvider::GetTooltipLabelForCommand(aProperties));
+                            pDlg->InsertUno(".uno:PasteTextImportDialog", sLabel);
 
                             TransferableDataHelper aDataHelper(
                                 TransferableDataHelper::CreateFromSystemClipboard( pWin ) );
@@ -2401,7 +2466,7 @@ void ScCellShell::ExecuteEdit( SfxRequest& rReq )
                 ScViewData* pData  = GetViewData();
                 ScMarkData& rMark  = pData->GetMarkData();
                 ScDocument* pDoc   = pData->GetDocument();
-                ScMarkData  aNewMark(pDoc->MaxRow(), pDoc->MaxCol());
+                ScMarkData  aNewMark(pDoc->GetSheetLimits());
                 ScRangeList aRangeList;
 
                 for (auto const& rTab : rMark.GetSelectedTabs())
@@ -2808,31 +2873,12 @@ void ScCellShell::ExecuteDataPilotDialog()
                 pTabViewShell->GetFrameWeld(), bEnableExt));
 
         // Populate named ranges (if any).
-        // We must take into account 2 types of scope : global doc and sheets
-        // for global doc: <name of the range>
-        // for sheets: <sheetname>.<name of the range>
-        std::map<OUString, ScRangeName*> aRangeMap;
-        pDoc->GetRangeNameMap(aRangeMap);
-        for (auto const& elemRangeMap : aRangeMap)
+        ScRangeName* pRangeName = pDoc->GetRangeName();
+        if (pRangeName)
         {
-            ScRangeName* pRangeName = elemRangeMap.second;
-            if (pRangeName)
-            {
-                if (elemRangeMap.first == STR_GLOBAL_RANGE_NAME)
-                {
-                    for (auto const& elem : *pRangeName)
-                        pTypeDlg->AppendNamedRange(elem.second->GetName());
-                }
-                else
-                {
-                    OUString aScope(elemRangeMap.first);
-                    ScGlobal::AddQuotes(aScope, '\'');
-                    for (auto const& elem : *pRangeName)
-                    {
-                        pTypeDlg->AppendNamedRange(aScope + "." + elem.second->GetName());
-                    }
-                }
-            }
+            ScRangeName::const_iterator itr = pRangeName->begin(), itrEnd = pRangeName->end();
+            for (; itr != itrEnd; ++itr)
+                pTypeDlg->AppendNamedRange(itr->second->GetName());
         }
 
         if ( pTypeDlg->Execute() == RET_OK )

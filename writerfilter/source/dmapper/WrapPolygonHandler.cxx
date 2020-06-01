@@ -18,11 +18,12 @@
  */
 
 #include <com/sun/star/drawing/PointSequence.hpp>
+#include <com/sun/star/text/GraphicCrop.hpp>
 #include <comphelper/sequence.hxx>
+#include <tools/UnitConversion.hxx>
 
 #include <ooxml/resourceids.hxx>
 
-#include "ConversionHelper.hxx"
 #include "WrapPolygonHandler.hxx"
 #include "util.hxx"
 
@@ -98,7 +99,7 @@ WrapPolygon::Pointer_t WrapPolygon::correctWordWrapPolygon(const awt::Size & rSr
     const long nWrap100Percent = 21600;
 
     Fraction aMove(nWrap100Percent, rSrcSize.Width);
-    aMove = aMove * Fraction(15, 1);
+    aMove = aMove * Fraction(convertTwipToMm100(15), 1);
     awt::Point aMovePoint(aMove.operator long(), 0);
     pResult = move(aMovePoint);
 
@@ -132,6 +133,23 @@ WrapPolygon::Pointer_t WrapPolygon::correctWordWrapPolygonPixel(const awt::Size 
     Fraction aScaleX(rSrcSize.Width, nWrap100Percent);
     Fraction aScaleY(rSrcSize.Height, nWrap100Percent);
     pResult = scale(aScaleX, aScaleY);
+
+    return pResult;
+}
+
+WrapPolygon::Pointer_t WrapPolygon::correctCrop(const awt::Size& rGraphicSize,
+                                                const text::GraphicCrop& rGraphicCrop)
+{
+    WrapPolygon::Pointer_t pResult;
+
+    Fraction aScaleX(rGraphicSize.Width - rGraphicCrop.Left - rGraphicCrop.Right,
+                     rGraphicSize.Width);
+    Fraction aScaleY(rGraphicSize.Height - rGraphicCrop.Top - rGraphicCrop.Bottom,
+                     rGraphicSize.Height);
+    pResult = scale(aScaleX, aScaleY);
+
+    awt::Point aMove(rGraphicCrop.Left, rGraphicCrop.Top);
+    pResult = pResult->move(aMove);
 
     return pResult;
 }

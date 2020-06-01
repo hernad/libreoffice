@@ -29,10 +29,10 @@
 #include <cppuhelper/implbase.hxx>
 #include <editeng/editdata.hxx>
 
-namespace com { namespace sun { namespace star { namespace drawing { class XDrawPage; } } } }
-namespace com { namespace sun { namespace star { namespace drawing { class XShape; } } } }
-namespace com { namespace sun { namespace star { namespace text { class XTextRange; } } } }
-namespace com { namespace sun { namespace star { namespace util { class XSearchDescriptor; } } } }
+namespace com::sun::star::drawing { class XDrawPage; }
+namespace com::sun::star::drawing { class XShape; }
+namespace com::sun::star::text { class XTextRange; }
+namespace com::sun::star::util { class XSearchDescriptor; }
 
 class SvxItemPropertySet;
 class SdUnoSearchReplaceDescriptor;
@@ -41,7 +41,7 @@ class SdUnoSearchReplaceDescriptor;
 class SdUnoSearchReplaceShape : public css::util::XReplaceable
 {
 protected:
-    css::drawing::XDrawPage* const mpPage;
+    css::drawing::XDrawPage* mpPage;
 
     css::uno::Reference< css::text::XTextRange >  Search( const css::uno::Reference< css::text::XTextRange >&  xText, SdUnoSearchReplaceDescriptor* pDescr );
     bool Search( const OUString& rText, sal_Int32& nStartPos, sal_Int32& nEndPos, SdUnoSearchReplaceDescriptor* pDescr ) throw();

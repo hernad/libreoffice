@@ -22,6 +22,7 @@
 #include <textapi.hxx>
 
 #include <hintids.hxx>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/text/XText.hpp>
 #include <com/sun/star/script/Converter.hpp>
 #include <com/sun/star/text/PlaceholderType.hpp>
@@ -865,7 +866,7 @@ OUString SwDocInfoFieldType::Expand( sal_uInt16 nSub, sal_uInt32 nFormat,
     switch(nSub)
     {
     case DI_TITLE:  aStr = xDocProps->getTitle();       break;
-    case DI_THEMA:  aStr = xDocProps->getSubject();     break;
+    case DI_SUBJECT:aStr = xDocProps->getSubject();     break;
     case DI_KEYS:   aStr = ::comphelper::string::convertCommaSeparated(
                                 xDocProps->getKeywords());
                     break;
@@ -2173,13 +2174,10 @@ void SwRefPageGetFieldType::Modify( const SfxPoolItem* pOld, const SfxPoolItem* 
         SetGetExpFields aTmpLst;
         if (MakeSetList(aTmpLst, pLayout))
         {
-            SwIterator<SwFormatField,SwFieldType> aIter( *this );
-            for ( SwFormatField* pFormatField = aIter.First(); pFormatField; pFormatField = aIter.Next() )
-            {
-                    // update only the GetRef fields
-                    if( pFormatField->GetTextField() )
-                        UpdateField(pFormatField->GetTextField(), aTmpLst, pLayout);
-            }
+            std::vector<SwFormatField*> vFields;
+            GatherFields(vFields);
+            for(auto pFormatField: vFields)
+                UpdateField(pFormatField->GetTextField(), aTmpLst, pLayout);
         }
     };
 
@@ -2214,51 +2212,47 @@ bool SwRefPageGetFieldType::MakeSetList(SetGetExpFields& rTmpLst,
         SwRootFrame const*const pLayout)
 {
     IDocumentRedlineAccess const& rIDRA(m_pDoc->getIDocumentRedlineAccess());
-    SwIterator<SwFormatField,SwFieldType> aIter(*m_pDoc->getIDocumentFieldsAccess().GetSysFieldType( SwFieldIds::RefPageSet));
-    for ( SwFormatField* pFormatField = aIter.First(); pFormatField; pFormatField = aIter.Next() )
+    std::vector<SwFormatField*> vFields;
+    GatherFields(vFields);
+    for(auto pFormatField: vFields)
     {
         // update only the GetRef fields
         const SwTextField* pTField = pFormatField->GetTextField();
-        if( pTField )
+        if (!pLayout || !pLayout->IsHideRedlines() || !sw::IsFieldDeletedInModel(rIDRA, *pTField))
         {
-            if (!pLayout || !pLayout->IsHideRedlines()
-                || !sw::IsFieldDeletedInModel(rIDRA, *pTField))
+            const SwTextNode& rTextNd = pTField->GetTextNode();
+
+            // Always the first! (in Tab-Headline, header/footer )
+            Point aPt;
+            std::pair<Point, bool> const tmp(aPt, false);
+            const SwContentFrame *const pFrame = rTextNd.getLayoutFrame(
+                pLayout, nullptr, &tmp);
+
+            std::unique_ptr<SetGetExpField> pNew;
+
+            if( !pFrame ||
+                 pFrame->IsInDocBody() ||
+                // #i31868#
+                // Check if pFrame is not yet connected to the layout.
+                !pFrame->FindPageFrame() )
             {
-                const SwTextNode& rTextNd = pTField->GetTextNode();
-
-                // Always the first! (in Tab-Headline, header/footer )
-                Point aPt;
-                std::pair<Point, bool> const tmp(aPt, false);
-                const SwContentFrame *const pFrame = rTextNd.getLayoutFrame(
-                    pLayout, nullptr, &tmp);
-
-                std::unique_ptr<SetGetExpField> pNew;
-
-                if( !pFrame ||
-                     pFrame->IsInDocBody() ||
-                    // #i31868#
-                    // Check if pFrame is not yet connected to the layout.
-                    !pFrame->FindPageFrame() )
-                {
-                    //  create index for determination of the TextNode
-                    SwNodeIndex aIdx( rTextNd );
-                    pNew.reset( new SetGetExpField( aIdx, pTField ) );
-                }
-                else
-                {
-                    //  create index for determination of the TextNode
-                    SwPosition aPos( m_pDoc->GetNodes().GetEndOfPostIts() );
-                    bool const bResult = GetBodyTextNode( *m_pDoc, aPos, *pFrame );
-                    OSL_ENSURE(bResult, "where is the Field?");
-                    pNew.reset( new SetGetExpField( aPos.nNode, pTField,
-                                                &aPos.nContent ) );
-                }
-
-                rTmpLst.insert( std::move(pNew) );
+                //  create index for determination of the TextNode
+                SwNodeIndex aIdx( rTextNd );
+                pNew.reset( new SetGetExpField( aIdx, pTField ) );
             }
+            else
+            {
+                //  create index for determination of the TextNode
+                SwPosition aPos( m_pDoc->GetNodes().GetEndOfPostIts() );
+                bool const bResult = GetBodyTextNode( *m_pDoc, aPos, *pFrame );
+                OSL_ENSURE(bResult, "where is the Field?");
+                pNew.reset( new SetGetExpField( aPos.nNode, pTField,
+                                            &aPos.nContent ) );
+            }
+
+            rTmpLst.insert( std::move(pNew) );
         }
     }
-
     return !rTmpLst.empty();
 }
 

@@ -18,6 +18,7 @@
  */
 
 #include <i18nutil/unicode.hxx>
+#include <vcl/InterimItemWindow.hxx>
 #include <sfx2/dispatch.hxx>
 #include <sfx2/bindings.hxx>
 #include <sfx2/viewfrm.hxx>
@@ -35,14 +36,12 @@
 #include <cppuhelper/queryinterface.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <vcl/event.hxx>
-#include <vcl/fixed.hxx>
-#include <vcl/lstbox.hxx>
 #include <vcl/settings.hxx>
 #include <rtl/ustring.hxx>
 #include <swabstdlg.hxx>
 #include <sfx2/zoomitem.hxx>
-#include <vcl/field.hxx>
 #include <vcl/svapp.hxx>
+#include <vcl/weldutils.hxx>
 #include <svx/dialmgr.hxx>
 #include <svx/strings.hrc>
 #include <bitmaps.hlst>
@@ -54,10 +53,7 @@
 #include <com/sun/star/util/XURLTransformer.hpp>
 
 // Size check
-#define NAVI_ENTRIES 20
-#if NAVI_ENTRIES != NID_COUNT
-#error SwScrollNaviPopup-CTOR static array wrong size. Are new IDs added?
-#endif
+#define NAVI_ENTRIES 18
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -159,7 +155,6 @@ IMPL_STATIC_LINK(SwTbxAutoTextCtrl, PopupHdl, Menu*, pMenu, bool)
 // determine the order of the toolbox items
 static sal_uInt16 aNavigationInsertIds[ NAVI_ENTRIES ] =
 {
-    // -- first line
     NID_TBL,
     NID_FRM,
     NID_GRF,
@@ -169,8 +164,6 @@ static sal_uInt16 aNavigationInsertIds[ NAVI_ENTRIES ] =
     NID_MARK,
     NID_DRW,
     NID_CTRL,
-    NID_PREV,
-    // -- second line
     NID_REG,
     NID_BKM,
     NID_SEL,
@@ -179,13 +172,11 @@ static sal_uInt16 aNavigationInsertIds[ NAVI_ENTRIES ] =
     NID_SRCH_REP,
     NID_INDEX_ENTRY,
     NID_TABLE_FORMULA,
-    NID_TABLE_FORMULA_ERROR,
-    NID_NEXT
+    NID_TABLE_FORMULA_ERROR
 };
 
 static OUStringLiteral const aNavigationImgIds[ NAVI_ENTRIES ] =
 {
-    // -- first line
     RID_BMP_RIBBAR_TBL,
     RID_BMP_RIBBAR_FRM,
     RID_BMP_RIBBAR_GRF,
@@ -195,8 +186,6 @@ static OUStringLiteral const aNavigationImgIds[ NAVI_ENTRIES ] =
     RID_BMP_RIBBAR_MARK,
     RID_BMP_RIBBAR_DRW,
     RID_BMP_RIBBAR_CTRL,
-    RID_BMP_RIBBAR_PREV,
-    // -- second line
     RID_BMP_RIBBAR_REG,
     RID_BMP_RIBBAR_BKM,
     RID_BMP_RIBBAR_SEL,
@@ -205,39 +194,11 @@ static OUStringLiteral const aNavigationImgIds[ NAVI_ENTRIES ] =
     RID_BMP_RIBBAR_REP,
     RID_BMP_RIBBAR_ENTRY,
     RID_BMP_RIBBAR_FORMULA,
-    RID_BMP_RIBBAR_ERROR,
-    RID_BMP_RIBBAR_NEXT
-};
-
-static const char* aNavigationHelpIds[ NAVI_ENTRIES ] =
-{
-    // -- first line
-    HID_NID_TBL,
-    HID_NID_FRM,
-    HID_NID_GRF,
-    HID_NID_OLE,
-    HID_NID_PGE,
-    HID_NID_OUTL,
-    HID_NID_MARK,
-    HID_NID_DRW,
-    HID_NID_CTRL,
-    HID_NID_PREV,
-    // -- second line
-    HID_NID_REG,
-    HID_NID_BKM,
-    HID_NID_SEL,
-    HID_NID_FTN,
-    HID_NID_POSTIT,
-    HID_NID_SRCH_REP,
-    HID_NID_INDEX_ENTRY,
-    HID_NID_TABLE_FORMULA,
-    HID_NID_TABLE_FORMULA_ERROR,
-    HID_NID_NEXT
+    RID_BMP_RIBBAR_ERROR
 };
 
 static const char* aNavigationStrIds[ NAVI_ENTRIES ] =
 {
-    // -- first line
     ST_TBL,
     ST_FRM,
     ST_GRF,
@@ -247,8 +208,6 @@ static const char* aNavigationStrIds[ NAVI_ENTRIES ] =
     ST_MARK,
     ST_DRW,
     ST_CTRL,
-    STR_IMGBTN_PGE_UP,
-    // -- second line
     ST_REG,
     ST_BKM,
     ST_SEL,
@@ -257,15 +216,12 @@ static const char* aNavigationStrIds[ NAVI_ENTRIES ] =
     ST_SRCH_REP,
     ST_INDEX_ENTRY,
     ST_TABLE_FORMULA,
-    ST_TABLE_FORMULA_ERROR,
-    STR_IMGBTN_PGE_DOWN
+    ST_TABLE_FORMULA_ERROR
 };
 
 // these are global strings
 static const char* STR_IMGBTN_ARY[] =
 {
-    nullptr,
-    nullptr,
     STR_IMGBTN_TBL_DOWN,
     STR_IMGBTN_FRM_DOWN,
     STR_IMGBTN_PGE_DOWN,
@@ -284,8 +240,6 @@ static const char* STR_IMGBTN_ARY[] =
     STR_IMGBTN_INDEX_ENTRY_DOWN,
     STR_IMGBTN_TBLFML_DOWN,
     STR_IMGBTN_TBLFML_ERR_DOWN,
-    nullptr,
-    nullptr,
     STR_IMGBTN_TBL_UP,
     STR_IMGBTN_FRM_UP,
     STR_IMGBTN_PGE_UP,
@@ -306,69 +260,7 @@ static const char* STR_IMGBTN_ARY[] =
     STR_IMGBTN_TBLFML_ERR_UP
 };
 
-SwScrollNaviPopup::SwScrollNaviPopup(vcl::Window *pParent)
-    : DockingWindow(pParent, "FloatingNavigation", "modules/swriter/ui/floatingnavigation.ui")
-    , m_xToolBox1(get<ToolBox>("line1"))
-    , m_xToolBox2(get<ToolBox>("line2"))
-    , m_xInfoField(get<FixedText>("label"))
-{
-    m_xToolBox1->SetHelpId(HID_NAVI_VS);
-    m_xToolBox2->SetHelpId(HID_NAVI_VS);
-
-    for (size_t i = 0; i < NID_LINE_COUNT; ++i)
-        m_xToolBox1->SetHelpId(m_xToolBox1->GetItemId(i), aNavigationHelpIds[i]);
-
-    for (size_t i = 0; i < NID_LINE_COUNT; ++i)
-        m_xToolBox2->SetHelpId(m_xToolBox2->GetItemId(i), aNavigationHelpIds[i + NID_LINE_COUNT]);
-
-    for (size_t i = 0; i < SAL_N_ELEMENTS(STR_IMGBTN_ARY); ++i)
-    {
-        const char* id = STR_IMGBTN_ARY[i];
-        if (!id)
-            continue;
-        sQuickHelp[i] = SwResId(id);
-    }
-
-    sal_uInt16 nItemId = SwView::GetMoveType();
-    m_xInfoField->SetText(GetItemText(nItemId));
-    CheckItem(nItemId, true);
-
-    m_xToolBox1->SetSelectHdl(LINK(this, SwScrollNaviPopup, SelectHdl));
-    m_xToolBox2->SetSelectHdl(LINK(this, SwScrollNaviPopup, SelectHdl));
-}
-
-SwScrollNaviPopup::~SwScrollNaviPopup()
-{
-    disposeOnce();
-}
-
-void SwScrollNaviPopup::dispose()
-{
-    m_xToolBox2.disposeAndClear();
-    m_xToolBox1.disposeAndClear();
-    m_xInfoField.clear();
-    DockingWindow::dispose();
-}
-
-IMPL_LINK_NOARG(SwScrollNaviPopup, SelectHdl, ToolBox*, void)
-{
-    sal_uInt16 nSet = GetCurItemId();
-    if( nSet != NID_PREV && nSet != NID_NEXT )
-    {
-        SvxSearchDialogWrapper::SetSearchLabel( SearchLabel::Empty );
-        SwView::SetMoveType( nSet );
-        GetActiveView()->GetViewFrame()->GetDispatcher()->Execute(FN_NAV_ELEMENT);
-    }
-    else
-    {
-        sal_uInt16 cmd(FN_SCROLL_PREV);
-        if (NID_NEXT == nSet)
-            cmd = FN_SCROLL_NEXT;
-        GetActiveView()->GetViewFrame()->GetDispatcher()->Execute(cmd);
-    }
-}
-
-OUString SwScrollNaviPopup::GetToolTip(bool bNext)
+static OUString lcl_GetScrollToolTip(bool bNext)
 {
     sal_uInt16 nResId = SwView::GetMoveType();
     if (!bNext)
@@ -377,191 +269,70 @@ OUString SwScrollNaviPopup::GetToolTip(bool bNext)
     return id ? SwResId(id): OUString();
 }
 
-void SwScrollNaviPopup::syncFromDoc()
-{
-    sal_uInt16 nSet = SwView::GetMoveType();
-    SetItemText( NID_NEXT, sQuickHelp[nSet - NID_START] );
-    SetItemText( NID_PREV, sQuickHelp[nSet - NID_START + NID_COUNT] );
-    m_xInfoField->SetText( GetItemText( nSet ) );
-    // check the current button only
-    for( ToolBox::ImplToolItems::size_type i = 0; i < NID_COUNT; i++ )
-    {
-        sal_uInt16 nItemId = aNavigationInsertIds[i];
-        CheckItem(nItemId, nItemId == nSet);
-    }
-}
-
-namespace
-{
-    sal_uInt16 IdToIdent(const OUString& rId)
-    {
-        if (rId == "tbl")
-            return NID_TBL;
-        if (rId == "frm")
-            return NID_FRM;
-        if (rId == "grf")
-            return NID_GRF;
-        if (rId == "ole")
-            return NID_OLE;
-        if (rId == "pge")
-            return NID_PGE;
-        if (rId == "outl")
-            return NID_OUTL;
-        if (rId == "mark")
-            return NID_MARK;
-        if (rId == "drw")
-            return NID_DRW;
-        if (rId == "ctrl")
-            return NID_CTRL;
-        if (rId == "prev")
-            return NID_PREV;
-
-        if (rId == "reg")
-            return NID_REG;
-        if (rId == "bkm")
-            return NID_BKM;
-        if (rId == "sel")
-            return NID_SEL;
-        if (rId == "ftn")
-            return NID_FTN;
-        if (rId == "postit")
-            return NID_POSTIT;
-        if (rId == "rep")
-            return NID_SRCH_REP;
-        if (rId == "entry")
-            return NID_INDEX_ENTRY;
-        if (rId == "formula")
-            return NID_TABLE_FORMULA;
-        if (rId == "formulaerror")
-            return NID_TABLE_FORMULA_ERROR;
-        if (rId == "next")
-            return NID_NEXT;
-
-        return 0;
-    }
-
-    OUString IdentToId(sal_uInt16 nId)
-    {
-        if (nId == NID_TBL)
-            return "tbl";
-        if (nId == NID_FRM)
-            return "frm";
-        if (nId == NID_GRF)
-            return "grf";
-        if (nId == NID_OLE)
-            return "ole";
-        if (nId == NID_PGE)
-            return "pge";
-        if (nId == NID_OUTL)
-            return "outl";
-        if (nId == NID_MARK)
-            return "mark";
-        if (nId == NID_DRW)
-            return "drw";
-        if (nId == NID_CTRL)
-            return "ctrl";
-        if (nId == NID_PREV)
-            return "prev";
-
-        if (nId == NID_REG)
-            return "reg";
-        if (nId == NID_BKM)
-            return "bkm";
-        if (nId == NID_SEL)
-            return "sel";
-        if (nId == NID_FTN)
-            return "ftn";
-        if (nId == NID_POSTIT)
-            return "postit";
-        if (nId == NID_SRCH_REP)
-            return "rep";
-        if (nId == NID_INDEX_ENTRY)
-            return "entry";
-        if (nId == NID_TABLE_FORMULA)
-            return "formula";
-        if (nId == NID_TABLE_FORMULA_ERROR)
-            return "formulaerror";
-        if (nId == NID_NEXT)
-            return "next";
-
-        return "";
-    }
-}
-
-sal_uInt16 SwScrollNaviPopup::GetCurItemId() const
-{
-    OUString sItemId = m_xToolBox1->GetItemCommand(m_xToolBox1->GetCurItemId());
-    if (sItemId.isEmpty())
-        sItemId = m_xToolBox2->GetItemCommand(m_xToolBox2->GetCurItemId());
-    return IdToIdent(sItemId);
-}
-
-OUString SwScrollNaviPopup::GetItemText(sal_uInt16 nNaviId) const
-{
-    const OUString sId(IdentToId(nNaviId));
-    sal_uInt16 nItemId = m_xToolBox1->GetItemId(sId);
-    if (nItemId)
-        return m_xToolBox1->GetItemText(nItemId);
-    nItemId = m_xToolBox2->GetItemId(sId);
-    return m_xToolBox2->GetItemText(nItemId);
-}
-
-void SwScrollNaviPopup::SetItemText(sal_uInt16 nNaviId, const OUString &rText)
-{
-    const OUString sId(IdentToId(nNaviId));
-    sal_uInt16 nItemId = m_xToolBox1->GetItemId(sId);
-    if (nItemId)
-    {
-        m_xToolBox1->SetItemText(nItemId, rText);
-        return;
-    }
-    nItemId = m_xToolBox2->GetItemId(sId);
-    m_xToolBox2->SetItemText(nItemId, rText);
-}
-
-void SwScrollNaviPopup::CheckItem(sal_uInt16 nNaviId, bool bOn)
-{
-    const OUString sId(IdentToId(nNaviId));
-    sal_uInt16 nItemId = m_xToolBox1->GetItemId(sId);
-    if (nItemId)
-    {
-        m_xToolBox1->CheckItem(nItemId, bOn);
-        return;
-    }
-    nItemId = m_xToolBox2->GetItemId(sId);
-    m_xToolBox2->CheckItem(nItemId, bOn);
-}
-
 namespace {
 
-class SwZoomBox_Impl : public ComboBox
+class SwZoomBox_Impl final : public InterimItemWindow
 {
-    sal_uInt16 const nSlotId;
+    std::unique_ptr<weld::ComboBox> m_xWidget;
+    sal_uInt16       nSlotId;
     bool             bRelease;
 
-public:
-    SwZoomBox_Impl(
-        vcl::Window* pParent,
-        sal_uInt16 nSlot );
+    DECL_LINK(SelectHdl, weld::ComboBox&, void);
+    DECL_LINK(KeyInputHdl, const KeyEvent&, bool);
+    DECL_LINK(ActivateHdl, weld::ComboBox&, bool);
+    DECL_LINK(FocusOutHdl, weld::Widget&, void);
 
-protected:
-    virtual void    Select() override;
-    virtual bool    EventNotify( NotifyEvent& rNEvt ) override;
+    void Select();
 
     void ReleaseFocus();
 
+public:
+    SwZoomBox_Impl(vcl::Window* pParent, sal_uInt16 nSlot);
+
+    virtual void dispose() override
+    {
+        m_xWidget.reset();
+        InterimItemWindow::dispose();
+    }
+
+    virtual void GetFocus() override
+    {
+        if (m_xWidget)
+            m_xWidget->grab_focus();
+        InterimItemWindow::GetFocus();
+    }
+
+    void save_value()
+    {
+        m_xWidget->save_value();
+    }
+
+    void set_entry_text(const OUString& rText)
+    {
+        m_xWidget->set_entry_text(rText);
+    }
+
+    virtual ~SwZoomBox_Impl() override
+    {
+        disposeOnce();
+    }
 };
 
 }
 
 SwZoomBox_Impl::SwZoomBox_Impl(vcl::Window* pParent, sal_uInt16 nSlot)
-    : ComboBox(pParent, WB_HIDE | WB_BORDER | WB_DROPDOWN | WB_AUTOHSCROLL)
+    : InterimItemWindow(pParent, "modules/swriter/ui/zoombox.ui", "ZoomBox")
+    , m_xWidget(m_xBuilder->weld_combo_box("zoom"))
     , nSlotId(nSlot)
     , bRelease(true)
 {
-    SetHelpId(HID_PVIEW_ZOOM_LB);
-    SetSizePixel(LogicToPixel(Size(30, 86), MapMode(MapUnit::MapAppFont)));
-    EnableAutocomplete( false );
+    m_xWidget->set_help_id(HID_PVIEW_ZOOM_LB);
+    m_xWidget->set_entry_completion(false);
+    m_xWidget->connect_changed(LINK(this, SwZoomBox_Impl, SelectHdl));
+    m_xWidget->connect_key_press(LINK(this, SwZoomBox_Impl, KeyInputHdl));
+    m_xWidget->connect_entry_activate(LINK(this, SwZoomBox_Impl, ActivateHdl));
+    m_xWidget->connect_focus_out(LINK(this, SwZoomBox_Impl, FocusOutHdl));
+
     const char* const aZoomValues[] =
     { RID_SVXSTR_ZOOM_25 , RID_SVXSTR_ZOOM_50 ,
       RID_SVXSTR_ZOOM_75 , RID_SVXSTR_ZOOM_100 ,
@@ -571,15 +342,34 @@ SwZoomBox_Impl::SwZoomBox_Impl(vcl::Window* pParent, sal_uInt16 nSlot)
     for(const char* pZoomValue : aZoomValues)
     {
         OUString sEntry = SvxResId(pZoomValue);
-        InsertEntry(sEntry);
+        m_xWidget->append_text(sEntry);
     }
+
+    int nWidth = m_xWidget->get_pixel_size(SvxResId(RID_SVXSTR_ZOOM_200)).Width();
+    m_xWidget->set_entry_width_chars(std::ceil(nWidth / m_xWidget->get_approximate_digit_width()));
+
+    SetSizePixel(m_xWidget->get_preferred_size());
 }
 
-void    SwZoomBox_Impl::Select()
+IMPL_LINK(SwZoomBox_Impl, SelectHdl, weld::ComboBox&, rComboBox, void)
 {
-    if ( !IsTravelSelect() )
+    if (rComboBox.changed_by_direct_pick())  // only when picked from the list
+        Select();
+}
+
+IMPL_LINK_NOARG(SwZoomBox_Impl, ActivateHdl, weld::ComboBox&, bool)
+{
+    Select();
+    return true;
+}
+
+void SwZoomBox_Impl::Select()
+{
+    if( FN_PREVIEW_ZOOM == nSlotId )
     {
-        OUString sEntry = GetText().replaceAll("%", "");
+        bool bNonNumeric = true;
+
+        OUString sEntry = m_xWidget->get_active_text().replaceAll("%", "");
         SvxZoomItem aZoom(SvxZoomType::PERCENT,100);
         if(sEntry == SvxResId( RID_SVXSTR_ZOOM_PAGE_WIDTH ) )
             aZoom.SetType(SvxZoomType::PAGEWIDTH);
@@ -589,6 +379,8 @@ void    SwZoomBox_Impl::Select()
             aZoom.SetType(SvxZoomType::WHOLEPAGE);
         else
         {
+            bNonNumeric = false;
+
             sal_uInt16 nZoom = static_cast<sal_uInt16>(sEntry.toInt32());
             if(nZoom < MINZOOM)
                 nZoom = MINZOOM;
@@ -596,52 +388,50 @@ void    SwZoomBox_Impl::Select()
                 nZoom = MAXZOOM;
             aZoom.SetValue(nZoom);
         }
-        if( FN_PREVIEW_ZOOM == nSlotId )
-        {
-            SfxObjectShell* pCurrentShell = SfxObjectShell::Current();
 
-            pCurrentShell->GetDispatcher()->ExecuteList(SID_ATTR_ZOOM,
-                    SfxCallMode::ASYNCHRON, { &aZoom });
+        if (bNonNumeric)
+        {
+            // put old value back, in case its effectively the same
+            // as the picked option and no update to number comes
+            // back from writer
+            m_xWidget->set_entry_text(m_xWidget->get_saved_value());
         }
-        ReleaseFocus();
+
+        SfxObjectShell* pCurrentShell = SfxObjectShell::Current();
+
+        pCurrentShell->GetDispatcher()->ExecuteList(SID_ATTR_ZOOM,
+                SfxCallMode::ASYNCHRON, { &aZoom });
     }
+    ReleaseFocus();
 }
 
-bool SwZoomBox_Impl::EventNotify( NotifyEvent& rNEvt )
+IMPL_LINK(SwZoomBox_Impl, KeyInputHdl, const KeyEvent&, rKEvt, bool)
 {
     bool bHandled = false;
 
-    if ( rNEvt.GetType() == MouseNotifyEvent::KEYINPUT )
-    {
-        sal_uInt16 nCode = rNEvt.GetKeyEvent()->GetKeyCode().GetCode();
+    sal_uInt16 nCode = rKEvt.GetKeyCode().GetCode();
 
-        switch ( nCode )
-        {
-            case KEY_RETURN:
-            case KEY_TAB:
-            {
-                if ( KEY_TAB == nCode )
-                    bRelease = false;
-                else
-                    bHandled = true;
-                Select();
-                break;
-            }
-
-            case KEY_ESCAPE:
-                SetText( GetSavedValue() );
-                ReleaseFocus();
-                break;
-        }
-    }
-    else if ( MouseNotifyEvent::LOSEFOCUS == rNEvt.GetType() )
+    switch (nCode)
     {
-        vcl::Window* pFocusWin = Application::GetFocusWindow();
-        if ( !HasFocus() && GetSubEdit() != pFocusWin )
-            SetText( GetSavedValue() );
+        case KEY_TAB:
+            bRelease = false;
+            Select();
+            break;
+
+        case KEY_ESCAPE:
+            m_xWidget->set_entry_text(m_xWidget->get_saved_value());
+            ReleaseFocus();
+            bHandled = true;
+            break;
     }
 
-    return bHandled || ComboBox::EventNotify(rNEvt);
+    return bHandled || ChildKeyInput(rKEvt);
+}
+
+IMPL_LINK_NOARG(SwZoomBox_Impl, FocusOutHdl, weld::Widget&, void)
+{
+    if (!m_xWidget->has_focus()) // a combobox can be comprised of different subwidget so double-check if none of those has focus
+        m_xWidget->set_entry_text(m_xWidget->get_saved_value());
 }
 
 void SwZoomBox_Impl::ReleaseFocus()
@@ -687,12 +477,12 @@ void SwPreviewZoomControl::StateChanged( sal_uInt16 /*nSID*/,
     {
         OUString sZoom(unicode::formatPercent(static_cast<const SfxUInt16Item*>(pState)->GetValue(),
             Application::GetSettings().GetUILanguageTag()));
-        pBox->SetText(sZoom);
-        pBox->SaveValue();
+        pBox->set_entry_text(sZoom);
+        pBox->save_value();
     }
 }
 
-VclPtr<vcl::Window> SwPreviewZoomControl::CreateItemWindow( vcl::Window *pParent )
+VclPtr<InterimItemWindow> SwPreviewZoomControl::CreateItemWindow( vcl::Window *pParent )
 {
     VclPtrInstance<SwZoomBox_Impl> pRet( pParent, GetSlotId() );
     return pRet.get();
@@ -700,42 +490,60 @@ VclPtr<vcl::Window> SwPreviewZoomControl::CreateItemWindow( vcl::Window *pParent
 
 namespace {
 
-class SwJumpToSpecificBox_Impl : public NumericField
+class SwJumpToSpecificBox_Impl final : public InterimItemWindow
 {
-    sal_uInt16 const nSlotId;
+    std::unique_ptr<weld::Entry> m_xWidget;
 
+    sal_uInt16 nSlotId;
+
+    DECL_LINK(KeyInputHdl, const KeyEvent&, bool);
+    DECL_LINK(SelectHdl, weld::Entry&, bool);
 public:
     SwJumpToSpecificBox_Impl(vcl::Window* pParent, sal_uInt16 nSlot);
-
-protected:
-    void            Select();
-    virtual bool    EventNotify( NotifyEvent& rNEvt ) override;
+    virtual void dispose() override
+    {
+        m_xWidget.reset();
+        InterimItemWindow::dispose();
+    }
+    virtual void GetFocus() override
+    {
+        if (m_xWidget)
+            m_xWidget->grab_focus();
+        InterimItemWindow::GetFocus();
+    }
+    virtual ~SwJumpToSpecificBox_Impl() override
+    {
+        disposeOnce();
+    }
 };
 
 }
 
-SwJumpToSpecificBox_Impl::SwJumpToSpecificBox_Impl(vcl::Window* pParent, sal_uInt16 nSlot)
-    : NumericField(pParent, WB_HIDE | WB_BORDER)
-    , nSlotId(nSlot)
+IMPL_LINK(SwJumpToSpecificBox_Impl, KeyInputHdl, const KeyEvent&, rKEvt, bool)
 {
-    SetSizePixel(LogicToPixel(Size(16, 12), MapMode(MapUnit::MapAppFont)));
+    return ChildKeyInput(rKEvt);
 }
 
-void SwJumpToSpecificBox_Impl::Select()
+SwJumpToSpecificBox_Impl::SwJumpToSpecificBox_Impl(vcl::Window* pParent, sal_uInt16 nSlot)
+    : InterimItemWindow(pParent, "modules/swriter/ui/jumpposbox.ui", "JumpPosBox")
+    , m_xWidget(m_xBuilder->weld_entry("jumppos"))
+    , nSlotId(nSlot)
 {
-    OUString sEntry(GetText());
+    m_xWidget->connect_key_press(LINK(this, SwJumpToSpecificBox_Impl, KeyInputHdl));
+    m_xWidget->connect_activate(LINK(this, SwJumpToSpecificBox_Impl, SelectHdl));
+
+    SetSizePixel(m_xWidget->get_preferred_size());
+}
+
+IMPL_LINK_NOARG(SwJumpToSpecificBox_Impl, SelectHdl, weld::Entry&, bool)
+{
+    OUString sEntry(m_xWidget->get_text());
     SfxUInt16Item aPageNum(nSlotId);
     aPageNum.SetValue(static_cast<sal_uInt16>(sEntry.toInt32()));
     SfxObjectShell* pCurrentShell = SfxObjectShell::Current();
     pCurrentShell->GetDispatcher()->ExecuteList(nSlotId, SfxCallMode::ASYNCHRON,
             { &aPageNum });
-}
-
-bool SwJumpToSpecificBox_Impl::EventNotify( NotifyEvent& rNEvt )
-{
-    if ( rNEvt.GetType() == MouseNotifyEvent::KEYINPUT )
-        Select();
-    return NumericField::EventNotify(rNEvt);
+    return true;
 }
 
 SFX_IMPL_TOOLBOX_CONTROL( SwJumpToSpecificPageControl, SfxUInt16Item);
@@ -750,7 +558,7 @@ SwJumpToSpecificPageControl::SwJumpToSpecificPageControl(
 SwJumpToSpecificPageControl::~SwJumpToSpecificPageControl()
 {}
 
-VclPtr<vcl::Window> SwJumpToSpecificPageControl::CreateItemWindow( vcl::Window *pParent )
+VclPtr<InterimItemWindow> SwJumpToSpecificPageControl::CreateItemWindow( vcl::Window *pParent )
 {
     VclPtrInstance<SwJumpToSpecificBox_Impl> pRet( pParent, GetSlotId() );
     return pRet.get();
@@ -758,7 +566,9 @@ VclPtr<vcl::Window> SwJumpToSpecificPageControl::CreateItemWindow( vcl::Window *
 
 namespace {
 
+class NavElementBox_Base;
 class NavElementBox_Impl;
+
 class NavElementToolBoxControl : public svt::ToolboxController,
                                  public lang::XServiceInfo
 {
@@ -793,56 +603,107 @@ class NavElementToolBoxControl : public svt::ToolboxController,
         using svt::ToolboxController::dispatchCommand;
 
     private:
-        VclPtr<NavElementBox_Impl>           m_pBox;
+        VclPtr<NavElementBox_Impl> m_xVclBox;
+        std::unique_ptr<NavElementBox_Base> m_xWeldBox;
+        NavElementBox_Base* m_pBox;
 };
 
-class NavElementBox_Impl : public ListBox
+class NavElementBox_Base
 {
 public:
-                        NavElementBox_Impl( vcl::Window* pParent,
-                                             const uno::Reference< frame::XFrame >& _xFrame,
-                                             NavElementToolBoxControl& rCtrl );
+    NavElementBox_Base(std::unique_ptr<weld::ComboBox> xWidget,
+                       const uno::Reference<frame::XFrame>& _xFrame,
+                       NavElementToolBoxControl& rCtrl);
 
-    void                Update();
+    virtual ~NavElementBox_Base()
+    {
+    }
 
-    virtual bool        EventNotify( NotifyEvent& rNEvt ) override;
+    void set_sensitive(bool bSensitive)
+    {
+        m_xWidget->set_sensitive(bSensitive);
+    }
+
+    void                UpdateBox();
 
 protected:
-    virtual void        Select() override;
-
-private:
+    std::unique_ptr<weld::ComboBox>            m_xWidget;
     NavElementToolBoxControl*                  m_pCtrl;
     bool                                       m_bRelease;
     uno::Reference< frame::XFrame >            m_xFrame;
 
+    virtual bool DoKeyInput(const KeyEvent& rKEvt);
+
+    DECL_LINK(SelectHdl, weld::ComboBox&, void);
+    DECL_LINK(KeyInputHdl, const KeyEvent&, bool);
+
     void                ReleaseFocus_Impl();
 };
 
+
+class NavElementBox_Impl final : public InterimItemWindow
+                               , public NavElementBox_Base
+{
+public:
+    NavElementBox_Impl(vcl::Window* pParent,
+                       const uno::Reference<frame::XFrame>& _xFrame,
+                       NavElementToolBoxControl& rCtrl);
+
+    virtual void dispose() override
+    {
+        m_xWidget.reset();
+        InterimItemWindow::dispose();
+    }
+
+    virtual void GetFocus() override
+    {
+        if (m_xWidget)
+            m_xWidget->grab_focus();
+        InterimItemWindow::GetFocus();
+    }
+
+    virtual bool DoKeyInput(const KeyEvent& rKEvt) override;
+
+    virtual ~NavElementBox_Impl() override
+    {
+        disposeOnce();
+    }
+};
+
+}
+
+NavElementBox_Base::NavElementBox_Base(
+    std::unique_ptr<weld::ComboBox> xWidget,
+    const uno::Reference< frame::XFrame >&            _xFrame,
+    NavElementToolBoxControl&                         _rCtrl )
+    : m_xWidget(std::move(xWidget))
+    , m_pCtrl(&_rCtrl)
+    , m_bRelease(true)
+    , m_xFrame(_xFrame)
+{
+    m_xWidget->set_size_request(150, -1);
+
+    m_xWidget->make_sorted();
+    m_xWidget->freeze();
+    for (sal_uInt16 i = 0; i < NID_COUNT; i++)
+         m_xWidget->append(OUString::number(aNavigationInsertIds[i]), SwResId(aNavigationStrIds[i]), aNavigationImgIds[i]);
+    m_xWidget->thaw();
+
+    m_xWidget->connect_changed(LINK(this, NavElementBox_Base, SelectHdl));
+    m_xWidget->connect_key_press(LINK(this, NavElementBox_Base, KeyInputHdl));
 }
 
 NavElementBox_Impl::NavElementBox_Impl(
     vcl::Window*                                      _pParent,
     const uno::Reference< frame::XFrame >&            _xFrame,
-    NavElementToolBoxControl&                         _rCtrl ) :
-
-    ListBox( _pParent, WinBits( WB_DROPDOWN ) ),
-
-    m_pCtrl             ( &_rCtrl ),
-    m_bRelease          ( true ),
-    m_xFrame            ( _xFrame )
+    NavElementToolBoxControl&                         _rCtrl )
+    : InterimItemWindow(_pParent, "modules/swriter/ui/combobox.ui", "ComboBox")
+    , NavElementBox_Base(m_xBuilder->weld_combo_box("combobox"), _xFrame, _rCtrl)
 {
-    SetSizePixel( Size( 150, 260 ) );
-
-    sal_uInt16 i;
-    for ( i = 0; i < NID_COUNT; i++ )
-    {
-        sal_uInt16 nNaviId = aNavigationInsertIds[i];
-        if ( ( NID_PREV != nNaviId ) && ( NID_NEXT != nNaviId ) )
-            InsertEntry( SwResId( aNavigationStrIds[i] ), Image( StockImage::Yes, aNavigationImgIds[i] ) );
-    }
+    SetSizePixel(m_xContainer->get_preferred_size());
 }
 
-void NavElementBox_Impl::ReleaseFocus_Impl()
+void NavElementBox_Base::ReleaseFocus_Impl()
 {
     if ( !m_bRelease )
     {
@@ -854,20 +715,13 @@ void NavElementBox_Impl::ReleaseFocus_Impl()
         m_xFrame->getContainerWindow()->setFocus();
 }
 
-void NavElementBox_Impl::Select()
+IMPL_LINK(NavElementBox_Base, SelectHdl, weld::ComboBox&, rComboBox, void)
 {
-    ListBox::Select();
-
-    if ( !IsTravelSelect() )
+    if (rComboBox.changed_by_direct_pick())  // only when picked from the list
     {
         SvxSearchDialogWrapper::SetSearchLabel( SearchLabel::Empty );
 
-        sal_uInt16 nPos = GetSelectedEntryPos();
-        // adjust array index for Ids after NID_PREV in aNavigationInsertIds
-        if ( nPos >= NID_COUNT/2 - 1 )
-            ++nPos;
-
-        sal_uInt16 nMoveType = aNavigationInsertIds[nPos];
+        sal_uInt16 nMoveType = rComboBox.get_active_id().toUInt32();
         SwView::SetMoveType( nMoveType );
 
         css::uno::Sequence< css::beans::PropertyValue > aArgs;
@@ -881,7 +735,7 @@ void NavElementBox_Impl::Select()
     }
 }
 
-void NavElementBox_Impl::Update()
+void NavElementBox_Base::UpdateBox()
 {
     sal_uInt16 nMoveType = SwView::GetMoveType();
     for ( size_t i = 0; i < SAL_N_ELEMENTS( aNavigationInsertIds ); ++i )
@@ -890,42 +744,52 @@ void NavElementBox_Impl::Update()
         {
             const char* id = aNavigationStrIds[i];
             OUString sText = SwResId( id );
-            SelectEntry( sText );
+            m_xWidget->set_active_text(sText);
             break;
         }
     }
 }
 
-bool NavElementBox_Impl::EventNotify( NotifyEvent& rNEvt )
+IMPL_LINK(NavElementBox_Base, KeyInputHdl, const KeyEvent&, rKEvt, bool)
+{
+    return DoKeyInput(rKEvt);
+}
+
+bool NavElementBox_Base::DoKeyInput(const KeyEvent& rKEvt)
 {
     bool bHandled = false;
 
-    if ( rNEvt.GetType() == MouseNotifyEvent::KEYINPUT )
+    vcl::KeyCode aKeyCode = rKEvt.GetKeyCode();
+    sal_uInt16 nCode = aKeyCode.GetCode();
+
+    switch ( nCode )
     {
-        sal_uInt16 nCode = rNEvt.GetKeyEvent()->GetKeyCode().GetCode();
-
-        switch ( nCode )
+        case KEY_TAB:
         {
-            case KEY_RETURN:
-            case KEY_TAB:
-            {
-                if ( KEY_TAB == nCode )
-                    m_bRelease = false;
-                else
-                    bHandled = true;
-                Select();
-                break;
-            }
-
-            case KEY_ESCAPE:
-                ReleaseFocus_Impl();
-                bHandled = true;
-                break;
+            m_bRelease = false;
+            SelectHdl(*m_xWidget);
+            break;
         }
+        case KEY_RETURN:
+        {
+            bHandled = true;
+            SelectHdl(*m_xWidget);
+            break;
+        }
+        case KEY_ESCAPE:
+            ReleaseFocus_Impl();
+            bHandled = true;
+            break;
     }
 
-    return bHandled || ListBox::EventNotify( rNEvt );
+    return bHandled;
 }
+
+bool NavElementBox_Impl::DoKeyInput(const KeyEvent& rKEvt)
+{
+    return NavElementBox_Base::DoKeyInput(rKEvt) || ChildKeyInput(rKEvt);
+}
+
 
 NavElementToolBoxControl::NavElementToolBoxControl( const uno::Reference< uno::XComponentContext >& rxContext )
  : svt::ToolboxController( rxContext,
@@ -977,24 +841,26 @@ void SAL_CALL NavElementToolBoxControl::dispose()
     svt::ToolboxController::dispose();
 
     SolarMutexGuard aSolarMutexGuard;
-    m_pBox.disposeAndClear();
+    m_xVclBox.disposeAndClear();
+    m_xWeldBox.reset();
+    m_pBox = nullptr;
 }
 
 // XStatusListener
 void SAL_CALL NavElementToolBoxControl::statusChanged( const frame::FeatureStateEvent& rEvent )
 {
-    if ( m_pBox )
+    if (m_pBox)
     {
         SolarMutexGuard aSolarMutexGuard;
         if ( rEvent.FeatureURL.Path == "NavElement" )
         {
             if ( rEvent.IsEnabled )
             {
-                m_pBox->Enable();
-                m_pBox->Update();
+                m_pBox->set_sensitive(true);
+                m_pBox->UpdateBox();
             }
             else
-                m_pBox->Disable();
+                m_pBox->set_sensitive(true);
         }
     }
 }
@@ -1022,15 +888,28 @@ uno::Reference< awt::XWindow > SAL_CALL NavElementToolBoxControl::createItemWind
 {
     uno::Reference< awt::XWindow > xItemWindow;
 
-    VclPtr<vcl::Window> pParent = VCLUnoHelper::GetWindow( xParent );
-    if ( pParent )
+    if (m_pBuilder)
     {
         SolarMutexGuard aSolarMutexGuard;
-        m_pBox = VclPtr<NavElementBox_Impl>::Create( pParent, m_xFrame, *this );
-        xItemWindow = VCLUnoHelper::GetInterface( m_pBox );
-    }
 
-    uno::Reference< util::XURLTransformer > xURLTransformer = getURLTransformer();
+        std::unique_ptr<weld::ComboBox> xWidget(m_pBuilder->weld_combo_box("NavElementWidget"));
+
+        xItemWindow = css::uno::Reference<css::awt::XWindow>(new weld::TransportAsXWindow(xWidget.get()));
+
+        m_xWeldBox.reset(new NavElementBox_Base(std::move(xWidget), m_xFrame, *this));
+        m_pBox = m_xWeldBox.get();
+    }
+    else
+    {
+        VclPtr<vcl::Window> pParent = VCLUnoHelper::GetWindow( xParent );
+        if ( pParent )
+        {
+            SolarMutexGuard aSolarMutexGuard;
+            m_xVclBox = VclPtr<NavElementBox_Impl>::Create( pParent, m_xFrame, *this );
+            m_pBox = m_xVclBox.get();
+            xItemWindow = VCLUnoHelper::GetInterface(m_xVclBox);
+        }
+    }
 
     return xItemWindow;
 }
@@ -1084,15 +963,11 @@ public:
     // XComponent
     virtual void SAL_CALL dispose() override;
 
-    // XToolbarController
-    virtual void SAL_CALL execute( sal_Int16 /* KeyModifier */ ) override;
-    virtual void SAL_CALL click() override;
-
     // XStatusListener
     virtual void SAL_CALL statusChanged( const css::frame::FeatureStateEvent& rEvent ) override;
 
 private:
-    Type const                 meType;
+    Type                     meType;
 };
 
 }
@@ -1152,40 +1027,20 @@ void SAL_CALL PrevNextScrollToolboxController::dispose()
     svt::ToolboxController::dispose();
 }
 
-// XToolbarController
-void SAL_CALL PrevNextScrollToolboxController::execute( sal_Int16 /* KeyModifier */ )
-{
-}
-
-void SAL_CALL PrevNextScrollToolboxController::click()
-{
-    uno::Sequence< beans::PropertyValue > rArgs;
-
-    uno::Reference< frame::XDispatchProvider > xDispatchProvider( m_xFrame, uno::UNO_QUERY );
-    if ( xDispatchProvider.is() )
-    {
-        util::URL                               aURL;
-        uno::Reference< frame::XDispatch >      xDispatch;
-        uno::Reference< util::XURLTransformer > xURLTransformer = getURLTransformer();
-
-        aURL.Complete = getCommandURL();
-        xURLTransformer->parseStrict( aURL );
-        xDispatch = xDispatchProvider->queryDispatch( aURL, OUString(), 0 );
-        if ( xDispatch.is() )
-            xDispatch->dispatch( aURL, rArgs );
-    }
-}
-
 // XStatusListener
 void SAL_CALL PrevNextScrollToolboxController::statusChanged( const css::frame::FeatureStateEvent& rEvent )
 {
-    if ( rEvent.FeatureURL.Path == "NavElement" )
+    if (rEvent.FeatureURL.Path == "NavElement")
     {
-        ToolBox* pToolBox = nullptr;
-        sal_uInt16 nId = 0;
-        if ( getToolboxId( nId, &pToolBox ) )
-            pToolBox->SetQuickHelpText( nId, ( meType == PrevNextScrollToolboxController::PREVIOUS?SwScrollNaviPopup::GetToolTip( false ):
-                                                                                                   SwScrollNaviPopup::GetToolTip( true ) ) );
+        if (m_pToolbar)
+            m_pToolbar->set_item_tooltip_text(m_aCommandURL.toUtf8(), lcl_GetScrollToolTip(meType != PrevNextScrollToolboxController::PREVIOUS));
+        else
+        {
+            ToolBox* pToolBox = nullptr;
+            sal_uInt16 nId = 0;
+            if (getToolboxId(nId, &pToolBox))
+                pToolBox->SetQuickHelpText(nId, lcl_GetScrollToolTip(meType != PrevNextScrollToolboxController::PREVIOUS));
+        }
     }
 }
 

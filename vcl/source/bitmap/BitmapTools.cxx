@@ -46,11 +46,20 @@ namespace vcl::bitmap
 
 BitmapEx loadFromName(const OUString& rFileName, const ImageLoadFlags eFlags)
 {
+    bool bSuccess = true;
+    OUString aIconTheme;
     BitmapEx aBitmapEx;
+    try
+    {
+        aIconTheme = Application::GetSettings().GetStyleSettings().DetermineIconTheme();
+        ImageTree::get().loadImage(rFileName, aIconTheme, aBitmapEx, true, eFlags);
+    }
+    catch (...)
+    {
+        bSuccess = false;
+    }
 
-    OUString aIconTheme = Application::GetSettings().GetStyleSettings().DetermineIconTheme();
-
-    ImageTree::get().loadImage(rFileName, aIconTheme, aBitmapEx, true, eFlags);
+    SAL_WARN_IF(!bSuccess, "vcl", "vcl::bitmap::loadFromName : could not load image " << rFileName << " via icon theme " << aIconTheme);
 
     return aBitmapEx;
 }
@@ -371,7 +380,7 @@ BitmapEx CanvasTransformBitmap( const BitmapEx&                 rBitmap,
     const Size aDestBmpSize( ::basegfx::fround( rDestRect.getWidth() ),
                              ::basegfx::fround( rDestRect.getHeight() ) );
 
-    if( aDestBmpSize.Width() == 0 || aDestBmpSize.Height() == 0 )
+    if( aDestBmpSize.IsEmpty() )
         return BitmapEx();
 
     Bitmap aDstBitmap( aDestBmpSize, aSrcBitmap.GetBitCount(), &pReadAccess->GetPalette() );

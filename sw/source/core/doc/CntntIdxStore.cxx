@@ -34,6 +34,7 @@
 #include <sal/types.h>
 #include <unocrsr.hxx>
 #include <txtfrm.hxx>
+#include <frameformats.hxx>
 #include <memory>
 
 using namespace ::boost;
@@ -84,8 +85,8 @@ namespace
     struct PaMEntry
     {
         SwPaM* m_pPaM;
-        bool const m_isMark;
-        sal_Int32 const m_nContent;
+        bool m_isMark;
+        sal_Int32 m_nContent;
     };
     struct OffsetUpdater
     {
@@ -441,10 +442,15 @@ void ContentIdxStoreImpl::SaveShellCursors(SwDoc* pDoc, sal_uLong nNode, sal_Int
         {
             SwPaM *_pStackCursor = static_cast<SwCursorShell*>(&rCurShell)->GetStackCursor();
             if( _pStackCursor )
-                do {
+                for (;;)
+                {
                     lcl_ChkPaMBoth( m_aShellCursorEntries, nNode, nContent, *_pStackCursor);
-                } while ( (_pStackCursor != nullptr ) &&
-                    ((_pStackCursor = _pStackCursor->GetNext()) != static_cast<SwCursorShell*>(&rCurShell)->GetStackCursor()) );
+                    if (!_pStackCursor)
+                        break;
+                    _pStackCursor = _pStackCursor->GetNext();
+                    if (_pStackCursor == static_cast<SwCursorShell*>(&rCurShell)->GetStackCursor())
+                        break;
+                }
 
             for(SwPaM& rPaM : static_cast<SwCursorShell*>(&rCurShell)->GetCursor_()->GetRingContainer())
             {

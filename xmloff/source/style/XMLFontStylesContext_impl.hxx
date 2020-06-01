@@ -22,9 +22,9 @@
 
 #include <xmloff/xmlstyle.hxx>
 
-namespace com { namespace sun { namespace star { namespace io {
+namespace com::sun::star::io {
     class XOutputStream;
-} } } }
+}
 
 /// Handles <style:font-face>
 class XMLFontStyleContextFontFace : public SvXMLStyleContext
@@ -35,7 +35,7 @@ class XMLFontStyleContextFontFace : public SvXMLStyleContext
     css::uno::Any aPitch;
     css::uno::Any aEnc;
 
-    SvXMLImportContextRef const xStyles;
+    SvXMLImportContextRef xStyles;
 
     XMLFontStylesContext *GetStyles()
     {

@@ -154,13 +154,16 @@ SwDoc::InsertSwSection(SwPaM const& rRange, SwSectionData & rNewData,
 {
     const SwNode* pPrvNd = nullptr;
     sal_uInt16 nRegionRet = 0;
-    if( rRange.HasMark() &&
-        0 == ( nRegionRet = IsInsRegionAvailable( rRange, &pPrvNd ) ))
+    if( rRange.HasMark() )
     {
-        // demoted to info because this is called from SwXTextSection::attach,
-        // so it could be invalid input
-        SAL_INFO("sw.core" , "InsertSwSection: rRange overlaps other sections");
-        return nullptr;
+        nRegionRet = IsInsRegionAvailable( rRange, &pPrvNd );
+        if( 0 == nRegionRet )
+        {
+            // demoted to info because this is called from SwXTextSection::attach,
+            // so it could be invalid input
+            SAL_INFO("sw.core" , "InsertSwSection: rRange overlaps other sections");
+            return nullptr;
+        }
     }
 
     // See if the whole Document should be hidden, which we currently are not able to do.
@@ -409,8 +412,8 @@ sal_uInt16 SwDoc::IsInsRegionAvailable( const SwPaM& rRange,
                 const SwStartNode* pPrvNd;
                 const SwEndNode* pNxtNd;
                 while( nullptr != ( pPrvNd = (pNd = &aIdx.GetNode())->GetSectionNode() ) &&
-                    !( aIdx.GetIndex() < nCmp &&
-                        nCmp < pPrvNd->EndOfSectionIndex() ) )
+                    ( aIdx.GetIndex() >= nCmp ||
+                        nCmp >= pPrvNd->EndOfSectionIndex() ) )
                 {
                     --aIdx;
                 }
@@ -422,8 +425,8 @@ sal_uInt16 SwDoc::IsInsRegionAvailable( const SwPaM& rRange,
                 nCmp = pStt->nNode.GetIndex();
                 while( nullptr != ( pNxtNd = (pNd = &aIdx.GetNode())->GetEndNode() ) &&
                     pNxtNd->StartOfSectionNode()->IsSectionNode() &&
-                    !( pNxtNd->StartOfSectionIndex() < nCmp &&
-                        nCmp < aIdx.GetIndex() ) )
+                    ( pNxtNd->StartOfSectionIndex() >= nCmp ||
+                        nCmp >= aIdx.GetIndex() ) )
                 {
                     ++aIdx;
                 }
@@ -780,14 +783,14 @@ SwSectionNode* SwNodes::InsertTextSection(SwNodeIndex const& rNdIdx,
                                 SwSectionFormat& rSectionFormat,
                                 SwSectionData const& rSectionData,
                                 SwTOXBase const*const pTOXBase,
-                                SwNodeIndex const*const pEnde,
+                                SwNodeIndex const*const pEnd,
                                 bool const bInsAtStart, bool const bCreateFrames)
 {
     SwNodeIndex aInsPos( rNdIdx );
-    if( !pEnde ) // No Area, thus create a new Section before/after it
+    if( !pEnd ) // No Area, thus create a new Section before/after it
     {
         // #i26762#
-        OSL_ENSURE(!pEnde || rNdIdx <= *pEnde,
+        OSL_ENSURE(!pEnd || rNdIdx <= *pEnd,
                "Section start and end in wrong order!");
 
         if( bInsAtStart )
@@ -818,11 +821,11 @@ SwSectionNode* SwNodes::InsertTextSection(SwNodeIndex const& rNdIdx,
 
     SwSectionNode *const pSectNd =
             new SwSectionNode(aInsPos, rSectionFormat, pTOXBase);
-    if( pEnde )
+    if( pEnd )
     {
         // Special case for the Reader/Writer
-        if( &pEnde->GetNode() != &GetEndOfContent() )
-            aInsPos = pEnde->GetIndex()+1;
+        if( &pEnd->GetNode() != &GetEndOfContent() )
+            aInsPos = pEnd->GetIndex()+1;
         // #i58710: We created a RTF document with a section break inside a table cell
         // We are not able to handle a section start inside a table and the section end outside.
         const SwNode* pLastNode = pSectNd->StartOfSectionNode()->EndOfSectionNode();
@@ -899,10 +902,10 @@ SwSectionNode* SwNodes::InsertTextSection(SwNodeIndex const& rNdIdx,
     }
 
     // Set the right StartNode for all in this Area
-    sal_uLong nEnde = pSectNd->EndOfSectionIndex();
+    sal_uLong nEnd = pSectNd->EndOfSectionIndex();
     sal_uLong nStart = pSectNd->GetIndex()+1;
     sal_uLong nSkipIdx = ULONG_MAX;
-    for( sal_uLong n = nStart; n < nEnde; ++n )
+    for( sal_uLong n = nStart; n < nEnd; ++n )
     {
         SwNode* pNd = (*this)[n];
 
@@ -935,7 +938,7 @@ SwSectionNode* SwNodes::InsertTextSection(SwNodeIndex const& rNdIdx,
             static_cast<SwContentNode*>(pNd)->DelFrames(nullptr);
     }
 
-    sw_DeleteFootnote( pSectNd, nStart, nEnde );
+    sw_DeleteFootnote( pSectNd, nStart, nEnd );
 
     if( bInsFrame )
     {
@@ -1315,8 +1318,8 @@ void SwSectionNode::NodesArrChgd()
                                   : pDoc->GetDfltFrameFormat() );
 
     // Set the right StartNode for all in this Area
-    sal_uLong nStart = GetIndex()+1, nEnde = EndOfSectionIndex();
-    for( sal_uLong n = nStart; n < nEnde; ++n )
+    sal_uLong nStart = GetIndex()+1, nEnd = EndOfSectionIndex();
+    for( sal_uLong n = nStart; n < nEnd; ++n )
         // Make up the Format's nesting
         if( nullptr != ( pSectNd = rNds[ n ]->GetSectionNode() ) )
         {

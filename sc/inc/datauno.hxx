@@ -50,9 +50,9 @@
 
 #include <vector>
 
-namespace com { namespace sun { namespace star { namespace sheet { struct TableFilterField2; } } } }
-namespace com { namespace sun { namespace star { namespace sheet { struct TableFilterField3; } } } }
-namespace com { namespace sun { namespace star { namespace sheet { struct TableFilterField; } } } }
+namespace com::sun::star::sheet { struct TableFilterField2; }
+namespace com::sun::star::sheet { struct TableFilterField3; }
+namespace com::sun::star::sheet { struct TableFilterField; }
 
 class ScDBData;
 class ScDocShell;
@@ -115,7 +115,7 @@ class ScSubTotalDescriptorBase : public cppu::WeakImplHelper<
                                         css::lang::XServiceInfo >
 {
 private:
-    SfxItemPropertySet const aPropSet;
+    SfxItemPropertySet      aPropSet;
 
     ScSubTotalFieldObj*     GetObjectByIndex_Impl(sal_uInt16 nIndex);
 
@@ -281,7 +281,7 @@ class ScFilterDescriptorBase : public cppu::WeakImplHelper<
                                public SfxListener
 {
 private:
-    SfxItemPropertySet const aPropSet;
+    SfxItemPropertySet      aPropSet;
     ScDocShell*             pDocSh;
 
 public:
@@ -403,11 +403,11 @@ class ScDatabaseRangeObj : public cppu::WeakImplHelper<
 private:
     ScDocShell*             pDocShell;
     OUString                aName;
-    SfxItemPropertySet const aPropSet;
+    SfxItemPropertySet      aPropSet;
     std::vector< css::uno::Reference< css::util::XRefreshListener > >
                             aRefreshListeners;
-    bool const              bIsUnnamed;
-    SCTAB const             aTab;
+    bool                    bIsUnnamed;
+    SCTAB                   aTab;
 
 private:
     ScDBData*               GetDBData_Impl() const;

@@ -34,13 +34,13 @@
 #include <tools/poly.hxx>
 
 
-namespace com { namespace sun { namespace star { namespace uno { template <typename > class Sequence; } } } }
+namespace com::sun::star::uno { template <typename > class Sequence; }
 
-namespace com { namespace sun { namespace star { namespace uno {
+namespace com::sun::star::uno {
     class XInterface;
-}}}}
+}
 
-namespace com { namespace sun { namespace star { namespace awt {
+namespace com::sun::star::awt {
     class XBitmap;
     class XWindow;
     class XWindow2;
@@ -57,7 +57,7 @@ namespace com { namespace sun { namespace star { namespace awt {
     struct FontDescriptor;
     struct Rectangle;
     struct KeyEvent;
-}}}}
+}
 
 
 class FontMetric;
@@ -76,6 +76,7 @@ public:
     // Bitmap
     static BitmapEx                                                         GetBitmap( const css::uno::Reference< css::awt::XBitmap>& rxBitmap );
     static css::uno::Reference< css::awt::XBitmap>    CreateBitmap( const BitmapEx& rBitmap );
+    static css::uno::Reference< css::awt::XBitmap>    CreateVCLXBitmap( const BitmapEx& rBitmap );
 
     // Window
     static VclPtr< vcl::Window >                                                          GetWindow( const css::uno::Reference< css::awt::XWindow>& rxWindow );

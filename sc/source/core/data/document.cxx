@@ -266,7 +266,7 @@ bool ScDocument::GetTable( const OUString& rName, SCTAB& rTab ) const
     {
         aCacheName = rName;
         // surprisingly slow ...
-        aCacheUpperName = ScGlobal::pCharClass->uppercase(rName);
+        aCacheUpperName = ScGlobal::getCharClassPtr()->uppercase(rName);
     }
     aUpperName = aCacheUpperName;
 
@@ -375,7 +375,7 @@ bool ScDocument::ValidNewTabName( const OUString& rName ) const
     bool bValid = ValidTabName(rName);
     if (!bValid)
         return false;
-    OUString aUpperName = ScGlobal::pCharClass->uppercase(rName);
+    OUString aUpperName = ScGlobal::getCharClassPtr()->uppercase(rName);
     for (const auto& a : maTabs)
     {
         if (!a)
@@ -1238,8 +1238,8 @@ struct BroadcastRecalcOnRefMoveGuard
     }
 
 private:
-    sc::AutoCalcSwitch const aSwitch; // first for ctor/dtor order, destroy second
-    ScBulkBroadcast const aBulk;      // second for ctor/dtor order, destroy first
+    sc::AutoCalcSwitch aSwitch; // first for ctor/dtor order, destroy second
+    ScBulkBroadcast aBulk;      // second for ctor/dtor order, destroy first
 };
 
 }
@@ -5323,7 +5323,8 @@ void ScDocument::UnlockTable(SCTAB nTab)
 
 bool ScDocument::IsBlockEditable( SCTAB nTab, SCCOL nStartCol, SCROW nStartRow,
                                         SCCOL nEndCol, SCROW nEndRow,
-                                        bool* pOnlyNotBecauseOfMatrix /* = NULL */ ) const
+                                        bool* pOnlyNotBecauseOfMatrix /* = NULL */,
+                                        bool bNoMatrixAtAll ) const
 {
     // import into read-only document is possible
     if (!bImportingXML && !mbChangeReadOnlyEnabled && mpShell && mpShell->IsReadOnly())
@@ -5336,7 +5337,7 @@ bool ScDocument::IsBlockEditable( SCTAB nTab, SCCOL nStartCol, SCROW nStartRow,
     if (ValidTab(nTab) && nTab < static_cast<SCTAB>(maTabs.size()))
         if (maTabs[nTab])
             return maTabs[nTab]->IsBlockEditable( nStartCol, nStartRow, nEndCol,
-                nEndRow, pOnlyNotBecauseOfMatrix );
+                nEndRow, pOnlyNotBecauseOfMatrix, bNoMatrixAtAll );
 
     OSL_FAIL("wrong table number");
     if ( pOnlyNotBecauseOfMatrix )

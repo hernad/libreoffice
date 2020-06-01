@@ -89,7 +89,7 @@ namespace {
 
 void lclUpdateProgressBar( const ISegmentProgressBarRef& rxProgressBar, double fPosition )
 {
-    if( rxProgressBar.get() )
+    if( rxProgressBar )
         rxProgressBar->setPosition( fPosition );
 }
 
@@ -384,7 +384,7 @@ private:
     bool                   mbFastRowProgress; /// Do we have a progress bar thread ?
     ISegmentProgressBarRef mxRowProgress;   /// Progress bar for row/cell processing.
     ISegmentProgressBarRef mxFinalProgress; /// Progress bar for finalization.
-    WorksheetType const       meSheetType;        /// Type of this sheet.
+    WorksheetType       meSheetType;        /// Type of this sheet.
     Reference< XSpreadsheet > mxSheet;      /// Reference to the current sheet.
     bool                mbHasDefWidth;      /// True = default column width is set from defaultColWidth attribute.
 };
@@ -433,7 +433,7 @@ WorksheetGlobals::WorksheetGlobals( const WorkbookHelper& rHelper, const ISegmen
     mxVmlDrawing.reset( new VmlDrawing( *this ) );
 
     // prepare progress bars
-    if( mxProgressBar.get() )
+    if( mxProgressBar )
     {
         mxRowProgress = mxProgressBar->createSegment( 0.5 );
         mxFinalProgress = mxProgressBar->createSegment( 0.5 );

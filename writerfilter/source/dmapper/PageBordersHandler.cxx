@@ -17,6 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include "BorderHandler.hxx"
 #include "PageBordersHandler.hxx"
 
 #include <ooxml/resourceids.hxx>
@@ -91,7 +92,7 @@ void PageBordersHandler::lcl_sprm( Sprm& rSprm )
         case NS_ooxml::LN_CT_PageBorders_right:
         {
             writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-            if( pProperties.get())
+            if( pProperties )
             {
                 auto pBorderHandler = std::make_shared<BorderHandler>( true );
                 pProperties->resolve(*pBorderHandler);

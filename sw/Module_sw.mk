@@ -80,6 +80,7 @@ $(eval $(call gb_Module_add_slowcheck_targets,sw,\
     CppunitTest_sw_ooxmlexport12 \
     CppunitTest_sw_ooxmlexport13 \
     CppunitTest_sw_ooxmlexport14 \
+    CppunitTest_sw_ooxmlexport15 \
     CppunitTest_sw_ooxmlexport_template \
     CppunitTest_sw_ooxmlfieldexport \
     CppunitTest_sw_ooxmllinks \
@@ -102,12 +103,18 @@ $(eval $(call gb_Module_add_slowcheck_targets,sw,\
     CppunitTest_sw_mailmerge \
     CppunitTest_sw_globalfilter \
     CppunitTest_sw_accessible_relation_set \
+    CppunitTest_sw_apiterminate \
     CppunitTest_sw_apitests \
     CppunitTest_sw_unowriter \
     CppunitTest_sw_core_text \
     CppunitTest_sw_core_doc \
     CppunitTest_sw_uibase_shells \
+    CppunitTest_sw_uibase_dochdl \
     CppunitTest_sw_core_accessibilitycheck \
+    CppunitTest_sw_core_layout \
+    CppunitTest_sw_core_frmedt \
+    CppunitTest_sw_core_txtnode \
+    CppunitTest_sw_core_objectpositioning \
 ))
 
 ifneq ($(DISABLE_GUI),TRUE)
@@ -125,7 +132,6 @@ $(eval $(call gb_Module_add_slowcheck_targets,sw,\
 ))
 endif
 
-ifneq ($(OOO_JUNIT_JAR),)
 $(eval $(call gb_Module_add_subsequentcheck_targets,sw,\
     JunitTest_sw_complex \
     JunitTest_sw_unoapi_1 \
@@ -133,13 +139,10 @@ $(eval $(call gb_Module_add_subsequentcheck_targets,sw,\
     JunitTest_sw_unoapi_3 \
     JunitTest_sw_unoapi_4 \
 ))
-endif
 
-ifneq ($(DISABLE_PYTHON),TRUE)
 $(eval $(call gb_Module_add_subsequentcheck_targets,sw,\
 	PythonTest_sw_python \
 ))
-endif
 
 # screenshots
 $(eval $(call gb_Module_add_screenshot_targets,sw,\
@@ -161,6 +164,7 @@ $(eval $(call gb_Module_add_uicheck_targets,sw,\
 	UITest_chapterNumbering \
 	UITest_librelogo \
 	UITest_options \
+	UITest_sw_ui_fmtui \
 	UITest_classification \
 	UITest_writer_macro_tests \
 	UITest_writer_dialogs \

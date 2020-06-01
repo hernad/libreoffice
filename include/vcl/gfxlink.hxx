@@ -28,25 +28,32 @@
 
 class SvStream;
 
+/** GfxLink graphic types that are supported by GfxLink.
+ *
+ * It is important that the numbers for native types stay the same, because
+ * they are used in serialization to MTF.
+ */
 enum class GfxLinkType
 {
     NONE         = 0,
     EpsBuffer    = 1,
-    NativeGif    = 2,    // Don't forget to update the following defines
-    NativeJpg    = 3,    // Don't forget to update the following defines
-    NativePng    = 4,    // Don't forget to update the following defines
-    NativeTif    = 5,    // Don't forget to update the following defines
-    NativeWmf    = 6,    // Don't forget to update the following defines
-    NativeMet    = 7,    // Don't forget to update the following defines
-    NativePct    = 8,    // Don't forget to update the following defines
-    NativeSvg    = 9,    // Don't forget to update the following defines
-    NativeMov    = 10,   // Don't forget to update the following defines
+    NativeGif    = 2,
+    NativeJpg    = 3,
+    NativePng    = 4,
+    NativeTif    = 5,
+    NativeWmf    = 6,
+    NativeMet    = 7,
+    NativePct    = 8,
+    NativeSvg    = 9,
+    NativeMov    = 10,
     NativeBmp    = 11,
-    NativePdf    = 12    // Don't forget to update the following defines
-};
+    NativePdf    = 12, // If a new type is added, make sure to change NativeLast too
 
-#define GFX_LINK_FIRST_NATIVE_ID    GfxLinkType::NativeGif
-#define GFX_LINK_LAST_NATIVE_ID     GfxLinkType::NativePdf
+    // Alias for when the first native type starts and last native
+    // type ends.
+    NativeFirst  = NativeGif,
+    NativeLast   = NativePdf,
+};
 
 class Graphic;
 
@@ -55,9 +62,8 @@ class VCL_DLLPUBLIC GfxLink
 private:
     GfxLinkType     meType;
     sal_uInt32      mnUserId;
-
     mutable std::shared_ptr<sal_uInt8> mpSwapInData;
-
+    mutable size_t  maHash;
     sal_uInt32      mnSwapInDataSize;
     MapMode         maPrefMapMode;
     Size            maPrefSize;
@@ -74,6 +80,8 @@ public:
     bool                operator==( const GfxLink& ) const;
 
     GfxLinkType         GetType() const { return meType;}
+
+    size_t              GetHash() const;
 
     void                SetUserId( sal_uInt32 nUserId ) { mnUserId = nUserId; }
     sal_uInt32          GetUserId() const { return mnUserId; }
@@ -96,10 +104,6 @@ public:
     bool                ExportNative( SvStream& rOStream ) const;
 
     bool                IsEMF() const; // WMF & EMF stored under the same type (NativeWmf)
-public:
-
-    friend SvStream&  WriteGfxLink( SvStream& rOStream, const GfxLink& rGfxLink );
-    friend SvStream&  ReadGfxLink( SvStream& rIStream, GfxLink& rGfxLink );
 };
 
 #endif

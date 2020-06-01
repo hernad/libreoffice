@@ -22,7 +22,7 @@
 #include <memory>
 #include <com/sun/star/frame/XFrame.hpp>
 
-#include <svx/sidebar/PanelLayout.hxx>
+#include <sfx2/sidebar/PanelLayout.hxx>
 
 #include <sfx2/sidebar/ControllerItem.hxx>
 
@@ -39,7 +39,7 @@
 
 class List;
 class ColorListBox;
-namespace sw { namespace sidebar {
+namespace sw::sidebar {
 
 class PageStylesPanel:
     public PanelLayout,
@@ -55,6 +55,10 @@ public:
         const sal_uInt16 nSId,
         const SfxItemState eState,
         const SfxPoolItem* pState) override;
+
+    virtual void GetControlState(
+        const sal_uInt16 /*nSId*/,
+        boost::property_tree::ptree& /*rState*/) override {};
 
     SfxBindings* GetBindings() const { return mpBindings; }
     PageStylesPanel(
@@ -112,7 +116,7 @@ private:
     DECL_LINK( ModifyFillColorListHdl, ColorListBox&, void );
 };
 
-} } //end of namespace sw::sidebar
+} //end of namespace sw::sidebar
 
 #endif
 

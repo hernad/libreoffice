@@ -36,7 +36,6 @@
 
 #include <vcl/svapp.hxx>
 
-using css::uno::RuntimeException;
 using css::uno::Reference;
 using css::uno::Exception;
 using css::uno::UNO_QUERY;
@@ -452,7 +451,7 @@ void SVTXGridControl::impl_checkTableModelInit()
 
 namespace
 {
-    void lcl_convertColor( ::o3tl::optional< ::Color > const & i_color, Any & o_colorValue )
+    void lcl_convertColor( ::std::optional< ::Color > const & i_color, Any & o_colorValue )
     {
         if ( !i_color )
             o_colorValue.clear();
@@ -535,7 +534,7 @@ Any SVTXGridControl::getProperty( const OUString& PropertyName )
 
     case BASEPROPERTY_GRID_ROW_BACKGROUND_COLORS:
     {
-        ::o3tl::optional< ::std::vector< ::Color > > aColors( m_xTableModel->getRowBackgroundColors() );
+        ::std::optional< ::std::vector< ::Color > > aColors( m_xTableModel->getRowBackgroundColors() );
         if ( !aColors )
             aPropertyValue.clear();
         else

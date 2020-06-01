@@ -741,6 +741,7 @@ ScInputHandler::ScInputHandler()
         nTipVisibleSec( nullptr ),
         nFormSelStart( 0 ),
         nFormSelEnd( 0 ),
+        nCellPercentFormatDecSep( 0 ),
         nAutoPar( 0 ),
         eMode( SC_INPUT_NONE ),
         bUseTab( false ),
@@ -755,7 +756,6 @@ ScInputHandler::ScInputHandler()
         bCommandErrorShown( false ),
         bInOwnChange( false ),
         bProtected( false ),
-        bCellHasPercentFormat( false ),
         bLastIsSymbol( false ),
         mbDocumentDisposing(false),
         nValidation( 0 ),
@@ -775,6 +775,12 @@ ScInputHandler::ScInputHandler()
     pDelayTimer.reset( new Timer( "ScInputHandlerDelay timer" ) );
     pDelayTimer->SetTimeout( 500 ); // 500 ms delay
     pDelayTimer->SetInvokeHandler( LINK( this, ScInputHandler, DelayTimer ) );
+
+    if (comphelper::LibreOfficeKit::isActive())
+    {
+        ScInputHandler::bOptLoaded = true;            // Evaluate App options
+        ScInputHandler::bAutoComplete = true;         // Is set in KeyInput
+    }
 }
 
 ScInputHandler::~ScInputHandler()
@@ -1156,7 +1162,14 @@ void ScInputHandler::ShowArgumentsTip( OUString& rSelText )
                                 aBuf.append( " : " );
                                 aBuf.append( ppFDesc->getParameterDescription(nActive-1) );
                                 aNew = aBuf.makeStringAndClear();
-                                ShowTipBelow( aNew );
+                                if (eMode != SC_INPUT_TOP)
+                                {
+                                    ShowTipBelow( aNew );
+                                }
+                                else
+                                {
+                                    ShowTip(aNew);
+                                }
                                 bFound = true;
                             }
                         }
@@ -1253,7 +1266,7 @@ bool ScInputHandler::GetFuncName( OUString& aStart, OUString& aResult )
     if ( aStart.isEmpty() )
         return false;
 
-    aStart = ScGlobal::pCharClass->uppercase( aStart );
+    aStart = ScGlobal::getCharClassPtr()->uppercase( aStart );
     sal_Int32 nPos = aStart.getLength() - 1;
     sal_Unicode c = aStart[ nPos ];
     // fdo#75264 use maFormulaChar to check if characters are used in function names
@@ -1295,12 +1308,16 @@ namespace {
 
 void ScInputHandler::ShowFuncList( const ::std::vector< OUString > & rFuncStrVec )
 {
+    const SfxViewShell* pViewShell = SfxViewShell::Current();
     if (comphelper::LibreOfficeKit::isActive() &&
-        comphelper::LibreOfficeKit::isMobile(SfxLokHelper::getView()))
+            pViewShell && pViewShell->isLOKMobilePhone())
     {
-        SfxViewShell* pViewShell = SfxViewShell::Current();
-        if (pViewShell && rFuncStrVec.size())
+        if (rFuncStrVec.size())
         {
+            auto aPos = pFormulaData->begin();
+            sal_uInt32 nCurIndex = std::distance(aPos, miAutoPosFormula);
+            const sal_uInt32 nSize = pFormulaData->size();
+
             OUString aFuncNameStr;
             OUString aDescFuncNameStr;
             OStringBuffer aPayload;
@@ -1327,6 +1344,9 @@ void ScInputHandler::ShowFuncList( const ::std::vector< OUString > & rFuncStrVec
                     if ( !ppFDesc->getFunctionName().isEmpty() )
                     {
                         aPayload.append("{");
+                        aPayload.append("\"index\": ");
+                        aPayload.append(OString::number(nCurIndex));
+                        aPayload.append(", ");
                         aPayload.append("\"signature\": \"");
                         aPayload.append(escapeJSON(ppFDesc->getSignature()));
                         aPayload.append("\", ");
@@ -1335,6 +1355,9 @@ void ScInputHandler::ShowFuncList( const ::std::vector< OUString > & rFuncStrVec
                         aPayload.append("\"}, ");
                     }
                 }
+                ++nCurIndex;
+                if (nCurIndex == nSize)
+                    nCurIndex = 0;
             }
             sal_Int32 nLen = aPayload.getLength();
             aPayload[nLen - 2] = ' ';
@@ -1419,7 +1442,7 @@ void ScInputHandler::UseFormulaData()
             return;
 
         if ( aParagraph.getLength() > aSel.nEndPos &&
-             ( ScGlobal::pCharClass->isLetterNumeric( aParagraph, aSel.nEndPos ) ||
+             ( ScGlobal::getCharClassPtr()->isLetterNumeric( aParagraph, aSel.nEndPos ) ||
                aParagraph[ aSel.nEndPos ] == '_' ||
                aParagraph[ aSel.nEndPos ] == '.' ||
                aParagraph[ aSel.nEndPos ] == '$'   ) )
@@ -1497,6 +1520,34 @@ void completeFunction( EditView* pView, const OUString& rInsert, bool& rParInser
     {
         ESelection aSel = pView->GetSelection();
 
+        bool bNoInitialLetter = false;
+        OUString aOld = pView->GetEditEngine()->GetText(0);
+        // in case we want just insert a function and not completing
+        if ( comphelper::LibreOfficeKit::isActive() )
+        {
+            ESelection aSelRange = aSel;
+            --aSelRange.nStartPos;
+            --aSelRange.nEndPos;
+            pView->SetSelection(aSelRange);
+            pView->SelectCurrentWord();
+
+            if ( aOld == "=" )
+            {
+                bNoInitialLetter = true;
+                aSelRange.nStartPos = 1;
+                aSelRange.nEndPos = 1;
+                pView->SetSelection(aSelRange);
+            }
+            else if ( pView->GetSelected().startsWith("()") )
+            {
+                bNoInitialLetter = true;
+                ++aSelRange.nStartPos;
+                ++aSelRange.nEndPos;
+                pView->SetSelection(aSelRange);
+            }
+        }
+
+        if(!bNoInitialLetter)
         {
             const sal_Int32 nMinLen = std::max(aSel.nEndPos - aSel.nStartPos, sal_Int32(1));
             // Since transliteration service is used to test for match, the replaced string could be
@@ -1530,7 +1581,6 @@ void completeFunction( EditView* pView, const OUString& rInsert, bool& rParInser
             // Do not insert parentheses after function names if there already are some
             // (e.g. if the function name was edited).
             ESelection aWordSel = pView->GetSelection();
-            OUString aOld = pView->GetEditEngine()->GetText(0);
 
             // aWordSel.EndPos points one behind string if word at end
             if (aWordSel.nEndPos < aOld.getLength())
@@ -1587,18 +1637,40 @@ void ScInputHandler::PasteFunctionData()
         pActiveView->ShowCursor();
 }
 
-void ScInputHandler::LOKPasteFunctionData( sal_uInt32 nIndex )
+void ScInputHandler::LOKPasteFunctionData(const OUString& rFunctionName)
 {
-    if (pFormulaData  && miAutoPosFormula != pFormulaData->end() && nIndex < pFormulaData->size())
+    if (pActiveViewSh && (pTopView || pTableView))
     {
-        auto aPos = pFormulaData->begin();
-        sal_uInt32 nCurIndex = std::distance(aPos, miAutoPosFormula);
-        nIndex += nCurIndex;
-        if (nIndex >= pFormulaData->size())
-            nIndex -= pFormulaData->size();
-        std::advance(aPos, nIndex);
-        miAutoPosFormula = aPos;
-        PasteFunctionData();
+        bool bEdit = false;
+        OUString aFormula;
+        EditView* pEditView = pTopView ? pTopView : pTableView;
+        const EditEngine* pEditEngine = pEditView->GetEditEngine();
+        if (pEditEngine)
+        {
+            aFormula = pEditEngine->GetText(0);
+            bEdit = aFormula.getLength() > 1 && (aFormula[0] == '=' || aFormula[0] == '+' || aFormula[0] == '-');
+        }
+
+        if ( !bEdit )
+        {
+            OUString aNewFormula('=');
+            if ( aFormula.startsWith("=") )
+                aNewFormula = aFormula;
+
+            InputReplaceSelection( aNewFormula );
+        }
+
+        if (pFormulaData)
+        {
+            OUString aNew;
+            ScTypedCaseStrSet::const_iterator aPos = findText(*pFormulaData, pFormulaData->begin(), rFunctionName, aNew, /* backward = */false);
+
+            if (aPos != pFormulaData->end())
+            {
+                miAutoPosFormula = aPos;
+                PasteFunctionData();
+            }
+        }
     }
 }
 
@@ -2287,11 +2359,13 @@ bool ScInputHandler::StartTable( sal_Unicode cTyped, bool bFromCommand, bool bIn
                 if ( SfxItemState::SET == rAttrSet.GetItemState( ATTR_VALUE_FORMAT, true, &pItem ) )
                 {
                     sal_uInt32 nFormat = static_cast<const SfxUInt32Item*>(pItem)->GetValue();
-                    bCellHasPercentFormat = ( SvNumFormatType::PERCENT ==
-                                              rDoc.GetFormatTable()->GetType( nFormat ) );
+                    if (SvNumFormatType::PERCENT == rDoc.GetFormatTable()->GetType( nFormat ))
+                        nCellPercentFormatDecSep = rDoc.GetFormatTable()->GetFormatDecimalSep( nFormat).toChar();
+                    else
+                        nCellPercentFormatDecSep = 0;
                 }
                 else
-                    bCellHasPercentFormat = false; // Default: no percent
+                    nCellPercentFormatDecSep = 0; // Default: no percent
 
                 // Validity specified?
                 if ( SfxItemState::SET == rAttrSet.GetItemState( ATTR_VALIDDATA, true, &pItem ) )
@@ -3093,25 +3167,25 @@ void ScInputHandler::EnterHandler( ScEnterMode nBlockMode )
                 bInsertPreCorrectedString = false;
                 OUString aReplace(pAuto->GetStartDoubleQuote());
                 if( aReplace.isEmpty() )
-                    aReplace = ScGlobal::pLocaleData->getDoubleQuotationMarkStart();
+                    aReplace = ScGlobal::getLocaleDataPtr()->getDoubleQuotationMarkStart();
                 if( aReplace != "\"" )
                     aString = aString.replaceAll( aReplace, "\"" );
 
                 aReplace = OUString(pAuto->GetEndDoubleQuote());
                 if( aReplace.isEmpty() )
-                    aReplace = ScGlobal::pLocaleData->getDoubleQuotationMarkEnd();
+                    aReplace = ScGlobal::getLocaleDataPtr()->getDoubleQuotationMarkEnd();
                 if( aReplace != "\"" )
                     aString = aString.replaceAll( aReplace, "\"" );
 
                 aReplace = OUString(pAuto->GetStartSingleQuote());
                 if( aReplace.isEmpty() )
-                    aReplace = ScGlobal::pLocaleData->getQuotationMarkStart();
+                    aReplace = ScGlobal::getLocaleDataPtr()->getQuotationMarkStart();
                 if( aReplace != "'" )
                     aString = aString.replaceAll( aReplace, "'" );
 
                 aReplace = OUString(pAuto->GetEndSingleQuote());
                 if( aReplace.isEmpty() )
-                    aReplace = ScGlobal::pLocaleData->getQuotationMarkEnd();
+                    aReplace = ScGlobal::getLocaleDataPtr()->getQuotationMarkEnd();
                 if( aReplace != "'" )
                     aString = aString.replaceAll( aReplace, "'");
             }
@@ -3252,8 +3326,13 @@ void ScInputHandler::AddRefEntry()
     OUString aText = GetEditText(mpEditEngine.get());
     sal_Unicode cLastChar = 0;
     sal_Int32 nPos = aText.getLength() - 1;
-    while (nPos >= 0 && ((cLastChar = aText[nPos]) == ' ')) //checking space
+    while (nPos >= 0) //checking space
+    {
+        cLastChar = aText[nPos];
+        if (cLastChar != ' ')
+            break;
         --nPos;
+    }
 
     bool bAppendSeparator = (cLastChar != '(' && cLastChar != cSep && cLastChar != '=');
     if (bAppendSeparator)
@@ -3272,7 +3351,9 @@ void ScInputHandler::SetReference( const ScRange& rRef, const ScDocument& rDoc )
     HideTip();
 
     const ScDocument* pThisDoc = nullptr;
-    bool bOtherDoc = (pRefViewSh && ((pThisDoc = pRefViewSh->GetViewData().GetDocument()) != &rDoc));
+    if (pRefViewSh)
+        pThisDoc = pRefViewSh->GetViewData().GetDocument();
+    bool bOtherDoc = (pThisDoc != &rDoc);
     if (bOtherDoc && !rDoc.GetDocumentShell()->HasName())
     {
         // References to unnamed document; that doesn't work
@@ -3590,8 +3671,11 @@ bool ScInputHandler::KeyInput( const KeyEvent& rKEvt, bool bStartEdit /* = false
                     {
                         OUString aStrLoP;
 
-                        if ( bStartEdit && bCellHasPercentFormat && ((nChar >= '0' && nChar <= '9') || nChar == '-') )
+                        if (bStartEdit && nCellPercentFormatDecSep != 0 &&
+                                ((nChar >= '0' && nChar <= '9') || nChar == '-' || nChar == nCellPercentFormatDecSep))
+                        {
                             aStrLoP = "%";
+                        }
 
                         if (pTableView)
                         {
@@ -3786,7 +3870,7 @@ void ScInputHandler::InputCommand( const CommandEvent& rCEvt )
             {
                 if (pTableView)
                     pTableView->Command( rCEvt );
-                if (pTopView)
+                if (pTopView && !comphelper::LibreOfficeKit::isActive())
                     pTopView->Command( rCEvt );
 
                 if ( rCEvt.GetCommand() == CommandEventId::EndExtTextInput )

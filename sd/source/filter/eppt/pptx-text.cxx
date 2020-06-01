@@ -752,7 +752,7 @@ void ParagraphObj::ImplClear()
 
 void ParagraphObj::CalculateGraphicBulletSize( sal_uInt16 nFontHeight )
 {
-    if ( !(( nNumberingType == SVX_NUM_BITMAP ) && ( nBulletId != 0xffff )) )
+    if ( ( nNumberingType != SVX_NUM_BITMAP ) || ( nBulletId == 0xffff ) )
         return;
 
     // calculate the bullet real size for this graphic
@@ -877,7 +877,6 @@ void ParagraphObj::ImplGetNumberingLevel( PPTExBulletProvider* pBuProv, sal_Int1
                 {
                     if ( aBuGraSize.Width() && aBuGraSize.Height() )
                     {
-                        Graphic aGraphic(xGraphic);
                         nBulletId = pBuProv->GetId(xGraphic, aBuGraSize );
                         if ( nBulletId != 0xffff )
                             bExtendedBulletsUsed = true;

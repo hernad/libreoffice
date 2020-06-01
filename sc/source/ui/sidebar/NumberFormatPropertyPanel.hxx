@@ -22,11 +22,10 @@
 #include <sfx2/sidebar/ControllerItem.hxx>
 #include <sfx2/sidebar/IContextChangeReceiver.hxx>
 #include <sfx2/weldutils.hxx>
-#include <svx/sidebar/PanelLayout.hxx>
+#include <sfx2/sidebar/PanelLayout.hxx>
+#include <vcl/EnumContext.hxx>
 
-class Edit;
-
-namespace sc { namespace sidebar {
+namespace sc::sidebar {
 
 class NumberFormatPropertyPanel
 :   public PanelLayout,
@@ -50,6 +49,10 @@ public:
         const sal_uInt16 nSId,
         const SfxItemState eState,
         const SfxPoolItem* pState) override;
+
+    virtual void GetControlState(
+        const sal_uInt16 /*nSId*/,
+        boost::property_tree::ptree& /*rState*/) override {};
 
     SfxBindings* GetBindings() { return mpBindings;}
 
@@ -81,7 +84,7 @@ private:
     sal_Int32                               mnCategorySelected;
 
     vcl::EnumContext                        maContext;
-    SfxBindings* const                      mpBindings;
+    SfxBindings*                            mpBindings;
 
     DECL_LINK(NumFormatSelectHdl, weld::ComboBox&, void);
     DECL_LINK(NumFormatValueHdl, weld::SpinButton&, void);
@@ -91,7 +94,7 @@ private:
     void DisableControls();
 };
 
-} } // end of namespace ::sc::sidebar
+} // end of namespace ::sc::sidebar
 
 #endif
 

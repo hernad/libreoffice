@@ -25,12 +25,15 @@
 #include <basegfx/polygon/b2dpolygon.hxx>
 #include <drawinglayer/primitive2d/polygonprimitive2d.hxx>
 #include <basegfx/polygon/b2dpolygontools.hxx>
-#include <drawinglayer/primitive2d/polypolygonprimitive2d.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonColorPrimitive2D.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonStrokePrimitive2D.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonHatchPrimitive2D.hxx>
 #include <drawinglayer/geometry/viewinformation2d.hxx>
 #include <basegfx/matrix/b2dhommatrixtools.hxx>
 #include <drawinglayer/primitive2d/unifiedtransparenceprimitive2d.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
+#include <toolkit/helper/vclunohelper.hxx>
 
 
 namespace drawinglayer::primitive2d
@@ -147,7 +150,7 @@ ImplPrimitive2DIDBlock(OverlayStaticRectanglePrimitive, PRIMITIVE2D_ID_OVERLAYRE
             // calculate back from internal bitmap's extreme coordinates (the edges)
             // to logical coordinates. Only use a unified scaling value (getDiscreteUnit(),
             // the prepared one which expresses how many logic units form a discrete unit)
-            // for this step. This primitive is to be displayed always unscaled (in it's pixel size)
+            // for this step. This primitive is to be displayed always unscaled (in its pixel size)
             // and unrotated, more like a marker
             const double fLeft((0.0 - getCenterX()) * getDiscreteUnit());
             const double fTop((0.0 - getCenterY()) * getDiscreteUnit());
@@ -177,7 +180,10 @@ ImplPrimitive2DIDBlock(OverlayStaticRectanglePrimitive, PRIMITIVE2D_ID_OVERLAYRE
             // add BasePosition
             aTransform.translate(getBasePosition().getX(), getBasePosition().getY());
 
-            rContainer.push_back(new BitmapPrimitive2D(getBitmapEx(), aTransform));
+            rContainer.push_back(
+                new BitmapPrimitive2D(
+                    VCLUnoHelper::CreateVCLXBitmap(getBitmapEx()),
+                    aTransform));
         }
 
         bool OverlayBitmapExPrimitive::operator==( const BasePrimitive2D& rPrimitive ) const

@@ -21,8 +21,8 @@ extern sal_Int32 rStyleIdx; // Holds index of the <extlst> <cfRule> style (Will 
 
 struct ScDataBarFormatData;
 namespace oox { class AttributeList; }
-namespace oox { namespace xls { class WorkbookFragment; } }
-namespace oox { namespace xls { class WorksheetFragment; } }
+namespace oox::xls { class WorkbookFragment; }
+namespace oox::xls { class WorksheetFragment; }
 
 namespace oox {
 namespace xls {
@@ -36,7 +36,7 @@ public:
     virtual void        onStartElement( const AttributeList& rAttribs ) override;
 
 private:
-    ScDataBarFormatData* const mpTarget;
+    ScDataBarFormatData* mpTarget;
 
     bool mbFirstEntry;
 };

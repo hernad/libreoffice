@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_AVMEDIA_SOURCE_MACAVF_WINDOW_HXX
-#define INCLUDED_AVMEDIA_SOURCE_MACAVF_WINDOW_HXX
+#pragma once
 
 #include "macavfcommon.hxx"
 #include <cppuhelper/implbase.hxx>
@@ -34,7 +33,7 @@
 - (void) play;
 @end
 
-namespace avmedia { namespace macavf {
+namespace avmedia::macavf {
 
 class Player;
 
@@ -107,9 +106,6 @@ private:
     void                                        ImplLayoutVideoWindow();
 };
 
-} // namespace macavf
-} // namespace avmedia
-
-#endif // INCLUDED_AVMEDIA_SOURCE_MACAVF_WINDOW_HXX
+} // namespace avmedia::macavf
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

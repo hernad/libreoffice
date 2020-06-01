@@ -300,7 +300,7 @@ namespace
                                 rViewData.GetActivePart() :
                                 static_cast<ScSplitPos>(_nPane);
         _rpWindow = _pViewShell->GetWindowByPos( eWhich );
-        _rpSdrView = _pViewShell->GetSdrView();
+        _rpSdrView = _pViewShell->GetScDrawView();
         _rpFormShell = _pViewShell->GetFormShell();
         return ( _rpFormShell != nullptr ) && ( _rpSdrView != nullptr )&& ( _rpWindow != nullptr );
     }
@@ -545,7 +545,7 @@ void ScTabViewObj::SheetChanged( bool bSameTabButMoved )
         uno::Reference< uno::XInterface > xSource(xView, uno::UNO_QUERY);
         aEvent.Source = xSource;
         aEvent.ActiveSheet = new ScTableSheetObj(pDocSh, rViewData.GetTabNo());
-        for (XActivationEventListenerVector::iterator it = aActivationListeners.begin(); it != aActivationListeners.end(); )
+        for (auto it = aActivationListeners.begin(); it != aActivationListeners.end(); )
         {
             try
             {
@@ -825,7 +825,7 @@ sal_Bool SAL_CALL ScTabViewObj::select( const uno::Any& aSelection )
 uno::Reference<drawing::XShapes> ScTabViewShell::getSelectedXShapes()
 {
     uno::Reference<drawing::XShapes> xShapes;
-    SdrView* pSdrView = GetSdrView();
+    SdrView* pSdrView = GetScDrawView();
     if (pSdrView)
     {
         const SdrMarkList& rMarkList = pSdrView->GetMarkedObjectList();
@@ -1093,7 +1093,7 @@ uno::Reference< uno::XInterface > ScTabViewObj::GetClickedObject(const Point& rP
             if (pDrawLayer->HasObjects() && (pDrawLayer->GetPageCount() > nTab))
                 pDrawPage = pDrawLayer->GetPage(static_cast<sal_uInt16>(nTab));
 
-            SdrView* pDrawView = GetViewShell()->GetSdrView();
+            SdrView* pDrawView = GetViewShell()->GetScDrawView();
 
             if (pDrawPage && pDrawView && pDrawView->GetSdrPageView())
             {
@@ -1155,7 +1155,7 @@ bool ScTabViewObj::MousePressed( const awt::MouseEvent& e )
         aMouseEvent.Target = xTarget;
         aMouseEvent.Modifiers = e.Modifiers;
 
-        for (XMouseClickHandlerVector::iterator it = aMouseClickHandlers.begin(); it != aMouseClickHandlers.end(); )
+        for (auto it = aMouseClickHandlers.begin(); it != aMouseClickHandlers.end(); )
         {
             try
             {
@@ -1265,7 +1265,7 @@ bool ScTabViewObj::MouseReleased( const awt::MouseEvent& e )
             aMouseEvent.Target = xTarget;
             aMouseEvent.Modifiers = e.Modifiers;
 
-            for (XMouseClickHandlerVector::iterator it = aMouseClickHandlers.begin(); it != aMouseClickHandlers.end(); )
+            for (auto it = aMouseClickHandlers.begin(); it != aMouseClickHandlers.end(); )
             {
                 try
                 {
@@ -2006,7 +2006,7 @@ void ScTabViewObj::RangeSelDone( const OUString& rText )
     aEvent.RangeDescriptor = rText;
 
     // copy on the stack because listener could remove itself
-    XRangeSelectionListenerVector const listeners(aRangeSelListeners);
+    auto const listeners(aRangeSelListeners);
 
     for (const auto& rListener : listeners)
         rListener->done( aEvent );
@@ -2019,7 +2019,7 @@ void ScTabViewObj::RangeSelAborted( const OUString& rText )
     aEvent.RangeDescriptor = rText;
 
     // copy on the stack because listener could remove itself
-    XRangeSelectionListenerVector const listeners(aRangeSelListeners);
+    auto const listeners(aRangeSelListeners);
 
     for (const auto& rListener : listeners)
         rListener->aborted( aEvent );
@@ -2032,7 +2032,7 @@ void ScTabViewObj::RangeSelChanged( const OUString& rText )
     aEvent.RangeDescriptor = rText;
 
     // copy on the stack because listener could remove itself
-    XRangeSelectionChangeListenerVector const listener(aRangeChgListeners);
+    auto const listener(aRangeChgListeners);
 
     for (const auto& rListener : listener)
         rListener->descriptorChanged( aEvent );

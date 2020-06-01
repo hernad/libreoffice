@@ -17,10 +17,10 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <sfx2/sidebar/DeckDescriptor.hxx>
-#include <sfx2/sidebar/PanelDescriptor.hxx>
+#include <sidebar/DeckDescriptor.hxx>
+#include <sidebar/PanelDescriptor.hxx>
 #include <sfx2/sidebar/ResourceManager.hxx>
-#include <sfx2/sidebar/Tools.hxx>
+#include <sidebar/Tools.hxx>
 
 #include <officecfg/Office/UI/Sidebar.hxx>
 #include <unotools/confignode.hxx>
@@ -35,6 +35,7 @@
 #include <vcl/EnumContext.hxx>
 
 #include <com/sun/star/frame/ModuleManager.hpp>
+#include <com/sun/star/ui/XSidebarPanel.hpp>
 #include <com/sun/star/ui/XUpdateModel.hpp>
 
 #include <map>

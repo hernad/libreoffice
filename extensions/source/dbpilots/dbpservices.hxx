@@ -22,14 +22,11 @@
 
 #include <sal/config.h>
 
-#include <sal/types.h>
-
 extern "C" {
 
 void createRegistryInfo_OGridWizard();
 void createRegistryInfo_OGroupBoxWizard();
 void createRegistryInfo_OListComboWizard();
-
 }
 
 #endif

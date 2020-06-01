@@ -29,6 +29,7 @@
 #include <sax/tools/converter.hxx>
 #include <rtl/ustring.hxx>
 #include <com/sun/star/beans/XPropertySet.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <comphelper/sequence.hxx>
 
@@ -58,7 +59,7 @@ XMLIndexBibliographyConfigurationContext::XMLIndexBibliographyConfigurationConte
     sal_uInt16 nPrfx,
     const OUString& rLocalName,
     const Reference<XAttributeList> & xAttrList) :
-        SvXMLStyleContext(rImport, nPrfx, rLocalName, xAttrList, XML_STYLE_FAMILY_TEXT_BIBLIOGRAPHYCONFIG),
+        SvXMLStyleContext(rImport, nPrfx, rLocalName, xAttrList, XmlStyleFamily::TEXT_BIBLIOGRAPHYCONFIG),
         sSuffix(),
         sPrefix(),
         sAlgorithm(),
@@ -72,24 +73,7 @@ XMLIndexBibliographyConfigurationContext::~XMLIndexBibliographyConfigurationCont
 {
 }
 
-void XMLIndexBibliographyConfigurationContext::StartElement(
-    const Reference<XAttributeList> & xAttrList)
-{
-    sal_Int16 nLength = xAttrList->getLength();
-    for(sal_Int16 nAttr = 0; nAttr < nLength; nAttr++)
-    {
-        OUString sLocalName;
-        sal_uInt16 nPrefix = GetImport().GetNamespaceMap().
-            GetKeyByAttrName( xAttrList->getNameByIndex(nAttr),
-                              &sLocalName );
-
-        ProcessAttribute(nPrefix, sLocalName,
-                         xAttrList->getValueByIndex(nAttr));
-        // else: ignore
-    }
-}
-
-void XMLIndexBibliographyConfigurationContext::ProcessAttribute(
+void XMLIndexBibliographyConfigurationContext::SetAttribute(
     sal_uInt16 nPrefix,
     const OUString& sLocalName,
     const OUString& sValue)

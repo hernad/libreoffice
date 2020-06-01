@@ -325,7 +325,8 @@ const sc::CellStoreType* ScDBQueryDataIterator::GetColumnCellStore(ScDocument& r
     ScTable* pTab = rDoc.FetchTable(nTab);
     if (!pTab)
         return nullptr;
-
+    if (nCol >= pTab->GetAllocatedColumnsCount())
+        return nullptr;
     return &pTab->aCol[nCol].maCells;
 }
 
@@ -890,14 +891,17 @@ void ScCellIterator::init()
     if (maStartPos.Tab() > maEndPos.Tab())
         maStartPos.SetTab(maEndPos.Tab());
 
-    maCurPos = maStartPos;
-
-    if (!mpDoc->maTabs[maCurPos.Tab()])
+    if (!mpDoc->maTabs[maStartPos.Tab()])
     {
         assert(!"Table not found");
         maStartPos = ScAddress(mpDoc->MaxCol()+1, mpDoc->MaxRow()+1, MAXTAB+1); // -> Abort on GetFirst.
-        maCurPos = maStartPos;
     }
+    else
+    {
+        maStartPos.SetCol(mpDoc->maTabs[maStartPos.Tab()]->ClampToAllocatedColumns(maStartPos.Col()));
+    }
+
+    maCurPos = maStartPos;
 }
 
 bool ScCellIterator::getCurrent()
@@ -1269,7 +1273,7 @@ bool ScQueryCellIterator::FindEqualOrSortedLastInRange( SCCOL& nFoundCol,
     struct BoolResetter
     {
         bool& mr;
-        bool const  mb;
+        bool  mb;
         BoolResetter( bool& r, bool b ) : mr(r), mb(r) { r = b; }
         ~BoolResetter() { mr = mb; }
     } aRangeLookupResetter( maParam.mbRangeLookup, true);
@@ -1309,8 +1313,11 @@ bool ScQueryCellIterator::FindEqualOrSortedLastInRange( SCCOL& nFoundCol,
             nFoundCol = GetCol();
             nFoundRow = GetRow();
             aPosSave = maCurPos;
+            if (IsEqualConditionFulfilled())
+                break;
+            bNext = GetNext();
         }
-        while ( !IsEqualConditionFulfilled() && (bNext = GetNext()));
+        while (bNext);
 
         // There may be no pNext but equal condition fulfilled if regular
         // expressions are involved. Keep the found entry and proceed.

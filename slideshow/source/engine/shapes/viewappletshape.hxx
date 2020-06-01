@@ -27,17 +27,18 @@
 
 #include <viewlayer.hxx>
 
-namespace com { namespace sun { namespace star {
-namespace frame {
-    class XSynchronousFrameLoader;
-    class XFrame2;
+namespace com::sun::star {
+    namespace frame {
+        class XSynchronousFrameLoader;
+        class XFrame2;
+    }
+    namespace uno {
+        class XComponentContext;
+    }
+    namespace drawing {
+        class XShape;
+    }
 }
-namespace uno {
-    class XComponentContext;
-}
-namespace drawing {
-    class XShape;
-}}}}
 
 namespace slideshow
 {
@@ -140,7 +141,7 @@ namespace slideshow
 
         private:
 
-            ViewLayerSharedPtr const                 mpViewLayer;
+            ViewLayerSharedPtr                                    mpViewLayer;
 
             /// the actual viewer component for this applet
             css::uno::Reference<

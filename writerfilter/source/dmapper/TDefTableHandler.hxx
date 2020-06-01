@@ -20,16 +20,15 @@
 #define INCLUDED_WRITERFILTER_SOURCE_DMAPPER_TDEFTABLEHANDLER_HXX
 
 #include "LoggedResources.hxx"
-#include <memory>
 #include <vector>
-namespace com{ namespace sun{ namespace star{
+namespace com::sun::star{
     namespace table {
         struct BorderLine2;
     }
     namespace beans {
         struct PropertyValue;
     }
-}}}
+}
 
 namespace writerfilter {
 namespace dmapper

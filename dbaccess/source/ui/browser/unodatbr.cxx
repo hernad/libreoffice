@@ -20,33 +20,18 @@
 #include <browserids.hxx>
 #include <core_resource.hxx>
 #include <helpids.h>
-#include <dbexchange.hxx>
 #include <dbtreelistbox.hxx>
 #include "dbtreemodel.hxx"
 #include "dbtreeview.hxx"
 #include <dbu_reghelper.hxx>
-#include <stringconstants.hxx>
 #include <strings.hrc>
-#include <dlgsave.hxx>
 #include <uiservices.hxx>
-#include <HtmlReader.hxx>
 #include <imageprovider.hxx>
-#include <listviewitems.hxx>
-#include <QEnumTypes.hxx>
-#include <RtfReader.hxx>
-#include <sbagrid.hrc>
 #include <sbagrid.hxx>
-#include <sqlmessage.hxx>
-#include <TokenWriter.hxx>
+#include <strings.hxx>
 #include <UITools.hxx>
 #include <unodatbr.hxx>
-#include <WColumnSelect.hxx>
-#include <WCopyTable.hxx>
-#include <WCPage.hxx>
-#include <WExtendPages.hxx>
-#include <WNameMatch.hxx>
 
-#include <com/sun/star/awt/LineEndFormat.hpp>
 #include <com/sun/star/awt/MouseWheelBehavior.hpp>
 #include <com/sun/star/awt/TextAlign.hpp>
 #include <com/sun/star/awt/VisualEffect.hpp>
@@ -54,7 +39,6 @@
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/beans/XMultiPropertySet.hpp>
 #include <com/sun/star/container/XNameContainer.hpp>
-#include <com/sun/star/form/XForm.hpp>
 #include <com/sun/star/form/XGridColumnFactory.hpp>
 #include <com/sun/star/form/XLoadable.hpp>
 #include <com/sun/star/form/XReset.hpp>
@@ -65,8 +49,6 @@
 #include <com/sun/star/i18n/Collator.hpp>
 #include <com/sun/star/sdb/CommandType.hpp>
 #include <com/sun/star/sdb/SQLContext.hpp>
-#include <com/sun/star/sdb/XBookmarksSupplier.hpp>
-#include <com/sun/star/sdb/XCompletedConnection.hpp>
 #include <com/sun/star/sdb/XDatabaseContext.hpp>
 #include <com/sun/star/sdb/XDatabaseRegistrations.hpp>
 #include <com/sun/star/sdb/XDocumentDataSource.hpp>
@@ -81,17 +63,13 @@
 #include <com/sun/star/sdbc/FetchDirection.hpp>
 #include <com/sun/star/sdbc/SQLWarning.hpp>
 #include <com/sun/star/sdbc/XDataSource.hpp>
-#include <com/sun/star/sdbc/XResultSetMetaDataSupplier.hpp>
 #include <com/sun/star/sdbc/XWarningsSupplier.hpp>
-#include <com/sun/star/sdbcx/Privilege.hpp>
 #include <com/sun/star/sdbcx/XColumnsSupplier.hpp>
-#include <com/sun/star/sdbcx/XDataDescriptorFactory.hpp>
-#include <com/sun/star/sdbcx/XDrop.hpp>
 #include <com/sun/star/sdbcx/XTablesSupplier.hpp>
 #include <com/sun/star/sdbcx/XViewsSupplier.hpp>
 #include <com/sun/star/task/InteractionHandler.hpp>
-#include <com/sun/star/ui/dialogs/XExecutableDialog.hpp>
 #include <com/sun/star/util/XFlushable.hpp>
+#include <com/sun/star/util/XNumberFormatter.hpp>
 #include <com/sun/star/util/XURLTransformer.hpp>
 #include <com/sun/star/document/MacroExecMode.hpp>
 #include <com/sun/star/ui/XContextMenuInterceptor.hpp>
@@ -102,18 +80,11 @@
 #include <comphelper/types.hxx>
 #include <connectivity/dbexception.hxx>
 #include <cppuhelper/exc_hlp.hxx>
-#include <cppuhelper/typeprovider.hxx>
 #include <i18nlangtag/languagetag.hxx>
-#include <sfx2/app.hxx>
-#include <sfx2/dispatch.hxx>
-#include <sot/storage.hxx>
 #include <svl/filenotation.hxx>
-#include <svl/intitem.hxx>
-#include <unotools/moduleoptions.hxx>
 #include <vcl/svlbitm.hxx>
 #include <vcl/treelistbox.hxx>
 #include <vcl/treelistentry.hxx>
-#include <svx/algitem.hxx>
 #include <svx/dataaccessdescriptor.hxx>
 #include <svx/databaseregistrationui.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
@@ -124,10 +95,10 @@
 #include <tools/urlobj.hxx>
 #include <unotools/confignode.hxx>
 #include <vcl/split.hxx>
-#include <vcl/stdtext.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/toolbox.hxx>
 #include <vcl/settings.hxx>
+#include <vcl/weld.hxx>
 
 #include <memory>
 
@@ -1236,61 +1207,61 @@ void SbaTableQueryBrowser::connectExternalDispatches()
 {
     Reference< XDispatchProvider >  xProvider( getFrame(), UNO_QUERY );
     OSL_ENSURE(xProvider.is(), "SbaTableQueryBrowser::connectExternalDispatches: no DispatchProvider !");
-    if (xProvider.is())
+    if (!xProvider.is())
+        return;
+
+    if ( m_aExternalFeatures.empty() )
     {
-        if ( m_aExternalFeatures.empty() )
-        {
-            const char* pURLs[] = {
-                ".uno:DataSourceBrowser/DocumentDataSource",
-                ".uno:DataSourceBrowser/FormLetter",
-                ".uno:DataSourceBrowser/InsertColumns",
-                ".uno:DataSourceBrowser/InsertContent",
-            };
-            const sal_uInt16 nIds[] = {
-                ID_BROWSER_DOCUMENT_DATASOURCE,
-                ID_BROWSER_FORMLETTER,
-                ID_BROWSER_INSERTCOLUMNS,
-                ID_BROWSER_INSERTCONTENT
-            };
+        const char* pURLs[] = {
+            ".uno:DataSourceBrowser/DocumentDataSource",
+            ".uno:DataSourceBrowser/FormLetter",
+            ".uno:DataSourceBrowser/InsertColumns",
+            ".uno:DataSourceBrowser/InsertContent",
+        };
+        const sal_uInt16 nIds[] = {
+            ID_BROWSER_DOCUMENT_DATASOURCE,
+            ID_BROWSER_FORMLETTER,
+            ID_BROWSER_INSERTCOLUMNS,
+            ID_BROWSER_INSERTCONTENT
+        };
 
-            for ( size_t i=0; i < SAL_N_ELEMENTS( pURLs ); ++i )
+        for ( size_t i=0; i < SAL_N_ELEMENTS( pURLs ); ++i )
+        {
+            URL aURL;
+            aURL.Complete = OUString::createFromAscii( pURLs[i] );
+            if ( m_xUrlTransformer.is() )
+                m_xUrlTransformer->parseStrict( aURL );
+            m_aExternalFeatures[ nIds[ i ] ] = ExternalFeature( aURL );
+        }
+    }
+
+    for (auto & externalFeature : m_aExternalFeatures)
+    {
+        externalFeature.second.xDispatcher = xProvider->queryDispatch(
+            externalFeature.second.aURL, "_parent", FrameSearchFlag::PARENT
+        );
+
+        if ( externalFeature.second.xDispatcher.get() == static_cast< XDispatch* >( this ) )
+        {
+            SAL_WARN("dbaccess.ui",  "SbaTableQueryBrowser::connectExternalDispatches: this should not happen anymore!" );
+                // (nowadays, the URLs aren't in our SupportedFeatures list anymore, so we should
+                // not supply a dispatcher for this)
+            externalFeature.second.xDispatcher.clear();
+        }
+
+        if ( externalFeature.second.xDispatcher.is() )
+        {
+            try
             {
-                URL aURL;
-                aURL.Complete = OUString::createFromAscii( pURLs[i] );
-                if ( m_xUrlTransformer.is() )
-                    m_xUrlTransformer->parseStrict( aURL );
-                m_aExternalFeatures[ nIds[ i ] ] = ExternalFeature( aURL );
+                externalFeature.second.xDispatcher->addStatusListener( this, externalFeature.second.aURL );
+            }
+            catch( const Exception& )
+            {
+                DBG_UNHANDLED_EXCEPTION("dbaccess");
             }
         }
 
-        for (auto & externalFeature : m_aExternalFeatures)
-        {
-            externalFeature.second.xDispatcher = xProvider->queryDispatch(
-                externalFeature.second.aURL, "_parent", FrameSearchFlag::PARENT
-            );
-
-            if ( externalFeature.second.xDispatcher.get() == static_cast< XDispatch* >( this ) )
-            {
-                SAL_WARN("dbaccess.ui",  "SbaTableQueryBrowser::connectExternalDispatches: this should not happen anymore!" );
-                    // (nowadays, the URLs aren't in our SupportedFeatures list anymore, so we should
-                    // not supply a dispatcher for this)
-                externalFeature.second.xDispatcher.clear();
-            }
-
-            if ( externalFeature.second.xDispatcher.is() )
-            {
-                try
-                {
-                    externalFeature.second.xDispatcher->addStatusListener( this, externalFeature.second.aURL );
-                }
-                catch( const Exception& )
-                {
-                    DBG_UNHANDLED_EXCEPTION("dbaccess");
-                }
-            }
-
-            implCheckExternalSlot( externalFeature.first );
-        }
+        implCheckExternalSlot( externalFeature.first );
     }
 }
 
@@ -2163,8 +2134,8 @@ IMPL_LINK(SbaTableQueryBrowser, OnExpandEntry, SvTreeListEntry*, _pParent, bool)
 
                 if (xWarnings.is())
                 {
-                    SQLExceptionInfo aWarnings(xWarnings->getWarnings());
 #if 0
+                    SQLExceptionInfo aWarnings(xWarnings->getWarnings());
 // Obviously this if test is always false. So to avoid a Clang warning
 // "use of logical '&&' with constant operand" I put this in #if
 // 0. Yeah, I know it is fairly likely nobody will ever read this
@@ -2961,14 +2932,6 @@ void SbaTableQueryBrowser::unloadAndCleanup( bool _bDisposeConnection )
     try
     {
         // get the active connection. We need to dispose it.
-        Reference< XPropertySet > xRowSetProps(getRowSet(),UNO_QUERY);
-#if OSL_DEBUG_LEVEL > 0
-        {
-            Reference< XComponent > xComp(
-                xRowSetProps->getPropertyValue(PROPERTY_ACTIVE_CONNECTION),
-                css::uno::UNO_QUERY);
-        }
-#endif
 
         // unload the form
         Reference< XLoadable > xLoadable = getLoadable();
@@ -3170,7 +3133,7 @@ void SbaTableQueryBrowser::impl_initialize()
 
     if ( m_bEnableBrowser )
     {
-        m_aDocScriptSupport = ::o3tl::optional< bool >( false );
+        m_aDocScriptSupport = ::std::optional< bool >( false );
     }
     else
     {
@@ -3178,7 +3141,7 @@ void SbaTableQueryBrowser::impl_initialize()
         // there is a specific database document which we belong to.
         Reference< XOfficeDatabaseDocument > xDocument( getDataSourceOrModel(
             lcl_getDataSource( m_xDatabaseContext, sInitialDataSourceName, xConnection ) ), UNO_QUERY );
-        m_aDocScriptSupport = ::o3tl::optional< bool >( Reference< XEmbeddedScripts >( xDocument, UNO_QUERY ).is() );
+        m_aDocScriptSupport = ::std::optional< bool >( Reference< XEmbeddedScripts >( xDocument, UNO_QUERY ).is() );
     }
 
     if ( implSelect( sInitialDataSourceName, sInitialCommand, nInitialDisplayCommandType, bEscapeProcessing, xConnection, true ) )

@@ -28,22 +28,17 @@
 
 class SdXMLDrawPageContext : public SdXMLGenericPageContext
 {
-    OUString               maMasterPageName;
-    OUString               maHREF;
-
     bool                   mbHadSMILNodes;
 
 public:
-    SdXMLDrawPageContext( SdXMLImport& rImport, sal_uInt16 nPrfx,
-        const OUString& rLocalName,
-        const css::uno::Reference< css::xml::sax::XAttributeList>& xAttrList,
+    SdXMLDrawPageContext( SdXMLImport& rImport,
+        const css::uno::Reference< css::xml::sax::XFastAttributeList>& xAttrList,
         css::uno::Reference< css::drawing::XShapes > const & rShapes);
     virtual ~SdXMLDrawPageContext() override;
 
-    virtual SvXMLImportContextRef CreateChildContext(
-        sal_uInt16 nPrefix, const OUString& rLocalName,
-        const css::uno::Reference< css::xml::sax::XAttributeList>& xAttrList ) override;
-    virtual void EndElement() override;
+    virtual css::uno::Reference< XFastContextHandler >  SAL_CALL createFastChildContext(sal_Int32 Element,
+        const css::uno::Reference<css::xml::sax::XFastAttributeList>& Attribs) override;
+    virtual void SAL_CALL endFastElement(sal_Int32 nElement) override;
 
 };
 

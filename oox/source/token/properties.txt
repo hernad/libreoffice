@@ -207,6 +207,8 @@ Function
 GapwidthSequence
 GenerateVbaEvents
 Geometry3D
+GlowEffect
+GlowEffectRad
 GradientName
 HatchName
 Graphic
@@ -285,6 +287,8 @@ LabelBorderWidth
 LabelPlacement
 LabelPosition
 LabelSeparator
+LabelFillStyle
+LabelFillColor
 CustomLabelFields
 LayoutInfo
 LeftBorder
@@ -345,6 +349,7 @@ Opaque
 Orientation
 OutputPosition
 OverlapSequence
+Overlay
 PageScale
 PageStyle
 PageToggle
@@ -446,6 +451,8 @@ SelectedPage
 Shadow
 ShadowColor
 ShadowFormat
+ShadowSizeX
+ShadowSizeY
 ShadowTransparence
 ShadowXDistance
 ShadowYDistance
@@ -464,6 +471,7 @@ ShowFormulas
 ShowGrid
 ShowHighLow
 ShowInputMessage
+ShowLeaderLines
 ShowLegendEntry
 ShowList
 ShowNegativeError

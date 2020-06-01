@@ -665,7 +665,10 @@ sal_Int32 FastGetPos(const Array& rArray, const Val* p, sal_Int32& rLastPos)
     // The world's lamest linear search from svarray...
     for (sal_Int32 nIdx = 0; nIdx < nArrayLen; ++nIdx)
         if (rArray.at(nIdx).get() == p)
-            return rLastPos = nIdx;
+        {
+            rLastPos = nIdx;
+            return rLastPos;
+        }
 
     // XXX "not found" condition for sal_Int32 indexes
     return EE_PARA_NOT_FOUND;
@@ -1825,18 +1828,18 @@ void ContentAttribs::SetStyleSheet( SfxStyleSheet* pS )
     bool bStyleChanged = ( pStyle != pS );
     pStyle = pS;
     // Only when other style sheet, not when current style sheet modified
-    if ( pStyle && bStyleChanged )
+    if ( !(pStyle && bStyleChanged) )
+        return;
+
+    // Selectively remove the attributes from the paragraph formatting
+    // which are specified in the style, so that the attributes of the
+    // style can have an affect.
+    const SfxItemSet& rStyleAttribs = pStyle->GetItemSet();
+    for ( sal_uInt16 nWhich = EE_PARA_START; nWhich <= EE_CHAR_END; nWhich++ )
     {
-        // Selectively remove the attributes from the paragraph formatting
-        // which are specified in the style, so that the attributes of the
-        // style can have an affect.
-        const SfxItemSet& rStyleAttribs = pStyle->GetItemSet();
-        for ( sal_uInt16 nWhich = EE_PARA_START; nWhich <= EE_CHAR_END; nWhich++ )
-        {
-            // Don't change bullet on/off
-            if ( ( nWhich != EE_PARA_BULLETSTATE ) && ( rStyleAttribs.GetItemState( nWhich ) == SfxItemState::SET ) )
-                aAttribSet.ClearItem( nWhich );
-        }
+        // Don't change bullet on/off
+        if ( ( nWhich != EE_PARA_BULLETSTATE ) && ( rStyleAttribs.GetItemState( nWhich ) == SfxItemState::SET ) )
+            aAttribSet.ClearItem( nWhich );
     }
 }
 
@@ -1905,7 +1908,8 @@ EditDoc::EditDoc( SfxItemPool* pPool ) :
     mnRotation(TextRotation::NONE),
     bIsFixedCellHeight(false),
     bOwnerOfPool(pPool == nullptr),
-    bModified(false)
+    bModified(false),
+    bDisableAttributeExpanding(false)
 {
     // Don't create an empty node, Clear() will be called in EditEngine-CTOR
 };
@@ -2007,11 +2011,7 @@ void CreateFont( SvxFont& rFont, const SfxItemSet& rSet, bool bSearchInParent, S
         rFont.SetPropr( static_cast<sal_uInt8>(nProp) );
 
         short nEsc = rEsc.GetEsc();
-        if ( nEsc == DFLT_ESC_AUTO_SUPER )
-            nEsc = 100 - nProp;
-        else if ( nEsc == DFLT_ESC_AUTO_SUB )
-            nEsc = sal::static_int_cast< short >( -( 100 - nProp ) );
-        rFont.SetEscapement( nEsc );
+        rFont.SetNonAutoEscapement( nEsc );
     }
     if ( bSearchInParent || ( rSet.GetItemState( EE_CHAR_PAIRKERNING ) == SfxItemState::SET ) )
         rFont.SetKerning( rSet.Get( EE_CHAR_PAIRKERNING ).GetValue() ? FontKerning::FontSpecific : FontKerning::NONE );
@@ -2369,6 +2369,15 @@ void EditDoc::InsertAttribInSelection( ContentNode* pNode, sal_Int32 nStart, sal
     DBG_ASSERT( nStart <= nEnd, "Small miscalculations in InsertAttribInSelection" );
 
     RemoveAttribs( pNode, nStart, nEnd, pStartingAttrib, pEndingAttrib, rPoolItem.Which() );
+
+    // tdf#132288  By default inserting an attribute beside another that is of
+    // the same type expands the original instead of inserting another. But the
+    // spell check dialog doesn't want that behaviour
+    if (bDisableAttributeExpanding)
+    {
+        pStartingAttrib = nullptr;
+        pEndingAttrib = nullptr;
+    }
 
     if ( pStartingAttrib && pEndingAttrib &&
          ( *(pStartingAttrib->GetItem()) == rPoolItem ) &&

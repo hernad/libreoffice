@@ -20,6 +20,7 @@
 #include <sal/config.h>
 
 #include <memory>
+#include <numeric>
 
 #include <svsys.h>
 
@@ -1987,18 +1988,19 @@ private:
     // all other values the triangulation is based on and
     // need to be compared with to check for data validity
     bool                                    mbNoLineJoin;
+    std::vector< double >                       maStroke;
 
 public:
     SystemDependentData_GraphicsPath(
         basegfx::SystemDependentDataManager& rSystemDependentDataManager,
         std::shared_ptr<Gdiplus::GraphicsPath>& rpGraphicsPath,
-        bool bNoLineJoin);
+        bool bNoLineJoin,
+        const std::vector< double >* pStroke); // MM01
 
-    // read access to Gdiplus::GraphicsPath
+    // read access
     std::shared_ptr<Gdiplus::GraphicsPath>& getGraphicsPath() { return mpGraphicsPath; }
-
-    // other data-validity access
     bool getNoLineJoin() const { return mbNoLineJoin; }
+    const std::vector< double >& getStroke() const { return maStroke; }
 
     virtual sal_Int64 estimateUsageInBytes() const override;
 };
@@ -2008,11 +2010,17 @@ public:
 SystemDependentData_GraphicsPath::SystemDependentData_GraphicsPath(
     basegfx::SystemDependentDataManager& rSystemDependentDataManager,
     std::shared_ptr<Gdiplus::GraphicsPath>& rpGraphicsPath,
-    bool bNoLineJoin)
+    bool bNoLineJoin,
+    const std::vector< double >* pStroke)
 :   basegfx::SystemDependentData(rSystemDependentDataManager),
     mpGraphicsPath(rpGraphicsPath),
-    mbNoLineJoin(bNoLineJoin)
+    mbNoLineJoin(bNoLineJoin),
+    maStroke()
 {
+    if(nullptr != pStroke)
+    {
+        maStroke = *pStroke;
+    }
 }
 
 sal_Int64 SystemDependentData_GraphicsPath::estimateUsageInBytes() const
@@ -2103,7 +2111,7 @@ bool WinSalGraphicsImpl::drawPolyPolygon(
         // and embed into a TransformPrimitive2D containing the transformation.
         //
         // A 2nd problem is that the NoLineJoin mode (basegfx::B2DLineJoin::NONE
-        // && rLineWidths > 0.0) creates polygon fill infos that are not reusable
+        // && !bIsHairline) creates polygon fill infos that are not reusable
         // for the fill case (see ::drawPolyLine below) - thus we would need a
         // bool and/or two system-dependent paths buffered - doable, but complicated.
         //
@@ -2136,7 +2144,8 @@ bool WinSalGraphicsImpl::drawPolyPolygon(
         rPolyPolygon.addOrReplaceSystemDependentData<SystemDependentData_GraphicsPath>(
             ImplGetSystemDependentDataManager(),
             pGraphicsPath,
-            false);
+            false,
+            nullptr);
     }
 
     if(mrParent.getAntiAliasB2DDraw())
@@ -2195,25 +2204,46 @@ bool WinSalGraphicsImpl::drawPolyLine(
     const basegfx::B2DHomMatrix& rObjectToDevice,
     const basegfx::B2DPolygon& rPolygon,
     double fTransparency,
-    const basegfx::B2DVector& rLineWidths,
+    double fLineWidth,
+    const std::vector< double >* pStroke, // MM01
     basegfx::B2DLineJoin eLineJoin,
     css::drawing::LineCap eLineCap,
     double fMiterMinimumAngle,
     bool bPixelSnapHairline)
 {
-    if(!mbPen || 0 == rPolygon.count())
+    // MM01 check done for simple reasons
+    if(!mbPen || !rPolygon.count() || fTransparency < 0.0 || fTransparency > 1.0)
     {
         return true;
+    }
+
+    // need to check/handle LineWidth when ObjectToDevice transformation is used
+    const bool bObjectToDeviceIsIdentity(rObjectToDevice.isIdentity());
+    const bool bIsHairline(fLineWidth == 0);
+
+    // tdf#124848 calculate-back logical LineWidth for a hairline
+    // since this implementation hands over the transformation to
+    // the graphic sub-system
+    if(bIsHairline)
+    {
+        fLineWidth = 1.0;
+
+        if(!bObjectToDeviceIsIdentity)
+        {
+            basegfx::B2DHomMatrix aObjectToDeviceInv(rObjectToDevice);
+            aObjectToDeviceInv.invert();
+            fLineWidth = (aObjectToDeviceInv * basegfx::B2DVector(fLineWidth, 0)).getLength();
+        }
     }
 
     Gdiplus::Graphics aGraphics(mrParent.getHDC());
     const sal_uInt8 aTrans = static_cast<sal_uInt8>(basegfx::fround( 255 * (1.0 - fTransparency) ));
     const Gdiplus::Color aTestColor(aTrans, maLineColor.GetRed(), maLineColor.GetGreen(), maLineColor.GetBlue());
-    Gdiplus::Pen aPen(aTestColor.GetValue(), Gdiplus::REAL(rLineWidths.getX()));
+    Gdiplus::Pen aPen(aTestColor.GetValue(), Gdiplus::REAL(fLineWidth));
     bool bNoLineJoin(false);
 
     // Set full (Object-to-Device) transformation - if used
-    if(rObjectToDevice.isIdentity())
+    if(bObjectToDeviceIsIdentity)
     {
         aGraphics.ResetTransform();
     }
@@ -2235,7 +2265,7 @@ bool WinSalGraphicsImpl::drawPolyLine(
     {
         case basegfx::B2DLineJoin::NONE :
         {
-            if(basegfx::fTools::more(rLineWidths.getX(), 0.0))
+            if(!bIsHairline)
             {
                 bNoLineJoin = true;
             }
@@ -2293,6 +2323,49 @@ bool WinSalGraphicsImpl::drawPolyLine(
     std::shared_ptr<SystemDependentData_GraphicsPath> pSystemDependentData_GraphicsPath(
         rPolygon.getSystemDependentData<SystemDependentData_GraphicsPath>());
 
+    // MM01 need to do line dashing as fallback stuff here now
+    const double fDotDashLength(nullptr != pStroke ? std::accumulate(pStroke->begin(), pStroke->end(), 0.0) : 0.0);
+    const bool bStrokeUsed(0.0 != fDotDashLength);
+    assert(!bStrokeUsed || (bStrokeUsed && pStroke));
+
+    // MM01 decide if to stroke directly
+    static bool bDoDirectGDIPlusStroke(true);
+
+    // activate to stroke directly
+    if(bDoDirectGDIPlusStroke && bStrokeUsed)
+    {
+        // tdf#124848 the fix of tdf#130478 that was needed here before
+        // gets much easier when already handling the hairline case above,
+        // the back-calculated logical linewidth is already here, just use it.
+        // Still be careful - a zero LineWidth *should* not happen, but...
+        std::vector<Gdiplus::REAL> aDashArray(pStroke->size());
+        const double fFactor(fLineWidth == 0 ? 1.0 : 1.0 / fLineWidth);
+
+        for(size_t a(0); a < pStroke->size(); a++)
+        {
+            aDashArray[a] = Gdiplus::REAL((*pStroke)[a] * fFactor);
+        }
+
+        aPen.SetDashCap(Gdiplus::DashCapFlat);
+        aPen.SetDashOffset(Gdiplus::REAL(0.0));
+        aPen.SetDashPattern(aDashArray.data(), aDashArray.size());
+    }
+
+    if(!bDoDirectGDIPlusStroke && pSystemDependentData_GraphicsPath)
+    {
+        // MM01 - check on stroke change. Used against not used, or if oth used,
+        // equal or different? Triangulation geometry creation depends heavily
+        // on stroke, independent of being transformation independent
+        const bool bStrokeWasUsed(!pSystemDependentData_GraphicsPath->getStroke().empty());
+
+        if(bStrokeWasUsed != bStrokeUsed
+        || (bStrokeUsed && *pStroke != pSystemDependentData_GraphicsPath->getStroke()))
+        {
+            // data invalid, forget
+            pSystemDependentData_GraphicsPath.reset();
+        }
+    }
+
     if(pSystemDependentData_GraphicsPath)
     {
         // check data validity
@@ -2314,17 +2387,47 @@ bool WinSalGraphicsImpl::drawPolyLine(
         // fill data of buffered data
         pGraphicsPath = std::make_shared<Gdiplus::GraphicsPath>();
 
-        impAddB2DPolygonToGDIPlusGraphicsPathReal(
-            *pGraphicsPath,
-            rPolygon,
-            rObjectToDevice,
-            bNoLineJoin,
-            bPixelSnapHairline);
-
-        if(rPolygon.isClosed() && !bNoLineJoin)
+        if(!bDoDirectGDIPlusStroke && bStrokeUsed)
         {
-            // #i101491# needed to create the correct line joins
-            pGraphicsPath->CloseFigure();
+            // MM01 need to do line dashing as fallback stuff here now
+            basegfx::B2DPolyPolygon aPolyPolygonLine;
+
+            // apply LineStyle
+            basegfx::utils::applyLineDashing(
+                rPolygon, // source
+                *pStroke, // pattern
+                &aPolyPolygonLine, // target for lines
+                nullptr, // target for gaps
+                fDotDashLength); // full length if available
+
+            // MM01 checked/verified, ok
+            for(sal_uInt32 a(0); a < aPolyPolygonLine.count(); a++)
+            {
+                const basegfx::B2DPolygon aPolyLine(aPolyPolygonLine.getB2DPolygon(a));
+                pGraphicsPath->StartFigure();
+                impAddB2DPolygonToGDIPlusGraphicsPathReal(
+                    *pGraphicsPath,
+                    aPolyLine,
+                    rObjectToDevice,
+                    bNoLineJoin,
+                    bPixelSnapHairline);
+            }
+        }
+        else
+        {
+            // no line dashing or direct stroke, just copy
+            impAddB2DPolygonToGDIPlusGraphicsPathReal(
+                *pGraphicsPath,
+                rPolygon,
+                rObjectToDevice,
+                bNoLineJoin,
+                bPixelSnapHairline);
+
+            if(rPolygon.isClosed() && !bNoLineJoin)
+            {
+                // #i101491# needed to create the correct line joins
+                pGraphicsPath->CloseFigure();
+            }
         }
 
         // add to buffering mechanism
@@ -2333,7 +2436,8 @@ bool WinSalGraphicsImpl::drawPolyLine(
             rPolygon.addOrReplaceSystemDependentData<SystemDependentData_GraphicsPath>(
                 ImplGetSystemDependentDataManager(),
                 pGraphicsPath,
-                bNoLineJoin);
+                bNoLineJoin,
+                pStroke);
         }
     }
 
@@ -2377,7 +2481,7 @@ static void paintToGdiPlus(
     Gdiplus::PointF aDestPoints[3];
     Gdiplus::ImageAttributes aAttributes;
 
-    // define target region as paralellogram
+    // define target region as parallelogram
     aDestPoints[0].X = Gdiplus::REAL(rTR.mnDestX);
     aDestPoints[0].Y = Gdiplus::REAL(rTR.mnDestY);
     aDestPoints[1].X = Gdiplus::REAL(rTR.mnDestX + rTR.mnDestWidth);
@@ -2549,7 +2653,7 @@ bool WinSalGraphicsImpl::drawTransformedBitmap(
                     nSrcHeight,
                     nDestHeight);
 
-                // this mode is only capable of drawing the whole bitmap to a paralellogram
+                // this mode is only capable of drawing the whole bitmap to a parallelogram
                 aDestPoints[0].X = Gdiplus::REAL(rNull.getX());
                 aDestPoints[0].Y = Gdiplus::REAL(rNull.getY());
                 aDestPoints[1].X = Gdiplus::REAL(rX.getX());

@@ -39,6 +39,7 @@
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/lang/XComponent.hpp>
 #include <com/sun/star/lang/XMain.hpp>
+#include <com/sun/star/lang/XSingleComponentFactory.hpp>
 #include <com/sun/star/bridge/UnoUrlResolver.hpp>
 #include <com/sun/star/bridge/XUnoUrlResolver.hpp>
 #include <com/sun/star/uno/RuntimeException.hpp>
@@ -158,9 +159,12 @@ static bool equals( const TestData & rData1, const TestData & rData2 )
 {
     sal_Int32 nLen;
 
-    if ((rData1.Sequence == rData2.Sequence) &&
-        equals( static_cast<const TestElement &>(rData1), static_cast<const TestElement &>(rData2) ) &&
-        (nLen = rData1.Sequence.getLength()) == rData2.Sequence.getLength())
+    if (rData1.Sequence != rData2.Sequence)
+        return false;
+    if (!equals( static_cast<const TestElement &>(rData1), static_cast<const TestElement &>(rData2) ))
+        return false;
+    nLen = rData1.Sequence.getLength();
+    if (nLen == rData2.Sequence.getLength())
     {
         // once again by hand sequence ==
         const TestElement * pElements1 = rData1.Sequence.getConstArray();
@@ -927,7 +931,6 @@ static bool raiseException( const Reference< XBridgeTest > & xLBT )
         {
             try
             {
-                TestData aRet, aRet2;
                 xLBT->raiseException(
                     5, STRING_TEST_CONSTANT,
                     xLBT->getInterface() );
@@ -937,7 +940,7 @@ static bool raiseException( const Reference< XBridgeTest > & xLBT )
                 if (rExc.ArgumentPosition == 5 &&
 #if OSL_DEBUG_LEVEL == 0
                     // java stack traces trash Message
-                    rExc.Message == STRING_TEST_CONSTANT &&
+                    rExc.Message.startsWith(STRING_TEST_CONSTANT) &&
 #endif
                     rExc.Context == xLBT->getInterface())
                 {
@@ -964,7 +967,7 @@ static bool raiseException( const Reference< XBridgeTest > & xLBT )
             if (rExc.Context == xLBT->getInterface()
 #if OSL_DEBUG_LEVEL == 0
                     // java stack traces trash Message
-                && rExc.Message == STRING_TEST_CONSTANT
+                && rExc.Message.startsWith(STRING_TEST_CONSTANT)
 #endif
                 )
             {
@@ -984,7 +987,7 @@ static bool raiseException( const Reference< XBridgeTest > & xLBT )
         if (rExc.Context == xLBT->getInterface()
 #if OSL_DEBUG_LEVEL == 0
             // java stack traces trash Message
-            && rExc.Message == STRING_TEST_CONSTANT
+            && rExc.Message.startsWith(STRING_TEST_CONSTANT)
 #endif
             )
         {

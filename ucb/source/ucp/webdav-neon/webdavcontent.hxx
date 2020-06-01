@@ -39,25 +39,25 @@
 #include "DAVResourceAccess.hxx"
 #include "PropertyMap.hxx"
 
-namespace com { namespace sun { namespace star { namespace beans {
+namespace com::sun::star::beans {
     struct Property;
     struct PropertyValue;
-} } } }
+}
 
-namespace com { namespace sun { namespace star { namespace io {
+namespace com::sun::star::io {
     class XInputStream;
-} } } }
+}
 
-namespace com { namespace sun { namespace star { namespace sdbc {
+namespace com::sun::star::sdbc {
     class XRow;
-} } } }
+}
 
-namespace com { namespace sun { namespace star { namespace ucb {
+namespace com::sun::star::ucb {
     struct OpenCommandArgument3;
     struct PostCommandArgument2;
     struct PropertyCommandArgument;
     struct TransferInfo;
-} } } }
+}
 
 namespace webdav_ucp
 {
@@ -94,7 +94,7 @@ class Content : public ::ucbhelper::ContentImplHelper,
     ResourceType      m_eResourceTypeForLocks;
     ContentProvider*  m_pProvider; // No need for a ref, base class holds object
     bool              m_bTransient;
-    bool const        m_bCollection;
+    bool              m_bCollection;
     bool              m_bDidGetOrHead;
     std::vector< OUString > m_aFailedPropNames;
     // Options Cache lifetime

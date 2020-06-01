@@ -17,6 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/linguistic2/ProofreadingResult.hpp>
 #include <com/sun/star/linguistic2/XProofreadingIterator.hpp>
 #include <com/sun/star/linguistic2/XHyphenatedWord.hpp>
@@ -897,7 +898,7 @@ uno::Reference< XSpellAlternatives >
         return nullptr;
     SwPaM* pCursor = GetCursor();
     SwPosition aPos( *pCursor->GetPoint() );
-    SwCursorMoveState eTmpState( MV_SETONLYTEXT );
+    SwCursorMoveState eTmpState( CursorMoveState::SetOnlyText );
     SwTextNode *pNode = nullptr;
     SwWrongList *pWrong = nullptr;
     if (pPt && GetLayout()->GetModelPositionForViewPoint( &aPos, *const_cast<Point*>(pPt), &eTmpState ))
@@ -964,7 +965,7 @@ bool SwEditShell::GetGrammarCorrection(
 
     SwPaM* pCursor = GetCursor();
     SwPosition aPos( *pCursor->GetPoint() );
-    SwCursorMoveState eTmpState( MV_SETONLYTEXT );
+    SwCursorMoveState eTmpState( CursorMoveState::SetOnlyText );
     SwTextNode *pNode = nullptr;
     SwGrammarMarkUp *pWrong = nullptr;
     if (pPt && GetLayout()->GetModelPositionForViewPoint( &aPos, *const_cast<Point*>(pPt), &eTmpState ))
@@ -984,7 +985,7 @@ bool SwEditShell::GetGrammarCorrection(
             uno::Reference< linguistic2::XProofreadingIterator >  xGCIterator( mxDoc->GetGCIterator() );
             if (xGCIterator.is())
             {
-                uno::Reference< lang::XComponent > xDoc( mxDoc->GetDocShell()->GetBaseModel(), uno::UNO_QUERY );
+                uno::Reference< lang::XComponent > xDoc = mxDoc->GetDocShell()->GetBaseModel();
 
                 // Expand the string:
                 const ModelToViewHelper aConversionMap(*pNode, GetLayout());
@@ -1612,7 +1613,7 @@ void    SwSpellIter::AddPortion(uno::Reference< XSpellAlternatives > const & xAl
                         pCursor->GetMark()->nContent.GetIndex() );
                     const sal_uInt16 nWhich = pTextAttr
                         ? pTextAttr->Which()
-                        : static_cast<sal_uInt16>(RES_TXTATR_END);
+                        : RES_TXTATR_END;
                     switch (nWhich)
                     {
                         case RES_TXTATR_FIELD:

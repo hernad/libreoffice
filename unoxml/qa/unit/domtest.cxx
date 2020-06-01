@@ -19,6 +19,7 @@
 
 #include <rtl/ref.hxx>
 #include <sal/log.hxx>
+#include <sax/fastattribs.hxx>
 #include <comphelper/seqstream.hxx>
 #include <cppuhelper/implbase.hxx>
 #include <cppunit/extensions/HelperMacros.h>
@@ -35,7 +36,6 @@ using namespace ::comphelper;
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 using css::xml::dom::XDocumentBuilder;
-using css::xml::dom::DocumentBuilder;
 
 namespace
 {
@@ -169,8 +169,7 @@ struct DocumentHandler
     }
 };
 
-struct TokenHandler
-    : public ::cppu::WeakImplHelper< xml::sax::XFastTokenHandler >
+struct TokenHandler : public sax_fastparser::FastTokenHandlerBase
 {
     virtual ::sal_Int32 SAL_CALL getTokenFromUTF8( const uno::Sequence< ::sal_Int8 >& Identifier ) override
     {
@@ -182,6 +181,11 @@ struct TokenHandler
         CPPUNIT_ASSERT_MESSAGE( "TokenHandler::getUTF8Identifier() unexpected call",
                                 false );
         return uno::Sequence<sal_Int8>();
+    }
+
+    virtual sal_Int32 getTokenDirect( const char * /* pToken */, sal_Int32 /* nLength */ ) const override
+    {
+        return -1;
     }
 };
 

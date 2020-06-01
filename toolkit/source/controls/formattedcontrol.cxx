@@ -17,9 +17,9 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <toolkit/controls/formattedcontrol.hxx>
+#include <controls/formattedcontrol.hxx>
 #include <toolkit/helper/property.hxx>
-#include <toolkit/helper/servicenames.hxx>
+#include <helper/servicenames.hxx>
 
 #include <com/sun/star/awt/XVclWindowPeer.hpp>
 #include <com/sun/star/uno/XComponentContext.hpp>
@@ -161,7 +161,7 @@ namespace toolkit
 
     OUString UnoControlFormattedFieldModel::getServiceName()
     {
-        return OUString::createFromAscii( szServiceName_UnoControlFormattedFieldModel );
+        return "stardiv.vcl.controlmodel.FormattedField";
     }
 
 
@@ -371,7 +371,7 @@ namespace toolkit
         Any aReturn;
         switch (nPropId)
         {
-            case BASEPROPERTY_DEFAULTCONTROL: aReturn <<= OUString::createFromAscii( szServiceName_UnoControlFormattedField ); break;
+            case BASEPROPERTY_DEFAULTCONTROL: aReturn <<= OUString("stardiv.vcl.control.FormattedField"); break;
 
             case BASEPROPERTY_TREATASNUMBER: aReturn <<= true; break;
 

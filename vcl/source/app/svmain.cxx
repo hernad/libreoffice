@@ -43,7 +43,7 @@
 #include <configsettings.hxx>
 #include <vcl/lazydelete.hxx>
 #include <vcl/embeddedfontshelper.hxx>
-#include <vcl/dialog.hxx>
+#include <vcl/toolkit/dialog.hxx>
 #include <vcl/menu.hxx>
 #include <vcl/virdev.hxx>
 #include <vcl/print.hxx>
@@ -82,13 +82,18 @@
 #include <com/sun/star/lang/XComponent.hpp>
 #include <com/sun/star/frame/Desktop.hpp>
 
+#ifdef _WIN32
+#include <com/sun/star/datatransfer/clipboard/XClipboard.hpp>
+#endif
+
 #include <comphelper/lok.hxx>
 #include <cppuhelper/implbase.hxx>
 #include <uno/current_context.hxx>
 
 #include <opencl/OpenCLZone.hxx>
 #include <opengl/zone.hxx>
-#include <opengl/watchdog.hxx>
+#include <skia/zone.hxx>
+#include <watchdog.hxx>
 
 #include <basegfx/utils/systemdependentdata.hxx>
 #include <tools/diagnose_ex.h>
@@ -123,12 +128,16 @@ static oslSignalAction VCLExceptionSignal_impl( void* /*pData*/, oslSignalInfo* 
         if (OpenGLZone::isInZone())
             OpenGLZone::hardDisable();
 #endif
+#if HAVE_FEATURE_SKIA
+        if (SkiaZone::isInZone())
+            SkiaZone::hardDisable();
+#endif
 #if HAVE_FEATURE_OPENCL
         if (OpenCLZone::isInZone())
         {
             OpenCLZone::hardDisable();
 #ifdef _WIN32
-            if (OpenCLZone::isInInitialTest())
+            if (OpenCLInitialZone::isInZone())
                 TerminateProcess(GetCurrentProcess(), EXITHELPER_NORMAL_RESTART);
 #endif
         }
@@ -212,9 +221,7 @@ int ImplSVMain()
         pSVData->mxAccessBridge.clear();
     }
 
-#if HAVE_FEATURE_OPENGL
-    OpenGLWatchdogThread::stop();
-#endif
+    WatchdogThread::stop();
     DeInitVCL();
 
     return nReturn;
@@ -450,7 +457,7 @@ void DeInitVCL()
             aBuf.append( "\" type = \"" );
             aBuf.append( typeid(*pWin).name() );
             aBuf.append( "\", ptr = 0x" );
-            aBuf.append( sal_Int64( pWin ), 16 );
+            aBuf.append( reinterpret_cast<sal_Int64>( pWin ), 16 );
             aBuf.append( "\n" );
         }
     }
@@ -581,7 +588,7 @@ void DeInitVCL()
 
     pSVData->maGDIData.mxScreenFontList.reset();
     pSVData->maGDIData.mxScreenFontCache.reset();
-    pSVData->maGDIData.maScaleCache.remove_if([](const o3tl::lru_map<SalBitmap*, BitmapEx>::key_value_pair_t&)
+    pSVData->maGDIData.maScaleCache.remove_if([](const lru_scale_cache::key_value_pair_t&)
                                                 { return true; });
 
     pSVData->maGDIData.maThemeDrawCommandsCache.clear();
@@ -608,8 +615,8 @@ namespace {
 // only one call is allowed
 struct WorkerThreadData
 {
-    oslWorkerFunction const   pWorker;
-    void * const              pThreadData;
+    oslWorkerFunction   pWorker;
+    void *              pThreadData;
     WorkerThreadData( oslWorkerFunction pWorker_, void * pThreadData_ )
         : pWorker( pWorker_ )
         , pThreadData( pThreadData_ )

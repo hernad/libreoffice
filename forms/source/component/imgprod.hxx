@@ -21,7 +21,6 @@
 #define INCLUDED_FORMS_SOURCE_COMPONENT_IMGPROD_HXX
 
 #include <tools/link.hxx>
-#include <com/sun/star/awt/ImageStatus.hpp>
 #include <com/sun/star/awt/XImageConsumer.hpp>
 #include <com/sun/star/awt/XImageProducer.hpp>
 #include <com/sun/star/lang/XInitialization.hpp>
@@ -32,10 +31,7 @@
 
 class SvStream;
 class Graphic;
-
-namespace com { namespace sun { namespace star { namespace io {
-    class XInputStream;
-}}}}
+namespace com::sun::star::io { class XInputStream; }
 
 
 class ImageProducer :   public css::awt::XImageProducer,

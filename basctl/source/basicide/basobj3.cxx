@@ -250,19 +250,22 @@ BasicManager* FindBasicManager( StarBASIC const * pLib )
 
 void MarkDocumentModified( const ScriptDocument& rDocument )
 {
+    Shell* pShell = GetShell();
+
     // does not have to come from a document...
     if ( rDocument.isApplication() )
     {
-        if (Shell* pShell = GetShell())
-        {
+        if (pShell)
             pShell->SetAppBasicModified(true);
-            pShell->UpdateObjectCatalog();
-        }
     }
     else
     {
         rDocument.setDocumentModified();
     }
+
+    // tdf#130161 in all cases call UpdateObjectCatalog
+    if (pShell)
+        pShell->UpdateObjectCatalog();
 
     if (SfxBindings* pBindings = GetBindingsPtr())
     {
@@ -341,27 +344,28 @@ void BasicStopped(
 
 void InvalidateDebuggerSlots()
 {
-    if (SfxBindings* pBindings = GetBindingsPtr())
-    {
-        pBindings->Invalidate( SID_BASICSTOP );
-        pBindings->Update( SID_BASICSTOP );
-        pBindings->Invalidate( SID_BASICRUN );
-        pBindings->Update( SID_BASICRUN );
-        pBindings->Invalidate( SID_BASICCOMPILE );
-        pBindings->Update( SID_BASICCOMPILE );
-        pBindings->Invalidate( SID_BASICSTEPOVER );
-        pBindings->Update( SID_BASICSTEPOVER );
-        pBindings->Invalidate( SID_BASICSTEPINTO );
-        pBindings->Update( SID_BASICSTEPINTO );
-        pBindings->Invalidate( SID_BASICSTEPOUT );
-        pBindings->Update( SID_BASICSTEPOUT );
-        pBindings->Invalidate( SID_BASICIDE_TOGGLEBRKPNT );
-        pBindings->Update( SID_BASICIDE_TOGGLEBRKPNT );
-        pBindings->Invalidate( SID_BASICIDE_STAT_POS );
-        pBindings->Update( SID_BASICIDE_STAT_POS );
-        pBindings->Invalidate( SID_BASICIDE_STAT_TITLE );
-        pBindings->Update( SID_BASICIDE_STAT_TITLE );
-    }
+    SfxBindings* pBindings = GetBindingsPtr();
+    if (!pBindings)
+        return;
+
+    pBindings->Invalidate( SID_BASICSTOP );
+    pBindings->Update( SID_BASICSTOP );
+    pBindings->Invalidate( SID_BASICRUN );
+    pBindings->Update( SID_BASICRUN );
+    pBindings->Invalidate( SID_BASICCOMPILE );
+    pBindings->Update( SID_BASICCOMPILE );
+    pBindings->Invalidate( SID_BASICSTEPOVER );
+    pBindings->Update( SID_BASICSTEPOVER );
+    pBindings->Invalidate( SID_BASICSTEPINTO );
+    pBindings->Update( SID_BASICSTEPINTO );
+    pBindings->Invalidate( SID_BASICSTEPOUT );
+    pBindings->Update( SID_BASICSTEPOUT );
+    pBindings->Invalidate( SID_BASICIDE_TOGGLEBRKPNT );
+    pBindings->Update( SID_BASICIDE_TOGGLEBRKPNT );
+    pBindings->Invalidate( SID_BASICIDE_STAT_POS );
+    pBindings->Update( SID_BASICIDE_STAT_POS );
+    pBindings->Invalidate( SID_BASICIDE_STAT_TITLE );
+    pBindings->Update( SID_BASICIDE_STAT_TITLE );
 }
 
 long HandleBasicError( StarBASIC const * pBasic )

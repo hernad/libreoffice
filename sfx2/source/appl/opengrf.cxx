@@ -26,6 +26,7 @@
 #include <com/sun/star/ui/dialogs/ExtendedFilePickerElementIds.hpp>
 #include <com/sun/star/ui/dialogs/TemplateDescription.hpp>
 #include <com/sun/star/ui/dialogs/XFilePickerControlAccess.hpp>
+#include <com/sun/star/ui/dialogs/XFilePicker3.hpp>
 #include <o3tl/any.hxx>
 #include <vcl/stdtext.hxx>
 #include <vcl/graphicfilter.hxx>
@@ -138,7 +139,8 @@ ErrCode SvxOpenGraphicDialog::Execute()
             }
             else
             {
-                if( (nImpRet=rFilter.CanImportGraphic( aObj, nFormatNum, &nRetFormat )) != ERRCODE_NONE )
+                nImpRet = rFilter.CanImportGraphic( aObj, nFormatNum, &nRetFormat );
+                if( nImpRet != ERRCODE_NONE )
                     nImpRet = rFilter.CanImportGraphic( aObj, GRFILTER_FORMAT_DONTKNOW, &nRetFormat );
             }
 

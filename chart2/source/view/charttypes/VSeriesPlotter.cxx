@@ -19,6 +19,7 @@
 
 #include <memory>
 #include <VSeriesPlotter.hxx>
+#include <BaseGFXHelper.hxx>
 #include <VLineProperties.hxx>
 #include <ShapeFactory.hxx>
 
@@ -86,6 +87,7 @@
 namespace chart {
 
 using namespace ::com::sun::star;
+using namespace ::com::sun::star::chart;
 using namespace ::com::sun::star::chart2;
 using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::Sequence;
@@ -579,9 +581,9 @@ uno::Reference< drawing::XShape > VSeriesPlotter::createDataLabel( const uno::Re
             }
         }
 
-        for( sal_Int32 nN = 0; nN < aTextList.getLength(); ++nN )
+        for( auto const & line : std::as_const(aTextList) )
         {
-            if( !aTextList[nN].isEmpty() )
+            if( !line.isEmpty() )
             {
                 ++nLineCountForSymbolsize;
             }
@@ -607,8 +609,7 @@ uno::Reference< drawing::XShape > VSeriesPlotter::createDataLabel( const uno::Re
             Sequence< uno::Reference< XFormattedString > > aFormattedLabels( aCustomLabels.getLength() );
             for( int i = 0; i < aFormattedLabels.getLength(); i++ )
             {
-                uno::Reference< XFormattedString > xString( aCustomLabels[i], uno::UNO_QUERY );
-                aFormattedLabels[i] = xString;
+                aFormattedLabels[i] = aCustomLabels[i];
             }
 
             // center the text
@@ -721,7 +722,42 @@ uno::Reference< drawing::XShape > VSeriesPlotter::createDataLabel( const uno::Re
         {
             awt::Point aRelPos = rDataSeries.getLabelPosition(aTextShapePos, nPointIndex);
             if( aRelPos.X != -1 )
+            {
                 xTextShape->setPosition(aRelPos);
+                if( !m_xChartTypeModel->getChartType().equalsIgnoreAsciiCase(CHART2_SERVICE_NAME_CHARTTYPE_PIE) )
+                {
+                    sal_Int32 nX1 = rScreenPosition2D.X;
+                    sal_Int32 nY1 = rScreenPosition2D.Y;
+                    sal_Int32 nX2 = nX1;
+                    sal_Int32 nY2 = nY1;
+                    ::basegfx::B2IRectangle aRect(BaseGFXHelper::makeRectangle(aRelPos, xTextShape->getSize()));
+                    if (nX1 < aRelPos.X)
+                        nX2 = aRelPos.X;
+                    else if (nX1 > aRect.getMaxX())
+                        nX2 = aRect.getMaxX();
+
+                    if (nY1 < aRect.getMinY())
+                        nY2 = aRect.getMinY();
+                    else if (nY1 > aRect.getMaxY())
+                        nY2 = aRect.getMaxY();
+
+                    //when the line is very short compared to the page size don't create one
+                    ::basegfx::B2DVector aLength(nX1 - nX2, nY1 - nY2);
+                    double fPageDiagonaleLength = sqrt(double(m_aPageReferenceSize.Width)*double(m_aPageReferenceSize.Width) + double(m_aPageReferenceSize.Height)*double(m_aPageReferenceSize.Height));
+                    if ((aLength.getLength() / fPageDiagonaleLength) >= 0.01)
+                    {
+                        drawing::PointSequenceSequence aPoints(1);
+                        aPoints[0].realloc(2);
+                        aPoints[0][0].X = nX1;
+                        aPoints[0][0].Y = nY1;
+                        aPoints[0][1].X = nX2;
+                        aPoints[0][1].Y = nY2;
+
+                        VLineProperties aVLineProperties;
+                        m_pShapeFactory->createLine2D(xTarget, aPoints, &aVLineProperties);
+                    }
+                }
+            }
         }
 
         // in case legend symbol has to be displayed, text shape position is
@@ -805,8 +841,8 @@ double lcl_getErrorBarLogicLength(
                                              : OUString("NegativeError") ) >>= fPercent )
                 {
                     if( nIndex >=0 && nIndex < rData.getLength() &&
-                        ! ::rtl::math::isNan( rData[nIndex] ) &&
-                        ! ::rtl::math::isNan( fPercent ))
+                        ! std::isnan( rData[nIndex] ) &&
+                        ! std::isnan( fPercent ))
                     {
                         fResult = rData[nIndex] * fPercent / 100.0;
                     }
@@ -828,14 +864,13 @@ double lcl_getErrorBarLogicLength(
                 {
                     double fMaxValue;
                     ::rtl::math::setInf(&fMaxValue, true);
-                    const double* pValues = rData.getConstArray();
-                    for(sal_Int32 i=0; i<rData.getLength(); ++i, ++pValues)
+                    for(double d : rData)
                     {
-                        if(fMaxValue<*pValues)
-                            fMaxValue=*pValues;
+                        if(fMaxValue < d)
+                            fMaxValue = d;
                     }
-                    if( ::rtl::math::isFinite( fMaxValue ) &&
-                        ::rtl::math::isFinite( fPercent ))
+                    if( std::isfinite( fMaxValue ) &&
+                        std::isfinite( fPercent ))
                     {
                         fResult = fMaxValue * fPercent / 100.0;
                     }
@@ -1002,7 +1037,7 @@ void VSeriesPlotter::createErrorBar(
         if( bShowPositive )
         {
             double fLength = lcl_getErrorBarLogicLength( aData, xErrorBarProperties, nErrorBarStyle, nIndex, true, bYError );
-            if( ::rtl::math::isFinite( fLength ) )
+            if( std::isfinite( fLength ) )
             {
                 double fLocalX = fX;
                 double fLocalY = fY;
@@ -1025,7 +1060,7 @@ void VSeriesPlotter::createErrorBar(
         if( bShowNegative )
         {
             double fLength = lcl_getErrorBarLogicLength( aData, xErrorBarProperties, nErrorBarStyle, nIndex, false, bYError );
-            if( ::rtl::math::isFinite( fLength ) )
+            if( std::isfinite( fLength ) )
             {
                 double fLocalX = fX;
                 double fLocalY = fY;
@@ -1203,10 +1238,10 @@ void VSeriesPlotter::createErrorRectangle(
                                 nErrorBorderStyleY, nIndex, false, true );
         }
 
-        if ( !( ::rtl::math::isFinite( fPosX ) &&
-                ::rtl::math::isFinite( fPosY ) &&
-                ::rtl::math::isFinite( fNegX ) &&
-                ::rtl::math::isFinite( fNegY ) ) )
+        if ( !( std::isfinite( fPosX ) &&
+                std::isfinite( fPosY ) &&
+                std::isfinite( fNegX ) &&
+                std::isfinite( fNegY ) ) )
             return;
 
         drawing::Position3D aBottomLeft( lcl_transformMixedToScene( m_pPosHelper,
@@ -1363,7 +1398,7 @@ void VSeriesPlotter::createRegressionCurvesShapes( VDataSeries const & rVDataSer
             xScalingY.set( aScales[1].Scaling );
         }
 
-        uno::Sequence< geometry::RealPoint2D > aCalculatedPoints(
+        const uno::Sequence< geometry::RealPoint2D > aCalculatedPoints(
             xCalculator->getCurveValues(
                             fMinX, fMaxX, nPointCount,
                             xScalingX, xScalingY, bMaySkipPoints ));
@@ -1380,19 +1415,19 @@ void VSeriesPlotter::createRegressionCurvesShapes( VDataSeries const & rVDataSer
 
         sal_Int32 nRealPointCount = 0;
 
-        for(sal_Int32 nP = 0; nP < aCalculatedPoints.getLength(); ++nP)
+        for(geometry::RealPoint2D const & p : aCalculatedPoints)
         {
-            double fLogicX = aCalculatedPoints[nP].X;
-            double fLogicY = aCalculatedPoints[nP].Y;
+            double fLogicX = p.X;
+            double fLogicY = p.Y;
             double fLogicZ = 0.0; //dummy
 
             // fdo#51656: don't scale mean value lines
             if(!bAverageLine)
                 m_pPosHelper->doLogicScaling( &fLogicX, &fLogicY, &fLogicZ );
 
-            if(!rtl::math::isNan(fLogicX) && !rtl::math::isInf(fLogicX) &&
-               !rtl::math::isNan(fLogicY) && !rtl::math::isInf(fLogicY) &&
-               !rtl::math::isNan(fLogicZ) && !rtl::math::isInf(fLogicZ) )
+            if(!std::isnan(fLogicX) && !std::isinf(fLogicX) &&
+               !std::isnan(fLogicY) && !std::isinf(fLogicY) &&
+               !std::isnan(fLogicZ) && !std::isinf(fLogicZ) )
             {
                 aRegressionPoly.SequenceX[0][nRealPointCount] = fLogicX;
                 aRegressionPoly.SequenceY[0][nRealPointCount] = fLogicY;
@@ -1467,129 +1502,129 @@ void VSeriesPlotter::createRegressionCurveEquationShapes(
 
     bool bShowEquation = false;
     bool bShowCorrCoeff = false;
-    if(( xEquationProperties->getPropertyValue( "ShowEquation") >>= bShowEquation ) &&
-       ( xEquationProperties->getPropertyValue( "ShowCorrelationCoefficient") >>= bShowCorrCoeff ))
+    if(!(( xEquationProperties->getPropertyValue( "ShowEquation") >>= bShowEquation ) &&
+       ( xEquationProperties->getPropertyValue( "ShowCorrelationCoefficient") >>= bShowCorrCoeff )))
+        return;
+
+    if( ! (bShowEquation || bShowCorrCoeff))
+        return;
+
+    OUStringBuffer aFormula;
+    sal_Int32 nNumberFormatKey = 0;
+    sal_Int32 nFormulaWidth = 0;
+    xEquationProperties->getPropertyValue(CHART_UNONAME_NUMFMT) >>= nNumberFormatKey;
+    bool bResizeEquation = true;
+    sal_Int32 nMaxIteration = 2;
+    if ( bShowEquation )
     {
-        if( ! (bShowEquation || bShowCorrCoeff))
-            return;
+        OUString aXName, aYName;
+        if ( !(xEquationProperties->getPropertyValue( "XName" ) >>= aXName) )
+            aXName = OUString( "x" );
+        if ( !(xEquationProperties->getPropertyValue( "YName" ) >>= aYName) )
+            aYName = OUString( "f(x)" );
+        xRegressionCurveCalculator->setXYNames( aXName, aYName );
+    }
 
-        OUStringBuffer aFormula;
-        sal_Int32 nNumberFormatKey = 0;
-        sal_Int32 nFormulaWidth = 0;
-        xEquationProperties->getPropertyValue(CHART_UNONAME_NUMFMT) >>= nNumberFormatKey;
-        bool bResizeEquation = true;
-        sal_Int32 nMaxIteration = 2;
-        if ( bShowEquation )
+    for ( sal_Int32 nCountIteration = 0; bResizeEquation && nCountIteration < nMaxIteration ; nCountIteration++ )
+    {
+        bResizeEquation = false;
+        if( bShowEquation )
         {
-            OUString aXName, aYName;
-            if ( !(xEquationProperties->getPropertyValue( "XName" ) >>= aXName) )
-                aXName = OUString( "x" );
-            if ( !(xEquationProperties->getPropertyValue( "YName" ) >>= aYName) )
-                aYName = OUString( "f(x)" );
-            xRegressionCurveCalculator->setXYNames( aXName, aYName );
-        }
-
-        for ( sal_Int32 nCountIteration = 0; bResizeEquation && nCountIteration < nMaxIteration ; nCountIteration++ )
-        {
-            bResizeEquation = false;
-            if( bShowEquation )
-            {
-                if (m_apNumberFormatterWrapper)
-                {   // iteration 0: default representation (no wrap)
-                    // iteration 1: expected width (nFormulaWidth) is calculated
-                    aFormula = xRegressionCurveCalculator->getFormattedRepresentation(
-                        m_apNumberFormatterWrapper->getNumberFormatsSupplier(),
-                        nNumberFormatKey, nFormulaWidth );
-                    nFormulaWidth = lcl_getOUStringMaxLineLength( aFormula );
-                }
-                else
-                {
-                    aFormula = xRegressionCurveCalculator->getRepresentation();
-                }
-
-                if( bShowCorrCoeff )
-                {
-                    aFormula.append( "\n" );
-                }
-            }
-            if( bShowCorrCoeff )
-            {
-                aFormula.append( "R" ).append( OUStringChar( aSuperscriptFigures[2] ) ).append( " = " );
-                double fR( xRegressionCurveCalculator->getCorrelationCoefficient());
-                if (m_apNumberFormatterWrapper)
-                {
-                    Color nLabelCol;
-                    bool bColChanged;
-                    aFormula.append(
-                        m_apNumberFormatterWrapper->getFormattedString(
-                            nNumberFormatKey, fR*fR, nLabelCol, bColChanged ));
-                    //@todo: change color of label if bColChanged is true
-                }
-                else
-                {
-                    const LocaleDataWrapper& rLocaleDataWrapper = Application::GetSettings().GetLocaleDataWrapper();
-                    const OUString& aNumDecimalSep = rLocaleDataWrapper.getNumDecimalSep();
-                    sal_Unicode aDecimalSep = aNumDecimalSep[0];
-                    aFormula.append( ::rtl::math::doubleToUString(
-                                        fR*fR, rtl_math_StringFormat_G, 4, aDecimalSep, true ));
-                }
-            }
-
-            awt::Point aScreenPosition2D;
-            chart2::RelativePosition aRelativePosition;
-            if( xEquationProperties->getPropertyValue( "RelativePosition") >>= aRelativePosition )
-            {
-                //@todo decide whether x is primary or secondary
-                double fX = aRelativePosition.Primary*m_aPageReferenceSize.Width;
-                double fY = aRelativePosition.Secondary*m_aPageReferenceSize.Height;
-                aScreenPosition2D.X = static_cast< sal_Int32 >( ::rtl::math::round( fX ));
-                aScreenPosition2D.Y = static_cast< sal_Int32 >( ::rtl::math::round( fY ));
+            if (m_apNumberFormatterWrapper)
+            {   // iteration 0: default representation (no wrap)
+                // iteration 1: expected width (nFormulaWidth) is calculated
+                aFormula = xRegressionCurveCalculator->getFormattedRepresentation(
+                    m_apNumberFormatterWrapper->getNumberFormatsSupplier(),
+                    nNumberFormatKey, nFormulaWidth );
+                nFormulaWidth = lcl_getOUStringMaxLineLength( aFormula );
             }
             else
-                aScreenPosition2D = aDefaultPos;
-
-            if( !aFormula.isEmpty())
             {
-                // set fill and line properties on creation
-                tNameSequence aNames;
-                tAnySequence  aValues;
-                PropertyMapper::getPreparedTextShapePropertyLists( xEquationProperties, aNames, aValues );
+                aFormula = xRegressionCurveCalculator->getRepresentation();
+            }
 
-                uno::Reference< drawing::XShape > xTextShape = m_pShapeFactory->createText(
-                    xEquationTarget, aFormula.makeStringAndClear(),
-                    aNames, aValues, ShapeFactory::makeTransformation( aScreenPosition2D ));
+            if( bShowCorrCoeff )
+            {
+                aFormula.append( "\n" );
+            }
+        }
+        if( bShowCorrCoeff )
+        {
+            aFormula.append( "R" ).append( OUStringChar( aSuperscriptFigures[2] ) ).append( " = " );
+            double fR( xRegressionCurveCalculator->getCorrelationCoefficient());
+            if (m_apNumberFormatterWrapper)
+            {
+                Color nLabelCol;
+                bool bColChanged;
+                aFormula.append(
+                    m_apNumberFormatterWrapper->getFormattedString(
+                        nNumberFormatKey, fR*fR, nLabelCol, bColChanged ));
+                //@todo: change color of label if bColChanged is true
+            }
+            else
+            {
+                const LocaleDataWrapper& rLocaleDataWrapper = Application::GetSettings().GetLocaleDataWrapper();
+                const OUString& aNumDecimalSep = rLocaleDataWrapper.getNumDecimalSep();
+                sal_Unicode aDecimalSep = aNumDecimalSep[0];
+                aFormula.append( ::rtl::math::doubleToUString(
+                                    fR*fR, rtl_math_StringFormat_G, 4, aDecimalSep, true ));
+            }
+        }
 
-                OSL_ASSERT( xTextShape.is());
-                if( xTextShape.is())
+        awt::Point aScreenPosition2D;
+        chart2::RelativePosition aRelativePosition;
+        if( xEquationProperties->getPropertyValue( "RelativePosition") >>= aRelativePosition )
+        {
+            //@todo decide whether x is primary or secondary
+            double fX = aRelativePosition.Primary*m_aPageReferenceSize.Width;
+            double fY = aRelativePosition.Secondary*m_aPageReferenceSize.Height;
+            aScreenPosition2D.X = static_cast< sal_Int32 >( ::rtl::math::round( fX ));
+            aScreenPosition2D.Y = static_cast< sal_Int32 >( ::rtl::math::round( fY ));
+        }
+        else
+            aScreenPosition2D = aDefaultPos;
+
+        if( !aFormula.isEmpty())
+        {
+            // set fill and line properties on creation
+            tNameSequence aNames;
+            tAnySequence  aValues;
+            PropertyMapper::getPreparedTextShapePropertyLists( xEquationProperties, aNames, aValues );
+
+            uno::Reference< drawing::XShape > xTextShape = m_pShapeFactory->createText(
+                xEquationTarget, aFormula.makeStringAndClear(),
+                aNames, aValues, ShapeFactory::makeTransformation( aScreenPosition2D ));
+
+            OSL_ASSERT( xTextShape.is());
+            if( xTextShape.is())
+            {
+                ShapeFactory::setShapeName( xTextShape, rEquationCID );
+                awt::Size aSize( xTextShape->getSize() );
+                awt::Point aPos( RelativePositionHelper::getUpperLeftCornerOfAnchoredObject(
+                    aScreenPosition2D, aSize, aRelativePosition.Anchor ) );
+                //ensure that the equation is fully placed within the page (if possible)
+                if( (aPos.X + aSize.Width) > m_aPageReferenceSize.Width )
+                    aPos.X = m_aPageReferenceSize.Width - aSize.Width;
+                if( aPos.X < 0 )
                 {
-                    ShapeFactory::setShapeName( xTextShape, rEquationCID );
-                    awt::Size aSize( xTextShape->getSize() );
-                    awt::Point aPos( RelativePositionHelper::getUpperLeftCornerOfAnchoredObject(
-                        aScreenPosition2D, aSize, aRelativePosition.Anchor ) );
-                    //ensure that the equation is fully placed within the page (if possible)
-                    if( (aPos.X + aSize.Width) > m_aPageReferenceSize.Width )
-                        aPos.X = m_aPageReferenceSize.Width - aSize.Width;
-                    if( aPos.X < 0 )
+                    aPos.X = 0;
+                    if ( nFormulaWidth > 0 )
                     {
-                        aPos.X = 0;
-                        if ( nFormulaWidth > 0 )
-                        {
-                            bResizeEquation = true;
-                            if ( nCountIteration < nMaxIteration-1 )
-                                xEquationTarget->remove( xTextShape );  // remove equation
-                            nFormulaWidth *= m_aPageReferenceSize.Width / static_cast< double >(aSize.Width);
-                            nFormulaWidth -= nCountIteration;
-                            if ( nFormulaWidth < 0 )
-                                nFormulaWidth = 0;
-                        }
+                        bResizeEquation = true;
+                        if ( nCountIteration < nMaxIteration-1 )
+                            xEquationTarget->remove( xTextShape );  // remove equation
+                        nFormulaWidth *= m_aPageReferenceSize.Width / static_cast< double >(aSize.Width);
+                        nFormulaWidth -= nCountIteration;
+                        if ( nFormulaWidth < 0 )
+                            nFormulaWidth = 0;
                     }
-                    if( (aPos.Y + aSize.Height) > m_aPageReferenceSize.Height )
-                        aPos.Y = m_aPageReferenceSize.Height - aSize.Height;
-                    if( aPos.Y < 0 )
-                        aPos.Y = 0;
-                    if ( !bResizeEquation || nCountIteration == nMaxIteration-1 )
-                        xTextShape->setPosition(aPos);  // if equation was not removed
                 }
+                if( (aPos.Y + aSize.Height) > m_aPageReferenceSize.Height )
+                    aPos.Y = m_aPageReferenceSize.Height - aSize.Height;
+                if( aPos.Y < 0 )
+                    aPos.Y = 0;
+                if ( !bResizeEquation || nCountIteration == nMaxIteration-1 )
+                    xTextShape->setPosition(aPos);  // if equation was not removed
             }
         }
     }
@@ -1624,7 +1659,7 @@ long VSeriesPlotter::calculateTimeResolutionOnXAxis()
 
     std::vector<double>::const_iterator aIt = rDateCategories.begin(), aEnd = rDateCategories.end();
 
-    aIt = std::find_if(aIt, aEnd, [](const double& rDateCategory) { return !rtl::math::isNan(rDateCategory); });
+    aIt = std::find_if(aIt, aEnd, [](const double& rDateCategory) { return !std::isnan(rDateCategory); });
     if (aIt == aEnd)
         return nRet;
 
@@ -1636,7 +1671,7 @@ long VSeriesPlotter::calculateTimeResolutionOnXAxis()
     ++aIt;
     for(;aIt!=aEnd;++aIt)
     {
-        if (rtl::math::isNan(*aIt))
+        if (std::isnan(*aIt))
             continue;
 
         Date aCurrent(aNullDate); aCurrent.AddDays(rtl::math::approxFloor(*aIt));
@@ -1698,7 +1733,7 @@ double VSeriesPlotter::getMinimumYInRange( double fMinimumX, double fMaximumX, s
                 fMinimum=fLocalMinimum;
         }
     }
-    if(::rtl::math::isInf(fMinimum))
+    if(std::isinf(fMinimum))
         ::rtl::math::setNan(&fMinimum);
     return fMinimum;
 }
@@ -1731,7 +1766,7 @@ double VSeriesPlotter::getMaximumYInRange( double fMinimumX, double fMaximumX, s
                 fMinimum=fLocalMinimum;
         }
     }
-    if(::rtl::math::isInf(fMaximum))
+    if(std::isinf(fMaximum))
         ::rtl::math::setNan(&fMaximum);
     return fMaximum;
 }
@@ -1799,15 +1834,15 @@ void VSeriesPlotter::getMinimumAndMaximiumX( double& rfMinimum, double& rfMaximu
         {
             double fLocalMinimum, fLocalMaximum;
             XSlot.getMinimumAndMaximiumX( fLocalMinimum, fLocalMaximum );
-            if( !::rtl::math::isNan(fLocalMinimum) && fLocalMinimum< rfMinimum )
+            if( !std::isnan(fLocalMinimum) && fLocalMinimum< rfMinimum )
                 rfMinimum = fLocalMinimum;
-            if( !::rtl::math::isNan(fLocalMaximum) && fLocalMaximum> rfMaximum )
+            if( !std::isnan(fLocalMaximum) && fLocalMaximum> rfMaximum )
                 rfMaximum = fLocalMaximum;
         }
     }
-    if(::rtl::math::isInf(rfMinimum))
+    if(std::isinf(rfMinimum))
         ::rtl::math::setNan(&rfMinimum);
-    if(::rtl::math::isInf(rfMaximum))
+    if(std::isinf(rfMaximum))
         ::rtl::math::setNan(&rfMaximum);
 }
 
@@ -1822,15 +1857,15 @@ void VSeriesPlotter::getMinimumAndMaximiumYInContinuousXRange( double& rfMinY, d
         {
             double fLocalMinimum, fLocalMaximum;
             XSlot.getMinimumAndMaximiumYInContinuousXRange( fLocalMinimum, fLocalMaximum, fMinX, fMaxX, nAxisIndex );
-            if( !::rtl::math::isNan(fLocalMinimum) && fLocalMinimum< rfMinY )
+            if( !std::isnan(fLocalMinimum) && fLocalMinimum< rfMinY )
                 rfMinY = fLocalMinimum;
-            if( !::rtl::math::isNan(fLocalMaximum) && fLocalMaximum> rfMaxY )
+            if( !std::isnan(fLocalMaximum) && fLocalMaximum> rfMaxY )
                 rfMaxY = fLocalMaximum;
         }
     }
-    if(::rtl::math::isInf(rfMinY))
+    if(std::isinf(rfMinY))
         ::rtl::math::setNan(&rfMinY);
-    if(::rtl::math::isInf(rfMaxY))
+    if(std::isinf(rfMaxY))
         ::rtl::math::setNan(&rfMaxY);
 }
 
@@ -1908,7 +1943,7 @@ void VDataSeriesGroup::getMinimumAndMaximiumX( double& rfMinimum, double& rfMaxi
         for(sal_Int32 nN=0;nN<nPointCount;nN++)
         {
             double fX = pSeries->getXValue( nN );
-            if( ::rtl::math::isNan(fX) )
+            if( std::isnan(fX) )
                 continue;
             if(rfMaximum<fX)
                 rfMaximum=fX;
@@ -1916,9 +1951,9 @@ void VDataSeriesGroup::getMinimumAndMaximiumX( double& rfMinimum, double& rfMaxi
                 rfMinimum=fX;
         }
     }
-    if(::rtl::math::isInf(rfMinimum))
+    if(std::isinf(rfMinimum))
         ::rtl::math::setNan(&rfMinimum);
-    if(::rtl::math::isInf(rfMaximum))
+    if(std::isinf(rfMaximum))
         ::rtl::math::setNan(&rfMaximum);
 }
 
@@ -2077,7 +2112,7 @@ void VDataSeriesGroup::getMinimumAndMaximiumYInContinuousXRange(
                 continue;
 
             double fX = pSeries->getXValue(i);
-            if (rtl::math::isNan(fX))
+            if (std::isnan(fX))
                 continue;
 
             if (fX < fMinX || fX > fMaxX)
@@ -2085,7 +2120,7 @@ void VDataSeriesGroup::getMinimumAndMaximiumYInContinuousXRange(
                 continue;
 
             double fY = pSeries->getYValue(i);
-            if (::rtl::math::isNan(fY))
+            if (std::isnan(fY))
                 continue;
 
             aRangeCalc.setValue(fX, fY);
@@ -2137,21 +2172,21 @@ void VDataSeriesGroup::calculateYMinAndMaxForCategory( sal_Int32 nCategoryIndex
 
             if( fValueMaxY >= 0 )
             {
-                if( ::rtl::math::isNan( fPositiveSum ) )
+                if( std::isnan( fPositiveSum ) )
                     fPositiveSum = fFirstPositiveY = fValueMaxY;
                 else
                     fPositiveSum += fValueMaxY;
             }
             if( fValueMinY < 0 )
             {
-                if(::rtl::math::isNan( fNegativeSum ))
+                if(std::isnan( fNegativeSum ))
                     fNegativeSum = fFirstNegativeY = fValueMinY;
                 else
                     fNegativeSum += fValueMinY;
             }
         }
-        rfMinimumY = ::rtl::math::isNan( fNegativeSum ) ? fFirstPositiveY : fNegativeSum;
-        rfMaximumY = ::rtl::math::isNan( fPositiveSum ) ? fFirstNegativeY : fPositiveSum;
+        rfMinimumY = std::isnan( fNegativeSum ) ? fFirstPositiveY : fNegativeSum;
+        rfMaximumY = std::isnan( fPositiveSum ) ? fFirstNegativeY : fPositiveSum;
     }
     else
     {
@@ -2163,7 +2198,7 @@ void VDataSeriesGroup::calculateYMinAndMaxForCategory( sal_Int32 nCategoryIndex
             double fValueMinY = pSeries->getMinimumofAllDifferentYValues( nCategoryIndex );
             double fValueMaxY = pSeries->getMaximumofAllDifferentYValues( nCategoryIndex );
 
-            if( ::rtl::math::isNan( fTotalSum ) )
+            if( std::isnan( fTotalSum ) )
             {
                 rfMinimumY = fValueMinY;
                 rfMaximumY = fTotalSum = fValueMaxY;

@@ -20,8 +20,6 @@
 #define INCLUDED_FORMS_SOURCE_RICHTEXT_RICHTEXTVCLCONTROL_HXX
 
 #include <vcl/ctrl.hxx>
-#include <vcl/toolbox.hxx>
-#include <com/sun/star/awt/FontDescriptor.hpp>
 #include "rtattributes.hxx"
 #include "textattributelistener.hxx"
 #include <memory>
@@ -99,7 +97,7 @@ namespace frm
               EditView& getView();
 
         // Window overridables
-        virtual void        Draw( OutputDevice* _pDev, const Point& _rPos, const Size& _rSize, DrawFlags _nFlags ) override;
+        virtual void        Draw( OutputDevice* _pDev, const Point& _rPos, DrawFlags _nFlags ) override;
 
     protected:
         // Window overridables

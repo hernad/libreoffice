@@ -233,7 +233,7 @@ void ToolBox::ImplCheckUpdate()
 
     // this is only required for transparent toolbars (see ImplDrawTransparentBackground() )
     if( !IsBackground() && HasPaintEvent() && !IsInPaint() )
-        Update();
+        PaintImmediately();
 }
 
 void ToolBox::ImplDrawGrip(vcl::RenderContext& rRenderContext,
@@ -609,7 +609,8 @@ void ToolBox::ImplDrawBorder(vcl::RenderContext& rRenderContext)
 static bool ImplIsFixedControl( const ImplToolItem *pItem )
 {
     return ( pItem->mpWindow &&
-            (pItem->mpWindow->GetType() == WindowType::FIXEDTEXT ||
+            (pItem->mbNonInteractiveWindow ||
+             pItem->mpWindow->GetType() == WindowType::FIXEDTEXT ||
              pItem->mpWindow->GetType() == WindowType::FIXEDLINE ||
              pItem->mpWindow->GetType() == WindowType::GROUPBOX) );
 }
@@ -3209,7 +3210,7 @@ void ToolBox::MouseButtonDown( const MouseEvent& rMEvt )
         if ( mbFormat )
         {
             ImplFormat();
-            Update();
+            PaintImmediately();
         }
 
         Point  aMousePos = rMEvt.GetPosPixel();
@@ -3550,9 +3551,10 @@ void ToolBox::Resize()
                         aBounds.Union( rItem.maRect );
                     }
 
-                    long nOptimalWidth = aBounds.GetWidth();
-                    long nDiff = aSize.Width() - nOptimalWidth;
-                    nDiff /= aExpandables.size();
+                    auto nOptimalWidth = aBounds.GetWidth();
+                    auto nDiff = aSize.Width() - nOptimalWidth;
+                    decltype(nDiff) nExpandablesSize = aExpandables.size();
+                    nDiff /= nExpandablesSize;
 
                     //share out the diff from optimal to real across
                     //expandable entries
@@ -3710,7 +3712,7 @@ bool ToolBox::EventNotify( NotifyEvent& rNEvt )
                 if( bNoTabCycling )
                     return DockingWindow::EventNotify( rNEvt );
                 else if( ImplChangeHighlightUpDn( aKeyCode.IsShift() , bNoTabCycling ) )
-                    return false;
+                    return true;
                 else
                     return DockingWindow::EventNotify( rNEvt );
             }
@@ -4659,11 +4661,6 @@ static bool ImplIsValidItem( const ImplToolItem* pItem, bool bNotClipped )
     if( bValid && bNotClipped && pItem->IsClipped() )
         bValid = false;
     return bValid;
-}
-
-bool ToolBox::ChangeHighlightUpDn( bool bUp )
-{
-    return ImplChangeHighlightUpDn(bUp, /*bNoCycle*/ false);
 }
 
 bool ToolBox::ImplChangeHighlightUpDn( bool bUp, bool bNoCycle )

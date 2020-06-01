@@ -33,10 +33,9 @@
 
 #include <vector>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace text { class XDocumentIndexMark; }
-} } }
-
+}
 class SwTOXType;
 class SwTOXMark;
 class SwTextTOXMark;
@@ -158,8 +157,8 @@ public:
     inline TOXTypes         GetType() const;
 
 private:
-    OUString const        m_aName;
-    TOXTypes const        m_eType;
+    OUString        m_aName;
+    TOXTypes        m_eType;
 
     // @@@ public copy ctor, but no copy assignment?
     SwTOXType & operator= (const SwTOXType &) = delete;
@@ -236,7 +235,7 @@ struct SW_DLLPUBLIC SwFormToken
 
 struct SwFormTokenEqualToFormTokenType
 {
-    FormTokenType const eType;
+    FormTokenType eType;
 
     SwFormTokenEqualToFormTokenType(FormTokenType _eType) : eType(_eType) {}
     bool operator()(const SwFormToken & rToken)

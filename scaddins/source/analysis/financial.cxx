@@ -561,8 +561,8 @@ double SAL_CALL AnalysisAddIn::getXirr(
         }
         while( bContLoop && (++nIter < nMaxIter) );
         nIter = 0;
-        if (  ::rtl::math::isNan(fResultRate)  || ::rtl::math::isInf(fResultRate)
-            ||::rtl::math::isNan(fResultValue) || ::rtl::math::isInf(fResultValue))
+        if (  std::isnan(fResultRate)  || std::isinf(fResultRate)
+            ||std::isnan(fResultValue) || std::isinf(fResultValue))
             bContLoop = true;
 
         ++nIterScan;

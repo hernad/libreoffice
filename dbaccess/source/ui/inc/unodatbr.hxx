@@ -22,10 +22,8 @@
 
 #include <memory>
 #include "brwctrlr.hxx"
-#include <com/sun/star/sdbc/XConnection.hpp>
 #include <com/sun/star/frame/XStatusListener.hpp>
 #include <com/sun/star/frame/XDispatch.hpp>
-#include <com/sun/star/container/XContainerListener.hpp>
 #include <com/sun/star/i18n/XCollator.hpp>
 #include <com/sun/star/view/XSelectionSupplier.hpp>
 #include <com/sun/star/awt/XWindow.hpp>
@@ -36,10 +34,8 @@
 #include <com/sun/star/sdb/XDatabaseRegistrationsListener.hpp>
 #include <cppuhelper/implbase5.hxx>
 #include "callbacks.hxx"
-#include <vcl/timer.hxx>
 #include <vcl/transfer.hxx>
 #include <svx/dataaccessdescriptor.hxx>
-#include <sot/storage.hxx>
 #include "TableCopyHelper.hxx"
 #include "commontypes.hxx"
 
@@ -47,7 +43,7 @@ class SvTreeListEntry;
 class Splitter;
 struct SvSortData;
 
-namespace com { namespace sun{ namespace star { namespace container { class XNameContainer; } } } }
+namespace com::sun::star::container { class XNameContainer; }
 
 class SvTreeList;
 namespace dbaui
@@ -108,7 +104,7 @@ namespace dbaui
         bool                m_bShowMenu;            // if sal_True the menu should be visible otherwise not
         bool                m_bInSuspend;
         bool                m_bEnableBrowser;
-        ::o3tl::optional< bool >
+        ::std::optional< bool >
                                 m_aDocScriptSupport;    // relevant if and only if we are associated with exactly one DBDoc
 
         virtual OUString getPrivateTitle( ) const override;

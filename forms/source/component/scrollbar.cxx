@@ -18,10 +18,13 @@
  */
 
 #include "scrollbar.hxx"
+#include <property.hxx>
+#include <services.hxx>
 #include <comphelper/property.hxx>
 #include <comphelper/streamsection.hxx>
 #include <comphelper/basicio.hxx>
 #include <rtl/math.hxx>
+#include <com/sun/star/form/FormComponentType.hpp>
 
 namespace frm
 {
@@ -48,10 +51,10 @@ namespace frm
         double nExternalValue = 0;
         if ( _rExternalValue >>= nExternalValue )
         {
-            if ( ::rtl::math::isInf( nExternalValue ) )
+            if ( std::isinf( nExternalValue ) )
             {
                 // set the minimum or maximum of the scroll values
-                OUString sLimitPropertyName = ::rtl::math::isSignBitSet( nExternalValue )
+                OUString sLimitPropertyName = std::signbit( nExternalValue )
                     ? _rMinValueName : _rMaxValueName;
                 if ( _rxProperties.is() )
                     _rxProperties->getPropertyValue( sLimitPropertyName ) >>= nControlValue;

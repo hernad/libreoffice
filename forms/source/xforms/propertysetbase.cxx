@@ -20,15 +20,8 @@
 
 #include "propertysetbase.hxx"
 
-#include <cppuhelper/typeprovider.hxx>
-
-#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/beans/XMultiPropertySet.hpp>
-#include <com/sun/star/beans/XPropertyState.hpp>
 #include <com/sun/star/uno/Reference.hxx>
-#include <tools/solar.h>
-
-#include <vector>
 
 using com::sun::star::uno::Any;
 using com::sun::star::uno::Reference;
@@ -127,7 +120,7 @@ void PropertySetBase::initializePropertyValueCache( sal_Int32 nHandle )
 PropertyAccessorBase& PropertySetBase::locatePropertyHandler( sal_Int32 nHandle ) const
 {
     PropertyAccessors::const_iterator aPropertyPos = m_aAccessors.find( nHandle );
-    OSL_ENSURE( aPropertyPos != m_aAccessors.end() && aPropertyPos->second.get(),
+    OSL_ENSURE( aPropertyPos != m_aAccessors.end() && aPropertyPos->second,
         "PropertySetBase::locatePropertyHandler: accessor map is corrupted!" );
         // neither should this be called for handles where there is no accessor, nor should a
         // NULL accessor be in the map

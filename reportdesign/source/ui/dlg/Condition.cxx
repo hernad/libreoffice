@@ -23,30 +23,15 @@
 #include <core_resource.hxx>
 #include <strings.hrc>
 #include <ReportController.hxx>
-#include <ColorChanger.hxx>
 #include <reportformula.hxx>
-#include <com/sun/star/util/URL.hpp>
-#include <com/sun/star/beans/PropertyValue.hpp>
-#include <com/sun/star/ui/XUIConfigurationManager.hpp>
-#include <com/sun/star/ui/XModuleUIConfigurationManagerSupplier.hpp>
-#include <com/sun/star/ui/XImageManager.hpp>
-#include <com/sun/star/awt/FontDescriptor.hpp>
-#include <com/sun/star/ui/ImageType.hpp>
 
 #include <svx/PaletteManager.hxx>
-#include <svx/tbcontrl.hxx>
 #include <svx/svxids.hrc>
-#include <svx/xtable.hxx>
-#include <svx/tbxcolorupdate.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
-#include <unotools/pathoptions.hxx>
 #include <vcl/svapp.hxx>
-#include <vcl/bitmapaccess.hxx>
 #include <vcl/settings.hxx>
 
 #include <tools/diagnose_ex.h>
-#include <rtl/ustrbuf.hxx>
-#include <svtools/valueset.hxx>
 
 namespace rptui
 {
@@ -321,30 +306,30 @@ void Condition::updateToolbar(const uno::Reference< report::XReportControlFormat
     OString aItems[] = { "bold", "italic", "underline", "fontdialog" };
 
     OSL_ENSURE(_xReportControlFormat.is(),"XReportControlFormat is NULL!");
-    if ( _xReportControlFormat.is() )
-    {
-        for (size_t j = 0; j < SAL_N_ELEMENTS(aItems); ++j)
-        {
-            m_xActions->set_item_active(aItems[j], OReportController::isFormatCommandEnabled(mapToolbarItemToSlotId(aItems[j]),
-                _xReportControlFormat));
-        }
+    if ( !_xReportControlFormat.is() )
+        return;
 
-        try
-        {
-            vcl::Font aBaseFont( Application::GetDefaultDevice()->GetSettings().GetStyleSettings().GetAppFont() );
-            SvxFont aFont( VCLUnoHelper::CreateFont( _xReportControlFormat->getFontDescriptor(), aBaseFont ) );
-            aFont.SetFontHeight(OutputDevice::LogicToLogic(Size(0, aFont.GetFontHeight()), MapMode(MapUnit::MapPoint), MapMode(MapUnit::MapTwip)).Height());
-            aFont.SetEmphasisMark( static_cast< FontEmphasisMark >( _xReportControlFormat->getControlTextEmphasis() ) );
-            aFont.SetRelief( static_cast< FontRelief >( _xReportControlFormat->getCharRelief() ) );
-            aFont.SetColor( Color(_xReportControlFormat->getCharColor()) );
-            m_aPreview.SetFont( aFont, aFont, aFont );
-            m_aPreview.SetBackColor( Color(_xReportControlFormat->getControlBackground()) );
-            m_aPreview.SetTextLineColor( Color( _xReportControlFormat->getCharUnderlineColor() ) );
-        }
-        catch( const Exception& )
-        {
-            DBG_UNHANDLED_EXCEPTION("reportdesign");
-        }
+    for (size_t j = 0; j < SAL_N_ELEMENTS(aItems); ++j)
+    {
+        m_xActions->set_item_active(aItems[j], OReportController::isFormatCommandEnabled(mapToolbarItemToSlotId(aItems[j]),
+            _xReportControlFormat));
+    }
+
+    try
+    {
+        vcl::Font aBaseFont( Application::GetDefaultDevice()->GetSettings().GetStyleSettings().GetAppFont() );
+        SvxFont aFont( VCLUnoHelper::CreateFont( _xReportControlFormat->getFontDescriptor(), aBaseFont ) );
+        aFont.SetFontHeight(OutputDevice::LogicToLogic(Size(0, aFont.GetFontHeight()), MapMode(MapUnit::MapPoint), MapMode(MapUnit::MapTwip)).Height());
+        aFont.SetEmphasisMark( static_cast< FontEmphasisMark >( _xReportControlFormat->getControlTextEmphasis() ) );
+        aFont.SetRelief( static_cast< FontRelief >( _xReportControlFormat->getCharRelief() ) );
+        aFont.SetColor( Color(_xReportControlFormat->getCharColor()) );
+        m_aPreview.SetFont( aFont, aFont, aFont );
+        m_aPreview.SetBackColor( Color(_xReportControlFormat->getControlBackground()) );
+        m_aPreview.SetTextLineColor( Color( _xReportControlFormat->getCharUnderlineColor() ) );
+    }
+    catch( const Exception& )
+    {
+        DBG_UNHANDLED_EXCEPTION("reportdesign");
     }
 }
 

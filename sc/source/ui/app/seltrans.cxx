@@ -76,7 +76,7 @@ ScSelectionTransferObj* ScSelectionTransferObj::CreateFromView( ScTabView* pView
         {
             ScSelectionTransferMode eMode = SC_SELTRANS_INVALID;
 
-            SdrView* pSdrView = pView->GetSdrView();
+            SdrView* pSdrView = pView->GetScDrawView();
             if ( pSdrView )
             {
                 //  handle selection on drawing layer
@@ -114,16 +114,17 @@ ScSelectionTransferObj* ScSelectionTransferObj::CreateFromView( ScTabView* pView
                 //  allow MultiMarked because GetSimpleArea may be able to merge into a simple range
                 //  (GetSimpleArea modifies a local copy of MarkData)
                 // Also allow simple filtered area.
-                ScMarkType eMarkType;
-                if ( ( rMark.IsMarked() || rMark.IsMultiMarked() ) &&
-                        (((eMarkType = rViewData.GetSimpleArea( aRange )) == SC_MARK_SIMPLE) ||
-                         (eMarkType == SC_MARK_SIMPLE_FILTERED)) )
+                if ( rMark.IsMarked() || rMark.IsMultiMarked() )
                 {
-                    //  only for "real" selection, cursor alone isn't used
-                    if ( aRange.aStart == aRange.aEnd )
-                        eMode = SC_SELTRANS_CELL;
-                    else
-                        eMode = SC_SELTRANS_CELLS;
+                    ScMarkType eMarkType = rViewData.GetSimpleArea( aRange );
+                    if (eMarkType == SC_MARK_SIMPLE || eMarkType == SC_MARK_SIMPLE_FILTERED)
+                    {
+                        //  only for "real" selection, cursor alone isn't used
+                        if ( aRange.aStart == aRange.aEnd )
+                            eMode = SC_SELTRANS_CELL;
+                        else
+                            eMode = SC_SELTRANS_CELLS;
+                    }
                 }
             }
 

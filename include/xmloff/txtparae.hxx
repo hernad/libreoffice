@@ -45,7 +45,7 @@ class MultiPropertySetHelper;
 enum class XMLShapeExportFlags;
 class SvXMLExportPropertyMapper;
 
-namespace com { namespace sun { namespace star
+namespace com::sun::star
 {
     namespace beans { class XPropertySet; class XPropertyState;
                       class XPropertySetInfo; }
@@ -53,7 +53,7 @@ namespace com { namespace sun { namespace star
     namespace text { class XTextContent; class XTextRange; class XText;
                      class XFootnote; class XTextFrame; class XTextSection;
                      class XTextField; }
-} } }
+}
 
 namespace xmloff
 {
@@ -375,17 +375,17 @@ public:
 
     /// add autostyle for specified family
     void Add(
-        sal_uInt16 nFamily,
+        XmlStyleFamily nFamily,
         MultiPropertySetHelper& rPropSetHelper,
         const css::uno::Reference< css::beans::XPropertySet > & rPropSet );
     void Add(
-        sal_uInt16 nFamily,
+        XmlStyleFamily nFamily,
         const css::uno::Reference< css::beans::XPropertySet > & rPropSet,
         const XMLPropertyState** pAddState = nullptr, bool bDontSeek = false );
 
     /// find style name for specified family and parent
     OUString Find(
-        sal_uInt16 nFamily,
+        XmlStyleFamily nFamily,
         const css::uno::Reference< css::beans::XPropertySet > & rPropSet,
         const OUString& rParent,
         const XMLPropertyState** pAddState = nullptr ) const;

@@ -1025,7 +1025,7 @@ void ScTable::SyncColRowFlags()
 
 void ScTable::SetPageSize( const Size& rSize )
 {
-    if ( rSize.Width() != 0 && rSize.Height() != 0 )
+    if ( !rSize.IsEmpty() )
     {
         if (aPageSizeTwips != rSize)
             InvalidatePageBreaks();
@@ -1039,7 +1039,7 @@ void ScTable::SetPageSize( const Size& rSize )
 
 bool ScTable::IsProtected() const
 {
-    return pTabProtection.get() && pTabProtection->isProtected();
+    return pTabProtection && pTabProtection->isProtected();
 }
 
 void ScTable::SetProtection(const ScTableProtection* pProtect)

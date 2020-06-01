@@ -18,6 +18,7 @@
  */
 
 #include <com/sun/star/linguistic2/XAvailableLocales.hpp>
+#include <com/sun/star/linguistic2/XLinguServiceManager2.hpp>
 #include <com/sun/star/linguistic2/XSpellChecker1.hpp>
 #include <linguistic/misc.hxx>
 #include <rtl/ustring.hxx>
@@ -33,6 +34,11 @@
 #include <svx/dialmgr.hxx>
 #include <svx/strings.hrc>
 #include <bitmaps.hlst>
+
+#include <comphelper/string.hxx>
+#include <comphelper/processfactory.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/settings.hxx>
 
 using namespace ::com::sun::star::util;
 using namespace ::com::sun::star::linguistic2;
@@ -185,8 +191,10 @@ void SvxLanguageBox::AddLanguages(const std::vector< LanguageType >& rLanguageTy
     }
 }
 
-void SvxLanguageBox::SetLanguageList( SvxLanguageListFlags nLangList,
-        bool bHasLangNone, bool bLangNoneIsLangAll, bool bCheckSpellAvail )
+void SvxLanguageBox::SetLanguageList(SvxLanguageListFlags nLangList, bool bHasLangNone,
+                                     bool bLangNoneIsLangAll, bool bCheckSpellAvail,
+                                     bool bDefaultLangExist, LanguageType eDefaultLangType,
+                                     sal_Int16 nDefaultType)
 {
     m_bHasLangNone          = bHasLangNone;
     m_bLangNoneIsLangAll    = bLangNoneIsLangAll;
@@ -207,7 +215,7 @@ void SvxLanguageBox::SetLanguageList( SvxLanguageListFlags nLangList,
     std::vector< LanguageType > aHyphAvailLang;
     std::vector< LanguageType > aThesAvailLang;
     Sequence< sal_Int16 > aSpellUsedLang;
-    Reference< XAvailableLocales > xAvail( LinguMgr::GetLngSvcMgr(), UNO_QUERY );
+    Reference< XAvailableLocales > xAvail( LinguMgr::GetLngSvcMgr() );
     if (xAvail.is())
     {
         Sequence< css::lang::Locale > aTmp;
@@ -278,10 +286,30 @@ void SvxLanguageBox::SetLanguageList( SvxLanguageListFlags nLangList,
         AddLanguages(aThesAvailLang, nLangList, aEntries);
     }
 
+    std::sort(aEntries.begin(), aEntries.end(),
+              [](const weld::ComboBoxEntry e1, const weld::ComboBoxEntry e2) {
+                  static const auto aSorter = comphelper::string::NaturalStringSorter(
+                      ::comphelper::getProcessComponentContext(),
+                      Application::GetSettings().GetLanguageTag().getLocale());
+                  return aSorter.compare(e1.sString, e2.sString) < 0;
+              });
+
+    int nSeparatorPosition = 0;
+    if (bDefaultLangExist)
+    {
+        aEntries.insert(aEntries.begin(), BuildEntry(eDefaultLangType, nDefaultType));
+        nSeparatorPosition++;
+    }
+
     if (bHasLangNone)
-       aEntries.push_back(BuildEntry(LANGUAGE_NONE));
+    {
+        aEntries.insert(aEntries.begin(), BuildEntry(LANGUAGE_NONE));
+        nSeparatorPosition++;
+    }
 
     m_xControl->insert_vector(aEntries, false);
+    if (nSeparatorPosition > 0)
+        m_xControl->insert_separator(nSeparatorPosition, "");
 }
 
 int SvxLanguageBox::ImplTypeToPos(LanguageType eType) const
@@ -303,11 +331,6 @@ void SvxLanguageBox::InsertLanguage(const LanguageType nLangType, sal_Int16 nTyp
 void SvxLanguageBox::InsertLanguage(const LanguageType nLangType)
 {
     InsertLanguage(nLangType, css::i18n::ScriptType::WEAK);
-}
-
-void SvxLanguageBox::InsertDefaultLanguage(sal_Int16 nType)
-{
-    InsertLanguage(LANGUAGE_SYSTEM, nType);
 }
 
 weld::ComboBoxEntry SvxLanguageBox::BuildEntry(const LanguageType nLangType, sal_Int16 nType)
@@ -438,7 +461,6 @@ SvxLanguageBox::SvxLanguageBox(std::unique_ptr<weld::ComboBox> pControl)
     , m_bLangNoneIsLangAll(false)
     , m_bWithCheckmark(false)
 {
-    m_xControl->make_sorted();
     m_xControl->connect_changed(LINK(this, SvxLanguageBox, ChangeHdl));
 }
 

@@ -18,6 +18,7 @@
  */
 
 #include <sal/log.hxx>
+#include <rtl/math.hxx>
 #include <o3tl/underlyingenumvalue.hxx>
 #include <osl/diagnose.h>
 #include <basegfx/matrix/b2dhommatrixtools.hxx>
@@ -775,7 +776,7 @@ bool BitmapEx::Create( const css::uno::Reference< css::rendering::XBitmapCanvas 
                        const Size &rSize )
 {
     uno::Reference< beans::XFastPropertySet > xFastPropertySet( xBitmapCanvas, uno::UNO_QUERY );
-    if( xFastPropertySet.get() )
+    if( xFastPropertySet )
     {
         // 0 means get BitmapEx
         uno::Any aAny = xFastPropertySet->getFastPropertyValue( 0 );
@@ -1396,7 +1397,7 @@ static Bitmap DetectEdges( const Bitmap& rBmp )
                     {
                         nXTmp = nX;
 
-                        nSum2 = lGray = pReadAcc->GetIndexFromData( pScanlineRead, nXTmp++ );
+                        nSum2 = pReadAcc->GetIndexFromData( pScanlineRead, nXTmp++ );
                         nSum1 = -nSum2;
                         nSum2 += static_cast<long>(pReadAcc->GetIndexFromData( pScanlineRead, nXTmp++ )) << 1;
                         lGray = pReadAcc->GetIndexFromData( pScanlineRead, nXTmp );
@@ -1617,71 +1618,6 @@ void BitmapEx::AdjustTransparency(sal_uInt8 cTrans)
         }
     }
     *this = BitmapEx( GetBitmap(), aAlpha );
-}
-
-// AS: Because JPEGs require the alpha channel provided separately (JPEG does not
-//  natively support alpha channel, but SWF lets you provide it separately), we
-//  extract the alpha channel into a separate array here.
-void BitmapEx::GetSplitData( std::vector<sal_uInt8>& rvColorData, std::vector<sal_uInt8>& rvAlphaData ) const
-{
-    if( IsEmpty() )
-        return;
-
-    Bitmap::ScopedReadAccess pRAcc(const_cast<Bitmap&>(maBitmap));
-
-    assert( pRAcc );
-
-    AlphaMask   aAlpha;
-    sal_uInt32 nWidth = pRAcc->Width();
-    sal_uInt32 nHeight = pRAcc->Height();
-    rvColorData.resize(nWidth*nHeight*4);
-    rvAlphaData.resize(nWidth*nHeight);
-    sal_uInt8* p = rvColorData.data(), *pAlpha = rvAlphaData.data();
-
-
-    if (IsAlpha())
-    {
-        aAlpha = GetAlpha();
-    }
-    else if (IsTransparent())
-    {
-        aAlpha = GetMask();
-    }
-    else
-    {
-        sal_uInt8 cAlphaVal = 0;
-        aAlpha = AlphaMask(maBitmap.GetSizePixel(), &cAlphaVal);
-    }
-
-    AlphaMask::ScopedReadAccess pAAcc(aAlpha);
-
-    assert( pAAcc );
-
-    for( sal_uInt32 nY = 0; nY < nHeight; nY++ )
-    {
-        Scanline pScanlineAA = pAAcc->GetScanline( nY );
-        for( sal_uInt32 nX = 0; nX < nWidth; nX++ )
-        {
-            const sal_uInt8     nAlpha = pAAcc->GetIndexFromData( pScanlineAA, nX );
-            const BitmapColor   aPixelColor( pRAcc->GetColor( nY, nX ) );
-
-            if( nAlpha == 0xff )
-            {
-                *p++ = 0;
-                *p++ = 0;
-                *p++ = 0;
-                *p++ = 0;
-            }
-            else
-            {
-                *p++ = 0xff-nAlpha;
-                *p++ = aPixelColor.GetRed();
-                *p++ = aPixelColor.GetGreen();
-                *p++ = aPixelColor.GetBlue();
-            }
-            *pAlpha++ = 0xff - nAlpha;
-        }
-    }
 }
 
 void BitmapEx::CombineMaskOr(Color maskColor, sal_uInt8 nTol)

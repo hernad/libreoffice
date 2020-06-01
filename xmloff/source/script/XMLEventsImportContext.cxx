@@ -22,6 +22,7 @@
 #include <XMLEventImportHelper.hxx>
 
 #include <com/sun/star/document/XEventsSupplier.hpp>
+#include <comphelper/attributelist.hxx>
 #include <xmloff/xmlimp.hxx>
 #include <xmloff/nmspmap.hxx>
 #include <xmloff/xmlnmspe.hxx>
@@ -46,6 +47,11 @@ XMLEventsImportContext::XMLEventsImportContext(
 {
 }
 
+XMLEventsImportContext::XMLEventsImportContext(SvXMLImport& rImport) :
+    SvXMLImportContext(rImport)
+{
+}
+
 
 XMLEventsImportContext::XMLEventsImportContext(
     SvXMLImport& rImport,
@@ -53,6 +59,14 @@ XMLEventsImportContext::XMLEventsImportContext(
     const OUString& rLocalName,
     const Reference<XEventsSupplier> & xEventsSupplier) :
         SvXMLImportContext(rImport, nPrfx, rLocalName),
+        xEvents(xEventsSupplier->getEvents())
+{
+}
+
+XMLEventsImportContext::XMLEventsImportContext(
+    SvXMLImport& rImport,
+    const Reference<XEventsSupplier> & xEventsSupplier) :
+        SvXMLImportContext(rImport),
         xEvents(xEventsSupplier->getEvents())
 {
 }
@@ -87,8 +101,8 @@ void XMLEventsImportContext::EndElement()
 }
 
 SvXMLImportContextRef XMLEventsImportContext::CreateChildContext(
-    sal_uInt16 p_nPrefix,
-    const OUString& rLocalName,
+    sal_uInt16 /*p_nPrefix*/,
+    const OUString& /*rLocalName*/,
     const Reference<XAttributeList> & xAttrList )
 {
     // a) search for script:language and script:event-name attribute
@@ -124,8 +138,65 @@ SvXMLImportContextRef XMLEventsImportContext::CreateChildContext(
 
     // b) delegate to factory
     return GetImport().GetEventImport().CreateContext(
-        GetImport(), p_nPrefix, rLocalName, xAttrList,
-        this, sEventName, sLanguage);
+        GetImport(), xAttrList, this, sEventName, sLanguage);
+}
+
+void XMLEventsImportContext::startFastElement(sal_Int32 /*nElement*/,
+                const css::uno::Reference< css::xml::sax::XFastAttributeList >&)
+{
+    // nothing to be done
+}
+
+void XMLEventsImportContext::endFastElement(sal_Int32 /*nElement*/)
+{
+    // nothing to be done
+}
+
+css::uno::Reference< css::xml::sax::XFastContextHandler > XMLEventsImportContext::createFastChildContext(
+    sal_Int32 /*nElement*/,
+    const css::uno::Reference< css::xml::sax::XFastAttributeList >& xAttrList )
+{
+    // a) search for script:language and script:event-name attribute
+    // b) delegate to factory. The factory will:
+    //    1) translate XML event name into API event name
+    //    2) get proper event context factory from import
+    //    3) instantiate context
+
+    // a) search for script:language and script:event-name attribute
+    OUString sLanguage;
+    OUString sEventName;
+    for (auto &aIter : sax_fastparser::castToFastAttributeList( xAttrList ))
+    {
+        OUString sValue = aIter.toString();
+
+        if (aIter.getToken() == XML_ELEMENT(SCRIPT, XML_EVENT_NAME))
+        {
+            sEventName = sValue;
+        }
+        else if (aIter.getToken() == XML_ELEMENT(SCRIPT, XML_EVENT_NAME))
+        {
+            sLanguage = sValue;
+            // else: ignore -> let child context handle this
+        }
+        // else: ignore -> let child context handle this
+    }
+
+    rtl::Reference < comphelper::AttributeList > rAttrList = new comphelper::AttributeList;
+    const Sequence< css::xml::FastAttribute > fastAttribs = xAttrList->getFastAttributes();
+    for (const auto& rAttr : fastAttribs)
+    {
+        const OUString& rAttrValue = rAttr.Value;
+        sal_Int32 nToken = rAttr.Token;
+        const OUString& rAttrNamespacePrefix = SvXMLImport::getNamespacePrefixFromToken( nToken, nullptr );
+        OUString sAttrName = SvXMLImport::getNameFromToken( nToken );
+        if ( !rAttrNamespacePrefix.isEmpty() )
+            sAttrName = rAttrNamespacePrefix + ":" + sAttrName;
+        rAttrList->AddAttribute( sAttrName, "CDATA", rAttrValue );
+    }
+
+    // b) delegate to factory
+    return GetImport().GetEventImport().CreateContext(
+        GetImport(), rAttrList.get(), this, sEventName, sLanguage);
 }
 
 void XMLEventsImportContext::SetEvents(

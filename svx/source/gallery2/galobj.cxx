@@ -17,28 +17,22 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <sal/config.h>
 
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/lang/XUnoTunnel.hpp>
 #include <sfx2/objsh.hxx>
-#include <sfx2/docfac.hxx>
 #include <comphelper/fileformat.h>
-#include <comphelper/classids.hxx>
-#include <unotools/pathoptions.hxx>
-#include <unotools/resmgr.hxx>
 #include <tools/vcompat.hxx>
 #include <tools/helpers.hxx>
 #include <vcl/virdev.hxx>
-#include <svl/itempool.hxx>
 #include <svx/fmmodel.hxx>
 #include <svx/fmview.hxx>
 #include <svx/fmpage.hxx>
 #include <svx/galmisc.hxx>
 #include <galobj.hxx>
-#include <vcl/svapp.hxx>
-#include <vcl/settings.hxx>
 #include <vcl/dibtools.hxx>
 #include "gallerydrawmodel.hxx"
-#include <memory>
 #include <bitmaps.hlst>
 
 using namespace ::com::sun::star;
@@ -106,7 +100,7 @@ bool SgaObject::CreateThumb( const Graphic& rGraphic )
             {
                 Size aLogSize( OutputDevice::LogicToLogic(aBmpEx.GetPrefSize(), aBmpEx.GetPrefMapMode(), MapMode(MapUnit::Map100thMM)) );
 
-                if( aLogSize.Width() > 0 && aLogSize.Height() > 0 )
+                if( !aLogSize.IsEmpty() )
                 {
                     double  fFactorLog = static_cast< double >( aLogSize.Width() ) / aLogSize.Height();
                     double  fFactorPix = static_cast< double >( aBmpSize.Width() ) / aBmpSize.Height();
@@ -460,31 +454,9 @@ bool SgaObjectSvDraw::CreateThumb( const FmFormModel& rModel )
 
                 aView.ShowSdrPage(const_cast< FmFormPage* >(pPage));
                 aView.MarkAllObj();
-                aThumbBmp = aView.GetMarkedObjBitmapEx();
-
-                const Size aDiscreteSize(aThumbBmp.GetSizePixel());
-
-                if(aDiscreteSize.Width() && aDiscreteSize.Height())
-                {
-                    sal_uInt32 nTargetSizeX(S_THUMB);
-                    sal_uInt32 nTargetSizeY(S_THUMB);
-
-                    if(aDiscreteSize.Width() > aDiscreteSize.Height())
-                    {
-                        nTargetSizeY = (aDiscreteSize.Height() * nTargetSizeX) / aDiscreteSize.Width();
-                    }
-                    else
-                    {
-                        nTargetSizeX = (aDiscreteSize.Width() * nTargetSizeY) / aDiscreteSize.Height();
-                    }
-
-                    if(!!aThumbBmp)
-                    {
-                        aThumbBmp.Scale(Size(nTargetSizeX, nTargetSizeY), BmpScaleFlag::BestQuality);
-                        aThumbBmp.Convert(BmpConversion::N8BitColors);
-                        bRet = true;
-                    }
-                }
+                aThumbBmp = aView.GetMarkedObjBitmapEx(true);
+                aGraphic = Graphic(aThumbBmp);
+                bRet = SgaObject::CreateThumb(aGraphic);
             }
         }
     }

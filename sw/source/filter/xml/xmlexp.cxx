@@ -52,6 +52,7 @@
 #include "xmlexpit.hxx"
 #include <comphelper/processfactory.hxx>
 #include <docary.hxx>
+#include <frameformats.hxx>
 #include <comphelper/servicehelper.hxx>
 #include <vcl/svapp.hxx>
 #include <IDocumentSettingAccess.hxx>
@@ -124,7 +125,7 @@ ErrCode SwXMLExport::exportDoc( enum XMLTokenEnum eClass )
     if( getExportFlags() & (SvXMLExportFlags::FONTDECLS|SvXMLExportFlags::STYLES|
                             SvXMLExportFlags::MASTERSTYLES|SvXMLExportFlags::CONTENT))
     {
-        if( getDefaultVersion() > SvtSaveOptions::ODFVER_012 )
+        if (getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
         {
             GetNamespaceMap_().Add(
                 GetXMLToken(XML_NP_OFFICE_EXT),

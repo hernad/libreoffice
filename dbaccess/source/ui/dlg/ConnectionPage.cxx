@@ -20,49 +20,21 @@
 #include <config_java.h>
 #include "ConnectionPage.hxx"
 #include <core_resource.hxx>
-#include <dbu_dlg.hxx>
+#include <IItemSetHelper.hxx>
 #include <strings.hrc>
 #include <dsmeta.hxx>
 #if HAVE_FEATURE_JAVA
 #include <jvmaccess/virtualmachine.hxx>
 #endif
 #include <svl/itemset.hxx>
-#include <unotools/pathoptions.hxx>
 #include <svl/stritem.hxx>
 #include <svl/eitem.hxx>
-#include <svl/intitem.hxx>
-#include <unotools/moduleoptions.hxx>
 #include <dsitems.hxx>
 #include <helpids.h>
-#include <osl/process.h>
-#include <dbadmin.hxx>
-#include <vcl/stdtext.hxx>
 #include <sqlmessage.hxx>
-#include "odbcconfig.hxx"
-#include "dsselect.hxx"
 #include <svl/filenotation.hxx>
-#include <stringconstants.hxx>
-#include <com/sun/star/sdbc/XRow.hpp>
-#include <com/sun/star/awt/XWindow.hpp>
-#include <com/sun/star/task/XInteractionHandler.hpp>
 #include <com/sun/star/ucb/XProgressHandler.hpp>
-#include <com/sun/star/sdbc/XConnection.hpp>
-#include <com/sun/star/ui/dialogs/ExtendedFilePickerElementIds.hpp>
-#include <com/sun/star/ui/dialogs/XFilePickerControlAccess.hpp>
-#include <com/sun/star/ui/dialogs/XFilePicker.hpp>
-#include <UITools.hxx>
-#include <unotools/localfilehelper.hxx>
-#include <unotools/ucbhelper.hxx>
-#include <ucbhelper/commandenvironment.hxx>
-#include "finteraction.hxx"
 #include <connectivity/CommonTools.hxx>
-#include <sfx2/docfilt.hxx>
-#include "dsnItem.hxx"
-
-#if defined _WIN32
-#include <vcl/sysdata.hxx>
-#include "adodatalinks.hxx"
-#endif
 
 namespace dbaui
 {
@@ -209,36 +181,37 @@ namespace dbaui
         const SfxBoolItem* pAllowEmptyPwd = _rSet.GetItem<SfxBoolItem>(DSID_PASSWORDREQUIRED);
 
         // forward the values to the controls
-        if ( bValid )
+        if ( !bValid )
+            return;
+
+        m_xUserName->set_text(pUidItem->GetValue());
+        m_xPasswordRequired->set_active(pAllowEmptyPwd->GetValue());
+
+        const OUString& sUrl = pUrlItem->GetValue();
+        setURL( sUrl );
+
+        const bool bEnableJDBC = m_pCollection->determineType(m_eType) == ::dbaccess::DST_JDBC;
+        if ( !pJdbcDrvItem->GetValue().getLength() )
         {
-            m_xUserName->set_text(pUidItem->GetValue());
-            m_xPasswordRequired->set_active(pAllowEmptyPwd->GetValue());
-
-            const OUString& sUrl = pUrlItem->GetValue();
-            setURL( sUrl );
-
-            const bool bEnableJDBC = m_pCollection->determineType(m_eType) == ::dbaccess::DST_JDBC;
-            if ( !pJdbcDrvItem->GetValue().getLength() )
-            {
-                OUString sDefaultJdbcDriverName = m_pCollection->getJavaDriverClass(m_eType);
-                if ( !sDefaultJdbcDriverName.isEmpty() )
-                    m_xJavaDriver->set_text(sDefaultJdbcDriverName);
-            }
-            else
-                m_xJavaDriver->set_text(pJdbcDrvItem->GetValue());
-
-            m_xJavaDriverLabel->set_visible(bEnableJDBC);
-            m_xJavaDriver->set_visible(bEnableJDBC);
-            m_xTestJavaDriver->set_visible(bEnableJDBC);
-            m_xTestJavaDriver->set_sensitive( !m_xJavaDriver->get_text().trim().isEmpty() );
-            m_xFL3->set_visible(bEnableJDBC);
-
-            checkTestConnection();
-
-            m_xUserName->save_value();
-            m_xConnectionURL->save_value();
-            m_xJavaDriver->save_value();
+            OUString sDefaultJdbcDriverName = m_pCollection->getJavaDriverClass(m_eType);
+            if ( !sDefaultJdbcDriverName.isEmpty() )
+                m_xJavaDriver->set_text(sDefaultJdbcDriverName);
         }
+        else
+            m_xJavaDriver->set_text(pJdbcDrvItem->GetValue());
+
+        m_xJavaDriverLabel->set_visible(bEnableJDBC);
+        m_xJavaDriver->set_visible(bEnableJDBC);
+        m_xTestJavaDriver->set_visible(bEnableJDBC);
+        m_xTestJavaDriver->set_sensitive( !m_xJavaDriver->get_text().trim().isEmpty() );
+        m_xFL3->set_visible(bEnableJDBC);
+
+        checkTestConnection();
+
+        m_xUserName->save_value();
+        m_xConnectionURL->save_value();
+        m_xJavaDriver->save_value();
+        m_xPasswordRequired->save_state();
     }
 
     bool OConnectionTabPage::FillItemSet(SfxItemSet* _rSet)

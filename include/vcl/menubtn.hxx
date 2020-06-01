@@ -20,6 +20,7 @@
 #ifndef INCLUDED_VCL_MENUBTN_HXX
 #define INCLUDED_VCL_MENUBTN_HXX
 
+#include <config_options.h>
 #include <vcl/button.hxx>
 #include <vcl/dllapi.h>
 #include <memory>
@@ -79,7 +80,6 @@ public:
 
     void            SetPopover(Window* pWindow);
 
-    sal_uInt16      GetCurItemId() const { return mnCurItemId; }
     OString const & GetCurItemIdent() const { return msCurItemIdent; }
 
     void            SetActivateHdl( const Link<MenuButton *, void>& rLink ) { maActivateHdl = rLink; }
@@ -87,7 +87,7 @@ public:
 };
 
 
-class VCL_DLLPUBLIC MenuToggleButton final : public MenuButton
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) MenuToggleButton final : public MenuButton
 {
 public:
     explicit        MenuToggleButton( vcl::Window* pParent, WinBits nStyle );

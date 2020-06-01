@@ -22,9 +22,7 @@
 #include "xmlEnums.hxx"
 #include <xmloff/xmltoken.hxx>
 #include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
 #include <xmloff/ProgressBarHelper.hxx>
-#include <stringconstants.hxx>
 #include <strings.hxx>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <comphelper/sequence.hxx>
@@ -53,8 +51,8 @@ css::uno::Reference< css::xml::sax::XFastContextHandler > OXMLTableFilterList::c
 {
     SvXMLImportContext *pContext = nullptr;
 
-    if ( (nElement & NMSP_MASK) == NAMESPACE_TOKEN(XML_NAMESPACE_DB) ||
-         (nElement & NMSP_MASK) == NAMESPACE_TOKEN(XML_NAMESPACE_DB_OASIS) )
+    if ( IsTokenInNamespace(nElement, XML_NAMESPACE_DB) ||
+         IsTokenInNamespace(nElement, XML_NAMESPACE_DB_OASIS) )
     {
         GetImport().GetProgressBarHelper()->Increment( PROGRESS_BAR_STEP );
         switch (nElement & TOKEN_MASK)

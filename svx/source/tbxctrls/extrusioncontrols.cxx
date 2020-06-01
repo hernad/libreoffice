@@ -18,23 +18,11 @@
  */
 
 
-#include <string>
-
 #include <svtools/toolbarmenu.hxx>
-#include <svx/colorwindow.hxx>
 #include <vcl/toolbox.hxx>
-#include <sfx2/app.hxx>
-#include <sfx2/dispatch.hxx>
-#include <sfx2/objsh.hxx>
-#include <svl/eitem.hxx>
-#include <vcl/event.hxx>
-#include <vcl/settings.hxx>
-#include <svl/intitem.hxx>
-#include <editeng/colritem.hxx>
 
 #include <svx/strings.hrc>
 #include <svx/svdtrans.hxx>
-#include <svx/sdasitm.hxx>
 #include <svx/dialmgr.hxx>
 
 #include <helpids.h>
@@ -126,7 +114,7 @@ ExtrusionDirectionWindow::ExtrusionDirectionWindow(
     weld::Widget* pParent)
     : WeldToolbarPopup(pControl->getFrameInterface(), pParent, "svx/ui/directionwindow.ui", "DirectionWindow")
     , mxControl(pControl)
-    , mxDirectionSet(new SvtValueSet(nullptr))
+    , mxDirectionSet(new ValueSet(nullptr))
     , mxDirectionSetWin(new weld::CustomWeld(*m_xBuilder, "valueset", *mxDirectionSet))
     , mxPerspective(m_xBuilder->weld_radio_button("perspective"))
     , mxParallel(m_xBuilder->weld_radio_button("parallel"))
@@ -231,7 +219,7 @@ void ExtrusionDirectionWindow::statusChanged(
     }
 }
 
-IMPL_LINK_NOARG(ExtrusionDirectionWindow, SelectValueSetHdl, SvtValueSet*, void)
+IMPL_LINK_NOARG(ExtrusionDirectionWindow, SelectValueSetHdl, ValueSet*, void)
 {
     Sequence< PropertyValue > aArgs( 1 );
     aArgs[0].Name = OUString(g_sExtrusionDirection).copy(5);
@@ -581,7 +569,7 @@ ExtrusionLightingWindow::ExtrusionLightingWindow(svt::PopupWindowController* pCo
                                                  weld::Widget* pParent)
     : WeldToolbarPopup(pControl->getFrameInterface(), pParent, "svx/ui/lightingwindow.ui", "LightingWindow")
     , mxControl(pControl)
-    , mxLightingSet(new SvtValueSet(nullptr))
+    , mxLightingSet(new ValueSet(nullptr))
     , mxLightingSetWin(new weld::CustomWeld(*m_xBuilder, "valueset", *mxLightingSet))
     , mxBright(m_xBuilder->weld_radio_button("bright"))
     , mxNormal(m_xBuilder->weld_radio_button("normal"))
@@ -706,7 +694,7 @@ void ExtrusionLightingWindow::statusChanged(
     }
 }
 
-IMPL_LINK_NOARG(ExtrusionLightingWindow, SelectValueSetHdl, SvtValueSet*, void)
+IMPL_LINK_NOARG(ExtrusionLightingWindow, SelectValueSetHdl, ValueSet*, void)
 {
     sal_Int32 nDirection = mxLightingSet->GetSelectedItemId();
 

@@ -28,7 +28,7 @@
 #include <unotools/options.hxx>
 #include <o3tl/typed_flags_set.hxx>
 
-namespace com{ namespace sun{ namespace star{
+namespace com::sun::star {
     namespace uno{
         class Any;
     }
@@ -41,7 +41,7 @@ namespace com{ namespace sun{ namespace star{
     namespace util{
         class XChangesListener;
     }
-}}}
+}
 
 enum class ConfigItemMode
 {
@@ -52,7 +52,7 @@ enum class ConfigItemMode
 
 namespace o3tl
 {
-    template<> struct typed_flags<ConfigItemMode> : is_typed_flags<ConfigItemMode, 0x07> {};
+    template<> struct typed_flags<ConfigItemMode> : is_typed_flags<ConfigItemMode, 0x06> {};
 }
 
 namespace utl
@@ -74,7 +74,7 @@ namespace utl
                                         m_xHierarchyAccess;
             css::uno::Reference< css::util::XChangesListener >
                                         xChangeLstnr;
-            ConfigItemMode const              m_nMode;
+            ConfigItemMode              m_nMode;
             bool                        m_bIsModified;
             bool                        m_bEnableInternalNotification;
             sal_Int16                   m_nInValueChange;

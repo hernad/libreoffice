@@ -28,22 +28,17 @@
 #include <com/sun/star/drawing/MeasureTextHorzPos.hpp>
 #include <com/sun/star/drawing/MeasureTextVertPos.hpp>
 #include <com/sun/star/drawing/CircleKind.hpp>
-#include <com/sun/star/uno/Sequence.hxx>
 
 #include <editeng/boxitem.hxx>
 #include <editeng/eeitem.hxx>
 #include <editeng/lineitem.hxx>
-#include <editeng/shaditem.hxx>
 #include <editeng/xmlcnitm.hxx>
 #include <editeng/adjustitem.hxx>
-#include <editeng/editdata.hxx>
 #include <editeng/writingmodeitem.hxx>
 #include <editeng/charrotateitem.hxx>
 #include <osl/diagnose.h>
 #include <i18nutil/unicode.hxx>
-#include <svl/solar.hrc>
 #include <tools/bigint.hxx>
-#include <tools/stream.hxx>
 #include <unotools/intlwrapper.hxx>
 #include <unotools/localedatawrapper.hxx>
 #include <vcl/svapp.hxx>
@@ -54,12 +49,12 @@
 #include <svx/sdgcpitm.hxx>
 #include <svx/sdtfchim.hxx>
 #include <svx/sdasitm.hxx>
-#include <svx/sdgcoitm.hxx>
+#include <sdgcoitm.hxx>
 #include <svx/sdggaitm.hxx>
-#include <svx/sdginitm.hxx>
+#include <sdginitm.hxx>
 #include <svx/sdgluitm.hxx>
 #include <svx/sdgmoitm.hxx>
-#include <svx/sdgtritm.hxx>
+#include <sdgtritm.hxx>
 #include <svx/sdprcitm.hxx>
 #include <svx/sdtaaitm.hxx>
 #include <svx/sdtacitm.hxx>
@@ -75,23 +70,21 @@
 #include <svx/svx3ditems.hxx>
 #include <svx/svxids.hrc>
 #include <sxallitm.hxx>
-#include <svx/sxcaitm.hxx>
+#include <sxcaitm.hxx>
 #include <svx/sxcecitm.hxx>
 #include <svx/sxcgitm.hxx>
-#include <svx/sxciaitm.hxx>
 #include <sxcikitm.hxx>
 #include <svx/sxcllitm.hxx>
 #include <svx/sxctitm.hxx>
 #include <svx/sxekitm.hxx>
 #include <svx/sxelditm.hxx>
 #include <svx/sxenditm.hxx>
-#include <svx/sxfiitm.hxx>
+#include <sxfiitm.hxx>
 #include <sxlayitm.hxx>
 #include <sxlogitm.hxx>
 #include <svx/sxmbritm.hxx>
-#include <svx/sxmfsitm.hxx>
+#include <sxmfsitm.hxx>
 #include <sxmkitm.hxx>
-#include <svx/sxmlhitm.hxx>
 #include <sxmoitm.hxx>
 #include <sxmovitm.hxx>
 #include <sxmsitm.hxx>
@@ -108,13 +101,12 @@
 #include <sxrooitm.hxx>
 #include <sxsaitm.hxx>
 #include <sxsalitm.hxx>
-#include <svx/sxsiitm.hxx>
+#include <sxsiitm.hxx>
 #include <sxsoitm.hxx>
 #include <sxtraitm.hxx>
 #include <svx/xfillit0.hxx>
 #include <svx/xflclit.hxx>
 #include <svx/xlineit0.hxx>
-#include <svx/xtable.hxx>
 #include <libxml/xmlwriter.h>
 
 using namespace ::com::sun::star;
@@ -139,7 +131,10 @@ SdrItemPool::SdrItemPool(
     rPoolDefaults[SDRATTR_SHADOWCOLOR       -SDRATTR_START]=new XColorItem(SDRATTR_SHADOWCOLOR, aNullCol);
     rPoolDefaults[SDRATTR_SHADOWXDIST       -SDRATTR_START]=new SdrMetricItem(SDRATTR_SHADOWXDIST, 0);
     rPoolDefaults[SDRATTR_SHADOWYDIST       -SDRATTR_START]=new SdrMetricItem(SDRATTR_SHADOWYDIST, 0);
+    rPoolDefaults[SDRATTR_SHADOWSIZEX       -SDRATTR_START]=new SdrMetricItem(SDRATTR_SHADOWSIZEX, 100000);
+    rPoolDefaults[SDRATTR_SHADOWSIZEY       -SDRATTR_START]=new SdrMetricItem(SDRATTR_SHADOWSIZEY, 100000);
     rPoolDefaults[SDRATTR_SHADOWTRANSPARENCE-SDRATTR_START]=new SdrPercentItem(SDRATTR_SHADOWTRANSPARENCE, 0);
+    rPoolDefaults[SDRATTR_SHADOWBLUR        -SDRATTR_START]=new SdrMetricItem(SDRATTR_SHADOWBLUR, 0);
     rPoolDefaults[SDRATTR_SHADOW3D          -SDRATTR_START]=new SfxVoidItem(SDRATTR_SHADOW3D    );
     rPoolDefaults[SDRATTR_SHADOWPERSP       -SDRATTR_START]=new SfxVoidItem(SDRATTR_SHADOWPERSP );
     rPoolDefaults[SDRATTR_CAPTIONTYPE      -SDRATTR_START]=new SdrCaptionTypeItem      ;
@@ -334,6 +329,12 @@ SdrItemPool::SdrItemPool(
     rPoolDefaults[ SDRATTR_TABLE_BORDER_BLTR - SDRATTR_START ] = new SvxLineItem( SDRATTR_TABLE_BORDER_BLTR );
     rPoolDefaults[ SDRATTR_TABLE_TEXT_ROTATION - SDRATTR_START ] = new SvxTextRotateItem(0, SDRATTR_TABLE_TEXT_ROTATION);
 
+    rPoolDefaults[ SDRATTR_GLOW_RAD - SDRATTR_START ] = new SdrMetricItem(SDRATTR_GLOW_RAD, 0);
+    rPoolDefaults[ SDRATTR_GLOW_COLOR - SDRATTR_START ] = new XColorItem(SDRATTR_GLOW_COLOR, aNullCol);
+    rPoolDefaults[ SDRATTR_GLOW_TRANSPARENCY - SDRATTR_START ] = new SdrPercentItem(SDRATTR_GLOW_TRANSPARENCY, 0);
+
+    rPoolDefaults[SDRATTR_SOFTEDGE_RAD - SDRATTR_START] = new SdrMetricItem(SDRATTR_SOFTEDGE_RAD, 0);
+
     // set own ItemInfos
     mpLocalItemInfos[SDRATTR_SHADOW-SDRATTR_START]._nSID=SID_ATTR_FILL_SHADOW;
     mpLocalItemInfos[SDRATTR_SHADOWCOLOR-SDRATTR_START]._nSID=SID_ATTR_SHADOW_COLOR;
@@ -347,6 +348,12 @@ SdrItemPool::SdrItemPool(
     mpLocalItemInfos[SDRATTR_TABLE_BORDER_INNER - SDRATTR_START ]._nSID = SID_ATTR_BORDER_INNER;
     mpLocalItemInfos[SDRATTR_TABLE_BORDER_TLBR - SDRATTR_START ]._nSID = SID_ATTR_BORDER_DIAG_TLBR;
     mpLocalItemInfos[SDRATTR_TABLE_BORDER_BLTR - SDRATTR_START ]._nSID = SID_ATTR_BORDER_DIAG_BLTR;
+
+    mpLocalItemInfos[SDRATTR_GLOW_RAD - SDRATTR_START]._nSID = SID_ATTR_GLOW_RADIUS;
+    mpLocalItemInfos[SDRATTR_GLOW_COLOR - SDRATTR_START]._nSID = SID_ATTR_GLOW_COLOR;
+    mpLocalItemInfos[SDRATTR_GLOW_TRANSPARENCY - SDRATTR_START]._nSID = SID_ATTR_GLOW_TRANSPARENCY;
+
+    mpLocalItemInfos[SDRATTR_SOFTEDGE_RAD - SDRATTR_START]._nSID = SID_ATTR_SOFTEDGE_RADIUS;
 
     // it's my own creation level, set Defaults and ItemInfos
     SetDefaults(mpLocalPoolDefaults);
@@ -453,6 +460,12 @@ OUString SdrItemPool::GetItemName(sal_uInt16 nWhich)
         case SDRATTR_SHADOWTRANSPARENCE: pResId = SIP_SA_SHADOWTRANSPARENCE;break;
         case SDRATTR_SHADOW3D          : pResId = SIP_SA_SHADOW3D;break;
         case SDRATTR_SHADOWPERSP       : pResId = SIP_SA_SHADOWPERSP;break;
+
+        case SDRATTR_GLOW_RAD          : pResId = SIP_SA_GLOW_RAD;break;
+        case SDRATTR_GLOW_COLOR        : pResId = SIP_SA_GLOW_COLOR;break;
+        case SDRATTR_GLOW_TRANSPARENCY : pResId = SIP_SA_GLOW_TRANSPARENCY;break;
+
+        case SDRATTR_SOFTEDGE_RAD      : pResId = SIP_SA_SOFTEDGE_RAD; break;
 
         case SDRATTR_CAPTIONTYPE      : pResId = SIP_SA_CAPTIONTYPE;break;
         case SDRATTR_CAPTIONFIXEDANGLE: pResId = SIP_SA_CAPTIONFIXEDANGLE;break;

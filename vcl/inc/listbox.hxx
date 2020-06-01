@@ -23,7 +23,7 @@
 #include <sal/config.h>
 
 #include <o3tl/safeint.hxx>
-#include <vcl/button.hxx>
+#include <vcl/toolkit/button.hxx>
 #include <vcl/floatwin.hxx>
 #include <vcl/quickselectionengine.hxx>
 #include <vcl/glyphitem.hxx>
@@ -49,9 +49,9 @@ enum LB_EVENT_TYPE
 
 struct ImplEntryType
 {
-    OUString const    maStr;
-    SalLayoutGlyphs   maStrGlyphs;
-    Image const       maImage;
+    OUString    maStr;
+    SalLayoutGlyphs maStrGlyphs;
+    Image       maImage;
     void*       mpUserData;
     bool        mbIsSelected;
     ListBoxEntryFlags mnFlags;
@@ -136,7 +136,6 @@ public:
     void*           GetEntryData( sal_Int32  nPos ) const;
 
     void              SetEntryFlags( sal_Int32  nPos, ListBoxEntryFlags nFlags );
-    ListBoxEntryFlags GetEntryFlags( sal_Int32  nPos ) const;
 
     void            SelectEntry( sal_Int32  nPos, bool bSelect );
 
@@ -200,7 +199,6 @@ private:
     sal_Int32       mnTop;           ///< output from line on
     long            mnLeft;          ///< output from column on
     long            mnTextHeight;    ///< text height
-    ProminentEntry  meProminentType; ///< where is the "prominent" entry
 
     sal_uInt16      mnSelectModifier;   ///< Modifiers
 
@@ -222,7 +220,8 @@ private:
     bool mbCenter : 1;           ///< center Text output
     bool mbRight : 1;            ///< right align Text output
     bool mbEdgeBlending : 1;
-    bool mbIsComboboxDropdown : 1;
+    /// Listbox is actually a dropdown (either combobox, or popup window treated as dropdown)
+    bool mbIsDropdown : 1;
 
     Link<ImplListBoxWindow*,void>  maScrollHdl;
     Link<LinkParamNone*,void>      maSelectHdl;
@@ -267,7 +266,8 @@ public:
 
     ImplEntryList*  GetEntryList() const { return mpEntryList.get(); }
 
-    sal_Int32       InsertEntry( sal_Int32  nPos, ImplEntryType* pNewEntry );
+    sal_Int32       InsertEntry( sal_Int32  nPos, ImplEntryType* pNewEntry ); // sorts using mbSort
+    sal_Int32       InsertEntry( sal_Int32  nPos, ImplEntryType* pNewEntry, bool bSort ); // to insert ignoring mbSort, e.g. mru
     void            RemoveEntry( sal_Int32  nPos );
     void            Clear();
     void            ResetCurrentPos()               { mnCurrentPos = LISTBOX_ENTRY_NOTFOUND; }
@@ -275,7 +275,7 @@ public:
     sal_uInt16      GetDisplayLineCount() const;
     void            SetEntryFlags( sal_Int32  nPos, ListBoxEntryFlags nFlags );
 
-    void            DrawEntry(vcl::RenderContext& rRenderContext, sal_Int32  nPos, bool bDrawImage, bool bDrawText, bool bDrawTextAtImagePos = false);
+    void            DrawEntry(vcl::RenderContext& rRenderContext, sal_Int32  nPos, bool bDrawImage, bool bDrawText);
 
     void            SelectEntry( sal_Int32  nPos, bool bSelect );
     void            DeselectAll();
@@ -289,7 +289,6 @@ public:
     /** ShowProminentEntry will set the entry corresponding to nEntryPos
         either at top or in the middle depending on the chosen style*/
     void            ShowProminentEntry( sal_Int32  nEntryPos );
-    void            SetProminentEntryType( ProminentEntry eType ) { meProminentType = eType; }
     using Window::IsVisible;
     bool            IsVisible( sal_Int32  nEntry ) const;
 
@@ -369,7 +368,6 @@ public:
 
     bool GetEdgeBlending() const { return mbEdgeBlending; }
     void SetEdgeBlending(bool bNew) { mbEdgeBlending = bNew; }
-    void EnableQuickSelection( bool b );
 
     using Control::ImplInitSettings;
     virtual void ApplySettings(vcl::RenderContext& rRenderContext) override;
@@ -458,8 +456,6 @@ public:
     void            ShowProminentEntry( sal_Int32  nPos ) { maLBWindow->ShowProminentEntry( nPos ); }
     using Window::IsVisible;
     bool            IsVisible( sal_Int32  nEntry ) const { return maLBWindow->IsVisible( nEntry ); }
-
-    void            SetProminentEntryType( ProminentEntry eType ) { maLBWindow->SetProminentEntryType( eType ); }
 
     long            GetLeftIndent() const           { return maLBWindow->GetLeftIndent(); }
     void            SetLeftIndent( sal_uInt16 n )       { maLBWindow->SetLeftIndent( n ); }
@@ -555,9 +551,7 @@ private:
     tools::Rectangle       maFocusRect;
 
     Link<void*,void> maMBDownHdl;
-    Link<UserDrawEvent*, void> maUserDrawHdl;
 
-    bool            mbUserDrawEnabled : 1;
     bool            mbEdgeBlending : 1;
 
     void ImplDraw(vcl::RenderContext& rRenderContext, bool bLayout = false);
@@ -582,10 +576,6 @@ public:
     void            SetImage( const Image& rImg ) { maImage = rImg; }
 
     void            SetMBDownHdl( const Link<void*,void>& rLink ) { maMBDownHdl = rLink; }
-    void            SetUserDrawHdl( const Link<UserDrawEvent*, void>& rLink ) { maUserDrawHdl = rLink; }
-
-    void            EnableUserDraw( bool bUserDraw )    { mbUserDrawEnabled = bUserDraw; }
-    bool            IsUserDrawEnabled() const           { return mbUserDrawEnabled; }
 
     void DrawEntry(vcl::RenderContext& rRenderContext, bool bLayout);
 

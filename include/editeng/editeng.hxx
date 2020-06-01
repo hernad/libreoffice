@@ -23,7 +23,7 @@
 #include <memory>
 #include <vector>
 
-#include <o3tl/optional.hxx>
+#include <optional>
 
 #include <com/sun/star/uno/Reference.h>
 #include <com/sun/star/i18n/WordType.hpp>
@@ -46,7 +46,7 @@
 
 template <typename Arg, typename Ret> class Link;
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
   namespace linguistic2 {
     class XSpellChecker1;
     class XHyphenator;
@@ -57,7 +57,7 @@ namespace com { namespace sun { namespace star {
   namespace lang {
     struct Locale;
   }
-}}}
+}
 
 namespace svx {
 struct SpellPortion;
@@ -209,7 +209,11 @@ public:
     void            SetRefMapMode( const MapMode& rMapMode );
     MapMode const & GetRefMapMode() const;
 
-    void            SetUpdateMode( bool bUpdate );
+    /// Change the update mode per bUpdate and potentially trigger FormatAndUpdate.
+    /// bRestoring is used for LOK to update cursor visibility, specifically,
+    /// when true, it means we are restoring the update mode after internally
+    /// disabling it (f.e. during SetText to set/delete default text in Impress).
+    void            SetUpdateMode(bool bUpdate, bool bRestoring = false);
     bool            GetUpdateMode() const;
 
     void            SetBackgroundColor( const Color& rColor );
@@ -506,7 +510,7 @@ public:
     virtual OUString  GetUndoComment( sal_uInt16 nUndoId ) const;
     virtual bool    SpellNextDocument();
     virtual void    FieldClicked( const SvxFieldItem& rField );
-    virtual OUString CalcFieldValue( const SvxFieldItem& rField, sal_Int32 nPara, sal_Int32 nPos, o3tl::optional<Color>& rTxtColor, o3tl::optional<Color>& rFldColor );
+    virtual OUString CalcFieldValue( const SvxFieldItem& rField, sal_Int32 nPara, sal_Int32 nPos, std::optional<Color>& rTxtColor, std::optional<Color>& rFldColor );
 
     // override this if access to bullet information needs to be provided
     virtual const SvxNumberFormat * GetNumberFormat( sal_Int32 nPara ) const;
@@ -619,6 +623,11 @@ public:
     sal_Int32 GetOverflowingLineNum() const;
     void ClearOverflowingParaNum();
     bool IsPageOverflow();
+
+    // tdf#132288  By default inserting an attribute beside another that is of
+    // the same type expands the original instead of inserting another. But the
+    // spell check dialog doesn't want that behaviour
+    void DisableAttributeExpanding();
 };
 
 #endif // INCLUDED_EDITENG_EDITENG_HXX

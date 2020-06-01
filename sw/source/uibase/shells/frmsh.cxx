@@ -793,7 +793,30 @@ void SwFrameShell::GetState(SfxItemSet& rSet)
                          bProtect ||
                          ((nWhich == FN_FRAME_ALIGN_HORZ_CENTER  || nWhich == SID_OBJECT_ALIGN_CENTER) &&
                           bHtmlMode ))
+                    {
                         rSet.DisableItem( nWhich );
+                    }
+                    else
+                    {
+                        sal_Int16 nHoriOrient = -1;
+                        switch(nWhich)
+                        {
+                            case SID_OBJECT_ALIGN_LEFT:
+                                nHoriOrient = text::HoriOrientation::LEFT;
+                                break;
+                            case SID_OBJECT_ALIGN_CENTER:
+                                nHoriOrient = text::HoriOrientation::CENTER;
+                                break;
+                            case SID_OBJECT_ALIGN_RIGHT:
+                                nHoriOrient = text::HoriOrientation::RIGHT;
+                                break;
+                            default:
+                                break;
+                        }
+                        SwFormatHoriOrient aHOrient(aMgr.GetHoriOrient());
+                        if (nHoriOrient != -1)
+                            rSet.Put(SfxBoolItem(nWhich, nHoriOrient == aHOrient.GetHoriOrient()));
+                    }
                 break;
                 case FN_FRAME_ALIGN_VERT_ROW_TOP:
                 case FN_FRAME_ALIGN_VERT_ROW_CENTER:
@@ -1078,7 +1101,7 @@ void SwFrameShell::ExecFrameStyle(SfxRequest const & rReq)
     if (pPoolBoxItem == &rBoxItem)
         bDefault = true;
 
-    std::shared_ptr<SvxBoxItem> aBoxItem(rBoxItem.Clone());
+    std::unique_ptr<SvxBoxItem> aBoxItem(rBoxItem.Clone());
 
     SvxBorderLine aBorderLine;
     const SfxPoolItem *pItem = nullptr;
@@ -1091,7 +1114,7 @@ void SwFrameShell::ExecFrameStyle(SfxRequest const & rReq)
             {
                 if (pArgs->GetItemState(RES_BOX, true, &pItem) == SfxItemState::SET)
                 {
-                    std::shared_ptr<SvxBoxItem> aNewBox(static_cast<SvxBoxItem*>(pItem->Clone()));
+                    std::unique_ptr<SvxBoxItem> aNewBox(static_cast<SvxBoxItem*>(pItem->Clone()));
                     const SvxBorderLine* pBorderLine;
 
                     if ((pBorderLine = aBoxItem->GetTop()) != nullptr)
@@ -1119,7 +1142,7 @@ void SwFrameShell::ExecFrameStyle(SfxRequest const & rReq)
                         aNewBox->SetAllDistances(rBoxItem.GetSmallestDistance());
                     }
 
-                    aBoxItem = aNewBox;
+                    aBoxItem = std::move(aNewBox);
 
                     if( aBoxItem->GetTop() != nullptr )
                         aBoxItem->SetLine(&aBorderLine, SvxBoxItemLine::TOP);

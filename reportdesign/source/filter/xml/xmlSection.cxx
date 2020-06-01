@@ -20,17 +20,12 @@
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
 #include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
 #include <xmloff/xmluconv.hxx>
 #include "xmlHelper.hxx"
-#include "xmlEnums.hxx"
-#include "xmlColumn.hxx"
-#include "xmlCondPrtExpr.hxx"
-#include "xmlStyleImport.hxx"
-#include <connectivity/dbtools.hxx>
 #include <com/sun/star/report/ReportPrintOption.hpp>
-#include <strings.hxx>
 #include "xmlTable.hxx"
+#include <sal/log.hxx>
+#include <osl/diagnose.h>
 
 
 namespace rptxml
@@ -62,9 +57,7 @@ OXMLSection::OXMLSection( ORptFilter& rImport,
     static const OUString s_sTRUE = ::xmloff::token::GetXMLToken(XML_TRUE);
     try
     {
-        sax_fastparser::FastAttributeList *pAttribList =
-                        sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-        for (auto &aIter : *pAttribList)
+        for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
         {
             OUString sValue = aIter.toString();
 
@@ -79,9 +72,8 @@ OXMLSection::OXMLSection( ORptFilter& rImport,
                 case XML_ELEMENT(REPORT, XML_REPEAT_SECTION):
                     m_xSection->setRepeatSection(sValue == s_sTRUE );
                     break;
-
                 default:
-                    OSL_FAIL("OXMLSection: Unknown attribute!");
+                    SAL_WARN("reportdesign", "unknown attribute " << SvXMLImport::getPrefixAndNameFromToken(aIter.getToken()) << " = " << sValue);
             }
         }
     }

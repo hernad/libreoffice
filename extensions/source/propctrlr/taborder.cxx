@@ -19,13 +19,12 @@
 
 #include "taborder.hxx"
 
-#include "modulepcr.hxx"
-#include <strings.hrc>
 #include <bitmaps.hlst>
 #include "formstrings.hxx"
 #include <comphelper/types.hxx>
 #include <comphelper/property.hxx>
 #include <cppuhelper/implbase.hxx>
+#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/form/FormComponentType.hpp>
 #include <com/sun/star/form/runtime/FormController.hpp>
 #include <osl/diagnose.h>

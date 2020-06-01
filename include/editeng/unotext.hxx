@@ -190,7 +190,7 @@ public:
     virtual void            QuickSetAttribs( const SfxItemSet& rSet, const ESelection& rSel ) override;
     virtual void            QuickInsertLineBreak( const ESelection& rSel ) override;
 
-    virtual OUString        CalcFieldValue( const SvxFieldItem& rField, sal_Int32 nPara, sal_Int32 nPos, o3tl::optional<Color>& rpTxtColor, o3tl::optional<Color>& rpFldColor ) override;
+    virtual OUString        CalcFieldValue( const SvxFieldItem& rField, sal_Int32 nPara, sal_Int32 nPos, std::optional<Color>& rpTxtColor, std::optional<Color>& rpFldColor ) override;
     virtual void            FieldClicked( const SvxFieldItem& rField ) override;
 
     virtual bool            IsValid() const override;
@@ -586,7 +586,6 @@ private:
     css::uno::Reference< css::text::XText > mxParentText;
     std::unique_ptr<SvxEditSource>          mpEditSource;
     sal_Int32               mnNextParagraph;
-    const SvxUnoTextBase&   mrText;
     std::vector< rtl::Reference<SvxUnoTextContent> >  maContents;
 
 public:
@@ -604,7 +603,6 @@ class SvxUnoTextRangeEnumeration : public ::cppu::WeakAggImplHelper1< css::conta
 private:
     std::unique_ptr<SvxEditSource>      mpEditSource;
     css::uno::Reference< css::text::XText > mxParentText;
-    sal_Int32                mnParagraph;
     std::vector< rtl::Reference<SvxUnoTextRange> >  maPortions;
     sal_uInt16               mnNextPortion;
 

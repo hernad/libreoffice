@@ -17,9 +17,9 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <toolkit/controls/tkscrollbar.hxx>
+#include <controls/tkscrollbar.hxx>
 #include <toolkit/helper/property.hxx>
-#include <toolkit/helper/servicenames.hxx>
+#include <helper/servicenames.hxx>
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <cppuhelper/typeprovider.hxx>
 #include <cppuhelper/queryinterface.hxx>
@@ -47,7 +47,7 @@ namespace toolkit
 
     OUString UnoControlScrollBarModel::getServiceName( )
     {
-        return OUString::createFromAscii( szServiceName_UnoControlScrollBarModel );
+        return "stardiv.vcl.controlmodel.ScrollBar";
     }
 
     OUString UnoControlScrollBarModel::getImplementationName()
@@ -72,7 +72,7 @@ namespace toolkit
         case BASEPROPERTY_LIVE_SCROLL:
             return uno::makeAny( false );
         case BASEPROPERTY_DEFAULTCONTROL:
-            return uno::makeAny( OUString::createFromAscii( szServiceName_UnoControlScrollBar ) );
+            return uno::makeAny( OUString( "stardiv.vcl.control.ScrollBar" ) );
 
         default:
             return UnoControlModel::ImplGetDefaultValue( nPropId );

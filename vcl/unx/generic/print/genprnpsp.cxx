@@ -36,6 +36,7 @@
 
 #include <comphelper/fileurl.hxx>
 #include <o3tl/safeint.hxx>
+#include <rtl/ustrbuf.hxx>
 #include <rtl/ustring.hxx>
 #include <sal/log.hxx>
 
@@ -253,13 +254,15 @@ static bool passFileToCommandLine( const OUString& rFilename, const OUString& rC
         aCmdLine = aCmdLine.replaceAll("(TMP)", aFilename);
 
 #if OSL_DEBUG_LEVEL > 1
-    fprintf( stderr, "%s commandline: \"%s\"\n",
-             bPipe ? "piping to" : "executing",
-             aCmdLine.getStr() );
+    SAL_INFO("vcl.unx.print", (bPipe ? "piping to" : "executing")
+            << " commandline: \"" << aCmdLine << "\".");
     struct stat aStat;
-    if( stat( aFilename.getStr(), &aStat ) )
-        fprintf( stderr, "stat( %s ) failed\n", aFilename.getStr() );
-    fprintf( stderr, "Tmp file %s has modes: 0%03lo\n", aFilename.getStr(), (long)aStat.st_mode );
+    SAL_WARN_IF(stat( aFilename.getStr(), &aStat ),
+            "vcl.unx.print", "stat( " << aFilename << " ) failed.");
+    SAL_INFO("vcl.unx.print", "Tmp file " << aFilename
+            << " has modes: "
+            << std::showbase << std::oct
+            << (long)aStat.st_mode);
 #endif
     const char* argv[4];
     if( ! ( argv[ 0 ] = getenv( "SHELL" ) ) )
@@ -938,8 +941,8 @@ struct PDFNewJobParameters
 
 struct PDFPrintFile
 {
-    OUString const       maTmpURL;
-    PDFNewJobParameters const maParameters;
+    OUString       maTmpURL;
+    PDFNewJobParameters maParameters;
 
     PDFPrintFile( const OUString& i_rURL, const PDFNewJobParameters& i_rNewParameters )
     : maTmpURL( i_rURL )

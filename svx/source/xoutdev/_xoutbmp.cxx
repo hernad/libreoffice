@@ -23,18 +23,11 @@
 #include <comphelper/base64.hxx>
 #include <comphelper/graphicmimetype.hxx>
 #include <tools/debug.hxx>
-#include <tools/poly.hxx>
-#include <vcl/bitmapaccess.hxx>
 #include <vcl/virdev.hxx>
-#include <svl/solar.hrc>
 #include <sfx2/docfile.hxx>
-#include <sfx2/app.hxx>
 #include <svx/xoutbmp.hxx>
-#include <vcl/dibtools.hxx>
-#include <vcl/FilterConfigItem.hxx>
 #include <vcl/graphicfilter.hxx>
 #include <vcl/cvtgrf.hxx>
-#include <sax/tools/converter.hxx>
 #include <memory>
 
 #define FORMAT_BMP  "bmp"
@@ -137,16 +130,16 @@ ErrCode XOutBitmap::WriteGraphic( const Graphic& rGraphic, OUString& rFileName,
         }
 
         // #i121128# use shortcut to write Vector Graphic Data data in original form (if possible)
-        const VectorGraphicDataPtr& aVectorGraphicDataPtr(rGraphic.getVectorGraphicData());
+        auto const & rVectorGraphicDataPtr(rGraphic.getVectorGraphicData());
 
-        if(aVectorGraphicDataPtr.get()
-            && aVectorGraphicDataPtr->getVectorGraphicDataArrayLength())
+        if (rVectorGraphicDataPtr && rVectorGraphicDataPtr->getVectorGraphicDataArrayLength())
         {
-            const bool bIsSvg(rFilterName.equalsIgnoreAsciiCase("svg") && VectorGraphicDataType::Svg == aVectorGraphicDataPtr->getVectorGraphicDataType());
-            const bool bIsWmf(rFilterName.equalsIgnoreAsciiCase("wmf") && VectorGraphicDataType::Wmf == aVectorGraphicDataPtr->getVectorGraphicDataType());
-            const bool bIsEmf(rFilterName.equalsIgnoreAsciiCase("emf") && VectorGraphicDataType::Emf == aVectorGraphicDataPtr->getVectorGraphicDataType());
+            const bool bIsSvg(rFilterName.equalsIgnoreAsciiCase("svg") && VectorGraphicDataType::Svg == rVectorGraphicDataPtr->getVectorGraphicDataType());
+            const bool bIsWmf(rFilterName.equalsIgnoreAsciiCase("wmf") && VectorGraphicDataType::Wmf == rVectorGraphicDataPtr->getVectorGraphicDataType());
+            const bool bIsEmf(rFilterName.equalsIgnoreAsciiCase("emf") && VectorGraphicDataType::Emf == rVectorGraphicDataPtr->getVectorGraphicDataType());
+            const bool bIsPdf(rFilterName.equalsIgnoreAsciiCase("pdf") && VectorGraphicDataType::Pdf == rVectorGraphicDataPtr->getVectorGraphicDataType());
 
-            if (bIsSvg || bIsWmf || bIsEmf)
+            if (bIsSvg || bIsWmf || bIsEmf || bIsPdf)
             {
                 if (!(nFlags & XOutFlags::DontAddExtension))
                 {
@@ -159,7 +152,7 @@ ErrCode XOutBitmap::WriteGraphic( const Graphic& rGraphic, OUString& rFileName,
 
                 if (pOStm)
                 {
-                    pOStm->WriteBytes(aVectorGraphicDataPtr->getVectorGraphicDataArray().getConstArray(), aVectorGraphicDataPtr->getVectorGraphicDataArrayLength());
+                    pOStm->WriteBytes(rVectorGraphicDataPtr->getVectorGraphicDataArray().getConstArray(), rVectorGraphicDataPtr->getVectorGraphicDataArrayLength());
                     aMedium.Commit();
 
                     if (!aMedium.GetError())
@@ -167,24 +160,6 @@ ErrCode XOutBitmap::WriteGraphic( const Graphic& rGraphic, OUString& rFileName,
                         nErr = ERRCODE_NONE;
                     }
                 }
-            }
-        }
-
-        // Write PDF data in original form if possible.
-        if (rGraphic.hasPdfData() && rFilterName.equalsIgnoreAsciiCase("pdf"))
-        {
-            if (!(nFlags & XOutFlags::DontAddExtension))
-                aURL.setExtension(rFilterName);
-
-            rFileName = aURL.GetMainURL(INetURLObject::DecodeMechanism::NONE);
-            SfxMedium aMedium(aURL.GetMainURL(INetURLObject::DecodeMechanism::NONE), StreamMode::WRITE|StreamMode::SHARE_DENYNONE|StreamMode::TRUNC);
-            if (SvStream* pOutStream = aMedium.GetOutStream())
-            {
-                const std::shared_ptr<std::vector<sal_Int8>> rPdfData(rGraphic.getPdfData());
-                pOutStream->WriteBytes(rPdfData->data(), rPdfData->size());
-                aMedium.Commit();
-                if (!aMedium.GetError())
-                    nErr = ERRCODE_NONE;
             }
         }
 

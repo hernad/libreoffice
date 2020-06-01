@@ -187,11 +187,11 @@ void ImpXMLEXPPageMasterInfo::SetName(const OUString& rStr)
 
 class ImpXMLAutoLayoutInfo
 {
-    sal_uInt16 const                   mnType;
-    ImpXMLEXPPageMasterInfo* const     mpPageMasterInfo;
+    sal_uInt16                  mnType;
+    ImpXMLEXPPageMasterInfo*    mpPageMasterInfo;
     OUString                    msLayoutName;
-    tools::Rectangle                   maTitleRect;
-    tools::Rectangle                   maPresRect;
+    tools::Rectangle            maTitleRect;
+    tools::Rectangle            maPresRect;
     sal_Int32                   mnGapX;
     sal_Int32                   mnGapY;
 
@@ -412,17 +412,17 @@ void SAL_CALL SdXMLExport::setSourceDocument( const Reference< lang::XComponent 
 
     // add family name
     GetAutoStylePool()->AddFamily(
-        XML_STYLE_FAMILY_SD_GRAPHICS_ID,
+        XmlStyleFamily::SD_GRAPHICS_ID,
         OUString(XML_STYLE_FAMILY_SD_GRAPHICS_NAME),
           GetPropertySetMapper(),
           OUString(XML_STYLE_FAMILY_SD_GRAPHICS_PREFIX));
     GetAutoStylePool()->AddFamily(
-        XML_STYLE_FAMILY_SD_PRESENTATION_ID,
+        XmlStyleFamily::SD_PRESENTATION_ID,
         OUString(XML_STYLE_FAMILY_SD_PRESENTATION_NAME),
           GetPropertySetMapper(),
           OUString(XML_STYLE_FAMILY_SD_PRESENTATION_PREFIX));
     GetAutoStylePool()->AddFamily(
-        XML_STYLE_FAMILY_SD_DRAWINGPAGE_ID,
+        XmlStyleFamily::SD_DRAWINGPAGE_ID,
         OUString(XML_STYLE_FAMILY_SD_DRAWINGPAGE_NAME),
           GetPresPagePropsMapper(),
           OUString(XML_STYLE_FAMILY_SD_DRAWINGPAGE_PREFIX));
@@ -553,7 +553,7 @@ void SAL_CALL SdXMLExport::setSourceDocument( const Reference< lang::XComponent 
         GetXMLToken(XML_N_ANIMATION),
         XML_NAMESPACE_ANIMATION);
 
-    if( getDefaultVersion() > SvtSaveOptions::ODFVER_012 )
+    if (getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
     {
         GetNamespaceMap_().Add(
             GetXMLToken(XML_NP_OFFICE_EXT),
@@ -1532,12 +1532,12 @@ OUString SdXMLExport::ImpCreatePresPageStyleName( const Reference<XDrawPage>& xD
         {
             // there are filtered properties -> hard attributes
             // try to find this style in AutoStylePool
-            sStyleName = GetAutoStylePool()->Find(XML_STYLE_FAMILY_SD_DRAWINGPAGE_ID, sStyleName, aPropStates);
+            sStyleName = GetAutoStylePool()->Find(XmlStyleFamily::SD_DRAWINGPAGE_ID, sStyleName, aPropStates);
 
             if(sStyleName.isEmpty())
             {
                 // Style did not exist, add it to AutoStalePool
-                sStyleName = GetAutoStylePool()->Add(XML_STYLE_FAMILY_SD_DRAWINGPAGE_ID, sStyleName, aPropStates);
+                sStyleName = GetAutoStylePool()->Add(XmlStyleFamily::SD_DRAWINGPAGE_ID, sStyleName, aPropStates);
             }
         }
     }
@@ -1596,7 +1596,7 @@ void SdXMLExport::ImpWritePresentationStyles()
                     aStEx->exportStyleFamily(xNamed->getName(),
                         OUString(XML_STYLE_FAMILY_SD_PRESENTATION_NAME),
                         aMapperRef, false,
-                        XML_STYLE_FAMILY_SD_PRESENTATION_ID, &aPrefix);
+                        XmlStyleFamily::SD_PRESENTATION_ID, &aPrefix);
                 }
             }
         }
@@ -1996,7 +1996,7 @@ void SdXMLExport::ExportStyles_(bool bUsed)
     GetShapeExport()->ExportGraphicDefaults();
 
     // do not export in ODF 1.1 or older
-    if( getDefaultVersion() >= SvtSaveOptions::ODFVER_012 )
+    if (getSaneDefaultVersion() >= SvtSaveOptions::ODFSVER_012)
         GetShapeExport()->GetShapeTableExport()->exportTableStyles();
 
     // write presentation styles
@@ -2202,7 +2202,7 @@ void SdXMLExport::ExportAutoStyles_()
     }
 
     // export draw-page styles
-    GetAutoStylePool()->exportXML( XML_STYLE_FAMILY_SD_DRAWINGPAGE_ID );
+    GetAutoStylePool()->exportXML( XmlStyleFamily::SD_DRAWINGPAGE_ID );
 
     exportAutoDataStyles();
 
@@ -2500,7 +2500,7 @@ void SdXMLExport::collectAnnotationAutoStyles( const Reference<XDrawPage>& xDraw
 void SdXMLExport::exportAnnotations( const Reference<XDrawPage>& xDrawPage )
 {
     // do not export in ODF 1.2 or older
-    if( getDefaultVersion() <= SvtSaveOptions::ODFVER_012 )
+    if (getSaneDefaultVersion() <= SvtSaveOptions::ODFSVER_012)
         return;
 
     Reference< XAnnotationAccess > xAnnotationAccess( xDrawPage, UNO_QUERY );
@@ -2551,9 +2551,15 @@ void SdXMLExport::exportAnnotations( const Reference<XDrawPage>& xDrawPage )
                 OUString aInitials( xAnnotation->getInitials() );
                 if( !aInitials.isEmpty() )
                 {
-                    // TODO: see OFFICE-3776 export meta:creator-initials for ODF 1.3
-                    SvXMLElementExport aInitialsElem( *this, XML_NAMESPACE_LO_EXT,
-                            XML_SENDER_INITIALS, true, false );
+                    // OFFICE-3776 export meta:creator-initials for ODF 1.3
+                    SvXMLElementExport aInitialsElem( *this,
+                            (SvtSaveOptions::ODFSVER_013 <= getSaneDefaultVersion())
+                                ? XML_NAMESPACE_META
+                                : XML_NAMESPACE_LO_EXT,
+                            (SvtSaveOptions::ODFSVER_013 <= getSaneDefaultVersion())
+                                ? XML_CREATOR_INITIALS
+                                : XML_SENDER_INITIALS,
+                            true, false );
                     Characters(aInitials);
                 }
 

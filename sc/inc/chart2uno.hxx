@@ -48,7 +48,7 @@
 #include <unordered_set>
 #include <vector>
 
-namespace com { namespace sun { namespace star { namespace chart2 { namespace data { class XLabeledDataSequence; } } } } }
+namespace com::sun::star::chart2::data { class XLabeledDataSequence; }
 
 class ScDocument;
 
@@ -144,7 +144,7 @@ public:
 private:
 
     ScDocument*                 m_pDocument;
-    SfxItemPropertySet const    m_aPropSet;
+    SfxItemPropertySet          m_aPropSet;
     bool                        m_bIncludeHiddenCells;
 };
 
@@ -374,7 +374,7 @@ private:
     std::vector<ScTokenRef>     m_aTokens;
     RangeIndexMapPtr            m_pRangeIndices;
     ExtRefListenerPtr           m_pExtRefListener;
-    SfxItemPropertySet const    m_aPropSet;
+    SfxItemPropertySet          m_aPropSet;
 
     std::unique_ptr<HiddenRangeListener> m_pHiddenListener;
 

@@ -22,21 +22,17 @@
 
 #include <vcl/weld.hxx>
 
-namespace com {
-namespace sun {
-namespace star {
-namespace security {
-    class XCertificate; }
-namespace xml { namespace crypto {
-    class XSecurityEnvironment; }}
-}}}
+namespace com::sun::star {
+    namespace security { class XCertificate; }
+    namespace xml::crypto { class XSecurityEnvironment; }
+}
 
 class CertificateViewerGeneralTP;
 class CertificateViewerDetailsTP;
 class CertificateViewerCertPathTP;
 class CertificateChooser;
 
-class CertificateViewer : public weld::GenericDialogController
+class CertificateViewer final : public weld::GenericDialogController
 {
 private:
     friend class CertificateViewerGeneralTP;

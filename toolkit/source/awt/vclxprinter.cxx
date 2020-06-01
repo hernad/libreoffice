@@ -18,7 +18,7 @@
  */
 
 #include <com/sun/star/uno/XComponentContext.hpp>
-#include <toolkit/awt/vclxprinter.hxx>
+#include <awt/vclxprinter.hxx>
 #include <cppuhelper/supportsservice.hxx>
 
 
@@ -28,6 +28,7 @@
 #include <vcl/svapp.hxx>
 #include <vcl/window.hxx>
 
+#include <rtl/ustrbuf.hxx>
 #include <tools/debug.hxx>
 #include <tools/stream.hxx>
 
@@ -251,7 +252,7 @@ sal_Bool VCLXPrinter::start( const OUString& /*rJobName*/, sal_Int16 /*nCopies*/
 {
     ::osl::MutexGuard aGuard( Mutex );
 
-    if (mxPrinter.get())
+    if (mxPrinter)
     {
         maInitJobSetup = mxPrinter->GetJobSetup();
         mxListener = std::make_shared<vcl::OldStylePrintAdaptor>(mxPrinter, nullptr);
@@ -264,7 +265,7 @@ void VCLXPrinter::end(  )
 {
     ::osl::MutexGuard aGuard( Mutex );
 
-    if (mxListener.get())
+    if (mxListener)
     {
         Printer::PrintJob(mxListener, maInitJobSetup);
         mxListener.reset();
@@ -282,7 +283,7 @@ css::uno::Reference< css::awt::XDevice > VCLXPrinter::startPage(  )
 {
     ::osl::MutexGuard aGuard( Mutex );
 
-    if (mxListener.get())
+    if (mxListener)
     {
         mxListener->StartPage();
     }
@@ -293,7 +294,7 @@ void VCLXPrinter::endPage(  )
 {
     ::osl::MutexGuard aGuard( Mutex );
 
-    if (mxListener.get())
+    if (mxListener)
     {
         mxListener->EndPage();
     }

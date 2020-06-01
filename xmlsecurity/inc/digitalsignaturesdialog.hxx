@@ -29,23 +29,17 @@
 
 #include <vector>
 
-namespace com {
-namespace sun {
-namespace star {
-namespace lang {
-    class XMultiServiceFactory; }
-namespace io {
-    class XStream; }
-namespace embed {
-    class XStorage; }
-namespace xml { namespace dom {
-    class XDocumentBuilder; } }
-}}}
+namespace com::sun::star {
+    namespace lang { class XMultiServiceFactory; }
+    namespace io { class XStream; }
+    namespace embed { class XStorage; }
+    namespace xml::dom { class XDocumentBuilder; }
+}
 
 
 class HeaderBar;
 
-class DigitalSignaturesDialog : public weld::GenericDialogController
+class DigitalSignaturesDialog final : public weld::GenericDialogController
 {
 private:
     DocumentSignatureManager maSignatureManager;

@@ -22,14 +22,14 @@
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
 #include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
 #include <xmloff/xmluconv.hxx>
 #include <xmloff/ProgressBarHelper.hxx>
 #include "xmlHelper.hxx"
 #include "xmlEnums.hxx"
-#include <ucbhelper/content.hxx>
 #include <com/sun/star/report/GroupOn.hpp>
 #include <com/sun/star/report/KeepTogether.hpp>
+#include <sal/log.hxx>
+#include <osl/diagnose.h>
 
 namespace rptxml
 {
@@ -58,9 +58,7 @@ OXMLGroup::OXMLGroup( ORptFilter& _rImport
 
     m_xGroup->setSortAscending(false);// the default value has to be set
     static const OUString s_sTRUE = ::xmloff::token::GetXMLToken(XML_TRUE);
-    sax_fastparser::FastAttributeList *pAttribList =
-                    sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-    for (auto &aIter : *pAttribList)
+    for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
     {
         OUString sValue = aIter.toString();
 
@@ -160,6 +158,7 @@ OXMLGroup::OXMLGroup( ORptFilter& _rImport
                     m_xGroup->setKeepTogether(lcl_getKeepTogetherOption(sValue));
                     break;
                 default:
+                    SAL_WARN("reportdesign", "unknown attribute " << SvXMLImport::getPrefixAndNameFromToken(aIter.getToken()) << "=" << sValue);
                     break;
             }
         }

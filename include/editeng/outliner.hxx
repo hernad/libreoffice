@@ -40,7 +40,7 @@
 #include <editeng/paragraphdata.hxx>
 #include <o3tl/typed_flags_set.hxx>
 
-#include <o3tl/optional.hxx>
+#include <optional>
 #include <functional>
 #include <memory>
 #include <vector>
@@ -77,16 +77,16 @@ enum class PointerStyle;
 class SvxNumRule;
 enum class TextRotation;
 
-namespace com { namespace sun { namespace star { namespace linguistic2 {
+namespace com::sun::star::linguistic2 {
     class XSpellChecker1;
     class XHyphenator;
-}}}}
+}
 namespace svx{
     struct SpellPortion;
     typedef std::vector<SpellPortion> SpellPortions;
 }
 namespace basegfx { class B2DPolyPolygon; }
-namespace com { namespace sun { namespace star { namespace lang { struct Locale; } } } }
+namespace com::sun::star::lang { struct Locale; }
 
 
 
@@ -126,9 +126,9 @@ private:
 
     Paragraph& operator=(const Paragraph& rPara ) = delete;
 
-    ParaFlag            nFlags;
     OUString            aBulText;
     Size                aBulSize;
+    ParaFlag            nFlags;
     bool                bVisible;
 
     bool                IsVisible() const { return bVisible; }
@@ -484,8 +484,8 @@ private:
     Outliner*           pOutliner;
     const SvxFieldItem& rFldItem;
 
-    o3tl::optional<Color> mxTxtColor;
-    o3tl::optional<Color> mxFldColor;
+    std::optional<Color> mxTxtColor;
+    std::optional<Color> mxFldColor;
 
     OUString            aRepresentation;
 
@@ -509,11 +509,11 @@ public:
 
     const SvxFieldItem& GetField() const { return rFldItem; }
 
-    o3tl::optional<Color> const & GetTextColor() const { return mxTxtColor; }
-    void            SetTextColor( o3tl::optional<Color> xCol ) { mxTxtColor = xCol; }
+    std::optional<Color> const & GetTextColor() const { return mxTxtColor; }
+    void            SetTextColor( std::optional<Color> xCol ) { mxTxtColor = xCol; }
 
-    o3tl::optional<Color> const & GetFieldColor() const { return mxFldColor; }
-    void            SetFieldColor( o3tl::optional<Color> xCol ) { mxFldColor = xCol; }
+    std::optional<Color> const & GetFieldColor() const { return mxFldColor; }
+    void            SetFieldColor( std::optional<Color> xCol ) { mxFldColor = xCol; }
 
     sal_Int32       GetPara() const { return nPara; }
     sal_Int32       GetPos() const { return nPos; }
@@ -526,16 +526,16 @@ public:
     SdrPage*        GetSdrPage() const { return mpSdrPage; }
 };
 
-struct EBulletInfo
+ struct EBulletInfo
 {
-    bool        bVisible;
-    sal_uInt16  nType;          // see SvxNumberType
-    OUString    aText;
-    SvxFont     aFont;
-    sal_Int32   nParagraph;
-    tools::Rectangle   aBounds;
+    SvxFont           aFont;
+    tools::Rectangle  aBounds;
+    OUString          aText;
+    sal_Int32         nParagraph;
+    sal_uInt16        nType;          // see SvxNumberType
+    bool              bVisible;
 
-    EBulletInfo() : bVisible( false ), nType( 0 ), nParagraph( EE_PARA_NOT_FOUND ) {}
+    EBulletInfo() : nParagraph( EE_PARA_NOT_FOUND ), nType( 0 ), bVisible( false ) {}
 };
 
 enum class OutlinerMode {
@@ -545,10 +545,6 @@ enum class OutlinerMode {
     OutlineObject  = 0x0003,
     OutlineView    = 0x0004
 };
-namespace o3tl
-{
-    template<> struct typed_flags<OutlinerMode> : is_typed_flags<OutlinerMode, 0x000f> {};
-}
 
 class EDITENG_DLLPUBLIC Outliner : public SfxBroadcaster
 {
@@ -880,7 +876,7 @@ public:
     bool            UpdateFields();
     void            RemoveFields( const std::function<bool ( const SvxFieldData* )>& isFieldData = [] (const SvxFieldData* ){return true;} );
 
-    virtual OUString CalcFieldValue( const SvxFieldItem& rField, sal_Int32 nPara, sal_Int32 nPos, o3tl::optional<Color>& rTxtColor, o3tl::optional<Color>& rFldColor );
+    virtual OUString CalcFieldValue( const SvxFieldItem& rField, sal_Int32 nPara, sal_Int32 nPos, std::optional<Color>& rTxtColor, std::optional<Color>& rFldColor );
 
     void            SetSpeller( css::uno::Reference< css::linguistic2::XSpellChecker1 > const &xSpeller );
     css::uno::Reference< css::linguistic2::XSpellChecker1 > const &

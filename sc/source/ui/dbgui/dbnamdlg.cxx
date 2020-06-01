@@ -156,7 +156,7 @@ ScDbNameDlg::ScDbNameDlg(SfxBindings* pB, SfxChildWindow* pCW, weld::Window* pPa
     , m_xFrameLabel(m_xAssignFrame->weld_label_widget())
     , m_xExpander(m_xBuilder->weld_expander("more"))
 {
-    m_xEdName->set_height_request_by_rows(8);
+    m_xEdName->set_height_request_by_rows(4);
     m_xEdAssign->SetReferences(this, m_xFrameLabel.get());
     m_xRbAssign->SetReferences(this, m_xEdAssign.get());
     aStrAdd = m_xBtnAdd->get_label();
@@ -341,7 +341,7 @@ void ScDbNameDlg::UpdateNames()
 void ScDbNameDlg::UpdateDBData( const OUString& rStrName )
 {
 
-    const ScDBData* pData = aLocalDbCol.getNamedDBs().findByUpperName(ScGlobal::pCharClass->uppercase(rStrName));
+    const ScDBData* pData = aLocalDbCol.getNamedDBs().findByUpperName(ScGlobal::getCharClassPtr()->uppercase(rStrName));
 
     if ( pData )
     {
@@ -417,7 +417,7 @@ IMPL_LINK_NOARG(ScDbNameDlg, AddBtnHdl, weld::Button&, void)
                 ScAddress aStart = theCurArea.aStart;
                 ScAddress aEnd   = theCurArea.aEnd;
 
-                ScDBData* pOldEntry = aLocalDbCol.getNamedDBs().findByUpperName(ScGlobal::pCharClass->uppercase(aNewName));
+                ScDBData* pOldEntry = aLocalDbCol.getNamedDBs().findByUpperName(ScGlobal::getCharClassPtr()->uppercase(aNewName));
                 if (pOldEntry)
                 {
                     //  modify area

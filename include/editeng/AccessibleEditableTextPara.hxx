@@ -20,6 +20,7 @@
 #ifndef INCLUDED_EDITENG_ACCESSIBLEEDITABLETEXTPARA_HXX
 #define INCLUDED_EDITENG_ACCESSIBLEEDITABLETEXTPARA_HXX
 
+#include <config_options.h>
 #include <rtl/ustring.hxx>
 #include <tools/gen.hxx>
 #include <cppuhelper/compbase.hxx>
@@ -27,6 +28,7 @@
 
 #include <com/sun/star/uno/Reference.hxx>
 #include <com/sun/star/lang/XServiceInfo.hpp>
+#include <com/sun/star/accessibility/AccessibleScrollType.hpp>
 #include <com/sun/star/accessibility/XAccessible.hpp>
 #include <com/sun/star/accessibility/XAccessibleContext.hpp>
 #include <com/sun/star/accessibility/XAccessibleComponent.hpp>
@@ -61,7 +63,7 @@ namespace accessibility
 
     /** This class implements the actual text paragraphs for the EditEngine/Outliner UAA
      */
-    class EDITENG_DLLPUBLIC AccessibleEditableTextPara final : public ::cppu::BaseMutex, public AccessibleTextParaInterfaceBase, private ::comphelper::OCommonAccessibleText
+    class UNLESS_MERGELIBS(EDITENG_DLLPUBLIC) AccessibleEditableTextPara final : public ::cppu::BaseMutex, public AccessibleTextParaInterfaceBase, private ::comphelper::OCommonAccessibleText
     {
 
         // override OCommonAccessibleText methods
@@ -138,6 +140,7 @@ namespace accessibility
         /// Does not support AccessibleTextType::SENTENCE (missing feature in EditEngine)
         virtual css::accessibility::TextSegment SAL_CALL getTextBehindIndex( sal_Int32 nIndex, sal_Int16 aTextType ) override;
         virtual sal_Bool SAL_CALL copyText( sal_Int32 nStartIndex, sal_Int32 nEndIndex ) override;
+        virtual sal_Bool SAL_CALL scrollSubstringTo( sal_Int32 nStartIndex, sal_Int32 nEndIndex, css::accessibility::AccessibleScrollType aScrollType) override;
 
         // XAccessibleEditableText
         virtual sal_Bool SAL_CALL cutText( sal_Int32 nStartIndex, sal_Int32 nEndIndex ) override;

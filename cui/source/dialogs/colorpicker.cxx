@@ -493,19 +493,19 @@ void ColorFieldControl::Modify()
 void ColorFieldControl::SetValues( Color aColor, ColorMode eMode, double x, double y )
 {
     bool bUpdateBitmap = (maColor!= aColor) || (meMode != eMode);
-    if( bUpdateBitmap || (mdX != x) || (mdY != y) )
-    {
-        maColor = aColor;
-        meMode = eMode;
-        mdX = x;
-        mdY = y;
+    if( !(bUpdateBitmap || (mdX != x) || (mdY != y)) )
+        return;
 
-        if (bUpdateBitmap)
-            UpdateBitmap();
-        UpdatePosition();
-        if (bUpdateBitmap)
-            Invalidate();
-    }
+    maColor = aColor;
+    meMode = eMode;
+    mdX = x;
+    mdY = y;
+
+    if (bUpdateBitmap)
+        UpdateBitmap();
+    UpdatePosition();
+    if (bUpdateBitmap)
+        Invalidate();
 }
 
 void ColorFieldControl::UpdatePosition()
@@ -1302,15 +1302,15 @@ Sequence< PropertyValue > SAL_CALL ColorPicker::getPropertyValues(  )
 
 void SAL_CALL ColorPicker::setPropertyValues( const Sequence< PropertyValue >& aProps )
 {
-    for( sal_Int32 n = 0; n < aProps.getLength(); n++ )
+    for ( const PropertyValue& rProp : aProps )
     {
-        if( aProps[n].Name == gsColorKey )
+        if( rProp.Name == gsColorKey )
         {
-            aProps[n].Value >>= mnColor;
+            rProp.Value >>= mnColor;
         }
-        else if( aProps[n].Name == gsModeKey )
+        else if( rProp.Name == gsModeKey )
         {
-            aProps[n].Value >>= mnMode;
+            rProp.Value >>= mnMode;
         }
     }
 }

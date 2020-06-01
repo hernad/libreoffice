@@ -25,6 +25,7 @@
 
 #include <memory>
 
+#include <rtl/ustrbuf.hxx>
 #include <o3tl/deleter.hxx>
 #include <tools/solar.h>
 #include <vcl/dllapi.h>
@@ -71,7 +72,6 @@ private:
     sal_Int32           mnMaxWidthChars;
     sal_Unicode         mcEchoChar;
     bool                mbModified:1,
-                        mbSelectAllSingleClick:1,
                         mbInternModified:1,
                         mbReadOnly:1,
                         mbInsertMode:1,
@@ -157,7 +157,7 @@ public:
     virtual void        KeyInput( const KeyEvent& rKEvt ) override;
     virtual void        Paint( vcl::RenderContext& rRenderContext, const tools::Rectangle& rRect ) override;
     virtual void        Resize() override;
-    virtual void        Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawFlags nFlags ) override;
+    virtual void        Draw( OutputDevice* pDev, const Point& rPos, DrawFlags nFlags ) override;
     virtual void        GetFocus() override;
     virtual void        LoseFocus() override;
     virtual void        Tracking( const TrackingEvent& rTEvt ) override;
@@ -178,8 +178,6 @@ public:
 
     virtual void        SetReadOnly( bool bReadOnly = true );
     virtual bool        IsReadOnly() const { return mbReadOnly; }
-
-    void                SetSelectAllSingleClick( bool bSelectAllSingleClick );
 
     void                SetInsertMode( bool bInsert );
     bool                IsInsertMode() const;

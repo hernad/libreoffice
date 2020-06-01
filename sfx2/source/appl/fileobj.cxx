@@ -40,14 +40,15 @@
 #include <sfx2/strings.hrc>
 #include <vcl/svapp.hxx>
 
-#define FILETYPE_TEXT       1
-#define FILETYPE_GRF        2
-#define FILETYPE_OBJECT     3
+enum class SvFileObjectType
+{
+    Text = 1, Graphic = 2, Object = 3
+};
 
 SvFileObject::SvFileObject()
     : nPostUserEventId(nullptr)
     , mxDelMed()
-    , nType(FILETYPE_TEXT)
+    , nType(SvFileObjectType::Text)
     , bLoadAgain(true)
     , bSynchron(false)
     , bLoadError(false)
@@ -76,7 +77,7 @@ bool SvFileObject::GetData( css::uno::Any & rData,
     SotClipboardFormatId nFmt = SotExchange::RegisterFormatMimeType( rMimeType );
     switch( nType )
     {
-    case FILETYPE_TEXT:
+    case SvFileObjectType::Text:
         if( SotClipboardFormatId::SIMPLE_FILE == nFmt )
         {
             // The media in the application must be opened to lookup the
@@ -86,7 +87,7 @@ bool SvFileObject::GetData( css::uno::Any & rData,
         }
         break;
 
-    case FILETYPE_GRF:
+    case SvFileObjectType::Graphic:
         if (SotClipboardFormatId::GDIMETAFILE == nFmt
          || SotClipboardFormatId::BITMAP == nFmt
          || SotClipboardFormatId::SVXB == nFmt)
@@ -94,7 +95,7 @@ bool SvFileObject::GetData( css::uno::Any & rData,
             rData <<= sFileNm;
         }
         break;
-    case FILETYPE_OBJECT:
+    case SvFileObjectType::Object:
         // TODO/LATER: possibility to insert a new object
         rData <<= sFileNm;
         break;
@@ -110,7 +111,7 @@ bool SvFileObject::Connect( sfx2::SvBaseLink* pLink )
     // Test if not another link of the same connection already exists
     sfx2::LinkManager::GetDisplayNames( pLink, nullptr, &sFileNm, nullptr, &sFilter );
 
-    if( OBJECT_CLIENT_GRF == pLink->GetObjType() )
+    if( sfx2::SvBaseLinkObjectType::ClientGraphic == pLink->GetObjType() )
     {
         SfxObjectShellRef pShell = pLink->GetLinkManager()->GetPersist();
         if( pShell.is() )
@@ -125,17 +126,17 @@ bool SvFileObject::Connect( sfx2::SvBaseLink* pLink )
 
     switch( pLink->GetObjType() )
     {
-    case OBJECT_CLIENT_GRF:
-        nType = FILETYPE_GRF;
+    case sfx2::SvBaseLinkObjectType::ClientGraphic:
+        nType = SvFileObjectType::Graphic;
         bSynchron = pLink->IsSynchron();
         break;
 
-    case OBJECT_CLIENT_FILE:
-        nType = FILETYPE_TEXT;
+    case sfx2::SvBaseLinkObjectType::ClientFile:
+        nType = SvFileObjectType::Text;
         break;
 
-    case OBJECT_CLIENT_OLE:
-        nType = FILETYPE_OBJECT;
+    case sfx2::SvBaseLinkObjectType::ClientOle:
+        nType = SvFileObjectType::Object;
         // TODO/LATER: introduce own type to be used for exchanging
         break;
 
@@ -262,9 +263,9 @@ void SvFileObject::Edit(weld::Window* pParent, sfx2::SvBaseLink* pLink, const Li
 
     switch( pLink->GetObjType() )
     {
-        case OBJECT_CLIENT_GRF:
+        case sfx2::SvBaseLinkObjectType::ClientGraphic:
         {
-            nType = FILETYPE_GRF;       // If not set already
+            nType = SvFileObjectType::Graphic;       // If not set already
 
             SvxOpenGraphicDialog aDlg(SfxResId(RID_SVXSTR_EDITGRFLINK), pParent);
             aDlg.EnableLink(false);
@@ -285,9 +286,9 @@ void SvFileObject::Edit(weld::Window* pParent, sfx2::SvBaseLink* pLink, const Li
         }
         break;
 
-        case OBJECT_CLIENT_OLE:
+        case sfx2::SvBaseLinkObjectType::ClientOle:
         {
-            nType = FILETYPE_OBJECT; // if not set already
+            nType = SvFileObjectType::Object; // if not set already
 
             ::sfx2::FileDialogHelper & rFileDlg =
                 pLink->GetInsertFileDialog( OUString() );
@@ -296,9 +297,9 @@ void SvFileObject::Edit(weld::Window* pParent, sfx2::SvBaseLink* pLink, const Li
         }
         break;
 
-        case OBJECT_CLIENT_FILE:
+        case sfx2::SvBaseLinkObjectType::ClientFile:
         {
-            nType = FILETYPE_TEXT; // if not set already
+            nType = SvFileObjectType::Text; // if not set already
 
             OUString sFactory;
             SfxObjectShell* pShell = pLink->GetLinkManager()->GetPersist();
@@ -357,7 +358,7 @@ IMPL_LINK( SvFileObject, DialogClosedHdl, sfx2::FileDialogHelper*, _pFileDlg, vo
 {
     OUString sFile;
 
-    if ( FILETYPE_TEXT == nType || FILETYPE_OBJECT == nType )
+    if ( SvFileObjectType::Text == nType || SvFileObjectType::Object == nType )
     {
         if ( _pFileDlg && _pFileDlg->GetError() == ERRCODE_NONE )
         {
@@ -380,13 +381,13 @@ IMPL_LINK( SvFileObject, DialogClosedHdl, sfx2::FileDialogHelper*, _pFileDlg, vo
 */
 bool SvFileObject::IsPending() const
 {
-    return FILETYPE_GRF == nType && !bLoadError && bWaitForData;
+    return SvFileObjectType::Graphic == nType && !bLoadError && bWaitForData;
 }
 
 bool SvFileObject::IsDataComplete() const
 {
     bool bRet = false;
-    if( FILETYPE_GRF != nType )
+    if( SvFileObjectType::Graphic != nType )
         bRet = true;
     else if( !bLoadError && !bWaitForData )
     {

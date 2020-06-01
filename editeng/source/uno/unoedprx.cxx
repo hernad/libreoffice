@@ -36,7 +36,7 @@
 #include <editeng/unoedprx.hxx>
 #include <editeng/editdata.hxx>
 #include <editeng/editeng.hxx>
-#include <editeng/AccessibleStringWrap.hxx>
+#include <AccessibleStringWrap.hxx>
 #include <editeng/outliner.hxx>
 
 using namespace ::com::sun::star;
@@ -302,7 +302,7 @@ SvxEditSourceAdapter::~SvxEditSourceAdapter()
 
 std::unique_ptr<SvxEditSource> SvxEditSourceAdapter::Clone() const
 {
-    if( mbEditSourceValid && mpAdaptee.get() )
+    if( mbEditSourceValid && mpAdaptee )
     {
         std::unique_ptr< SvxEditSource > pClonedAdaptee( mpAdaptee->Clone() );
 
@@ -319,7 +319,7 @@ std::unique_ptr<SvxEditSource> SvxEditSourceAdapter::Clone() const
 
 SvxAccessibleTextAdapter* SvxEditSourceAdapter::GetTextForwarderAdapter()
 {
-    if( mbEditSourceValid && mpAdaptee.get() )
+    if( mbEditSourceValid && mpAdaptee )
     {
         SvxTextForwarder* pTextForwarder = mpAdaptee->GetTextForwarder();
 
@@ -341,7 +341,7 @@ SvxTextForwarder* SvxEditSourceAdapter::GetTextForwarder()
 
 SvxViewForwarder* SvxEditSourceAdapter::GetViewForwarder()
 {
-    if( mbEditSourceValid && mpAdaptee.get() )
+    if( mbEditSourceValid && mpAdaptee )
         return mpAdaptee->GetViewForwarder();
 
     return nullptr;
@@ -349,7 +349,7 @@ SvxViewForwarder* SvxEditSourceAdapter::GetViewForwarder()
 
 SvxAccessibleTextEditViewAdapter* SvxEditSourceAdapter::GetEditViewForwarderAdapter( bool bCreate )
 {
-    if( mbEditSourceValid && mpAdaptee.get() )
+    if( mbEditSourceValid && mpAdaptee )
     {
         SvxEditViewForwarder* pEditViewForwarder = mpAdaptee->GetEditViewForwarder(bCreate);
 
@@ -376,13 +376,13 @@ SvxEditViewForwarder* SvxEditSourceAdapter::GetEditViewForwarder( bool bCreate )
 
 void SvxEditSourceAdapter::UpdateData()
 {
-    if( mbEditSourceValid && mpAdaptee.get() )
+    if( mbEditSourceValid && mpAdaptee )
         mpAdaptee->UpdateData();
 }
 
 SfxBroadcaster& SvxEditSourceAdapter::GetBroadcaster() const
 {
-    if( mbEditSourceValid && mpAdaptee.get() )
+    if( mbEditSourceValid && mpAdaptee )
         return mpAdaptee->GetBroadcaster();
 
     return maDummyBroadcaster;
@@ -463,7 +463,6 @@ OUString SvxAccessibleTextAdapter::GetText( const ESelection& rSel ) const
         sStr = sStr.copy(0, sStr.getLength() - (aEndIndex.GetFieldLen() - aEndIndex.GetFieldOffset()) );
     }
 
-    EBulletInfo aBulletInfo1 = GetBulletInfo( aStartIndex.GetParagraph() );
     EBulletInfo aBulletInfo2 = GetBulletInfo( aEndIndex.GetParagraph() );
 
     if( aEndIndex.InBullet() )
@@ -614,7 +613,7 @@ SfxItemPool* SvxAccessibleTextAdapter::GetPool() const
     return mpTextForwarder->GetPool();
 }
 
-OUString SvxAccessibleTextAdapter::CalcFieldValue( const SvxFieldItem& rField, sal_Int32 nPara, sal_Int32 nPos, o3tl::optional<Color>& rpTxtColor, o3tl::optional<Color>& rpFldColor )
+OUString SvxAccessibleTextAdapter::CalcFieldValue( const SvxFieldItem& rField, sal_Int32 nPara, sal_Int32 nPos, std::optional<Color>& rpTxtColor, std::optional<Color>& rpFldColor )
 {
     assert(mpTextForwarder && "SvxAccessibleTextAdapter: no forwarder");
 

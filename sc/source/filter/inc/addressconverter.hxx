@@ -17,15 +17,14 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_SC_SOURCE_FILTER_INC_ADDRESSCONVERTER_HXX
-#define INCLUDED_SC_SOURCE_FILTER_INC_ADDRESSCONVERTER_HXX
+#pragma once
 
 #include <vector>
 #include <rangelst.hxx>
 #include "workbookhelper.hxx"
 #include <com/sun/star/uno/Sequence.h>
 
-namespace com { namespace sun { namespace star { namespace table { struct CellRangeAddress; } } } }
+namespace com::sun::star::table { struct CellRangeAddress; }
 namespace oox { class SequenceInputStream; }
 
 namespace oox {
@@ -502,6 +501,5 @@ private:
 } // namespace xls
 } // namespace oox
 
-#endif
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

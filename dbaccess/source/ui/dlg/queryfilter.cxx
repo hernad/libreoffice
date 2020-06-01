@@ -20,22 +20,14 @@
 #include <queryfilter.hxx>
 #include <com/sun/star/sdbc/DataType.hpp>
 #include <com/sun/star/util/Date.hpp>
-#include <com/sun/star/util/DateTime.hpp>
-#include <com/sun/star/util/Time.hpp>
-#include <com/sun/star/sdb/XSQLQueryComposer.hpp>
 #include <com/sun/star/sdbc/ColumnSearch.hpp>
 #include <com/sun/star/sdbcx/XColumnsSupplier.hpp>
 #include <com/sun/star/sdb/SQLFilterOperator.hpp>
 #include <com/sun/star/sdbc/XConnection.hpp>
-#include <com/sun/star/sdbc/XRow.hpp>
-#include <com/sun/star/sdbc/XResultSet.hpp>
-#include <com/sun/star/container/XNameAccess.hpp>
 #include <comphelper/string.hxx>
 #include <tools/diagnose_ex.h>
 #include <osl/diagnose.h>
-#include <connectivity/sqliterator.hxx>
 #include <connectivity/dbtools.hxx>
-#include <stringconstants.hxx>
 #include <strings.hxx>
 #include <com/sun/star/sdb/XSingleSelectQueryComposer.hpp>
 
@@ -480,25 +472,25 @@ void DlgFilterCrit::SetLine( int nIdx, const PropertyValue& _rItem, bool _bOr )
             break;
     }
 
-    if ( pColumnListControl && pPredicateListControl && pPredicateValueControl )
-    {
-        OUString sName;
-        if ( xColumn.is() )
-            xColumn->getPropertyValue(PROPERTY_NAME) >>= sName;
-        else
-            sName = _rItem.Name;
-        // select the appropriate field name
-        SelectField( *pColumnListControl, sName );
-        ListSelectHdl( *pColumnListControl );
+    if ( !(pColumnListControl && pPredicateListControl && pPredicateValueControl) )
+        return;
 
-        // select the appropriate condition
-        pPredicateListControl->set_active( GetSelectionPos( _rItem.Handle, *pPredicateListControl ) );
+    OUString sName;
+    if ( xColumn.is() )
+        xColumn->getPropertyValue(PROPERTY_NAME) >>= sName;
+    else
+        sName = _rItem.Name;
+    // select the appropriate field name
+    SelectField( *pColumnListControl, sName );
+    ListSelectHdl( *pColumnListControl );
 
-        // initially normalize this value
-        OUString aString( aStr );
-        m_aPredicateInput.normalizePredicateString( aString, xColumn );
-        pPredicateValueControl->set_text( aString );
-    }
+    // select the appropriate condition
+    pPredicateListControl->set_active( GetSelectionPos( _rItem.Handle, *pPredicateListControl ) );
+
+    // initially normalize this value
+    OUString aString( aStr );
+    m_aPredicateInput.normalizePredicateString( aString, xColumn );
+    pPredicateValueControl->set_text( aString );
 }
 
 void DlgFilterCrit::SelectField(weld::ComboBox& rBox, const OUString& rField)

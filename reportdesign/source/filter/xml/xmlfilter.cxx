@@ -24,14 +24,12 @@
 #include <com/sun/star/packages/zip/ZipIOException.hpp>
 #include <com/sun/star/embed/ElementModes.hpp>
 #include <com/sun/star/beans/NamedValue.hpp>
-#include <com/sun/star/sdb/XOfficeDatabaseDocument.hpp>
 #include <com/sun/star/util/MeasureUnit.hpp>
 #include <com/sun/star/xml/sax/Parser.hpp>
 #include <com/sun/star/xml/sax/SAXParseException.hpp>
-#include <com/sun/star/document/GraphicStorageHandler.hpp>
+#include <com/sun/star/document/XGraphicStorageHandler.hpp>
 #include <com/sun/star/document/XEmbeddedObjectResolver.hpp>
 #include "xmlfilter.hxx"
-#include "xmlGroup.hxx"
 #include "xmlReport.hxx"
 #include <vcl/errinf.hxx>
 #include "xmlHelper.hxx"
@@ -51,20 +49,18 @@
 #include <comphelper/propertysetinfo.hxx>
 #include <unotools/mediadescriptor.hxx>
 #include <xmloff/ProgressBarHelper.hxx>
+#include <xmloff/XMLTextMasterStylesContext.hxx>
 #include <sfx2/docfile.hxx>
 #include <com/sun/star/io/XInputStream.hpp>
-#include <com/sun/star/uno/XNamingService.hpp>
 #include <xmloff/DocumentSettingsContext.hxx>
 #include <xmloff/xmluconv.hxx>
 #include <xmloff/xmlmetai.hxx>
 #include <tools/diagnose_ex.h>
-#include <com/sun/star/util/XModifiable.hpp>
 #include <svtools/sfxecode.hxx>
 #include "xmlEnums.hxx"
 #include "xmlStyleImport.hxx"
 #include <strings.hxx>
 #include "xmlPropertyHandler.hxx"
-#include <xmloff/txtprmap.hxx>
 #include <ReportDefinition.hxx>
 
 namespace rptxml
@@ -184,7 +180,6 @@ static ErrCode ReadThroughComponent(
     const uno::Reference< embed::XStorage >& xStorage,
     const uno::Reference<XComponent>& xModelComponent,
     const char* pStreamName,
-    const char* pCompatibilityStreamName,
     const uno::Reference<XComponentContext> & rxContext,
     const Reference<document::XGraphicStorageHandler> & rxGraphicStorageHandler,
     const Reference<document::XEmbeddedObjectResolver>& _xEmbeddedObjectResolver,
@@ -204,17 +199,8 @@ static ErrCode ReadThroughComponent(
             OUString sStreamName = OUString::createFromAscii(pStreamName);
             if ( !xStorage->hasByName( sStreamName ) || !xStorage->isStreamElement( sStreamName ) )
             {
-                // stream name not found! Then try the compatibility name.
-                // if no stream can be opened, return immediately with OK signal
-
-                // do we even have an alternative name?
-                if ( nullptr == pCompatibilityStreamName )
-                    return ERRCODE_NONE;
-
-                // if so, does the stream exist?
-                sStreamName = OUString::createFromAscii(pCompatibilityStreamName);
-                if ( !xStorage->hasByName( sStreamName ) || !xStorage->isStreamElement( sStreamName ) )
-                    return ERRCODE_NONE;
+                // stream name not found! return immediately with OK signal
+                return ERRCODE_NONE;
             }
 
             // get input stream
@@ -423,8 +409,6 @@ bool ORptFilter::implImport( const Sequence< PropertyValue >& rDescriptor )
 
     if ( !sFileName.isEmpty() )
     {
-        uno::Reference<XComponent> xCom = GetModel();
-
         tools::SvRef<SfxMedium> pMedium = new SfxMedium(
                 sFileName, ( StreamMode::READ | StreamMode::NOCREATE ) );
 
@@ -494,7 +478,6 @@ bool ORptFilter::implImport( const Sequence< PropertyValue >& rDescriptor )
         ErrCode nRet = ReadThroughComponent( xStorage
                                     ,xModel
                                     ,"meta.xml"
-                                    ,"Meta.xml"
                                     ,GetComponentContext()
                                     ,xGraphicStorageHandler
                                     ,xEmbeddedObjectResolver
@@ -518,7 +501,6 @@ bool ORptFilter::implImport( const Sequence< PropertyValue >& rDescriptor )
             nRet = ReadThroughComponent( xStorage
                                     ,xModel
                                     ,"settings.xml"
-                                    ,"Settings.xml"
                                     ,GetComponentContext()
                                     ,xGraphicStorageHandler
                                     ,xEmbeddedObjectResolver
@@ -532,7 +514,6 @@ bool ORptFilter::implImport( const Sequence< PropertyValue >& rDescriptor )
             nRet = ReadThroughComponent(xStorage
                                     ,xModel
                                     ,"styles.xml"
-                                    ,"Styles.xml"
                                     ,GetComponentContext()
                                     ,xGraphicStorageHandler
                                     ,xEmbeddedObjectResolver
@@ -546,7 +527,6 @@ bool ORptFilter::implImport( const Sequence< PropertyValue >& rDescriptor )
             nRet = ReadThroughComponent( xStorage
                                     ,xModel
                                     ,"content.xml"
-                                    ,"Content.xml"
                                     ,GetComponentContext()
                                     ,xGraphicStorageHandler
                                     ,xEmbeddedObjectResolver
@@ -631,33 +611,16 @@ public:
                     return pStyleContext;
                 }
                 break;
+            case XML_ELEMENT(OFFICE, XML_STYLES):
+                rImport.GetProgressBarHelper()->Increment( PROGRESS_BAR_STEP );
+                return rImport.CreateStylesContext(false);
+                break;
+            case XML_ELEMENT(OFFICE, XML_AUTOMATIC_STYLES):
+                // don't use the autostyles from the styles-document for the progress
+                return rImport.CreateStylesContext(true);
+                break;
         }
         return nullptr;
-    }
-
-    virtual SvXMLImportContextRef CreateChildContext(sal_uInt16 const nPrefix,
-        const OUString& rLocalName,
-        const uno::Reference<xml::sax::XAttributeList> & xAttrList) override
-    {
-        SvXMLImportContext *pContext = nullptr;
-
-        ORptFilter & rImport(static_cast<ORptFilter&>(GetImport()));
-        const SvXMLTokenMap& rTokenMap = rImport.GetDocContentElemTokenMap();
-        switch (rTokenMap.Get(nPrefix, rLocalName))
-        {
-            case XML_TOK_CONTENT_STYLES:
-                rImport.GetProgressBarHelper()->Increment( PROGRESS_BAR_STEP );
-                pContext = rImport.CreateStylesContext(rLocalName, xAttrList, false);
-                break;
-            case XML_TOK_CONTENT_AUTOSTYLES:
-                // don't use the autostyles from the styles-document for the progress
-                pContext = rImport.CreateStylesContext(rLocalName, xAttrList, true);
-                break;
-            default:
-                break;
-        }
-
-        return pContext;
     }
 };
 
@@ -674,7 +637,7 @@ css::uno::Reference< css::xml::sax::XFastContextHandler > RptXMLDocumentBodyCont
         const SvXMLStylesContext* pAutoStyles = rImport.GetAutoStyles();
         if (pAutoStyles)
         {
-            XMLPropStyleContext* pAutoStyle = const_cast<XMLPropStyleContext*>(dynamic_cast<const XMLPropStyleContext *>(pAutoStyles->FindStyleChildContext(XML_STYLE_FAMILY_PAGE_MASTER, "pm1")));
+            XMLPropStyleContext* pAutoStyle = const_cast<XMLPropStyleContext*>(dynamic_cast<const XMLPropStyleContext *>(pAutoStyles->FindStyleChildContext(XmlStyleFamily::PAGE_MASTER, "pm1")));
             if (pAutoStyle)
             {
                 pAutoStyle->FillPropertySet(rImport.getReportDefinition().get());
@@ -711,29 +674,12 @@ public:
                 rImport.GetProgressBarHelper()->Increment( PROGRESS_BAR_STEP );
                 return rImport.CreateFontDeclsContext();
                 break;
+            case XML_ELEMENT(OFFICE, XML_AUTOMATIC_STYLES):
+                rImport.GetProgressBarHelper()->Increment( PROGRESS_BAR_STEP );
+                return rImport.CreateStylesContext(true);
+                break;
         }
         return nullptr;
-    }
-
-    virtual SvXMLImportContextRef CreateChildContext(sal_uInt16 const nPrefix,
-        const OUString& rLocalName,
-        const uno::Reference<xml::sax::XAttributeList> & xAttrList) override
-    {
-        SvXMLImportContext *pContext = nullptr;
-
-        ORptFilter & rImport(static_cast<ORptFilter&>(GetImport()));
-        const SvXMLTokenMap& rTokenMap = rImport.GetDocContentElemTokenMap();
-        switch (rTokenMap.Get(nPrefix, rLocalName))
-        {
-            case XML_TOK_CONTENT_AUTOSTYLES:
-                rImport.GetProgressBarHelper()->Increment( PROGRESS_BAR_STEP );
-                pContext = rImport.CreateStylesContext(rLocalName, xAttrList, true);
-                break;
-            default:
-                break;
-        }
-
-        return pContext;
     }
 };
 
@@ -762,24 +708,6 @@ SvXMLImportContext *ORptFilter::CreateFastContext( sal_Int32 nElement,
             break;
     }
     return pContext;
-}
-
-const SvXMLTokenMap& ORptFilter::GetDocContentElemTokenMap() const
-{
-    if (!m_pDocContentElemTokenMap)
-    {
-        static const SvXMLTokenMapEntry aElemTokenMap[]=
-        {
-            { XML_NAMESPACE_OFFICE, XML_STYLES,             XML_TOK_CONTENT_STYLES      },
-            { XML_NAMESPACE_OFFICE, XML_AUTOMATIC_STYLES,   XML_TOK_CONTENT_AUTOSTYLES  },
-            { XML_NAMESPACE_OFFICE, XML_FONT_FACE_DECLS,    XML_TOK_CONTENT_FONTDECLS   },
-            { XML_NAMESPACE_OFFICE, XML_MASTER_STYLES,      XML_TOK_CONTENT_MASTERSTYLES},
-            { XML_NAMESPACE_OFFICE, XML_BODY,               XML_TOK_CONTENT_BODY        },
-            XML_TOKEN_MAP_END
-        };
-        m_pDocContentElemTokenMap.reset(new SvXMLTokenMap( aElemTokenMap ));
-    }
-    return *m_pDocContentElemTokenMap;
 }
 
 const SvXMLTokenMap& ORptFilter::GetReportElemTokenMap() const
@@ -814,13 +742,12 @@ const SvXMLTokenMap& ORptFilter::GetCellElemTokenMap() const
     return *m_pCellElemTokenMap;
 }
 
-SvXMLImportContext* ORptFilter::CreateStylesContext(const OUString& rLocalName,
-                                     const uno::Reference< XAttributeList>& xAttrList, bool bIsAutoStyle )
+SvXMLImportContext* ORptFilter::CreateStylesContext( bool bIsAutoStyle )
 {
     SvXMLImportContext* pContext = bIsAutoStyle ? GetAutoStyles() : GetStyles();
     if ( !pContext )
     {
-        pContext = new OReportStylesContext(*this, XML_NAMESPACE_OFFICE, rLocalName, xAttrList, bIsAutoStyle);
+        pContext = new OReportStylesContext(*this, bIsAutoStyle);
         if (bIsAutoStyle)
             SetAutoStyles(static_cast<SvXMLStylesContext*>(pContext));
         else

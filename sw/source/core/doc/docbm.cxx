@@ -562,10 +562,12 @@ namespace sw::mark
         }
 #endif
         if (   (!rPaM.GetPoint()->nNode.GetNode().IsTextNode()
-                    // huh, SwXTextRange puts one on table node?
-                && !rPaM.GetPoint()->nNode.GetNode().IsTableNode())
+                && (eType != MarkType::UNO_BOOKMARK
+                // SwXTextRange can be on table node or plain start node (FLY_AT_FLY)
+                    || !rPaM.GetPoint()->nNode.GetNode().IsStartNode()))
             || (!rPaM.GetMark()->nNode.GetNode().IsTextNode()
-                && !rPaM.GetMark()->nNode.GetNode().IsTableNode()))
+                && (eType != MarkType::UNO_BOOKMARK
+                    || !rPaM.GetMark()->nNode.GetNode().IsStartNode())))
         {
             SAL_WARN("sw.core", "MarkManager::makeMark(..)"
                 " - refusing to create mark on non-textnode");
@@ -649,9 +651,7 @@ namespace sw::mark
                 pMark = std::make_unique<AnnotationMark>( rPaM, rName );
                 break;
         }
-        assert(pMark.get() &&
-            "MarkManager::makeMark(..)"
-            " - Mark was not created.");
+        assert(pMark && "MarkManager::makeMark(..) - Mark was not created.");
 
         if(pMark->GetMarkPos() != pMark->GetMarkStart())
             pMark->Swap();
@@ -1479,7 +1479,6 @@ namespace sw::mark
             if (m_pLastActiveFieldmark != pFieldBM)
             {
                 FieldmarkWithDropDownButton& rFormField = dynamic_cast<FieldmarkWithDropDownButton&>(*pFieldBM);
-                rFormField.ShowButton(&rEditWin);
                 pNewActiveFieldmark = &rFormField;
             }
             else
@@ -1492,6 +1491,8 @@ namespace sw::mark
         {
             ClearFieldActivation();
             m_pLastActiveFieldmark = pNewActiveFieldmark;
+            if(pNewActiveFieldmark)
+                pNewActiveFieldmark->ShowButton(&rEditWin);
         }
     }
 
@@ -1816,7 +1817,9 @@ void DelBookmarks(
             {
                 bool bStt = true;
                 SwContentNode* pCNd = pRStt->nNode.GetNode().GetContentNode();
-                if( !pCNd && nullptr == ( pCNd = pDoc->GetNodes().GoNext( &pRStt->nNode )) )
+                if( !pCNd )
+                    pCNd = pDoc->GetNodes().GoNext( &pRStt->nNode );
+                if (!pCNd)
                 {
                     bStt = false;
                     pRStt->nNode = rStt;
@@ -1838,7 +1841,9 @@ void DelBookmarks(
             {
                 bool bStt = false;
                 SwContentNode* pCNd = pREnd->nNode.GetNode().GetContentNode();
-                if( !pCNd && nullptr == ( pCNd = SwNodes::GoPrevious( &pREnd->nNode )) )
+                if( !pCNd )
+                    pCNd = SwNodes::GoPrevious( &pREnd->nNode );
+                if( !pCNd )
                 {
                     bStt = true;
                     pREnd->nNode = rEnd;

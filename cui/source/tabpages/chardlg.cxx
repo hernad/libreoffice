@@ -221,7 +221,7 @@ SvxCharNamePage::SvxCharNamePage(weld::Container* pPage, weld::DialogController*
     , m_xEastFontStyleFT(m_xBuilder->weld_label("eaststyleft"))
     , m_xEastFontStyleLB(new FontStyleBox(m_xBuilder->weld_combo_box("eaststylelb")))
     , m_xEastFontSizeFT(m_xBuilder->weld_label("eastsizeft"))
-    , m_xEastFontSizeLB(new SvtFontSizeBox(m_xBuilder->weld_combo_box("eastsizelb")))
+    , m_xEastFontSizeLB(new FontSizeBox(m_xBuilder->weld_combo_box("eastsizelb")))
     , m_xEastFontLanguageFT(m_xBuilder->weld_label("eastlangft"))
     , m_xEastFontLanguageLB(new SvxLanguageBox(m_xBuilder->weld_combo_box("eastlanglb")))
     , m_xEastFontTypeFT(m_xBuilder->weld_label("eastfontinfo"))
@@ -232,7 +232,7 @@ SvxCharNamePage::SvxCharNamePage(weld::Container* pPage, weld::DialogController*
     , m_xCTLFontStyleFT(m_xBuilder->weld_label("ctlstyleft"))
     , m_xCTLFontStyleLB(new FontStyleBox(m_xBuilder->weld_combo_box("ctlstylelb")))
     , m_xCTLFontSizeFT(m_xBuilder->weld_label("ctlsizeft"))
-    , m_xCTLFontSizeLB(new SvtFontSizeBox(m_xBuilder->weld_combo_box("ctlsizelb")))
+    , m_xCTLFontSizeLB(new FontSizeBox(m_xBuilder->weld_combo_box("ctlsizelb")))
     , m_xCTLFontLanguageFT(m_xBuilder->weld_label("ctllangft"))
     , m_xCTLFontLanguageLB(new SvxLanguageBox(m_xBuilder->weld_combo_box("ctllanglb")))
     , m_xCTLFontTypeFT(m_xBuilder->weld_label("ctlfontinfo"))
@@ -258,7 +258,7 @@ SvxCharNamePage::SvxCharNamePage(weld::Container* pPage, weld::DialogController*
         m_xWestFontSizeFT = m_xBuilder->weld_label("westsizeft-cjk");
 
         m_xWestFontStyleLB.reset(new FontStyleBox(m_xBuilder->weld_combo_box("weststylelb-cjk")));
-        m_xWestFontSizeLB.reset(new SvtFontSizeBox(m_xBuilder->weld_combo_box("westsizelb-cjk")));
+        m_xWestFontSizeLB.reset(new FontSizeBox(m_xBuilder->weld_combo_box("westsizelb-cjk")));
 
         m_xWestFontLanguageFT = m_xBuilder->weld_label("westlangft-cjk");
         m_xWestFontLanguageLB.reset(new SvxLanguageBox(m_xBuilder->weld_combo_box("westlanglb-cjk")));
@@ -290,7 +290,7 @@ SvxCharNamePage::SvxCharNamePage(weld::Container* pPage, weld::DialogController*
 
         m_xWestFontNameLB = std::move(xWestFontNameLB);
         m_xWestFontStyleLB.reset(new FontStyleBox(std::move(xWestFontStyleLB)));
-        m_xWestFontSizeLB.reset(new SvtFontSizeBox(std::move(xWestFontSizeLB)));
+        m_xWestFontSizeLB.reset(new FontSizeBox(std::move(xWestFontSizeLB)));
     }
 
     //In MacOSX the standard dialogs name font-name, font-style as
@@ -321,9 +321,12 @@ SvxCharNamePage::SvxCharNamePage(weld::Container* pPage, weld::DialogController*
     m_xEastFrame->set_visible(bShowCJK);
     m_xCTLFrame->set_visible(bShowCTL);
 
-    m_xWestFontLanguageLB->SetLanguageList(SvxLanguageListFlags::WESTERN, true, false, true);
-    m_xEastFontLanguageLB->SetLanguageList(SvxLanguageListFlags::CJK, true, false, true);
-    m_xCTLFontLanguageLB->SetLanguageList(SvxLanguageListFlags::CTL, true, false, true);
+    m_xWestFontLanguageLB->SetLanguageList(SvxLanguageListFlags::WESTERN, true, false, true, true,
+                                           LANGUAGE_SYSTEM, css::i18n::ScriptType::LATIN);
+    m_xEastFontLanguageLB->SetLanguageList(SvxLanguageListFlags::CJK, true, false, true, true,
+                                           LANGUAGE_SYSTEM, css::i18n::ScriptType::ASIAN);
+    m_xCTLFontLanguageLB->SetLanguageList(SvxLanguageListFlags::CTL, true, false, true, true,
+                                          LANGUAGE_SYSTEM, css::i18n::ScriptType::COMPLEX);
 
     Initialize();
 }
@@ -404,7 +407,7 @@ namespace
                     SvxCharNamePage const * _pPage,
                     const weld::ComboBox* _pFontNameLB,
                     const FontStyleBox* _pFontStyleLB,
-                    const SvtFontSizeBox* _pFontSizeLB,
+                    const FontSizeBox* _pFontSizeLB,
                     const SvxLanguageBox* _pLanguageLB,
                     const FontList* _pFontList,
                     sal_uInt16 _nFontWhich,
@@ -532,19 +535,19 @@ void SvxCharNamePage::FillStyleBox_Impl(const weld::Widget& rNameBox)
 
     pStyleBox->Fill(sFontName, pFontList);
 
-    if ( m_pImpl->m_bInSearchMode )
-    {
-        // additional entries for the search:
-        // "not bold" and "not italic"
-        OUString aEntry = m_pImpl->m_aNoStyleText;
-        const char sS[] = "%1";
-        aEntry = aEntry.replaceFirst( sS, pFontList->GetBoldStr() );
-        m_pImpl->m_nExtraEntryPos = pStyleBox->get_count();
-        pStyleBox->append_text( aEntry );
-        aEntry = m_pImpl->m_aNoStyleText;
-        aEntry = aEntry.replaceFirst( sS, pFontList->GetItalicStr() );
-        pStyleBox->append_text(aEntry);
-    }
+    if ( !m_pImpl->m_bInSearchMode )
+        return;
+
+    // additional entries for the search:
+    // "not bold" and "not italic"
+    OUString aEntry = m_pImpl->m_aNoStyleText;
+    const char sS[] = "%1";
+    aEntry = aEntry.replaceFirst( sS, pFontList->GetBoldStr() );
+    m_pImpl->m_nExtraEntryPos = pStyleBox->get_count();
+    pStyleBox->append_text( aEntry );
+    aEntry = m_pImpl->m_aNoStyleText;
+    aEntry = aEntry.replaceFirst( sS, pFontList->GetItalicStr() );
+    pStyleBox->append_text(aEntry);
 }
 
 void SvxCharNamePage::FillSizeBox_Impl(const weld::Widget& rNameBox)
@@ -553,7 +556,7 @@ void SvxCharNamePage::FillSizeBox_Impl(const weld::Widget& rNameBox)
     DBG_ASSERT( pFontList, "no fontlist" );
 
     FontStyleBox* pStyleBox = nullptr;
-    SvtFontSizeBox* pSizeBox = nullptr;
+    FontSizeBox* pSizeBox = nullptr;
     OUString sFontName;
 
     if (m_xWestFontNameLB.get() == &rNameBox)
@@ -607,7 +610,7 @@ void SvxCharNamePage::Reset_Impl( const SfxItemSet& rSet, LanguageGroup eLangGrp
     weld::Label* pStyleLabel = nullptr;
     FontStyleBox* pStyleBox = nullptr;
     weld::Label* pSizeLabel = nullptr;
-    SvtFontSizeBox* pSizeBox = nullptr;
+    FontSizeBox* pSizeBox = nullptr;
     weld::Label* pLangFT = nullptr;
     SvxLanguageBox* pLangBox = nullptr;
     sal_uInt16 nWhich = 0;
@@ -763,7 +766,7 @@ void SvxCharNamePage::Reset_Impl( const SfxItemSet& rSet, LanguageGroup eLangGrp
     }
     else
     {
-        pSizeBox->set_active_text( OUString() );
+        pSizeBox->set_active_or_entry_text(OUString());
         if ( eState <= SfxItemState::READONLY )
         {
             pSizeBox->set_sensitive(false);
@@ -836,7 +839,7 @@ bool SvxCharNamePage::FillItemSet_Impl( SfxItemSet& rSet, LanguageGroup eLangGrp
 
     weld::ComboBox* pNameBox = nullptr;
     FontStyleBox* pStyleBox = nullptr;
-    SvtFontSizeBox* pSizeBox = nullptr;
+    FontSizeBox* pSizeBox = nullptr;
     SvxLanguageBox* pLangBox = nullptr;
     sal_uInt16 nWhich = 0;
     sal_uInt16 nSlot = 0;
@@ -1231,7 +1234,7 @@ void SvxCharNamePage::SetFontList( const SvxFontListItem& rItem )
 
 namespace
 {
-    void enableRelativeMode( SvxCharNamePage const * _pPage, SvtFontSizeBox* _pFontSizeLB, sal_uInt16 _nHeightWhich )
+    void enableRelativeMode( SvxCharNamePage const * _pPage, FontSizeBox* _pFontSizeLB, sal_uInt16 _nHeightWhich )
     {
         _pFontSizeLB->EnableRelativeMode( 5, 995 ); // min 5%, max 995%, step 5
 
@@ -1323,7 +1326,6 @@ SvxCharEffectsPage::SvxCharEffectsPage(weld::Container* pPage, weld::DialogContr
     , m_xReliefLB(m_xBuilder->weld_combo_box("relieflb"))
     , m_xOutlineBtn(m_xBuilder->weld_check_button("outlinecb"))
     , m_xShadowBtn(m_xBuilder->weld_check_button("shadowcb"))
-    , m_xBlinkingBtn(m_xBuilder->weld_check_button("blinkingcb"))
     , m_xHiddenBtn(m_xBuilder->weld_check_button("hiddencb"))
     , m_xOverlineLB(m_xBuilder->weld_combo_box("overlinelb"))
     , m_xOverlineColorFT(m_xBuilder->weld_label("overlinecolorft"))
@@ -1560,7 +1562,7 @@ void SvxCharEffectsPage::ResetColor_Impl( const SfxItemSet& rSet )
             m_aPreviewWin.Invalidate();
 
             Color aRGBColor = aColor;
-            if (aRGBColor.GetTransparency())
+            if (aRGBColor.GetTransparency() && aColor != COL_AUTO)
             {
                 aRGBColor.SetTransparency(0);
             }
@@ -2001,33 +2003,6 @@ void SvxCharEffectsPage::Reset( const SfxItemSet* rSet )
         }
     }
 
-    // Blinking
-    nWhich = GetWhich( SID_ATTR_FLASH );
-    eState = rSet->GetItemState( nWhich );
-
-    switch ( eState )
-    {
-        case SfxItemState::UNKNOWN:
-            m_xBlinkingBtn->hide();
-            break;
-
-        case SfxItemState::DISABLED:
-        case SfxItemState::READONLY:
-            m_xBlinkingBtn->set_sensitive(false);
-            break;
-
-        case SfxItemState::DONTCARE:
-            m_xBlinkingBtn->set_state( TRISTATE_INDET );
-            break;
-
-        case SfxItemState::DEFAULT:
-        case SfxItemState::SET:
-        {
-            const SvxBlinkItem& rItem = static_cast<const SvxBlinkItem&>(rSet->Get( nWhich ));
-            m_xBlinkingBtn->set_state( static_cast<TriState>(rItem.GetValue()) );
-            break;
-        }
-    }
     // Hidden
     nWhich = GetWhich( SID_ATTR_CHAR_HIDDEN );
     eState = rSet->GetItemState( nWhich );
@@ -2078,7 +2053,6 @@ void SvxCharEffectsPage::ChangesApplied()
     m_xReliefLB->save_value();
     m_xOutlineBtn->save_state();
     m_xShadowBtn->save_state();
-    m_xBlinkingBtn->save_state();
     m_xHiddenBtn->save_state();
     m_xFontTransparencyMtr->save_value();
 }
@@ -2352,30 +2326,6 @@ bool SvxCharEffectsPage::FillItemSet( SfxItemSet* rSet )
 
     bChanged = true;
 
-    // Blinking
-    nWhich = GetWhich( SID_ATTR_FLASH );
-    pOld = GetOldItem( *rSet, SID_ATTR_FLASH );
-    eState = m_xBlinkingBtn->get_state();
-
-    if ( pOld )
-    {
-        const SvxBlinkItem& rItem = *static_cast<const SvxBlinkItem*>(pOld);
-        if ( rItem.GetValue() == StateToAttr( eState ) && m_xBlinkingBtn->get_saved_state() == eState )
-            bChanged = false;
-    }
-
-    if ( !bChanged && pExampleSet && pExampleSet->GetItemState( nWhich, false, &pItem ) == SfxItemState::SET &&
-         !StateToAttr( eState ) && static_cast<const SvxBlinkItem*>(pItem)->GetValue() )
-        bChanged = true;
-
-    if ( bChanged && eState != TRISTATE_INDET )
-    {
-        rSet->Put( SvxBlinkItem( StateToAttr( eState ), nWhich ) );
-        bModified = true;
-    }
-    else if ( SfxItemState::DEFAULT == rOldSet.GetItemState( nWhich, false ) )
-        rSet->InvalidateItem(nWhich);
-
     // Hidden
     nWhich = GetWhich( SID_ATTR_CHAR_HIDDEN );
     pOld = GetOldItem( *rSet, SID_ATTR_CHAR_HIDDEN );
@@ -2417,9 +2367,6 @@ void SvxCharEffectsPage::DisableControls( sal_uInt16 nDisable )
     if ( ( DISABLE_WORDLINE & nDisable ) == DISABLE_WORDLINE )
         m_xIndividualWordsBtn->set_sensitive(false);
 
-    if ( ( DISABLE_BLINK & nDisable ) == DISABLE_BLINK )
-        m_xBlinkingBtn->set_sensitive(false);
-
     if ( ( DISABLE_UNDERLINE_COLOR & nDisable ) == DISABLE_UNDERLINE_COLOR )
     {
         // disable the controls
@@ -2436,20 +2383,18 @@ void SvxCharEffectsPage::PageCreated(const SfxAllItemSet& aSet)
     if (pDisableCtlItem)
         DisableControls(pDisableCtlItem->GetValue());
 
-    if (pFlagItem)
+    if (!pFlagItem)
+        return;
+
+    sal_uInt32 nFlags=pFlagItem->GetValue();
+    if ( ( nFlags & SVX_PREVIEW_CHARACTER ) == SVX_PREVIEW_CHARACTER )
+        // the writer uses SID_ATTR_BRUSH as font background
+        m_bPreviewBackgroundToCharacter = true;
+    if ((nFlags & SVX_ENABLE_CHAR_TRANSPARENCY) != SVX_ENABLE_CHAR_TRANSPARENCY)
     {
-        sal_uInt32 nFlags=pFlagItem->GetValue();
-        if ( ( nFlags & SVX_ENABLE_FLASH ) == SVX_ENABLE_FLASH )
-            m_xBlinkingBtn->show();
-        if ( ( nFlags & SVX_PREVIEW_CHARACTER ) == SVX_PREVIEW_CHARACTER )
-            // the writer uses SID_ATTR_BRUSH as font background
-            m_bPreviewBackgroundToCharacter = true;
-        if ((nFlags & SVX_ENABLE_CHAR_TRANSPARENCY) != SVX_ENABLE_CHAR_TRANSPARENCY)
-        {
-            // Only show these in case client code explicitly wants this.
-            m_xFontTransparencyFT->hide();
-            m_xFontTransparencyMtr->hide();
-        }
+        // Only show these in case client code explicitly wants this.
+        m_xFontTransparencyFT->hide();
+        m_xFontTransparencyMtr->hide();
     }
 }
 

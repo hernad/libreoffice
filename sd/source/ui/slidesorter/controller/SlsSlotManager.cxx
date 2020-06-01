@@ -565,7 +565,7 @@ void SlotManager::GetMenuState (SfxItemSet& rSet)
             while (aSelectedPages.HasMoreElements())
             {
                 SdPage* pPage = aSelectedPages.GetNextElement()->GetPage();
-                SdrObject* pObj = pPage->GetPresObj(PRESOBJ_OUTLINE);
+                SdrObject* pObj = pPage->GetPresObj(PresObjKind::Outline);
                 if (pObj!=nullptr )
                 {
                     if( !pObj->IsEmptyPresObj() )
@@ -606,7 +606,7 @@ void SlotManager::GetMenuState (SfxItemSet& rSet)
             while (aSelectedPages.HasMoreElements())
             {
                 SdPage* pPage = aSelectedPages.GetNextElement()->GetPage();
-                SdrObject* pObj = pPage->GetPresObj(PRESOBJ_TITLE);
+                SdrObject* pObj = pPage->GetPresObj(PresObjKind::Title);
 
                 if (pObj!=nullptr && !pObj->IsEmptyPresObj())
                     bDisable = false;
@@ -763,7 +763,7 @@ void SlotManager::GetClipboardState ( SfxItemSet& rSet)
     }
 
     ViewShellBase* pBase = mrSlideSorter.GetViewShellBase();
-    if (pBase && pBase->isContentExtractionLocked())
+    if (pBase && pBase->GetObjectShell()->isContentExtractionLocked())
     {
         rSet.DisableItem(SID_COPY);
         rSet.DisableItem(SID_CUT);
@@ -918,6 +918,7 @@ void SlotManager::RenameSlide(const SfxRequest& rRequest)
         aNameDlg->GetName( aOldName );
         aNameDlg->SetText( aTitle );
         aNameDlg->SetCheckNameHdl( LINK( this, SlotManager, RenameSlideHdl ), true );
+        aNameDlg->SetCheckNameTooltipHdl( LINK( this, SlotManager, RenameSlideTooltipHdl ) );
         aNameDlg->SetEditHelpId( HID_SD_NAMEDIALOG_PAGE );
 
         if( aNameDlg->Execute() == RET_OK )
@@ -957,6 +958,11 @@ IMPL_LINK(SlotManager, RenameSlideHdl, AbstractSvxNameDialog&, rDialog, bool)
     return (pCurrentPage!=nullptr && aNewName == pCurrentPage->GetName())
         || (mrSlideSorter.GetViewShell()
             && mrSlideSorter.GetViewShell()->GetDocSh()->IsNewPageNameValid( aNewName ) );
+}
+
+IMPL_STATIC_LINK_NOARG(SlotManager, RenameSlideTooltipHdl, AbstractSvxNameDialog&, OUString)
+{
+    return SdResId(STR_TOOLTIP_RENAME);
 }
 
 bool SlotManager::RenameSlideFromDrawViewShell( sal_uInt16 nPageId, const OUString & rName  )

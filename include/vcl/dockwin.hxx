@@ -20,6 +20,7 @@
 #ifndef INCLUDED_VCL_DOCKWIN_HXX
 #define INCLUDED_VCL_DOCKWIN_HXX
 
+#include <config_options.h>
 #include <vcl/dllapi.h>
 #include <o3tl/deleter.hxx>
 #include <vcl/builder.hxx>
@@ -30,7 +31,7 @@
 // data to be sent with docking events
 struct DockingData
 {
-    Point const       maMousePos;     // in
+    Point       maMousePos;     // in
     tools::Rectangle   maTrackRect;    // in/out
     bool        mbFloating;     // out
 
@@ -41,9 +42,9 @@ struct DockingData
 
 struct EndDockingData
 {
-    tools::Rectangle const   maWindowRect;    // in
-    bool const        mbFloating;      // in
-    bool const        mbCancelled;     // in
+    tools::Rectangle   maWindowRect;    // in
+    bool        mbFloating;      // in
+    bool        mbCancelled;     // in
 
     EndDockingData( const tools::Rectangle& rRect, bool b, bool bCancelled ) :
         maWindowRect( rRect ), mbFloating( b ), mbCancelled( bCancelled )
@@ -52,8 +53,8 @@ struct EndDockingData
 
 struct EndPopupModeData
 {
-    Point const       maFloatingPos;    // in
-    bool const        mbTearoff;        // in
+    Point       maFloatingPos;    // in
+    bool        mbTearoff;        // in
 
     EndPopupModeData( const Point& rPos, bool bTearoff ) :
         maFloatingPos( rPos ), mbTearoff( bTearoff )
@@ -164,7 +165,7 @@ public:
     Size            GetSizePixel() const;
 };
 
-class VCL_DLLPUBLIC DockingManager
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) DockingManager
 {
     std::vector<std::unique_ptr<ImplDockingWindowWrapper, o3tl::default_delete<ImplDockingWindowWrapper>>> mvDockingWindows;
 

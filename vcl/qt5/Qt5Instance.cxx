@@ -400,7 +400,10 @@ void Qt5Instance::AddToRecentDocumentList(const OUString&, const OUString&, cons
 
 OpenGLContext* Qt5Instance::CreateOpenGLContext() { return new Qt5OpenGLContext; }
 
-bool Qt5Instance::IsMainThread() const { return qApp->thread() == QThread::currentThread(); }
+bool Qt5Instance::IsMainThread() const
+{
+    return !qApp || (qApp->thread() == QThread::currentThread());
+}
 
 void Qt5Instance::TriggerUserEventProcessing()
 {
@@ -600,7 +603,9 @@ void Qt5Instance::MoveFakeCmdlineArgs(std::unique_ptr<char* []>& rFakeArgv,
 
 std::unique_ptr<QApplication> Qt5Instance::CreateQApplication(int& nArgc, char** pArgv)
 {
-    QApplication::setAttribute(Qt::AA_DisableHighDpiScaling);
+    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+    // for scaled icons in the native menus
+    QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
 
     FreeableCStr session_manager;
     if (getenv("SESSION_MANAGER") != nullptr)

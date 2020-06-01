@@ -37,6 +37,7 @@
 #include <com/sun/star/awt/LineEndFormat.hpp>
 #include <com/sun/star/awt/PushButtonType.hpp>
 #include <com/sun/star/awt/VisualEffect.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/util/Date.hpp>
 #include <com/sun/star/util/Time.hpp>
 #include <tools/date.hxx>
@@ -738,7 +739,9 @@ void ElementDescriptor::readImageOrGraphicAttr(OUString const & rAttrName)
             }
         }
     }
-    else if (beans::PropertyState_DEFAULT_VALUE != _xPropState->getPropertyState("ImageURL"))
+    // tdf#130793 Above fails if the dialog is not part of a document. Export the ImageURL then.
+    if (sURL.isEmpty()
+        && beans::PropertyState_DEFAULT_VALUE != _xPropState->getPropertyState("ImageURL"))
     {
         _xProps->getPropertyValue("ImageURL") >>= sURL;
     }

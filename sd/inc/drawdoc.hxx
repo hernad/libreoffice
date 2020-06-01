@@ -32,8 +32,8 @@
 #include "sddllapi.h"
 #include "pres.hxx"
 
-namespace com { namespace sun { namespace star { namespace xml { namespace dom { class XNode; } } } } }
-namespace com { namespace sun { namespace star { namespace uno { class XInterface; } } } }
+namespace com::sun::star::xml::dom { class XNode; }
+namespace com::sun::star::uno { class XInterface; }
 namespace vcl { class Font; }
 
 namespace com
@@ -99,10 +99,10 @@ struct StyleReplaceData
     OUString        aNewName;
 };
 
-enum DocCreationMode
+enum class DocCreationMode
 {
-    NEW_DOC,
-    DOC_LOADED
+    New,
+    Loaded
 };
 
 namespace sd
@@ -173,7 +173,7 @@ private:
     SvxNumType          mePageNumType;
     ::sd::DrawDocShellRef   mxAllocedDocShRef;   // => AllocModel()
     bool                mbAllocDocSh;       // => AllocModel()
-    DocumentType const  meDocType;
+    DocumentType        meDocType;
     std::unique_ptr<CharClass>
                         mpCharClass;
 

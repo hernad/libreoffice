@@ -24,7 +24,6 @@
 
 #include <dbu_reghelper.hxx>
 #include <uiservices.hxx>
-#include <sfx2/sfxsids.hrc>
 #include <strings.hrc>
 #include <strings.hxx>
 #include <vcl/svapp.hxx>
@@ -32,28 +31,16 @@
 #include <browserids.hxx>
 #include <comphelper/types.hxx>
 #include <core_resource.hxx>
-#include <stringconstants.hxx>
 #include <connectivity/dbtools.hxx>
 #include <comphelper/processfactory.hxx>
-#include <com/sun/star/container/XChild.hpp>
-#include <com/sun/star/container/XNameContainer.hpp>
-#include <com/sun/star/sdbcx/XDataDescriptorFactory.hpp>
 #include <com/sun/star/sdbcx/XTablesSupplier.hpp>
 #include <com/sun/star/sdbcx/KeyType.hpp>
-#include <com/sun/star/sdbcx/XDrop.hpp>
-#include <com/sun/star/sdbcx/XAlterTable.hpp>
-#include <com/sun/star/sdbcx/XAppend.hpp>
 #include <com/sun/star/sdbcx/XKeysSupplier.hpp>
 #include <com/sun/star/sdbcx/XColumnsSupplier.hpp>
-#include <com/sun/star/sdb/SQLContext.hpp>
-#include <com/sun/star/sdbc/SQLWarning.hpp>
-#include <com/sun/star/sdbc/ColumnValue.hpp>
+#include <com/sun/star/sdbc/SQLException.hpp>
 #include <com/sun/star/sdbc/XRow.hpp>
 #include <connectivity/dbexception.hxx>
 #include <connectivity/dbmetadata.hxx>
-#include <com/sun/star/ui/dialogs/XExecutableDialog.hpp>
-#include <com/sun/star/io/XActiveDataSource.hpp>
-#include <com/sun/star/io/XActiveDataSink.hpp>
 #include <sqlmessage.hxx>
 #include <RelationController.hxx>
 #include <TableWindowData.hxx>
@@ -61,7 +48,6 @@
 #include <RTableConnectionData.hxx>
 #include <RelationTableView.hxx>
 #include <RelationDesignView.hxx>
-#include <tools/debug.hxx>
 #include <tools/diagnose_ex.h>
 #include <osl/thread.hxx>
 #include <osl/mutex.hxx>
@@ -365,69 +351,69 @@ namespace
             xKeys = xKeySup->getKeys();
         }
 
-        if ( xKeys.is() )
+        if ( !xKeys.is() )
+            return;
+
+        Reference<XPropertySet> xKey;
+        const sal_Int32 nCount = xKeys->getCount();
+        for(sal_Int32 i = 0 ; i < nCount ; ++i)
         {
-            Reference<XPropertySet> xKey;
-            const sal_Int32 nCount = xKeys->getCount();
-            for(sal_Int32 i = 0 ; i < nCount ; ++i)
+            xKeys->getByIndex(i) >>= xKey;
+            sal_Int32 nKeyType = 0;
+            xKey->getPropertyValue(PROPERTY_TYPE) >>= nKeyType;
+            if ( KeyType::FOREIGN == nKeyType )
             {
-                xKeys->getByIndex(i) >>= xKey;
-                sal_Int32 nKeyType = 0;
-                xKey->getPropertyValue(PROPERTY_TYPE) >>= nKeyType;
-                if ( KeyType::FOREIGN == nKeyType )
+                OUString sReferencedTable;
+                xKey->getPropertyValue(PROPERTY_REFERENCEDTABLE) >>= sReferencedTable;
+
+                // insert windows
+                TTableDataHelper::const_iterator aRefFind = m_aTableData.find(sReferencedTable);
+                if ( aRefFind == m_aTableData.end() )
                 {
-                    OUString sReferencedTable;
-                    xKey->getPropertyValue(PROPERTY_REFERENCEDTABLE) >>= sReferencedTable;
-
-                    // insert windows
-                    TTableDataHelper::const_iterator aRefFind = m_aTableData.find(sReferencedTable);
-                    if ( aRefFind == m_aTableData.end() )
+                    if ( m_xTables->hasByName(sReferencedTable) )
                     {
-                        if ( m_xTables->hasByName(sReferencedTable) )
-                        {
-                            Reference<XPropertySet>  xReferencedTable(m_xTables->getByName(sReferencedTable),UNO_QUERY);
-                            aRefFind = m_aTableData.emplace(sReferencedTable,std::make_shared<OTableWindowData>(xReferencedTable,sReferencedTable, sReferencedTable, OUString())).first;
-                            aRefFind->second->ShowAll(false);
-                        }
-                        else
-                            continue; // table name could not be found so we do not show this table relation
+                        Reference<XPropertySet>  xReferencedTable(m_xTables->getByName(sReferencedTable),UNO_QUERY);
+                        aRefFind = m_aTableData.emplace(sReferencedTable,std::make_shared<OTableWindowData>(xReferencedTable,sReferencedTable, sReferencedTable, OUString())).first;
+                        aRefFind->second->ShowAll(false);
                     }
-                    TTableWindowData::value_type pReferencedTable = aRefFind->second;
-
-                    OUString sKeyName;
-                    xKey->getPropertyValue(PROPERTY_NAME) >>= sKeyName;
-                    // insert connection
-                    ORelationTableConnectionData* pTabConnData = new ORelationTableConnectionData( pReferencingTable, pReferencedTable, sKeyName );
-                    m_vTableConnectionData.push_back(TTableConnectionData::value_type(pTabConnData));
-                    // insert columns
-                    const Reference<XColumnsSupplier> xColsSup(xKey,UNO_QUERY);
-                    OSL_ENSURE(xColsSup.is(),"Key is no XColumnsSupplier!");
-                    const Reference<XNameAccess> xColumns = xColsSup->getColumns();
-                    const Sequence< OUString> aNames = xColumns->getElementNames();
-                    OUString sColumnName,sRelatedName;
-                    for(sal_Int32 j=0;j<aNames.getLength();++j)
-                    {
-                        const Reference<XPropertySet> xPropSet(xColumns->getByName(aNames[j]),UNO_QUERY);
-                        OSL_ENSURE(xPropSet.is(),"Invalid column found in KeyColumns!");
-                        if ( xPropSet.is() )
-                        {
-                            xPropSet->getPropertyValue(PROPERTY_NAME)           >>= sColumnName;
-                            xPropSet->getPropertyValue(PROPERTY_RELATEDCOLUMN)  >>= sRelatedName;
-                        }
-                        pTabConnData->SetConnLine( j, sColumnName, sRelatedName );
-                    }
-                    // set update/del flags
-                    sal_Int32   nUpdateRule = 0;
-                    sal_Int32   nDeleteRule = 0;
-                    xKey->getPropertyValue(PROPERTY_UPDATERULE) >>= nUpdateRule;
-                    xKey->getPropertyValue(PROPERTY_DELETERULE) >>= nDeleteRule;
-
-                    pTabConnData->SetUpdateRules( nUpdateRule );
-                    pTabConnData->SetDeleteRules( nDeleteRule );
-
-                    // set cardinality
-                    pTabConnData->SetCardinality();
+                    else
+                        continue; // table name could not be found so we do not show this table relation
                 }
+                TTableWindowData::value_type pReferencedTable = aRefFind->second;
+
+                OUString sKeyName;
+                xKey->getPropertyValue(PROPERTY_NAME) >>= sKeyName;
+                // insert connection
+                auto xTabConnData = std::make_shared<ORelationTableConnectionData>( pReferencingTable, pReferencedTable, sKeyName );
+                m_vTableConnectionData.push_back(xTabConnData);
+                // insert columns
+                const Reference<XColumnsSupplier> xColsSup(xKey,UNO_QUERY);
+                OSL_ENSURE(xColsSup.is(),"Key is no XColumnsSupplier!");
+                const Reference<XNameAccess> xColumns = xColsSup->getColumns();
+                const Sequence< OUString> aNames = xColumns->getElementNames();
+                OUString sColumnName,sRelatedName;
+                for(sal_Int32 j=0;j<aNames.getLength();++j)
+                {
+                    const Reference<XPropertySet> xPropSet(xColumns->getByName(aNames[j]),UNO_QUERY);
+                    OSL_ENSURE(xPropSet.is(),"Invalid column found in KeyColumns!");
+                    if ( xPropSet.is() )
+                    {
+                        xPropSet->getPropertyValue(PROPERTY_NAME)           >>= sColumnName;
+                        xPropSet->getPropertyValue(PROPERTY_RELATEDCOLUMN)  >>= sRelatedName;
+                    }
+                    xTabConnData->SetConnLine( j, sColumnName, sRelatedName );
+                }
+                // set update/del flags
+                sal_Int32   nUpdateRule = 0;
+                sal_Int32   nDeleteRule = 0;
+                xKey->getPropertyValue(PROPERTY_UPDATERULE) >>= nUpdateRule;
+                xKey->getPropertyValue(PROPERTY_DELETERULE) >>= nDeleteRule;
+
+                xTabConnData->SetUpdateRules( nUpdateRule );
+                xTabConnData->SetDeleteRules( nDeleteRule );
+
+                // set cardinality
+                xTabConnData->SetCardinality();
             }
         }
     }

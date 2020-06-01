@@ -19,19 +19,16 @@
 
 #include <UITools.hxx>
 #include <sfx2/docfilt.hxx>
-#include <callbacks.hxx>
 #include <core_resource.hxx>
-#include <stringconstants.hxx>
 #include <dlgsave.hxx>
-#include <dbtreelistbox.hxx>
 #include <defaultobjectnamecheck.hxx>
+#include <strings.hxx>
 #include <comphelper/extract.hxx>
 #include <com/sun/star/sdb/DatabaseContext.hpp>
 #include <com/sun/star/sdb/XSingleSelectQueryAnalyzer.hpp>
 #include <com/sun/star/sdb/XCompletedConnection.hpp>
 #include <com/sun/star/sdbc/XDataSource.hpp>
 #include <com/sun/star/sdb/SQLContext.hpp>
-#include <com/sun/star/sdbcx/XKeysSupplier.hpp>
 #include <com/sun/star/sdbcx/XColumnsSupplier.hpp>
 #include <com/sun/star/sdbcx/XViewsSupplier.hpp>
 #include <com/sun/star/sdbcx/XTablesSupplier.hpp>
@@ -45,28 +42,19 @@
 #include <com/sun/star/ucb/XContent.hpp>
 #include <com/sun/star/ui/dialogs/XExecutableDialog.hpp>
 #include <com/sun/star/beans/PropertyValue.hpp>
-#include <com/sun/star/container/XIndexAccess.hpp>
 #include <com/sun/star/container/XNameContainer.hpp>
 #include <com/sun/star/ucb/InteractiveIOException.hpp>
 #include <com/sun/star/sdb/XDocumentDataSource.hpp>
 #include <com/sun/star/ucb/IOErrorCode.hpp>
-#include <toolkit/helper/vclunohelper.hxx>
-#include <toolkit/awt/vclxwindow.hxx>
-#include <vcl/stdtext.hxx>
+#include <vcl/syswin.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/svapp.hxx>
 #include <com/sun/star/beans/XPropertySetInfo.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/container/XNameAccess.hpp>
-#include <com/sun/star/container/XContainer.hpp>
 #include <com/sun/star/container/XHierarchicalNameContainer.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/awt/TextAlign.hpp>
-#include <com/sun/star/awt/FontDescriptor.hpp>
-#include <com/sun/star/awt/FontWeight.hpp>
-#include <com/sun/star/awt/FontRelief.hpp>
-#include <com/sun/star/awt/FontWidth.hpp>
-#include <com/sun/star/awt/XWindow.hpp>
 #include <TypeInfo.hxx>
 #include <FieldDescriptions.hxx>
 #include <comphelper/stl_types.hxx>
@@ -82,7 +70,6 @@
 #include <sbagrid.hrc>
 #include <svl/rngitem.hxx>
 #include <svl/intitem.hxx>
-#include <svx/algitem.hxx>
 #include <svx/numinf.hxx>
 #include <svl/zforlist.hxx>
 #include <dlgattr.hxx>
@@ -92,18 +79,11 @@
 #include <com/sun/star/util/XNumberFormatter.hpp>
 #include <strings.hrc>
 #include <sqlmessage.hxx>
-#include <com/sun/star/util/NumberFormat.hpp>
-#include <com/sun/star/util/URL.hpp>
-#include <vcl/toolbox.hxx>
 #include <dlgsize.hxx>
 #include <svtools/editbrowsebox.hxx>
-#include <unotools/configmgr.hxx>
-#include <svtools/helpopt.hxx>
-#include <ucbhelper/content.hxx>
 #include <tools/urlobj.hxx>
 #include <tools/diagnose_ex.h>
 #include <svl/numuno.hxx>
-#include <unotools/pathoptions.hxx>
 #include <svl/filenotation.hxx>
 #include <connectivity/FValue.hxx>
 
@@ -426,208 +406,208 @@ void fillTypeInfo(  const Reference< css::sdbc::XConnection>& _rxConnection,
     Reference< XResultSet> xRs = _rxConnection->getMetaData ()->getTypeInfo ();
     Reference< XRow> xRow(xRs,UNO_QUERY);
     // Information for a single SQL type
-    if(xRs.is())
+    if(!xRs.is())
+        return;
+
+    Reference<XResultSetMetaData> xResultSetMetaData = Reference<XResultSetMetaDataSupplier>(xRs,UNO_QUERY_THROW)->getMetaData();
+    ::connectivity::ORowSetValue aValue;
+    std::vector<sal_Int32> aTypes;
+    std::vector<bool> aNullable;
+    // Loop on the result set until we reach end of file
+    while (xRs->next())
     {
-        Reference<XResultSetMetaData> xResultSetMetaData = Reference<XResultSetMetaDataSupplier>(xRs,UNO_QUERY_THROW)->getMetaData();
-        ::connectivity::ORowSetValue aValue;
-        std::vector<sal_Int32> aTypes;
-        std::vector<bool> aNullable;
-        // Loop on the result set until we reach end of file
-        while (xRs->next())
+        TOTypeInfoSP pInfo = std::make_shared<OTypeInfo>();
+        sal_Int32 nPos = 1;
+        if ( aTypes.empty() )
         {
-            TOTypeInfoSP pInfo = std::make_shared<OTypeInfo>();
-            sal_Int32 nPos = 1;
-            if ( aTypes.empty() )
+            sal_Int32 nCount = xResultSetMetaData->getColumnCount();
+            if ( nCount < 1 )
+                nCount = 18;
+            aTypes.reserve(nCount+1);
+            aTypes.push_back(-1);
+            aNullable.push_back(false);
+            for (sal_Int32 j = 1; j <= nCount ; ++j)
             {
-                sal_Int32 nCount = xResultSetMetaData->getColumnCount();
-                if ( nCount < 1 )
-                    nCount = 18;
-                aTypes.reserve(nCount+1);
-                aTypes.push_back(-1);
-                aNullable.push_back(false);
-                for (sal_Int32 j = 1; j <= nCount ; ++j)
-                {
-                    aTypes.push_back(xResultSetMetaData->getColumnType(j));
-                    aNullable.push_back(xResultSetMetaData->isNullable(j) != ColumnValue::NO_NULLS);
-                }
+                aTypes.push_back(xResultSetMetaData->getColumnType(j));
+                aNullable.push_back(xResultSetMetaData->isNullable(j) != ColumnValue::NO_NULLS);
             }
-
-            aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
-            pInfo->aTypeName        = aValue;
-            ++nPos;
-            aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
-            pInfo->nType            = aValue;
-            ++nPos;
-            aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
-            pInfo->nPrecision       = aValue;
-            ++nPos;
-            aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow); // LiteralPrefix
-            ++nPos;
-            aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow); //LiteralSuffix
-            ++nPos;
-            aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
-            pInfo->aCreateParams    = aValue;
-            ++nPos;
-            aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
-            pInfo->bNullable        = static_cast<sal_Int32>(aValue) == ColumnValue::NULLABLE;
-            ++nPos;
-            aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
-            // bCaseSensitive
-            ++nPos;
-            aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
-            pInfo->nSearchType      = aValue;
-            ++nPos;
-            aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
-            // bUnsigned
-            ++nPos;
-            aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
-            pInfo->bCurrency        = static_cast<bool>(aValue);
-            ++nPos;
-            aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
-            pInfo->bAutoIncrement   = static_cast<bool>(aValue);
-            ++nPos;
-            aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
-            pInfo->aLocalTypeName   = aValue;
-            ++nPos;
-            aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
-            pInfo->nMinimumScale    = aValue;
-            ++nPos;
-            aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
-            pInfo->nMaximumScale    = aValue;
-            assert(nPos == 15);
-            // 16 and 17 are unused
-            nPos = 18;
-            aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
-            pInfo->nNumPrecRadix    = aValue;
-
-            // check if values are less than zero like it happens in a oracle jdbc driver
-            if( pInfo->nPrecision < 0)
-                pInfo->nPrecision = 0;
-            if( pInfo->nMinimumScale < 0)
-                pInfo->nMinimumScale = 0;
-            if( pInfo->nMaximumScale < 0)
-                pInfo->nMaximumScale = 0;
-            if( pInfo->nNumPrecRadix <= 1)
-                pInfo->nNumPrecRadix = 10;
-
-            OUString aName;
-            switch(pInfo->nType)
-            {
-                case DataType::CHAR:
-                    aName = _rsTypeNames.getToken(TYPE_CHAR, ';');
-                    break;
-                case DataType::VARCHAR:
-                    aName = _rsTypeNames.getToken(TYPE_TEXT, ';');
-                    break;
-                case DataType::DECIMAL:
-                    aName = _rsTypeNames.getToken(TYPE_DECIMAL, ';');
-                    break;
-                case DataType::NUMERIC:
-                    aName = _rsTypeNames.getToken(TYPE_NUMERIC, ';');
-                    break;
-                case DataType::BIGINT:
-                    aName = _rsTypeNames.getToken(TYPE_BIGINT, ';');
-                    break;
-                case DataType::FLOAT:
-                    aName = _rsTypeNames.getToken(TYPE_FLOAT, ';');
-                    break;
-                case DataType::DOUBLE:
-                    aName = _rsTypeNames.getToken(TYPE_DOUBLE, ';');
-                    break;
-                case DataType::LONGVARCHAR:
-                    aName = _rsTypeNames.getToken(TYPE_MEMO, ';');
-                    break;
-                case DataType::LONGVARBINARY:
-                    aName = _rsTypeNames.getToken(TYPE_IMAGE, ';');
-                    break;
-                case DataType::DATE:
-                    aName = _rsTypeNames.getToken(TYPE_DATE, ';');
-                    break;
-                case DataType::TIME:
-                    aName = _rsTypeNames.getToken(TYPE_TIME, ';');
-                    break;
-                case DataType::TIMESTAMP:
-                    aName = _rsTypeNames.getToken(TYPE_DATETIME, ';');
-                    break;
-                case DataType::BIT:
-                    if ( !pInfo->aCreateParams.isEmpty() )
-                    {
-                        aName = _rsTypeNames.getToken(TYPE_BIT, ';');
-                        break;
-                    }
-                    [[fallthrough]];
-                case DataType::BOOLEAN:
-                    aName = _rsTypeNames.getToken(TYPE_BOOL, ';');
-                    break;
-                case DataType::TINYINT:
-                    aName = _rsTypeNames.getToken(TYPE_TINYINT, ';');
-                    break;
-                case DataType::SMALLINT:
-                    aName = _rsTypeNames.getToken(TYPE_SMALLINT, ';');
-                    break;
-                case DataType::INTEGER:
-                    aName = _rsTypeNames.getToken(TYPE_INTEGER, ';');
-                    break;
-                case DataType::REAL:
-                    aName = _rsTypeNames.getToken(TYPE_REAL, ';');
-                    break;
-                case DataType::BINARY:
-                    aName = _rsTypeNames.getToken(TYPE_BINARY, ';');
-                    break;
-                case DataType::VARBINARY:
-                    aName = _rsTypeNames.getToken(TYPE_VARBINARY, ';');
-                    break;
-                case DataType::SQLNULL:
-                    aName = _rsTypeNames.getToken(TYPE_SQLNULL, ';');
-                    break;
-                case DataType::OBJECT:
-                    aName = _rsTypeNames.getToken(TYPE_OBJECT, ';');
-                    break;
-                case DataType::DISTINCT:
-                    aName = _rsTypeNames.getToken(TYPE_DISTINCT, ';');
-                    break;
-                case DataType::STRUCT:
-                    aName = _rsTypeNames.getToken(TYPE_STRUCT, ';');
-                    break;
-                case DataType::ARRAY:
-                    aName = _rsTypeNames.getToken(TYPE_ARRAY, ';');
-                    break;
-                case DataType::BLOB:
-                    aName = _rsTypeNames.getToken(TYPE_BLOB, ';');
-                    break;
-                case DataType::CLOB:
-                    aName = _rsTypeNames.getToken(TYPE_CLOB, ';');
-                    break;
-                case DataType::REF:
-                    aName = _rsTypeNames.getToken(TYPE_REF, ';');
-                    break;
-                case DataType::OTHER:
-                    aName = _rsTypeNames.getToken(TYPE_OTHER, ';');
-                    break;
-            }
-            if ( !aName.isEmpty() )
-            {
-                pInfo->aUIName = aName;
-                pInfo->aUIName += " [ ";
-            }
-            pInfo->aUIName += pInfo->aTypeName;
-            if ( !aName.isEmpty() )
-                pInfo->aUIName += " ]";
-            // Now that we have the type info, save it in the multimap
-            _rTypeInfoMap.emplace(pInfo->nType,pInfo);
         }
-        // for a faster index access
-        _rTypeInfoIters.reserve(_rTypeInfoMap.size());
 
-        OTypeInfoMap::iterator aIter = _rTypeInfoMap.begin();
-        OTypeInfoMap::const_iterator aEnd = _rTypeInfoMap.end();
-        for(;aIter != aEnd;++aIter)
-            _rTypeInfoIters.push_back(aIter);
+        aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
+        pInfo->aTypeName        = aValue;
+        ++nPos;
+        aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
+        pInfo->nType            = aValue;
+        ++nPos;
+        aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
+        pInfo->nPrecision       = aValue;
+        ++nPos;
+        aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow); // LiteralPrefix
+        ++nPos;
+        aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow); //LiteralSuffix
+        ++nPos;
+        aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
+        pInfo->aCreateParams    = aValue;
+        ++nPos;
+        aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
+        pInfo->bNullable        = static_cast<sal_Int32>(aValue) == ColumnValue::NULLABLE;
+        ++nPos;
+        aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
+        // bCaseSensitive
+        ++nPos;
+        aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
+        pInfo->nSearchType      = aValue;
+        ++nPos;
+        aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
+        // bUnsigned
+        ++nPos;
+        aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
+        pInfo->bCurrency        = static_cast<bool>(aValue);
+        ++nPos;
+        aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
+        pInfo->bAutoIncrement   = static_cast<bool>(aValue);
+        ++nPos;
+        aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
+        pInfo->aLocalTypeName   = aValue;
+        ++nPos;
+        aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
+        pInfo->nMinimumScale    = aValue;
+        ++nPos;
+        aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
+        pInfo->nMaximumScale    = aValue;
+        assert(nPos == 15);
+        // 16 and 17 are unused
+        nPos = 18;
+        aValue.fill(nPos,aTypes[nPos],aNullable[nPos],xRow);
+        pInfo->nNumPrecRadix    = aValue;
 
-        // Close the result set/statement.
+        // check if values are less than zero like it happens in a oracle jdbc driver
+        if( pInfo->nPrecision < 0)
+            pInfo->nPrecision = 0;
+        if( pInfo->nMinimumScale < 0)
+            pInfo->nMinimumScale = 0;
+        if( pInfo->nMaximumScale < 0)
+            pInfo->nMaximumScale = 0;
+        if( pInfo->nNumPrecRadix <= 1)
+            pInfo->nNumPrecRadix = 10;
 
-        ::comphelper::disposeComponent(xRs);
+        OUString aName;
+        switch(pInfo->nType)
+        {
+            case DataType::CHAR:
+                aName = _rsTypeNames.getToken(TYPE_CHAR, ';');
+                break;
+            case DataType::VARCHAR:
+                aName = _rsTypeNames.getToken(TYPE_TEXT, ';');
+                break;
+            case DataType::DECIMAL:
+                aName = _rsTypeNames.getToken(TYPE_DECIMAL, ';');
+                break;
+            case DataType::NUMERIC:
+                aName = _rsTypeNames.getToken(TYPE_NUMERIC, ';');
+                break;
+            case DataType::BIGINT:
+                aName = _rsTypeNames.getToken(TYPE_BIGINT, ';');
+                break;
+            case DataType::FLOAT:
+                aName = _rsTypeNames.getToken(TYPE_FLOAT, ';');
+                break;
+            case DataType::DOUBLE:
+                aName = _rsTypeNames.getToken(TYPE_DOUBLE, ';');
+                break;
+            case DataType::LONGVARCHAR:
+                aName = _rsTypeNames.getToken(TYPE_MEMO, ';');
+                break;
+            case DataType::LONGVARBINARY:
+                aName = _rsTypeNames.getToken(TYPE_IMAGE, ';');
+                break;
+            case DataType::DATE:
+                aName = _rsTypeNames.getToken(TYPE_DATE, ';');
+                break;
+            case DataType::TIME:
+                aName = _rsTypeNames.getToken(TYPE_TIME, ';');
+                break;
+            case DataType::TIMESTAMP:
+                aName = _rsTypeNames.getToken(TYPE_DATETIME, ';');
+                break;
+            case DataType::BIT:
+                if ( !pInfo->aCreateParams.isEmpty() )
+                {
+                    aName = _rsTypeNames.getToken(TYPE_BIT, ';');
+                    break;
+                }
+                [[fallthrough]];
+            case DataType::BOOLEAN:
+                aName = _rsTypeNames.getToken(TYPE_BOOL, ';');
+                break;
+            case DataType::TINYINT:
+                aName = _rsTypeNames.getToken(TYPE_TINYINT, ';');
+                break;
+            case DataType::SMALLINT:
+                aName = _rsTypeNames.getToken(TYPE_SMALLINT, ';');
+                break;
+            case DataType::INTEGER:
+                aName = _rsTypeNames.getToken(TYPE_INTEGER, ';');
+                break;
+            case DataType::REAL:
+                aName = _rsTypeNames.getToken(TYPE_REAL, ';');
+                break;
+            case DataType::BINARY:
+                aName = _rsTypeNames.getToken(TYPE_BINARY, ';');
+                break;
+            case DataType::VARBINARY:
+                aName = _rsTypeNames.getToken(TYPE_VARBINARY, ';');
+                break;
+            case DataType::SQLNULL:
+                aName = _rsTypeNames.getToken(TYPE_SQLNULL, ';');
+                break;
+            case DataType::OBJECT:
+                aName = _rsTypeNames.getToken(TYPE_OBJECT, ';');
+                break;
+            case DataType::DISTINCT:
+                aName = _rsTypeNames.getToken(TYPE_DISTINCT, ';');
+                break;
+            case DataType::STRUCT:
+                aName = _rsTypeNames.getToken(TYPE_STRUCT, ';');
+                break;
+            case DataType::ARRAY:
+                aName = _rsTypeNames.getToken(TYPE_ARRAY, ';');
+                break;
+            case DataType::BLOB:
+                aName = _rsTypeNames.getToken(TYPE_BLOB, ';');
+                break;
+            case DataType::CLOB:
+                aName = _rsTypeNames.getToken(TYPE_CLOB, ';');
+                break;
+            case DataType::REF:
+                aName = _rsTypeNames.getToken(TYPE_REF, ';');
+                break;
+            case DataType::OTHER:
+                aName = _rsTypeNames.getToken(TYPE_OTHER, ';');
+                break;
+        }
+        if ( !aName.isEmpty() )
+        {
+            pInfo->aUIName = aName;
+            pInfo->aUIName += " [ ";
+        }
+        pInfo->aUIName += pInfo->aTypeName;
+        if ( !aName.isEmpty() )
+            pInfo->aUIName += " ]";
+        // Now that we have the type info, save it in the multimap
+        _rTypeInfoMap.emplace(pInfo->nType,pInfo);
     }
+    // for a faster index access
+    _rTypeInfoIters.reserve(_rTypeInfoMap.size());
+
+    OTypeInfoMap::iterator aIter = _rTypeInfoMap.begin();
+    OTypeInfoMap::const_iterator aEnd = _rTypeInfoMap.end();
+    for(;aIter != aEnd;++aIter)
+        _rTypeInfoIters.push_back(aIter);
+
+    // Close the result set/statement.
+
+    ::comphelper::disposeComponent(xRs);
 }
 
 void setColumnProperties(const Reference<XPropertySet>& _rxColumn,const OFieldDescription* _pFieldDesc)
@@ -742,34 +722,34 @@ void callColumnFormatDialog(const Reference<XPropertySet>& xAffectedCol,
                             SvNumberFormatter* _pFormatter,
                             const vcl::Window* _pParent)
 {
-    if (xAffectedCol.is() && xField.is())
+    if (!(xAffectedCol.is() && xField.is()))
+        return;
+
+    try
     {
-        try
+        Reference< XPropertySetInfo >  xInfo = xAffectedCol->getPropertySetInfo();
+        bool bHasFormat = xInfo->hasPropertyByName(PROPERTY_FORMATKEY);
+        sal_Int32 nDataType = ::comphelper::getINT32(xField->getPropertyValue(PROPERTY_TYPE));
+
+        SvxCellHorJustify eJustify(SvxCellHorJustify::Standard);
+        Any aAlignment = xAffectedCol->getPropertyValue(PROPERTY_ALIGN);
+        if (aAlignment.hasValue())
+            eJustify = dbaui::mapTextJustify(::comphelper::getINT16(aAlignment));
+        sal_Int32  nFormatKey = 0;
+        if ( bHasFormat )
+            nFormatKey = ::comphelper::getINT32(xAffectedCol->getPropertyValue(PROPERTY_FORMATKEY));
+
+        if(callColumnFormatDialog(_pParent,_pFormatter,nDataType,nFormatKey,eJustify,bHasFormat))
         {
-            Reference< XPropertySetInfo >  xInfo = xAffectedCol->getPropertySetInfo();
-            bool bHasFormat = xInfo->hasPropertyByName(PROPERTY_FORMATKEY);
-            sal_Int32 nDataType = ::comphelper::getINT32(xField->getPropertyValue(PROPERTY_TYPE));
+            xAffectedCol->setPropertyValue(PROPERTY_ALIGN, makeAny(static_cast<sal_Int16>(dbaui::mapTextAllign(eJustify))));
+            if (bHasFormat)
+                xAffectedCol->setPropertyValue(PROPERTY_FORMATKEY, makeAny(nFormatKey));
 
-            SvxCellHorJustify eJustify(SvxCellHorJustify::Standard);
-            Any aAlignment = xAffectedCol->getPropertyValue(PROPERTY_ALIGN);
-            if (aAlignment.hasValue())
-                eJustify = dbaui::mapTextJustify(::comphelper::getINT16(aAlignment));
-            sal_Int32  nFormatKey = 0;
-            if ( bHasFormat )
-                nFormatKey = ::comphelper::getINT32(xAffectedCol->getPropertyValue(PROPERTY_FORMATKEY));
-
-            if(callColumnFormatDialog(_pParent,_pFormatter,nDataType,nFormatKey,eJustify,bHasFormat))
-            {
-                xAffectedCol->setPropertyValue(PROPERTY_ALIGN, makeAny(static_cast<sal_Int16>(dbaui::mapTextAllign(eJustify))));
-                if (bHasFormat)
-                    xAffectedCol->setPropertyValue(PROPERTY_FORMATKEY, makeAny(nFormatKey));
-
-            }
         }
-        catch( const Exception& )
-        {
-            DBG_UNHANDLED_EXCEPTION("dbaccess");
-        }
+    }
+    catch( const Exception& )
+    {
+        DBG_UNHANDLED_EXCEPTION("dbaccess");
     }
 }
 
@@ -909,8 +889,8 @@ bool appendToFilter(const Reference<XConnection>& _xConnection,
             {
                 if(rItem.indexOf('%') != -1)
                 {
-                    sal_Int32 nLen;
-                    if((nLen = rItem.lastIndexOf('.')) != -1 && !rItem.compareTo(_sName,nLen))
+                    sal_Int32 nLen = rItem.lastIndexOf('.');
+                    if(nLen != -1 && !rItem.compareTo(_sName,nLen))
                         bHasToInsert = false;
                     else if(rItem.getLength() == 1)
                         bHasToInsert = false;
@@ -962,20 +942,20 @@ void adjustBrowseBoxColumnWidth( ::svt::EditBrowseBox* _pBox, sal_uInt16 _nColId
     Size aDefaultMM = _pBox->PixelToLogic( Size( nDefaultWidth, 0 ), MapMode( MapUnit::MapMM ) );
 
     DlgSize aColumnSizeDlg(_pBox->GetFrameWeld(), nColSize, false, aDefaultMM.Width() * 10);
-    if (aColumnSizeDlg.run() == RET_OK)
-    {
-        sal_Int32 nValue = aColumnSizeDlg.GetValue();
-        if ( -1 == nValue )
-        {   // default width
-            nValue = _pBox->GetDefaultColumnWidth( _pBox->GetColumnTitle( _nColId ) );
-        }
-        else
-        {
-            Size aSizeMM( nValue / 10, 0 );
-            nValue = _pBox->LogicToPixel( aSizeMM, MapMode( MapUnit::MapMM ) ).Width();
-        }
-        _pBox->SetColumnWidth( _nColId, nValue );
+    if (aColumnSizeDlg.run() != RET_OK)
+        return;
+
+    sal_Int32 nValue = aColumnSizeDlg.GetValue();
+    if ( -1 == nValue )
+    {   // default width
+        nValue = _pBox->GetDefaultColumnWidth( _pBox->GetColumnTitle( _nColId ) );
     }
+    else
+    {
+        Size aSizeMM( nValue / 10, 0 );
+        nValue = _pBox->LogicToPixel( aSizeMM, MapMode( MapUnit::MapMM ) ).Width();
+    }
+    _pBox->SetColumnWidth( _nColId, nValue );
 }
 
 // check if SQL92 name checking is enabled
@@ -998,26 +978,26 @@ void fillAutoIncrementValue(const Reference<XPropertySet>& _xDatasource,
                             bool& _rAutoIncrementValueEnabled,
                             OUString& _rsAutoIncrementValue)
 {
-    if ( _xDatasource.is() )
-    {
-        OSL_ENSURE(_xDatasource->getPropertySetInfo()->hasPropertyByName(PROPERTY_INFO),"NO datasource supplied!");
-        Sequence<PropertyValue> aInfo;
-        _xDatasource->getPropertyValue(PROPERTY_INFO) >>= aInfo;
+    if ( !_xDatasource.is() )
+        return;
 
-        // search the right propertyvalue
-        const PropertyValue* pValue =std::find_if(aInfo.begin(), aInfo.end(),
-                                            [](const PropertyValue& lhs)
-                                            {return lhs.Name == PROPERTY_AUTOINCREMENTCREATION;} );
+    OSL_ENSURE(_xDatasource->getPropertySetInfo()->hasPropertyByName(PROPERTY_INFO),"NO datasource supplied!");
+    Sequence<PropertyValue> aInfo;
+    _xDatasource->getPropertyValue(PROPERTY_INFO) >>= aInfo;
 
-        if ( pValue != aInfo.end() )
-            pValue->Value >>= _rsAutoIncrementValue;
-        pValue =std::find_if(aInfo.begin(), aInfo.end(),
-                             [](const PropertyValue& lhs)
-                             {return lhs.Name == "IsAutoRetrievingEnabled";} );
+    // search the right propertyvalue
+    const PropertyValue* pValue =std::find_if(aInfo.begin(), aInfo.end(),
+                                        [](const PropertyValue& lhs)
+                                        {return lhs.Name == PROPERTY_AUTOINCREMENTCREATION;} );
 
-        if ( pValue != aInfo.end() )
-            pValue->Value >>= _rAutoIncrementValueEnabled;
-    }
+    if ( pValue != aInfo.end() )
+        pValue->Value >>= _rsAutoIncrementValue;
+    pValue =std::find_if(aInfo.begin(), aInfo.end(),
+                         [](const PropertyValue& lhs)
+                         {return lhs.Name == "IsAutoRetrievingEnabled";} );
+
+    if ( pValue != aInfo.end() )
+        pValue->Value >>= _rAutoIncrementValueEnabled;
 }
 
 void fillAutoIncrementValue(const Reference<XConnection>& _xConnection,
@@ -1055,18 +1035,18 @@ OUString getStrippedDatabaseName(const Reference<XPropertySet>& _xDataSource,OUS
 void setEvalDateFormatForFormatter(Reference< css::util::XNumberFormatter > const & _rxFormatter)
 {
     OSL_ENSURE( _rxFormatter.is(),"setEvalDateFormatForFormatter: Formatter is NULL!");
-    if ( _rxFormatter.is() )
+    if ( !_rxFormatter.is() )
+        return;
+
+    Reference< css::util::XNumberFormatsSupplier >  xSupplier = _rxFormatter->getNumberFormatsSupplier();
+
+    auto pSupplierImpl = comphelper::getUnoTunnelImplementation<SvNumberFormatsSupplierObj>(xSupplier);
+    OSL_ENSURE(pSupplierImpl,"No Supplier!");
+
+    if ( pSupplierImpl )
     {
-        Reference< css::util::XNumberFormatsSupplier >  xSupplier = _rxFormatter->getNumberFormatsSupplier();
-
-        auto pSupplierImpl = comphelper::getUnoTunnelImplementation<SvNumberFormatsSupplierObj>(xSupplier);
-        OSL_ENSURE(pSupplierImpl,"No Supplier!");
-
-        if ( pSupplierImpl )
-        {
-            SvNumberFormatter* pFormatter = pSupplierImpl->GetNumberFormatter();
-            pFormatter->SetEvalDateFormat(NF_EVALDATEFORMAT_FORMAT);
-        }
+        SvNumberFormatter* pFormatter = pSupplierImpl->GetNumberFormatter();
+        pFormatter->SetEvalDateFormat(NF_EVALDATEFORMAT_FORMAT);
     }
 }
 
@@ -1086,15 +1066,15 @@ TOTypeInfoSP queryPrimaryKeyType(const OTypeInfoMap& _rTypeInfo)
             pTypeInfo = elem.second; // alternative
             break;
         }
-        else if ( !pTypeInfo.get() && elem.second->nType == DataType::DOUBLE )
+        else if ( !pTypeInfo && elem.second->nType == DataType::DOUBLE )
             pTypeInfo = elem.second; // alternative
-        else if ( !pTypeInfo.get() && elem.second->nType == DataType::REAL )
+        else if ( !pTypeInfo && elem.second->nType == DataType::REAL )
             pTypeInfo = elem.second; // alternative
     }
-    if ( !pTypeInfo.get() ) // just a fallback
+    if ( !pTypeInfo ) // just a fallback
         pTypeInfo = queryTypeInfoByType(DataType::VARCHAR,_rTypeInfo);
 
-    OSL_ENSURE(pTypeInfo.get(),"checkColumns: can't find a type which is usable as a key!");
+    OSL_ENSURE(pTypeInfo,"checkColumns: can't find a type which is usable as a key!");
     return pTypeInfo;
 }
 

@@ -25,7 +25,7 @@
 
 class SdrPage;
 
-namespace sdr { namespace contact {
+namespace sdr::contact {
 
 class ViewContactOfSdrPage;
 
@@ -123,7 +123,7 @@ public:
 
 class ViewContactOfGrid final : public ViewContactOfPageSubObject
 {
-    bool const                                        mbFront : 1;
+    bool                                        mbFront : 1;
 
     virtual ViewObjectContact& CreateObjectSpecificViewObjectContact(ObjectContact& rObjectContact) override;
     virtual drawinglayer::primitive2d::Primitive2DContainer createViewIndependentPrimitive2DSequence() const override;
@@ -137,7 +137,7 @@ public:
 
 class ViewContactOfHelplines final : public ViewContactOfPageSubObject
 {
-    bool const                                        mbFront : 1;
+    bool                                        mbFront : 1;
 
     virtual ViewObjectContact& CreateObjectSpecificViewObjectContact(ObjectContact& rObjectContact) override;
     virtual drawinglayer::primitive2d::Primitive2DContainer createViewIndependentPrimitive2DSequence() const override;
@@ -198,7 +198,7 @@ protected:
     virtual drawinglayer::primitive2d::Primitive2DContainer createViewIndependentPrimitive2DSequence() const override;
 };
 
-}}
+}
 
 #endif // INCLUDED_SVX_INC_SDR_CONTACT_VIEWCONTACTOFSDRPAGE_HXX
 

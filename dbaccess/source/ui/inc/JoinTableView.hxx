@@ -69,8 +69,8 @@ namespace dbaui
         void resetRange(const Point& _aSize);
 
         // own methods
-        ScrollBar& GetHScrollBar() { return *m_aHScrollBar.get(); }
-        ScrollBar& GetVScrollBar() { return *m_aVScrollBar.get(); }
+        ScrollBar& GetHScrollBar() { return *m_aHScrollBar; }
+        ScrollBar& GetVScrollBar() { return *m_aVScrollBar; }
     };
 
 
@@ -280,7 +280,7 @@ namespace dbaui
         ///     resizing) is used, as no scrolling can take place while resizing
         virtual void Command(const CommandEvent& rEvt) override;
 
-        virtual OTableWindowData* CreateImpl(const OUString& _rComposedName
+        virtual std::shared_ptr<OTableWindowData> CreateImpl(const OUString& _rComposedName
                                             ,const OUString& _sTableName
                                             ,const OUString& _rWinName);
 

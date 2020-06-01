@@ -21,9 +21,6 @@
 #include <helpids.h>
 #include "AppView.hxx"
 #include <vcl/event.hxx>
-#include <vcl/svapp.hxx>
-#include <vcl/syswin.hxx>
-#include <vcl/menu.hxx>
 #include <vcl/mnemonic.hxx>
 #include <vcl/settings.hxx>
 #include "AppController.hxx"
@@ -164,9 +161,9 @@ IMPL_LINK_NOARG(OApplicationSwapWindow, ChangeToLastSelected, void*, void)
 
 void OApplicationSwapWindow::selectContainer(ElementType _eType)
 {
-    sal_uLong nCount = m_aIconControl->GetEntryCount();
+    sal_Int32 nCount = m_aIconControl->GetEntryCount();
     SvxIconChoiceCtrlEntry* pEntry = nullptr;
-    for (sal_uLong i=0; i < nCount; ++i)
+    for (sal_Int32 i=0; i < nCount; ++i)
     {
         pEntry = m_aIconControl->GetEntry(i);
         if ( pEntry && *static_cast<ElementType*>(pEntry->GetUserData()) == _eType )

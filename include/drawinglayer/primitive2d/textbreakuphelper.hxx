@@ -17,21 +17,18 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_DRAWINGLAYER_PRIMITIVE2D_TEXTBREAKUPHELPER_HXX
-#define INCLUDED_DRAWINGLAYER_PRIMITIVE2D_TEXTBREAKUPHELPER_HXX
+#pragma once
 
 #include <drawinglayer/drawinglayerdllapi.h>
 #include <drawinglayer/primitive2d/baseprimitive2d.hxx>
 #include <drawinglayer/primitive2d/textlayoutdevice.hxx>
 #include <basegfx/matrix/b2dhommatrixtools.hxx>
 
-namespace drawinglayer { namespace primitive2d { class TextSimplePortionPrimitive2D; } }
+namespace drawinglayer::primitive2d { class TextSimplePortionPrimitive2D; }
 
 
-namespace drawinglayer
+namespace drawinglayer::primitive2d
 {
-    namespace primitive2d
-    {
         enum class BreakupUnit
         {
             Character,
@@ -72,10 +69,7 @@ namespace drawinglayer
             const Primitive2DContainer& getResult(BreakupUnit aBreakupUnit = BreakupUnit::Character) const;
         };
 
-    } // end of namespace primitive2d
-} // end of namespace drawinglayer
+} // end of namespace drawinglayer::primitive2d
 
-
-#endif //INCLUDED_DRAWINGLAYER_PRIMITIVE2D_TEXTBREAKUPHELPER_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

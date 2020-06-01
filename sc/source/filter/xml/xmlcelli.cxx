@@ -144,8 +144,8 @@ ScXMLTableRowCellContext::ScXMLTableRowCellContext( ScXMLImport& rImport,
 
     rXMLImport.GetTables().AddColumn(bTempIsCovered);
 
-    o3tl::optional<OUString> xStyleName;
-    o3tl::optional<OUString> xCurrencySymbol;
+    std::optional<OUString> xStyleName;
+    std::optional<OUString> xCurrencySymbol;
     if ( rAttrList.is() )
     {
         for (auto &it : *rAttrList)
@@ -352,7 +352,7 @@ void ScXMLTableRowCellContext::PushFormat(sal_Int32 nBegin, sal_Int32 nEnd, cons
 
     // Style name for text span corresponds with the name of an automatic style.
     const XMLPropStyleContext* pStyle = dynamic_cast<const XMLPropStyleContext*>(
-        pAutoStyles->FindStyleChildContext(XML_STYLE_FAMILY_TEXT_TEXT, rStyleName));
+        pAutoStyles->FindStyleChildContext(XmlStyleFamily::TEXT_TEXT, rStyleName));
 
     if (!pStyle)
         // No style by that name found.
@@ -688,7 +688,7 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL ScXMLTableRowCellContex
 {
     SvXMLImportContext *pContext = nullptr;
     sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
+        &sax_fastparser::castToFastAttributeList( xAttrList );
 
     // bool bTextP(false);
     switch (nElement)
@@ -981,7 +981,7 @@ void ScXMLTableRowCellContext::SetCellRangeSource( const ScAddress& rPosition )
         ScAreaLink* pLink = new ScAreaLink( pDoc->GetDocumentShell(), pCellRangeSource->sURL,
             sFilterName, pCellRangeSource->sFilterOptions, sSourceStr, aDestRange, pCellRangeSource->nRefresh );
         sfx2::LinkManager* pLinkManager = pDoc->GetLinkManager();
-        pLinkManager->InsertFileLink( *pLink, OBJECT_CLIENT_FILE, pCellRangeSource->sURL, &sFilterName, &sSourceStr );
+        pLinkManager->InsertFileLink( *pLink, sfx2::SvBaseLinkObjectType::ClientFile, pCellRangeSource->sURL, &sFilterName, &sSourceStr );
     }
 }
 
@@ -1008,7 +1008,7 @@ void ScXMLTableRowCellContext::SetFormulaCell(ScFormulaCell* pFCell) const
                 bMayForceNumberformat = false;
             }
         }
-        else if (rtl::math::isFinite(fValue))
+        else if (std::isfinite(fValue))
         {
             pFCell->SetHybridDouble(fValue);
             if (mbPossibleEmptyDisplay && fValue == 0.0)
@@ -1028,7 +1028,7 @@ void ScXMLTableRowCellContext::SetFormulaCell(ScFormulaCell* pFCell) const
 }
 
 void ScXMLTableRowCellContext::PutTextCell( const ScAddress& rCurrentPos,
-        const SCCOL nCurrentCol, const ::o3tl::optional< OUString >& pOUText )
+        const SCCOL nCurrentCol, const ::std::optional< OUString >& pOUText )
 {
     ScDocument* pDoc = rXMLImport.GetDocument();
     bool bDoIncrement = true;
@@ -1144,7 +1144,7 @@ void ScXMLTableRowCellContext::PutValueCell( const ScAddress& rCurrentPos )
         // fdo#62250 absent values are not NaN, set to 0.0
         // PutValueCell() is called only for a known cell value type,
         // bIsEmpty==false in all these cases, no sense to check it here.
-        if (!::rtl::math::isFinite( fValue))
+        if (!std::isfinite( fValue))
             fValue = 0.0;
 
         // #i62435# Initialize the value cell's script type if the default
@@ -1167,7 +1167,7 @@ bool isEmptyOrNote( const ScDocument* pDoc, const ScAddress& rCurrentPos )
 }
 
 void ScXMLTableRowCellContext::AddTextAndValueCell( const ScAddress& rCellPos,
-        const ::o3tl::optional< OUString >& pOUText, ScAddress& rCurrentPos )
+        const ::std::optional< OUString >& pOUText, ScAddress& rCurrentPos )
 {
     ScDocument* pDoc = rXMLImport.GetDocument();
     ScMyTables& rTables = rXMLImport.GetTables();
@@ -1234,7 +1234,7 @@ void ScXMLTableRowCellContext::AddTextAndValueCell( const ScAddress& rCellPos,
                 }
                 else
                 {
-                    if (!bWasEmpty || mxAnnotationData.get())
+                    if (!bWasEmpty || mxAnnotationData)
                     {
                         if (rCurrentPos.Row() > pDoc->MaxRow())
                             rXMLImport.SetRangeOverflowType(SCWARN_IMPORT_ROW_OVERFLOW);
@@ -1303,7 +1303,7 @@ OUString getOutputString( ScDocument* pDoc, const ScAddress& aCellPos )
 
 void ScXMLTableRowCellContext::AddNonFormulaCell( const ScAddress& rCellPos )
 {
-    ::o3tl::optional< OUString > pOUText;
+    ::std::optional< OUString > pOUText;
 
     ScDocument* pDoc = rXMLImport.GetDocument();
     if( nCellType == util::NumberFormat::TEXT )
@@ -1316,7 +1316,7 @@ void ScXMLTableRowCellContext::AddNonFormulaCell( const ScAddress& rCellPos )
     }
 
     ScAddress aCurrentPos( rCellPos );
-    if( mxAnnotationData.get() || pDetectiveObjVec || pCellRangeSource ) // has special content
+    if( mxAnnotationData || pDetectiveObjVec || pCellRangeSource ) // has special content
         bIsEmpty = false;
 
     AddTextAndValueCell( rCellPos, pOUText, aCurrentPos );
@@ -1345,8 +1345,7 @@ void ScXMLTableRowCellContext::PutFormulaCell( const ScAddress& rCellPos )
 
     OUString aText = maFormula->first;
 
-    std::unique_ptr<ScExternalRefManager::ApiGuard> pExtRefGuard (
-            new ScExternalRefManager::ApiGuard(pDoc));
+    ScExternalRefManager::ApiGuard aExtRefGuard(pDoc);
 
     if ( !aText.isEmpty() )
     {
@@ -1425,7 +1424,7 @@ void ScXMLTableRowCellContext::AddFormulaCell( const ScAddress& rCellPos )
                             pFCell->ResetDirty();
                         }
                     }
-                    else if (rtl::math::isFinite(fValue))
+                    else if (std::isfinite(fValue))
                     {
                         pFCell->SetResultMatrix(
                             nMatrixCols, nMatrixRows, pMat, new formula::FormulaDoubleToken(fValue));

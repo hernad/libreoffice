@@ -26,6 +26,7 @@
 #include <vcl/decoview.hxx>
 #include <vcl/event.hxx>
 #include <vcl/settings.hxx>
+#include <rtl/math.hxx>
 #include <tools/wintypes.hxx>
 #include <unotools/charclass.hxx>
 
@@ -42,11 +43,9 @@ using namespace com::sun::star;
 using ::com::sun::star::uno::Reference;
 using ::com::sun::star::accessibility::XAccessible;
 using ::com::sun::star::accessibility::XAccessibleContext;
-using ::std::vector;
 
 ScMenuFloatingWindow::MenuItemData::MenuItemData() :
     mbEnabled(true), mbSeparator(false),
-    mpAction(static_cast<ScCheckListMenuWindow::Action*>(nullptr)),
     mpSubMenuWin(static_cast<ScMenuFloatingWindow*>(nullptr))
 {
 }
@@ -882,7 +881,7 @@ ScCheckListMenuWindow::ScCheckListMenuWindow(vcl::Window* pParent, ScDocument* p
     ScMenuFloatingWindow(pParent, pDoc),
     maEdSearch(VclPtr<ScSearchEdit>::Create(this)),
     maChecks(VclPtr<ScCheckListBox>::Create(this)),
-    maChkToggleAll(VclPtr<TriStateBox>::Create(this, 0)),
+    maChkToggleAll(VclPtr<CheckBox>::Create(this, 0)),
     maBtnSelectSingle(VclPtr<ImageButton>::Create(this, 0)),
     maBtnUnselectSingle(VclPtr<ImageButton>::Create(this, 0)),
     maBtnOk(VclPtr<OKButton>::Create(this)),
@@ -891,6 +890,8 @@ ScCheckListMenuWindow::ScCheckListMenuWindow(vcl::Window* pParent, ScDocument* p
     mePrevToggleAllState(TRISTATE_INDET),
     maTabStops(this)
 {
+    maChkToggleAll->EnableTriState(true);
+
     float fScaleFactor = GetDPIScaleFactor();
 
     nWidth = std::max<int>(nWidth, 200 * fScaleFactor);
@@ -1218,55 +1219,51 @@ IMPL_LINK_NOARG(ScCheckListMenuWindow, TriStateHdl, Button*, void)
 IMPL_LINK_NOARG(ScCheckListMenuWindow, EdModifyHdl, Edit&, void)
 {
     OUString aSearchText = maEdSearch->GetText();
-    aSearchText = ScGlobal::pCharClass->lowercase( aSearchText );
+    aSearchText = ScGlobal::getCharClassPtr()->lowercase( aSearchText );
     bool bSearchTextEmpty = aSearchText.isEmpty();
     size_t n = maMembers.size();
     size_t nSelCount = 0;
-    OUString aLabelDisp;
     bool bSomeDateDeletes = false;
 
-    for (size_t i = 0; i < n; ++i)
+    maChecks->SetUpdateMode(false);
+
+    if (bSearchTextEmpty)
     {
-        bool bIsDate = maMembers[i].mbDate;
-        bool bPartialMatch = false;
-
-        aLabelDisp = maMembers[i].maName;
-        if ( aLabelDisp.isEmpty() )
-            aLabelDisp = ScResId( STR_EMPTYDATA );
-
-        if ( !bSearchTextEmpty )
+        // when there are a lot of rows, it is cheaper to simply clear the tree and re-initialise
+        maChecks->Clear();
+        nSelCount = initMembers();
+    }
+    else
+    {
+        for (size_t i = 0; i < n; ++i)
         {
+            bool bIsDate = maMembers[i].mbDate;
+            bool bPartialMatch = false;
+
+            OUString aLabelDisp = maMembers[i].maName;
+            if ( aLabelDisp.isEmpty() )
+                aLabelDisp = ScResId( STR_EMPTYDATA );
+
             if ( !bIsDate )
-                bPartialMatch = ( ScGlobal::pCharClass->lowercase( aLabelDisp ).indexOf( aSearchText ) != -1 );
+                bPartialMatch = ( ScGlobal::getCharClassPtr()->lowercase( aLabelDisp ).indexOf( aSearchText ) != -1 );
             else if ( maMembers[i].meDatePartType == ScCheckListMember::DAY ) // Match with both numerical and text version of month
-                bPartialMatch = (ScGlobal::pCharClass->lowercase( OUString(
+                bPartialMatch = (ScGlobal::getCharClassPtr()->lowercase( OUString(
                                 maMembers[i].maRealName + maMembers[i].maDateParts[1] )).indexOf( aSearchText ) != -1);
             else
                 continue;
-        }
-        else if ( bIsDate && maMembers[i].meDatePartType != ScCheckListMember::DAY )
-            continue;
 
-        if ( bSearchTextEmpty )
-        {
-            SvTreeListEntry* pLeaf = maChecks->ShowCheckEntry( aLabelDisp, maMembers[i], true, maMembers[i].mbVisible );
-            updateMemberParents( pLeaf, i );
-            if ( maMembers[i].mbVisible )
+            if ( bPartialMatch )
+            {
+                SvTreeListEntry* pLeaf = maChecks->ShowCheckEntry( aLabelDisp, maMembers[i] );
+                updateMemberParents( pLeaf, i );
                 ++nSelCount;
-            continue;
-        }
-
-        if ( bPartialMatch )
-        {
-            SvTreeListEntry* pLeaf = maChecks->ShowCheckEntry( aLabelDisp, maMembers[i] );
-            updateMemberParents( pLeaf, i );
-            ++nSelCount;
-        }
-        else
-        {
-            maChecks->ShowCheckEntry( aLabelDisp, maMembers[i], false, false );
-            if( bIsDate )
-                bSomeDateDeletes = true;
+            }
+            else
+            {
+                maChecks->ShowCheckEntry( aLabelDisp, maMembers[i], false, false );
+                if( bIsDate )
+                    bSomeDateDeletes = true;
+            }
         }
     }
 
@@ -1279,6 +1276,8 @@ IMPL_LINK_NOARG(ScCheckListMenuWindow, EdModifyHdl, Edit&, void)
             updateMemberParents( nullptr, i );
         }
     }
+
+    maChecks->SetUpdateMode(true);
 
     if ( nSelCount == n )
         maChkToggleAll->SetState( TRISTATE_TRUE );
@@ -1890,10 +1889,11 @@ void ScCheckListMenuWindow::setHasDates(bool bHasDates)
         maChecks->SetStyle(WB_HASBUTTONS);
 }
 
-void ScCheckListMenuWindow::initMembers()
+size_t ScCheckListMenuWindow::initMembers()
 {
     size_t n = maMembers.size();
     size_t nVisMemCount = 0;
+
 
     maChecks->SetUpdateMode(false);
     maChecks->GetModel()->EnableInvalidate(false);
@@ -1946,6 +1946,7 @@ void ScCheckListMenuWindow::initMembers()
 
     maChecks->GetModel()->EnableInvalidate(true);
     maChecks->SetUpdateMode(true);
+    return nVisMemCount;
 }
 
 void ScCheckListMenuWindow::setConfig(const Config& rConfig)
@@ -2024,7 +2025,7 @@ void ScCheckListMenuWindow::launch(const tools::Rectangle& rRect)
 
 void ScCheckListMenuWindow::close(bool bOK)
 {
-    if (bOK && mpOKAction.get())
+    if (bOK && mpOKAction)
         mpOKAction->execute();
 
     EndPopupMode();

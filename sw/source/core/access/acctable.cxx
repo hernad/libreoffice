@@ -56,7 +56,6 @@ using namespace ::com::sun::star::accessibility;
 using namespace ::sw::access;
 
 typedef o3tl::sorted_vector< sal_Int32 > Int32Set_Impl;
-typedef std::pair < sal_Int32, sal_Int32 > Int32Pair_Impl;
 
 const unsigned int SELECTION_WITH_NUM = 10;
 
@@ -80,8 +79,8 @@ class SwAccessibleTableData_Impl
     Int32Set_Impl   maColumns;
     Point   maTabFramePos;
     const SwTabFrame *mpTabFrame;
-    bool const mbIsInPagePreview;
-    bool const mbOnlyTableColumnHeader;
+    bool mbIsInPagePreview;
+    bool mbOnlyTableColumnHeader;
 
     void CollectData( const SwFrame *pFrame );
 

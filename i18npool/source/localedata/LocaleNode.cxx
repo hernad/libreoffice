@@ -235,7 +235,7 @@ void LCInfoNode::generateCode (const OFileWriter &of) const
     if (languageNode)
     {
         aLanguage = languageNode->getChildAt(0)->getValue();
-        if (!(aLanguage.getLength() == 2 || aLanguage.getLength() == 3))
+        if (aLanguage.getLength() != 2 && aLanguage.getLength() != 3)
             incErrorStr( "Error: langID '%s' not 2-3 characters\n", aLanguage);
         of.writeParameter("langID", aLanguage);
         of.writeParameter("langDefaultName", languageNode->getChildAt(1)->getValue());
@@ -620,8 +620,8 @@ void LCFormatNode::generateCode (const OFileWriter &of) const
         aFormatIndex = currNodeAttr.getValueByName("formatindex");
         sal_Int16 formatindex = static_cast<sal_Int16>(aFormatIndex.toInt32());
         // Ensure the new reserved range is not used anymore, free usage start
-        // was up'ed from 50 to 60.
-        if (50 <= formatindex && formatindex < i18npool::nFirstFreeFormatIndex)
+        // was up'ed from 50 to 60 (and more later).
+        if (i18npool::nStopPredefinedFormatIndex <= formatindex && formatindex < i18npool::nFirstFreeFormatIndex)
         {
             incErrorInt( "Error: Reserved formatindex=\"%d\" in FormatElement.\n", formatindex);
             bShowNextFreeFormatIndex = true;
@@ -688,14 +688,16 @@ void LCFormatNode::generateCode (const OFileWriter &of) const
                 case cssi::NumberFormatIndex::CURRENCY_1000DEC2 :
                     // Remember the currency symbol if present.
                     {
-                        sal_Int32 nStart;
-                        if (sTheCompatibleCurrency.isEmpty() &&
-                                ((nStart = n->getValue().indexOf("[$")) >= 0))
+                        if (sTheCompatibleCurrency.isEmpty())
                         {
-                            const OUString& aCode( n->getValue());
-                            sal_Int32 nHyphen = aCode.indexOf( '-', nStart);
-                            if (nHyphen >= nStart + 3)
-                                sTheCompatibleCurrency = aCode.copy( nStart + 2, nHyphen - nStart - 2);
+                            sal_Int32 nStart = n->getValue().indexOf("[$");
+                            if (nStart >= 0)
+                            {
+                                const OUString& aCode( n->getValue());
+                                sal_Int32 nHyphen = aCode.indexOf( '-', nStart);
+                                if (nHyphen >= nStart + 3)
+                                    sTheCompatibleCurrency = aCode.copy( nStart + 2, nHyphen - nStart - 2);
+                            }
                         }
                     }
                     [[fallthrough]];
@@ -862,14 +864,15 @@ void LCFormatNode::generateCode (const OFileWriter &of) const
                 incError( "No abbreviated DateAcceptancePattern present. For example M/D or D.M.\n");
         }
 
-        // 0..47 MUST be present, 48,49 MUST NOT be present
+        // 0..9 MUST be present, 10,11 MUST NOT be present, 12..47 MUST be
+        // present, 48,49 MUST NOT be present, 50 MUST be present.
         ValueSet::const_iterator aIter( aFormatIndexSet.begin());
         for (sal_Int16 nNext = cssi::NumberFormatIndex::NUMBER_START;
-                nNext < cssi::NumberFormatIndex::INDEX_TABLE_ENTRIES; ++nNext)
+                nNext < i18npool::nStopPredefinedFormatIndex; ++nNext)
         {
             sal_Int16 nHere = ::std::min( (aIter != aFormatIndexSet.end() ? *aIter :
-                    cssi::NumberFormatIndex::INDEX_TABLE_ENTRIES),
-                    cssi::NumberFormatIndex::INDEX_TABLE_ENTRIES);
+                    i18npool::nStopPredefinedFormatIndex),
+                    i18npool::nStopPredefinedFormatIndex);
             if (aIter != aFormatIndexSet.end()) ++aIter;
             for ( ; nNext < nHere; ++nNext)
             {
@@ -887,6 +890,12 @@ void LCFormatNode::generateCode (const OFileWriter &of) const
             }
             switch (nHere)
             {
+                case cssi::NumberFormatIndex::FRACTION_1 :
+                    incErrorInt( "Error: FormatElement formatindex=\"%d\" reserved for internal ``# ?/?''.\n", nNext);
+                    break;
+                case cssi::NumberFormatIndex::FRACTION_2 :
+                    incErrorInt( "Error: FormatElement formatindex=\"%d\" reserved for internal ``# ?\?/?\?''.\n", nNext);
+                    break;
                 case cssi::NumberFormatIndex::BOOLEAN :
                     incErrorInt( "Error: FormatElement formatindex=\"%d\" reserved for internal ``BOOLEAN''.\n", nNext);
                     break;
@@ -1520,6 +1529,24 @@ static void lcl_writeAbbrFullNarrArrays( const OFileWriter & of, sal_Int16 nCoun
     }
 }
 
+bool LCCalendarNode::expectedCalendarElement( const OUString& rName,
+        const LocaleNode* pNode, sal_Int16 nChild, const OUString& rCalendarID ) const
+{
+    bool bFound = true;
+    if (nChild >= 0)
+    {
+        if (nChild >= pNode->getNumberOfChildren())
+            bFound = false;
+        else
+            pNode = pNode->getChildAt(nChild);
+    }
+    if (bFound && (!pNode || pNode->getName() != rName))
+        bFound = false;
+    if (!bFound)
+        incErrorStrStr( "Error: <%s> element expected in calendar '%s'\n", rName, rCalendarID);
+    return bFound;
+}
+
 void LCCalendarNode::generateCode (const OFileWriter &of) const
 {
     OUString useLocale =   getAttr().getValueByName("ref");
@@ -1710,46 +1737,64 @@ void LCCalendarNode::generateCode (const OFileWriter &of) const
         } else {
             if (erasNode == nullptr)
                 erasNode = calNode -> getChildAt(nChild);
-            nbOfEras[i] = sal::static_int_cast<sal_Int16>( erasNode->getNumberOfChildren() );
-            if (bGregorian && nbOfEras[i] != 2)
-                incErrorInt( "Error: A Gregorian calendar must have 2 eras, this one has %d\n", nbOfEras[i]);
-            elementTag = "era";
-            for (j = 0; j < nbOfEras[i]; j++) {
-                LocaleNode *currNode = erasNode -> getChildAt(j);
-                OUString eraID( currNode->getChildAt(0)->getValue());
-                of.writeParameter("eraID", eraID, i, j);
-                if ( j == 0 && bGregorian && eraID != "bc" )
-                    incError( "First era of a Gregorian calendar must be <EraID>bc</EraID>");
-                if ( j == 1 && bGregorian && eraID != "ad" )
-                    incError( "Second era of a Gregorian calendar must be <EraID>ad</EraID>");
-                of.writeAsciiString("\n");
-                of.writeParameter(elementTag, "DefaultAbbrvName",currNode->getChildAt(1)->getValue() ,i, j);
-                of.writeParameter(elementTag, "DefaultFullName",currNode->getChildAt(2)->getValue() , i, j);
-            }
-        }
-        ++nChild;
-
-        str = calNode->getChildAt(nChild)->getChildAt(0)->getValue();
-        if (nbOfDays[i])
-        {
-            for (j = 0; j < nbOfDays[i]; j++)
+            if (!expectedCalendarElement("Eras", erasNode, -1, calendarID))
             {
-                LocaleNode *currNode = daysNode->getChildAt(j);
-                OUString dayID( currNode->getChildAt(0)->getValue());
-                if (str == dayID)
-                    break;  // for
+                --nChild;
             }
-            if (j >= nbOfDays[i])
-                incErrorStr( "Error: <StartDayOfWeek> <DayID> must be one of the <DaysOfWeek>, but is: %s\n", str);
+            else
+            {
+                nbOfEras[i] = sal::static_int_cast<sal_Int16>( erasNode->getNumberOfChildren() );
+                if (bGregorian && nbOfEras[i] != 2)
+                    incErrorInt( "Error: A Gregorian calendar must have 2 eras, this one has %d\n", nbOfEras[i]);
+                elementTag = "era";
+                for (j = 0; j < nbOfEras[i]; j++) {
+                    LocaleNode *currNode = erasNode -> getChildAt(j);
+                    if (!expectedCalendarElement("Era", currNode, -1, calendarID))
+                    {
+                        continue;   // for
+                    }
+                    OUString eraID( currNode->getChildAt(0)->getValue());
+                    of.writeParameter("eraID", eraID, i, j);
+                    if ( j == 0 && bGregorian && eraID != "bc" )
+                        incError( "First era of a Gregorian calendar must be <EraID>bc</EraID>");
+                    if ( j == 1 && bGregorian && eraID != "ad" )
+                        incError( "Second era of a Gregorian calendar must be <EraID>ad</EraID>");
+                    of.writeAsciiString("\n");
+                    of.writeParameter(elementTag, "DefaultAbbrvName",currNode->getChildAt(1)->getValue() ,i, j);
+                    of.writeParameter(elementTag, "DefaultFullName",currNode->getChildAt(2)->getValue() , i, j);
+                }
+            }
         }
-        of.writeParameter("startDayOfWeek", str, i);
         ++nChild;
 
-        str = calNode ->getChildAt(nChild)-> getValue();
-        sal_Int16 nDays = sal::static_int_cast<sal_Int16>( str.toInt32() );
-        if (nDays < 1 || (0 < nbOfDays[i] && nbOfDays[i] < nDays))
-            incErrorInt( "Error: Bad value of MinimalDaysInFirstWeek: %d, must be 1 <= value <= days_in_week\n",  nDays);
-        of.writeIntParameter("minimalDaysInFirstWeek", i, nDays);
+        if (expectedCalendarElement("StartDayOfWeek", calNode, nChild, calendarID))
+        {
+            str = calNode->getChildAt(nChild)->getChildAt(0)->getValue();
+            if (nbOfDays[i])
+            {
+                for (j = 0; j < nbOfDays[i]; j++)
+                {
+                    LocaleNode *currNode = daysNode->getChildAt(j);
+                    OUString dayID( currNode->getChildAt(0)->getValue());
+                    if (str == dayID)
+                        break;  // for
+                }
+                if (j >= nbOfDays[i])
+                    incErrorStr( "Error: <StartDayOfWeek> <DayID> must be one of the <DaysOfWeek>, but is: %s\n", str);
+            }
+            of.writeParameter("startDayOfWeek", str, i);
+            ++nChild;
+        }
+
+        if (expectedCalendarElement("MinimalDaysInFirstWeek", calNode, nChild, calendarID))
+        {
+            str = calNode ->getChildAt(nChild)-> getValue();
+            sal_Int16 nDays = sal::static_int_cast<sal_Int16>( str.toInt32() );
+            if (nDays < 1 || (0 < nbOfDays[i] && nbOfDays[i] < nDays))
+                incErrorInt( "Error: Bad value of MinimalDaysInFirstWeek: %d, must be 1 <= value <= days_in_week\n",
+                        nDays);
+            of.writeIntParameter("minimalDaysInFirstWeek", i, nDays);
+        }
     }
     if (!bHasGregorian)
         fprintf( stderr, "Warning: %s\n", "No Gregorian calendar defined, are you sure?");

@@ -152,7 +152,7 @@ void BreakIterator_Unicode::loadICUBreakIterator(const css::lang::Locale& rLocal
             udata_setAppData("OpenOffice", OpenOffice_dat, &status);
             if ( !U_SUCCESS(status) ) throw uno::RuntimeException();
 
-            std::unique_ptr<OOoRuleBasedBreakIterator> rbi;
+            std::shared_ptr<OOoRuleBasedBreakIterator> rbi;
 
             if (breakRules.getLength() > breakType && !breakRules[breakType].isEmpty())
             {
@@ -168,13 +168,13 @@ void BreakIterator_Unicode::loadICUBreakIterator(const css::lang::Locale& rLocal
                     break;  // do
                 }
 
-                rbi.reset(new OOoRuleBasedBreakIterator(udata_open("OpenOffice", "brk",
-                    OUStringToOString(breakRules[breakType], RTL_TEXTENCODING_ASCII_US).getStr(), &status), status));
+                rbi = std::make_shared<OOoRuleBasedBreakIterator>(udata_open("OpenOffice", "brk",
+                    OUStringToOString(breakRules[breakType], RTL_TEXTENCODING_ASCII_US).getStr(), &status), status);
 
                 if (U_SUCCESS(status))
                 {
                     icuBI->mpValue = std::make_shared<BI_ValueData>();
-                    icuBI->mpValue->mpBreakIterator = std::move( rbi);
+                    icuBI->mpValue->mpBreakIterator = rbi;
                     theBIMap.insert( std::make_pair( aBIMapRuleTypeKey, icuBI->mpValue));
                 }
                 else
@@ -202,11 +202,11 @@ void BreakIterator_Unicode::loadICUBreakIterator(const css::lang::Locale& rLocal
                 OString aUDName = rtl::OStringView(rule) + "_" + aLanguage;
                 UDataMemory* pUData = udata_open("OpenOffice", "brk", aUDName.getStr(), &status);
                 if( U_SUCCESS(status) )
-                    rbi.reset(new OOoRuleBasedBreakIterator( pUData, status));
+                    rbi = std::make_shared<OOoRuleBasedBreakIterator>( pUData, status);
                 if ( U_SUCCESS(status) )
                 {
                     icuBI->mpValue = std::make_shared<BI_ValueData>();
-                    icuBI->mpValue->mpBreakIterator = std::move( rbi);
+                    icuBI->mpValue->mpBreakIterator = rbi;
                     theBIMap.insert( std::make_pair( aBIMapRuleKey, icuBI->mpValue));
                 }
                 else
@@ -228,11 +228,11 @@ void BreakIterator_Unicode::loadICUBreakIterator(const css::lang::Locale& rLocal
                     status = U_ZERO_ERROR;
                     pUData = udata_open("OpenOffice", "brk", rule, &status);
                     if( U_SUCCESS(status) )
-                        rbi.reset(new OOoRuleBasedBreakIterator( pUData, status));
+                        rbi = std::make_shared<OOoRuleBasedBreakIterator>( pUData, status);
                     if ( U_SUCCESS(status) )
                     {
                         icuBI->mpValue = std::make_shared<BI_ValueData>();
-                        icuBI->mpValue->mpBreakIterator = std::move( rbi);
+                        icuBI->mpValue->mpBreakIterator = rbi;
                         theBIMap.insert( std::make_pair( aBIMapRuleOnlyKey, icuBI->mpValue));
                     }
                     else
@@ -307,23 +307,23 @@ void BreakIterator_Unicode::loadICUBreakIterator(const css::lang::Locale& rLocal
         bNewBreak=true;
     }
 
-    if (bNewBreak || icuBI->mpValue->maICUText.pData != rText.pData)
-    {
-        const UChar *pText = reinterpret_cast<const UChar *>(rText.getStr());
+    if (!(bNewBreak || icuBI->mpValue->maICUText.pData != rText.pData))
+        return;
 
-        status = U_ZERO_ERROR;
-        icuBI->mpValue->mpUt = utext_openUChars(icuBI->mpValue->mpUt, pText, rText.getLength(), &status);
+    const UChar *pText = reinterpret_cast<const UChar *>(rText.getStr());
 
-        if (!U_SUCCESS(status))
-            throw uno::RuntimeException();
+    status = U_ZERO_ERROR;
+    icuBI->mpValue->mpUt = utext_openUChars(icuBI->mpValue->mpUt, pText, rText.getLength(), &status);
 
-        icuBI->mpValue->mpBreakIterator->setText(icuBI->mpValue->mpUt, status);
+    if (!U_SUCCESS(status))
+        throw uno::RuntimeException();
 
-        if (!U_SUCCESS(status))
-            throw uno::RuntimeException();
+    icuBI->mpValue->mpBreakIterator->setText(icuBI->mpValue->mpUt, status);
 
-        icuBI->mpValue->maICUText = rText;
-    }
+    if (!U_SUCCESS(status))
+        throw uno::RuntimeException();
+
+    icuBI->mpValue->maICUText = rText;
 }
 
 sal_Int32 SAL_CALL BreakIterator_Unicode::nextCharacters( const OUString& Text,

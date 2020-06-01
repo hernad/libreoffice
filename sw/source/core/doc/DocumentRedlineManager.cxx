@@ -283,10 +283,12 @@ namespace
     bool IsPrevPos( const SwPosition & rPos1, const SwPosition & rPos2 )
     {
         const SwContentNode* pCNd;
-        return 0 == rPos2.nContent.GetIndex() &&
-               rPos2.nNode.GetIndex() - 1 == rPos1.nNode.GetIndex() &&
-               nullptr != ( pCNd = rPos1.nNode.GetNode().GetContentNode() ) &&
-               rPos1.nContent.GetIndex() == pCNd->Len();
+        if( 0 != rPos2.nContent.GetIndex() )
+            return false;
+        if( rPos2.nNode.GetIndex() - 1 != rPos1.nNode.GetIndex() )
+            return false;
+        pCNd = rPos1.nNode.GetNode().GetContentNode();
+        return pCNd && rPos1.nContent.GetIndex() == pCNd->Len();
     }
 
     // copy style or return with SwRedlineExtra_FormatColl with reject data of the upcoming copy
@@ -2028,25 +2030,29 @@ DocumentRedlineManager::AppendRedline(SwRangeRedline* pNewRedl, bool const bCall
                             pTextNode = pTextNd->GetTextNode();
                             if (pTextNode && pDelNode != pTextNode )
                             {
-                                bCompress = true;
-
-                                // split redline to store ExtraData per paragraphs
                                 SwPosition aPos(aIdx);
-                                SwRangeRedline* pPar = new SwRangeRedline( *pNewRedl );
-                                pPar->SetStart( aPos );
-                                pNewRedl->SetEnd( aPos );
 
-                                // get extradata for reset formatting of the modified paragraph
-                                SwRedlineExtraData_FormatColl* pExtraData = lcl_CopyStyle(aPos, *pStt, false);
-                                if (pExtraData)
+                                if (m_rDoc.GetIDocumentUndoRedo().DoesUndo())
                                 {
-                                    std::unique_ptr<SwRedlineExtraData_FormatColl> xRedlineExtraData;
-                                    if (!bFirst)
-                                        pExtraData->SetFormatAll(false);
-                                    xRedlineExtraData.reset(pExtraData);
-                                    pPar->SetExtraData( xRedlineExtraData.get() );
+                                    bCompress = true;
+
+                                    // split redline to store ExtraData per paragraphs
+                                    SwRangeRedline* pPar = new SwRangeRedline( *pNewRedl );
+                                    pPar->SetStart( aPos );
+                                    pNewRedl->SetEnd( aPos );
+
+                                    // get extradata for reset formatting of the modified paragraph
+                                    SwRedlineExtraData_FormatColl* pExtraData = lcl_CopyStyle(aPos, *pStt, false);
+                                    if (pExtraData)
+                                    {
+                                        std::unique_ptr<SwRedlineExtraData_FormatColl> xRedlineExtraData;
+                                        if (!bFirst)
+                                            pExtraData->SetFormatAll(false);
+                                        xRedlineExtraData.reset(pExtraData);
+                                        pPar->SetExtraData( xRedlineExtraData.get() );
+                                    }
+                                    mpRedlineTable->Insert( pPar );
                                 }
-                                mpRedlineTable->Insert( pPar );
 
                                 // modify paragraph formatting
                                 lcl_CopyStyle(*pStt, aPos);
@@ -2847,10 +2853,11 @@ const SwRangeRedline* DocumentRedlineManager::SelNextRedline( SwPaM& rPam ) cons
                 if( pTmp->HasMark() && pTmp->IsVisible() )
                 {
                     const SwPosition *pRStt;
-                    if( pFnd->GetType() == pTmp->GetType() &&
-                        pFnd->GetAuthor() == pTmp->GetAuthor() &&
-                        ( *pPrevEnd == *( pRStt = pTmp->Start() ) ||
-                          IsPrevPos( *pPrevEnd, *pRStt )) )
+                    if( pFnd->GetType() != pTmp->GetType() ||
+                        pFnd->GetAuthor() != pTmp->GetAuthor() )
+                        break;
+                    pRStt = pTmp->Start();
+                    if( *pPrevEnd == *pRStt || IsPrevPos( *pPrevEnd, *pRStt ) )
                     {
                         pPrevEnd = pTmp->End();
                         rSttPos = *pPrevEnd;
@@ -2867,25 +2874,31 @@ const SwRangeRedline* DocumentRedlineManager::SelNextRedline( SwPaM& rPam ) cons
 
             SwContentNode* pCNd;
             SwNodeIndex* pIdx = &rPam.GetMark()->nNode;
-            if( !pIdx->GetNode().IsContentNode() &&
-                nullptr != ( pCNd = m_rDoc.GetNodes().GoNextSection( pIdx )) )
+            if( !pIdx->GetNode().IsContentNode() )
             {
-                if( *pIdx <= rPam.GetPoint()->nNode )
-                    rPam.GetMark()->nContent.Assign( pCNd, 0 );
-                else
-                    pFnd = nullptr;
+                pCNd = m_rDoc.GetNodes().GoNextSection( pIdx );
+                if( pCNd )
+                {
+                    if( *pIdx <= rPam.GetPoint()->nNode )
+                        rPam.GetMark()->nContent.Assign( pCNd, 0 );
+                    else
+                        pFnd = nullptr;
+                }
             }
 
             if( pFnd )
             {
                 pIdx = &rPam.GetPoint()->nNode;
-                if( !pIdx->GetNode().IsContentNode() &&
-                    nullptr != ( pCNd = SwNodes::GoPrevSection( pIdx )) )
+                if( !pIdx->GetNode().IsContentNode() )
                 {
-                    if( *pIdx >= rPam.GetMark()->nNode )
-                        rPam.GetPoint()->nContent.Assign( pCNd, pCNd->Len() );
-                    else
-                        pFnd = nullptr;
+                    pCNd = SwNodes::GoPrevSection( pIdx );
+                    if( pCNd )
+                    {
+                        if( *pIdx >= rPam.GetMark()->nNode )
+                            rPam.GetPoint()->nContent.Assign( pCNd, pCNd->Len() );
+                        else
+                            pFnd = nullptr;
+                    }
                 }
             }
 
@@ -2988,25 +3001,31 @@ const SwRangeRedline* DocumentRedlineManager::SelPrevRedline( SwPaM& rPam ) cons
 
             SwContentNode* pCNd;
             SwNodeIndex* pIdx = &rPam.GetMark()->nNode;
-            if( !pIdx->GetNode().IsContentNode() &&
-                nullptr != ( pCNd = SwNodes::GoPrevSection( pIdx )) )
+            if( !pIdx->GetNode().IsContentNode() )
             {
-                if( *pIdx >= rPam.GetPoint()->nNode )
-                    rPam.GetMark()->nContent.Assign( pCNd, pCNd->Len() );
-                else
-                    pFnd = nullptr;
+                pCNd = SwNodes::GoPrevSection( pIdx );
+                if( pCNd )
+                {
+                    if( *pIdx >= rPam.GetPoint()->nNode )
+                        rPam.GetMark()->nContent.Assign( pCNd, pCNd->Len() );
+                    else
+                        pFnd = nullptr;
+                }
             }
 
             if( pFnd )
             {
                 pIdx = &rPam.GetPoint()->nNode;
-                if( !pIdx->GetNode().IsContentNode() &&
-                    nullptr != ( pCNd = m_rDoc.GetNodes().GoNextSection( pIdx )) )
+                if( !pIdx->GetNode().IsContentNode() )
                 {
-                    if( *pIdx <= rPam.GetMark()->nNode )
-                        rPam.GetPoint()->nContent.Assign( pCNd, 0 );
-                    else
-                        pFnd = nullptr;
+                    pCNd = m_rDoc.GetNodes().GoNextSection( pIdx );
+                    if( pCNd )
+                    {
+                        if( *pIdx <= rPam.GetMark()->nNode )
+                            rPam.GetPoint()->nContent.Assign( pCNd, 0 );
+                        else
+                            pFnd = nullptr;
+                    }
                 }
             }
 

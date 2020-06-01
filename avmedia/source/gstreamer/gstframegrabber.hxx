@@ -17,14 +17,13 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_AVMEDIA_SOURCE_GSTREAMER_GSTFRAMEGRABBER_HXX
-#define INCLUDED_AVMEDIA_SOURCE_GSTREAMER_GSTFRAMEGRABBER_HXX
+#pragma once
 
 #include "gstplayer.hxx"
 #include <com/sun/star/media/XFrameGrabber.hpp>
 #include <cppuhelper/implbase.hxx>
 
-namespace avmedia { namespace gstreamer {
+namespace avmedia::gstreamer {
 
 typedef ::cppu::WeakImplHelper< css::media::XFrameGrabber,
                                 css::lang::XServiceInfo > FrameGrabber_BASE;
@@ -56,9 +55,6 @@ private:
     explicit FrameGrabber( const OUString &aURL );
 };
 
-} // namespace gst
-} // namespace avmedia
-
-#endif // INCLUDED_AVMEDIA_SOURCE_GSTREAMER_GSTFRAMEGRABBER_HXX
+} // avmedia::gst
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

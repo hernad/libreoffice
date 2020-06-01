@@ -19,17 +19,22 @@
 #include "DomainMapperTableHandler.hxx"
 #include "DomainMapper_Impl.hxx"
 #include "StyleSheetTable.hxx"
+#include <com/sun/star/style/ParagraphAdjust.hpp>
 #include <com/sun/star/table/TableBorderDistances.hpp>
 #include <com/sun/star/table/TableBorder.hpp>
 #include <com/sun/star/table/BorderLine2.hpp>
 #include <com/sun/star/table/BorderLineStyle.hpp>
 #include <com/sun/star/table/XCellRange.hpp>
 #include <com/sun/star/text/HoriOrientation.hpp>
-#include <com/sun/star/text/RelOrientation.hpp>
 #include <com/sun/star/text/SizeType.hpp>
 #include <com/sun/star/text/XTextRangeCompare.hpp>
+#include <com/sun/star/beans/XPropertySet.hpp>
+#include <com/sun/star/beans/XPropertyState.hpp>
+#include <com/sun/star/container/XEnumeration.hpp>
+#include <com/sun/star/container/XEnumerationAccess.hpp>
+#include <com/sun/star/drawing/FillStyle.hpp>
 #include "TablePositionHandler.hxx"
-#include "ConversionHelper.hxx"
+#include "TagLogger.hxx"
 #include "util.hxx"
 #include <osl/diagnose.h>
 #include <sal/log.hxx>
@@ -59,6 +64,7 @@ using namespace ::std;
 #define CNF_FIRST_ROW_FIRST_COLUMN  0x004
 #define CNF_LAST_ROW_LAST_COLUMN    0x002
 #define CNF_LAST_ROW_FIRST_COLUMN   0x001
+#define CNF_ALL                     0xFFF
 
 DomainMapperTableHandler::DomainMapperTableHandler(
             css::uno::Reference<css::text::XTextAppendAndConvert> const& xText,
@@ -88,7 +94,7 @@ void DomainMapperTableHandler::startTable(const TablePropertyMapPtr& pProps)
 
 static void lcl_mergeBorder( PropertyIds nId, const PropertyMapPtr& pOrig, const PropertyMapPtr& pDest )
 {
-    o3tl::optional<PropertyMap::Property> pOrigVal = pOrig->getProperty(nId);
+    std::optional<PropertyMap::Property> pOrigVal = pOrig->getProperty(nId);
 
     if ( pOrigVal )
     {
@@ -99,8 +105,8 @@ static void lcl_mergeBorder( PropertyIds nId, const PropertyMapPtr& pOrig, const
 static void lcl_computeCellBorders( const PropertyMapPtr& pTableBorders, const PropertyMapPtr& pCellProps,
         sal_Int32 nCell, sal_Int32 nRow, bool bIsEndCol, bool bIsEndRow, bool bMergedVertically )
 {
-    o3tl::optional<PropertyMap::Property> pVerticalVal = pCellProps->getProperty(META_PROP_VERTICAL_BORDER);
-    o3tl::optional<PropertyMap::Property> pHorizontalVal = pCellProps->getProperty(META_PROP_HORIZONTAL_BORDER);
+    std::optional<PropertyMap::Property> pVerticalVal = pCellProps->getProperty(META_PROP_VERTICAL_BORDER);
+    std::optional<PropertyMap::Property> pHorizontalVal = pCellProps->getProperty(META_PROP_HORIZONTAL_BORDER);
 
     // Handle the vertical and horizontal borders
     uno::Any aVertProp;
@@ -225,6 +231,7 @@ struct TableInfo
     PropertyMapPtr pTableBorders;
     TableStyleSheetEntry* pTableStyle;
     css::beans::PropertyValues aTableProperties;
+    std::vector< PropertyIds > aTablePropertyIds;
 
     TableInfo()
     : nLeftBorderDistance(DEF_BORDER_DIST)
@@ -249,7 +256,7 @@ bool lcl_extractTableBorderProperty(const PropertyMapPtr& pTableProperties, cons
     if (!pTableProperties)
         return false;
 
-    const o3tl::optional<PropertyMap::Property> aTblBorder = pTableProperties->getProperty(nId);
+    const std::optional<PropertyMap::Property> aTblBorder = pTableProperties->getProperty(nId);
     if( aTblBorder )
     {
         OSL_VERIFY(aTblBorder->second >>= rLine);
@@ -334,7 +341,7 @@ TableStyleSheetEntry * DomainMapperTableHandler::endTableGetTableStyle(TableInfo
     // will receive the table style if any
     TableStyleSheetEntry* pTableStyle = nullptr;
 
-    if( m_aTableProperties.get() )
+    if( m_aTableProperties )
     {
         //create properties from the table attributes
         //...pPropMap->Insert( PROP_LEFT_MARGIN, uno::makeAny( m_nLeftMargin - m_nGapHalf ));
@@ -383,7 +390,7 @@ TableStyleSheetEntry * DomainMapperTableHandler::endTableGetTableStyle(TableInfo
             aGrabBag["TablePosition"] <<= aGrabBagTS;
         }
 
-        o3tl::optional<PropertyMap::Property> aTableStyleVal = m_aTableProperties->getProperty(META_PROP_TABLE_STYLE_NAME);
+        std::optional<PropertyMap::Property> aTableStyleVal = m_aTableProperties->getProperty(META_PROP_TABLE_STYLE_NAME);
         if(aTableStyleVal)
         {
             // Apply table style properties recursively
@@ -451,7 +458,7 @@ TableStyleSheetEntry * DomainMapperTableHandler::endTableGetTableStyle(TableInfo
         }
 
         // This is the one preserving just all the table look attributes.
-        o3tl::optional<PropertyMap::Property> oTableLook = m_aTableProperties->getProperty(META_PROP_TABLE_LOOK);
+        std::optional<PropertyMap::Property> oTableLook = m_aTableProperties->getProperty(META_PROP_TABLE_LOOK);
         if (oTableLook)
         {
             aGrabBag["TableStyleLook"] = oTableLook->second;
@@ -459,7 +466,7 @@ TableStyleSheetEntry * DomainMapperTableHandler::endTableGetTableStyle(TableInfo
         }
 
         // This is just the "val" attribute's numeric value.
-        const o3tl::optional<PropertyMap::Property> aTblLook = m_aTableProperties->getProperty(PROP_TBL_LOOK);
+        const std::optional<PropertyMap::Property> aTblLook = m_aTableProperties->getProperty(PROP_TBL_LOOK);
         if(aTblLook)
         {
             aTblLook->second >>= rInfo.nTblLook;
@@ -467,25 +474,25 @@ TableStyleSheetEntry * DomainMapperTableHandler::endTableGetTableStyle(TableInfo
         }
 
         // apply cell margin settings of the table style
-        const o3tl::optional<PropertyMap::Property> oLeftMargin = m_aTableProperties->getProperty(META_PROP_CELL_MAR_LEFT);
+        const std::optional<PropertyMap::Property> oLeftMargin = m_aTableProperties->getProperty(META_PROP_CELL_MAR_LEFT);
         if (oLeftMargin)
         {
             oLeftMargin->second >>= rInfo.nLeftBorderDistance;
             m_aTableProperties->Erase(oLeftMargin->first);
         }
-        const o3tl::optional<PropertyMap::Property> oRightMargin = m_aTableProperties->getProperty(META_PROP_CELL_MAR_RIGHT);
+        const std::optional<PropertyMap::Property> oRightMargin = m_aTableProperties->getProperty(META_PROP_CELL_MAR_RIGHT);
         if (oRightMargin)
         {
             oRightMargin->second >>= rInfo.nRightBorderDistance;
             m_aTableProperties->Erase(oRightMargin->first);
         }
-        const o3tl::optional<PropertyMap::Property> oTopMargin = m_aTableProperties->getProperty(META_PROP_CELL_MAR_TOP);
+        const std::optional<PropertyMap::Property> oTopMargin = m_aTableProperties->getProperty(META_PROP_CELL_MAR_TOP);
         if (oTopMargin)
         {
             oTopMargin->second >>= rInfo.nTopBorderDistance;
             m_aTableProperties->Erase(oTopMargin->first);
         }
-        const o3tl::optional<PropertyMap::Property> oBottomMargin = m_aTableProperties->getProperty(META_PROP_CELL_MAR_BOTTOM);
+        const std::optional<PropertyMap::Property> oBottomMargin = m_aTableProperties->getProperty(META_PROP_CELL_MAR_BOTTOM);
         if (oBottomMargin)
         {
             oBottomMargin->second >>= rInfo.nBottomBorderDistance;
@@ -507,6 +514,14 @@ TableStyleSheetEntry * DomainMapperTableHandler::endTableGetTableStyle(TableInfo
         }
 
         m_aTableProperties->getValue( TablePropertyMap::GAP_HALF, nGapHalf );
+
+        std::optional<PropertyMap::Property> oLeftMarginFromStyle = m_aTableProperties->getProperty(PROP_LEFT_MARGIN);
+        if (oLeftMarginFromStyle)
+        {
+            oLeftMarginFromStyle->second >>= nLeftMargin;
+            // don't need to erase, we will push back the adjusted value
+            // of this (or the direct formatting, if that exists) later
+        }
         m_aTableProperties->getValue( TablePropertyMap::LEFT_MARGIN, nLeftMargin );
 
         m_aTableProperties->getValue( TablePropertyMap::CELL_MAR_LEFT,
@@ -588,12 +603,10 @@ TableStyleSheetEntry * DomainMapperTableHandler::endTableGetTableStyle(TableInfo
         // - nested tables: the goal is to have left-most border starting at table_indent pos
 
         // Only top level table position depends on border width of Column A.
-        // TODO: Position based on last row (at least in MSOffice 2016), but first row in Office 2003.
-        //       Export code is also based on first cell, so using first row here...
         if ( !m_aCellProperties.empty() && !m_aCellProperties[0].empty() )
         {
             // aLeftBorder already contains tblBorder; overwrite if cell is different.
-            o3tl::optional<PropertyMap::Property> aCellBorder
+            std::optional<PropertyMap::Property> aCellBorder
                 = m_aCellProperties[0][0]->getProperty(PROP_LEFT_BORDER);
             if ( aCellBorder )
                 aCellBorder->second >>= aLeftBorder;
@@ -608,16 +621,26 @@ TableStyleSheetEntry * DomainMapperTableHandler::endTableGetTableStyle(TableInfo
         lcl_adjustBorderDistance(rInfo, aLeftBorder, aRightBorder);
 
         // tdf#106742: since MS Word 2013 (compatibilityMode >= 15), top-level tables are handled the same as nested tables;
-        // this is also the default behavior in LO when DOCX doesn't define "compatibilityMode" option
+        // the default behavior when DOCX doesn't define "compatibilityMode" option is to add the cell spacing
+
+        // Undefined should not be possible any more for DOCX, but it is for RTF.
+        // In any case, continue to treat undefined as version 12 during import.
         sal_Int32 nMode = m_rDMapper_Impl.GetSettingsTable()->GetWordCompatibilityMode();
 
-        if ( nMode > 0 && nMode <= 14 && rInfo.nNestLevel == 1 )
+        if (((nMode < 0) || (0 < nMode && nMode <= 14)) && rInfo.nNestLevel == 1)
         {
-            m_aTableProperties->Insert( PROP_LEFT_MARGIN, uno::makeAny( nLeftMargin - nGapHalf - rInfo.nLeftBorderDistance ) );
+            const sal_Int32 nAdjustedMargin = nLeftMargin - nGapHalf - rInfo.nLeftBorderDistance;
+            m_aTableProperties->Insert( PROP_LEFT_MARGIN, uno::makeAny( nAdjustedMargin ) );
         }
         else
         {
-            m_aTableProperties->Insert( PROP_LEFT_MARGIN, uno::makeAny( nLeftMargin - nGapHalf ) );
+            // Writer starts a table in the middle of the border.
+            // Word starts a table at the left edge of the border,
+            // so emulate that by adding the half the width. (also see docxattributeoutput)
+            if ( rInfo.nNestLevel > 1 && nLeftMargin < 0 )
+                nLeftMargin = 0;
+            const sal_Int32 nAdjustedMargin = nLeftMargin - nGapHalf + (aLeftBorder.LineWidth / 2);
+            m_aTableProperties->Insert( PROP_LEFT_MARGIN, uno::makeAny( nAdjustedMargin ) );
         }
 
         sal_Int32 nTableWidth = 0;
@@ -651,9 +674,9 @@ TableStyleSheetEntry * DomainMapperTableHandler::endTableGetTableStyle(TableInfo
         m_aTableProperties->Insert( PROP_HEADER_ROW_COUNT, uno::makeAny( sal_Int32(0)), false);
 
         // if table is only a single row, and row is set as don't split, set the same value for the whole table.
-        if( m_aRowProperties.size() == 1 && m_aRowProperties[0].get() )
+        if( m_aRowProperties.size() == 1 && m_aRowProperties[0] )
         {
-            o3tl::optional<PropertyMap::Property> oSplitAllowed = m_aRowProperties[0]->getProperty(PROP_IS_SPLIT_ALLOWED);
+            std::optional<PropertyMap::Property> oSplitAllowed = m_aRowProperties[0]->getProperty(PROP_IS_SPLIT_ALLOWED);
             if( oSplitAllowed )
             {
                 bool bRowCanSplit = true;
@@ -664,6 +687,7 @@ TableStyleSheetEntry * DomainMapperTableHandler::endTableGetTableStyle(TableInfo
         }
 
         rInfo.aTableProperties = m_aTableProperties->GetPropertyValues();
+        rInfo.aTablePropertyIds = m_aTableProperties->GetPropertyIds();
 
 #ifdef DBG_UTIL
         TagLogger::getInstance().startElement("debug.tableprops");
@@ -802,18 +826,18 @@ CellPropertyValuesSeq_t DomainMapperTableHandler::endTableGetCellProperties(Tabl
                     // Apply also possible tblPrEx borders on cells
                     for (const PropertyIds& rBorder : pBorders)
                     {
-                        o3tl::optional<PropertyMap::Property> oStyleCellBorder = pStyleProps->getProperty(rBorder);
-                        o3tl::optional<PropertyMap::Property> oRowCellBorder;
+                        std::optional<PropertyMap::Property> oStyleCellBorder = pStyleProps->getProperty(rBorder);
+                        std::optional<PropertyMap::Property> oRowCellBorder;
                         // we can have table border exception in row properties
                         if (*aRowIter && (*aRowIter)->isSet(rBorder))
                             oRowCellBorder = (*aRowIter)->getProperty(rBorder);
-                        o3tl::optional<PropertyMap::Property> oDirectCellBorder = (*aCellIterator)->getProperty(rBorder);
+                        std::optional<PropertyMap::Property> oDirectCellBorder = (*aCellIterator)->getProperty(rBorder);
                         if (oRowCellBorder && oDirectCellBorder)
                         {
                             table::BorderLine2 aRowCellBorder = oRowCellBorder->second.get<table::BorderLine2>();
                             table::BorderLine2 aDirectCellBorder = oDirectCellBorder->second.get<table::BorderLine2>();
                             if (aRowCellBorder.LineStyle != table::BorderLineStyle::NONE && aDirectCellBorder.LineStyle == table::BorderLineStyle::NONE)
-                                oDirectCellBorder = o3tl::optional<PropertyMap::Property>();
+                                oDirectCellBorder = std::optional<PropertyMap::Property>();
                         }
                         if (oRowCellBorder && !oDirectCellBorder)
                         {
@@ -840,7 +864,7 @@ CellPropertyValuesSeq_t DomainMapperTableHandler::endTableGetCellProperties(Tabl
                             }
                             else
                             {
-                                o3tl::optional<PropertyMap::Property> oTableBorder = rInfo.pTableBorders->getProperty(rBorder);
+                                std::optional<PropertyMap::Property> oTableBorder = rInfo.pTableBorders->getProperty(rBorder);
                                 if (oTableBorder)
                                 {
                                     table::BorderLine2 aTableBorder = oTableBorder->second.get<table::BorderLine2>();
@@ -883,7 +907,17 @@ CellPropertyValuesSeq_t DomainMapperTableHandler::endTableGetCellProperties(Tabl
                 // Do not apply vertical borders to a one column table.
                 else if (m_aCellProperties.size() > 1 && aRowOfCellsIterator->size() <= 1)
                 {
-                    rInfo.pTableBorders->Erase(META_PROP_VERTICAL_BORDER);
+                    bool isOneCol = true;
+                    for (size_t i = nRow; i < m_aCellProperties.size(); i++)
+                    {
+                        if (m_aCellProperties[i].size() > 1)
+                        {
+                            isOneCol = false;
+                            break;
+                        }
+                    }
+                    if (isOneCol)
+                        rInfo.pTableBorders->Erase(META_PROP_VERTICAL_BORDER);
                 }
                 // Do not apply horizontal borders to a one row table.
                 else if (m_aCellProperties.size() == 1 && aRowOfCellsIterator->size() > 1)
@@ -912,7 +946,7 @@ CellPropertyValuesSeq_t DomainMapperTableHandler::endTableGetCellProperties(Tabl
                                                  uno::makeAny(rInfo.nBottomBorderDistance ), false);
 
                 // Horizontal merge is not a UNO property, extract that info here to rMerges, and then remove it from the map.
-                const o3tl::optional<PropertyMap::Property> aHorizontalMergeVal = (*aCellIterator)->getProperty(PROP_HORIZONTAL_MERGE);
+                const std::optional<PropertyMap::Property> aHorizontalMergeVal = (*aCellIterator)->getProperty(PROP_HORIZONTAL_MERGE);
                 if (aHorizontalMergeVal)
                 {
                     if (aHorizontalMergeVal->second.get<bool>())
@@ -1061,6 +1095,116 @@ css::uno::Sequence<css::beans::PropertyValues> DomainMapperTableHandler::endTabl
     return aRowProperties;
 }
 
+// table style has got bigger precedence than docDefault style,
+// but lower precedence than the paragraph styles and direct paragraph formatting
+void DomainMapperTableHandler::ApplyParagraphPropertiesFromTableStyle(TableParagraph rParaProp, std::vector< PropertyIds > aAllTableParaProperties, css::beans::PropertyValues rCellProperties)
+{
+    for( auto const& eId : aAllTableParaProperties )
+    {
+        // apply paragraph and character properties of the table style on table paragraphs
+        // if there is no direct paragraph formatting
+        if ( !rParaProp.m_pPropertyMap->isSet(eId) )
+        {
+            OUString sPropertyName = getPropertyName(eId);
+            auto pCellProp = std::find_if(rCellProperties.begin(), rCellProperties.end(),
+                [&](const beans::PropertyValue& rProp) { return rProp.Name == sPropertyName; });
+            // this cell applies the table style property
+            if (pCellProp != rCellProperties.end())
+            {
+                bool bDocDefault;
+                // handle paragraph background color defined in CellColorHandler
+                if (eId == PROP_FILL_COLOR)
+                {
+                    // table style defines paragraph background color, use the correct property name
+                    auto pFillStyleProp = std::find_if(rCellProperties.begin(), rCellProperties.end(),
+                        [&](const beans::PropertyValue& rProp) { return rProp.Name == "FillStyle"; });
+                    if ( pFillStyleProp != rCellProperties.end() &&
+                         pFillStyleProp->Value == uno::makeAny(drawing::FillStyle_SOLID) )
+                    {
+                        sPropertyName = "ParaBackColor";
+                    }
+                    else
+                    {
+                        // FillStyle_NONE, skip table style usage for paragraph background color
+                        continue;
+                    }
+                }
+                OUString sParaStyleName;
+                rParaProp.m_rPropertySet->getPropertyValue("ParaStyleName") >>= sParaStyleName;
+                StyleSheetEntryPtr pEntry = m_rDMapper_Impl.GetStyleSheetTable()->FindStyleSheetByConvertedStyleName(sParaStyleName);
+                uno::Any aParaStyle = m_rDMapper_Impl.GetPropertyFromStyleSheet(eId, pEntry, true, true, &bDocDefault);
+                // A very strange compatibility rule says that the DEFAULT style's specified fontsize of 11 or 12
+                // or a specified left justify will always be overridden by the table-style.
+                // Normally this rule is applied, so always do this unless a compatSetting indicates otherwise.
+                bool bCompatOverride = false;
+                if ( (eId == PROP_CHAR_HEIGHT || eId == PROP_PARA_ADJUST) && sParaStyleName == m_rDMapper_Impl.GetDefaultParaStyleName() )
+                {
+                    if ( eId == PROP_CHAR_HEIGHT )
+                        bCompatOverride = aParaStyle == uno::Any(double(11)) || aParaStyle == uno::Any(double(12));
+                    else if ( eId == PROP_PARA_ADJUST )
+                    {
+                        style::ParagraphAdjust eAdjust(style::ParagraphAdjust_CENTER);
+                        aParaStyle >>= eAdjust;
+                        bCompatOverride = eAdjust == style::ParagraphAdjust_LEFT;
+                    }
+
+                    // The wording is confusing here. Normally, the paragraph style DOES override the table-style.
+                    // But for these two special situations, do not override the table-style. So the default is false.
+                    // If false, then "CompatOverride" the normal behaviour, and apply the table-style's value.
+                    bCompatOverride &= !m_rDMapper_Impl.GetSettingsTable()->GetCompatSettingValue("overrideTableStyleFontSizeAndJustification");
+                }
+
+                // use table style when no paragraph style setting or a docDefault value is applied instead of it
+                if ( aParaStyle == uno::Any() || bDocDefault || bCompatOverride ) try
+                {
+                    // check property state of paragraph
+                    uno::Reference<text::XParagraphCursor> xParagraph(
+                        rParaProp.m_rEndParagraph->getText()->createTextCursorByRange(rParaProp.m_rEndParagraph), uno::UNO_QUERY_THROW );
+                    // select paragraph
+                    xParagraph->gotoStartOfParagraph( true );
+                    uno::Reference< beans::XPropertyState > xParaProperties( xParagraph, uno::UNO_QUERY_THROW );
+                    if ( xParaProperties->getPropertyState(sPropertyName) == css::beans::PropertyState_DEFAULT_VALUE )
+                    {
+                        if ( eId != PROP_FILL_COLOR )
+                        {
+                            // apply style setting when the paragraph doesn't modify it
+                            rParaProp.m_rPropertySet->setPropertyValue( sPropertyName, pCellProp->Value );
+                        }
+                        else
+                        {
+                            // we need this for complete import of table-style based paragraph background color
+                            rParaProp.m_rPropertySet->setPropertyValue( "FillColor",  pCellProp->Value );
+                            rParaProp.m_rPropertySet->setPropertyValue( "FillStyle",  uno::makeAny(drawing::FillStyle_SOLID) );
+                        }
+                    }
+                    else
+                    {
+                        // apply style setting only on text portions without direct modification of it
+                        uno::Reference<container::XEnumerationAccess> xParaEnumAccess(xParagraph, uno::UNO_QUERY);
+                        uno::Reference<container::XEnumeration> xParaEnum = xParaEnumAccess->createEnumeration();
+                        uno::Reference<container::XEnumerationAccess> xRunEnumAccess(xParaEnum->nextElement(), uno::UNO_QUERY);
+                        uno::Reference<container::XEnumeration> xRunEnum = xRunEnumAccess->createEnumeration();
+                        while ( xRunEnum->hasMoreElements() )
+                        {
+                            uno::Reference<text::XTextRange> xRun(xRunEnum->nextElement(), uno::UNO_QUERY);
+                            uno::Reference< beans::XPropertyState > xRunProperties( xRun, uno::UNO_QUERY_THROW );
+                            if ( xRunProperties->getPropertyState(sPropertyName) == css::beans::PropertyState_DEFAULT_VALUE )
+                            {
+                                 uno::Reference< beans::XPropertySet > xRunPropertySet( xRun, uno::UNO_QUERY_THROW );
+                                 xRunPropertySet->setPropertyValue( sPropertyName, pCellProp->Value );
+                            }
+                        }
+                    }
+                }
+                catch ( const uno::Exception & )
+                {
+                    TOOLS_INFO_EXCEPTION("writerfilter.dmapper", "Exception during table style correction");
+                }
+            }
+        }
+    }
+}
+
 void DomainMapperTableHandler::endTable(unsigned int nestedTableLevel, bool bTableStartsAtCellStart)
 {
 #ifdef DBG_UTIL
@@ -1090,6 +1234,63 @@ void DomainMapperTableHandler::endTable(unsigned int nestedTableLevel, bool bTab
         uno::Reference<text::XTextRange> xEnd;
 
         bool bFloating = !aFrameProperties.empty();
+
+        // OOXML table style may contain paragraph properties, apply these on cell paragraphs
+        if ( m_aTableRanges[0].hasElements() && m_aTableRanges[0][0].hasElements() )
+        {
+            // collect all paragraph properties used in table styles
+            PropertyMapPtr pAllTableProps( new PropertyMap );
+            pAllTableProps->InsertProps(aTableInfo.pTableDefaults);
+            if ( aTableInfo.pTableStyle )
+                pAllTableProps->InsertProps(aTableInfo.pTableStyle->GetProperties( CNF_ALL ));
+            for (const auto& eId : pAllTableProps->GetPropertyIds())
+            {
+                if ( !isParagraphProperty(eId) && !isCharacterProperty(eId) )
+                    pAllTableProps->Erase(eId);
+            }
+            std::vector< PropertyIds > aAllTableParaProperties = pAllTableProps->GetPropertyIds();
+
+            if ( !aAllTableParaProperties.empty() )
+            {
+                TableParagraphVectorPtr pTableParagraphs = m_rDMapper_Impl.getTableManager().getCurrentParagraphs();
+                for (size_t nRow = 0; nRow < m_aTableRanges.size(); ++nRow)
+                {
+                    for (size_t nCell = 0; nCell < m_aTableRanges[nRow].size(); ++nCell)
+                    {
+                        auto rStartPara = m_aTableRanges[nRow][nCell][0];
+                        if (!rStartPara.is())
+                            continue;
+                        auto rEndPara = m_aTableRanges[nRow][nCell][1];
+                        uno::Reference<text::XTextRangeCompare> xTextRangeCompare(rStartPara->getText(), uno::UNO_QUERY);
+                        bool bApply = false;
+                        // search paragraphs of the cell
+                        std::vector<TableParagraph>::iterator aIt = pTableParagraphs->begin();
+                        while ( aIt != pTableParagraphs->end() ) try
+                        {
+                            if (!bApply && xTextRangeCompare->compareRegionStarts(rStartPara, aIt->m_rStartParagraph) == 0)
+                                bApply = true;
+                            if (bApply)
+                            {
+                                bool bEndOfApply = (xTextRangeCompare->compareRegionEnds(rEndPara, aIt->m_rEndParagraph) == 0);
+                                ApplyParagraphPropertiesFromTableStyle(*aIt, aAllTableParaProperties, aCellProperties[nRow][nCell]);
+                                // erase processed paragraph from list of pending paragraphs
+                                aIt = pTableParagraphs->erase(aIt);
+                                if (bEndOfApply)
+                                    break;
+                            }
+                            else
+                                ++aIt;
+                        }
+                        catch( const lang::IllegalArgumentException & )
+                        {
+                            // skip compareRegion with nested tables
+                            ++aIt;
+                        }
+                    }
+                }
+            }
+        }
+
         // Additional checks: if we can do this.
         if (bFloating && m_aTableRanges[0].hasElements() && m_aTableRanges[0][0].hasElements())
         {
@@ -1268,7 +1469,7 @@ void DomainMapperTableHandler::startCell(const css::uno::Reference< css::text::X
                                          const TablePropertyMapPtr& pProps )
 {
     sal_uInt32 nRow = m_aRowProperties.size();
-    if ( pProps.get( ) )
+    if ( pProps )
         m_aCellProperties[nRow - 1].push_back( pProps.get() );
     else
     {
@@ -1283,14 +1484,14 @@ void DomainMapperTableHandler::startCell(const css::uno::Reference< css::text::X
     TagLogger::getInstance().startElement("table.cell.start");
     TagLogger::getInstance().chars(XTextRangeToString(start));
     TagLogger::getInstance().endElement();
-    if (pProps.get())
+    if (pProps)
         pProps->printProperties();
 #endif
 
     //add a new 'row' of properties
     m_aCellRange.clear();
     uno::Reference<text::XTextRange> xStart;
-    if (start.get())
+    if (start)
         xStart = start->getStart();
     m_aCellRange.push_back(xStart);
 }
@@ -1305,7 +1506,7 @@ void DomainMapperTableHandler::endCell(const css::uno::Reference< css::text::XTe
 #endif
 
     uno::Reference<text::XTextRange> xEnd;
-    if (end.get())
+    if (end)
         xEnd = end->getEnd();
     m_aCellRange.push_back(xEnd);
     m_aRowRanges.push_back(comphelper::containerToSequence(m_aCellRange));

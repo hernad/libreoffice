@@ -19,12 +19,13 @@
 
 #include <com/sun/star/document/XDocumentPropertiesSupplier.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
-#include <com/sun/star/beans/XPropertyContainer.hpp>
 #include <com/sun/star/document/XDocumentProperties.hpp>
+#include <ooxml/resourceids.hxx>
 #include "DomainMapper_Impl.hxx"
 #include "ConversionHelper.hxx"
 #include "SdtHelper.hxx"
 #include "DomainMapperTableHandler.hxx"
+#include "TagLogger.hxx"
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <com/sun/star/graphic/XGraphic.hpp>
 #include <com/sun/star/beans/XPropertyState.hpp>
@@ -59,6 +60,7 @@
 #include <com/sun/star/text/XParagraphCursor.hpp>
 #include <com/sun/star/text/XRedline.hpp>
 #include <com/sun/star/text/XTextFieldsSupplier.hpp>
+#include <com/sun/star/text/XTextFrame.hpp>
 #include <com/sun/star/text/RubyPosition.hpp>
 #include <com/sun/star/text/XTextRangeCompare.hpp>
 #include <com/sun/star/style/DropCapFormat.hpp>
@@ -67,8 +69,6 @@
 #include <com/sun/star/util/XNumberFormatter.hpp>
 #include <com/sun/star/document/XViewDataSupplier.hpp>
 #include <com/sun/star/container/XIndexContainer.hpp>
-#include <com/sun/star/awt/XControlModel.hpp>
-#include <com/sun/star/drawing/XControlShape.hpp>
 #include <com/sun/star/text/ControlCharacter.hpp>
 #include <com/sun/star/text/XTextColumns.hpp>
 #include <com/sun/star/awt/CharSet.hpp>
@@ -79,18 +79,16 @@
 #include <oox/mathml/import.hxx>
 #include <xmloff/odffields.hxx>
 #include <rtl/uri.hxx>
-#include "GraphicHelpers.hxx"
 #include <dmapper/GraphicZOrderHelper.hxx>
 
 #include <oox/token/tokens.hxx>
 
 #include <cmath>
+#include <optional>
 #include <map>
 #include <tuple>
 #include <unordered_map>
 
-#include <vcl/svapp.hxx>
-#include <vcl/outdev.hxx>
 #include <officecfg/Office/Common.hxx>
 #include <filter/msfilter/util.hxx>
 #include <comphelper/sequence.hxx>
@@ -99,9 +97,7 @@
 #include <unotools/configmgr.hxx>
 #include <unotools/mediadescriptor.hxx>
 #include <tools/diagnose_ex.h>
-#include <tools/lineend.hxx>
 #include <sal/log.hxx>
-
 
 using namespace ::com::sun::star;
 using namespace oox;
@@ -174,7 +170,7 @@ namespace {
 struct FieldConversion
 {
     const char*     cFieldServiceName;
-    FieldId const   eFieldId;
+    FieldId         eFieldId;
 };
 
 }
@@ -229,7 +225,7 @@ static bool IsFieldNestingAllowed(const FieldContextPtr& pOuter, const FieldCont
 
 uno::Any FloatingTableInfo::getPropertyValue(const OUString &propertyName)
 {
-    for( beans::PropertyValue const & propVal : m_aFrameProperties )
+    for( beans::PropertyValue const & propVal : std::as_const(m_aFrameProperties) )
         if( propVal.Name == propertyName )
             return propVal.Value ;
     return uno::Any() ;
@@ -469,9 +465,7 @@ void DomainMapper_Impl::AddDummyParaForTableInSection()
     if (!m_aTextAppendStack.empty())
     {
         uno::Reference< text::XTextAppend >  xTextAppend = m_aTextAppendStack.top().xTextAppend;
-        uno::Reference< text::XTextCursor > xCrsr = xTextAppend->getText()->createTextCursor();
-        uno::Reference< text::XText > xText = xTextAppend->getText();
-        if(xCrsr.is() && xText.is())
+        if (xTextAppend.is())
         {
             xTextAppend->finishParagraph(  uno::Sequence< beans::PropertyValue >() );
             SetIsDummyParaAddedForTableInSection(true);
@@ -687,6 +681,13 @@ void    DomainMapper_Impl::PopProperties(ContextType eId)
         deferredCharacterProperties.clear();
     }
 
+    if (!IsInFootOrEndnote() && IsInCustomFootnote() && !m_aPropertyStacks[eId].empty())
+    {
+        PropertyMapPtr pRet = m_aPropertyStacks[eId].top();
+        if (pRet->GetFootnote().is() && m_pFootnoteContext.is())
+            EndCustomFootnote();
+    }
+
     m_aPropertyStacks[eId].pop();
     m_aContextStack.pop();
     if(!m_aContextStack.empty() && !m_aPropertyStacks[m_aContextStack.top()].empty())
@@ -800,16 +801,19 @@ OUString DomainMapper_Impl::GetDefaultParaStyleName()
     return m_sDefaultParaStyleName;
 }
 
-uno::Any DomainMapper_Impl::GetPropertyFromStyleSheet(PropertyIds eId, StyleSheetEntryPtr pEntry, const bool bDocDefaults, const bool bPara)
+uno::Any DomainMapper_Impl::GetPropertyFromStyleSheet(PropertyIds eId, StyleSheetEntryPtr pEntry, const bool bDocDefaults, const bool bPara, bool* pIsDocDefault)
 {
-    while(pEntry.get( ) )
+    while(pEntry)
     {
         if(pEntry->pProperties)
         {
-            o3tl::optional<PropertyMap::Property> aProperty =
+            std::optional<PropertyMap::Property> aProperty =
                     pEntry->pProperties->getProperty(eId);
             if( aProperty )
             {
+                if (pIsDocDefault)
+                    *pIsDocDefault = pEntry->pProperties->isDocDefault(eId);
+
                 return aProperty->second;
             }
         }
@@ -831,9 +835,14 @@ uno::Any DomainMapper_Impl::GetPropertyFromStyleSheet(PropertyIds eId, StyleShee
         const PropertyMapPtr& pDefaultParaProps = GetStyleSheetTable()->GetDefaultParaProps();
         if ( pDefaultParaProps )
         {
-            o3tl::optional<PropertyMap::Property> aProperty = pDefaultParaProps->getProperty(eId);
+            std::optional<PropertyMap::Property> aProperty = pDefaultParaProps->getProperty(eId);
             if ( aProperty )
+            {
+                if (pIsDocDefault)
+                    *pIsDocDefault = true;
+
                 return aProperty->second;
+            }
         }
     }
     if ( bDocDefaults && isCharacterProperty(eId) )
@@ -841,11 +850,20 @@ uno::Any DomainMapper_Impl::GetPropertyFromStyleSheet(PropertyIds eId, StyleShee
         const PropertyMapPtr& pDefaultCharProps = GetStyleSheetTable()->GetDefaultCharProps();
         if ( pDefaultCharProps )
         {
-            o3tl::optional<PropertyMap::Property> aProperty = pDefaultCharProps->getProperty(eId);
+            std::optional<PropertyMap::Property> aProperty = pDefaultCharProps->getProperty(eId);
             if ( aProperty )
+            {
+                if (pIsDocDefault)
+                    *pIsDocDefault = true;
+
                 return aProperty->second;
+            }
         }
     }
+
+    if (pIsDocDefault)
+        *pIsDocDefault = false;
+
     return uno::Any();
 }
 
@@ -876,7 +894,7 @@ uno::Any DomainMapper_Impl::GetAnyProperty(PropertyIds eId, const PropertyMapPtr
     // first look in directly applied attributes
     if ( rContext )
     {
-        o3tl::optional<PropertyMap::Property> aProperty = rContext->getProperty(eId);
+        std::optional<PropertyMap::Property> aProperty = rContext->getProperty(eId);
         if ( aProperty )
             return aProperty->second;
     }
@@ -891,6 +909,12 @@ uno::Any DomainMapper_Impl::GetAnyProperty(PropertyIds eId, const PropertyMapPtr
 
     // then look in current paragraph style, and docDefaults
     return GetPropertyFromParaStyleSheet(eId);
+}
+
+OUString DomainMapper_Impl::GetListStyleName(sal_Int32 nListId)
+{
+    auto const pList(GetListTable()->GetList( nListId ));
+    return pList ? pList->GetStyleName() : OUString();
 }
 
 ListsManager::Pointer const & DomainMapper_Impl::GetListTable()
@@ -1034,7 +1058,7 @@ static void lcl_AddRangeAndStyle(
     pToBeSavedProperties->SetStartingRange(xParaCursor->getStart());
     if(pPropertyMap)
     {
-        o3tl::optional<PropertyMap::Property> aParaStyle = pPropertyMap->getProperty(PROP_PARA_STYLE_NAME);
+        std::optional<PropertyMap::Property> aParaStyle = pPropertyMap->getProperty(PROP_PARA_STYLE_NAME);
         if( aParaStyle )
         {
             OUString sName;
@@ -1056,7 +1080,7 @@ void DomainMapper_Impl::CheckUnregisteredFrameConversion( )
         return;
     TextAppendContext& rAppendContext = m_aTextAppendStack.top();
     // n#779642: ignore fly frame inside table as it could lead to messy situations
-    if (!rAppendContext.pLastParagraphProperties.get())
+    if (!rAppendContext.pLastParagraphProperties)
         return;
     if (!rAppendContext.pLastParagraphProperties->IsFrameMode())
         return;
@@ -1071,7 +1095,7 @@ void DomainMapper_Impl::CheckUnregisteredFrameConversion( )
 
         std::vector<beans::PropertyValue> aFrameProperties;
 
-        if ( pParaStyle.get( ) )
+        if ( pParaStyle )
         {
             const ParagraphProperties* pStyleProperties = dynamic_cast<const ParagraphProperties*>( pParaStyle->pProperties.get() );
             if (!pStyleProperties)
@@ -1146,7 +1170,7 @@ void DomainMapper_Impl::CheckUnregisteredFrameConversion( )
             aFrameProperties.push_back(comphelper::makePropertyValue(getPropertyName(PROP_VERT_ORIENT_RELATION), sal_Int16(
                 rAppendContext.pLastParagraphProperties->GetvAnchor() >= 0 ?
                     rAppendContext.pLastParagraphProperties->GetvAnchor() :
-                    pStyleProperties->GetvAnchor() >= 0 ? pStyleProperties->GetvAnchor() : text::RelOrientation::FRAME )));
+                    pStyleProperties->GetvAnchor() >= 0 ? pStyleProperties->GetvAnchor() : text::RelOrientation::PAGE_PRINT_AREA )));
 
             aFrameProperties.push_back(comphelper::makePropertyValue(getPropertyName(PROP_SURROUND),
                 rAppendContext.pLastParagraphProperties->GetWrap() != text::WrapTextMode::WrapTextMode_MAKE_FIXED_SIZE
@@ -1345,34 +1369,62 @@ void DomainMapper_Impl::finishParagraph( const PropertyMapPtr& pPropertyMap, con
 #endif
 
     const StyleSheetEntryPtr pEntry = GetStyleSheetTable()->FindStyleSheetByConvertedStyleName( GetCurrentParaStyleName() );
-    OSL_ENSURE( pEntry.get(), "no style sheet found" );
+    OSL_ENSURE( pEntry, "no style sheet found" );
     const StyleSheetPropertyMap* pStyleSheetProperties = dynamic_cast<const StyleSheetPropertyMap*>(pEntry ? pEntry->pProperties.get() : nullptr);
     bool isNumberingViaStyle(false);
-    //apply numbering to paragraph if it was set at the style, but only if the paragraph itself
-    //does not specify the numbering
-    if ( !bRemove && pStyleSheetProperties && pParaContext && !pParaContext->isSet(PROP_NUMBERING_RULES) )
+    bool isNumberingViaRule = pParaContext && pParaContext->GetListId() > -1;
+    sal_Int32 nListId = -1;
+    if ( !bRemove && pStyleSheetProperties && pParaContext )
     {
+        //apply numbering level/style to paragraph if it was set at the style, but only if the paragraph itself
+        //does not specify the numbering
+        const sal_Int16 nListLevel = pStyleSheetProperties->GetListLevel();
+        if ( !isNumberingViaRule && nListLevel >= 0 )
+            pParaContext->Insert( PROP_NUMBERING_LEVEL, uno::makeAny(nListLevel), false );
+
         bool bNumberingFromBaseStyle = false;
-        sal_Int32 nListId = pEntry ? lcl_getListId(pEntry, GetStyleSheetTable(), bNumberingFromBaseStyle) : -1;
+        nListId = pEntry ? lcl_getListId(pEntry, GetStyleSheetTable(), bNumberingFromBaseStyle) : -1;
         auto const pList(GetListTable()->GetList(nListId));
         if (pList && nListId >= 0 && !pParaContext->isSet(PROP_NUMBERING_STYLE_NAME))
         {
-            pParaContext->Insert( PROP_NUMBERING_STYLE_NAME, uno::makeAny( pList->GetStyleName(nListId) ), false);
-            isNumberingViaStyle = true;
+            if ( !isNumberingViaRule )
+            {
+                isNumberingViaStyle = true;
+                // Since LO7.0/tdf#131321 fixed the loss of numbering in styles, this OUGHT to be obsolete,
+                // but now other new/critical LO7.0 code expects it, and perhaps some corner cases still need it as well.
+                pParaContext->Insert( PROP_NUMBERING_STYLE_NAME, uno::makeAny(pList->GetStyleName()), true );
+            }
+            else if ( !pList->isOutlineNumbering(nListLevel) )
+            {
+                // After ignoring anything related to the special Outline levels,
+                // we have direct numbering, as well as paragraph-style numbering.
+                // Apply the style if it uses the same list as the direct numbering,
+                // otherwise the directly-applied-to-paragraph status will be lost,
+                // and the priority of the numbering-style-indents will be lowered. tdf#133000
+                if ( nListId == pParaContext->GetListId() )
+                    pParaContext->Insert( PROP_NUMBERING_STYLE_NAME, uno::makeAny(pList->GetStyleName()), true );
+            }
+        }
 
-            // Indent properties from the paragraph style have priority
-            // over the ones from the numbering styles in Word
-            // but in Writer numbering styles have priority,
-            // so insert directly into the paragraph properties to compensate.
-            o3tl::optional<PropertyMap::Property> oProperty;
+        if ( isNumberingViaStyle )
+        {
+            // When numbering is defined by the paragraph style, then the para-style indents have priority.
+            // But since import has just copied para-style's PROP_NUMBERING_STYLE_NAME directly onto the paragraph,
+            // the numbering indents now have the priority.
+            // So now import must also copy the para-style indents directly onto the paragraph to compensate.
+            std::optional<PropertyMap::Property> oProperty;
             const StyleSheetEntryPtr pParent = (!pEntry->sBaseStyleIdentifier.isEmpty()) ? GetStyleSheetTable()->FindStyleSheetByISTD(pEntry->sBaseStyleIdentifier) : nullptr;
             const StyleSheetPropertyMap* pParentProperties = dynamic_cast<const StyleSheetPropertyMap*>(pParent ? pParent->pProperties.get() : nullptr);
             if (!pEntry->sBaseStyleIdentifier.isEmpty())
-                if ( (oProperty = pStyleSheetProperties->getProperty(PROP_PARA_FIRST_LINE_INDENT))
+            {
+                oProperty = pStyleSheetProperties->getProperty(PROP_PARA_FIRST_LINE_INDENT);
+                if ( oProperty
                     // If the numbering comes from a base style, indent of the base style has also priority.
                     || (bNumberingFromBaseStyle && pParentProperties && (oProperty = pParentProperties->getProperty(PROP_PARA_FIRST_LINE_INDENT))) )
                     pParaContext->Insert(PROP_PARA_FIRST_LINE_INDENT, oProperty->second, /*bOverwrite=*/false);
-            if ( (oProperty = pStyleSheetProperties->getProperty(PROP_PARA_LEFT_MARGIN))
+            }
+            oProperty = pStyleSheetProperties->getProperty(PROP_PARA_LEFT_MARGIN);
+            if ( oProperty
                 || (bNumberingFromBaseStyle && pParentProperties && (oProperty = pParentProperties->getProperty(PROP_PARA_LEFT_MARGIN))) )
                 pParaContext->Insert(PROP_PARA_LEFT_MARGIN, oProperty->second, /*bOverwrite=*/false);
 
@@ -1381,8 +1433,8 @@ void DomainMapper_Impl::finishParagraph( const PropertyMapPtr& pPropertyMap, con
             if  ( pParentProperties && (oProperty = pParentProperties->getProperty(PROP_PARA_RIGHT_MARGIN)) && (nParaRightMargin = oProperty->second.get<sal_Int32>()) != 0 )
             {
                 // If we're setting the right margin, we should set the first / left margin as well from the numbering style.
-                const sal_Int32 nFirstLineIndent = getNumberingProperty(nListId, pStyleSheetProperties->GetListLevel(), "FirstLineIndent");
-                const sal_Int32 nParaLeftMargin  = getNumberingProperty(nListId, pStyleSheetProperties->GetListLevel(), "IndentAt");
+                const sal_Int32 nFirstLineIndent = getNumberingProperty(nListId, nListLevel, "FirstLineIndent");
+                const sal_Int32 nParaLeftMargin  = getNumberingProperty(nListId, nListLevel, "IndentAt");
                 if (nFirstLineIndent != 0)
                     pParaContext->Insert(PROP_PARA_FIRST_LINE_INDENT, uno::makeAny(nFirstLineIndent), /*bOverwrite=*/false);
                 if (nParaLeftMargin != 0)
@@ -1391,9 +1443,6 @@ void DomainMapper_Impl::finishParagraph( const PropertyMapPtr& pPropertyMap, con
                 pParaContext->Insert(PROP_PARA_RIGHT_MARGIN, uno::makeAny(nParaRightMargin), /*bOverwrite=*/false);
             }
         }
-
-        if ( pStyleSheetProperties->GetListLevel() >= 0 )
-            pParaContext->Insert( PROP_NUMBERING_LEVEL, uno::makeAny(pStyleSheetProperties->GetListLevel()), false);
     }
 
     // apply AutoSpacing: it has priority over all other margin settings
@@ -1479,7 +1528,7 @@ void DomainMapper_Impl::finishParagraph( const PropertyMapPtr& pPropertyMap, con
                 sal_Int32 nCount = xParaCursor->getString().getLength();
                 pToBeSavedProperties->SetDropCapLength(nCount > 0 && nCount < 255 ? static_cast<sal_Int8>(nCount) : 1);
             }
-            if( rAppendContext.pLastParagraphProperties.get() )
+            if( rAppendContext.pLastParagraphProperties )
             {
                 if( sal::static_int_cast<Id>(rAppendContext.pLastParagraphProperties->GetDropCap()) != NS_ooxml::LN_Value_doc_ST_DropCap_none)
                 {
@@ -1524,12 +1573,12 @@ void DomainMapper_Impl::finishParagraph( const PropertyMapPtr& pPropertyMap, con
                 }
             }
             std::vector<beans::PropertyValue> aProperties;
-            if (pPropertyMap.get())
+            if (pPropertyMap)
             {
                 aProperties = comphelper::sequenceToContainer< std::vector<beans::PropertyValue> >(pPropertyMap->GetPropertyValues());
             }
             // TODO: this *should* work for RTF but there are test failures, maybe rtftok doesn't distinguish between formatting for the paragraph marker and for the paragraph as a whole; needs investigation
-            if (pPropertyMap.get() && IsOOXMLImport())
+            if (pPropertyMap && IsOOXMLImport())
             {
                 // tdf#64222 filter out the "paragraph marker" formatting and
                 // set it as a separate paragraph property, not a empty hint at
@@ -1570,7 +1619,7 @@ void DomainMapper_Impl::finishParagraph( const PropertyMapPtr& pPropertyMap, con
                 {
                     xTextRange = xTextAppend->finishParagraphInsert( comphelper::containerToSequence(aProperties), rAppendContext.xInsertPosition );
                     rAppendContext.xCursor->gotoNextParagraph(false);
-                    if (rAppendContext.pLastParagraphProperties.get())
+                    if (rAppendContext.pLastParagraphProperties)
                         rAppendContext.pLastParagraphProperties->SetEndingRange(xTextRange->getEnd());
                 }
                 else
@@ -1595,25 +1644,45 @@ void DomainMapper_Impl::finishParagraph( const PropertyMapPtr& pPropertyMap, con
                     {
                         return rValue.Name == "NumberingRules";
                     });
-                    if (itNumberingRules != aProperties.end())
+
+                    assert( isNumberingViaRule == (itNumberingRules != aProperties.end()) );
+                    isNumberingViaRule = (itNumberingRules != aProperties.end());
+                    if (m_xPreviousParagraph.is() && (isNumberingViaRule || isNumberingViaStyle))
                     {
                         // This textnode has numbering. Look up the numbering style name of the current and previous paragraph.
-                        OUString aCurrentNumberingRuleName;
-                        uno::Reference<container::XNamed> xCurrentNumberingRules(itNumberingRules->Value, uno::UNO_QUERY);
-                        if (xCurrentNumberingRules.is())
-                            aCurrentNumberingRuleName = xCurrentNumberingRules->getName();
-                        OUString aPreviousNumberingRuleName;
-                        if (m_xPreviousParagraph.is())
+                        OUString aCurrentNumberingName;
+                        OUString aPreviousNumberingName;
+                        if (isNumberingViaRule)
                         {
-                            uno::Reference<container::XNamed> xPreviousNumberingRules(m_xPreviousParagraph->getPropertyValue("NumberingRules"), uno::UNO_QUERY);
-                            if (xPreviousNumberingRules.is())
-                                aPreviousNumberingRuleName = xPreviousNumberingRules->getName();
+                            uno::Reference<container::XNamed> xCurrentNumberingRules(itNumberingRules->Value, uno::UNO_QUERY);
+                            if (xCurrentNumberingRules.is())
+                                aCurrentNumberingName = xCurrentNumberingRules->getName();
+                            if (m_xPreviousParagraph.is())
+                            {
+                                uno::Reference<container::XNamed> xPreviousNumberingRules(m_xPreviousParagraph->getPropertyValue("NumberingRules"), uno::UNO_QUERY);
+                                if (xPreviousNumberingRules.is())
+                                    aPreviousNumberingName = xPreviousNumberingRules->getName();
+                            }
+                        }
+                        else if ( m_xPreviousParagraph->getPropertySetInfo()->hasPropertyByName("NumberingStyleName") &&
+                                // don't update before tables
+                                (m_nTableDepth == 0 || !m_bFirstParagraphInCell))
+                        {
+                            aCurrentNumberingName = GetListStyleName(nListId);
+                            m_xPreviousParagraph->getPropertyValue("NumberingStyleName") >>= aPreviousNumberingName;
                         }
 
-                        if (!aPreviousNumberingRuleName.isEmpty() && aCurrentNumberingRuleName == aPreviousNumberingRuleName)
+                        if (!aPreviousNumberingName.isEmpty() && aCurrentNumberingName == aPreviousNumberingName)
                         {
+                            uno::Sequence<beans::PropertyValue> aPrevPropertiesSeq;
+                            m_xPreviousParagraph->getPropertyValue("ParaInteropGrabBag") >>= aPrevPropertiesSeq;
+                            auto aPrevProperties = comphelper::sequenceToContainer< std::vector<beans::PropertyValue> >(aPrevPropertiesSeq);
+                            bool bParaAutoBefore = m_bParaAutoBefore || std::any_of(aPrevProperties.begin(), aPrevProperties.end(), [](const beans::PropertyValue& rValue)
+                            {
+                                    return rValue.Name == "ParaTopMarginBeforeAutoSpacing";
+                            });
                             // There was a previous textnode and it had the same numbering.
-                            if (m_bParaAutoBefore)
+                            if (bParaAutoBefore)
                             {
                                 // This before spacing is set to auto, set before space to 0.
                                 auto itParaTopMargin = std::find_if(aProperties.begin(), aProperties.end(), [](const beans::PropertyValue& rValue)
@@ -1625,9 +1694,7 @@ void DomainMapper_Impl::finishParagraph( const PropertyMapPtr& pPropertyMap, con
                                 else
                                     aProperties.push_back(comphelper::makePropertyValue("ParaTopMargin", static_cast<sal_Int32>(0)));
                             }
-                            uno::Sequence<beans::PropertyValue> aPrevPropertiesSeq;
-                            m_xPreviousParagraph->getPropertyValue("ParaInteropGrabBag") >>= aPrevPropertiesSeq;
-                            auto aPrevProperties = comphelper::sequenceToContainer< std::vector<beans::PropertyValue> >(aPrevPropertiesSeq);
+
                             bool bPrevParaAutoAfter = std::any_of(aPrevProperties.begin(), aPrevProperties.end(), [](const beans::PropertyValue& rValue)
                             {
                                 return rValue.Name == "ParaBottomMarginAfterAutoSpacing";
@@ -1644,13 +1711,15 @@ void DomainMapper_Impl::finishParagraph( const PropertyMapPtr& pPropertyMap, con
                     m_xPreviousParagraph.set(xTextRange, uno::UNO_QUERY);
 
                     if (m_xPreviousParagraph.is() && // null for SvxUnoTextBase
-                        (isNumberingViaStyle || itNumberingRules != aProperties.end()))
+                        (isNumberingViaStyle || isNumberingViaRule))
                     {
                         assert(dynamic_cast<ParagraphPropertyMap*>(pPropertyMap.get()));
-                        sal_Int32 const nListId( isNumberingViaStyle
-                            ? pStyleSheetProperties->GetListId()
+                        // Use lcl_getListId(), so we find the list ID in parent styles as well.
+                        bool bNumberingFromBaseStyle = false;
+                        sal_Int32 const nListId2( isNumberingViaStyle
+                            ? lcl_getListId(pEntry, GetStyleSheetTable(), bNumberingFromBaseStyle)
                             : static_cast<ParagraphPropertyMap*>(pPropertyMap.get())->GetListId());
-                        if (ListDef::Pointer const& pList = m_pListTable->GetList(nListId))
+                        if (ListDef::Pointer const& pList = m_pListTable->GetList(nListId2))
                         {   // styles could refer to non-existing lists...
                             AbstractListDef::Pointer const& pAbsList =
                                     pList->GetAbstractDefinition();
@@ -1665,6 +1734,22 @@ void DomainMapper_Impl::finishParagraph( const PropertyMapPtr& pPropertyMap, con
                                 if (listId != paraId)
                                 {
                                     m_xPreviousParagraph->setPropertyValue("ListId", uno::makeAny(listId));
+                                }
+                            }
+                            if (pList->GetCurrentLevel())
+                            {
+                                sal_Int16 nOverrideLevel = pList->GetCurrentLevel()->GetStartOverride();
+                                if (nOverrideLevel != -1 && m_aListOverrideApplied.find(nListId2) == m_aListOverrideApplied.end())
+                                {
+                                    // Apply override: we have override instruction for this level
+                                    // And this was not done for this list before: we can do this only once on first occurrence
+                                    // of list with override
+                                    // TODO: Not tested variant with different levels override in different lists.
+                                    // Probably m_aListOverrideApplied as a set of overridden listids is not sufficient
+                                    // and we need to register level overrides separately.
+                                    m_xPreviousParagraph->setPropertyValue("ParaIsNumberingRestart", uno::makeAny(true));
+                                    m_xPreviousParagraph->setPropertyValue("NumberingStartValue", uno::makeAny(nOverrideLevel));
+                                    m_aListOverrideApplied.insert(nListId2);
                                 }
                             }
                         }
@@ -1722,12 +1807,55 @@ void DomainMapper_Impl::finishParagraph( const PropertyMapPtr& pPropertyMap, con
 
                     xCur->goLeft( 1 , true );
                     // Extend the redline ranges for empty paragraphs
-                    if ( !m_bParaChanged && m_previousRedline.get() )
+                    if ( !m_bParaChanged && m_previousRedline )
                         CreateRedline( xCur, m_previousRedline );
                     CheckParaMarkerRedline( xCur );
                 }
 
                 css::uno::Reference<css::beans::XPropertySet> xParaProps(xTextRange, uno::UNO_QUERY);
+
+                // table style precedence and not hidden shapes anchored to hidden empty table paragraphs
+                if (xParaProps && (m_nTableDepth > 0 || !m_aAnchoredObjectAnchors.empty()) )
+                {
+                    // table style has got bigger precedence than docDefault style
+                    // collect these pending paragraph properties to process in endTable()
+                    uno::Reference<text::XTextCursor> xCur = xTextRange->getText( )->createTextCursor( );
+                    xCur->gotoEnd(false);
+                    xCur->goLeft(1, false);
+                    uno::Reference<text::XTextCursor> xCur2 =  xTextRange->getText()->createTextCursorByRange(xCur);
+                    uno::Reference<text::XParagraphCursor> xParaCursor(xCur2, uno::UNO_QUERY_THROW);
+                    xParaCursor->gotoStartOfParagraph(false);
+                    if (m_nTableDepth > 0)
+                    {
+                        TableParagraph aPending{xParaCursor, xCur, pParaContext, xParaProps};
+                        getTableManager().getCurrentParagraphs()->push_back(aPending);
+                    }
+
+                    // hidden empty paragraph with a not hidden shape, set as not hidden
+                    std::optional<PropertyMap::Property> pHidden;
+                    if ( !m_aAnchoredObjectAnchors.empty() && (pHidden = pParaContext->getProperty(PROP_CHAR_HIDDEN)) )
+                    {
+                        bool bIsHidden = {}; // -Werror=maybe-uninitialized
+                        pHidden->second >>= bIsHidden;
+                        if (bIsHidden)
+                        {
+                            bIsHidden = false;
+                            pHidden = GetTopContext()->getProperty(PROP_CHAR_HIDDEN);
+                            if (pHidden)
+                                pHidden->second >>= bIsHidden;
+                            if (!bIsHidden)
+                            {
+                                uno::Reference<text::XTextCursor> xCur3 =  xTextRange->getText()->createTextCursorByRange(xParaCursor);
+                                xCur3->goRight(1, true);
+                                if (xCur3->getString() == SAL_NEWLINE_STRING)
+                                {
+                                    uno::Reference< beans::XPropertySet > xProp( xCur3, uno::UNO_QUERY );
+                                    xProp->setPropertyValue(getPropertyName(PROP_CHAR_HIDDEN), uno::makeAny(false));
+                                }
+                            }
+                        }
+                    }
+                }
 
                 // tdf#118521 set paragraph top or bottom margin based on the paragraph style
                 // if we already set the other margin with direct formatting
@@ -1736,7 +1864,7 @@ void DomainMapper_Impl::finishParagraph( const PropertyMapPtr& pPropertyMap, con
                     const bool bTopSet = pParaContext->isSet(PROP_PARA_TOP_MARGIN);
                     const bool bBottomSet = pParaContext->isSet(PROP_PARA_BOTTOM_MARGIN);
                     const bool bContextSet = pParaContext->isSet(PROP_PARA_CONTEXT_MARGIN);
-                    if ( !(bTopSet == bBottomSet && bBottomSet == bContextSet) )
+                    if ( bTopSet != bBottomSet || bBottomSet != bContextSet )
                     {
 
                         if ( !bTopSet )
@@ -1766,13 +1894,19 @@ void DomainMapper_Impl::finishParagraph( const PropertyMapPtr& pPropertyMap, con
                     const bool bLeftSet  = pParaContext->isSet(PROP_PARA_LEFT_MARGIN);
                     const bool bRightSet = pParaContext->isSet(PROP_PARA_RIGHT_MARGIN);
                     const bool bFirstSet = pParaContext->isSet(PROP_PARA_FIRST_LINE_INDENT);
-                    if ( !(bLeftSet == bRightSet && bRightSet == bFirstSet) )
+                    if ( bLeftSet != bRightSet || bRightSet != bFirstSet )
                     {
                         if ( !bLeftSet )
                         {
                             uno::Any aMargin = GetPropertyFromParaStyleSheet(PROP_PARA_LEFT_MARGIN);
                             if ( aMargin != uno::Any() )
                                 xParaProps->setPropertyValue("ParaLeftMargin", aMargin);
+                            else if (isNumberingViaStyle)
+                            {
+                                const sal_Int32 nParaLeftMargin = getNumberingProperty(nListId, pStyleSheetProperties->GetListLevel(), "IndentAt");
+                                if (nParaLeftMargin != 0)
+                                    xParaProps->setPropertyValue("ParaLeftMargin", uno::makeAny(nParaLeftMargin));
+                            }
                         }
                         if ( !bRightSet )
                         {
@@ -1785,21 +1919,33 @@ void DomainMapper_Impl::finishParagraph( const PropertyMapPtr& pPropertyMap, con
                             uno::Any aMargin = GetPropertyFromParaStyleSheet(PROP_PARA_FIRST_LINE_INDENT);
                             if ( aMargin != uno::Any() )
                                 xParaProps->setPropertyValue("ParaFirstLineIndent", aMargin);
+                            else if (isNumberingViaStyle)
+                            {
+                                const sal_Int32 nFirstLineIndent = getNumberingProperty(nListId, pStyleSheetProperties->GetListLevel(), "FirstLineIndent");
+                                if (nFirstLineIndent != 0)
+                                    xParaProps->setPropertyValue("ParaFirstLineIndent", uno::makeAny(nFirstLineIndent));
+                            }
                         }
                     }
                 }
 
                 // fix table paragraph properties
-                if ( xParaProps && m_nTableDepth > 0 )
+                if ( xTextRange.is() && xParaProps && m_nTableDepth > 0 )
                 {
-                    uno::Sequence< beans::PropertyValue > aValues = pParaContext->GetPropertyValues(false);
-
+                    uno::Sequence< beans::PropertyValue > aParaProps = pParaContext->GetPropertyValues(false);
+                    uno::Reference<text::XTextCursor> xCur =  xTextRange->getText()->createTextCursorByRange(xTextRange);
+                    uno::Reference< beans::XPropertyState > xRunProperties( xCur, uno::UNO_QUERY_THROW );
                     // tdf#90069 in tables, apply paragraph level character style also on
                     // paragraph level to support its copy during insertion of new table rows
-                    for( const auto& rProp : std::as_const(aValues) )
+                    for( const auto& rParaProp : std::as_const(aParaProps) )
                     {
-                        if ( rProp.Name.startsWith("Char") && rProp.Name != "CharStyleName" && rProp.Name != "CharInteropGrabBag" )
-                            xParaProps->setPropertyValue( rProp.Name, rProp.Value );
+                        if ( rParaProp.Name.startsWith("Char") && rParaProp.Name != "CharStyleName" && rParaProp.Name != "CharInteropGrabBag" &&
+                            // all text portions contain the same value, so next setPropertyValue() won't overwrite part of them
+                            xRunProperties->getPropertyState(rParaProp.Name) == css::beans::PropertyState_DIRECT_VALUE )
+                        {
+                            uno::Reference<beans::XPropertySet> xRunPropertySet(xCur, uno::UNO_QUERY);
+                            xParaProps->setPropertyValue( rParaProp.Name, xRunPropertySet->getPropertyValue(rParaProp.Name) );
+                        }
                     }
 
                     // tdf#128959 table paragraphs haven't got window and orphan controls
@@ -1835,7 +1981,7 @@ void DomainMapper_Impl::finishParagraph( const PropertyMapPtr& pPropertyMap, con
         SetIsFirstParagraphInSection(false);
         // count first not deleted paragraph as first paragraph in section to avoid of
         // its deletion later, resulting loss of the associated page break
-        if (!m_previousRedline.get())
+        if (!m_previousRedline)
         {
             SetIsFirstParagraphInSectionAfterRedline(false);
             SetIsLastParagraphInSection(false);
@@ -1874,11 +2020,6 @@ void DomainMapper_Impl::appendTextPortion( const OUString& rString, const Proper
 
     if (m_aTextAppendStack.empty())
         return;
-
-    // not a table-only header, don't avoid of floating tables
-    if (m_eInHeaderFooterImport == HeaderFooterImportState::header && !IsInShape() && hasTableManager() && !getTableManager().isInCell())
-        getTableManager().setIsUnfloatTable(false);
-
     // Before placing call to processDeferredCharacterProperties(), TopContextType should be CONTEXT_CHARACTER
     // processDeferredCharacterProperties() invokes only if character inserted
     if( pPropertyMap == m_pTopContext && !deferredCharacterProperties.empty() && (GetTopContextType() == CONTEXT_CHARACTER) )
@@ -1962,7 +2103,7 @@ void DomainMapper_Impl::appendTextPortion( const OUString& rString, const Proper
             }
 
             // reset moveFrom data of non-terminating runs of the paragraph
-            if ( m_pParaMarkerRedlineMoveFrom.get( ) )
+            if ( m_pParaMarkerRedlineMoveFrom )
             {
                 m_pParaMarkerRedlineMoveFrom.clear();
             }
@@ -2132,15 +2273,21 @@ void DomainMapper_Impl::appendStarMath( const Value& val )
                 uno::makeAny( sal_Int32(size.Height())));
             // mimic the treatment of graphics here... it seems anchoring as character
             // gives a better ( visually ) result
-            xStarMathProperties->setPropertyValue(getPropertyName( PROP_ANCHOR_TYPE ),
-                uno::makeAny( text::TextContentAnchorType_AS_CHARACTER ) );
-            appendTextContent( xStarMath, uno::Sequence< beans::PropertyValue >() );
+            appendTextContent(xStarMath, uno::Sequence<beans::PropertyValue>());
+            xStarMathProperties->setPropertyValue(getPropertyName(PROP_ANCHOR_TYPE),
+                    uno::makeAny(text::TextContentAnchorType_AS_CHARACTER));
         }
         catch( const uno::Exception& )
         {
             OSL_FAIL( "Exception in creation of StarMath object" );
         }
     }
+}
+
+void DomainMapper_Impl::adjustLastPara(sal_Int8 nAlign)
+{
+    PropertyMapPtr pLastPara = GetTopContextOfType(dmapper::CONTEXT_PARAGRAPH);
+    pLastPara->Insert(PROP_PARA_ADJUST, uno::makeAny(nAlign), true);
 }
 
 uno::Reference< beans::XPropertySet > DomainMapper_Impl::appendTextSectionAfter(
@@ -2225,10 +2372,6 @@ void DomainMapper_Impl::PushPageHeaderFooter(bool bHeader, SectionPropertyMap::P
 
     m_eInHeaderFooterImport
         = bHeader ? HeaderFooterImportState::header : HeaderFooterImportState::footer;
-
-    // ignore <w:tblpPr> in table-only header, that table is imported as non-floating one
-    if (bHeader && hasTableManager())
-        getTableManager().setIsUnfloatTable(true);
 
     //get the section context
     PropertyMapPtr pContext = DomainMapper_Impl::GetTopContextOfType(CONTEXT_SECTION);
@@ -2329,7 +2472,7 @@ void DomainMapper_Impl::PushFootOrEndnote( bool bIsFootnote )
         // This adds a hack on top of the following hack to save the style name in the context.
         PropertyMapPtr pTopContext = GetTopContext();
         OUString sFootnoteCharStyleName;
-        o3tl::optional< PropertyMap::Property > aProp = pTopContext->getProperty(PROP_CHAR_STYLE_NAME);
+        std::optional< PropertyMap::Property > aProp = pTopContext->getProperty(PROP_CHAR_STYLE_NAME);
         if (aProp)
             aProp->second >>= sFootnoteCharStyleName;
 
@@ -2372,7 +2515,7 @@ void DomainMapper_Impl::PushFootOrEndnote( bool bIsFootnote )
 void DomainMapper_Impl::CreateRedline(uno::Reference<text::XTextRange> const& xRange,
         const RedlineParamsPtr& pRedline)
 {
-    if ( pRedline.get( ) )
+    if ( pRedline )
     {
         try
         {
@@ -2427,22 +2570,22 @@ void DomainMapper_Impl::CreateRedline(uno::Reference<text::XTextRange> const& xR
 
 void DomainMapper_Impl::CheckParaMarkerRedline( uno::Reference< text::XTextRange > const& xRange )
 {
-    if ( m_pParaMarkerRedline.get( ) )
+    if ( m_pParaMarkerRedline )
     {
         CreateRedline( xRange, m_pParaMarkerRedline );
-        if ( m_pParaMarkerRedline.get( ) )
+        if ( m_pParaMarkerRedline )
         {
             m_pParaMarkerRedline.clear();
             m_currentRedline.clear();
         }
     }
-    else if ( m_pParaMarkerRedlineMoveFrom.get( ) )
+    else if ( m_pParaMarkerRedlineMoveFrom )
     {
         // terminating moveFrom redline removes also the paragraph mark
         m_pParaMarkerRedlineMoveFrom->m_nToken = XML_del;
         CreateRedline( xRange, m_pParaMarkerRedlineMoveFrom );
     }
-    if ( m_pParaMarkerRedlineMoveFrom.get( ) )
+    if ( m_pParaMarkerRedlineMoveFrom )
     {
         m_pParaMarkerRedlineMoveFrom.clear();
     }
@@ -2796,7 +2939,7 @@ void DomainMapper_Impl::PushShapeContext( const uno::Reference< drawing::XShape 
                 // Fix spacing for as-character objects. If the paragraph has CT_Spacing_after set,
                 // it needs to be set on the object too, as that's what object placement code uses.
                 PropertyMapPtr paragraphContext = GetTopContextOfType( CONTEXT_PARAGRAPH );
-                o3tl::optional<PropertyMap::Property> aPropMargin = paragraphContext->getProperty(PROP_PARA_BOTTOM_MARGIN);
+                std::optional<PropertyMap::Property> aPropMargin = paragraphContext->getProperty(PROP_PARA_BOTTOM_MARGIN);
                 if(aPropMargin)
                     xProps->setPropertyValue( getPropertyName( PROP_BOTTOM_MARGIN ), aPropMargin->second );
             }
@@ -2849,7 +2992,7 @@ void DomainMapper_Impl::PushShapeContext( const uno::Reference< drawing::XShape 
                         uno::makeAny( true ) );
         }
         m_bParaChanged = true;
-        getTableManager().setIsUnfloatTable(true);
+        getTableManager().setIsInShape(true);
     }
     catch ( const uno::Exception& )
     {
@@ -2999,15 +3142,22 @@ static sal_Int16 lcl_ParseNumberingType( const OUString& rCommand )
     sal_Int16 nRet = style::NumberingType::PAGE_DESCRIPTOR;
 
     //  The command looks like: " PAGE \* Arabic "
-    OUString sNumber = msfilter::util::findQuotedText(rCommand, "\\* ", ' ');
+    // tdf#132185: but may as well be "PAGE \* Arabic"
+    OUString sNumber;
+    constexpr OUStringLiteral rSeparator("\\* ");
+    if (sal_Int32 nStartIndex = rCommand.indexOf(rSeparator); nStartIndex >= 0)
+    {
+        nStartIndex += rSeparator.getLength();
+        sNumber = rCommand.getToken(0, ' ', nStartIndex);
+    }
 
     if( !sNumber.isEmpty() )
     {
         //todo: might make sense to hash this list, too
         struct NumberingPairs
         {
-            const char*     cWordName;
-            sal_Int16 const nType;
+            const sal_Char* cWordName;
+            sal_Int16 nType;
         };
         static const NumberingPairs aNumberingPairs[] =
         {
@@ -3300,7 +3450,7 @@ static bool lcl_FindInCommand(
 void DomainMapper_Impl::GetCurrentLocale(lang::Locale& rLocale)
 {
     PropertyMapPtr pTopContext = GetTopContext();
-    o3tl::optional<PropertyMap::Property> pLocale = pTopContext->getProperty(PROP_CHAR_LOCALE);
+    std::optional<PropertyMap::Property> pLocale = pTopContext->getProperty(PROP_CHAR_LOCALE);
     if( pLocale )
         pLocale->second >>= rLocale;
     else
@@ -3710,8 +3860,8 @@ void DomainMapper_Impl::AppendFieldCommand(OUString const & rPartOfCommand)
 #endif
 
     FieldContextPtr pContext = m_aFieldStack.back();
-    OSL_ENSURE( pContext.get(), "no field context available");
-    if( pContext.get() )
+    OSL_ENSURE( pContext, "no field context available");
+    if( pContext )
     {
         pContext->AppendCommand( rPartOfCommand );
     }
@@ -3946,7 +4096,15 @@ void  DomainMapper_Impl::handleRubyEQField( const FieldContextPtr& pContext)
     }
 
     nIndex = rCommand.indexOf("\\o");
-    if (nIndex == -1 || (nIndex = rCommand.indexOf('(', nIndex)) == -1 || (nEnd = rCommand.lastIndexOf(')'))==-1 || nEnd <= nIndex)
+    if (nIndex == -1)
+        return;
+    nIndex = rCommand.indexOf('(', nIndex);
+    if (nIndex == -1)
+        return;
+    nEnd = rCommand.lastIndexOf(')');
+    if (nEnd == -1)
+        return;
+    if (nEnd <= nIndex)
         return;
 
     OUString sRubyParts = rCommand.copy(nIndex+1,nEnd-nIndex-1);
@@ -3971,7 +4129,7 @@ void  DomainMapper_Impl::handleRubyEQField( const FieldContextPtr& pContext)
     PropertyValueVector_t aProps = comphelper::sequenceToContainer< PropertyValueVector_t >(pRubyContext->GetPropertyValues());
     aInfo.sRubyStyle = m_rDMapper.getOrCreateCharStyle(aProps, /*bAlwaysCreate=*/false);
     PropertyMapPtr pCharContext(new PropertyMap());
-    if (m_pLastCharacterContext.get())
+    if (m_pLastCharacterContext)
         pCharContext->InsertProps(m_pLastCharacterContext);
     pCharContext->InsertProps(pContext->getProperties());
     pCharContext->Insert(PROP_RUBY_TEXT, uno::makeAny( aInfo.sRubyText ) );
@@ -4039,9 +4197,9 @@ void DomainMapper_Impl::handleAuthor
     constexpr sal_uInt8 SET_DATE = 0x04;
     struct DocPropertyMap
     {
-        const char*     pDocPropertyName;
-        const char*     pServiceName;
-        sal_uInt8 const nFlags;
+        const sal_Char* pDocPropertyName;
+        const sal_Char* pServiceName;
+        sal_uInt8       nFlags;
     };
     static const DocPropertyMap aDocProperties[] =
     {
@@ -4606,7 +4764,7 @@ void DomainMapper_Impl::handleIndex
 static auto InsertFieldmark(std::stack<TextAppendContext> & rTextAppendStack,
         uno::Reference<text::XFormField> const& xFormField,
         uno::Reference<text::XTextRange> const& xStartRange,
-        o3tl::optional<FieldId> const oFieldId) -> void
+        std::optional<FieldId> const oFieldId) -> void
 {
     uno::Reference<text::XTextContent> const xTextContent(xFormField, uno::UNO_QUERY_THROW);
     uno::Reference<text::XTextAppend> const& xTextAppend(rTextAppendStack.top().xTextAppend);
@@ -4648,7 +4806,7 @@ static auto InsertFieldmark(std::stack<TextAppendContext> & rTextAppendStack,
 
 static auto PopFieldmark(std::stack<TextAppendContext> & rTextAppendStack,
         uno::Reference<text::XTextCursor> const& xCursor,
-        o3tl::optional<FieldId> const oFieldId) -> void
+        std::optional<FieldId> const oFieldId) -> void
 {
     if (oFieldId
         && (oFieldId == FIELD_FORMCHECKBOX || oFieldId == FIELD_FORMDROPDOWN))
@@ -4674,8 +4832,8 @@ void DomainMapper_Impl::CloseFieldCommand()
     FieldContextPtr pContext;
     if(!m_aFieldStack.empty())
         pContext = m_aFieldStack.back();
-    OSL_ENSURE( pContext.get(), "no field context available");
-    if( pContext.get() )
+    OSL_ENSURE( pContext, "no field context available");
+    if( pContext )
     {
         m_bSetUserFieldContent = false;
         m_bSetCitation = false;
@@ -4689,6 +4847,24 @@ void DomainMapper_Impl::CloseFieldCommand()
             const auto& [sType, vArguments, vSwitches]{ splitFieldCommand(pContext->GetCommand()) };
             (void)vSwitches;
             OUString const sFirstParam(vArguments.empty() ? OUString() : vArguments.front());
+
+            // apply font size to the form control
+            if (!m_aTextAppendStack.empty() &&  m_pLastCharacterContext && m_pLastCharacterContext->isSet(PROP_CHAR_HEIGHT) )
+            {
+                uno::Reference< text::XTextAppend >  xTextAppend = m_aTextAppendStack.top().xTextAppend;
+                if (xTextAppend.is())
+                {
+                    uno::Reference< text::XTextCursor > xCrsr = xTextAppend->getText()->createTextCursor();
+                    if (xCrsr.is())
+                    {
+                        xCrsr->gotoEnd(false);
+                        uno::Reference< beans::XPropertySet > xProp( xCrsr, uno::UNO_QUERY );
+                        xProp->setPropertyValue(getPropertyName(PROP_CHAR_HEIGHT), m_pLastCharacterContext->getProperty(PROP_CHAR_HEIGHT)->second);
+                        if ( m_pLastCharacterContext->isSet(PROP_CHAR_HEIGHT_COMPLEX) )
+                            xProp->setPropertyValue(getPropertyName(PROP_CHAR_HEIGHT_COMPLEX), m_pLastCharacterContext->getProperty(PROP_CHAR_HEIGHT_COMPLEX)->second);
+                    }
+                }
+            }
 
             FieldConversionMap_t::const_iterator const aIt = aFieldConversionMap.find(sType);
             if (aIt != aFieldConversionMap.end()
@@ -5260,9 +5436,9 @@ void DomainMapper_Impl::CloseFieldCommand()
 
                         if (xTextAppend.is())
                         {
-                            uno::Reference< text::XTextCursor > xCrsr = xTextAppend->getText()->createTextCursor();
                             uno::Reference< text::XText > xText = xTextAppend->getText();
-                            if(xCrsr.is() && xText.is())
+                            uno::Reference< text::XTextCursor > xCrsr = xText->createTextCursor();
+                            if (xCrsr.is())
                             {
                                 xCrsr->gotoEnd(false);
                                 xText->insertString(xCrsr, sSymbol, true);
@@ -5335,10 +5511,9 @@ void DomainMapper_Impl::CloseFieldCommand()
                         uno::Reference< text::XTextAppend >  xTextAppend = m_aTextAppendStack.top().xTextAppend;
                         if (xTextAppend.is())
                         {
-                            uno::Reference< text::XTextCursor > xCrsr = xTextAppend->getText()->createTextCursor();
-
                             uno::Reference< text::XText > xText = xTextAppend->getText();
-                            if(xCrsr.is() && xText.is())
+                            uno::Reference< text::XTextCursor > xCrsr = xText->createTextCursor();
+                            if (xCrsr.is())
                             {
                                 xCrsr->gotoEnd(false);
                                 xText->insertTextContent(uno::Reference< text::XTextRange >( xCrsr, uno::UNO_QUERY_THROW ), xToInsert, false);
@@ -5465,8 +5640,8 @@ bool DomainMapper_Impl::IsFieldResultAsString()
     bool bRet = false;
     OSL_ENSURE( !m_aFieldStack.empty(), "field stack empty?");
     FieldContextPtr pContext = m_aFieldStack.back();
-    OSL_ENSURE( pContext.get(), "no field context available");
-    if( pContext.get() )
+    OSL_ENSURE( pContext, "no field context available");
+    if( pContext )
     {
         bRet = pContext->GetTextField().is()
             || pContext->GetFieldId() == FIELD_FORMDROPDOWN
@@ -5492,8 +5667,8 @@ void DomainMapper_Impl::AppendFieldResult(OUString const& rString)
 {
     assert(!m_aFieldStack.empty());
     FieldContextPtr pContext = m_aFieldStack.back();
-    SAL_WARN_IF(!pContext.get(), "writerfilter.dmapper", "no field context");
-    if (pContext.get())
+    SAL_WARN_IF(!pContext, "writerfilter.dmapper", "no field context");
+    if (pContext)
     {
         FieldContextPtr pOuter = GetParentFieldContext(m_aFieldStack);
         if (pOuter)
@@ -5541,7 +5716,7 @@ void DomainMapper_Impl::SetFieldResult(OUString const& rResult)
 #endif
 
     FieldContextPtr pContext = m_aFieldStack.back();
-    OSL_ENSURE( pContext.get(), "no field context available");
+    OSL_ENSURE( pContext, "no field context available");
 
     if (m_aFieldStack.size() > 1)
     {
@@ -5558,7 +5733,7 @@ void DomainMapper_Impl::SetFieldResult(OUString const& rResult)
         }
     }
 
-    if( pContext.get() )
+    if( pContext )
     {
         uno::Reference<text::XTextField> xTextField = pContext->GetTextField();
         try
@@ -5684,7 +5859,7 @@ void DomainMapper_Impl::SetFieldFFData(const FFDataHandler::Pointer_t& pFFDataHa
     if (!m_aFieldStack.empty())
     {
         FieldContextPtr pContext = m_aFieldStack.back();
-        if (pContext.get())
+        if (pContext)
         {
             pContext->setFFDataHandler(pFFDataHandler);
         }
@@ -5707,8 +5882,8 @@ void DomainMapper_Impl::PopFieldContext()
         return;
 
     FieldContextPtr pContext = m_aFieldStack.back();
-    OSL_ENSURE( pContext.get(), "no field context available");
-    if( pContext.get() )
+    OSL_ENSURE( pContext, "no field context available");
+    if( pContext )
     {
         if( !pContext->IsCommandCompleted() )
             CloseFieldCommand();
@@ -5773,7 +5948,7 @@ void DomainMapper_Impl::PopFieldContext()
                         // properties from there.
                         // Also merge in the properties from the field context,
                         // e.g. SdtEndBefore.
-                        if (m_pLastCharacterContext.get())
+                        if (m_pLastCharacterContext)
                             aMap.InsertProps(m_pLastCharacterContext);
                         aMap.InsertProps(m_aFieldStack.back()->getProperties());
                         appendTextContent(xToInsert, aMap.GetPropertyValues());
@@ -6235,6 +6410,8 @@ void  DomainMapper_Impl::ImportGraphic(const writerfilter::Reference< Properties
             xEmbeddedProps->setPropertyValue("VertOrient", xShapeProps->getPropertyValue("VertOrient"));
             xEmbeddedProps->setPropertyValue("VertOrientPosition", xShapeProps->getPropertyValue("VertOrientPosition"));
             xEmbeddedProps->setPropertyValue("VertOrientRelation", xShapeProps->getPropertyValue("VertOrientRelation"));
+            //tdf123873 fix missing textwrap import
+            xEmbeddedProps->setPropertyValue("TextWrap", xShapeProps->getPropertyValue("TextWrap"));
         }
     }
     //insert it into the document at the current cursor position
@@ -6355,10 +6532,19 @@ void DomainMapper_Impl::ExecuteFrameConversion()
                 uno::Reference< text::XTextRange > xRange;
                 aFramedRedlines[i] >>= xRange;
                 uno::Reference<text::XTextCursor> xRangeCursor = GetTopTextAppend()->createTextCursorByRange( xRange );
-                sal_Int32 nLen = xRange->getString().getLength();
-                redLen.push_back(nLen);
-                xRangeCursor->gotoRange(m_xFrameStartRange, true);
-                redPos.push_back(xRangeCursor->getString().getLength() - nLen);
+                if (xRangeCursor.is())
+                {
+                    sal_Int32 nLen = xRange->getString().getLength();
+                    redLen.push_back(nLen);
+                    xRangeCursor->gotoRange(m_xFrameStartRange, true);
+                    redPos.push_back(xRangeCursor->getString().getLength() - nLen);
+                }
+                else
+                {
+                    // failed createTextCursorByRange(), for example, table inside the frame
+                    redLen.push_back(-1);
+                    redPos.push_back(-1);
+                }
             }
 
             const uno::Reference< text::XTextContent >& xTextContent = xTextAppendAndConvert->convertToTextFrame(
@@ -6371,6 +6557,9 @@ void DomainMapper_Impl::ExecuteFrameConversion()
             {
                 OUString sType;
                 beans::PropertyValues aRedlineProperties( 3 );
+                // skip failed createTextCursorByRange()
+                if (redPos[i/3] == -1)
+                    continue;
                 aFramedRedlines[i+1] >>= sType;
                 aFramedRedlines[i+2] >>= aRedlineProperties;
                 uno::Reference< text::XTextFrame > xFrame( xTextContent, uno::UNO_QUERY_THROW );
@@ -6428,17 +6617,15 @@ void DomainMapper_Impl::SetCurrentRedlineIsRead()
 
 sal_Int32 DomainMapper_Impl::GetCurrentRedlineToken(  ) const
 {
-    sal_Int32 nToken = 0;
-    assert( m_currentRedline.get());
-    nToken = m_currentRedline->m_nToken;
-    return nToken;
+    assert(m_currentRedline);
+    return m_currentRedline->m_nToken;
 }
 
 void DomainMapper_Impl::SetCurrentRedlineAuthor( const OUString& sAuthor )
 {
     if (!m_xAnnotationField.is())
     {
-        if (m_currentRedline.get())
+        if (m_currentRedline)
             m_currentRedline->m_sAuthor = sAuthor;
         else
             SAL_INFO("writerfilter.dmapper", "numberingChange not implemented");
@@ -6457,7 +6644,7 @@ void DomainMapper_Impl::SetCurrentRedlineDate( const OUString& sDate )
 {
     if (!m_xAnnotationField.is())
     {
-        if (m_currentRedline.get())
+        if (m_currentRedline)
             m_currentRedline->m_sDate = sDate;
         else
             SAL_INFO("writerfilter.dmapper", "numberingChange not implemented");
@@ -6476,20 +6663,20 @@ void DomainMapper_Impl::SetCurrentRedlineId( sal_Int32 sId )
     {
         // This should be an assert, but somebody had the smart idea to reuse this function also for comments and whatnot,
         // and in some cases the id is actually not handled, which may be in fact a bug.
-        if( !m_currentRedline.get())
+        if( !m_currentRedline)
             SAL_INFO("writerfilter.dmapper", "no current redline");
     }
 }
 
 void DomainMapper_Impl::SetCurrentRedlineToken( sal_Int32 nToken )
 {
-    assert( m_currentRedline.get());
+    assert(m_currentRedline);
     m_currentRedline->m_nToken = nToken;
 }
 
 void DomainMapper_Impl::SetCurrentRedlineRevertProperties( const uno::Sequence<beans::PropertyValue>& aProperties )
 {
-    assert( m_currentRedline.get());
+    assert(m_currentRedline);
     m_currentRedline->m_aRevertProperties = aProperties;
 }
 
@@ -6554,8 +6741,14 @@ void DomainMapper_Impl::ApplySettingsTable()
             if( m_pSettingsTable->GetEmbedSystemFonts())
                 xSettings->setPropertyValue( getPropertyName( PROP_EMBED_SYSTEM_FONTS ), uno::makeAny(true) );
             xSettings->setPropertyValue("AddParaTableSpacing", uno::makeAny(m_pSettingsTable->GetDoNotUseHTMLParagraphAutoSpacing()));
+            if (m_pSettingsTable->GetNoLeading())
+            {
+                xSettings->setPropertyValue("AddExternalLeading", uno::makeAny(!m_pSettingsTable->GetNoLeading()));
+            }
             if( m_pSettingsTable->GetProtectForm() )
                 xSettings->setPropertyValue("ProtectForm", uno::makeAny( true ));
+            if( m_pSettingsTable->GetReadOnly() )
+                xSettings->setPropertyValue("LoadReadonly", uno::makeAny( true ));
         }
         catch(const uno::Exception&)
         {
@@ -6588,7 +6781,7 @@ uno::Reference<container::XIndexAccess> DomainMapper_Impl::GetCurrentNumberingRu
         OUString aListName;
         if (pList)
         {
-            aListName = pList->GetStyleName(nListId);
+            aListName = pList->GetStyleName();
         }
         uno::Reference< style::XStyleFamiliesSupplier > xStylesSupplier(GetTextDocument(), uno::UNO_QUERY_THROW);
         uno::Reference< container::XNameAccess > xStyleFamilies = xStylesSupplier->getStyleFamilies();
@@ -6632,7 +6825,7 @@ uno::Reference<beans::XPropertySet> DomainMapper_Impl::GetCurrentNumberingCharSt
             }
 
             // In case numbering rules is not found via a style, try the direct formatting instead.
-            o3tl::optional<PropertyMap::Property> oProp = pContext->getProperty(PROP_NUMBERING_RULES);
+            std::optional<PropertyMap::Property> oProp = pContext->getProperty(PROP_NUMBERING_RULES);
             if (oProp)
             {
                 xLevels.set(oProp->second, uno::UNO_QUERY);
@@ -6709,7 +6902,7 @@ sal_Int32 DomainMapper_Impl::getNumberingProperty(const sal_Int32 nListId, sal_I
 
         auto const pList(GetListTable()->GetList(nListId));
         assert(pList);
-        const OUString aListName = pList->GetStyleName(nListId);
+        const OUString aListName = pList->GetStyleName();
         const uno::Reference< style::XStyleFamiliesSupplier > xStylesSupplier(GetTextDocument(), uno::UNO_QUERY_THROW);
         const uno::Reference< container::XNameAccess > xStyleFamilies = xStylesSupplier->getStyleFamilies();
         uno::Reference<container::XNameAccess> xNumberingStyles;
@@ -6738,7 +6931,7 @@ sal_Int32 DomainMapper_Impl::getCurrentNumberingProperty(const OUString& aProp)
 {
     sal_Int32 nRet = 0;
 
-    o3tl::optional<PropertyMap::Property> pProp = m_pTopContext->getProperty(PROP_NUMBERING_RULES);
+    std::optional<PropertyMap::Property> pProp = m_pTopContext->getProperty(PROP_NUMBERING_RULES);
     uno::Reference<container::XIndexAccess> xNumberingRules;
     if (pProp)
         xNumberingRules.set(pProp->second, uno::UNO_QUERY);

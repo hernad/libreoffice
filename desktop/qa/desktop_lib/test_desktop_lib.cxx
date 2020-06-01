@@ -19,14 +19,17 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 
-#include <vcl/combobox.hxx>
 #include <vcl/scheduler.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/syswin.hxx>
 #include <vcl/window.hxx>
+#include <vcl/ctrl.hxx>
+#include <vcl/uitest/uiobject.hxx>
 #include <comphelper/processfactory.hxx>
+#include <rtl/math.hxx>
 #include <rtl/uri.hxx>
 #include <sfx2/app.hxx>
+#include <sfx2/childwin.hxx>
 #include <sfx2/lokhelper.hxx>
 #include <test/unoapi_test.hxx>
 #include <comphelper/lok.hxx>
@@ -49,6 +52,7 @@
 #include <config_mpl.h>
 
 #include <lib/init.hxx>
+#include <svx/svxids.hrc>
 
 using namespace com::sun::star;
 using namespace desktop;
@@ -170,6 +174,8 @@ public:
     void testShowHideDialog();
     void testDialogInput();
     void testCalcSaveAs();
+    void testControlState();
+    void testMetricField();
     void testABI();
 
     CPPUNIT_TEST_SUITE(DesktopLOKTest);
@@ -229,6 +235,8 @@ public:
     CPPUNIT_TEST(testShowHideDialog);
     CPPUNIT_TEST(testDialogInput);
     CPPUNIT_TEST(testCalcSaveAs);
+    CPPUNIT_TEST(testControlState);
+    CPPUNIT_TEST(testMetricField);
     CPPUNIT_TEST(testABI);
     CPPUNIT_TEST_SUITE_END();
 
@@ -1750,16 +1758,15 @@ void DesktopLOKTest::testDialogInput()
 
     Control* pCtrlFocused = GetFocusControl(pWindow.get());
     CPPUNIT_ASSERT(pCtrlFocused);
-    ComboBox* pCtrlURL = dynamic_cast<ComboBox*>(pCtrlFocused);
-    CPPUNIT_ASSERT(pCtrlURL);
-    CPPUNIT_ASSERT_EQUAL(OUString(""), pCtrlURL->GetText());
+    CPPUNIT_ASSERT_EQUAL(WindowType::COMBOBOX, pCtrlFocused->GetType());
+    CPPUNIT_ASSERT_EQUAL(OUString(""), pCtrlFocused->GetText());
 
     vcl::LOKWindowId nDialogId = pWindow->GetLOKWindowId();
     pDocument->pClass->postWindowExtTextInputEvent(pDocument, nDialogId, LOK_EXT_TEXTINPUT, "wiki.");
     pDocument->pClass->postWindowExtTextInputEvent(pDocument, nDialogId, LOK_EXT_TEXTINPUT_END, "wiki.");
     pDocument->pClass->removeTextContext(pDocument, nDialogId, 1, 0);
     Scheduler::ProcessEventsToIdle();
-    CPPUNIT_ASSERT_EQUAL(OUString("wiki"), pCtrlURL->GetText());
+    CPPUNIT_ASSERT_EQUAL(OUString("wiki"), pCtrlFocused->GetText());
 
     static_cast<SystemWindow*>(pWindow.get())->Close();
     Scheduler::ProcessEventsToIdle();
@@ -1868,6 +1875,7 @@ public:
     tools::Rectangle m_aOwnCursor;
     boost::property_tree::ptree m_aCommentCallbackResult;
     boost::property_tree::ptree m_aCallbackWindowResult;
+    bool m_bWindowHidden;
 
     ViewCallback(LibLODocument_Impl* pDocument)
         : mpDocument(pDocument),
@@ -1923,6 +1931,10 @@ public:
             m_aCallbackWindowResult.clear();
             std::stringstream aStream(pPayload);
             boost::property_tree::read_json(aStream, m_aCallbackWindowResult);
+
+            std::string sAction = m_aCallbackWindowResult.get<std::string>("action");
+            if (sAction == "hide")
+                m_bWindowHidden = true;
         }
         break;
         case LOK_CALLBACK_CELL_FORMULA:
@@ -2641,9 +2653,8 @@ void DesktopLOKTest::testDialogPaste()
 
     Control* pCtrlFocused = GetFocusControl(pWindow.get());
     CPPUNIT_ASSERT(pCtrlFocused);
-    ComboBox* pCtrlURL = dynamic_cast<ComboBox*>(pCtrlFocused);
-    CPPUNIT_ASSERT(pCtrlURL);
-    CPPUNIT_ASSERT_EQUAL(OUString("www.softwarelibre.org.bo"), pCtrlURL->GetText());
+    CPPUNIT_ASSERT_EQUAL(WindowType::COMBOBOX, pCtrlFocused->GetType());
+    CPPUNIT_ASSERT_EQUAL(OUString("www.softwarelibre.org.bo"), pCtrlFocused->GetText());
 
     static_cast<SystemWindow*>(pWindow.get())->Close();
     Scheduler::ProcessEventsToIdle();
@@ -2663,15 +2674,15 @@ void DesktopLOKTest::testShowHideDialog()
     VclPtr<vcl::Window> pWindow(Application::GetActiveTopWindow());
     CPPUNIT_ASSERT(pWindow);
 
+    aView.m_bWindowHidden = false;
+
     pWindow->Hide();
     Scheduler::ProcessEventsToIdle();
 
-    CPPUNIT_ASSERT_EQUAL(std::string("hide"), aView.m_aCallbackWindowResult.get<std::string>("action"));
+    CPPUNIT_ASSERT_EQUAL(true, aView.m_bWindowHidden);
 
-    pWindow->Show();
+    static_cast<SystemWindow*>(pWindow.get())->Close();
     Scheduler::ProcessEventsToIdle();
-
-    CPPUNIT_ASSERT_EQUAL(std::string("invalidate"), aView.m_aCallbackWindowResult.get<std::string>("action"));
 }
 
 void DesktopLOKTest::testComplexSelection()
@@ -2764,7 +2775,7 @@ void DesktopLOKTest::testSpellcheckerMultiView()
     SvtSysLocaleOptions aSysLocaleOptions;
     aSysLocaleOptions.SetLocaleConfigString(aLangISO);
     aSysLocaleOptions.SetUILocaleConfigString(aLangISO);
-    comphelper::LibreOfficeKit::setLanguageTag(aLangISO, true);
+    comphelper::LibreOfficeKit::setLanguageTag(LanguageTag(aLangISO, true));
 
     auto aSavedSettings = Application::GetSettings();
     std::unique_ptr<Resetter> pResetter(
@@ -2805,6 +2816,49 @@ void DesktopLOKTest::testSpellcheckerMultiView()
 
     // We should survive the destroyed view.
     CPPUNIT_ASSERT_EQUAL(1, pDocument->m_pDocumentClass->getViewsCount(pDocument));
+}
+
+void DesktopLOKTest::testControlState()
+{
+    LibLODocument_Impl* pDocument = loadDoc("search.ods");
+    pDocument->pClass->postUnoCommand(pDocument, ".uno:StarShapes", nullptr, false);
+    Scheduler::ProcessEventsToIdle();
+
+    boost::property_tree::ptree aState;
+    SfxViewShell* pViewShell = SfxViewShell::Current();
+    pViewShell->GetViewFrame()->GetBindings().Update();
+    pViewShell->GetViewFrame()->GetBindings().QueryControlState(SID_ATTR_TRANSFORM_WIDTH, aState);
+    CPPUNIT_ASSERT(!aState.empty());
+}
+
+void DesktopLOKTest::testMetricField()
+{
+    LibLODocument_Impl* pDocument = loadDoc("search.ods");
+    pDocument->pClass->postUnoCommand(pDocument, ".uno:StarShapes", nullptr, false);
+    Scheduler::ProcessEventsToIdle();
+
+    SfxViewShell* pViewShell = SfxViewShell::Current();
+    CPPUNIT_ASSERT(pViewShell);
+
+    SfxViewFrame* pViewFrame = pViewShell->GetViewFrame();
+    CPPUNIT_ASSERT(pViewFrame);
+
+    SfxChildWindow* pSideBar = pViewFrame->GetChildWindow(SID_SIDEBAR);
+    CPPUNIT_ASSERT(pSideBar);
+
+    vcl::Window* pWin = pSideBar->GetWindow();
+    CPPUNIT_ASSERT(pWin);
+
+    WindowUIObject aWinUI(pWin);
+    std::unique_ptr<UIObject> pUIWin(aWinUI.get_child("selectwidth"));
+    CPPUNIT_ASSERT(pUIWin);
+
+    StringMap aMap;
+    aMap["VALUE"] = "75.06";
+    pUIWin->execute("VALUE", aMap);
+
+    StringMap aRet = pUIWin->get_state();
+    CPPUNIT_ASSERT_EQUAL(aMap["VALUE"], aRet["Value"]);
 }
 
 namespace {
@@ -2902,10 +2956,12 @@ void DesktopLOKTest::testABI()
     CPPUNIT_ASSERT_EQUAL(documentClassOffset(57), offsetof(struct _LibreOfficeKitDocumentClass, renderFontOrientation));
     CPPUNIT_ASSERT_EQUAL(documentClassOffset(58), offsetof(struct _LibreOfficeKitDocumentClass, paintWindowForView));
     CPPUNIT_ASSERT_EQUAL(documentClassOffset(59), offsetof(struct _LibreOfficeKitDocumentClass, completeFunction));
+    CPPUNIT_ASSERT_EQUAL(documentClassOffset(60), offsetof(struct _LibreOfficeKitDocumentClass, setWindowTextSelection));
+    CPPUNIT_ASSERT_EQUAL(documentClassOffset(61), offsetof(struct _LibreOfficeKitDocumentClass, sendFormFieldEvent));
 
     // Extending is fine, update this, and add new assert for the offsetof the
     // new method
-    CPPUNIT_ASSERT_EQUAL(documentClassOffset(60), sizeof(struct _LibreOfficeKitDocumentClass));
+    CPPUNIT_ASSERT_EQUAL(documentClassOffset(62), sizeof(struct _LibreOfficeKitDocumentClass));
 }
 
 CPPUNIT_TEST_SUITE_REGISTRATION(DesktopLOKTest);

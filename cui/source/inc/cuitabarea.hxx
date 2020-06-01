@@ -379,7 +379,7 @@ private:
 
     DECL_LINK( ClickAddHdl_Impl, weld::Button&, void );
     DECL_LINK( ClickModifyHdl_Impl, weld::Button&, void );
-    DECL_LINK( ChangeGradientHdl, SvtValueSet*, void );
+    DECL_LINK( ChangeGradientHdl, ValueSet*, void );
     void ChangeGradientHdl_Impl();
     DECL_LINK( ClickRenameHdl_Impl, SvxPresetListBox*, void );
     DECL_LINK( ClickDeleteHdl_Impl, SvxPresetListBox*, void );
@@ -446,7 +446,7 @@ private:
     std::unique_ptr<weld::CustomWeld> m_xHatchLBWin;
     std::unique_ptr<weld::CustomWeld> m_xCtlPreview;
 
-    DECL_LINK(ChangeHatchHdl, SvtValueSet*, void);
+    DECL_LINK(ChangeHatchHdl, ValueSet*, void);
     void ChangeHatchHdl_Impl();
     DECL_LINK( ModifiedEditHdl_Impl, weld::MetricSpinButton&, void );
     DECL_LINK( ModifiedListBoxHdl_Impl, weld::ComboBox&, void );
@@ -527,7 +527,7 @@ private:
     std::unique_ptr<weld::CustomWeld> m_xCtlBitmapPreview;
     std::unique_ptr<weld::CustomWeld> m_xBitmapLBWin;
 
-    DECL_LINK( ModifyBitmapHdl, SvtValueSet*, void );
+    DECL_LINK( ModifyBitmapHdl, ValueSet*, void );
     DECL_LINK( ClickScaleHdl, weld::Button&, void );
     DECL_LINK( ModifyBitmapStyleHdl, weld::ComboBox&, void );
     DECL_LINK( ModifyBitmapSizeHdl, weld::MetricSpinButton&, void );
@@ -589,7 +589,7 @@ private:
 
     DECL_LINK( ClickAddHdl_Impl, weld::Button&, void );
     DECL_LINK( ClickModifyHdl_Impl, weld::Button&, void );
-    DECL_LINK( ChangePatternHdl_Impl, SvtValueSet*, void );
+    DECL_LINK( ChangePatternHdl_Impl, ValueSet*, void );
     DECL_LINK( ChangeColorHdl_Impl, ColorListBox&, void );
     DECL_LINK( ClickRenameHdl_Impl, SvxPresetListBox*, void );
     DECL_LINK( ClickDeleteHdl_Impl, SvxPresetListBox*, void );
@@ -648,8 +648,8 @@ private:
     PaletteManager maPaletteManager;
     SvxXRectPreview m_aCtlPreviewOld;
     SvxXRectPreview m_aCtlPreviewNew;
-    std::unique_ptr<ColorValueSet> m_xValSetColorList;
-    std::unique_ptr<ColorValueSet> m_xValSetRecentList;
+    std::unique_ptr<SvxColorValueSet> m_xValSetColorList;
+    std::unique_ptr<SvxColorValueSet> m_xValSetRecentList;
     std::unique_ptr<weld::ComboBox> m_xSelectPalette;
     std::unique_ptr<weld::RadioButton> m_xRbRGB;
     std::unique_ptr<weld::RadioButton> m_xRbCMYK;
@@ -695,7 +695,7 @@ private:
     DECL_LINK(ClickDeleteHdl_Impl, weld::Button&, void);
 
     DECL_LINK(SelectPaletteLBHdl, weld::ComboBox&, void);
-    DECL_LINK( SelectValSetHdl_Impl, SvtValueSet*, void );
+    DECL_LINK( SelectValSetHdl_Impl, ValueSet*, void );
     DECL_LINK( SelectColorModeHdl_Impl, weld::ToggleButton&, void );
     void ChangeColor(const Color &rNewColor, bool bUpdatePreset = true);
     void SetColorModel(ColorModel eModel);

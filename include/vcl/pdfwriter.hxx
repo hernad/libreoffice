@@ -19,6 +19,7 @@
 #ifndef INCLUDED_VCL_PDFWRITER_HXX
 #define INCLUDED_VCL_PDFWRITER_HXX
 
+#include <config_options.h>
 #include <sal/types.h>
 
 #include <tools/gen.hxx>
@@ -36,9 +37,9 @@
 #include <vector>
 #include <set>
 
-namespace com { namespace sun { namespace star { namespace beans { class XMaterialHolder; } } } }
-namespace com { namespace sun { namespace star { namespace io { class XOutputStream; } } } }
-namespace com { namespace sun { namespace star { namespace security { class XCertificate; } } } }
+namespace com::sun::star::beans { class XMaterialHolder; }
+namespace com::sun::star::io { class XOutputStream; }
+namespace com::sun::star::security { class XCertificate; }
 
 class GDIMetaFile;
 class MapMode;
@@ -103,7 +104,7 @@ public:
     enum class Orientation { Portrait, Inherit };
 
     // in case the below enum is added PDF_1_6 PDF_1_7, please add them just after PDF_1_5
-    enum class PDFVersion { PDF_1_2, PDF_1_3, PDF_1_4, PDF_1_5, PDF_1_6, PDF_A_1, PDF_A_2 };//i59651, PDF/A-1b & -1a, only -1b implemented for now
+    enum class PDFVersion { PDF_1_2, PDF_1_3, PDF_1_4, PDF_1_5, PDF_1_6, PDF_A_1, PDF_A_2, PDF_A_3 };//i59651, PDF/A-1b & -1a, only -1b implemented for now
     // for the meaning of DestAreaType please look at PDF Reference Manual
     // version 1.4 section 8.2.1, page 475
     enum class DestAreaType { XYZ, FitRectangle };
@@ -212,9 +213,9 @@ public:
         Error_Signature_Failed,
     };
 
-    struct VCL_DLLPUBLIC AnyWidget
+    struct UNLESS_MERGELIBS(VCL_DLLPUBLIC) AnyWidget
     {
-        WidgetType const    Type;       // primitive RTTI
+        WidgetType          Type;       // primitive RTTI
     public:
         OUString            Name;       // a distinct name to identify the control
         OUString            Description;// descriptive text for the control (e.g. for tool tip)
@@ -261,7 +262,7 @@ public:
 
         WidgetType getType() const { return Type; }
 
-        virtual std::unique_ptr<AnyWidget> Clone() const = 0;
+        virtual std::shared_ptr<AnyWidget> Clone() const = 0;
 
     protected:
         // note that this equals the default compiler-generated copy-ctor, but we want to have it
@@ -320,9 +321,9 @@ public:
                   Dest( -1 ), Submit( false ), SubmitGet( false )
         {}
 
-        virtual std::unique_ptr<AnyWidget> Clone() const override
+        virtual std::shared_ptr<AnyWidget> Clone() const override
         {
-            return std::unique_ptr<AnyWidget>(new PushButtonWidget( *this ));
+            return std::make_shared<PushButtonWidget>( *this );
         }
     };
 
@@ -335,9 +336,9 @@ public:
                   Checked( false )
         {}
 
-        virtual std::unique_ptr<AnyWidget> Clone() const override
+        virtual std::shared_ptr<AnyWidget> Clone() const override
         {
-            return std::unique_ptr<AnyWidget>(new CheckBoxWidget( *this ));
+            return std::make_shared<CheckBoxWidget>( *this );
         }
     };
 
@@ -353,9 +354,9 @@ public:
                   RadioGroup( 0 )
         {}
 
-        virtual std::unique_ptr<AnyWidget> Clone() const override
+        virtual std::shared_ptr<AnyWidget> Clone() const override
         {
-            return std::unique_ptr<AnyWidget>(new RadioButtonWidget( *this ));
+            return std::make_shared<RadioButtonWidget>( *this );
         }
         // radio buttons having the same RadioGroup id comprise one
         // logical radio button group, that is at most one of the RadioButtons
@@ -382,9 +383,9 @@ public:
                   MaxLen( 0 )
         {}
 
-        virtual std::unique_ptr<AnyWidget> Clone() const override
+        virtual std::shared_ptr<AnyWidget> Clone() const override
         {
-            return std::unique_ptr<AnyWidget>(new EditWidget( *this ));
+            return std::make_shared<EditWidget>( *this );
         }
     };
 
@@ -404,9 +405,9 @@ public:
                   MultiSelect( false )
         {}
 
-        virtual std::unique_ptr<AnyWidget> Clone() const override
+        virtual std::shared_ptr<AnyWidget> Clone() const override
         {
-            return std::unique_ptr<AnyWidget>(new ListBoxWidget( *this ));
+            return std::make_shared<ListBoxWidget>( *this );
         }
     };
 
@@ -420,9 +421,9 @@ public:
                 : AnyWidget( vcl::PDFWriter::ComboBox )
         {}
 
-        virtual std::unique_ptr<AnyWidget> Clone() const override
+        virtual std::shared_ptr<AnyWidget> Clone() const override
         {
-            return std::unique_ptr<AnyWidget>(new ComboBoxWidget( *this ));
+            return std::make_shared<ComboBoxWidget>( *this );
         }
     };
 
@@ -432,9 +433,9 @@ public:
                 : AnyWidget( vcl::PDFWriter::Signature )
         {}
 
-        virtual std::unique_ptr<AnyWidget> Clone() const override
+        virtual std::shared_ptr<AnyWidget> Clone() const override
         {
-            return std::unique_ptr<AnyWidget>(new SignatureWidget( *this ));
+            return std::make_shared<SignatureWidget>( *this );
         }
     };
 
@@ -613,7 +614,7 @@ The following structure describes the permissions used in PDF security
                 DefaultLinkAction( PDFWriter::URIAction ),
                 ConvertOOoTargetToPDFTarget( false ),
                 ForcePDFAction( false ),
-                Version( PDFWriter::PDFVersion::PDF_1_5 ),
+                Version( PDFWriter::PDFVersion::PDF_1_6 ),
                 UniversalAccessibilityCompliance( false ),
                 Tagged( false ),
                 SubmitFormat( PDFWriter::FDF ),

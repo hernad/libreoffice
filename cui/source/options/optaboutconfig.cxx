@@ -20,6 +20,7 @@
 #include <com/sun/star/util/XChangesBatch.hpp>
 #include <com/sun/star/util/SearchFlags.hpp>
 #include <com/sun/star/util/SearchAlgorithms2.hpp>
+#include <rtl/ustrbuf.hxx>
 #include <unotools/textsearch.hxx>
 #include <vcl/event.hxx>
 #include <sal/log.hxx>
@@ -258,10 +259,10 @@ void CuiAboutConfigTabPage::FillItems(const Reference< XNameAccess >& xNameAcces
 {
     OUString sPath = Reference< XHierarchicalName >(
         xNameAccess, uno::UNO_QUERY_THROW )->getHierarchicalName();
-    uno::Sequence< OUString > seqItems = xNameAccess->getElementNames();
-    for( sal_Int32 i = 0; i < seqItems.getLength(); ++i )
+    const uno::Sequence< OUString > seqItems = xNameAccess->getElementNames();
+    for( const OUString& item : seqItems )
     {
-        Any aNode = xNameAccess->getByName( seqItems[i] );
+        Any aNode = xNameAccess->getByName( item );
 
         bool bNotLeaf = false;
 
@@ -286,7 +287,7 @@ void CuiAboutConfigTabPage::FillItems(const Reference< XNameAccess >& xNameAcces
                 m_vectorUserData.push_back(std::make_unique<UserData>(xNextNameAccess, lineage + 1));
                 OUString sId(OUString::number(reinterpret_cast<sal_Int64>(m_vectorUserData.back().get())));
 
-                m_xPrefBox->insert(pParentEntry, -1, &seqItems[i], &sId, nullptr, nullptr, nullptr, true, m_xScratchIter.get());
+                m_xPrefBox->insert(pParentEntry, -1, &item, &sId, nullptr, nullptr, nullptr, true, m_xScratchIter.get());
                 //It is needed, without this the selection line will be truncated.
                 m_xPrefBox->set_text(*m_xScratchIter, "", 1);
                 m_xPrefBox->set_text(*m_xScratchIter, "", 2);
@@ -296,7 +297,7 @@ void CuiAboutConfigTabPage::FillItems(const Reference< XNameAccess >& xNameAcces
         else
         {
             // leaf node
-            OUString sPropertyName = seqItems[i];
+            OUString sPropertyName = item;
             auto it = std::find_if(m_modifiedPrefBoxEntries.begin(), m_modifiedPrefBoxEntries.end(),
               [&sPath, &sPropertyName](const prefBoxEntry& rEntry) -> bool
               {
@@ -351,10 +352,10 @@ void CuiAboutConfigTabPage::FillItems(const Reference< XNameAccess >& xNameAcces
                     else if( sType == "[]byte" )
                     {
                         uno::Sequence<sal_Int8> seq = aNode.get< uno::Sequence<sal_Int8> >();
-                        for( sal_Int32 j = 0; j != seq.getLength(); ++j )
+                        for( sal_Int8 j : seq )
                         {
                             OUString s = OUString::number(
-                                static_cast<sal_uInt8>(seq[j]), 16 );
+                                static_cast<sal_uInt8>(j), 16 );
                             if( s.getLength() == 1 )
                             {
                                 sValue.append("0");
@@ -371,10 +372,10 @@ void CuiAboutConfigTabPage::FillItems(const Reference< XNameAccess >& xNameAcces
                             {
                                 sValue.append(",");
                             }
-                            for( sal_Int32 k = 0; k != seq[j].getLength(); ++k )
+                            for( sal_Int8 k : seq[j] )
                             {
                                 OUString s = OUString::number(
-                                    static_cast<sal_uInt8>(seq[j][k]), 16 );
+                                    static_cast<sal_uInt8>(k), 16 );
                                 if( s.getLength() == 1 )
                                 {
                                     sValue.append("0");
@@ -447,7 +448,7 @@ void CuiAboutConfigTabPage::FillItems(const Reference< XNameAccess >& xNameAcces
                     {
                         SAL_WARN(
                             "cui.options",
-                            "path \"" << sPath << "\" member " << seqItems[i]
+                            "path \"" << sPath << "\" member " << item
                                 << " of unsupported type " << sType);
                     }
                     break;
@@ -455,7 +456,7 @@ void CuiAboutConfigTabPage::FillItems(const Reference< XNameAccess >& xNameAcces
                 default:
                     SAL_WARN(
                         "cui.options",
-                        "path \"" << sPath << "\" member " << seqItems[i]
+                        "path \"" << sPath << "\" member " << item
                             << " of unsupported type " << sType);
                     break;
                 }
@@ -466,7 +467,7 @@ void CuiAboutConfigTabPage::FillItems(const Reference< XNameAccess >& xNameAcces
             for(int j = 1; j < lineage; ++j)
                 index = sPath.indexOf("/", index + 1);
 
-            InsertEntry(sPath, sPath.copy(index+1), seqItems[i], sType, sValue.makeStringAndClear(), pParentEntry, !bLoadAll);
+            InsertEntry(sPath, sPath.copy(index+1), item, sType, sValue.makeStringAndClear(), pParentEntry, !bLoadAll);
         }
     }
 }
@@ -570,218 +571,218 @@ IMPL_LINK_NOARG( CuiAboutConfigTabPage, StandardHdl_Impl, weld::Button&, void )
         return;
 
     UserData *pUserData = reinterpret_cast<UserData*>(m_xPrefBox->get_id(*m_xScratchIter).toInt64());
-    if (pUserData && pUserData->bIsPropertyPath)
+    if (!(pUserData && pUserData->bIsPropertyPath))
+        return;
+
+    //if selection is a node
+    OUString sPropertyName = m_xPrefBox->get_text(*m_xScratchIter, 1);
+    OUString sPropertyType = m_xPrefBox->get_text(*m_xScratchIter, 2);
+    OUString sPropertyValue = m_xPrefBox->get_text(*m_xScratchIter, 3);
+
+    auto pProperty  = std::make_shared<Prop_Impl>( pUserData->sPropertyPath, sPropertyName, Any( sPropertyValue ) );
+    bool bSaveChanges = false;
+
+    bool bOpenDialog = true;
+    OUString sDialogValue;
+    OUString sNewValue;
+
+    if( sPropertyType == "boolean" )
     {
-        //if selection is a node
-        OUString sPropertyName = m_xPrefBox->get_text(*m_xScratchIter, 1);
-        OUString sPropertyType = m_xPrefBox->get_text(*m_xScratchIter, 2);
-        OUString sPropertyValue = m_xPrefBox->get_text(*m_xScratchIter, 3);
-
-        auto pProperty  = std::make_shared<Prop_Impl>( pUserData->sPropertyPath, sPropertyName, Any( sPropertyValue ) );
-        bool bSaveChanges = false;
-
-        bool bOpenDialog = true;
-        OUString sDialogValue;
-        OUString sNewValue;
-
-        if( sPropertyType == "boolean" )
+        bool bValue;
+        if( sPropertyValue == "true" )
         {
-            bool bValue;
-            if( sPropertyValue == "true" )
-            {
-                sDialogValue = "false";
-                bValue = false;
-            }
-            else
-            {
-                sDialogValue = "true";
-                bValue = true;
-            }
-
-            pProperty->Value <<= bValue;
-            bOpenDialog = false;
-            bSaveChanges = true;
-        }
-        else if ( sPropertyType == "void" )
-        {
-            bOpenDialog = false;
+            sDialogValue = "false";
+            bValue = false;
         }
         else
         {
-            sDialogValue = sPropertyValue;
-            bOpenDialog = true;
+            sDialogValue = "true";
+            bValue = true;
         }
 
-        try
+        pProperty->Value <<= bValue;
+        bOpenDialog = false;
+        bSaveChanges = true;
+    }
+    else if ( sPropertyType == "void" )
+    {
+        bOpenDialog = false;
+    }
+    else
+    {
+        sDialogValue = sPropertyValue;
+        bOpenDialog = true;
+    }
+
+    try
+    {
+        if( bOpenDialog )
         {
-            if( bOpenDialog )
+            //Cosmetic length limit for integer values.
+            int limit=0;
+            if( sPropertyType == "short" )
+                limit = SHORT_LEN_LIMIT;
+            else if( sPropertyType == "long" )
+                limit = LONG_LEN_LIMIT;
+            else if( sPropertyType == "hyper" )
+                limit = HYPER_LEN_LIMIT;
+
+            CuiAboutConfigValueDialog aValueDialog(m_xDialog.get(), sDialogValue, limit);
+
+            if (aValueDialog.run() == RET_OK )
             {
-                //Cosmetic length limit for integer values.
-                int limit=0;
-                if( sPropertyType == "short" )
-                    limit = SHORT_LEN_LIMIT;
+                sNewValue = aValueDialog.getValue();
+                bSaveChanges = true;
+                if ( sPropertyType == "short")
+                {
+                    sal_Int16 nShort;
+                    sal_Int32 nNumb = sNewValue.toInt32();
+
+                    //if the value is 0 and length is not 1, there is something wrong
+                    if( ( nNumb==0 && sNewValue.getLength()!=1 ) || nNumb > SAL_MAX_INT16 || nNumb < SAL_MIN_INT16)
+                        throw uno::Exception("out of range short", nullptr);
+                    nShort = static_cast<sal_Int16>(nNumb);
+                    pProperty->Value <<= nShort;
+                }
                 else if( sPropertyType == "long" )
-                    limit = LONG_LEN_LIMIT;
-                else if( sPropertyType == "hyper" )
-                    limit = HYPER_LEN_LIMIT;
-
-                CuiAboutConfigValueDialog aValueDialog(m_xDialog.get(), sDialogValue, limit);
-
-                if (aValueDialog.run() == RET_OK )
                 {
-                    sNewValue = aValueDialog.getValue();
-                    bSaveChanges = true;
-                    if ( sPropertyType == "short")
-                    {
-                        sal_Int16 nShort;
-                        sal_Int32 nNumb = sNewValue.toInt32();
-
-                        //if the value is 0 and length is not 1, there is something wrong
-                        if( ( nNumb==0 && sNewValue.getLength()!=1 ) || nNumb > SAL_MAX_INT16 || nNumb < SAL_MIN_INT16)
-                            throw uno::Exception("out of range short", nullptr);
-                        nShort = static_cast<sal_Int16>(nNumb);
-                        pProperty->Value <<= nShort;
-                    }
-                    else if( sPropertyType == "long" )
-                    {
-                        sal_Int32 nLong = sNewValue.toInt32();
-                        if( nLong==0 && sNewValue.getLength()!=1)
-                            throw uno::Exception("out of range long", nullptr);
-                        pProperty->Value <<= nLong;
-                    }
-                    else if( sPropertyType == "hyper")
-                    {
-                        sal_Int64 nHyper = sNewValue.toInt64();
-                        if( nHyper==0 && sNewValue.getLength()!=1)
-                            throw uno::Exception("out of range hyper", nullptr);
-                        pProperty->Value <<= nHyper;
-                    }
-                    else if( sPropertyType == "double")
-                    {
-                        double nDoub = sNewValue.toDouble();
-                        if( nDoub ==0 && sNewValue.getLength()!=1)
-                            throw uno::Exception("out of range double", nullptr);
-                        pProperty->Value <<= nDoub;
-                    }
-                    else if( sPropertyType == "float")
-                    {
-                        float nFloat = sNewValue.toFloat();
-                        if( nFloat ==0 && sNewValue.getLength()!=1)
-                            throw uno::Exception("out of range float", nullptr);
-                        pProperty->Value <<= nFloat;
-                    }
-                    else if( sPropertyType == "string" )
-                    {
-                        pProperty->Value <<= sNewValue;
-                    }
-                    else if( sPropertyType == "[]short" )
-                    {
-                        //create string sequence from comma separated string
-                        //uno::Sequence< OUString > seqStr;
-                        std::vector< OUString > seqStr = commaStringToSequence( sNewValue );
-
-                        //create appropriate sequence with same size as string sequence
-                        uno::Sequence< sal_Int16 > seqShort( seqStr.size() );
-                        //convert all strings to appropriate type
-                        for( size_t i = 0; i < seqStr.size(); ++i )
-                        {
-                            seqShort[i] = static_cast<sal_Int16>(seqStr[i].toInt32());
-                        }
-                        pProperty->Value <<= seqShort;
-                    }
-                    else if( sPropertyType == "[]long" )
-                    {
-                        std::vector< OUString > seqStrLong = commaStringToSequence( sNewValue );
-
-                        uno::Sequence< sal_Int32 > seqLong( seqStrLong.size() );
-                        for( size_t i = 0; i < seqStrLong.size(); ++i )
-                        {
-                            seqLong[i] = seqStrLong[i].toInt32();
-                        }
-                        pProperty->Value <<= seqLong;
-                    }
-                    else if( sPropertyType == "[]hyper" )
-                    {
-                        std::vector< OUString > seqStrHyper = commaStringToSequence( sNewValue );
-                        uno::Sequence< sal_Int64 > seqHyper( seqStrHyper.size() );
-                        for( size_t i = 0; i < seqStrHyper.size(); ++i )
-                        {
-                            seqHyper[i] = seqStrHyper[i].toInt64();
-                        }
-                        pProperty->Value <<= seqHyper;
-                    }
-                    else if( sPropertyType == "[]double" )
-                    {
-                        std::vector< OUString > seqStrDoub = commaStringToSequence( sNewValue );
-                        uno::Sequence< double > seqDoub( seqStrDoub.size() );
-                        for( size_t i = 0; i < seqStrDoub.size(); ++i )
-                        {
-                            seqDoub[i] = seqStrDoub[i].toDouble();
-                        }
-                        pProperty->Value <<= seqDoub;
-                    }
-                    else if( sPropertyType == "[]float" )
-                    {
-                        std::vector< OUString > seqStrFloat = commaStringToSequence( sNewValue );
-                        uno::Sequence< sal_Int16 > seqFloat( seqStrFloat.size() );
-                        for( size_t i = 0; i < seqStrFloat.size(); ++i )
-                        {
-                            seqFloat[i] = seqStrFloat[i].toFloat();
-                        }
-                        pProperty->Value <<= seqFloat;
-                    }
-                    else if( sPropertyType == "[]string" )
-                    {
-                        pProperty->Value <<= comphelper::containerToSequence( commaStringToSequence( sNewValue ));
-                    }
-                    else //unknown
-                        throw uno::Exception("unknown property type " + sPropertyType, nullptr);
-
-                    sDialogValue = sNewValue;
+                    sal_Int32 nLong = sNewValue.toInt32();
+                    if( nLong==0 && sNewValue.getLength()!=1)
+                        throw uno::Exception("out of range long", nullptr);
+                    pProperty->Value <<= nLong;
                 }
-            }
-
-            if(bSaveChanges)
-            {
-                AddToModifiedVector( pProperty );
-
-                //update listbox value.
-                m_xPrefBox->set_text(*m_xScratchIter, sDialogValue, 3);
-                //update m_prefBoxEntries
-                auto it = std::find_if(m_prefBoxEntries.begin(), m_prefBoxEntries.end(),
-                  [&pUserData, &sPropertyName](const prefBoxEntry& rEntry) -> bool
-                  {
-                      return rEntry.pUserData->sPropertyPath == pUserData->sPropertyPath
-                          && rEntry.sStatus == sPropertyName;
-                  }
-                );
-                if (it != m_prefBoxEntries.end())
+                else if( sPropertyType == "hyper")
                 {
-                    it->sValue = sDialogValue;
-
-                    auto modifiedIt = std::find_if(
-                                m_modifiedPrefBoxEntries.begin(), m_modifiedPrefBoxEntries.end(),
-                                [&pUserData, &sPropertyName](const prefBoxEntry& rEntry) -> bool
-                                {
-                                    return rEntry.pUserData->sPropertyPath == pUserData->sPropertyPath
-                                        && rEntry.sStatus == sPropertyName;
-                                }
-                    );
-
-                    if (modifiedIt != m_modifiedPrefBoxEntries.end())
-                    {
-                        modifiedIt->sValue = sDialogValue;
-                    }
-                    else
-                    {
-                        m_modifiedPrefBoxEntries.push_back(*it);
-                    }
+                    sal_Int64 nHyper = sNewValue.toInt64();
+                    if( nHyper==0 && sNewValue.getLength()!=1)
+                        throw uno::Exception("out of range hyper", nullptr);
+                    pProperty->Value <<= nHyper;
                 }
+                else if( sPropertyType == "double")
+                {
+                    double nDoub = sNewValue.toDouble();
+                    if( nDoub ==0 && sNewValue.getLength()!=1)
+                        throw uno::Exception("out of range double", nullptr);
+                    pProperty->Value <<= nDoub;
+                }
+                else if( sPropertyType == "float")
+                {
+                    float nFloat = sNewValue.toFloat();
+                    if( nFloat ==0 && sNewValue.getLength()!=1)
+                        throw uno::Exception("out of range float", nullptr);
+                    pProperty->Value <<= nFloat;
+                }
+                else if( sPropertyType == "string" )
+                {
+                    pProperty->Value <<= sNewValue;
+                }
+                else if( sPropertyType == "[]short" )
+                {
+                    //create string sequence from comma separated string
+                    //uno::Sequence< OUString > seqStr;
+                    std::vector< OUString > seqStr = commaStringToSequence( sNewValue );
+
+                    //create appropriate sequence with same size as string sequence
+                    uno::Sequence< sal_Int16 > seqShort( seqStr.size() );
+                    //convert all strings to appropriate type
+                    for( size_t i = 0; i < seqStr.size(); ++i )
+                    {
+                        seqShort[i] = static_cast<sal_Int16>(seqStr[i].toInt32());
+                    }
+                    pProperty->Value <<= seqShort;
+                }
+                else if( sPropertyType == "[]long" )
+                {
+                    std::vector< OUString > seqStrLong = commaStringToSequence( sNewValue );
+
+                    uno::Sequence< sal_Int32 > seqLong( seqStrLong.size() );
+                    for( size_t i = 0; i < seqStrLong.size(); ++i )
+                    {
+                        seqLong[i] = seqStrLong[i].toInt32();
+                    }
+                    pProperty->Value <<= seqLong;
+                }
+                else if( sPropertyType == "[]hyper" )
+                {
+                    std::vector< OUString > seqStrHyper = commaStringToSequence( sNewValue );
+                    uno::Sequence< sal_Int64 > seqHyper( seqStrHyper.size() );
+                    for( size_t i = 0; i < seqStrHyper.size(); ++i )
+                    {
+                        seqHyper[i] = seqStrHyper[i].toInt64();
+                    }
+                    pProperty->Value <<= seqHyper;
+                }
+                else if( sPropertyType == "[]double" )
+                {
+                    std::vector< OUString > seqStrDoub = commaStringToSequence( sNewValue );
+                    uno::Sequence< double > seqDoub( seqStrDoub.size() );
+                    for( size_t i = 0; i < seqStrDoub.size(); ++i )
+                    {
+                        seqDoub[i] = seqStrDoub[i].toDouble();
+                    }
+                    pProperty->Value <<= seqDoub;
+                }
+                else if( sPropertyType == "[]float" )
+                {
+                    std::vector< OUString > seqStrFloat = commaStringToSequence( sNewValue );
+                    uno::Sequence< sal_Int16 > seqFloat( seqStrFloat.size() );
+                    for( size_t i = 0; i < seqStrFloat.size(); ++i )
+                    {
+                        seqFloat[i] = seqStrFloat[i].toFloat();
+                    }
+                    pProperty->Value <<= seqFloat;
+                }
+                else if( sPropertyType == "[]string" )
+                {
+                    pProperty->Value <<= comphelper::containerToSequence( commaStringToSequence( sNewValue ));
+                }
+                else //unknown
+                    throw uno::Exception("unknown property type " + sPropertyType, nullptr);
+
+                sDialogValue = sNewValue;
             }
         }
-        catch( uno::Exception& )
+
+        if(bSaveChanges)
         {
+            AddToModifiedVector( pProperty );
+
+            //update listbox value.
+            m_xPrefBox->set_text(*m_xScratchIter, sDialogValue, 3);
+            //update m_prefBoxEntries
+            auto it = std::find_if(m_prefBoxEntries.begin(), m_prefBoxEntries.end(),
+              [&pUserData, &sPropertyName](const prefBoxEntry& rEntry) -> bool
+              {
+                  return rEntry.pUserData->sPropertyPath == pUserData->sPropertyPath
+                      && rEntry.sStatus == sPropertyName;
+              }
+            );
+            if (it != m_prefBoxEntries.end())
+            {
+                it->sValue = sDialogValue;
+
+                auto modifiedIt = std::find_if(
+                            m_modifiedPrefBoxEntries.begin(), m_modifiedPrefBoxEntries.end(),
+                            [&pUserData, &sPropertyName](const prefBoxEntry& rEntry) -> bool
+                            {
+                                return rEntry.pUserData->sPropertyPath == pUserData->sPropertyPath
+                                    && rEntry.sStatus == sPropertyName;
+                            }
+                );
+
+                if (modifiedIt != m_modifiedPrefBoxEntries.end())
+                {
+                    modifiedIt->sValue = sDialogValue;
+                }
+                else
+                {
+                    m_modifiedPrefBoxEntries.push_back(*it);
+                }
+            }
         }
+    }
+    catch( uno::Exception& )
+    {
     }
 }
 

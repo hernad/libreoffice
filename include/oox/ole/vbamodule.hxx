@@ -25,12 +25,12 @@
 #include <rtl/ustring.hxx>
 #include <sal/types.h>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace container { class XNameAccess; }
     namespace container { class XNameContainer; }
     namespace frame { class XModel; }
     namespace uno { class XComponentContext; }
-} } }
+}
 
 namespace oox {
     class BinaryInputStream;
@@ -92,12 +92,12 @@ private:
     OUString            maName;
     OUString            maStreamName;
     OUString            maDocString;
-    rtl_TextEncoding const meTextEnc;
+    rtl_TextEncoding    meTextEnc;
     sal_Int32           mnType;
     sal_uInt32          mnOffset;
     bool                mbReadOnly;
     bool                mbPrivate;
-    bool const          mbExecutable;
+    bool                mbExecutable;
 };
 
 

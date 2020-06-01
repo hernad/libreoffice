@@ -26,6 +26,7 @@
 #include <tools/debug.hxx>
 #include <tools/stream.hxx>
 #include <tools/urlobj.hxx>
+#include <tools/diagnose_ex.h>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/sequence.hxx>
 #include <cppuhelper/supportsservice.hxx>
@@ -84,8 +85,6 @@ static void ReadThroughDic( const OUString &rMainURL, ConvDicXMLImport &rImport 
     if (!xIn.is())
         return;
 
-    SvStreamPtr pStream( utl::UcbStreamHelper::CreateStream( xIn ) );
-
     // prepare ParserInputSource
     xml::sax::InputSource aParserInput;
     aParserInput.aInputStream = xIn;
@@ -97,12 +96,15 @@ static void ReadThroughDic( const OUString &rMainURL, ConvDicXMLImport &rImport 
     }
     catch( xml::sax::SAXParseException& )
     {
+        TOOLS_WARN_EXCEPTION("linguistic", "");
     }
     catch( xml::sax::SAXException& )
     {
+        TOOLS_WARN_EXCEPTION("linguistic", "");
     }
     catch( io::IOException& )
     {
+        TOOLS_WARN_EXCEPTION("linguistic", "");
     }
 }
 
@@ -222,7 +224,7 @@ void ConvDic::Save()
     if (!xStream.is())
         return;
 
-    SvStreamPtr pStream( utl::UcbStreamHelper::CreateStream( xStream ) );
+    std::unique_ptr<SvStream> pStream( utl::UcbStreamHelper::CreateStream( xStream ) );
 
     // get XML writer
     uno::Reference< xml::sax::XWriter > xSaxWriter = xml::sax::Writer::create(xContext);
@@ -282,7 +284,7 @@ void ConvDic::AddEntry( const OUString &rLeftText, const OUString &rRightText )
     {
         if (rLeftText.getLength() > nMaxLeftCharCount)
             nMaxLeftCharCount   = static_cast<sal_Int16>(rLeftText.getLength());
-        if (pFromRight.get() && rRightText.getLength() > nMaxRightCharCount)
+        if (pFromRight && rRightText.getLength() > nMaxRightCharCount)
             nMaxRightCharCount  = static_cast<sal_Int16>(rRightText.getLength());
     }
 

@@ -371,14 +371,14 @@ void RTFSdrImport::resolve(RTFShape& rShape, bool bClose, ShapeOrPict const shap
     uno::Any aLineWidth = uno::makeAny(sal_Int32(26));
     sal_Int16 eWritingMode = text::WritingMode2::LR_TB;
     // Groupshape support
-    o3tl::optional<sal_Int32> oGroupLeft;
-    o3tl::optional<sal_Int32> oGroupTop;
-    o3tl::optional<sal_Int32> oGroupRight;
-    o3tl::optional<sal_Int32> oGroupBottom;
-    o3tl::optional<sal_Int32> oRelLeft;
-    o3tl::optional<sal_Int32> oRelTop;
-    o3tl::optional<sal_Int32> oRelRight;
-    o3tl::optional<sal_Int32> oRelBottom;
+    std::optional<sal_Int32> oGroupLeft;
+    std::optional<sal_Int32> oGroupTop;
+    std::optional<sal_Int32> oGroupRight;
+    std::optional<sal_Int32> oGroupBottom;
+    std::optional<sal_Int32> oRelLeft;
+    std::optional<sal_Int32> oRelTop;
+    std::optional<sal_Int32> oRelRight;
+    std::optional<sal_Int32> oRelBottom;
 
     // Importing these are not trivial, let the VML import do the hard work.
     oox::vml::FillModel aFillModel; // Gradient.
@@ -386,8 +386,8 @@ void RTFSdrImport::resolve(RTFShape& rShape, bool bClose, ShapeOrPict const shap
 
     bool bOpaque = true;
 
-    o3tl::optional<sal_Int16> oRelativeWidth;
-    o3tl::optional<sal_Int16> oRelativeHeight;
+    std::optional<sal_Int16> oRelativeWidth;
+    std::optional<sal_Int16> oRelativeHeight;
     sal_Int16 nRelativeWidthRelation = text::RelOrientation::PAGE_FRAME;
     sal_Int16 nRelativeHeightRelation = text::RelOrientation::PAGE_FRAME;
     boost::logic::tribool obRelFlipV(boost::logic::indeterminate);
@@ -725,7 +725,7 @@ void RTFSdrImport::resolve(RTFShape& rShape, bool bClose, ShapeOrPict const shap
             sal_Int16 nPercentage = rtl::math::round(rProperty.second.toDouble() / 10);
             if (nPercentage)
             {
-                o3tl::optional<sal_Int16>& rPercentage
+                std::optional<sal_Int16>& rPercentage
                     = rProperty.first == "pctHoriz" ? oRelativeWidth : oRelativeHeight;
                 rPercentage = nPercentage;
             }
@@ -970,10 +970,9 @@ void RTFSdrImport::resolve(RTFShape& rShape, bool bClose, ShapeOrPict const shap
             {
                 uno::Sequence<awt::Point>& rPolygon = aPolyPolySequence[0];
                 basegfx::B2DPolygon aPoly;
-                for (sal_Int32 i = 0; i < rPolygon.getLength(); ++i)
+                for (const awt::Point& rPoint : std::as_const(rPolygon))
                 {
-                    const awt::Point& rPoint = rPolygon[i];
-                    aPoly.insert(i, basegfx::B2DPoint(rPoint.X, rPoint.Y));
+                    aPoly.append(basegfx::B2DPoint(rPoint.X, rPoint.Y));
                 }
                 basegfx::B2DHomMatrix aTransformation;
                 aTransformation.scale(1.0, obRelFlipV ? -1.0 : 1.0);

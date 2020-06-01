@@ -151,7 +151,7 @@ namespace myImplHelpers
             RES_NONE, RES_NONE, RES_POOLCOLL_HEADLINE_BASE, RES_NONE,
             RES_POOLCOLL_SIGNATURE, RES_NONE, RES_POOLCOLL_TEXT,
             RES_POOLCOLL_TEXT_MOVE, RES_NONE, RES_NONE, RES_NONE, RES_NONE,
-            RES_NONE, RES_NONE, RES_POOLCOLL_DOC_SUBTITEL
+            RES_NONE, RES_NONE, RES_POOLCOLL_DOC_SUBTITLE
         };
 
         OSL_ENSURE(SAL_N_ELEMENTS(aArr) == 75, "Style Array has false size");
@@ -325,7 +325,7 @@ namespace myImplHelpers
     class IfBeforeStart
     {
     private:
-        sal_Int32 const mnStart;
+        sal_Int32 mnStart;
     public:
         explicit IfBeforeStart(sal_Int32 nStart) : mnStart(nStart) {}
         bool operator()(const sw::util::CharRunEntry &rEntry) const

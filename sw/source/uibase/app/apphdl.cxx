@@ -80,6 +80,8 @@
 #include <salhelper/simplereferenceobject.hxx>
 #include <rtl/ref.hxx>
 
+#include <officecfg/Office/Common.hxx>
+
 using namespace ::com::sun::star;
 
 // Slotmaps for the application's methods
@@ -156,8 +158,8 @@ void SwModule::StateOther(SfxItemSet &rSet)
             break;
             case FN_MAILMERGE_WIZARD:
             {
-                SwView* pView = ::GetActiveView();
-                if (pView && pView->GetViewShell()->isExportLocked())
+                SfxObjectShell* pObjectShell = GetObjectShell();
+                if (pObjectShell && pObjectShell->isExportLocked())
                     rSet.DisableItem(nWhich);
                 break;
             }
@@ -202,26 +204,8 @@ void SwModule::StateOther(SfxItemSet &rSet)
             {
                 SwView* pView = ::GetActiveView();
                 std::shared_ptr<SwMailMergeConfigItem> xConfigItem;
-                bool bUnLockDispatcher = false;
-                SfxDispatcher* pDispatcher = nullptr;
                 if (pView)
-                {
                     xConfigItem = pView->EnsureMailMergeConfigItem();
-
-                    // tdf#121607 lock the dispatcher while processing
-                    // this request, and release it afterwards,
-                    // that means that if this request pops up a dialog
-                    // any other pending requests will be deferred
-                    // until this request is finished, i.e. they won't
-                    // be dispatched by the dispatcher timeout until
-                    // unlock is called, serializing the password dialogs
-                    pDispatcher = pView->GetViewFrame()->GetDispatcher();
-                    if (!pDispatcher->IsLocked())
-                    {
-                        pDispatcher->Lock(true);
-                        bUnLockDispatcher = true;
-                    }
-                }
 
                 // #i51949# hide e-Mail option if e-Mail is not supported
                 // #i63267# printing might be disabled
@@ -236,9 +220,6 @@ void SwModule::StateOther(SfxItemSet &rSet)
                 {
                     rSet.DisableItem(nWhich);
                 }
-
-                if (bUnLockDispatcher)
-                    pDispatcher->Lock(false);
             }
             break;
             default:
@@ -414,21 +395,36 @@ void SwMailMergeWizardExecutor::ExecuteMailMergeWizard( const SfxItemSet * pArgs
 {
     if(!lcl_hasAllComponentsAvailable())
     {
-        try
+        if (officecfg::Office::Common::PackageKit::EnableBaseInstallation::get())
         {
-            using namespace org::freedesktop::PackageKit;
-            using namespace svtools;
-            css::uno::Reference< XSyncDbusSessionHelper > xSyncDbusSessionHelper(SyncDbusSessionHelper::create(comphelper::getProcessComponentContext()));
-            const css::uno::Sequence< OUString > vPackages{ "libreoffice-base" };
-            xSyncDbusSessionHelper->InstallPackageNames(vPackages, OUString());
-            SolarMutexGuard aGuard;
-            executeRestartDialog(comphelper::getProcessComponentContext(), nullptr, RESTART_REASON_MAILMERGE_INSTALL);
-        }
-        catch (const css::uno::Exception &)
-        {
-            TOOLS_INFO_EXCEPTION(
-                "sw.core",
-                "trying to install LibreOffice Base, caught");
+            try
+            {
+                using namespace org::freedesktop::PackageKit;
+                using namespace svtools;
+                css::uno::Reference< XSyncDbusSessionHelper > xSyncDbusSessionHelper(SyncDbusSessionHelper::create(comphelper::getProcessComponentContext()));
+                const css::uno::Sequence< OUString > vPackages{ "libreoffice-base" };
+                xSyncDbusSessionHelper->InstallPackageNames(vPackages, OUString());
+                SolarMutexGuard aGuard;
+                executeRestartDialog(comphelper::getProcessComponentContext(), nullptr, RESTART_REASON_MAILMERGE_INSTALL);
+            }
+            catch (const css::uno::Exception &)
+            {
+                TOOLS_INFO_EXCEPTION(
+                    "sw.core",
+                    "trying to install LibreOffice Base, caught");
+                auto xRestartManager
+                    = css::task::OfficeRestartManager::get(comphelper::getProcessComponentContext());
+                if (!xRestartManager->isRestartRequested(false))
+                {
+                    // Base is absent, and could not initiate its install - ask user to do that manually
+                    // Only show the dialog if restart is not initiated yet
+                    std::unique_ptr<weld::MessageDialog> xWarnBox(Application::CreateMessageDialog(
+                        nullptr, VclMessageType::Info, VclButtonsType::Ok,
+                        SwResId(STR_NO_BASE_FOR_MERGE)));
+                    xWarnBox->run();
+                }
+            }
+        } else {
             auto xRestartManager
                 = css::task::OfficeRestartManager::get(comphelper::getProcessComponentContext());
             if (!xRestartManager->isRestartRequested(false))
@@ -614,7 +610,7 @@ void SwMailMergeWizardExecutor::EndDialogHdl(sal_Int32 nRet)
     default: // finish
         {
             std::shared_ptr<SwMailMergeConfigItem> xMMConfig = m_pView->GetMailMergeConfigItem();
-            SwView* pSourceView = xMMConfig.get() ? xMMConfig->GetSourceView() : nullptr;
+            SwView* pSourceView = xMMConfig ? xMMConfig->GetSourceView() : nullptr;
             if(pSourceView)
             {
                 xMMConfig->GetSourceView()->GetViewFrame()->GetFrame().Appear();

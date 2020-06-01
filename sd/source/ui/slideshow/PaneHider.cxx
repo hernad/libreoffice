@@ -27,6 +27,7 @@
 #include <com/sun/star/drawing/framework/XControllerManager.hpp>
 #include <com/sun/star/drawing/framework/XConfigurationController.hpp>
 #include <com/sun/star/drawing/framework/XConfiguration.hpp>
+#include <com/sun/star/frame/XController.hpp>
 #include <com/sun/star/lang/DisposedException.hpp>
 
 #include <tools/diagnose_ex.h>
@@ -39,7 +40,6 @@ using ::com::sun::star::lang::DisposedException;
 namespace sd {
 
 PaneHider::PaneHider (const ViewShell& rViewShell, SlideshowImpl* pSlideShow)
-    : mrViewShell(rViewShell)
 {
      // Hide the left and right pane windows when a slideshow exists and is
     // not full screen.
@@ -49,7 +49,7 @@ PaneHider::PaneHider (const ViewShell& rViewShell, SlideshowImpl* pSlideShow)
     try
     {
         Reference<XControllerManager> xControllerManager (
-            mrViewShell.GetViewShellBase().GetController(), UNO_QUERY_THROW);
+            rViewShell.GetViewShellBase().GetController(), UNO_QUERY_THROW);
         mxConfigurationController = xControllerManager->getConfigurationController();
         if (mxConfigurationController.is())
         {
@@ -72,7 +72,7 @@ PaneHider::PaneHider (const ViewShell& rViewShell, SlideshowImpl* pSlideShow)
                 }
             }
         }
-        FrameworkHelper::Instance(mrViewShell.GetViewShellBase())->WaitForUpdate();
+        FrameworkHelper::Instance(rViewShell.GetViewShellBase())->WaitForUpdate();
     }
     catch (RuntimeException&)
     {

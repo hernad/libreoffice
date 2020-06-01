@@ -211,8 +211,6 @@ SwGlossaryDlg::SwGlossaryDlg(SfxViewFrame const * pViewFrame,
 
     m_xShortNameEdit->connect_insert_text(LINK(this, SwGlossaryDlg, TextFilterHdl));
 
-    SvtLinguConfig aLocalLinguConfig;
-
     m_xEditBtn->connect_toggled(LINK(this, SwGlossaryDlg, EnableHdl));
     m_xEditBtn->connect_selected(LINK(this, SwGlossaryDlg, MenuHdl));
     m_xPathBtn->connect_clicked(LINK(this, SwGlossaryDlg, PathHdl));
@@ -502,25 +500,27 @@ IMPL_LINK(SwGlossaryDlg, MenuHdl, const OString&, rItemIdent, void)
         m_xShortNameEdit->set_text(m_pGlossaryHdl->GetGlossaryShortName(m_xNameED->get_text()));
         SwNewGlosNameDlg aNewNameDlg(this, m_xNameED->get_text(), m_xShortNameEdit->get_text());
         if (aNewNameDlg.run() == RET_OK && m_pGlossaryHdl->Rename(m_xShortNameEdit->get_text(),
-                                                                aNewNameDlg.GetNewShort(),
-                                                                aNewNameDlg.GetNewName()))
+                                                                  aNewNameDlg.GetNewShort(),
+                                                                  aNewNameDlg.GetNewName()))
         {
             std::unique_ptr<weld::TreeIter> xEntry = m_xCategoryBox->make_iterator();
-            m_xCategoryBox->get_selected(xEntry.get());
-            std::unique_ptr<weld::TreeIter> xOldEntry = m_xCategoryBox->make_iterator(xEntry.get());
-            if (m_xCategoryBox->get_iter_depth(*xEntry))
-                m_xCategoryBox->iter_parent(*xEntry);
+            if (m_xCategoryBox->get_selected(xEntry.get()))
+            {
+                std::unique_ptr<weld::TreeIter> xOldEntry = m_xCategoryBox->make_iterator(xEntry.get());
+                if (m_xCategoryBox->get_iter_depth(*xEntry))
+                    m_xCategoryBox->iter_parent(*xEntry);
 
-            std::unique_ptr<weld::TreeIter> xNewEntry = m_xCategoryBox->make_iterator();
-            OUString sId(aNewNameDlg.GetNewShort());
-            OUString sName(aNewNameDlg.GetNewName());
+                std::unique_ptr<weld::TreeIter> xNewEntry = m_xCategoryBox->make_iterator();
+                OUString sId(aNewNameDlg.GetNewShort());
+                OUString sName(aNewNameDlg.GetNewName());
 
-            m_xCategoryBox->insert(xEntry.get(), -1, &sName, &sId,
-                                   nullptr, nullptr, nullptr, false, xNewEntry.get());
+                m_xCategoryBox->insert(xEntry.get(), -1, &sName, &sId,
+                                       nullptr, nullptr, nullptr, false, xNewEntry.get());
 
-            m_xCategoryBox->remove(*xOldEntry);
-            m_xCategoryBox->select(*xNewEntry);
-            m_xCategoryBox->scroll_to_row(*xNewEntry);
+                m_xCategoryBox->remove(*xOldEntry);
+                m_xCategoryBox->select(*xNewEntry);
+                m_xCategoryBox->scroll_to_row(*xNewEntry);
+            }
         }
         GrpSelect(*m_xCategoryBox);
     }

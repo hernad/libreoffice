@@ -37,14 +37,14 @@ class ScEditEngineDefaulter;
 class ScEditUtil
 {
     ScDocument*     pDoc;
-    SCCOL const     nCol;
-    SCROW const     nRow;
-    SCTAB const     nTab;
-    Point const     aScrPos;
+    SCCOL           nCol;
+    SCROW           nRow;
+    SCTAB           nTab;
+    Point           aScrPos;
     VclPtr<OutputDevice> pDev; // MapMode has to be set
-    double const    nPPTX;
-    double const    nPPTY;
-    Fraction const  aZoomX;
+    double          nPPTX;
+    double          nPPTY;
+    Fraction        aZoomX;
     Fraction        aZoomY;
 
 public:
@@ -74,7 +74,7 @@ public:
     static std::unique_ptr<EditTextObject> Clone( const EditTextObject& rSrc, ScDocument& rDestDoc );
 
     static OUString GetCellFieldValue(
-        const SvxFieldData& rFieldData, const ScDocument* pDoc, o3tl::optional<Color>* ppTextColor );
+        const SvxFieldData& rFieldData, const ScDocument* pDoc, std::optional<Color>* ppTextColor );
 
 public:
                 ScEditUtil( ScDocument* pDocument, SCCOL nX, SCROW nY, SCTAB nZ,
@@ -87,7 +87,6 @@ public:
 
 class ScEditAttrTester
 {
-    ScEditEngineDefaulter* pEngine;
     std::unique_ptr<SfxItemSet> pEditAttrs;
     bool        bNeedsObject;
     bool        bNeedsCellAttr;
@@ -105,9 +104,9 @@ public:
 class ScEnginePoolHelper
 {
 protected:
-    SfxItemPool* const    pEnginePool;
+    SfxItemPool*    pEnginePool;
     SfxItemSet*     pDefaults;
-    bool const      bDeleteEnginePool;
+    bool            bDeleteEnginePool;
     bool            bDeleteDefaults;
 
                     ScEnginePoolHelper( SfxItemPool* pEnginePool, bool bDeleteEnginePool );
@@ -175,7 +174,7 @@ public:
 class SC_DLLPUBLIC ScFieldEditEngine : public ScEditEngineDefaulter
 {
 private:
-    ScDocument* const mpDoc;
+    ScDocument* mpDoc;
     bool bExecuteURL;
 
 public:
@@ -186,7 +185,7 @@ public:
     void SetExecuteURL(bool bSet)    { bExecuteURL = bSet; }
 
     virtual void    FieldClicked( const SvxFieldItem& rField ) override;
-    virtual OUString CalcFieldValue( const SvxFieldItem& rField, sal_Int32 nPara, sal_Int32 nPos, o3tl::optional<Color>& rTxtColor, o3tl::optional<Color>& rFldColor ) override;
+    virtual OUString CalcFieldValue( const SvxFieldItem& rField, sal_Int32 nPara, sal_Int32 nPos, std::optional<Color>& rTxtColor, std::optional<Color>& rFldColor ) override;
 };
 
 // 1/100 mm
@@ -223,7 +222,7 @@ private:
 
 public:
     ScHeaderEditEngine( SfxItemPool* pEnginePool );
-    virtual OUString CalcFieldValue( const SvxFieldItem& rField, sal_Int32 nPara, sal_Int32 nPos, o3tl::optional<Color>& rTxtColor, o3tl::optional<Color>& rFldColor ) override;
+    virtual OUString CalcFieldValue( const SvxFieldItem& rField, sal_Int32 nPara, sal_Int32 nPos, std::optional<Color>& rTxtColor, std::optional<Color>& rFldColor ) override;
 
     void SetNumType(SvxNumType eNew)                { aData.eNumType = eNew; }
     void SetData(const ScHeaderFieldData& rNew)     { aData = rNew; }

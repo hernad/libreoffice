@@ -21,6 +21,7 @@
 
 #include <com/sun/star/document/XFilter.hpp>
 #include <com/sun/star/document/XImporter.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/propertysequence.hxx>
@@ -50,7 +51,6 @@ ErrCode SwDOCXReader::Read(SwDoc& rDoc, const OUString& /* rBaseURL */, SwPaM& r
         return ERR_SWG_READ_ERROR;
 
     // We want to work in an empty paragraph.
-    auto pSttNdIdx = std::make_shared<SwNodeIndex>(rDoc.GetNodes());
     const SwPosition* pPos = rPam.GetPoint();
     rDoc.getIDocumentContentOperations().SplitNode(*pPos, false);
     rDoc.SetTextFormatColl(rPam, rDoc.getIDocumentStylePoolAccess().GetTextCollFromPool(RES_POOLCOLL_STANDARD, false));
@@ -233,7 +233,7 @@ bool SwDOCXReader::MakeEntries( SwDoc *pD, SwTextBlocks &rBlocks )
                     SwNodeIndex aIdx( pGlDoc->GetNodes().GetEndOfContent(), -1 );
                     pCNd = aIdx.GetNode().GetContentNode();
                     SwPosition aPos( aIdx, SwIndex( pCNd, pCNd ? pCNd->Len() : 0 ) );
-                    pD->getIDocumentContentOperations().CopyRange( aPam, aPos, /*bCopyAll=*/false, /*bCheckPos=*/true, /*bCopyText=*/false );
+                    pD->getIDocumentContentOperations().CopyRange(aPam, aPos, SwCopyFlags::CheckPosInFly);
                     rBlocks.PutDoc();
                 }
                 else

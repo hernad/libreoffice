@@ -20,14 +20,13 @@
 #ifndef INCLUDED_FORMS_SOURCE_XFORMS_XMLHELPER_HXX
 #define INCLUDED_FORMS_SOURCE_XFORMS_XMLHELPER_HXX
 
-#include <sal/types.h>
 #include <rtl/ustring.hxx>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace uno { template<typename T> class Reference; }
     namespace container { class XNameContainer; }
-    namespace xml { namespace dom { class XDocumentBuilder; } }
-} } }
+    namespace xml::dom { class XDocumentBuilder; }
+}
 
 
 bool isValidQName( const OUString& sName,

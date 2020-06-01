@@ -27,6 +27,7 @@
 #include <sal/log.hxx>
 
 #include <drawingml/colorchoicecontext.hxx>
+#include <drawingml/misccontexts.hxx>
 #include <drawingml/textcharacterpropertiescontext.hxx>
 #include <drawingml/fillproperties.hxx>
 #include <oox/helper/attributelist.hxx>
@@ -91,7 +92,7 @@ TextParagraphPropertiesContext::TextParagraphPropertiesContext( ContextHandler2H
     if ( rAttribs.hasAttribute( XML_indent ) )
     {
         sValue = rAttribs.getString( XML_indent ).get();
-        mrTextParagraphProperties.getFirstLineIndentation() = o3tl::optional< sal_Int32 >( sValue.isEmpty() ? 0 : GetCoordinate( sValue ) );
+        mrTextParagraphProperties.getFirstLineIndentation() = std::optional< sal_Int32 >( sValue.isEmpty() ? 0 : GetCoordinate( sValue ) );
     }
 
   // ST_TextIndentLevelType
@@ -114,7 +115,7 @@ TextParagraphPropertiesContext::TextParagraphPropertiesContext( ContextHandler2H
     if ( rAttribs.hasAttribute( XML_marL ) )
     {
         sValue = rAttribs.getString( XML_marL ).get();
-        mrTextParagraphProperties.getParaLeftMargin() = o3tl::optional< sal_Int32 >( sValue.isEmpty() ? 0 : GetCoordinate( sValue ) );
+        mrTextParagraphProperties.getParaLeftMargin() = std::optional< sal_Int32 >( sValue.isEmpty() ? 0 : GetCoordinate( sValue ) );
     }
 
     // ParaRightMargin
@@ -150,7 +151,7 @@ TextParagraphPropertiesContext::~TextParagraphPropertiesContext()
         rPropertyMap.setProperty( PROP_ParaTabStops, aSeq);
     }
 
-    if (mxBlipProps.get() && mxBlipProps->mxFillGraphic.is())
+    if (mxBlipProps && mxBlipProps->mxFillGraphic.is())
         mrBulletList.setGraphic(mxBlipProps->mxFillGraphic);
 
     if( mrBulletList.is() )

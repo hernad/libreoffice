@@ -26,7 +26,7 @@
 namespace sd { class PreviewRenderer; }
 class SdDrawDocument;
 
-namespace sd { namespace sidebar {
+namespace sd::sidebar {
 
 class PageObjectProvider;
 class PreviewProvider;
@@ -204,12 +204,12 @@ public:
     sal_Int32 mnUseCount;
 
     class URLComparator { public:
-        OUString const msURL;
+        OUString msURL;
         explicit URLComparator (const OUString& sURL);
         bool operator() (const SharedMasterPageDescriptor& rDescriptor);
     };
     class StyleNameComparator { public:
-        OUString const msStyleName;
+        OUString msStyleName;
         explicit StyleNameComparator (const OUString& sStyleName);
         bool operator() (const SharedMasterPageDescriptor& rDescriptor);
     };
@@ -222,12 +222,12 @@ public:
         explicit AllComparator(const SharedMasterPageDescriptor& rDescriptor);
         bool operator() (const SharedMasterPageDescriptor& rDescriptor);
     private:
-        SharedMasterPageDescriptor const mpDescriptor;
+        SharedMasterPageDescriptor mpDescriptor;
     };
 
 };
 
-} } // end of namespace sd::sidebar
+} // end of namespace sd::sidebar
 
 #endif
 

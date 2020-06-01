@@ -154,35 +154,35 @@ namespace vclcanvas
     void CanvasHelper::clear()
     {
         // are we disposed?
-        if( mpOutDevProvider )
-        {
-            OutputDevice& rOutDev( mpOutDevProvider->getOutDev() );
-            tools::OutDevStateKeeper aStateKeeper( mpProtectedOutDevProvider );
+        if( !mpOutDevProvider )
+            return;
 
-            rOutDev.EnableMapMode( false );
-            rOutDev.SetAntialiasing( AntialiasingFlags::EnableB2dDraw );
-            rOutDev.SetLineColor( COL_WHITE );
-            rOutDev.SetFillColor( COL_WHITE );
-            rOutDev.SetClipRegion();
-            rOutDev.DrawRect( ::tools::Rectangle( Point(),
-                                         rOutDev.GetOutputSizePixel()) );
+        OutputDevice& rOutDev( mpOutDevProvider->getOutDev() );
+        tools::OutDevStateKeeper aStateKeeper( mpProtectedOutDevProvider );
 
-            if( mp2ndOutDevProvider )
-            {
-                OutputDevice& rOutDev2( mp2ndOutDevProvider->getOutDev() );
+        rOutDev.EnableMapMode( false );
+        rOutDev.SetAntialiasing( AntialiasingFlags::EnableB2dDraw );
+        rOutDev.SetLineColor( COL_WHITE );
+        rOutDev.SetFillColor( COL_WHITE );
+        rOutDev.SetClipRegion();
+        rOutDev.DrawRect( ::tools::Rectangle( Point(),
+                                     rOutDev.GetOutputSizePixel()) );
 
-                rOutDev2.SetDrawMode( DrawModeFlags::Default );
-                rOutDev2.EnableMapMode( false );
-                rOutDev2.SetAntialiasing( AntialiasingFlags::EnableB2dDraw );
-                rOutDev2.SetLineColor( COL_WHITE );
-                rOutDev2.SetFillColor( COL_WHITE );
-                rOutDev2.SetClipRegion();
-                rOutDev2.DrawRect( ::tools::Rectangle( Point(),
-                                              rOutDev2.GetOutputSizePixel()) );
-                rOutDev2.SetDrawMode( DrawModeFlags::BlackLine | DrawModeFlags::BlackFill | DrawModeFlags::BlackText |
-                                      DrawModeFlags::BlackGradient | DrawModeFlags::BlackBitmap );
-            }
-        }
+        if( !mp2ndOutDevProvider )
+            return;
+
+        OutputDevice& rOutDev2( mp2ndOutDevProvider->getOutDev() );
+
+        rOutDev2.SetDrawMode( DrawModeFlags::Default );
+        rOutDev2.EnableMapMode( false );
+        rOutDev2.SetAntialiasing( AntialiasingFlags::EnableB2dDraw );
+        rOutDev2.SetLineColor( COL_WHITE );
+        rOutDev2.SetFillColor( COL_WHITE );
+        rOutDev2.SetClipRegion();
+        rOutDev2.DrawRect( ::tools::Rectangle( Point(),
+                                      rOutDev2.GetOutputSizePixel()) );
+        rOutDev2.SetDrawMode( DrawModeFlags::BlackLine | DrawModeFlags::BlackFill | DrawModeFlags::BlackText |
+                              DrawModeFlags::BlackGradient | DrawModeFlags::BlackBitmap );
     }
 
     void CanvasHelper::drawLine( const rendering::XCanvas*      ,
@@ -192,22 +192,22 @@ namespace vclcanvas
                                  const rendering::RenderState&  renderState )
     {
         // are we disposed?
-        if( mpOutDevProvider )
-        {
-            // nope, render
-            tools::OutDevStateKeeper aStateKeeper( mpProtectedOutDevProvider );
-            setupOutDevState( viewState, renderState, LINE_COLOR );
+        if( !mpOutDevProvider )
+            return;
 
-            const Point aStartPoint( tools::mapRealPoint2D( aStartRealPoint2D,
-                                                            viewState, renderState ) );
-            const Point aEndPoint( tools::mapRealPoint2D( aEndRealPoint2D,
-                                                          viewState, renderState ) );
-            // TODO(F2): alpha
-            mpOutDevProvider->getOutDev().DrawLine( aStartPoint, aEndPoint );
+        // nope, render
+        tools::OutDevStateKeeper aStateKeeper( mpProtectedOutDevProvider );
+        setupOutDevState( viewState, renderState, LINE_COLOR );
 
-            if( mp2ndOutDevProvider )
-                mp2ndOutDevProvider->getOutDev().DrawLine( aStartPoint, aEndPoint );
-        }
+        const Point aStartPoint( tools::mapRealPoint2D( aStartRealPoint2D,
+                                                        viewState, renderState ) );
+        const Point aEndPoint( tools::mapRealPoint2D( aEndRealPoint2D,
+                                                      viewState, renderState ) );
+        // TODO(F2): alpha
+        mpOutDevProvider->getOutDev().DrawLine( aStartPoint, aEndPoint );
+
+        if( mp2ndOutDevProvider )
+            mp2ndOutDevProvider->getOutDev().DrawLine( aStartPoint, aEndPoint );
     }
 
     void CanvasHelper::drawBezier( const rendering::XCanvas*            ,
@@ -216,38 +216,38 @@ namespace vclcanvas
                                    const rendering::ViewState&          viewState,
                                    const rendering::RenderState&        renderState )
     {
-        if( mpOutDevProvider )
-        {
-            tools::OutDevStateKeeper aStateKeeper( mpProtectedOutDevProvider );
-            setupOutDevState( viewState, renderState, LINE_COLOR );
+        if( !mpOutDevProvider )
+            return;
 
-            const Point& rStartPoint( tools::mapRealPoint2D( geometry::RealPoint2D(aBezierSegment.Px,
-                                                                                   aBezierSegment.Py),
-                                                            viewState, renderState ) );
-            const Point& rCtrlPoint1( tools::mapRealPoint2D( geometry::RealPoint2D(aBezierSegment.C1x,
-                                                                                   aBezierSegment.C1y),
-                                                            viewState, renderState ) );
-            const Point& rCtrlPoint2( tools::mapRealPoint2D( geometry::RealPoint2D(aBezierSegment.C2x,
-                                                                                   aBezierSegment.C2y),
-                                                             viewState, renderState ) );
-            const Point& rEndPoint( tools::mapRealPoint2D( _aEndPoint,
-                                                           viewState, renderState ) );
+        tools::OutDevStateKeeper aStateKeeper( mpProtectedOutDevProvider );
+        setupOutDevState( viewState, renderState, LINE_COLOR );
 
-            ::tools::Polygon aPoly(4);
-            aPoly.SetPoint( rStartPoint, 0 );
-            aPoly.SetFlags( 0, PolyFlags::Normal );
-            aPoly.SetPoint( rCtrlPoint1, 1 );
-            aPoly.SetFlags( 1, PolyFlags::Control );
-            aPoly.SetPoint( rCtrlPoint2, 2 );
-            aPoly.SetFlags( 2, PolyFlags::Control );
-            aPoly.SetPoint( rEndPoint, 3 );
-            aPoly.SetFlags( 3, PolyFlags::Normal );
+        const Point& rStartPoint( tools::mapRealPoint2D( geometry::RealPoint2D(aBezierSegment.Px,
+                                                                               aBezierSegment.Py),
+                                                        viewState, renderState ) );
+        const Point& rCtrlPoint1( tools::mapRealPoint2D( geometry::RealPoint2D(aBezierSegment.C1x,
+                                                                               aBezierSegment.C1y),
+                                                        viewState, renderState ) );
+        const Point& rCtrlPoint2( tools::mapRealPoint2D( geometry::RealPoint2D(aBezierSegment.C2x,
+                                                                               aBezierSegment.C2y),
+                                                         viewState, renderState ) );
+        const Point& rEndPoint( tools::mapRealPoint2D( _aEndPoint,
+                                                       viewState, renderState ) );
 
-            // TODO(F2): alpha
-            mpOutDevProvider->getOutDev().DrawPolygon( aPoly );
-            if( mp2ndOutDevProvider )
-                mp2ndOutDevProvider->getOutDev().DrawPolygon( aPoly );
-        }
+        ::tools::Polygon aPoly(4);
+        aPoly.SetPoint( rStartPoint, 0 );
+        aPoly.SetFlags( 0, PolyFlags::Normal );
+        aPoly.SetPoint( rCtrlPoint1, 1 );
+        aPoly.SetFlags( 1, PolyFlags::Control );
+        aPoly.SetPoint( rCtrlPoint2, 2 );
+        aPoly.SetFlags( 2, PolyFlags::Control );
+        aPoly.SetPoint( rEndPoint, 3 );
+        aPoly.SetFlags( 3, PolyFlags::Normal );
+
+        // TODO(F2): alpha
+        mpOutDevProvider->getOutDev().DrawPolygon( aPoly );
+        if( mp2ndOutDevProvider )
+            mp2ndOutDevProvider->getOutDev().DrawPolygon( aPoly );
     }
 
     uno::Reference< rendering::XCachedPrimitive > CanvasHelper::drawPolyPolygon( const rendering::XCanvas*                          ,
@@ -321,12 +321,6 @@ namespace vclcanvas
 
             ::basegfx::B2DPolyPolygon aPolyPoly(
                 ::basegfx::unotools::b2DPolyPolygonFromXPolyPolygon2D(xPolyPolygon) );
-
-            if( aPolyPoly.areControlPointsUsed() )
-            {
-                // AW: Not needed for ApplyLineDashing anymore; should be removed
-                aPolyPoly = ::basegfx::utils::adaptiveSubdivideByAngle(aPolyPoly);
-            }
 
             // apply dashing, if any
             if( strokeAttributes.DashArray.hasElements() )
@@ -873,7 +867,7 @@ namespace vclcanvas
 
     geometry::IntegerSize2D CanvasHelper::getSize()
     {
-        if( !mpOutDevProvider.get() )
+        if( !mpOutDevProvider )
             return geometry::IntegerSize2D(); // we're disposed
 
         return vcl::unotools::integerSize2DFromSize( mpOutDevProvider->getOutDev().GetOutputSizePixel() );
@@ -882,7 +876,7 @@ namespace vclcanvas
     uno::Reference< rendering::XBitmap > CanvasHelper::getScaledBitmap( const geometry::RealSize2D& newSize,
                                                                         bool                        beFast )
     {
-        if( !mpOutDevProvider.get() || !mpDevice )
+        if( !mpOutDevProvider || !mpDevice )
             return uno::Reference< rendering::XBitmap >(); // we're disposed
 
         OutputDevice& rOutDev( mpOutDevProvider->getOutDev() );
@@ -907,7 +901,7 @@ namespace vclcanvas
     uno::Sequence< sal_Int8 > CanvasHelper::getData( rendering::IntegerBitmapLayout&     rLayout,
                                                      const geometry::IntegerRectangle2D& rect )
     {
-        if( !mpOutDevProvider.get() )
+        if( !mpOutDevProvider )
             return uno::Sequence< sal_Int8 >(); // we're disposed
 
         rLayout = getMemoryLayout();
@@ -957,7 +951,7 @@ namespace vclcanvas
     uno::Sequence< sal_Int8 > CanvasHelper::getPixel( rendering::IntegerBitmapLayout& rLayout,
                                                       const geometry::IntegerPoint2D& pos )
     {
-        if( !mpOutDevProvider.get() )
+        if( !mpOutDevProvider )
             return uno::Sequence< sal_Int8 >(); // we're disposed
 
         rLayout = getMemoryLayout();
@@ -986,7 +980,7 @@ namespace vclcanvas
 
     rendering::IntegerBitmapLayout CanvasHelper::getMemoryLayout()
     {
-        if( !mpOutDevProvider.get() )
+        if( !mpOutDevProvider )
             return rendering::IntegerBitmapLayout(); // we're disposed
 
         rendering::IntegerBitmapLayout aBitmapLayout( ::canvas::tools::getStdMemoryLayout(getSize()) );
@@ -1000,7 +994,7 @@ namespace vclcanvas
                                         const rendering::RenderState&   renderState,
                                         ColorType                       eColorType ) const
     {
-        ENSURE_OR_THROW( mpOutDevProvider.get(),
+        ENSURE_OR_THROW( mpOutDevProvider,
                          "outdev null. Are we disposed?" );
 
         ::canvas::tools::verifyInput( renderState,
@@ -1085,7 +1079,7 @@ namespace vclcanvas
                                         const rendering::RenderState&                   renderState,
                                         const uno::Reference< rendering::XCanvasFont >& xFont   ) const
     {
-        ENSURE_OR_THROW( mpOutDevProvider.get(),
+        ENSURE_OR_THROW( mpOutDevProvider,
                          "outdev null. Are we disposed?" );
 
         OutputDevice& rOutDev( mpOutDevProvider->getOutDev() );

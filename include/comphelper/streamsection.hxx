@@ -20,12 +20,13 @@
 #ifndef INCLUDED_COMPHELPER_STREAMSECTION_HXX
 #define INCLUDED_COMPHELPER_STREAMSECTION_HXX
 
+#include <config_options.h>
 #include <com/sun/star/uno/Reference.h>
 #include <comphelper/comphelperdllapi.h>
 
-namespace com { namespace sun { namespace star { namespace io { class XDataInputStream; } } } }
-namespace com { namespace sun { namespace star { namespace io { class XDataOutputStream; } } } }
-namespace com { namespace sun { namespace star { namespace io { class XMarkableStream; } } } }
+namespace com::sun::star::io { class XDataInputStream; }
+namespace com::sun::star::io { class XDataOutputStream; }
+namespace com::sun::star::io { class XMarkableStream; }
 
 namespace comphelper
 {
@@ -35,7 +36,7 @@ namespace comphelper
     use the same mechanism.
 */
 
-class COMPHELPER_DLLPUBLIC OStreamSection
+class UNLESS_MERGELIBS(COMPHELPER_DLLPUBLIC) OStreamSection
 {
     css::uno::Reference< css::io::XMarkableStream >       m_xMarkStream;
     css::uno::Reference< css::io::XDataInputStream >      m_xInStream;

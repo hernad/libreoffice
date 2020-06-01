@@ -26,7 +26,7 @@
 #include "xladdress.hxx"
 #include <dpobject.hxx>
 
-#include <o3tl/optional.hxx>
+#include <optional>
 
 class XclImpStream;
 class XclExpStream;
@@ -515,7 +515,7 @@ public:
 protected:
     XclPCFieldInfo      maFieldInfo;        /// Pivot cache field info (SXFIELD record).
     XclPCFieldType      meFieldType;        /// Type of this pivot cache field.
-    sal_uInt16 const    mnFieldIdx;         /// Own field index in pivot cache.
+    sal_uInt16          mnFieldIdx;         /// Own field index in pivot cache.
     ScfUInt16Vec        maGroupOrder;       /// Order of items in a grouping field (SXGROUPINFO record).
     XclPCNumGroupInfo   maNumGroupInfo;     /// Info for numeric grouping (SXNUMGROUP record).
 };
@@ -624,7 +624,7 @@ struct XclPTFieldExtInfo
     sal_uInt16          mnSortField;    /// Index to data field sorting bases on.
     sal_uInt16          mnShowField;    /// Index to data field AutoShow bases on.
     sal_uInt16          mnNumFmt;
-    o3tl::optional<OUString> mpFieldTotalName;
+    std::optional<OUString> mpFieldTotalName;
 
     explicit            XclPTFieldExtInfo();
 

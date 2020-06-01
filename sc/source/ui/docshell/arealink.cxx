@@ -183,7 +183,7 @@ bool ScAreaLink::IsEqual( const OUString& rFile, const OUString& rFilter, const 
 bool ScAreaLink::FindExtRange( ScRange& rRange, const ScDocument* pSrcDoc, const OUString& rAreaName )
 {
     bool bFound = false;
-    OUString aUpperName = ScGlobal::pCharClass->uppercase(rAreaName);
+    OUString aUpperName = ScGlobal::getCharClassPtr()->uppercase(rAreaName);
     ScRangeName* pNames = pSrcDoc->GetRangeName();
     if (pNames)         // named ranges
     {
@@ -375,7 +375,7 @@ bool ScAreaLink::Refresh( const OUString& rNewFile, const OUString& rNewFilter,
             {
                 ScRange const & rTokenRange( aSourceRanges[nRange]);
                 SCTAB nSrcTab = rTokenRange.aStart.Tab();
-                ScMarkData aSourceMark(rSrcDoc.MaxRow(), rSrcDoc.MaxCol());
+                ScMarkData aSourceMark(rSrcDoc.GetSheetLimits());
                 aSourceMark.SelectOneTable( nSrcTab );      // selecting for CopyToClip
                 aSourceMark.SetMarkArea( rTokenRange );
 
@@ -395,7 +395,7 @@ bool ScAreaLink::Refresh( const OUString& rNewFile, const OUString& rNewFilter,
 
                 aNewTokenRange.aEnd.SetCol( aNewTokenRange.aStart.Col() + (rTokenRange.aEnd.Col() - rTokenRange.aStart.Col()) );
                 aNewTokenRange.aEnd.SetRow( aNewTokenRange.aStart.Row() + (rTokenRange.aEnd.Row() - rTokenRange.aStart.Row()) );
-                ScMarkData aDestMark(rDoc.MaxRow(), rDoc.MaxCol());
+                ScMarkData aDestMark(rDoc.GetSheetLimits());
                 aDestMark.SelectOneTable( nDestTab );
                 aDestMark.SetMarkArea( aNewTokenRange );
                 rDoc.CopyFromClip( aNewTokenRange, aDestMark, InsertDeleteFlags::ALL, nullptr, &aClipDoc, false );

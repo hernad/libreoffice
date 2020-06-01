@@ -25,6 +25,7 @@
 #include <vcl/syswin.hxx>
 #include <vcl/weld.hxx>
 
+#include <rtl/ustrbuf.hxx>
 #include <svl/whiter.hxx>
 #include <svl/stritem.hxx>
 #include <svl/eitem.hxx>
@@ -1237,7 +1238,7 @@ void SwPagePreview::CreateScrollbar( bool bHori )
     vcl::Window *pMDI = &GetViewFrame()->GetWindow();
     VclPtr<SwScrollbar>& ppScrollbar = bHori ? m_pHScrollbar : m_pVScrollbar;
 
-    assert(!ppScrollbar.get()); //check beforehand!
+    assert(!ppScrollbar); //check beforehand!
 
     ppScrollbar = VclPtr<SwScrollbar>::Create( pMDI, bHori );
 
@@ -1321,7 +1322,7 @@ void SwPagePreview::OuterResizePixel( const Point &rOfst, const Size &rSize )
     // Call of the DocSzChgd-Method of the scrollbars is necessary,
     // because from the maximum scroll range half the height of the
     // VisArea is always deducted.
-    if ( m_pVScrollbar && aTmpSize.Width() > 0 && aTmpSize.Height() > 0 )
+    if ( m_pVScrollbar && !aTmpSize.IsEmpty() )
     {
         ScrollDocSzChg();
     }
@@ -1370,7 +1371,7 @@ void SwPagePreview::SetVisArea( const tools::Rectangle &rRect )
     // because then we do not really paint but the rectangles are just
     // bookmarked (in document coordinates).
     if( GetViewShell()->ActionPend() )
-        m_pViewWin->Update();
+        m_pViewWin->PaintImmediately();
 
     // Set at View-Win the current size
     m_aVisArea = aLR;

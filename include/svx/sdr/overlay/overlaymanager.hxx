@@ -35,9 +35,9 @@ class OutputDevice;
 class SdrModel;
 namespace vcl { class Region; }
 
-namespace sdr { namespace overlay {
+namespace sdr::overlay {
     class OverlayObject;
-}}
+}
 
 namespace basegfx {
     class B2DRange;
@@ -69,7 +69,7 @@ namespace sdr
             sal_uInt32                                  mnStripeLengthPixel; // defaults to 4L
 
             // hold an incarnation of Drawinglayer configuration options
-            SvtOptionsDrawinglayer const                maDrawinglayerOpt;
+            SvtOptionsDrawinglayer                      maDrawinglayerOpt;
 
             // hold buffered the logic length of discrete vector (1.0, 0.0) and the
             // view transformation belonging to it. Update happens in getDiscreteOne()

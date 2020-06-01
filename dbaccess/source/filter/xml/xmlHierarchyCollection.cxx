@@ -19,18 +19,14 @@
 
 #include "xmlHierarchyCollection.hxx"
 #include "xmlComponent.hxx"
-#include "xmlQuery.hxx"
 #include "xmlColumn.hxx"
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
-#include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
 #include <xmloff/ProgressBarHelper.hxx>
 #include "xmlEnums.hxx"
-#include <stringconstants.hxx>
-#include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/container/XNameContainer.hpp>
 #include <comphelper/propertysequence.hxx>
+#include <osl/diagnose.h>
 #include <sal/log.hxx>
 
 namespace dbaxml
@@ -49,43 +45,42 @@ OXMLHierarchyCollection::OXMLHierarchyCollection( ODBFilter& rImport
     ,m_sCollectionServiceName(_sCollectionServiceName)
     ,m_sComponentServiceName(_sComponentServiceName)
 {
-    sax_fastparser::FastAttributeList *pAttribList =
-                    sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-    for (auto &aIter : *pAttribList)
+    OUString sName;
+    for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
     {
         OUString sValue = aIter.toString();
 
         switch( aIter.getToken() & TOKEN_MASK )
         {
             case XML_NAME:
-                m_sName = sValue;
+                sName = sValue;
                 break;
             default:
-                SAL_WARN("dbaccess", "unknown attribute " << SvXMLImport::getNameFromToken(aIter.getToken()) << " value=" << aIter.toString());
+                SAL_WARN("dbaccess", "unknown attribute " << SvXMLImport::getPrefixAndNameFromToken(aIter.getToken()) << "=" << aIter.toString());
         }
     }
-    if ( !m_sName.isEmpty() && _xParentContainer.is() )
+    if ( !(!sName.isEmpty() && _xParentContainer.is()) )
+        return;
+
+    try
     {
-        try
+        Reference<XMultiServiceFactory> xORB(_xParentContainer,UNO_QUERY);
+        if ( xORB.is() )
         {
-            Reference<XMultiServiceFactory> xORB(_xParentContainer,UNO_QUERY);
-            if ( xORB.is() )
+            Sequence<Any> aArguments(comphelper::InitAnyPropertySequence(
             {
-                Sequence<Any> aArguments(comphelper::InitAnyPropertySequence(
-                {
-                    {"Name", Any(m_sName)}, // set as folder
-                    {"Parent", Any(_xParentContainer)},
-                }));
-                m_xContainer.set(xORB->createInstanceWithArguments(_sCollectionServiceName,aArguments),UNO_QUERY);
-                Reference<XNameContainer> xNameContainer(_xParentContainer,UNO_QUERY);
-                if ( xNameContainer.is() && !xNameContainer->hasByName(m_sName) )
-                    xNameContainer->insertByName(m_sName,makeAny(m_xContainer));
-            }
+                {"Name", Any(sName)}, // set as folder
+                {"Parent", Any(_xParentContainer)},
+            }));
+            m_xContainer.set(xORB->createInstanceWithArguments(_sCollectionServiceName,aArguments),UNO_QUERY);
+            Reference<XNameContainer> xNameContainer(_xParentContainer,UNO_QUERY);
+            if ( xNameContainer.is() && !xNameContainer->hasByName(sName) )
+                xNameContainer->insertByName(sName,makeAny(m_xContainer));
         }
-        catch(Exception&)
-        {
-            OSL_FAIL("OXMLHierarchyCollection::OXMLHierarchyCollection -> exception caught");
-        }
+    }
+    catch(Exception&)
+    {
+        OSL_FAIL("OXMLHierarchyCollection::OXMLHierarchyCollection -> exception caught");
     }
 }
 

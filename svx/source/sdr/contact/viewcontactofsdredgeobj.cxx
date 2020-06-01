@@ -20,9 +20,8 @@
 
 #include <sdr/contact/viewcontactofsdredgeobj.hxx>
 #include <svx/svdoedge.hxx>
-#include <svx/sdr/primitive2d/sdrattributecreator.hxx>
+#include <sdr/primitive2d/sdrattributecreator.hxx>
 #include <sdr/primitive2d/sdrconnectorprimitive2d.hxx>
-#include <basegfx/matrix/b2dhommatrixtools.hxx>
 
 
 namespace sdr::contact
@@ -45,8 +44,8 @@ namespace sdr::contact
 
             // ckeck attributes
             const SfxItemSet& rItemSet = GetEdgeObj().GetMergedItemSet();
-            const drawinglayer::attribute::SdrLineShadowTextAttribute aAttribute(
-                drawinglayer::primitive2d::createNewSdrLineShadowTextAttribute(
+            const drawinglayer::attribute::SdrLineEffectsTextAttribute aAttribute(
+                drawinglayer::primitive2d::createNewSdrLineEffectsTextAttribute(
                     rItemSet,
                     GetEdgeObj().getText(0)));
 

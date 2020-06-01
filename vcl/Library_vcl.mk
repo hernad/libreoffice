@@ -48,7 +48,6 @@ $(eval $(call gb_Library_add_defs,vcl,\
     -DCUI_DLL_NAME=\"$(call gb_Library_get_runtime_filename,$(call gb_Library__get_name,cui))\" \
     -DDESKTOP_DETECTOR_DLL_NAME=\"$(call gb_Library_get_runtime_filename,$(call gb_Library__get_name,desktop_detector))\" \
     -DTK_DLL_NAME=\"$(call gb_Library_get_runtime_filename,$(call gb_Library__get_name,tk))\" \
-    -DENABLE_MERGELIBS=$(if $(MERGELIBS),1,0) \
 ))
 
 ifeq ($(SYSTEM_GLM),TRUE)
@@ -118,7 +117,6 @@ endif
 $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/source/animate/Animation \
     vcl/source/animate/AnimationBitmap \
-    vcl/source/window/aboutdialog \
     vcl/source/window/errinf \
     vcl/source/window/settings \
     vcl/source/window/paint \
@@ -192,6 +190,7 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/source/control/fixedhyper \
     vcl/source/control/hyperlabel \
     vcl/source/control/fmtfield \
+    vcl/source/control/InterimItemWindow \
     vcl/source/control/imgctrl \
     vcl/source/control/imivctl1 \
     vcl/source/control/imivctl2 \
@@ -318,9 +317,12 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/source/gdi/TypeSerializer \
     vcl/source/pdf/ResourceDict \
     vcl/source/pdf/Matrix3 \
+    vcl/source/pdf/XmpMetadata \
+    vcl/source/graphic/GraphicID \
     vcl/source/graphic/GraphicLoader \
     vcl/source/graphic/GraphicObject \
     vcl/source/graphic/GraphicObject2 \
+    vcl/source/graphic/GraphicReader \
     vcl/source/graphic/grfattr \
     vcl/source/graphic/Manager \
     vcl/source/graphic/UnoGraphic \
@@ -328,9 +330,11 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/source/graphic/UnoGraphicObject \
     vcl/source/graphic/UnoGraphicProvider \
     vcl/source/graphic/UnoGraphicTransformer \
+    vcl/source/graphic/VectorGraphicSearch \
     vcl/source/bitmap/bitmap \
     vcl/source/bitmap/bitmapfilter \
     vcl/source/bitmap/BitmapAlphaClampFilter \
+    vcl/source/bitmap/BitmapBasicMorphologyFilter \
     vcl/source/bitmap/BitmapMonochromeFilter \
     vcl/source/bitmap/BitmapSmoothenFilter \
     vcl/source/bitmap/BitmapLightenFilter \
@@ -364,10 +368,12 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/source/image/ImageRepository \
     vcl/source/image/ImplImage \
     vcl/source/image/ImplImageTree \
+    vcl/source/bitmap/BitmapFilterStackBlur \
     vcl/source/helper/canvasbitmap \
     vcl/source/helper/canvastools \
     vcl/source/helper/commandinfoprovider \
     vcl/source/helper/displayconnectiondispatch \
+    vcl/source/helper/driverblocklist \
     vcl/source/helper/errcode \
     vcl/source/helper/evntpost \
     vcl/source/helper/lazydelete \
@@ -399,6 +405,7 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/source/app/unohelp2 \
     vcl/source/app/unohelp \
     vcl/source/app/vclevent \
+    vcl/source/app/watchdog \
     vcl/source/app/weldutils \
     vcl/source/app/winscheduler \
     vcl/source/components/dtranscomp \
@@ -433,7 +440,7 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/source/font/Feature \
     vcl/source/font/FeatureCollector \
     vcl/source/font/FeatureParser \
-    vcl/source/font/OpenTypeFeatureDefinitonList \
+    vcl/source/font/OpenTypeFeatureDefinitionList \
     vcl/source/font/PhysicalFontCollection \
     vcl/source/font/PhysicalFontFace \
     vcl/source/font/PhysicalFontFamily \
@@ -450,13 +457,13 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/source/fontsubset/sft \
     vcl/source/fontsubset/ttcr \
     vcl/source/fontsubset/xlat \
-    vcl/source/pdf/XmpMetadata \
     vcl/source/uitest/logger \
     vcl/source/uitest/uiobject \
     vcl/source/uitest/uitest \
     vcl/source/uitest/uno/uiobject_uno \
     vcl/source/uitest/uno/uitest_uno \
     vcl/backendtest/outputdevice/bitmap \
+    vcl/backendtest/outputdevice/clip \
     vcl/backendtest/outputdevice/common \
     vcl/backendtest/outputdevice/gradient \
     vcl/backendtest/outputdevice/line \
@@ -468,6 +475,7 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/backendtest/outputdevice/polyline \
     vcl/backendtest/outputdevice/polyline_b2d \
     vcl/backendtest/outputdevice/rectangle \
+    vcl/jsdialog/jsdialogbuilder \
 ))
 
 $(eval $(call gb_Library_add_cobjects,vcl,\
@@ -503,6 +511,7 @@ vcl_headless_freetype_code=\
     vcl/headless/svptext \
     vcl/unx/generic/app/gendata \
     vcl/unx/generic/gdi/cairotextrender \
+    vcl/unx/generic/gdi/freetypetextrender \
     vcl/unx/generic/glyphs/freetype_glyphcache \
     vcl/unx/generic/glyphs/glyphcache \
     vcl/unx/generic/fontmanager/fontsubst \
@@ -589,9 +598,10 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/source/opengl/OpenGLHelper \
     vcl/skia/SkiaHelper \
     $(if $(filter SKIA,$(BUILD_TYPE)), \
-        vcl/skia/packedsurfaceatlas \
         vcl/skia/salbmp \
-        vcl/skia/gdiimpl) \
+        vcl/skia/zone \
+        vcl/skia/gdiimpl \
+        ) \
  ))
 
 # runtime dependency
@@ -699,7 +709,6 @@ endif
 ifeq ($(OS),WNT)
 $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/opengl/win/WinDeviceInfo \
-    vcl/opengl/win/blocklist_parser \
     vcl/source/app/salplug \
 ))
 
@@ -714,6 +723,14 @@ $(eval $(call gb_Library_add_nativeres,vcl,vcl/salsrc))
 # HACK: dependency on icon themes so running unit tests don't
 # prevent delivering these by having open file handles on WNT
 $(eval $(call gb_Library_use_package,vcl,postprocess_images))
+endif
+
+ifeq ($(OS), $(filter LINUX %BSD SOLARIS, $(OS)))
+ifeq ($(USING_X11),TRUE)
+$(eval $(call gb_Library_use_static_libraries,vcl,\
+	glxtest \
+))
+endif
 endif
 
 # vim: set noet sw=4 ts=4:

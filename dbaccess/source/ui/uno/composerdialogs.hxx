@@ -23,10 +23,10 @@
 #include <com/sun/star/container/XNameAccess.hpp>
 #include <com/sun/star/sdbc/XConnection.hpp>
 #include <com/sun/star/sdb/XSingleSelectQueryComposer.hpp>
-#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/sdbc/XRowSet.hpp>
 
 #include <comphelper/proparrhlp.hxx>
+#include <connectivity/CommonTools.hxx>
 #include <svtools/genericunodialog.hxx>
 #include <apitools.hxx>
 

@@ -79,6 +79,7 @@
 #include <memory>
 #include <unoparagraph.hxx>
 #include <wrtsh.hxx>
+#include <frameformats.hxx>
 #include <svx/sdr/attribute/sdrallfillattributeshelper.hxx>
 #include <svl/itemiter.hxx>
 
@@ -545,7 +546,7 @@ SwTextNode *SwTextNode::SplitContentNode(const SwPosition & rPos,
             pFrame->RegisterToNode( *pNode );
             if (!pFrame->IsFollow() && pFrame->GetOffset())
             {
-                pFrame->SetOfst( TextFrameIndex(0) );
+                pFrame->SetOffset( TextFrameIndex(0) );
             }
         }
 
@@ -1138,7 +1139,7 @@ void SwTextNode::JoinPrev()
 // create an AttrSet with ranges for Frame-/Para/Char-attributes
 void SwTextNode::NewAttrSet( SwAttrPool& rPool )
 {
-    OSL_ENSURE( !mpAttrSet.get(), "AttrSet is set after all" );
+    OSL_ENSURE( !mpAttrSet, "AttrSet is set after all" );
     SwAttrSet aNewAttrSet( rPool, aTextNodeSetRange );
 
     // put names of parent style and conditional style:
@@ -3122,7 +3123,7 @@ OUString SwTextNode::GetNumString( const bool _bInclPrefixAndSuffixStrings,
         const unsigned int _nRestrictToThisLevel,
         SwRootFrame const*const pLayout) const
 {
-    if (GetDoc()->IsClipBoard() && m_pNumStringCache.get())
+    if (GetDoc()->IsClipBoard() && m_pNumStringCache)
     {
         // #i111677# do not expand number strings in clipboard documents
         return *m_pNumStringCache;
@@ -3938,7 +3939,7 @@ SwFormatColl* SwTextNode::ChgFormatColl( SwFormatColl *pNewColl )
         }
 
         // reset fill information on parent style change
-        if(maFillAttributes.get())
+        if(maFillAttributes)
         {
             maFillAttributes.reset();
         }
@@ -5273,7 +5274,7 @@ void SwTextNode::SwClientNotify( const SwModify& rModify, const SfxHint& rHint )
         }
 
         // reset fill information
-        if (maFillAttributes.get() && pNewValue)
+        if (maFillAttributes && pNewValue)
         {
             const sal_uInt16 nWhich = pNewValue->Which();
             bool bReset(RES_FMT_CHG == nWhich); // ..on format change (e.g. style changed)
@@ -5333,7 +5334,7 @@ SwTextNode::MakeUnoObject()
 drawinglayer::attribute::SdrAllFillAttributesHelperPtr SwTextNode::getSdrAllFillAttributesHelper() const
 {
     // create SdrAllFillAttributesHelper on demand
-    if(!maFillAttributes.get())
+    if(!maFillAttributes)
     {
         const_cast< SwTextNode* >(this)->maFillAttributes = std::make_shared<drawinglayer::attribute::SdrAllFillAttributesHelper>(GetSwAttrSet());
     }

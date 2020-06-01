@@ -20,6 +20,7 @@
 #ifndef INCLUDED_SVTOOLS_TOOLBARMENU_HXX
 #define INCLUDED_SVTOOLS_TOOLBARMENU_HXX
 
+#include <config_options.h>
 #include <svtools/svtdllapi.h>
 
 #include <memory>
@@ -52,7 +53,7 @@ protected:
     rtl::Reference<svt::FrameStatusListener> mxStatusListener;
 };
 
-class SVT_DLLPUBLIC ToolbarPopup : public DockingWindow, public ToolbarPopupBase
+class UNLESS_MERGELIBS(SVT_DLLPUBLIC) ToolbarPopup : public DockingWindow, public ToolbarPopupBase
 {
 public:
     ToolbarPopup(const css::uno::Reference<css::frame::XFrame>& rFrame,
@@ -62,7 +63,6 @@ public:
     virtual void dispose() override;
 
 protected:
-    bool IsInPopupMode() const;
     void EndPopupMode();
 
 private:

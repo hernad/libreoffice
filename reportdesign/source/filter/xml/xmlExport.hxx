@@ -23,23 +23,16 @@
 #include <com/sun/star/container/XNamed.hpp>
 #include <com/sun/star/document/XFilter.hpp>
 #include <com/sun/star/document/XImporter.hpp>
-#include <com/sun/star/document/XExporter.hpp>
-#include <com/sun/star/lang/XInitialization.hpp>
-#include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/report/XReportDefinition.hpp>
 #include <com/sun/star/report/XSection.hpp>
 #include <com/sun/star/report/XReportControlModel.hpp>
 #include <com/sun/star/report/XFormattedField.hpp>
 #include <com/sun/star/lang/XComponent.hpp>
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#include <com/sun/star/io/XActiveDataSource.hpp>
-#include <osl/diagnose.h>
-#include <unotools/tempfile.hxx>
-#include <unotools/localfilehelper.hxx>
 #include <xmloff/xmlexp.hxx>
-#include <xmloff/xmlimp.hxx>
 #include <xmloff/xmlexppr.hxx>
+#include <xmloff/prhdlfac.hxx>
+#include <xmloff/xmlprmap.hxx>
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <memory>
 
@@ -128,8 +121,8 @@ private:
     void                    exportAutoStyle(const Reference<XSection>& _xProp);
     void                    exportReportComponentAutoStyles(const Reference<XSection>& _xProp);
     void                    collectComponentStyles();
-    void                    collectStyleNames(sal_Int32 _nFamily,const ::std::vector< sal_Int32>& _aSize, std::vector<OUString>& _rStyleNames);
-    void                    collectStyleNames(sal_Int32 _nFamily,const ::std::vector< sal_Int32>& _aSize, const ::std::vector< sal_Int32>& _aSizeAutoGrow, std::vector<OUString>& _rStyleNames);
+    void                    collectStyleNames(XmlStyleFamily _nFamily,const ::std::vector< sal_Int32>& _aSize, std::vector<OUString>& _rStyleNames);
+    void                    collectStyleNames(XmlStyleFamily _nFamily,const ::std::vector< sal_Int32>& _aSize, const ::std::vector< sal_Int32>& _aSizeAutoGrow, std::vector<OUString>& _rStyleNames);
     void                    exportParagraph(const Reference< XReportControlModel >& _xReportElement);
     bool                    exportFormula(enum ::xmloff::token::XMLTokenEnum eName,const OUString& _sFormula);
     void                    exportGroupsExpressionAsFunction(const Reference< XGroups>& _xGroups);

@@ -25,6 +25,7 @@
 #include <basegfx/matrix/b2dhommatrixtools.hxx>
 #include <basegfx/numeric/ftools.hxx>
 #include <basegfx/tuple/b2dtuple.hxx>
+#include <basegfx/range/b2drange.hxx>
 
 namespace basegfx
 {
@@ -444,6 +445,64 @@ public:
         CPPUNIT_ASSERT_DOUBLES_EQUAL_MESSAGE("decompose: error test J1", F_PI, fDRot, 1E-12);
     }
 
+    void testCreate_abcdef()
+    {
+        B2DHomMatrix aB2DMatrix(00, 01, 02, 10, 11, 12);
+
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(00, aB2DMatrix.a(), 1E-12);
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(10, aB2DMatrix.b(), 1E-12);
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(01, aB2DMatrix.c(), 1E-12);
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(11, aB2DMatrix.d(), 1E-12);
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(02, aB2DMatrix.e(), 1E-12);
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(12, aB2DMatrix.f(), 1E-12);
+
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(aB2DMatrix.get(0, 0), aB2DMatrix.a(), 1E-12);
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(aB2DMatrix.get(1, 0), aB2DMatrix.b(), 1E-12);
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(aB2DMatrix.get(0, 1), aB2DMatrix.c(), 1E-12);
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(aB2DMatrix.get(1, 1), aB2DMatrix.d(), 1E-12);
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(aB2DMatrix.get(0, 2), aB2DMatrix.e(), 1E-12);
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(aB2DMatrix.get(1, 2), aB2DMatrix.f(), 1E-12);
+    }
+
+    void testMultiplyWithAnotherMatrix()
+    {
+        B2DHomMatrix aB2DMatrix(00, 01, 02, 10, 11, 12);
+        B2DHomMatrix aNewB2DMatrix = B2DHomMatrix::abcdef(1, 2, 3, 4, 5, 6);
+
+        aB2DMatrix *= aNewB2DMatrix;
+
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(30, aB2DMatrix.get(0, 0), 1E-12);
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(40, aB2DMatrix.get(1, 0), 1E-12);
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(34, aB2DMatrix.get(0, 1), 1E-12);
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(46, aB2DMatrix.get(1, 1), 1E-12);
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(43, aB2DMatrix.get(0, 2), 1E-12);
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(58, aB2DMatrix.get(1, 2), 1E-12);
+    }
+
+    void testTransformPoint()
+    {
+        B2DHomMatrix aNewB2DMatrix = B2DHomMatrix::abcdef(1, 2, 3, 4, 5, 6);
+
+        B2DPoint aPoint(1, 2);
+        aPoint *= aNewB2DMatrix;
+
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(12, aPoint.getX(), 1E-12);
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(16, aPoint.getY(), 1E-12);
+    }
+
+    void testTransformRange()
+    {
+        B2DHomMatrix aNewB2DMatrix = B2DHomMatrix::abcdef(1, 2, 3, 4, 5, 6);
+
+        B2DRange aRange(2, 1, 4, 3);
+        aRange *= aNewB2DMatrix;
+
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(10, aRange.getMinX(), 1E-12);
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(18, aRange.getMaxX(), 1E-12);
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(14, aRange.getMinY(), 1E-12);
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(26, aRange.getMaxY(), 1E-12);
+    }
+
     // Change the following lines only, if you add, remove or rename
     // member functions of the current class,
     // because these macros are need by auto register mechanism.
@@ -457,6 +516,10 @@ public:
     CPPUNIT_TEST(shear);
     CPPUNIT_TEST(multiply);
     CPPUNIT_TEST(decompose);
+    CPPUNIT_TEST(testCreate_abcdef);
+    CPPUNIT_TEST(testMultiplyWithAnotherMatrix);
+    CPPUNIT_TEST(testTransformPoint);
+    CPPUNIT_TEST(testTransformRange);
     CPPUNIT_TEST_SUITE_END();
 
 }; // class b2dhommatrix

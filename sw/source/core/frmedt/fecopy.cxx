@@ -67,6 +67,7 @@
 #include <pagedesc.hxx>
 #include <mvsave.hxx>
 #include <textboxhelper.hxx>
+#include <frameformats.hxx>
 #include <vcl/virdev.hxx>
 #include <svx/svdundo.hxx>
 
@@ -337,7 +338,7 @@ bool SwFEShell::CopyDrawSel( SwFEShell* pDestShell, const Point& rSttPt,
                     SwPosition aPos( *GetCursor()->GetPoint() );
                     Point aPt( rInsPt );
                     aPt -= rSttPt - pObj->GetSnapRect().TopLeft();
-                    SwCursorMoveState aState( MV_SETONLYTEXT );
+                    SwCursorMoveState aState( CursorMoveState::SetOnlyText );
                     GetLayout()->GetModelPositionForViewPoint( &aPos, aPt, &aState );
                     const SwNode *pNd;
                     if( (pNd = &aPos.nNode.GetNode())->IsNoTextNode() )
@@ -484,7 +485,7 @@ bool SwFEShell::Copy( SwFEShell* pDestShell, const Point& rSttPt,
                 SwPosition aPos( *GetCursor()->GetPoint() );
                 Point aPt( rInsPt );
                 aPt -= rSttPt - pFly->getFrameArea().Pos();
-                SwCursorMoveState aState( MV_SETONLYTEXT );
+                SwCursorMoveState aState( CursorMoveState::SetOnlyText );
                 GetLayout()->GetModelPositionForViewPoint( &aPos, aPt, &aState );
                 const SwNode *pNd;
                 if( (pNd = &aPos.nNode.GetNode())->IsNoTextNode() )
@@ -798,7 +799,7 @@ bool SwFEShell::Paste( SwDoc* pClpDoc, bool bNestedTable )
             {
                 SwNodeIndex aIndexBefore(rInsPos.nNode);
                 --aIndexBefore;
-                pClpDoc->getIDocumentContentOperations().CopyRange( rCopy, rInsPos, /*bCopyAll=*/false, /*bCheckPos=*/true, /*bCopyText=*/false );
+                pClpDoc->getIDocumentContentOperations().CopyRange(rCopy, rInsPos, SwCopyFlags::CheckPosInFly);
                 {
                     ++aIndexBefore;
                     SwPaM aPaM(SwPosition(aIndexBefore),
@@ -1037,7 +1038,7 @@ bool SwFEShell::Paste( SwDoc* pClpDoc, bool bNestedTable )
 
                     --aIndexBefore;
 
-                    pClpDoc->getIDocumentContentOperations().CopyRange( aCpyPam, rInsPos, /*bCopyAll=*/false, /*bCheckPos=*/true, /*bCopyText=*/false );
+                    pClpDoc->getIDocumentContentOperations().CopyRange(aCpyPam, rInsPos, SwCopyFlags::CheckPosInFly);
                     // Note: aCpyPam is invalid now
 
                     ++aIndexBefore;

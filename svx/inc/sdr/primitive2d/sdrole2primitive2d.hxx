@@ -22,7 +22,7 @@
 
 #include <drawinglayer/primitive2d/baseprimitive2d.hxx>
 #include <basegfx/matrix/b2dhommatrix.hxx>
-#include <svx/sdr/attribute/sdrlinefillshadowtextattribute.hxx>
+#include <sdr/attribute/sdrlinefilleffectstextattribute.hxx>
 
 
 // predefines
@@ -35,20 +35,20 @@ namespace drawinglayer
         class SdrOle2Primitive2D final : public BasePrimitive2D
         {
         private:
-            Primitive2DContainer const                        maOLEContent;
-            basegfx::B2DHomMatrix const                       maTransform;
-            attribute::SdrLineFillShadowTextAttribute const   maSdrLFSTAttribute;
+            Primitive2DContainer                         maOLEContent;
+            basegfx::B2DHomMatrix                       maTransform;
+            attribute::SdrLineFillEffectsTextAttribute   maSdrLFSTAttribute;
 
         public:
             SdrOle2Primitive2D(
                 const Primitive2DContainer& rOLEContent,
                 const basegfx::B2DHomMatrix& rTransform,
-                const attribute::SdrLineFillShadowTextAttribute& rSdrLFSTAttribute);
+                const attribute::SdrLineFillEffectsTextAttribute& rSdrLFSTAttribute);
 
             // data access
             const Primitive2DContainer& getOLEContent() const { return maOLEContent; }
             const basegfx::B2DHomMatrix& getTransform() const { return maTransform; }
-            const attribute::SdrLineFillShadowTextAttribute& getSdrLFSTAttribute() const { return maSdrLFSTAttribute; }
+            const attribute::SdrLineFillEffectsTextAttribute& getSdrLFSTAttribute() const { return maSdrLFSTAttribute; }
 
             // compare operator
             virtual bool operator==(const BasePrimitive2D& rPrimitive) const override;
@@ -57,7 +57,7 @@ namespace drawinglayer
             virtual void get2DDecomposition(Primitive2DDecompositionVisitor& rVisitor, const geometry::ViewInformation2D& aViewInformation) const override;
 
             // provide unique ID
-            DeclPrimitive2DIDBlock()
+            virtual sal_uInt32 getPrimitive2DID() const override;
         };
     } // end of namespace primitive2d
 } // end of namespace drawinglayer

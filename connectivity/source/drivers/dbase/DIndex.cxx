@@ -130,29 +130,29 @@ ONDXPagePtr const & ODbaseIndex::getRoot()
 
 void ODbaseIndex::openIndexFile()
 {
+    if(m_pFileStream)
+        return;
+
+    OUString sFile = getCompletePath();
+    if(UCBContentHelper::Exists(sFile))
+    {
+        m_pFileStream = OFileTable::createStream_simpleError(sFile, StreamMode::READWRITE | StreamMode::NOCREATE | StreamMode::SHARE_DENYWRITE);
+        if (!m_pFileStream)
+            m_pFileStream = OFileTable::createStream_simpleError(sFile, StreamMode::READ | StreamMode::NOCREATE | StreamMode::SHARE_DENYNONE);
+        if(m_pFileStream)
+        {
+            m_pFileStream->SetEndian(SvStreamEndian::LITTLE);
+            m_pFileStream->SetBufferSize(DINDEX_PAGE_SIZE);
+            (*m_pFileStream) >> *this;
+        }
+    }
     if(!m_pFileStream)
     {
-        OUString sFile = getCompletePath();
-        if(UCBContentHelper::Exists(sFile))
-        {
-            m_pFileStream = OFileTable::createStream_simpleError(sFile, StreamMode::READWRITE | StreamMode::NOCREATE | StreamMode::SHARE_DENYWRITE);
-            if (!m_pFileStream)
-                m_pFileStream = OFileTable::createStream_simpleError(sFile, StreamMode::READ | StreamMode::NOCREATE | StreamMode::SHARE_DENYNONE);
-            if(m_pFileStream)
-            {
-                m_pFileStream->SetEndian(SvStreamEndian::LITTLE);
-                m_pFileStream->SetBufferSize(DINDEX_PAGE_SIZE);
-                (*m_pFileStream) >> *this;
-            }
-        }
-        if(!m_pFileStream)
-        {
-            const OUString sError( m_pTable->getConnection()->getResources().getResourceStringWithSubstitution(
-                STR_COULD_NOT_LOAD_FILE,
-                "$filename$", sFile
-             ) );
-            ::dbtools::throwGenericSQLException( sError, *this );
-        }
+        const OUString sError( m_pTable->getConnection()->getResources().getResourceStringWithSubstitution(
+            STR_COULD_NOT_LOAD_FILE,
+            "$filename$", sFile
+         ) );
+        ::dbtools::throwGenericSQLException( sError, *this );
     }
 }
 
@@ -533,7 +533,7 @@ void ODbaseIndex::CreateImpl()
     memset(&m_aHeader,0,sizeof(m_aHeader));
     sal_Int32 nType = 0;
     ::rtl::Reference<OSQLColumns> aCols = m_pTable->getTableColumns();
-    const Reference< XPropertySet > xTableCol(*find(aCols->get().begin(),aCols->get().end(),aName,::comphelper::UStringMixEqual(isCaseSensitive())));
+    const Reference< XPropertySet > xTableCol(*find(aCols->begin(),aCols->end(),aName,::comphelper::UStringMixEqual(isCaseSensitive())));
 
     xTableCol->getPropertyValue(OMetaConnection::getPropMap().getNameByIndex(PROPERTY_ID_TYPE)) >>= nType;
 

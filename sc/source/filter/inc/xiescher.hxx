@@ -31,12 +31,12 @@
 #include <memory>
 #include <vector>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace drawing { class XShape; }
     namespace form { class XForm; }
-} } }
+}
 
-namespace com { namespace sun { namespace star { namespace container { class XNameContainer; } } } }
+namespace com::sun::star::container { class XNameContainer; }
 
 class SdrObjList;
 class ScfProgressBar;
@@ -433,7 +433,7 @@ private:
     typedef std::shared_ptr< XclImpChart > XclImpChartRef;
 
     XclImpChartRef      mxChart;        /// The chart itself (BOF/EOF substream data).
-    bool const          mbOwnTab;       /// true = own sheet; false = embedded object.
+    bool                mbOwnTab;       /// true = own sheet; false = embedded object.
 };
 
 /** A note object, which is a specialized text box object. */
@@ -494,7 +494,7 @@ private:
 private:
     const XclImpRoot&            mrRoot;     /// Not derived from XclImpRoot to allow multiple inheritance.
     std::shared_ptr< ScRange >   mxSrcRange; /// Source data range in the Calc document.
-    XclCtrlBindMode const        meBindMode; /// Value binding mode.
+    XclCtrlBindMode              meBindMode; /// Value binding mode.
 };
 
 /** Base class for textbox based form controls. */
@@ -1026,11 +1026,11 @@ private:
 private:
     typedef std::shared_ptr< ScfProgressBar >     ScfProgressBarRef;
     typedef std::shared_ptr< XclImpDffConvData >  XclImpDffConvDataRef;
-    typedef std::vector< XclImpDffConvDataRef >   XclImpDffConvDataStack;
 
     tools::SvRef<SotStorageStream> mxCtlsStrm;         /// The 'Ctls' stream for OCX form controls.
     ScfProgressBarRef   mxProgress;         /// The progress bar used in ProcessObj().
-    XclImpDffConvDataStack maDataStack;     /// Stack for registered drawing managers.
+    std::vector< XclImpDffConvDataRef >
+                        maDataStack;     /// Stack for registered drawing managers.
     sal_uInt32          mnOleImpFlags;      /// Application OLE import settings.
     sal_Int32           mnDefTextMargin;    /// Default margin in text boxes.
     bool mbNotifyMacroEventRead;            /// If we have already seen a macro event
@@ -1104,7 +1104,7 @@ private:
     XclImpObjMapById    maObjMapId;         /// Maps BIFF8 drawing objects to object ID.
     XclImpObjTextMap    maTextMap;          /// Maps BIFF8 TXO textbox data to DFF stream position.
     ScfUInt16Vec        maSkipObjs;         /// IDs of all objects to be skipped.
-    bool const          mbOleObjs;          /// True = draw model supports OLE objects.
+    bool                mbOleObjs;          /// True = draw model supports OLE objects.
 };
 
 /** Drawing manager of a single sheet. */
@@ -1204,7 +1204,7 @@ private:
     typedef std::unique_ptr<SvMemoryStream> SvMemoryStreamPtr;
 
     SvMemoryStream      maDummyStrm;    /// Dummy DGG stream for DFF manager.
-    XclImpSimpleDffConverter const maDffConv; /// DFF converter used to resolve palette colors.
+    XclImpSimpleDffConverter maDffConv; /// DFF converter used to resolve palette colors.
     SvMemoryStreamPtr   mxMemStrm;      /// Helper stream.
 };
 

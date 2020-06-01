@@ -21,13 +21,9 @@
 #define INCLUDED_SVTOOLS_CTRLBOX_HXX
 
 #include <svtools/svtdllapi.h>
-
 #include <editeng/borderline.hxx>
-
-#include <vcl/lstbox.hxx>
-#include <vcl/combobox.hxx>
+#include <vcl/idle.hxx>
 #include <vcl/metric.hxx>
-#include <vcl/field.hxx>
 #include <vcl/weld.hxx>
 
 #include <memory>
@@ -35,6 +31,7 @@
 namespace weld { class CustomWeld; }
 
 class VirtualDevice;
+class BitmapEx;
 class BorderWidthImpl;
 class FontList;
 
@@ -46,12 +43,12 @@ class ImpLineListData
 private:
     BorderWidthImpl const m_aWidthImpl;
 
-    Color  ( * const m_pColor1Fn )( Color );
-    Color  ( * const m_pColor2Fn )( Color );
-    Color  ( * const m_pColorDistFn )( Color, Color );
+    Color  ( * m_pColor1Fn )( Color );
+    Color  ( * m_pColor2Fn )( Color );
+    Color  ( * m_pColorDistFn )( Color, Color );
 
-    long const   m_nMinWidth;
-    SvxBorderLineStyle const m_nStyle;
+    long    m_nMinWidth;
+    SvxBorderLineStyle m_nStyle;
 
 public:
     ImpLineListData( BorderWidthImpl aWidthImpl,
@@ -199,7 +196,7 @@ inline Color sameDistColor( Color /*rMain*/, Color rDefault )
     return rDefault;
 }
 
-class SvtValueSet;
+class ValueSet;
 
 class SVT_DLLPUBLIC SvtLineListBox
 {
@@ -252,7 +249,7 @@ private:
                                     SvxBorderLineStyle nStyle, BitmapEx& rBmp );
 
     void            UpdatePaintLineColor();       // returns sal_True if maPaintCol has changed
-    DECL_LINK(ValueSelectHdl, SvtValueSet*, void);
+    DECL_LINK(ValueSelectHdl, ValueSet*, void);
     DECL_LINK(FocusHdl, weld::Widget&, void);
     DECL_LINK(ToggleHdl, weld::ToggleButton&, void);
     DECL_LINK(NoneHdl, weld::Button&, void);
@@ -277,7 +274,7 @@ private:
     std::unique_ptr<weld::Builder> m_xBuilder;
     std::unique_ptr<weld::Widget> m_xTopLevel;
     std::unique_ptr<weld::Button> m_xNoneButton;
-    std::unique_ptr<SvtValueSet> m_xLineSet;
+    std::unique_ptr<ValueSet> m_xLineSet;
     std::unique_ptr<weld::CustomWeld> m_xLineSetWin;
 
     std::vector<std::unique_ptr<ImpLineListData>> m_vLineList;
@@ -329,30 +326,65 @@ private:
     void set_label_from_date();
 };
 
-class SVT_DLLPUBLIC FontNameBox : public ComboBox
+class SVT_DLLPUBLIC FontNameBox
 {
 private:
+    std::unique_ptr<weld::ComboBox> m_xComboBox;
     std::unique_ptr<ImplFontList> mpFontList;
+    size_t          mnPreviewProgress;
     bool            mbWYSIWYG;
     OUString        maFontMRUEntriesFile;
+    Idle            maUpdateIdle;
 
-    SVT_DLLPRIVATE void         ImplCalcUserItemSize();
     SVT_DLLPRIVATE void         ImplDestroyFontList();
 
-protected:
+    DECL_LINK(CustomRenderHdl, weld::ComboBox::render_args, void);
+    DECL_STATIC_LINK(FontNameBox, CustomGetSizeHdl, OutputDevice&, Size);
+    DECL_LINK(UpdateHdl, Timer*, void);
+
     void            LoadMRUEntries( const OUString& aFontMRUEntriesFile );
     void            SaveMRUEntries( const OUString& aFontMRUEntriesFile ) const;
-public:
-                    FontNameBox( vcl::Window* pParent,
-                                 WinBits nWinStyle );
-    virtual         ~FontNameBox() override;
-    virtual void    dispose() override;
 
-    virtual void    UserDraw( const UserDrawEvent& rUDEvt ) override;
+    OutputDevice&   CachePreview(size_t nIndex, Point* pTopLeft);
+
+public:
+    FontNameBox(std::unique_ptr<weld::ComboBox> p);
+    ~FontNameBox();
 
     void            Fill( const FontList* pList );
 
-    void            EnableWYSIWYG( bool bEnable );
+    void            EnableWYSIWYG();
+
+    void connect_changed(const Link<weld::ComboBox&, void>& rLink) { m_xComboBox->connect_changed(rLink); }
+    void connect_focus_in(const Link<weld::Widget&, void>& rLink) { m_xComboBox->connect_focus_in(rLink); }
+    void connect_focus_out(const Link<weld::Widget&, void>& rLink) { m_xComboBox->connect_focus_out(rLink); }
+    void connect_key_press(const Link<const KeyEvent&, bool>& rLink) { m_xComboBox->connect_key_press(rLink); }
+    int get_active() const { return m_xComboBox->get_active(); }
+    OUString get_active_text() const { return m_xComboBox->get_active_text(); }
+    void set_active_or_entry_text(const OUString& rText);
+    int get_count() const { return m_xComboBox->get_count(); }
+    OUString get_text(int nIndex) const { return m_xComboBox->get_text(nIndex); }
+    void set_sensitive(bool bSensitive) { m_xComboBox->set_sensitive(bSensitive); }
+    void save_value() { m_xComboBox->save_value(); }
+    OUString const& get_saved_value() const { return m_xComboBox->get_saved_value(); }
+    void select_entry_region(int nStartPos, int nEndPos) { m_xComboBox->select_entry_region(nStartPos, nEndPos); }
+    bool get_entry_selection_bounds(int& rStartPos, int& rEndPos) { return m_xComboBox->get_entry_selection_bounds(rStartPos, rEndPos); }
+    void clear() { m_xComboBox->clear(); }
+    void grab_focus() { m_xComboBox->grab_focus(); }
+    bool has_focus() const { return m_xComboBox->has_focus(); }
+    void connect_entry_activate(const Link<weld::ComboBox&, bool>& rLink) { m_xComboBox->connect_entry_activate(rLink); }
+    void connect_get_property_tree(const Link<boost::property_tree::ptree&, void>& rLink) { m_xComboBox->connect_get_property_tree(rLink); }
+    void set_entry_width_chars(int nWidth) { m_xComboBox->set_entry_width_chars(nWidth); }
+    void set_size_request(int nWidth, int nHeight) { m_xComboBox->set_size_request(nWidth, nHeight); }
+    int get_max_mru_count() { return m_xComboBox->get_max_mru_count(); }
+    void set_max_mru_count(int nCount) { m_xComboBox->set_max_mru_count(nCount); }
+
+    // font size is in points, not pixels, e.g. see Window::[G]etPointFont
+    vcl::Font get_font() { return m_xComboBox->get_font(); }
+    void set_entry_font(const vcl::Font& rFont) { m_xComboBox->set_entry_font(rFont); }
+    vcl::Font get_entry_font() { return m_xComboBox->get_entry_font(); }
+
+    void set_tooltip_text(const OUString& rTip) { m_xComboBox->set_tooltip_text(rTip); }
 
 private:
     void            InitFontMRUEntriesFile();
@@ -383,32 +415,7 @@ private:
     FontStyleBox& operator=(const FontStyleBox&) = delete;
 };
 
-class SVT_DLLPUBLIC FontSizeBox : public MetricBox
-{
-    bool             bStdSize:1;
-
-    using Window::ImplInit;
-    SVT_DLLPRIVATE void         ImplInit();
-
-protected:
-    virtual sal_Int64 GetValueFromStringUnit(const OUString& rStr, FieldUnit eOutUnit) const override;
-
-public:
-                    FontSizeBox( vcl::Window* pParent, WinBits nWinStyle );
-
-    void            Reformat() override;
-
-    void            Fill( const FontMetric* pFontMetric, const FontList* pList );
-
-    virtual void    SetValue( sal_Int64 nNewValue, FieldUnit eInUnit ) override;
-    virtual void    SetValue( sal_Int64 nNewValue  ) override;
-
-private:
-                    FontSizeBox( const FontSizeBox& ) = delete;
-    FontSizeBox&    operator =( const FontSizeBox& ) = delete;
-};
-
-class SVT_DLLPUBLIC SvtFontSizeBox
+class SVT_DLLPUBLIC FontSizeBox
 {
     FontMetric      aFontMetric;
     const FontList* pFontList;
@@ -428,6 +435,7 @@ class SVT_DLLPUBLIC SvtFontSizeBox
                     bPtRelative:1,
                     bStdSize:1;
     Link<weld::ComboBox&, void> m_aChangeHdl;
+    Link<weld::Widget&, void> m_aFocusOutHdl;
     std::unique_ptr<weld::ComboBox> m_xComboBox;
 
     sal_uInt16 GetDecimalDigits() const { return nDecimalDigits; }
@@ -444,7 +452,7 @@ class SVT_DLLPUBLIC SvtFontSizeBox
     DECL_LINK(ModifyHdl, weld::ComboBox&, void);
     DECL_LINK(ReformatHdl, weld::Widget&, void);
 public:
-    SvtFontSizeBox(std::unique_ptr<weld::ComboBox> p);
+    FontSizeBox(std::unique_ptr<weld::ComboBox> p);
 
     void Fill(const FontMetric* pFontMetric, const FontList* pList);
 
@@ -461,18 +469,28 @@ public:
     bool IsPtRelative() const { return bPtRelative; }
 
     void connect_changed(const Link<weld::ComboBox&, void>& rLink) { m_aChangeHdl = rLink; }
+    void connect_focus_out(const Link<weld::Widget&, void>& rLink) { m_aFocusOutHdl = rLink; }
+    void connect_key_press(const Link<const KeyEvent&, bool>& rLink) { m_xComboBox->connect_key_press(rLink); }
     OUString get_active_text() const { return m_xComboBox->get_active_text(); }
-    void set_active_text(const OUString& rText) { m_xComboBox->set_active_text(rText); }
+    void set_active_or_entry_text(const OUString& rText);
     void set_sensitive(bool bSensitive) { m_xComboBox->set_sensitive(bSensitive); }
+    int get_active() const { return m_xComboBox->get_active(); }
     int get_value() const;
     void set_value(int nValue);
     void save_value() { nSavedValue = get_value(); }
     int get_saved_value() const { return nSavedValue; }
     bool get_value_changed_from_saved() const { return get_value() != get_saved_value(); }
+    int get_count() const { return m_xComboBox->get_count(); }
+    OUString get_text(int i) const { return m_xComboBox->get_text(i); }
+    void grab_focus() { m_xComboBox->grab_focus(); }
+    bool has_focus() const { return m_xComboBox->has_focus(); }
+    void connect_entry_activate(const Link<weld::ComboBox&, bool>& rLink) { m_xComboBox->connect_entry_activate(rLink); }
+    void disable_entry_completion() { m_xComboBox->set_entry_completion(false, false); }
+    void connect_get_property_tree(const Link<boost::property_tree::ptree&, void>& rLink) { m_xComboBox->connect_get_property_tree(rLink); }
 
 private:
-    SvtFontSizeBox(const SvtFontSizeBox&) = delete;
-    SvtFontSizeBox& operator=(const SvtFontSizeBox&) = delete;
+    FontSizeBox(const FontSizeBox&) = delete;
+    FontSizeBox& operator=(const FontSizeBox&) = delete;
 };
 
 

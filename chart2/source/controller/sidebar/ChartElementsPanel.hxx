@@ -21,11 +21,12 @@
 
 #include <sfx2/sidebar/IContextChangeReceiver.hxx>
 #include <sfx2/sidebar/SidebarModelUpdate.hxx>
-#include <svx/sidebar/PanelLayout.hxx>
+#include <sfx2/sidebar/PanelLayout.hxx>
+#include <vcl/EnumContext.hxx>
 #include "ChartSidebarModifyListener.hxx"
 #include <TitleHelper.hxx>
 
-namespace com { namespace sun { namespace star { namespace util { class XModifyListener; } } } }
+namespace com::sun::star::util { class XModifyListener; }
 
 namespace chart {
 
@@ -80,6 +81,7 @@ private:
     std::unique_ptr<weld::CheckButton> mxCB2ndYAxis;
     std::unique_ptr<weld::CheckButton> mxCB2ndYAxisTitle;
     std::unique_ptr<weld::CheckButton> mxCBLegend;
+    std::unique_ptr<weld::CheckButton> mxCBLegendNoOverlay;
     std::unique_ptr<weld::CheckButton> mxCBGridVerticalMajor;
     std::unique_ptr<weld::CheckButton> mxCBGridHorizontalMajor;
     std::unique_ptr<weld::CheckButton> mxCBGridVerticalMinor;

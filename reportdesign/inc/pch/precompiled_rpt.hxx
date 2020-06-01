@@ -13,7 +13,7 @@
  manual changes will be rewritten by the next run of update_pch.sh (which presumably
  also fixes all possible problems, so it's usually better to use it).
 
- Generated on 2020-01-22 15:57:52 using:
+ Generated on 2020-04-25 20:55:04 using:
  ./bin/update_pch reportdesign rpt --cutoff=9 --exclude:system --include:module --include:local
 
  If after updating build fails, use the following command to locate conflicting headers:
@@ -24,9 +24,9 @@
 #include <algorithm>
 #include <assert.h>
 #include <cassert>
+#include <cmath>
 #include <cstddef>
 #include <cstdlib>
-#include <cstring>
 #include <deque>
 #include <float.h>
 #include <functional>
@@ -39,6 +39,7 @@
 #include <math.h>
 #include <memory>
 #include <new>
+#include <optional>
 #include <ostream>
 #include <sstream>
 #include <stddef.h>
@@ -48,7 +49,6 @@
 #include <type_traits>
 #include <typeinfo>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 #include <boost/property_tree/ptree_fwd.hpp>
@@ -68,9 +68,7 @@
 #include <rtl/instance.hxx>
 #include <rtl/locale.h>
 #include <rtl/math.h>
-#include <rtl/math.hxx>
 #include <rtl/ref.hxx>
-#include <rtl/strbuf.h>
 #include <rtl/strbuf.hxx>
 #include <rtl/string.h>
 #include <rtl/string.hxx>
@@ -80,7 +78,6 @@
 #include <rtl/textenc.h>
 #include <rtl/unload.h>
 #include <rtl/uri.hxx>
-#include <rtl/ustrbuf.h>
 #include <rtl/ustrbuf.hxx>
 #include <rtl/ustring.h>
 #include <rtl/ustring.hxx>
@@ -89,7 +86,6 @@
 #include <sal/detail/log.h>
 #include <sal/log.hxx>
 #include <sal/macros.h>
-#include <sal/mathconf.h>
 #include <sal/saldllapi.h>
 #include <sal/types.h>
 #include <sal/typesizes.h>
@@ -150,11 +146,11 @@
 #include <basegfx/tuple/b2i64tuple.hxx>
 #include <basegfx/tuple/b2ituple.hxx>
 #include <basegfx/tuple/b3dtuple.hxx>
+#include <basegfx/utils/common.hxx>
 #include <basegfx/vector/b2dsize.hxx>
 #include <basegfx/vector/b2dvector.hxx>
 #include <basegfx/vector/b2enums.hxx>
 #include <basegfx/vector/b2ivector.hxx>
-#include <com/sun/star/awt/FontDescriptor.hpp>
 #include <com/sun/star/awt/GradientStyle.hpp>
 #include <com/sun/star/awt/Key.hpp>
 #include <com/sun/star/awt/KeyGroup.hpp>
@@ -164,13 +160,9 @@
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/beans/XFastPropertySet.hpp>
 #include <com/sun/star/beans/XMultiPropertySet.hpp>
-#include <com/sun/star/beans/XPropertyAccess.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/beans/XPropertySetOption.hpp>
 #include <com/sun/star/beans/XPropertyState.hpp>
-#include <com/sun/star/container/XChild.hpp>
-#include <com/sun/star/container/XContainer.hpp>
-#include <com/sun/star/container/XNameContainer.hpp>
 #include <com/sun/star/drawing/DashStyle.hpp>
 #include <com/sun/star/drawing/HatchStyle.hpp>
 #include <com/sun/star/drawing/LineCap.hpp>
@@ -180,21 +172,16 @@
 #include <com/sun/star/graphic/XPrimitive2D.hpp>
 #include <com/sun/star/lang/DisposedException.hpp>
 #include <com/sun/star/lang/EventObject.hpp>
-#include <com/sun/star/lang/IndexOutOfBoundsException.hpp>
 #include <com/sun/star/lang/Locale.hpp>
 #include <com/sun/star/lang/XComponent.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/lang/XTypeProvider.hpp>
 #include <com/sun/star/lang/XUnoTunnel.hpp>
-#include <com/sun/star/report/XFormatCondition.hpp>
 #include <com/sun/star/report/XReportComponent.hpp>
-#include <com/sun/star/style/ParagraphAdjust.hpp>
-#include <com/sun/star/style/VerticalAlignment.hpp>
 #include <com/sun/star/style/XStyle.hpp>
 #include <com/sun/star/uno/Any.h>
 #include <com/sun/star/uno/Any.hxx>
-#include <com/sun/star/uno/Exception.hpp>
 #include <com/sun/star/uno/Reference.h>
 #include <com/sun/star/uno/Reference.hxx>
 #include <com/sun/star/uno/RuntimeException.hpp>
@@ -210,9 +197,7 @@
 #include <com/sun/star/uno/genfunc.h>
 #include <com/sun/star/uno/genfunc.hxx>
 #include <com/sun/star/util/Date.hpp>
-#include <com/sun/star/util/DateTime.hpp>
 #include <com/sun/star/util/Time.hpp>
-#include <com/sun/star/util/XAccounting.hpp>
 #include <comphelper/broadcasthelper.hxx>
 #include <comphelper/comphelperdllapi.h>
 #include <comphelper/interfacecontainer2.hxx>
@@ -231,28 +216,20 @@
 #include <cppuhelper/implbase_ex_post.hxx>
 #include <cppuhelper/implbase_ex_pre.hxx>
 #include <cppuhelper/interfacecontainer.h>
-#include <cppuhelper/propertysetmixin.hxx>
 #include <cppuhelper/propshlp.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <cppuhelper/weak.hxx>
 #include <cppuhelper/weakagg.hxx>
 #include <cppuhelper/weakref.hxx>
-#include <drawinglayer/drawinglayerdllapi.h>
-#include <drawinglayer/primitive2d/CommonTypes.hxx>
-#include <drawinglayer/primitive2d/Primitive2DContainer.hxx>
-#include <drawinglayer/primitive2d/Primitive2DVisitor.hxx>
 #include <editeng/editengdllapi.h>
 #include <i18nlangtag/lang.h>
 #include <o3tl/cow_wrapper.hxx>
-#include <o3tl/deleter.hxx>
-#include <o3tl/optional.hxx>
 #include <o3tl/strong_int.hxx>
 #include <o3tl/typed_flags_set.hxx>
 #include <o3tl/underlyingenumvalue.hxx>
+#include <salhelper/salhelperdllapi.h>
 #include <salhelper/simplereferenceobject.hxx>
 #include <svl/SfxBroadcaster.hxx>
-#include <svl/cenumitm.hxx>
-#include <svl/eitem.hxx>
 #include <svl/hint.hxx>
 #include <svl/lstner.hxx>
 #include <svl/poolitem.hxx>
@@ -261,16 +238,11 @@
 #include <svl/svldllapi.h>
 #include <svl/typedwhich.hxx>
 #include <svtools/svtdllapi.h>
-#include <svx/DiagramDataInterface.hxx>
-#include <svx/shapeproperty.hxx>
-#include <svx/svddef.hxx>
-#include <svx/svdobj.hxx>
+#include <svx/svdsob.hxx>
 #include <svx/svdtypes.hxx>
 #include <svx/svxdllapi.h>
-#include <svx/xdef.hxx>
 #include <tools/color.hxx>
 #include <tools/date.hxx>
-#include <tools/datetime.hxx>
 #include <tools/diagnose_ex.h>
 #include <tools/fldunit.hxx>
 #include <tools/fontenum.hxx>
@@ -282,7 +254,6 @@
 #include <tools/solar.h>
 #include <tools/time.hxx>
 #include <tools/toolsdllapi.h>
-#include <tools/weakbase.h>
 #include <tools/wintypes.hxx>
 #include <typelib/typeclass.h>
 #include <typelib/typedescription.h>
@@ -298,7 +269,6 @@
 #include <unotools/unotoolsdllapi.h>
 #endif // PCH_LEVEL >= 3
 #if PCH_LEVEL >= 4
-#include <ReportComponent.hxx>
 #include <RptModel.hxx>
 #include <RptObject.hxx>
 #include <Tools.hxx>

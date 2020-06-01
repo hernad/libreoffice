@@ -28,6 +28,7 @@
 #include <swtblfmt.hxx>
 #include <swcrsr.hxx>
 #include <unocrsr.hxx>
+#include <bookmrk.hxx>
 #include <doc.hxx>
 #include <IDocumentUndoRedo.hxx>
 #include <IDocumentRedlineAccess.hxx>
@@ -53,6 +54,7 @@
 #include <IDocumentMarkAccess.hxx>
 #include <memory>
 #include <comphelper/lok.hxx>
+#include <editsh.hxx>
 
 using namespace ::com::sun::star::i18n;
 
@@ -62,7 +64,7 @@ namespace {
 
 struct PercentHdl
 {
-    SwDocShell* const pDSh;
+    SwDocShell* pDSh;
     sal_uLong nActPos;
     bool bBack, bNodeIdx;
 
@@ -338,9 +340,12 @@ bool SwCursor::IsSelOvr( SwCursorSelOverFlags eFlags )
             // skip to the next/prev valid paragraph with a layout
             SwNodeIndex& rPtIdx = GetPoint()->nNode;
             bool bGoNxt = m_vSavePos.back().nNode < rPtIdx.GetIndex();
-            while( nullptr != ( pFrame = ( bGoNxt ? pFrame->GetNextContentFrame() : pFrame->GetPrevContentFrame() ))
-                   && 0 == pFrame->getFrameArea().Height() )
-                ;
+            for (;;)
+            {
+                pFrame = bGoNxt ? pFrame->GetNextContentFrame() : pFrame->GetPrevContentFrame();
+                if (!pFrame || 0 != pFrame->getFrameArea().Height() )
+                    break;
+            }
 
             // #i72394# skip to prev/next valid paragraph with a layout in case
             // the first search did not succeed:
@@ -422,7 +427,8 @@ bool SwCursor::IsSelOvr( SwCursorSelOverFlags eFlags )
         return true; // we need a frame
     }
 
-    if( (pNd = &GetMark()->nNode.GetNode())->IsContentNode()
+    pNd = &GetMark()->nNode.GetNode();
+    if( pNd->IsContentNode()
         && !static_cast<const SwContentNode*>(pNd)->getLayoutFrame( pDoc->getIDocumentLayoutAccess().GetCurrentLayout() )
         && !dynamic_cast<SwUnoCursor*>(this) )
     {
@@ -533,9 +539,15 @@ bool SwCursor::IsSelOvr( SwCursorSelOverFlags eFlags )
                     return false;
                 }
             }
-            if( bSelTop
-                ? ( !pMyNd->IsEndNode() || nullptr == ( pPtNd = pMyNd->FindTableNode() ))
-                : nullptr == ( pPtNd = pMyNd->GetTableNode() ))
+            if( bSelTop )
+            {
+                if ( !pMyNd->IsEndNode() )
+                    break;
+                pPtNd = pMyNd->FindTableNode();
+            }
+            else
+                pPtNd = pMyNd->GetTableNode();
+            if (!pPtNd)
                 break;
         } while( true );
     }
@@ -627,8 +639,8 @@ SetNextCursor:
         }
         // end of table, so go to next node
         ++aCellStt;
-        SwNode* pNd;
-        if( ( pNd = &aCellStt.GetNode())->IsEndNode() || HasMark())
+        SwNode* pNd = &aCellStt.GetNode();
+        if( pNd->IsEndNode() || HasMark())
         {
             // if only table in FlyFrame or SSelection then stay on old position
             if( bChgCursor )
@@ -651,7 +663,8 @@ SetNextCursor:
         bool bProt = true;
 GoPrevCell:
         for (;;) {
-            if( !( pNd = &aCellStt.GetNode())->IsEndNode() )
+            pNd = &aCellStt.GetNode();
+            if( !pNd->IsEndNode() )
                 break;
             aCellStt.Assign( *pNd->StartOfSectionNode(), +1 );
             if( nullptr == ( pCNd = aCellStt.GetNode().GetContentNode() ))
@@ -677,7 +690,8 @@ SetPrevCursor:
         }
         // at the beginning of a table, so go to next node
         --aCellStt;
-        if( ( pNd = &aCellStt.GetNode())->IsStartNode() || HasMark() )
+        pNd = &aCellStt.GetNode();
+        if( pNd->IsStartNode() || HasMark() )
         {
             // if only table in FlyFrame or SSelection then stay on old position
             if( bChgCursor )
@@ -778,13 +792,14 @@ static sal_uLong lcl_FindSelection( SwFindParas& rParas, SwCursor* pCurrentCurso
             pPHdl.reset(new PercentHdl( aRegion ));
 
         // as long as found and not at same position
-        while(  *pSttPos <= *pEndPos &&
-                0 != ( nFndRet = rParas.DoFind(*pCurrentCursor, fnMove,
-                                            aRegion, bInReadOnly)) &&
-                ( !pFndRing ||
-                    *pFndRing->GetPoint() != *pCurrentCursor->GetPoint() ||
-                    *pFndRing->GetMark() != *pCurrentCursor->GetMark() ))
+        while(  *pSttPos <= *pEndPos )
         {
+            nFndRet = rParas.DoFind(*pCurrentCursor, fnMove, aRegion, bInReadOnly);
+            if( 0 == nFndRet ||
+                ( pFndRing &&
+                  *pFndRing->GetPoint() == *pCurrentCursor->GetPoint() &&
+                  *pFndRing->GetMark() == *pCurrentCursor->GetMark() ))
+                break;
             if( !( FIND_NO_RING & nFndRet ))
             {
                 // #i24084# - create ring similar to the one in CreateCursor
@@ -926,7 +941,7 @@ static bool lcl_MakeSelBkwrd( const SwNode& rSttNd, const SwNode& rEndNd,
 // this method "searches" for all use cases because in SwFindParas is always the
 // correct parameters and respective search method
 sal_uLong SwCursor::FindAll( SwFindParas& rParas,
-                            SwDocPositions nStart, SwDocPositions nEnde,
+                            SwDocPositions nStart, SwDocPositions nEnd,
                             FindRanges eFndRngs, bool& bCancel )
 {
     bCancel = false;
@@ -934,7 +949,7 @@ sal_uLong SwCursor::FindAll( SwFindParas& rParas,
 
     // create region without adding it to the ring
     SwPaM aRegion( *GetPoint() );
-    SwMoveFnCollection const & fnMove = MakeFindRange( nStart, nEnde, &aRegion );
+    SwMoveFnCollection const & fnMove = MakeFindRange( nStart, nEnd, &aRegion );
 
     sal_uLong nFound = 0;
     const bool bMvBkwrd = &fnMove == &fnMoveBackward;
@@ -1406,23 +1421,20 @@ bool SwCursor::SelectWordWT( SwViewShell const * pViewShell, sal_Int16 nWordType
     {
         // Should we select the whole fieldmark?
         const IDocumentMarkAccess* pMarksAccess = GetDoc()->getIDocumentMarkAccess( );
-        sw::mark::IMark* pMark = GetPoint() ? pMarksAccess->getFieldmarkFor( *GetPoint( ) ) : nullptr;
+        sw::mark::IFieldmark const*const pMark(pMarksAccess->getFieldmarkFor(*GetPoint()));
         if ( pMark )
         {
-            const SwPosition& rStart = pMark->GetMarkStart();
-            GetPoint()->nNode = rStart.nNode;
-            GetPoint()->nContent = rStart.nContent;
-            ++GetPoint()->nContent; // Don't select the start delimiter
+            *GetPoint() = sw::mark::FindFieldSep(*pMark);
+            ++GetPoint()->nContent; // Don't select the separator
 
             const SwPosition& rEnd = pMark->GetMarkEnd();
 
-            if ( rStart != rEnd )
-            {
-                SetMark();
-                GetMark()->nNode = rEnd.nNode;
-                GetMark()->nContent = rEnd.nContent;
-                --GetMark()->nContent; //Don't select the end delimiter
-            }
+            assert(pMark->GetMarkEnd() != *GetPoint());
+            SetMark();
+            GetMark()->nNode = rEnd.nNode;
+            GetMark()->nContent = rEnd.nContent;
+            --GetMark()->nContent; // Don't select the end delimiter
+
             bRet = true;
         }
         else
@@ -2006,7 +2018,7 @@ bool SwCursor::UpDown( bool bUp, sal_uInt16 nCnt,
                 DisableCallbackAction a(rLayout);
                 std::pair<Point, bool> const tmp(aPt, true);
                 pFrame = GetContentNode()->getLayoutFrame(&rLayout, GetPoint(), &tmp);
-                SwCursorMoveState eTmpState( MV_UPDOWN );
+                SwCursorMoveState eTmpState( CursorMoveState::UpDown );
                 eTmpState.m_bSetInReadOnly = bInReadOnly;
                 SwRect aTmpRect;
                 pFrame->GetCharRect( aTmpRect, *GetPoint(), &eTmpState );
@@ -2024,11 +2036,23 @@ bool SwCursor::UpDown( bool bUp, sal_uInt16 nCnt,
                 }
                 pFrame->GetModelPositionForViewPoint( GetPoint(), aPt, &eTmpState );
             }
-            bRet = !IsSelOvr( SwCursorSelOverFlags::Toggle | SwCursorSelOverFlags::ChangePos );
         }
         else
-            *GetPoint() = aOldPos;
+        {
+            // Jump to beginning or end of line when the cursor at first or last line.
+            SwNode& rNode = GetPoint()->nNode.GetNode();
+            const sal_Int32 nOffset = bUp ? 0 : rNode.GetTextNode()->GetText().getLength();
+            const SwPosition aPos(*GetContentNode(), nOffset);
 
+            //if cursor has already been at start or end of file,
+            //Update cursor to change nUpDownX.
+            if ( aOldPos.nContent.GetIndex() == nOffset )
+                GetDoc()->GetEditShell()->UpdateCursor();
+            else
+                *GetPoint() = aPos; // just give a new position
+        }
+
+        bRet = !IsSelOvr( SwCursorSelOverFlags::Toggle | SwCursorSelOverFlags::ChangePos );
         DoSetBidiLevelUpDown(); // calculate cursor bidi level
     }
     return bRet;
@@ -2361,7 +2385,8 @@ SwCursor* SwTableCursor::MakeBoxSels( SwCursor* pCurrentCursor )
                 pPos->nContent.Assign( const_cast<SwContentNode*>(static_cast<const SwContentNode*>(pNd)), 0 );
 
                 aIdx.Assign( *pSttNd->EndOfSectionNode(), - 1 );
-                if( !( pNd = &aIdx.GetNode())->IsContentNode() )
+                pNd = &aIdx.GetNode();
+                if( !pNd->IsContentNode() )
                     pNd = SwNodes::GoPrevSection( &aIdx, true, false );
 
                 pPos = pCur->GetPoint();
@@ -2406,7 +2431,8 @@ SwCursor* SwTableCursor::MakeBoxSels( SwCursor* pCurrentCursor )
 
             SwPosition* pPos = pNew->GetPoint();
             pPos->nNode.Assign( *pSttNd->EndOfSectionNode(), - 1 );
-            if( !( pNd = &pPos->nNode.GetNode())->IsContentNode() )
+            pNd = &pPos->nNode.GetNode();
+            if( !pNd->IsContentNode() )
                 pNd = SwNodes::GoPrevSection( &pPos->nNode, true, false );
 
             pPos->nContent.Assign(static_cast<SwContentNode*>(pNd), pNd ? static_cast<SwContentNode*>(pNd)->Len() : 0);

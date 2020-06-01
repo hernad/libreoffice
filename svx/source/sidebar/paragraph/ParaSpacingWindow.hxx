@@ -16,36 +16,17 @@
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
-#ifndef INCLUDED_SVX_SOURCE_SIDEBAR_PARAGRAPH_PARASPACINGWINDOW_HXX
-#define INCLUDED_SVX_SOURCE_SIDEBAR_PARAGRAPH_PARASPACINGWINDOW_HXX
+#pragma once
 
 #include <editeng/ulspitem.hxx>
-#include <vcl/builder.hxx>
-#include <vcl/layout.hxx>
 #include <vcl/EnumContext.hxx>
+#include <vcl/InterimItemWindow.hxx>
 #include <svx/relfld.hxx>
 
 using namespace com::sun::star;
 
-class InterimItemWindow : public Control
+namespace svx
 {
-public:
-    virtual ~InterimItemWindow() override;
-    virtual void dispose() override;
-
-    virtual void Resize() override;
-    virtual Size GetOptimalSize() const override;
-
-protected:
-    InterimItemWindow(vcl::Window* pParent, const OUString& rUIXMLDescription, const OString& rID);
-
-    std::unique_ptr<weld::Builder> m_xBuilder;
-    VclPtr<vcl::Window> m_xVclContentArea;
-    std::unique_ptr<weld::Container> m_xContainer;
-};
-
-namespace svx {
-
 class ParaULSpacingWindow : public InterimItemWindow
 {
 public:
@@ -129,9 +110,6 @@ public:
     explicit ParaFirstLineSpacingWindow(vcl::Window* pParent);
     virtual void GetFocus() override;
 };
-
 }
-
-#endif
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

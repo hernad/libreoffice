@@ -98,7 +98,7 @@ public:
     virtual SfxStyleSheetBasePool* GetStyleSheetPool() override;
     virtual void            FillClass(SvGlobalName* pClassName, SotClipboardFormatId* pFormat, OUString* pFullTypeName, sal_Int32 nFileFormat, bool bTemplate = false ) const override;
     virtual void            SetModified( bool = true ) override;
-    virtual std::unique_ptr<SfxDocumentInfoDialog> CreateDocumentInfoDialog(weld::Window* pParent,
+    virtual std::shared_ptr<SfxDocumentInfoDialog> CreateDocumentInfoDialog(weld::Window* pParent,
                                                                             const SfxItemSet &rSet) override;
 
     using SfxObjectShell::GetVisArea;
@@ -212,12 +212,12 @@ protected:
     ::sd::ViewShell*        mpViewShell;
     std::unique_ptr<FontList> mpFontList;
     rtl::Reference<FuPoor> mxDocShellFunction;
-    DocumentType const      meDocType;
+    DocumentType            meDocType;
     SfxStyleFamily          mnStyleFamily;
     o3tl::span<sal_uInt16 const>
                             mpFilterSIDs;
     bool                    mbFilterEnable;
-    bool const              mbSdDataObj;
+    bool                    mbSdDataObj;
     bool                    mbInDestruction;
     bool                    mbOwnPrinter;
 

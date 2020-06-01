@@ -20,8 +20,7 @@
 #define INCLUDED_DBACCESS_SOURCE_UI_INC_QUERYTABLEVIEW_HXX
 
 #include "JoinTableView.hxx"
-#include <com/sun/star/container/XNameAccess.hpp>
-#include "querycontroller.hxx"
+#include "TableFieldDescription.hxx"
 
 namespace dbaui
 {
@@ -103,7 +102,7 @@ namespace dbaui
 
         bool ExistsAVisitedConn(const OQueryTableWindow* pFrom) const;
 
-        virtual OTableWindowData* CreateImpl(const OUString& _rComposedName
+        virtual std::shared_ptr<OTableWindowData> CreateImpl(const OUString& _rComposedName
                                             ,const OUString& _sTableName
                                             ,const OUString& _rWinName) override;
 

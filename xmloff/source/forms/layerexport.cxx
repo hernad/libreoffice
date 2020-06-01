@@ -32,6 +32,7 @@
 #include "controlpropertymap.hxx"
 #include <com/sun/star/container/XIndexAccess.hpp>
 #include <com/sun/star/form/XFormsSupplier2.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/xforms/XFormsSupplier.hpp>
 #include <com/sun/star/form/FormComponentType.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
@@ -81,7 +82,7 @@ namespace xmloff
 
         // our style family
         m_rContext.GetAutoStylePool()->AddFamily(
-            XML_STYLE_FAMILY_CONTROL_ID, token::GetXMLToken(token::XML_PARAGRAPH),
+            XmlStyleFamily::CONTROL_ID, token::GetXMLToken(token::XML_PARAGRAPH),
             m_xStyleExportMapper.get(),
             OUString(  XML_STYLE_FAMILY_CONTROL_PREFIX )
         );
@@ -250,7 +251,7 @@ namespace xmloff
 
     void OFormLayerXMLExport_Impl::exportAutoStyles()
     {
-        m_rContext.GetAutoStylePool()->exportXML( XML_STYLE_FAMILY_CONTROL_ID );
+        m_rContext.GetAutoStylePool()->exportXML( XmlStyleFamily::CONTROL_ID );
     }
 
     void OFormLayerXMLExport_Impl::exportForms(const Reference< XDrawPage >& _rxDrawPage)
@@ -588,7 +589,7 @@ namespace xmloff
 
                 if ( !aPropertyStates.empty() )
                 {   // add to the style pool
-                    OUString sColumnStyleName = m_rContext.GetAutoStylePool()->Add( XML_STYLE_FAMILY_CONTROL_ID, aPropertyStates );
+                    OUString sColumnStyleName = m_rContext.GetAutoStylePool()->Add( XmlStyleFamily::CONTROL_ID, aPropertyStates );
 
                     OSL_ENSURE( m_aGridColumnStyles.end() == m_aGridColumnStyles.find( xColumnProperties ),
                         "OFormLayerXMLExport_Impl::collectGridColumnStylesAndIds: already have a style for this column!" );

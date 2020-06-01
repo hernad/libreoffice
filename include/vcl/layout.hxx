@@ -10,10 +10,10 @@
 #ifndef INCLUDED_VCL_LAYOUT_HXX
 #define INCLUDED_VCL_LAYOUT_HXX
 
+#include <config_options.h>
 #include <vcl/dllapi.h>
+#include <vcl/ctrl.hxx>
 #include <vcl/help.hxx>
-#include <vcl/scrbar.hxx>
-#include <vcl/split.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/window.hxx>
 #include <vcl/settings.hxx>
@@ -23,6 +23,11 @@
 #include <vcl/IContext.hxx>
 #include <vcl/commandevent.hxx>
 #include <set>
+
+class ScrollBar;
+class ScrollBar;
+class ScrollBarBox;
+class Splitter;
 
 class VCL_DLLPUBLIC VclContainer : public vcl::Window,
                                    public vcl::IContext
@@ -357,7 +362,7 @@ public:
     virtual bool set_property(const OString &rKey, const OUString &rValue) override;
 };
 
-class VCL_DLLPUBLIC VclBin : public VclContainer
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) VclBin : public VclContainer
 {
 public:
     VclBin(vcl::Window *pParent, WinBits nStyle = WB_HIDE | WB_CLIPCHILDREN)
@@ -378,10 +383,10 @@ protected:
 
     VclPaned(vcl::Window *pParent, bool bVertical);
 public:
-    virtual ~VclPaned() override { disposeOnce(); }
+    virtual ~VclPaned() override;
     virtual void dispose() override;
     long get_position() const { return m_nPosition; }
-    void set_position(long nPosition) { m_nPosition = nPosition; }
+    virtual void set_position(long nPosition) { m_nPosition = nPosition; }
 };
 
 class VclVPaned final : public VclPaned
@@ -392,8 +397,10 @@ private:
 
 public:
     VclVPaned(vcl::Window *pParent);
+    virtual ~VclVPaned() override;
     virtual Size calculateRequisition() const override;
     virtual void setAllocation(const Size &rAllocation) override;
+    virtual void set_position(long nPosition) override;
 };
 
 class VclHPaned final : public VclPaned
@@ -404,8 +411,10 @@ private:
 
 public:
     VclHPaned(vcl::Window *pParent);
+    virtual ~VclHPaned() override;
     virtual Size calculateRequisition() const override;
     virtual void setAllocation(const Size &rAllocation) override;
+    virtual void set_position(long nPosition) override;
 };
 
 class VclFrame final : public VclBin
@@ -437,7 +446,7 @@ private:
     virtual OUString getDefaultAccessibleName() const override;
 };
 
-class VCL_DLLPUBLIC VclAlignment final : public VclBin
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) VclAlignment final : public VclBin
 {
 public:
     VclAlignment(vcl::Window *pParent)
@@ -488,7 +497,7 @@ class VCL_DLLPUBLIC VclScrolledWindow final : public VclBin
 {
 public:
     VclScrolledWindow(vcl::Window *pParent );
-    virtual ~VclScrolledWindow() override { disposeOnce(); }
+    virtual ~VclScrolledWindow() override;
     virtual void dispose() override;
     virtual vcl::Window *get_child() override;
     virtual const vcl::Window *get_child() const override;

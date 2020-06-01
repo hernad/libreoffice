@@ -24,13 +24,11 @@
 #include <com/sun/star/embed/XTransactedObject.hpp>
 #include <com/sun/star/io/XInputStream.hpp>
 #include <com/sun/star/io/XOutputStream.hpp>
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <osl/diagnose.h>
 #include <sal/log.hxx>
 #include <tools/diagnose_ex.h>
 #include <comphelper/storagehelper.hxx>
-#include <oox/helper/helper.hxx>
 
 namespace oox {
 
@@ -45,7 +43,10 @@ ZipStorage::ZipStorage( const Reference< XComponentContext >& rxContext, const R
 {
     OSL_ENSURE( rxContext.is(), "ZipStorage::ZipStorage - missing component context" );
     // create base storage object
-    if( rxContext.is() ) try
+    if( !rxContext.is() )
+        return;
+
+    try
     {
         /*  #i105325# ::comphelper::OStorageHelper::GetStorageFromInputStream()
             cannot be used here as it will open a storage with format type

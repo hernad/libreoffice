@@ -24,8 +24,6 @@
 
 #include "TableManager.hxx"
 #include "PropertyMap.hxx"
-#include "StyleSheetTable.hxx"
-#include <com/sun/star/text/XTextRange.hpp>
 #include <vector>
 #include <memory>
 #include <comphelper/sequenceashashmap.hxx>
@@ -46,9 +44,9 @@ class DomainMapperTableManager : public TableManager
     sal_uInt32      m_nGridAfter; ///< number of grid columns in the parent table's table grid which shall be left after the last cell in the table row
     sal_Int32       m_nHeaderRepeat; //counter of repeated headers - if == -1 then the repeating stops
     sal_Int32       m_nTableWidth; //might be set directly or has to be calculated from the column positions
-    /// Unfloat tables in a shape/table-only header (text append stack is not empty)
-    bool m_bIsUnfloatTable;
-    OUString m_sTableStyleName;
+    /// Are we in a shape (text append stack is not empty) or in the body document?
+    bool m_bIsInShape;
+    std::vector< OUString > m_aTableStyleNames;
     /// Grab-bag of table look attributes for preserving.
     comphelper::SequenceAsHashMap m_aTableLook;
     std::vector< TablePositionHandlerPtr > m_aTablePositions;
@@ -65,9 +63,13 @@ class DomainMapperTableManager : public TableManager
     bool m_bTableSizeTypeInserted;
     /// Table layout algorithm, IOW if we should consider fixed column width or not.
     sal_uInt32 m_nLayoutType;
+    /// Collected table paragraphs for table style handling
+    std::stack< TableParagraphVectorPtr > m_aParagraphsToEndTable;
 
     std::unique_ptr<TablePropertiesHandler> m_pTablePropsHandler;
     PropertyMapPtr            m_pStyleProps;
+
+    bool shouldInsertRow(IntVectorPtr pCellWidths, IntVectorPtr pTableGrid, size_t nGrids, bool& rIsIncompleteGrid);
 
     virtual void clearData() override;
 
@@ -93,6 +95,7 @@ public:
     IntVectorPtr const & getCurrentSpans( );
     IntVectorPtr const & getCurrentCellWidths( );
     sal_uInt32 getCurrentGridBefore( );
+    TableParagraphVectorPtr getCurrentParagraphs( );
 
     /// Turn the attributes collected so far in m_aTableLook into a property and clear the container.
     void finishTableLook();
@@ -101,7 +104,7 @@ public:
 
     virtual void cellProps(const TablePropertyMapPtr& pProps) override
     {
-        if ( m_pStyleProps.get( ) )
+        if ( m_pStyleProps )
             m_pStyleProps->InsertProps(pProps.get());
         else
            TableManager::cellProps( pProps );
@@ -109,7 +112,7 @@ public:
 
     virtual void insertRowProps(const TablePropertyMapPtr& pProps) override
     {
-        if ( m_pStyleProps.get( ) )
+        if ( m_pStyleProps )
             m_pStyleProps->InsertProps(pProps.get());
         else
            TableManager::insertRowProps( pProps );
@@ -117,7 +120,7 @@ public:
 
     virtual void insertTableProps(const TablePropertyMapPtr& pProps) override
     {
-        if ( m_pStyleProps.get( ) )
+        if ( m_pStyleProps )
             m_pStyleProps->InsertProps(pProps.get());
         else
             m_aTmpTableProperties.back()->InsertProps(pProps.get());
@@ -130,7 +133,7 @@ public:
 
     using TableManager::isInCell;
 
-    void setIsUnfloatTable(bool bIsUnfloatTable);
+    void setIsInShape(bool bIsInShape);
 
 };
 

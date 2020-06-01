@@ -294,7 +294,7 @@ SvxEditDictionaryDialog::SvxEditDictionaryDialog(weld::Window* pParent, const OU
         }
         Reference< XDictionary >  xDic;
         if (nPos != -1)
-            xDic.set( aDics.getConstArray()[ nPos ], UNO_QUERY );
+            xDic = aDics[ nPos ];
         if (xDic.is())
             SetLanguage_Impl( LanguageTag( xDic->getLocale() ).getLanguageType() );
 
@@ -392,56 +392,56 @@ void SvxEditDictionaryDialog::RemoveDictEntry(int nEntry)
 IMPL_LINK_NOARG(SvxEditDictionaryDialog, SelectBookHdl_Impl, weld::ComboBox&, void)
 {
     int nPos = m_xAllDictsLB->get_active();
-    if (nPos != -1)
-    {
-        m_xNewReplacePB->set_sensitive( false );
-        m_xDeletePB->set_sensitive( false );
-        // display dictionary
-        ShowWords_Impl( nPos );
-        // enable or disable new and delete button according to file attributes
-        Reference< XDictionary >  xDic( aDics.getConstArray()[ nPos ], UNO_QUERY );
-        if (xDic.is())
-            SetLanguage_Impl( LanguageTag( xDic->getLocale() ).getLanguageType() );
+    if (nPos == -1)
+        return;
 
-        SetDicReadonly_Impl(xDic);
-        bool bEnable = !IsDicReadonly_Impl();
-        m_xLangFT->set_sensitive( bEnable );
-        m_xLangLB->set_sensitive( bEnable );
-    }
+    m_xNewReplacePB->set_sensitive( false );
+    m_xDeletePB->set_sensitive( false );
+    // display dictionary
+    ShowWords_Impl( nPos );
+    // enable or disable new and delete button according to file attributes
+    Reference< XDictionary > const & xDic = aDics[ nPos ];
+    if (xDic.is())
+        SetLanguage_Impl( LanguageTag( xDic->getLocale() ).getLanguageType() );
+
+    SetDicReadonly_Impl(xDic);
+    bool bEnable = !IsDicReadonly_Impl();
+    m_xLangFT->set_sensitive( bEnable );
+    m_xLangLB->set_sensitive( bEnable );
 }
 
 IMPL_LINK_NOARG(SvxEditDictionaryDialog, SelectLangHdl_Impl, weld::ComboBox&, void)
 {
     int nDicPos = m_xAllDictsLB->get_active();
     LanguageType nLang = m_xLangLB->get_active_id();
-    Reference< XDictionary >  xDic( aDics.getConstArray()[ nDicPos ], UNO_QUERY );
+    Reference< XDictionary > const & xDic = aDics[ nDicPos ];
     LanguageType nOldLang = LanguageTag( xDic->getLocale() ).getLanguageType();
 
-    if ( nLang != nOldLang )
+    if ( nLang == nOldLang )
+        return;
+
+    std::unique_ptr<weld::MessageDialog> xBox(Application::CreateMessageDialog(m_xDialog.get(),
+                                                  VclMessageType::Question, VclButtonsType::YesNo,
+                                                  CuiResId(RID_SVXSTR_CONFIRM_SET_LANGUAGE)));
+    OUString sTxt(xBox->get_primary_text());
+    sTxt = sTxt.replaceFirst("%1", m_xAllDictsLB->get_active_text());
+    xBox->set_primary_text(sTxt);
+
+    if (xBox->run() == RET_YES)
     {
-        std::unique_ptr<weld::MessageDialog> xBox(Application::CreateMessageDialog(m_xDialog.get(),
-                                                      VclMessageType::Question, VclButtonsType::YesNo,
-                                                      CuiResId(RID_SVXSTR_CONFIRM_SET_LANGUAGE)));
-        OUString sTxt(xBox->get_primary_text());
-        sTxt = sTxt.replaceFirst("%1", m_xAllDictsLB->get_active_text());
-        xBox->set_primary_text(sTxt);
+        xDic->setLocale( LanguageTag::convertToLocale( nLang ) );
+        bool bNegativ = xDic->getDictionaryType() == DictionaryType_NEGATIVE;
 
-        if (xBox->run() == RET_YES)
-        {
-            xDic->setLocale( LanguageTag::convertToLocale( nLang ) );
-            bool bNegativ = xDic->getDictionaryType() == DictionaryType_NEGATIVE;
-
-            const OUString sName(
-                ::GetDicInfoStr( xDic->getName(),
-                                 LanguageTag( xDic->getLocale() ).getLanguageType(),
-                                 bNegativ ) );
-            m_xAllDictsLB->remove(nDicPos);
-            m_xAllDictsLB->insert_text(nDicPos, sName);
-            m_xAllDictsLB->set_active(nDicPos);
-        }
-        else
-            SetLanguage_Impl( nOldLang );
+        const OUString sName(
+            ::GetDicInfoStr( xDic->getName(),
+                             LanguageTag( xDic->getLocale() ).getLanguageType(),
+                             bNegativ ) );
+        m_xAllDictsLB->remove(nDicPos);
+        m_xAllDictsLB->insert_text(nDicPos, sName);
+        m_xAllDictsLB->set_active(nDicPos);
     }
+    else
+        SetLanguage_Impl( nOldLang );
 }
 
 void SvxEditDictionaryDialog::ShowWords_Impl( sal_uInt16 nId )
@@ -606,7 +606,7 @@ bool SvxEditDictionaryDialog::NewDelHdl(const weld::Widget* pBtn)
         if (nPos != -1 && !aNewWord.isEmpty())
         {
             DBG_ASSERT(nPos < aDics.getLength(), "invalid dictionary index");
-            Reference< XDictionary >  xDic( aDics.getConstArray()[ nPos ], UNO_QUERY );
+            Reference< XDictionary > const & xDic = aDics[ nPos ];
             if (xDic.is())
             {
                 // make changes in dic
@@ -686,6 +686,8 @@ IMPL_LINK(SvxEditDictionaryDialog, ModifyHdl, weld::Entry&, rEdt, void)
             bool bTmpSelEntry=false;
             CDE_RESULT eCmpRes = CDE_DIFFERENT;
 
+            bool bDoubleColumn = m_pWordsLB == m_xDoubleColumnLB.get();
+
             for (int i = 0, nCount = m_pWordsLB->n_children(); i < nCount; ++i)
             {
                 OUString aTestStr(m_pWordsLB->get_text(i, 0));
@@ -697,7 +699,8 @@ IMPL_LINK(SvxEditDictionaryDialog, ModifyHdl, weld::Entry&, rEdt, void)
                     bDoNothing=true;
                     m_pWordsLB->set_cursor(i);
                     bDoNothing=false;
-                    m_xReplaceED->set_text(m_pWordsLB->get_text(i, 1));
+                    if (bDoubleColumn)
+                        m_xReplaceED->set_text(m_pWordsLB->get_text(i, 1));
 
                     if (CDE_SIMILAR == eCmpRes)
                     {

@@ -27,7 +27,7 @@
 #include <rtl/textenc.h>
 #include <editeng/svxenum.hxx>
 #include <tools/solar.h>
-#include <o3tl/optional.hxx>
+#include <optional>
 
 #include <com/sun/star/drawing/TextVerticalAdjust.hpp>
 #include <swtypes.hxx>
@@ -145,7 +145,7 @@ enum StyleType
 class AttributeOutputBase
 {
 private:
-    SvtSaveOptions const m_aSaveOpt;
+    SvtSaveOptions m_aSaveOpt;
     OUString m_sBaseURL; // To be used in ConvertURL
 
     OUString ConvertURL( const OUString& rUrl, bool bAbsoluteOut );
@@ -339,7 +339,7 @@ public:
 
     /// The style of the page numbers.
     ///
-    virtual void SectionPageNumbering( sal_uInt16 nNumType, const ::o3tl::optional<sal_uInt16>& oPageRestartNumber ) = 0;
+    virtual void SectionPageNumbering( sal_uInt16 nNumType, const ::std::optional<sal_uInt16>& oPageRestartNumber ) = 0;
 
     /// The type of breaking.
     virtual void SectionType( sal_uInt8 nBreakCode ) = 0;
@@ -348,7 +348,8 @@ public:
     virtual void NumberingDefinition( sal_uInt16 nId, const SwNumRule &rRule ) = 0;
 
     /// Numbering definition that overrides abstract numbering definition
-    virtual void OverrideNumberingDefinition(SwNumRule const&, sal_uInt16 /*nNum*/, sal_uInt16 /*nAbstractNum*/)
+    virtual void OverrideNumberingDefinition(SwNumRule const&, sal_uInt16 /*nNum*/, sal_uInt16 /*nAbstractNum*/,
+        const std::map< size_t, size_t > & /*rLevelOverrides*/)
     { assert(false); } // TODO implement for WW8/RTF
 
     /// Start of the abstract numbering definition instance.

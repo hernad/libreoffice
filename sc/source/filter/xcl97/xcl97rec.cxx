@@ -56,6 +56,7 @@
 #include <tabprotection.hxx>
 
 #include <com/sun/star/embed/Aspects.hpp>
+#include <com/sun/star/chart/XChartDocument.hpp>
 #include <com/sun/star/chart2/XCoordinateSystemContainer.hpp>
 #include <com/sun/star/chart2/XChartTypeContainer.hpp>
 #include <com/sun/star/chart2/XChartDocument.hpp>
@@ -152,6 +153,17 @@ void XclExpObjList::Save( XclExpStream& rStrm )
 
 namespace {
 
+bool IsFormControlObject( const XclObj *rObj )
+{
+    switch( rObj->GetObjType() )
+    {
+        case EXC_OBJTYPE_CHECKBOX:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool IsVmlObject( const XclObj *rObj )
 {
     switch( rObj->GetObjType() )
@@ -210,7 +222,7 @@ bool IsValidObject( const XclObj& rObj )
     return true;
 }
 
-void SaveDrawingMLObjects( XclExpObjList& rList, XclExpXmlStream& rStrm, sal_Int32& nDrawingMLCount )
+void SaveDrawingMLObjects( XclExpObjList& rList, XclExpXmlStream& rStrm )
 {
     std::vector<XclObj*> aList;
     aList.reserve(rList.size());
@@ -225,7 +237,7 @@ void SaveDrawingMLObjects( XclExpObjList& rList, XclExpXmlStream& rStrm, sal_Int
     if (aList.empty())
         return;
 
-    sal_Int32 nDrawing = ++nDrawingMLCount;
+    sal_Int32 nDrawing = XclExpObjList::getNewDrawingUniqueId();
     OUString sId;
     sax_fastparser::FSHelperPtr pDrawing = rStrm.CreateOutputStream(
             XclXmlUtils::GetStreamName( "xl/", "drawings/drawing", nDrawing ),
@@ -243,12 +255,52 @@ void SaveDrawingMLObjects( XclExpObjList& rList, XclExpXmlStream& rStrm, sal_Int
             FSNS(XML_xmlns, XML_a),   rStrm.getNamespaceURL(OOX_NS(dml)).toUtf8(),
             FSNS(XML_xmlns, XML_r),   rStrm.getNamespaceURL(OOX_NS(officeRel)).toUtf8() );
 
+    sal_Int32 nShapeId = 1000; // unique id of the shape inside one worksheet (not the whole document)
     for (const auto& rpObj : aList)
+    {
+        // validate shapeId
+        if ( IsFormControlObject( rpObj ) )
+        {
+            XclExpTbxControlObj* pXclExpTbxControlObj = dynamic_cast<XclExpTbxControlObj*>(rpObj);
+            if (pXclExpTbxControlObj)
+            {
+                pXclExpTbxControlObj->setShapeId(++nShapeId);
+            }
+        }
+
         rpObj->SaveXml(rStrm);
+    }
 
     pDrawing->endElement( FSNS( XML_xdr, XML_wsDr ) );
 
     rStrm.PopStream();
+}
+
+void SaveFormControlObjects(XclExpObjList& rList, XclExpXmlStream& rStrm)
+{
+    sax_fastparser::FSHelperPtr& rWorksheet = rStrm.GetCurrentStream();
+
+    rWorksheet->startElement(FSNS(XML_mc, XML_AlternateContent),
+        FSNS(XML_xmlns, XML_mc), rStrm.getNamespaceURL(OOX_NS(mce)).toUtf8());
+    rWorksheet->startElement(FSNS(XML_mc, XML_Choice), XML_Requires, "x14");
+    rWorksheet->startElement(XML_controls);
+
+    for (const auto& rxObj : rList)
+    {
+        if (IsFormControlObject(rxObj.get()))
+        {
+            XclExpTbxControlObj* pXclExpTbxControlObj = dynamic_cast<XclExpTbxControlObj*>(rxObj.get());
+            if (pXclExpTbxControlObj)
+            {
+                const OUString aIdFormControlPr = pXclExpTbxControlObj->SaveControlPropertiesXml(rStrm);
+                pXclExpTbxControlObj->SaveSheetXml(rStrm, aIdFormControlPr);
+            }
+        }
+    }
+
+    rWorksheet->endElement(XML_controls);
+    rWorksheet->endElement(FSNS(XML_mc, XML_Choice));
+    rWorksheet->endElement(FSNS(XML_mc, XML_AlternateContent));
 }
 
 void SaveVmlObjects( XclExpObjList& rList, XclExpXmlStream& rStrm, sal_Int32& nVmlCount )
@@ -297,7 +349,8 @@ void XclExpObjList::SaveXml( XclExpXmlStream& rStrm )
     if( maObjs.empty())
         return;
 
-    SaveDrawingMLObjects( *this, rStrm, mnDrawingMLCount );
+    SaveDrawingMLObjects( *this, rStrm );
+    SaveFormControlObjects( *this, rStrm );
     SaveVmlObjects( *this, rStrm, mnVmlCount );
 }
 
@@ -855,7 +908,7 @@ XclTxo::XclTxo( const XclExpRoot& rRoot, const EditTextObject& rEditObj, SdrObje
 
 void XclTxo::SaveCont( XclExpStream& rStrm )
 {
-    OSL_ENSURE( mpString.get(), "XclTxo::SaveCont - missing string" );
+    OSL_ENSURE( mpString, "XclTxo::SaveCont - missing string" );
 
     // #i96858# do not save existing string formatting if text is empty
     sal_uInt16 nRunLen = mpString->IsEmpty() ? 0 : (8 * mpString->GetFormatsCount());
@@ -921,7 +974,7 @@ void XclObjOle::WriteSubRecs( XclExpStream& rStrm )
     OUString        aStorageName( "MBD" );
     char        aBuf[ sizeof(sal_uInt32) * 2 + 1 ];
     // FIXME Eeek! Is this just a way to get a unique id?
-    sal_uInt32          nPictureId = sal_uInt32(sal_uIntPtr(this) >> 2);
+    sal_uInt32          nPictureId = sal_uInt32(reinterpret_cast<sal_uIntPtr>(this) >> 2);
     sprintf( aBuf, "%08X", static_cast< unsigned int >( nPictureId ) );
     aStorageName += OUString::createFromAscii(aBuf);
     tools::SvRef<SotStorage>    xOleStg = pRootStorage->OpenSotStorage( aStorageName );
@@ -1393,7 +1446,7 @@ ExcEScenario::ExcEScenario( const XclExpRoot& rRoot, SCTAB nTab )
                     sText = ::rtl::math::doubleToUString( fVal,
                             rtl_math_StringFormat_Automatic,
                             rtl_math_DecimalPlaces_Max,
-                            ScGlobal::pLocaleData->getNumDecimalSep()[0],
+                            ScGlobal::getLocaleDataPtr()->getNumDecimalSep()[0],
                             true );
                 }
                 else

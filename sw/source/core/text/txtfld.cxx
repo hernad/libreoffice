@@ -426,7 +426,8 @@ static void checkApplyParagraphMarkFormatToNumbering(SwFont* pNumFnt, SwTextForm
     std::shared_ptr<SfxItemSet> pSet(rListAutoFormat.GetStyleHandle());
 
     // TODO remove this fallback (for WW8/RTF)
-    if (!pSet)
+    bool isDOCX = pIDSA->get(DocumentSettingId::ADD_VERTICAL_FLY_OFFSETS);
+    if (!isDOCX && !pSet)
     {
         TextFrameIndex const nTextLen(rInf.GetTextFrame()->GetText().getLength());
         SwTextNode const* pNode(nullptr);
@@ -457,7 +458,7 @@ static void checkApplyParagraphMarkFormatToNumbering(SwFont* pNumFnt, SwTextForm
     // TODO: apparently Word can apply Character Style too, see testParagraphMark
 
     // Check each item and in case it should be ignored, then clear it.
-    if (pSet.get())
+    if (pSet)
     {
         std::unique_ptr<SfxItemSet> const pCleanedSet = pSet->Clone();
 
@@ -465,17 +466,17 @@ static void checkApplyParagraphMarkFormatToNumbering(SwFont* pNumFnt, SwTextForm
         const SfxPoolItem* pItem = aIter.GetCurItem();
         do
         {
-            if (SwTextNode::IsIgnoredCharFormatForNumbering(pItem->Which()))
-                pCleanedSet->ClearItem(pItem->Which());
-            else if (pFormat && pFormat->HasItem(pItem->Which()))
-                pCleanedSet->ClearItem(pItem->Which());
+            if (pItem->Which() != RES_CHRATR_BACKGROUND)
+            {
+                if (SwTextNode::IsIgnoredCharFormatForNumbering(pItem->Which()))
+                    pCleanedSet->ClearItem(pItem->Which());
+                else if (pFormat && pFormat->HasItem(pItem->Which()))
+                    pCleanedSet->ClearItem(pItem->Which());
+            }
 
             pItem = aIter.NextItem();
         } while (pItem);
-        // Highlightcolor also needed to be untouched, but we can't have that just by clearing the item
-        Color nSaveHighlight = pNumFnt->GetHighlightColor();
         pNumFnt->SetDiffFnt(pCleanedSet.get(), pIDSA);
-        pNumFnt->SetHighlightColor(nSaveHighlight);
     }
 }
 

@@ -20,7 +20,6 @@
 #define INCLUDED_REPORTDESIGN_SOURCE_FILTER_XML_XMLCOMPONENT_HXX
 
 #include <xmloff/xmlictxt.hxx>
-#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/report/XReportComponent.hpp>
 
 namespace rptxml
@@ -38,6 +37,8 @@ namespace rptxml
                     ,const css::uno::Reference< css::xml::sax::XFastAttributeList > & xAttrList
                     ,const css::uno::Reference< css::report::XReportComponent >& _xComponent
                     );
+        virtual void SAL_CALL startFastElement(
+                sal_Int32 /*nElement*/, const css::uno::Reference< css::xml::sax::XFastAttributeList >& /*xAttrList*/ ) override {}
         virtual ~OXMLComponent() override;
     };
 

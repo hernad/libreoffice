@@ -20,10 +20,12 @@
 #ifndef INCLUDED_VCL_INC_IMPGRAPH_HXX
 #define INCLUDED_VCL_INC_IMPGRAPH_HXX
 
+#include <vcl/dllapi.h>
 #include <vcl/GraphicExternalLink.hxx>
 #include <vcl/gdimtf.hxx>
 #include <vcl/graph.hxx>
 #include "graphic/Manager.hxx"
+#include "graphic/GraphicID.hxx"
 
 struct ImpSwapInfo
 {
@@ -41,31 +43,11 @@ struct ImpSwapInfo
 
 class OutputDevice;
 class GfxLink;
-struct ImpSwapFile;
+class ImpSwapFile;
 class GraphicConversionParameters;
 class ImpGraphic;
 
-class GraphicID
-{
-private:
-    sal_uInt32  mnID1;
-    sal_uInt32  mnID2;
-    sal_uInt32  mnID3;
-    BitmapChecksum  mnID4;
-
-public:
-    GraphicID(ImpGraphic const & rGraphic);
-
-    bool operator==(const GraphicID& rID) const
-    {
-        return rID.mnID1 == mnID1 && rID.mnID2 == mnID2 &&
-               rID.mnID3 == mnID3 && rID.mnID4 == mnID4;
-    }
-
-    OString getIDString() const;
-};
-
-class ImpGraphic final
+class VCL_DLLPUBLIC ImpGraphic final
 {
     friend class Graphic;
     friend class GraphicID;
@@ -74,7 +56,9 @@ class ImpGraphic final
 private:
 
     GDIMetaFile                  maMetaFile;
-    BitmapEx                     maEx;
+    BitmapEx                     maBitmapEx;
+    /// If maBitmapEx is empty, this preferred size will be set on it when it gets initialized.
+    Size                         maExPrefSize;
     ImpSwapInfo                  maSwapInfo;
     std::unique_ptr<Animation>   mpAnimation;
     std::shared_ptr<GraphicReader> mpContext;
@@ -84,24 +68,15 @@ private:
     mutable sal_uLong            mnSizeBytes;
     bool                         mbSwapOut;
     bool                         mbDummyContext;
-    VectorGraphicDataPtr         maVectorGraphicData;
+    std::shared_ptr<VectorGraphicData> maVectorGraphicData;
     // cache checksum computation
     mutable BitmapChecksum       mnChecksum = 0;
 
-    /// The PDF stream from which this Graphic is rendered,
-    /// as converted (version downgraded) from the original,
-    /// which should be in GfxLink.
-    std::shared_ptr<std::vector<sal_Int8>> mpPdfData;
     std::unique_ptr<GraphicID>   mpGraphicID;
     GraphicExternalLink          maGraphicExternalLink;
 
     std::chrono::high_resolution_clock::time_point maLastUsed;
     bool mbPrepared;
-
-    /// Used with GfxLink and/or PdfData when they store original media
-    /// which might be multi-page (PDF, f.e.) and we need to re-render
-    /// this Graphic (a page) from the source in GfxLink or PdfData.
-    sal_Int32                    mnPageNumber;
 
 public:
     ImpGraphic();
@@ -110,7 +85,7 @@ public:
     ImpGraphic( const GraphicExternalLink& rExternalLink);
     ImpGraphic( const Bitmap& rBmp );
     ImpGraphic( const BitmapEx& rBmpEx );
-    ImpGraphic(const VectorGraphicDataPtr& rVectorGraphicDataPtr);
+    ImpGraphic(const std::shared_ptr<VectorGraphicData>& rVectorGraphicDataPtr);
     ImpGraphic( const Animation& rAnimation );
     ImpGraphic( const GDIMetaFile& rMtf );
     ~ImpGraphic();
@@ -141,12 +116,7 @@ private:
         return mpGraphicID->getIDString();
     }
 
-    bool hasPdfData() const
-    {
-        return mpPdfData && !mpPdfData->empty();
-    }
-
-    void                ImplCreateSwapInfo();
+    void                createSwapInfo();
     void                ImplClearGraphics();
     void                ImplClear();
 
@@ -206,13 +176,8 @@ private:
     bool                ImplReadEmbedded( SvStream& rIStream );
     bool                ImplWriteEmbedded( SvStream& rOStream );
 
-    bool                ImplSwapIn();
-    bool                ImplSwapIn( SvStream* pIStm );
+    bool                swapInFromStream(SvStream* pIStm);
 
-    bool                ImplSwapOut();
-    bool                ImplSwapOut( SvStream* pOStm );
-
-    bool                ImplIsSwapOut() const { return mbSwapOut;}
     bool                ImplIsDummyContext() const { return mbDummyContext; }
     void                ImplSetLink( const std::shared_ptr<GfxLink>& );
     std::shared_ptr<GfxLink> ImplGetSharedGfxLink() const;
@@ -226,15 +191,22 @@ private:
     friend void         WriteImpGraphic(SvStream& rOStm, const ImpGraphic& rImpGraphic);
     friend void         ReadImpGraphic(SvStream& rIStm, ImpGraphic& rImpGraphic);
 
-    const VectorGraphicDataPtr& getVectorGraphicData() const;
+    const std::shared_ptr<VectorGraphicData>& getVectorGraphicData() const;
 
-    const std::shared_ptr<std::vector<sal_Int8>> & getPdfData() const;
-
-    void setPdfData(const std::shared_ptr<std::vector<sal_Int8>>& rPdfData);
+    /// Gets the bitmap replacement for a vector graphic.
+    BitmapEx getVectorGraphicReplacement() const;
 
     bool ensureAvailable () const;
 
     bool loadPrepared();
+
+    sal_Int32 getPageNumber() const;
+
+public:
+    bool swapIn();
+    bool swapOut();
+    bool isSwappedOut() const { return mbSwapOut; }
+    OUString getSwapFileURL();
 };
 
 #endif // INCLUDED_VCL_INC_IMPGRAPH_HXX

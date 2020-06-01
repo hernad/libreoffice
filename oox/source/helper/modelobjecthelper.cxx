@@ -28,7 +28,6 @@
 #include <com/sun/star/graphic/XGraphic.hpp>
 #include <com/sun/star/awt/XBitmap.hpp>
 #include <oox/helper/containerhelper.hxx>
-#include <oox/helper/helper.hxx>
 #include <osl/diagnose.h>
 
 namespace oox {
@@ -141,7 +140,7 @@ OUString ModelObjectHelper::insertFillBitmapXGraphic(uno::Reference<graphic::XGr
     return OUString();
 }
 
-OUString ModelObjectHelper::insertFillHatch( const Hatch& rHatch )
+OUString ModelObjectHelper::insertFillHatch(const drawing::Hatch& rHatch)
 {
     return maHatchContainer.insertObject( gaHatchNameBase, Any( rHatch ), true );
 }

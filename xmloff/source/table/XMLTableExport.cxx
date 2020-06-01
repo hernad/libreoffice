@@ -24,13 +24,14 @@
 #include <osl/diagnose.h>
 
 #include <rtl/ustring.hxx>
-
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/style/XStyleFamiliesSupplier.hpp>
 #include <com/sun/star/text/XText.hpp>
 #include <com/sun/star/table/XCellRange.hpp>
 #include <com/sun/star/table/XColumnRowRange.hpp>
 #include <com/sun/star/table/XMergeableCell.hpp>
 #include <com/sun/star/style/XStyle.hpp>
+#include <com/sun/star/beans/XPropertyState.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/beans/XPropertySetInfo.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
@@ -56,11 +57,11 @@ using namespace ::com::sun::star::container;
 using namespace ::com::sun::star::text;
 using namespace ::com::sun::star::style;
 
-#define MAP_(name,prefix,token,type,context)  { name, sizeof(name)-1, prefix, token, type, context, SvtSaveOptions::ODFVER_010, false }
+#define MAP_(name,prefix,token,type,context)  { name, sizeof(name)-1, prefix, token, type, context, SvtSaveOptions::ODFSVER_010, false }
 #define CMAP(name,prefix,token,type,context) MAP_(name,prefix,token,type|XML_TYPE_PROP_TABLE_COLUMN,context)
 #define RMAP(name,prefix,token,type,context) MAP_(name,prefix,token,type|XML_TYPE_PROP_TABLE_ROW,context)
 #define CELLMAP(name,prefix,token,type,context) MAP_(name,prefix,token,type|XML_TYPE_PROP_TABLE_CELL,context)
-#define MAP_END { nullptr, 0, 0, XML_EMPTY, 0, 0, SvtSaveOptions::ODFVER_010, false }
+#define MAP_END { nullptr, 0, 0, XML_EMPTY, 0, 0, SvtSaveOptions::ODFSVER_010, false }
 
 const XMLPropertyMapEntry* getColumnPropertiesMap()
 {
@@ -142,6 +143,22 @@ sal_Int32 StringStatisticHelper::getModeString( OUString& rStyleName )
     return nMax;
 }
 
+namespace {
+
+class XMLCellExportPropertyMapper : public SvXMLExportPropertyMapper
+{
+public:
+    using SvXMLExportPropertyMapper::SvXMLExportPropertyMapper;
+    /** this method is called for every item that has the
+    MID_FLAG_SPECIAL_ITEM_EXPORT flag set */
+    virtual void handleSpecialItem(SvXMLAttributeList&, const XMLPropertyState&, const SvXMLUnitConverter&,
+        const SvXMLNamespaceMap&, const std::vector<XMLPropertyState>*, sal_uInt32) const override
+    {
+        // the SpecialItem NumberFormat must not be handled by this method
+    }
+};
+
+}
 
 XMLTableExport::XMLTableExport(SvXMLExport& rExp, const rtl::Reference< SvXMLExportPropertyMapper  >& xExportPropertyMapper, const rtl::Reference< XMLPropertyHandlerFactory >& xFactoryRef )
 : mrExport( rExp )
@@ -168,7 +185,7 @@ XMLTableExport::XMLTableExport(SvXMLExport& rExp, const rtl::Reference< SvXMLExp
 
     if (mbWriter)
     {
-        mxCellExportPropertySetMapper = new SvXMLExportPropertyMapper(new XMLTextPropertySetMapper(TextPropMap::CELL, true));
+        mxCellExportPropertySetMapper = new XMLCellExportPropertyMapper(new XMLTextPropertySetMapper(TextPropMap::CELL, true));
     }
     else
     {
@@ -180,15 +197,15 @@ XMLTableExport::XMLTableExport(SvXMLExport& rExp, const rtl::Reference< SvXMLExp
     mxRowExportPropertySetMapper = new SvXMLExportPropertyMapper( new XMLPropertySetMapper( getRowPropertiesMap(), xFactoryRef.get(), true ) );
     mxColumnExportPropertySetMapper = new SvXMLExportPropertyMapper( new XMLPropertySetMapper( getColumnPropertiesMap(), xFactoryRef.get(), true ) );
 
-    mrExport.GetAutoStylePool()->AddFamily(XML_STYLE_FAMILY_TABLE_COLUMN,
+    mrExport.GetAutoStylePool()->AddFamily(XmlStyleFamily::TABLE_COLUMN,
         OUString(XML_STYLE_FAMILY_TABLE_COLUMN_STYLES_NAME),
         mxColumnExportPropertySetMapper.get(),
         OUString(XML_STYLE_FAMILY_TABLE_COLUMN_STYLES_PREFIX));
-    mrExport.GetAutoStylePool()->AddFamily(XML_STYLE_FAMILY_TABLE_ROW,
+    mrExport.GetAutoStylePool()->AddFamily(XmlStyleFamily::TABLE_ROW,
         OUString(XML_STYLE_FAMILY_TABLE_ROW_STYLES_NAME),
         mxRowExportPropertySetMapper.get(),
         OUString(XML_STYLE_FAMILY_TABLE_ROW_STYLES_PREFIX));
-    mrExport.GetAutoStylePool()->AddFamily(XML_STYLE_FAMILY_TABLE_CELL,
+    mrExport.GetAutoStylePool()->AddFamily(XmlStyleFamily::TABLE_CELL,
         OUString(XML_STYLE_FAMILY_TABLE_CELL_STYLES_NAME),
         mxCellExportPropertySetMapper.get(),
         OUString(XML_STYLE_FAMILY_TABLE_CELL_STYLES_PREFIX));
@@ -223,7 +240,7 @@ static bool has_states( const std::vector< XMLPropertyState >& xPropStates )
 
             if( has_states( aPropStates ) )
             {
-                const OUString sStyleName( mrExport.GetAutoStylePool()->Add(XML_STYLE_FAMILY_TABLE_COLUMN, aPropStates) );
+                const OUString sStyleName( mrExport.GetAutoStylePool()->Add(XmlStyleFamily::TABLE_COLUMN, aPropStates) );
                 Reference< XInterface > xKey( xPropSet, UNO_QUERY );
                 xTableInfo->maColumnStyleMap[xKey] = sStyleName;
             }
@@ -247,7 +264,7 @@ static bool has_states( const std::vector< XMLPropertyState >& xPropStates )
 
             if( has_states( aRowPropStates ) )
             {
-                const OUString sStyleName( mrExport.GetAutoStylePool()->Add(XML_STYLE_FAMILY_TABLE_ROW, aRowPropStates) );
+                const OUString sStyleName( mrExport.GetAutoStylePool()->Add(XmlStyleFamily::TABLE_ROW, aRowPropStates) );
                 Reference< XInterface > xKey( xPropSet, UNO_QUERY );
                 xTableInfo->maRowStyleMap[xKey] = sStyleName;
             }
@@ -273,7 +290,7 @@ static bool has_states( const std::vector< XMLPropertyState >& xPropStates )
                 OUString sStyleName;
                 std::vector< XMLPropertyState > aCellPropStates( mxCellExportPropertySetMapper->Filter( xCellSet ) );
                 if( has_states( aCellPropStates ) )
-                    sStyleName = mrExport.GetAutoStylePool()->Add(XML_STYLE_FAMILY_TABLE_CELL, aCellPropStates);
+                    sStyleName = mrExport.GetAutoStylePool()->Add(XmlStyleFamily::TABLE_CELL, aCellPropStates);
                 else
                     sStyleName = sParentStyleName;
 
@@ -338,7 +355,7 @@ static bool has_states( const std::vector< XMLPropertyState >& xPropStates )
             OUString sDefaultCellStyle;
 
             // table:style-name
-            if( xTableInfo.get() )
+            if( xTableInfo )
             {
                 Reference< XInterface > xKey( xCellRange, UNO_QUERY );
                 const OUString sStyleName( xTableInfo->maRowStyleMap[xKey] );
@@ -383,7 +400,7 @@ static bool has_states( const std::vector< XMLPropertyState >& xPropStates )
          if ( xColumnProperties.is() )
         {
             // table:style-name
-            if( rTableInfo.get() )
+            if( rTableInfo )
             {
                 Reference< XInterface > xKey( xColumnProperties, UNO_QUERY );
                 const OUString sStyleName( rTableInfo->maColumnStyleMap[xKey] );
@@ -409,7 +426,7 @@ static bool has_states( const std::vector< XMLPropertyState >& xPropStates )
 
     try
     {
-        if( rTableInfo.get() )
+        if( rTableInfo )
         {
             // table:style-name
             Reference< XInterface > xKey( xCell, UNO_QUERY );
@@ -471,7 +488,7 @@ void XMLTableExport::exportTableStyles()
     if (mbWriter)
     {
         sCellStyleName = "CellStyles";
-        aStEx.set(new XMLStyleExport(mrExport));
+        aStEx.set(new XMLCellStyleExport(mrExport));
     }
     else
     {
@@ -480,7 +497,7 @@ void XMLTableExport::exportTableStyles()
         aStEx.set(new XMLStyleExport(mrExport, mrExport.GetAutoStylePool().get()));
     }
 
-    aStEx->exportStyleFamily(sCellStyleName, OUString(XML_STYLE_FAMILY_TABLE_CELL_STYLES_NAME), mxCellExportPropertySetMapper.get(), true, XML_STYLE_FAMILY_TABLE_CELL);
+    aStEx->exportStyleFamily(sCellStyleName, OUString(XML_STYLE_FAMILY_TABLE_CELL_STYLES_NAME), mxCellExportPropertySetMapper.get(), true, XmlStyleFamily::TABLE_CELL);
 
     exportTableTemplates();
 }
@@ -492,9 +509,9 @@ void XMLTableExport::exportAutoStyles()
     if( !mbExportTables )
          return;
 
-    mrExport.GetAutoStylePool()->exportXML( XML_STYLE_FAMILY_TABLE_COLUMN );
-    mrExport.GetAutoStylePool()->exportXML( XML_STYLE_FAMILY_TABLE_ROW );
-    mrExport.GetAutoStylePool()->exportXML( XML_STYLE_FAMILY_TABLE_CELL );
+    mrExport.GetAutoStylePool()->exportXML( XmlStyleFamily::TABLE_COLUMN );
+    mrExport.GetAutoStylePool()->exportXML( XmlStyleFamily::TABLE_ROW );
+    mrExport.GetAutoStylePool()->exportXML( XmlStyleFamily::TABLE_CELL );
 }
 
 const TableStyleElement* getTableStyleMap()
@@ -596,7 +613,7 @@ void XMLTableExport::exportTableTemplates()
             else
             {
                 // checks if any of the extended version of ODF are set
-                if ((eVersion & SvtSaveOptions::ODFSVER_EXTENDED) != 0)
+                if (eVersion == SvtSaveOptions::ODFSVER_012_EXT_COMPAT)
                 {
                     // tdf#106780 historically this wrong attribute was used
                     // for the name; write it if extended because LO < 5.3 can
@@ -659,6 +676,32 @@ void XMLTableExport::exportTableTemplates()
     catch(const Exception&)
     {
         TOOLS_WARN_EXCEPTION("xmloff", "XMLTableExport::exportTableDesigns()");
+    }
+}
+
+void XMLCellStyleExport::exportStyleContent(const Reference<XStyle>& /*rStyle*/)
+{
+}
+
+void XMLCellStyleExport::exportStyleAttributes(const Reference<XStyle>& rStyle)
+{
+    Reference<XPropertySet> xPropSet(rStyle, UNO_QUERY);
+    if (xPropSet.is())
+    {
+        Reference<XPropertySetInfo> xPropSetInfo(xPropSet->getPropertySetInfo());
+        const OUString sNumberFormat("NumberFormat");
+        if (xPropSetInfo->hasPropertyByName(sNumberFormat))
+        {
+            Reference<XPropertyState> xPropState(xPropSet, UNO_QUERY);
+            if (xPropState.is() && (PropertyState_DIRECT_VALUE ==
+                xPropState->getPropertyState(sNumberFormat)))
+            {
+                sal_Int32 nNumberFormat = 0;
+                if (xPropSet->getPropertyValue(sNumberFormat) >>= nNumberFormat)
+                    GetExport().AddAttribute(XML_NAMESPACE_STYLE, XML_DATA_STYLE_NAME,
+                                             GetExport().getDataStyleName(nNumberFormat));
+            }
+        }
     }
 }
 

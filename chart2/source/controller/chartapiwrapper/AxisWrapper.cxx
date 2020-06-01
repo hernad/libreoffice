@@ -34,6 +34,9 @@
 #include <com/sun/star/chart/ChartAxisPosition.hpp>
 #include <com/sun/star/chart/ChartAxisLabelPosition.hpp>
 #include <com/sun/star/chart/ChartAxisMarkPosition.hpp>
+#include <com/sun/star/chart2/XAxis.hpp>
+#include <com/sun/star/chart2/XDiagram.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 
 #include <CharacterProperties.hxx>
 #include <LinePropertiesHelper.hxx>
@@ -96,7 +99,8 @@ enum
     PROP_AXIS_GAP_WIDTH,
     PROP_AXIS_DISPLAY_UNITS,
     PROP_AXIS_BUILTINUNIT,
-    PROP_AXIS_TRY_STAGGERING_FIRST
+    PROP_AXIS_TRY_STAGGERING_FIRST,
+    PROP_AXIS_MAJOR_ORIGIN
 };
 
 void lcl_AddPropertiesToVector(
@@ -323,6 +327,12 @@ void lcl_AddPropertiesToVector(
                   cppu::UnoType<bool>::get(),
                   beans::PropertyAttribute::BOUND
                   | beans::PropertyAttribute::MAYBEDEFAULT );
+
+    rOutProperties.emplace_back( "MajorOrigin",
+                  PROP_AXIS_MAJOR_ORIGIN,
+                  cppu::UnoType<double>::get(),
+                  beans::PropertyAttribute::BOUND
+                  | beans::PropertyAttribute::MAYBEVOID );
 }
 
 struct StaticAxisWrapperPropertyArray_Initializer
@@ -616,6 +626,7 @@ std::vector< std::unique_ptr<WrappedProperty> > AxisWrapper::createWrappedProper
     aWrappedProperties.emplace_back( new WrappedLinkNumberFormatProperty );
     aWrappedProperties.emplace_back( new WrappedProperty("StackedText","StackCharacters") );
     aWrappedProperties.emplace_back( new WrappedDirectStateProperty("CrossoverPosition","CrossoverPosition") );
+    aWrappedProperties.emplace_back( new WrappedDirectStateProperty("MajorOrigin","MajorOrigin") );
     {
         WrappedGapwidthProperty* pWrappedGapwidthProperty( new WrappedGapwidthProperty( m_spChart2ModelContact ) );
         WrappedBarOverlapProperty* pWrappedBarOverlapProperty( new WrappedBarOverlapProperty( m_spChart2ModelContact ) );

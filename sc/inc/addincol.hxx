@@ -34,9 +34,9 @@
 #include <vector>
 #include <unordered_map>
 
-namespace com { namespace sun { namespace star { namespace reflection { class XIdlMethod; } } } }
-namespace com { namespace sun { namespace star { namespace sheet { class XVolatileResult; } } } }
-namespace com { namespace sun { namespace star { namespace uno { class XInterface; } } } }
+namespace com::sun::star::reflection { class XIdlMethod; }
+namespace com::sun::star::sheet { class XVolatileResult; }
+namespace com::sun::star::uno { class XInterface; }
 
 class SfxObjectShell;
 class ScUnoAddInFuncData;
@@ -81,19 +81,19 @@ public:
                         : maLocale( rLocale), maName( rName) { }
     };
 private:
-    OUString const     aOriginalName;      ///< kept in formula
-    OUString const     aLocalName;         ///< for display
-    OUString           aUpperName;         ///< for entering formulas
-    OUString           aUpperLocal;        ///< for entering formulas
-    OUString const     aDescription;
+    OUString            aOriginalName;      ///< kept in formula
+    OUString            aLocalName;         ///< for display
+    OUString            aUpperName;         ///< for entering formulas
+    OUString            aUpperLocal;        ///< for entering formulas
+    OUString            aDescription;
     css::uno::Reference< css::reflection::XIdlMethod> xFunction;
     css::uno::Any       aObject;
     long                nArgCount;
     std::unique_ptr<ScAddInArgDesc[]>
                         pArgDescs;
     long                nCallerPos;
-    sal_uInt16 const    nCategory;
-    OString const       sHelpId;
+    sal_uInt16          nCategory;
+    OString             sHelpId;
     mutable ::std::vector< LocalizedName > maCompNames;
     mutable bool        bCompInitialized;
 

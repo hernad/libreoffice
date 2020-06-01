@@ -27,11 +27,9 @@ class AbstractSvxNameDialog;
 class SfxItemSet;
 class SfxRequest;
 
-namespace sd { namespace slidesorter {
-class SlideSorter;
-} }
+namespace sd::slidesorter { class SlideSorter; }
 
-namespace sd { namespace slidesorter { namespace controller {
+namespace sd::slidesorter::controller {
 
 /** This manager takes over the work of handling slot calls from the
     controller of the slide sorter.
@@ -81,6 +79,7 @@ private:
     */
     void RenameSlide( const SfxRequest& rRequest );
     DECL_LINK(RenameSlideHdl, AbstractSvxNameDialog&, bool);
+    DECL_STATIC_LINK(SlotManager, RenameSlideTooltipHdl, AbstractSvxNameDialog&, OUString);
     bool RenameSlideFromDrawViewShell( sal_uInt16 nPageId, const OUString& rName);
 
     /** Handle SID_INSERTPAGE slot calls.
@@ -95,7 +94,7 @@ private:
     sal_Int32 GetInsertionPosition() const;
 };
 
-} } } // end of namespace ::sd::slidesorter::controller
+} // end of namespace ::sd::slidesorter::controller
 
 #endif
 

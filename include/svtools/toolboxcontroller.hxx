@@ -47,6 +47,7 @@ class ToolBox;
 
 namespace weld
 {
+    class Builder;
     class Toolbar;
 }
 
@@ -128,6 +129,8 @@ class SVT_DLLPUBLIC ToolboxController :
 
         void enable( bool bEnable );
 
+        bool IsInSidebar() const { return m_bSidebar; }
+
     protected:
         bool getToolboxId( sal_uInt16& rItemId, ToolBox** ppToolBox );
         struct Listener
@@ -135,7 +138,7 @@ class SVT_DLLPUBLIC ToolboxController :
             Listener( const css::util::URL& rURL, const css::uno::Reference< css::frame::XDispatch >& rDispatch ) :
                 aURL( rURL ), xDispatch( rDispatch ) {}
 
-            css::util::URL const aURL;
+            css::util::URL aURL;
             css::uno::Reference< css::frame::XDispatch > xDispatch;
         };
 
@@ -164,7 +167,7 @@ class SVT_DLLPUBLIC ToolboxController :
         void removeStatusListener( const OUString& aCommandURL );
         void bindListener();
         void unbindListener();
-        bool isBound() const;
+
         // TODO remove
         const css::uno::Reference< css::util::XURLTransformer >& getURLTransformer() const { return m_xUrlTransformer;}
         // TODO remove
@@ -184,6 +187,7 @@ class SVT_DLLPUBLIC ToolboxController :
         css::uno::Reference< css::util::XURLTransformer >         m_xUrlTransformer;
         OUString                                                  m_sModuleName;
         weld::Toolbar*                                            m_pToolbar;
+        weld::Builder*                                            m_pBuilder;
 };
 
 }

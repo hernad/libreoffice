@@ -19,19 +19,16 @@
 #ifndef INCLUDED_DBACCESS_SOURCE_UI_INC_DBEXCHANGE_HXX
 #define INCLUDED_DBACCESS_SOURCE_UI_INC_DBEXCHANGE_HXX
 
-#include <com/sun/star/beans/PropertyValue.hpp>
+#include "TokenWriter.hxx"
 #include <com/sun/star/util/XNumberFormatter.hpp>
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#include <com/sun/star/lang/XEventListener.hpp>
 #include <com/sun/star/sdbc/XConnection.hpp>
 #include <svx/dbaexchange.hxx>
-#include <vector>
 
 #include <rtl/ref.hxx>
 
-namespace com { namespace sun { namespace star { namespace uno {
+namespace com::sun::star::uno {
     class XComponentContext;
-} } } }
+}
 
 namespace dbaui
 {

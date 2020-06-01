@@ -101,7 +101,7 @@ FreetypeFontFile::FreetypeFontFile( const OString& rNativeFileName )
 
 bool FreetypeFontFile::Map()
 {
-    if( mnRefCount++ <= 0 )
+    if (mnRefCount++ == 0)
     {
         const char* pFileName = maNativeFileName.getStr();
         int nFile = open( pFileName, O_RDONLY );
@@ -128,11 +128,14 @@ bool FreetypeFontFile::Map()
 
 void FreetypeFontFile::Unmap()
 {
-    if( (--mnRefCount > 0) || (mpFileMap == nullptr) )
+    if (--mnRefCount != 0)
         return;
-
-    munmap( mpFileMap, mnFileSize );
-    mpFileMap = nullptr;
+    assert(mnRefCount >= 0 && "how did this go negative\n");
+    if (mpFileMap)
+    {
+        munmap(mpFileMap, mnFileSize);
+        mpFileMap = nullptr;
+    }
 }
 
 FreetypeFontInfo::FreetypeFontInfo( const FontAttributes& rDevFontAttributes,
@@ -199,7 +202,7 @@ FT_FaceRec_* FreetypeFontInfo::GetFaceFT()
 
 void FreetypeFont::SetFontVariationsOnHBFont(hb_font_t* pHbFace) const
 {
-    sal_uInt32 nFaceVariation = mpFontInfo->GetFontFaceVariation();
+    sal_uInt32 nFaceVariation = mxFontInfo->GetFontFaceVariation();
     if (maFaceFT && nFaceVariation)
     {
         FT_MM_Var *pFtMMVar;
@@ -223,12 +226,16 @@ void FreetypeFont::SetFontVariationsOnHBFont(hb_font_t* pHbFace) const
 
 void FreetypeFontInfo::ReleaseFaceFT()
 {
-    if (--mnRefCount <= 0)
+    if (--mnRefCount == 0)
     {
-        FT_Done_Face( maFaceFT );
-        maFaceFT = nullptr;
+        if (maFaceFT)
+        {
+            FT_Done_Face(maFaceFT);
+            maFaceFT = nullptr;
+        }
         mpFontFile->Unmap();
     }
+    assert(mnRefCount >= 0 && "how did this go negative\n");
 }
 
 static unsigned GetUInt( const unsigned char* p ) { return((p[0]<<24)+(p[1]<<16)+(p[2]<<8)+p[3]);}
@@ -308,10 +315,24 @@ namespace
     }
 }
 
-bool FreetypeFont::AlmostHorizontalDrainsRenderingPool()
+bool FreetypeFont::AlmostHorizontalDrainsRenderingPool(int nRatio, const FontSelectPattern& rFSD)
 {
     static bool bAlmostHorizontalDrainsRenderingPool = DoesAlmostHorizontalDrainRenderingPool();
-    return bAlmostHorizontalDrainsRenderingPool;
+    if (nRatio > 100 && rFSD.maTargetName == "OpenSymbol" && bAlmostHorizontalDrainsRenderingPool)
+    {
+        // tdf#127189 FreeType <= 2.8 will fail to render stretched horizontal
+        // brace glyphs in starmath at a fairly low stretch ratio. The failure
+        // will set CAIRO_STATUS_FREETYPE_ERROR on the surface which cannot be
+        // cleared, so all further painting to the surface fails.
+
+        // This appears fixed in >= freetype 2.9
+
+        // Restrict this bodge to a stretch ratio > ~10 of the OpenSymbol font
+        // where it has been seen in practice.
+        SAL_WARN("vcl", "rendering text would fail with stretch ratio of: " << nRatio << ", with FreeType <= 2.8");
+        return true;
+    }
+    return false;
 }
 
 FT_Face FreetypeFont::GetFtFace() const
@@ -346,7 +367,7 @@ void FreetypeManager::AnnounceFonts( PhysicalFontCollection* pToAdd ) const
     }
 }
 
-FreetypeFont* FreetypeManager::CreateFont(LogicalFontInstance* pFontInstance)
+FreetypeFont* FreetypeManager::CreateFont(FreetypeFontInstance* pFontInstance)
 {
     // find a FontInfo matching to the font id
     if (!pFontInstance)
@@ -358,12 +379,11 @@ FreetypeFont* FreetypeManager::CreateFont(LogicalFontInstance* pFontInstance)
 
     sal_IntPtr nFontId = pFontFace->GetFontId();
     FontInfoList::iterator it = m_aFontInfoList.find(nFontId);
-    FreetypeFontInfo* pFontInfo = it != m_aFontInfoList.end() ? it->second.get() : nullptr;
 
-    if (!pFontInfo)
+    if (it == m_aFontInfoList.end())
         return nullptr;
 
-    return new FreetypeFont(pFontInstance, pFontInfo);
+    return new FreetypeFont(*pFontInstance, it->second);
 }
 
 FreetypeFontFace::FreetypeFontFace( FreetypeFontInfo* pFI, const FontAttributes& rDFA )
@@ -379,16 +399,12 @@ rtl::Reference<LogicalFontInstance> FreetypeFontFace::CreateFontInstance(const F
 
 // FreetypeFont
 
-FreetypeFont::FreetypeFont(LogicalFontInstance* pFontInstance, FreetypeFontInfo* pFI )
-:   mpFontInstance(static_cast<FreetypeFontInstance*>(pFontInstance)),
-    mnRefCount(1),
-    mnBytesUsed( sizeof(FreetypeFont) ),
-    mpPrevGCFont( nullptr ),
-    mpNextGCFont( nullptr ),
+FreetypeFont::FreetypeFont(FreetypeFontInstance& rFontInstance, std::shared_ptr<FreetypeFontInfo>& rFI)
+:   mrFontInstance(rFontInstance),
     mnCos( 0x10000),
     mnSin( 0 ),
     mnPrioAntiAlias(nDefaultPrioAntiAlias),
-    mpFontInfo( pFI ),
+    mxFontInfo(rFI),
     mnLoadFlags( 0 ),
     maFaceFT( nullptr ),
     maSizeFT( nullptr ),
@@ -397,13 +413,10 @@ FreetypeFont::FreetypeFont(LogicalFontInstance* pFontInstance, FreetypeFontInfo*
     mbArtBold(false)
 {
     int nPrioEmbedded = nDefaultPrioEmbedded;
-    // TODO: move update of mpFontInstance into FontEntry class when
-    // it becomes responsible for the FreetypeFont instantiation
-    mpFontInstance->SetFreetypeFont( this );
 
-    maFaceFT = pFI->GetFaceFT();
+    maFaceFT = mxFontInfo->GetFaceFT();
 
-    const FontSelectPattern& rFSD = pFontInstance->GetFontSelectPattern();
+    const FontSelectPattern& rFSD = rFontInstance.GetFontSelectPattern();
 
     if( rFSD.mnOrientation != 0 )
     {
@@ -432,7 +445,7 @@ FreetypeFont::FreetypeFont(LogicalFontInstance* pFontInstance, FreetypeFontInfo*
 
     FT_Select_Charmap(maFaceFT, FT_ENCODING_UNICODE);
 
-    if( mpFontInfo->IsSymbolFont() )
+    if( mxFontInfo->IsSymbolFont() )
     {
         FT_Encoding eEncoding = FT_ENCODING_MS_SYMBOL;
         FT_Select_Charmap(maFaceFT, eEncoding);
@@ -443,8 +456,8 @@ FreetypeFont::FreetypeFont(LogicalFontInstance* pFontInstance, FreetypeFontInfo*
     // TODO: query GASP table for load flags
     mnLoadFlags = FT_LOAD_DEFAULT | FT_LOAD_IGNORE_TRANSFORM;
 
-    mbArtItalic = (rFSD.GetItalic() != ITALIC_NONE && pFI->GetFontAttributes().GetItalic() == ITALIC_NONE);
-    mbArtBold = (rFSD.GetWeight() > WEIGHT_MEDIUM && pFI->GetFontAttributes().GetWeight() <= WEIGHT_MEDIUM);
+    mbArtItalic = (rFSD.GetItalic() != ITALIC_NONE && mxFontInfo->GetFontAttributes().GetItalic() == ITALIC_NONE);
+    mbArtBold = (rFSD.GetWeight() > WEIGHT_MEDIUM && mxFontInfo->GetFontAttributes().GetWeight() <= WEIGHT_MEDIUM);
 
     if( ((mnCos != 0) && (mnSin != 0)) || (nPrioEmbedded <= 0) )
         mnLoadFlags |= FT_LOAD_NO_BITMAP;
@@ -469,30 +482,25 @@ const FontConfigFontOptions* FreetypeFont::GetFontOptions() const
 {
     if (!mxFontOptions)
     {
-        mxFontOptions = GetFCFontOptions(mpFontInfo->GetFontAttributes(), mpFontInstance->GetFontSelectPattern().mnHeight);
+        mxFontOptions = GetFCFontOptions(mxFontInfo->GetFontAttributes(), mrFontInstance.GetFontSelectPattern().mnHeight);
         mxFontOptions->SyncPattern(GetFontFileName(), GetFontFaceIndex(), GetFontFaceVariation(), NeedsArtificialBold());
     }
     return mxFontOptions.get();
 }
 
-void FreetypeFont::ClearFontOptions()
-{
-    mxFontOptions.reset();
-}
-
 const OString& FreetypeFont::GetFontFileName() const
 {
-    return mpFontInfo->GetFontFileName();
+    return mxFontInfo->GetFontFileName();
 }
 
 int FreetypeFont::GetFontFaceIndex() const
 {
-    return mpFontInfo->GetFontFaceIndex();
+    return mxFontInfo->GetFontFaceIndex();
 }
 
 int FreetypeFont::GetFontFaceVariation() const
 {
-    return mpFontInfo->GetFontFaceVariation();
+    return mxFontInfo->GetFontFaceVariation();
 }
 
 FreetypeFont::~FreetypeFont()
@@ -500,18 +508,14 @@ FreetypeFont::~FreetypeFont()
     if( maSizeFT )
         FT_Done_Size( maSizeFT );
 
-    mpFontInfo->ReleaseFaceFT();
-
-    mpFontInstance.clear();
-
-    ReleaseFromGarbageCollect();
+    mxFontInfo->ReleaseFaceFT();
 }
 
 void FreetypeFont::GetFontMetric(ImplFontMetricDataRef const & rxTo) const
 {
-    rxTo->FontAttributes::operator =(mpFontInfo->GetFontAttributes());
+    rxTo->FontAttributes::operator =(mxFontInfo->GetFontAttributes());
 
-    rxTo->SetOrientation( mpFontInstance->GetFontSelectPattern().mnOrientation );
+    rxTo->SetOrientation(mrFontInstance.GetFontSelectPattern().mnOrientation);
 
     //Always consider [star]symbol as symbol fonts
     if ( IsStarSymbol( rxTo->GetFamilyName() ) )
@@ -519,7 +523,7 @@ void FreetypeFont::GetFontMetric(ImplFontMetricDataRef const & rxTo) const
 
     FT_Activate_Size( maSizeFT );
 
-    rxTo->ImplCalcLineSpacing(mpFontInstance.get());
+    rxTo->ImplCalcLineSpacing(&mrFontInstance);
 
     rxTo->SetSlant( 0 );
     rxTo->SetWidth( mnWidth );
@@ -558,13 +562,13 @@ void FreetypeFont::GetFontMetric(ImplFontMetricDataRef const & rxTo) const
     }
 
     // initialize kashida width
-    rxTo->SetMinKashida(mpFontInstance->GetKashidaWidth());
+    rxTo->SetMinKashida(mrFontInstance.GetKashidaWidth());
 }
 
 void FreetypeFont::ApplyGlyphTransform(bool bVertical, FT_Glyph pGlyphFT ) const
 {
     // shortcut most common case
-    if (!mpFontInstance->GetFontSelectPattern().mnOrientation && !bVertical)
+    if (!mrFontInstance.GetFontSelectPattern().mnOrientation && !bVertical)
         return;
 
     const FT_Size_Metrics& rMetrics = maFaceFT->size->metrics;
@@ -656,14 +660,14 @@ bool FreetypeFont::GetGlyphBoundRect(sal_GlyphId nID, tools::Rectangle& rRect, b
 bool FreetypeFont::GetAntialiasAdvice() const
 {
     // TODO: also use GASP info
-    return !mpFontInstance->GetFontSelectPattern().mbNonAntialiased && (mnPrioAntiAlias > 0);
+    return !mrFontInstance.GetFontSelectPattern().mbNonAntialiased && (mnPrioAntiAlias > 0);
 }
 
 // determine unicode ranges in font
 
 FontCharMapRef FreetypeFont::GetFontCharMap() const
 {
-    return mpFontInfo->GetFontCharMap();
+    return mxFontInfo->GetFontCharMap();
 }
 
 const FontCharMapRef& FreetypeFontInfo::GetFontCharMap()
@@ -699,7 +703,7 @@ bool FreetypeFont::GetFontCapabilities(vcl::FontCapabilities &rFontCapabilities)
     sal_uLong nLength = 0;
 
     // load OS/2 table
-    const FT_Byte* pOS2 = mpFontInfo->GetTable("OS/2", &nLength);
+    const FT_Byte* pOS2 = mxFontInfo->GetTable("OS/2", &nLength);
     if (pOS2)
     {
         bRet = vcl::getTTCoverage(
@@ -735,7 +739,7 @@ private:
                     mpFlagAry;
 
     FT_Vector       maPosition;
-    sal_uInt16 const mnMaxPoints;
+    sal_uInt16      mnMaxPoints;
     sal_uInt16      mnPoints;
     sal_uInt16      mnPoly;
     bool            bHasOffline;
@@ -941,7 +945,7 @@ bool FreetypeFont::GetGlyphOutline(sal_GlyphId nId, basegfx::B2DPolyPolygon& rB2
 
 const unsigned char* FreetypeFont::GetTable(const char* pName, sal_uLong* pLength) const
 {
-    return mpFontInfo->GetTable( pName, pLength );
+    return mxFontInfo->GetTable( pName, pLength );
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

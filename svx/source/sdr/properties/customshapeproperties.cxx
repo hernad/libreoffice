@@ -23,10 +23,12 @@
 #include <svl/itemset.hxx>
 #include <svl/style.hxx>
 #include <svx/svdoashp.hxx>
+#include <svx/sdooitm.hxx>
 #include <editeng/eeitem.hxx>
-#include <svx/sdtagitm.hxx>
 #include <svl/whiter.hxx>
 #include <svl/hint.hxx>
+
+#include <sal/log.hxx>
 
 
 namespace sdr::properties
@@ -71,6 +73,7 @@ namespace sdr::properties
                     // Graphic attributes, 3D properties, CustomShape
                     // properties:
                     SDRATTR_GRAF_FIRST, SDRATTR_CUSTOMSHAPE_LAST,
+                    SDRATTR_GLOW_FIRST, SDRATTR_SOFTEDGE_LAST,
                     // Range from SdrTextObj:
                     EE_ITEMS_START, EE_ITEMS_END>{});
         }

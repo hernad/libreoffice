@@ -19,7 +19,6 @@
 #ifndef INCLUDED_WRITERFILTER_SOURCE_DMAPPER_BORDERHANDLER_HXX
 #define INCLUDED_WRITERFILTER_SOURCE_DMAPPER_BORDERHANDLER_HXX
 
-#include <memory>
 #include <vector>
 #include "LoggedResources.hxx"
 #include "PropertyMap.hxx"
@@ -52,7 +51,7 @@ private:
     sal_Int32       m_nLineColor;
     sal_Int32       m_nLineDistance;
     bool            m_bShadow;
-    bool const      m_bOOXML;
+    bool            m_bOOXML;
 
     o3tl::enumarray<BorderPosition, bool> m_aFilledLines;
     o3tl::enumarray<BorderPosition, css::table::BorderLine2> m_aBorderLines;

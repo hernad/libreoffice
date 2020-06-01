@@ -21,7 +21,6 @@
 #define INCLUDED_WRITERFILTER_SOURCE_DMAPPER_LOGGEDRESOURCES_HXX
 
 #include <dmapper/resourcemodel.hxx>
-#include "TagLogger.hxx"
 
 
 namespace writerfilter
@@ -42,7 +41,7 @@ public:
     static void attribute(const std::string & rName, sal_uInt32 nValue);
 
 private:
-    std::string const msPrefix;
+    std::string msPrefix;
 };
 #endif
 

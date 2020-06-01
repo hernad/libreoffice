@@ -7,6 +7,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+#include <algorithm>
 #include <memory>
 #include <swmodeltestbase.hxx>
 #include <config_features.h>
@@ -221,6 +222,8 @@ DECLARE_ODFEXPORT_TEST(testTdf43569, "tdf43569_conditionalfield.doc")
 
 DECLARE_ODFEXPORT_TEST(testTdf103567, "tdf103567.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<drawing::XShape> const xShape(getShape(1));
 
     // contour wrap polygon
@@ -256,7 +259,8 @@ DECLARE_ODFEXPORT_TEST(testTdf103567, "tdf103567.odt")
 
 DECLARE_ODFEXPORT_TEST(testUserFieldDecl, "user-field-decl.odt")
 {
-    if (xmlDocPtr pXmlDoc = parseExport("styles.xml"))
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+    if (xmlDocUniquePtr pXmlDoc = parseExport("styles.xml"))
         // Without the accompanying fix in place, this test would have failed with 'Expected: 2;
         // Actual: 1', i.e. the in-table field had no declaration (in the header), while the
         // outside-table one had the declaration.
@@ -265,7 +269,9 @@ DECLARE_ODFEXPORT_TEST(testUserFieldDecl, "user-field-decl.odt")
 
 DECLARE_ODFEXPORT_TEST(testUserFieldDeclFly, "user-field-decl-fly.odt")
 {
-    if (xmlDocPtr pXmlDoc = parseExport("styles.xml"))
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+    if (xmlDocUniquePtr pXmlDoc = parseExport("styles.xml"))
         // Without the accompanying fix in place, this test would have failed with 'Expected: 2;
         // Actual: 1', i.e. the in-textframe field had no declaration (in the header), while the
         // outside-textframe one had the declaration.
@@ -274,6 +280,8 @@ DECLARE_ODFEXPORT_TEST(testUserFieldDeclFly, "user-field-decl-fly.odt")
 
 DECLARE_ODFEXPORT_TEST(testFramebackgrounds, "framebackgrounds.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(16, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
    //Counting the Number of Frames and checking with the expected count
     uno::Reference<text::XTextFramesSupplier> xTextFramesSupplier(mxComponent, uno::UNO_QUERY);
     uno::Reference<container::XIndexAccess> xIndexAccess(xTextFramesSupplier->getTextFrames(), uno::UNO_QUERY);
@@ -386,7 +394,7 @@ DECLARE_ODFEXPORT_TEST(testFramebackgrounds, "framebackgrounds.odt")
     aGradientxTextFrame = getProperty<awt::Gradient>(xTextFrame, "FillTransparenceGradient");
     CPPUNIT_ASSERT_EQUAL(css::awt::GradientStyle_LINEAR, aGradientxTextFrame.Style);
 
-    if (xmlDocPtr pXmlDoc = parseExport("content.xml"))
+    if (xmlDocUniquePtr pXmlDoc = parseExport("content.xml"))
     {
         // check that there are 3 background-image elements
         assertXPath(pXmlDoc, "//style:style[@style:parent-style-name='Frame' and @style:family='graphic']/style:graphic-properties[@draw:fill='bitmap']/style:background-image[@style:repeat='stretch']", 3);
@@ -400,11 +408,13 @@ DECLARE_ODFEXPORT_TEST(testFramebackgrounds, "framebackgrounds.odt")
 
 DECLARE_SW_ROUNDTRIP_TEST(testSHA1Correct, "sha1_correct.odt", "1012345678901234567890123456789012345678901234567890", Test)
 {   // tdf#114939 this has both an affected password as well as content.xml
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     getParagraph(1, "012");
 }
 
 DECLARE_SW_ROUNDTRIP_TEST(testSHA1Wrong, "sha1_wrong.odt", "1012345678901234567890123456789012345678901234567890", Test)
 {   // tdf#114939 this has both an affected password as well as content.xml
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     getParagraph(1, "012");
 }
 
@@ -442,6 +452,8 @@ DECLARE_ODFEXPORT_TEST(testOOoxmlEmbedded, "oooxml_embedded.sxw")
 
 DECLARE_ODFEXPORT_TEST(testredlineTextFrame, "redlineTextFrame.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(2, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     //Note this is for a crash test
     //Counting the Number of Frames and checking with the expected count
     uno::Reference<text::XTextFramesSupplier> xTextFramesSupplier(mxComponent, uno::UNO_QUERY);
@@ -449,8 +461,16 @@ DECLARE_ODFEXPORT_TEST(testredlineTextFrame, "redlineTextFrame.odt")
     CPPUNIT_ASSERT_EQUAL(sal_Int32(1), xIndexAccess->getCount());
 }
 
+DECLARE_ODFEXPORT_TEST(testTdf131621, "tdf131621.ott")
+{
+    CPPUNIT_ASSERT_EQUAL(12, getShapes());
+    //Crash test, Check number of pages
+    CPPUNIT_ASSERT_EQUAL( 1, getPages() );
+}
+
 DECLARE_ODFEXPORT_TEST(testFdo38244, "fdo38244.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // See ooxmlexport's testFdo38244().
 
     // Test comment range feature.
@@ -495,10 +515,9 @@ DECLARE_ODFEXPORT_TEST(testSenderInitials, "sender-initials.fodt")
     }
 }
 
-#ifndef _WIN32
 DECLARE_ODFEXPORT_TEST(testResolvedComment, "resolved-comment.odt")
 {
-    // TODO find out why does this break testFdo58949 on Windows.
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<text::XTextFieldsSupplier> xTextFieldsSupplier(mxComponent, uno::UNO_QUERY);
     uno::Reference<container::XEnumerationAccess> xFieldsAccess(xTextFieldsSupplier->getTextFields());
     uno::Reference<container::XEnumeration> xFields(xFieldsAccess->createEnumeration());
@@ -507,7 +526,6 @@ DECLARE_ODFEXPORT_TEST(testResolvedComment, "resolved-comment.odt")
     xPropertySet.set(xFields->nextElement(), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(false, getProperty<bool>(xPropertySet, "Resolved"));
 }
-#endif
 
 DECLARE_ODFEXPORT_TEST(testTdf92379, "tdf92379.fodt")
 {
@@ -531,7 +549,7 @@ DECLARE_ODFEXPORT_TEST(testTdf92379, "tdf92379.fodt")
 //    CPPUNIT_ASSERT_EQUAL(sal_Int32(0xffffff), getProperty<sal_Int32>(xFrameStyle2, "FillColor"));
 //    CPPUNIT_ASSERT_EQUAL(sal_Int16(100), getProperty<sal_Int16>(xFrameStyle2, "FillTransparence"));
 
-    if (xmlDocPtr pXmlDoc = parseExport("styles.xml"))
+    if (xmlDocUniquePtr pXmlDoc = parseExport("styles.xml"))
     {
         // check that fo:background-color attribute is exported properly
         assertXPath(pXmlDoc, "//style:style[@style:family='graphic' and @style:name='encarts']/style:graphic-properties[@fo:background-color='#ffcc99']", 1);
@@ -579,7 +597,7 @@ DECLARE_ODFEXPORT_TEST(testTdf92379, "tdf92379.fodt")
 //    CPPUNIT_ASSERT_EQUAL(sal_Int16(100), getProperty<sal_Int16>(xStyle32, "FillTransparence"));
     CPPUNIT_ASSERT_EQUAL(sal_Int32(0x461900), getProperty<sal_Int32>(xStyle32, "CharColor"));
 
-    if (xmlDocPtr pXmlDoc = parseExport("styles.xml"))
+    if (xmlDocUniquePtr pXmlDoc = parseExport("styles.xml"))
     {
         // check that fo:background-color attribute is exported properly
         assertXPath(pXmlDoc, "//style:style[@style:family='paragraph' and @style:display-name='Titre Avis expert']/style:paragraph-properties[@fo:background-color='#661900']", 1);
@@ -591,6 +609,7 @@ DECLARE_ODFEXPORT_TEST(testTdf92379, "tdf92379.fodt")
 
 DECLARE_ODFEXPORT_TEST(testFdo79358, "fdo79358.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // the boolean properties of the index were not exported properly
     uno::Reference<text::XDocumentIndexesSupplier> xIndexSupplier(mxComponent, uno::UNO_QUERY);
     uno::Reference<container::XIndexAccess> xIndexes = xIndexSupplier->getDocumentIndexes();
@@ -610,6 +629,7 @@ DECLARE_ODFEXPORT_TEST(testFdo79358, "fdo79358.odt")
 
 DECLARE_ODFEXPORT_TEST(testFirstHeaderFooter, "first-header-footer.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(6, getPages());
     // Test import and export of the header-first token.
 
     // The document has 6 pages, two page styles for the first and second half of pages.
@@ -629,6 +649,8 @@ DECLARE_ODFEXPORT_TEST(testFirstHeaderFooter, "first-header-footer.odt")
 
 DECLARE_ODFEXPORT_TEST(testTextframeGradient, "textframe-gradient.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(2, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<text::XTextFramesSupplier> xTextFramesSupplier(mxComponent, uno::UNO_QUERY);
     uno::Reference<container::XIndexAccess> xIndexAccess(xTextFramesSupplier->getTextFrames(), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(2), xIndexAccess->getCount());
@@ -677,6 +699,7 @@ DECLARE_ODFEXPORT_TEST(testDuplicateCrossRefHeadingBookmark, "CrossRefHeadingBoo
 
 DECLARE_ODFEXPORT_TEST(testFdo60769, "fdo60769.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // Test multi-paragraph comment range feature.
     uno::Reference<text::XTextDocument> xTextDocument(mxComponent, uno::UNO_QUERY);
     uno::Reference<container::XEnumerationAccess> xParaEnumAccess(xTextDocument->getText(), uno::UNO_QUERY);
@@ -715,11 +738,30 @@ DECLARE_ODFEXPORT_TEST(testFdo58949, "fdo58949.docx")
     uno::Sequence<uno::Any> aArgs(1);
     aArgs[0] <<= aTempFile.GetURL();
     uno::Reference<container::XNameAccess> xNameAccess(m_xSFactory->createInstanceWithArguments("com.sun.star.packages.zip.ZipFileAccess", aArgs), uno::UNO_QUERY);
-    CPPUNIT_ASSERT_EQUAL(true, bool(xNameAccess->hasByName("Obj102")));
+    const css::uno::Sequence<OUString> aNames(xNameAccess->getElementNames());
+    // The exported document must have three objects named ObjNNN. The names are assigned in
+    // OLEHandler::copyOLEOStream using a static counter, and actual numbers depend on previous
+    // tests; so just count the matching names here.
+    int nMatches = 0;
+    for (const OUString& sName : aNames)
+    {
+        OUString sRest;
+        if (sName.startsWith("Obj", &sRest))
+        {
+            // all following characters must be decimal digits; minimal value is 100
+            bool bMatch = sRest.getLength() >= 3
+                          && std::all_of(sRest.getStr(), sRest.getStr() + sRest.getLength(),
+                                 [](sal_Unicode ch) { return ch >= '0' && ch <= '9'; });
+            if (bMatch)
+                ++nMatches;
+        }
+    }
+    CPPUNIT_ASSERT_EQUAL(3, nMatches);
 }
 
 DECLARE_ODFEXPORT_TEST(testStylePageNumber, "ooo321_stylepagenumber.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(5, getPages());
     uno::Reference<text::XTextContent> xTable1(getParagraphOrTable(1));
 // actually no break attribute is written in this case
 //    CPPUNIT_ASSERT_EQUAL(style::BreakType_PAGE_BEFORE, getProperty<style::BreakType>(xTable1, "BreakType"));
@@ -751,6 +793,7 @@ DECLARE_ODFEXPORT_TEST(testStylePageNumber, "ooo321_stylepagenumber.odt")
 
 DECLARE_ODFEXPORT_TEST(testCharacterBorder, "charborder.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // Make sure paragraph and character attributes don't interfere
     // First paragraph has a paragraph border and a character border included by the paragraph style
 
@@ -926,7 +969,7 @@ DECLARE_ODFEXPORT_TEST(testProtectionKey, "protection-key.fodt")
 
     // we can't assume that the user entered the password; check that we
     // round-trip the password as-is
-    if (xmlDocPtr pXmlDoc = parseExport("content.xml"))
+    if (xmlDocUniquePtr pXmlDoc = parseExport("content.xml"))
     {
         assertXPath(pXmlDoc, "//text:section[@text:name='Section0' and @text:protected='true' and @text:protection-key='vbnhxyBKtPHCA1wB21zG1Oha8ZA=']");
         assertXPath(pXmlDoc, "//text:section[@text:name='Section1' and @text:protected='true' and @text:protection-key='nLHas0RIwepGDaH4c2hpyIUvIS8=']");
@@ -960,6 +1003,7 @@ DECLARE_ODFEXPORT_TEST(testTdf128188, "footnote-collect-at-end-of-section.fodt")
 
 DECLARE_ODFEXPORT_TEST(testFdo43807, "fdo43807.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<beans::XPropertySet> xSet(getParagraph(1), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(OUString("Drop Caps"),getProperty<OUString>(xSet,"DropCapCharStyleName"));
 
@@ -1036,6 +1080,8 @@ DECLARE_ODFEXPORT_TEST(testTdf103091, "tdf103091.fodt")
 
 DECLARE_ODFEXPORT_TEST(testTextframeTransparentShadow, "textframe-transparent-shadow.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<drawing::XShape> xPicture = getShape(1);
     // ODF stores opacity of 75%, that means 25% transparency.
     CPPUNIT_ASSERT_EQUAL(sal_Int32(25), getProperty<sal_Int32>(xPicture, "ShadowTransparence"));
@@ -1043,6 +1089,8 @@ DECLARE_ODFEXPORT_TEST(testTextframeTransparentShadow, "textframe-transparent-sh
 
 DECLARE_ODFEXPORT_TEST(testRelhPage, "relh-page.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<drawing::XShape> xTextFrame = getShape(1);
     // This was text::RelOrientation::FRAME (the default), RelativeHeightRelation was not handled in xmloff.
     CPPUNIT_ASSERT_EQUAL(text::RelOrientation::PAGE_FRAME, getProperty<sal_Int16>(xTextFrame, "RelativeHeightRelation"));
@@ -1055,6 +1103,8 @@ DECLARE_ODFEXPORT_TEST(testRelhPage, "relh-page.odt")
 
 DECLARE_ODFEXPORT_TEST(testRelhPageTdf80282, "relh-page-tdf80282.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<drawing::XShape> xTextFrame = getShape(1);
     CPPUNIT_ASSERT_EQUAL_MESSAGE("Height", sal_Int32(8391), parseDump("//anchored/fly/infos/bounds", "height").toInt32());
     CPPUNIT_ASSERT_EQUAL_MESSAGE("Width",  sal_Int32(5953), parseDump("//anchored/fly/infos/bounds", "width").toInt32());
@@ -1062,6 +1112,8 @@ DECLARE_ODFEXPORT_TEST(testRelhPageTdf80282, "relh-page-tdf80282.odt")
 
 DECLARE_ODFEXPORT_TEST(testRelwPage, "relw-page.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<drawing::XShape> xTextFrame = getShape(1);
     // This was text::RelOrientation::FRAME (the default), RelativeWidthRelation was not handled in xmloff.
     CPPUNIT_ASSERT_EQUAL(text::RelOrientation::PAGE_FRAME, getProperty<sal_Int16>(xTextFrame, "RelativeWidthRelation"));
@@ -1074,6 +1126,8 @@ DECLARE_ODFEXPORT_TEST(testRelwPage, "relw-page.odt")
 
 DECLARE_ODFEXPORT_TEST(testTextFrameVertAdjust, "textframe-vertadjust.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(3, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // Test import/export of new frame attribute called TextVerticalAdjust
 
     // 1st frame's context is adjusted to the top
@@ -1089,12 +1143,16 @@ DECLARE_ODFEXPORT_TEST(testTextFrameVertAdjust, "textframe-vertadjust.odt")
 
 DECLARE_ODFEXPORT_TEST(testTdf111891_frameVertStyle, "tdf111891_frameVertStyle.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<beans::XPropertySet> xFrame(getShape(1), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(drawing::TextVerticalAdjust_BOTTOM, getProperty<drawing::TextVerticalAdjust>(xFrame, "TextVerticalAdjust"));
 }
 
 DECLARE_ODFEXPORT_TEST(testShapeRelsize, "shape-relsize.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<drawing::XShape> xShape = getShape(1);
     // These were all 0, as style:rel-width/height was ignored on import for shapes.
     CPPUNIT_ASSERT_EQUAL(sal_Int16(40), getProperty<sal_Int16>(xShape, "RelativeWidth"));
@@ -1108,6 +1166,8 @@ DECLARE_ODFEXPORT_TEST(testShapeRelsize, "shape-relsize.odt")
 
 DECLARE_ODFEXPORT_TEST(testTextboxRoundedCorners, "textbox-rounded-corners.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<drawing::XShape> xShape = getShape(1);
     comphelper::SequenceAsHashMap aCustomShapeGeometry(getProperty< uno::Sequence<beans::PropertyValue> >(xShape, "CustomShapeGeometry"));
 
@@ -1121,7 +1181,7 @@ DECLARE_ODFEXPORT_TEST(testTextboxRoundedCorners, "textbox-rounded-corners.odt")
     CPPUNIT_ASSERT_EQUAL(OUString("a"), xCell->getString());
 
     // Table inside a textbox should be in the extension namespace.
-    if (xmlDocPtr pXmlDoc = parseExport("content.xml"))
+    if (xmlDocUniquePtr pXmlDoc = parseExport("content.xml"))
         // This failed, as draw:custom-shape had a table:table child.
         assertXPath(pXmlDoc, "//draw:custom-shape/loext:table", "name", "Table1");
 }
@@ -1129,6 +1189,8 @@ DECLARE_ODFEXPORT_TEST(testTextboxRoundedCorners, "textbox-rounded-corners.odt")
 // test that import whitespace collapsing is compatible with old docs
 DECLARE_ODFEXPORT_TEST(testWhitespace, "whitespace.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(4, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<container::XEnumerationAccess> xPara;
     uno::Reference<container::XEnumeration> xPortions;
     uno::Reference<text::XTextRange> xPortion;
@@ -1451,6 +1513,7 @@ DECLARE_ODFEXPORT_TEST(testWhitespace, "whitespace.odt")
 
 DECLARE_ODFEXPORT_TEST(testBtlrCell, "btlr-cell.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // Without the accompanying fix in place, this test would have failed, as
     // the btlr text direction in the A1 cell was lost on ODF import and
     // export.
@@ -1470,6 +1533,8 @@ DECLARE_ODFEXPORT_TEST(testBtlrCell, "btlr-cell.odt")
 
 DECLARE_ODFEXPORT_TEST(testBtlrFrame, "btlr-frame.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // Without the accompanying fix in place, this test would have failed, as
     // the btlr text direction in the text frame was lost on ODF import and
     // export.
@@ -1524,10 +1589,9 @@ DECLARE_ODFEXPORT_TEST(testBtlrFrame, "btlr-frame.odt")
 
 DECLARE_ODFEXPORT_TEST(testFdo86963, "fdo86963.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // Export of this document failed with beans::UnknownPropertyException.
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<drawing::XDrawPage> xDrawPage = xDrawPageSupplier->getDrawPage();
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(1), xDrawPage->getCount());
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
 }
 
 // Check for correct header/footer with special first page with TOC inside:
@@ -1539,7 +1603,7 @@ DECLARE_ODFEXPORT_TEST(testTdf118393, "tdf118393.odt")
 
     // First page has no header/footer
     {
-        xmlDocPtr pXmlDoc = parseLayoutDump();
+        xmlDocUniquePtr pXmlDoc = parseLayoutDump();
 
         // check first page
         xmlXPathObjectPtr pXmlPage1Header = getXPathNode(pXmlDoc, "/root/page[1]/header");
@@ -1579,10 +1643,13 @@ DECLARE_ODFEXPORT_TEST(testTdf118393, "tdf118393.odt")
 
 DECLARE_ODFEXPORT_TEST(testGerrit13858, "gerrit13858.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // Just make sure the output is valid.
 }
 DECLARE_ODFEXPORT_TEST(testOdtBorderTypes, "border_types.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     static const sal_Int32 lineStyles[] = { 0, 1, 2, 14, 16, 17, 3, 15 };
     uno::Reference<text::XTextDocument> textDocument(mxComponent, uno::UNO_QUERY);
     uno::Reference<container::XEnumerationAccess> xParaEnumAccess(textDocument->getText(), uno::UNO_QUERY);
@@ -1615,8 +1682,20 @@ DECLARE_ODFEXPORT_TEST(testOdtBorderTypes, "border_types.odt")
     } while (xParaEnum->hasMoreElements());
 }
 
+DECLARE_ODFEXPORT_TEST(testMasterPageWithDrawingPage, "sw_hatch.odt")
+{
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+    uno::Reference<container::XNameAccess> xStyles(getStyles("PageStyles"));
+    uno::Reference<beans::XPropertySet> xStyle(xStyles->getByName("Standard"), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL(drawing::FillStyle_HATCH, getProperty<drawing::FillStyle>(xStyle, "FillStyle"));
+    CPPUNIT_ASSERT_EQUAL(OUString("Blue -45 Degrees"), getProperty<OUString>(xStyle, "FillHatchName"));
+    CPPUNIT_ASSERT(!getProperty<sal_Bool>(xStyle, "FillBackground"));
+    CPPUNIT_ASSERT_EQUAL(sal_Int16(0), getProperty<sal_Int16>(xStyle, "FillTransparence"));
+}
+
 DECLARE_ODFEXPORT_TEST(testCellUserDefineAttr, "userdefattr-tablecell.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<text::XTextTable> xTable(getParagraphOrTable(1), uno::UNO_QUERY);
     uno::Reference<table::XCell> const xCellA1(xTable->getCellByName("A1"), uno::UNO_SET_THROW);
     uno::Reference<table::XCell> const xCellB1(xTable->getCellByName("B1"), uno::UNO_SET_THROW);
@@ -1629,6 +1708,8 @@ DECLARE_ODFEXPORT_TEST(testCellUserDefineAttr, "userdefattr-tablecell.odt")
 #if HAVE_FEATURE_PDFIUM
 DECLARE_ODFEXPORT_TEST(testEmbeddedPdf, "embedded-pdf.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<drawing::XShape> xShape = getShape(1);
     // This failed, pdf+png replacement graphics pair didn't survive an ODT roundtrip.
     auto xReplacementGraphic = getProperty<uno::Reference<graphic::XGraphic>>(xShape, "ReplacementGraphic");
@@ -1662,6 +1743,7 @@ DECLARE_ODFEXPORT_TEST(testEmbeddedPdf, "embedded-pdf.odt")
 
 DECLARE_ODFEXPORT_TEST(testTableStyles1, "table_styles_1.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // Table styles basic graphic test.
     // Doesn't cover all attributes.
     uno::Reference<style::XStyleFamiliesSupplier> XFamiliesSupplier(mxComponent, uno::UNO_QUERY);
@@ -1702,6 +1784,7 @@ DECLARE_ODFEXPORT_TEST(testTableStyles1, "table_styles_1.odt")
 
 DECLARE_ODFEXPORT_TEST(testTableStyles2, "table_styles_2.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // Table styles paragraph and char tests
     // Doesn't cover all attributes.
     // Problem: underline for table autoformat doesn't work.
@@ -1909,8 +1992,9 @@ DECLARE_ODFEXPORT_TEST(testTableStyles2, "table_styles_2.odt")
 
 DECLARE_ODFEXPORT_TEST(testTableStyles3, "table_styles_3.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // This test checks if default valued attributes aren't exported.
-    xmlDocPtr pXmlDoc = parseExport("styles.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport("styles.xml");
     if (!pXmlDoc)
         return;
 
@@ -1983,8 +2067,9 @@ DECLARE_ODFIMPORT_TEST(testTableStyles4, "table_styles_4.odt")
 
 DECLARE_ODFEXPORT_TEST(testTableStyles5, "table_styles_5.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // Test if cell styles doesn't have a style:parent-style-name attribute.
-    xmlDocPtr pXmlDoc = parseExport("styles.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport("styles.xml");
     if (!pXmlDoc)
         return;
 
@@ -2007,22 +2092,56 @@ DECLARE_ODFEXPORT_TEST(testTableStyles5, "table_styles_5.odt")
 
 }
 
+DECLARE_ODFEXPORT_TEST(testTdf101710, "tdf101710.odt")
+{
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+    // Test that number format of cell styles can be imported and exported.
+    uno::Reference<beans::XPropertySet> xStyle(getStyles("CellStyles")->getByName("Test Style.11"), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL(sal_uInt32(10104), getProperty<sal_uInt32>(xStyle, "NumberFormat"));
+}
+
+DECLARE_ODFEXPORT_TEST(testTdf129568, "tdf129568.fodt")
+{
+    // Test that export doesn't fail, and that style is imported and in use.
+    uno::Reference<style::XStyle> xStyle(getStyles("CellStyles")->getByName("Default Style.1"), uno::UNO_QUERY);
+    CPPUNIT_ASSERT(xStyle->isInUse());
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(0xffff00), getProperty<sal_Int32>(xStyle, "BackColor"));
+}
+
+DECLARE_ODFEXPORT_TEST(testTdf129568ui, "tdf129568-ui.fodt")
+{
+    // Same as above, but styles referenced by UI name.
+    uno::Reference<style::XStyle> xStyle(getStyles("CellStyles")->getByName("Default Style.1"), uno::UNO_QUERY);
+    CPPUNIT_ASSERT(xStyle->isInUse());
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(0xffff00), getProperty<sal_Int32>(xStyle, "BackColor"));
+}
+
+DECLARE_ODFEXPORT_TEST(testTdf132642_keepWithNextTable, "tdf132642_keepWithNextTable.odt")
+{
+    // Since the row is very big, it should split over two pages.
+    // Since up to this point we haven't tried to make it match MS formats, it should start on page 1.
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Row splits over 2 pages", 2, getPages());
+}
+
 DECLARE_ODFEXPORT_TEST(testImageMimetype, "image-mimetype.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // Test that the loext:mimetype attribute is written for exported images, tdf#109202
-    if (xmlDocPtr pXmlDoc = parseExport("content.xml"))
+    if (xmlDocUniquePtr pXmlDoc = parseExport("content.xml"))
     {
         // Original image (svg)
-        assertXPath(pXmlDoc, "/office:document-content/office:body/office:text/text:p/draw:frame/draw:image[@loext:mime-type='image/svg+xml']");
+        assertXPath(pXmlDoc, "/office:document-content/office:body/office:text/text:p/draw:frame/draw:image[@draw:mime-type='image/svg+xml']");
     }
 }
 
 DECLARE_ODFEXPORT_TEST(testEmbeddedFontProps, "embedded-font-props.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
 #if !defined(MACOSX)
     // Test that font style/weight of embedded fonts is exposed.
     // Test file is a normal ODT, except EmbedFonts is set to true in settings.xml.
-    if (xmlDocPtr pXmlDoc = parseExport("content.xml"))
+    if (xmlDocUniquePtr pXmlDoc = parseExport("content.xml"))
     {
         // These failed, the attributes were missing.
         assertXPath(pXmlDoc, "//style:font-face[@style:name='Liberation Serif']/svg:font-face-src/svg:font-face-uri[1]", "font-style", "normal");
@@ -2039,6 +2158,8 @@ DECLARE_ODFEXPORT_TEST(testEmbeddedFontProps, "embedded-font-props.odt")
 
 DECLARE_ODFEXPORT_TEST(testTdf100492, "tdf100492.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(2, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<drawing::XShape> xShape = getShape(1);
     CPPUNIT_ASSERT(xShape.is());
 
@@ -2060,7 +2181,7 @@ DECLARE_ODFEXPORT_TEST(testTdf100492, "tdf100492.odt")
     // Reason of such behavior unclear. So XPATH assert fails.
 
     // Parse resulting SVG as XML file.
-    // xmlDocPtr pXmlDoc = parseXmlStream(&aStream);
+    // xmlDocUniquePtr pXmlDoc = parseXmlStream(&aStream);
 
     // Check amount of paths required to draw an arrow.
     // Since there are still some empty paths in output test can fail later. There are just two
@@ -2070,6 +2191,7 @@ DECLARE_ODFEXPORT_TEST(testTdf100492, "tdf100492.odt")
 
 DECLARE_ODFEXPORT_TEST(testTdf77961, "tdf77961.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<container::XNameAccess> xStyles(getStyles("PageStyles"));
     uno::Reference<beans::XPropertySet> xStyle(xStyles->getByName("Standard"), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL( false , getProperty<bool>(xStyle, "GridDisplay"));
@@ -2078,6 +2200,7 @@ DECLARE_ODFEXPORT_TEST(testTdf77961, "tdf77961.odt")
 
 DECLARE_ODFEXPORT_TEST(testReferenceLanguage, "referencelanguage.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(2, getPages());
     // Test loext:reference-language attribute of reference fields
     // (used from LibreOffice 6.1, and proposed for next ODF)
     const char* aFieldTexts[] = { "A 2", "Az Isten", "Az 50-esek",
@@ -2111,7 +2234,8 @@ DECLARE_ODFEXPORT_TEST(testReferenceLanguage, "referencelanguage.odt")
 
 DECLARE_ODFEXPORT_TEST(testRubyPosition, "ruby-position.odt")
 {
-    if (xmlDocPtr pXmlDoc = parseExport("content.xml"))
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+    if (xmlDocUniquePtr pXmlDoc = parseExport("content.xml"))
     {
         assertXPath(pXmlDoc, "//style:style[@style:family='ruby']/style:ruby-properties[@loext:ruby-position='inter-character']", 1);
         assertXPath(pXmlDoc, "//style:style[@style:family='ruby']/style:ruby-properties[@style:ruby-position='below']", 1);
@@ -2120,6 +2244,8 @@ DECLARE_ODFEXPORT_TEST(testRubyPosition, "ruby-position.odt")
 
 DECLARE_ODFEXPORT_TEST(testAllowOverlap, "allow-overlap.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(2, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<drawing::XShape> xShape = getShape(1);
     // Without the accompanying fix in place, this test would have failed with:
     // - Expression: !getProperty<bool>(xShape, "AllowOverlap")
@@ -2147,10 +2273,18 @@ DECLARE_ODFEXPORT_TEST(testSignatureLineProperties, "signatureline-properties.fo
                          getProperty<OUString>(xShape, "SignatureLineSigningInstructions"));
     CPPUNIT_ASSERT_EQUAL(true, getProperty<bool>(xShape, "SignatureLineCanAddComment"));
     CPPUNIT_ASSERT_EQUAL(true, getProperty<bool>(xShape, "SignatureLineShowSignDate"));
+
+    // tdf#130917 This needs to be always set when importing a doc, ooxml export expects it.
+    uno::Reference<graphic::XGraphic> xUnsignedGraphic;
+    uno::Reference<beans::XPropertySet> xProps(xShape, uno::UNO_QUERY);
+    xProps->getPropertyValue("SignatureLineUnsignedImage") >>= xUnsignedGraphic;
+    CPPUNIT_ASSERT_EQUAL(true, xUnsignedGraphic.is());
 }
 
 DECLARE_ODFEXPORT_TEST(testQrCodeGenProperties, "qrcode-properties.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<drawing::XShape> xShape = getShape(1);
     CPPUNIT_ASSERT(xShape.is());
 
@@ -2166,6 +2300,7 @@ DECLARE_ODFEXPORT_TEST(testQrCodeGenProperties, "qrcode-properties.odt")
 
 DECLARE_ODFEXPORT_TEST(testChapterNumberingNewLine, "chapter-number-new-line.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<text::XChapterNumberingSupplier> xNumberingSupplier(mxComponent, uno::UNO_QUERY);
     uno::Reference<container::XIndexAccess> xNumberingRules = xNumberingSupplier->getChapterNumberingRules();
     comphelper::SequenceAsHashMap hashMap(xNumberingRules->getByIndex(0));
@@ -2177,6 +2312,7 @@ DECLARE_ODFEXPORT_TEST(testChapterNumberingNewLine, "chapter-number-new-line.odt
 
 DECLARE_ODFEXPORT_TEST(testSpellOutNumberingTypes, "spellout-numberingtypes.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // ordinal indicator, ordinal and cardinal number numbering styles (from LibreOffice 6.1)
     static const char* const aFieldTexts[] = { "1st", "Erste", "Eins",  "1.", "Premier", "Un", "1ᵉʳ", "First", "One" };
     // fallback for old platforms without std::codecvt and std::regex supports
@@ -2204,6 +2340,7 @@ DECLARE_ODFEXPORT_TEST(testSpellOutNumberingTypes, "spellout-numberingtypes.odt"
 // MAILMERGE Add conditional to expand / collapse bookmarks
 DECLARE_ODFEXPORT_TEST(tdf101856_overlapped, "tdf101856_overlapped.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // get bookmark interface
     uno::Reference<text::XBookmarksSupplier> xBookmarksSupplier(mxComponent, uno::UNO_QUERY);
     uno::Reference<container::XIndexAccess> xBookmarksByIdx(xBookmarksSupplier->getBookmarks(), uno::UNO_QUERY);
@@ -2228,6 +2365,7 @@ DECLARE_ODFEXPORT_TEST(tdf101856_overlapped, "tdf101856_overlapped.odt")
 // MAILMERGE Add conditional to expand / collapse bookmarks
 DECLARE_ODFEXPORT_TEST(tdf101856, "tdf101856.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // get bookmark interface
     uno::Reference<text::XBookmarksSupplier> xBookmarksSupplier(mxComponent, uno::UNO_QUERY);
     uno::Reference<container::XIndexAccess> xBookmarksByIdx(xBookmarksSupplier->getBookmarks(), uno::UNO_QUERY);
@@ -2273,6 +2411,8 @@ DECLARE_ODFEXPORT_TEST(tdf101856, "tdf101856.odt")
 
 DECLARE_ODFEXPORT_TEST(tdf118502, "tdf118502.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<drawing::XShape> xShape = getShape(1);
     // Make sure the replacement graphic is still there
     // (was gone because the original graphic was not recognized during load)
@@ -2284,13 +2424,13 @@ DECLARE_ODFEXPORT_TEST(tdf118502, "tdf118502.odt")
 DECLARE_ODFEXPORT_TEST(tdf99631, "tdf99631.docx")
 {
     // check import of VisualArea settings of the embedded XLSX OLE objects
-    xmlDocPtr pXmlDoc = parseExport("Object 1/settings.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport("Object 1/settings.xml");
     if (!pXmlDoc)
         return;
     assertXPathContent(pXmlDoc, "//config:config-item[@config:name='VisibleAreaWidth']", "4515");
     assertXPathContent(pXmlDoc, "//config:config-item[@config:name='VisibleAreaHeight']", "903");
 
-    xmlDocPtr pXmlDoc2 = parseExport("Object 2/settings.xml");
+    xmlDocUniquePtr pXmlDoc2 = parseExport("Object 2/settings.xml");
     if (!pXmlDoc2)
         return;
     assertXPathContent(pXmlDoc2, "//config:config-item[@config:name='VisibleAreaWidth']", "4515");
@@ -2309,10 +2449,76 @@ DECLARE_ODFEXPORT_TEST(tdf128504, "tdf128504.docx")
 
 DECLARE_ODFEXPORT_TEST(tdf121658, "tdf121658.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<container::XNameAccess> xParaStyles(getStyles("ParagraphStyles"));
     uno::Reference<beans::XPropertySet> xStyle1(xParaStyles->getByName(
             "Standard"), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(true, getProperty<bool>(xStyle1, "ParaHyphenationNoCaps"));
+}
+
+DECLARE_ODFEXPORT_TEST(testArabicZeroNumbering, "arabic-zero-numbering.odt")
+{
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+    auto xNumberingRules
+        = getProperty<uno::Reference<container::XIndexAccess>>(getParagraph(1), "NumberingRules");
+    comphelper::SequenceAsHashMap aMap(xNumberingRules->getByIndex(0));
+    // Without the accompanying fix in place, this test would have failed with:
+    // - Expected: 64
+    // - Actual  : 4
+    // i.e. numbering type was ARABIC, not ARABIC_ZERO.
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_uInt16>(style::NumberingType::ARABIC_ZERO),
+                         aMap["NumberingType"].get<sal_uInt16>());
+}
+
+DECLARE_ODFEXPORT_TEST(testArabicZero3Numbering, "arabic-zero3-numbering.odt")
+{
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+    auto xNumberingRules
+        = getProperty<uno::Reference<container::XIndexAccess>>(getParagraph(1), "NumberingRules");
+    comphelper::SequenceAsHashMap aMap(xNumberingRules->getByIndex(0));
+    // Without the accompanying fix in place, this test would have failed with:
+    // - Expected: 65
+    // - Actual  : 4
+    // i.e. numbering type was ARABIC, not ARABIC_ZERO3.
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_uInt16>(style::NumberingType::ARABIC_ZERO3),
+                         aMap["NumberingType"].get<sal_uInt16>());
+}
+
+DECLARE_ODFEXPORT_TEST(testArabicZero4Numbering, "arabic-zero4-numbering.odt")
+{
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+    auto xNumberingRules
+        = getProperty<uno::Reference<container::XIndexAccess>>(getParagraph(1), "NumberingRules");
+    comphelper::SequenceAsHashMap aMap(xNumberingRules->getByIndex(0));
+    // Without the accompanying fix in place, this test would have failed with:
+    // - Expected: 66
+    // - Actual  : 4
+    // i.e. numbering type was ARABIC, not ARABIC_ZERO4.
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_uInt16>(style::NumberingType::ARABIC_ZERO4),
+                         aMap["NumberingType"].get<sal_uInt16>());
+}
+
+DECLARE_ODFEXPORT_TEST(testArabicZero5Numbering, "arabic-zero5-numbering.odt")
+{
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+    auto xNumberingRules
+        = getProperty<uno::Reference<container::XIndexAccess>>(getParagraph(1), "NumberingRules");
+    comphelper::SequenceAsHashMap aMap(xNumberingRules->getByIndex(0));
+    // Without the accompanying fix in place, this test would have failed with:
+    // - Expected: 67
+    // - Actual  : 4
+    // i.e. numbering type was ARABIC, not ARABIC_ZERO5.
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_uInt16>(style::NumberingType::ARABIC_ZERO5),
+                         aMap["NumberingType"].get<sal_uInt16>());
+}
+
+DECLARE_ODFEXPORT_TEST(testPageContentBottom, "page-content-bottom.odt")
+{
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+    uno::Reference<beans::XPropertySet> xShape(getShape(1), uno::UNO_QUERY);
+    sal_Int16 nExpected = text::RelOrientation::PAGE_PRINT_AREA_BOTTOM;
+    CPPUNIT_ASSERT_EQUAL(nExpected, getProperty<sal_Int16>(xShape, "VertOrientRelation"));
 }
 
 CPPUNIT_PLUGIN_IMPLEMENT();

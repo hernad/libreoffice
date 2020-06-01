@@ -21,11 +21,7 @@
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
 #include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
-#include "xmlEnums.hxx"
-#include <stringconstants.hxx>
 #include <strings.hxx>
-#include <tools/debug.hxx>
 #include <tools/diagnose_ex.h>
 #include <svl/filenotation.hxx>
 #include <unotools/pathoptions.hxx>
@@ -46,9 +42,7 @@ OXMLFileBasedDatabase::OXMLFileBasedDatabase( ODBFilter& rImport,
     OUString sLocation,sMediaType,sFileTypeExtension;
     if (xDataSource.is())
     {
-        sax_fastparser::FastAttributeList *pAttribList =
-                        sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-        for (auto &aIter : *pAttribList)
+        for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
         {
             OUString sValue = aIter.toString();
 
@@ -84,7 +78,7 @@ OXMLFileBasedDatabase::OXMLFileBasedDatabase( ODBFilter& rImport,
                     sFileTypeExtension = sValue;
                     break;
                 default:
-                    SAL_WARN("dbaccess", "unknown attribute " << SvXMLImport::getNameFromToken(aIter.getToken()) << " value=" << aIter.toString());
+                    SAL_WARN("dbaccess", "unknown attribute " << SvXMLImport::getPrefixAndNameFromToken(aIter.getToken()) << "=" << aIter.toString());
             }
             if ( !aProperty.Name.isEmpty() )
             {
@@ -94,18 +88,18 @@ OXMLFileBasedDatabase::OXMLFileBasedDatabase( ODBFilter& rImport,
             }
         }
     }
-    if ( !(sLocation.isEmpty() || sMediaType.isEmpty()) )
+    if ( sLocation.isEmpty() || sMediaType.isEmpty() )
+        return;
+
+    ::dbaccess::ODsnTypeCollection aTypeCollection(rImport.GetComponentContext());
+    OUString sURL = aTypeCollection.getDatasourcePrefixFromMediaType(sMediaType,sFileTypeExtension) + sLocation;
+    try
     {
-        ::dbaccess::ODsnTypeCollection aTypeCollection(rImport.GetComponentContext());
-        OUString sURL = aTypeCollection.getDatasourcePrefixFromMediaType(sMediaType,sFileTypeExtension) + sLocation;
-        try
-        {
-            xDataSource->setPropertyValue(PROPERTY_URL,makeAny(sURL));
-        }
-        catch(const Exception&)
-        {
-            DBG_UNHANDLED_EXCEPTION("dbaccess");
-        }
+        xDataSource->setPropertyValue(PROPERTY_URL,makeAny(sURL));
+    }
+    catch(const Exception&)
+    {
+        DBG_UNHANDLED_EXCEPTION("dbaccess");
     }
 }
 

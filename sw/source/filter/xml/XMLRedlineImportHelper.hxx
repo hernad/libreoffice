@@ -31,11 +31,11 @@ class SvXMLImport;
 class RedlineInfo;
 class SwRedlineData;
 class SwDoc;
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace text { class XTextCursor; }
     namespace text { class XTextRange; }
     namespace frame { class XModel; }
-} } }
+}
 
 typedef std::map< OUString, RedlineInfo* > RedlineMapType;
 
@@ -51,7 +51,7 @@ class XMLRedlineImportHelper final
 
     // if true, no redlines should be inserted into document
     // (This typically happen when a document is loaded in 'insert'-mode.)
-    bool const m_bIgnoreRedlines;
+    bool m_bIgnoreRedlines;
 
     // save information for saving and reconstruction of the redline mode
     css::uno::Reference<css::beans::XPropertySet> m_xModelPropertySet;

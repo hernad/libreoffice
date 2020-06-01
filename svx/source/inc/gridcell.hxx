@@ -84,7 +84,7 @@ private:
     sal_Int32               m_nFormatKey;
     sal_Int16               m_nFieldType;
     sal_Int16               m_nTypeId;
-    sal_uInt16 const        m_nId;
+    sal_uInt16              m_nId;
     sal_Int16               m_nFieldPos;
     sal_Int16               m_nAlign;                       // specified with TXT_ALIGN_LEFT...
     bool                m_bReadOnly : 1;
@@ -533,7 +533,7 @@ private:
 class DbSpinField : public DbCellControl
 {
 private:
-    sal_Int16 const   m_nStandardAlign;
+    sal_Int16   m_nStandardAlign;
 
 public:
 
@@ -952,55 +952,26 @@ protected:
 };
 
 
-typedef ::cppu::ImplHelper1 <   css::awt::XListBox
-                            >   FmXListBoxCell_Base;
 class FmXListBoxCell final :public FmXTextCell
-                        ,public FmXListBoxCell_Base
 {
 public:
     FmXListBoxCell( DbGridColumn* pColumn, std::unique_ptr<DbCellControl> pControl );
 
-    DECLARE_UNO3_AGG_DEFAULTS(FmXListBoxCell, FmXTextCell)
-    virtual css::uno::Any SAL_CALL queryAggregation( const css::uno::Type& _rType ) override;
-    virtual css::uno::Sequence< css::uno::Type > SAL_CALL getTypes(  ) override;
     virtual css::uno::Sequence< sal_Int8 > SAL_CALL getImplementationId() override;
 
 // OComponentHelper
     virtual void SAL_CALL disposing() override;
 
-// css::awt::XListBox
-    virtual void SAL_CALL addItemListener(const css::uno::Reference< css::awt::XItemListener >& l) override;
-    virtual void SAL_CALL removeItemListener(const css::uno::Reference< css::awt::XItemListener >& l) override;
-    virtual void SAL_CALL addActionListener(const css::uno::Reference< css::awt::XActionListener >& l) override;
-    virtual void SAL_CALL removeActionListener(const css::uno::Reference< css::awt::XActionListener >& l) override;
-    virtual void SAL_CALL addItem(const OUString& aItem, sal_Int16 nPos) override;
-    virtual void SAL_CALL addItems(const css::uno::Sequence< OUString >& aItems, sal_Int16 nPos) override;
-    virtual void SAL_CALL removeItems(sal_Int16 nPos, sal_Int16 nCount) override;
-    virtual sal_Int16 SAL_CALL getItemCount() override;
-    virtual OUString SAL_CALL getItem(sal_Int16 nPos) override;
-    virtual css::uno::Sequence< OUString > SAL_CALL getItems() override;
-    virtual sal_Int16 SAL_CALL getSelectedItemPos() override;
-    virtual css::uno::Sequence< sal_Int16 > SAL_CALL getSelectedItemsPos() override;
-    virtual OUString SAL_CALL getSelectedItem() override;
-    virtual css::uno::Sequence< OUString > SAL_CALL getSelectedItems() override;
-    virtual void SAL_CALL selectItemPos(sal_Int16 nPos, sal_Bool bSelect) override;
-    virtual void SAL_CALL selectItemsPos(const css::uno::Sequence< sal_Int16 >& aPositions, sal_Bool bSelect) override;
-    virtual void SAL_CALL selectItem(const OUString& aItem, sal_Bool bSelect) override;
-    virtual sal_Bool SAL_CALL isMutipleMode() override;
-    virtual void SAL_CALL setMultipleMode(sal_Bool bMulti) override;
-    virtual sal_Int16 SAL_CALL getDropDownLineCount() override;
-    virtual void SAL_CALL setDropDownLineCount(sal_Int16 nLines) override;
-    virtual void SAL_CALL makeVisible(sal_Int16 nEntry) override;
-
 private:
-    virtual void onWindowEvent( const VclEventId _nEventId, const vcl::Window& _rWindow, const void* _pEventData ) override;
     virtual ~FmXListBoxCell() override;
 
-    DECL_LINK( OnDoubleClick, ListBox&, void );
+    DECL_LINK(ChangedHdl, weld::ComboBox&, void);
+
+    void OnDoubleClick();
 
     ::comphelper::OInterfaceContainerHelper2   m_aItemListeners,
                                         m_aActionListeners;
-    VclPtr<ListBox>                     m_pBox;
+    weld::ComboBox* m_pBox;
 };
 
 
@@ -1012,7 +983,10 @@ class FmXComboBoxCell   :public FmXTextCell
 private:
     ::comphelper::OInterfaceContainerHelper2   m_aItemListeners,
                                         m_aActionListeners;
-    VclPtr<ComboBox>                    m_pComboBox;
+    weld::ComboBox* m_pComboBox;
+    sal_uInt16 m_nLines;
+
+    DECL_LINK(ChangedHdl, weld::ComboBox&, void);
 
 protected:
     virtual ~FmXComboBoxCell() override;
@@ -1041,11 +1015,7 @@ public:
     virtual css::uno::Sequence< OUString > SAL_CALL getItems(  ) override;
     virtual ::sal_Int16 SAL_CALL getDropDownLineCount(  ) override;
     virtual void SAL_CALL setDropDownLineCount( ::sal_Int16 Lines ) override;
-
-protected:
-    virtual void onWindowEvent( const VclEventId _nEventId, const vcl::Window& _rWindow, const void* _pEventData ) override;
 };
-
 
 typedef ::cppu::ImplHelper2 <   css::awt::XTextComponent
                             ,   css::lang::XUnoTunnel

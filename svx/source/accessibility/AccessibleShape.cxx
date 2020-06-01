@@ -365,7 +365,7 @@ uno::Reference<XAccessibleRelationSet> SAL_CALL
 
     //this mxshape is the captioned shape
     uno::Sequence< uno::Reference< uno::XInterface > > aSequence { mpParent->GetAccessibleCaption(mxShape) };
-    if(aSequence[0].get())
+    if(aSequence[0])
     {
         pRelationSet->AddRelation(
                                   AccessibleRelation( AccessibleRelationType::DESCRIBED_BY, aSequence ) );
@@ -1336,6 +1336,7 @@ css::accessibility::TextSegment SAL_CALL AccessibleShape::getTextBehindIndex( sa
     return aResult;
 }
 sal_Bool SAL_CALL AccessibleShape::copyText( sal_Int32, sal_Int32 ){return true;}
+sal_Bool SAL_CALL AccessibleShape::scrollSubstringTo( sal_Int32, sal_Int32, AccessibleScrollType ){return false;}
 
 } // end of namespace accessibility
 

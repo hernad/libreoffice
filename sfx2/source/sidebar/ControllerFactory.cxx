@@ -17,8 +17,8 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <sfx2/sidebar/ControllerFactory.hxx>
-#include <sfx2/sidebar/Tools.hxx>
+#include <sidebar/ControllerFactory.hxx>
+#include <sidebar/Tools.hxx>
 
 #include <com/sun/star/frame/XToolbarController.hpp>
 #include <com/sun/star/frame/XFrame.hpp>
@@ -44,14 +44,14 @@ Reference<frame::XToolbarController> ControllerFactory::CreateToolBoxController(
     const Reference<frame::XFrame>& rxFrame,
     const Reference<frame::XController>& rxController,
     const Reference<awt::XWindow>& rxParentWindow,
-    const sal_Int32 nWidth)
+    const sal_Int32 nWidth, bool bSideBar)
 {
     Reference<frame::XToolbarController> xController (
         CreateToolBarController(
             VCLUnoHelper::GetInterface(pToolBox),
             rsCommandName,
             rxFrame, rxController,
-            nWidth));
+            nWidth, bSideBar));
 
     bool bFactoryHasController( xController.is() );
 
@@ -139,18 +139,18 @@ Reference<frame::XToolbarController> ControllerFactory::CreateToolBoxController(
 }
 
 Reference<frame::XToolbarController> ControllerFactory::CreateToolBoxController(
-    weld::Toolbar& rToolbar,
+    weld::Toolbar& rToolbar, weld::Builder& rBuilder,
     const OUString& rsCommandName,
-    const Reference<frame::XFrame>& rxFrame)
+    const Reference<frame::XFrame>& rxFrame, bool bSideBar)
 {
-    css::uno::Reference<css::awt::XWindow> xWidget(new weld::TransportAsXWindow(&rToolbar));
+    css::uno::Reference<css::awt::XWindow> xWidget(new weld::TransportAsXWindow(&rToolbar, &rBuilder));
 
     Reference<frame::XToolbarController> xController(
         CreateToolBarController(
             xWidget,
             rsCommandName,
             rxFrame, rxFrame->getController(),
-            -1));
+            -1, bSideBar));
 
     if (!xController.is())
     {
@@ -188,6 +188,8 @@ Reference<frame::XToolbarController> ControllerFactory::CreateToolBoxController(
 
     if (xController.is())
     {
+        xController->createItemWindow(xWidget);
+
         Reference<util::XUpdatable> xUpdatable(xController, UNO_QUERY);
         if (xUpdatable.is())
             xUpdatable->update();
@@ -202,7 +204,7 @@ Reference<frame::XToolbarController> ControllerFactory::CreateToolBarController(
     const OUString& rsCommandName,
     const Reference<frame::XFrame>& rxFrame,
     const Reference<frame::XController>& rxController,
-    const sal_Int32 nWidth)
+    const sal_Int32 nWidth, bool bSideBar)
 {
     try
     {
@@ -232,7 +234,7 @@ Reference<frame::XToolbarController> ControllerFactory::CreateToolBarController(
             aPropertyVector.push_back( makeAny( aPropValue ));
 
             aPropValue.Name = "IsSidebar";
-            aPropValue.Value <<= true;
+            aPropValue.Value <<= bSideBar;
             aPropertyVector.push_back( makeAny( aPropValue ));
 
             if (nWidth > 0)

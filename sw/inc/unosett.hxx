@@ -39,7 +39,7 @@ class SwDocShell;
 class SwNumRule;
 class SwNumFormat;
 class SfxItemPropertySet;
-namespace com { namespace sun { namespace star { namespace beans { struct PropertyValue; } } } }
+namespace com::sun::star::beans { struct PropertyValue; }
 
 class SwXFootnoteProperties final : public cppu::WeakAggImplHelper2
 <
@@ -151,7 +151,7 @@ private:
     SwDocShell*                 m_pDocShell; // Only if used as chapter numbering.
     SwNumRule*                  m_pNumRule;
     const SfxItemPropertySet*   m_pPropertySet;
-    bool const                  m_bOwnNumRuleCreated;
+    bool                        m_bOwnNumRuleCreated;
 protected:
     virtual ~SwXNumberingRules() override;
 
@@ -217,7 +217,7 @@ public:
             OUString *const pBulletFontName,
             OUString *const pHeadingStyleName,
             OUString *const pParagraphStyleName,
-            SwDoc *const pDoc, SwDocShell *const pDocShell,
+            SwDoc *const pDoc,
             css::uno::Sequence<css::beans::PropertyValue> const& rProperties);
 
 };

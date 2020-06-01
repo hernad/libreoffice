@@ -22,7 +22,7 @@
 #include <memory>
 #include <com/sun/star/frame/XFrame.hpp>
 
-#include <svx/sidebar/PanelLayout.hxx>
+#include <sfx2/sidebar/PanelLayout.hxx>
 
 #include <sfx2/sidebar/ControllerItem.hxx>
 
@@ -34,7 +34,7 @@
 #include <svx/spacinglistbox.hxx>
 #include <svx/samecontentlistbox.hxx>
 
-namespace sw { namespace sidebar {
+namespace sw::sidebar {
 
 class PageFooterPanel:
     public PanelLayout,
@@ -50,6 +50,10 @@ public:
         const sal_uInt16 nSId,
         const SfxItemState eState,
         const SfxPoolItem* pState) override;
+
+    virtual void GetControlState(
+        const sal_uInt16 /*nSId*/,
+        boost::property_tree::ptree& /*rState*/) override {};
 
     SfxBindings* GetBindings() const { return mpBindings; }
     PageFooterPanel(
@@ -99,7 +103,7 @@ private:
     DECL_LINK( FooterLayoutHdl, weld::ComboBox&, void);
 };
 
-} } //end of namespace sw::sidebar
+} //end of namespace sw::sidebar
 
 #endif
 

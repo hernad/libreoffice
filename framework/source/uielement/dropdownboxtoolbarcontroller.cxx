@@ -21,9 +21,9 @@
 
 #include <com/sun/star/beans/PropertyValue.hpp>
 
+#include <vcl/InterimItemWindow.hxx>
 #include <svtools/toolboxcontroller.hxx>
 #include <vcl/svapp.hxx>
-#include <vcl/lstbox.hxx>
 #include <vcl/toolbox.hxx>
 
 using namespace ::com::sun::star;
@@ -41,26 +41,42 @@ namespace framework
 // Unfortunaltly the events are notified through virtual methods instead
 // of Listeners.
 
-class ListBoxControl : public ListBox
+class ListBoxControl final : public InterimItemWindow
 {
-    public:
-        ListBoxControl( vcl::Window* pParent, WinBits nStyle, DropdownToolbarController* pListBoxListener );
-        virtual ~ListBoxControl() override;
-        virtual void dispose() override;
+public:
+    ListBoxControl(vcl::Window* pParent, DropdownToolbarController* pListBoxListener);
+    virtual ~ListBoxControl() override;
+    virtual void dispose() override;
 
-        virtual void Select() override;
-        virtual void GetFocus() override;
-        virtual void LoseFocus() override;
-        virtual bool PreNotify( NotifyEvent& rNEvt ) override;
+    void set_active(int nPos) { m_xWidget->set_active(nPos); }
+    void append_text(const OUString& rStr) { m_xWidget->append_text(rStr); }
+    void insert_text(int nPos, const OUString& rStr) { m_xWidget->insert_text(nPos, rStr); }
+    int get_count() const { return m_xWidget->get_count(); }
+    int find_text(const OUString& rStr) const { return m_xWidget->find_text(rStr); }
+    OUString get_active_text() const { return m_xWidget->get_active_text(); }
+    void clear() { return m_xWidget->clear(); }
+    void remove(int nPos) { m_xWidget->remove(nPos); }
 
-    private:
-        DropdownToolbarController* m_pListBoxListener;
+    DECL_LINK(FocusInHdl, weld::Widget&, void);
+    DECL_LINK(FocusOutHdl, weld::Widget&, void);
+    DECL_LINK(ModifyHdl, weld::ComboBox&, void);
+
+private:
+    std::unique_ptr<weld::ComboBox> m_xWidget;
+    DropdownToolbarController* m_pListBoxListener;
 };
 
-ListBoxControl::ListBoxControl( vcl::Window* pParent, WinBits nStyle, DropdownToolbarController* pListBoxListener ) :
-    ListBox( pParent, nStyle )
+ListBoxControl::ListBoxControl(vcl::Window* pParent, DropdownToolbarController* pListBoxListener)
+    : InterimItemWindow(pParent, "svt/ui/listcontrol.ui", "ListControl")
+    , m_xWidget(m_xBuilder->weld_combo_box("listbox"))
     , m_pListBoxListener( pListBoxListener )
 {
+    m_xWidget->connect_focus_in(LINK(this, ListBoxControl, FocusInHdl));
+    m_xWidget->connect_focus_out(LINK(this, ListBoxControl, FocusOutHdl));
+    m_xWidget->connect_changed(LINK(this, ListBoxControl, ModifyHdl));
+
+    m_xWidget->set_size_request(42, -1); // so a later narrow size request can stick
+    SetSizePixel(get_preferred_size());
 }
 
 ListBoxControl::~ListBoxControl()
@@ -71,39 +87,26 @@ ListBoxControl::~ListBoxControl()
 void ListBoxControl::dispose()
 {
     m_pListBoxListener = nullptr;
-    ListBox::dispose();
+    m_xWidget.reset();
+    InterimItemWindow::dispose();
 }
 
-void ListBoxControl::Select()
+IMPL_LINK_NOARG(ListBoxControl, ModifyHdl, weld::ComboBox&, void)
 {
-    ListBox::Select();
-    if ( m_pListBoxListener )
+    if (m_pListBoxListener)
         m_pListBoxListener->Select();
 }
 
-void ListBoxControl::GetFocus()
+IMPL_LINK_NOARG(ListBoxControl, FocusInHdl, weld::Widget&, void)
 {
-    ListBox::GetFocus();
-    if ( m_pListBoxListener )
+    if (m_pListBoxListener)
         m_pListBoxListener->GetFocus();
 }
 
-void ListBoxControl::LoseFocus()
+IMPL_LINK_NOARG(ListBoxControl, FocusOutHdl, weld::Widget&, void)
 {
-    ListBox::LoseFocus();
-    if ( m_pListBoxListener )
+    if (m_pListBoxListener)
         m_pListBoxListener->LoseFocus();
-}
-
-bool ListBoxControl::PreNotify( NotifyEvent& rNEvt )
-{
-    bool bRet = false;
-    if ( m_pListBoxListener )
-        bRet = false;
-    if ( !bRet )
-        bRet = ListBox::PreNotify( rNEvt );
-
-    return bRet;
 }
 
 DropdownToolbarController::DropdownToolbarController(
@@ -116,17 +119,15 @@ DropdownToolbarController::DropdownToolbarController(
     ComplexToolbarController( rxContext, rFrame, pToolbar, nID, aCommand )
     ,   m_pListBoxControl( nullptr )
 {
-    m_pListBoxControl = VclPtr<ListBoxControl>::Create( m_xToolbar, WB_DROPDOWN|WB_AUTOHSCROLL|WB_BORDER, this );
+    m_pListBoxControl = VclPtr<ListBoxControl>::Create(m_xToolbar, this);
     if ( nWidth == 0 )
         nWidth = 100;
 
-    // default dropdown size
-    ::Size aLogicalSize( 0, 160 );
-    ::Size aPixelSize = m_pListBoxControl->LogicToPixel(aLogicalSize, MapMode(MapUnit::MapAppFont));
+    // ListBoxControl ctor has set a suitable height already
+    auto nHeight = m_pListBoxControl->GetSizePixel().Height();
 
-    m_pListBoxControl->SetSizePixel( ::Size( nWidth, aPixelSize.Height() ));
+    m_pListBoxControl->SetSizePixel( ::Size( nWidth, nHeight ));
     m_xToolbar->SetItemWindow( m_nID, m_pListBoxControl );
-    m_pListBoxControl->SetDropDownLineCount( 5 );
 }
 
 DropdownToolbarController::~DropdownToolbarController()
@@ -146,7 +147,7 @@ void SAL_CALL DropdownToolbarController::dispose()
 Sequence<PropertyValue> DropdownToolbarController::getExecuteArgs(sal_Int16 KeyModifier) const
 {
     Sequence<PropertyValue> aArgs( 2 );
-    OUString aSelectedText = m_pListBoxControl->GetSelectedEntry();
+    OUString aSelectedText = m_pListBoxControl->get_active_text();
 
     // Add key modifier to argument list
     aArgs[0].Name = "KeyModifier";
@@ -158,13 +159,8 @@ Sequence<PropertyValue> DropdownToolbarController::getExecuteArgs(sal_Int16 KeyM
 
 void DropdownToolbarController::Select()
 {
-    if ( m_pListBoxControl->GetEntryCount() > 0 )
-    {
-        vcl::Window::PointerState aState = m_pListBoxControl->GetPointerState();
-
-        sal_uInt16 nKeyModifier = sal_uInt16( aState.mnState & KEY_MODIFIERS_MASK );
-        execute( nKeyModifier );
-    }
+    if (m_pListBoxControl->get_count() > 0)
+        execute(0);
 }
 
 void DropdownToolbarController::GetFocus()
@@ -181,18 +177,18 @@ void DropdownToolbarController::executeControlCommand( const css::frame::Control
 {
     if ( rControlCommand.Command == "SetList" )
     {
-        for ( sal_Int32 i = 0; i < rControlCommand.Arguments.getLength(); i++ )
+        for ( const NamedValue& rArg : rControlCommand.Arguments )
         {
-            if ( rControlCommand.Arguments[i].Name == "List" )
+            if ( rArg.Name == "List" )
             {
                 Sequence< OUString > aList;
-                m_pListBoxControl->Clear();
+                m_pListBoxControl->clear();
 
-                rControlCommand.Arguments[i].Value >>= aList;
-                for ( sal_Int32 j = 0; j < aList.getLength(); j++ )
-                    m_pListBoxControl->InsertEntry( aList[j] );
+                rArg.Value >>= aList;
+                for (OUString const & rName : std::as_const(aList))
+                    m_pListBoxControl->append_text(rName);
 
-                m_pListBoxControl->SelectEntryPos( 0 );
+                m_pListBoxControl->set_active(0);
 
                 // send notification
                 uno::Sequence< beans::NamedValue > aInfo { { "List", css::uno::makeAny(aList) } };
@@ -207,49 +203,49 @@ void DropdownToolbarController::executeControlCommand( const css::frame::Control
     else if ( rControlCommand.Command == "AddEntry" )
     {
         OUString   aText;
-        for ( sal_Int32 i = 0; i < rControlCommand.Arguments.getLength(); i++ )
+        for ( const NamedValue& rArg : rControlCommand.Arguments )
         {
-            if ( rControlCommand.Arguments[i].Name == "Text" )
+            if ( rArg.Name == "Text" )
             {
-                if ( rControlCommand.Arguments[i].Value >>= aText )
-                    m_pListBoxControl->InsertEntry( aText, LISTBOX_APPEND );
+                if ( rArg.Value >>= aText )
+                    m_pListBoxControl->append_text(aText);
                 break;
             }
         }
     }
     else if ( rControlCommand.Command == "InsertEntry" )
     {
-        sal_Int32      nPos( LISTBOX_APPEND );
+        sal_Int32 nPos(-1);
         OUString   aText;
-        for ( sal_Int32 i = 0; i < rControlCommand.Arguments.getLength(); i++ )
+        for ( const NamedValue& rArg : rControlCommand.Arguments )
         {
-            if ( rControlCommand.Arguments[i].Name == "Pos" )
+            if ( rArg.Name == "Pos" )
             {
                 sal_Int32 nTmpPos = 0;
-                if ( rControlCommand.Arguments[i].Value >>= nTmpPos )
+                if ( rArg.Value >>= nTmpPos )
                 {
                     if (( nTmpPos >= 0 ) &&
-                        ( nTmpPos < m_pListBoxControl->GetEntryCount() ))
+                        ( nTmpPos < m_pListBoxControl->get_count() ))
                         nPos = nTmpPos;
                 }
             }
-            else if ( rControlCommand.Arguments[i].Name == "Text" )
-                rControlCommand.Arguments[i].Value >>= aText;
+            else if ( rArg.Name == "Text" )
+                rArg.Value >>= aText;
         }
 
-        m_pListBoxControl->InsertEntry( aText, nPos );
+        m_pListBoxControl->insert_text(nPos, aText);
     }
     else if ( rControlCommand.Command == "RemoveEntryPos" )
     {
-        for ( sal_Int32 i = 0; i < rControlCommand.Arguments.getLength(); i++ )
+        for ( const NamedValue& rArg : rControlCommand.Arguments )
         {
-            if ( rControlCommand.Arguments[i].Name == "Pos" )
+            if ( rArg.Name == "Pos" )
             {
                 sal_Int32 nPos( -1 );
-                if ( rControlCommand.Arguments[i].Value >>= nPos )
+                if ( rArg.Value >>= nPos )
                 {
-                    if ( 0 <= nPos && nPos < m_pListBoxControl->GetEntryCount() )
-                        m_pListBoxControl->RemoveEntry( nPos );
+                    if ( 0 <= nPos && nPos < m_pListBoxControl->get_count() )
+                        m_pListBoxControl->remove(nPos);
                 }
                 break;
             }
@@ -257,26 +253,17 @@ void DropdownToolbarController::executeControlCommand( const css::frame::Control
     }
     else if ( rControlCommand.Command == "RemoveEntryText" )
     {
-        for ( sal_Int32 i = 0; i < rControlCommand.Arguments.getLength(); i++ )
+        for ( const NamedValue& rArg : rControlCommand.Arguments )
         {
-            if ( rControlCommand.Arguments[i].Name == "Text" )
+            if ( rArg.Name == "Text" )
             {
                 OUString aText;
-                if ( rControlCommand.Arguments[i].Value >>= aText )
-                    m_pListBoxControl->RemoveEntry( aText );
-                break;
-            }
-        }
-    }
-    else if ( rControlCommand.Command == "SetDropDownLines" )
-    {
-        for ( sal_Int32 i = 0; i < rControlCommand.Arguments.getLength(); i++ )
-        {
-            if ( rControlCommand.Arguments[i].Name == "Lines" )
-            {
-                sal_Int32 nValue( 5 );
-                rControlCommand.Arguments[i].Value >>= nValue;
-                m_pListBoxControl->SetDropDownLineCount( sal_uInt16( nValue ));
+                if ( rArg.Value >>= aText )
+                {
+                    auto nPos = m_pListBoxControl->find_text(aText);
+                    if (nPos != -1)
+                        m_pListBoxControl->remove(nPos);
+                }
                 break;
             }
         }

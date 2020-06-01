@@ -19,9 +19,11 @@
 #include <skia/x11/gdiimpl.hxx>
 
 #include <tools/sk_app/unix/WindowContextFactory_unix.h>
-#include <tools/sk_app/WindowContext.h>
 
-#include <vcl/skia/SkiaHelper.hxx>
+#include <skia/utils.hxx>
+#include <skia/zone.hxx>
+
+#include <X11/Xutil.h>
 
 X11SkiaSalGraphicsImpl::X11SkiaSalGraphicsImpl(X11SalGraphics& rParent)
     : SkiaSalGraphicsImpl(rParent, rParent.GetGeometryProvider())
@@ -40,43 +42,60 @@ void X11SkiaSalGraphicsImpl::Init()
 
 void X11SkiaSalGraphicsImpl::createWindowContext()
 {
+    assert(mX11Parent.GetDrawable() != None);
+    mWindowContext = createWindowContext(mX11Parent.GetXDisplay(), mX11Parent.GetDrawable(),
+                                         &mX11Parent.GetVisual(), GetWidth(), GetHeight(),
+                                         SkiaHelper::renderMethodToUse(), false);
+    if (mWindowContext && SkiaHelper::renderMethodToUse() == SkiaHelper::RenderVulkan)
+        mIsGPU = true;
+    else
+        mIsGPU = false;
+}
+
+std::unique_ptr<sk_app::WindowContext>
+X11SkiaSalGraphicsImpl::createWindowContext(Display* display, Drawable drawable,
+                                            const XVisualInfo* visual, int width, int height,
+                                            SkiaHelper::RenderMethod renderMethod, bool temporary)
+{
+    SkiaZone zone;
     sk_app::DisplayParams displayParams;
     displayParams.fColorType = kN32_SkColorType;
     sk_app::window_context_factory::XlibWindowInfo winInfo;
-    winInfo.fDisplay = mX11Parent.GetXDisplay();
-    winInfo.fWindow = mX11Parent.GetDrawable();
-    assert(winInfo.fDisplay);
-    // Allow window being None if offscreen, this is used to temporarily create GrContext
-    // for an offscreen surface.
-    assert(winInfo.fWindow != None || isOffscreen());
+    assert(display);
+    winInfo.fDisplay = display;
+    winInfo.fWindow = drawable;
     winInfo.fFBConfig = nullptr; // not used
-    winInfo.fVisualInfo = const_cast<SalVisual*>(&mX11Parent.GetVisual());
+    winInfo.fVisualInfo = const_cast<XVisualInfo*>(visual);
+    assert(winInfo.fVisualInfo->visual != nullptr); // make sure it's not an uninitialized SalVisual
+    winInfo.fWidth = width;
+    winInfo.fHeight = height;
 #ifdef DBG_UTIL
     // Our patched Skia has VulkanWindowContext that shares GrContext, which requires
     // that the X11 visual is always the same. Ensure it is so.
     static VisualID checkVisualID = -1U;
-    assert(checkVisualID == -1U || winInfo.fVisualInfo->visualid == checkVisualID);
-    checkVisualID = winInfo.fVisualInfo->visualid;
+    // Exception is for the temporary case during startup, when SkiaHelper's
+    // checkDeviceBlacklisted() needs a WindowContext and may be called before SalVisual
+    // is ready.
+    if (!temporary)
+    {
+        assert(checkVisualID == -1U || winInfo.fVisualInfo->visualid == checkVisualID);
+        checkVisualID = winInfo.fVisualInfo->visualid;
+    }
+#else
+    (void)temporary;
 #endif
-    winInfo.fWidth = GetWidth();
-    winInfo.fHeight = GetHeight();
-    switch (SkiaHelper::renderMethodToUse())
+    switch (renderMethod)
     {
         case SkiaHelper::RenderRaster:
             // TODO The Skia Xlib code actually requires the non-native color type to work properly.
             displayParams.fColorType
                 = (displayParams.fColorType == kBGRA_8888_SkColorType ? kRGBA_8888_SkColorType
                                                                       : kBGRA_8888_SkColorType);
-            mWindowContext
-                = sk_app::window_context_factory::MakeRasterForXlib(winInfo, displayParams);
-            mIsGPU = false;
-            break;
+            return sk_app::window_context_factory::MakeRasterForXlib(winInfo, displayParams);
         case SkiaHelper::RenderVulkan:
-            mWindowContext
-                = sk_app::window_context_factory::MakeVulkanForXlib(winInfo, displayParams);
-            mIsGPU = true;
-            break;
+            return sk_app::window_context_factory::MakeVulkanForXlib(winInfo, displayParams);
     }
+    abort();
 }
 
 bool X11SkiaSalGraphicsImpl::avoidRecreateByResize() const
@@ -99,6 +118,7 @@ bool X11SkiaSalGraphicsImpl::avoidRecreateByResize() const
 
 void X11SkiaSalGraphicsImpl::DeInit()
 {
+    SkiaZone zone;
     SkiaSalGraphicsImpl::DeInit();
     mWindowContext.reset();
 }
@@ -107,9 +127,37 @@ void X11SkiaSalGraphicsImpl::freeResources() {}
 
 void X11SkiaSalGraphicsImpl::performFlush()
 {
-    mPendingPixelsToFlush = 0;
+    SkiaZone zone;
     // TODO XPutImage() is somewhat inefficient, XShmPutImage() should be preferred.
     mWindowContext->swapBuffers();
 }
+
+std::unique_ptr<sk_app::WindowContext> createVulkanWindowContext(bool temporary)
+{
+    SalDisplay* salDisplay = vcl_sal::getSalDisplay(GetGenericUnixSalData());
+    const XVisualInfo* visual;
+    XVisualInfo* visuals = nullptr;
+    if (!temporary)
+        visual = &salDisplay->GetVisual(salDisplay->GetDefaultXScreen());
+    else
+    {
+        // SalVisual from salDisplay may not be setup yet at this point, get
+        // info for the default visual.
+        XVisualInfo search;
+        search.visualid = XVisualIDFromVisual(
+            DefaultVisual(salDisplay->GetDisplay(), salDisplay->GetDefaultXScreen().getXScreen()));
+        int count;
+        visuals = XGetVisualInfo(salDisplay->GetDisplay(), VisualIDMask, &search, &count);
+        assert(count == 1);
+        visual = visuals;
+    }
+    std::unique_ptr<sk_app::WindowContext> ret = X11SkiaSalGraphicsImpl::createWindowContext(
+        salDisplay->GetDisplay(), None, visual, 1, 1, SkiaHelper::RenderVulkan, temporary);
+    if (temporary)
+        XFree(visuals);
+    return ret;
+}
+
+void X11SkiaSalGraphicsImpl::prepareSkia() { SkiaHelper::prepareSkia(createVulkanWindowContext); }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

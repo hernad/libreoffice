@@ -23,6 +23,7 @@
 #include <tools/toolsdllapi.h>
 #include <com/sun/star/uno/Any.hxx>
 #include <basegfx/color/bcolor.hxx>
+#include <osl/endian.h>
 
 namespace color
 {
@@ -242,7 +243,7 @@ inline void Color::Merge( const Color& rMergeColor, sal_uInt8 cTransparency )
 // to reduce the noise when moving these into and out of Any
 inline bool operator >>=( const css::uno::Any & rAny, Color & value )
 {
-  sal_Int32 nTmp;
+  sal_Int32 nTmp = {}; // spurious -Werror=maybe-uninitialized
   if (!(rAny >>= nTmp))
       return false;
   value = Color(nTmp);
@@ -253,13 +254,13 @@ inline void operator <<=( css::uno::Any & rAny, Color value )
 {
     rAny <<= sal_Int32(value);
 }
-namespace com { namespace sun { namespace star { namespace uno {
+namespace com::sun::star::uno {
     template<>
     inline Any makeAny( Color const & value )
     {
         return Any(sal_Int32(value));
     }
-} } } }
+}
 
 // Test compile time conversion of Color to sal_uInt32
 

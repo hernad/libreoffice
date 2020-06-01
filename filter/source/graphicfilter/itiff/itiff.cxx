@@ -269,7 +269,7 @@ sal_uInt32 TIFFReader::ReadIntData()
         break;
         case 11 :
             pTIFF->ReadFloat( nFLOAT );
-            if (!rtl::math::isNan(nFLOAT) && nFLOAT > SAL_MIN_INT32 - 1.0
+            if (!std::isnan(nFLOAT) && nFLOAT > SAL_MIN_INT32 - 1.0
                 && nFLOAT < SAL_MAX_INT32 + 1.0)
             {
                 nUINT32a = static_cast<sal_Int32>(nFLOAT);
@@ -281,7 +281,7 @@ sal_uInt32 TIFFReader::ReadIntData()
         break;
         case 12 :
             pTIFF->ReadDouble( nDOUBLE );
-            if (!rtl::math::isNan(nDOUBLE) && nDOUBLE > SAL_MIN_INT32 - 1.0
+            if (!std::isnan(nDOUBLE) && nDOUBLE > SAL_MIN_INT32 - 1.0
                 && nDOUBLE < SAL_MAX_INT32 + 1.0)
             {
                 nUINT32a = static_cast<sal_Int32>(nDOUBLE);
@@ -1218,23 +1218,23 @@ void TIFFReader::MakePalCol()
         }
     }
 
-    if ( fXResolution > 1.0 && fYResolution > 1.0 && ( nResolutionUnit == 2 || nResolutionUnit == 3 ) )
+    if ( !(fXResolution > 1.0 && fYResolution > 1.0 && ( nResolutionUnit == 2 || nResolutionUnit == 3 )) )
+        return;
+
+    sal_uInt32 nRX, nRY;
+    if (nResolutionUnit==2)
     {
-        sal_uInt32 nRX, nRY;
-        if (nResolutionUnit==2)
-        {
-            nRX=static_cast<sal_uInt32>(fXResolution+0.5);
-            nRY=static_cast<sal_uInt32>(fYResolution+0.5);
-        }
-        else
-        {
-            nRX=static_cast<sal_uInt32>(fXResolution*2.54+0.5);
-            nRY=static_cast<sal_uInt32>(fYResolution*2.54+0.5);
-        }
-        MapMode aMapMode(MapUnit::MapInch,Point(0,0),Fraction(1,nRX),Fraction(1,nRY));
-        maBitmapPrefMapMode = aMapMode;
-        maBitmapPrefSize = Size(nImageWidth,nImageLength);
+        nRX=static_cast<sal_uInt32>(fXResolution+0.5);
+        nRY=static_cast<sal_uInt32>(fYResolution+0.5);
     }
+    else
+    {
+        nRX=static_cast<sal_uInt32>(fXResolution*2.54+0.5);
+        nRY=static_cast<sal_uInt32>(fYResolution*2.54+0.5);
+    }
+    MapMode aMapMode(MapUnit::MapInch,Point(0,0),Fraction(1,nRX),Fraction(1,nRY));
+    maBitmapPrefMapMode = aMapMode;
+    maBitmapPrefSize = Size(nImageWidth,nImageLength);
 }
 
 

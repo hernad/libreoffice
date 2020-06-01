@@ -21,7 +21,7 @@
 #define INCLUDED_VCL_INC_TOOLBOX_H
 
 #include <vcl/toolbox.hxx>
-#include <vcl/controllayout.hxx>
+#include <vcl/toolkit/controllayout.hxx>
 
 #include <vector>
 
@@ -35,6 +35,7 @@ namespace vcl { class Window; }
 struct ImplToolItem
 {
     VclPtr<vcl::Window> mpWindow; //don't dispose mpWindow - we get copied around
+    bool                mbNonInteractiveWindow;
     void*               mpUserData;
     Image               maImage;
     long                mnImageAngle;

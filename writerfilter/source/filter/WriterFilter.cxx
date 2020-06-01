@@ -44,6 +44,7 @@
 #include <rtl/ref.hxx>
 #include <sal/log.hxx>
 #include <tools/diagnose_ex.h>
+#include <comphelper/scopeguard.hxx>
 
 using namespace ::com::sun::star;
 
@@ -155,6 +156,11 @@ sal_Bool WriterFilter::filter(const uno::Sequence<beans::PropertyValue>& rDescri
     }
     if (m_xDstDoc.is())
     {
+        uno::Reference<beans::XPropertySet> const xDocProps(m_xDstDoc, uno::UNO_QUERY);
+        xDocProps->setPropertyValue("UndocumentedWriterfilterHack", uno::makeAny(true));
+        comphelper::ScopeGuard g([xDocProps] {
+            xDocProps->setPropertyValue("UndocumentedWriterfilterHack", uno::makeAny(false));
+        });
         utl::MediaDescriptor aMediaDesc(rDescriptor);
         bool bRepairStorage = aMediaDesc.getUnpackedValueOrDefault("RepairPackage", false);
         bool bSkipImages
@@ -251,7 +257,7 @@ sal_Bool WriterFilter::filter(const uno::Sequence<beans::PropertyValue>& rDescri
                 pDocStream, writerfilter::ooxml::OOXMLStream::VBAPROJECT));
         oox::StorageRef xVbaPrjStrg = std::make_shared<::oox::ole::OleStorage>(
             m_xContext, pVBAProjectStream->getDocumentStream(), false);
-        if (xVbaPrjStrg.get() && xVbaPrjStrg->isStorage())
+        if (xVbaPrjStrg && xVbaPrjStrg->isStorage())
         {
             ::oox::ole::VbaProject aVbaProject(m_xContext, xModel, "Writer");
             uno::Reference<frame::XFrame> xFrame = aMediaDesc.getUnpackedValueOrDefault(
@@ -279,6 +285,8 @@ sal_Bool WriterFilter::filter(const uno::Sequence<beans::PropertyValue>& rDescri
         }
 
         pStream.clear();
+
+        // note: pStream.clear calls RemoveLastParagraph()
 
         return true;
     }

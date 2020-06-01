@@ -19,6 +19,7 @@
 #include <memory>
 #include <thread>
 #include <chrono>
+#include <comphelper/debuggerinfo.hxx>
 
 #if defined HAVE_VALGRIND_HEADERS
 #include <valgrind/memcheck.h>
@@ -239,10 +240,13 @@ void ThreadPool::waitUntilDone(const std::shared_ptr<ThreadTaskTag>& rTag, bool 
 
         if( maWorkers.empty() )
         { // no threads at all -> execute the work in-line
-            std::unique_ptr<ThreadTask> pTask;
-            while (!rTag->isDone() &&
-                   ( pTask = popWorkLocked(aGuard, false) ) )
+            while (!rTag->isDone())
+            {
+                std::unique_ptr<ThreadTask> pTask = popWorkLocked(aGuard, false);
+                if (!pTask)
+                    break;
                 pTask->exec();
+            }
         }
     }
 
@@ -319,36 +323,6 @@ bool ThreadTaskTag::isDone()
     std::scoped_lock< std::mutex > aGuard( maMutex );
     return mnTasksWorking == 0;
 }
-
-#if defined DBG_UTIL && !defined NDEBUG
-static bool isDebuggerAttached()
-{
-#if defined(_WIN32)
-    return IsDebuggerPresent();
-#elif defined LINUX
-    char buf[ 4096 ];
-    int fd = open( "/proc/self/status", O_RDONLY );
-    if( fd < 0 )
-        return false;
-    int size = read( fd, buf, sizeof( buf ) - 1 );
-    close( fd );
-    if( size < 0 )
-        return false;
-    assert( size < int( sizeof( buf )) - 1 );
-    buf[ sizeof( buf ) - 1 ] = '\0';
-    // "TracerPid: <pid>" for pid != 0 means something is attached
-    const char* pos = strstr( buf, "TracerPid:" );
-    if( pos == nullptr )
-        return false;
-    pos += strlen( "TracerPid:" );
-    while( *pos != '\n' && isspace( *pos ))
-        ++pos;
-    return *pos != '\n' && *pos != '0';
-#else
-    return false; // feel free to add your platform
-#endif
-}
-#endif
 
 void ThreadTaskTag::waitUntilDone()
 {

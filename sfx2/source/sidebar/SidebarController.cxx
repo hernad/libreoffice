@@ -18,15 +18,15 @@
  */
 #include <sfx2/sidebar/SidebarController.hxx>
 #include <sfx2/sidebar/Deck.hxx>
-#include <sfx2/sidebar/DeckDescriptor.hxx>
-#include <sfx2/sidebar/DeckTitleBar.hxx>
+#include <sidebar/DeckDescriptor.hxx>
+#include <sidebar/DeckTitleBar.hxx>
 #include <sfx2/sidebar/Panel.hxx>
-#include <sfx2/sidebar/PanelDescriptor.hxx>
-#include <sfx2/sidebar/PanelTitleBar.hxx>
+#include <sidebar/PanelDescriptor.hxx>
+#include <sidebar/PanelTitleBar.hxx>
 #include <sfx2/sidebar/TabBar.hxx>
 #include <sfx2/sidebar/Theme.hxx>
 #include <sfx2/sidebar/SidebarChildWindow.hxx>
-#include <sfx2/sidebar/Tools.hxx>
+#include <sidebar/Tools.hxx>
 #include <sfx2/sidebar/SidebarDockingWindow.hxx>
 #include <sfx2/sidebar/Context.hxx>
 
@@ -71,13 +71,13 @@ namespace
     const static sal_Int32 gnWidthCloseThreshold (70);
     const static sal_Int32 gnWidthOpenThreshold (40);
 
-    std::string UnoNameFromDeckId(const OUString& rsDeckId)
+    std::string UnoNameFromDeckId(const OUString& rsDeckId, bool isImpress = false)
     {
         if (rsDeckId == "SdCustomAnimationDeck")
             return ".uno:CustomAnimation";
 
         if (rsDeckId == "PropertyDeck")
-            return ".uno:Sidebar";
+            return isImpress ? ".uno:ModifyPage" : ".uno:Sidebar";
 
         if (rsDeckId == "SdLayoutsDeck")
             return ".uno:ModifyPage";
@@ -236,7 +236,7 @@ void SidebarController::disposeDecks()
     {
         if (const SfxViewShell* pViewShell = mpViewFrame->GetViewShell())
         {
-            const std::string hide = UnoNameFromDeckId(msCurrentDeckId);
+            const std::string hide = UnoNameFromDeckId(msCurrentDeckId, vcl::EnumContext::Application::Impress == vcl::EnumContext::GetApplicationEnum(GetCurrentContext().msApplication));
             if (!hide.empty())
                 pViewShell->libreOfficeKitViewCallback(LOK_CALLBACK_STATE_CHANGED,
                                                        (hide + "=false").c_str());
@@ -427,7 +427,9 @@ void SidebarController::NotifyResize()
                 // it's the PropertyDeck that really has many panes
                 // that can collapse or expand. For others, limit
                 // the height to something sensible.
-                const sal_Int32 nExtHeight = (msCurrentDeckId == "PropertyDeck" ? 2000 : 600);
+                // tdf#130348: Add special case for ChartDeck, too.
+                const sal_Int32 nExtHeight = (msCurrentDeckId == "PropertyDeck" ? 2000 :
+                                              (msCurrentDeckId == "ChartDeck" ? 1200 : 600));
                 // No TabBar in LOK (use nWidth in full).
                 mpCurrentDeck->setPosSizePixel(nDeckX, 0, nWidth, nExtHeight);
             }
@@ -754,13 +756,13 @@ void SidebarController::SwitchToDeck (
         {
             if (msCurrentDeckId != rDeckDescriptor.msId)
             {
-                const std::string hide = UnoNameFromDeckId(msCurrentDeckId);
+                const std::string hide = UnoNameFromDeckId(msCurrentDeckId, vcl::EnumContext::Application::Impress == vcl::EnumContext::GetApplicationEnum(GetCurrentContext().msApplication));
                 if (!hide.empty())
                     pViewShell->libreOfficeKitViewCallback(LOK_CALLBACK_STATE_CHANGED,
                                                            (hide + "=false").c_str());
             }
 
-            const std::string show = UnoNameFromDeckId(rDeckDescriptor.msId);
+            const std::string show = UnoNameFromDeckId(rDeckDescriptor.msId, vcl::EnumContext::Application::Impress == vcl::EnumContext::GetApplicationEnum(GetCurrentContext().msApplication));
             if (!show.empty())
                 pViewShell->libreOfficeKitViewCallback(LOK_CALLBACK_STATE_CHANGED,
                                                        (show + "=true").c_str());
@@ -939,7 +941,7 @@ Reference<ui::XUIElement> SidebarController::CreateUIElement (
         aCreationArguments.put("ParentWindow", makeAny(rxWindow));
         SfxDockingWindow* pSfxDockingWindow = dynamic_cast<SfxDockingWindow*>(mpParentWindow.get());
         if (pSfxDockingWindow != nullptr)
-            aCreationArguments.put("SfxBindings", makeAny(sal_uInt64(&pSfxDockingWindow->GetBindings())));
+            aCreationArguments.put("SfxBindings", makeAny(reinterpret_cast<sal_uInt64>(&pSfxDockingWindow->GetBindings())));
         aCreationArguments.put("Theme", Theme::GetPropertySet());
         aCreationArguments.put("Sidebar", makeAny(Reference<ui::XSidebar>(static_cast<ui::XSidebar*>(this))));
         if (bWantsCanvas)
@@ -1216,13 +1218,14 @@ IMPL_LINK(SidebarController, OnMenuItemSelected, Menu*, pMenu, bool)
 
 void SidebarController::RequestCloseDeck()
 {
-    if (comphelper::LibreOfficeKit::isActive() && mpCurrentDeck.get())
+    if (comphelper::LibreOfficeKit::isActive() && mpCurrentDeck)
     {
         const vcl::ILibreOfficeKitNotifier* pNotifier = mpCurrentDeck->GetLOKNotifier();
         auto pMobileNotifier = SfxViewShell::Current();
-        if (pMobileNotifier && comphelper::LibreOfficeKit::isMobile(SfxLokHelper::getView()))
+        const SfxViewShell* pViewShell = SfxViewShell::Current();
+        if (pMobileNotifier && pViewShell && pViewShell->isLOKMobilePhone())
         {
-            // Mobile.
+            // Mobile phone.
             std::stringstream aStream;
             boost::property_tree::ptree aTree;
             aTree.put("id", mpParentWindow->get_id()); // TODO could be missing - sort out
@@ -1240,7 +1243,7 @@ void SidebarController::RequestCloseDeck()
     mbIsDeckRequestedOpen = false;
     UpdateDeckOpenState();
 
-    if (!mpCurrentDeck.get())
+    if (!mpCurrentDeck)
         mpTabBar->RemoveDeckHighlight();
 }
 
@@ -1310,7 +1313,7 @@ void SidebarController::UpdateDeckOpenState()
 
                 if (const SfxViewShell* pViewShell = mpViewFrame->GetViewShell())
                 {
-                    const std::string uno = UnoNameFromDeckId(msCurrentDeckId);
+                    const std::string uno = UnoNameFromDeckId(msCurrentDeckId, vcl::EnumContext::Application::Impress == vcl::EnumContext::GetApplicationEnum(GetCurrentContext().msApplication));
                     if (!uno.empty())
                         pViewShell->libreOfficeKitViewCallback(LOK_CALLBACK_STATE_CHANGED,
                                                                 (uno + "=true").c_str());
@@ -1348,7 +1351,7 @@ void SidebarController::UpdateDeckOpenState()
 
                 if (const SfxViewShell* pViewShell = mpViewFrame->GetViewShell())
                 {
-                    const std::string uno = UnoNameFromDeckId(msCurrentDeckId);
+                    const std::string uno = UnoNameFromDeckId(msCurrentDeckId, vcl::EnumContext::Application::Impress == vcl::EnumContext::GetApplicationEnum(GetCurrentContext().msApplication));
                     if (!uno.empty())
                         pViewShell->libreOfficeKitViewCallback(LOK_CALLBACK_STATE_CHANGED,
                                                                 (uno + "=false").c_str());

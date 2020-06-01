@@ -16,23 +16,17 @@
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
-#include <o3tl/optional.hxx>
+#include <optional>
 #include "DomainMapperTableManager.hxx"
-#include "BorderHandler.hxx"
-#include "CellColorHandler.hxx"
-#include "CellMarginHandler.hxx"
 #include "ConversionHelper.hxx"
 #include "MeasureHandler.hxx"
-#include "TDefTableHandler.hxx"
-#include <com/sun/star/text/HoriOrientation.hpp>
+#include "TagLogger.hxx"
 #include <com/sun/star/text/SizeType.hpp>
 #include <com/sun/star/text/TableColumnSeparator.hpp>
-#include <com/sun/star/text/VertOrientation.hpp>
 #include <com/sun/star/text/WritingMode2.hpp>
 #include <o3tl/numeric.hxx>
 #include <o3tl/safeint.hxx>
 #include <ooxml/resourceids.hxx>
-#include "DomainMapper.hxx"
 #include <rtl/math.hxx>
 #include <sal/log.hxx>
 #include <numeric>
@@ -50,12 +44,13 @@ DomainMapperTableManager::DomainMapperTableManager() :
     m_nGridAfter(0),
     m_nHeaderRepeat(0),
     m_nTableWidth(0),
-    m_bIsUnfloatTable(false),
+    m_bIsInShape(false),
     m_aTmpPosition(),
     m_aTmpTableProperties(),
     m_bPushCurrentWidth(false),
     m_bTableSizeTypeInserted(false),
     m_nLayoutType(0),
+    m_aParagraphsToEndTable(),
     m_pTablePropsHandler(new TablePropertiesHandler())
 {
     m_pTablePropsHandler->SetTableManager( this );
@@ -140,7 +135,7 @@ bool DomainMapperTableManager::sprm(Sprm & rSprm)
             {
                 //contains unit and value
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                if( pProperties.get())
+                if( pProperties )
                 {
                     MeasureHandlerPtr pMeasureHandler( new MeasureHandler );
                     pProperties->resolve(*pMeasureHandler);
@@ -184,6 +179,12 @@ bool DomainMapperTableManager::sprm(Sprm & rSprm)
                                 // Set the width type of table with 'Auto' and set the width value to 0 (as per grid values)
                                 pPropMap->setValue( TablePropertyMap::TABLE_WIDTH_TYPE, text::SizeType::VARIABLE );
                                 pPropMap->setValue( TablePropertyMap::TABLE_WIDTH, 0 );
+                                m_bTableSizeTypeInserted = true;
+                            }
+                            else if (getTableDepth() > 1)
+                            {
+                                // tdf#131819 limiting the fix for nested tables temporarily
+                                // TODO revert the fix for tdf#104876 and reopen it
                                 m_bTableSizeTypeInserted = true;
                             }
                         }
@@ -244,9 +245,8 @@ bool DomainMapperTableManager::sprm(Sprm & rSprm)
             break;
             case NS_ooxml::LN_CT_TblPrBase_tblStyle: //table style name
             {
-                m_sTableStyleName = pValue->getString();
                 TablePropertyMapPtr pPropMap( new TablePropertyMap );
-                pPropMap->Insert( META_PROP_TABLE_STYLE_NAME, uno::makeAny( m_sTableStyleName ));
+                pPropMap->Insert( META_PROP_TABLE_STYLE_NAME, uno::makeAny( pValue->getString() ));
                 insertTableProps(pPropMap);
             }
             break;
@@ -322,7 +322,7 @@ bool DomainMapperTableManager::sprm(Sprm & rSprm)
                     // us, later we'll just distribute these values in a
                     // 0..10000 scale.
                     writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                    if( pProperties.get())
+                    if( pProperties )
                     {
                         MeasureHandlerPtr pMeasureHandler(new MeasureHandler());
                         pProperties->resolve(*pMeasureHandler);
@@ -339,8 +339,8 @@ bool DomainMapperTableManager::sprm(Sprm & rSprm)
             case NS_ooxml::LN_CT_TblPrBase_tblpPr:
                 {
                     writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                    // Ignore <w:tblpPr> in shape text or in table-only header, those tables should be always non-floating ones.
-                    if (!m_bIsUnfloatTable && pProperties.get())
+                    // Ignore <w:tblpPr> in shape text, those tables should be always non-floating ones.
+                    if (!m_bIsInShape && pProperties)
                     {
                         TablePositionHandlerPtr pHandler = m_aTmpPosition.back();
                         if ( !pHandler )
@@ -425,9 +425,14 @@ TablePositionHandler* DomainMapperTableManager::getCurrentTableRealPosition()
         return nullptr;
 }
 
-void DomainMapperTableManager::setIsUnfloatTable(bool bIsUnfloatTable)
+TableParagraphVectorPtr DomainMapperTableManager::getCurrentParagraphs( )
 {
-    m_bIsUnfloatTable = bIsUnfloatTable;
+    return m_aParagraphsToEndTable.top( );
+}
+
+void DomainMapperTableManager::setIsInShape(bool bIsInShape)
+{
+    m_bIsInShape = bIsInShape;
 }
 
 void DomainMapperTableManager::startLevel( )
@@ -435,11 +440,17 @@ void DomainMapperTableManager::startLevel( )
     TableManager::startLevel( );
 
     // If requested, pop the value that was pushed too early.
-    o3tl::optional<sal_Int32> oCurrentWidth;
+    std::optional<sal_Int32> oCurrentWidth;
     if (m_bPushCurrentWidth && !m_aCellWidths.empty() && !m_aCellWidths.back()->empty())
     {
         oCurrentWidth = m_aCellWidths.back()->back();
         m_aCellWidths.back()->pop_back();
+    }
+    std::optional<TableParagraph> oParagraph;
+    if (getTableDepthDifference() > 0 && !m_aParagraphsToEndTable.empty() && !m_aParagraphsToEndTable.top()->empty())
+    {
+        oParagraph = m_aParagraphsToEndTable.top()->back();
+        m_aParagraphsToEndTable.top()->pop_back();
     }
 
     IntVectorPtr pNewGrid = std::make_shared<vector<sal_Int32>>();
@@ -450,6 +461,8 @@ void DomainMapperTableManager::startLevel( )
     m_aGridSpans.push_back( pNewSpans );
     m_aCellWidths.push_back( pNewCellWidths );
     m_aTablePositions.push_back( pNewPositionHandler );
+    // empty name will be replaced by the table style name, if it exists
+    m_aTableStyleNames.push_back( OUString() );
 
     TablePositionHandlerPtr pTmpPosition;
     TablePropertyMapPtr pTmpProperties( new TablePropertyMap( ) );
@@ -459,10 +472,14 @@ void DomainMapperTableManager::startLevel( )
     m_aGridBefore.push_back( 0 );
     m_nTableWidth = 0;
     m_nLayoutType = 0;
+    TableParagraphVectorPtr pNewParagraphs = std::make_shared<vector<TableParagraph>>();
+    m_aParagraphsToEndTable.push( pNewParagraphs );
 
     // And push it back to the right level.
     if (oCurrentWidth)
         m_aCellWidths.back()->push_back(*oCurrentWidth);
+    if (oParagraph)
+        m_aParagraphsToEndTable.top()->push_back(*oParagraph);
 }
 
 void DomainMapperTableManager::endLevel( )
@@ -477,7 +494,7 @@ void DomainMapperTableManager::endLevel( )
     m_aGridSpans.pop_back( );
 
     // Do the same trick as in startLevel(): pop the value that was pushed too early.
-    o3tl::optional<sal_Int32> oCurrentWidth;
+    std::optional<sal_Int32> oCurrentWidth;
     if (m_bPushCurrentWidth && !m_aCellWidths.empty() && !m_aCellWidths.back()->empty())
         oCurrentWidth = m_aCellWidths.back()->back();
     m_aCellWidths.pop_back( );
@@ -506,6 +523,8 @@ void DomainMapperTableManager::endLevel( )
     // Pop back the table position after endLevel as it's used
     // in the endTable method called in endLevel.
     m_aTablePositions.pop_back();
+    m_aTableStyleNames.pop_back();
+    m_aParagraphsToEndTable.pop();
 }
 
 void DomainMapperTableManager::endOfCellAction()
@@ -521,13 +540,25 @@ void DomainMapperTableManager::endOfCellAction()
     ++m_nCell.back( );
 }
 
+bool DomainMapperTableManager::shouldInsertRow(IntVectorPtr pCellWidths, IntVectorPtr pTableGrid, size_t nGrids, bool& rIsIncompleteGrid)
+{
+    if (pCellWidths->empty())
+        return false;
+    if (m_nLayoutType == NS_ooxml::LN_Value_doc_ST_TblLayout_fixed)
+        return true;
+    if (pCellWidths->size() == (nGrids + m_nGridAfter))
+        return true;
+    rIsIncompleteGrid = true;
+    return nGrids + m_nGridAfter > pTableGrid->size();
+}
+
 void DomainMapperTableManager::endOfRowAction()
 {
 #ifdef DBG_UTIL
     TagLogger::getInstance().startElement("endOfRowAction");
 #endif
 
-    // Compare the table position with the previous ones. We may need to split
+    // Compare the table position and style with the previous ones. We may need to split
     // into two tables if those are different. We surely don't want to do anything
     // if we don't have any row yet.
     TablePositionHandlerPtr pTmpPosition = m_aTmpPosition.back();
@@ -535,7 +566,13 @@ void DomainMapperTableManager::endOfRowAction()
     TablePositionHandlerPtr pCurrentPosition = m_aTablePositions.back();
     bool bSamePosition = ( pTmpPosition == pCurrentPosition ) ||
                          ( pTmpPosition && pCurrentPosition && *pTmpPosition == *pCurrentPosition );
-    if ( !bSamePosition && m_nRow > 0 )
+    bool bIsSetTableStyle = pTablePropMap->isSet(META_PROP_TABLE_STYLE_NAME);
+    OUString sTableStyleName;
+    bool bSameTableStyle = ( !bIsSetTableStyle && m_aTableStyleNames.back().isEmpty()) ||
+            ( bIsSetTableStyle &&
+              (pTablePropMap->getProperty(META_PROP_TABLE_STYLE_NAME)->second >>= sTableStyleName) &&
+              sTableStyleName == m_aTableStyleNames.back() );
+    if ( (!bSamePosition || !bSameTableStyle) && m_nRow > 0 )
     {
         // Save the grid infos to have them survive the end/start level
         IntVectorPtr pTmpTableGrid = m_aTableGrid.back();
@@ -561,6 +598,13 @@ void DomainMapperTableManager::endOfRowAction()
         m_aCellWidths.push_back(pTmpCellWidths);
         m_nCell.push_back(nTmpCell);
         m_aGridBefore.push_back(nTmpGridBefore);
+    }
+    // save table style in the first row for comparison
+    if ( m_nRow == 0 && pTablePropMap->isSet(META_PROP_TABLE_STYLE_NAME) )
+    {
+        pTablePropMap->getProperty(META_PROP_TABLE_STYLE_NAME)->second >>= sTableStyleName;
+        m_aTableStyleNames.pop_back();
+        m_aTableStyleNames.push_back( sTableStyleName );
     }
 
     // Push the tmp position now that we compared it
@@ -640,6 +684,7 @@ void DomainMapperTableManager::endOfRowAction()
     for (int i : (*pTableGrid))
         nFullWidthRelative = o3tl::saturating_add(nFullWidthRelative, i);
 
+    bool bIsIncompleteGrid = false;
     if( pTableGrid->size() == ( nGrids + m_nGridAfter ) && m_nCell.back( ) > 0 )
     {
         /*
@@ -706,10 +751,7 @@ void DomainMapperTableManager::endOfRowAction()
 #endif
         insertRowProps(pPropMap);
     }
-    else if ( !pCellWidths->empty() &&
-               ( m_nLayoutType == NS_ooxml::LN_Value_doc_ST_TblLayout_fixed
-                 || pCellWidths->size() == ( nGrids + m_nGridAfter ) )
-             )
+    else if (shouldInsertRow(pCellWidths, pTableGrid, nGrids, bIsIncompleteGrid))
     {
         // If we're here, then the number of cells does not equal to the amount
         // defined by the grid, even after taking care of
@@ -719,20 +761,53 @@ void DomainMapperTableManager::endOfRowAction()
         // On the other hand even if the layout is not fixed, but the cell widths
         // provided equal the total number of cells, and there are no after/before cells
         // then use the cell widths to calculate the column separators.
+        // Also handle autofit tables with incomplete grids, when rows can have
+        // different widths and last cells can be wider, than their values.
         uno::Sequence< text::TableColumnSeparator > aSeparators(pCellWidths->size() - 1);
         text::TableColumnSeparator* pSeparators = aSeparators.getArray();
         sal_Int16 nSum = 0;
         sal_uInt32 nPos = 0;
+
+        if (bIsIncompleteGrid)
+            nFullWidthRelative = 0;
+
         // Avoid divide by zero (if there's no grid, position using cell widths).
         if( nFullWidthRelative == 0 )
             for (size_t i = 0; i < pCellWidths->size(); ++i)
                 nFullWidthRelative += (*pCellWidths)[i];
+
+        if (bIsIncompleteGrid)
+        {
+            /*
+             * If table width property set earlier is smaller than the current table row width,
+             * then replace the TABLE_WIDTH property, set earlier.
+             */
+            sal_Int32 nFullWidth = static_cast<sal_Int32>(ceil(ConversionHelper::convertTwipToMM100Double(nFullWidthRelative)));
+            sal_Int32 nTableWidth(0);
+            sal_Int32 nTableWidthType(text::SizeType::VARIABLE);
+            pTablePropMap->getValue(TablePropertyMap::TABLE_WIDTH, nTableWidth);
+            pTablePropMap->getValue(TablePropertyMap::TABLE_WIDTH_TYPE, nTableWidthType);
+            if (nTableWidth < nFullWidth)
+            {
+                pTablePropMap->setValue(TablePropertyMap::TABLE_WIDTH, nFullWidth);
+            }
+        }
 
         size_t nWidthsBound = pCellWidths->size() - 1;
         if (nWidthsBound)
         {
             if (nFullWidthRelative == 0)
                 throw o3tl::divide_by_zero();
+
+            // At incomplete table grids, last cell width can be smaller, than its final width.
+            // Correct it based on the last but one column width and their span values.
+            if ( bIsIncompleteGrid && pCurrentSpans->size()-1 == nWidthsBound )
+            {
+                auto aSpansIter = std::next(pCurrentSpans->begin( ), nWidthsBound - 1);
+                sal_Int32 nFixLastCellWidth = (*pCellWidths)[nWidthsBound-1] / *aSpansIter * *std::next(aSpansIter);
+                if (nFixLastCellWidth > (*pCellWidths)[nWidthsBound])
+                    nFullWidthRelative += nFixLastCellWidth - (*pCellWidths)[nWidthsBound];
+            }
 
             for (size_t i = 0; i < nWidthsBound; ++i)
             {
@@ -778,7 +853,6 @@ void DomainMapperTableManager::endOfRowAction()
 void DomainMapperTableManager::clearData()
 {
     m_nRow = m_nHeaderRepeat = m_nTableWidth = m_nLayoutType = 0;
-    m_sTableStyleName.clear();
 }
 
 }

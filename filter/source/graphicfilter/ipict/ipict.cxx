@@ -224,7 +224,7 @@ private:
     // returns true if there's no need to print the shape/text/frame
     bool IsInvisible( PictDrawingMethod eMethod ) const {
       if ( eActROP == RasterOp::N1 ) return true;
-      if ( eMethod == PictDrawingMethod::FRAME && ( nActPenSize.Width() == 0 || nActPenSize.Height() == 0 ) ) return true;
+      if ( eMethod == PictDrawingMethod::FRAME && nActPenSize.IsEmpty() ) return true;
       return false;
     }
 
@@ -454,6 +454,13 @@ void PictReader::ReadRectangle(tools::Rectangle & rRect)
 
     aTopLeft=ReadPoint();
     aBottomRight=ReadPoint();
+    if (aTopLeft.X() > aBottomRight.X() || aTopLeft.Y() > aBottomRight.Y())
+    {
+        SAL_WARN("filter.pict", "broken rectangle");
+        pPict->SetError( SVSTREAM_FILEFORMAT_ERROR );
+        rRect = tools::Rectangle();
+        return;
+    }
     rRect=tools::Rectangle(aTopLeft,aBottomRight);
 
     SAL_INFO("filter.pict", "ReadRectangle: " << rRect);
@@ -743,7 +750,6 @@ sal_uInt64 PictReader::ReadPixMapEtc( BitmapEx &rBitmap, bool bBaseAddr, bool bC
     nWidth = nWidth - nBndX;
     if (nWidth == 0)
         return 0xffffffff;
-    sal_uInt16 nDstBitCount = 1;
 
     std::vector<Color> aPalette;
     const bool bNotMonoChrome = (nRowBytes & 0x8000) != 0;
@@ -759,12 +765,6 @@ sal_uInt64 PictReader::ReadPixMapEtc( BitmapEx &rBitmap, bool bBaseAddr, bool bC
 
         pPict->SeekRel( 8 );
         nDataSize += 46;
-
-        nDstBitCount = nPixelSize;
-        if ( nDstBitCount > 8 )
-            nDstBitCount = 24;
-        else if ( nDstBitCount == 2 )
-            nDstBitCount = 4;
 
         if ( bColorTable )
         {
@@ -1084,6 +1084,9 @@ sal_uInt64 PictReader::ReadPixMapEtc( BitmapEx &rBitmap, bool bBaseAddr, bool bC
                     return 0xffffffff;
 
                 pBitmap.reset(new vcl::bitmap::RawBitmap( Size(nWidth, nHeight), 24 ));
+
+                // cid#1458434 to sanitize Untrusted loop bound
+                nWidth = pBitmap->Width();
 
                 size_t nByteWidth = static_cast<size_t>(nWidth) * nCmpCount;
                 std::vector<sal_uInt8> aScanline(nByteWidth);

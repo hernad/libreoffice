@@ -22,6 +22,7 @@
 
 #include "wrtww8.hxx"
 
+#include <sal/log.hxx>
 #include <sax/fshelper.hxx>
 #include <rtl/ustring.hxx>
 
@@ -44,11 +45,11 @@ namespace oox {
     namespace vml { class VMLExport; }
 }
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace frame { class XModel; }
     namespace drawing { class XShape; }
     namespace awt { class XControlModel; }
-} } }
+}
 
 /// Data to be written in the document settings part of the document
 struct DocxSettingsData
@@ -104,7 +105,7 @@ class DocxExport : public MSWordExportBase
     std::unique_ptr<DocxSdrExport> m_pSdrExport;
 
     /// If the result will be a .docm file or not.
-    bool const m_bDocm;
+    bool m_bDocm;
 
     /// Export is done into template (.dotx)
     bool const m_bTemplate;
@@ -130,8 +131,6 @@ public:
     /// Access to the sections/headers/footres.
     virtual MSWordSections& Sections() const override;
 
-    virtual bool SupportsOneColumnBreak() const override { return true; }
-
     virtual bool FieldsQuoted() const override { return true; }
 
     virtual bool AddSectionBreaksForTOX() const override { return true; }
@@ -155,7 +154,7 @@ public:
     OString AddRelation( const OUString& rType, const OUString& rTarget );
 
     virtual void WriteCR( ww8::WW8TableNodeInfoInner::Pointer_t /*pTableTextNodeInfoInner = ww8::WW8TableNodeInfoInner::Pointer_t()*/ ) override { /* FIXME no-op for docx, most probably should not even be in MSWordExportBase */ }
-    virtual void WriteChar( sal_Unicode ) override { /* FIXME */ fprintf( stderr, "HACK! WriteChar() has nothing to do for docx.\n" ); }
+    virtual void WriteChar( sal_Unicode ) override { SAL_WARN("sw.ww8", "FIXME: WriteChar() has nothing to do for docx."); }
 
     /// Return value indicates if an inherited outline numbering is suppressed.
     virtual bool DisallowInheritingOutlineNumbering( const SwFormat &rFormat ) override;

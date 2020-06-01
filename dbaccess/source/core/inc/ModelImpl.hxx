@@ -20,46 +20,20 @@
 #ifndef INCLUDED_DBACCESS_SOURCE_CORE_INC_MODELIMPL_HXX
 #define INCLUDED_DBACCESS_SOURCE_CORE_INC_MODELIMPL_HXX
 
-#include <apitools.hxx>
-#include "bookmarkcontainer.hxx"
 #include "ContentHelper.hxx"
 #include "documentevents.hxx"
 
-#include <com/sun/star/beans/PropertyAttribute.hpp>
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/beans/XPropertyBag.hpp>
-#include <com/sun/star/container/XContainerListener.hpp>
 #include <com/sun/star/document/XDocumentSubStorageSupplier.hpp>
-#include <com/sun/star/document/XEventListener.hpp>
-#include <com/sun/star/document/XStorageBasedDocument.hpp>
-#include <com/sun/star/embed/ElementModes.hpp>
 #include <com/sun/star/embed/XStorage.hpp>
-#include <com/sun/star/embed/XTransactionListener.hpp>
 #include <com/sun/star/frame/XModel.hpp>
-#include <com/sun/star/lang/NotInitializedException.hpp>
-#include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/lang/XSingleServiceFactory.hpp>
 #include <com/sun/star/script/XStorageBasedLibraryContainer.hpp>
-#include <com/sun/star/sdb/XBookmarksSupplier.hpp>
-#include <com/sun/star/sdb/XCompletedConnection.hpp>
-#include <com/sun/star/sdb/XFormDocumentsSupplier.hpp>
-#include <com/sun/star/sdb/XQueryDefinitionsSupplier.hpp>
-#include <com/sun/star/sdb/XReportDocumentsSupplier.hpp>
 #include <com/sun/star/sdbc/XDataSource.hpp>
-#include <com/sun/star/sdbc/XIsolatedConnection.hpp>
-#include <com/sun/star/sdbcx/XTablesSupplier.hpp>
-#include <com/sun/star/util/XCloseable.hpp>
-#include <com/sun/star/util/XFlushable.hpp>
-#include <com/sun/star/util/XModifiable.hpp>
 #include <com/sun/star/util/XNumberFormatsSupplier.hpp>
-#include <com/sun/star/util/XNumberFormatter.hpp>
-#include <com/sun/star/util/XRefreshable.hpp>
-#include <com/sun/star/sdb/XDocumentDataSource.hpp>
 
 #include <comphelper/namedvaluecollection.hxx>
-#include <comphelper/solarmutex.hxx>
-#include <connectivity/CommonTools.hxx>
-#include <cppuhelper/propshlp.hxx>
 #include <cppuhelper/weakref.hxx>
 #include <vcl/svapp.hxx>
 #include <sfx2/docmacromode.hxx>
@@ -166,7 +140,7 @@ private:
     oslInterlockedCount                                 m_refCount;
 
     /// do we have any object (forms/reports) which contains macros?
-    ::o3tl::optional< EmbeddedMacros >                 m_aEmbeddedMacros;
+    ::std::optional< EmbeddedMacros >                 m_aEmbeddedMacros;
 
     /// true if setting the Modified flag of the document is currently locked
     bool                                                m_bModificationLock;
@@ -183,6 +157,8 @@ private:
         been recovered.
     */
     OUString                                     m_sDocumentURL;
+
+    SignatureState m_nScriptingSignatureState;
 
 public:
     OWeakConnectionArray                                                        m_aConnections;
@@ -299,7 +275,7 @@ public:
     void    commitRootStorage();
 
     /// commits a given storage if it's not readonly, ignoring (but asserting) all errors
-    static  bool    commitStorageIfWriteable_ignoreErrors(
+    bool    commitStorageIfWriteable_ignoreErrors(
                 const css::uno::Reference< css::embed::XStorage >& _rxStorage
             );
 

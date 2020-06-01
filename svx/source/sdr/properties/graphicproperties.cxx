@@ -28,10 +28,10 @@
 #include <svx/sdgcpitm.hxx>
 #include <svx/svdmodel.hxx>
 #include <svx/sdgluitm.hxx>
-#include <svx/sdgcoitm.hxx>
+#include <sdgcoitm.hxx>
 #include <svx/sdggaitm.hxx>
-#include <svx/sdgtritm.hxx>
-#include <svx/sdginitm.hxx>
+#include <sdgtritm.hxx>
+#include <sdginitm.hxx>
 #include <svx/sdgmoitm.hxx>
 #include <svx/xfillit0.hxx>
 #include <svx/xlineit0.hxx>
@@ -66,6 +66,8 @@ namespace sdr::properties
 
                 // range from SdrGrafObj
                 SDRATTR_GRAF_FIRST, SDRATTR_GRAF_LAST,
+
+                SDRATTR_GLOW_FIRST, SDRATTR_SOFTEDGE_LAST,
 
                 // range from SdrTextObj
                 EE_ITEMS_START, EE_ITEMS_END>{});

@@ -25,14 +25,14 @@
 #include <com/sun/star/ucb/XContentCreator.hpp>
 #include "ftpurl.hxx"
 
-namespace com { namespace sun { namespace star { namespace beans {
+namespace com::sun::star::beans {
     struct Property;
     struct PropertyValue;
-} } } }
+}
 
-namespace com { namespace sun { namespace star { namespace sdbc {
+namespace com::sun::star::sdbc {
     class XRow;
-} } } }
+}
 
 
 namespace ftp
@@ -113,7 +113,7 @@ private:
     FTPURL              m_aFTPURL;
     bool                m_bInserted;
     bool                m_bTitleSet;
-    css::ucb::ContentInfo const m_aInfo;
+    css::ucb::ContentInfo m_aInfo;
 
     virtual css::uno::Sequence< css::beans::Property >
         getProperties( const css::uno::Reference<

@@ -70,7 +70,7 @@ public:
 // TabPage printer settings additions
 class SwAddPrinterTabPage : public SfxTabPage
 {
-    OUString const sNone;
+    OUString sNone;
     bool bAttrModified;
     bool bPreview;
 
@@ -143,21 +143,21 @@ class SwStdFontTabPage : public SfxTabPage
 
     sal_uInt8 m_nFontGroup; //fontcfg.hxx: FONT_GROUP_[STANDARD|CJK|CTL]
 
-    OUString const m_sScriptWestern;
-    OUString const m_sScriptAsian;
-    OUString const m_sScriptComplex;
+    OUString m_sScriptWestern;
+    OUString m_sScriptAsian;
+    OUString m_sScriptComplex;
 
     std::unique_ptr<weld::Label> m_xLabelFT;
     std::unique_ptr<weld::ComboBox> m_xStandardBox;
-    std::unique_ptr<SvtFontSizeBox> m_xStandardHeightLB;
+    std::unique_ptr<FontSizeBox> m_xStandardHeightLB;
     std::unique_ptr<weld::ComboBox> m_xTitleBox;
-    std::unique_ptr<SvtFontSizeBox> m_xTitleHeightLB;
+    std::unique_ptr<FontSizeBox> m_xTitleHeightLB;
     std::unique_ptr<weld::ComboBox> m_xListBox;
-    std::unique_ptr<SvtFontSizeBox> m_xListHeightLB;
+    std::unique_ptr<FontSizeBox> m_xListHeightLB;
     std::unique_ptr<weld::ComboBox> m_xLabelBox;
-    std::unique_ptr<SvtFontSizeBox> m_xLabelHeightLB;
+    std::unique_ptr<FontSizeBox> m_xLabelHeightLB;
     std::unique_ptr<weld::ComboBox> m_xIdxBox;
-    std::unique_ptr<SvtFontSizeBox> m_xIndexHeightLB;
+    std::unique_ptr<FontSizeBox> m_xIndexHeightLB;
     std::unique_ptr<weld::Button> m_xStandardPB;
 
     DECL_LINK(StandardHdl, weld::Button&, void );
@@ -225,9 +225,11 @@ class SwShdwCursorOptionsTabPage : public SfxTabPage
     std::unique_ptr<weld::CheckButton> m_xSpacesCB;
     std::unique_ptr<weld::CheckButton> m_xHSpacesCB;
     std::unique_ptr<weld::CheckButton> m_xTabCB;
+    std::unique_ptr<weld::Label> m_xTabLabel;
     std::unique_ptr<weld::CheckButton> m_xBreakCB;
     std::unique_ptr<weld::CheckButton> m_xCharHiddenCB;
     std::unique_ptr<weld::CheckButton> m_xBookmarkCB;
+    std::unique_ptr<weld::Label> m_xBookmarkLabel;
 
     std::unique_ptr<weld::Frame> m_xDirectCursorFrame;
     std::unique_ptr<weld::CheckButton> m_xOnOffCB;
@@ -254,7 +256,7 @@ public:
 class SwMarkPreview : public weld::CustomWidgetController
 {
     Color m_aBgCol;    // background
-    Color const m_aTransCol; // transparency
+    Color m_aTransCol; // transparency
     Color m_aMarkCol;  // marks
     Color m_aLineCol;  // general lines
     Color m_aShadowCol; // shadow

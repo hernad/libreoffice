@@ -154,31 +154,31 @@ IMPL_LINK_NOARG(ManageLanguageDialog, DeleteHdl, weld::Button&, void)
 {
     std::unique_ptr<weld::Builder> xBuilder(Application::CreateBuilder(m_xDialog.get(), "modules/BasicIDE/ui/deletelangdialog.ui"));
     std::unique_ptr<weld::MessageDialog> xQBox(xBuilder->weld_message_dialog("DeleteLangDialog"));
-    if (xQBox->run() == RET_OK)
+    if (xQBox->run() != RET_OK)
+        return;
+
+    std::vector<int> aSelection = m_xLanguageLB->get_selected_rows();
+    int nCount = aSelection.size();
+    int nPos = m_xLanguageLB->get_selected_index();
+    // remove locales
+    Sequence< Locale > aLocaleSeq( nCount );
+    for (int i = 0; i < nCount; ++i)
     {
-        std::vector<int> aSelection = m_xLanguageLB->get_selected_rows();
-        int nCount = aSelection.size();
-        int nPos = m_xLanguageLB->get_selected_index();
-        // remove locales
-        Sequence< Locale > aLocaleSeq( nCount );
-        for (int i = 0; i < nCount; ++i)
-        {
-            const sal_Int32 nSelPos = aSelection[i];
-            LanguageEntry* pEntry = reinterpret_cast<LanguageEntry*>(m_xLanguageLB->get_id(nSelPos).toInt64());
-            if ( pEntry )
-                aLocaleSeq[i] = pEntry->m_aLocale;
-        }
-        m_xLocalizationMgr->handleRemoveLocales( aLocaleSeq );
-        // update listbox
-        ClearLanguageBox();
-        FillLanguageBox();
-        // reset selection
-        nCount = m_xLanguageLB->n_children();
-        if (nCount <= nPos)
-            nPos = nCount - 1;
-        m_xLanguageLB->select(nPos);
-        SelectHdl( *m_xLanguageLB );
+        const sal_Int32 nSelPos = aSelection[i];
+        LanguageEntry* pEntry = reinterpret_cast<LanguageEntry*>(m_xLanguageLB->get_id(nSelPos).toInt64());
+        if ( pEntry )
+            aLocaleSeq[i] = pEntry->m_aLocale;
     }
+    m_xLocalizationMgr->handleRemoveLocales( aLocaleSeq );
+    // update listbox
+    ClearLanguageBox();
+    FillLanguageBox();
+    // reset selection
+    nCount = m_xLanguageLB->n_children();
+    if (nCount <= nPos)
+        nPos = nCount - 1;
+    m_xLanguageLB->select(nPos);
+    SelectHdl( *m_xLanguageLB );
 }
 
 IMPL_LINK_NOARG(ManageLanguageDialog, MakeDefHdl, weld::Button&, void)
@@ -298,9 +298,7 @@ Sequence< Locale > SetDefaultLanguageDialog::GetLocales() const
     if (bNotLocalized)
     {
         LanguageType eType(m_xLanguageLB->get_selected_id().toUInt32());
-        Sequence<Locale> aLocaleSeq(1);
-        aLocaleSeq[0] = LanguageTag(eType).getLocale();
-        return aLocaleSeq;
+        return {LanguageTag(eType).getLocale()};
     }
     std::vector<Locale> aLocaleSeq;
     const sal_Int32 nCount = m_xCheckLangLB->n_children();

@@ -20,10 +20,10 @@
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/text/RelOrientation.hpp>
 #include <com/sun/star/lang/WrappedTargetRuntimeException.hpp>
-#include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/xml/sax/FastShapeContextHandler.hpp>
 #include <com/sun/star/xml/sax/SAXException.hpp>
 #include <ooxml/resourceids.hxx>
+#include <oox/mathml/import.hxx>
 #include <oox/token/namespaces.hxx>
 #include <sal/log.hxx>
 #include <comphelper/embeddedobjectcontainer.hxx>
@@ -34,6 +34,9 @@
 #include "OOXMLFastContextHandler.hxx"
 #include "OOXMLFactory.hxx"
 #include "Handler.hxx"
+#include <dmapper/PropertyIds.hxx>
+#include <comphelper/propertysequence.hxx>
+#include <comphelper/sequenceashashmap.hxx>
 
 static const sal_Unicode uCR = 0xd;
 static const sal_Unicode uFtnEdnRef = 0x2;
@@ -63,10 +66,13 @@ OOXMLFastContextHandler::OOXMLFastContextHandler
   mId(0),
   mnDefine(0),
   mnToken(oox::XML_TOKEN_COUNT),
+  mnMathJcVal(0),
+  mbIsMathPara(false),
   mpStream(nullptr),
   mnTableDepth(0),
   inPositionV(false),
-  mbLayoutInCell(true),
+  mbAllowInCell(true),
+  mbIsVMLfound(false),
   m_xContext(context),
   m_bDiscardChildren(false),
   m_bTookChoice(false)
@@ -83,11 +89,14 @@ OOXMLFastContextHandler::OOXMLFastContextHandler(OOXMLFastContextHandler * pCont
   mId(0),
   mnDefine(0),
   mnToken(oox::XML_TOKEN_COUNT),
+  mnMathJcVal(pContext->mnMathJcVal),
+  mbIsMathPara(pContext->mbIsMathPara),
   mpStream(pContext->mpStream),
   mpParserState(pContext->mpParserState),
   mnTableDepth(pContext->mnTableDepth),
   inPositionV(pContext->inPositionV),
-  mbLayoutInCell(pContext->mbLayoutInCell),
+  mbAllowInCell(pContext->mbAllowInCell),
+  mbIsVMLfound(pContext->mbIsVMLfound),
   m_xContext(pContext->m_xContext),
   m_bDiscardChildren(pContext->m_bDiscardChildren),
   m_bTookChoice(pContext->m_bTookChoice)
@@ -122,6 +131,7 @@ bool OOXMLFastContextHandler::prepareMceContext(Token_t nElement, const uno::Ref
             static const char* aFeatures[] = {
                 "wps",
                 "wpg",
+                "w14",
             };
             for (const char *p : aFeatures)
             {
@@ -155,6 +165,19 @@ void SAL_CALL OOXMLFastContextHandler::startFastElement
     {
         mbPreserveSpace = Attribs->getValue(oox::NMSP_xml | oox::XML_space) == "preserve";
         mbPreserveSpaceSet = true;
+    }
+    if (Element == (NMSP_officeMath | XML_oMathPara))
+    {
+        mnMathJcVal = eMathParaJc::CENTER;
+        mbIsMathPara = true;
+    }
+    if (Element == (NMSP_officeMath | XML_jc) && mpParent && mpParent->mpParent )
+    {
+        mbIsMathPara = true;
+        auto aAttrLst = Attribs->getFastAttributes();
+        if (aAttrLst[0].Value == "center") mpParent->mpParent->mnMathJcVal = eMathParaJc::CENTER;
+        if (aAttrLst[0].Value == "left") mpParent->mpParent->mnMathJcVal = eMathParaJc::LEFT;
+        if (aAttrLst[0].Value == "right") mpParent->mpParent->mnMathJcVal = eMathParaJc::RIGHT;
     }
 
     if (oox::getNamespace(Element) == NMSP_mce)
@@ -1212,7 +1235,7 @@ void OOXMLFastContextHandlerValue::setDefaultStringValue()
 void OOXMLFastContextHandlerValue::pushBiDiEmbedLevel()
 {
     const bool bRtl
-        = mpValue.get() && mpValue->getInt() == NS_ooxml::LN_Value_ST_Direction_rtl;
+        = mpValue && mpValue->getInt() == NS_ooxml::LN_Value_ST_Direction_rtl;
     OOXMLFactory::characters(this, bRtl ? u"\u202B" : u"\u202A"); // RLE / LRE
 }
 
@@ -1666,21 +1689,15 @@ void OOXMLFastContextHandlerShape::sendShape( Token_t Element )
 
             bool bIsPicture = Element == ( NMSP_dmlPicture | XML_pic );
 
-
             //tdf#87569: Fix table layout with correcting anchoring
             //If anchored object is in table, Word calculates its position from cell border
             //instead of page (what is set in the sample document)
-            if (mnTableDepth > 0 && mbLayoutInCell) //if we had a table
+            uno::Reference<beans::XPropertySet> xShapePropSet(xShape, uno::UNO_QUERY);
+            if (mnTableDepth > 0 && xShapePropSet.is() && mbIsVMLfound) //if we had a table
             {
-                uno::Reference<beans::XPropertySet> xShapePropSet(xShape, uno::UNO_QUERY);
-                sal_Int16 nCurrentHorOriRel; //A temp variable for storaging the current setting
-                xShapePropSet->getPropertyValue("HoriOrientRelation") >>= nCurrentHorOriRel;
-                //and the correction:
-                if (nCurrentHorOriRel == com::sun::star::text::RelOrientation::PAGE_FRAME)
-                    xShapePropSet->setPropertyValue("HoriOrientRelation",
-                                                    uno::makeAny(text::RelOrientation::FRAME));
+                xShapePropSet->setPropertyValue(dmapper::getPropertyName(dmapper::PROP_FOLLOW_TEXT_FLOW),
+                                                uno::makeAny(mbAllowInCell));
             }
-
             // Notify the dmapper that the shape is ready to use
             if ( !bIsPicture )
             {
@@ -1731,7 +1748,7 @@ OOXMLFastContextHandlerShape::lcl_createFastChildContext
     bool bGroupShape = Element == Token_t(NMSP_vml | XML_group);
     // drawingML version also counts as a group shape.
     bGroupShape |= mrShapeContext->getStartToken() == Token_t(NMSP_wpg | XML_wgp);
-
+    mbIsVMLfound = (getNamespace(Element) == NMSP_vmlOffice) || (getNamespace(Element) == NMSP_vml);
     switch (oox::getNamespace(Element))
     {
         case NMSP_doc:
@@ -1755,7 +1772,7 @@ OOXMLFastContextHandlerShape::lcl_createFastChildContext
 
                     //tdf129888 store allowincell attribute of the VML shape
                     if (Attribs->hasAttribute(NMSP_vmlOffice | XML_allowincell))
-                        mbLayoutInCell
+                        mbAllowInCell
                             = !(Attribs->getValue(NMSP_vmlOffice | XML_allowincell) == "f");
 
                     if (!bGroupShape)
@@ -1920,7 +1937,7 @@ OOXMLFastContextHandlerWrapper::lcl_createFastChildContext
     bool bIsWrap = Element == static_cast<sal_Int32>(NMSP_vmlWord | XML_wrap);
     bool bIsSignatureLine = Element == static_cast<sal_Int32>(NMSP_vmlOffice | XML_signatureline);
     bool bSkipImages = getDocument()->IsSkipImages() && oox::getNamespace(Element) == NMSP_dml &&
-        !((oox::getBaseToken(Element) == XML_linkedTxbx) || (oox::getBaseToken(Element) == XML_txbx));
+        (oox::getBaseToken(Element) != XML_linkedTxbx) && (oox::getBaseToken(Element) != XML_txbx);
 
     if ( bInNamespaces && ((!bIsWrap && !bIsSignatureLine)
                            || mxShapeHandler->isShapeSent()) )
@@ -2143,7 +2160,28 @@ void OOXMLFastContextHandlerMath::process()
     {
         OOXMLPropertySet::Pointer_t pProps(new OOXMLPropertySet);
         OOXMLValue::Pointer_t pVal( new OOXMLStarMathValue( ref ));
-        pProps->add(NS_ooxml::LN_starmath, pVal, OOXMLProperty::ATTRIBUTE);
+        if (mbIsMathPara)
+        {
+            switch (mnMathJcVal)
+            {
+                case eMathParaJc::CENTER:
+                    pProps->add(NS_ooxml::LN_Value_math_ST_Jc_centerGroup, pVal,
+                                OOXMLProperty::ATTRIBUTE);
+                    break;
+                case eMathParaJc::LEFT:
+                    pProps->add(NS_ooxml::LN_Value_math_ST_Jc_left, pVal,
+                                OOXMLProperty::ATTRIBUTE);
+                    break;
+                case eMathParaJc::RIGHT:
+                    pProps->add(NS_ooxml::LN_Value_math_ST_Jc_right, pVal,
+                                OOXMLProperty::ATTRIBUTE);
+                    break;
+                default:
+                    break;
+            }
+        }
+        else
+            pProps->add(NS_ooxml::LN_starmath, pVal, OOXMLProperty::ATTRIBUTE);
         mpStream->props( pProps.get() );
     }
 }

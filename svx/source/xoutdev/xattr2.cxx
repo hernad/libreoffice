@@ -29,7 +29,7 @@
 #include <svx/xlncapit.hxx>
 #include <svx/xlntrit.hxx>
 #include <svx/xfltrit.hxx>
-#include <svx/xftshtit.hxx>
+#include <xftshtit.hxx>
 #include <svx/xgrscit.hxx>
 #include <svx/xflbmtit.hxx>
 #include <svx/xflbmpit.hxx>
@@ -39,13 +39,13 @@
 #include <svx/xflbstit.hxx>
 #include <svx/xflboxy.hxx>
 #include <svx/xflbckit.hxx>
-#include <svx/xtable.hxx>
 #include <svx/dialmgr.hxx>
-#include <editeng/itemtype.hxx>
 #include <svx/xdef.hxx>
-#include <svx/AffineMatrixItem.hxx>
+#include <AffineMatrixItem.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
+
+#include <comphelper/lok.hxx>
 
 #include <libxml/xmlwriter.h>
 
@@ -107,7 +107,7 @@ bool XLineJointItem::GetPresentation( SfxItemPresentation /*ePres*/, MapUnit /*e
     {
         case css::drawing::LineJoint::LineJoint_MAKE_FIXED_SIZE:
         case css::drawing::LineJoint_NONE:
-            pId = RID_SVXSTR_NONE;
+            pId = comphelper::LibreOfficeKit::isActive() ? RID_SVXSTR_INVISIBLE : RID_SVXSTR_NONE;
         break;
 
         case css::drawing::LineJoint_MIDDLE:

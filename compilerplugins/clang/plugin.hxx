@@ -18,6 +18,8 @@
 #include <clang/Basic/SourceManager.h>
 #include <clang/Frontend/CompilerInstance.h>
 #include <clang/Lex/Preprocessor.h>
+
+#include <memory>
 #include <unordered_map>
 #include <vector>
 
@@ -25,6 +27,10 @@
 
 #include "compat.hxx"
 #include "pluginhandler.hxx"
+
+#if CLANG_VERSION >= 110000
+#include "clang/AST/ParentMapContext.h"
+#endif
 
 using namespace clang;
 using namespace llvm;
@@ -78,8 +84,11 @@ protected:
      Returns the parent of the given AST node. Clang's internal AST representation doesn't provide this information,
      it can only provide children, but getting the parent is often useful for inspecting a part of the AST.
     */
+    compat::DynTypedNodeList getParents(Decl const & decl);
+    compat::DynTypedNodeList getParents(Stmt const & stmt);
     const Stmt* getParentStmt( const Stmt* stmt );
     Stmt* getParentStmt( Stmt* stmt );
+    const Decl* getFunctionDeclContext(const Stmt* stmt);
     const FunctionDecl* getParentFunctionDecl( const Stmt* stmt );
 
     /**
@@ -112,6 +121,10 @@ private:
 
     enum { isRewriter = false };
     const char* name;
+
+#if CLANG_VERSION >= 110000
+    std::unique_ptr<ParentMapContext> parentMapContext_;
+#endif
 };
 
 template<typename Derived>
@@ -300,6 +313,13 @@ bool hasCLanguageLinkageType(FunctionDecl const * decl);
 int derivedFromCount(clang::QualType subclassType, clang::QualType baseclassType);
 int derivedFromCount(const CXXRecordDecl* subtypeRecord, const CXXRecordDecl* baseRecord);
 
+// It looks like Clang wrongly implements DR 4
+// (<http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#4>) and treats
+// a variable declared in an 'extern "..." {...}'-style linkage-specification as
+// if it contained the 'extern' specifier:
+bool hasExternalLinkage(VarDecl const * decl);
+
+bool isSmartPointerType(const Expr*);
 
 } // namespace
 

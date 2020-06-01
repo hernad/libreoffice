@@ -33,7 +33,7 @@
 #include <dlgcont.hxx>
 #include <comphelper/fileformat.h>
 #include <comphelper/processfactory.hxx>
-
+#include <tools/diagnose_ex.h>
 #include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
 #include <xmlscript/xmldlg_imexp.hxx>
@@ -201,9 +201,10 @@ void SfxDialogLibraryContainer::storeLibrariesToStorage( const uno::Reference< e
         }
         catch (const Exception& )
         {
+            TOOLS_WARN_EXCEPTION("basic", "");
             // if we cannot get the version then the
             // Oasis2OOoTransformer will not be used
-            OSL_ASSERT(false);
+            assert(false);
         }
     }
 
@@ -212,12 +213,12 @@ void SfxDialogLibraryContainer::storeLibrariesToStorage( const uno::Reference< e
     // we need to export out any embedded image object(s)
     // associated with any Dialogs. First, we need to actually gather any such urls
     // for each dialog in this container
-    Sequence< OUString > sLibraries = getElementNames();
-    for ( sal_Int32 i=0; i < sLibraries.getLength(); ++i )
+    const Sequence< OUString > sLibraries = getElementNames();
+    for ( const OUString& rName : sLibraries )
     {
-        loadLibrary( sLibraries[ i ] );
+        loadLibrary( rName );
         Reference< XNameContainer > xLib;
-        getByName( sLibraries[ i ] ) >>= xLib;
+        getByName( rName ) >>= xLib;
         if ( xLib.is() )
         {
             Sequence< OUString > sDialogs = xLib->getElementNames();

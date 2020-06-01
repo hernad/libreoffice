@@ -68,7 +68,7 @@ public:
     }
 
 private:
-    OUString const m_aChartTypeName;
+    OUString m_aChartTypeName;
 };
 } // anonymous namespace
 
@@ -582,66 +582,36 @@ void SAL_CALL SchXMLImport::setTargetDocument(const uno::Reference<lang::XCompon
 
 // first version: everything comes from one storage
 
-Sequence< OUString > SchXMLImport_getSupportedServiceNames() throw()
+extern "C" SAL_DLLPUBLIC_EXPORT uno::XInterface*
+com_sun_star_comp_Chart_XMLOasisImporter_get_implementation(uno::XComponentContext* pCtx,
+                                                            uno::Sequence<uno::Any> const& /*rSeq*/)
 {
-    return Sequence< OUString > { "com.sun.star.comp.Chart.XMLOasisImporter" };
-}
-
-OUString SchXMLImport_getImplementationName() throw()
-{
-    return "SchXMLImport";
-}
-
-Reference< uno::XInterface > SchXMLImport_createInstance(const Reference< lang::XMultiServiceFactory > & rSMgr)
-{
-    return static_cast<cppu::OWeakObject*>(new SchXMLImport( comphelper::getComponentContext(rSMgr), SchXMLImport_getImplementationName(), SvXMLImportFlags::ALL));
+    return cppu::acquire(new SchXMLImport(pCtx, "SchXMLImport", SvXMLImportFlags::ALL));
 }
 
 // multiple storage version: one for content / styles / meta
 
-Sequence< OUString > SchXMLImport_Styles_getSupportedServiceNames() throw()
+extern "C" SAL_DLLPUBLIC_EXPORT uno::XInterface*
+com_sun_star_comp_Chart_XMLOasisMetaImporter_get_implementation(
+    uno::XComponentContext* pCtx, uno::Sequence<uno::Any> const& /*rSeq*/)
 {
-    return Sequence< OUString > { "com.sun.star.comp.Chart.XMLOasisStylesImporter" };
+    return cppu::acquire(new SchXMLImport(pCtx, "SchXMLImport.Meta", SvXMLImportFlags::META));
 }
 
-OUString SchXMLImport_Styles_getImplementationName() throw()
+extern "C" SAL_DLLPUBLIC_EXPORT uno::XInterface*
+com_sun_star_comp_Chart_XMLOasisStylesImporter_get_implementation(
+    uno::XComponentContext* pCtx, uno::Sequence<uno::Any> const& /*rSeq*/)
 {
-    return "SchXMLImport.Styles";
+    return cppu::acquire(new SchXMLImport(pCtx, "SchXMLImport.Styles", SvXMLImportFlags::STYLES));
 }
 
-Reference< uno::XInterface > SchXMLImport_Styles_createInstance(const Reference< lang::XMultiServiceFactory > & rSMgr)
+extern "C" SAL_DLLPUBLIC_EXPORT uno::XInterface*
+com_sun_star_comp_Chart_XMLOasisContentImporter_get_implementation(
+    uno::XComponentContext* pCtx, uno::Sequence<uno::Any> const& /*rSeq*/)
 {
-    return static_cast<cppu::OWeakObject*>(new SchXMLImport( comphelper::getComponentContext(rSMgr), SchXMLImport_Styles_getImplementationName(), SvXMLImportFlags::STYLES ));
-}
-
-Sequence< OUString > SchXMLImport_Content_getSupportedServiceNames() throw()
-{
-    return Sequence< OUString > { "com.sun.star.comp.Chart.XMLOasisContentImporter" };
-}
-
-OUString SchXMLImport_Content_getImplementationName() throw()
-{
-    return "SchXMLImport.Content";
-}
-
-Reference< uno::XInterface > SchXMLImport_Content_createInstance(const Reference< lang::XMultiServiceFactory > & rSMgr)
-{
-    return static_cast<cppu::OWeakObject*>(new SchXMLImport( comphelper::getComponentContext(rSMgr), SchXMLImport_Content_getImplementationName(), SvXMLImportFlags::CONTENT | SvXMLImportFlags::AUTOSTYLES | SvXMLImportFlags::FONTDECLS ));
-}
-
-Sequence< OUString > SchXMLImport_Meta_getSupportedServiceNames() throw()
-{
-    return Sequence< OUString > { "com.sun.star.comp.Chart.XMLOasisMetaImporter" };
-}
-
-OUString SchXMLImport_Meta_getImplementationName() throw()
-{
-    return "SchXMLImport.Meta";
-}
-
-Reference< uno::XInterface > SchXMLImport_Meta_createInstance(const Reference< lang::XMultiServiceFactory > & rSMgr)
-{
-    return static_cast<cppu::OWeakObject*>(new SchXMLImport( comphelper::getComponentContext(rSMgr), SchXMLImport_Meta_getImplementationName(), SvXMLImportFlags::META ));
+    return cppu::acquire(new SchXMLImport(pCtx, "SchXMLImport.Content",
+                                          SvXMLImportFlags::CONTENT | SvXMLImportFlags::AUTOSTYLES
+                                              | SvXMLImportFlags::FONTDECLS));
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

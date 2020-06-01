@@ -153,10 +153,10 @@ void SvxScriptOrgDialog::Init( const OUString& language  )
     }
 
     Reference<XModel> xDocumentModel;
-    for ( sal_Int32 n = 0; n < children.getLength(); n++ )
+    for ( const Reference< browse::XBrowseNode >& childNode : std::as_const(children) )
     {
         bool app = false;
-        OUString uiName = children[ n ]->getName();
+        OUString uiName = childNode->getName();
         OUString factoryURL;
         if ( uiName == userStr || uiName == shareStr )
         {
@@ -186,13 +186,11 @@ void SvxScriptOrgDialog::Init( const OUString& language  )
                 } catch(const uno::Exception&)
                     {}
 
-                beans::PropertyValue const * pmoduleDescr =
-                    moduleDescr.getConstArray();
-                for ( sal_Int32 pos = moduleDescr.getLength(); pos--; )
+                for ( const beans::PropertyValue& prop : std::as_const(moduleDescr))
                 {
-                    if ( pmoduleDescr[ pos ].Name == "ooSetupFactoryEmptyDocumentURL" )
+                    if ( prop.Name == "ooSetupFactoryEmptyDocumentURL" )
                     {
-                        pmoduleDescr[ pos ].Value >>= factoryURL;
+                        prop.Value >>= factoryURL;
                         break;
                     }
                 }
@@ -200,7 +198,7 @@ void SvxScriptOrgDialog::Init( const OUString& language  )
         }
 
         Reference< browse::XBrowseNode > langEntries =
-            getLangNodeFromRootNode( children[ n ], language );
+            getLangNodeFromRootNode( childNode, language );
 
         insertEntry( uiName, app ? OUStringLiteral(RID_CUIBMP_HARDDISK) : OUStringLiteral(RID_CUIBMP_DOC),
             nullptr, true, std::make_unique< SFEntry >( langEntries, xDocumentModel ), factoryURL, false );
@@ -288,16 +286,16 @@ void SvxScriptOrgDialog::RequestSubEntries(const weld::TreeIter& rRootEntry, Ref
         // if we catch an exception in getChildNodes then no entries are added
     }
 
-    for ( sal_Int32 n = 0; n < children.getLength(); n++ )
+    for ( const Reference< browse::XBrowseNode >& childNode : std::as_const(children) )
     {
-        OUString name( children[ n ]->getName() );
-        if (  children[ n ]->getType() !=  browse::BrowseNodeTypes::SCRIPT)
+        OUString name( childNode->getName() );
+        if (  childNode->getType() !=  browse::BrowseNodeTypes::SCRIPT)
         {
-            insertEntry(name, RID_CUIBMP_LIB, &rRootEntry, true, std::make_unique<SFEntry>(children[n], model), false);
+            insertEntry(name, RID_CUIBMP_LIB, &rRootEntry, true, std::make_unique<SFEntry>(childNode, model), false);
         }
         else
         {
-            insertEntry(name, RID_CUIBMP_MACRO, &rRootEntry, false, std::make_unique<SFEntry>(children[n], model), false);
+            insertEntry(name, RID_CUIBMP_MACRO, &rRootEntry, false, std::make_unique<SFEntry>(childNode, model), false);
         }
     }
 }
@@ -553,132 +551,132 @@ IMPL_LINK(SvxScriptOrgDialog, ButtonHdl, weld::Button&, rButton, void)
         StoreCurrentSelection();
         m_xDialog->response(RET_CANCEL);
     }
-    if (&rButton == m_xEditButton.get() ||
+    if (!(&rButton == m_xEditButton.get() ||
         &rButton == m_xCreateButton.get() ||
         &rButton == m_xDelButton.get() ||
         &rButton == m_xRunButton.get() ||
-        &rButton == m_xRenameButton.get())
+        &rButton == m_xRenameButton.get()))
 
+        return;
+
+    std::unique_ptr<weld::TreeIter> xIter = m_xScriptsBox->make_iterator();
+    if (!m_xScriptsBox->get_selected(xIter.get()))
+        return;
+    SFEntry* userData = reinterpret_cast<SFEntry*>(m_xScriptsBox->get_id(*xIter).toInt64());
+    if (!userData)
+        return;
+
+    Reference< browse::XBrowseNode > node;
+    Reference< XModel > xModel;
+
+    node = userData->GetNode();
+    xModel = userData->GetModel();
+
+    if ( !node.is() )
     {
-        std::unique_ptr<weld::TreeIter> xIter = m_xScriptsBox->make_iterator();
-        if (!m_xScriptsBox->get_selected(xIter.get()))
-            return;
-        SFEntry* userData = reinterpret_cast<SFEntry*>(m_xScriptsBox->get_id(*xIter).toInt64());
-        if (!userData)
-            return;
+        return;
+    }
 
-        Reference< browse::XBrowseNode > node;
-        Reference< XModel > xModel;
-
-        node = userData->GetNode();
-        xModel = userData->GetModel();
-
-        if ( !node.is() )
+    if (&rButton == m_xRunButton.get())
+    {
+        OUString tmpString;
+        Reference< beans::XPropertySet > xProp( node, UNO_QUERY );
+        Reference< provider::XScriptProvider > mspNode;
+        if( !xProp.is() )
         {
             return;
         }
 
-        if (&rButton == m_xRunButton.get())
+        if ( xModel.is() )
         {
-            OUString tmpString;
-            Reference< beans::XPropertySet > xProp( node, UNO_QUERY );
-            Reference< provider::XScriptProvider > mspNode;
-            if( !xProp.is() )
+            Reference< XEmbeddedScripts >  xEmbeddedScripts( xModel, UNO_QUERY);
+            if( !xEmbeddedScripts.is() )
             {
                 return;
             }
 
-            if ( xModel.is() )
+            if (!xEmbeddedScripts->getAllowMacroExecution())
             {
-                Reference< XEmbeddedScripts >  xEmbeddedScripts( xModel, UNO_QUERY);
-                if( !xEmbeddedScripts.is() )
-                {
-                    return;
-                }
-
-                if (!xEmbeddedScripts->getAllowMacroExecution())
-                {
-                    // Please FIXME: Show a message box if AllowMacroExecution is false
-                    return;
-                }
+                // Please FIXME: Show a message box if AllowMacroExecution is false
+                return;
             }
+        }
 
-            std::unique_ptr<weld::TreeIter> xParentIter = m_xScriptsBox->make_iterator(xIter.get());
-            bool bParent = m_xScriptsBox->iter_parent(*xParentIter);
-            while (bParent && !mspNode.is() )
+        std::unique_ptr<weld::TreeIter> xParentIter = m_xScriptsBox->make_iterator(xIter.get());
+        bool bParent = m_xScriptsBox->iter_parent(*xParentIter);
+        while (bParent && !mspNode.is() )
+        {
+            SFEntry* mspUserData = reinterpret_cast<SFEntry*>(m_xScriptsBox->get_id(*xParentIter).toInt64());
+            mspNode.set( mspUserData->GetNode() , UNO_QUERY );
+            bParent = m_xScriptsBox->iter_parent(*xParentIter);
+        }
+        xProp->getPropertyValue("URI") >>= tmpString;
+        const OUString scriptURL( tmpString );
+
+        if ( mspNode.is() )
+        {
+            try
             {
-                SFEntry* mspUserData = reinterpret_cast<SFEntry*>(m_xScriptsBox->get_id(*xParentIter).toInt64());
-                mspNode.set( mspUserData->GetNode() , UNO_QUERY );
-                bParent = m_xScriptsBox->iter_parent(*xParentIter);
-            }
-            xProp->getPropertyValue("URI") >>= tmpString;
-            const OUString scriptURL( tmpString );
+                Reference< provider::XScript > xScript(
+                    mspNode->getScript( scriptURL ), UNO_SET_THROW );
 
-            if ( mspNode.is() )
+                const Sequence< Any > args(0);
+                Sequence< sal_Int16 > outIndex;
+                Sequence< Any > outArgs( 0 );
+                xScript->invoke( args, outIndex, outArgs );
+            }
+            catch ( reflection::InvocationTargetException& ite )
             {
-                try
-                {
-                    Reference< provider::XScript > xScript(
-                        mspNode->getScript( scriptURL ), UNO_SET_THROW );
-
-                    const Sequence< Any > args(0);
-                    Sequence< sal_Int16 > outIndex;
-                    Sequence< Any > outArgs( 0 );
-                    xScript->invoke( args, outIndex, outArgs );
-                }
-                catch ( reflection::InvocationTargetException& ite )
-                {
-                    ShowErrorDialog(css::uno::Any(ite));
-                }
-                catch ( provider::ScriptFrameworkErrorException& ite )
-                {
-                    ShowErrorDialog(css::uno::Any(ite));
-                }
-                catch ( RuntimeException& re )
-                {
-                    ShowErrorDialog(css::uno::Any(re));
-                }
-                catch ( Exception& e )
-                {
-                    ShowErrorDialog(css::uno::Any(e));
-                }
+                ShowErrorDialog(css::uno::Any(ite));
             }
+            catch ( provider::ScriptFrameworkErrorException& ite )
+            {
+                ShowErrorDialog(css::uno::Any(ite));
+            }
+            catch ( RuntimeException& re )
+            {
+                ShowErrorDialog(css::uno::Any(re));
+            }
+            catch ( Exception& e )
+            {
+                ShowErrorDialog(css::uno::Any(e));
+            }
+        }
+        StoreCurrentSelection();
+        m_xDialog->response(RET_CANCEL);
+    }
+    else if ( &rButton == m_xEditButton.get() )
+    {
+        Reference< script::XInvocation > xInv( node, UNO_QUERY );
+        if ( xInv.is() )
+        {
             StoreCurrentSelection();
             m_xDialog->response(RET_CANCEL);
-        }
-        else if ( &rButton == m_xEditButton.get() )
-        {
-            Reference< script::XInvocation > xInv( node, UNO_QUERY );
-            if ( xInv.is() )
+            Sequence< Any > args(0);
+            Sequence< Any > outArgs( 0 );
+            Sequence< sal_Int16 > outIndex;
+            try
             {
-                StoreCurrentSelection();
-                m_xDialog->response(RET_CANCEL);
-                Sequence< Any > args(0);
-                Sequence< Any > outArgs( 0 );
-                Sequence< sal_Int16 > outIndex;
-                try
-                {
-                    // ISSUE need code to run script here
-                    xInv->invoke( "Editable", args, outIndex, outArgs );
-                }
-                catch( Exception const & )
-                {
-                    TOOLS_WARN_EXCEPTION("cui.dialogs", "Caught exception trying to invoke" );
-                }
+                // ISSUE need code to run script here
+                xInv->invoke( "Editable", args, outIndex, outArgs );
+            }
+            catch( Exception const & )
+            {
+                TOOLS_WARN_EXCEPTION("cui.dialogs", "Caught exception trying to invoke" );
             }
         }
-        else if ( &rButton == m_xCreateButton.get() )
-        {
-            createEntry(*xIter);
-        }
-        else if ( &rButton == m_xDelButton.get() )
-        {
-            deleteEntry(*xIter);
-        }
-        else if ( &rButton == m_xRenameButton.get() )
-        {
-            renameEntry(*xIter);
-        }
+    }
+    else if ( &rButton == m_xCreateButton.get() )
+    {
+        createEntry(*xIter);
+    }
+    else if ( &rButton == m_xDelButton.get() )
+    {
+        deleteEntry(*xIter);
+    }
+    else if ( &rButton == m_xRenameButton.get() )
+    {
+        renameEntry(*xIter);
     }
 }
 
@@ -761,9 +759,9 @@ void SvxScriptOrgDialog::createEntry(weld::TreeIter& rEntry)
                 if(extnPos>0)
                     extn = nodeName.copy(extnPos);
             }
-            for( sal_Int32 index = 0; index < childNodes.getLength(); index++ )
+            for( const Reference< browse::XBrowseNode >& n : std::as_const(childNodes) )
             {
-                if (aNewName+extn == childNodes[index]->getName())
+                if (aNewName+extn == n->getName())
                 {
                     bFound = true;
                     break;
@@ -788,9 +786,9 @@ void SvxScriptOrgDialog::createEntry(weld::TreeIter& rEntry)
             {
                 OUString aUserSuppliedName = aNewDlg.GetObjectName();
                 bValid = true;
-                for( sal_Int32 index = 0; index < childNodes.getLength(); index++ )
+                for( const Reference< browse::XBrowseNode >& n : std::as_const(childNodes) )
                 {
-                    if (aUserSuppliedName+extn == childNodes[index]->getName())
+                    if (aUserSuppliedName+extn == n->getName())
                     {
                         bValid = false;
                         OUString aError = m_createErrStr + m_createDupStr;
@@ -938,7 +936,7 @@ void SvxScriptOrgDialog::deleteEntry(weld::TreeIter& rEntry)
 {
     bool result = false;
     Reference< browse::XBrowseNode > node = getBrowseNode(rEntry);
-    // ISSUE L10N string & can we centre list?
+    // ISSUE L10N string & can we center list?
     OUString aQuery = m_delQueryStr + getListOfChildren( node, 0 );
     std::unique_ptr<weld::MessageDialog> xQueryBox(Application::CreateMessageDialog(m_xDialog.get(),
                                                    VclMessageType::Question, VclButtonsType::YesNo, aQuery));
@@ -1009,11 +1007,11 @@ OUString SvxScriptOrgDialog::getListOfChildren( const Reference< browse::XBrowse
     {
         if ( node->hasChildNodes() )
         {
-            Sequence< Reference< browse::XBrowseNode > > children
+            const Sequence< Reference< browse::XBrowseNode > > children
                 = node->getChildNodes();
-            for ( sal_Int32 n = 0; n < children.getLength(); n++ )
+            for( const Reference< browse::XBrowseNode >& n : children )
             {
-                result.append( getListOfChildren( children[ n ] , depth+1 ) );
+                result.append( getListOfChildren( n , depth+1 ) );
             }
         }
     }

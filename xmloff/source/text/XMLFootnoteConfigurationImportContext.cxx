@@ -33,6 +33,7 @@
 #include <xmloff/families.hxx>
 #include <xmloff/xmluconv.hxx>
 #include <xmloff/xmlimp.hxx>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/xml/sax/XAttributeList.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/text/XFootnotesSupplier.hpp>
@@ -58,7 +59,7 @@ class XMLFootnoteConfigHelper : public SvXMLImportContext
 {
     OUStringBuffer sBuffer;
     XMLFootnoteConfigurationImportContext& rConfig;
-    bool const bIsBegin;
+    bool bIsBegin;
 
 public:
 
@@ -128,7 +129,7 @@ XMLFootnoteConfigurationImportContext::XMLFootnoteConfigurationImportContext(
     sal_uInt16 nPrfx,
     const OUString& rLocalName,
     const Reference<XAttributeList> & xAttrList)
-:   SvXMLStyleContext(rImport, nPrfx, rLocalName, xAttrList, XML_STYLE_FAMILY_TEXT_FOOTNOTECONFIG)
+:   SvXMLStyleContext(rImport, nPrfx, rLocalName, xAttrList, XmlStyleFamily::TEXT_FOOTNOTECONFIG)
 ,   sNumFormat("1")
 ,   sNumSync("false")
 ,   nOffset(0)
@@ -150,7 +151,7 @@ XMLFootnoteConfigurationImportContext::XMLFootnoteConfigurationImportContext(
             if( IsXMLToken( rValue, XML_ENDNOTE ) )
             {
                 bIsEndnote = true;
-                SetFamily( XML_STYLE_FAMILY_TEXT_FOOTNOTECONFIG );
+                SetFamily( XmlStyleFamily::TEXT_FOOTNOTECONFIG );
             }
             break;
         }
@@ -220,64 +221,56 @@ static SvXMLEnumMapEntry<sal_Int16> const aFootnoteNumberingMap[] =
     { XML_TOKEN_INVALID,    0 },
 };
 
-void XMLFootnoteConfigurationImportContext::StartElement(
-    const Reference<XAttributeList> & xAttrList )
+void XMLFootnoteConfigurationImportContext::SetAttribute( sal_uInt16 nPrefixKey,
+                               const OUString& rLocalName,
+                               const OUString& rValue )
 {
-    sal_Int16 nLength = xAttrList->getLength();
-    for(sal_Int16 nAttr = 0; nAttr < nLength; nAttr++)
+    switch (GetFtnConfigAttrTokenMap().Get(nPrefixKey, rLocalName))
     {
-        OUString sLocalName;
-        sal_uInt16 nPrefix = GetImport().GetNamespaceMap().
-            GetKeyByAttrName( xAttrList->getNameByIndex(nAttr),
-                              &sLocalName );
-        OUString sValue = xAttrList->getValueByIndex(nAttr);
-        switch (GetFtnConfigAttrTokenMap().Get(nPrefix, sLocalName))
+        case XML_TOK_FTNCONFIG_CITATION_STYLENAME:
+            sCitationStyle = rValue;
+            break;
+        case XML_TOK_FTNCONFIG_ANCHOR_STYLENAME:
+            sAnchorStyle = rValue;
+            break;
+        case XML_TOK_FTNCONFIG_DEFAULT_STYLENAME:
+            sDefaultStyle = rValue;
+            break;
+        case XML_TOK_FTNCONFIG_PAGE_STYLENAME:
+            sPageStyle = rValue;
+            break;
+        case XML_TOK_FTNCONFIG_OFFSET:
         {
-            case XML_TOK_FTNCONFIG_CITATION_STYLENAME:
-                sCitationStyle = sValue;
-                break;
-            case XML_TOK_FTNCONFIG_ANCHOR_STYLENAME:
-                sAnchorStyle = sValue;
-                break;
-            case XML_TOK_FTNCONFIG_DEFAULT_STYLENAME:
-                sDefaultStyle = sValue;
-                break;
-            case XML_TOK_FTNCONFIG_PAGE_STYLENAME:
-                sPageStyle = sValue;
-                break;
-            case XML_TOK_FTNCONFIG_OFFSET:
+            sal_Int32 nTmp;
+            if (::sax::Converter::convertNumber(nTmp, rValue))
             {
-                sal_Int32 nTmp;
-                if (::sax::Converter::convertNumber(nTmp, sValue))
-                {
-                    nOffset = static_cast<sal_uInt16>(nTmp);
-                }
-                break;
+                nOffset = static_cast<sal_uInt16>(nTmp);
             }
-            case XML_TOK_FTNCONFIG_NUM_PREFIX:
-                sPrefix = sValue;
-                break;
-            case XML_TOK_FTNCONFIG_NUM_SUFFIX:
-                sSuffix = sValue;
-                break;
-            case XML_TOK_FTNCONFIG_NUM_FORMAT:
-                sNumFormat = sValue;
-                break;
-            case XML_TOK_FTNCONFIG_NUM_SYNC:
-                sNumSync = sValue;
-                break;
-            case XML_TOK_FTNCONFIG_START_AT:
-            {
-                (void)SvXMLUnitConverter::convertEnum(nNumbering, sValue,
-                                                      aFootnoteNumberingMap);
-                break;
-            }
-            case XML_TOK_FTNCONFIG_POSITION:
-                bPosition = IsXMLToken( sValue, XML_DOCUMENT );
-                break;
-            default:
-                ; // ignore
+            break;
         }
+        case XML_TOK_FTNCONFIG_NUM_PREFIX:
+            sPrefix = rValue;
+            break;
+        case XML_TOK_FTNCONFIG_NUM_SUFFIX:
+            sSuffix = rValue;
+            break;
+        case XML_TOK_FTNCONFIG_NUM_FORMAT:
+            sNumFormat = rValue;
+            break;
+        case XML_TOK_FTNCONFIG_NUM_SYNC:
+            sNumSync = rValue;
+            break;
+        case XML_TOK_FTNCONFIG_START_AT:
+        {
+            (void)SvXMLUnitConverter::convertEnum(nNumbering, rValue,
+                                                  aFootnoteNumberingMap);
+            break;
+        }
+        case XML_TOK_FTNCONFIG_POSITION:
+            bPosition = IsXMLToken( rValue, XML_DOCUMENT );
+            break;
+        default:
+            ; // ignore
     }
 }
 
@@ -359,28 +352,28 @@ void XMLFootnoteConfigurationImportContext::ProcessSettings(
     if (!sCitationStyle.isEmpty())
     {
         aAny <<= GetImport().GetStyleDisplayName(
-                        XML_STYLE_FAMILY_TEXT_TEXT, sCitationStyle );
+                        XmlStyleFamily::TEXT_TEXT, sCitationStyle );
         rConfig->setPropertyValue(gsPropertyCharStyleName, aAny);
     }
 
     if (!sAnchorStyle.isEmpty())
     {
         aAny <<= GetImport().GetStyleDisplayName(
-                        XML_STYLE_FAMILY_TEXT_TEXT, sAnchorStyle );
+                        XmlStyleFamily::TEXT_TEXT, sAnchorStyle );
         rConfig->setPropertyValue(gsPropertyAnchorCharStyleName, aAny);
     }
 
     if (!sPageStyle.isEmpty())
     {
         aAny <<= GetImport().GetStyleDisplayName(
-                        XML_STYLE_FAMILY_MASTER_PAGE, sPageStyle );
+                        XmlStyleFamily::MASTER_PAGE, sPageStyle );
         rConfig->setPropertyValue(gsPropertyPageStyleName, aAny);
     }
 
     if (!sDefaultStyle.isEmpty())
     {
         aAny <<= GetImport().GetStyleDisplayName(
-                        XML_STYLE_FAMILY_TEXT_PARAGRAPH, sDefaultStyle );
+                        XmlStyleFamily::TEXT_PARAGRAPH, sDefaultStyle );
         rConfig->setPropertyValue(gsPropertyParagraphStyleName, aAny);
     }
 

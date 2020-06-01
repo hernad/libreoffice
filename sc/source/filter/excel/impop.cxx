@@ -850,7 +850,7 @@ void ImportExcel::Shrfmla()
     rDoc.getDoc().EnsureTable(aPos.Tab());
     rDoc.setFormulaCell(aPos, pCell);
     pCell->SetNeedNumberFormat(false);
-    if (rtl::math::isFinite(mpLastFormula->mfValue))
+    if (std::isfinite(mpLastFormula->mfValue))
         pCell->SetResultDouble(mpLastFormula->mfValue);
 
     GetXFRangeBuffer().SetXF(aPos, mpLastFormula->mnXF);
@@ -908,13 +908,7 @@ void ImportExcel::Rstring()
     {
         // unformatted Unicode string with separate formatting information
         XclImpString aString;
-
-        // #i63105# use text encoding from FONT record
-        rtl_TextEncoding eOldTextEnc = GetTextEncoding();
-        if( const XclImpFont* pFont = GetXFBuffer().GetFont( nXFIdx ) )
-            SetTextEncoding( pFont->GetFontEncoding() );
         aString.Read( maStrm );
-        SetTextEncoding( eOldTextEnc );
 
         // character formatting runs
         if( !aString.IsRich() )

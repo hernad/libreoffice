@@ -18,9 +18,9 @@
  */
 #include "StyleSheetTable.hxx"
 #include "util.hxx"
-#include "NumberingManager.hxx"
 #include "ConversionHelper.hxx"
 #include "TblStylePrHandler.hxx"
+#include "TagLogger.hxx"
 #include "BorderHandler.hxx"
 #include "LatentStyleHandler.hxx"
 #include <ooxml/resourceids.hxx>
@@ -30,14 +30,15 @@
 #include <com/sun/star/beans/XPropertyState.hpp>
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/container/XNameContainer.hpp>
+#include <com/sun/star/container/XIndexReplace.hpp>
 #include <com/sun/star/text/XTextDocument.hpp>
+#include <com/sun/star/style/NumberingType.hpp>
 #include <com/sun/star/style/XStyleFamiliesSupplier.hpp>
 #include <com/sun/star/style/XStyle.hpp>
 #include <com/sun/star/style/ParagraphAdjust.hpp>
 #include <com/sun/star/text/WritingMode.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <map>
-#include <set>
 #include <osl/diagnose.h>
 #include <rtl/ustrbuf.hxx>
 #include <sal/log.hxx>
@@ -50,9 +51,6 @@ using namespace ::com::sun::star;
 
 namespace writerfilter::dmapper
 {
-
-typedef ::std::map< OUString, OUString> StringPairMap_t;
-
 
 StyleSheetEntry::StyleSheetEntry() :
         sStyleIdentifierD()
@@ -112,12 +110,12 @@ void TableStyleSheetEntry::AddTblStylePr( TblStyleType nType, const PropertyMapP
         if ( nType == pTypesToFix[i] )
         {
             PropertyIds nChecked = pPropsToCheck[i];
-            o3tl::optional<PropertyMap::Property> pChecked = pProps->getProperty(nChecked);
+            std::optional<PropertyMap::Property> pChecked = pProps->getProperty(nChecked);
 
             PropertyIds nInsideProp = ( i < 2 ) ? META_PROP_HORIZONTAL_BORDER : META_PROP_VERTICAL_BORDER;
-            o3tl::optional<PropertyMap::Property> pInside = pProps->getProperty(nInsideProp);
+            std::optional<PropertyMap::Property> pInside = pProps->getProperty(nInsideProp);
 
-            if ( pChecked && pProps )
+            if ( pChecked && pInside )
             {
                 // In this case, remove the inside border
                 pProps->Erase( nInsideProp );
@@ -200,7 +198,7 @@ static void lcl_mergeProps( const PropertyMapPtr& pToFill, const PropertyMapPtr&
     for ( unsigned i = 0 ; i != SAL_N_ELEMENTS(pPropsToCheck); i++ )
     {
         PropertyIds nId = pPropsToCheck[i];
-        o3tl::optional<PropertyMap::Property> pProp = pToAdd->getProperty(nId);
+        std::optional<PropertyMap::Property> pProp = pToAdd->getProperty(nId);
 
         if ( pProp )
         {
@@ -220,8 +218,8 @@ PropertyMapPtr TableStyleSheetEntry::GetLocalPropertiesFromMask( sal_Int32 nMask
 {
     // Order from right to left
     struct TblStyleTypeAndMask {
-        sal_Int32 const       mask;
-        TblStyleType const    type;
+        sal_Int32       mask;
+        TblStyleType    type;
     };
 
     static const TblStyleTypeAndMask aOrderedStyleTable[] =
@@ -255,8 +253,8 @@ namespace {
 
 struct ListCharStylePropertyMap_t
 {
-    OUString const         sCharStyleName;
-    PropertyValueVector_t const   aPropertyValues;
+    OUString         sCharStyleName;
+    PropertyValueVector_t   aPropertyValues;
 
     ListCharStylePropertyMap_t(const OUString& rCharStyleName, const PropertyValueVector_t& rPropertyValues):
         sCharStyleName( rCharStyleName ),
@@ -280,7 +278,7 @@ struct StyleSheetTable_Impl
     OUString                                m_sDefaultParaStyleName; //WW8 name
     ListCharStylePropertyVector_t           m_aListCharStylePropertyVector;
     bool                                    m_bHasImportedDefaultParaProps;
-    bool const                              m_bIsNewDoc;
+    bool                                    m_bIsNewDoc;
 
     StyleSheetTable_Impl(DomainMapper& rDMapper, uno::Reference< text::XTextDocument> const& xTextDocument, bool bIsNewDoc);
 
@@ -394,6 +392,11 @@ StyleSheetTable::StyleSheetTable(DomainMapper& rDMapper,
 
 StyleSheetTable::~StyleSheetTable()
 {
+}
+
+void StyleSheetTable::SetDefaultParaProps(PropertyIds eId, const css::uno::Any& rAny)
+{
+    m_pImpl->m_pDefaultParaProps->Insert(eId, rAny, /*bOverwrite=*/false, NO_GRAB_BAG, /*bDocDefault=*/true);
 }
 
 PropertyMapPtr const & StyleSheetTable::GetDefaultParaProps() const
@@ -532,8 +535,8 @@ void StyleSheetTable::lcl_sprm(Sprm & rSprm)
 {
     sal_uInt32 nSprmId = rSprm.getId();
     Value::Pointer_t pValue = rSprm.getValue();
-    sal_Int32 nIntValue = pValue.get() ? pValue->getInt() : 0;
-    OUString sStringValue = pValue.get() ? pValue->getString() : OUString();
+    sal_Int32 nIntValue = pValue ? pValue->getInt() : 0;
+    OUString sStringValue = pValue ? pValue->getString() : OUString();
 
     switch(nSprmId)
     {
@@ -575,7 +578,7 @@ void StyleSheetTable::lcl_sprm(Sprm & rSprm)
         case NS_ooxml::LN_CT_Style_tcPr:
         {
             writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-            if( pProperties.get() && m_pImpl->m_pCurrentEntry->nStyleTypeCode == STYLE_TYPE_TABLE)
+            if( pProperties && m_pImpl->m_pCurrentEntry->nStyleTypeCode == STYLE_TYPE_TABLE)
             {
                 auto pTblStylePrHandler = std::make_shared<TblStylePrHandler>(m_pImpl->m_rDMapper);
                 pProperties->resolve(*pTblStylePrHandler);
@@ -649,7 +652,7 @@ void StyleSheetTable::lcl_sprm(Sprm & rSprm)
         case NS_ooxml::LN_EG_RPrBase_rFonts: //table fonts
         {
             writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-            if( pProperties.get())
+            if( pProperties )
             {
                 auto pTblStylePrHandler = std::make_shared<TblStylePrHandler>( m_pImpl->m_rDMapper );
                 pProperties->resolve( *pTblStylePrHandler );
@@ -688,10 +691,10 @@ void StyleSheetTable::lcl_sprm(Sprm & rSprm)
         case NS_ooxml::LN_CT_DocDefaults_pPrDefault:
             m_pImpl->m_rDMapper.PushStyleSheetProperties( m_pImpl->m_pDefaultParaProps );
             resolveSprmProps( m_pImpl->m_rDMapper, rSprm );
-            if ( nSprmId == NS_ooxml::LN_CT_DocDefaults_pPrDefault && m_pImpl->m_pDefaultParaProps.get() &&
+            if ( nSprmId == NS_ooxml::LN_CT_DocDefaults_pPrDefault && m_pImpl->m_pDefaultParaProps &&
                 !m_pImpl->m_pDefaultParaProps->isSet( PROP_PARA_TOP_MARGIN ) )
             {
-                m_pImpl->m_pDefaultParaProps->Insert( PROP_PARA_TOP_MARGIN, uno::makeAny( sal_Int32(0) ) );
+                SetDefaultParaProps( PROP_PARA_TOP_MARGIN, uno::makeAny( sal_Int32(0) ) );
             }
             m_pImpl->m_rDMapper.PopStyleSheetProperties();
             applyDefaults( true );
@@ -713,7 +716,7 @@ void StyleSheetTable::lcl_sprm(Sprm & rSprm)
         case NS_ooxml::LN_CT_TblPrBase_tblBorders: //table borders, might be defined in table style
         {
             writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-            if( pProperties.get())
+            if( pProperties )
             {
                 auto pBorderHandler = std::make_shared<BorderHandler>(m_pImpl->m_rDMapper.IsOOXMLImport());
                 pProperties->resolve(*pBorderHandler);
@@ -731,7 +734,7 @@ void StyleSheetTable::lcl_sprm(Sprm & rSprm)
         case NS_ooxml::LN_CT_LatentStyles_lsdException:
         {
             writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-            if (pProperties.get())
+            if (pProperties)
             {
                 tools::SvRef<LatentStyleHandler> pLatentStyleHandler(new LatentStyleHandler());
                 pProperties->resolve(*pLatentStyleHandler);
@@ -881,6 +884,48 @@ uno::Sequence< OUString > PropValVector::getNames()
     return comphelper::containerToSequence(aRet);
 }
 
+void StyleSheetTable::ApplyNumberingStyleNameToParaStyles()
+{
+    try
+    {
+        uno::Reference< style::XStyleFamiliesSupplier > xStylesSupplier( m_pImpl->m_xTextDocument, uno::UNO_QUERY_THROW );
+        uno::Reference< lang::XMultiServiceFactory > xDocFactory( m_pImpl->m_xTextDocument, uno::UNO_QUERY_THROW );
+        uno::Reference< container::XNameAccess > xStyleFamilies = xStylesSupplier->getStyleFamilies();
+        uno::Reference<container::XNameContainer> xParaStyles;
+        xStyleFamilies->getByName(getPropertyName( PROP_PARAGRAPH_STYLES )) >>= xParaStyles;
+
+        if ( !xParaStyles.is() )
+            return;
+
+        for ( auto& pEntry : m_pImpl->m_aStyleSheetEntries )
+        {
+            StyleSheetPropertyMap* pStyleSheetProperties = nullptr;
+            if ( pEntry->nStyleTypeCode == STYLE_TYPE_PARA && (pStyleSheetProperties = dynamic_cast<StyleSheetPropertyMap*>(pEntry->pProperties.get())) )
+            {
+                // ListId 0 means turn off numbering - to cancel inheritance - so make sure that can be set.
+                // Ignore the special "chapter numbering" outline styles as they are handled internally.
+                if ( pStyleSheetProperties->GetListId() > -1 && pStyleSheetProperties->GetOutlineLevel() == -1 )
+                {
+                    uno::Reference< style::XStyle > xStyle;
+                    xParaStyles->getByName( ConvertStyleName(pEntry->sStyleName) ) >>= xStyle;
+
+                    if ( !xStyle.is() )
+                        break;
+
+                    uno::Reference<beans::XPropertySet> xPropertySet( xStyle, uno::UNO_QUERY_THROW );
+                    const OUString sNumberingStyleName = m_pImpl->m_rDMapper.GetListStyleName( pStyleSheetProperties->GetListId() );
+                    if ( !sNumberingStyleName.isEmpty() || !pStyleSheetProperties->GetListId() )
+                        xPropertySet->setPropertyValue( getPropertyName(PROP_NUMBERING_STYLE_NAME), uno::makeAny(sNumberingStyleName) );
+                }
+            }
+        }
+    }
+    catch( const uno::Exception& )
+    {
+        DBG_UNHANDLED_EXCEPTION("writerfilter", "Failed applying numbering style name to Paragraph styles");
+    }
+}
+
 void StyleSheetTable::ApplyStyleSheets( const FontTablePtr& rFontTable )
 {
     try
@@ -990,7 +1035,7 @@ void StyleSheetTable::ApplyStyleSheets( const FontTablePtr& rFontTable )
                     else if( bParaStyle )
                     {
                         // Paragraph styles that don't inherit from some parent need to apply the DocDefaults
-                        pEntry->pProperties->InsertProps( m_pImpl->m_pDefaultParaProps, /*bAllowOverwrite=*/false );
+                        pEntry->pProperties->InsertProps( m_pImpl->m_pDefaultParaProps, /*bOverwrite=*/false );
 
                         //now it's time to set the default parameters - for paragraph styles
                         //Fonts: Western first entry in font table
@@ -1038,13 +1083,38 @@ void StyleSheetTable::ApplyStyleSheets( const FontTablePtr& rFontTable )
                         }
 
                         // Set the outline levels
-                        const StyleSheetPropertyMap* pStyleSheetProperties = dynamic_cast<const StyleSheetPropertyMap*>(pEntry ? pEntry->pProperties.get() : nullptr);
+                        StyleSheetPropertyMap* pStyleSheetProperties = dynamic_cast<StyleSheetPropertyMap*>(pEntry ? pEntry->pProperties.get() : nullptr);
+
                         if ( pStyleSheetProperties )
                         {
                             beans::PropertyValue aLvlVal( getPropertyName( PROP_OUTLINE_LEVEL ), 0,
                                     uno::makeAny( sal_Int16( pStyleSheetProperties->GetOutlineLevel( ) + 1 ) ),
                                     beans::PropertyState_DIRECT_VALUE );
                             aPropValues.push_back(aLvlVal);
+
+                            // tdf#95495 missing list level settings in custom styles in old DOCX: apply settings of the parent style
+                            if (pStyleSheetProperties->GetListLevel() == -1 && pStyleSheetProperties->GetOutlineLevel() == -1)
+                            {
+                                const beans::PropertyValues aPropGrabBag = pEntry->GetInteropGrabBagSeq();
+                                for (const auto& rVal : aPropGrabBag)
+                                {
+                                    if (rVal.Name == "customStyle" && rVal.Value == true)
+                                    {
+                                        OUString sBaseId = pEntry->sBaseStyleIdentifier;
+                                        for (const auto& aSheetProps : m_pImpl->m_aStyleSheetEntries)
+                                        {
+                                            if (aSheetProps->sStyleIdentifierD == sBaseId)
+                                            {
+                                                StyleSheetPropertyMap& rStyleSheetProps
+                                                    = dynamic_cast<StyleSheetPropertyMap&>(*aSheetProps->pProperties);
+                                                pStyleSheetProperties->SetListLevel(rStyleSheetProps.GetListLevel());
+                                                pStyleSheetProperties->SetOutlineLevel(rStyleSheetProps.GetOutlineLevel());
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
 
                         uno::Reference< beans::XPropertyState >xState( xStyle, uno::UNO_QUERY_THROW );
@@ -1058,15 +1128,15 @@ void StyleSheetTable::ApplyStyleSheets( const FontTablePtr& rFontTable )
                         }
                         else if ( sConvertedStyleName == "Text body" )
                             xState->setPropertyToDefault(getPropertyName( PROP_PARA_BOTTOM_MARGIN ));
-                        else if( sConvertedStyleName == "Heading 1" ||
-                                sConvertedStyleName == "Heading 2" ||
-                                sConvertedStyleName == "Heading 3" ||
-                                sConvertedStyleName == "Heading 4" ||
-                                sConvertedStyleName == "Heading 5" ||
-                                sConvertedStyleName == "Heading 6" ||
-                                sConvertedStyleName == "Heading 7" ||
-                                sConvertedStyleName == "Heading 8" ||
-                                sConvertedStyleName == "Heading 9" )
+                        else if ( sConvertedStyleName == "Heading 1" ||
+                                  sConvertedStyleName == "Heading 2" ||
+                                  sConvertedStyleName == "Heading 3" ||
+                                  sConvertedStyleName == "Heading 4" ||
+                                  sConvertedStyleName == "Heading 5" ||
+                                  sConvertedStyleName == "Heading 6" ||
+                                  sConvertedStyleName == "Heading 7" ||
+                                  sConvertedStyleName == "Heading 8" ||
+                                  sConvertedStyleName == "Heading 9" )
                         {
                             xState->setPropertyToDefault(getPropertyName( PROP_CHAR_WEIGHT ));
                             xState->setPropertyToDefault(getPropertyName( PROP_CHAR_WEIGHT_ASIAN ));
@@ -1176,6 +1246,10 @@ void StyleSheetTable::ApplyStyleSheets( const FontTablePtr& rFontTable )
                     // If this is a table style, save its contents as-is for roundtrip purposes.
                     TableStyleSheetEntry* pTableEntry = static_cast<TableStyleSheetEntry *>(pEntry.get());
                     aTableStylesVec.push_back(pTableEntry->GetInteropGrabBag());
+
+                    // if DocDefaults exist, MS Word includes these in the table style definition.
+                    pEntry->pProperties->InsertProps( m_pImpl->m_pDefaultCharProps, /*bOverwrite=*/false );
+                    pEntry->pProperties->InsertProps( m_pImpl->m_pDefaultParaProps, /*bOverwrite=*/false );
                 }
             }
 
@@ -1271,7 +1345,7 @@ OUString StyleSheetTable::ConvertStyleName( const OUString& rWWName, bool bExten
     }
 
     // create a map only once
-    static const StringPairMap_t StyleNameMap{
+    static const std::map< OUString, OUString> StyleNameMap {
         { "Normal", "Standard" },
         { "heading 1", "Heading 1" },
         { "heading 2", "Heading 2" },
@@ -1451,16 +1525,16 @@ void StyleSheetTable::applyDefaults(bool bParaProperties)
         }
 
         // WARNING: these defaults only take effect IF there is a DocDefaults style section. Normally there is, but not always.
-        if( bParaProperties && m_pImpl->m_pDefaultParaProps.get())
+        if( bParaProperties && m_pImpl->m_pDefaultParaProps)
         {
             // tdf#87533 LO will have different defaults here, depending on the locale. Import with documented defaults
-            m_pImpl->m_pDefaultParaProps->Insert(PROP_WRITING_MODE, uno::makeAny(sal_Int16(text::WritingMode_LR_TB)), /*bOverwrite=*/false);
-            m_pImpl->m_pDefaultParaProps->Insert(PROP_PARA_ADJUST, uno::makeAny(sal_Int16(style::ParagraphAdjust_LEFT)), false);
+            SetDefaultParaProps(PROP_WRITING_MODE, uno::makeAny(sal_Int16(text::WritingMode_LR_TB)));
+            SetDefaultParaProps(PROP_PARA_ADJUST, uno::makeAny(sal_Int16(style::ParagraphAdjust_LEFT)));
 
             // Widow/Orphan -> set both to two if not already set
             uno::Any aTwo = uno::makeAny(sal_Int8(2));
-            m_pImpl->m_pDefaultParaProps->Insert(PROP_PARA_WIDOWS, aTwo, /*bOverwrite=*/false);
-            m_pImpl->m_pDefaultParaProps->Insert(PROP_PARA_ORPHANS, aTwo, false);
+            SetDefaultParaProps(PROP_PARA_WIDOWS, aTwo);
+            SetDefaultParaProps(PROP_PARA_ORPHANS, aTwo);
 
             uno::Reference<style::XStyleFamiliesSupplier> xStylesSupplier(m_pImpl->m_xTextDocument, uno::UNO_QUERY);
             uno::Reference<container::XNameAccess> xStyleFamilies = xStylesSupplier->getStyleFamilies();
@@ -1483,7 +1557,7 @@ void StyleSheetTable::applyDefaults(bool bParaProperties)
                 }
             }
         }
-        if( !bParaProperties && m_pImpl->m_pDefaultCharProps.get())
+        if( !bParaProperties && m_pImpl->m_pDefaultCharProps )
         {
             // tdf#108350: Earlier in DomainMapper for DOCX, Calibri/11pt was set to match MSWord 2007+,
             // but that is valid only if DocDefaults_rPrDefault is omitted.

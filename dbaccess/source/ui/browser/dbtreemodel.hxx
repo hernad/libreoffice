@@ -20,7 +20,6 @@
 #ifndef INCLUDED_DBACCESS_SOURCE_UI_BROWSER_DBTREEMODEL_HXX
 #define INCLUDED_DBACCESS_SOURCE_UI_BROWSER_DBTREEMODEL_HXX
 
-#include <com/sun/star/container/XNameAccess.hpp>
 #include <unodatbr.hxx>
 #include <commontypes.hxx>
 
@@ -34,7 +33,7 @@
 #define CONTAINER_QUERIES       sal_uLong( 0 )
 #define CONTAINER_TABLES        sal_uLong( 1 )
 
-namespace com { namespace sun { namespace star { namespace lang { class XMultiServiceFactory; } } } }
+namespace com::sun::star::lang { class XMultiServiceFactory; }
 
 namespace dbaui
 {

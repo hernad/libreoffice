@@ -21,18 +21,11 @@
 #include <svx/sdr/contact/viewobjectcontactofsdrobj.hxx>
 #include <svx/sdr/contact/viewobjectcontact.hxx>
 #include <svx/svdobj.hxx>
-#include <svx/sdr/contact/displayinfo.hxx>
 #include <tools/debug.hxx>
-#include <vcl/outdev.hxx>
-#include <svx/svdoole2.hxx>
 #include <svx/svdpage.hxx>
 #include <svx/sdr/contact/objectcontact.hxx>
-#include <basegfx/color/bcolor.hxx>
 #include <drawinglayer/primitive2d/markerarrayprimitive2d.hxx>
 #include <drawinglayer/primitive2d/objectinfoprimitive2d.hxx>
-#include <svx/sdr/contact/objectcontactofpageview.hxx>
-#include <svx/sdrpagewindow.hxx>
-#include <svx/sdrpaintwindow.hxx>
 #include <svx/svdhdl.hxx>
 
 namespace sdr::contact {
@@ -113,14 +106,12 @@ ViewContact* ViewContactOfSdrObj::GetParentContact() const
 void ViewContactOfSdrObj::ActionChanged()
 {
     // look for own changes
-    if(dynamic_cast<const SdrTextObj*>( &GetSdrObject() ) != nullptr)
+    if (SdrTextObj* pTextObj = dynamic_cast<SdrTextObj*>(&GetSdrObject()))
     {
-        SdrTextObj& rTextObj = static_cast<SdrTextObj&>(GetSdrObject());
-
-        if(rTextObj.GetTextAniKind() != meRememberedAnimationKind)
+        if (pTextObj->GetTextAniKind() != meRememberedAnimationKind)
         {
             // #i38135# now remember new type
-            meRememberedAnimationKind = rTextObj.GetTextAniKind();
+            meRememberedAnimationKind = pTextObj->GetTextAniKind();
         }
     }
 

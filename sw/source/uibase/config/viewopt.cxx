@@ -152,7 +152,7 @@ SwViewOption::SwViewOption() :
     mnViewLayoutColumns( 0 ),
     m_nPagePreviewRow( 1 ),
     m_nPagePreviewCol( 2 ),
-    m_nShadowCursorFillMode( FILL_TAB ),
+    m_nShadowCursorFillMode( SwFillMode::Tab ),
     m_bReadonly(false),
     m_bStarOneSetting(false),
     m_bIsPagePreview(false),
@@ -530,8 +530,8 @@ void SwViewOption::SetAppearanceFlag(ViewOptFlags nFlag, bool bSet, bool bSaveIn
         svtools::EditableColorConfig aEditableConfig;
         struct FlagToConfig_Impl
         {
-            ViewOptFlags const                nFlag;
-            svtools::ColorConfigEntry const   eEntry;
+            ViewOptFlags                nFlag;
+            svtools::ColorConfigEntry   eEntry;
         };
         static const FlagToConfig_Impl aFlags[] =
         {

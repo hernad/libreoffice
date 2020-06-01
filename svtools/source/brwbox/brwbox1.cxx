@@ -25,6 +25,8 @@
 #include <tools/debug.hxx>
 #include <tools/fract.hxx>
 #include <sal/log.hxx>
+#include <vcl/scrbar.hxx>
+#include <vcl/status.hxx>
 
 #include <algorithm>
 #include <com/sun/star/accessibility/AccessibleTableModelChange.hpp>
@@ -512,7 +514,7 @@ void BrowseBox::SetColumnWidth( sal_uInt16 nItemId, sal_uLong nWidth )
         return;
 
     // does the state change?
-    if ( !(nWidth >= LONG_MAX || mvCols[ nItemPos ]->Width() != nWidth) )
+    if ( nWidth < LONG_MAX && mvCols[ nItemPos ]->Width() == nWidth )
         return;
 
     long nOldWidth = mvCols[ nItemPos ]->Width();
@@ -948,7 +950,7 @@ long BrowseBox::ScrollColumns( long nCols )
     if ( nCols )
     {
         pDataWin->Update();
-        Update();
+        PaintImmediately();
     }
     bScrolling = false;
     EndScroll();
@@ -1872,8 +1874,7 @@ void BrowseBox::MakeFieldVisible
 
     Size aTestSize = pDataWin->GetSizePixel();
 
-    if ( !bBootstrapped ||
-         ( aTestSize.Width() == 0 && aTestSize.Height() == 0 ) )
+    if ( !bBootstrapped || aTestSize.IsEmpty() )
         return;
 
     // is it visible already?
@@ -2130,8 +2131,7 @@ void BrowseBox::SetMode( BrowserMode nMode )
     bHLines = ( nMode & BrowserMode::HLINES ) == BrowserMode::HLINES;
     bVLines = ( nMode & BrowserMode::VLINES ) == BrowserMode::VLINES;
 
-    WinBits nVScrollWinBits =
-        WB_VSCROLL | ( ( nMode & BrowserMode::THUMBDRAGGING ) ? WB_DRAG : 0 );
+    constexpr WinBits nVScrollWinBits = WB_VSCROLL;
     pVScroll = ( nMode & BrowserMode::TRACKING_TIPS ) == BrowserMode::TRACKING_TIPS
                 ? VclPtr<BrowserScrollBar>::Create( this, nVScrollWinBits, pDataWin.get() )
                 : VclPtr<ScrollBar>::Create( this, nVScrollWinBits );

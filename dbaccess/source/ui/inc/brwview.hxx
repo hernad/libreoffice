@@ -22,15 +22,14 @@
 
 #include <vcl/window.hxx>
 
-#include <com/sun/star/awt/PosSize.hpp>
 #include <dbaccess/dataview.hxx>
 #include <unotools/eventlisteneradapter.hxx>
 
-namespace com { namespace sun { namespace star { namespace awt {
+namespace com::sun::star::awt {
     class XControl;
     class XControlContainer;
     class XControlModel;
-}}}}
+}
 
 class Splitter;
 

@@ -29,7 +29,7 @@
 #include <vector>
 #include <memory>
 
-namespace com{ namespace sun {namespace star{
+namespace com::sun::star{
     namespace beans{
         struct PropertyValue;
     }
@@ -45,7 +45,7 @@ namespace com{ namespace sun {namespace star{
     namespace text{
         class XTextRange;
     }
-}}}
+}
 
 namespace utl
 {
@@ -95,6 +95,7 @@ public:
 
     void PushListProperties( const ::tools::SvRef<PropertyMap>& pListProperties );
     void PopListProperties();
+    OUString GetListStyleName(sal_Int32 nListId) const;
 
     bool IsOOXMLImport() const;
     bool IsRTFImport() const;
@@ -112,6 +113,7 @@ public:
     bool IsInHeaderFooter() const;
     bool IsInTable() const;
     bool IsStyleSheetImport() const;
+    bool IsInShape() const;
 
     void hasControls( const bool bSet ) { mbHasControls = bSet; }
 

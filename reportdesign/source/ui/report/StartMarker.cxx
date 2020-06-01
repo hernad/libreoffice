@@ -17,6 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 #include <StartMarker.hxx>
+#include <UITools.hxx>
 #include <vcl/image.hxx>
 #include <vcl/svapp.hxx>
 #include <bitmaps.hlst>
@@ -267,21 +268,21 @@ void OStartMarker::showRuler(bool _bShow)
 
 void OStartMarker::RequestHelp( const HelpEvent& rHEvt )
 {
-    if( !m_aText->GetText().isEmpty())
-    {
-        // show help
-        tools::Rectangle aItemRect(rHEvt.GetMousePosPixel(),Size(GetSizePixel().Width(),getMinHeight()));
-        Point aPt = OutputToScreenPixel( aItemRect.TopLeft() );
-        aItemRect.SetLeft( aPt.X() );
-        aItemRect.SetTop( aPt.Y() );
-        aPt = OutputToScreenPixel( aItemRect.BottomRight() );
-        aItemRect.SetRight( aPt.X() );
-        aItemRect.SetBottom( aPt.Y() );
-        if( rHEvt.GetMode() == HelpEventMode::BALLOON )
-            Help::ShowBalloon( this, aItemRect.Center(), aItemRect, m_aText->GetText());
-        else
-            Help::ShowQuickHelp( this, aItemRect, m_aText->GetText() );
-    }
+    if( m_aText->GetText().isEmpty())
+        return;
+
+    // show help
+    tools::Rectangle aItemRect(rHEvt.GetMousePosPixel(),Size(GetSizePixel().Width(),getMinHeight()));
+    Point aPt = OutputToScreenPixel( aItemRect.TopLeft() );
+    aItemRect.SetLeft( aPt.X() );
+    aItemRect.SetTop( aPt.Y() );
+    aPt = OutputToScreenPixel( aItemRect.BottomRight() );
+    aItemRect.SetRight( aPt.X() );
+    aItemRect.SetBottom( aPt.Y() );
+    if( rHEvt.GetMode() == HelpEventMode::BALLOON )
+        Help::ShowBalloon( this, aItemRect.Center(), aItemRect, m_aText->GetText());
+    else
+        Help::ShowQuickHelp( this, aItemRect, m_aText->GetText() );
 }
 
 void OStartMarker::setCollapsed(bool _bCollapsed)
@@ -295,7 +296,7 @@ void OStartMarker::zoom(const Fraction& _aZoom)
 {
     setZoomFactor(_aZoom,*this);
     m_aVRuler->SetZoom(_aZoom);
-    setZoomFactor(_aZoom, *m_aText.get());
+    setZoomFactor(_aZoom, *m_aText);
     Resize();
     Invalidate();
 }

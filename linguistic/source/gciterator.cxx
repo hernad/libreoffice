@@ -120,6 +120,10 @@ static const sal_Unicode aWhiteSpaces[] =
     0xfffb    /* INTERLINEAR ANNOTATION TERMINATOR */
 };
 
+//  Information about reason for proofreading (ProofInfo)
+   static const sal_Int32 PROOFINFO_GET_PROOFRESULT = 1;
+   static const sal_Int32 PROOFINFO_MARK_PARAGRAPH = 2;
+
 static const int nWhiteSpaces = SAL_N_ELEMENTS( aWhiteSpaces );
 
 static bool lcl_IsWhiteSpace( sal_Unicode cChar )
@@ -350,24 +354,24 @@ void GrammarCheckingIterator::AddEntry(
     // we may not need/have a xFlatParaIterator (e.g. if checkGrammarAtPos was called)
     // but we always need a xFlatPara...
     uno::Reference< text::XFlatParagraph > xPara( xFlatPara );
-    if (xPara.is())
-    {
-        FPEntry aNewFPEntry;
-        aNewFPEntry.m_xParaIterator = xFlatParaIterator;
-        aNewFPEntry.m_xPara         = xFlatPara;
-        aNewFPEntry.m_aDocId        = rDocId;
-        aNewFPEntry.m_nStartIndex   = nStartIndex;
-        aNewFPEntry.m_bAutomatic    = bAutomatic;
+    if (!xPara.is())
+        return;
 
-        // add new entry to the end of this queue
-        ::osl::Guard< ::osl::Mutex > aGuard( MyMutex::get() );
-        if (!m_thread)
-            m_thread = osl_createThread( lcl_workerfunc, this );
-        m_aFPEntriesQueue.push_back( aNewFPEntry );
+    FPEntry aNewFPEntry;
+    aNewFPEntry.m_xParaIterator = xFlatParaIterator;
+    aNewFPEntry.m_xPara         = xFlatPara;
+    aNewFPEntry.m_aDocId        = rDocId;
+    aNewFPEntry.m_nStartIndex   = nStartIndex;
+    aNewFPEntry.m_bAutomatic    = bAutomatic;
 
-        // wake up the thread in order to do grammar checking
-        m_aWakeUpThread.set();
-    }
+    // add new entry to the end of this queue
+    ::osl::Guard< ::osl::Mutex > aGuard( MyMutex::get() );
+    if (!m_thread)
+        m_thread = osl_createThread( lcl_workerfunc, this );
+    m_aFPEntriesQueue.push_back( aNewFPEntry );
+
+    // wake up the thread in order to do grammar checking
+    m_aWakeUpThread.set();
 }
 
 
@@ -545,13 +549,15 @@ uno::Reference< linguistic2::XProofreader > GrammarCheckingIterator::GetGrammarC
 }
 
 static uno::Sequence<beans::PropertyValue>
-lcl_makeProperties(uno::Reference<text::XFlatParagraph> const& xFlatPara)
+lcl_makeProperties(uno::Reference<text::XFlatParagraph> const& xFlatPara, sal_Int32 nProofInfo)
 {
     uno::Reference<beans::XPropertySet> const xProps(
             xFlatPara, uno::UNO_QUERY_THROW);
+    css::uno::Any a (nProofInfo);
     return comphelper::InitPropertySequence({
         { "FieldPositions", xProps->getPropertyValue("FieldPositions") },
-        { "FootnotePositions", xProps->getPropertyValue("FootnotePositions") }
+        { "FootnotePositions", xProps->getPropertyValue("FootnotePositions") },
+        { "ProofInfo", a }
     });
 }
 
@@ -619,7 +625,7 @@ void GrammarCheckingIterator::DequeueAndCheck()
                             {
                                 aGuard.clear();
                                 uno::Sequence<beans::PropertyValue> const aProps(
-                                    lcl_makeProperties(xFlatPara));
+                                    lcl_makeProperties(xFlatPara, PROOFINFO_MARK_PARAGRAPH));
                                 aRes = xGC->doProofreading(aCurDocId, aCurTxt, aCurLocale,
                                                            nStartPos, nSuggestedEnd, aProps);
 
@@ -772,7 +778,7 @@ linguistic2::ProofreadingResult SAL_CALL GrammarCheckingIterator::checkSentenceA
             if (xGC.is())
             {
                 uno::Sequence<beans::PropertyValue> const aProps(
-                        lcl_makeProperties(xFlatPara));
+                        lcl_makeProperties(xFlatPara, PROOFINFO_GET_PROOFRESULT));
                 aTmpRes = xGC->doProofreading( aDocId, rText,
                     aCurLocale, nStartPos, nSuggestedEndOfSentencePos, aProps );
 
@@ -916,25 +922,25 @@ sal_Bool SAL_CALL GrammarCheckingIterator::isProofreading(
 void SAL_CALL GrammarCheckingIterator::processLinguServiceEvent(
     const linguistic2::LinguServiceEvent& rLngSvcEvent )
 {
-    if (rLngSvcEvent.nEvent == linguistic2::LinguServiceEventFlags::PROOFREAD_AGAIN)
+    if (rLngSvcEvent.nEvent != linguistic2::LinguServiceEventFlags::PROOFREAD_AGAIN)
+        return;
+
+    try
     {
-        try
-        {
-             uno::Reference< uno::XInterface > xThis( static_cast< OWeakObject * >(this) );
-             linguistic2::LinguServiceEvent aEvent( xThis, linguistic2::LinguServiceEventFlags::PROOFREAD_AGAIN );
-             m_aNotifyListeners.notifyEach(
-                    &linguistic2::XLinguServiceEventListener::processLinguServiceEvent,
-                    aEvent);
-        }
-        catch (uno::RuntimeException &)
-        {
-             throw;
-        }
-        catch (const ::uno::Exception &)
-        {
-            // ignore
-            TOOLS_WARN_EXCEPTION("linguistic", "processLinguServiceEvent");
-        }
+         uno::Reference< uno::XInterface > xThis( static_cast< OWeakObject * >(this) );
+         linguistic2::LinguServiceEvent aEvent( xThis, linguistic2::LinguServiceEventFlags::PROOFREAD_AGAIN );
+         m_aNotifyListeners.notifyEach(
+                &linguistic2::XLinguServiceEventListener::processLinguServiceEvent,
+                aEvent);
+    }
+    catch (uno::RuntimeException &)
+    {
+         throw;
+    }
+    catch (const ::uno::Exception &)
+    {
+        // ignore
+        TOOLS_WARN_EXCEPTION("linguistic", "processLinguServiceEvent");
     }
 }
 

@@ -207,7 +207,6 @@ struct SwHTMLTextCollOutputInfo
     bool bParaPossible;         // a </P> may be output additionally
     bool bOutPara;              // a </P> is supposed to be output
     bool bOutDiv;               // write a </DIV>
-    bool bOutLi = false;        // write a </li>
 
     SwHTMLTextCollOutputInfo() :
         bInNumberBulletList( false ),
@@ -438,6 +437,12 @@ static void OutHTML_SwFormat( Writer& rWrt, const SwFormat& rFormat,
     bool bNoEndTag = false;         // don't output an end tag
 
     rHWrt.m_bNoAlign = false;       // no ALIGN=... possible
+
+    if (rHWrt.mbXHTML)
+    {
+        rHWrt.m_bNoAlign = true;
+    }
+
     sal_uInt8 nBulletGrfLvl = 255;  // The bullet graphic we want to output
 
     // Are we in a bulleted or numbered list?
@@ -758,14 +763,8 @@ static void OutHTML_SwFormat( Writer& rWrt, const SwFormat& rFormat,
         html.start(OOO_STRING_SVTOOLS_HTML_li);
         if( USHRT_MAX != nNumStart )
             html.attribute(OOO_STRING_SVTOOLS_HTML_O_value, OString::number(nNumStart));
-        if (rHWrt.mbXHTML)
-        {
-            rWrt.Strm().WriteCharPtr(">");
-            rInfo.bOutLi = true;
-        }
-        else
-            // Finish the opening element, but don't close it.
-            html.characters(OString());
+        // Finish the opening element, but don't close it.
+        html.characters(OString());
     }
 
     if( rHWrt.m_nDefListLvl > 0 && !bForceDL )
@@ -1016,11 +1015,7 @@ static void OutHTML_SwFormatOff( Writer& rWrt, const SwHTMLTextCollOutputInfo& r
         rHWrt.m_bLFPossible = true;
     }
 
-    if (rInfo.bOutLi)
-        HTMLOutFuncs::Out_AsciiTag(rWrt.Strm(), rHWrt.GetNamespace() + OOO_STRING_SVTOOLS_HTML_li,
-                                   false);
-
-    // if necessary, close a bulleted or numbered list
+    // if necessary, close the list item, then close a bulleted or numbered list
     if( rInfo.bInNumberBulletList )
     {
         rHWrt.FillNextNumInfo();
@@ -1084,11 +1079,11 @@ class HTMLEndPosLst
     std::vector<sal_uInt16> aScriptLst;
 
     SwDoc *pDoc;            // the current document
-    SwDoc* const pTemplate;       // the HTML template (or 0)
-    o3tl::optional<Color> xDfltColor;// the default foreground colors
+    SwDoc* pTemplate;       // the HTML template (or 0)
+    std::optional<Color> xDfltColor;// the default foreground colors
     std::set<OUString>& rScriptTextStyles;
 
-    sal_uLong const nHTMLMode;
+    sal_uLong nHTMLMode;
     bool bOutStyles : 1;    // are styles exported
 
     // Insert/remove a SttEndPos in/from the Start and End lists.
@@ -1129,7 +1124,7 @@ class HTMLEndPosLst
 
 public:
 
-    HTMLEndPosLst( SwDoc *pDoc, SwDoc* pTemplate, o3tl::optional<Color> xDfltColor,
+    HTMLEndPosLst( SwDoc *pDoc, SwDoc* pTemplate, std::optional<Color> xDfltColor,
                    bool bOutStyles, sal_uLong nHTMLMode,
                    const OUString& rText, std::set<OUString>& rStyles );
     ~HTMLEndPosLst();
@@ -1577,7 +1572,7 @@ const SwHTMLFormatInfo *HTMLEndPosLst::GetFormatInfo( const SwFormat& rFormat,
     return pFormatInfo;
 }
 
-HTMLEndPosLst::HTMLEndPosLst(SwDoc* pD, SwDoc* pTempl, o3tl::optional<Color> xDfltCol,
+HTMLEndPosLst::HTMLEndPosLst(SwDoc* pD, SwDoc* pTempl, std::optional<Color> xDfltCol,
                              bool bStyles, sal_uLong nMode, const OUString& rText,
                              std::set<OUString>& rStyles)
     : pDoc(pD)
@@ -1674,7 +1669,7 @@ void HTMLEndPosLst::InsertNoScript( const SfxPoolItem& rItem,
             {
                 const SwFormatAutoFormat& rAutoFormat = static_cast<const SwFormatAutoFormat&>(rItem);
                 const std::shared_ptr<SfxItemSet>& pSet = rAutoFormat.GetStyleHandle();
-                if( pSet.get() )
+                if( pSet )
                     Insert( *pSet, nStart, nEnd, rFormatInfos, true, bParaAttrs );
             }
             break;

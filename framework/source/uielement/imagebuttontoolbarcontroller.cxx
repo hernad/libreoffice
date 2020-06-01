@@ -83,32 +83,32 @@ void ImageButtonToolbarController::executeControlCommand( const css::frame::Cont
 {
     SolarMutexGuard aSolarMutexGuard;
     // i73486 to be downward compatible use old and "wrong" also!
-    if( rControlCommand.Command == "SetImag" ||
-        rControlCommand.Command == "SetImage" )
+    if( !(rControlCommand.Command == "SetImag" ||
+        rControlCommand.Command == "SetImage") )
+        return;
+
+    for ( const NamedValue& rArg : rControlCommand.Arguments )
     {
-        for ( sal_Int32 i = 0; i < rControlCommand.Arguments.getLength(); i++ )
+        if ( rArg.Name == "URL" )
         {
-            if ( rControlCommand.Arguments[i].Name == "URL" )
+            OUString aURL;
+            rArg.Value >>= aURL;
+
+            SubstituteVariables( aURL );
+
+            Image aImage;
+            if ( ReadImageFromURL( SvtMiscOptions().AreCurrentSymbolsLarge(),
+                                   aURL,
+                                   aImage ))
             {
-                OUString aURL;
-                rControlCommand.Arguments[i].Value >>= aURL;
+                m_xToolbar->SetItemImage( m_nID, aImage );
 
-                SubstituteVariables( aURL );
-
-                Image aImage;
-                if ( ReadImageFromURL( SvtMiscOptions().AreCurrentSymbolsLarge(),
-                                       aURL,
-                                       aImage ))
-                {
-                    m_xToolbar->SetItemImage( m_nID, aImage );
-
-                    // send notification
-                    uno::Sequence< beans::NamedValue > aInfo { { "URL", css::uno::makeAny(aURL) } };
-                    addNotifyInfo( "ImageChanged",
-                                getDispatchFromCommand( m_aCommandURL ),
-                                aInfo );
-                    break;
-                }
+                // send notification
+                uno::Sequence< beans::NamedValue > aInfo { { "URL", css::uno::makeAny(aURL) } };
+                addNotifyInfo( "ImageChanged",
+                            getDispatchFromCommand( m_aCommandURL ),
+                            aInfo );
+                break;
             }
         }
     }
@@ -130,7 +130,7 @@ bool ImageButtonToolbarController::ReadImageFromURL( bool bBigImage, const OUStr
         const ::Size aSize = bBigImage ? aImageSizeBig : aImageSizeSmall; // Sizes used for toolbar images
 
         ::Size aBmpSize = aBitmapEx.GetSizePixel();
-        if ( aBmpSize.Width() > 0 && aBmpSize.Height() > 0 )
+        if ( !aBmpSize.IsEmpty() )
         {
             ::Size aNoScaleSize( aBmpSize.Width(), aSize.Height() );
             if ( aBmpSize != aNoScaleSize )

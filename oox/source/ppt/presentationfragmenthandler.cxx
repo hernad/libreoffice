@@ -19,21 +19,20 @@
 
 #include <comphelper/anytostring.hxx>
 #include <comphelper/sequenceashashmap.hxx>
-#include <cppuhelper/exc_hlp.hxx>
-#include <osl/diagnose.h>
 #include <sal/log.hxx>
 #include <tools/multisel.hxx>
 #include <tools/diagnose_ex.h>
 
+#include <com/sun/star/container/XNamed.hpp>
 #include <com/sun/star/drawing/XMasterPagesSupplier.hpp>
 #include <com/sun/star/drawing/XDrawPages.hpp>
 #include <com/sun/star/drawing/XDrawPagesSupplier.hpp>
 #include <com/sun/star/drawing/XMasterPageTarget.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/io/XInputStream.hpp>
+#include <com/sun/star/text/XTextField.hpp>
 #include <com/sun/star/xml/dom/XDocument.hpp>
 #include <com/sun/star/xml/sax/XFastSAXSerializable.hpp>
-#include <com/sun/star/style/XStyleFamiliesSupplier.hpp>
-#include <com/sun/star/style/XStyle.hpp>
 #include <com/sun/star/presentation/XPresentationPage.hpp>
 #include <com/sun/star/task/XStatusIndicator.hpp>
 
@@ -103,55 +102,55 @@ PresentationFragmentHandler::~PresentationFragmentHandler() throw()
 static void ResolveTextFields( XmlFilterBase const & rFilter )
 {
     const oox::core::TextFieldStack& rTextFields = rFilter.getTextFieldStack();
-    if ( !rTextFields.empty() )
-    {
-        const Reference< frame::XModel >& xModel( rFilter.getModel() );
-        for (auto const& textField : rTextFields)
-        {
-            const OUString sURL = "URL";
-            Reference< drawing::XDrawPagesSupplier > xDPS( xModel, uno::UNO_QUERY_THROW );
-            Reference< drawing::XDrawPages > xDrawPages( xDPS->getDrawPages(), uno::UNO_SET_THROW );
+    if ( rTextFields.empty() )
+        return;
 
-            const oox::core::TextField& rTextField( textField );
-            Reference< XPropertySet > xPropSet( rTextField.xTextField, UNO_QUERY );
-            Reference< XPropertySetInfo > xPropSetInfo( xPropSet->getPropertySetInfo() );
-            if ( xPropSetInfo->hasPropertyByName( sURL ) )
+    const Reference< frame::XModel >& xModel( rFilter.getModel() );
+    for (auto const& textField : rTextFields)
+    {
+        const OUString sURL = "URL";
+        Reference< drawing::XDrawPagesSupplier > xDPS( xModel, uno::UNO_QUERY_THROW );
+        Reference< drawing::XDrawPages > xDrawPages( xDPS->getDrawPages(), uno::UNO_SET_THROW );
+
+        const oox::core::TextField& rTextField( textField );
+        Reference< XPropertySet > xPropSet( rTextField.xTextField, UNO_QUERY );
+        Reference< XPropertySetInfo > xPropSetInfo( xPropSet->getPropertySetInfo() );
+        if ( xPropSetInfo->hasPropertyByName( sURL ) )
+        {
+            OUString aURL;
+            if ( xPropSet->getPropertyValue( sURL ) >>= aURL )
             {
-                OUString aURL;
-                if ( xPropSet->getPropertyValue( sURL ) >>= aURL )
+                const OUString sSlide = "#Slide ";
+                const OUString sNotes = "#Notes ";
+                bool bNotes = false;
+                sal_Int32 nPageNumber = 0;
+                if ( aURL.match( sSlide ) )
+                    nPageNumber = aURL.copy( sSlide.getLength() ).toInt32();
+                else if ( aURL.match( sNotes ) )
                 {
-                    const OUString sSlide = "#Slide ";
-                    const OUString sNotes = "#Notes ";
-                    bool bNotes = false;
-                    sal_Int32 nPageNumber = 0;
-                    if ( aURL.match( sSlide ) )
-                        nPageNumber = aURL.copy( sSlide.getLength() ).toInt32();
-                    else if ( aURL.match( sNotes ) )
+                    nPageNumber = aURL.copy( sNotes.getLength() ).toInt32();
+                    bNotes = true;
+                }
+                if ( nPageNumber )
+                {
+                    try
                     {
-                        nPageNumber = aURL.copy( sNotes.getLength() ).toInt32();
-                        bNotes = true;
+                        Reference< XDrawPage > xDrawPage;
+                        xDrawPages->getByIndex( nPageNumber - 1 ) >>= xDrawPage;
+                        if ( bNotes )
+                        {
+                            Reference< css::presentation::XPresentationPage > xPresentationPage( xDrawPage, UNO_QUERY_THROW );
+                            xDrawPage = xPresentationPage->getNotesPage();
+                        }
+                        Reference< container::XNamed > xNamed( xDrawPage, UNO_QUERY_THROW );
+                        aURL = "#" + xNamed->getName();
+                        xPropSet->setPropertyValue( sURL, Any( aURL ) );
+                        Reference< text::XTextContent > xContent( rTextField.xTextField);
+                        Reference< text::XTextRange > xTextRange = rTextField.xTextCursor;
+                        rTextField.xText->insertTextContent( xTextRange, xContent, true );
                     }
-                    if ( nPageNumber )
+                    catch( uno::Exception& )
                     {
-                        try
-                        {
-                            Reference< XDrawPage > xDrawPage;
-                            xDrawPages->getByIndex( nPageNumber - 1 ) >>= xDrawPage;
-                            if ( bNotes )
-                            {
-                                Reference< css::presentation::XPresentationPage > xPresentationPage( xDrawPage, UNO_QUERY_THROW );
-                                xDrawPage = xPresentationPage->getNotesPage();
-                            }
-                            Reference< container::XNamed > xNamed( xDrawPage, UNO_QUERY_THROW );
-                            aURL = "#" + xNamed->getName();
-                            xPropSet->setPropertyValue( sURL, Any( aURL ) );
-                            Reference< text::XTextContent > xContent( rTextField.xTextField, UNO_QUERY);
-                            Reference< text::XTextRange > xTextRange = rTextField.xTextCursor;
-                            rTextField.xText->insertTextContent( xTextRange, xContent, true );
-                        }
-                        catch( uno::Exception& )
-                        {
-                        }
                     }
                 }
             }
@@ -275,7 +274,7 @@ void PresentationFragmentHandler::importSlide(sal_uInt32 nSlide, bool bFirstPage
                         }
                     }
 
-                    if ( !pMasterPersistPtr.get() )
+                    if ( !pMasterPersistPtr )
                     {   // masterpersist not found, we have to load it
                         Reference< drawing::XDrawPage > xMasterPage;
                         Reference< drawing::XMasterPagesSupplier > xMPS( xModel, uno::UNO_QUERY_THROW );
@@ -337,7 +336,7 @@ void PresentationFragmentHandler::importSlide(sal_uInt32 nSlide, bool bFirstPage
             }
 
             // importing slide page
-            if (pMasterPersistPtr.get()) {
+            if (pMasterPersistPtr) {
                 pSlidePersistPtr->setMasterPersist( pMasterPersistPtr );
                 pSlidePersistPtr->setTheme( pMasterPersistPtr->getTheme() );
                 Reference< drawing::XMasterPageTarget > xMasterPageTarget( pSlidePersistPtr->getPage(), UNO_QUERY );
@@ -563,7 +562,7 @@ void PresentationFragmentHandler::importSlide( const FragmentHandlerRef& rxSlide
 {
     Reference< drawing::XDrawPage > xSlide( rSlidePersistPtr->getPage() );
     SlidePersistPtr pMasterPersistPtr( rSlidePersistPtr->getMasterPersist() );
-    if ( pMasterPersistPtr.get() )
+    if ( pMasterPersistPtr )
     {
         // Setting "Layout" property adds extra title and outliner preset shapes to the master slide
         Reference< drawing::XDrawPage > xMasterSlide(pMasterPersistPtr->getPage());

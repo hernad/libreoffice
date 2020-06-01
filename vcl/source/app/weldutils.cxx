@@ -40,8 +40,8 @@ DialogController::~DialogController() COVERITY_NOEXCEPT_FALSE {}
 Dialog* GenericDialogController::getDialog() { return m_xDialog.get(); }
 
 GenericDialogController::GenericDialogController(weld::Widget* pParent, const OUString& rUIFile,
-                                                 const OString& rDialogId)
-    : m_xBuilder(Application::CreateBuilder(pParent, rUIFile))
+                                                 const OString& rDialogId, bool bMobile)
+    : m_xBuilder(Application::CreateBuilder(pParent, rUIFile, bMobile))
     , m_xDialog(m_xBuilder->weld_dialog(rDialogId))
 {
 }
@@ -104,6 +104,25 @@ void TriStateEnabled::ButtonToggled(weld::ToggleButton& rToggle)
         }
     }
     eState = rToggle.get_state();
+}
+
+void RemoveParentKeepChildren(weld::TreeView& rTreeView, weld::TreeIter& rParent)
+{
+    if (rTreeView.iter_has_child(rParent))
+    {
+        std::unique_ptr<weld::TreeIter> xNewParent(rTreeView.make_iterator(&rParent));
+        if (!rTreeView.iter_parent(*xNewParent))
+            xNewParent.reset();
+
+        while (true)
+        {
+            std::unique_ptr<weld::TreeIter> xChild(rTreeView.make_iterator(&rParent));
+            if (!rTreeView.iter_children(*xChild))
+                break;
+            rTreeView.move_subtree(*xChild, xNewParent.get(), -1);
+        }
+    }
+    rTreeView.remove(rParent);
 }
 }
 

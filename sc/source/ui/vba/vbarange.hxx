@@ -30,13 +30,13 @@
 #include <address.hxx>
 #include <formula/grammar.hxx>
 
-namespace com { namespace sun { namespace star { namespace sheet { class XSheetCellRangeContainer; } } } }
-namespace com { namespace sun { namespace star { namespace table { class XCell; } } } }
-namespace com { namespace sun { namespace star { namespace table { class XCellRange; } } } }
-namespace com { namespace sun { namespace star { namespace table { struct CellRangeAddress; } } } }
-namespace ooo { namespace vba { class XCollection; } }
-namespace ooo { namespace vba { namespace excel { class XComment; } } }
-namespace ooo { namespace vba { namespace excel { class XFont; } } }
+namespace com::sun::star::sheet { class XSheetCellRangeContainer; }
+namespace com::sun::star::table { class XCell; }
+namespace com::sun::star::table { class XCellRange; }
+namespace com::sun::star::table { struct CellRangeAddress; }
+namespace ooo::vba { class XCollection; }
+namespace ooo::vba::excel { class XComment; }
+namespace ooo::vba::excel { class XFont; }
 
 class SfxItemSet;
 class ScCellRangesBase;
@@ -75,8 +75,8 @@ class ScVbaRange : public ScVbaRange_BASE
     css::uno::Reference< ov::XCollection > m_Borders;
     css::uno::Reference< css::table::XCellRange > mxRange;
     css::uno::Reference< css::sheet::XSheetCellRangeContainer > mxRanges;
-    bool const mbIsRows;
-    bool const mbIsColumns;
+    bool mbIsRows;
+    bool mbIsColumns;
     css::uno::Reference< ov::excel::XValidation > m_xValidation;
     /// @throws css::uno::RuntimeException
     double getCalcColWidth(const css::table::CellRangeAddress&);

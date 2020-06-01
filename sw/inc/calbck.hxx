@@ -312,7 +312,8 @@ namespace sw
                 if(m_pPosition)
                     while( m_pPosition->m_pLeft )
                         m_pPosition = m_pPosition->m_pLeft;
-                return m_pCurrent = m_pPosition;
+                m_pCurrent = m_pPosition;
+                return m_pCurrent;
             }
             ~ClientIteratorBase() override
             {
@@ -326,7 +327,7 @@ namespace sw
             // SwModify::Add() asserts this
             bool IsChanged() const { return m_pPosition != m_pCurrent; }
             // ensures the iterator to point at a current client
-            WriterListener* Sync() { return m_pCurrent = m_pPosition; }
+            WriterListener* Sync() { m_pCurrent = m_pPosition; return m_pCurrent; }
     };
 }
 
@@ -347,29 +348,6 @@ public:
         m_pCurrent = nullptr;
         return Next();
     }
-    TElementType* Last()
-    {
-        if(!m_pPosition)
-            m_pPosition = m_rRoot.m_pWriterListeners;
-        if(!m_pPosition)
-            return static_cast<TElementType*>(Sync());
-        while(GetRightOfPos())
-            m_pPosition = GetRightOfPos();
-        sw::WriterListener * pCurrent(m_pPosition);
-        if (eMode == sw::IteratorMode::UnwrapMulti)
-        {
-            if (auto const pLE = dynamic_cast<sw::ListenerEntry const*>(pCurrent))
-            {
-                pCurrent = pLE->m_pToTell;
-            }
-        }
-        if (dynamic_cast<const TElementType *>(pCurrent) != nullptr)
-        {
-            Sync();
-            return static_cast<TElementType*>(pCurrent);
-        }
-        return Previous();
-    }
     TElementType* Next()
     {
         if(!IsChanged())
@@ -387,30 +365,6 @@ public:
             if (dynamic_cast<const TElementType *>(pCurrent) == nullptr)
             {
                 m_pPosition = GetRightOfPos();
-                pCurrent = m_pPosition;
-            }
-            else
-                break;
-        }
-        Sync();
-        return static_cast<TElementType*>(pCurrent);
-    }
-    TElementType* Previous()
-    {
-        m_pPosition = GetLeftOfPos();
-        sw::WriterListener *pCurrent(m_pPosition);
-        while (m_pPosition)
-        {
-            if (eMode == sw::IteratorMode::UnwrapMulti)
-            {
-                if (auto const pLE = dynamic_cast<sw::ListenerEntry const*>(m_pPosition))
-                {
-                    pCurrent = pLE->m_pToTell;
-                }
-            }
-            if (dynamic_cast<const TElementType *>(pCurrent) == nullptr)
-            {
-                m_pPosition = GetLeftOfPos();
                 pCurrent = m_pPosition;
             }
             else

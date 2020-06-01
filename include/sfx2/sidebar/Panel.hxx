@@ -30,12 +30,16 @@ namespace com::sun::star::ui { class XSidebarPanel; }
 namespace com::sun::star::ui { class XUIElement; }
 namespace com::sun::star::awt { class XWindow; }
 
-namespace sfx2 { namespace sidebar {
+namespace sfx2::sidebar {
 
 class PanelDescriptor;
 class PanelTitleBar;
 class Context;
 
+/**
+ * Multiple panels form a single deck.
+ * E.g. the Properties deck has panels like Styles, Character, paragraph.
+ */
 class SFX2_DLLPUBLIC Panel final : public vcl::Window
 {
 public:
@@ -83,7 +87,7 @@ private:
 };
 typedef std::vector<VclPtr<Panel> > SharedPanelContainer;
 
-} } // end of namespace sfx2::sidebar
+} // end of namespace sfx2::sidebar
 
 #endif
 

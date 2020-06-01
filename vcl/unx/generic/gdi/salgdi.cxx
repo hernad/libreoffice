@@ -58,7 +58,7 @@
 #include <vcl/skia/SkiaHelper.hxx>
 #if HAVE_FEATURE_SKIA
 #include <skia/x11/gdiimpl.hxx>
-#include <skia/x11/cairotextrender.hxx>
+#include <skia/x11/textrender.hxx>
 #endif
 
 X11SalGraphics::X11SalGraphics():
@@ -86,7 +86,7 @@ X11SalGraphics::X11SalGraphics():
     if (m_bSkia)
     {
         mxImpl.reset(new X11SkiaSalGraphicsImpl(*this));
-        mxTextRenderImpl.reset(new SkiaX11CairoTextRender(*this));
+        mxTextRenderImpl.reset(new SkiaTextRender);
     }
     else
 #endif
@@ -325,8 +325,12 @@ void X11SalGraphics::GetResolution( sal_Int32 &rDPIX, sal_Int32 &rDPIY ) // cons
         // different x- and y- resolutions are usually artifacts of
         // a wrongly calculated screen size.
 #ifdef DEBUG
-        printf("Forcing Resolution from %" SAL_PRIdINT32 "x%" SAL_PRIdINT32 " to %" SAL_PRIdINT32 "x%" SAL_PRIdINT32 "\n",
-                rDPIX,rDPIY,rDPIY,rDPIY);
+        SAL_INFO("vcl.gdi", "Forcing Resolution from "
+            << std::hex << rDPIX
+            << std::dec << rDPIX
+            << " to "
+            << std::hex << rDPIY
+            << std::dec << rDPIY);
 #endif
         rDPIX = rDPIY; // y-resolution is more trustworthy
     }
@@ -698,7 +702,8 @@ bool X11SalGraphics::drawPolyLine(
     const basegfx::B2DHomMatrix& rObjectToDevice,
     const basegfx::B2DPolygon& rPolygon,
     double fTransparency,
-    const basegfx::B2DVector& rLineWidth,
+    double fLineWidth,
+    const std::vector< double >* pStroke, // MM01
     basegfx::B2DLineJoin eLineJoin,
     css::drawing::LineCap eLineCap,
     double fMiterMinimumAngle,
@@ -734,7 +739,8 @@ bool X11SalGraphics::drawPolyLine(
                 rObjectToDevice,
                 rPolygon,
                 fTransparency,
-                rLineWidth,
+                fLineWidth,
+                pStroke, // MM01
                 eLineJoin,
                 eLineCap,
                 fMiterMinimumAngle,
@@ -753,7 +759,8 @@ bool X11SalGraphics::drawPolyLine(
         rObjectToDevice,
         rPolygon,
         fTransparency,
-        rLineWidth,
+        fLineWidth,
+        pStroke, // MM01
         eLineJoin,
         eLineCap,
         fMiterMinimumAngle,

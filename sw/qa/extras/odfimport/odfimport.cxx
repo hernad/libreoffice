@@ -11,9 +11,15 @@
 
 #include <config_features.h>
 
+#include <com/sun/star/awt/XTextComponent.hpp>
+#include <com/sun/star/awt/XControl.hpp>
+#include <com/sun/star/awt/XControlModel.hpp>
+#include <com/sun/star/awt/XWindowPeer.hpp>
 #include <com/sun/star/awt/FontWeight.hpp>
 #include <com/sun/star/drawing/FillStyle.hpp>
 #include <com/sun/star/drawing/BitmapMode.hpp>
+#include <com/sun/star/form/XForm.hpp>
+#include <com/sun/star/form/XFormsSupplier.hpp>
 #include <com/sun/star/lang/IndexOutOfBoundsException.hpp>
 #include <com/sun/star/style/PageStyleLayout.hpp>
 #include <com/sun/star/style/FootnoteLineStyle.hpp>
@@ -23,6 +29,7 @@
 #include <com/sun/star/text/XTextTable.hpp>
 #include <com/sun/star/text/PageNumberType.hpp>
 #include <com/sun/star/text/VertOrientation.hpp>
+#include <com/sun/star/view/XControlAccess.hpp>
 
 #include <IDocumentSettingAccess.hxx>
 #include <wrtsh.hxx>
@@ -258,6 +265,90 @@ DECLARE_ODFIMPORT_TEST(testPageStyleLayoutDefault, "hello.odt")
     CPPUNIT_ASSERT_EQUAL(style::PageStyleLayout_ALL, getProperty<style::PageStyleLayout>(xPropertySet, "PageStyleLayout"));
 }
 
+DECLARE_ODFIMPORT_TEST(testTimeFormFormats, "timeFormFormats.odt")
+{
+    //FIXME: make it an ODFEXPORT_TEST. Validator fails with
+    //attribute "form:current-value" has a bad value: "PT12H12M" does not satisfy the "time" type
+    //See tdf#131127
+
+    uno::Reference<frame::XModel> const xModel(mxComponent, uno::UNO_QUERY);
+    CPPUNIT_ASSERT(xModel.is());
+    uno::Reference<drawing::XDrawPageSupplier> const xDPS(xModel, uno::UNO_QUERY);
+    uno::Reference<drawing::XDrawPage> const xDP = xDPS->getDrawPage();
+    CPPUNIT_ASSERT(xDP.is());
+    uno::Reference<form::XFormsSupplier> const xFS(xDP, uno::UNO_QUERY);
+    CPPUNIT_ASSERT(xFS.is());
+    uno::Reference<container::XIndexContainer> const xForms(xFS->getForms(), uno::UNO_QUERY);
+    CPPUNIT_ASSERT(xForms.is());
+    uno::Reference<form::XForm> xForm(xForms->getByIndex(0), uno::UNO_QUERY_THROW);
+    CPPUNIT_ASSERT(xForm.is());
+    uno::Reference<container::XNameContainer> xFormNC(xForm, uno::UNO_QUERY);
+
+    uno::Any aAny;
+    uno::Reference<awt::XControlModel> xControlModel;
+    uno::Reference<view::XControlAccess> xController;
+    uno::Reference<awt::XControl> xControl;
+    uno::Reference<awt::XWindowPeer> xWindowPeer;
+    uno::Reference<awt::XTextComponent> xTextComponent;
+    OUString aName = "Time Field ";
+
+    static const char* const aExpectedResults[] = { "12:12", "12:12:00", "12:12PM", "06:00:00AM"};
+
+    for (size_t i = 1; i <= 4; ++i)
+    {
+        aAny = xFormNC->getByName(aName + OUString::number(i));
+        xControlModel.set(aAny, uno::UNO_QUERY);
+        xController.set(xModel->getCurrentController(), uno::UNO_QUERY_THROW);
+        xControl = xController->getControl(xControlModel);
+        xWindowPeer = xControl->getPeer();
+        xTextComponent.set(xWindowPeer, uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString::fromUtf8(aExpectedResults[i - 1]), xTextComponent->getText());
+    }
+}
+
+DECLARE_ODFIMPORT_TEST(testDateFormFormats, "dateFormFormats.odt")
+{
+    //FIXME: make it an ODFEXPORT_TEST. Validator fails with
+    //unexpected attribute "form:input-required"
+    //See tdf#131148
+
+    uno::Reference<frame::XModel> const xModel(mxComponent, uno::UNO_QUERY);
+    CPPUNIT_ASSERT(xModel.is());
+    uno::Reference<drawing::XDrawPageSupplier> const xDPS(xModel, uno::UNO_QUERY);
+    uno::Reference<drawing::XDrawPage> const xDP = xDPS->getDrawPage();
+    CPPUNIT_ASSERT(xDP.is());
+    uno::Reference<form::XFormsSupplier> const xFS(xDP, uno::UNO_QUERY);
+    CPPUNIT_ASSERT(xFS.is());
+    uno::Reference<container::XIndexContainer> const xForms(xFS->getForms(), uno::UNO_QUERY);
+    CPPUNIT_ASSERT(xForms.is());
+    uno::Reference<form::XForm> xForm(xForms->getByIndex(0), uno::UNO_QUERY_THROW);
+    CPPUNIT_ASSERT(xForm.is());
+    uno::Reference<container::XNameContainer> xFormNC(xForm, uno::UNO_QUERY);
+
+    uno::Any aAny;
+    uno::Reference<awt::XControlModel> xControlModel;
+    uno::Reference<view::XControlAccess> xController;
+    uno::Reference<awt::XControl> xControl;
+    uno::Reference<awt::XWindowPeer> xWindowPeer;
+    uno::Reference<awt::XTextComponent> xTextComponent;
+    OUString aName = "Date Field ";
+
+    static const char* const aExpectedResults[] = { "03/04/20", "03/04/20", "03/04/2020",
+        "Wednesday, March 4, 2020", "04/03/20", "03/04/20", "20/03/04", "04/03/2020", "03/04/2020",
+        "2020/03/04", "20-03-04", "2020-03-04"};
+
+    for (size_t i = 1; i <= 12; ++i)
+    {
+        aAny = xFormNC->getByName(aName + OUString::number(i));
+        xControlModel.set(aAny, uno::UNO_QUERY);
+        xController.set(xModel->getCurrentController(), uno::UNO_QUERY_THROW);
+        xControl = xController->getControl(xControlModel);
+        xWindowPeer = xControl->getPeer();
+        xTextComponent.set(xWindowPeer, uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString::fromUtf8(aExpectedResults[i - 1]), xTextComponent->getText());
+    }
+}
+
 DECLARE_ODFIMPORT_TEST(testTdf64038, "space.odt")
 {
     // no space
@@ -389,11 +480,7 @@ DECLARE_ODFIMPORT_TEST(testFdo60842, "fdo60842.odt")
 
 DECLARE_ODFIMPORT_TEST(testFdo79269, "fdo79269.odt")
 {
-    uno::Reference<frame::XModel> xModel(mxComponent, uno::UNO_QUERY);
-    uno::Reference<text::XTextViewCursorSupplier> xTextViewCursorSupplier(xModel->getCurrentController(), uno::UNO_QUERY);
-    uno::Reference<text::XPageCursor> xCursor(xTextViewCursorSupplier->getViewCursor(), uno::UNO_QUERY);
-    xCursor->jumpToLastPage();
-    CPPUNIT_ASSERT_EQUAL(sal_Int16(2), xCursor->getPage());
+    CPPUNIT_ASSERT_EQUAL(2, getPages());
 
     // The problem was that the first-footer was shared.
     uno::Reference<beans::XPropertySet> xPropSet(getStyles("PageStyles")->getByName("Standard"), uno::UNO_QUERY);
@@ -407,11 +494,7 @@ DECLARE_ODFIMPORT_TEST(testFdo79269, "fdo79269.odt")
 
 DECLARE_ODFIMPORT_TEST(testFdo79269_header, "fdo79269_header.odt")
 {
-    uno::Reference<frame::XModel> xModel(mxComponent, uno::UNO_QUERY);
-    uno::Reference<text::XTextViewCursorSupplier> xTextViewCursorSupplier(xModel->getCurrentController(), uno::UNO_QUERY);
-    uno::Reference<text::XPageCursor> xCursor(xTextViewCursorSupplier->getViewCursor(), uno::UNO_QUERY);
-    xCursor->jumpToLastPage();
-    CPPUNIT_ASSERT_EQUAL(sal_Int16(2), xCursor->getPage());
+    CPPUNIT_ASSERT_EQUAL(2, getPages());
 
     uno::Reference<beans::XPropertySet> xPropSet(getStyles("PageStyles")->getByName("Standard"), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(false, getProperty<bool>(xPropSet, "FirstIsShared"));
@@ -758,11 +841,7 @@ DECLARE_ODFIMPORT_TEST(testTdf76322_columnBreakInHeader, "tdf76322_columnBreakIn
 DECLARE_ODFIMPORT_TEST(testTdf76349_1columnBreak, "tdf76349_1columnBreak.odt")
 {
     //single-column breaks should only be treated as page breaks for MS formats - should be only one page here.
-    uno::Reference<frame::XModel> xModel(mxComponent, uno::UNO_QUERY);
-    uno::Reference<text::XTextViewCursorSupplier> xTextViewCursorSupplier(xModel->getCurrentController(), uno::UNO_QUERY);
-    uno::Reference<text::XPageCursor> xCursor(xTextViewCursorSupplier->getViewCursor(), uno::UNO_QUERY);
-    xCursor->jumpToLastPage();
-    CPPUNIT_ASSERT_EQUAL(sal_Int16(1), xCursor->getPage());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
 }
 
 DECLARE_ODFIMPORT_TEST(testTdf96113, "tdf96113.odt")
@@ -894,14 +973,11 @@ DECLARE_ODFIMPORT_TEST(testTdf94882, "tdf94882.odt")
 
 DECLARE_ODFIMPORT_TEST(testBlankBeforeFirstPage, "tdf94882.odt")
 {
-    // This document starts on page 50, which is even, so it should have a
+    // This document starts on page 50, which is even, but it should not have a
     // blank page inserted before it to make it a left page
 
-    CPPUNIT_ASSERT_EQUAL_MESSAGE("There should be 2 pages output",
-        OUString("2"), parseDump("count(/root/page)")
-    );
-    CPPUNIT_ASSERT_EQUAL_MESSAGE("The first page should be blank",
-        OUString("0"), parseDump("count(/root/page[1]/body)")
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("There should be 1 pages output",
+        OUString("1"), parseDump("count(/root/page)")
     );
 }
 

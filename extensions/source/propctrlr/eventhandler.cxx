@@ -28,7 +28,6 @@
 #include "handlerhelper.hxx"
 #include "modulepcr.hxx"
 #include "pcrcommon.hxx"
-#include "pcrstrings.hxx"
 #include "propertycontrolextender.hxx"
 
 #include <com/sun/star/awt/XTabControllerModel.hpp>
@@ -59,17 +58,12 @@
 #include <cppuhelper/supportsservice.hxx>
 #include <rtl/ref.hxx>
 #include <rtl/ustrbuf.hxx>
-#include <sfx2/app.hxx>
-#include <svl/eitem.hxx>
-#include <svl/itemset.hxx>
 #include <svx/svxdlg.hxx>
-#include <svx/svxids.hrc>
 #include <tools/diagnose_ex.h>
 
 #include <map>
 #include <algorithm>
 #include <iterator>
-#include <o3tl/functional.hxx>
 
 extern "C" void createRegistryInfo_EventHandler()
 {
@@ -815,7 +809,7 @@ namespace pcr
             nInitialSelection
         ) );
 
-        if ( !pDialog.get() )
+        if ( !pDialog )
             return InteractiveSelectionResult_Cancelled;
 
         // DF definite problem here

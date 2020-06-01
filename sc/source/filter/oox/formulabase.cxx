@@ -178,15 +178,15 @@ typedef std::shared_ptr< FunctionInfo > FunctionInfoRef;
 
 struct FunctionData
 {
-    const char*     mpcOdfFuncName;     /// ODF function name.
-    const char*     mpcOoxFuncName;     /// OOXML function name.
-    sal_uInt16 const          mnBiff12FuncId;     /// BIFF12 function identifier.
-    sal_uInt16 const          mnBiffFuncId;       /// BIFF2-BIFF8 function identifier.
-    sal_uInt8 const           mnMinParamCount;    /// Minimum number of parameters.
-    sal_uInt8 const           mnMaxParamCount;    /// Maximum number of parameters.
-    sal_uInt8 const           mnRetClass;         /// BIFF token class of the return value.
-    FunctionParamInfo const   mpParamInfos[ FUNCINFO_PARAMINFOCOUNT ]; /// Information about all parameters.
-    FuncFlags const           mnFlags;            /// Additional flags.
+    const char*          mpcOdfFuncName;     /// ODF function name.
+    const char*          mpcOoxFuncName;     /// OOXML function name.
+    sal_uInt16           mnBiff12FuncId;     /// BIFF12 function identifier.
+    sal_uInt16           mnBiffFuncId;       /// BIFF2-BIFF8 function identifier.
+    sal_uInt8            mnMinParamCount;    /// Minimum number of parameters.
+    sal_uInt8            mnMaxParamCount;    /// Maximum number of parameters.
+    sal_uInt8            mnRetClass;         /// BIFF token class of the return value.
+    FunctionParamInfo    mpParamInfos[ FUNCINFO_PARAMINFOCOUNT ]; /// Information about all parameters.
+    FuncFlags            mnFlags;            /// Additional flags.
 
     bool         isSupported(bool bImportFilter) const;
 };
@@ -915,7 +915,9 @@ static const FunctionData saFuncTableOOoLO[] =
     { "ORG.LIBREOFFICE.FORECAST.ETS.STAT.MULT", "ORG.LIBREOFFICE.FORECAST.ETS.STAT.MULT", NOID,   NOID,   3,  6,  V, { VR, VA, VR }, FuncFlags::MACROCALL_NEW },
     { "ORG.LIBREOFFICE.ROUNDSIG",   "ORG.LIBREOFFICE.ROUNDSIG", NOID, NOID,  2,  2,  V, { RX }, FuncFlags::MACROCALL_NEW },
     { "ORG.LIBREOFFICE.REGEX",      "ORG.LIBREOFFICE.REGEX", NOID, NOID,  2,  4,  V, { RX }, FuncFlags::MACROCALL_NEW },
-    { "ORG.LIBREOFFICE.FOURIER",    "ORG.LIBREOFFICE.FOURIER", NOID, NOID,  2,  5,  A, { RX }, FuncFlags::MACROCALL_NEW }
+    { "ORG.LIBREOFFICE.FOURIER",    "ORG.LIBREOFFICE.FOURIER", NOID, NOID,  2,  5,  A, { RX }, FuncFlags::MACROCALL_NEW },
+    { "ORG.LIBREOFFICE.RAND.NV",    "ORG.LIBREOFFICE.RAND.NV", NOID, NOID,  0,  0,  V, {}, FuncFlags::MACROCALL_NEW },
+    { "ORG.LIBREOFFICE.RANDBETWEEN.NV", "ORG.LIBREOFFICE.RANDBETWEEN.NV", NOID, NOID,  2,  2,  V, { VR }, FuncFlags::MACROCALL_NEW }
 
 };
 
@@ -1544,7 +1546,7 @@ OUString FormulaProcessorBase::generateAddress2dString( const BinAddress& rAddre
 {
     OUStringBuffer aBuffer;
     // column
-    for( sal_Int32 nTemp = rAddress.mnCol; nTemp >= 0; (nTemp /= 26) -= 1 )
+    for( sal_Int32 nTemp = rAddress.mnCol; nTemp >= 0; nTemp = (nTemp / 26) - 1 )
         aBuffer.insert( 0, sal_Unicode( 'A' + (nTemp % 26) ) );
     if( bAbsolute )
         aBuffer.insert( 0, '$' );

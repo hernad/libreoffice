@@ -19,8 +19,8 @@
 
 #include <uielement/menubarmanager.hxx>
 #include <uielement/styletoolbarcontroller.hxx>
-#include <framework/menuconfiguration.hxx>
-#include <framework/addonmenu.hxx>
+#include <menuconfiguration.hxx>
+#include <addonmenu.hxx>
 #include <framework/addonsoptions.hxx>
 #include <classes/fwkresid.hxx>
 #include <strings.hrc>
@@ -165,20 +165,20 @@ void MenuBarManager::Destroy()
 {
     SolarMutexGuard aGuard;
 
-    if ( !rBHelper.bDisposed )
+    if ( rBHelper.bDisposed )
+        return;
+
+    // stop asynchronous settings timer and
+    // release deferred item container reference
+    m_aAsyncSettingsTimer.Stop();
+    m_xDeferedItemContainer.clear();
+    RemoveListener();
+
+    m_aMenuItemHandlerVector.clear();
+
+    if ( m_bDeleteMenu )
     {
-        // stop asynchronous settings timer and
-        // release deferred item container reference
-        m_aAsyncSettingsTimer.Stop();
-        m_xDeferedItemContainer.clear();
-        RemoveListener();
-
-        m_aMenuItemHandlerVector.clear();
-
-        if ( m_bDeleteMenu )
-        {
-            m_pVCLMenu.disposeAndClear();
-        }
+        m_pVCLMenu.disposeAndClear();
     }
 }
 
@@ -255,21 +255,21 @@ void SAL_CALL MenuBarManager::frameAction( const FrameActionEvent& Action )
     if ( rBHelper.bDisposed || rBHelper.bInDispose )
         throw css::lang::DisposedException();
 
-    if ( Action.Action == FrameAction_CONTEXT_CHANGED )
-    {
-        for (auto const& menuItemHandler : m_aMenuItemHandlerVector)
-        {
-            // Clear dispatch reference as we will requery it later
-            if ( menuItemHandler->xMenuItemDispatch.is() )
-            {
-                URL aTargetURL;
-                aTargetURL.Complete = menuItemHandler->aMenuItemURL;
-                m_xURLTransformer->parseStrict( aTargetURL );
+    if ( Action.Action != FrameAction_CONTEXT_CHANGED )
+        return;
 
-                menuItemHandler->xMenuItemDispatch->removeStatusListener( this, aTargetURL );
-            }
-            menuItemHandler->xMenuItemDispatch.clear();
+    for (auto const& menuItemHandler : m_aMenuItemHandlerVector)
+    {
+        // Clear dispatch reference as we will requery it later
+        if ( menuItemHandler->xMenuItemDispatch.is() )
+        {
+            URL aTargetURL;
+            aTargetURL.Complete = menuItemHandler->aMenuItemURL;
+            m_xURLTransformer->parseStrict( aTargetURL );
+
+            menuItemHandler->xMenuItemDispatch->removeStatusListener( this, aTargetURL );
         }
+        menuItemHandler->xMenuItemDispatch.clear();
     }
 }
 
@@ -691,8 +691,8 @@ IMPL_LINK( MenuBarManager, Activate, Menu *, pMenu, bool )
                         // There is no dispatch mechanism for the special window list menu items,
                         // because they are handled directly through XFrame->activate!!!
                         // Don't update dispatches for special file menu items.
-                        if ( !( menuItemHandler->nItemId >= START_ITEMID_WINDOWLIST &&
-                                menuItemHandler->nItemId < END_ITEMID_WINDOWLIST ) )
+                        if ( menuItemHandler->nItemId < START_ITEMID_WINDOWLIST ||
+                             menuItemHandler->nItemId >= END_ITEMID_WINDOWLIST )
                         {
                             Reference< XDispatch > xMenuItemDispatch;
 
@@ -1185,21 +1185,21 @@ void MenuBarManager::impl_RetrieveShortcutsFromConfiguration(
     const Sequence< OUString >& rCommands,
     std::vector< std::unique_ptr<MenuItemHandler> >& aMenuShortCuts )
 {
-    if ( rAccelCfg.is() )
+    if ( !rAccelCfg.is() )
+        return;
+
+    try
     {
-        try
+        css::awt::KeyEvent aKeyEvent;
+        Sequence< Any > aSeqKeyCode = rAccelCfg->getPreferredKeyEventsForCommandList( rCommands );
+        for ( sal_Int32 i = 0; i < aSeqKeyCode.getLength(); i++ )
         {
-            css::awt::KeyEvent aKeyEvent;
-            Sequence< Any > aSeqKeyCode = rAccelCfg->getPreferredKeyEventsForCommandList( rCommands );
-            for ( sal_Int32 i = 0; i < aSeqKeyCode.getLength(); i++ )
-            {
-                if ( aSeqKeyCode[i] >>= aKeyEvent )
-                    aMenuShortCuts[i]->aKeyCode = svt::AcceleratorExecute::st_AWTKey2VCLKey( aKeyEvent );
-            }
+            if ( aSeqKeyCode[i] >>= aKeyEvent )
+                aMenuShortCuts[i]->aKeyCode = svt::AcceleratorExecute::st_AWTKey2VCLKey( aKeyEvent );
         }
-        catch ( const IllegalArgumentException& )
-        {
-        }
+    }
+    catch ( const IllegalArgumentException& )
+    {
     }
 }
 
@@ -1219,92 +1219,92 @@ void MenuBarManager::RetrieveShortcuts( std::vector< std::unique_ptr<MenuItemHan
         }
     }
 
-    if ( m_bModuleIdentified )
-    {
-        Reference< XAcceleratorConfiguration > xDocAccelCfg( m_xDocAcceleratorManager );
-        Reference< XAcceleratorConfiguration > xModuleAccelCfg( m_xModuleAcceleratorManager );
-        Reference< XAcceleratorConfiguration > xGlobalAccelCfg( m_xGlobalAcceleratorManager );
+    if ( !m_bModuleIdentified )
+        return;
 
-        if ( !m_bAcceleratorCfg )
+    Reference< XAcceleratorConfiguration > xDocAccelCfg( m_xDocAcceleratorManager );
+    Reference< XAcceleratorConfiguration > xModuleAccelCfg( m_xModuleAcceleratorManager );
+    Reference< XAcceleratorConfiguration > xGlobalAccelCfg( m_xGlobalAcceleratorManager );
+
+    if ( !m_bAcceleratorCfg )
+    {
+        // Retrieve references on demand
+        m_bAcceleratorCfg = true;
+        if ( !xDocAccelCfg.is() )
         {
-            // Retrieve references on demand
-            m_bAcceleratorCfg = true;
-            if ( !xDocAccelCfg.is() )
+            Reference< XController > xController = m_xFrame->getController();
+            Reference< XModel > xModel;
+            if ( xController.is() )
             {
-                Reference< XController > xController = m_xFrame->getController();
-                Reference< XModel > xModel;
-                if ( xController.is() )
+                xModel = xController->getModel();
+                if ( xModel.is() )
                 {
-                    xModel = xController->getModel();
-                    if ( xModel.is() )
+                    Reference< XUIConfigurationManagerSupplier > xSupplier( xModel, UNO_QUERY );
+                    if ( xSupplier.is() )
                     {
-                        Reference< XUIConfigurationManagerSupplier > xSupplier( xModel, UNO_QUERY );
-                        if ( xSupplier.is() )
+                        Reference< XUIConfigurationManager > xDocUICfgMgr = xSupplier->getUIConfigurationManager();
+                        if ( xDocUICfgMgr.is() )
                         {
-                            Reference< XUIConfigurationManager > xDocUICfgMgr = xSupplier->getUIConfigurationManager();
-                            if ( xDocUICfgMgr.is() )
-                            {
-                                xDocAccelCfg = xDocUICfgMgr->getShortCutManager();
-                                m_xDocAcceleratorManager = xDocAccelCfg;
-                            }
+                            xDocAccelCfg = xDocUICfgMgr->getShortCutManager();
+                            m_xDocAcceleratorManager = xDocAccelCfg;
                         }
                     }
                 }
             }
-
-            if ( !xModuleAccelCfg.is() )
-            {
-                Reference< XModuleUIConfigurationManagerSupplier > xModuleCfgMgrSupplier =
-                    theModuleUIConfigurationManagerSupplier::get( m_xContext );
-                try
-                {
-                    Reference< XUIConfigurationManager > xUICfgMgr = xModuleCfgMgrSupplier->getUIConfigurationManager( m_aModuleIdentifier );
-                    if ( xUICfgMgr.is() )
-                    {
-                        xModuleAccelCfg = xUICfgMgr->getShortCutManager();
-                        m_xModuleAcceleratorManager = xModuleAccelCfg;
-                    }
-                }
-                catch ( const RuntimeException& )
-                {
-                    throw;
-                }
-                catch ( const Exception& )
-                {
-                }
-            }
-
-            if ( !xGlobalAccelCfg.is() ) try
-            {
-                xGlobalAccelCfg = GlobalAcceleratorConfiguration::create( m_xContext );
-                m_xGlobalAcceleratorManager = xGlobalAccelCfg;
-            }
-            catch ( const css::uno::DeploymentException& )
-            {
-                SAL_WARN("fwk.uielement", "GlobalAcceleratorConfiguration"
-                        " not available. This should happen only on mobile platforms.");
-            }
         }
 
-        vcl::KeyCode aEmptyKeyCode;
-        Sequence< OUString > aSeq( aMenuShortCuts.size() );
-        const sal_uInt32 nCount = aMenuShortCuts.size();
-        for ( sal_uInt32 i = 0; i < nCount; ++i )
+        if ( !xModuleAccelCfg.is() )
         {
-            OUString aItemURL = aMenuShortCuts[i]->aMenuItemURL;
-            if( aItemURL.isEmpty() && aMenuShortCuts[i]->xSubMenuManager.is())
-                aItemURL = "-"; // tdf#99527 prevent throw in case of empty commands
-            aSeq[i] = aItemURL;
-            aMenuShortCuts[i]->aKeyCode = aEmptyKeyCode;
+            Reference< XModuleUIConfigurationManagerSupplier > xModuleCfgMgrSupplier =
+                theModuleUIConfigurationManagerSupplier::get( m_xContext );
+            try
+            {
+                Reference< XUIConfigurationManager > xUICfgMgr = xModuleCfgMgrSupplier->getUIConfigurationManager( m_aModuleIdentifier );
+                if ( xUICfgMgr.is() )
+                {
+                    xModuleAccelCfg = xUICfgMgr->getShortCutManager();
+                    m_xModuleAcceleratorManager = xModuleAccelCfg;
+                }
+            }
+            catch ( const RuntimeException& )
+            {
+                throw;
+            }
+            catch ( const Exception& )
+            {
+            }
         }
 
-        if ( m_xGlobalAcceleratorManager.is() )
-            impl_RetrieveShortcutsFromConfiguration( xGlobalAccelCfg, aSeq, aMenuShortCuts );
-        if ( m_xModuleAcceleratorManager.is() )
-            impl_RetrieveShortcutsFromConfiguration( xModuleAccelCfg, aSeq, aMenuShortCuts );
-        if ( m_xDocAcceleratorManager.is() )
-            impl_RetrieveShortcutsFromConfiguration( xDocAccelCfg, aSeq, aMenuShortCuts );
+        if ( !xGlobalAccelCfg.is() ) try
+        {
+            xGlobalAccelCfg = GlobalAcceleratorConfiguration::create( m_xContext );
+            m_xGlobalAcceleratorManager = xGlobalAccelCfg;
+        }
+        catch ( const css::uno::DeploymentException& )
+        {
+            SAL_WARN("fwk.uielement", "GlobalAcceleratorConfiguration"
+                    " not available. This should happen only on mobile platforms.");
+        }
     }
+
+    vcl::KeyCode aEmptyKeyCode;
+    Sequence< OUString > aSeq( aMenuShortCuts.size() );
+    const sal_uInt32 nCount = aMenuShortCuts.size();
+    for ( sal_uInt32 i = 0; i < nCount; ++i )
+    {
+        OUString aItemURL = aMenuShortCuts[i]->aMenuItemURL;
+        if( aItemURL.isEmpty() && aMenuShortCuts[i]->xSubMenuManager.is())
+            aItemURL = "-"; // tdf#99527 prevent throw in case of empty commands
+        aSeq[i] = aItemURL;
+        aMenuShortCuts[i]->aKeyCode = aEmptyKeyCode;
+    }
+
+    if ( m_xGlobalAcceleratorManager.is() )
+        impl_RetrieveShortcutsFromConfiguration( xGlobalAccelCfg, aSeq, aMenuShortCuts );
+    if ( m_xModuleAcceleratorManager.is() )
+        impl_RetrieveShortcutsFromConfiguration( xModuleAccelCfg, aSeq, aMenuShortCuts );
+    if ( m_xDocAcceleratorManager.is() )
+        impl_RetrieveShortcutsFromConfiguration( xDocAccelCfg, aSeq, aMenuShortCuts );
 }
 
 void MenuBarManager::RetrieveImageManagers()
@@ -1371,20 +1371,20 @@ void MenuBarManager::FillMenuWithConfiguration(
                                      rModuleIdentifier );
 
     bool bHasDisabledEntries = SvtCommandOptions().HasEntries( SvtCommandOptions::CMDOPTION_DISABLED );
-    if ( bHasDisabledEntries )
+    if ( !bHasDisabledEntries )
+        return;
+
+    sal_uInt16 nCount = pMenu->GetItemCount();
+    for ( sal_uInt16 i = 0; i < nCount; i++ )
     {
-        sal_uInt16 nCount = pMenu->GetItemCount();
-        for ( sal_uInt16 i = 0; i < nCount; i++ )
+        sal_uInt16 nID = pMenu->GetItemId( i );
+        if ( nID > 0 )
         {
-            sal_uInt16 nID = pMenu->GetItemId( i );
-            if ( nID > 0 )
+            PopupMenu* pPopupMenu = pMenu->GetPopupMenu( nID );
+            if ( pPopupMenu )
             {
-                PopupMenu* pPopupMenu = pMenu->GetPopupMenu( nID );
-                if ( pPopupMenu )
-                {
-                    if ( MustBeHidden( pPopupMenu, rTransformer ))
-                        pMenu->HideItem( nId );
-                }
+                if ( MustBeHidden( pPopupMenu, rTransformer ))
+                    pMenu->HideItem( nId );
             }
         }
     }
@@ -1400,7 +1400,7 @@ void MenuBarManager::FillMenu(
     // Fill menu bar with container contents
     for ( sal_Int32 n = 0; n < rItemContainer->getCount(); n++ )
     {
-        Sequence< PropertyValue > aProp;
+        Sequence< PropertyValue > aProps;
         OUString aCommandURL;
         OUString aLabel;
         OUString aModuleIdentifier( rModuleIdentifier );
@@ -1410,32 +1410,32 @@ void MenuBarManager::FillMenu(
         sal_Int16 nStyle = 0;
         try
         {
-            if ( rItemContainer->getByIndex( n ) >>= aProp )
+            if ( rItemContainer->getByIndex( n ) >>= aProps )
             {
                 bool bShow = true;
                 bool bEnabled = true;
 
-                for ( int i = 0; i < aProp.getLength(); i++ )
+                for ( beans::PropertyValue const & rProp : std::as_const(aProps) )
                 {
-                    OUString aPropName = aProp[i].Name;
+                    OUString aPropName = rProp.Name;
                     if ( aPropName == "CommandURL" )
-                        aProp[i].Value >>= aCommandURL;
+                        rProp.Value >>= aCommandURL;
                     else if ( aPropName == "ItemDescriptorContainer" )
-                        aProp[i].Value >>= xIndexContainer;
+                        rProp.Value >>= xIndexContainer;
                     else if ( aPropName == "Label" )
-                        aProp[i].Value >>= aLabel;
+                        rProp.Value >>= aLabel;
                     else if ( aPropName == "Type" )
-                        aProp[i].Value >>= nType;
+                        rProp.Value >>= nType;
                     else if ( aPropName == "ModuleIdentifier" )
-                        aProp[i].Value >>= aModuleIdentifier;
+                        rProp.Value >>= aModuleIdentifier;
                     else if ( aPropName == "DispatchProvider" )
-                        aProp[i].Value >>= xDispatchProvider;
+                        rProp.Value >>= xDispatchProvider;
                     else if ( aPropName == "Style" )
-                        aProp[i].Value >>= nStyle;
+                        rProp.Value >>= nStyle;
                     else if ( aPropName == "IsVisible" )
-                        aProp[i].Value >>= bShow;
+                        rProp.Value >>= bShow;
                     else if ( aPropName == "Enabled" )
-                        aProp[i].Value >>= bEnabled;
+                        rProp.Value >>= bEnabled;
                 }
 
                 if (!aCommandURL.isEmpty() && vcl::CommandInfoProvider::IsExperimental(aCommandURL, rModuleIdentifier) &&

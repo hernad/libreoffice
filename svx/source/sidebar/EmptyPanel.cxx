@@ -18,13 +18,11 @@
  */
 
 #include "EmptyPanel.hxx"
-#include <svx/strings.hrc>
-#include <svx/dialmgr.hxx>
 
 namespace svx::sidebar {
 
 EmptyPanel::EmptyPanel (vcl::Window* pParent)
-    : PanelLayout(pParent, "EmptyPanel", "svx/ui/sidebarempty.ui", nullptr, true)
+    : PanelLayout(pParent, "EmptyPanel", "svx/ui/sidebarempty.ui", nullptr)
     , mxMessageControl(m_xBuilder->weld_label("message"))
 {
 }

@@ -20,10 +20,10 @@
 #define INCLUDED_SVX_SOURCE_SIDEBAR_GRAPHIC_GRAPHICPROPERTYPANEL_HXX
 
 #include <sfx2/sidebar/ControllerItem.hxx>
-#include <svx/sidebar/PanelLayout.hxx>
+#include <sfx2/sidebar/PanelLayout.hxx>
 #include <vcl/weld.hxx>
 
-namespace svx { namespace sidebar {
+namespace svx::sidebar {
 
 class GraphicPropertyPanel
 :   public PanelLayout,
@@ -46,6 +46,10 @@ public:
         const SfxItemState eState,
         const SfxPoolItem* pState) override;
 
+    virtual void GetControlState(
+        const sal_uInt16 /*nSId*/,
+        boost::property_tree::ptree& /*rState*/) override {};
+
     SfxBindings* GetBindings() { return mpBindings;}
 
     // constructor/destructor
@@ -64,7 +68,7 @@ private:
     ::sfx2::sidebar::ControllerItem                     maGammaControl;
     ::sfx2::sidebar::ControllerItem                     maModeControl;
 
-    SfxBindings* const                                  mpBindings;
+    SfxBindings*                                        mpBindings;
 
     //ui controls
     std::unique_ptr<weld::MetricSpinButton> mxMtrBrightness;
@@ -88,7 +92,7 @@ private:
     void Initialize();
 };
 
-} } // end of namespace svx::sidebar
+} // end of namespace svx::sidebar
 
 #endif
 

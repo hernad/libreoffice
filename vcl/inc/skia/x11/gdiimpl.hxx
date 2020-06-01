@@ -15,6 +15,7 @@
 #include <unx/salgdi.h>
 #include <unx/x11/x11gdiimpl.h>
 #include <skia/gdiimpl.hxx>
+#include <skia/utils.hxx>
 
 class VCL_PLUGIN_PUBLIC X11SkiaSalGraphicsImpl final : public SkiaSalGraphicsImpl,
                                                        public X11GraphicsImpl
@@ -30,10 +31,16 @@ public:
     virtual void DeInit() override;
     virtual void freeResources() override;
 
+    static void prepareSkia();
+
 private:
     virtual void createWindowContext() override;
     virtual void performFlush() override;
     virtual bool avoidRecreateByResize() const override;
+    static std::unique_ptr<sk_app::WindowContext>
+    createWindowContext(Display* display, Drawable drawable, const XVisualInfo* visual, int width,
+                        int height, SkiaHelper::RenderMethod renderMethod, bool temporary);
+    friend std::unique_ptr<sk_app::WindowContext> createVulkanWindowContext(bool);
 };
 
 #endif // INCLUDED_VCL_INC_SKIA_X11_GDIIMPL_HXX

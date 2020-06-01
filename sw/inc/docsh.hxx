@@ -56,9 +56,9 @@ namespace svt
 {
 class EmbeddedObjectRef;
 }
-namespace com { namespace sun { namespace star { namespace frame { class XController; } } } }
-namespace ooo { namespace vba { class XSinkCaller; } }
-namespace ooo { namespace vba { namespace word { class XDocument; } } }
+namespace com::sun::star::frame { class XController; }
+namespace ooo::vba { class XSinkCaller; }
+namespace ooo::vba::word { class XDocument; }
 
 // initialize DrawModel (in form of a SwDrawModel) and DocShell (in form of a SwDocShell)
 // as needed, one or both parameters may be zero
@@ -117,7 +117,7 @@ class SW_DLLPUBLIC SwDocShell
         override;
 
     /// Make DocInfo known to the Doc.
-    SAL_DLLPRIVATE virtual std::unique_ptr<SfxDocumentInfoDialog> CreateDocumentInfoDialog(weld::Window* pParent,
+    SAL_DLLPRIVATE virtual std::shared_ptr<SfxDocumentInfoDialog> CreateDocumentInfoDialog(weld::Window* pParent,
                                                                                            const SfxItemSet &rSet) override;
     /// OLE-stuff
     SAL_DLLPRIVATE virtual void          Draw( OutputDevice*, const JobSetup&, sal_uInt16 nAspect) override;
@@ -273,7 +273,6 @@ public:
      the load of document being finished. */
 
     void LoadingFinished();
-    virtual void SetFormatSpecificCompatibilityOptions( const OUString& rFilterTypeName ) override;
 
     /// Cancel transfer (called from SFX).
     virtual void CancelTransfers() override;

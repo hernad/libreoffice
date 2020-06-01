@@ -23,6 +23,7 @@
 #include "Tickmarks.hxx"
 #include <com/sun/star/drawing/XShapes.hpp>
 #include <com/sun/star/chart2/AxisType.hpp>
+#include <com/sun/star/chart2/XAxis.hpp>
 #include <com/sun/star/chart2/data/XTextualDataSequence.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 
@@ -212,17 +213,17 @@ size_t VAxisBase::getIndexOfLongestLabel( const uno::Sequence<OUString>& rLabels
 
 void VAxisBase::removeTextShapesFromTicks()
 {
-    if( m_xTextTarget.is() )
+    if( !m_xTextTarget.is() )
+        return;
+
+    for (auto & tickInfos : m_aAllTickInfos)
     {
-        for (auto & tickInfos : m_aAllTickInfos)
+        for (auto & tickInfo : tickInfos)
         {
-            for (auto & tickInfo : tickInfos)
+            if(tickInfo.xTextShape.is())
             {
-                if(tickInfo.xTextShape.is())
-                {
-                    m_xTextTarget->remove(tickInfo.xTextShape);
-                    tickInfo.xTextShape = nullptr;
-                }
+                m_xTextTarget->remove(tickInfo.xTextShape);
+                tickInfo.xTextShape = nullptr;
             }
         }
     }

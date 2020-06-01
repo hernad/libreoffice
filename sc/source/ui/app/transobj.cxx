@@ -573,7 +573,7 @@ void ScTransferObj::DragFinished( sal_Int8 nDropAction )
 
     m_xDragSourceRanges = nullptr;       // don't keep source after dropping
 
-    TransferableHelper::DragFinished( nDropAction );
+    TransferDataContainer::DragFinished( nDropAction );
 }
 
 void ScTransferObj::SetDragHandlePos( SCCOL nX, SCROW nY )
@@ -646,7 +646,7 @@ ScDocShell* ScTransferObj::GetSourceDocShell()
 
 ScMarkData ScTransferObj::GetSourceMarkData() const
 {
-    ScMarkData aMarkData(m_pDoc->MaxRow(), m_pDoc->MaxCol());
+    ScMarkData aMarkData(m_pDoc->GetSheetLimits());
     ScCellRangesBase* pRangesObj = comphelper::getUnoTunnelImplementation<ScCellRangesBase>( m_xDragSourceRanges );
     if (pRangesObj)
     {
@@ -671,7 +671,7 @@ void ScTransferObj::InitDocShell(bool bLimitToPageSize)
         pDocSh->DoInitNew();
 
         ScDocument& rDestDoc = pDocSh->GetDocument();
-        ScMarkData aDestMark(rDestDoc.MaxRow(), rDestDoc.MaxCol());
+        ScMarkData aDestMark(rDestDoc.GetSheetLimits());
         aDestMark.SelectTable( 0, true );
 
         rDestDoc.SetDocOptions( m_pDoc->GetDocOptions() );   // #i42666#
@@ -932,7 +932,7 @@ sal_Int64 SAL_CALL ScTransferObj::getSomething( const css::uno::Sequence< sal_In
         nRet = reinterpret_cast< sal_Int64 >( this );
     }
     else
-        nRet = TransferableHelper::getSomething(rId);
+        nRet = TransferDataContainer::getSomething(rId);
     return nRet;
 }
 

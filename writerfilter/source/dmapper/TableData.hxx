@@ -20,10 +20,11 @@
 #ifndef INCLUDED_WRITERFILTER_SOURCE_DMAPPER_TABLEDATA_HXX
 #define INCLUDED_WRITERFILTER_SOURCE_DMAPPER_TABLEDATA_HXX
 
-#include <dmapper/resourcemodel.hxx>
+#include <com/sun/star/text/XTextRange.hpp>
+
+#include "PropertyMap.hxx"
 
 #include <vector>
-#include <memory>
 
 namespace writerfilter
 {
@@ -74,7 +75,7 @@ public:
      */
     void insertProperties(TablePropertyMapPtr pProps)
     {
-        if( mpProps.get() )
+        if( mpProps )
             mpProps->InsertProps(pProps.get());
         else
             mpProps = pProps;
@@ -163,9 +164,9 @@ public:
      */
     void insertProperties(TablePropertyMapPtr pProperties)
     {
-        if( pProperties.get() )
+        if( pProperties )
         {
-            if( !mpProperties.get() )
+            if( !mpProperties )
                 mpProperties = pProperties;
             else
                 mpProperties->InsertProps(pProperties.get());
@@ -249,7 +250,7 @@ class TableData : public virtual SvRefBase
     /**
        depth of the current table in a hierarchy of tables
      */
-    unsigned int const mnDepth;
+    unsigned int mnDepth;
 
     /**
        initialize mpRow

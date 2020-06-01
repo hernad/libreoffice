@@ -25,55 +25,21 @@
 #include <svtools/svtdllapi.h>
 #include <tools/urlobj.hxx>
 
-#include <vcl/combobox.hxx>
 #include <vcl/idle.hxx>
 #include <vcl/weld.hxx>
 
-class MatchContext_Impl;
 class SvtMatchContext_Impl;
 class SvtURLBox_Impl;
-class SVT_DLLPUBLIC SvtURLBox final : public ComboBox
+
+class SVT_DLLPUBLIC SvtURLBox
 {
-friend class SvtMatchContext_Impl;
-friend class SvtURLBox_Impl;
-    Link<SvtURLBox*,void>           aOpenHdl;
-    rtl::Reference< SvtMatchContext_Impl > pCtx;
-    std::unique_ptr<SvtURLBox_Impl> pImpl;
-    INetProtocol                    eSmartProtocol;
-    bool                            bAutoCompleteMode   : 1;
-
-    SVT_DLLPRIVATE bool             ProcessKey( const vcl::KeyCode& rCode );
-    SVT_DLLPRIVATE void             TryAutoComplete();
-    SVT_DLLPRIVATE void             UpdatePicklistForSmartProtocol_Impl();
-    DECL_DLLPRIVATE_LINK(     AutoCompleteHdl_Impl, Edit&, void );
-    SVT_DLLPRIVATE void             Init(bool bSetDefaultHelpID);
-
-    virtual bool                    EventNotify( NotifyEvent& rNEvt ) override;
-    virtual void                    Select() override;
-    virtual bool                    PreNotify( NotifyEvent& rNEvt ) override;
-
-public:
-                                    SvtURLBox( vcl::Window* pParent, INetProtocol eSmart = INetProtocol::NotValid, bool bSetDefaultHelpID = true );
-                                    virtual ~SvtURLBox() override;
-    virtual void                    dispose() override;
-
-    void                            SetOpenHdl( const Link<SvtURLBox*,void>& rLink ) { aOpenHdl = rLink; }
-    const Link<SvtURLBox*,void>&    GetOpenHdl() const { return aOpenHdl; }
-    INetProtocol                    GetSmartProtocol() const { return eSmartProtocol; }
-    OUString                        GetURL();
-
-    static OUString                 ParseSmart( const OUString& aText, const OUString& aBaseURL );
-};
-
-class SVT_DLLPUBLIC URLBox
-{
-    friend class MatchContext_Impl;
+    friend class SvtMatchContext_Impl;
     friend class SvtURLBox_Impl;
 
     Idle                            aChangedIdle;
     OUString                        aBaseURL;
     OUString                        aPlaceHolder;
-    rtl::Reference< MatchContext_Impl > pCtx;
+    rtl::Reference<SvtMatchContext_Impl> pCtx;
     std::unique_ptr<SvtURLBox_Impl> pImpl;
     INetProtocol                    eSmartProtocol;
     bool                            bOnlyDirectories    : 1;
@@ -94,13 +60,14 @@ class SVT_DLLPUBLIC URLBox
     SVT_DLLPRIVATE void             Init();
 
 public:
-    URLBox(std::unique_ptr<weld::ComboBox> xWidget);
-    ~URLBox();
+    SvtURLBox(std::unique_ptr<weld::ComboBox> xWidget);
+    ~SvtURLBox();
 
     void                set_entry_text(const OUString& rStr) { m_xWidget->set_entry_text(rStr); }
     void                show() { m_xWidget->show(); }
     void                clear() { m_xWidget->clear(); }
     void                connect_entry_activate(const Link<weld::ComboBox&, bool>& rLink) { m_xWidget->connect_entry_activate(rLink); }
+    void                connect_key_press(const Link<const KeyEvent&, bool>& rLink) { m_xWidget->connect_key_press(rLink); }
     void                connect_changed(const Link<weld::ComboBox&, void>& rLink) { aChangeHdl = rLink; }
     void                trigger_changed() { aChangeHdl.Call(*m_xWidget); }
     void                connect_focus_in(const Link<weld::Widget&, void>& rLink) { aFocusInHdl = rLink; }
@@ -112,6 +79,7 @@ public:
     void                set_sensitive(bool bSensitive) { m_xWidget->set_sensitive(bSensitive); }
     void                set_help_id(const OString& rHelpId) { m_xWidget->set_help_id(rHelpId); }
     void                select_entry_region(int nStartPos, int nEndPos) { m_xWidget->select_entry_region(nStartPos, nEndPos); }
+    Size                get_preferred_size() const { return m_xWidget->get_preferred_size(); }
 
     void                EnableAutocomplete(bool bEnable = true) { m_xWidget->set_entry_completion(bEnable); }
     void                SetBaseURL( const OUString& rURL );

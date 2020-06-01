@@ -20,17 +20,11 @@
 #include "xmlColumn.hxx"
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
-#include <xmloff/xmluconv.hxx>
-#include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
-#include <stringconstants.hxx>
 #include <strings.hxx>
 #include <com/sun/star/sdbcx/XDataDescriptorFactory.hpp>
 #include <com/sun/star/sdbcx/XAppend.hpp>
-#include <com/sun/star/beans/PropertyValue.hpp>
-#include <com/sun/star/container/XNameContainer.hpp>
-#include <com/sun/star/container/XChild.hpp>
 #include "xmlStyleImport.hxx"
+#include <osl/diagnose.h>
 #include <sal/log.hxx>
 
 namespace dbaxml
@@ -52,9 +46,7 @@ OXMLColumn::OXMLColumn( ODBFilter& rImport
     ,m_bHidden(false)
 {
     OUString sType;
-    sax_fastparser::FastAttributeList *pAttribList =
-                    sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-    for (auto &aIter : *pAttribList)
+    for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
     {
         OUString sValue = aIter.toString();
 
@@ -87,7 +79,7 @@ OXMLColumn::OXMLColumn( ODBFilter& rImport
                 m_sCellStyleName = sValue;
                 break;
             default:
-                SAL_WARN("dbaccess", "unknown attribute " << SvXMLImport::getNameFromToken(aIter.getToken()) << " value=" << aIter.toString());
+                SAL_WARN("dbaccess", "unknown attribute " << SvXMLImport::getPrefixAndNameFromToken(aIter.getToken()) << " value=" << aIter.toString());
         }
     }
 }
@@ -124,7 +116,7 @@ void OXMLColumn::endFastElement(sal_Int32 )
                 if ( pAutoStyles )
                 {
                     OTableStyleContext* pAutoStyle = const_cast<OTableStyleContext*>(
-                        dynamic_cast< const OTableStyleContext* >(pAutoStyles->FindStyleChildContext(XML_STYLE_FAMILY_TABLE_COLUMN,m_sStyleName)));
+                        dynamic_cast< const OTableStyleContext* >(pAutoStyles->FindStyleChildContext(XmlStyleFamily::TABLE_COLUMN,m_sStyleName)));
                     if ( pAutoStyle )
                     {
                         pAutoStyle->FillPropertySet(xProp);
@@ -136,7 +128,7 @@ void OXMLColumn::endFastElement(sal_Int32 )
                 const SvXMLStylesContext* pAutoStyles = GetOwnImport().GetAutoStyles();
                 if ( pAutoStyles )
                 {
-                    OTableStyleContext* pAutoStyle = const_cast<OTableStyleContext*>(dynamic_cast<const OTableStyleContext* >(pAutoStyles->FindStyleChildContext(XML_STYLE_FAMILY_TABLE_CELL,m_sCellStyleName)));
+                    OTableStyleContext* pAutoStyle = const_cast<OTableStyleContext*>(dynamic_cast<const OTableStyleContext* >(pAutoStyles->FindStyleChildContext(XmlStyleFamily::TABLE_CELL,m_sCellStyleName)));
                     if ( pAutoStyle )
                     {
                         pAutoStyle->FillPropertySet(xProp);
@@ -153,7 +145,7 @@ void OXMLColumn::endFastElement(sal_Int32 )
         const SvXMLStylesContext* pAutoStyles = GetOwnImport().GetAutoStyles();
         if ( pAutoStyles )
         {
-            OTableStyleContext* pAutoStyle = const_cast<OTableStyleContext*>(dynamic_cast< const OTableStyleContext* >(pAutoStyles->FindStyleChildContext(XML_STYLE_FAMILY_TABLE_CELL,m_sCellStyleName)));
+            OTableStyleContext* pAutoStyle = const_cast<OTableStyleContext*>(dynamic_cast< const OTableStyleContext* >(pAutoStyles->FindStyleChildContext(XmlStyleFamily::TABLE_CELL,m_sCellStyleName)));
             if ( pAutoStyle )
             {
                 // we also have to do this on the table to import text-properties

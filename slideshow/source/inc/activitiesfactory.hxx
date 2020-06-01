@@ -36,7 +36,7 @@
 #include "boolanimation.hxx"
 #include "pairanimation.hxx"
 
-#include <o3tl/optional.hxx>
+#include <optional>
 
 /* Definition of ActivitiesFactory class */
 
@@ -55,7 +55,7 @@ namespace ActivitiesFactory
             double                                nMinDuration,
             sal_uInt32                            nMinNumberOfFrames,
             bool                                  bAutoReverse,
-            ::o3tl::optional<double> const&      aRepeats,
+            ::std::optional<double> const&      aRepeats,
             double                                nAcceleration,
             double                                nDeceleration,
             const ShapeSharedPtr&                 rShape,
@@ -90,7 +90,7 @@ namespace ActivitiesFactory
             (wouldn't have a clue, then, how to scale the
             animation over time).
         */
-        double const                                    mnMinDuration;
+        double                                          mnMinDuration;
 
         /** Minimal number of frames for this activity.
 
@@ -100,7 +100,7 @@ namespace ActivitiesFactory
             is over, the activity will be prolonged until
             mnMinNumberOfFrames are rendered.
         */
-        sal_uInt32 const                                mnMinNumberOfFrames;
+        sal_uInt32                                      mnMinNumberOfFrames;
 
         /** Number of repeats for the simple duration
 
@@ -110,13 +110,13 @@ namespace ActivitiesFactory
             unspecified, the activity will repeat
             indefinitely.
         */
-        ::o3tl::optional<double> const                 maRepeats;
+        ::std::optional<double> const                 maRepeats;
 
         /// Fraction of simple time to accelerate animation
-        double const                                    mnAcceleration;
+        double                                          mnAcceleration;
 
         /// Fraction of simple time to decelerate animation
-        double const                                    mnDeceleration;
+        double                                          mnDeceleration;
 
         /// Shape, to get bounds from
         ShapeSharedPtr                                  mpShape;
@@ -125,7 +125,7 @@ namespace ActivitiesFactory
         ::basegfx::B2DVector                            maSlideBounds;
 
         /// When true, activity is played reversed after mnDuration.
-        bool const                                      mbAutoReverse;
+        bool                                            mbAutoReverse;
     };
 
     /** Create an activity from an XAnimate node.

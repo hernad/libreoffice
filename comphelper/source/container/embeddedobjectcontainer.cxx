@@ -195,7 +195,7 @@ void EmbeddedObjectContainer::CloseEmbeddedObjects()
 {
     for( const auto& rObj : pImpl->maNameToObjectMap )
     {
-        uno::Reference < util::XCloseable > xClose( rObj.second, uno::UNO_QUERY );
+        uno::Reference < util::XCloseable > const & xClose = rObj.second;
         if( xClose.is() )
         {
             try
@@ -423,42 +423,42 @@ void EmbeddedObjectContainer::AddEmbeddedObject( const css::uno::Reference < css
         xChild->setParent( pImpl->m_xModel.get() );
 
     // look for object in temporary container
-    if ( pImpl->mpTempObjectContainer )
+    if ( !pImpl->mpTempObjectContainer )
+        return;
+
+    auto& rObjectContainer = pImpl->mpTempObjectContainer->pImpl->maNameToObjectMap;
+    auto aIter = std::find_if(rObjectContainer.begin(), rObjectContainer.end(),
+        [&xObj](const EmbeddedObjectContainerNameMap::value_type& rEntry) { return rEntry.second == xObj; });
+    if (aIter == rObjectContainer.end())
+        return;
+
+    // copy replacement image from temporary container (if there is any)
+    OUString aTempName = aIter->first;
+    OUString aMediaType;
+    uno::Reference < io::XInputStream > xStream = pImpl->mpTempObjectContainer->GetGraphicStream( xObj, &aMediaType );
+    if ( xStream.is() )
     {
-        auto& rObjectContainer = pImpl->mpTempObjectContainer->pImpl->maNameToObjectMap;
-        auto aIter = std::find_if(rObjectContainer.begin(), rObjectContainer.end(),
-            [&xObj](const EmbeddedObjectContainerNameMap::value_type& rEntry) { return rEntry.second == xObj; });
-        if (aIter != rObjectContainer.end())
+        InsertGraphicStream( xStream, rName, aMediaType );
+        xStream = nullptr;
+        pImpl->mpTempObjectContainer->RemoveGraphicStream( aTempName );
+    }
+
+    // remove object from storage of temporary container
+    uno::Reference < embed::XEmbedPersist > xPersist( xObj, uno::UNO_QUERY );
+    if ( xPersist.is() )
+    {
+        try
         {
-            // copy replacement image from temporary container (if there is any)
-            OUString aTempName = aIter->first;
-            OUString aMediaType;
-            uno::Reference < io::XInputStream > xStream = pImpl->mpTempObjectContainer->GetGraphicStream( xObj, &aMediaType );
-            if ( xStream.is() )
-            {
-                InsertGraphicStream( xStream, rName, aMediaType );
-                xStream = nullptr;
-                pImpl->mpTempObjectContainer->RemoveGraphicStream( aTempName );
-            }
-
-            // remove object from storage of temporary container
-            uno::Reference < embed::XEmbedPersist > xPersist( xObj, uno::UNO_QUERY );
-            if ( xPersist.is() )
-            {
-                try
-                {
-                    pImpl->mpTempObjectContainer->pImpl->mxStorage->removeElement( aTempName );
-                }
-                catch (const uno::Exception&)
-                {
-                }
-            }
-
-            // temp. container needs to forget the object
-            pImpl->mpTempObjectContainer->pImpl->maObjectToNameMap.erase( aIter->second );
-            pImpl->mpTempObjectContainer->pImpl->maNameToObjectMap.erase( aIter );
+            pImpl->mpTempObjectContainer->pImpl->mxStorage->removeElement( aTempName );
+        }
+        catch (const uno::Exception&)
+        {
         }
     }
+
+    // temp. container needs to forget the object
+    pImpl->mpTempObjectContainer->pImpl->maObjectToNameMap.erase( aIter->second );
+    pImpl->mpTempObjectContainer->pImpl->maNameToObjectMap.erase( aIter );
 }
 
 bool EmbeddedObjectContainer::StoreEmbeddedObject(
@@ -761,14 +761,14 @@ uno::Reference < embed::XEmbeddedObject > EmbeddedObjectContainer::CopyAndGetEmb
                     if ( !xOrigInfo.is() )
                         throw uno::RuntimeException();
 
-                    uno::Sequence< beans::Property > aPropertiesList = xOrigInfo->getProperties();
-                    for ( sal_Int32 nInd = 0; nInd < aPropertiesList.getLength(); nInd++ )
+                    const uno::Sequence< beans::Property > aPropertiesList = xOrigInfo->getProperties();
+                    for ( const auto & p : aPropertiesList )
                     {
                         try
                         {
                             xTargetProps->setPropertyValue(
-                                aPropertiesList[nInd].Name,
-                                xOrigProps->getPropertyValue( aPropertiesList[nInd].Name ) );
+                                p.Name,
+                                xOrigProps->getPropertyValue( p.Name ) );
                         }
                         catch (const beans::PropertyVetoException&)
                         {
@@ -993,20 +993,20 @@ void EmbeddedObjectContainer::CloseEmbeddedObject( const uno::Reference < embed:
 
     auto aIter = std::find_if(pImpl->maNameToObjectMap.begin(), pImpl->maNameToObjectMap.end(),
         [&xObj](const EmbeddedObjectContainerNameMap::value_type& rEntry) { return rEntry.second == xObj; });
-    if (aIter != pImpl->maNameToObjectMap.end())
-    {
-        pImpl->maObjectToNameMap.erase( aIter->second );
-        pImpl->maNameToObjectMap.erase( aIter );
+    if (aIter == pImpl->maNameToObjectMap.end())
+        return;
 
-        try
-        {
-            xObj->close( true );
-        }
-        catch (const uno::Exception&)
-        {
-            // it is no problem if the object is already closed
-            // TODO/LATER: what if the object can not be closed?
-        }
+    pImpl->maObjectToNameMap.erase( aIter->second );
+    pImpl->maNameToObjectMap.erase( aIter );
+
+    try
+    {
+        xObj->close( true );
+    }
+    catch (const uno::Exception&)
+    {
+        // it is no problem if the object is already closed
+        // TODO/LATER: what if the object can not be closed?
     }
 }
 

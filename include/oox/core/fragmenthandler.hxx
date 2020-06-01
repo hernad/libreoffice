@@ -32,12 +32,12 @@
 #include <rtl/ustring.hxx>
 #include <sal/types.h>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace io { class XInputStream; }
-    namespace xml { namespace sax { class XFastAttributeList; } }
-    namespace xml { namespace sax { class XFastContextHandler; } }
-    namespace xml { namespace sax { class XLocator; } }
-} } }
+    namespace xml::sax { class XFastAttributeList; }
+    namespace xml::sax { class XFastContextHandler; }
+    namespace xml::sax { class XLocator; }
+}
 
 namespace oox {
 namespace core {
@@ -55,7 +55,7 @@ struct FragmentBaseData
     const OUString      maFragmentPath;
     css::uno::Reference< css::xml::sax::XLocator >
                         mxLocator;
-    RelationsRef const  mxRelations;
+    RelationsRef        mxRelations;
 
     explicit            FragmentBaseData(
                             XmlFilterBase& rFilter,

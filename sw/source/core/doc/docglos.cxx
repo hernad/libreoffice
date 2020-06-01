@@ -21,7 +21,7 @@
 #include <com/sun/star/document/XDocumentProperties.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/beans/XPropertySetInfo.hpp>
-
+#include <com/sun/star/frame/XModel.hpp>
 #include <osl/diagnose.h>
 
 #include <doc.hxx>
@@ -189,7 +189,7 @@ bool SwDoc::InsertGlossary( SwTextBlocks& rBlock, const OUString& rEntry,
                 SwDontExpandItem aACD;
                 aACD.SaveDontExpandItems( rInsPos );
 
-                pGDoc->getIDocumentContentOperations().CopyRange( aCpyPam, rInsPos, /*bCopyAll=*/false, /*bCheckPos=*/true, /*bCopyText=*/false );
+                pGDoc->getIDocumentContentOperations().CopyRange(aCpyPam, rInsPos, SwCopyFlags::CheckPosInFly);
 
                 aACD.RestoreDontExpandItems( rInsPos );
                 if( pShell )

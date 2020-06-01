@@ -34,9 +34,9 @@
 
 using namespace com::sun::star;
 
-namespace com { namespace sun { namespace star { namespace lang {
+namespace com::sun::star::lang {
     class XMultiServiceFactory;
-} } } }
+}
 
 namespace http_dav_ucp
 {

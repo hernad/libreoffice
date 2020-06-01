@@ -32,11 +32,9 @@
 class ScPostIt;
 
 namespace utl { class TempFile; }
-namespace com { namespace sun { namespace star { namespace chart { class XChartDocument; } } } }
+namespace com::sun::star::chart { class XChartDocument; }
+namespace com::sun::star::script { struct ScriptEventDescriptor; }
 
-namespace com { namespace sun { namespace star {
-    namespace script { struct ScriptEventDescriptor; }
-} } }
 
 // DFF client anchor ==========================================================
 
@@ -79,7 +77,7 @@ private:
     virtual void        ImplCalcAnchorRect( const tools::Rectangle& rRect, MapUnit eMapUnit ) override;
 
 private:
-    SCTAB const         mnScTab;        /// Calc sheet index.
+    SCTAB               mnScTab;        /// Calc sheet index.
 };
 
 /** Represents the position (anchor) of a shape in an embedded draw page. */
@@ -94,9 +92,9 @@ private:
     virtual void        ImplCalcAnchorRect( const tools::Rectangle& rRect, MapUnit eMapUnit ) override;
 
 private:
-    Size const          maPageSize;
-    sal_Int32 const     mnScaleX;
-    sal_Int32 const     mnScaleY;
+    Size                maPageSize;
+    sal_Int32           mnScaleX;
+    sal_Int32           mnScaleY;
 };
 
 /** Represents the position (anchor) of a note object. */
@@ -126,7 +124,7 @@ private:
 
 protected:
     XclEscherEx&        mrEscherEx;         /// Reference to the DFF converter containing the DFF stream.
-    sal_uInt32 const    mnFragmentKey;      /// The key of the DFF stream fragment to be written by this record.
+    sal_uInt32          mnFragmentKey;      /// The key of the DFF stream fragment to be written by this record.
 };
 
 /** The MSODRAWINGGROUP record contains the DGGCONTAINER with global DFF data
@@ -158,8 +156,8 @@ public:
     virtual void        SaveXml( XclExpXmlStream& rStrm ) override;
 
 private:
-    Graphic const       maGraphic;      /// The VCL graphic.
-    sal_uInt16 const    mnRecId;        /// Record identifier for the IMGDATA record.
+    Graphic             maGraphic;      /// The VCL graphic.
+    sal_uInt16          mnRecId;        /// Record identifier for the IMGDATA record.
 };
 
 /** Helper class for form controls to manage spreadsheet links . */
@@ -190,6 +188,8 @@ private:
     XclTokenArrayRef    mxCellLink;     /// Formula for linked cell.
     XclTokenArrayRef    mxSrcRange;     /// Formula for source data range.
     sal_uInt16          mnEntryCount;   /// Number of entries in source range.
+protected:
+    ScAddress mxCellLinkAddress;
 };
 
 class XclMacroHelper : public XclExpControlHelper
@@ -237,7 +237,7 @@ private:
     virtual void        WriteSubRecs( XclExpStream& rStrm ) override;
 
 private:
-    OUString const      maClassName;        /// Class name of the control.
+    OUString            maClassName;        /// Class name of the control.
     sal_uInt32          mnStrmStart;        /// Start position in 'Ctls' stream.
     sal_uInt32          mnStrmSize;         /// Size in 'Ctls' stream.
 };
@@ -257,6 +257,13 @@ public:
         @return  true = The passed event descriptor was valid, macro name has been found. */
     bool                SetMacroLink( const css::script::ScriptEventDescriptor& rEvent );
 
+    virtual void        SaveXml( XclExpXmlStream& rStrm ) override;
+
+    OUString SaveControlPropertiesXml(XclExpXmlStream& rStrm) const;
+    void SaveSheetXml(XclExpXmlStream& rStrm, const OUString& aIdFormControlPr) const;
+
+    void setShapeId(sal_Int32 aShapeId);
+
 private:
     virtual void        WriteSubRecs( XclExpStream& rStrm ) override;
 
@@ -266,6 +273,7 @@ private:
     void                WriteSbs( XclExpStream& rStrm );
 
 private:
+    const css::uno::Reference< css::drawing::XShape > mxShape;
     ScfInt16Vec         maMultiSel;     /// Indexes of all selected entries in a multi selection.
     XclTbxEventType     meEventType;    /// Type of supported macro event.
     sal_Int32           mnHeight;       /// Height of the control.
@@ -281,6 +289,13 @@ private:
     bool                mbFlatBorder;   /// False = 3D border style; True = Flat border style.
     bool                mbMultiSel;     /// true = Multi selection in listbox.
     bool                mbScrollHor;    /// Scrollbar: true = horizontal.
+    bool                mbPrint;
+    bool                mbVisible;
+    OUString            msCtrlName;
+    OUString            msLabel;
+    sal_Int32           mnShapeId;
+    tools::Rectangle    maAreaFrom;
+    tools::Rectangle    maAreaTo;
 };
 
 //#endif
@@ -373,7 +388,7 @@ public:
     virtual void        SaveXml( XclExpXmlStream& rStrm ) override;
 
 private:
-    SCTAB const         mnTab;
+    SCTAB               mnTab;
     XclExpRecordList< XclExpNote >& mrNotes;
 };
 
@@ -391,17 +406,17 @@ public:
 
     /** Creates and returns the MSODRAWINGGROUP record containing global DFF
         data in the DGGCONTAINER. */
-    std::shared_ptr< XclExpRecordBase > CreateDrawingGroup();
+    rtl::Reference< XclExpRecordBase > CreateDrawingGroup();
 
     /** Initializes the object manager for a new sheet. */
     void                StartSheet();
 
     /** Processes a drawing page and returns the record block containing all
         related records (MSODRAWING, OBJ, TXO, charts, etc.). */
-    std::shared_ptr< XclExpRecordBase > ProcessDrawing( const SdrPage* pSdrPage );
+    rtl::Reference< XclExpRecordBase > ProcessDrawing( const SdrPage* pSdrPage );
     /** Processes a collection of UNO shapes and returns the record block
         containing all related records (MSODRAWING, OBJ, TXO, charts, etc.). */
-    std::shared_ptr< XclExpRecordBase > ProcessDrawing( const css::uno::Reference< css::drawing::XShapes >& rxShapes );
+    rtl::Reference< XclExpRecordBase > ProcessDrawing( const css::uno::Reference< css::drawing::XShapes >& rxShapes );
 
     /** Finalizes the object manager after conversion of all sheets. */
     void                EndDocument();
@@ -420,9 +435,9 @@ private:
 
 private:
     std::shared_ptr< ::utl::TempFile > mxTempFile;
-    std::shared_ptr< SvStream >  mxDffStrm;
+    std::unique_ptr< SvStream >  mxDffStrm;
     std::shared_ptr< XclEscherEx > mxEscherEx;
-    std::shared_ptr< XclExpObjList > mxObjList;
+    rtl::Reference< XclExpObjList > mxObjList;
 };
 
 class XclExpEmbeddedObjectManager : public XclExpObjectManager
@@ -438,9 +453,9 @@ public:
     virtual XclExpDffAnchorBase* CreateDffAnchor() const override;
 
 private:
-    Size const                maPageSize;
-    sal_Int32 const           mnScaleX;
-    sal_Int32 const           mnScaleY;
+    Size                maPageSize;
+    sal_Int32           mnScaleX;
+    sal_Int32           mnScaleY;
 };
 
 #endif

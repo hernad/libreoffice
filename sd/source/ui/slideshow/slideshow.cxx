@@ -28,6 +28,7 @@
 #include <vcl/svapp.hxx>
 #include <vcl/wrkwin.hxx>
 #include <svx/svdpool.hxx>
+#include <svx/svdlayer.hxx>
 #include <svl/itemprop.hxx>
 
 #include <sfx2/bindings.hxx>
@@ -35,6 +36,7 @@
 #include <sfx2/sfxsids.hrc>
 
 #include <framework/FrameworkHelper.hxx>
+#include <comphelper/extract.hxx>
 
 #include <FrameView.hxx>
 #include <createpresentation.hxx>
@@ -766,6 +768,30 @@ void SAL_CALL SlideShow::end()
                 }
             }
 
+            // In case mbMouseAsPen was set, a new layer DrawnInSlideshow might have been generated
+            // during slideshow, which is not known to FrameView yet.
+            if (any2bool(getPropertyValue("UsePen"))
+                && pViewShell->GetDoc()->GetLayerAdmin().GetLayer("DrawnInSlideshow"))
+            {
+                SdrLayerIDSet aDocLayerIDSet;
+                pViewShell->GetDoc()->GetLayerAdmin().getVisibleLayersODF(aDocLayerIDSet);
+                if (pViewShell->GetFrameView()->GetVisibleLayers() != aDocLayerIDSet)
+                {
+                    pViewShell->GetFrameView()->SetVisibleLayers(aDocLayerIDSet);
+                }
+                pViewShell->GetDoc()->GetLayerAdmin().getPrintableLayersODF(aDocLayerIDSet);
+                if (pViewShell->GetFrameView()->GetPrintableLayers() != aDocLayerIDSet)
+                {
+                    pViewShell->GetFrameView()->SetPrintableLayers(aDocLayerIDSet);
+                }
+                pViewShell->GetDoc()->GetLayerAdmin().getLockedLayersODF(aDocLayerIDSet);
+                if (pViewShell->GetFrameView()->GetLockedLayers() != aDocLayerIDSet)
+                {
+                    pViewShell->GetFrameView()->SetLockedLayers(aDocLayerIDSet);
+                }
+                pViewShell->InvalidateWindows();
+            }
+
             // Fire the acc focus event when focus is switched back. The above method
             // mpCurrentViewShellBase->GetWindow()->GrabFocus() will set focus to WorkWindow
             // instead of the sd::window, so here call Shell's method to fire the focus event
@@ -1041,14 +1067,14 @@ void SlideShow::StartInPlacePresentation()
         ::std::shared_ptr<FrameworkHelper> pHelper(FrameworkHelper::Instance(*mpCurrentViewShellBase));
         ::std::shared_ptr<ViewShell> pMainViewShell(pHelper->GetViewShell(FrameworkHelper::msCenterPaneURL));
 
-        if( pMainViewShell.get() )
+        if( pMainViewShell )
             eShell = pMainViewShell->GetShellType();
 
         if( eShell != ViewShell::ST_IMPRESS )
         {
             // Switch temporary to a DrawViewShell which supports the in-place presentation.
 
-            if( pMainViewShell.get() )
+            if( pMainViewShell )
             {
                 FrameView* pFrameView = pMainViewShell->GetFrameView();
                 pFrameView->SetPresentationViewShellId(SID_VIEWSHELL1);
@@ -1081,7 +1107,7 @@ void SlideShow::StartInPlacePresentation()
         return;
 
     bool bSuccess = false;
-    if( mxCurrentSettings.get() && mxCurrentSettings->mbPreview )
+    if( mxCurrentSettings && mxCurrentSettings->mbPreview )
     {
         bSuccess = mxController->startPreview(mxCurrentSettings->mxStartPage, mxCurrentSettings->mxAnimationNode, mxCurrentSettings->mpParentWindow );
     }
@@ -1094,7 +1120,7 @@ void SlideShow::StartInPlacePresentation()
         end();
     else
     {
-        if( mpCurrentViewShellBase && ( !mxCurrentSettings.get() || ( mxCurrentSettings.get() && !mxCurrentSettings->mbPreview ) ) )
+        if( mpCurrentViewShellBase && ( !mxCurrentSettings || ( mxCurrentSettings && !mxCurrentSettings->mbPreview ) ) )
             mpCurrentViewShellBase->GetWindow()->GrabFocus();
     }
 }
@@ -1123,7 +1149,7 @@ void SlideShow::StartFullscreenPresentation( )
     // view shells.
     FrameView* pOriginalFrameView = nullptr;
     ::std::shared_ptr<ViewShell> xShell(mpCurrentViewShellBase->GetMainViewShell());
-    if (xShell.get())
+    if (xShell)
         pOriginalFrameView = xShell->GetFrameView();
 
     delete mpFullScreenFrameView;

@@ -92,10 +92,10 @@
 #include <memory>
 #include <vector>
 
-namespace com { namespace sun { namespace star { namespace table { struct BorderLine2; } } } }
-namespace com { namespace sun { namespace star { namespace table { struct BorderLine; } } } }
-namespace com { namespace sun { namespace star { namespace table { struct TableBorder2; } } } }
-namespace com { namespace sun { namespace star { namespace table { struct TableBorder; } } } }
+namespace com::sun::star::table { struct BorderLine2; }
+namespace com::sun::star::table { struct BorderLine; }
+namespace com::sun::star::table { struct TableBorder2; }
+namespace com::sun::star::table { struct TableBorder; }
 
 class ScDocShell;
 class ScMarkData;
@@ -120,7 +120,7 @@ namespace editeng { class SvxBorderLine; }
 
 class ScLinkListener final : public SvtListener
 {
-    Link<const SfxHint&,void> const  aLink;
+    Link<const SfxHint&,void>  aLink;
 public:
                     ScLinkListener(const Link<const SfxHint&,void>& rL) : aLink(rL) {}
     virtual         ~ScLinkListener() override;
@@ -1098,7 +1098,7 @@ class ScCellFormatsObj final : public cppu::WeakImplHelper<
 {
 private:
     ScDocShell*             pDocShell;
-    ScRange const           aTotalRange;
+    ScRange                 aTotalRange;
 
 private:
     ScCellRangeObj*         GetObjectByIndex_Impl(long nIndex) const;
@@ -1134,7 +1134,7 @@ class ScCellFormatsEnumeration final : public cppu::WeakImplHelper<
 {
 private:
     ScDocShell*             pDocShell;
-    SCTAB const             nTab;
+    SCTAB                   nTab;
     std::unique_ptr<ScAttrRectIterator> pIter;
     ScRange                 aNext;
     bool                    bAtEnd;
@@ -1170,7 +1170,6 @@ class ScUniqueCellFormatsObj final : public cppu::WeakImplHelper<
 {
 private:
     ScDocShell*                     pDocShell;
-    ScRange const                   aTotalRange;
     ScMyRangeLists                  aRangeLists;
 
 public:

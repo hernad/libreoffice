@@ -20,7 +20,7 @@
 #pragma once
 
 #include <svtools/svtdllapi.h>
-#include <svtools/table/tablemodel.hxx>
+#include <table/tablemodel.hxx>
 #include <vcl/accessibletable.hxx>
 
 #include <vcl/ctrl.hxx>
@@ -28,7 +28,7 @@
 
 #include <memory>
 
-namespace svt { namespace table
+namespace svt::table
 {
     class TableControl_Impl;
 
@@ -167,7 +167,7 @@ namespace svt { namespace table
     };
 
 
-} } // namespace svt::table
+} // namespace svt::table
 
 
 

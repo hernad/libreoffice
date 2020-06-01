@@ -126,6 +126,7 @@
 #include <comphelper/lok.hxx>
 #include <sfx2/classificationhelper.hxx>
 #include <sfx2/sfxdlg.hxx>
+#include <comphelper/classids.hxx>
 
 #include <memory>
 
@@ -454,6 +455,9 @@ sal_Bool SAL_CALL SwTransferable::isComplex()
                 return true; // Complex
         }
     }
+
+    if (m_pWrtShell->GetSelectionType() == SelectionType::DrawObject)
+        return true; // Complex
 
     // Simple
     return false;
@@ -1122,7 +1126,7 @@ int SwTransferable::PrepareForCopy( bool bIsCut )
 
 int SwTransferable::Copy( bool bIsCut )
 {
-    if (m_pWrtShell->GetView().isContentExtractionLocked())
+    if (m_pWrtShell->GetView().GetObjectShell()->isContentExtractionLocked())
         return 0;
 
     int nRet = PrepareForCopy( bIsCut );
@@ -1349,6 +1353,41 @@ bool SwTransferable::IsPaste( const SwWrtShell& rSh,
     return bIsPaste;
 }
 
+void SwTransferable::SelectPasteFormat(TransferableDataHelper& rData, sal_uInt8& nAction,
+                                       SotClipboardFormatId& nFormat)
+{
+    if (nFormat != SotClipboardFormatId::RICHTEXT)
+    {
+        return;
+    }
+
+    if (!rData.HasFormat(SotClipboardFormatId::EMBED_SOURCE))
+    {
+        return;
+    }
+
+    if (!rData.HasFormat(SotClipboardFormatId::OBJECTDESCRIPTOR))
+    {
+        return;
+    }
+
+    TransferableObjectDescriptor aObjDesc;
+    if (!rData.GetTransferableObjectDescriptor(SotClipboardFormatId::OBJECTDESCRIPTOR, aObjDesc))
+    {
+        return;
+    }
+
+    if (aObjDesc.maClassName != SvGlobalName(SO3_SW_CLASSID))
+    {
+        return;
+    }
+
+    // At this point we know that we paste from Writer to Writer and the clipboard has the content
+    // in both RTF and ODF formats. Prefer ODF in this case.
+    nAction = EXCHG_OUT_ACTION_INSERT_OLE;
+    nFormat = SotClipboardFormatId::EMBED_SOURCE;
+}
+
 bool SwTransferable::Paste(SwWrtShell& rSh, TransferableDataHelper& rData, RndStdIds nAnchorType, bool bIgnoreComments, PasteTableType ePasteTable)
 {
     SwPasteContext aPasteContext(rSh);
@@ -1527,6 +1566,10 @@ bool SwTransferable::Paste(SwWrtShell& rSh, TransferableDataHelper& rData, RndSt
             nFormat = SotClipboardFormatId::RICHTEXT;
         }
     }
+
+    // Tweak the format if necessary: the source application can be considered in this context,
+    // while not in sot/ code.
+    SwTransferable::SelectPasteFormat(rData, nAction, nFormat);
 
     collectUIInformation("PASTE", "parameter");
 
@@ -3642,8 +3685,11 @@ bool SwTransferable::PrivatePaste(SwWrtShell& rShell, SwPasteContext* pContext, 
     //Delete selected content, not at table-selection and table in Clipboard, and don't delete hovering graphics.
     if( rShell.HasSelection() && !( nSelection & SelectionType::TableCell) && !( nSelection & SelectionType::DrawObject))
     {
-        bKillPaMs = true;
-        rShell.SetRetainSelection( true );
+        if (!(nSelection & SelectionType::NumberList))
+        {
+            bKillPaMs = true;
+            rShell.SetRetainSelection( true );
+        }
         if (pContext)
             pContext->forget();
         rShell.DelRight();
@@ -3659,7 +3705,10 @@ bool SwTransferable::PrivatePaste(SwWrtShell& rShell, SwPasteContext* pContext, 
             Point aPt( rShell.GetCharRect().Pos() );
             rShell.SwCursorShell::SetCursor( aPt, true );
         }
-        rShell.SetRetainSelection( false );
+        if (!(nSelection & SelectionType::NumberList))
+        {
+            rShell.SetRetainSelection( false );
+        }
     }
     if ( nSelection & SelectionType::DrawObject) //unselect hovering graphics
     {

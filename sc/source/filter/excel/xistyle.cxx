@@ -73,6 +73,7 @@
 #include <cppuhelper/implbase.hxx>
 #include <com/sun/star/container/XIndexAccess.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 
 using ::std::vector;
 using namespace ::com::sun::star;
@@ -444,7 +445,7 @@ void XclImpFont::ReadFontData5( XclImpStream& rStrm )
     maData.mbStrikeout  = ::get_flag( nFlags, EXC_FONTATTR_STRIKEOUT );
     maData.mbOutline    = ::get_flag( nFlags, EXC_FONTATTR_OUTLINE );
     maData.mbShadow     = ::get_flag( nFlags, EXC_FONTATTR_SHADOW );
-    mbHasCharSet = true;
+    mbHasCharSet = maData.mnCharSet != 0;
 }
 
 void XclImpFont::ReadFontColor( XclImpStream& rStrm )
@@ -577,8 +578,6 @@ void XclImpFontBuffer::ReadFont( XclImpStream& rStrm )
     if( maFontList.size() == 1 )
     {
         UpdateAppFont( rFont.GetFontData(), rFont.HasCharSet() );
-        // #i71033# set text encoding from application font, if CODEPAGE is missing
-        SetAppFontEncoding( rFont.GetFontEncoding() );
     }
 }
 
@@ -1239,7 +1238,7 @@ void XclImpXF::ReadXF( XclImpStream& rStrm )
 
 const ScPatternAttr& XclImpXF::CreatePattern( bool bSkipPoolDefs )
 {
-    if( mpPattern.get() )
+    if( mpPattern )
         return *mpPattern;
 
     // create new pattern attribute set
@@ -1606,11 +1605,8 @@ struct IgnoreCaseCompare
 void XclImpXFBuffer::CreateUserStyles()
 {
     // calculate final names of all styles
-    typedef ::std::map< OUString, XclImpStyle*, IgnoreCaseCompare > CellStyleNameMap;
-    typedef ::std::vector< XclImpStyle* > XclImpStyleVector;
-
-    CellStyleNameMap aCellStyles;
-    XclImpStyleVector aConflictNameStyles;
+    std::map< OUString, XclImpStyle*, IgnoreCaseCompare > aCellStyles;
+    std::vector< XclImpStyle* > aConflictNameStyles;
 
     /*  First, reserve style names that are built-in in Calc. This causes that
         imported cell styles get different unused names and thus do not try to
@@ -1990,7 +1986,7 @@ void XclImpXFRangeBuffer::Finalize()
     for( const auto& rxColumn : maColumns )
     {
         // apply all cell styles of an existing column
-        if( rxColumn.get() )
+        if( rxColumn )
         {
             XclImpXFRangeColumn& rColumn = *rxColumn;
             std::vector<ScAttrEntry> aAttrs;

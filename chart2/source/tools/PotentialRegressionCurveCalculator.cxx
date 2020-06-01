@@ -63,7 +63,7 @@ void SAL_CALL PotentialRegressionCurveCalculator::recalculateRegression(
         {
             ::rtl::math::setNan( & m_fSlope );
             ::rtl::math::setNan( & m_fIntercept );
-            ::rtl::math::setNan( & m_fCorrelationCoeffitient );
+            ::rtl::math::setNan( & m_fCorrelationCoefficient );
             return;
         }
         m_fSign = -1.0;
@@ -94,7 +94,7 @@ void SAL_CALL PotentialRegressionCurveCalculator::recalculateRegression(
 
     m_fSlope = fQxy / fQx;
     m_fIntercept = fAverageY - m_fSlope * fAverageX;
-    m_fCorrelationCoeffitient = fQxy / sqrt( fQx * fQy );
+    m_fCorrelationCoefficient = fQxy / sqrt( fQx * fQy );
 
     m_fIntercept = m_fSign * exp( m_fIntercept );
 }
@@ -104,8 +104,8 @@ double SAL_CALL PotentialRegressionCurveCalculator::getCurveValue( double x )
     double fResult;
     ::rtl::math::setNan( & fResult );
 
-    if( ! ( ::rtl::math::isNan( m_fSlope ) ||
-            ::rtl::math::isNan( m_fIntercept )))
+    if( ! ( std::isnan( m_fSlope ) ||
+            std::isnan( m_fIntercept )))
     {
         fResult = m_fIntercept * pow( x, m_fSlope );
     }

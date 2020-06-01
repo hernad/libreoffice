@@ -27,9 +27,9 @@
 #include <com/sun/star/container/XNameAccess.hpp>
 #include <cppuhelper/implbase.hxx>
 
-namespace com { namespace sun { namespace star { namespace beans { class XPropertyChangeListener; } } } }
-namespace com { namespace sun { namespace star { namespace beans { class XPropertySetInfo; } } } }
-namespace com { namespace sun { namespace star { namespace beans { class XVetoableChangeListener; } } } }
+namespace com::sun::star::beans { class XPropertyChangeListener; }
+namespace com::sun::star::beans { class XPropertySetInfo; }
+namespace com::sun::star::beans { class XVetoableChangeListener; }
 
 class ScDocShell;
 
@@ -81,7 +81,7 @@ class ScLinkTargetTypeObj final : public ::cppu::WeakImplHelper<
 {
 private:
     ScDocShell*             pDocShell;
-    sal_uInt16 const        nType;
+    sal_uInt16              nType;
     OUString                aName;
 
 public:

@@ -21,11 +21,13 @@
 #include <vcl/dllapi.h>
 #include <vcl/vclenum.hxx>
 #include <vcl/font.hxx>
-#include <vcl/menu.hxx>
+#include <vcl/vclptr.hxx>
 #include <vcl/uitest/factory.hxx>
 
 #include <com/sun/star/accessibility/XAccessibleRelationSet.hpp>
 #include <com/sun/star/accessibility/XAccessible.hpp>
+
+#include <boost/property_tree/ptree_fwd.hpp>
 
 #include <assert.h>
 #include <memory>
@@ -60,9 +62,10 @@ typedef css::uno::Reference<css::accessibility::XAccessible> a11yref;
 typedef css::uno::Reference<css::accessibility::XAccessibleRelationSet> a11yrelationset;
 
 enum class PointerStyle;
-class SvNumberFormatter;
+class CommandEvent;
 class KeyEvent;
 class MouseEvent;
+class SvNumberFormatter;
 class TransferDataContainer;
 class OutputDevice;
 class VirtualDevice;
@@ -71,6 +74,7 @@ struct SystemEnvData;
 namespace vcl
 {
 class ILibreOfficeKitNotifier;
+typedef OutputDevice RenderContext;
 }
 
 namespace weld
@@ -166,11 +170,6 @@ public:
     virtual void set_accessible_relation_labeled_by(weld::Widget* pLabel) = 0;
     virtual void set_accessible_relation_label_for(weld::Widget* pLabeled) = 0;
 
-    virtual void
-    add_extra_accessible_relation(const css::accessibility::AccessibleRelation& rRelation)
-        = 0;
-    virtual void clear_extra_accessible_relations() = 0;
-
     virtual void set_tooltip_text(const OUString& rTip) = 0;
     virtual OUString get_tooltip_text() const = 0;
 
@@ -260,8 +259,16 @@ public:
     virtual void set_stack_background() = 0;
     //make this widget look like it has a highlighted background
     virtual void set_highlight_background() = 0;
+    //make this widget suitable for use in a toolbar
+    virtual void set_toolbar_background() = 0;
 
     virtual css::uno::Reference<css::datatransfer::dnd::XDropTarget> get_drop_target() = 0;
+
+    virtual void connect_get_property_tree(const Link<boost::property_tree::ptree&, void>& rLink)
+        = 0;
+
+    // render the widget to an output device
+    virtual void draw(VirtualDevice& rOutput) = 0;
 
     virtual ~Widget() {}
 };
@@ -283,6 +290,15 @@ class VCL_DLLPUBLIC Box : virtual public Container
 public:
     // Moves child to a new position in the list of children
     virtual void reorder_child(weld::Widget* pWidget, int position) = 0;
+};
+
+class VCL_DLLPUBLIC Paned : virtual public Container
+{
+public:
+    // set pixel position of divider
+    virtual void set_position(int nPos) = 0;
+    // get pixel position of divider
+    virtual int get_position() const = 0;
 };
 
 class VCL_DLLPUBLIC ScrolledWindow : virtual public Container
@@ -443,8 +459,6 @@ public:
 
     virtual void resize_to_request() = 0;
 
-    // render the dialog for a screenshot
-    virtual void draw(VirtualDevice& rOutput) = 0;
     // collect positions of widgets and their help ids for screenshot purposes
     virtual ScreenShotCollection collect_screenshot_data() = 0;
 };
@@ -578,11 +592,18 @@ enum class EntryMessageType
     Error,
 };
 
+class Menu;
+
 /// A widget used to choose from a list of items.
 class VCL_DLLPUBLIC ComboBox : virtual public Container
 {
 private:
     OUString m_sSavedValue;
+
+public:
+    // OUString is the id of the row, it may be null to measure the height of a generic line
+    typedef std::tuple<vcl::RenderContext&, const tools::Rectangle&, bool, const OUString&>
+        render_args;
 
 protected:
     Link<ComboBox&, void> m_aChangeHdl;
@@ -592,6 +613,16 @@ protected:
 
     void signal_changed() { m_aChangeHdl.Call(*this); }
     virtual void signal_popup_toggled() { m_aPopupToggledHdl.Call(*this); }
+
+    Link<render_args, void> m_aRenderHdl;
+    void signal_custom_render(vcl::RenderContext& rDevice, const tools::Rectangle& rRect,
+                              bool bSelected, const OUString& rId)
+    {
+        m_aRenderHdl.Call(render_args(rDevice, rRect, bSelected, rId));
+    }
+
+    Link<vcl::RenderContext&, Size> m_aGetSizeHdl;
+    Size signal_custom_get_size(vcl::RenderContext& rDevice) { return m_aGetSizeHdl.Call(rDevice); }
 
 public:
     virtual void insert(int pos, const OUString& rStr, const OUString* pId,
@@ -643,7 +674,17 @@ public:
     virtual int find_id(const OUString& rId) const = 0;
     void remove_id(const OUString& rId) { remove(find_id(rId)); }
 
+    /* m_aChangeHdl is called when the active item is changed. The can be due
+       to the user selecting a different item from the list or while typing
+       into the entry of a combo box with an entry.
+
+       Use changed_by_direct_pick() to discover whether an item was actually explicitly
+       selected, e.g. from the menu.
+     */
     void connect_changed(const Link<ComboBox&, void>& rLink) { m_aChangeHdl = rLink; }
+
+    virtual bool changed_by_direct_pick() const = 0;
+
     virtual void connect_popup_toggled(const Link<ComboBox&, void>& rLink)
     {
         m_aPopupToggledHdl = rLink;
@@ -658,6 +699,15 @@ public:
     virtual void select_entry_region(int nStartPos, int nEndPos) = 0;
     virtual bool get_entry_selection_bounds(int& rStartPos, int& rEndPos) = 0;
     virtual void set_entry_completion(bool bEnable, bool bCaseSensitive = false) = 0;
+    virtual void set_entry_placeholder_text(const OUString& rText) = 0;
+    virtual void set_entry_editable(bool bEditable) = 0;
+    virtual void cut_entry_clipboard() = 0;
+    virtual void copy_entry_clipboard() = 0;
+    virtual void paste_entry_clipboard() = 0;
+
+    // font size is in points, not pixels, e.g. see Window::[G]etPointFont
+    virtual void set_entry_font(const vcl::Font& rFont) = 0;
+    virtual vcl::Font get_entry_font() = 0;
 
     virtual bool get_popup_shown() const = 0;
 
@@ -672,6 +722,27 @@ public:
     void save_value() { m_sSavedValue = get_active_text(); }
     OUString const& get_saved_value() const { return m_sSavedValue; }
     bool get_value_changed_from_saved() const { return m_sSavedValue != get_active_text(); }
+
+    // for custom rendering a row
+    void connect_custom_get_size(const Link<vcl::RenderContext&, Size>& rLink)
+    {
+        m_aGetSizeHdl = rLink;
+    }
+    void connect_custom_render(const Link<render_args, void>& rLink) { m_aRenderHdl = rLink; }
+    // call set_custom_renderer after setting custom callbacks
+    virtual void set_custom_renderer() = 0;
+    // create a virtual device compatible with the device passed in render_args wrt alpha
+    virtual VclPtr<VirtualDevice> create_render_virtual_device() const = 0;
+    // set a sub menu for a entry, only works with custom rendering
+    virtual void set_item_menu(const OString& rIdent, weld::Menu* pMenu) = 0;
+    // get the width needed to show the menu launcher in a custom row
+    virtual int get_menu_button_width() const = 0;
+
+    // for mru support
+    virtual int get_max_mru_count() const = 0;
+    virtual void set_max_mru_count(int nCount) = 0;
+    virtual OUString get_mru_entries() const = 0;
+    virtual void set_mru_entries(const OUString& rEntries) = 0;
 };
 
 class VCL_DLLPUBLIC TreeIter
@@ -688,6 +759,14 @@ public:
 
 class VCL_DLLPUBLIC TreeView : virtual public Container
 {
+public:
+    typedef std::pair<const TreeIter&, int> iter_col;
+    typedef std::pair<const TreeIter&, OUString> iter_string;
+    // OUString is the id of the row, it may be null to measure the height of a generic line
+    typedef std::pair<vcl::RenderContext&, const OUString&> get_size_args;
+    typedef std::tuple<vcl::RenderContext&, const tools::Rectangle&, bool, const OUString&>
+        render_args;
+
 private:
     OUString m_sSavedValue;
 
@@ -695,19 +774,23 @@ protected:
     Link<TreeView&, void> m_aChangeHdl;
     Link<TreeView&, bool> m_aRowActivatedHdl;
     Link<int, void> m_aColumnClickedHdl;
-    Link<const std::pair<int, int>&, void> m_aRadioToggleHdl;
+    Link<const iter_col&, void> m_aRadioToggleHdl;
     Link<const TreeIter&, bool> m_aEditingStartedHdl;
-    Link<const std::pair<const TreeIter&, OUString>&, bool> m_aEditingDoneHdl;
+    Link<const iter_string&, bool> m_aEditingDoneHdl;
     // if handler returns false, the expansion of the row is refused
     Link<const TreeIter&, bool> m_aExpandingHdl;
+    // if handler returns false, the collapse of the row is refused
+    Link<const TreeIter&, bool> m_aCollapsingHdl;
     Link<TreeView&, void> m_aVisibleRangeChangedHdl;
     Link<TreeView&, void> m_aModelChangedHdl;
     // if handler returns true, then menu has been show and event is consumed
     Link<const CommandEvent&, bool> m_aPopupMenuHdl;
-    // if handler returns true, drag is disallowed
-    Link<TreeView&, bool> m_aDragBeginHdl;
+    // if handler returns true, drag is disallowed, consumer can change bool
+    // arg to false to disable the treeview default dnd icon
+    Link<bool&, bool> m_aDragBeginHdl;
     std::function<int(const weld::TreeIter&, const weld::TreeIter&)> m_aCustomSort;
 
+protected:
     std::vector<int> m_aRadioIndexes;
 
     void signal_changed() { m_aChangeHdl.Call(*this); }
@@ -717,21 +800,37 @@ protected:
     {
         return !m_aExpandingHdl.IsSet() || m_aExpandingHdl.Call(rIter);
     }
+    bool signal_collapsing(const TreeIter& rIter)
+    {
+        return !m_aCollapsingHdl.IsSet() || m_aCollapsingHdl.Call(rIter);
+    }
     void signal_visible_range_changed() { m_aVisibleRangeChangedHdl.Call(*this); }
     void signal_model_changed() { m_aModelChangedHdl.Call(*this); }
 
-    // arg is pair<row,col>
-    void signal_toggled(const std::pair<int, int>& rRowCol) { m_aRadioToggleHdl.Call(rRowCol); }
+    void signal_toggled(const iter_col& rIterCol) { m_aRadioToggleHdl.Call(rIterCol); }
 
     bool signal_editing_started(const TreeIter& rIter) { return m_aEditingStartedHdl.Call(rIter); }
 
-    bool signal_editing_done(const std::pair<const TreeIter&, OUString>& rIterText)
+    bool signal_editing_done(const iter_string& rIterText)
     {
         return m_aEditingDoneHdl.Call(rIterText);
     }
 
     Link<const TreeIter&, OUString> m_aQueryTooltipHdl;
     OUString signal_query_tooltip(const TreeIter& rIter) { return m_aQueryTooltipHdl.Call(rIter); }
+
+    Link<render_args, void> m_aRenderHdl;
+    void signal_custom_render(vcl::RenderContext& rDevice, const tools::Rectangle& rRect,
+                              bool bSelected, const OUString& rId)
+    {
+        m_aRenderHdl.Call(render_args(rDevice, rRect, bSelected, rId));
+    }
+
+    Link<get_size_args, Size> m_aGetSizeHdl;
+    Size signal_custom_get_size(vcl::RenderContext& rDevice, const OUString& rId)
+    {
+        return m_aGetSizeHdl.Call(get_size_args(rDevice, rId));
+    }
 
 public:
     virtual void connect_query_tooltip(const Link<const TreeIter&, OUString>& rLink)
@@ -799,10 +898,7 @@ public:
 
     // Argument is a pair of row, col describing the node in non-tree mode.
     // If in tree mode, then retrieve the toggled node with get_cursor
-    void connect_toggled(const Link<const std::pair<int, int>&, void>& rLink)
-    {
-        m_aRadioToggleHdl = rLink;
-    }
+    void connect_toggled(const Link<const iter_col&, void>& rLink) { m_aRadioToggleHdl = rLink; }
 
     void connect_column_clicked(const Link<int, void>& rLink) { m_aColumnClickedHdl = rLink; }
     void connect_model_changed(const Link<TreeView&, void>& rLink) { m_aModelChangedHdl = rLink; }
@@ -812,6 +908,7 @@ public:
 
     //by index
     virtual int get_selected_index() const = 0;
+    //Don't select when frozen, select after thaw. Note selection doesn't survive a freeze.
     virtual void select(int pos) = 0;
     virtual void unselect(int pos) = 0;
     virtual void remove(int pos) = 0;
@@ -828,9 +925,10 @@ public:
         = 0;
     virtual void set_text_emphasis(int row, bool bOn, int col) = 0;
     virtual bool get_text_emphasis(int row, int col) const = 0;
+    virtual void set_text_align(int row, double fAlign, int col) = 0;
     virtual void swap(int pos1, int pos2) = 0;
     virtual std::vector<int> get_selected_rows() const = 0;
-    virtual void set_font_color(int pos, const Color& rColor) const = 0;
+    virtual void set_font_color(int pos, const Color& rColor) = 0;
     virtual void scroll_to_row(int pos) = 0;
     virtual bool is_selected(int pos) const = 0;
     virtual int get_cursor_index() const = 0;
@@ -838,6 +936,7 @@ public:
 
     //by text
     virtual int find_text(const OUString& rText) const = 0;
+    //Don't select when frozen, select after thaw. Note selection doesn't survive a freeze.
     void select_text(const OUString& rText) { select(find_text(rText)); }
     void remove_text(const OUString& rText) { remove(find_text(rText)); }
     std::vector<OUString> get_selected_rows_text() const
@@ -853,6 +952,7 @@ public:
     //by id
     virtual OUString get_id(int pos) const = 0;
     virtual int find_id(const OUString& rId) const = 0;
+    //Don't select when frozen, select after thaw. Note selection doesn't survive a freeze.
     void select_id(const OUString& rId) { select(find_id(rId)); }
     void remove_id(const OUString& rText) { remove(find_id(rText)); }
 
@@ -865,8 +965,14 @@ public:
     virtual bool get_iter_first(TreeIter& rIter) const = 0;
     // set iter to point to next node at the current level
     virtual bool iter_next_sibling(TreeIter& rIter) const = 0;
+    // set iter to point to previous node at the current level
+    virtual bool iter_previous_sibling(TreeIter& rIter) const = 0;
     // set iter to point to next node, depth first, then sibling
     virtual bool iter_next(TreeIter& rIter) const = 0;
+    // set iter to point to previous node, sibling first then depth
+    virtual bool iter_previous(TreeIter& rIter) const = 0;
+    // set iter to point to next node, depth first but only if expanded, then sibling
+    virtual bool iter_next_visible(TreeIter& rIter) const = 0;
     virtual bool iter_children(TreeIter& rIter) const = 0;
     bool iter_nth_sibling(TreeIter& rIter, int nChild) const
     {
@@ -893,15 +999,21 @@ public:
     // returns the number of direct children rIter has
     virtual int iter_n_children(const TreeIter& rIter) const = 0;
     virtual void remove(const TreeIter& rIter) = 0;
+    //Don't select when frozen, select after thaw. Note selection doesn't survive a freeze.
     virtual void select(const TreeIter& rIter) = 0;
     virtual void unselect(const TreeIter& rIter) = 0;
     virtual bool get_row_expanded(const TreeIter& rIter) const = 0;
+    virtual bool get_children_on_demand(const TreeIter& rIter) const = 0;
+    virtual void set_children_on_demand(const TreeIter& rIter, bool bChildrenOnDemand) = 0;
+    //visually indent this row as if it was at get_iter_depth() + nIndentLevel
+    virtual void set_extra_row_indent(const TreeIter& rIter, int nIndentLevel) = 0;
     virtual void expand_row(const TreeIter& rIter) = 0;
     virtual void collapse_row(const TreeIter& rIter) = 0;
     virtual void set_text(const TreeIter& rIter, const OUString& rStr, int col = -1) = 0;
     virtual void set_sensitive(const TreeIter& rIter, bool bSensitive, int col = -1) = 0;
     virtual void set_text_emphasis(const TreeIter& rIter, bool bOn, int col) = 0;
     virtual bool get_text_emphasis(const TreeIter& rIter, int col) const = 0;
+    virtual void set_text_align(const TreeIter& rIter, double fAlign, int col) = 0;
     virtual void set_toggle(const TreeIter& rIter, TriState bOn, int col) = 0;
     virtual TriState get_toggle(const TreeIter& rIter, int col) const = 0;
     virtual OUString get_text(const TreeIter& rIter, int col = -1) const = 0;
@@ -912,7 +1024,7 @@ public:
     virtual void set_image(const TreeIter& rIter,
                            const css::uno::Reference<css::graphic::XGraphic>& rImage, int col = -1)
         = 0;
-    virtual void set_font_color(const TreeIter& rIter, const Color& rColor) const = 0;
+    virtual void set_font_color(const TreeIter& rIter, const Color& rColor) = 0;
     virtual void scroll_to_row(const TreeIter& rIter) = 0;
     virtual bool is_selected(const TreeIter& rIter) const = 0;
 
@@ -941,12 +1053,12 @@ public:
         = 0;
 
     void connect_expanding(const Link<const TreeIter&, bool>& rLink) { m_aExpandingHdl = rLink; }
+    void connect_collapsing(const Link<const TreeIter&, bool>& rLink) { m_aCollapsingHdl = rLink; }
 
     // rStartLink returns true to allow editing, false to disallow
     // rEndLink returns true to accept the edit, false to reject
-    virtual void
-    connect_editing(const Link<const TreeIter&, bool>& rStartLink,
-                    const Link<const std::pair<const TreeIter&, OUString>&, bool>& rEndLink)
+    virtual void connect_editing(const Link<const TreeIter&, bool>& rStartLink,
+                                 const Link<const iter_string&, bool>& rEndLink)
     {
         assert(rStartLink.IsSet() == rEndLink.IsSet() && "should be both on or both off");
         m_aEditingStartedHdl = rStartLink;
@@ -971,9 +1083,9 @@ public:
                                     sal_uInt8 eDNDConstants)
         = 0;
 
-    void connect_drag_begin(const Link<TreeView&, bool>& rLink) { m_aDragBeginHdl = rLink; }
+    void connect_drag_begin(const Link<bool&, bool>& rLink) { m_aDragBeginHdl = rLink; }
 
-    //all of them
+    //all of them. Don't select when frozen, select after thaw. Note selection doesn't survive a freeze.
     void select_all() { unselect(-1); }
     void unselect_all() { select(-1); }
 
@@ -1004,6 +1116,7 @@ public:
 
     virtual void columns_autosize() = 0;
     virtual void set_column_fixed_widths(const std::vector<int>& rWidths) = 0;
+    virtual void set_column_editables(const std::vector<bool>& rEditables) = 0;
     virtual int get_column_width(int nCol) const = 0;
     virtual void set_centered_column(int nCol) = 0;
     virtual OUString get_column_title(int nColumn) const = 0;
@@ -1018,12 +1131,24 @@ public:
 
     void set_toggle_columns_as_radio(const std::vector<int>& rCols) { m_aRadioIndexes = rCols; }
 
+    virtual void vadjustment_set_value(int value) = 0;
+    virtual int vadjustment_get_value() const = 0;
+
     void save_value() { m_sSavedValue = get_selected_text(); }
     OUString const& get_saved_value() const { return m_sSavedValue; }
     bool get_value_changed_from_saved() const { return m_sSavedValue != get_selected_text(); }
 
+    // for custom rendering a cell
+    void connect_custom_get_size(const Link<get_size_args, Size>& rLink) { m_aGetSizeHdl = rLink; }
+    void connect_custom_render(const Link<render_args, void>& rLink) { m_aRenderHdl = rLink; }
+    // call set_column_custom_renderer after setting custom callbacks
+    virtual void set_column_custom_renderer(int nColumn, bool bEnable) = 0;
+
     // for dnd
-    virtual bool get_dest_row_at_pos(const Point& rPos, weld::TreeIter* pResult) = 0;
+    virtual bool get_dest_row_at_pos(const Point& rPos, weld::TreeIter* pResult,
+                                     bool bHighLightTarget = true)
+        = 0;
+    virtual void unset_drag_dest_row() = 0;
     virtual tools::Rectangle get_row_area(const weld::TreeIter& rIter) const = 0;
     // for dragging and dropping between TreeViews, return the active source
     virtual TreeView* get_drag_source() const = 0;
@@ -1074,7 +1199,7 @@ public:
 
     virtual OUString get_selected_text() const = 0;
 
-    //by index
+    //by index. Don't select when frozen, select after thaw. Note selection doesn't survive a freeze.
     virtual void select(int pos) = 0;
     virtual void unselect(int pos) = 0;
 
@@ -1090,7 +1215,7 @@ public:
     // call func on each selected element until func returns true or we run out of elements
     virtual void selected_foreach(const std::function<bool(TreeIter&)>& func) = 0;
 
-    //all of them
+    //all of them. Don't select when frozen, select after thaw. Note selection doesn't survive a freeze.
     void select_all() { unselect(-1); }
     void unselect_all() { select(-1); }
 
@@ -1194,23 +1319,28 @@ public:
     void connect_selected(const Link<const OString&, void>& rLink) { m_aSelectHdl = rLink; }
 
     virtual void insert_item(int pos, const OUString& rId, const OUString& rStr,
-                             const OUString* pIconName, VirtualDevice* pImageSufface, bool bCheck)
+                             const OUString* pIconName, VirtualDevice* pImageSurface,
+                             TriState eCheckRadioFalse)
         = 0;
     void append_item(const OUString& rId, const OUString& rStr)
     {
-        insert_item(-1, rId, rStr, nullptr, nullptr, false);
+        insert_item(-1, rId, rStr, nullptr, nullptr, TRISTATE_INDET);
     }
     void append_item_check(const OUString& rId, const OUString& rStr)
     {
-        insert_item(-1, rId, rStr, nullptr, nullptr, true);
+        insert_item(-1, rId, rStr, nullptr, nullptr, TRISTATE_TRUE);
+    }
+    void append_item_radio(const OUString& rId, const OUString& rStr)
+    {
+        insert_item(-1, rId, rStr, nullptr, nullptr, TRISTATE_FALSE);
     }
     void append_item(const OUString& rId, const OUString& rStr, const OUString& rImage)
     {
-        insert_item(-1, rId, rStr, &rImage, nullptr, false);
+        insert_item(-1, rId, rStr, &rImage, nullptr, TRISTATE_INDET);
     }
     void append_item(const OUString& rId, const OUString& rStr, VirtualDevice& rImage)
     {
-        insert_item(-1, rId, rStr, nullptr, &rImage, false);
+        insert_item(-1, rId, rStr, nullptr, &rImage, TRISTATE_INDET);
     }
     virtual void insert_separator(int pos, const OUString& rId) = 0;
     void append_separator(const OUString& rId) { insert_separator(-1, rId); }
@@ -1318,6 +1448,7 @@ public:
     virtual void set_editable(bool bEditable) = 0;
     virtual bool get_editable() const = 0;
     virtual void set_message_type(EntryMessageType eType) = 0;
+    virtual void set_placeholder_text(const OUString& rText) = 0;
 
     // font size is in points, not pixels, e.g. see Window::[G]etPointFont
     virtual void set_font(const vcl::Font& rFont) = 0;
@@ -1724,6 +1855,7 @@ public:
     {
         m_xSpinButton->connect_focus_out(rLink);
     }
+    OString get_buildable_name() { return m_xSpinButton->get_buildable_name(); }
     void set_help_id(const OString& rName) { m_xSpinButton->set_help_id(rName); }
     void set_position(int nCursorPos) { m_xSpinButton->set_position(nCursorPos); }
     // set the width of the underlying widget in characters, this setting is
@@ -1735,7 +1867,7 @@ public:
 
 class VCL_DLLPUBLIC TimeSpinButton final
 {
-    TimeFieldFormat const m_eFormat;
+    TimeFieldFormat m_eFormat;
     std::unique_ptr<weld::SpinButton> m_xSpinButton;
     Link<TimeSpinButton&, void> m_aValueChangedHdl;
 
@@ -1935,13 +2067,17 @@ public:
 
     virtual void set_sensitive(const OString& rIdent, bool bSensitive) = 0;
     virtual void set_label(const OString& rIdent, const OUString& rLabel) = 0;
+    virtual OUString get_label(const OString& rIdent) const = 0;
     virtual void set_active(const OString& rIdent, bool bActive) = 0;
     virtual bool get_active(const OString& rIdent) const = 0;
     virtual void set_visible(const OString& rIdent, bool bVisible) = 0;
 
     virtual void insert(int pos, const OUString& rId, const OUString& rStr,
-                        const OUString* pIconName, VirtualDevice* pImageSufface, bool bCheck)
+                        const OUString* pIconName, VirtualDevice* pImageSurface,
+                        TriState eCheckRadioFalse)
         = 0;
+
+    virtual void remove(const OString& rId) = 0;
 
     virtual void clear() = 0;
 
@@ -1950,19 +2086,23 @@ public:
 
     void append(const OUString& rId, const OUString& rStr)
     {
-        insert(-1, rId, rStr, nullptr, nullptr, false);
+        insert(-1, rId, rStr, nullptr, nullptr, TRISTATE_INDET);
     }
     void append_check(const OUString& rId, const OUString& rStr)
     {
-        insert(-1, rId, rStr, nullptr, nullptr, true);
+        insert(-1, rId, rStr, nullptr, nullptr, TRISTATE_TRUE);
+    }
+    void append_radio(const OUString& rId, const OUString& rStr)
+    {
+        insert(-1, rId, rStr, nullptr, nullptr, TRISTATE_FALSE);
     }
     void append(const OUString& rId, const OUString& rStr, const OUString& rImage)
     {
-        insert(-1, rId, rStr, &rImage, nullptr, false);
+        insert(-1, rId, rStr, &rImage, nullptr, TRISTATE_INDET);
     }
     void append(const OUString& rId, const OUString& rStr, VirtualDevice& rImage)
     {
-        insert(-1, rId, rStr, nullptr, &rImage, false);
+        insert(-1, rId, rStr, nullptr, &rImage, TRISTATE_INDET);
     }
 
     // return the number of toplevel nodes
@@ -2017,6 +2157,13 @@ public:
     virtual vcl::ImageType get_icon_size() const = 0;
     virtual void set_icon_size(vcl::ImageType eType) = 0;
 
+    // return what modifiers are held
+    virtual sal_uInt16 get_modifier_state() const = 0;
+
+    // This function returns the position a new item should be inserted if dnd
+    // is dropped at rPoint
+    virtual int get_drop_index(const Point& rPoint) const = 0;
+
     void connect_clicked(const Link<const OString&, void>& rLink) { m_aClickHdl = rLink; }
     void connect_menu_toggled(const Link<const OString&, void>& rLink) { m_aToggleMenuHdl = rLink; }
 };
@@ -2032,25 +2179,11 @@ public:
 
 class VCL_DLLPUBLIC Builder
 {
-private:
-    OString m_sHelpRoot;
-
 public:
-    Builder(const OUString& rUIFile)
-        : m_sHelpRoot(OUStringToOString(rUIFile, RTL_TEXTENCODING_UTF8))
-    {
-        sal_Int32 nIdx = m_sHelpRoot.lastIndexOf('.');
-        if (nIdx != -1)
-            m_sHelpRoot = m_sHelpRoot.copy(0, nIdx);
-        m_sHelpRoot += OString('/');
-    }
     virtual std::unique_ptr<MessageDialog> weld_message_dialog(const OString& id,
                                                                bool bTakeOwnership = true)
         = 0;
     virtual std::unique_ptr<Dialog> weld_dialog(const OString& id, bool bTakeOwnership = true) = 0;
-    virtual std::unique_ptr<AboutDialog> weld_about_dialog(const OString& id,
-                                                           bool bTakeOwnership = true)
-        = 0;
     virtual std::unique_ptr<Assistant> weld_assistant(const OString& id, bool bTakeOwnership = true)
         = 0;
     virtual std::unique_ptr<Window> weld_window(const OString& id, bool bTakeOwnership = true) = 0;
@@ -2059,6 +2192,7 @@ public:
                                                       bool bTakeOwnership = false)
         = 0;
     virtual std::unique_ptr<Box> weld_box(const OString& id, bool bTakeOwnership = false) = 0;
+    virtual std::unique_ptr<Paned> weld_paned(const OString& id, bool bTakeOwnership = false) = 0;
     virtual std::unique_ptr<Button> weld_button(const OString& id, bool bTakeOwnership = false) = 0;
     virtual std::unique_ptr<MenuButton> weld_menu_button(const OString& id,
                                                          bool bTakeOwnership = false)
@@ -2162,7 +2296,7 @@ protected:
 
 public:
     GenericDialogController(weld::Widget* pParent, const OUString& rUIFile,
-                            const OString& rDialogId);
+                            const OString& rDialogId, bool bMobile = false);
     virtual Dialog* getDialog() override;
     virtual ~GenericDialogController() COVERITY_NOEXCEPT_FALSE override;
 };

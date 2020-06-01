@@ -60,6 +60,8 @@ COMMA :=,
 OPEN_PAREN :=(
 CLOSE_PAREN :=)
 
+gb_SPACE:=$(gb_SPACE) $(gb_SPACE)
+
 gb_VERBOSE := $(verbose)
 
 include $(GBUILDDIR)/Helper.mk
@@ -142,7 +144,14 @@ ifeq ($(gb_ENABLE_SYMBOLS_FOR),no)
 gb_ENABLE_SYMBOLS_FOR :=
 endif
 
+ifeq ($(BLOCK_PCH),)
 gb_ENABLE_PCH := $(ENABLE_PCH)
+else
+# Setting BLOCK_PCH effectively disables PCH, but the extra object file will be still linked in.
+# This is useful for rebuilding only some files with PCH disabled, e.g. to check #include's,
+# disabling the whole ENABLE_PCH would lead to unresolved symbols at link time.
+gb_ENABLE_PCH :=
+endif
 
 ifneq ($(nodep)$(ENABLE_PRINT_DEPS),)
 gb_FULLDEPS := $(false)
@@ -273,6 +282,8 @@ gb_DEFS_INTERNAL := \
 include $(GBUILDDIR)/Deliver.mk
 
 $(eval $(call gb_Deliver_init))
+
+include $(GBUILDDIR)/Trace.mk
 
 # We are using a set of scopes that we might as well call classes.
 

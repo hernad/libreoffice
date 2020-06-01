@@ -23,16 +23,12 @@
 #include <set>
 #include <com/sun/star/beans/XPropertyAccess.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
-#include <com/sun/star/container/XNameContainer.hpp>
+#include <com/sun/star/beans/Pair.hpp>
 #include <com/sun/star/embed/XRelationshipAccess.hpp>
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#include <com/sun/star/xml/sax/InputSource.hpp>
-#include <com/sun/star/xml/sax/XFastParser.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/xml/sax/XFastSAXSerializable.hpp>
-#include <com/sun/star/xml/dom/XDocument.hpp>
 #include <com/sun/star/xml/sax/XSAXSerializable.hpp>
 #include <com/sun/star/xml/sax/Writer.hpp>
-#include <com/sun/star/document/XDocumentProperties.hpp>
 #include <o3tl/any.hxx>
 #include <unotools/mediadescriptor.hxx>
 #include <unotools/docinfohelper.hxx>
@@ -47,7 +43,6 @@
 #include <oox/core/fragmenthandler.hxx>
 #include <oox/core/recordparser.hxx>
 #include <oox/core/relationshandler.hxx>
-#include <oox/helper/containerhelper.hxx>
 #include <oox/helper/propertyset.hxx>
 #include <oox/helper/zipstorage.hxx>
 #include <oox/ole/olestorage.hxx>
@@ -65,9 +60,8 @@
 #include <comphelper/ofopxmlhelper.hxx>
 
 #include <oox/crypto/DocumentEncryption.hxx>
-#include <tools/date.hxx>
-#include <tools/datetime.hxx>
 #include <tools/urlobj.hxx>
+#include <com/sun/star/util/Date.hpp>
 #include <com/sun/star/util/Duration.hpp>
 #include <sax/tools/converter.hxx>
 #include <oox/token/namespacemap.hxx>
@@ -151,6 +145,8 @@ struct NamespaceIds: public rtl::StaticWithInit<
              NMSP_p15},
             {"http://schemas.microsoft.com/office/spreadsheetml/2011/1/ac",
              NMSP_x12ac},
+            {"http://schemas.microsoft.com/office/drawing/2012/chart",
+             NMSP_c15},
         };
     }
 };
@@ -278,7 +274,7 @@ void XmlFilterBase::importDocumentProperties()
     Reference< XComponentContext > xContext = getComponentContext();
     rtl::Reference< ::oox::core::FilterDetect > xDetector( new ::oox::core::FilterDetect( xContext ) );
     xInputStream = xDetector->extractUnencryptedPackage( aMediaDesc );
-    Reference< XComponent > xModel( getModel(), UNO_QUERY );
+    Reference< XComponent > xModel = getModel();
     Reference< XStorage > xDocumentStorage (
             ::comphelper::OStorageHelper::GetStorageOfFormatFromInputStream( OFOPXML_STORAGE_FORMAT_STRING, xInputStream ) );
     Reference< XInterface > xTemp = xContext->getServiceManager()->createInstanceWithContext(
@@ -601,9 +597,9 @@ writeElement( const FSHelperPtr& pDoc, sal_Int32 nXmlElement, const Sequence< OU
     OUStringBuffer sRep;
     sRep.append( aItems[ 0 ] );
 
-    for( sal_Int32 i = 1, end = aItems.getLength(); i < end; ++i )
+    for( const OUString& rItem : aItems )
     {
-        sRep.append( " " ).append( aItems[ i ] );
+        sRep.append( " " ).append( rItem );
     }
 
     writeElement( pDoc, nXmlElement, sRep.makeStringAndClear() );
@@ -624,7 +620,11 @@ writeCoreProperties( XmlFilterBase& rSelf, const Reference< XDocumentProperties 
 {
     OUString sValue;
     if( rSelf.getVersion() == oox::core::ISOIEC_29500_2008  )
+    {
+        // The lowercase "officedocument" is intentional and according to the spec
+        // (although most other places are written "officeDocument")
         sValue = "http://schemas.openxmlformats.org/officedocument/2006/relationships/metadata/core-properties";
+    }
     else
         sValue = "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties";
 
@@ -881,13 +881,7 @@ Reference<XStream> XmlFilterBase::implGetOutputStream( MediaDescriptor& rMediaDe
                                         MediaDescriptor::PROP_ENCRYPTIONDATA(),
                                         Sequence< NamedValue >() );
 
-    OUString aPassword;
-    auto pProp = std::find_if(aMediaEncData.begin(), aMediaEncData.end(),
-        [](const NamedValue& rProp) { return rProp.Name == "OOXPassword"; });
-    if (pProp != aMediaEncData.end())
-        pProp->Value >>= aPassword;
-
-    if (aPassword.isEmpty())
+    if (aMediaEncData.getLength() == 0)
     {
         return FilterBase::implGetOutputStream( rMediaDescriptor );
     }
@@ -908,20 +902,13 @@ bool XmlFilterBase::implFinalizeExport( MediaDescriptor& rMediaDescriptor )
                                         MediaDescriptor::PROP_ENCRYPTIONDATA(),
                                         Sequence< NamedValue >() );
 
-    OUString aPassword;
-
-    auto pProp = std::find_if(aMediaEncData.begin(), aMediaEncData.end(),
-        [](const NamedValue& rProp) { return rProp.Name == "OOXPassword"; });
-    if (pProp != aMediaEncData.end())
-        pProp->Value >>= aPassword;
-
-    if (!aPassword.isEmpty())
+    if (aMediaEncData.getLength())
     {
         commitStorage();
 
         Reference< XStream> xDocumentStream (FilterBase::implGetOutputStream(rMediaDescriptor));
         oox::ole::OleStorage aOleStorage( getComponentContext(), xDocumentStream, true );
-        DocumentEncryption encryptor(getMainDocumentStream(), aOleStorage, aPassword);
+        crypto::DocumentEncryption encryptor( getComponentContext(), getMainDocumentStream(), aOleStorage, aMediaEncData );
         bRet = encryptor.encrypt();
         if (bRet)
             aOleStorage.commit();
@@ -967,81 +954,82 @@ OUString XmlFilterBase::getNamespaceURL(sal_Int32 nNSID) const
 void XmlFilterBase::importCustomFragments(css::uno::Reference<css::embed::XStorage> const & xDocumentStorage)
 {
     Reference<XRelationshipAccess> xRelations(xDocumentStorage, UNO_QUERY);
-    if (xRelations.is())
+    if (!xRelations.is())
+        return;
+
+    const uno::Sequence<uno::Sequence<beans::StringPair>> aSeqs = xRelations->getAllRelationships();
+
+    std::vector<StreamDataSequence> aCustomFragments;
+    std::vector<OUString> aCustomFragmentTypes;
+    std::vector<OUString> aCustomFragmentTargets;
+    for (const uno::Sequence<beans::StringPair>& aSeq : aSeqs)
     {
-        const uno::Sequence<uno::Sequence<beans::StringPair>> aSeqs = xRelations->getAllRelationships();
-
-        std::vector<StreamDataSequence> aCustomFragments;
-        std::vector<OUString> aCustomFragmentTypes;
-        std::vector<OUString> aCustomFragmentTargets;
-        for (const uno::Sequence<beans::StringPair>& aSeq : aSeqs)
+        OUString sType;
+        OUString sTarget;
+        for (const beans::StringPair& aPair : aSeq)
         {
-            OUString sType;
-            OUString sTarget;
-            for (const beans::StringPair& aPair : aSeq)
-            {
-                if (aPair.First == "Target")
-                    sTarget = aPair.Second;
-                else if (aPair.First == "Type")
-                    sType = aPair.Second;
-            }
-
-            // Preserve non-standard (i.e. custom) entries.
-            if (!sType.match("http://schemas.openxmlformats.org"))
-            {
-                StreamDataSequence aDataSeq;
-                if (importBinaryData(aDataSeq, sTarget))
-                {
-                    aCustomFragments.emplace_back(aDataSeq);
-                    aCustomFragmentTypes.emplace_back(sType);
-                    aCustomFragmentTargets.emplace_back(sTarget);
-                }
-            }
+            if (aPair.First == "Target")
+                sTarget = aPair.Second;
+            else if (aPair.First == "Type")
+                sType = aPair.Second;
         }
 
-        // Adding the saved custom xml DOM
-        comphelper::SequenceAsHashMap aGrabBagProperties;
-        aGrabBagProperties["OOXCustomFragments"] <<= comphelper::containerToSequence(aCustomFragments);
-        aGrabBagProperties["OOXCustomFragmentTypes"] <<= comphelper::containerToSequence(aCustomFragmentTypes);
-        aGrabBagProperties["OOXCustomFragmentTargets"] <<= comphelper::containerToSequence(aCustomFragmentTargets);
-
-        std::vector<uno::Reference<xml::dom::XDocument>> aCustomXmlDomList;
-        std::vector<uno::Reference<xml::dom::XDocument>> aCustomXmlDomPropsList;
-        //FIXME: Ideally, we should get these the relations, but it seems that is not consistently set.
-        // In some cases it's stored in the workbook relationships, which is unexpected. So we discover them directly.
-        for (int i = 1; ; ++i)
+        // Preserve non-standard (i.e. custom) entries.
+        if (!sType.match("http://schemas.openxmlformats.org") // OOXML/ECMA Transitional
+            && !sType.match("http://purl.oclc.org")) // OOXML Strict
         {
-            Reference<XDocument> xCustDoc = importFragment("customXml/item" + OUString::number(i) + ".xml");
-            Reference<XDocument> xCustDocProps = importFragment("customXml/itemProps" + OUString::number(i) + ".xml");
-            if (xCustDoc && xCustDocProps)
+            StreamDataSequence aDataSeq;
+            if (importBinaryData(aDataSeq, sTarget))
             {
-                aCustomXmlDomList.emplace_back(xCustDoc);
-                aCustomXmlDomPropsList.emplace_back(xCustDocProps);
+                aCustomFragments.emplace_back(aDataSeq);
+                aCustomFragmentTypes.emplace_back(sType);
+                aCustomFragmentTargets.emplace_back(sTarget);
             }
-            else
-                break;
         }
-
-        // Adding the saved custom xml DOM
-        aGrabBagProperties["OOXCustomXml"] <<= comphelper::containerToSequence(aCustomXmlDomList);
-        aGrabBagProperties["OOXCustomXmlProps"] <<= comphelper::containerToSequence(aCustomXmlDomPropsList);
-
-        // Save the [Content_Types].xml after parsing.
-        uno::Sequence<uno::Sequence<beans::StringPair>> aContentTypeInfo;
-        uno::Reference<io::XInputStream> xInputStream = openInputStream("[Content_Types].xml");
-        if (xInputStream.is())
-            aContentTypeInfo = comphelper::OFOPXMLHelper::ReadContentTypeSequence(xInputStream, getComponentContext());
-
-        aGrabBagProperties["OOXContentTypes"] <<= aContentTypeInfo;
-
-        Reference<XComponent> xModel(getModel(), UNO_QUERY);
-        oox::core::XmlFilterBase::putPropertiesToDocumentGrabBag(xModel, aGrabBagProperties);
     }
+
+    // Adding the saved custom xml DOM
+    comphelper::SequenceAsHashMap aGrabBagProperties;
+    aGrabBagProperties["OOXCustomFragments"] <<= comphelper::containerToSequence(aCustomFragments);
+    aGrabBagProperties["OOXCustomFragmentTypes"] <<= comphelper::containerToSequence(aCustomFragmentTypes);
+    aGrabBagProperties["OOXCustomFragmentTargets"] <<= comphelper::containerToSequence(aCustomFragmentTargets);
+
+    std::vector<uno::Reference<xml::dom::XDocument>> aCustomXmlDomList;
+    std::vector<uno::Reference<xml::dom::XDocument>> aCustomXmlDomPropsList;
+    //FIXME: Ideally, we should get these the relations, but it seems that is not consistently set.
+    // In some cases it's stored in the workbook relationships, which is unexpected. So we discover them directly.
+    for (int i = 1; ; ++i)
+    {
+        Reference<XDocument> xCustDoc = importFragment("customXml/item" + OUString::number(i) + ".xml");
+        Reference<XDocument> xCustDocProps = importFragment("customXml/itemProps" + OUString::number(i) + ".xml");
+        if (xCustDoc && xCustDocProps)
+        {
+            aCustomXmlDomList.emplace_back(xCustDoc);
+            aCustomXmlDomPropsList.emplace_back(xCustDocProps);
+        }
+        else
+            break;
+    }
+
+    // Adding the saved custom xml DOM
+    aGrabBagProperties["OOXCustomXml"] <<= comphelper::containerToSequence(aCustomXmlDomList);
+    aGrabBagProperties["OOXCustomXmlProps"] <<= comphelper::containerToSequence(aCustomXmlDomPropsList);
+
+    // Save the [Content_Types].xml after parsing.
+    uno::Sequence<uno::Sequence<beans::StringPair>> aContentTypeInfo;
+    uno::Reference<io::XInputStream> xInputStream = openInputStream("[Content_Types].xml");
+    if (xInputStream.is())
+        aContentTypeInfo = comphelper::OFOPXMLHelper::ReadContentTypeSequence(xInputStream, getComponentContext());
+
+    aGrabBagProperties["OOXContentTypes"] <<= aContentTypeInfo;
+
+    Reference<XComponent> xModel = getModel();
+    oox::core::XmlFilterBase::putPropertiesToDocumentGrabBag(xModel, aGrabBagProperties);
 }
 
 void XmlFilterBase::exportCustomFragments()
 {
-    Reference<XComponent> xModel(getModel(), UNO_QUERY);
+    Reference<XComponent> xModel = getModel();
     uno::Reference<beans::XPropertySet> xPropSet(xModel, uno::UNO_QUERY_THROW);
 
     uno::Reference<beans::XPropertySetInfo> xPropSetInfo = xPropSet->getPropertySetInfo();

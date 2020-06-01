@@ -53,6 +53,7 @@ $(eval $(call gb_UIConfig_add_uifiles,cui,\
 	cui/uiconfig/ui/editdictionarydialog \
 	cui/uiconfig/ui/editmodulesdialog \
 	cui/uiconfig/ui/embossdialog \
+	cui/uiconfig/ui/entrycontextmenu \
 	cui/uiconfig/ui/eventassigndialog \
 	cui/uiconfig/ui/eventassignpage \
 	cui/uiconfig/ui/fontfragment \
@@ -206,6 +207,7 @@ $(eval $(call gb_UIConfig_add_uifiles,cui,\
 	cui/uiconfig/ui/tsaurldialog \
 	cui/uiconfig/ui/twolinespage \
 	cui/uiconfig/ui/wordcompletionpage \
+	cui/uiconfig/ui/spinbox \
 	cui/uiconfig/ui/zoomdialog \
 ))
 

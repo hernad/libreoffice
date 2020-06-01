@@ -14,7 +14,6 @@
 #include <boost/property_tree/json_parser.hpp>
 
 #include <com/sun/star/awt/FontWeight.hpp>
-#include <com/sun/star/frame/DispatchHelper.hpp>
 #include <com/sun/star/style/LineSpacing.hpp>
 #include <com/sun/star/text/TableColumnSeparator.hpp>
 #include <com/sun/star/view/XSelectionSupplier.hpp>
@@ -38,7 +37,6 @@
 #include <sfx2/viewfrm.hxx>
 #include <sfx2/dispatch.hxx>
 #include <svl/stritem.hxx>
-#include <svx/svxids.hrc>
 #include <comphelper/lok.hxx>
 #include <txtfrm.hxx>
 #include <redline.hxx>
@@ -48,6 +46,7 @@
 #include <PostItMgr.hxx>
 #include <postithelper.hxx>
 #include <fmtcntnt.hxx>
+#include <frameformats.hxx>
 #include <shellio.hxx>
 #include <editeng/fontitem.hxx>
 
@@ -124,6 +123,48 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf47471_paraStyleBackground)
                          getProperty<OUString>(getParagraph(2), "ParaStyleName"));
     CPPUNIT_ASSERT_EQUAL(OUString("00Background"),
                          getProperty<OUString>(getParagraph(3), "ParaStyleName"));
+}
+
+CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdfChangeNumberingListAutoFormat)
+{
+    createDoc("tdf117923.docx");
+    // Ensure that all text portions are calculated before testing.
+    SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
+    CPPUNIT_ASSERT(pTextDoc);
+    SwViewShell* pViewShell
+        = pTextDoc->GetDocShell()->GetDoc()->getIDocumentLayoutAccess().GetCurrentViewShell();
+    CPPUNIT_ASSERT(pViewShell);
+    pViewShell->Reformat();
+
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
+
+    // Check that we actually test the line we need
+    assertXPathContent(pXmlDoc, "/root/page/body/tab/row/cell/txt[3]", "GHI GHI GHI GHI");
+    assertXPath(pXmlDoc, "/root/page/body/tab/row/cell/txt[3]/Special", "nType",
+                "PortionType::Number");
+    assertXPath(pXmlDoc, "/root/page/body/tab/row/cell/txt[3]/Special", "rText", "2.");
+    // The numbering height was 960 in DOC format.
+    assertXPath(pXmlDoc, "/root/page/body/tab/row/cell/txt[3]/Special", "nHeight", "220");
+
+    // tdf#127606: now it's possible to change formatting of numbering
+    // increase font size (220 -> 260)
+    dispatchCommand(mxComponent, ".uno:SelectAll", {});
+    dispatchCommand(mxComponent, ".uno:Grow", {});
+    pViewShell->Reformat();
+    discardDumpedLayout();
+    pXmlDoc = parseLayoutDump();
+    assertXPath(pXmlDoc, "/root/page/body/tab/row/cell/txt[3]/Special", "nHeight", "260");
+
+    // save it to DOCX
+    reload("Office Open XML Text", "tdf117923.docx");
+    pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
+    pViewShell
+        = pTextDoc->GetDocShell()->GetDoc()->getIDocumentLayoutAccess().GetCurrentViewShell();
+    pViewShell->Reformat();
+    discardDumpedLayout();
+    pXmlDoc = parseLayoutDump();
+    // this was 220
+    assertXPath(pXmlDoc, "/root/page/body/tab/row/cell/txt[3]/Special", "nHeight", "260");
 }
 
 CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf101534)
@@ -246,6 +287,30 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testRedlineInHiddenSection)
     CPPUNIT_ASSERT(
         !pNode->GetNodes()[pNode->GetIndex() + 3]->GetTextNode()->getLayoutFrame(nullptr));
     CPPUNIT_ASSERT(pNode->GetNodes()[pNode->GetIndex() + 4]->IsEndNode());
+}
+
+CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf132236)
+{
+    load(DATA_DIRECTORY, "tdf132236.odt");
+
+    SwXTextDocument* const pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
+    CPPUNIT_ASSERT(pTextDoc);
+
+    // select everything and delete
+    SwWrtShell* const pWrtShell(pTextDoc->GetDocShell()->GetWrtShell());
+    pWrtShell->Down(true);
+    pWrtShell->Down(true);
+    pWrtShell->Down(true);
+    pWrtShell->Delete();
+    SwDoc* const pDoc(pWrtShell->GetDoc());
+    sw::UndoManager& rUndoManager(pDoc->GetUndoManager());
+    rUndoManager.Undo();
+
+    // check that the text frames exist inside their sections
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
+    assertXPath(pXmlDoc, "/root/page[1]/body/section[1]/txt", 1);
+    assertXPath(pXmlDoc, "/root/page[1]/body/section[2]/txt", 2);
+    assertXPath(pXmlDoc, "/root/page[1]/body/txt", 1);
 }
 
 CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf54819)
@@ -934,6 +999,16 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf105413)
                          getProperty<OUString>(getParagraph(1), "ParaStyleName"));
 }
 
+CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf123102)
+{
+    createDoc("tdf123102.odt");
+    // insert a new row after a vertically merged cell
+    dispatchCommand(mxComponent, ".uno:InsertRowsAfter", {});
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
+    // This was "3." - caused by the hidden numbered paragraph of the new merged cell
+    assertXPath(pXmlDoc, "/root/page/body/tab/row[6]/cell[1]/txt/Special", "rText", "2.");
+}
+
 CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testUnfloatButtonSmallTable)
 {
     // The floating table in the test document is too small, so we don't provide an unfloat button
@@ -1545,9 +1620,7 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testDocxAttributeTableExport)
 
     // get the table frame, set new values and dismiss the references
     {
-        uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-        uno::Reference<container::XIndexAccess> xDrawPage = xDrawPageSupplier->getDrawPage();
-        uno::Reference<beans::XPropertySet> xShape(xDrawPage->getByIndex(0), uno::UNO_QUERY);
+        uno::Reference<beans::XPropertySet> xShape(getShape(1), uno::UNO_QUERY);
 
         // change the properties
         // 8133 -> 8000
@@ -1562,9 +1635,7 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testDocxAttributeTableExport)
     // save it to docx
     reload("Office Open XML Text", "floating-table-position.docx");
 
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDrawPage = xDrawPageSupplier->getDrawPage();
-    uno::Reference<beans::XPropertySet> xShape(xDrawPage->getByIndex(0), uno::UNO_QUERY);
+    uno::Reference<beans::XPropertySet> xShape(getShape(1), uno::UNO_QUERY);
 
     // test the new values
     sal_Int32 nValue = getProperty<sal_Int32>(xShape, "VertOrientPosition");
@@ -2304,7 +2375,7 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf118311)
     //  .uno:Cut doesn't remove the table, only the selected content of the first cell
     dispatchCommand(mxComponent, ".uno:Cut", {});
 
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     assertXPath(pXmlDoc, "//page[1]//body/tab");
 
     // .uno:SelectAll selects the whole table, and UNO command Cut cuts it
@@ -2435,7 +2506,7 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf90069)
 CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf129655)
 {
     createDoc("tdf129655-vtextbox.odt");
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     assertXPath(pXmlDoc, "//fly/txt[@WritingMode='Vertical']", 1);
 }
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

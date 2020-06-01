@@ -27,11 +27,9 @@
 #include <vector>
 
 class SdDrawDocument;
-namespace sd { namespace slidesorter {
-class SlideSorterViewShell;
-} }
+namespace sd::slidesorter { class SlideSorterViewShell; }
 
-namespace sd { namespace slidesorter { namespace controller {
+namespace sd::slidesorter::controller {
 
 /** Represent previews and other information so that they can be
     attached to an existing transferable.
@@ -47,8 +45,8 @@ public:
         Representative (const BitmapEx& rBitmap, const bool bIsExcluded)
             : maBitmap(rBitmap), mbIsExcluded(bIsExcluded) {}
 
-        BitmapEx const maBitmap;
-        bool const mbIsExcluded;
+        BitmapEx maBitmap;
+        bool mbIsExcluded;
     };
 
     static SdTransferable* CreateTransferable (
@@ -76,7 +74,7 @@ private:
     virtual void Notify (SfxBroadcaster& rBroadcaster, const SfxHint& rHint) override;
 };
 
-} } } // end of namespace ::sd::slidesorter::controller
+} // end of namespace ::sd::slidesorter::controller
 
 #endif
 

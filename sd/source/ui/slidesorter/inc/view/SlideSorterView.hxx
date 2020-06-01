@@ -31,18 +31,11 @@
 #include <vcl/region.hxx>
 #include <memory>
 
-namespace sd { namespace slidesorter { namespace cache {
-class PageCache;
-} } }
-
-namespace sd { namespace slidesorter { namespace model {
-class SlideSorterModel;
-} } }
-
+namespace sd::slidesorter::cache { class PageCache; }
+namespace sd::slidesorter::model { class SlideSorterModel; }
 namespace sd { class Window; }
-namespace sd { namespace slidesorter { class SlideSorter; } }
-
-namespace sd { namespace slidesorter { namespace view {
+namespace sd::slidesorter { class SlideSorter; }
+namespace sd::slidesorter::view {
 
 class LayeredDevice;
 class PageObjectPainter;
@@ -214,7 +207,7 @@ private:
     model::SharedPageDescriptor mpPageUnderMouse;
     std::shared_ptr<PageObjectPainter> mpPageObjectPainter;
     vcl::Region maRedrawRegion;
-    SharedILayerPainter const mpBackgroundPainter;
+    SharedILayerPainter mpBackgroundPainter;
     std::unique_ptr<ToolTip, o3tl::default_delete<ToolTip>> mpToolTip;
     bool mbIsRearrangePending;
     ::std::vector<Link<LinkParamNone*,void>> maVisibilityChangeListeners;
@@ -228,7 +221,7 @@ private:
     void Rearrange();
 };
 
-} } } // end of namespace ::sd::slidesorter::view
+} // end of namespace ::sd::slidesorter::view
 
 #endif
 

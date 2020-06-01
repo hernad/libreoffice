@@ -146,7 +146,7 @@ static bool lcl_CopyData( ScDocument* pSrcDoc, const ScRange& rSrcRange,
                 nDestTab ) );
 
     ScDocumentUniquePtr pClipDoc(new ScDocument( SCDOCMODE_CLIP ));
-    ScMarkData aSourceMark(pSrcDoc->MaxRow(), pSrcDoc->MaxCol());
+    ScMarkData aSourceMark(pSrcDoc->GetSheetLimits());
     aSourceMark.SelectOneTable( nSrcTab );      // for CopyToClip
     aSourceMark.SetMarkArea( rSrcRange );
     ScClipParam aClipParam(rSrcRange, false);
@@ -161,7 +161,7 @@ static bool lcl_CopyData( ScDocument* pSrcDoc, const ScRange& rSrcRange,
         pClipDoc->ApplyPatternAreaTab( 0,0, pClipDoc->MaxCol(), pClipDoc->MaxRow(), nSrcTab, aPattern );
     }
 
-    ScMarkData aDestMark(pDestDoc->MaxRow(), pDestDoc->MaxCol());
+    ScMarkData aDestMark(pDestDoc->GetSheetLimits());
     aDestMark.SelectOneTable( nDestTab );
     aDestMark.SetMarkArea( aNewRange );
     pDestDoc->CopyFromClip( aNewRange, aDestMark, InsertDeleteFlags::ALL & ~InsertDeleteFlags::FORMULA, nullptr, pClipDoc.get(), false );
@@ -276,7 +276,7 @@ SC_IMPL_DUMMY_PROPERTY_LISTENER( ScFunctionAccess )
 static bool lcl_AddFunctionToken( ScTokenArray& rArray, const OUString& rName,const ScCompiler& rCompiler )
 {
     // function names are always case-insensitive
-    OUString aUpper = ScGlobal::pCharClass->uppercase(rName);
+    OUString aUpper = ScGlobal::getCharClassPtr()->uppercase(rName);
 
     // same options as in ScCompiler::IsOpCode:
     // 1. built-in function name
@@ -394,7 +394,7 @@ class SequencesContainer
     long& mrDocRow;
     bool mbOverflow;
     bool mbArgError;
-    ScDocument* const mpDoc;
+    ScDocument* mpDoc;
     ScTokenArray& mrTokenArr;
 
 public:

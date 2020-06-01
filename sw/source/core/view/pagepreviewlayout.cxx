@@ -301,7 +301,7 @@ bool SwPagePreviewLayout::Prepare( const sal_uInt16 _nProposedStartPageNum,
         if ( !bStartPosRangeValid )
             return false;
 
-        bool bWinSizeValid = _rPxWinSize.Width() != 0 && _rPxWinSize.Height() != 0;
+        bool bWinSizeValid = !_rPxWinSize.IsEmpty();
         OSL_ENSURE( bWinSizeValid, "no window size - no prepare of preview paint");
         if ( !bWinSizeValid )
             return false;
@@ -1210,7 +1210,7 @@ void SwPagePreviewLayout::PaintSelectMarkAtPage(vcl::RenderContext& rRenderConte
     Color aLine( pOutputDev->GetLineColor() );
 
     // determine selection mark color
-    Color aSelPgLineColor(COL_LIGHTBLUE);
+    Color aSelPgLineColor(117, 114, 106);
     const StyleSettings& rSettings =
         mrParentViewShell.GetWin()->GetSettings().GetStyleSettings();
     if ( rSettings.GetHighContrastMode() )

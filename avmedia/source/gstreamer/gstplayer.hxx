@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_AVMEDIA_SOURCE_GSTREAMER_GSTPLAYER_HXX
-#define INCLUDED_AVMEDIA_SOURCE_GSTREAMER_GSTPLAYER_HXX
+#pragma once
 
 #include <osl/conditn.hxx>
 #include "gstcommon.hxx"
@@ -29,7 +28,7 @@
 
 typedef struct _GstVideoOverlay GstVideoOverlay;
 
-namespace avmedia { namespace gstreamer {
+namespace avmedia::gstreamer {
 
 
 typedef ::cppu::WeakComponentImplHelper< css::media::XPlayer,
@@ -103,9 +102,6 @@ private:
     osl::Condition          maSizeCondition;
 };
 
-} // namespace gstreamer
-} // namespace avmedia
-
-#endif // INCLUDED_AVMEDIA_SOURCE_GSTREAMER_GSTPLAYER_HXX
+} // namespace avmedia::gstreamer
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

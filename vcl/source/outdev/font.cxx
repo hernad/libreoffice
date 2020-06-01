@@ -28,6 +28,7 @@
 #include <vcl/fontcharmap.hxx>
 #include <vcl/event.hxx>
 #include <font/FeatureCollector.hxx>
+#include <rtl/ustrbuf.hxx>
 #include <sal/log.hxx>
 #include <tools/debug.hxx>
 
@@ -276,23 +277,6 @@ bool OutputDevice::GetFontCapabilities( vcl::FontCapabilities& rFontCapabilities
         return false;
     return mpGraphics->GetFontCapabilities(rFontCapabilities);
 }
-
-#if ENABLE_CAIRO_CANVAS
-
-SystemFontData OutputDevice::GetSysFontData(int nFallbacklevel) const
-{
-    SystemFontData aSysFontData;
-
-    if (!mpGraphics)
-        (void) AcquireGraphics();
-
-    if (mpGraphics)
-        aSysFontData = mpGraphics->GetSysFontData(nFallbacklevel);
-
-    return aSysFontData;
-}
-
-#endif // ENABLE_CAIRO_CANVAS
 
 void OutputDevice::ImplGetEmphasisMark( tools::PolyPolygon& rPolyPoly, bool& rPolyLine,
                                         tools::Rectangle& rRect1, tools::Rectangle& rRect2,
@@ -1450,7 +1434,7 @@ sal_Int32 OutputDevice::HasGlyphs( const vcl::Font& rTempFont, const OUString& r
     // to get the map temporarily set font
     const vcl::Font aOrigFont = GetFont();
     const_cast<OutputDevice&>(*this).SetFont( rTempFont );
-    FontCharMapRef xFontCharMap ( new FontCharMap() );
+    FontCharMapRef xFontCharMap;
     bool bRet = GetFontCharMap( xFontCharMap );
     const_cast<OutputDevice&>(*this).SetFont( aOrigFont );
 

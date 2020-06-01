@@ -39,6 +39,7 @@
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/container/NoSuchElementException.hpp>
 #include <com/sun/star/container/XHierarchicalNameAccess.hpp>
+#include <com/sun/star/container/XNameAccess.hpp>
 #include <com/sun/star/util/XStringSubstitution.hpp>
 
 #include <unordered_map>
@@ -256,7 +257,7 @@ OUString SubstitutePathVariables::GetWorkPath() const
 OUString SubstitutePathVariables::GetWorkVariableValue() const
 {
     OUString aWorkPath;
-    o3tl::optional<OUString> x(officecfg::Office::Paths::Variables::Work::get(m_xContext));
+    std::optional<OUString> x(officecfg::Office::Paths::Variables::Work::get(m_xContext));
     if (!x)
     {
         // fallback to $HOME in case platform dependent config layer does not return

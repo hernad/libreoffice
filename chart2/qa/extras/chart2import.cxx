@@ -61,6 +61,7 @@ public:
      */
     void testPPTXHiddenDataSeries();
     void testPPTXPercentageNumberFormats();
+    void testPieChartLabelsNumFormat();
     void testPPTXStackedNonStackedYAxis();
     void testPPTChartSeries();
     void testODPChartSeries();
@@ -89,6 +90,7 @@ public:
     // void testTextCanOverlapXLSX(); // TODO : temporarily disabled.
     void testTextBreakXLSX();
     void testNumberFormatsXLSX();
+    void testNumberFormatsDOCX();
 
     void testTransparentBackground(OUString const & filename);
 
@@ -141,6 +143,7 @@ public:
     void testTdf128432();
     void testTdf128627();
     void testTdf128634();
+    void testTdf130657();
     void testDeletedDataLabel();
     void testDataPointInheritedColorDOCX();
     void testExternalStrRefsXLSX();
@@ -154,6 +157,8 @@ public:
     void testTdf125444PercentageCustomLabel();
     void testDataPointLabelCustomPos();
     void testTdf130032();
+    void testTdf119138MissingAutoTitleDeleted();
+    void testStockChartShiftedCategoryPosition();
 
     CPPUNIT_TEST_SUITE(Chart2ImportTest);
     CPPUNIT_TEST(Fdo60083);
@@ -173,6 +178,7 @@ public:
     CPPUNIT_TEST(testPPTXSparseChartSeries);
     CPPUNIT_TEST(testPPTXHiddenDataSeries);
     CPPUNIT_TEST(testPPTXPercentageNumberFormats);
+    CPPUNIT_TEST(testPieChartLabelsNumFormat);
     CPPUNIT_TEST(testPPTXStackedNonStackedYAxis);
     CPPUNIT_TEST(testODPChartSeries);
     CPPUNIT_TEST(testBnc864396);
@@ -200,6 +206,7 @@ public:
     // CPPUNIT_TEST(testTextCanOverlapXLSX); // TODO : temporarily disabled.
     CPPUNIT_TEST(testTextBreakXLSX);
     CPPUNIT_TEST(testNumberFormatsXLSX);
+    CPPUNIT_TEST(testNumberFormatsDOCX);
     CPPUNIT_TEST(testAutoTitleDelDefaultValue2007XLSX);
     CPPUNIT_TEST(testAutoTitleDelDefaultValue2013XLSX);
     CPPUNIT_TEST(testDispBlanksAsDefaultValue2007XLSX);
@@ -243,6 +250,7 @@ public:
     CPPUNIT_TEST(testTdf128432);
     CPPUNIT_TEST(testTdf128627);
     CPPUNIT_TEST(testTdf128634);
+    CPPUNIT_TEST(testTdf130657);
     CPPUNIT_TEST(testDeletedDataLabel);
     CPPUNIT_TEST(testDataPointInheritedColorDOCX);
     CPPUNIT_TEST(testExternalStrRefsXLSX);
@@ -256,6 +264,8 @@ public:
     CPPUNIT_TEST(testTdf125444PercentageCustomLabel);
     CPPUNIT_TEST(testDataPointLabelCustomPos);
     CPPUNIT_TEST(testTdf130032);
+    CPPUNIT_TEST(testTdf119138MissingAutoTitleDeleted);
+    CPPUNIT_TEST(testStockChartShiftedCategoryPosition);
 
     CPPUNIT_TEST_SUITE_END();
 
@@ -527,8 +537,8 @@ void Chart2ImportTest::testDOCXChartEmptySeries()
     CPPUNIT_ASSERT_EQUAL(2.4, aValues[1][0]);
     CPPUNIT_ASSERT_EQUAL(4.4, aValues[1][1]);
     //test the third series (empty) values
-    CPPUNIT_ASSERT(rtl::math::isNan(aValues[2][0]));
-    CPPUNIT_ASSERT(rtl::math::isNan(aValues[2][1]));
+    CPPUNIT_ASSERT(std::isnan(aValues[2][0]));
+    CPPUNIT_ASSERT(std::isnan(aValues[2][1]));
 }
 
 void Chart2ImportTest::testDOCXChartValuesSize()
@@ -592,13 +602,13 @@ void Chart2ImportTest::testPPTXSparseChartSeries()
 
     std::vector<std::vector<double> > aValues = getDataSeriesYValuesFromChartType(xCT);
     CPPUNIT_ASSERT_EQUAL(size_t(2), aValues.size());
-    CPPUNIT_ASSERT( rtl::math::isNan( aValues[0][0] ) );
+    CPPUNIT_ASSERT( std::isnan( aValues[0][0] ) );
     CPPUNIT_ASSERT_EQUAL(2.5,  aValues[0][1]);
     CPPUNIT_ASSERT_EQUAL(3.5,  aValues[0][2]);
-    CPPUNIT_ASSERT( rtl::math::isNan( aValues[0][3] ) );
+    CPPUNIT_ASSERT( std::isnan( aValues[0][3] ) );
     CPPUNIT_ASSERT_EQUAL(-2.4, aValues[1][0]);
-    CPPUNIT_ASSERT( rtl::math::isNan( aValues[1][1] ) );
-    CPPUNIT_ASSERT( rtl::math::isNan( aValues[1][2] ) );
+    CPPUNIT_ASSERT( std::isnan( aValues[1][1] ) );
+    CPPUNIT_ASSERT( std::isnan( aValues[1][2] ) );
     CPPUNIT_ASSERT_EQUAL(-2.8, aValues[1][3]);
 }
 
@@ -704,6 +714,18 @@ void Chart2ImportTest::testPPTXPercentageNumberFormats()
     CPPUNIT_ASSERT_EQUAL(nPercentFormatDecimalShort, nNumberFormat);
     sal_Int16 nType = getNumberFormatType(xChartDoc, nNumberFormat);
     CPPUNIT_ASSERT_MESSAGE("Y axis should be a percent format.", (nType & util::NumberFormat::PERCENT));
+}
+
+void Chart2ImportTest::testPieChartLabelsNumFormat()
+{
+    load("/chart2/qa/extras/data/xlsx/", "tdfPieNumFormat.xlsx");
+    uno::Reference< chart::XChartDocument > xChartDoc(getChartCompFromSheet(0, mxComponent), UNO_QUERY_THROW);
+    CPPUNIT_ASSERT(xChartDoc.is());
+    // test data point labels format
+    Reference<beans::XPropertySet> xDataPointPropSet(xChartDoc->getDiagram()->getDataPointProperties(0, 0), uno::UNO_SET_THROW);
+    chart2::DataPointLabel aLabel;
+    xDataPointPropSet->getPropertyValue("Label") >>= aLabel;
+    CPPUNIT_ASSERT_EQUAL(sal_True, aLabel.ShowNumber);
 }
 
 void Chart2ImportTest::testPPTXStackedNonStackedYAxis()
@@ -1266,6 +1288,28 @@ void Chart2ImportTest::testNumberFormatsXLSX()
     CPPUNIT_ASSERT_MESSAGE("\"LinkNumberFormatToSource\" should be set to true.", bSuccess && bLinkNumberFormatToSource);
 }
 
+void Chart2ImportTest::testNumberFormatsDOCX()
+{
+    load("/chart2/qa/extras/data/docx/", "tdf132174.docx");
+    uno::Reference< chart2::XChartDocument > xChartDoc(getChartDocFromWriter(0), uno::UNO_QUERY);
+    CPPUNIT_ASSERT(xChartDoc.is());
+
+    css::uno::Reference<chart2::XDiagram> xDiagram(xChartDoc->getFirstDiagram(), UNO_SET_THROW);
+    Reference<chart2::XDataSeries> xDataSeries = getDataSeriesFromDoc(xChartDoc, 0);
+    uno::Reference<beans::XPropertySet> xPropertySet(xDataSeries, uno::UNO_QUERY_THROW);
+    CPPUNIT_ASSERT(xPropertySet.is());
+
+    sal_Int32 nNumberFormat;
+    bool bLinkNumberFormatToSource = true;
+    const sal_Int32 nChartDataNumberFormat = getNumberFormat(xChartDoc, "0%");
+    xPropertySet->getPropertyValue(CHART_UNONAME_NUMFMT) >>= nNumberFormat;
+    CPPUNIT_ASSERT_EQUAL(nChartDataNumberFormat, nNumberFormat);
+    xPropertySet->getPropertyValue(CHART_UNONAME_LINK_TO_SRC_NUMFMT) >>= bLinkNumberFormatToSource;
+    // LinkNumberFormatToSource should be set to false even if the OOXML contain a true value,
+    // because the inner data table of charts have no own number format!
+    CPPUNIT_ASSERT_MESSAGE("\"LinkNumberFormatToSource\" should be set to false.", !bLinkNumberFormatToSource);
+}
+
 void Chart2ImportTest::testAutoTitleDelDefaultValue2007XLSX()
 {
     load("/chart2/qa/extras/data/xlsx/", "autotitledel_2007.xlsx");
@@ -1629,17 +1673,17 @@ void Chart2ImportTest::testInternalDataProvider() {
     // Parse empty first and last
     xDataSeq = rxDataProvider->createDataSequenceByValueArray("values-y", "{\"\";42;42;\"\"}");
     xSequence = xDataSeq->getData();
-    CPPUNIT_ASSERT( rtl::math::isNan( *static_cast<const double*>(xSequence[0].getValue())));
+    CPPUNIT_ASSERT( std::isnan( *static_cast<const double*>(xSequence[0].getValue())));
     CPPUNIT_ASSERT_EQUAL(uno::Any(sal_Int32(42)), xSequence[1]);
     CPPUNIT_ASSERT_EQUAL(uno::Any(sal_Int32(42)), xSequence[2]);
-    CPPUNIT_ASSERT( rtl::math::isNan( *static_cast<const double*>(xSequence[3].getValue())));
+    CPPUNIT_ASSERT( std::isnan( *static_cast<const double*>(xSequence[3].getValue())));
 
     // Parse empty middle
     xDataSeq = rxDataProvider->createDataSequenceByValueArray("values-y", "{42;\"\";\"\";42}");
     xSequence = xDataSeq->getData();
     CPPUNIT_ASSERT_EQUAL(uno::Any(sal_Int32(42)), xSequence[0]);
-    CPPUNIT_ASSERT( rtl::math::isNan( *static_cast<const double*>(xSequence[1].getValue())) );
-    CPPUNIT_ASSERT( rtl::math::isNan( *static_cast<const double*>(xSequence[2].getValue())) );
+    CPPUNIT_ASSERT( std::isnan( *static_cast<const double*>(xSequence[1].getValue())) );
+    CPPUNIT_ASSERT( std::isnan( *static_cast<const double*>(xSequence[2].getValue())) );
     CPPUNIT_ASSERT_EQUAL(uno::Any(sal_Int32(42)), xSequence[3]);
 
     // Parse mixed types, numeric only role
@@ -2125,6 +2169,21 @@ void Chart2ImportTest::testTdf128634()
     CPPUNIT_ASSERT(aScaleData.ShiftedCategoryPosition);
 }
 
+void Chart2ImportTest::testTdf130657()
+{
+    load("/chart2/qa/extras/data/xlsx/", "tdf130657.xlsx");
+    // Test ShiftedCategoryPosition for charts which is not contain a "crossbetween" OOXML tag.
+    uno::Reference<chart2::XChartDocument> xChartDoc = getChartDocFromSheet(0, mxComponent);
+    CPPUNIT_ASSERT_MESSAGE("failed to load chart", xChartDoc.is());
+
+    Reference<chart2::XAxis> xAxis = getAxisFromDoc(xChartDoc, 0, 0, 0);
+    CPPUNIT_ASSERT(xAxis.is());
+
+    chart2::ScaleData aScaleData = xAxis->getScaleData();
+    CPPUNIT_ASSERT(aScaleData.Categories.is());
+    CPPUNIT_ASSERT(aScaleData.ShiftedCategoryPosition);
+}
+
 namespace {
 
 void checkDataLabelProperties(const Reference<chart2::XDataSeries>& xDataSeries, sal_Int32 nDataPointIndex, bool bValueVisible)
@@ -2258,10 +2317,10 @@ void Chart2ImportTest::testXaxisValues()
     Sequence<uno::Any> xSequence = xDataSeq->getData();
     // test X values
     CPPUNIT_ASSERT_EQUAL(uno::Any(0.04), xSequence[0]);
-    CPPUNIT_ASSERT(rtl::math::isNan(*static_cast<const double*>(xSequence[1].getValue())));
+    CPPUNIT_ASSERT(std::isnan(*static_cast<const double*>(xSequence[1].getValue())));
     CPPUNIT_ASSERT_EQUAL(uno::Any(0.16), xSequence[2]);
     CPPUNIT_ASSERT_EQUAL(uno::Any(0.11), xSequence[3]);
-    CPPUNIT_ASSERT(rtl::math::isNan(*static_cast<const double*>(xSequence[4].getValue())));
+    CPPUNIT_ASSERT(std::isnan(*static_cast<const double*>(xSequence[4].getValue())));
 }
 
 void Chart2ImportTest::testTdf123504()
@@ -2395,6 +2454,32 @@ void Chart2ImportTest::testTdf130032()
     sal_Int32 aPlacement;
     xPropertySet->getPropertyValue("LabelPlacement") >>= aPlacement;
     CPPUNIT_ASSERT_EQUAL(chart::DataLabelPlacement::RIGHT, aPlacement);
+}
+
+void Chart2ImportTest::testTdf119138MissingAutoTitleDeleted()
+{
+    load("/chart2/qa/extras/data/xlsx/", "tdf119138-missing-autotitledeleted.xlsx");
+    Reference<chart2::XChartDocument> xChartDoc = getChartDocFromSheet(0, mxComponent);
+    CPPUNIT_ASSERT_MESSAGE("failed to load chart", xChartDoc.is());
+
+    Reference<chart2::XTitled> xTitled(xChartDoc, uno::UNO_QUERY_THROW);
+    uno::Reference<chart2::XTitle> xTitle = xTitled->getTitleObject();
+    CPPUNIT_ASSERT_MESSAGE("Missing autoTitleDeleted is implied to be True if title text is present", xTitle.is());
+}
+
+void Chart2ImportTest::testStockChartShiftedCategoryPosition()
+{
+    load("/chart2/qa/extras/data/odt/", "stock_chart_LO_6_2.odt");
+
+    uno::Reference<chart2::XChartDocument> xChartDoc(getChartDocFromWriter(0), uno::UNO_QUERY);
+    CPPUNIT_ASSERT(xChartDoc.is());
+
+    Reference<chart2::XAxis> xAxis = getAxisFromDoc(xChartDoc, 0, 0, 0);
+    CPPUNIT_ASSERT(xAxis.is());
+
+    chart2::ScaleData aScaleData = xAxis->getScaleData();
+    CPPUNIT_ASSERT(aScaleData.Categories.is());
+    CPPUNIT_ASSERT(aScaleData.ShiftedCategoryPosition);
 }
 
 CPPUNIT_TEST_SUITE_REGISTRATION(Chart2ImportTest);

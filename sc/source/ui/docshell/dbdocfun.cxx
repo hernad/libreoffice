@@ -122,7 +122,7 @@ bool ScDBDocFunc::DeleteDBRange(const OUString& rName)
     bool bUndo = rDoc.IsUndoEnabled();
 
     ScDBCollection::NamedDBs& rDBs = pDocColl->getNamedDBs();
-    auto const iter = rDBs.findByUpperName2(ScGlobal::pCharClass->uppercase(rName));
+    auto const iter = rDBs.findByUpperName2(ScGlobal::getCharClassPtr()->uppercase(rName));
     if (iter != rDBs.end())
     {
         ScDocShellModificator aModificator( rDocShell );
@@ -157,8 +157,8 @@ bool ScDBDocFunc::RenameDBRange( const OUString& rOld, const OUString& rNew )
     ScDBCollection* pDocColl = rDoc.GetDBCollection();
     bool bUndo = rDoc.IsUndoEnabled();
     ScDBCollection::NamedDBs& rDBs = pDocColl->getNamedDBs();
-    auto const iterOld = rDBs.findByUpperName2(ScGlobal::pCharClass->uppercase(rOld));
-    const ScDBData* pNew = rDBs.findByUpperName(ScGlobal::pCharClass->uppercase(rNew));
+    auto const iterOld = rDBs.findByUpperName2(ScGlobal::getCharClassPtr()->uppercase(rOld));
+    const ScDBData* pNew = rDBs.findByUpperName(ScGlobal::getCharClassPtr()->uppercase(rNew));
     if (iterOld != rDBs.end() && !pNew)
     {
         ScDocShellModificator aModificator( rDocShell );
@@ -297,7 +297,7 @@ bool ScDBDocFunc::RepeatDB( const OUString& rDBName, bool bApi, bool bIsUnnamed,
     {
         ScDBCollection* pColl = rDoc.GetDBCollection();
         if (pColl)
-            pDBData = pColl->getNamedDBs().findByUpperName(ScGlobal::pCharClass->uppercase(rDBName));
+            pDBData = pColl->getNamedDBs().findByUpperName(ScGlobal::getCharClassPtr()->uppercase(rDBName));
     }
 
     if ( pDBData )
@@ -512,8 +512,8 @@ bool ScDBDocFunc::Sort( SCTAB nTab, const ScSortParam& rSortParam,
         else
             nStartingColToEdit++;
     }
-    ScEditableTester aTester( &rDoc, nTab, nStartingColToEdit,nStartingRowToEdit,
-                                        aLocalParam.nCol2,aLocalParam.nRow2 );
+    ScEditableTester aTester( &rDoc, nTab, nStartingColToEdit, nStartingRowToEdit,
+            aLocalParam.nCol2, aLocalParam.nRow2, true /*bNoMatrixAtAll*/ );
     if (!aTester.IsEditable())
     {
         if (!bApi)
@@ -836,7 +836,7 @@ bool ScDBDocFunc::Query( SCTAB nTab, const ScQueryParam& rQueryParam,
                 aOldForm.aEnd.SetRow( aOldDest.aEnd.Row() );
                 rDoc.FitBlock( aOldForm, aNewForm, false );
 
-                ScMarkData aMark(rDoc.MaxRow(), rDoc.MaxCol());
+                ScMarkData aMark(rDoc.GetSheetLimits());
                 aMark.SelectOneTable(nDestTab);
                 SCROW nFStartY = aLocalParam.nRow1 + ( aLocalParam.bHasHeader ? 1 : 0 );
 
@@ -1672,7 +1672,7 @@ void ScDBDocFunc::UpdateImport( const OUString& rTarget, const svx::ODataAccessD
 
     ScDocument& rDoc = rDocShell.GetDocument();
     ScDBCollection& rDBColl = *rDoc.GetDBCollection();
-    const ScDBData* pData = rDBColl.getNamedDBs().findByUpperName(ScGlobal::pCharClass->uppercase(rTarget));
+    const ScDBData* pData = rDBColl.getNamedDBs().findByUpperName(ScGlobal::getCharClassPtr()->uppercase(rTarget));
     if (!pData)
     {
         std::unique_ptr<weld::MessageDialog> xInfoBox(Application::CreateMessageDialog(ScDocShell::GetActiveDialogParent(),

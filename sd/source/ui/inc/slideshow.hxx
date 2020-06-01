@@ -34,16 +34,14 @@
 
 #include <memory>
 
-namespace com { namespace sun { namespace star {
-
+namespace com::sun::star {
     namespace drawing {
         class XDrawPage;
     }
     namespace animations {
         class XAnimationNode;
     }
-} } }
-
+}
 class SdDrawDocument;
 class KeyEvent;
 class OutputDevice;
@@ -190,7 +188,7 @@ private:
     SlideShow(const SlideShow&) = delete;
     SlideShow& operator=( const SlideShow& ) = delete;
 
-    SvxItemPropertySet const  maPropSet;
+    SvxItemPropertySet  maPropSet;
 
     rtl::Reference< SlideshowImpl > mxController;
     /** This flag is used together with mxController.is() to prevent

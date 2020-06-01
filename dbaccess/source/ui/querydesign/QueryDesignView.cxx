@@ -20,40 +20,31 @@
 #include <QueryDesignView.hxx>
 #include <QueryTableView.hxx>
 #include "QTableWindow.hxx"
-#include <vcl/toolbox.hxx>
 #include <querycontroller.hxx>
 #include <sqlbison.hxx>
 #include <vcl/split.hxx>
-#include <svl/undo.hxx>
 #include <tools/diagnose_ex.h>
 #include <o3tl/safeint.hxx>
 #include <osl/diagnose.h>
-#include <adtabdlg.hxx>
 #include <vcl/svapp.hxx>
-#include <vcl/combobox.hxx>
 #include <vcl/weld.hxx>
 #include <browserids.hxx>
 #include "SelectionBrowseBox.hxx"
 #include <strings.hrc>
 #include <strings.hxx>
-#include <unotools/configmgr.hxx>
 #include <comphelper/string.hxx>
 #include <connectivity/dbtools.hxx>
 #include <connectivity/dbexception.hxx>
-#include <com/sun/star/i18n/XLocaleData.hpp>
 #include <com/sun/star/sdbc/DataType.hpp>
 #include <com/sun/star/container/XNameAccess.hpp>
 #include <com/sun/star/sdbc/ColumnValue.hpp>
 #include <connectivity/PColumn.hxx>
 #include "QTableConnection.hxx"
-#include <ConnectionLine.hxx>
 #include <ConnectionLineData.hxx>
 #include "QTableConnectionData.hxx"
 #include <core_resource.hxx>
-#include <stringconstants.hxx>
 #include <UITools.hxx>
 #include <querycontainerwindow.hxx>
-#include <sqlmessage.hxx>
 #include <unotools/localedatawrapper.hxx>
 #include <unotools/syslocale.hxx>
 #include <memory>
@@ -132,25 +123,24 @@ namespace
 
         if ( !pConn )
         {
-            OQueryTableConnectionData* pInfoData = new OQueryTableConnectionData();
-            TTableConnectionData::value_type aInfoData(pInfoData);
-            pInfoData->InitFromDrag(_aDragLeft, _aDragRight);
-            pInfoData->SetJoinType(_eJoinType);
+            auto xInfoData = std::make_shared<OQueryTableConnectionData>();
+            xInfoData->InitFromDrag(_aDragLeft, _aDragRight);
+            xInfoData->SetJoinType(_eJoinType);
 
             if ( _bNatural )
             {
-                aInfoData->ResetConnLines();
-                pInfoData->setNatural(_bNatural);
+                xInfoData->ResetConnLines();
+                xInfoData->setNatural(_bNatural);
                 try
                 {
-                    Reference<XNameAccess> xReferencedTableColumns(aInfoData->getReferencedTable()->getColumns());
-                    Sequence< OUString> aSeq = aInfoData->getReferencingTable()->getColumns()->getElementNames();
+                    Reference<XNameAccess> xReferencedTableColumns(xInfoData->getReferencedTable()->getColumns());
+                    Sequence< OUString> aSeq = xInfoData->getReferencingTable()->getColumns()->getElementNames();
                     const OUString* pIter = aSeq.getConstArray();
                     const OUString* pEnd   = pIter + aSeq.getLength();
                     for(;pIter != pEnd;++pIter)
                     {
                         if ( xReferencedTableColumns->hasByName(*pIter) )
-                            aInfoData->AppendConnLine(*pIter,*pIter);
+                            xInfoData->AppendConnLine(*pIter,*pIter);
                     }
                 }
                 catch( const Exception& )
@@ -159,9 +149,9 @@ namespace
                 }
             }
 
-            ScopedVclPtrInstance< OQueryTableConnection > aInfo(pTableView, aInfoData);
+            ScopedVclPtrInstance< OQueryTableConnection > aInfo(pTableView, xInfoData);
             // Because OQueryTableConnection never takes ownership of the data passed to it, but only remembers the pointer,
-            // this pointer to a local variable is not critical, as aInfoData and aInfo have the same lifetime
+            // this pointer to a local variable is not critical, as xInfoData and aInfo have the same lifetime
             pTableView->NotifyTabConnection( *aInfo );
         }
         else
@@ -328,19 +318,19 @@ namespace
         OSL_ENSURE(_pEntryConn,"TableConnection can not be null!");
 
         OQueryTableConnectionData* pData = static_cast< OQueryTableConnectionData*>(_pEntryConn->GetData().get());
-        if ( pData->GetJoinType() != INNER_JOIN && _pEntryTabTo->ExistsAVisitedConn() )
+        if ( !(pData->GetJoinType() != INNER_JOIN && _pEntryTabTo->ExistsAVisitedConn()) )
+            return;
+
+        bool bBrace = false;
+        if(_rJoin.endsWith(")"))
         {
-            bool bBrace = false;
-            if(_rJoin.endsWith(")"))
-            {
-                bBrace = true;
-                _rJoin = _rJoin.replaceAt(_rJoin.getLength()-1,1,OUString(' '));
-            }
-            _rJoin += C_AND + BuildJoinCriteria(_xConnection,&pData->GetConnLineDataList(),pData);
-            if(bBrace)
-                _rJoin += ")";
-            _pEntryConn->SetVisited(true);
+            bBrace = true;
+            _rJoin = _rJoin.replaceAt(_rJoin.getLength()-1,1,OUString(' '));
         }
+        _rJoin += C_AND + BuildJoinCriteria(_xConnection,&pData->GetConnLineDataList(),pData);
+        if(bBrace)
+            _rJoin += ")";
+        _pEntryConn->SetVisited(true);
     }
     OUString BuildTable( const Reference< XConnection>& _xConnection,
                                 const OQueryTableWindow* pEntryTab,
@@ -514,20 +504,20 @@ namespace
         }
 
         // when nothing found look for the "from" window
-        if(!bFound)
+        if(bFound)
+            return;
+
+        OQueryTableWindow* pEntryTabFrom = static_cast<OQueryTableWindow*>(pEntryConn->GetSourceWin());
+        for (auto const& connection : rConnections)
         {
-            OQueryTableWindow* pEntryTabFrom = static_cast<OQueryTableWindow*>(pEntryConn->GetSourceWin());
-            for (auto const& connection : rConnections)
+            OQueryTableConnection* pNext = static_cast<OQueryTableConnection*>(connection.get());
+            if(!pNext->IsVisited() && (pNext->GetSourceWin() == pEntryTabFrom || pNext->GetDestWin() == pEntryTabFrom))
             {
-                OQueryTableConnection* pNext = static_cast<OQueryTableConnection*>(connection.get());
-                if(!pNext->IsVisited() && (pNext->GetSourceWin() == pEntryTabFrom || pNext->GetDestWin() == pEntryTabFrom))
-                {
-                    OQueryTableWindow* pEntryTab = pNext->GetSourceWin() == pEntryTabFrom ? static_cast<OQueryTableWindow*>(pNext->GetDestWin()) : static_cast<OQueryTableWindow*>(pNext->GetSourceWin());
-                    // exists there a connection to a OQueryTableWindow that holds a connection that has been already visited
-                    JoinCycle(_xConnection,pNext,pEntryTab,aJoin);
-                    if(!pNext->IsVisited())
-                        GetNextJoin(_xConnection, pNext, pEntryTab, aJoin, _rTableNames);
-                }
+                OQueryTableWindow* pEntryTab = pNext->GetSourceWin() == pEntryTabFrom ? static_cast<OQueryTableWindow*>(pNext->GetDestWin()) : static_cast<OQueryTableWindow*>(pNext->GetSourceWin());
+                // exists there a connection to a OQueryTableWindow that holds a connection that has been already visited
+                JoinCycle(_xConnection,pNext,pEntryTab,aJoin);
+                if(!pNext->IsVisited())
+                    GetNextJoin(_xConnection, pNext, pEntryTab, aJoin, _rTableNames);
             }
         }
     }
@@ -568,8 +558,11 @@ namespace
 
             OTableFieldDescRef aDragLeft  = new OTableFieldDesc();
             OTableFieldDescRef aDragRight = new OTableFieldDesc();
-            if ( eOk != ( eErrorCode = FillDragInfo(_pView,pNode->getChild(0),aDragLeft)) ||
-                eOk != ( eErrorCode = FillDragInfo(_pView,pNode->getChild(2),aDragRight)))
+            eErrorCode = FillDragInfo(_pView,pNode->getChild(0),aDragLeft);
+            if ( eOk != eErrorCode )
+                return eErrorCode;
+            eErrorCode = FillDragInfo(_pView,pNode->getChild(2),aDragRight);
+            if ( eOk != eErrorCode )
                 return eErrorCode;
 
             if ( pLeftTable )
@@ -1504,16 +1497,19 @@ namespace
                         }
                     }
                 }
-                else if (pParamNode && eOk != (eErrorCode = FillDragInfo(_pView,pParamNode,aDragLeft))
-                        && SQL_ISRULE(pParamNode,num_value_exp))
+                else if (pParamNode)
                 {
-                    OUString sParameterValue;
-                    pParamNode->parseNodeToStr( sParameterValue,
-                                                xConnection,
-                                                &rController.getParser().getContext());
-                    nFunctionType |= FKT_NUMERIC;
-                    aDragLeft->SetField(sParameterValue);
-                    eErrorCode = eOk;
+                    eErrorCode = FillDragInfo(_pView,pParamNode,aDragLeft);
+                    if ( eOk != eErrorCode && SQL_ISRULE(pParamNode,num_value_exp))
+                    {
+                        OUString sParameterValue;
+                        pParamNode->parseNodeToStr( sParameterValue,
+                                                    xConnection,
+                                                    &rController.getParser().getContext());
+                        nFunctionType |= FKT_NUMERIC;
+                        aDragLeft->SetField(sParameterValue);
+                        eErrorCode = eOk;
+                    }
                 }
                 aDragLeft->SetFunctionType(nFunctionType);
                 if ( bHaving )
@@ -1553,8 +1549,11 @@ namespace
             if ( SQL_ISRULE(pCondition->getChild(0), column_ref ) && SQL_ISRULE(pCondition->getChild(pCondition->count()-1), column_ref ) )
             {
                 OTableFieldDescRef aDragRight = new OTableFieldDesc();
-                if (eOk != ( eErrorCode = FillDragInfo(_pView,pCondition->getChild(0),aDragLeft)) ||
-                    eOk != ( eErrorCode = FillDragInfo(_pView,pCondition->getChild(2),aDragRight)))
+                eErrorCode = FillDragInfo(_pView,pCondition->getChild(0),aDragLeft);
+                if (eOk != eErrorCode)
+                    return eErrorCode;
+                eErrorCode = FillDragInfo(_pView,pCondition->getChild(2),aDragRight);
+                if (eOk != eErrorCode)
                     return eErrorCode;
 
                 OQueryTableConnection* pConn = static_cast<OQueryTableConnection*>(
@@ -2401,7 +2400,6 @@ namespace
                 pResId = STR_QRY_SYNTAX;
                 break;
         }
-        ;
         return DBA_RES(pResId);
     }
 }
@@ -2648,10 +2646,9 @@ sal_Int32 OQueryDesignView::getColWidth(sal_uInt16 _nColPos) const
     return nWidth;
 }
 
-void OQueryDesignView::fillValidFields(const OUString& sAliasName, ComboBox* pFieldList)
+void OQueryDesignView::fillValidFields(const OUString& sAliasName, weld::ComboBox& rFieldList)
 {
-    OSL_ENSURE(pFieldList != nullptr, "OQueryDesignView::FillValidFields : What the hell do you think I can do with a NULL-ptr ? This will crash !");
-    pFieldList->Clear();
+    rFieldList.clear();
 
     bool bAllTables = sAliasName.isEmpty();
 
@@ -2670,9 +2667,9 @@ void OQueryDesignView::fillValidFields(const OUString& sAliasName, ComboBox* pFi
             for (auto const& field : aFields)
             {
                 if (bAllTables || field.toChar() == '*')
-                    pFieldList->InsertEntry(strCurrentPrefix + field);
+                    rFieldList.append_text(strCurrentPrefix + field);
                 else
-                    pFieldList->InsertEntry(field);
+                    rFieldList.append_text(field);
             }
 
             if (!bAllTables)

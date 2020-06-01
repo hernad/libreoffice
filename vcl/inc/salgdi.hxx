@@ -48,10 +48,6 @@ class OutputDevice;
 class FreetypeFont;
 struct SystemGraphicsData;
 
-#if ENABLE_CAIRO_CANVAS
-struct SystemFontData;
-#endif // ENABLE_CAIRO_CANVAS
-
 namespace basegfx {
     class B2DVector;
     class B2DPolygon;
@@ -246,7 +242,8 @@ public:
                                     const basegfx::B2DHomMatrix& rObjectToDevice,
                                     const basegfx::B2DPolygon& i_rPolygon,
                                     double i_fTransparency,
-                                    const basegfx::B2DVector& i_rLineWidth,
+                                    double i_fLineWidth,
+                                    const std::vector< double >* i_pStroke, // MM01
                                     basegfx::B2DLineJoin i_eLineJoin,
                                     css::drawing::LineCap i_eLineCap,
                                     double i_fMiterMinimumAngle,
@@ -435,8 +432,6 @@ public:
     virtual cairo::SurfaceSharedPtr CreateBitmapSurface(const OutputDevice& rRefDevice, const BitmapSystemData& rData, const Size& rSize) const = 0;
     virtual css::uno::Any       GetNativeSurfaceHandle(cairo::SurfaceSharedPtr& rSurface, const basegfx::B2ISize& rSize) const = 0;
 
-    virtual SystemFontData      GetSysFontData( int nFallbacklevel ) const = 0;
-
 #endif // ENABLE_CAIRO_CANVAS
 
 protected:
@@ -465,7 +460,8 @@ protected:
                                     const basegfx::B2DHomMatrix& rObjectToDevice,
                                     const basegfx::B2DPolygon&,
                                     double fTransparency,
-                                    const basegfx::B2DVector& rLineWidths,
+                                    double fLineWidth,
+                                    const std::vector< double >* pStroke, // MM01
                                     basegfx::B2DLineJoin,
                                     css::drawing::LineCap,
                                     double fMiterMinimumAngle,

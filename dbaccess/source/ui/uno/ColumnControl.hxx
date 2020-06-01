@@ -19,12 +19,11 @@
 #ifndef INCLUDED_DBACCESS_SOURCE_UI_UNO_COLUMNCONTROL_HXX
 #define INCLUDED_DBACCESS_SOURCE_UI_UNO_COLUMNCONTROL_HXX
 
+#include <connectivity/CommonTools.hxx>
 #include <toolkit/controls/unocontrol.hxx>
-#include <apitools.hxx>
+#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 
-namespace com { namespace sun { namespace star { namespace uno {
-    class XComponentContext;
-} } } }
+namespace com::sun::star::uno { class XComponentContext; }
 
 namespace dbaui
 {

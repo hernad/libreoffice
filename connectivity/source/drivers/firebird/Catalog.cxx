@@ -27,7 +27,6 @@ Catalog::Catalog(const uno::Reference< XConnection >& rConnection):
 //----- OCatalog -------------------------------------------------------------
 void Catalog::refreshTables()
 {
-    // TODO: set type -- currently we also get system tables...
     Sequence< OUString > aTypes(2);
     aTypes[0] = "TABLE";
     aTypes[1] = "VIEW";
@@ -71,8 +70,8 @@ void Catalog::refreshUsers()
 {
     OUString const sSql("SELECT DISTINCT RDB$USER FROM RDB$USER_PRIVILEGES");
 
-    uno::Reference< XResultSet > xUsers = m_xMetaData->getConnection()
-                                            ->createStatement()->executeQuery(sSql);
+    Reference<XStatement> xStmt= m_xMetaData->getConnection()->createStatement();
+    uno::Reference< XResultSet > xUsers = xStmt->executeQuery(sSql);
 
     if (!xUsers.is())
         return;

@@ -24,7 +24,6 @@
 
 #include <svx/fmgridif.hxx>
 
-#include <com/sun/star/sdb/XSQLQueryComposer.hpp>
 #include <com/sun/star/frame/XDispatch.hpp>
 #include <com/sun/star/util/URL.hpp>
 #include <comphelper/servicehelper.hxx>
@@ -37,11 +36,11 @@
 
 class SvNumberFormatter;
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace lang {
         class XMultiServiceFactory;
     }
-}}}
+}
 
 namespace dbaui
 {

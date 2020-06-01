@@ -20,6 +20,7 @@
 #ifndef INCLUDED_EDITENG_EDITVIEW_HXX
 #define INCLUDED_EDITENG_EDITVIEW_HXX
 
+#include <config_options.h>
 #include <memory>
 #include <com/sun/star/i18n/WordType.hpp>
 
@@ -87,7 +88,7 @@ enum class ScrollRangeCheck
 // react itself as needed.
 // Also Selection visualization is suppressed and EditViewSelectionChange
 // is triggered when Selection changes and needs reaction.
-class EDITENG_DLLPUBLIC EditViewCallbacks
+class UNLESS_MERGELIBS(EDITENG_DLLPUBLIC) EditViewCallbacks
 {
 public:
     EditViewCallbacks() {}
@@ -159,6 +160,8 @@ public:
     void            Invalidate();
     Pair            Scroll( long nHorzScroll, long nVertScroll, ScrollRangeCheck nRangeCheck = ScrollRangeCheck::NoNegative );
 
+    void            SetBroadcastLOKViewCursor(bool bSet);
+    tools::Rectangle       GetEditCursor() const;
     void            ShowCursor( bool bGotoCursor = true, bool bForceVisCursor = true, bool bActivate = false );
     void            HideCursor( bool bDeactivate = false );
 
@@ -270,6 +273,7 @@ public:
     bool            IsCursorAtWrongSpelledWord();
     bool            IsWrongSpelledWordAtPos( const Point& rPosPixel, bool bMarkIfWrong = false );
     void            ExecuteSpellPopup( const Point& rPosPixel, Link<SpellCallbackInfo&,void> const * pCallBack );
+    OUString        SpellIgnoreWord();
 
     void                InsertField( const SvxFieldItem& rFld );
     const SvxFieldItem* GetFieldUnderMousePointer() const;

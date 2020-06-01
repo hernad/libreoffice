@@ -1260,7 +1260,7 @@ void DrawViewShell::FuTemporary(SfxRequest& rReq)
 
                     if (pObj->GetObjIdentifier() == OBJ_TITLETEXT)
                     {
-                        pSheet = mpActualPage->GetStyleSheetForPresObj(PRESOBJ_TITLE);
+                        pSheet = mpActualPage->GetStyleSheetForPresObj(PresObjKind::Title);
                         if (pSheet)
                             pObj->SetStyleSheet(pSheet, false);
                     }
@@ -1268,7 +1268,7 @@ void DrawViewShell::FuTemporary(SfxRequest& rReq)
                     {
                         for (sal_uInt16 nLevel = 1; nLevel < 10; nLevel++)
                         {
-                            pSheet = mpActualPage->GetStyleSheetForPresObj( PRESOBJ_OUTLINE );
+                            pSheet = mpActualPage->GetStyleSheetForPresObj( PresObjKind::Outline );
                             DBG_ASSERT(pSheet, "Template for outline object not found");
                             if (pSheet)
                             {
@@ -2055,8 +2055,11 @@ void DrawViewShell::FuTemporary(SfxRequest& rReq)
                 // test for already existing names
                 bool    bLoop = true;
                 sal_uInt16  nRet = 0;
-                while( bLoop && ( (nRet = pDlg->Execute()) == RET_OK ) )
+                while( bLoop )
                 {
+                    nRet = pDlg->Execute();
+                    if (nRet != RET_OK)
+                        break;
                     pDlg->GetAttr( aNewAttr );
                     aLayerName   = static_cast<const SfxStringItem &>( aNewAttr.Get (ATTR_LAYER_NAME)).GetValue ();
                     if (bDelete)
@@ -2281,7 +2284,7 @@ void DrawViewShell::FuTemporary(SfxRequest& rReq)
         case SID_HIDE_LAST_LEVEL:
         {
             ESelection aSel;
-            // fdo#78151 editing a PRESOBJ_OUTLINE in a master page ?
+            // fdo#78151 editing a PresObjKind::Outline in a master page ?
             ::Outliner* pOL = GetOutlinerForMasterPageOutlineTextObj(aSel);
             if (pOL)
             {
@@ -2320,7 +2323,7 @@ void DrawViewShell::FuTemporary(SfxRequest& rReq)
             };
 
             ESelection aSel;
-            // fdo#78151 editing a PRESOBJ_OUTLINE in a master page ?
+            // fdo#78151 editing a PresObjKind::Outline in a master page ?
             ::Outliner* pOL = GetOutlinerForMasterPageOutlineTextObj(aSel);
             if (pOL)
             {
@@ -3440,8 +3443,8 @@ void DrawViewShell::FuTemporary(SfxRequest& rReq)
         }
         break;
 
-       case SID_PHOTOALBUM:
-       {
+        case SID_PHOTOALBUM:
+        {
             SdAbstractDialogFactory* pFact = SdAbstractDialogFactory::Create();
             vcl::Window* pWin = GetActiveWindow();
             ScopedVclPtr<VclAbstractDialog> pDlg(pFact->CreateSdPhotoAlbumDialog(
@@ -3456,7 +3459,7 @@ void DrawViewShell::FuTemporary(SfxRequest& rReq)
 
         case SID_INSERT_QRCODE:
         case SID_EDIT_QRCODE:
-       {
+        {
             VclAbstractDialogFactory* pFact = VclAbstractDialogFactory::Create();
             const uno::Reference<frame::XModel> xModel = GetViewShellBase().GetController()->getModel();
             ScopedVclPtr<AbstractQrCodeGenDialog> pDlg(pFact->CreateQrCodeGenDialog(
@@ -3466,6 +3469,16 @@ void DrawViewShell::FuTemporary(SfxRequest& rReq)
             rReq.Ignore ();
         }
         break;
+
+        case SID_ATTR_GLOW_COLOR:
+        case SID_ATTR_GLOW_RADIUS:
+        case SID_ATTR_GLOW_TRANSPARENCY:
+        case SID_ATTR_SOFTEDGE_RADIUS:
+            if (const SfxItemSet* pNewArgs = rReq.GetArgs())
+                mpDrawView->SetAttributes(*pNewArgs);
+            rReq.Done();
+            Cancel();
+            break;
 
         default:
         {

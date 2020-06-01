@@ -58,9 +58,7 @@ using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::Sequence;
 using ::com::sun::star::uno::RuntimeException;
 using ::com::sun::star::uno::XInterface;
-using ::com::sun::star::lang::DisposedException;
 using ::com::sun::star::lang::IndexOutOfBoundsException;
-using ::com::sun::star::lang::IllegalArgumentException;
 using ::com::sun::star::beans::PropertyValue;
 using namespace ::com::sun::star::accessibility;
 
@@ -607,6 +605,11 @@ TextSegment SAL_CALL ScAccessibleCsvRuler::getTextBehindIndex( sal_Int32 nIndex,
 sal_Bool SAL_CALL ScAccessibleCsvRuler::copyText( sal_Int32 /* nStartIndex */, sal_Int32 /* nEndIndex */ )
 {
     ensureAlive();
+    return false;
+}
+
+sal_Bool SAL_CALL ScAccessibleCsvRuler::scrollSubstringTo( sal_Int32 /* nStartIndex */, sal_Int32/* nEndIndex */, AccessibleScrollType /* aScrollType */ )
+{
     return false;
 }
 
@@ -1431,7 +1434,7 @@ css::awt::Rectangle ScAccessibleCsvCell::implGetBounds()
 
     tools::Rectangle aRect( implGetRealPos(), implGetRealSize() );
     aRect.Intersection( aClipRect );
-    if( (aRect.GetWidth() <= 0) || (aRect.GetHeight() <= 0) )
+    if( aRect.IsEmpty() )
         aRect.SetSize( Size( -1, -1 ) );
 
     return css::awt::Rectangle(aRect.Left(), aRect.Top(), aRect.GetWidth(), aRect.GetHeight());

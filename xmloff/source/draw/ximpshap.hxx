@@ -61,7 +61,7 @@ protected:
     /// whether to restore list context (#91964#)
     bool                        mbListContextPushed;
 
-    sal_uInt16                  mnStyleFamily;
+    XmlStyleFamily              mnStyleFamily;
     bool                    mbIsPlaceholder;
     bool                        mbClearDefaultAttributes;
     bool                    mbIsUserTransformed;
@@ -192,7 +192,7 @@ class SdXMLPolygonShapeContext : public SdXMLShapeContext
 {
     OUString               maPoints;
     OUString               maViewBox;
-    bool const             mbClosed;
+    bool                   mbClosed;
 
 public:
 

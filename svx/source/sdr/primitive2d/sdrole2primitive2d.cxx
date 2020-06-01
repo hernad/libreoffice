@@ -20,7 +20,7 @@
 #include <sdr/primitive2d/sdrole2primitive2d.hxx>
 #include <svx/sdr/primitive2d/svx_primitivetypes2d.hxx>
 #include <basegfx/polygon/b2dpolygontools.hxx>
-#include <svx/sdr/primitive2d/sdrdecompositiontools.hxx>
+#include <sdr/primitive2d/sdrdecompositiontools.hxx>
 #include <drawinglayer/primitive2d/sdrdecompositiontools2d.hxx>
 #include <basegfx/polygon/b2dpolygon.hxx>
 #include <basegfx/polygon/b2dpolypolygon.hxx>
@@ -34,7 +34,7 @@ namespace drawinglayer::primitive2d
         SdrOle2Primitive2D::SdrOle2Primitive2D(
             const Primitive2DContainer& rOLEContent,
             const basegfx::B2DHomMatrix& rTransform,
-            const attribute::SdrLineFillShadowTextAttribute& rSdrLFSTAttribute)
+            const attribute::SdrLineFillEffectsTextAttribute& rSdrLFSTAttribute)
         :   BasePrimitive2D(),
             maOLEContent(rOLEContent),
             maTransform(rTransform),

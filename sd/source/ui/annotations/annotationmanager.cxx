@@ -111,7 +111,7 @@ SfxItemPool* GetAnnotationPool()
 
 static SfxBindings* getBindings( ViewShellBase const & rBase )
 {
-    if( rBase.GetMainViewShell().get() && rBase.GetMainViewShell()->GetViewFrame() )
+    if( rBase.GetMainViewShell() && rBase.GetMainViewShell()->GetViewFrame() )
         return &rBase.GetMainViewShell()->GetViewFrame()->GetBindings();
 
     return nullptr;
@@ -119,7 +119,7 @@ static SfxBindings* getBindings( ViewShellBase const & rBase )
 
 static SfxDispatcher* getDispatcher( ViewShellBase const & rBase )
 {
-    if( rBase.GetMainViewShell().get() && rBase.GetMainViewShell()->GetViewFrame() )
+    if( rBase.GetMainViewShell() && rBase.GetMainViewShell()->GetViewFrame() )
         return rBase.GetMainViewShell()->GetViewFrame()->GetDispatcher();
 
     return nullptr;
@@ -683,9 +683,9 @@ void AnnotationManagerImpl::GetAnnotationState(SfxItemSet& rSet)
     const bool bReadOnly = mrBase.GetDocShell()->IsReadOnly();
     const bool bWrongPageKind = (pCurrentPage == nullptr) || (pCurrentPage->GetPageKind() != PageKind::Standard);
 
-    const SvtSaveOptions::ODFDefaultVersion nCurrentODFVersion( SvtSaveOptions().GetODFDefaultVersion() );
+    const SvtSaveOptions::ODFSaneDefaultVersion nCurrentODFVersion( SvtSaveOptions().GetODFSaneDefaultVersion() );
 
-    if( bReadOnly || bWrongPageKind || (nCurrentODFVersion <= SvtSaveOptions::ODFVER_012) )
+    if (bReadOnly || bWrongPageKind || (nCurrentODFVersion <= SvtSaveOptions::ODFSVER_012))
         rSet.DisableItem( SID_INSERT_POSTIT );
 
     rSet.Put(SfxBoolItem(SID_TOGGLE_NOTES, mbShowAnnotations));
@@ -1292,7 +1292,7 @@ SdPage* AnnotationManagerImpl::GetNextPage( SdPage const * pPage, bool bForward 
 
 SdPage* AnnotationManagerImpl::GetCurrentPage()
 {
-    if (mrBase.GetMainViewShell().get())
+    if (mrBase.GetMainViewShell())
         return mrBase.GetMainViewShell()->getCurrentPage();
     return nullptr;
 }

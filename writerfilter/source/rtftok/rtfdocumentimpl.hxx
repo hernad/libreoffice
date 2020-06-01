@@ -10,10 +10,11 @@
 #ifndef INCLUDED_WRITERFILTER_SOURCE_RTFTOK_RTFDOCUMENTIMPL_HXX
 #define INCLUDED_WRITERFILTER_SOURCE_RTFTOK_RTFDOCUMENTIMPL_HXX
 
+#include <memory>
 #include <queue>
 #include <tuple>
 #include <vector>
-#include <o3tl/optional.hxx>
+#include <optional>
 
 #include <com/sun/star/text/WrapTextMode.hpp>
 #include <oox/mathml/importutils.hxx>
@@ -129,7 +130,7 @@ class TableRowBuffer : public virtual SvRefBase
     RTFBuffer_t m_aBuffer;
     ::std::deque<RTFSprms> m_aCellsSprms;
     ::std::deque<RTFSprms> m_aCellsAttributes;
-    int const m_nCells;
+    int m_nCells;
     writerfilter::Reference<Properties>::Pointer_t m_pParaProperties;
     writerfilter::Reference<Properties>::Pointer_t m_pFrameProperties;
     writerfilter::Reference<Properties>::Pointer_t m_pRowProperties;
@@ -274,7 +275,7 @@ private:
     sal_Int32 m_nTop = 0;
     sal_Int32 m_nRight = 0;
     sal_Int32 m_nBottom = 0;
-    o3tl::optional<sal_Int32> m_oZ; ///< Z-Order of the shape.
+    std::optional<sal_Int32> m_oZ; ///< Z-Order of the shape.
     sal_Int16 m_nHoriOrientRelation
         = 0; ///< Horizontal text::RelOrientation for drawinglayer shapes.
     sal_Int16 m_nVertOrientRelation = 0; ///< Vertical text::RelOrientation for drawinglayer shapes.
@@ -380,7 +381,7 @@ private:
     sal_Int32 m_nHoriPadding, m_nVertPadding;
     sal_Int32 m_nHoriAlign, m_nHoriAnchor, m_nVertAlign, m_nVertAnchor;
     Id m_nHRule;
-    o3tl::optional<Id> m_oWrap;
+    std::optional<Id> m_oWrap;
 
 public:
     explicit RTFFrame(RTFParserState* pParserState);
@@ -695,9 +696,18 @@ public:
     RTFError dispatchSymbol(RTFKeyword nKeyword) override;
     RTFError dispatchToggle(RTFKeyword nKeyword, bool bParam, int nParam) override;
     RTFError dispatchValue(RTFKeyword nKeyword, int nParam) override;
+    bool dispatchTableSprmValue(RTFKeyword nKeyword, int nParam);
+    bool dispatchCharacterSprmValue(RTFKeyword nKeyword, int nParam);
+    bool dispatchCharacterAttributeValue(RTFKeyword nKeyword, int nParam);
+    bool dispatchParagraphSprmValue(RTFKeyword nKeyword, int nParam);
+    bool dispatchInfoValue(RTFKeyword nKeyword, int nParam);
+    bool dispatchFrameValue(RTFKeyword nKeyword, int nParam);
+    bool dispatchTableValue(RTFKeyword nKeyword, int nParam);
     RTFError resolveChars(char ch) override;
     RTFError pushState() override;
+    RTFError beforePopState(RTFParserState& rState);
     RTFError popState() override;
+    void afterPopState(RTFParserState& rState);
     Destination getDestination() override;
     void setDestination(Destination eDestination) override;
     RTFInternalState getInternalState() override;
@@ -799,7 +809,7 @@ private:
     css::uno::Reference<css::task::XStatusIndicator> const& m_xStatusIndicator;
     css::uno::Reference<css::lang::XMultiServiceFactory> m_xModelFactory;
     css::uno::Reference<css::document::XDocumentProperties> m_xDocumentProperties;
-    std::shared_ptr<SvStream> m_pInStream;
+    std::unique_ptr<SvStream> m_pInStream;
     Stream* m_pMapperStream;
     tools::SvRef<RTFSdrImport> m_pSdrImport;
     tools::SvRef<RTFTokenizer> m_pTokenizer;
@@ -957,7 +967,7 @@ private:
     int m_nListPictureId;
 
     /// New document means not pasting into an existing one.
-    bool const m_bIsNewDoc;
+    bool m_bIsNewDoc;
     /// The media descriptor contains e.g. the base URL of the document.
     const utl::MediaDescriptor& m_rMediaDescriptor;
 

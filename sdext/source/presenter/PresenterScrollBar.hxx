@@ -31,7 +31,7 @@
 #include <functional>
 #include <memory>
 
-namespace sdext { namespace presenter {
+namespace sdext::presenter {
 
 class PresenterCanvasHelper;
 class PresenterPaintManager;
@@ -156,7 +156,7 @@ protected:
     double mnThumbSize;
     double mnLineHeight;
     css::geometry::RealPoint2D maDragAnchor;
-    ::std::function<void (double)> const maThumbMotionListener;
+    ::std::function<void (double)> maThumbMotionListener;
     Area meButtonDownArea;
     Area meMouseMoveArea;
     css::geometry::RealRectangle2D maBox[AreaCount];
@@ -250,7 +250,7 @@ private:
     sal_Int32 mnScrollBarWidth;
 };
 
-} } // end of namespace ::sdext::presenter
+} // end of namespace ::sdext::presenter
 
 #endif
 

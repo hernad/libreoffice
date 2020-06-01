@@ -75,7 +75,7 @@ class SwTOXMark;
 class SwSplitTableDlg;
 
 #include <itabenum.hxx>
-#include <o3tl/optional.hxx>
+#include <optional>
 #include <o3tl/deleter.hxx>
 
 namespace sw
@@ -90,7 +90,7 @@ class AbstractSwWordCountFloatDlg_Impl : public AbstractSwWordCountFloatDlg
 {
     std::shared_ptr<SwWordCountFloatDlg> m_xDlg;
 public:
-    explicit AbstractSwWordCountFloatDlg_Impl(std::unique_ptr<SwWordCountFloatDlg> p)
+    explicit AbstractSwWordCountFloatDlg_Impl(std::shared_ptr<SwWordCountFloatDlg> p)
         : m_xDlg(std::move(p))
     {
     }
@@ -142,7 +142,7 @@ class AbstractGenericDialog_Impl : public VclAbstractDialog
 {
     std::shared_ptr<weld::GenericDialogController> m_xDlg;
 public:
-    explicit AbstractGenericDialog_Impl(std::unique_ptr<weld::GenericDialogController> p)
+    explicit AbstractGenericDialog_Impl(std::shared_ptr<weld::GenericDialogController> p)
         : m_xDlg(std::move(p))
     {
     }
@@ -183,7 +183,7 @@ public:
     virtual short Execute() override;
     virtual OUString                        GetTemplateName() override;
     virtual sal_uInt16                      GetKind() override;
-    virtual ::o3tl::optional<sal_uInt16>   GetPageNumber() override;
+    virtual ::std::optional<sal_uInt16>   GetPageNumber() override;
 };
 
 class AbstractSwTableWidthDlg_Impl : public VclAbstractDialog
@@ -236,7 +236,7 @@ class AbstractTabController_Impl : virtual public SfxAbstractTabDialog
 protected:
     std::shared_ptr<SfxTabDialogController> m_xDlg;
 public:
-    explicit AbstractTabController_Impl(std::unique_ptr<SfxTabDialogController> p)
+    explicit AbstractTabController_Impl(std::shared_ptr<SfxTabDialogController> p)
         : m_xDlg(std::move(p))
     {
     }
@@ -253,7 +253,7 @@ public:
 class AbstractApplyTabController_Impl : public AbstractTabController_Impl, virtual public SfxAbstractApplyTabDialog
 {
 public:
-    explicit AbstractApplyTabController_Impl(std::unique_ptr<SfxTabDialogController> p)
+    explicit AbstractApplyTabController_Impl(std::shared_ptr<SfxTabDialogController> p)
         : AbstractTabController_Impl(std::move(p))
     {
     }
@@ -375,7 +375,7 @@ class AbstractSwFieldDlg_Impl : public AbstractSwFieldDlg
 {
     std::shared_ptr<SwFieldDlg> m_xDlg;
 public:
-    explicit AbstractSwFieldDlg_Impl(std::unique_ptr<SwFieldDlg> p)
+    explicit AbstractSwFieldDlg_Impl(std::shared_ptr<SwFieldDlg> p)
         : m_xDlg(std::move(p))
     {
     }
@@ -471,16 +471,17 @@ public:
 class SwInsTableDlg;
 class AbstractInsTableDlg_Impl : public AbstractInsTableDlg
 {
-    std::unique_ptr<SwInsTableDlg> m_xDlg;
+protected:
+    std::shared_ptr<weld::DialogController> m_xDlg;
 public:
-    explicit AbstractInsTableDlg_Impl(std::unique_ptr<SwInsTableDlg> p)
-        : m_xDlg(std::move(p))
+    explicit AbstractInsTableDlg_Impl(std::shared_ptr<weld::DialogController> p)
+        : m_xDlg(p)
     {
     }
-    virtual short Execute() override;
     virtual void  GetValues( OUString& rName, sal_uInt16& rRow, sal_uInt16& rCol,
                              SwInsertTableOptions& rInsTableFlags, OUString& rTableAutoFormatName,
                              std::unique_ptr<SwTableAutoFormat>& prTAFormat ) override;
+    virtual std::shared_ptr<weld::DialogController> getDialogController() override { return m_xDlg; }
 };
 
 class SwJavaEditDialog;
@@ -516,7 +517,9 @@ public:
     virtual css::uno::Reference< css::sdbc::XResultSet> GetResultSet() const override;
     virtual bool IsSaveSingleDoc() const override;
     virtual bool IsGenerateFromDataBase() const override;
+    virtual bool IsFileEncryptedFromDataBase() const override;
     virtual OUString GetColumnName() const override;
+    virtual OUString GetPasswordColumnName() const override;
     virtual OUString GetTargetURL() const override;
 };
 
@@ -552,7 +555,7 @@ class AbstractMultiTOXTabDialog_Impl : public AbstractMultiTOXTabDialog
 protected:
     std::shared_ptr<SwMultiTOXTabDialog> m_xDlg;
 public:
-    explicit AbstractMultiTOXTabDialog_Impl(std::unique_ptr<SwMultiTOXTabDialog> p)
+    explicit AbstractMultiTOXTabDialog_Impl(std::shared_ptr<SwMultiTOXTabDialog> p)
         : m_xDlg(std::move(p))
     {
     }
@@ -569,7 +572,7 @@ class AbstractEditRegionDlg_Impl : public AbstractEditRegionDlg
 {
     std::shared_ptr<SwEditRegionDlg> m_xDlg;
 public:
-    explicit AbstractEditRegionDlg_Impl(std::unique_ptr<SwEditRegionDlg> p)
+    explicit AbstractEditRegionDlg_Impl(std::shared_ptr<SwEditRegionDlg> p)
         : m_xDlg(std::move(p))
     {
     }
@@ -582,7 +585,7 @@ class AbstractInsertSectionTabDialog_Impl : public AbstractInsertSectionTabDialo
 {
     std::shared_ptr<SwInsertSectionTabDialog> m_xDlg;
 public:
-    explicit AbstractInsertSectionTabDialog_Impl(std::unique_ptr<SwInsertSectionTabDialog> p)
+    explicit AbstractInsertSectionTabDialog_Impl(std::shared_ptr<SwInsertSectionTabDialog> p)
         : m_xDlg(std::move(p))
     {
     }
@@ -596,7 +599,7 @@ class AbstractIndexMarkFloatDlg_Impl : public AbstractMarkFloatDlg
 {
     std::shared_ptr<SwIndexMarkFloatDlg> m_xDlg;
 public:
-    explicit AbstractIndexMarkFloatDlg_Impl(std::unique_ptr<SwIndexMarkFloatDlg> p)
+    explicit AbstractIndexMarkFloatDlg_Impl(std::shared_ptr<SwIndexMarkFloatDlg> p)
         : m_xDlg(std::move(p))
     {
     }
@@ -610,7 +613,7 @@ class AbstractAuthMarkFloatDlg_Impl : public AbstractMarkFloatDlg
 {
     std::shared_ptr<SwAuthMarkFloatDlg> m_xDlg;
 public:
-    explicit AbstractAuthMarkFloatDlg_Impl(std::unique_ptr<SwAuthMarkFloatDlg> p)
+    explicit AbstractAuthMarkFloatDlg_Impl(std::shared_ptr<SwAuthMarkFloatDlg> p)
         : m_xDlg(std::move(p))
     {
     }
@@ -625,7 +628,7 @@ class AbstractMailMergeWizard_Impl : public AbstractMailMergeWizard
     std::shared_ptr<SwMailMergeWizard> m_xDlg;
 
 public:
-    explicit AbstractMailMergeWizard_Impl(std::unique_ptr<SwMailMergeWizard> p)
+    explicit AbstractMailMergeWizard_Impl(std::shared_ptr<SwMailMergeWizard> p)
         : m_xDlg(std::move(p))
     {
     }
@@ -728,7 +731,7 @@ public:
         weld::Window * pParent, SwWrtShell &rSh, bool bEd = false) override;
     virtual VclPtr<VclAbstractDialog>         CreateTitlePageDlg(weld::Window* pParent) override;
     virtual VclPtr<VclAbstractDialog>         CreateVclSwViewDialog(SwView& rView) override;
-    virtual VclPtr<AbstractInsTableDlg>        CreateInsTableDlg(SwView& rView) override;
+    virtual std::shared_ptr<AbstractInsTableDlg> CreateInsTableDlg(SwView& rView) override;
     virtual VclPtr<AbstractJavaEditDialog>     CreateJavaEditDialog(weld::Window* pParent,
         SwWrtShell* pWrtSh) override;
     virtual VclPtr<AbstractMailMergeDlg>       CreateMailMergeDlg(

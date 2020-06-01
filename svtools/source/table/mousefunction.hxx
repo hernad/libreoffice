@@ -19,14 +19,14 @@
 
 #pragma once
 
-#include <svtools/table/tabletypes.hxx>
+#include <table/tabletypes.hxx>
 
 #include <salhelper/simplereferenceobject.hxx>
 
 class MouseEvent;
 
 
-namespace svt { namespace table
+namespace svt::table
 {
 
 
@@ -125,7 +125,7 @@ namespace svt { namespace table
     };
 
 
-} } // namespace svt::table
+} // namespace svt::table
 
 
 

@@ -34,6 +34,7 @@
 #include <com/sun/star/beans/NamedValue.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/container/XIndexContainer.hpp>
+#include <com/sun/star/drawing/XDrawPage.hpp>
 #include <com/sun/star/form/XForm.hpp>
 #include <com/sun/star/form/XFormComponent.hpp>
 #include <com/sun/star/form/XFormsSupplier.hpp>
@@ -41,6 +42,7 @@
 #include <com/sun/star/form/binding/XListEntrySink.hpp>
 #include <com/sun/star/form/binding/XListEntrySource.hpp>
 #include <com/sun/star/form/binding/XValueBinding.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/sheet/XCellRangeAddressable.hpp>
 #include <com/sun/star/sheet/XCellRangeReferrer.hpp>
@@ -49,14 +51,12 @@
 #include <com/sun/star/table/CellRangeAddress.hpp>
 #include <rtl/tencinfo.h>
 #include <osl/diagnose.h>
-#include <sal/log.hxx>
 #include <vcl/font.hxx>
 #include <vcl/outdev.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/svapp.hxx>
 #include <oox/helper/attributelist.hxx>
 #include <oox/helper/binaryinputstream.hxx>
-#include <oox/helper/containerhelper.hxx>
 #include <oox/helper/graphichelper.hxx>
 #include <oox/helper/propertymap.hxx>
 #include <oox/ole/axbinarywriter.hxx>
@@ -360,7 +360,10 @@ void ControlConverter::bindToSources( const Reference< XControlModel >& rxCtrlMo
     }
 
     // list entry source
-    if( !rRowSource.isEmpty() ) try
+    if( rRowSource.isEmpty() )
+        return;
+
+    try
     {
         // first check if the XListEntrySink interface is supported
         Reference< XListEntrySink > xEntrySink( rxCtrlModel, UNO_QUERY_THROW );
@@ -661,7 +664,9 @@ ComCtlModelBase::ComCtlModelBase( sal_uInt32 nDataPartId5, sal_uInt32 nDataPartI
     mnFlags( 0 ),
     mnVersion( nVersion ),
     mnDataPartId5( nDataPartId5 ),
-    mnDataPartId6( nDataPartId6 )
+    mnDataPartId6( nDataPartId6 ),
+    mbCommonPart( true ),
+    mbComplexPart( true )
 {
 }
 
@@ -671,13 +676,15 @@ bool ComCtlModelBase::importBinaryModel( BinaryInputStream& rInStrm )
     if( importSizePart( rInStrm ) && readPartHeader( rInStrm, getDataPartId(), mnVersion ) )
     {
         // if flags part exists, the first int32 of the data part contains its size
-        sal_uInt32 nCommonPartSize = rInStrm.readuInt32();
+        sal_uInt32 nCommonPartSize = 0;
+        if (mbCommonPart)
+            nCommonPartSize = rInStrm.readuInt32();
         // implementations must read the exact amount of data, stream must point to its end afterwards
         importControlData( rInStrm );
         // read following parts
         if( !rInStrm.isEof() &&
-            importCommonPart( rInStrm, nCommonPartSize ) &&
-            importComplexPart( rInStrm ) )
+            (!mbCommonPart || importCommonPart( rInStrm, nCommonPartSize )) &&
+            (!mbComplexPart || importComplexPart( rInStrm )) )
         {
             return !rInStrm.isEof();
         }
@@ -687,7 +694,8 @@ bool ComCtlModelBase::importBinaryModel( BinaryInputStream& rInStrm )
 
 void ComCtlModelBase::convertProperties( PropertyMap& rPropMap, const ControlConverter& rConv ) const
 {
-    rPropMap.setProperty( PROP_Enabled, getFlag( mnFlags, COMCTL_COMMON_ENABLED ) );
+    if( mbCommonPart )
+        rPropMap.setProperty( PROP_Enabled, getFlag( mnFlags, COMCTL_COMMON_ENABLED ) );
     ControlModelBase::convertProperties( rPropMap, rConv );
 }
 
@@ -2680,12 +2688,12 @@ ControlModelBase* EmbeddedControl::createModelFromGuid( const OUString& rClassId
 
 OUString EmbeddedControl::getServiceName() const
 {
-    return mxModel.get() ? mxModel->getServiceName() : OUString();
+    return mxModel ? mxModel->getServiceName() : OUString();
 }
 
 bool EmbeddedControl::convertProperties( const Reference< XControlModel >& rxCtrlModel, const ControlConverter& rConv ) const
 {
-    if( mxModel.get() && rxCtrlModel.is() && !maName.isEmpty() )
+    if( mxModel && rxCtrlModel.is() && !maName.isEmpty() )
     {
         PropertyMap aPropMap;
         aPropMap.setProperty( PROP_Name, maName );
@@ -2707,7 +2715,7 @@ bool EmbeddedControl::convertProperties( const Reference< XControlModel >& rxCtr
 
 void EmbeddedControl::convertFromProperties( const Reference< XControlModel >& rxCtrlModel, const ControlConverter& rConv )
 {
-    if( mxModel.get() && rxCtrlModel.is() && !maName.isEmpty() )
+    if( mxModel && rxCtrlModel.is() && !maName.isEmpty() )
     {
         PropertySet aPropSet( rxCtrlModel );
         aPropSet.getProperty( maName, PROP_Name );

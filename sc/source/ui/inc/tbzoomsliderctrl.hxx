@@ -19,11 +19,13 @@
 #ifndef INCLUDED_SC_SOURCE_UI_INC_TBZOOMSLIDERCTRL_HXX
 #define INCLUDED_SC_SOURCE_UI_INC_TBZOOMSLIDERCTRL_HXX
 
+#include <vcl/customweld.hxx>
 #include <vcl/window.hxx>
 #include <svl/poolitem.hxx>
+#include <vcl/InterimItemWindow.hxx>
 #include <sfx2/tbxctrl.hxx>
 
-namespace com { namespace sun { namespace star { namespace frame { class XDispatchProvider; } } } }
+namespace com::sun::star::frame { class XDispatchProvider; }
 
 class SvxZoomSliderItem;
 
@@ -35,33 +37,45 @@ public:
     virtual ~ScZoomSliderControl() override;
 
     virtual void StateChanged( sal_uInt16 nSID, SfxItemState eState, const SfxPoolItem* pState ) override;
-    virtual VclPtr<vcl::Window> CreateItemWindow( vcl::Window *pParent ) override;
+    virtual VclPtr<InterimItemWindow> CreateItemWindow( vcl::Window *pParent ) override;
 };
 
-class ScZoomSliderWnd: public vcl::Window
+class ScZoomSlider final : public weld::CustomWidgetController
 {
 private:
     struct ScZoomSliderWnd_Impl;
     std::unique_ptr<ScZoomSliderWnd_Impl> mpImpl;
-    Size const aLogicalSize;
     css::uno::Reference<css::frame::XDispatchProvider> m_xDispatchProvider;
 
     sal_uInt16 Offset2Zoom(long nOffset) const;
     long Zoom2Offset(sal_uInt16 nZoom) const;
+
     void DoPaint(vcl::RenderContext& rRenderContext);
+public:
+    ScZoomSlider(const css::uno::Reference<css::frame::XDispatchProvider>& rDispatchProvider,
+                 sal_uInt16 nCurrentZoom, vcl::Window*);
+
+    void UpdateFromItem(const SvxZoomSliderItem* pZoomSliderItem);
+
+    virtual bool MouseButtonDown( const MouseEvent& rMEvt ) override;
+    virtual bool MouseMove( const MouseEvent& rMEvt ) override;
+    virtual void Paint(vcl::RenderContext& rRenderContext, const tools::Rectangle& rRect) override;
+};
+
+class ScZoomSliderWnd final : public InterimItemWindow
+{
+private:
+    std::unique_ptr<ScZoomSlider> mxWidget;
+    std::unique_ptr<weld::CustomWeld> mxWeld;
 
 public:
-    ScZoomSliderWnd(vcl::Window* pParent, const css::uno::Reference<css::frame::XDispatchProvider >& rDispatchProvider,
+    ScZoomSliderWnd(vcl::Window* pParent, const css::uno::Reference<css::frame::XDispatchProvider>& rDispatchProvider,
                     sal_uInt16 nCurrentZoom);
     virtual ~ScZoomSliderWnd() override;
     virtual void dispose() override;
     void UpdateFromItem( const SvxZoomSliderItem* pZoomSliderItem );
-
-protected:
-    virtual void MouseButtonDown( const MouseEvent& rMEvt ) override;
-    virtual void MouseMove( const MouseEvent& rMEvt ) override;
-    virtual void Paint(vcl::RenderContext& rRenderContext, const tools::Rectangle& rRect) override;
 };
+
 #endif
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

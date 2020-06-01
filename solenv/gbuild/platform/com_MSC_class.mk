@@ -34,13 +34,15 @@ endef
 
 # CObject class
 
-# $(call gb_CObject__compiler,flags,source)
+# $(call gb_CObject__compiler,flags,source,compiler)
 define gb_CObject__compiler
 	$(if $(filter YES,$(LIBRARY_X64)), $(CXX_X64_BINARY), \
 		$(if $(filter YES,$(PE_X86)), $(CXX_X86_BINARY), \
-			$(if $(filter %.c,$(2)), $(gb_CC), \
+			$(if $(filter %.c,$(2)), \
+				$(if $(3), $(3), $(gb_CC)), \
 				$(if $(filter -clr,$(1)), \
-					$(MSVC_CXX) -I$(SRCDIR)/solenv/clang-cl,$(gb_CXX)))))
+					$(MSVC_CXX) -I$(SRCDIR)/solenv/clang-cl, \
+						$(if $(3), $(3), $(gb_CXX))))))
 endef
 
 # Avoid annoying warning D9025 about overriding command-line arguments.
@@ -50,15 +52,15 @@ gb_Helper_remove_overridden_flags = \
     $(lastword $(filter -Od -O2,$(1))) \
     $(lastword $(filter -arch:SSE -arch:SSE2 -arch:AVX -arch:AVX2,$(1)))
 
-# $(call gb_CObject__command_pattern,object,flags,source,dep-file,compiler-plugins,symbols)
+# $(call gb_CObject__command_pattern,object,flags,source,dep-file,compiler-plugins,symbols,compiler)
 define gb_CObject__command_pattern
 $(call gb_Helper_abbreviate_dirs,\
 	mkdir -p $(dir $(1)) $(dir $(4)) && \
 	unset INCLUDE && \
-	$(filter-out -arch:SSE,$(call gb_CObject__compiler,$(2),$(3))) \
+	$(call gb_CObject__compiler,$(2),$(3),$(7)) \
 		$(DEFS) \
 		$(gb_LTOFLAGS) \
-		$(call gb_Helper_remove_overridden_flags,$(filter -arch:SSE,$(call gb_CObject__compiler,$(2),$(3))) \
+		$(call gb_Helper_remove_overridden_flags, \
 			$(2) $(if $(WARNINGS_DISABLED),$(gb_CXXFLAGS_DISABLE_WARNINGS))) \
 		$(if $(EXTERNAL_CODE), \
 			$(if $(filter -clr,$(2)),,$(if $(COM_IS_CLANG),-Wno-undef)), \
@@ -79,8 +81,9 @@ endef
 
 # PrecompiledHeader class
 
-gb_PrecompiledHeader_get_enableflags = -Yu$(1).hxx \
-	-FI$(1).hxx \
+gb_PrecompiledHeader_get_enableflags = \
+	-Yu$(SRCDIR)/$(3).hxx \
+	-FI$(SRCDIR)/$(3).hxx \
 	-Fp$(call gb_PrecompiledHeader_get_target,$(1),$(2)) \
 	$(gb_PCHWARNINGS)
 
@@ -91,11 +94,12 @@ gb_PrecompiledHeader_get_objectfile = $(1).obj
 
 define gb_PrecompiledHeader__command
 $(call gb_Output_announce,$(2),$(true),PCH,1)
+	$(call gb_Trace_StartRange,$(2),PCH)
 $(call gb_Helper_abbreviate_dirs,\
 	mkdir -p $(dir $(1)) $(dir $(call gb_PrecompiledHeader_get_dep_target,$(2),$(7))) && \
 	unset INCLUDE && \
-	$(filter-out -arch:SSE,$(call gb_CObject__compiler,$(4) $(5),$(3))) \
-		$(call gb_Helper_remove_overridden_flags,$(filter -arch:SSE,$(call gb_CObject__compiler,$(4) $(5),$(3))) \
+	$(call gb_CObject__compiler,$(4) $(5),$(3),$(8)) \
+		$(call gb_Helper_remove_overridden_flags, \
 			$(4) $(5) $(if $(WARNINGS_DISABLED),$(gb_CXXFLAGS_DISABLE_WARNINGS))) \
 		-Fd$(PDBFILE) \
 		$(if $(EXTERNAL_CODE),$(if $(COM_IS_CLANG),-Wno-undef),$(gb_DEFS_INTERNAL)) \
@@ -104,6 +108,7 @@ $(call gb_Helper_abbreviate_dirs,\
 		$(6) \
 		-c $(3) \
 		-Yc$(notdir $(patsubst %.cxx,%.hxx,$(3))) -Fp$(1) -Fo$(1).obj) $(call gb_create_deps,$(call gb_PrecompiledHeader_get_dep_target_tmp,$(2),$(7)),$(1),$(3))
+	$(call gb_Trace_EndRange,$(2),PCH)
 endef
 
 # No ccache with MSVC, no need to create a checksum for it.
@@ -190,6 +195,7 @@ MSC_SUBSYSTEM_VERSION=$(COMMA)6.01
 # length in check - otherwise the dupes easily hit the limit when linking mergedlib
 define gb_LinkTarget__command
 $(call gb_Output_announce,$(2),$(true),LNK,4)
+	$(call gb_Trace_StartRange,$(2),LNK)
 $(call gb_Helper_abbreviate_dirs,\
 	rm -f $(1) && \
 	RESPONSEFILE=$(call var2file,$(shell $(gb_MKTEMP)),100, \
@@ -243,7 +249,9 @@ $(call gb_Helper_abbreviate_dirs,\
 			-dump -exports $(ILIBTARGET) \
 			>> $(WORKDIR)/LinkTarget/$(2).exports.tmp && \
 		$(call gb_Helper_replace_if_different_and_touch,$(WORKDIR)/LinkTarget/$(2).exports.tmp,$(WORKDIR)/LinkTarget/$(2).exports,$(1))) \
-	; exit $$RC)
+	; \
+	$(call gb_Trace_EndRange,$(2),LNK) $(if $(gb_TRACE),;) \
+	exit $$RC)
 endef
 
 define gb_MSVCRT_subst
@@ -538,6 +546,7 @@ ifeq ($(gb_FULLDEPS),$(true))
 gb_WinResTarget__command_target = $(WORKDIR)/LinkTarget/Executable/makedepend.exe
 define gb_WinResTarget__command_dep
 $(call gb_Output_announce,RC:$(2),$(true),DEP,1)
+	$(call gb_Trace_StartRange,RC:$(2),DEP)
 $(call gb_Helper_abbreviate_dirs,\
 	mkdir -p $(dir $(1)) && \
 	$(call gb_Executable_get_target,makedepend) \
@@ -547,6 +556,7 @@ $(call gb_Helper_abbreviate_dirs,\
 		-o .res \
 		-p $(dir $(3)) \
 		-f $(1))
+	$(call gb_Trace_EndRange,RC:$(2),DEP)
 endef
 else
 gb_WinResTarget__command_target =
@@ -647,7 +657,7 @@ define gb_UIConfig__gla11y_command
 $(call gb_ExternalExecutale__check_registration,python)
 $(call gb_Helper_abbreviate_dirs,\
 	FILES=$(call var2file,$(shell $(gb_MKTEMP)),100,$(UIFILES)) && \
-	$(gb_UIConfig_LXML_PATH) $(gb_Helper_set_ld_path) \
+	$(gb_UIConfig_LXML_PATH) $(if $(SYSTEM_LIBXML)$(SYSTEM_LIBXSLT),,$(gb_Helper_set_ld_path)) \
 	$(call gb_ExternalExecutable_get_command,python) \
 	$(gb_UIConfig_gla11y_SCRIPT) $(gb_UIConfig_gla11y_PARAMETERS) -o $@ -L $$FILES
 )
@@ -658,7 +668,9 @@ endef
 
 define gb_UIMenubarTarget__command
 $(call gb_Output_announce,$(2),$(true),UIM,1)
+$(call gb_Trace_StartRange,$(2),UIM)
 cp $(3) $(1)
+$(call gb_Trace_EndRange,$(2),UIM)
 
 endef
 

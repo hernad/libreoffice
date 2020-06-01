@@ -26,6 +26,9 @@
 #include <com/sun/star/document/IndexedPropertyValues.hpp>
 #include <com/sun/star/document/XViewDataSupplier.hpp>
 #include <com/sun/star/document/NamedPropertyValues.hpp>
+#include <com/sun/star/sheet/XSpreadsheet.hpp>
+#include <com/sun/star/sheet/XSpreadsheetDocument.hpp>
+#include <com/sun/star/table/XCellRange.hpp>
 #include <osl/diagnose.h>
 #include <unotools/mediadescriptor.hxx>
 #include <oox/core/filterbase.hxx>
@@ -556,7 +559,7 @@ void ViewSettings::finalizeImport()
     // use active sheet to set sheet properties that are document-global in Calc
     sal_Int16 nActiveSheet = getActiveCalcSheet();
     SheetViewModelRef& rxActiveSheetView = maSheetViews[ nActiveSheet ];
-    OSL_ENSURE( rxActiveSheetView.get(), "ViewSettings::finalizeImport - missing active sheet view settings" );
+    OSL_ENSURE( rxActiveSheetView, "ViewSettings::finalizeImport - missing active sheet view settings" );
     if( !rxActiveSheetView )
         rxActiveSheetView = std::make_shared<SheetViewModel>();
 

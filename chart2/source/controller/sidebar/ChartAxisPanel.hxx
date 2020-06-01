@@ -14,13 +14,13 @@
 #include <sfx2/sidebar/ControllerItem.hxx>
 #include <sfx2/sidebar/IContextChangeReceiver.hxx>
 #include <sfx2/sidebar/SidebarModelUpdate.hxx>
-#include <svx/sidebar/PanelLayout.hxx>
+#include <sfx2/sidebar/PanelLayout.hxx>
 
 #include "ChartSidebarModifyListener.hxx"
 #include "ChartSidebarSelectionListener.hxx"
 
-namespace com { namespace sun { namespace star { namespace util { class XModifyListener; } } } }
-namespace com { namespace sun { namespace star { namespace view { class XSelectionChangeListener; } } } }
+namespace com::sun::star::util { class XModifyListener; }
+namespace com::sun::star::view { class XSelectionChangeListener; }
 
 class Edit;
 class ListBox;
@@ -55,6 +55,10 @@ public:
         const sal_uInt16 nSId,
         const SfxItemState eState,
         const SfxPoolItem* pState) override;
+
+    virtual void GetControlState(
+        const sal_uInt16 /*nSId*/,
+        boost::property_tree::ptree& /*rState*/) override {};
 
     // constructor/destructor
     ChartAxisPanel(

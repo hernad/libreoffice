@@ -1858,6 +1858,12 @@
           <value>trellis</value>
           <!-- Zig Zag -->
           <value>zigZag</value>
+          <!-- Dashed Dotted -->
+          <value>dashDot</value>
+          <!-- Dashed Dotted Upward Diagonal -->
+          <value>dashdotUpDiag</value>
+          <!-- Solid Dotted -->
+          <value>lsolidDoted</value>
         </choice>
       </define>
       <define name="CT_PatternFillProperties">
@@ -8121,6 +8127,11 @@
           <ref name="CT_OMath"/>
         </element>
       </define>
+      <define name="oMathParaPr">
+        <element name="oMathParaPr">
+          <ref name="CT_OMathParaPr"/>
+        </element>
+      </define>
     </grammar>
     <resource name="ST_Integer255" resource="Integer"/>
     <resource name="CT_Integer255" resource="Value">
@@ -8226,7 +8237,7 @@
     <resource name="CT_Style" resource="Value">
       <attribute name="val" tokenid="ooxml:CT_Style_val" action="setValue"/>
     </resource>
-    <resource name="ST_Jc" resource="List">
+    <resource name="ST_Jc" resource="String">
       <value tokenid="ooxml:Value_math_ST_Jc_start">left</value>
       <value tokenid="ooxml:Value_math_ST_Jc_end">right</value>
       <value tokenid="ooxml:Value_math_ST_Jc_left">left</value>
@@ -12880,6 +12891,7 @@
           <value>thaiNumbers</value>
           <!-- Thai Counting System -->
           <value>thaiCounting</value>
+          <value>custom</value>
         </choice>
       </define>
       <define name="ST_PageOrientation">
@@ -14795,6 +14807,9 @@
         </attribute>
       </define>
       <define name="CT_NumFmt">
+        <attribute name="format">
+          <data type="string"/>
+        </attribute>
         <attribute name="val">
           <ref name="ST_NumberFormat"/>
         </attribute>
@@ -17750,6 +17765,7 @@
       <value tokenid="ooxml:Value_ST_NumberFormat_thaiLetters">thaiLetters</value>
       <value tokenid="ooxml:Value_ST_NumberFormat_thaiNumbers">thaiNumbers</value>
       <value tokenid="ooxml:Value_ST_NumberFormat_thaiCounting">thaiCounting</value>
+      <value tokenid="ooxml:Value_ST_NumberFormat_custom">custom</value>
     </resource>
     <resource name="ST_PageOrientation" resource="List">
       <value tokenid="ooxml:Value_ST_PageOrientation_portrait">portrait</value>
@@ -18523,8 +18539,9 @@
     <resource name="CT_EdnPos" resource="Value">
       <attribute name="val" tokenid="ooxml:CT_EdnPos_val" action="setValue"/>
     </resource>
-    <resource name="CT_NumFmt" resource="Value">
-      <attribute name="val" tokenid="ooxml:CT_NumFmt_val" action="setValue"/>
+    <resource name="CT_NumFmt" resource="Properties">
+      <attribute name="format" tokenid="ooxml:CT_NumFmt_format"/>
+      <attribute name="val" tokenid="ooxml:CT_NumFmt_val"/>
     </resource>
     <resource name="ST_RestartNumber" resource="List">
       <value tokenid="ooxml:Value_ST_RestartNumber_continuous">continuous</value>
@@ -19172,6 +19189,8 @@
     </resource>
     <resource name="CT_OMath" resource="Math"/>
     <resource name="CT_OMathPara" resource="Stream"/>
+    <resource name="CT_OMathParaPr" resource="Properties"/>
+    <resource name="CT_OMathJc" resource="Value"/>
   </namespace>
 </model>
 <!-- vim: shiftwidth=2 softtabstop=2 expandtab:

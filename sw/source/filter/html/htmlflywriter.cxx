@@ -257,7 +257,7 @@ sal_uInt16 SwHTMLWriter::GuessFrameType( const SwFrameFormat& rFrameFormat,
                 }
                 if( bEmpty )
                 {
-                    std::shared_ptr<SvxBrushItem> aBrush = rFrameFormat.makeBackgroundBrushItem();
+                    std::unique_ptr<SvxBrushItem> aBrush = rFrameFormat.makeBackgroundBrushItem();
                     /// background is not empty, if it has a background graphic
                     /// or its background color is not "no fill"/"auto fill".
                     if( aBrush &&
@@ -685,8 +685,7 @@ OString SwHTMLWriter::OutFrameFormatOptions( const SwFrameFormat &rFrameFormat,
                       (nPercentHeight ? 0
                                   : pFSItem->GetHeight()-aTwipSpc.Height()) );
 
-        OSL_ENSURE( aTwipSz.Width() >= 0 && aTwipSz.Height() >= 0,
-                "Frame size minus spacing  < 0!!!???" );
+        OSL_ENSURE( !aTwipSz.IsEmpty(), "Frame size minus spacing  < 0!!!???" );
         if( aTwipSz.Width() < 0 )
             aTwipSz.setWidth( 0 );
         if( aTwipSz.Height() < 0 )
@@ -951,8 +950,7 @@ void SwHTMLWriter::writeFrameFormatOptions(HtmlWriter& aHtml, const SwFrameForma
                       (nPercentHeight ? 0
                                   : pFSItem->GetHeight()-aTwipSpc.Height()) );
 
-        OSL_ENSURE( aTwipSz.Width() >= 0 && aTwipSz.Height() >= 0,
-                "Frame size minus spacing < 0!!!???" );
+        OSL_ENSURE( !aTwipSz.IsEmpty(), "Frame size minus spacing < 0!!!???" );
         if( aTwipSz.Width() < 0 )
             aTwipSz.setWidth( 0 );
         if( aTwipSz.Height() < 0 )

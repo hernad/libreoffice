@@ -62,6 +62,7 @@
 #include <vcl/commandinfoprovider.hxx>
 #include <LibreOfficeKit/LibreOfficeKitEnums.h>
 
+#include <officecfg/Office/Common.hxx>
 #include <officecfg/Setup.hxx>
 #include <sfx2/app.hxx>
 #include <sfx2/flatpak.hxx>
@@ -125,7 +126,7 @@ public:
         AsyncExecuteInfo( AsyncExecuteCmd eCmd, SfxClipboardChangeListener* pListener ) :
             m_eCmd( eCmd ), m_xListener( pListener ) {}
 
-        AsyncExecuteCmd const m_eCmd;
+        AsyncExecuteCmd m_eCmd;
         rtl::Reference<SfxClipboardChangeListener> m_xListener;
     };
 
@@ -657,6 +658,7 @@ void SfxViewShell::GetState_Impl( SfxItemSet &rSet )
 {
 
     SfxWhichIter aIter( rSet );
+    SfxObjectShell *pSh = GetViewFrame()->GetObjectShell();
     for ( sal_uInt16 nSID = aIter.FirstWhich(); nSID; nSID = aIter.NextWhich() )
     {
         switch ( nSID )
@@ -672,13 +674,13 @@ void SfxViewShell::GetState_Impl( SfxItemSet &rSet )
 #if HAVE_FEATURE_MACOSX_SANDBOX
                 rSet.DisableItem(nSID);
 #endif
-                if (isExportLocked() && nSID != SID_MAIL_SENDDOC)
+                if (pSh && pSh->isExportLocked() && nSID != SID_MAIL_SENDDOC)
                     rSet.DisableItem(nSID);
                 break;
             }
             case SID_WEBHTML:
             {
-                if (isExportLocked())
+                if (pSh && pSh->isExportLocked())
                     rSet.DisableItem(nSID);
                 break;
             }
@@ -688,7 +690,8 @@ void SfxViewShell::GetState_Impl( SfxItemSet &rSet )
             case SID_SETUPPRINTER:
             case SID_PRINTER_NAME:
             {
-                if (Application::GetSettings().GetMiscSettings().GetDisablePrinting() || isPrintLocked())
+                if (Application::GetSettings().GetMiscSettings().GetDisablePrinting()
+                    || (pSh && pSh->isPrintLocked()))
                 {
                     rSet.DisableItem(nSID);
                     break;
@@ -1069,9 +1072,10 @@ SfxViewShell::SfxViewShell
 ,   pWindow(nullptr)
 ,   bNoNewWindow( nFlags & SfxViewShellFlags::NO_NEWWINDOW )
 ,   mbPrinterSettingsModified(false)
-,   maLOKLanguageTag("en-US", true)
+,   maLOKLanguageTag(LANGUAGE_NONE)
+,   maLOKLocale(LANGUAGE_NONE)
+,   maLOKDeviceFormFactor(LOKDeviceFormFactor::UNKNOWN)
 {
-
     SetMargin( pViewFrame->GetMargin_Impl() );
 
     SetPool( &pViewFrame->GetObjectShell()->GetPool() );
@@ -1083,6 +1087,11 @@ SfxViewShell::SfxViewShell
 
     if (comphelper::LibreOfficeKit::isActive())
     {
+        maLOKLanguageTag = SfxLokHelper::getDefaultLanguage();
+        maLOKLocale = SfxLokHelper::getDefaultLanguage();
+
+        maLOKDeviceFormFactor = SfxLokHelper::getDeviceFormFactor();
+
         vcl::Window* pFrameWin = pViewFrame->GetWindow().GetFrameWindow();
         if (pFrameWin && !pFrameWin->GetLOKNotifier())
             pFrameWin->SetLOKNotifier(this, true);
@@ -1450,7 +1459,10 @@ void SfxViewShell::registerLibreOfficeKitViewCallback(LibreOfficeKitCallback pCa
 
 void SfxViewShell::libreOfficeKitViewCallback(int nType, const char* pPayload) const
 {
-    if (!comphelper::LibreOfficeKit::isActive() || comphelper::LibreOfficeKit::isTiledPainting())
+    if (!comphelper::LibreOfficeKit::isActive())
+        return;
+
+    if (comphelper::LibreOfficeKit::isTiledPainting() && nType != LOK_CALLBACK_FORM_FIELD_BUTTON)
         return;
 
     if (pImpl->m_bTiledSearching)
@@ -1504,6 +1516,11 @@ void SfxViewShell::SetLOKLanguageTag(const OUString& rBcp47LanguageTag)
         maLOKLanguageTag = aTag;
     else
         maLOKLanguageTag = aFallbackTag;
+}
+
+void SfxViewShell::SetLOKLocale(const OUString& rBcp47LanguageTag)
+{
+    maLOKLocale = LanguageTag(rBcp47LanguageTag, true).makeFallback();
 }
 
 void SfxViewShell::NotifyCursor(SfxViewShell* /*pViewShell*/) const
@@ -1740,51 +1757,6 @@ void SfxViewShell::SetController( SfxBaseController* pController )
         pImpl->xClipboardListener->DisconnectViewShell();
 
     pImpl->xClipboardListener = new SfxClipboardChangeListener( this, GetClipboardNotifier() );
-}
-
-bool SfxViewShell::isContentExtractionLocked()
-{
-    Reference<XModel> xModel = GetCurrentDocument();
-    if (!xModel.is())
-        return false;
-    comphelper::NamedValueCollection aArgs(xModel->getArgs());
-    return aArgs.getOrDefault("LockContentExtraction", false);
-}
-
-bool SfxViewShell::isExportLocked()
-{
-    Reference<XModel> xModel = GetCurrentDocument();
-    if (!xModel.is())
-        return false;
-    comphelper::NamedValueCollection aArgs(xModel->getArgs());
-    return aArgs.getOrDefault("LockExport", false);
-}
-
-bool SfxViewShell::isPrintLocked()
-{
-    Reference<XModel> xModel = GetCurrentDocument();
-    if (!xModel.is())
-        return false;
-    comphelper::NamedValueCollection aArgs(xModel->getArgs());
-    return aArgs.getOrDefault("LockPrint", false);
-}
-
-bool SfxViewShell::isEditDocLocked()
-{
-    Reference<XModel> xModel = GetCurrentDocument();
-    if (!xModel.is())
-        return false;
-    comphelper::NamedValueCollection aArgs(xModel->getArgs());
-    return aArgs.getOrDefault("LockEditDoc", false);
-}
-
-bool SfxViewShell::isSaveLocked()
-{
-    Reference<XModel> xModel = GetCurrentDocument();
-    if (!xModel.is())
-        return false;
-    comphelper::NamedValueCollection aArgs(xModel->getArgs());
-    return aArgs.getOrDefault("LockSave", false);
 }
 
 Reference < XController > SfxViewShell::GetController() const

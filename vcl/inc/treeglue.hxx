@@ -7,7 +7,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <vcl/svtabbx.hxx>
+#include <vcl/toolkit/svtabbx.hxx>
 #include "svimpbox.hxx"
 
 //the default NotifyStartDrag is weird to me, and defaults to enabling all
@@ -93,8 +93,8 @@ public:
 
     virtual void DragFinished(sal_Int8 nDropAction) override
     {
-        m_aEndDragHdl.Call(this);
         SvTabListBox::DragFinished(nDropAction);
+        m_aEndDragHdl.Call(this);
     }
 
     virtual void ModelHasCleared() override
@@ -127,9 +127,12 @@ public:
         m_aModelChangedHdl.Call(this);
     }
 
-    virtual SvTreeListEntry* GetDropTarget(const Point& rPos) override
+    SvTreeListEntry* GetTargetAtPoint(const Point& rPos, bool bHighLightTarget)
     {
+        SvTreeListEntry* pOldTargetEntry = pTargetEntry;
         pTargetEntry = pImpl->GetEntry(rPos);
+        if (pOldTargetEntry != pTargetEntry)
+            ImplShowTargetEmphasis(pOldTargetEntry, false);
 
         // scroll
         if (rPos.Y() < 12)
@@ -147,7 +150,14 @@ public:
             }
         }
 
+        if (pTargetEntry && bHighLightTarget)
+            ImplShowTargetEmphasis(pTargetEntry, true);
         return pTargetEntry;
+    }
+
+    virtual SvTreeListEntry* GetDropTarget(const Point& rPos) override
+    {
+        return GetTargetAtPoint(rPos, true);
     }
 
     virtual bool EditingEntry(SvTreeListEntry* pEntry, Selection&) override

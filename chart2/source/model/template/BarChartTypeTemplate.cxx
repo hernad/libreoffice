@@ -25,6 +25,7 @@
 #include <com/sun/star/beans/PropertyAttribute.hpp>
 #include <com/sun/star/drawing/LineStyle.hpp>
 #include <com/sun/star/chart2/DataPointGeometry3D.hpp>
+#include <com/sun/star/chart2/XCoordinateSystemContainer.hpp>
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <tools/diagnose_ex.h>
@@ -251,19 +252,19 @@ void SAL_CALL BarChartTypeTemplate::applyStyle(
 {
     ChartTypeTemplate::applyStyle( xSeries, nChartTypeIndex, nSeriesIndex, nSeriesCount );
     DataSeriesHelper::setPropertyAlsoToAllAttributedDataPoints( xSeries, "BorderStyle", uno::Any( drawing::LineStyle_NONE ) );
-    if( getDimension() == 3 )
+    if( getDimension() != 3 )
+        return;
+
+    try
     {
-        try
-        {
-            //apply Geometry3D
-            uno::Any aAGeometry3D;
-            getFastPropertyValue( aAGeometry3D, PROP_BAR_TEMPLATE_GEOMETRY3D );
-            DataSeriesHelper::setPropertyAlsoToAllAttributedDataPoints( xSeries, "Geometry3D", aAGeometry3D );
-        }
-        catch( const uno::Exception & )
-        {
-            DBG_UNHANDLED_EXCEPTION("chart2");
-        }
+        //apply Geometry3D
+        uno::Any aAGeometry3D;
+        getFastPropertyValue( aAGeometry3D, PROP_BAR_TEMPLATE_GEOMETRY3D );
+        DataSeriesHelper::setPropertyAlsoToAllAttributedDataPoints( xSeries, "Geometry3D", aAGeometry3D );
+    }
+    catch( const uno::Exception & )
+    {
+        DBG_UNHANDLED_EXCEPTION("chart2");
     }
 }
 

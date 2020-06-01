@@ -10,16 +10,17 @@
 #include <test/bootstrapfixture.hxx>
 
 #include <vcl/wrkwin.hxx>
-#include <vcl/button.hxx>
 #include <vcl/edit.hxx>
-#include <vcl/combobox.hxx>
-#include <vcl/field.hxx>
+#include <vcl/toolkit/button.hxx>
+#include <vcl/toolkit/combobox.hxx>
+#include <vcl/toolkit/dialog.hxx>
+#include <vcl/toolkit/field.hxx>
 #include <vcl/virdev.hxx>
 #include <vcl/tabctrl.hxx>
-#include <vcl/dialog.hxx>
 #include <vcl/layout.hxx>
 #include <vcl/scheduler.hxx>
 #include <com/sun/star/awt/XWindow.hpp>
+#include <com/sun/star/awt/XWindowPeer.hpp>
 #include <com/sun/star/lang/XComponent.hpp>
 
 class LifecycleTest : public test::BootstrapFixture
@@ -75,6 +76,8 @@ void LifecycleTest::testVirtualDevice()
     VclPtrInstance<VirtualDevice> pVDev3;
     VclPtrInstance<VirtualDevice> pVDev4(DeviceFormat::BITMASK);
     CPPUNIT_ASSERT(!!pVDev && !!pVDev2 && !!pVDev3 && !!pVDev4);
+    pVDev.disposeAndClear();
+    pVDev4.disposeAndClear();
 }
 
 void LifecycleTest::testMultiDispose()

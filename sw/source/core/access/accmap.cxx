@@ -24,6 +24,7 @@
 #include <svx/unomod.hxx>
 #include <algorithm>
 #include <map>
+#include <unordered_map>
 #include <list>
 #include <vector>
 #include <accmap.hxx>
@@ -133,7 +134,7 @@ class SwDrawModellListener_Impl : public SfxListener,
 {
     mutable ::osl::Mutex maListenerMutex;
     ::comphelper::OInterfaceContainerHelper2 maEventListeners;
-    std::unordered_map<css::uno::Reference< css::drawing::XShape >, css::uno::Reference< css::document::XShapeEventListener >> maShapeListeners;
+    std::unordered_multimap<css::uno::Reference< css::drawing::XShape >, css::uno::Reference< css::document::XShapeEventListener >> maShapeListeners;
     SdrModel *mpDrawModel;
 protected:
     virtual ~SwDrawModellListener_Impl() override;
@@ -182,9 +183,7 @@ void SAL_CALL SwDrawModellListener_Impl::addShapeEventListener(
 {
     assert(xShape.is() && "no shape?");
     osl::MutexGuard aGuard(maListenerMutex);
-    auto rv = maShapeListeners.emplace(xShape, xListener);
-    assert(rv.second && "duplicate listener?");
-    (void)rv;
+    maShapeListeners.emplace(xShape, xListener);
 }
 
 void SAL_CALL SwDrawModellListener_Impl::removeShapeEventListener(
@@ -192,13 +191,13 @@ void SAL_CALL SwDrawModellListener_Impl::removeShapeEventListener(
                 const uno::Reference< document::XShapeEventListener >& xListener )
 {
     osl::MutexGuard aGuard(maListenerMutex);
-    auto it = maShapeListeners.find(xShape);
-    if (it != maShapeListeners.end())
-    {
-        assert(it->second == xListener);
-        (void)xListener;
-        maShapeListeners.erase(it);
-    }
+    auto [itBegin, itEnd] = maShapeListeners.equal_range(xShape);
+    for (auto it = itBegin; it != itEnd; ++it)
+        if (it->second == xListener)
+        {
+            maShapeListeners.erase(it);
+            return;
+        }
 }
 
 void SwDrawModellListener_Impl::Notify( SfxBroadcaster& /*rBC*/,
@@ -246,8 +245,8 @@ void SwDrawModellListener_Impl::Notify( SfxBroadcaster& /*rBC*/,
         auto pSdrObject = const_cast<SdrObject*>(pSdrHint->GetObject());
         uno::Reference<drawing::XShape> xShape(pSdrObject->getUnoShape(), uno::UNO_QUERY);
         osl::MutexGuard aGuard(maListenerMutex);
-        auto it = maShapeListeners.find(xShape);
-        if (it != maShapeListeners.end())
+        auto [itBegin, itEnd] = maShapeListeners.equal_range(xShape);
+        for (auto it = itBegin; it != itEnd; ++it)
             it->second->notifyShapeEvent(aEvent);
     }
 }
@@ -393,7 +392,7 @@ private:
     SwRect      maOldBox;                       // the old bounds for CHILD_POS_CHANGED
                                                 // and POS_CHANGED
     uno::WeakReference < XAccessible > mxAcc;   // The object that fires the event
-    SwAccessibleChild const maFrameOrObj;       // the child for CHILD_POS_CHANGED and
+    SwAccessibleChild maFrameOrObj;             // the child for CHILD_POS_CHANGED and
                                                 // the same as xAcc for any other
                                                 // event type
     EventType   meType;                         // The event type
@@ -658,8 +657,8 @@ namespace {
 
 struct SwAccessibleParaSelection
 {
-    TextFrameIndex const nStartOfSelection;
-    TextFrameIndex const nEndOfSelection;
+    TextFrameIndex nStartOfSelection;
+    TextFrameIndex nEndOfSelection;
 
     SwAccessibleParaSelection(const TextFrameIndex nStartOfSelection_,
                               const TextFrameIndex nEndOfSelection_)
@@ -870,20 +869,16 @@ void SwAccPreviewData::AdjustLogicPgRectToVisibleArea(
     SwTwips nTmpDiff;
     // left
     nTmpDiff = aVisPreviewPgSwRect.Left() - _rPreviewPgSwRect.Left();
-    if ( nTmpDiff > 0 )
-        _iorLogicPgSwRect.Left( _iorLogicPgSwRect.Left() + nTmpDiff );
+    _iorLogicPgSwRect.AddLeft( nTmpDiff );
     // top
     nTmpDiff = aVisPreviewPgSwRect.Top() - _rPreviewPgSwRect.Top();
-    if ( nTmpDiff > 0 )
-        _iorLogicPgSwRect.Top( _iorLogicPgSwRect.Top() + nTmpDiff );
+    _iorLogicPgSwRect.AddTop( nTmpDiff );
     // right
     nTmpDiff = _rPreviewPgSwRect.Right() - aVisPreviewPgSwRect.Right();
-    if ( nTmpDiff > 0 )
-        _iorLogicPgSwRect.Right( _iorLogicPgSwRect.Right() - nTmpDiff );
+    _iorLogicPgSwRect.AddRight( - nTmpDiff );
     // bottom
     nTmpDiff = _rPreviewPgSwRect.Bottom() - aVisPreviewPgSwRect.Bottom();
-    if ( nTmpDiff > 0 )
-        _iorLogicPgSwRect.Bottom( _iorLogicPgSwRect.Bottom() - nTmpDiff );
+    _iorLogicPgSwRect.AddBottom( - nTmpDiff );
 }
 
 static bool AreInSameTable( const uno::Reference< XAccessible >& rAcc,
@@ -2780,7 +2775,7 @@ void SwAccessibleMap::InvalidateFocus()
     if(GetShell()->IsPreview())
     {
         uno::Reference<XAccessible> xAcc = GetDocumentView_( true );
-        if (xAcc.get())
+        if (xAcc)
         {
             SwAccessiblePreview *pAccPreview = static_cast<SwAccessiblePreview *>(xAcc.get());
             if (pAccPreview)

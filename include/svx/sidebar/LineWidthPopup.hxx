@@ -25,9 +25,9 @@
 #include <vcl/weld.hxx>
 #include <array>
 
-class SvtValueSet;
+class ValueSet;
 
-namespace svx { namespace sidebar {
+namespace svx::sidebar {
 
 class LinePropertyPanelBase;
 class LineWidthValueSet;
@@ -45,13 +45,13 @@ public:
 private:
     LinePropertyPanelBase& m_rParent;
     std::array<OUString,9> maStrUnits;
-    OUString const m_sPt;
+    OUString m_sPt;
     MapUnit m_eMapUnit;
     bool m_bVSFocus;
     bool m_bCustom;
     long m_nCustomWidth;
-    Image const m_aIMGCus;
-    Image const m_aIMGCusGray;
+    Image  m_aIMGCus;
+    Image m_aIMGCusGray;
 
     std::unique_ptr<weld::Builder> m_xBuilder;
     std::unique_ptr<weld::Container> m_xTopLevel;
@@ -59,12 +59,12 @@ private:
     std::unique_ptr<LineWidthValueSet> m_xVSWidth;
     std::unique_ptr<weld::CustomWeld> m_xVSWidthWin;
 
-    DECL_LINK(VSSelectHdl, SvtValueSet*, void);
+    DECL_LINK(VSSelectHdl, ValueSet*, void);
     DECL_LINK(MFModifyHdl, weld::MetricSpinButton&, void);
     DECL_LINK(FocusHdl, weld::Widget&, void);
 };
 
-} } // end of namespace svx::sidebar
+} // end of namespace svx::sidebar
 
 #endif
 

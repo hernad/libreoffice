@@ -30,7 +30,7 @@
 #include <tools/fontenum.hxx>
 #include <vcl/glyphitem.hxx>
 
-#include <o3tl/optional.hxx>
+#include <optional>
 #include <unordered_map>
 #include <memory>
 
@@ -90,7 +90,6 @@ protected:
     // Takes ownership of pHbFace.
     static hb_font_t* InitHbFont(hb_face_t* pHbFace);
     virtual hb_font_t* ImplInitHbFont() { assert(false); return hb_font_get_empty(); }
-    inline void ReleaseHbFont();
 
 private:
     // cache of Unicode characters and replacement font names
@@ -103,7 +102,7 @@ private:
     hb_font_t* m_pHbFont;
     double m_nAveWidthFactor;
     rtl::Reference<PhysicalFontFace> m_pFontFace;
-    o3tl::optional<bool> m_xbIsGraphiteFont;
+    std::optional<bool> m_xbIsGraphiteFont;
 };
 
 inline hb_font_t* LogicalFontInstance::GetHbFont()
@@ -111,14 +110,6 @@ inline hb_font_t* LogicalFontInstance::GetHbFont()
     if (!m_pHbFont)
         m_pHbFont = ImplInitHbFont();
     return m_pHbFont;
-}
-
-inline void LogicalFontInstance::ReleaseHbFont()
-{
-    if (!m_pHbFont)
-        return;
-    hb_font_destroy(m_pHbFont);
-    m_pHbFont = nullptr;
 }
 
 inline void LogicalFontInstance::DecodeOpenTypeTag(const uint32_t nTableTag, char* pTagName)

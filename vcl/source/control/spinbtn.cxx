@@ -120,10 +120,10 @@ void SpinButton::Resize()
     Invalidate();
 }
 
-void SpinButton::Draw(OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawFlags nFlags)
+void SpinButton::Draw(OutputDevice* pDev, const Point& rPos, DrawFlags nFlags)
 {
     Point aPos  = pDev->LogicToPixel(rPos);
-    Size aSize = pDev->LogicToPixel(rSize);
+    Size aSize = GetSizePixel();
 
     pDev->Push();
     pDev->SetMapMode();
@@ -193,7 +193,6 @@ void SpinButton::MouseButtonDown( const MouseEvent& rMEvt )
 
     if ( mbUpperIn || mbLowerIn )
     {
-        Update();
         CaptureMouse();
         if ( mbRepeat )
             maRepeatTimer.Start();
@@ -213,14 +212,12 @@ void SpinButton::MouseButtonUp( const MouseEvent& )
     {
         mbUpperIn   = false;
         Invalidate( maUpperRect );
-        Update();
         Up();
     }
     else if ( mbLowerIn )
     {
         mbLowerIn = false;
         Invalidate( maLowerRect );
-        Update();
         Down();
     }
 
@@ -238,7 +235,6 @@ void SpinButton::MouseMove( const MouseEvent& rMEvt )
         mbUpperIn = false;
         maRepeatTimer.Stop();
         Invalidate( maUpperRect );
-        Update();
     }
     else if ( !maLowerRect.IsInside( rMEvt.GetPosPixel() ) &&
               mbLowerIn && mbInitialDown )
@@ -246,7 +242,6 @@ void SpinButton::MouseMove( const MouseEvent& rMEvt )
         mbLowerIn = false;
         maRepeatTimer.Stop();
         Invalidate( maLowerRect );
-        Update();
     }
     else if ( maUpperRect.IsInside( rMEvt.GetPosPixel() ) &&
               !mbUpperIn && mbInitialUp )
@@ -255,7 +250,6 @@ void SpinButton::MouseMove( const MouseEvent& rMEvt )
         if ( mbRepeat )
             maRepeatTimer.Start();
         Invalidate( maUpperRect );
-        Update();
     }
     else if ( maLowerRect.IsInside( rMEvt.GetPosPixel() ) &&
               !mbLowerIn && mbInitialDown )
@@ -264,7 +258,6 @@ void SpinButton::MouseMove( const MouseEvent& rMEvt )
         if ( mbRepeat )
             maRepeatTimer.Start();
         Invalidate( maLowerRect );
-        Update();
     }
 }
 
@@ -438,11 +431,10 @@ tools::Rectangle* SpinButton::ImplFindPartRect( const Point& rPt )
 
 bool SpinButton::PreNotify( NotifyEvent& rNEvt )
 {
-    const MouseEvent* pMouseEvt = nullptr;
-
-    if ((rNEvt.GetType() == MouseNotifyEvent::MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) != nullptr)
+    if (rNEvt.GetType() == MouseNotifyEvent::MOUSEMOVE)
     {
-        if (!pMouseEvt->GetButtons() && !pMouseEvt->IsSynthetic() && !pMouseEvt->IsModifierChanged())
+        const MouseEvent* pMouseEvt = rNEvt.GetMouseEvent();
+        if (pMouseEvt && !pMouseEvt->GetButtons() && !pMouseEvt->IsSynthetic() && !pMouseEvt->IsModifierChanged())
         {
             // trigger redraw if mouse over state has changed
             if (IsNativeControlSupported(ControlType::Spinbox, ControlPart::Entire) ||

@@ -23,7 +23,6 @@
 #include <core_resource.hxx>
 #include <helpids.h>
 #include <cppuhelper/supportsservice.hxx>
-#include <rtl/ustrbuf.hxx>
 #include <tools/debug.hxx>
 #include <metadata.hxx>
 #include <tools/urlobj.hxx>
@@ -179,7 +178,7 @@ namespace rptui
         {
             const char* programmaticName;
             const char* uiNameResId;
-            OString const helpId;
+            OString    helpId;
         } aCategories[] = {
             { "General",    RID_STR_PROPPAGE_DEFAULT,   HID_RPT_PROPDLG_TAB_GENERAL },
             { "Data",       RID_STR_PROPPAGE_DATA,      HID_RPT_PROPDLG_TAB_DATA },

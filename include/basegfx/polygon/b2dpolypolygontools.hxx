@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_BASEGFX_POLYGON_B2DPOLYPOLYGONTOOLS_HXX
-#define INCLUDED_BASEGFX_POLYGON_B2DPOLYPOLYGONTOOLS_HXX
+#pragma once
 
 #include <basegfx/point/b2dpoint.hxx>
 #include <basegfx/polygon/b3dpolypolygon.hxx>
@@ -28,16 +27,16 @@
 #include <basegfx/basegfxdllapi.h>
 
 
-namespace com { namespace sun { namespace star { namespace drawing { struct PolyPolygonBezierCoords; } } } }
+namespace com::sun::star::drawing { struct PolyPolygonBezierCoords; }
 
 namespace basegfx
 {
-    // predefinitions
     class B2DPolyPolygon;
     class B2DRange;
+}
 
-    namespace utils
-    {
+namespace basegfx::utils
+{
         // B2DPolyPolygon tools
 
         // Check and evtl. correct orientations of all contained Polygons so that
@@ -294,9 +293,6 @@ namespace basegfx
             const B2DPolyPolygon& rPolyPolygon,
             css::drawing::PolyPolygonBezierCoords& rPolyPolygonBezierCoordsRetval);
 
-    } // end of namespace utils
-} // end of namespace basegfx
-
-#endif // INCLUDED_BASEGFX_POLYGON_B2DPOLYPOLYGONTOOLS_HXX
+} // end of namespace basegfx::utils
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

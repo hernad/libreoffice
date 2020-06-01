@@ -87,10 +87,12 @@ SvxSaveTabPage::SvxSaveTabPage(weld::Container* pPage, weld::DialogController* p
     , m_xODFWarningFI(m_xBuilder->weld_widget("odfwarning_image"))
     , m_xODFWarningFT(m_xBuilder->weld_label("odfwarning_label"))
 {
-    m_xODFVersionLB->set_id(0, OUString::number(2         )); // 1.0/1.1
-    m_xODFVersionLB->set_id(1, OUString::number(4         )); // 1.2
-    m_xODFVersionLB->set_id(2, OUString::number(8         )); // 1.2 Extended (compatibility mode)
-    m_xODFVersionLB->set_id(3, OUString::number(0x7fffffff)); // 1.2 Extended (recommended)
+    m_xODFVersionLB->set_id(0, OUString::number(SvtSaveOptions::ODFVER_011)); // 1.0/1.1
+    m_xODFVersionLB->set_id(1, OUString::number(SvtSaveOptions::ODFVER_012)); // 1.2
+    m_xODFVersionLB->set_id(2, OUString::number(SvtSaveOptions::ODFVER_012_EXT_COMPAT)); // 1.2 Extended (compatibility mode)
+    m_xODFVersionLB->set_id(3, OUString::number(SvtSaveOptions::ODFVER_012_EXTENDED)); // 1.2 Extended
+    m_xODFVersionLB->set_id(4, OUString::number(SvtSaveOptions::ODFVER_013)); // 1.3
+    m_xODFVersionLB->set_id(5, OUString::number(SvtSaveOptions::ODFVER_LATEST)); // 1.3 Extended (recommended)
 
     m_xDocTypeLB->set_id(0, OUString::number(APP_WRITER)       );
     m_xDocTypeLB->set_id(1, OUString::number(APP_WRITER_WEB)   );
@@ -466,20 +468,20 @@ void SvxSaveTabPage::Reset( const SfxItemSet* )
 
 IMPL_LINK(SvxSaveTabPage, AutoClickHdl_Impl, weld::Button&, rBox, void)
 {
-    if (&rBox == m_xAutoSaveCB.get())
+    if (&rBox != m_xAutoSaveCB.get())
+        return;
+
+    if (m_xAutoSaveCB->get_active())
     {
-        if (m_xAutoSaveCB->get_active())
-        {
-            m_xAutoSaveEdit->set_sensitive(true);
-            m_xMinuteFT->set_sensitive(true);
-            m_xUserAutoSaveCB->set_sensitive(true);
-        }
-        else
-        {
-            m_xAutoSaveEdit->set_sensitive(false);
-            m_xMinuteFT->set_sensitive(false);
-            m_xUserAutoSaveCB->set_sensitive(false);
-        }
+        m_xAutoSaveEdit->set_sensitive(true);
+        m_xMinuteFT->set_sensitive(true);
+        m_xUserAutoSaveCB->set_sensitive(true);
+    }
+    else
+    {
+        m_xAutoSaveEdit->set_sensitive(false);
+        m_xMinuteFT->set_sensitive(false);
+        m_xUserAutoSaveCB->set_sensitive(false);
     }
 }
 

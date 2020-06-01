@@ -23,6 +23,7 @@
 #include <vcl/commandevent.hxx>
 #include <vcl/help.hxx>
 #include <vcl/settings.hxx>
+#include <vcl/scrbar.hxx>
 #include <vcl/ptrstyle.hxx>
 #include <tools/debug.hxx>
 #include <tools/fract.hxx>
@@ -226,7 +227,7 @@ void BrowserDataWin::LeaveUpdateLock()
         DoOutstandingInvalidations();
         if (bUpdateOnUnlock )
         {
-            Control::Update();
+            Control::PaintImmediately();
             bUpdateOnUnlock = false;
         }
     }
@@ -245,7 +246,7 @@ void InitSettings_Impl(vcl::Window* pWin)
 void BrowserDataWin::Update()
 {
     if ( !nUpdateLock )
-        Control::Update();
+        Control::PaintImmediately();
     else
         bUpdateOnUnlock = true;
 }

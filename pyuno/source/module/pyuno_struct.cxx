@@ -68,7 +68,7 @@ static PyObject *PyUNOStruct_str( PyObject *self )
         buf = OUStringToOString( s, RTL_TEXTENCODING_ASCII_US );
     }
 
-    return PyStr_FromString( buf.getStr());
+    return PyUnicode_FromString( buf.getStr());
 }
 
 static PyObject *PyUNOStruct_repr( PyObject *self )
@@ -347,6 +347,16 @@ static PyTypeObject PyUNOStructType =
     , nullptr
 #if PY_VERSION_HEX >= 0x03080000
     , nullptr // vectorcallfunc tp_vectorcall
+#if PY_VERSION_HEX < 0x03090000
+#if defined __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+    , nullptr // tp_print
+#if defined __clang__
+#pragma clang diagnostic pop
+#endif
+#endif
 #endif
 #endif
 };

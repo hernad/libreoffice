@@ -37,7 +37,9 @@ else
 gb_UITest_SOFFICEARG:=path:$(INSTROOT)/$(LIBO_BIN_FOLDER)/soffice
 endif
 
-gb_UITest_COMMAND = LIBO_LANG=C $(ICECREAM_RUN) $(gb_CppunitTest_RR) $(gb_UITest_EXECUTABLE) $(SRCDIR)/uitest/test_main.py
+gb_UITest_COMMAND = $(ICECREAM_RUN) $(gb_CppunitTest_RR) $(gb_UITest_EXECUTABLE) $(SRCDIR)/uitest/test_main.py
+
+gb_TEST_ENV_VARS += LIBO_LANG=C
 
 .PHONY : $(call gb_UITest_get_clean_target,%)
 $(call gb_UITest_get_clean_target,%) :
@@ -54,6 +56,7 @@ ifneq ($(gb_SUPPRESS_TESTS),)
 	@true
 else
 	$(call gb_Output_announce,$*,$(true),UIT,2)
+	$(call gb_Trace_StartRange,$*,UIT)
 	$(call gb_Helper_abbreviate_dirs,\
 		rm -rf $(dir $(call gb_UITest_get_target,$*)) && \
 		mkdir -p $(dir $(call gb_UITest_get_target,$*))/user/user && \
@@ -72,6 +75,7 @@ else
 		PYTHONPATH="$(PYPATH)" \
 		TestUserDir="$(call gb_Helper_make_url,$(dir $(call gb_UITest_get_target,$*)))" \
 		PYTHONDONTWRITEBYTECODE=0 \
+		$(if $(ENABLE_WERROR),PYTHONWARNINGS=error) \
 		$(gb_TEST_ENV_VARS) \
 		$(gb_UITest_COMMAND) \
 		--soffice="$(gb_UITest_SOFFICEARG)" \
@@ -88,6 +92,7 @@ else
                     cat $(dir $(call gb_UITest_get_target,$*))/soffice.out.log; \
                     printf ' >>>\n\n';) \
 			    cat $@.log; $(gb_UITest_UNITTESTFAILED) UI $*))))
+	$(call gb_Trace_EndRange,$*,UIT)
 endif
 
 # always use udkapi and URE services

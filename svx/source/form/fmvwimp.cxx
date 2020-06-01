@@ -27,7 +27,6 @@
 #include <fmservs.hxx>
 #include <fmshimp.hxx>
 #include <svx/fmtools.hxx>
-#include <fmundo.hxx>
 #include <fmvwimp.hxx>
 #include <formcontrolfactory.hxx>
 #include <svx/sdrpaintwindow.hxx>
@@ -48,16 +47,12 @@
 #include <com/sun/star/lang/IndexOutOfBoundsException.hpp>
 #include <com/sun/star/ui/dialogs/XExecutableDialog.hpp>
 #include <com/sun/star/sdbc/XRowSet.hpp>
-#include <com/sun/star/form/XLoadable.hpp>
-#include <com/sun/star/awt/VisualEffect.hpp>
 #include <com/sun/star/util/XNumberFormatsSupplier.hpp>
 #include <com/sun/star/util/XNumberFormats.hpp>
 #include <com/sun/star/sdb/CommandType.hpp>
 #include <com/sun/star/sdbc/DataType.hpp>
-#include <com/sun/star/sdbc/ColumnValue.hpp>
 #include <com/sun/star/form/FormComponentType.hpp>
 #include <com/sun/star/form/FormButtonType.hpp>
-#include <com/sun/star/form/XReset.hpp>
 #include <com/sun/star/form/binding/XBindableValue.hpp>
 #include <com/sun/star/form/binding/XValueBinding.hpp>
 #include <com/sun/star/form/runtime/FormController.hpp>
@@ -67,9 +62,7 @@
 #include <com/sun/star/awt/XTabController.hpp>
 #include <com/sun/star/container/XIndexAccess.hpp>
 #include <com/sun/star/awt/XControl.hpp>
-#include <com/sun/star/sdbcx/XTablesSupplier.hpp>
 #include <com/sun/star/sdbc/SQLException.hpp>
-#include <com/sun/star/sdbc/XPreparedStatement.hpp>
 #include <com/sun/star/sdb/XQueriesSupplier.hpp>
 #include <com/sun/star/container/XContainer.hpp>
 
@@ -95,7 +88,6 @@ using namespace ::dbtools;
 
     using namespace ::com::sun::star;
     using ::com::sun::star::uno::Exception;
-    using ::com::sun::star::uno::RuntimeException;
     using ::com::sun::star::uno::XInterface;
     using ::com::sun::star::uno::Sequence;
     using ::com::sun::star::uno::UNO_QUERY;
@@ -123,7 +115,6 @@ using namespace ::dbtools;
     using ::com::sun::star::form::XFormComponent;
     using ::com::sun::star::form::XForm;
     using ::com::sun::star::lang::IndexOutOfBoundsException;
-    using ::com::sun::star::lang::WrappedTargetException;
     using ::com::sun::star::container::XContainer;
     using ::com::sun::star::container::ContainerEvent;
     using ::com::sun::star::lang::EventObject;
@@ -869,7 +860,7 @@ namespace
                     continue;
 
                 Reference< XChild > xModel( pFormObject->GetUnoControlModel(), UNO_QUERY_THROW );
-                Reference< XInterface > xModelParent( xModel->getParent(), UNO_SET_THROW );
+                Reference< XInterface > xModelParent( xModel->getParent(), UNO_QUERY );
 
                 if ( xNormalizedForm.get() != xModelParent.get() )
                     continue;
@@ -891,7 +882,7 @@ Reference< XFormController > FmXFormView::getFormController( const Reference< XF
 
     for (const PFormViewPageWindowAdapter& pAdapter : m_aPageWindowAdapters)
     {
-        if ( !pAdapter.get() )
+        if ( !pAdapter )
         {
             SAL_WARN( "svx.form", "FmXFormView::getFormController: invalid page window adapter!" );
             continue;
@@ -923,7 +914,7 @@ IMPL_LINK_NOARG(FmXFormView, OnAutoFocus, void*, void)
     Reference< XIndexAccess > xForms( pPage ? Reference< XIndexAccess >( pPage->GetForms() ) : Reference< XIndexAccess >() );
 
     const PFormViewPageWindowAdapter pAdapter = m_aPageWindowAdapters.empty() ? nullptr : m_aPageWindowAdapters[0];
-    const vcl::Window* pWindow = pAdapter.get() ? pAdapter->getWindow() : nullptr;
+    const vcl::Window* pWindow = pAdapter ? pAdapter->getWindow() : nullptr;
 
     ENSURE_OR_RETURN_VOID( xForms.is() && pWindow, "FmXFormView::OnAutoFocus: could not collect all essentials!" );
 

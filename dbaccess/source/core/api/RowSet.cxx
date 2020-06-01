@@ -23,7 +23,6 @@
 #include <map>
 #include <utility>
 
-#include <string.h>
 #include "RowSet.hxx"
 #include <stringconstants.hxx>
 #include <sdbcoretools.hxx>
@@ -36,7 +35,6 @@
 #include <tablecontainer.hxx>
 
 #include <com/sun/star/beans/PropertyAttribute.hpp>
-#include <com/sun/star/container/XChild.hpp>
 #include <com/sun/star/lang/DisposedException.hpp>
 #include <com/sun/star/sdb/CommandType.hpp>
 #include <com/sun/star/sdb/DatabaseContext.hpp>
@@ -48,15 +46,12 @@
 #include <com/sun/star/sdb/XQueriesSupplier.hpp>
 #include <com/sun/star/sdbc/FetchDirection.hpp>
 #include <com/sun/star/sdbc/ResultSetConcurrency.hpp>
+#include <com/sun/star/sdbc/ResultSetType.hpp>
 #include <com/sun/star/sdbc/XDataSource.hpp>
-#include <com/sun/star/sdbc/XDriverAccess.hpp>
-#include <com/sun/star/sdbcx/CompareBookmark.hpp>
 #include <com/sun/star/sdbcx/Privilege.hpp>
-#include <com/sun/star/sdbcx/XDataDefinitionSupplier.hpp>
-#include <com/sun/star/uno/XNamingService.hpp>
 #include <com/sun/star/util/XNumberFormatsSupplier.hpp>
 
-#include <comphelper/property.hxx>
+#include <comphelper/extract.hxx>
 #include <comphelper/seqstream.hxx>
 #include <comphelper/sequence.hxx>
 #include <comphelper/servicehelper.hxx>
@@ -73,10 +68,7 @@
 #include <i18nlangtag/languagetag.hxx>
 #include <o3tl/safeint.hxx>
 #include <unotools/syslocale.hxx>
-#include <tools/debug.hxx>
 #include <tools/diagnose_ex.h>
-#include <tools/solar.h>
-#include <unotools/configmgr.hxx>
 
 using namespace utl;
 using namespace dbaccess;
@@ -164,7 +156,7 @@ ORowSet::ORowSet( const Reference< css::uno::XComponentContext >& _rxContext )
     sal_Int32 const nRT  = PropertyAttribute::READONLY   | PropertyAttribute::TRANSIENT;
     sal_Int32 const nBT  = PropertyAttribute::BOUND      | PropertyAttribute::TRANSIENT;
 
-    m_aPrematureParamValues->get().resize( 0 );
+    m_aPrematureParamValues->resize( 0 );
 
     // sdb.RowSet Properties
     registerMayBeVoidProperty(PROPERTY_ACTIVE_CONNECTION,PROPERTY_ID_ACTIVE_CONNECTION, PropertyAttribute::MAYBEVOID|PropertyAttribute::TRANSIENT|PropertyAttribute::BOUND, &m_aActiveConnection,   cppu::UnoType<XConnection>::get());
@@ -540,41 +532,41 @@ void ORowSet::freeResources( bool _bComplete )
     m_bLastKnownRowCountFinal = false;
     m_nLastKnownRowCount      = 0;
 
-    if ( _bComplete )
+    if ( !_bComplete )
+        return;
+
+    // the columns must be disposed before the querycomposer is disposed because
+    // their owner can be the composer
+    TDataColumns().swap(m_aDataColumns);// clear and resize capacity
+    std::vector<bool>().swap(m_aReadOnlyDataColumns);
+
+    m_xColumns      = nullptr;
+    if ( m_pColumns )
+        m_pColumns->disposing();
+    // dispose the composer to avoid that everybody knows that the querycomposer is eol
+    try { ::comphelper::disposeComponent( m_xComposer ); }
+    catch(Exception&)
     {
-        // the columns must be disposed before the querycomposer is disposed because
-        // their owner can be the composer
-        TDataColumns().swap(m_aDataColumns);// clear and resize capacity
-        std::vector<bool>().swap(m_aReadOnlyDataColumns);
-
-        m_xColumns      = nullptr;
-        if ( m_pColumns )
-            m_pColumns->disposing();
-        // dispose the composer to avoid that everybody knows that the querycomposer is eol
-        try { ::comphelper::disposeComponent( m_xComposer ); }
-        catch(Exception&)
-        {
-            DBG_UNHANDLED_EXCEPTION("dbaccess");
-            m_xComposer = nullptr;
-        }
-
-        // let our warnings container forget the reference to the (possibly disposed) old result set
-        m_aWarnings.setExternalWarnings( nullptr );
-
-        m_pCache.reset();
-
-        impl_resetTables_nothrow();
-
-        m_xStatement    = nullptr;
-        m_xTypeMap      = nullptr;
-
-        if ( m_aOldRow.is() )
-            m_aOldRow->clearRow();
-
-        impl_disposeParametersContainer_nothrow();
-
-        m_bCommandFacetsDirty = true;
+        DBG_UNHANDLED_EXCEPTION("dbaccess");
+        m_xComposer = nullptr;
     }
+
+    // let our warnings container forget the reference to the (possibly disposed) old result set
+    m_aWarnings.setExternalWarnings( nullptr );
+
+    m_pCache.reset();
+
+    impl_resetTables_nothrow();
+
+    m_xStatement    = nullptr;
+    m_xTypeMap      = nullptr;
+
+    if ( m_aOldRow.is() )
+        m_aOldRow->clearRow();
+
+    impl_disposeParametersContainer_nothrow();
+
+    m_bCommandFacetsDirty = true;
 }
 
 void ORowSet::setActiveConnection( Reference< XConnection > const & _rxNewConn, bool _bFireEvent )
@@ -671,7 +663,7 @@ void ORowSet::updateValue(sal_Int32 columnIndex,const ORowSetValue& x)
     checkUpdateConditions(columnIndex);
     checkUpdateIterator();
 
-    ORowSetValueVector::Vector& rRow = (*m_aCurrentRow)->get();
+    ORowSetValueVector::Vector& rRow = **m_aCurrentRow;
     ORowSetNotifier aNotify(this,rRow);
     m_pCache->updateValue(columnIndex,x,rRow,aNotify.getChangedColumns());
     m_bModified = m_bModified || !aNotify.getChangedColumns().empty();
@@ -687,7 +679,7 @@ void SAL_CALL ORowSet::updateNull( sal_Int32 columnIndex )
     checkUpdateConditions(columnIndex);
     checkUpdateIterator();
 
-    ORowSetValueVector::Vector& rRow = (*m_aCurrentRow)->get();
+    ORowSetValueVector::Vector& rRow = **m_aCurrentRow;
     ORowSetNotifier aNotify(this,rRow);
     m_pCache->updateNull(columnIndex,rRow,aNotify.getChangedColumns());
     m_bModified = m_bModified || !aNotify.getChangedColumns().empty();
@@ -775,7 +767,7 @@ void SAL_CALL ORowSet::updateCharacterStream( sal_Int32 columnIndex, const Refer
     ::osl::MutexGuard aGuard( *m_pMutex );
     checkUpdateConditions(columnIndex);
     checkUpdateIterator();
-    ORowSetValueVector::Vector& rRow = (*m_aCurrentRow)->get();
+    ORowSetValueVector::Vector& rRow = **m_aCurrentRow;
     ORowSetNotifier aNotify(this,rRow);
     m_pCache->updateCharacterStream(columnIndex,x,length,rRow,aNotify.getChangedColumns());
     m_bModified = m_bModified || !aNotify.getChangedColumns().empty();
@@ -819,7 +811,7 @@ void SAL_CALL ORowSet::updateObject( sal_Int32 columnIndex, const Any& x )
 
     if (!::dbtools::implUpdateObject(this, columnIndex, aNewValue))
     {   // there is no other updateXXX call which can handle the value in x
-        ORowSetValueVector::Vector& rRow = (*m_aCurrentRow)->get();
+        ORowSetValueVector::Vector& rRow = **m_aCurrentRow;
         ORowSetNotifier aNotify(this,rRow);
         m_pCache->updateObject(columnIndex,aNewValue,rRow,aNotify.getChangedColumns());
         m_bModified = m_bModified || !aNotify.getChangedColumns().empty();
@@ -833,7 +825,7 @@ void SAL_CALL ORowSet::updateNumericObject( sal_Int32 columnIndex, const Any& x,
     ::osl::MutexGuard aGuard( *m_pMutex );
     checkUpdateConditions(columnIndex);
     checkUpdateIterator();
-    ORowSetValueVector::Vector& rRow = (*m_aCurrentRow)->get();
+    ORowSetValueVector::Vector& rRow = **m_aCurrentRow;
     ORowSetNotifier aNotify(this,rRow);
     m_pCache->updateNumericObject(columnIndex,x,rRow,aNotify.getChangedColumns());
     m_bModified = m_bModified || !aNotify.getChangedColumns().empty();
@@ -931,53 +923,53 @@ void SAL_CALL ORowSet::updateRow(  )
         throwFunctionSequenceException(*this);
 
 
-    if(m_bModified)
+    if(!m_bModified)
+        return;
+
+    ORowSetRow aOldValues;
+    if ( !m_aCurrentRow.isNull() )
+        aOldValues = new ORowSetValueVector( *(*m_aCurrentRow) );
+
+    Sequence<Any> aChangedBookmarks;
+    RowsChangeEvent aEvt(*this,RowChangeAction::UPDATE,1,aChangedBookmarks);
+    notifyAllListenersRowBeforeChange(aGuard,aEvt);
+
+    std::vector< Any > aBookmarks;
+    m_pCache->updateRow(m_aCurrentRow.operator ->(),aBookmarks);
+    if ( !aBookmarks.empty() )
+        aEvt.Bookmarks = comphelper::containerToSequence(aBookmarks);
+    aEvt.Rows += aBookmarks.size();
+    m_aBookmark     = m_pCache->getBookmark();
+    m_aCurrentRow   = m_pCache->m_aMatrixIter;
+    m_bIsInsertRow  = false;
+    if ( m_pCache->m_aMatrixIter != m_pCache->getEnd() && (*m_pCache->m_aMatrixIter).is() )
     {
-        ORowSetRow aOldValues;
-        if ( !m_aCurrentRow.isNull() )
-            aOldValues = new ORowSetValueVector( *(*m_aCurrentRow) );
-
-        Sequence<Any> aChangedBookmarks;
-        RowsChangeEvent aEvt(*this,RowChangeAction::UPDATE,1,aChangedBookmarks);
-        notifyAllListenersRowBeforeChange(aGuard,aEvt);
-
-        std::vector< Any > aBookmarks;
-        m_pCache->updateRow(m_aCurrentRow.operator ->(),aBookmarks);
-        if ( !aBookmarks.empty() )
-            aEvt.Bookmarks = comphelper::containerToSequence(aBookmarks);
-        aEvt.Rows += aBookmarks.size();
-        m_aBookmark     = m_pCache->getBookmark();
-        m_aCurrentRow   = m_pCache->m_aMatrixIter;
-        m_bIsInsertRow  = false;
-        if ( m_pCache->m_aMatrixIter != m_pCache->getEnd() && (*m_pCache->m_aMatrixIter).is() )
+        if ( m_pCache->isResultSetChanged() )
         {
-            if ( m_pCache->isResultSetChanged() )
-            {
-                impl_rebuild_throw(aGuard);
-            }
-            else
-            {
-                m_aOldRow->setRow(new ORowSetValueVector(*(*m_aCurrentRow)));
-
-                // notification order
-                // - column values
-                ORowSetBase::firePropertyChange(aOldValues);
-            }
-            // - rowChanged
-            notifyAllListenersRowChanged(aGuard,aEvt);
-
-            // - IsModified
-            if(!m_bModified)
-                fireProperty(PROPERTY_ID_ISMODIFIED,false,true);
-            OSL_ENSURE( !m_bModified, "ORowSet::updateRow: just updated, but _still_ modified?" );
-
-            // - RowCount/IsRowCountFinal
-            fireRowcount();
+            impl_rebuild_throw(aGuard);
         }
-        else if ( !m_bAfterLast ) // the update went wrong
+        else
         {
-            ::dbtools::throwSQLException( DBA_RES( RID_STR_UPDATE_FAILED ), StandardSQLState::INVALID_CURSOR_POSITION, *this );
+            m_aOldRow->setRow(new ORowSetValueVector(*(*m_aCurrentRow)));
+
+            // notification order
+            // - column values
+            ORowSetBase::firePropertyChange(aOldValues);
         }
+        // - rowChanged
+        notifyAllListenersRowChanged(aGuard,aEvt);
+
+        // - IsModified
+        if(!m_bModified)
+            fireProperty(PROPERTY_ID_ISMODIFIED,false,true);
+        OSL_ENSURE( !m_bModified, "ORowSet::updateRow: just updated, but _still_ modified?" );
+
+        // - RowCount/IsRowCountFinal
+        fireRowcount();
+    }
+    else if ( !m_bAfterLast ) // the update went wrong
+    {
+        ::dbtools::throwSQLException( DBA_RES( RID_STR_UPDATE_FAILED ), StandardSQLState::INVALID_CURSOR_POSITION, *this );
     }
 }
 
@@ -1164,55 +1156,55 @@ void SAL_CALL ORowSet::moveToInsertRow(  )
     if ( ( m_pCache->m_nPrivileges & Privilege::INSERT ) != Privilege::INSERT )
         ::dbtools::throwSQLException( DBA_RES( RID_STR_NO_INSERT_PRIVILEGE ), StandardSQLState::GENERAL_ERROR, *this );
 
-    if ( notifyAllListenersCursorBeforeMove( aGuard ) )
+    if ( !notifyAllListenersCursorBeforeMove( aGuard ) )
+        return;
+
+    // remember old value for fire
+    ORowSetRow aOldValues;
+    if ( rowDeleted() )
     {
-        // remember old value for fire
-        ORowSetRow aOldValues;
-        if ( rowDeleted() )
-        {
-            positionCache( MOVE_FORWARD );
-            m_pCache->next();
-            setCurrentRow( true, false, aOldValues, aGuard);
-        }
-        else
-            positionCache( MOVE_NONE );
-
-        // check before because the resultset could be empty
-        if  (   !m_bBeforeFirst
-            &&  !m_bAfterLast
-            &&  m_pCache->m_aMatrixIter != m_pCache->getEnd()
-            &&  m_pCache->m_aMatrixIter->is()
-            )
-            aOldValues = new ORowSetValueVector( *(*(m_pCache->m_aMatrixIter)) );
-
-        const bool bNewState = m_bNew;
-        const bool bModState = m_bModified;
-
-        m_pCache->moveToInsertRow();
-        m_aCurrentRow = m_pCache->m_aInsertRow;
-        m_bIsInsertRow  = true;
-
-        // set read-only flag to false
-        impl_setDataColumnsWriteable_throw();
-
-        // notification order
-        // - column values
-        ORowSetBase::firePropertyChange(aOldValues);
-
-        // - cursorMoved
-        notifyAllListenersCursorMoved(aGuard);
-
-        // - IsModified
-        if ( bModState != m_bModified )
-            fireProperty( PROPERTY_ID_ISMODIFIED, m_bModified, bModState );
-
-        // - IsNew
-        if ( bNewState != m_bNew )
-            fireProperty( PROPERTY_ID_ISNEW, m_bNew, bNewState );
-
-        // - RowCount/IsRowCountFinal
-        fireRowcount();
+        positionCache( MOVE_FORWARD );
+        m_pCache->next();
+        setCurrentRow( true, false, aOldValues, aGuard);
     }
+    else
+        positionCache( MOVE_NONE );
+
+    // check before because the resultset could be empty
+    if  (   !m_bBeforeFirst
+        &&  !m_bAfterLast
+        &&  m_pCache->m_aMatrixIter != m_pCache->getEnd()
+        &&  m_pCache->m_aMatrixIter->is()
+        )
+        aOldValues = new ORowSetValueVector( *(*(m_pCache->m_aMatrixIter)) );
+
+    const bool bNewState = m_bNew;
+    const bool bModState = m_bModified;
+
+    m_pCache->moveToInsertRow();
+    m_aCurrentRow = m_pCache->m_aInsertRow;
+    m_bIsInsertRow  = true;
+
+    // set read-only flag to false
+    impl_setDataColumnsWriteable_throw();
+
+    // notification order
+    // - column values
+    ORowSetBase::firePropertyChange(aOldValues);
+
+    // - cursorMoved
+    notifyAllListenersCursorMoved(aGuard);
+
+    // - IsModified
+    if ( bModState != m_bModified )
+        fireProperty( PROPERTY_ID_ISMODIFIED, m_bModified, bModState );
+
+    // - IsNew
+    if ( bNewState != m_bNew )
+        fireProperty( PROPERTY_ID_ISNEW, m_bNew, bNewState );
+
+    // - RowCount/IsRowCountFinal
+    fireRowcount();
 }
 
 void ORowSet::impl_setDataColumnsWriteable_throw()
@@ -1262,20 +1254,20 @@ void SAL_CALL ORowSet::moveToCurrentRow(  )
         // check "if ( !m_pCache->m_bNew && !m_bModified )"
         ::dbtools::throwSQLException( DBA_RES( RID_STR_ROW_ALREADY_DELETED ), StandardSQLState::FUNCTION_SEQUENCE_ERROR, *this );
 
-    if ( notifyAllListenersCursorBeforeMove( aGuard ) )
-    {
-        positionCache( MOVE_NONE_REFRESH );
+    if ( !notifyAllListenersCursorBeforeMove( aGuard ) )
+        return;
 
-        ORowSetNotifier aNotifier( this );
+    positionCache( MOVE_NONE_REFRESH );
 
-        // notification order
-        // - cursorMoved
-        notifyAllListenersCursorMoved(aGuard);
+    ORowSetNotifier aNotifier( this );
 
-        // - IsModified
-        // - IsNew
-        aNotifier.fire();
-    }
+    // notification order
+    // - cursorMoved
+    notifyAllListenersCursorMoved(aGuard);
+
+    // - IsModified
+    // - IsNew
+    aNotifier.fire();
 }
 
 // XRow
@@ -1284,7 +1276,7 @@ sal_Bool SAL_CALL ORowSet::wasNull(  )
     ::osl::MutexGuard aGuard( *m_pMutex );
     checkCache();
 
-    return ( m_pCache && isInsertRow() ) ? ((*m_pCache->m_aInsertRow)->get())[m_nLastColumnIndex].isNull() : ORowSetBase::wasNull();
+    return ( m_pCache && isInsertRow() ) ? (**m_pCache->m_aInsertRow)[m_nLastColumnIndex].isNull() : ORowSetBase::wasNull();
 }
 
 const ORowSetValue& ORowSet::getInsertValue(sal_Int32 columnIndex)
@@ -1292,8 +1284,10 @@ const ORowSetValue& ORowSet::getInsertValue(sal_Int32 columnIndex)
     checkCache();
 
     if ( m_pCache && isInsertRow() )
-        return  ((*m_pCache->m_aInsertRow)->get())[m_nLastColumnIndex = columnIndex];
-
+    {
+        m_nLastColumnIndex = columnIndex;
+        return  (**m_pCache->m_aInsertRow)[m_nLastColumnIndex];
+    }
     return getValue(columnIndex);
 }
 
@@ -1376,7 +1370,8 @@ Reference< css::io::XInputStream > SAL_CALL ORowSet::getBinaryStream( sal_Int32 
     if ( m_pCache && isInsertRow() )
     {
         checkCache();
-        return new ::comphelper::SequenceInputStream(((*m_pCache->m_aInsertRow)->get())[m_nLastColumnIndex = columnIndex].getSequence());
+        m_nLastColumnIndex = columnIndex;
+        return new ::comphelper::SequenceInputStream((**m_pCache->m_aInsertRow)[m_nLastColumnIndex].getSequence());
     }
 
     return ORowSetBase::getBinaryStream(columnIndex);
@@ -1388,7 +1383,8 @@ Reference< css::io::XInputStream > SAL_CALL ORowSet::getCharacterStream( sal_Int
     if(m_pCache && isInsertRow() )
     {
         checkCache();
-        return new ::comphelper::SequenceInputStream(((*m_pCache->m_aInsertRow)->get())[m_nLastColumnIndex = columnIndex].getSequence());
+        m_nLastColumnIndex = columnIndex;
+        return new ::comphelper::SequenceInputStream((**m_pCache->m_aInsertRow)[m_nLastColumnIndex].getSequence());
     }
 
     return ORowSetBase::getCharacterStream(columnIndex);
@@ -1410,7 +1406,8 @@ Reference< XBlob > SAL_CALL ORowSet::getBlob( sal_Int32 columnIndex )
     if ( m_pCache && isInsertRow() )
     {
         checkCache();
-        return new ::connectivity::BlobHelper(((*m_pCache->m_aInsertRow)->get())[m_nLastColumnIndex = columnIndex].getSequence());
+        m_nLastColumnIndex = columnIndex;
+        return new ::connectivity::BlobHelper((**m_pCache->m_aInsertRow)[m_nLastColumnIndex].getSequence());
     }
     return ORowSetBase::getBlob(columnIndex);
 }
@@ -1491,7 +1488,7 @@ Reference< XIndexAccess > SAL_CALL ORowSet::getParameters(  )
         // complete command, and thus the parameters, changed
         impl_disposeParametersContainer_nothrow();
 
-    if ( !m_pParameters.get() && !m_aCommand.isEmpty() )
+    if ( !m_pParameters && !m_aCommand.isEmpty() )
     {
         try
         {
@@ -1673,14 +1670,14 @@ Reference< XResultSet > ORowSet::impl_prepareAndExecute_throw()
 {
     impl_ensureStatement_throw();
 
-    m_aParameterValueForCache->get().resize(1);
+    m_aParameterValueForCache->resize(1);
     Reference< XParameters > xParam( m_xStatement, UNO_QUERY_THROW );
-    size_t nParamCount( m_pParameters.is() ? m_pParameters->size() : m_aPrematureParamValues->get().size() );
+    size_t nParamCount( m_pParameters.is() ? m_pParameters->size() : m_aPrematureParamValues->size() );
     for ( size_t i=1; i<=nParamCount; ++i )
     {
         ORowSetValue& rParamValue( getParameterStorage( static_cast<sal_Int32>(i) ) );
         ::dbtools::setObjectWithInfo( xParam, i, rParamValue.makeAny(), rParamValue.getTypeKind() );
-        m_aParameterValueForCache->get().push_back(rParamValue);
+        m_aParameterValueForCache->push_back(rParamValue);
     }
     m_bParametersDirty = false;
 
@@ -1839,7 +1836,7 @@ void ORowSet::execute_NoApprove_NoNewConn(ResettableMutexGuard& _rClearForNotifi
                 {
                     sal_Int32 nCount = xMetaData->getColumnCount();
                     m_aDataColumns.reserve(nCount+1);
-                    aColumns->get().reserve(nCount+1);
+                    aColumns->reserve(nCount+1);
                     std::map< OUString, int > aColumnMap;
                     for (sal_Int32 i = 0 ; i < nCount; ++i)
                     {
@@ -1867,7 +1864,7 @@ void ORowSet::execute_NoApprove_NoNewConn(ResettableMutexGuard& _rClearForNotifi
                                 return this->getInsertValue(column);
                             });
                         aColumnMap.insert(std::make_pair(sName,0));
-                        aColumns->get().emplace_back(pColumn);
+                        aColumns->emplace_back(pColumn);
                         pColumn->setName(sName);
                         aNames.push_back(sName);
                         m_aDataColumns.push_back(pColumn);
@@ -1903,7 +1900,7 @@ void ORowSet::execute_NoApprove_NoNewConn(ResettableMutexGuard& _rClearForNotifi
             Reference< XResultSetMetaData > xMeta( getMetaData(), UNO_SET_THROW );
             sal_Int32 nCount = xMeta->getColumnCount();
             m_aDataColumns.reserve(nCount+1);
-            aColumns->get().reserve(nCount+1);
+            aColumns->reserve(nCount+1);
             std::set< Reference< XPropertySet > > aAllColumns;
 
             for(sal_Int32 i=1; i <= nCount ;++i)
@@ -1970,7 +1967,7 @@ void ORowSet::execute_NoApprove_NoNewConn(ResettableMutexGuard& _rClearForNotifi
                         [this] (sal_Int32 const column) -> ORowSetValue const& {
                             return this->getInsertValue(column);
                         });
-                    aColumns->get().emplace_back(pColumn);
+                    aColumns->emplace_back(pColumn);
 
                     pColumn->setFastPropertyValue_NoBroadcast(PROPERTY_ID_ISREADONLY,makeAny(rKeyColumns.find(i) != rKeyColumns.end()));
 
@@ -2409,10 +2406,10 @@ void ORowSet::impl_initParametersContainer_nothrow()
 
     m_pParameters = new param::ParameterWrapperContainer( m_xComposer.get() );
     // copy the premature parameters into the final ones
-    size_t nParamCount( std::min( m_pParameters->size(), m_aPrematureParamValues->get().size() ) );
+    size_t nParamCount( std::min( m_pParameters->size(), m_aPrematureParamValues->size() ) );
     for ( size_t i=0; i<nParamCount; ++i )
     {
-        (*m_pParameters)[i] = m_aPrematureParamValues->get()[i];
+        (*m_pParameters)[i] = (*m_aPrematureParamValues)[i];
     }
 }
 
@@ -2423,10 +2420,10 @@ void ORowSet::impl_disposeParametersContainer_nothrow()
 
     // copy the actual values to our "premature" ones, to preserve them for later use
     size_t nParamCount( m_pParameters->size() );
-    m_aPrematureParamValues->get().resize( nParamCount );
+    m_aPrematureParamValues->resize( nParamCount );
     for ( size_t i=0; i<nParamCount; ++i )
     {
-        m_aPrematureParamValues->get()[i] = (*m_pParameters)[i];
+        (*m_aPrematureParamValues)[i] = (*m_pParameters)[i];
     }
 
     m_pParameters->dispose();
@@ -2457,9 +2454,9 @@ ORowSetValue& ORowSet::getParameterStorage(sal_Int32 parameterIndex)
         }
     }
 
-    if ( m_aPrematureParamValues->get().size() < o3tl::make_unsigned(parameterIndex) )
-        m_aPrematureParamValues->get().resize( parameterIndex );
-    return m_aPrematureParamValues->get()[ parameterIndex - 1 ];
+    if ( m_aPrematureParamValues->size() < o3tl::make_unsigned(parameterIndex) )
+        m_aPrematureParamValues->resize( parameterIndex );
+    return (*m_aPrematureParamValues)[ parameterIndex - 1 ];
 }
 
 // XParameters
@@ -2631,7 +2628,7 @@ void SAL_CALL ORowSet::clearParameters(  )
 
     ::osl::MutexGuard aGuard( m_aColumnsMutex );
 
-    size_t nParamCount( m_pParameters.is() ? m_pParameters->size() : m_aPrematureParamValues->get().size() );
+    size_t nParamCount( m_pParameters.is() ? m_pParameters->size() : m_aPrematureParamValues->size() );
     for ( size_t i=1; i<=nParamCount; ++i )
         getParameterStorage( static_cast<sal_Int32>(i) ).setNull();
     m_aParametersSet.clear();
@@ -2701,7 +2698,7 @@ void ORowSet::checkUpdateConditions(sal_Int32 columnIndex)
     if ( m_aCurrentRow.isNull() )
         ::dbtools::throwSQLException( DBA_RES( RID_STR_INVALID_CURSOR_STATE ), StandardSQLState::INVALID_CURSOR_STATE, *this );
 
-    if ( columnIndex <= 0 || sal_Int32((*m_aCurrentRow)->get().size()) <= columnIndex )
+    if ( columnIndex <= 0 || sal_Int32((*m_aCurrentRow)->size()) <= columnIndex )
         ::dbtools::throwSQLException( DBA_RES( RID_STR_INVALID_INDEX ), StandardSQLState::INVALID_DESCRIPTOR_INDEX, *this );
 }
 
@@ -2768,7 +2765,7 @@ ORowSetClone::ORowSetClone( const Reference<XComponentContext>& _rContext, ORowS
         Sequence< OUString> aSeq = rParent.m_pColumns->getElementNames();
         const OUString* pIter    = aSeq.getConstArray();
         const OUString* pEnd     = pIter + aSeq.getLength();
-        aColumns->get().reserve(aSeq.getLength()+1);
+        aColumns->reserve(aSeq.getLength()+1);
         for(sal_Int32 i=1;pIter != pEnd ;++pIter,++i)
         {
             Reference<XPropertySet> xColumn;
@@ -2787,7 +2784,7 @@ ORowSetClone::ORowSetClone( const Reference<XComponentContext>& _rContext, ORowS
                 [this] (sal_Int32 const column) -> ORowSetValue const& {
                     return this->getValue(column);
                 });
-            aColumns->get().emplace_back(pColumn);
+            aColumns->emplace_back(pColumn);
             pColumn->setName(*pIter);
             aNames.push_back(*pIter);
             m_aDataColumns.push_back(pColumn);

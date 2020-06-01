@@ -58,6 +58,7 @@ ChartItemPool::ChartItemPool():
     //legend
     rPoolDefaults[SCHATTR_LEGEND_POS               - SCHATTR_START] = new SfxInt32Item(SCHATTR_LEGEND_POS, sal_Int32(css::chart2::LegendPosition_LINE_END) );
     rPoolDefaults[SCHATTR_LEGEND_SHOW              - SCHATTR_START] = new SfxBoolItem(SCHATTR_LEGEND_SHOW, true);
+    rPoolDefaults[SCHATTR_LEGEND_NO_OVERLAY        - SCHATTR_START] = new SfxBoolItem(SCHATTR_LEGEND_NO_OVERLAY, true);
 
     //text
     rPoolDefaults[SCHATTR_TEXT_DEGREES             - SCHATTR_START] = new SfxInt32Item(SCHATTR_TEXT_DEGREES, 0);
@@ -115,6 +116,7 @@ ChartItemPool::ChartItemPool():
     rPoolDefaults[SCHATTR_AXIS_POSITION        - SCHATTR_START] = new SfxInt32Item(SCHATTR_AXIS_POSITION,0);
     rPoolDefaults[SCHATTR_AXIS_POSITION_VALUE  - SCHATTR_START] = new SvxDoubleItem(0.0, SCHATTR_AXIS_POSITION_VALUE);
     rPoolDefaults[SCHATTR_AXIS_CROSSING_MAIN_AXIS_NUMBERFORMAT - SCHATTR_START] = new SfxUInt32Item(SCHATTR_AXIS_CROSSING_MAIN_AXIS_NUMBERFORMAT,0);
+    rPoolDefaults[SCHATTR_AXIS_SHIFTED_CATEGORY_POSITION - SCHATTR_START] = new SfxBoolItem(SCHATTR_AXIS_SHIFTED_CATEGORY_POSITION,false);
     rPoolDefaults[SCHATTR_AXIS_LABEL_POSITION  - SCHATTR_START] = new SfxInt32Item(SCHATTR_AXIS_LABEL_POSITION,0);
     rPoolDefaults[SCHATTR_AXIS_MARK_POSITION   - SCHATTR_START] = new SfxInt32Item(SCHATTR_AXIS_MARK_POSITION,0);
 
@@ -128,6 +130,7 @@ ChartItemPool::ChartItemPool():
     rPoolDefaults[SCHATTR_STOCK_VOLUME         - SCHATTR_START] = new SfxBoolItem(SCHATTR_STOCK_VOLUME,false);
     rPoolDefaults[SCHATTR_STOCK_UPDOWN         - SCHATTR_START] = new SfxBoolItem(SCHATTR_STOCK_UPDOWN,false);
     rPoolDefaults[SCHATTR_SYMBOL_SIZE          - SCHATTR_START] = new SvxSizeItem(SCHATTR_SYMBOL_SIZE,Size(0,0));
+    rPoolDefaults[SCHATTR_HIDE_DATA_POINT_LEGEND_ENTRY - SCHATTR_START] = new SfxBoolItem(SCHATTR_HIDE_DATA_POINT_LEGEND_ENTRY, false);
 
     // new for New Chart
     rPoolDefaults[SCHATTR_BAR_OVERLAP          - SCHATTR_START] = new SfxInt32Item(SCHATTR_BAR_OVERLAP,0);

@@ -39,7 +39,7 @@ enum GenericUnixSalDataType
 class VCL_DLLPUBLIC GenericUnixSalData : public SalData
 {
 private:
-    GenericUnixSalDataType const m_eType;
+    GenericUnixSalDataType m_eType;
     SalGenericDisplay* m_pDisplay;
     // cached hostname to avoid slow lookup
     OUString m_aHostname;
@@ -83,7 +83,7 @@ public:
         if (!m_pPrintFontManager)
             InitPrintFontManager();
         // PrintFontManager needs the FreetypeManager
-        assert(m_pFreetypeManager.get());
+        assert(m_pFreetypeManager);
         return m_pPrintFontManager.get();
     }
 

@@ -47,6 +47,7 @@ static char const namespaceOpenOfficeOrg[] =
     "http://openoffice.org/extensions/description/2006";
 
 static char const minimalVersionLibreOffice[] = "LibreOffice-minimal-version";
+static char const maximalVersionLibreOffice[] = "LibreOffice-maximal-version";
 
 static char const minimalVersionOpenOfficeOrg[] =
     "OpenOffice.org-minimal-version";
@@ -59,10 +60,15 @@ OUString getLibreOfficeMajorMinorMicro() {
 }
 
 OUString getReferenceOpenOfficeOrgMajorMinor() {
+#ifdef ANDROID
+    // just hardcode the version
+    OUString v("4.1");
+#else
     OUString v(
             "${$BRAND_BASE_DIR/" LIBO_ETC_FOLDER "/" SAL_CONFIGFILE("version")
             ":Version:ReferenceOOoMajorMinor}");
     rtl::Bootstrap::expandMacros(v); //TODO: check for failure
+#endif
     return v;
 }
 
@@ -129,6 +135,9 @@ check(dp_misc::DescriptionInfoset const & infoset) {
             sat = satisfiesMinimalVersion(
                 getLibreOfficeMajorMinorMicro(),
                 e->getAttribute("value"));
+        } else if (e->getNamespaceURI() == namespaceLibreOffice && e->getTagName() == maximalVersionLibreOffice )
+        {
+            sat = satisfiesMaximalVersion(getLibreOfficeMajorMinorMicro(), e->getAttribute("value"));
         } else if (e->hasAttributeNS(namespaceOpenOfficeOrg,
                        minimalVersionOpenOfficeOrg))
         {
@@ -163,6 +172,11 @@ OUString getErrorText(
     {
         return produceErrorText(
                 DpResId(RID_DEPLOYMENT_DEPENDENCIES_LO_MIN),
+            dependency->getAttribute("value"));
+    } else if (dependency->getNamespaceURI() == namespaceLibreOffice && dependency->getTagName() == maximalVersionLibreOffice )
+    {
+        return produceErrorText(
+                DpResId(RID_DEPLOYMENT_DEPENDENCIES_LO_MAX),
             dependency->getAttribute("value"));
     } else if (dependency->hasAttributeNS(namespaceOpenOfficeOrg,
                    minimalVersionOpenOfficeOrg))

@@ -869,7 +869,7 @@ double EnhancedCustomShape2d::GetEquationValueAsDouble( const sal_Int32 nIndex )
     static sal_uInt32 nLevel = 0;
     if ( nIndex < static_cast<sal_Int32>(vNodesSharedPtr.size()) )
     {
-        if ( vNodesSharedPtr[ nIndex ].get() ) {
+        if ( vNodesSharedPtr[ nIndex ] ) {
             nLevel ++;
             try
             {
@@ -886,7 +886,7 @@ double EnhancedCustomShape2d::GetEquationValueAsDouble( const sal_Int32 nIndex )
                     SAL_INFO("svx", "equation " << nLevel << " (level: " << seqEquations[nIndex] << "): "
                              << fNumber << " --> " << 180.0*fNumber/10800000.0);
                 }
-                if ( !rtl::math::isFinite( fNumber ) )
+                if ( !std::isfinite( fNumber ) )
                     fNumber = 0.0;
             }
             catch ( ... )
@@ -2340,7 +2340,7 @@ void EnhancedCustomShape2d::CreateSubPath(
                     sal_uInt32 nXor = bClockwise ? 3 : 2;
                     for ( sal_uInt16 i = 0; ( i < nPntCount ) && ( ( rSrcPt + 3 ) < nCoordSize ); i++ )
                     {
-                        tools::Rectangle aRect( GetPoint( seqCoordinates[ rSrcPt ], true, true ), GetPoint( seqCoordinates[ rSrcPt + 1 ], true, true ) );
+                        tools::Rectangle aRect = tools::Rectangle::Justify( GetPoint( seqCoordinates[ rSrcPt ], true, true ), GetPoint( seqCoordinates[ rSrcPt + 1 ], true, true ) );
                         if ( aRect.GetWidth() && aRect.GetHeight() )
                         {
                             Point aStart( GetPoint( seqCoordinates[ static_cast<sal_uInt16>( rSrcPt + nXor ) ], true, true ) );

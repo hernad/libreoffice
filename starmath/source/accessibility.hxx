@@ -20,6 +20,7 @@
 #ifndef INCLUDED_STARMATH_SOURCE_ACCESSIBILITY_HXX
 #define INCLUDED_STARMATH_SOURCE_ACCESSIBILITY_HXX
 
+#include <com/sun/star/accessibility/AccessibleScrollType.hpp>
 #include <com/sun/star/accessibility/XAccessible.hpp>
 #include <com/sun/star/accessibility/XAccessibleComponent.hpp>
 #include <com/sun/star/accessibility/XAccessibleContext.hpp>
@@ -58,7 +59,7 @@ SmGraphicAccessibleBaseClass;
 class SmGraphicAccessible final :
     public SmGraphicAccessibleBaseClass
 {
-    OUString const                      aAccName;
+    OUString                            aAccName;
     /// client id in the AccessibleEventNotifier queue
     sal_uInt32                          nClientId;
 
@@ -128,6 +129,7 @@ public:
     virtual css::accessibility::TextSegment SAL_CALL getTextBeforeIndex( sal_Int32 nIndex, sal_Int16 aTextType ) override;
     virtual css::accessibility::TextSegment SAL_CALL getTextBehindIndex( sal_Int32 nIndex, sal_Int16 aTextType ) override;
     virtual sal_Bool SAL_CALL copyText( sal_Int32 nStartIndex, sal_Int32 nEndIndex ) override;
+    virtual sal_Bool SAL_CALL scrollSubstringTo( sal_Int32 nStartIndex, sal_Int32 nEndIndex, css::accessibility::AccessibleScrollType aScrollType) override;
 
     // XServiceInfo
     virtual OUString SAL_CALL getImplementationName(  ) override;
@@ -197,7 +199,7 @@ public:
 
     virtual SfxItemPool* GetPool() const override;
 
-    virtual OUString        CalcFieldValue( const SvxFieldItem& rField, sal_Int32 nPara, sal_Int32 nPos, o3tl::optional<Color>& rpTxtColor, o3tl::optional<Color>& rpFldColor ) override;
+    virtual OUString        CalcFieldValue( const SvxFieldItem& rField, sal_Int32 nPara, sal_Int32 nPos, std::optional<Color>& rpTxtColor, std::optional<Color>& rpFldColor ) override;
     virtual void            FieldClicked(const SvxFieldItem&) override;
     virtual bool            IsValid() const override;
 
@@ -297,7 +299,7 @@ SmEditAccessibleBaseClass;
 class SmEditAccessible :
     public SmEditAccessibleBaseClass
 {
-    OUString const                          aAccName;
+    OUString                                aAccName;
     std::unique_ptr<::accessibility::AccessibleTextHelper> pTextHelper;
     VclPtr<SmEditWindow>                    pWin;
 

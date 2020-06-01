@@ -21,6 +21,7 @@
 
 #include <xmloff/xmlictxt.hxx>
 #include <com/sun/star/beans/XPropertySet.hpp>
+#include <rtl/ustrbuf.hxx>
 
 namespace rptxml
 {
@@ -28,6 +29,8 @@ namespace rptxml
     class OXMLCondPrtExpr : public SvXMLImportContext
     {
         css::uno::Reference< css::beans::XPropertySet >   m_xComponent;
+        OUStringBuffer m_aCharBuffer;
+
         OXMLCondPrtExpr(const OXMLCondPrtExpr&) = delete;
         void operator =(const OXMLCondPrtExpr&) = delete;
     public:
@@ -37,9 +40,11 @@ namespace rptxml
                     ,const css::uno::Reference< css::beans::XPropertySet >& _xComponent);
         virtual ~OXMLCondPrtExpr() override;
 
-        // This method is called for all characters that are contained in the
-        // current element. The default is to ignore them.
+        virtual void SAL_CALL startFastElement(
+                sal_Int32 /*nElement*/,
+                const css::uno::Reference< css::xml::sax::XFastAttributeList >& /*xAttrList*/ ) override {}
         virtual void SAL_CALL characters( const OUString& rChars ) override;
+        virtual void SAL_CALL endFastElement( sal_Int32 nElement ) override;
     };
 
 } // namespace rptxml

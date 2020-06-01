@@ -9,13 +9,13 @@
 
 #include <swmodeltestbase.hxx>
 
-#include <vcl/gdimtf.hxx>
 #include <comphelper/classids.hxx>
 #include <tools/globname.hxx>
 #include <svtools/embedhlp.hxx>
 
 #include <wrtsh.hxx>
 #include <fmtanchr.hxx>
+#include <frameformats.hxx>
 
 static char const DATA_DIRECTORY[] = "/sw/qa/core/doc/data/";
 

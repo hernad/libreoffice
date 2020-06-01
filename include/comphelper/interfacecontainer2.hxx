@@ -28,7 +28,7 @@
 #include <com/sun/star/lang/DisposedException.hpp>
 #include <comphelper/comphelperdllapi.h>
 
-namespace com { namespace sun { namespace star { namespace uno { class XInterface; } } } }
+namespace com::sun::star::uno { class XInterface; }
 namespace osl { class Mutex; }
 
 /** */ //for docpp
@@ -100,9 +100,9 @@ public:
 
 private:
     OInterfaceContainerHelper2 & rCont;
-    bool const                   bIsList;
     detail::element_alias2       aData;
     sal_Int32                    nRemain;
+    bool                         bIsList;
 
     OInterfaceIteratorHelper2( const OInterfaceIteratorHelper2 & ) = delete;
     OInterfaceIteratorHelper2 &  operator = ( const OInterfaceIteratorHelper2 & ) = delete;

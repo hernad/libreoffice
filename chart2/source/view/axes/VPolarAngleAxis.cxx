@@ -25,6 +25,7 @@
 #include <NumberFormatterWrapper.hxx>
 #include <PolarLabelPositionHelper.hxx>
 #include <PlottingPositionHelper.hxx>
+#include <com/sun/star/chart2/XAxis.hpp>
 #include <tools/color.hxx>
 
 #include <memory>
@@ -160,29 +161,26 @@ void VPolarAngleAxis::createLabels()
 
     double fLogicRadius = m_pPosHelper->getOuterLogicRadius();
 
-    if( m_aAxisProperties.m_bDisplayLabels )
-    {
-        //get the transformed screen values for all tickmarks in aAllTickInfos
-        std::unique_ptr< TickFactory > apTickFactory( createTickFactory() );
+    if( !m_aAxisProperties.m_bDisplayLabels )
+        return;
 
-        //create tick mark text shapes
-        //@todo: iterate through all tick depth which should be labeled
+    //create tick mark text shapes
+    //@todo: iterate through all tick depth which should be labeled
 
-        EquidistantTickIter aTickIter( m_aAllTickInfos, m_aIncrement, 0 );
-        updateUnscaledValuesAtTicks( aTickIter );
+    EquidistantTickIter aTickIter( m_aAllTickInfos, m_aIncrement, 0 );
+    updateUnscaledValuesAtTicks( aTickIter );
 
-        removeTextShapesFromTicks();
+    removeTextShapesFromTicks();
 
-        AxisLabelProperties aAxisLabelProperties( m_aAxisLabelProperties );
-        aAxisLabelProperties.bOverlapAllowed = true;
-        double const fLogicZ = 1.0;//as defined
-        createTextShapes_ForAngleAxis( m_xTextTarget, aTickIter
-                        , aAxisLabelProperties
-                        , fLogicRadius, fLogicZ
-                        );
+    AxisLabelProperties aAxisLabelProperties( m_aAxisLabelProperties );
+    aAxisLabelProperties.bOverlapAllowed = true;
+    double const fLogicZ = 1.0;//as defined
+    createTextShapes_ForAngleAxis( m_xTextTarget, aTickIter
+                    , aAxisLabelProperties
+                    , fLogicRadius, fLogicZ
+                    );
 
-        //no staggering for polar angle axis
-    }
+    //no staggering for polar angle axis
 }
 
 void VPolarAngleAxis::createShapes()

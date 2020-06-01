@@ -69,6 +69,7 @@
 #include <comphelper/string.hxx>
 #include <comphelper/types.hxx>
 #include <sal/macros.h>
+#include <rtl/math.hxx>
 #include <tools/diagnose_ex.h>
 #include <svl/zforlist.hxx>
 #include <vcl/svapp.hxx>
@@ -115,7 +116,7 @@ class DBConnector : public ScDPCache::DBConnector
     uno::Reference<sdbc::XRowSet> mxRowSet;
     uno::Reference<sdbc::XRow> mxRow;
     uno::Reference<sdbc::XResultSetMetaData> mxMetaData;
-    Date const maNullDate;
+    Date maNullDate;
 
 public:
     DBConnector(ScDPCache& rCache, const uno::Reference<sdbc::XRowSet>& xRowSet, const Date& rNullDate);
@@ -307,7 +308,6 @@ bool ScDPServiceDesc::operator== ( const ScDPServiceDesc& rOther ) const
 
 ScDPObject::ScDPObject( ScDocument* pD ) :
     pDoc( pD ),
-    mpTableData(static_cast<ScDPTableData*>(nullptr)),
     nHeaderRows( 0 ),
     mbHeaderLayout(false),
     bAllowMove(false),
@@ -321,7 +321,6 @@ ScDPObject::ScDPObject(const ScDPObject& r) :
     aTableName( r.aTableName ),
     aTableTag( r.aTableTag ),
     aOutRange( r.aOutRange ),
-    mpTableData(static_cast<ScDPTableData*>(nullptr)),
     maInteropGrabBag(r.maInteropGrabBag),
     nHeaderRows( r.nHeaderRows ),
     mbHeaderLayout( r.mbHeaderLayout ),
@@ -559,7 +558,7 @@ namespace {
 class DisableGetPivotData
 {
     ScDPObject& mrDPObj;
-    bool const mbOldState;
+    bool mbOldState;
 public:
     DisableGetPivotData(ScDPObject& rObj, bool bOld) : mrDPObj(rObj), mbOldState(bOld)
     {
@@ -574,7 +573,7 @@ public:
 
 class FindIntersectingTable
 {
-    ScRange const maRange;
+    ScRange maRange;
 public:
     explicit FindIntersectingTable(const ScRange& rRange) : maRange(rRange) {}
 
@@ -586,10 +585,10 @@ public:
 
 class FindIntersectingTableByColumns
 {
-    SCCOL const mnCol1;
-    SCCOL const mnCol2;
-    SCROW const mnRow;
-    SCTAB const mnTab;
+    SCCOL mnCol1;
+    SCCOL mnCol2;
+    SCROW mnRow;
+    SCTAB mnTab;
 public:
     FindIntersectingTableByColumns(SCCOL nCol1, SCCOL nCol2, SCROW nRow, SCTAB nTab) :
         mnCol1(nCol1), mnCol2(nCol2), mnRow(nRow), mnTab(nTab) {}
@@ -620,10 +619,10 @@ public:
 
 class FindIntersectingTableByRows
 {
-    SCCOL const mnCol;
-    SCROW const mnRow1;
-    SCROW const mnRow2;
-    SCTAB const mnTab;
+    SCCOL mnCol;
+    SCROW mnRow1;
+    SCROW mnRow2;
+    SCTAB mnTab;
 public:
     FindIntersectingTableByRows(SCCOL nCol, SCROW nRow1, SCROW nRow2, SCTAB nTab) :
         mnCol(nCol), mnRow1(nRow1), mnRow2(nRow2), mnTab(nTab) {}
@@ -655,7 +654,7 @@ public:
 class AccumulateOutputRanges
 {
     ScRangeList maRanges;
-    SCTAB const mnTab;
+    SCTAB mnTab;
 public:
     explicit AccumulateOutputRanges(SCTAB nTab) : mnTab(nTab) {}
     AccumulateOutputRanges(const AccumulateOutputRanges& r) : maRanges(r.maRanges), mnTab(r.mnTab) {}
@@ -1309,24 +1308,24 @@ namespace {
 
 class FindByName
 {
-    OUString const maName; // must be all uppercase.
+    OUString maName; // must be all uppercase.
 public:
     explicit FindByName(const OUString& rName) : maName(rName) {}
     bool operator() (const ScDPSaveDimension* pDim) const
     {
         // Layout name takes precedence.
-        const o3tl::optional<OUString> & pLayoutName = pDim->GetLayoutName();
-        if (pLayoutName && ScGlobal::pCharClass->uppercase(*pLayoutName) == maName)
+        const std::optional<OUString> & pLayoutName = pDim->GetLayoutName();
+        if (pLayoutName && ScGlobal::getCharClassPtr()->uppercase(*pLayoutName) == maName)
             return true;
 
         ScGeneralFunction eGenFunc = pDim->GetFunction();
         ScSubTotalFunc eFunc = ScDPUtil::toSubTotalFunc(eGenFunc);
         OUString aSrcName = ScDPUtil::getSourceDimensionName(pDim->GetName());
         OUString aFuncName = ScDPUtil::getDisplayedMeasureName(aSrcName, eFunc);
-        if (maName == ScGlobal::pCharClass->uppercase(aFuncName))
+        if (maName == ScGlobal::getCharClassPtr()->uppercase(aFuncName))
             return true;
 
-        return maName == ScGlobal::pCharClass->uppercase(aSrcName);
+        return maName == ScGlobal::getCharClassPtr()->uppercase(aSrcName);
     }
 };
 
@@ -1371,7 +1370,7 @@ double ScDPObject::GetPivotData(const OUString& rDataFieldName, std::vector<shee
 
     std::vector<const ScDPSaveDimension*>::iterator it = std::find_if(
         aDataDims.begin(), aDataDims.end(),
-        FindByName(ScGlobal::pCharClass->uppercase(rDataFieldName)));
+        FindByName(ScGlobal::getCharClassPtr()->uppercase(rDataFieldName)));
 
     if (it == aDataDims.end())
         return fRet;
@@ -1492,7 +1491,7 @@ bool dequote( const OUString& rSource, sal_Int32 nStartPos, sal_Int32& rEndPos, 
 struct ScGetPivotDataFunctionEntry
 {
     const char*       pName;
-    sal_Int16 const   eFunc;
+    sal_Int16         eFunc;
 };
 
 bool parseFunction( const OUString& rList, sal_Int32 nStartPos, sal_Int32& rEndPos, sal_Int16& rFunc )
@@ -2137,8 +2136,8 @@ namespace {
 
 class FindByColumn
 {
-    SCCOL const mnCol;
-    PivotFunc const mnMask;
+    SCCOL mnCol;
+    PivotFunc mnMask;
 public:
     FindByColumn(SCCOL nCol, PivotFunc nMask) : mnCol(nCol), mnMask(nMask) {}
     bool operator() (const ScPivotField& r) const
@@ -2591,7 +2590,7 @@ bool hasFieldColumn(const vector<ScPivotField>* pRefFields, SCCOL nCol)
 
 class FindByOriginalDim
 {
-    long const mnDim;
+    long mnDim;
 public:
     explicit FindByOriginalDim(long nDim) : mnDim(nDim) {}
     bool operator() (const ScPivotField& r) const
@@ -3357,7 +3356,7 @@ namespace {
  */
 class MatchByTable
 {
-    SCTAB const mnTab;
+    SCTAB mnTab;
 public:
     explicit MatchByTable(SCTAB nTab) : mnTab(nTab) {}
 

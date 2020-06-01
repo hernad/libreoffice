@@ -19,7 +19,6 @@
 
 #include <oox/core/filterdetect.hxx>
 
-#include <com/sun/star/io/TempFile.hpp>
 #include <com/sun/star/io/XStream.hpp>
 #include <comphelper/docpasswordhelper.hxx>
 #include <unotools/mediadescriptor.hxx>
@@ -55,6 +54,7 @@ using comphelper::DocPasswordVerifierResult;
 FilterDetectDocHandler::FilterDetectDocHandler( const  Reference< XComponentContext >& rxContext, OUString& rFilterName, const OUString& rFileName ) :
     mrFilterName( rFilterName ),
     maFileName(rFileName),
+    maOOXMLVariant( OOXMLVariant::ECMA_Transitional ),
     mxContext( rxContext )
 {
     maContextStack.reserve( 2 );
@@ -143,25 +143,34 @@ void SAL_CALL FilterDetectDocHandler::characters( const OUString& /*aChars*/ )
 void FilterDetectDocHandler::parseRelationship( const AttributeList& rAttribs )
 {
     OUString aType = rAttribs.getString( XML_Type, OUString() );
-    if ( aType == "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" // OOXML Transitional
-            || aType == "http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument" ) //OOXML strict
+
+    // tdf#131936 Remember filter when opening file as 'Office Open XML Text'
+    if (aType.startsWithIgnoreAsciiCase("http://schemas.openxmlformats.org/officedocument/2006/relationships/metadata/core-properties"))
+        maOOXMLVariant = OOXMLVariant::ISO_Transitional;
+    else if (aType.startsWithIgnoreAsciiCase("http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties"))
+        maOOXMLVariant = OOXMLVariant::ECMA_Transitional;
+    else if (aType.startsWithIgnoreAsciiCase("http://purl.oclc.org/ooxml/officeDocument"))
+        maOOXMLVariant = OOXMLVariant::ISO_Strict;
+
+    if ( !(aType == "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" // OOXML Transitional
+            || aType == "http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument") ) //OOXML strict
+        return;
+
+    Reference<XUriReferenceFactory> xFactory = UriReferenceFactory::create( mxContext );
+    try
     {
-        Reference<XUriReferenceFactory> xFactory = UriReferenceFactory::create( mxContext );
-        try
-        {
-             // use '/' to representent the root of the zip package ( and provide a 'file' scheme to
-             // keep the XUriReference implementation happy )
-             Reference< XUriReference > xBase = xFactory->parse( "file:///" );
+         // use '/' to representent the root of the zip package ( and provide a 'file' scheme to
+         // keep the XUriReference implementation happy )
+         Reference< XUriReference > xBase = xFactory->parse( "file:///" );
 
-             Reference< XUriReference > xPart = xFactory->parse(  rAttribs.getString( XML_Target, OUString() ) );
-             Reference< XUriReference > xAbs = xFactory->makeAbsolute(  xBase, xPart, true, RelativeUriExcessParentSegments_RETAIN );
+         Reference< XUriReference > xPart = xFactory->parse(  rAttribs.getString( XML_Target, OUString() ) );
+         Reference< XUriReference > xAbs = xFactory->makeAbsolute(  xBase, xPart, true, RelativeUriExcessParentSegments_RETAIN );
 
-             if ( xAbs.is() )
-                 maTargetPath = xAbs->getPath();
-        }
-        catch( const Exception& )
-        {
-        }
+         if ( xAbs.is() )
+             maTargetPath = xAbs->getPath();
+    }
+    catch( const Exception& )
+    {
     }
 }
 
@@ -170,14 +179,32 @@ OUString FilterDetectDocHandler::getFilterNameFromContentType( const OUString& r
     bool bDocm = rFileName.endsWithIgnoreAsciiCase(".docm");
 
     if( rContentType == "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml" && !bDocm )
-        return "writer_MS_Word_2007";
+    {
+        switch (maOOXMLVariant)
+        {
+            case OOXMLVariant::ISO_Transitional:
+            case OOXMLVariant::ISO_Strict: // Not supported, map to ISO transitional
+                return "writer_OOXML";
+            case OOXMLVariant::ECMA_Transitional:
+                return "writer_MS_Word_2007";
+        }
+    }
 
     if( rContentType == "application/vnd.ms-word.document.macroEnabled.main+xml" || bDocm )
         return "writer_MS_Word_2007_VBA";
 
     if( rContentType == "application/vnd.openxmlformats-officedocument.wordprocessingml.template.main+xml" ||
         rContentType == "application/vnd.ms-word.template.macroEnabledTemplate.main+xml" )
-        return "writer_MS_Word_2007_Template";
+    {
+        switch (maOOXMLVariant)
+        {
+            case OOXMLVariant::ISO_Transitional:
+            case OOXMLVariant::ISO_Strict: // Not supported, map to ISO transitional
+                return "writer_OOXML_Text_Template";
+            case OOXMLVariant::ECMA_Transitional:
+                return "writer_MS_Word_2007_Template";
+        }
+    }
 
     if( rContentType == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml")
         return "MS Excel 2007 XML";
@@ -249,23 +276,31 @@ bool lclIsZipPackage( const Reference< XComponentContext >& rxContext, const Ref
 class PasswordVerifier : public IDocPasswordVerifier
 {
 public:
-    explicit PasswordVerifier( DocumentDecryption& aDecryptor );
+    explicit PasswordVerifier( crypto::DocumentDecryption& aDecryptor );
 
     virtual DocPasswordVerifierResult verifyPassword( const OUString& rPassword, Sequence<NamedValue>& rEncryptionData ) override;
 
     virtual DocPasswordVerifierResult verifyEncryptionData( const Sequence<NamedValue>& rEncryptionData ) override;
 private:
-    DocumentDecryption& mDecryptor;
+    crypto::DocumentDecryption& mDecryptor;
 };
 
-PasswordVerifier::PasswordVerifier( DocumentDecryption& aDecryptor ) :
+PasswordVerifier::PasswordVerifier( crypto::DocumentDecryption& aDecryptor ) :
     mDecryptor(aDecryptor)
 {}
 
 comphelper::DocPasswordVerifierResult PasswordVerifier::verifyPassword( const OUString& rPassword, Sequence<NamedValue>& rEncryptionData )
 {
-    if(mDecryptor.generateEncryptionKey(rPassword))
-        rEncryptionData = mDecryptor.createEncryptionData(rPassword);
+    try
+    {
+        if (mDecryptor.generateEncryptionKey(rPassword))
+            rEncryptionData = mDecryptor.createEncryptionData(rPassword);
+    }
+    catch (...)
+    {
+        // Any exception is a reason to abort
+        return comphelper::DocPasswordVerifierResult::Abort;
+    }
 
     return rEncryptionData.hasElements() ? comphelper::DocPasswordVerifierResult::OK : comphelper::DocPasswordVerifierResult::WrongPassword;
 }
@@ -299,7 +334,7 @@ Reference< XInputStream > FilterDetect::extractUnencryptedPackage( MediaDescript
     {
         try
         {
-            DocumentDecryption aDecryptor(aOleStorage);
+            crypto::DocumentDecryption aDecryptor(mxContext, aOleStorage);
 
             if( aDecryptor.readEncryptionInfo() )
             {

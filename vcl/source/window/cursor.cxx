@@ -201,8 +201,9 @@ void vcl::Cursor::ImplDoShow( bool bDrawDirect, bool bRestore )
             // show the cursor, if there is an active window and the cursor
             // has been selected in this window
             pWindow = Application::GetFocusWindow();
-            if ( !pWindow || !pWindow->mpWindowImpl || (pWindow->mpWindowImpl->mpCursor != this) || pWindow->mpWindowImpl->mbInPaint
-                || !pWindow->mpWindowImpl->mpFrameData->mbHasFocus )
+            if (!pWindow || !pWindow->mpWindowImpl || (pWindow->mpWindowImpl->mpCursor != this)
+                || pWindow->mpWindowImpl->mbInPaint
+                || !pWindow->mpWindowImpl->mpFrameData->mbHasFocus)
                 pWindow = nullptr;
         }
 
@@ -252,8 +253,8 @@ void vcl::Cursor::LOKNotify( vcl::Window* pWindow, const OUString& rAction )
             aItems.emplace_back("visible", mpData->mbCurVisible ? "true" : "false");
         else if (rAction == "cursor_invalidate")
         {
-            const long nX = pWindow->GetOutOffXPixel() + pWindow->LogicToPixel(GetPos()).X();
-            const long nY = pWindow->GetOutOffYPixel() + pWindow->LogicToPixel(GetPos()).Y();
+            const long nX = pWindow->GetOutOffXPixel() + pWindow->LogicToPixel(GetPos()).X() - pParent->GetOutOffXPixel();
+            const long nY = pWindow->GetOutOffYPixel() + pWindow->LogicToPixel(GetPos()).Y() - pParent->GetOutOffYPixel();
             Size aSize = pWindow->LogicToPixel(GetSize());
             if (!aSize.Width())
                 aSize.setWidth( pWindow->GetSettings().GetStyleSettings().GetCursorSize() );

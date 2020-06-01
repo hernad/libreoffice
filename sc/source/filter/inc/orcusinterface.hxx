@@ -35,12 +35,7 @@ class ScOrcusSheet;
 class ScOrcusStyles;
 class ScOrcusFactory;
 class SfxItemSet;
-
-namespace com { namespace sun { namespace star { namespace task {
-
-class XStatusIndicator;
-
-}}}}
+namespace com::sun::star::task { class XStatusIndicator; }
 
 class ScOrcusGlobalSettings : public orcus::spreadsheet::iface::import_global_settings
 {
@@ -84,7 +79,7 @@ class ScOrcusNamedExpression : public orcus::spreadsheet::iface::import_named_ex
 {
     ScDocumentImport& mrDoc;
     const ScOrcusGlobalSettings& mrGlobalSettings;
-    SCTAB const mnTab; //< negative if global, else >= 0 for sheet-local named expressions.
+    SCTAB mnTab; //< negative if global, else >= 0 for sheet-local named expressions.
 
 public:
     ScOrcusNamedExpression( ScDocumentImport& rDoc, const ScOrcusGlobalSettings& rGS, SCTAB nTab = -1 );
@@ -171,7 +166,7 @@ public:
 
 private:
 
-    SCTAB const mnTab;
+    SCTAB mnTab;
     ScDocument& mrDoc;
 
     std::unique_ptr<ScConditionalFormat> mpCurrentFormat;
@@ -204,7 +199,7 @@ private:
 class ScOrcusSheetProperties : public orcus::spreadsheet::iface::import_sheet_properties
 {
     ScDocumentImport& mrDoc;
-    SCTAB const mnTab;
+    SCTAB mnTab;
 public:
     ScOrcusSheetProperties(SCTAB nTab, ScDocumentImport& rDoc);
     virtual ~ScOrcusSheetProperties() override;
@@ -289,7 +284,7 @@ class ScOrcusSheet : public orcus::spreadsheet::iface::import_sheet
     friend class ScOrcusArrayFormula;
 
     ScDocumentImport& mrDoc;
-    SCTAB const mnTab;
+    SCTAB mnTab;
     ScOrcusFactory& mrFactory;
     ScOrcusStyles& mrStyles;
     sc::SharedFormulaGroups maFormulaGroups;
@@ -591,7 +586,7 @@ class ScOrcusFactory : public orcus::spreadsheet::iface::import_factory
             FillDownCells
         };
 
-        ScAddress const maPos;
+        ScAddress maPos;
         Type meType;
 
         OUString maStr1;

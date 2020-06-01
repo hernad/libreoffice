@@ -74,8 +74,8 @@ struct snewfoil_value_info
 {
     const char* msBmpResId;
     const char* mpStrResId;
-    WritingMode const meWritingMode;
-    AutoLayout const maAutoLayout;
+    WritingMode meWritingMode;
+    AutoLayout maAutoLayout;
 };
 
 }
@@ -127,13 +127,13 @@ static const snewfoil_value_info standard[] =
     {"", nullptr, WritingMode_LR_TB, AUTOLAYOUT_NONE}
 };
 
-class LayoutValueSet : public SvtValueSet
+class LayoutValueSet : public ValueSet
 {
 private:
     LayoutMenu& mrMenu;
 public:
     LayoutValueSet(LayoutMenu& rMenu)
-        : SvtValueSet(nullptr)
+        : ValueSet(nullptr)
         , mrMenu(rMenu)
     {
     }
@@ -153,7 +153,7 @@ LayoutMenu::LayoutMenu (
     vcl::Window* pParent,
     ViewShellBase& rViewShellBase,
     const css::uno::Reference<css::ui::XSidebar>& rxSidebar)
-    : PanelLayout( pParent, "LayoutPanel", "modules/simpress/ui/layoutpanel.ui", nullptr, true ),
+    : PanelLayout( pParent, "LayoutPanel", "modules/simpress/ui/layoutpanel.ui", nullptr ),
       mrBase(rViewShellBase),
       mxLayoutValueSet(new LayoutValueSet(*this)),
       mxLayoutValueSetWin(new weld::CustomWeld(*m_xBuilder, "valueset", *mxLayoutValueSet)),
@@ -379,7 +379,7 @@ int LayoutMenu::CalculateRowCount (const Size&, int nColumnCount)
     return nRowCount;
 }
 
-IMPL_LINK_NOARG(LayoutMenu, ClickHandler, SvtValueSet*, void)
+IMPL_LINK_NOARG(LayoutMenu, ClickHandler, ValueSet*, void)
 {
     AssignLayoutToSelectedSlides( GetSelectedAutoLayout() );
 }
@@ -755,7 +755,6 @@ void LayoutMenu::DataChanged (const DataChangedEvent& /*rEvent*/)
 {
     Fill();
     mxLayoutValueSet->StyleUpdated();
-//TODO    SetBackground(sfx2::sidebar::Theme::GetWallpaper(sfx2::sidebar::Theme::Paint_PanelBackground));
     mxLayoutValueSet->SetColor(sfx2::sidebar::Theme::GetColor(sfx2::sidebar::Theme::Paint_PanelBackground));
 }
 

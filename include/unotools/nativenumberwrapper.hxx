@@ -20,19 +20,15 @@
 #ifndef INCLUDED_UNOTOOLS_NATIVENUMBERWRAPPER_HXX
 #define INCLUDED_UNOTOOLS_NATIVENUMBERWRAPPER_HXX
 
+#include <config_options.h>
 #include <unotools/unotoolsdllapi.h>
 #include <com/sun/star/i18n/NativeNumberXmlAttributes.hpp>
 #include <com/sun/star/uno/Reference.hxx>
 
-namespace com { namespace sun { namespace star {
-    namespace uno {
-        class XComponentContext;
-    }
-}}}
+namespace com::sun::star::uno { class XComponentContext; }
+namespace com::sun::star::i18n { class XNativeNumberSupplier2; }
 
-namespace com { namespace sun { namespace star { namespace i18n { class XNativeNumberSupplier2; } } } }
-
-class UNOTOOLS_DLLPUBLIC NativeNumberWrapper
+class UNLESS_MERGELIBS(UNOTOOLS_DLLPUBLIC) NativeNumberWrapper
 {
     css::uno::Reference< css::i18n::XNativeNumberSupplier2 >   xNNS;
                                 NativeNumberWrapper( const NativeNumberWrapper& ) = delete;

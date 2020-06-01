@@ -35,10 +35,11 @@ class WmfTest : public test::BootstrapFixture, public XmlTestTools
     }
 
 public:
-    WmfTest() :
-        BootstrapFixture(true, false),
-        maDataUrl("/emfio/qa/cppunit/wmf/data/")
-    {}
+    WmfTest()
+        : BootstrapFixture(true, false)
+        , maDataUrl("/emfio/qa/cppunit/wmf/data/")
+    {
+    }
 
     void testNonPlaceableWmf();
     void testSine();
@@ -72,9 +73,9 @@ void WmfTest::testNonPlaceableWmf()
     MetafileXmlDump dumper;
     dumper.filterAllActionTypes();
     dumper.filterActionType(MetaActionType::POLYLINE, false);
-    xmlDocPtr pDoc = dumpAndParse(dumper, aGDIMetaFile);
+    xmlDocUniquePtr pDoc = dumpAndParse(dumper, aGDIMetaFile);
 
-    CPPUNIT_ASSERT (pDoc);
+    CPPUNIT_ASSERT(pDoc);
 
     assertXPath(pDoc, "/metafile/polyline[1]/point[1]", "x", "16798");
     assertXPath(pDoc, "/metafile/polyline[1]/point[1]", "y", "1003");
@@ -101,9 +102,9 @@ void WmfTest::testSine()
     MetafileXmlDump dumper;
     dumper.filterAllActionTypes();
     dumper.filterActionType(MetaActionType::ISECTRECTCLIPREGION, false);
-    xmlDocPtr pDoc = dumpAndParse(dumper, aGDIMetaFile);
+    xmlDocUniquePtr pDoc = dumpAndParse(dumper, aGDIMetaFile);
 
-    CPPUNIT_ASSERT (pDoc);
+    CPPUNIT_ASSERT(pDoc);
 
     assertXPath(pDoc, "/metafile/sectrectclipregion", 0);
 }
@@ -117,9 +118,9 @@ void WmfTest::testEmfProblem()
     MetafileXmlDump dumper;
     dumper.filterAllActionTypes();
     dumper.filterActionType(MetaActionType::ISECTRECTCLIPREGION, false);
-    xmlDocPtr pDoc = dumpAndParse(dumper, aGDIMetaFile);
+    xmlDocUniquePtr pDoc = dumpAndParse(dumper, aGDIMetaFile);
 
-    CPPUNIT_ASSERT (pDoc);
+    CPPUNIT_ASSERT(pDoc);
 
     assertXPath(pDoc, "/metafile/sectrectclipregion[1]", "top", "427");
     assertXPath(pDoc, "/metafile/sectrectclipregion[1]", "left", "740");
@@ -137,9 +138,9 @@ void WmfTest::testEmfLineStyles()
     dumper.filterAllActionTypes();
     dumper.filterActionType(MetaActionType::LINE, false);
     dumper.filterActionType(MetaActionType::LINECOLOR, false);
-    xmlDocPtr pDoc = dumpAndParse(dumper, aGDIMetaFile);
+    xmlDocUniquePtr pDoc = dumpAndParse(dumper, aGDIMetaFile);
 
-    CPPUNIT_ASSERT (pDoc);
+    CPPUNIT_ASSERT(pDoc);
 
     assertXPath(pDoc, "/metafile/line", 4);
     assertXPath(pDoc, "/metafile/linecolor", 5);
@@ -196,9 +197,9 @@ void WmfTest::testWorldTransformFontSize()
     MetafileXmlDump dumper;
     dumper.filterAllActionTypes();
     dumper.filterActionType(MetaActionType::FONT, false);
-    xmlDocPtr pDoc = dumpAndParse(dumper, aGDIMetaFile);
+    xmlDocUniquePtr pDoc = dumpAndParse(dumper, aGDIMetaFile);
 
-    CPPUNIT_ASSERT (pDoc);
+    CPPUNIT_ASSERT(pDoc);
 
     assertXPath(pDoc, "/metafile/font", 8);
 
@@ -224,9 +225,9 @@ void WmfTest::testTdf93750()
     ReadWindowMetafile(aFileStream, aGDIMetaFile);
 
     MetafileXmlDump dumper;
-    xmlDocPtr pDoc = dumpAndParse(dumper, aGDIMetaFile);
+    xmlDocUniquePtr pDoc = dumpAndParse(dumper, aGDIMetaFile);
 
-    CPPUNIT_ASSERT (pDoc);
+    CPPUNIT_ASSERT(pDoc);
 
     assertXPath(pDoc, "/metafile/push[1]/comment[2]", "datasize", "28");
     assertXPath(pDoc, "/metafile/push[1]/comment[3]", "datasize", "72");
@@ -256,14 +257,14 @@ void WmfTest::testTdf99402()
 void WmfTest::testTdf39894()
 {
     OUString files[] = { "tdf39894.wmf", "tdf39894.emf" };
-    for (const auto& file: files)
+    for (const auto& file : files)
     {
         SvFileStream aFileStream(getFullUrl(file), StreamMode::READ);
         GDIMetaFile aGDIMetaFile;
         ReadWindowMetafile(aFileStream, aGDIMetaFile);
 
         MetafileXmlDump dumper;
-        xmlDocPtr pDoc = dumpAndParse(dumper, aGDIMetaFile);
+        xmlDocUniquePtr pDoc = dumpAndParse(dumper, aGDIMetaFile);
 
         CPPUNIT_ASSERT(pDoc);
 
@@ -277,14 +278,14 @@ void WmfTest::testTdf39894()
 void WmfTest::testETO_PDY()
 {
     OUString files[] = { "ETO_PDY.wmf", "ETO_PDY.emf" };
-    for (const auto& file: files)
+    for (const auto& file : files)
     {
         SvFileStream aFileStream(getFullUrl(file), StreamMode::READ);
         GDIMetaFile aGDIMetaFile;
         ReadWindowMetafile(aFileStream, aGDIMetaFile);
 
         MetafileXmlDump dumper;
-        xmlDocPtr pDoc = dumpAndParse(dumper, aGDIMetaFile);
+        xmlDocUniquePtr pDoc = dumpAndParse(dumper, aGDIMetaFile);
 
         CPPUNIT_ASSERT(pDoc);
 

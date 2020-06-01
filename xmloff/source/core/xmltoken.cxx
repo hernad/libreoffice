@@ -20,6 +20,10 @@
 #include <sal/macros.h>
 #include <xmloff/xmltoken.hxx>
 #include <rtl/ustring.hxx>
+#include <rtl/string.hxx>
+#include <sal/log.hxx>
+#include <optional>
+#include <set>
 
 
 namespace xmloff::token {
@@ -29,28 +33,31 @@ namespace xmloff::token {
     {
         struct XMLTokenEntry
         {
-            sal_Int32 const nLength;
+            sal_Int32 nLength;
             const char* pChar;
-            OUString* pOUString;
+            std::optional<OUString> xOUString;
 #if OSL_DEBUG_LEVEL > 0
-            XMLTokenEnum const eToken;
+            XMLTokenEnum eToken;
 #endif
         };
     }
 
 
 #if OSL_DEBUG_LEVEL > 0
-    #define TOKEN( s, e ) { sizeof(s)-1, s, nullptr, e }
+    #define TOKEN( s, e ) { sizeof(s)-1, s, std::nullopt, e }
 #else
-    #define TOKEN( s, e ) { sizeof(s)-1, s, nullptr }
+    #define TOKEN( s, e ) { sizeof(s)-1, s, std::nullopt }
 #endif
+
+    // IMPORTANT! aTokenList order MUST be in synch with XMLTokenEnum in include/xmloff/xmltoken.hxx
+    // and with xmloff/source/token/tokens.txt.
 
     struct XMLTokenEntry aTokenList[] =
     {
 #if OSL_DEBUG_LEVEL > 0
-        { 0, nullptr, nullptr, XML_TOKEN_START },
+        { 0, nullptr, std::nullopt, XML_TOKEN_START },
 #else
-        { 0, nullptr, nullptr },                            // XML_TOKEN_START
+        { 0, nullptr, std::nullopt },                            // XML_TOKEN_START
 #endif
 
         // common XML
@@ -159,16 +166,15 @@ namespace xmloff::token {
         TOKEN( "loext",                           XML_NP_LO_EXT ),
         TOKEN( "urn:org:documentfoundation:names:experimental:office:xmlns:loext:1.0", XML_N_LO_EXT ),
 
+        TOKEN( "urn:openoffice:names:experimental:ooo-ms-interop:xmlns:field:1.0",   XML_N_FIELD ),
+        TOKEN( "field",         XML_NP_FIELD ),
+
         // units
-        TOKEN( "mm",                              XML_UNIT_MM ),
         TOKEN( "m",                               XML_UNIT_M ),
-        TOKEN( "km",                              XML_UNIT_KM ),
         TOKEN( "cm",                              XML_UNIT_CM ),
         TOKEN( "pt",                              XML_UNIT_PT ),
         TOKEN( "pc",                              XML_UNIT_PC ),
         TOKEN( "ft",                              XML_UNIT_FOOT ),
-        TOKEN( "mi",                              XML_UNIT_MILES ),
-        TOKEN( "in",                              XML_UNIT_INCH ),
 
         // any other
         TOKEN( "1",                               XML_1 ),
@@ -294,8 +300,6 @@ namespace xmloff::token {
         TOKEN( "background-color",                XML_BACKGROUND_COLOR ),
         TOKEN( "background-image",                XML_BACKGROUND_IMAGE ),
         TOKEN( "no-repeat",                       XML_BACKGROUND_NO_REPEAT ),
-        TOKEN( "repeat",                          XML_BACKGROUND_REPEAT ),
-        TOKEN( "stretch",                         XML_BACKGROUND_STRETCH ),
         TOKEN( "bar",                             XML_BAR ),
         TOKEN( "base64Binary",                    XML_BASE64BINARY ),
         TOKEN( "base-cell-address",               XML_BASE_CELL_ADDRESS ),
@@ -380,7 +384,6 @@ namespace xmloff::token {
         TOKEN( "case-sensitive",                  XML_CASE_SENSITIVE ),
         TOKEN( "capitalize",                      XML_CASEMAP_CAPITALIZE ),
         TOKEN( "lowercase",                       XML_CASEMAP_LOWERCASE ),
-        TOKEN( "normal",                          XML_CASEMAP_NORMAL ),
         TOKEN( "small-caps",                      XML_CASEMAP_SMALL_CAPS ),
         TOKEN( "uppercase",                       XML_CASEMAP_UPPERCASE ),
         TOKEN( "categories",                      XML_CATEGORIES ),
@@ -427,7 +430,6 @@ namespace xmloff::token {
         TOKEN( "close",                           XML_CLOSE ),
         TOKEN( "close-horizontal",                XML_CLOSE_HORIZONTAL ),
         TOKEN( "close-vertical",                  XML_CLOSE_VERTICAL ),
-        TOKEN( "cm",                              XML_CM ),
         TOKEN( "cn",                              XML_CN ),
         TOKEN( "code",                            XML_CODE ),
         TOKEN( "codebase",                        XML_CODEBASE ),
@@ -446,7 +448,6 @@ namespace xmloff::token {
         TOKEN( "column-width",                    XML_COLUMN_WIDTH ),
         TOKEN( "columnalign",                     XML_COLUMNALIGN ),
         TOKEN( "columns",                         XML_COLUMNS ),
-        TOKEN( "auto",                            XML_COLUMNSPLIT_AUTO ),
         TOKEN( "avoid",                           XML_COLUMNSPLIT_AVOID ),
         TOKEN( "combine-entries",                 XML_COMBINE_ENTRIES ),
         TOKEN( "combine-entries-with-dash",       XML_COMBINE_ENTRIES_WITH_DASH ),
@@ -540,6 +541,8 @@ namespace xmloff::token {
         TOKEN( "custom-iconset-index",            XML_CUSTOM_ICONSET_INDEX ),
         TOKEN( "custom-iconset-name",             XML_CUSTOM_ICONSET_NAME ),
         TOKEN( "custom-label-field",             XML_CUSTOM_LABEL_FIELD ),
+        TOKEN( "custom-label-pos-x",              XML_CUSTOM_LABEL_POS_X ),
+        TOKEN( "custom-label-pos-y",              XML_CUSTOM_LABEL_POS_Y ),
         TOKEN( "cut",                             XML_CUT ),
         TOKEN( "cut-offs",                        XML_CUT_OFFS ),
         TOKEN( "cut_offs",                        XML_CUT_OFFS2 ),
@@ -929,16 +932,17 @@ namespace xmloff::token {
         TOKEN( "gcd",                             XML_GCD ),
         TOKEN( "generator",                       XML_GENERATOR ),
         TOKEN( "geq",                             XML_GEQ ),
+        TOKEN( "glow-radius",                     XML_GLOW_RADIUS ),
+        TOKEN( "glow-color",                      XML_GLOW_COLOR ),
+        TOKEN( "glow-transparency",               XML_GLOW_TRANSPARENCY ),
         TOKEN( "gouraud",                         XML_GOURAUD ),
         TOKEN( "gradient",                        XML_GRADIENT ),
         TOKEN( "angle",                           XML_GRADIENT_ANGLE ),
-        TOKEN( "border",                          XML_GRADIENT_BORDER ),
         TOKEN( "gradient-step-count",             XML_GRADIENT_STEP_COUNT ),
         TOKEN( "gradient-style",                  XML_GRADIENT_STYLE ),
         TOKEN( "gradient-table",                  XML_GRADIENT_TABLE ),
         TOKEN( "axial",                           XML_GRADIENTSTYLE_AXIAL ),
         TOKEN( "ellipsoid",                       XML_GRADIENTSTYLE_ELLIPSOID ),
-        TOKEN( "linear",                          XML_GRADIENTSTYLE_LINEAR ),
         TOKEN( "radial",                          XML_GRADIENTSTYLE_RADIAL ),
         TOKEN( "rectangular",                     XML_GRADIENTSTYLE_RECTANGULAR ),
         TOKEN( "square",                          XML_GRADIENTSTYLE_SQUARE ),
@@ -960,11 +964,7 @@ namespace xmloff::token {
         TOKEN( "hanging",                         XML_HANGING ),
         TOKEN( "has-persistent-data",             XML_HAS_PERSISTENT_DATA ),
         TOKEN( "hatch",                           XML_HATCH ),
-        TOKEN( "distance",                        XML_HATCH_DISTANCE ),
-        TOKEN( "style",                           XML_HATCH_STYLE ),
         TOKEN( "hatch-table",                     XML_HATCH_TABLE ),
-        TOKEN( "double",                          XML_HATCHSTYLE_DOUBLE ),
-        TOKEN( "single",                          XML_HATCHSTYLE_SINGLE ),
         TOKEN( "triple",                          XML_HATCHSTYLE_TRIPLE ),
         TOKEN( "header",                          XML_HEADER ),
         TOKEN( "header-first",                    XML_HEADER_FIRST ),
@@ -1089,7 +1089,6 @@ namespace xmloff::token {
         TOKEN( "justify",                         XML_JUSTIFY ),
         TOKEN( "justify-single-word",             XML_JUSTIFY_SINGLE_WORD ),
         TOKEN( "keep-with-next",                  XML_KEEP_WITH_NEXT ),
-        TOKEN( "normal",                          XML_KERNING_NORMAL ),
         TOKEN( "key",                             XML_KEY ),
         TOKEN( "key1",                            XML_KEY1 ),
         TOKEN( "key2",                            XML_KEY2 ),
@@ -1101,6 +1100,8 @@ namespace xmloff::token {
         TOKEN( "label-arrangement",               XML_LABEL_ARRANGEMENT ),
         TOKEN( "label-cell-address",              XML_LABEL_CELL_ADDRESS ),
         TOKEN( "label-cell-range-address",        XML_LABEL_CELL_RANGE_ADDRESS ),
+        TOKEN( "label-fill",                      XML_LABEL_FILL ),
+        TOKEN( "label-fill-color",                XML_LABEL_FILL_COLOR ),
         TOKEN( "label-range",                     XML_LABEL_RANGE ),
         TOKEN( "label-ranges",                    XML_LABEL_RANGES ),
         TOKEN( "label-string",                    XML_LABEL_STRING ),
@@ -1189,6 +1190,7 @@ namespace xmloff::token {
         TOKEN( "maction",                         XML_MACTION ),
         TOKEN( "main-entry-style-name",           XML_MAIN_ENTRY_STYLE_NAME ),
         TOKEN( "major",                           XML_MAJOR ),
+        TOKEN( "major-origin",                    XML_MAJOR_ORIGIN ),
         TOKEN( "maligngroup",                     XML_MALIGNGROUP ),
         TOKEN( "malignmark",                      XML_MALIGNMARK ),
         TOKEN( "manual",                          XML_MANUAL ),
@@ -1324,8 +1326,8 @@ namespace xmloff::token {
         TOKEN( "!empty",                          XML_NOEMPTY ),
         TOKEN( "nohref",                          XML_NOHREF ),
         TOKEN( "!match",                          XML_NOMATCH ),
+        TOKEN( "non-whitespace-character-count",  XML_NON_WHITESPACE_CHARACTER_COUNT ),
         TOKEN( "none",                            XML_NONE ),
-        TOKEN( "notprsubset",                     XML_NOPRTSUBSET ),
         TOKEN( "normal",                          XML_NORMAL ),
         TOKEN( "normals-direction",               XML_NORMALS_DIRECTION ),
         TOKEN( "normals-kind",                    XML_NORMALS_KIND ),
@@ -1335,6 +1337,7 @@ namespace xmloff::token {
         TOKEN( "note",                            XML_NOTE ),
         TOKEN( "notes",                           XML_NOTES ),
         TOKEN( "notin",                           XML_NOTIN ),
+        TOKEN( "notprsubset",                     XML_NOTPRSUBSET ),
         TOKEN( "notsubset",                       XML_NOTSUBSET ),
         TOKEN( "null-date",                       XML_NULL_DATE ),
         TOKEN( "null-year",                       XML_NULL_YEAR ),
@@ -1373,8 +1376,6 @@ namespace xmloff::token {
         TOKEN( "on-update-keep-styles",           XML_ON_UPDATE_KEEP_STYLES ),
         TOKEN( "online",                          XML_ONLINE ),
         TOKEN( "online-text",                     XML_ONLINE_TEXT ),
-        TOKEN( "background",                      XML_OPAQUE_BACKGROUND ),
-        TOKEN( "foreground",                      XML_OPAQUE_FOREGROUND ),
         TOKEN( "open",                            XML_OPEN ),
         TOKEN( "open-horizontal",                 XML_OPEN_HORIZONTAL ),
         TOKEN( "open-vertical",                   XML_OPEN_VERTICAL ),
@@ -1397,6 +1398,7 @@ namespace xmloff::token {
         TOKEN( "outset",                          XML_OUTSET ),
         TOKEN( "outside",                         XML_OUTSIDE ),
         TOKEN( "overlap",                         XML_OVERLAP ),
+        TOKEN( "overlay",                         XML_OVERLAY ),
         TOKEN( "p",                               XML_P ),
         TOKEN( "package-name",                    XML_PACKAGE_NAME ),
         TOKEN( "padding",                         XML_PADDING ),
@@ -1471,25 +1473,15 @@ namespace xmloff::token {
         TOKEN( "position-right",                  XML_POSITION_RIGHT ),
         TOKEN( "position-top",                    XML_POSITION_TOP ),
         TOKEN( "positive-color",                  XML_POSITIVE_COLOR ),
-        TOKEN( "italic",                          XML_POSTURE_ITALIC ),
-        TOKEN( "normal",                          XML_POSTURE_NORMAL ),
         TOKEN( "oblique",                         XML_POSTURE_OBLIQUE ),
         TOKEN( "power",                           XML_POWER ),
         TOKEN( "precision-as-shown",              XML_PRECISION_AS_SHOWN ),
         TOKEN( "prefix",                          XML_PREFIX ),
         TOKEN( "presentation",                    XML_PRESENTATION ),
-        TOKEN( "chart",                           XML_PRESENTATION_CHART ),
-        TOKEN( "graphic",                         XML_PRESENTATION_GRAPHIC ),
-        TOKEN( "notes",                           XML_PRESENTATION_NOTES ),
-        TOKEN( "object",                          XML_PRESENTATION_OBJECT ),
         TOKEN( "orgchart",                        XML_PRESENTATION_ORGCHART ),
         TOKEN( "outline",                         XML_PRESENTATION_OUTLINE ),
-        TOKEN( "page",                            XML_PRESENTATION_PAGE ),
         TOKEN( "presentation-page-layout",        XML_PRESENTATION_PAGE_LAYOUT ),
-        TOKEN( "presentation-page-layout-name",       XML_PRESENTATION_PAGE_LAYOUT_NAME ),
-        TOKEN( "subtitle",                        XML_PRESENTATION_SUBTITLE ),
-        TOKEN( "table",                           XML_PRESENTATION_TABLE ),
-        TOKEN( "title",                           XML_PRESENTATION_TITLE ),
+        TOKEN( "presentation-page-layout-name",   XML_PRESENTATION_PAGE_LAYOUT_NAME ),
         TOKEN( "previous",                        XML_PREVIOUS ),
         TOKEN( "previous-page",                   XML_PREVIOUS_PAGE ),
         TOKEN( "print",                           XML_PRINT ),
@@ -1507,9 +1499,6 @@ namespace xmloff::token {
         TOKEN( "projection",                      XML_PROJECTION ),
         TOKEN( "properties",                      XML_PROPERTIES ),
         TOKEN( "protect",                         XML_PROTECT ),
-        TOKEN( "content",                         XML_PROTECT_CONTENT ),
-        TOKEN( "position",                        XML_PROTECT_POSITION ),
-        TOKEN( "size",                            XML_PROTECT_SIZE ),
         TOKEN( "protected",                       XML_PROTECTED ),
         TOKEN( "protection-key",                  XML_PROTECTION_KEY ),
         TOKEN( "protection-key-digest-algorithm",   XML_PROTECTION_KEY_DIGEST_ALGORITHM ),
@@ -1712,6 +1701,7 @@ namespace xmloff::token {
         TOKEN( "slant-y",                         XML_SLANT_Y ),
         TOKEN( "slide",                           XML_SLIDE ),
         TOKEN( "slow",                            XML_SLOW ),
+        TOKEN( "softedge-radius",                 XML_SOFTEDGE_RADIUS ),
         TOKEN( "solid",                           XML_SOLID ),
         TOKEN( "solid-type",                      XML_SOLID_TYPE ),
         TOKEN( "sort",                            XML_SORT ),
@@ -1896,6 +1886,7 @@ namespace xmloff::token {
         TOKEN( "text-input",                      XML_TEXT_INPUT ),
         TOKEN( "text-justify",                    XML_TEXT_JUSTIFY ),
         TOKEN( "text-outline",                    XML_TEXT_OUTLINE ),
+        TOKEN( "text-only",                       XML_TEXT_ONLY ),
         TOKEN( "text-position",                   XML_TEXT_POSITION ),
         TOKEN( "text-rotation-angle",             XML_TEXT_ROTATION_ANGLE ),
         TOKEN( "text-rotation-scale",             XML_TEXT_ROTATION_SCALE ),
@@ -2071,8 +2062,6 @@ namespace xmloff::token {
         TOKEN( "wavyline-from-right",             XML_WAVYLINE_FROM_RIGHT ),
         TOKEN( "wavyline-from-top",               XML_WAVYLINE_FROM_TOP ),
         TOKEN( "week-of-year",                    XML_WEEK_OF_YEAR ),
-        TOKEN( "bold",                            XML_WEIGHT_BOLD ),
-        TOKEN( "normal",                          XML_WEIGHT_NORMAL ),
         TOKEN( "white",                           XML_WHITE ),
         TOKEN( "whole-page",                      XML_WHOLE_PAGE ),
         TOKEN( "widows",                          XML_WIDOWS ),
@@ -2524,6 +2513,7 @@ namespace xmloff::token {
         TOKEN( "http://openoffice.org/2000/drawing",    XML_N_DRAW_OOO ),
         TOKEN( "http://openoffice.org/2000/dr3d",       XML_N_DR3D_OOO ),
         TOKEN( "http://openoffice.org/2000/presentation",XML_N_PRESENTATION_OOO ),
+        TOKEN( "urn:oasis:names:tc:openoffice:xmlns:presentation:1.0",XML_N_PRESENTATION_OASIS ),
         TOKEN( "http://openoffice.org/2000/chart",      XML_N_CHART_OOO ),
         TOKEN( "http://openoffice.org/2001/config",     XML_N_CONFIG_OOO ),
         TOKEN( "http://openoffice.org/2000/form",       XML_N_FORM_OOO ),
@@ -2812,6 +2802,7 @@ namespace xmloff::token {
 
         TOKEN( "anim",                      XML_NP_ANIMATION ),
         TOKEN( "urn:oasis:names:tc:opendocument:xmlns:animation:1.0",  XML_N_ANIMATION ),
+        TOKEN( "urn:oasis:names:tc:openoffice:xmlns:animation:1.0",  XML_N_ANIMATION_OOO ),
 
         TOKEN( "par",                           XML_PAR ),
         TOKEN( "seq",                           XML_SEQ ),
@@ -2990,6 +2981,7 @@ namespace xmloff::token {
         TOKEN( "preset-id",         XML_PRESET_ID ),
         TOKEN( "preset-sub-type",       XML_PRESET_SUB_TYPE ),
         TOKEN( "preset-class",      XML_PRESET_CLASS ),
+        TOKEN( "preset-property",      XML_PRESET_PROPERTY ),
         TOKEN( "custom",                XML_CUSTOM ),
         TOKEN( "entrance",          XML_ENTRANCE ),
         TOKEN( "exit",              XML_EXIT ),
@@ -3230,8 +3222,6 @@ namespace xmloff::token {
         TOKEN( "fieldmark",             XML_FIELDMARK ),
         TOKEN( "fieldmark-start",       XML_FIELDMARK_START ),
         TOKEN( "fieldmark-end",         XML_FIELDMARK_END ),
-        TOKEN( "urn:openoffice:names:experimental:ooo-ms-interop:xmlns:field:1.0",   XML_N_FIELD ),
-        TOKEN( "field",         XML_NP_FIELD ),
 
         TOKEN( "image-scale",           XML_IMAGE_SCALE  ),
         TOKEN( "isotropic",             XML_ISOTROPIC  ),
@@ -3367,35 +3357,57 @@ namespace xmloff::token {
         // For recording whether comments/annotations are resolved
         TOKEN( "resolved",                        XML_RESOLVED ),
 
+        TOKEN( "page-content-bottom",             XML_PAGE_CONTENT_BOTTOM ),
+
 #if OSL_DEBUG_LEVEL > 0
-        { 0, nullptr, nullptr,                       XML_TOKEN_END }
+        { 0, nullptr, std::nullopt,               XML_TOKEN_END }
 #else
-        { 0, nullptr, nullptr                       /* XML_TOKEN_END */ }
+        { 0, nullptr, std::nullopt             /* XML_TOKEN_END */ }
 #endif
     };
 
     // get OUString representation of token
     const OUString& GetXMLToken( enum XMLTokenEnum eToken )
     {
-#if OSL_DEBUG_LEVEL > 0
+#if OSL_DEBUG_LEVEL > 0 && !defined NDEBUG
         static bool s_bChecked = false;
         if (!s_bChecked)
         {
             // check the consistency of the token list. Below, we use the
             // ordinal value of the token as index into the token list, so we
             // should make sure that every entry is at the proper position
+            std::set<OString> tokenSet;
+            bool foundDuplicate = false;
             const XMLTokenEntry* pEntry = aTokenList;
             const XMLTokenEntry* pEntryEnd =
                 pEntry + SAL_N_ELEMENTS(aTokenList);
             sal_uInt16 nPos = 0;
             while (pEntry < pEntryEnd)
             {
+                SAL_WARN_IF(nPos != static_cast<sal_uInt16>(pEntry->eToken), "xmloff",
+                            "inconsistency at pos " << nPos << " for token "
+                            << OUString( pEntry->pChar, pEntry->nLength, RTL_TEXTENCODING_ASCII_US ));
                 assert(nPos == static_cast<sal_uInt16>(pEntry->eToken));
                     // Inconsistency in the token list!
                     // The positions in xmltoken.hxx and xmltoken.cxx need to match.
+
+                // verify that we have no duplicates, which can mess us up when doing fast-parser import
+                if (pEntry->nLength && nPos >= XML_MM)
+                    // ignoring the zero-length fake entries and the namespace prefix entries
+                {
+                    auto pair = tokenSet.insert(OString(pEntry->pChar, pEntry->nLength));
+                    if (!pair.second)
+                    {
+                        SAL_WARN("xmloff", "duplicate token string "
+                                << OUString( pEntry->pChar, pEntry->nLength, RTL_TEXTENCODING_ASCII_US ));
+                        foundDuplicate = true;
+                    }
+                }
                 ++pEntry;
                 ++nPos;
             }
+            assert(!foundDuplicate && "duplicate token string");
+
             s_bChecked = true; // it's all static, checking once is enough
         }
 #endif
@@ -3404,10 +3416,10 @@ namespace xmloff::token {
         assert(sal_uInt16(eToken) < SAL_N_ELEMENTS(aTokenList));
 
         XMLTokenEntry* pToken = &aTokenList[static_cast<sal_uInt16>(eToken)];
-        if (!pToken->pOUString)
-           pToken->pOUString = new OUString( pToken->pChar, pToken->nLength,
-                                             RTL_TEXTENCODING_ASCII_US );
-        return *pToken->pOUString;
+        if (!pToken->xOUString)
+           pToken->xOUString = OUString( pToken->pChar, pToken->nLength,
+                                         RTL_TEXTENCODING_ASCII_US );
+        return *pToken->xOUString;
     }
 
     // does rString represent eToken?

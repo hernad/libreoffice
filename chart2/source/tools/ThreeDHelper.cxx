@@ -31,6 +31,7 @@
 #include <com/sun/star/drawing/ShadeMode.hpp>
 #include <tools/diagnose_ex.h>
 #include <tools/helpers.hxx>
+#include <rtl/math.hxx>
 
 namespace chart
 {
@@ -69,23 +70,23 @@ void lcl_RotateLightSource( const Reference< beans::XPropertySet >& xSceneProper
                            , const OUString& rLightSourceOn
                            , const ::basegfx::B3DHomMatrix& rRotationMatrix )
 {
-    if( xSceneProperties.is() )
-    {
-        bool bLightOn = false;
-        if( xSceneProperties->getPropertyValue( rLightSourceOn ) >>= bLightOn )
-        {
-            if( bLightOn )
-            {
-                drawing::Direction3D aLight;
-                if( xSceneProperties->getPropertyValue( rLightSourceDirection ) >>= aLight )
-                {
-                    ::basegfx::B3DVector aLightVector( BaseGFXHelper::Direction3DToB3DVector( aLight ) );
-                    aLightVector = rRotationMatrix*aLightVector;
+    if( !xSceneProperties.is() )
+        return;
 
-                    xSceneProperties->setPropertyValue( rLightSourceDirection
-                        , uno::Any( BaseGFXHelper::B3DVectorToDirection3D( aLightVector ) ) );
-                }
-            }
+    bool bLightOn = false;
+    if( !(xSceneProperties->getPropertyValue( rLightSourceOn ) >>= bLightOn) )
+        return;
+
+    if( bLightOn )
+    {
+        drawing::Direction3D aLight;
+        if( xSceneProperties->getPropertyValue( rLightSourceDirection ) >>= aLight )
+        {
+            ::basegfx::B3DVector aLightVector( BaseGFXHelper::Direction3DToB3DVector( aLight ) );
+            aLightVector = rRotationMatrix*aLightVector;
+
+            xSceneProperties->setPropertyValue( rLightSourceDirection
+                , uno::Any( BaseGFXHelper::B3DVectorToDirection3D( aLightVector ) ) );
         }
     }
 }

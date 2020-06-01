@@ -580,19 +580,29 @@ void sw::DocumentSettingManager::ReplaceCompatibilityOptions(const DocumentSetti
     Setn32DummyCompatibilityOptions1( rSource.Getn32DummyCompatibilityOptions1() );
     Setn32DummyCompatibilityOptions2( rSource.Getn32DummyCompatibilityOptions2() );
 
+    // No mbHTMLMode
+    // No mbIsGlobalDoc
+    // No mbGlblDocSaveLinks
+    // No mbIsLabelDoc
+    // No mbPurgeOLE
+    // No mbKernAsianPunctuation
     mbParaSpaceMax = rSource.mbParaSpaceMax;
     mbParaSpaceMaxAtPages = rSource.mbParaSpaceMaxAtPages;
     mbTabCompat = rSource.mbTabCompat;
     mbUseVirtualDevice = rSource.mbUseVirtualDevice;
+    mbAddFlyOffsets = rSource.mbAddFlyOffsets;
+    // No mbAddVerticalFlyOffsets
     mbAddExternalLeading = rSource.mbAddExternalLeading;
+    mbUseHiResolutionVirtualDevice = rSource.mbUseHiResolutionVirtualDevice;
     mbOldLineSpacing = rSource.mbOldLineSpacing;
     mbAddParaSpacingToTableCells = rSource.mbAddParaSpacingToTableCells;
     mbUseFormerObjectPos = rSource.mbUseFormerObjectPos;
     mbUseFormerTextWrapping = rSource.mbUseFormerTextWrapping;
     mbConsiderWrapOnObjPos = rSource.mbConsiderWrapOnObjPos;
-    mbAddFlyOffsets = rSource.mbAddFlyOffsets;
+    // No mbMathBaselineAlignment
+    // No mbStylesNoDefault
+    // No mbFloattableNomargins
     mbOldNumbering = rSource.mbOldNumbering;
-    mbUseHiResolutionVirtualDevice = rSource.mbUseHiResolutionVirtualDevice;
     mbIgnoreFirstLineIndentInNumbering = rSource.mbIgnoreFirstLineIndentInNumbering;
     mbDoNotJustifyLinesWithManualBreak = rSource.mbDoNotJustifyLinesWithManualBreak;
     mbDoNotResetParaAttrsForNumFont = rSource.mbDoNotResetParaAttrsForNumFont;
@@ -602,9 +612,27 @@ void sw::DocumentSettingManager::ReplaceCompatibilityOptions(const DocumentSetti
     mbClipAsCharacterAnchoredWriterFlyFrames = rSource.mbClipAsCharacterAnchoredWriterFlyFrames;
     mbUnixForceZeroExtLeading = rSource.mbUnixForceZeroExtLeading;
     mbTabRelativeToIndent = rSource.mbTabRelativeToIndent;
-    mbTabAtLeftIndentForParagraphsInList = rSource.mbTabAtLeftIndentForParagraphsInList;
+    // No mbProtectForm
     mbMsWordCompTrailingBlanks = rSource.mbMsWordCompTrailingBlanks;
+    // No mbInvertBorderSpacing
+    mbCollapseEmptyCellPara = rSource.mbCollapseEmptyCellPara;
+    mbTabAtLeftIndentForParagraphsInList = rSource.mbTabAtLeftIndentForParagraphsInList;
+    // No mbSmallCapsPercentage66
+    // No mbTabOverflow
+    mbUnbreakableNumberings = rSource.mbUnbreakableNumberings;
+    // No mbClippedPictures
+    // No mbBackgroundParaOverDrawings
+    mbTabOverMargin = rSource.mbTabOverMargin;
+    // No mbTreatSingleColumnBreakAsPageBreak
+    // No mbSurroundTextWrapSmall
+    mbPropLineSpacingShrinksFirstLine = rSource.mbPropLineSpacingShrinksFirstLine;
+    mbSubtractFlys = rSource.mbSubtractFlys;
+    // No mbLastBrowseMode: this is false by default everywhere
+    mbDisableOffPagePositioning = rSource.mbDisableOffPagePositioning;
     mbEmptyDbFieldHidesPara = rSource.mbEmptyDbFieldHidesPara;
+    mbContinuousEndnotes = rSource.mbContinuousEndnotes;
+    // No mbProtectBookmarks: this is false by default everywhere
+    // No mbProtectFields: this is false by default everywhere
 }
 
 sal_uInt32 sw::DocumentSettingManager::Getn32DummyCompatibilityOptions1() const

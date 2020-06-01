@@ -50,7 +50,7 @@
 #endif
 
 
-using namespace boost::spirit;
+using namespace boost::spirit::classic;
 using namespace pdfparse;
 
 namespace {
@@ -327,38 +327,41 @@ public:
     {
         PDFContainer* pContainer = nullptr;
         const char* pMsg = nullptr;
-        if( ! m_aObjectStack.empty() &&
-            (pContainer = dynamic_cast<PDFContainer*>(m_aObjectStack.back())) != nullptr )
+        if( ! m_aObjectStack.empty() )
         {
-            if( dynamic_cast<PDFDict*>(pContainer) == nullptr      &&
-                dynamic_cast<PDFArray*>(pContainer) == nullptr )
+            pContainer = dynamic_cast<PDFContainer*>(m_aObjectStack.back());
+            if (pContainer)
             {
-                PDFObject* pObj = dynamic_cast<PDFObject*>(pContainer);
-                if( pObj )
+                if( dynamic_cast<PDFDict*>(pContainer) == nullptr &&
+                    dynamic_cast<PDFArray*>(pContainer) == nullptr )
                 {
-                    if( pObj->m_pObject == nullptr )
-                        pObj->m_pObject = pNewValue.get();
-                    else
+                    PDFObject* pObj = dynamic_cast<PDFObject*>(pContainer);
+                    if( pObj )
                     {
-                        pMsg = "second value for object";
-                        pContainer = nullptr;
+                        if( pObj->m_pObject == nullptr )
+                            pObj->m_pObject = pNewValue.get();
+                        else
+                        {
+                            pMsg = "second value for object";
+                            pContainer = nullptr;
+                        }
                     }
-                }
-                else if( dynamic_cast<PDFDict*>(pNewValue.get()) )
-                {
-                    PDFTrailer* pTrailer = dynamic_cast<PDFTrailer*>(pContainer);
-                    if( pTrailer )
+                    else if( dynamic_cast<PDFDict*>(pNewValue.get()) )
                     {
-                        if( pTrailer->m_pDict == nullptr )
-                            pTrailer->m_pDict = dynamic_cast<PDFDict*>(pNewValue.get());
+                        PDFTrailer* pTrailer = dynamic_cast<PDFTrailer*>(pContainer);
+                        if( pTrailer )
+                        {
+                            if( pTrailer->m_pDict == nullptr )
+                                pTrailer->m_pDict = dynamic_cast<PDFDict*>(pNewValue.get());
+                            else
+                                pContainer = nullptr;
+                        }
                         else
                             pContainer = nullptr;
                     }
                     else
                         pContainer = nullptr;
                 }
-                else
-                    pContainer = nullptr;
             }
         }
         if( pContainer )
@@ -560,12 +563,12 @@ std::unique_ptr<PDFEntry> PDFReader::read( const char* pBuffer, unsigned int nLe
     try
     {
 #if OSL_DEBUG_LEVEL > 0
-        boost::spirit::parse_info<const char*> aInfo =
+        boost::spirit::classic::parse_info<const char*> aInfo =
 #endif
-            boost::spirit::parse( pBuffer,
+            boost::spirit::classic::parse( pBuffer,
                                   pBuffer+nLen,
                                   aGrammar,
-                                  boost::spirit::space_p );
+                                  boost::spirit::classic::space_p );
 #if OSL_DEBUG_LEVEL > 0
         SAL_INFO("sdext.pdfimport.pdfparse", "parseinfo: stop = " << aInfo.stop << " (buff=" << pBuffer << ", offset = " << aInfo.stop - pBuffer << "), hit = " << (aInfo.hit ? OUString("true") : OUString("false")) << ", full = " << (aInfo.full ? OUString("true") : OUString("false")) << ", length = " << static_cast<int>(aInfo.length) );
 #endif
@@ -638,12 +641,12 @@ std::unique_ptr<PDFEntry> PDFReader::read( const char* pFileName )
     try
     {
 #if OSL_DEBUG_LEVEL > 0
-        boost::spirit::parse_info< file_iterator<> > aInfo =
+        boost::spirit::classic::parse_info< file_iterator<> > aInfo =
 #endif
-            boost::spirit::parse( file_start,
+            boost::spirit::classic::parse( file_start,
                                   file_end,
                                   aGrammar,
-                                  boost::spirit::space_p );
+                                  boost::spirit::classic::space_p );
 #if OSL_DEBUG_LEVEL > 0
         SAL_INFO("sdext.pdfimport.pdfparse", "parseinfo: stop at offset = " << aInfo.stop - file_start << ", hit = " << (aInfo.hit ? "true" : "false") << ", full = " << (aInfo.full ? "true" : "false") << ", length = " << aInfo.length);
 #endif

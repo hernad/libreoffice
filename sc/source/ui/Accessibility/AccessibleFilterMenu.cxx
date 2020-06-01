@@ -38,7 +38,6 @@ using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::Sequence;
 using ::com::sun::star::uno::UNO_QUERY;
 using ::com::sun::star::lang::IndexOutOfBoundsException;
-using ::com::sun::star::uno::RuntimeException;
 using ::std::for_each;
 
 namespace {
@@ -65,7 +64,7 @@ public:
     }
 private:
     Reference<XAccessibleEventListener> mxListener;
-    bool const mbAdd;
+    bool mbAdd;
 };
 
 }

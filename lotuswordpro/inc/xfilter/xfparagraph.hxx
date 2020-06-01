@@ -60,9 +60,7 @@
 #ifndef INCLUDED_LOTUSWORDPRO_INC_XFILTER_XFPARAGRAPH_HXX
 #define INCLUDED_LOTUSWORDPRO_INC_XFILTER_XFPARAGRAPH_HXX
 
-#include <xfilter/xfglobal.hxx>
 #include <xfilter/xfcontentcontainer.hxx>
-#include <vector>
 
 class IXFStream;
 
@@ -79,12 +77,11 @@ public:
     virtual ~XFParagraph() override;
 
 public:
-    bool    HasContents() const;
+    bool HasContents() const;
 
-    virtual enumXFContent   GetContentType() override;
+    virtual enumXFContent GetContentType() override;
 
-    virtual void    ToXml(IXFStream *pStrm) override;
-
+    virtual void ToXml(IXFStream* pStrm) override;
 };
 
 #endif

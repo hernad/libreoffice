@@ -25,6 +25,7 @@
 #include <com/sun/star/uno/Sequence.hxx>
 #include <com/sun/star/util/Date.hpp>
 #include <com/sun/star/util/Time.hpp>
+#include <rtl/ustrbuf.hxx>
 
 namespace rptxml
 {
@@ -37,6 +38,7 @@ namespace rptxml
         OXMLControlProperty* m_pContainer;
         css::uno::Type m_aPropType;            // the type of the property the instance imports currently
         bool m_bIsList;
+        OUStringBuffer m_aCharBuffer;
 
         ORptFilter& GetOwnImport();
         static css::uno::Any convertString(const css::uno::Type& _rExpectedType, const OUString& _rReadCharacters);
@@ -52,6 +54,10 @@ namespace rptxml
 
         virtual css::uno::Reference< css::xml::sax::XFastContextHandler > SAL_CALL createFastChildContext(
                 sal_Int32 nElement, const css::uno::Reference< css::xml::sax::XFastAttributeList >& xAttrList ) override;
+
+        virtual void SAL_CALL startFastElement(
+                sal_Int32 /*nElement*/,
+                const css::uno::Reference< css::xml::sax::XFastAttributeList >& /*xAttrList*/ ) override {}
 
         virtual void SAL_CALL endFastElement(sal_Int32 nElement) override;
 

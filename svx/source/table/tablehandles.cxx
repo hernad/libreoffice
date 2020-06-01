@@ -20,22 +20,17 @@
 
 #include "tablehandles.hxx"
 
-#include <vcl/svapp.hxx>
 #include <vcl/outdev.hxx>
 #include <vcl/canvastools.hxx>
-#include <vcl/hatch.hxx>
 #include <vcl/ptrstyle.hxx>
 #include <basegfx/polygon/b2dpolygon.hxx>
-#include <basegfx/polygon/b2dpolypolygontools.hxx>
-#include <basegfx/range/b2drectangle.hxx>
-#include <basegfx/polygon/b2dpolygontools.hxx>
 #include <svx/sdr/overlay/overlayobject.hxx>
 #include <svx/sdr/overlay/overlaymanager.hxx>
 #include <svx/sdrpagewindow.hxx>
 #include <svx/sdrpaintwindow.hxx>
 #include <svx/svdmrkv.hxx>
 #include <svx/svdpagv.hxx>
-#include <drawinglayer/primitive2d/polypolygonprimitive2d.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonHairlinePrimitive2D.hxx>
 #include <sdr/overlay/overlayrectangle.hxx>
 #include <drawinglayer/primitive2d/hiddengeometryprimitive2d.hxx>
 
@@ -46,8 +41,8 @@ namespace {
 class OverlayTableEdge : public sdr::overlay::OverlayObject
 {
 protected:
-    basegfx::B2DPolyPolygon const maPolyPolygon;
-    bool const                    mbVisible;
+    basegfx::B2DPolyPolygon maPolyPolygon;
+    bool                    mbVisible;
 
     // geometry creation for OverlayObject
     virtual drawinglayer::primitive2d::Primitive2DContainer createOverlayObjectPrimitive2DSequence() override;
@@ -116,17 +111,17 @@ void TableEdgeHdl::getPolyPolygon(basegfx::B2DPolyPolygon& rVisible, basegfx::B2
 
     if( pDrag )
     {
-        int n = mbHorizontal ? 1 : 0;
-        aOffset[n] = aOffset[n] + GetValidDragOffset( *pDrag );
+        basegfx::Axis2D eDragAxis = mbHorizontal ? basegfx::Axis2D::Y : basegfx::Axis2D::X;
+        aOffset.set(eDragAxis, aOffset.get(eDragAxis) + GetValidDragOffset( *pDrag ));
     }
 
     basegfx::B2DPoint aStart(aOffset), aEnd(aOffset);
-    int nPos = mbHorizontal ? 0 : 1;
+    basegfx::Axis2D eAxis = mbHorizontal ? basegfx::Axis2D::X : basegfx::Axis2D::Y;
 
     for( const TableEdge& aEdge : maEdges )
     {
-        aStart[nPos] = aOffset[nPos] + aEdge.mnStart;
-        aEnd[nPos] = aOffset[nPos] + aEdge.mnEnd;
+        aStart.set(eAxis, aOffset.get(eAxis) + aEdge.mnStart);
+        aEnd.set(eAxis, aOffset.get(eAxis) + aEdge.mnEnd);
 
         basegfx::B2DPolygon aPolygon;
         aPolygon.append( aStart );

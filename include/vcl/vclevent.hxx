@@ -27,11 +27,9 @@
 
 class Menu;
 
-namespace com { namespace sun { namespace star {
-    namespace accessibility {
-        class XAccessible;
-    }
-}}}
+namespace com::sun::star::accessibility {
+    class XAccessible;
+}
 
 namespace vcl
 {
@@ -205,7 +203,7 @@ class VCL_DLLPUBLIC VclMenuEvent final : public VclSimpleEvent
 {
 private:
     VclPtr<Menu> pMenu;
-    sal_uInt16 const mnPos;
+    sal_uInt16 mnPos;
 
     VclMenuEvent(VclMenuEvent const &) = delete;
     VclMenuEvent& operator =(VclMenuEvent const &) = delete;

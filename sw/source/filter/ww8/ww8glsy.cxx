@@ -30,6 +30,7 @@
 #include <doc.hxx>
 #include <IDocumentStylePoolAccess.hxx>
 #include <docary.hxx>
+#include <frameformats.hxx>
 #include "ww8glsy.hxx"
 #include "ww8par.hxx"
 
@@ -167,7 +168,7 @@ bool WW8Glossary::MakeEntries(SwDoc *pD, SwTextBlocks &rBlocks,
                         -1 );
                     pCNd = aIdx.GetNode().GetContentNode();
                     SwPosition aPos(aIdx, SwIndex(pCNd, pCNd ? pCNd->Len() : 0));
-                    pD->getIDocumentContentOperations().CopyRange( aPam, aPos, /*bCopyAll=*/false, /*bCheckPos=*/true, /*bCopyText=*/false );
+                    pD->getIDocumentContentOperations().CopyRange(aPam, aPos, SwCopyFlags::CheckPosInFly);
                     rBlocks.PutDoc();
                 }
             }

@@ -20,7 +20,6 @@
 #define INCLUDED_REPORTDESIGN_SOURCE_FILTER_XML_XMLGROUP_HXX
 
 #include <xmloff/xmlictxt.hxx>
-#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/report/XGroups.hpp>
 
 namespace rptxml
@@ -42,6 +41,9 @@ namespace rptxml
                     );
         virtual ~OXMLGroup() override;
 
+        virtual void SAL_CALL startFastElement(
+                sal_Int32 /*nElement*/,
+                const css::uno::Reference< css::xml::sax::XFastAttributeList >& /*xAttrList*/ ) override {}
         virtual css::uno::Reference< css::xml::sax::XFastContextHandler > SAL_CALL createFastChildContext(
                 sal_Int32 nElement, const css::uno::Reference< css::xml::sax::XFastAttributeList >& xAttrList ) override;
 

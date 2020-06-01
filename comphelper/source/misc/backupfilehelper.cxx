@@ -411,14 +411,10 @@ namespace
                                 e.Context, anyEx );
             }
 
-            for (sal_Int32 i = 0; i < xAllPackages.getLength(); ++i)
+            for (const uno::Sequence< uno::Reference< deployment::XPackage > > & xPackageList : std::as_const(xAllPackages))
             {
-                uno::Sequence< uno::Reference< deployment::XPackage > > xPackageList = xAllPackages[i];
-
-                for (sal_Int32 j = 0; j < xPackageList.getLength(); ++j)
+                for (const uno::Reference< deployment::XPackage > & xPackage : xPackageList)
                 {
-                    uno::Reference< deployment::XPackage > xPackage = xPackageList[j];
-
                     if (xPackage.is())
                     {
                         maEntries.emplace_back(xPackage);
@@ -436,46 +432,46 @@ namespace
     private:
         void visitNodesXMLRead(const uno::Reference< xml::dom::XElement >& rElement)
         {
-            if (rElement.is())
+            if (!rElement.is())
+                return;
+
+            const OUString aTagName(rElement->getTagName());
+
+            if (aTagName == "extension")
             {
-                const OUString aTagName(rElement->getTagName());
+                OUString aAttrUrl(rElement->getAttribute("url"));
+                const OUString aAttrRevoked(rElement->getAttribute("revoked"));
 
-                if (aTagName == "extension")
+                if (!aAttrUrl.isEmpty())
                 {
-                    OUString aAttrUrl(rElement->getAttribute("url"));
-                    const OUString aAttrRevoked(rElement->getAttribute("revoked"));
+                    const sal_Int32 nIndex(aAttrUrl.lastIndexOf('/'));
 
-                    if (!aAttrUrl.isEmpty())
+                    if (nIndex > 0 && aAttrUrl.getLength() > nIndex + 1)
                     {
-                        const sal_Int32 nIndex(aAttrUrl.lastIndexOf('/'));
-
-                        if (nIndex > 0 && aAttrUrl.getLength() > nIndex + 1)
-                        {
-                            aAttrUrl = aAttrUrl.copy(nIndex + 1);
-                        }
-
-                        const bool bEnabled(aAttrRevoked.isEmpty() || !aAttrRevoked.toBoolean());
-                        maEntries.emplace_back(
-                                OUStringToOString(aAttrUrl, RTL_TEXTENCODING_ASCII_US),
-                                bEnabled);
+                        aAttrUrl = aAttrUrl.copy(nIndex + 1);
                     }
+
+                    const bool bEnabled(aAttrRevoked.isEmpty() || !aAttrRevoked.toBoolean());
+                    maEntries.emplace_back(
+                            OUStringToOString(aAttrUrl, RTL_TEXTENCODING_ASCII_US),
+                            bEnabled);
                 }
-                else
+            }
+            else
+            {
+                uno::Reference< xml::dom::XNodeList > aList = rElement->getChildNodes();
+
+                if (aList.is())
                 {
-                    uno::Reference< xml::dom::XNodeList > aList = rElement->getChildNodes();
+                    const sal_Int32 nLength(aList->getLength());
 
-                    if (aList.is())
+                    for (sal_Int32 a(0); a < nLength; a++)
                     {
-                        const sal_Int32 nLength(aList->getLength());
+                        const uno::Reference< xml::dom::XElement > aChild(aList->item(a), uno::UNO_QUERY);
 
-                        for (sal_Int32 a(0); a < nLength; a++)
+                        if (aChild.is())
                         {
-                            const uno::Reference< xml::dom::XElement > aChild(aList->item(a), uno::UNO_QUERY);
-
-                            if (aChild.is())
-                            {
-                                visitNodesXMLRead(aChild);
-                            }
+                            visitNodesXMLRead(aChild);
                         }
                     }
                 }
@@ -605,58 +601,58 @@ namespace
             const ExtensionInfoEntryVector& rToBeEnabled,
             const ExtensionInfoEntryVector& rToBeDisabled)
         {
+            if (!DirectoryHelper::fileExists(rUnoPackagReg))
+                return;
+
+            uno::Reference< uno::XComponentContext > xContext = ::comphelper::getProcessComponentContext();
+            uno::Reference< xml::dom::XDocumentBuilder > xBuilder = xml::dom::DocumentBuilder::create(xContext);
+            uno::Reference< xml::dom::XDocument > aDocument = xBuilder->parseURI(rUnoPackagReg);
+
+            if (!aDocument.is())
+                return;
+
+            if (!visitNodesXMLChange(
+                rTagToSearch,
+                aDocument->getDocumentElement(),
+                rToBeEnabled,
+                rToBeDisabled))
+                return;
+
+            // did change - write back
+            uno::Reference< xml::sax::XSAXSerializable > xSerializer(aDocument, uno::UNO_QUERY);
+
+            if (!xSerializer.is())
+                return;
+
+            // create a SAXWriter
+            uno::Reference< xml::sax::XWriter > const xSaxWriter = xml::sax::Writer::create(xContext);
+            uno::Reference< io::XStream > xTempFile = io::TempFile::create(xContext);
+            uno::Reference< io::XOutputStream > xOutStrm = xTempFile->getOutputStream();
+
+            // set output stream and do the serialization
+            xSaxWriter->setOutputStream(xOutStrm);
+            xSerializer->serialize(xSaxWriter, uno::Sequence< beans::StringPair >());
+
+            // get URL from temp file
+            uno::Reference < beans::XPropertySet > xTempFileProps(xTempFile, uno::UNO_QUERY);
+            uno::Any aUrl = xTempFileProps->getPropertyValue("Uri");
+            OUString aTempURL;
+            aUrl >>= aTempURL;
+
+            // copy back file
+            if (!(!aTempURL.isEmpty() && DirectoryHelper::fileExists(aTempURL)))
+                return;
+
             if (DirectoryHelper::fileExists(rUnoPackagReg))
             {
-                uno::Reference< uno::XComponentContext > xContext = ::comphelper::getProcessComponentContext();
-                uno::Reference< xml::dom::XDocumentBuilder > xBuilder = xml::dom::DocumentBuilder::create(xContext);
-                uno::Reference< xml::dom::XDocument > aDocument = xBuilder->parseURI(rUnoPackagReg);
-
-                if (aDocument.is())
-                {
-                    if (visitNodesXMLChange(
-                        rTagToSearch,
-                        aDocument->getDocumentElement(),
-                        rToBeEnabled,
-                        rToBeDisabled))
-                    {
-                        // did change - write back
-                        uno::Reference< xml::sax::XSAXSerializable > xSerializer(aDocument, uno::UNO_QUERY);
-
-                        if (xSerializer.is())
-                        {
-                            // create a SAXWriter
-                            uno::Reference< xml::sax::XWriter > const xSaxWriter = xml::sax::Writer::create(xContext);
-                            uno::Reference< io::XStream > xTempFile = io::TempFile::create(xContext);
-                            uno::Reference< io::XOutputStream > xOutStrm = xTempFile->getOutputStream();
-
-                            // set output stream and do the serialization
-                            xSaxWriter->setOutputStream(xOutStrm);
-                            xSerializer->serialize(xSaxWriter, uno::Sequence< beans::StringPair >());
-
-                            // get URL from temp file
-                            uno::Reference < beans::XPropertySet > xTempFileProps(xTempFile, uno::UNO_QUERY);
-                            uno::Any aUrl = xTempFileProps->getPropertyValue("Uri");
-                            OUString aTempURL;
-                            aUrl >>= aTempURL;
-
-                            // copy back file
-                            if (!aTempURL.isEmpty() && DirectoryHelper::fileExists(aTempURL))
-                            {
-                                if (DirectoryHelper::fileExists(rUnoPackagReg))
-                                {
-                                    osl::File::remove(rUnoPackagReg);
-                                }
+                osl::File::remove(rUnoPackagReg);
+            }
 
 #if OSL_DEBUG_LEVEL > 1
-                                SAL_WARN_IF(osl::FileBase::E_None != osl::File::move(aTempURL, rUnoPackagReg), "comphelper.backupfilehelper", "could not copy back modified Extension configuration file");
+            SAL_WARN_IF(osl::FileBase::E_None != osl::File::move(aTempURL, rUnoPackagReg), "comphelper.backupfilehelper", "could not copy back modified Extension configuration file");
 #else
-                                osl::File::move(aTempURL, rUnoPackagReg);
+            osl::File::move(aTempURL, rUnoPackagReg);
 #endif
-                            }
-                        }
-                    }
-                }
-            }
         }
 
     public:
@@ -1602,45 +1598,45 @@ namespace comphelper
         // ensure existence of needed paths
         getInitialBaseURL();
 
-        if (!maUserConfigBaseURL.isEmpty())
+        if (maUserConfigBaseURL.isEmpty())
+            return;
+
+        if (bSafeMode)
         {
-            if (bSafeMode)
+            if (!mbSafeModeDirExists)
             {
-                if (!mbSafeModeDirExists)
-                {
-                    std::set< OUString > aExcludeList;
+                std::set< OUString > aExcludeList;
 
-                    // do not move SafeMode directory itself
-                    aExcludeList.insert(getSafeModeName());
+                // do not move SafeMode directory itself
+                aExcludeList.insert(getSafeModeName());
 
-                    // init SafeMode by creating the 'SafeMode' directory and moving
-                    // all stuff there. All repairs will happen there. Both Dirs have to exist.
-                    // extend maUserConfigWorkURL as needed
-                    maUserConfigWorkURL = maUserConfigBaseURL + "/" + getSafeModeName();
+                // init SafeMode by creating the 'SafeMode' directory and moving
+                // all stuff there. All repairs will happen there. Both Dirs have to exist.
+                // extend maUserConfigWorkURL as needed
+                maUserConfigWorkURL = maUserConfigBaseURL + "/" + getSafeModeName();
 
-                    osl::Directory::createPath(maUserConfigWorkURL);
-                    DirectoryHelper::moveDirContent(maUserConfigBaseURL, maUserConfigWorkURL, aExcludeList);
+                osl::Directory::createPath(maUserConfigWorkURL);
+                DirectoryHelper::moveDirContent(maUserConfigBaseURL, maUserConfigWorkURL, aExcludeList);
 
-                    // switch local flag, maUserConfigWorkURL is already reset
-                    mbSafeModeDirExists = true;
-                }
+                // switch local flag, maUserConfigWorkURL is already reset
+                mbSafeModeDirExists = true;
             }
-            else
+        }
+        else
+        {
+            if (mbSafeModeDirExists)
             {
-                if (mbSafeModeDirExists)
-                {
-                    // SafeMode has ended, return to normal mode by moving all content
-                    // from 'SafeMode' directory back to UserDirectory and deleting it.
-                    // Both Dirs have to exist
-                    std::set< OUString > aExcludeList;
+                // SafeMode has ended, return to normal mode by moving all content
+                // from 'SafeMode' directory back to UserDirectory and deleting it.
+                // Both Dirs have to exist
+                std::set< OUString > aExcludeList;
 
-                    DirectoryHelper::moveDirContent(maUserConfigWorkURL, maUserConfigBaseURL, aExcludeList);
-                    osl::Directory::remove(maUserConfigWorkURL);
+                DirectoryHelper::moveDirContent(maUserConfigWorkURL, maUserConfigBaseURL, aExcludeList);
+                osl::Directory::remove(maUserConfigWorkURL);
 
-                    // switch local flag and reset maUserConfigWorkURL
-                    mbSafeModeDirExists = false;
-                    maUserConfigWorkURL = maUserConfigBaseURL;
-                }
+                // switch local flag and reset maUserConfigWorkURL
+                mbSafeModeDirExists = false;
+                maUserConfigWorkURL = maUserConfigBaseURL;
             }
         }
     }
@@ -1650,22 +1646,22 @@ namespace comphelper
         // no push when SafeModeDir exists, it may be Office's exit after SafeMode
         // where SafeMode flag is already deleted, but SafeModeDir cleanup is not
         // done yet (is done at next startup)
-        if (mbActive && !mbSafeModeDirExists)
+        if (!(mbActive && !mbSafeModeDirExists))
+            return;
+
+        const OUString aPackURL(getPackURL());
+
+        // ensure dir and file vectors
+        fillDirFileInfo();
+
+        // process all files in question recursively
+        if (!maDirs.empty() || !maFiles.empty())
         {
-            const OUString aPackURL(getPackURL());
-
-            // ensure dir and file vectors
-            fillDirFileInfo();
-
-            // process all files in question recursively
-            if (!maDirs.empty() || !maFiles.empty())
-            {
-                tryPush_Files(
-                    maDirs,
-                    maFiles,
-                    maUserConfigWorkURL,
-                    aPackURL);
-            }
+            tryPush_Files(
+                maDirs,
+                maFiles,
+                maUserConfigWorkURL,
+                aPackURL);
         }
     }
 
@@ -1709,29 +1705,29 @@ namespace comphelper
 
     void BackupFileHelper::tryPop()
     {
-        if (mbActive)
+        if (!mbActive)
+            return;
+
+        bool bDidPop(false);
+        const OUString aPackURL(getPackURL());
+
+        // ensure dir and file vectors
+        fillDirFileInfo();
+
+        // process all files in question recursively
+        if (!maDirs.empty() || !maFiles.empty())
         {
-            bool bDidPop(false);
-            const OUString aPackURL(getPackURL());
+            bDidPop = tryPop_files(
+                maDirs,
+                maFiles,
+                maUserConfigWorkURL,
+                aPackURL);
+        }
 
-            // ensure dir and file vectors
-            fillDirFileInfo();
-
-            // process all files in question recursively
-            if (!maDirs.empty() || !maFiles.empty())
-            {
-                bDidPop = tryPop_files(
-                    maDirs,
-                    maFiles,
-                    maUserConfigWorkURL,
-                    aPackURL);
-            }
-
-            if (bDidPop)
-            {
-                // try removal of evtl. empty directory
-                osl::Directory::remove(aPackURL);
-            }
+        if (bDidPop)
+        {
+            // try removal of evtl. empty directory
+            osl::Directory::remove(aPackURL);
         }
     }
 
@@ -1751,18 +1747,18 @@ namespace comphelper
 
     void BackupFileHelper::tryPopExtensionInfo()
     {
-        if (mbActive && mbExtensions)
+        if (!(mbActive && mbExtensions))
+            return;
+
+        bool bDidPop(false);
+        const OUString aPackURL(getPackURL());
+
+        bDidPop = tryPop_extensionInfo(aPackURL);
+
+        if (bDidPop)
         {
-            bool bDidPop(false);
-            const OUString aPackURL(getPackURL());
-
-            bDidPop = tryPop_extensionInfo(aPackURL);
-
-            if (bDidPop)
-            {
-                // try removal of evtl. empty directory
-                osl::Directory::remove(aPackURL);
-            }
+            // try removal of evtl. empty directory
+            osl::Directory::remove(aPackURL);
         }
     }
 
@@ -1914,6 +1910,11 @@ namespace comphelper
                                                        "ForceOpenGL", "false"));
         xRootElement->appendChild(lcl_getConfigElement(xDocument, "/org.openoffice.Office.Common/Misc",
                                                        "UseOpenCL", "false"));
+        // Do not disable Skia entirely, just force it's CPU-based raster mode.
+        xRootElement->appendChild(lcl_getConfigElement(xDocument, "/org.openoffice.Office.Common/VCL",
+                                                       "ForceSkia", "false"));
+        xRootElement->appendChild(lcl_getConfigElement(xDocument, "/org.openoffice.Office.Common/VCL",
+                                                       "ForceSkiaRaster", "true"));
 
         // write back
         uno::Reference< xml::sax::XSAXSerializable > xSerializer(xDocument, uno::UNO_QUERY);

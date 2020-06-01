@@ -51,7 +51,7 @@ ObjectType Tables::createObject(const OUString& rName)
                                                                   uno::Sequence< OUString >());
 
     if (!xTables.is())
-        throw RuntimeException();
+        throw RuntimeException("Could not acquire table.");
 
     uno::Reference< XRow > xRow(xTables,UNO_QUERY_THROW);
 
@@ -66,7 +66,7 @@ ObjectType Tables::createObject(const OUString& rName)
                               xRow->getString(5))); // Description / Remarks / Comments
 
     if (xTables->next())
-        throw RuntimeException(); // Only one table should be returned
+        throw RuntimeException("Found more tables than expected.");
 
     return xRet;
 }
@@ -207,19 +207,19 @@ void Tables::dropObject(sal_Int32 nPosition, const OUString& sName)
 {
     uno::Reference< XPropertySet > xTable(getObject(nPosition));
 
-    if (!ODescriptor::isNew(xTable))
-    {
-        OUStringBuffer sSql("DROP ");
+    if (ODescriptor::isNew(xTable))
+        return;
 
-        OUString sType;
-        xTable->getPropertyValue("Type") >>= sType;
-        sSql.append(sType);
+    OUStringBuffer sSql("DROP ");
 
-        const OUString sQuoteString = m_xMetaData->getIdentifierQuoteString();
-        sSql.append(::dbtools::quoteName(sQuoteString,sName));
+    OUString sType;
+    xTable->getPropertyValue("Type") >>= sType;
+    sSql.append(sType);
 
-        m_xMetaData->getConnection()->createStatement()->execute(sSql.makeStringAndClear());
-    }
+    const OUString sQuoteString = m_xMetaData->getIdentifierQuoteString();
+    sSql.append(::dbtools::quoteName(sQuoteString,sName));
+
+    m_xMetaData->getConnection()->createStatement()->execute(sSql.makeStringAndClear());
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

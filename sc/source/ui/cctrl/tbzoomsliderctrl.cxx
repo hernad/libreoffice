@@ -17,6 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 #include <tbzoomsliderctrl.hxx>
+#include <vcl/InterimItemWindow.hxx>
 #include <vcl/event.hxx>
 #include <vcl/image.hxx>
 #include <vcl/toolbox.hxx>
@@ -75,17 +76,17 @@ void ScZoomSliderControl::StateChanged( sal_uInt16 /*nSID*/, SfxItemState eState
     }
 }
 
-VclPtr<vcl::Window> ScZoomSliderControl::CreateItemWindow( vcl::Window *pParent )
+VclPtr<InterimItemWindow> ScZoomSliderControl::CreateItemWindow( vcl::Window *pParent )
 {
     // #i98000# Don't try to get a value via SfxViewFrame::Current here.
     // The view's value is always notified via StateChanged later.
-    VclPtrInstance<ScZoomSliderWnd> pSlider( pParent,
+    VclPtrInstance<ScZoomSliderWnd> xSlider( pParent,
         css::uno::Reference< css::frame::XDispatchProvider >( m_xFrame->getController(),
         css::uno::UNO_QUERY ), 100 );
-    return pSlider.get();
+    return xSlider;
 }
 
-struct ScZoomSliderWnd::ScZoomSliderWnd_Impl
+struct ScZoomSlider::ScZoomSliderWnd_Impl
 {
     sal_uInt16                   mnCurrentZoom;
     sal_uInt16                   mnMinZoom;
@@ -96,8 +97,9 @@ struct ScZoomSliderWnd::ScZoomSliderWnd_Impl
     Image                    maIncreaseButton;
     Image                    maDecreaseButton;
     bool                     mbOmitPaint;
+    VclPtr<vcl::Window>      mxParentWindow;
 
-    explicit ScZoomSliderWnd_Impl( sal_uInt16 nCurrentZoom ) :
+    explicit ScZoomSliderWnd_Impl( sal_uInt16 nCurrentZoom, vcl::Window* parentWindow ) :
         mnCurrentZoom( nCurrentZoom ),
         mnMinZoom( 10 ),
         mnMaxZoom( 400 ),
@@ -106,7 +108,8 @@ struct ScZoomSliderWnd::ScZoomSliderWnd_Impl
         maSliderButton(),
         maIncreaseButton(),
         maDecreaseButton(),
-        mbOmitPaint( false )
+        mbOmitPaint( false ),
+        mxParentWindow(parentWindow)
         {
         }
 };
@@ -124,7 +127,7 @@ const long nSliderXOffset   = 20;
 const long nSnappingEpsilon = 5; // snapping epsilon in pixels
 const long nSnappingPointsMinDist = nSnappingEpsilon; // minimum distance of two adjacent snapping points
 
-sal_uInt16 ScZoomSliderWnd::Offset2Zoom( long nOffset ) const
+sal_uInt16 ScZoomSlider::Offset2Zoom( long nOffset ) const
 {
     Size aSliderWindowSize = GetOutputSizePixel();
     const long nControlWidth = aSliderWindowSize.Width();
@@ -176,7 +179,7 @@ sal_uInt16 ScZoomSliderWnd::Offset2Zoom( long nOffset ) const
     return nRet;
 }
 
-long ScZoomSliderWnd::Zoom2Offset( sal_uInt16 nCurrentZoom ) const
+long ScZoomSlider::Zoom2Offset( sal_uInt16 nCurrentZoom ) const
 {
     Size aSliderWindowSize = GetOutputSizePixel();
     const long nControlWidth = aSliderWindowSize.Width();
@@ -205,16 +208,16 @@ long ScZoomSliderWnd::Zoom2Offset( sal_uInt16 nCurrentZoom ) const
 ScZoomSliderWnd::ScZoomSliderWnd( vcl::Window* pParent,
                 const css::uno::Reference< css::frame::XDispatchProvider >& rDispatchProvider,
                 sal_uInt16 nCurrentZoom ):
-                Window( pParent ),
-                mpImpl( new ScZoomSliderWnd_Impl( nCurrentZoom ) ),
-                aLogicalSize( 115, 40 ),
-                m_xDispatchProvider( rDispatchProvider )
+                InterimItemWindow(pParent, "modules/scalc/ui/zoombox.ui", "ZoomBox"),
+                mxWidget(new ScZoomSlider(rDispatchProvider, nCurrentZoom, pParent)),
+                mxWeld(new weld::CustomWeld(*m_xBuilder, "zoom", *mxWidget))
 {
-    mpImpl->maSliderButton      = Image(StockImage::Yes, RID_SVXBMP_SLIDERBUTTON);
-    mpImpl->maIncreaseButton    = Image(StockImage::Yes, RID_SVXBMP_SLIDERINCREASE);
-    mpImpl->maDecreaseButton    = Image(StockImage::Yes, RID_SVXBMP_SLIDERDECREASE);
-    Size  aSliderSize           = LogicToPixel( aLogicalSize, MapMode( MapUnit::Map10thMM ) );
-    SetSizePixel( Size( aSliderSize.Width() * nSliderWidth-1, aSliderSize.Height() + nSliderHeight ) );
+    Size aLogicalSize( 115, 40 );
+    Size aSliderSize = LogicToPixel(aLogicalSize, MapMode(MapUnit::Map10thMM));
+    Size aPreferredSize(aSliderSize.Width() * nSliderWidth-1, aSliderSize.Height() + nSliderHeight);
+    mxWidget->GetDrawingArea()->set_size_request(aPreferredSize.Width(), aPreferredSize.Height());
+    mxWidget->SetOutputSizePixel(aPreferredSize);
+    SetSizePixel(aPreferredSize);
 }
 
 ScZoomSliderWnd::~ScZoomSliderWnd()
@@ -224,11 +227,22 @@ ScZoomSliderWnd::~ScZoomSliderWnd()
 
 void ScZoomSliderWnd::dispose()
 {
-    mpImpl.reset();
-    vcl::Window::dispose();
+    mxWeld.reset();
+    mxWidget.reset();
+    InterimItemWindow::dispose();
 }
 
-void ScZoomSliderWnd::MouseButtonDown( const MouseEvent& rMEvt )
+ScZoomSlider::ScZoomSlider(const css::uno::Reference< css::frame::XDispatchProvider>& rDispatchProvider,
+                           sal_uInt16 nCurrentZoom, vcl::Window* parentWindow)
+    : mpImpl(new ScZoomSliderWnd_Impl(nCurrentZoom, parentWindow))
+    , m_xDispatchProvider(rDispatchProvider)
+{
+    mpImpl->maSliderButton      = Image(StockImage::Yes, RID_SVXBMP_SLIDERBUTTON);
+    mpImpl->maIncreaseButton    = Image(StockImage::Yes, RID_SVXBMP_SLIDERINCREASE);
+    mpImpl->maDecreaseButton    = Image(StockImage::Yes, RID_SVXBMP_SLIDERDECREASE);
+}
+
+bool ScZoomSlider::MouseButtonDown( const MouseEvent& rMEvt )
 {
     Size aSliderWindowSize = GetOutputSizePixel();
 
@@ -261,11 +275,10 @@ void ScZoomSliderWnd::MouseButtonDown( const MouseEvent& rMEvt )
         mpImpl->mnCurrentZoom = mpImpl->mnMaxZoom;
 
     if( nOldZoom == mpImpl->mnCurrentZoom )
-        return ;
+        return true;
 
-    tools::Rectangle aRect( Point( 0, 0 ), aSliderWindowSize );
-
-    Invalidate(aRect);
+    // need to invalidate parent since we rely on the toolbox drawing it's fancy gradient background
+    mpImpl->mxParentWindow->Invalidate();
     mpImpl->mbOmitPaint = true;
 
     SvxZoomSliderItem   aZoomSliderItem( mpImpl->mnCurrentZoom );
@@ -280,9 +293,11 @@ void ScZoomSliderWnd::MouseButtonDown( const MouseEvent& rMEvt )
     SfxToolBoxControl::Dispatch( m_xDispatchProvider, ".uno:ScalingFactor", aArgs );
 
     mpImpl->mbOmitPaint = false;
+
+    return true;
 }
 
-void ScZoomSliderWnd::MouseMove( const MouseEvent& rMEvt )
+bool ScZoomSlider::MouseMove( const MouseEvent& rMEvt )
 {
     Size aSliderWindowSize   = GetOutputSizePixel();
     const long nControlWidth = aSliderWindowSize.Width();
@@ -297,8 +312,8 @@ void ScZoomSliderWnd::MouseMove( const MouseEvent& rMEvt )
         {
             mpImpl->mnCurrentZoom = Offset2Zoom( aPoint.X() );
 
-            tools::Rectangle aRect(Point(0, 0), aSliderWindowSize);
-            Invalidate(aRect);
+            // need to invalidate parent since we rely on the toolbox drawing it's fancy gradient background
+            mpImpl->mxParentWindow->Invalidate();
 
             mpImpl->mbOmitPaint = true; // optimization: paint before executing command,
 
@@ -317,9 +332,16 @@ void ScZoomSliderWnd::MouseMove( const MouseEvent& rMEvt )
             mpImpl->mbOmitPaint = false;
         }
     }
+
+    return false;
 }
 
 void ScZoomSliderWnd::UpdateFromItem( const SvxZoomSliderItem* pZoomSliderItem )
+{
+    mxWidget->UpdateFromItem(pZoomSliderItem);
+}
+
+void ScZoomSlider::UpdateFromItem(const SvxZoomSliderItem* pZoomSliderItem)
 {
     if( pZoomSliderItem )
     {
@@ -357,19 +379,17 @@ void ScZoomSliderWnd::UpdateFromItem( const SvxZoomSliderItem* pZoomSliderItem )
         }
     }
 
-    Size aSliderWindowSize = GetOutputSizePixel();
-    tools::Rectangle aRect(Point(0, 0), aSliderWindowSize);
-
     if ( !mpImpl->mbOmitPaint )
-       Invalidate(aRect);
+        // need to invalidate parent since we rely on the toolbox drawing it's fancy gradient background
+        mpImpl->mxParentWindow->Invalidate();
 }
 
-void ScZoomSliderWnd::Paint(vcl::RenderContext& rRenderContext, const tools::Rectangle& /*rRect*/)
+void ScZoomSlider::Paint(vcl::RenderContext& rRenderContext, const tools::Rectangle& /*rRect*/)
 {
     DoPaint(rRenderContext);
 }
 
-void ScZoomSliderWnd::DoPaint(vcl::RenderContext& rRenderContext)
+void ScZoomSlider::DoPaint(vcl::RenderContext& rRenderContext)
 {
     if (mpImpl->mbOmitPaint)
         return;
@@ -378,6 +398,7 @@ void ScZoomSliderWnd::DoPaint(vcl::RenderContext& rRenderContext)
     tools::Rectangle aRect(Point(0, 0), aSliderWindowSize);
 
     ScopedVclPtrInstance< VirtualDevice > pVDev(rRenderContext);
+    pVDev->SetBackground(Wallpaper(COL_TRANSPARENT));
     pVDev->SetOutputSizePixel(aSliderWindowSize);
 
     tools::Rectangle aSlider = aRect;
@@ -398,21 +419,6 @@ void ScZoomSliderWnd::DoPaint(vcl::RenderContext& rRenderContext)
 
     tools::Rectangle aRight(aSlider);
     aRight.SetLeft( aRight.Right() );
-
-    // draw VirtualDevice's background color
-    Color aStartColor = rRenderContext.GetSettings().GetStyleSettings().GetFaceColor();
-    Color aEndColor   = rRenderContext.GetSettings().GetStyleSettings().GetFaceColor();
-
-    if (aEndColor.IsDark())
-        aStartColor = aEndColor;
-
-    Gradient aGradient;
-    aGradient.SetAngle(0);
-    aGradient.SetStyle(GradientStyle::Linear);
-
-    aGradient.SetStartColor(aStartColor);
-    aGradient.SetEndColor(aEndColor);
-    pVDev->DrawGradient(aRect, aGradient);
 
     // draw slider
     pVDev->SetLineColor(COL_WHITE);

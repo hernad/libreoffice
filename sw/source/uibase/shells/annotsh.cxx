@@ -455,7 +455,7 @@ void SwAnnotationShell::Exec( SfxRequest &rReq )
                 FieldUnit eMetric = ::GetDfltMetric(dynamic_cast<SwWebView*>( pView) !=  nullptr );
                 SW_MOD()->PutItem(SfxUInt16Item(SID_ATTR_METRIC, eMetric));
                 */
-                SfxItemSet aDlgAttr(GetPool(), svl::Items<EE_ITEMS_START, EE_ITEMS_END>{});
+                SfxItemSet aDlgAttr(GetPool(), svl::Items<XATTR_FILLSTYLE, XATTR_FILLCOLOR, EE_ITEMS_START, EE_ITEMS_END>{});
 
                 // util::Language does not exist in the EditEngine! Therefore not included in the set.
 
@@ -963,7 +963,8 @@ void SwAnnotationShell::StateClpbrd(SfxItemSet &rSet)
             }
             case SID_COPY:
             {
-                if (!pOLV->HasSelection() || rView.isContentExtractionLocked())
+                SfxObjectShell* pObjectShell = GetObjectShell();
+                if (!pOLV->HasSelection() || (pObjectShell && pObjectShell->isContentExtractionLocked()) )
                     rSet.DisableItem( nWhich );
                 break;
             }

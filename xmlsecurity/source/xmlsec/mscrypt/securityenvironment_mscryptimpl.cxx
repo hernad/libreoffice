@@ -34,6 +34,7 @@
 #include "x509certificate_mscryptimpl.hxx"
 #include <comphelper/servicehelper.hxx>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
+#include <com/sun/star/uno/XComponentContext.hpp>
 #include <cppuhelper/supportsservice.hxx>
 #include <xmlsec-wrapper.h>
 #include "akmngr.hxx"
@@ -991,12 +992,10 @@ OUString SecurityEnvironment_MSCryptImpl::getSecurityEnvironmentInformation()
 
 xmlSecKeysMngrPtr SecurityEnvironment_MSCryptImpl::createKeysManager() {
 
-    xmlSecKeysMngrPtr pKeysMngr = nullptr ;
-
     /*-
      * The following lines is based on the of xmlsec-mscrypto crypto engine
      */
-    pKeysMngr = xmlsecurity::MSCryptoAppliedKeysMngrCreate() ;
+    xmlSecKeysMngrPtr pKeysMngr = xmlsecurity::MSCryptoAppliedKeysMngrCreate() ;
     if( pKeysMngr == nullptr )
         throw uno::RuntimeException() ;
 

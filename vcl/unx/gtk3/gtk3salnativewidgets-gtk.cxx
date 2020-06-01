@@ -23,7 +23,7 @@
 #include <unx/fontmanager.hxx>
 
 #include "cairo_gtk3_cairo.hxx"
-#include <o3tl/optional.hxx>
+#include <optional>
 
 GtkStyleContext* GtkSalGraphics::mpWindowStyle = nullptr;
 GtkStyleContext* GtkSalGraphics::mpButtonStyle = nullptr;
@@ -488,7 +488,7 @@ void GtkSalGraphics::PaintScrollbar(GtkStyleContext *context,
 
         // Find the overall bounding rect of the control
         scrollbarRect = rControlRectangle;
-        if (scrollbarRect.GetWidth() <= 0 || scrollbarRect.GetHeight() <= 0)
+        if (scrollbarRect.IsEmpty())
             return;
 
         gint slider_side;
@@ -599,7 +599,7 @@ void GtkSalGraphics::PaintScrollbar(GtkStyleContext *context,
             button22BoundRect.SetSize( Size( slider_width, stepper_size ) );
         }
 
-        bool has_slider = ( thumbRect.GetWidth() > 0 && thumbRect.GetHeight() > 0 );
+        bool has_slider = !thumbRect.IsEmpty();
 
         // ----------------- CONTENTS
         GtkStyleContext* pScrollbarContentsStyle = scrollbarOrientation == GTK_ORIENTATION_VERTICAL ?
@@ -914,7 +914,7 @@ void GtkSalGraphics::PaintScrollbar(GtkStyleContext *context,
         thumbRect.Move( (scrollbarRect.GetWidth() - slider_width) / 2, 0 );
     }
 
-    bool has_slider = ( thumbRect.GetWidth() > 0 && thumbRect.GetHeight() > 0 );
+    bool has_slider = !thumbRect.IsEmpty();
 
     // ----------------- CONTENTS
     GtkStyleContext* pScrollbarContentsStyle = scrollbarOrientation == GTK_ORIENTATION_VERTICAL ?
@@ -2702,7 +2702,7 @@ bool GtkSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, co
 
     cairo_destroy(cr); // unref
 
-    if (rControlRegion.GetWidth() >= 0 && rControlRegion.GetHeight() >= 0)
+    if (!rControlRegion.IsEmpty())
         mpFrame->damaged(rControlRegion.Left(), rControlRegion.Top(), rControlRegion.GetWidth(), rControlRegion.GetHeight());
 
     return true;
@@ -2960,16 +2960,19 @@ vcl::Font pango_to_vcl(const PangoFontDescription* font, const css::lang::Locale
     }
 
 #if OSL_DEBUG_LEVEL > 1
-    fprintf( stderr, "font name BEFORE system match: \"%s\"\n", aFamily.getStr() );
+    SAL_INFO("vcl.gtk3", "font name BEFORE system match: \""
+            << aFamily << "\".");
 #endif
 
     // match font to e.g. resolve "Sans"
     psp::PrintFontManager::get().matchFont(aInfo, rLocale);
 
 #if OSL_DEBUG_LEVEL > 1
-    fprintf( stderr, "font match %s, name AFTER: \"%s\"\n",
-                  aInfo.m_nID != 0 ? "succeeded" : "failed",
-                  OUStringToOString( aInfo.m_aFamilyName, RTL_TEXTENCODING_ISO_8859_1 ).getStr() );
+    SAL_INFO("vcl.gtk3", "font match "
+            << (aInfo.m_nID != 0 ? "succeeded" : "failed")
+            << ", name AFTER: \""
+            << aInfo.m_aFamilyName
+            << "\".");
 #endif
 
     int nPointHeight = nPangoHeight/PANGO_SCALE;
@@ -3030,10 +3033,13 @@ bool GtkSalGraphics::updateSettings(AllSettings& rSettings)
     // mouse over text colors
     style_context_set_state(pStyle, GTK_STATE_FLAG_PRELIGHT);
     gtk_style_context_get_color(pStyle, gtk_style_context_get_state(pStyle), &text_color);
-    aTextColor = getColor( text_color );
+    aTextColor = getColor(text_color);
+    aStyleSet.SetDefaultButtonRolloverTextColor(aTextColor);
     aStyleSet.SetButtonRolloverTextColor(aTextColor);
+    aStyleSet.SetDefaultActionButtonRolloverTextColor(aTextColor);
     aStyleSet.SetActionButtonRolloverTextColor(aTextColor);
-    aStyleSet.SetFieldRolloverTextColor( aTextColor );
+    aStyleSet.SetFlatButtonRolloverTextColor(aTextColor);
+    aStyleSet.SetFieldRolloverTextColor(aTextColor);
 
     aContextState.restore();
 
@@ -3061,11 +3067,14 @@ bool GtkSalGraphics::updateSettings(AllSettings& rSettings)
         pos = gtk_widget_path_append_type (pCPath, GTK_TYPE_LABEL);
         gtk_widget_path_iter_add_class(pCPath, pos, GTK_STYLE_CLASS_LABEL);
         GtkStyleContext *pCStyle = makeContext (pCPath, nullptr);
+        aContextState.save(pCStyle);
 
         GdkRGBA tooltip_bg_color, tooltip_fg_color;
         style_context_set_state(pCStyle, GTK_STATE_FLAG_NORMAL);
         gtk_style_context_get_color(pCStyle, gtk_style_context_get_state(pCStyle), &tooltip_fg_color);
         gtk_style_context_get_background_color(pCStyle, gtk_style_context_get_state(pCStyle), &tooltip_bg_color);
+
+        aContextState.restore();
         g_object_unref( pCStyle );
 
         aStyleSet.SetHelpColor( getColor( tooltip_bg_color ));
@@ -3078,6 +3087,7 @@ bool GtkSalGraphics::updateSettings(AllSettings& rSettings)
         gtk_widget_path_append_type( pCPath, GTK_TYPE_TEXT_VIEW );
         gtk_widget_path_iter_add_class( pCPath, -1, GTK_STYLE_CLASS_VIEW );
         GtkStyleContext *pCStyle = makeContext( pCPath, nullptr );
+        aContextState.save(pCStyle);
 
         // highlighting colors
         style_context_set_state(pCStyle, GTK_STATE_FLAG_SELECTED);
@@ -3117,6 +3127,7 @@ bool GtkSalGraphics::updateSettings(AllSettings& rSettings)
             aShadowColor.DecreaseLuminance(64);
         aStyleSet.SetShadowColor(aShadowColor);
 
+        aContextState.restore();
         g_object_unref( pCStyle );
 
         // Tab colors
@@ -3323,7 +3334,9 @@ bool GtkSalGraphics::updateSettings(AllSettings& rSettings)
 #if OSL_DEBUG_LEVEL > 1
     gchar* pThemeName = NULL;
     g_object_get( pSettings, "gtk-theme-name", &pThemeName, nullptr );
-    fprintf( stderr, "Theme name is \"%s\"\n", pThemeName );
+    SAL_INFO("vcl.gtk3", "Theme name is \""
+            << pThemeName
+            << "\".");
     g_free(pThemeName);
 #endif
 

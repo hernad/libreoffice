@@ -36,7 +36,7 @@
 
 #include <list>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace beans {
         struct Property;
         struct PropertyValue;
@@ -44,7 +44,7 @@ namespace com { namespace sun { namespace star {
     namespace sdbc {
         class XRow;
     }
-}}}
+}
 namespace ucbhelper
 {
     class Content;
@@ -69,11 +69,11 @@ private:
     OUString          m_sObjectPath;
     OUString          m_sObjectId;
     OUString          m_sURL;
-    cmis::URL const   m_aURL;
+    cmis::URL         m_aURL;
 
     // Members to be set for non-persistent content
     bool                   m_bTransient;
-    bool const             m_bIsFolder;
+    bool                   m_bIsFolder;
     libcmis::ObjectTypePtr m_pObjectType;
     std::map< std::string, libcmis::PropertyPtr > m_pObjectProps;
 

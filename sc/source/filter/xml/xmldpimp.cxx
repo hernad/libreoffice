@@ -47,7 +47,6 @@
 using namespace com::sun::star;
 using namespace xmloff::token;
 using ::com::sun::star::uno::Reference;
-using ::com::sun::star::xml::sax::XAttributeList;
 
 ScXMLDataPilotTablesContext::ScXMLDataPilotTablesContext( ScXMLImport& rImport ) :
     ScXMLImportContext( rImport )
@@ -66,7 +65,7 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL ScXMLDataPilotTablesCon
 {
     SvXMLImportContext *pContext = nullptr;
     sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
+        &sax_fastparser::castToFastAttributeList( xAttrList );
 
     switch (nElement)
     {
@@ -195,7 +194,7 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL ScXMLDataPilotTableCont
 {
     SvXMLImportContext *pContext = nullptr;
     sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
+        &sax_fastparser::castToFastAttributeList( xAttrList );
 
     switch (nElement)
     {
@@ -767,7 +766,7 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL ScXMLSourceCellRangeCon
 {
     SvXMLImportContext *pContext = nullptr;
     sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
+        &sax_fastparser::castToFastAttributeList( xAttrList );
 
     switch (nElement)
     {
@@ -861,7 +860,7 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL ScXMLDataPilotFieldCont
 {
     SvXMLImportContext *pContext = nullptr;
     sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
+        &sax_fastparser::castToFastAttributeList( xAttrList );
 
     switch (nElement)
     {
@@ -1054,7 +1053,7 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL ScXMLDataPilotLevelCont
 {
     SvXMLImportContext *pContext = nullptr;
     sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
+        &sax_fastparser::castToFastAttributeList( xAttrList );
 
     switch (nElement)
     {
@@ -1215,7 +1214,7 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL ScXMLDataPilotSubTotals
 {
     SvXMLImportContext *pContext = nullptr;
     sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
+        &sax_fastparser::castToFastAttributeList( xAttrList );
 
     switch (nElement)
     {
@@ -1288,7 +1287,7 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL ScXMLDataPilotMembersCo
 {
     SvXMLImportContext *pContext = nullptr;
     sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
+        &sax_fastparser::castToFastAttributeList( xAttrList );
 
     switch (nElement)
     {
@@ -1461,7 +1460,7 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL ScXMLDataPilotGroupsCon
 {
     SvXMLImportContext *pContext = nullptr;
     sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
+        &sax_fastparser::castToFastAttributeList( xAttrList );
 
     if (nElement == XML_ELEMENT( TABLE, XML_DATA_PILOT_GROUP ))
     {
@@ -1494,7 +1493,7 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL ScXMLDataPilotGroupCont
 {
     SvXMLImportContext *pContext = nullptr;
     sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
+        &sax_fastparser::castToFastAttributeList( xAttrList );
 
     if (nElement == XML_ELEMENT( TABLE, XML_DATA_PILOT_MEMBER ) ||
         nElement == XML_ELEMENT( TABLE, XML_DATA_PILOT_GROUP_MEMBER ))

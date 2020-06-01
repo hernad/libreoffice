@@ -126,7 +126,7 @@ private:
     typedef std::vector<std::unique_ptr<SwFltStackEntry>> Entries;
     Entries m_Entries;
 
-    sal_uLong const nFieldFlags;
+    sal_uLong nFieldFlags;
 
     bool bHasSdOD;
     bool bSdODChecked;
@@ -165,7 +165,7 @@ public:
 
     void NewAttr(const SwPosition& rPos, const SfxPoolItem & rAttr );
 
-    virtual SwFltStackEntry* SetAttr(const SwPosition& rPos, sal_uInt16 nAttrId, bool bTstEnde=true, long nHand = LONG_MAX, bool consumedByField=false);
+    virtual SwFltStackEntry* SetAttr(const SwPosition& rPos, sal_uInt16 nAttrId, bool bTstEnd=true, long nHand = LONG_MAX, bool consumedByField=false);
 
     void StealAttr(const SwNodeIndex& rNode);
     void MarkAllAttrsOld();
@@ -212,9 +212,9 @@ class SwFltAnchorListener : public SvtListener
 class SW_DLLPUBLIC SwFltRedline : public SfxPoolItem
 {
 public:
-    DateTime const        aStamp;
-    RedlineType const     eType;
-    std::size_t const     nAutorNo;
+    DateTime        aStamp;
+    RedlineType     eType;
+    std::size_t     nAutorNo;
 
     SwFltRedline(RedlineType   eType_,
                  std::size_t     nAutorNo_,
@@ -234,10 +234,10 @@ class SW_DLLPUBLIC SwFltBookmark : public SfxPoolItem
 {
 private:
 
-    long const mnHandle;
+    long mnHandle;
     OUString maName;
-    OUString const maVal;
-    bool const mbIsTOCBookmark;
+    OUString maVal;
+    bool mbIsTOCBookmark;
 
 public:
     SwFltBookmark( const OUString& rNa,
@@ -282,7 +282,7 @@ class SW_DLLPUBLIC SwFltTOX : public SfxPoolItem
     bool bHadBreakItem; // there was a break item BEFORE insertion of the TOX
     bool bHadPageDescItem;
 public:
-    SwFltTOX(SwTOXBase* pBase);
+    SwFltTOX(std::shared_ptr<SwTOXBase> xBase);
     // "purely virtual methods" of SfxPoolItem
     virtual bool operator==(const SfxPoolItem&) const override;
     virtual SwFltTOX* Clone(SfxItemPool* = nullptr) const override;
@@ -311,7 +311,7 @@ SW_DLLPUBLIC void UpdatePageDescs(SwDoc &rDoc, size_t nInPageDescOffset);
 class ImportProgress
 {
 private:
-    SwDocShell * const m_pDocShell;
+    SwDocShell *m_pDocShell;
 public:
     ImportProgress(SwDocShell *pDocShell, long nStartVal, long nEndVal)
         : m_pDocShell(pDocShell)

@@ -20,10 +20,10 @@
 #ifndef INCLUDED_SVX_INC_SDR_CONTACT_VIEWCONTACTOFGRAPHIC_HXX
 #define INCLUDED_SVX_INC_SDR_CONTACT_VIEWCONTACTOFGRAPHIC_HXX
 
-#include <svx/sdr/contact/viewcontactoftextobj.hxx>
+#include <sdr/contact/viewcontactoftextobj.hxx>
 #include <svx/svdograf.hxx>
 
-namespace drawinglayer { namespace attribute { class SdrLineFillShadowTextAttribute; }}
+namespace drawinglayer::attribute { class SdrLineFillEffectsTextAttribute; }
 class GraphicAttr;
 
 namespace sdr
@@ -36,10 +36,10 @@ namespace sdr
             // helpers for constructing various primitive visualisations in various states
             drawinglayer::primitive2d::Primitive2DContainer createVIP2DSForPresObj(
                 const basegfx::B2DHomMatrix& rObjectMatrix,
-                const drawinglayer::attribute::SdrLineFillShadowTextAttribute& rAttribute) const;
+                const drawinglayer::attribute::SdrLineFillEffectsTextAttribute& rAttribute) const;
             drawinglayer::primitive2d::Primitive2DContainer createVIP2DSForDraft(
                 const basegfx::B2DHomMatrix& rObjectMatrix,
-                const drawinglayer::attribute::SdrLineFillShadowTextAttribute& rAttribute) const;
+                const drawinglayer::attribute::SdrLineFillEffectsTextAttribute& rAttribute) const;
 
             // Create an Object-Specific ViewObjectContact, set ViewContact and
             // ObjectContact. Always needs to return something.

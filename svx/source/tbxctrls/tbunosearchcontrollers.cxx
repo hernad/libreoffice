@@ -47,6 +47,7 @@
 #include <com/sun/star/util/SearchAlgorithms.hpp>
 #include <com/sun/star/util/SearchAlgorithms2.hpp>
 
+#include <vcl/InterimItemWindow.hxx>
 #include <svl/ctloptions.hxx>
 #include <svl/srchitem.hxx>
 #include <svtools/acceleratorexecute.hxx>
@@ -54,14 +55,12 @@
 #include <toolkit/helper/vclunohelper.hxx>
 #include <vcl/toolbox.hxx>
 #include <vcl/svapp.hxx>
-#include <rtl/ref.hxx>
 #include <rtl/instance.hxx>
+#include <svx/labelitemwindow.hxx>
 #include <svx/srchdlg.hxx>
-#include <vcl/button.hxx>
-#include <vcl/combobox.hxx>
 #include <vcl/event.hxx>
-#include <vcl/fixed.hxx>
-#include <vcl/window.hxx>
+
+#include <findtextfield.hxx>
 
 using namespace css;
 
@@ -75,6 +74,52 @@ static const char COMMAND_MATCHCASE[] = ".uno:MatchCase";
 static const char COMMAND_SEARCHFORMATTED[] = ".uno:SearchFormattedDisplayString";
 
 static const sal_Int32       REMEMBER_SIZE = 10;
+
+class CheckButtonItemWindow final : public InterimItemWindow
+{
+public:
+    CheckButtonItemWindow(vcl::Window* pParent, const OUString& rLabel)
+        : InterimItemWindow(pParent, "svx/ui/checkbuttonbox.ui", "CheckButtonBox")
+        , m_xWidget(m_xBuilder->weld_check_button("checkbutton"))
+    {
+        m_xWidget->connect_key_press(LINK(this, CheckButtonItemWindow, KeyInputHdl));
+        m_xWidget->set_label(rLabel);
+        SetSizePixel(m_xWidget->get_preferred_size());
+    }
+
+    bool get_active() const
+    {
+        return m_xWidget->get_active();
+    }
+
+    virtual void dispose() override
+    {
+        m_xWidget.reset();
+        InterimItemWindow::dispose();
+    }
+
+    virtual ~CheckButtonItemWindow() override
+    {
+        disposeOnce();
+    }
+
+    virtual void GetFocus() override
+    {
+        if (m_xWidget)
+            m_xWidget->grab_focus();
+        InterimItemWindow::GetFocus();
+    }
+
+private:
+    std::unique_ptr<weld::CheckButton> m_xWidget;
+
+    DECL_LINK(KeyInputHdl, const KeyEvent&, bool);
+};
+
+IMPL_LINK(CheckButtonItemWindow, KeyInputHdl, const KeyEvent&, rKeyEvent, bool)
+{
+    return ChildKeyInput(rKeyEvent);
+}
 
 void impl_executeSearch( const css::uno::Reference< css::uno::XComponentContext >& rxContext,
                          const css::uno::Reference< css::frame::XFrame >& xFrame,
@@ -99,19 +144,19 @@ void impl_executeSearch( const css::uno::Reference< css::uno::XComponentContext 
             OUString sItemCommand = pToolBox->GetItemCommand(id);
             if ( sItemCommand == COMMAND_FINDTEXT )
             {
-                vcl::Window* pItemWin = pToolBox->GetItemWindow(id);
+                FindTextFieldControl* pItemWin = static_cast<FindTextFieldControl*>(pToolBox->GetItemWindow(id));
                 if (pItemWin)
-                    sFindText = pItemWin->GetText();
+                    sFindText = pItemWin->get_active_text();
             } else if ( sItemCommand == COMMAND_MATCHCASE )
             {
-                CheckBox* pItemWin = static_cast<CheckBox*>( pToolBox->GetItemWindow(id) );
+                CheckButtonItemWindow* pItemWin = static_cast<CheckButtonItemWindow*>(pToolBox->GetItemWindow(id));
                 if (pItemWin)
-                    aMatchCase = pItemWin->IsChecked();
+                    aMatchCase = pItemWin->get_active();
             } else if ( sItemCommand == COMMAND_SEARCHFORMATTED )
             {
-                CheckBox* pItemWin = static_cast<CheckBox*>( pToolBox->GetItemWindow(id) );
+                CheckButtonItemWindow* pItemWin = static_cast<CheckButtonItemWindow*>(pToolBox->GetItemWindow(id));
                 if (pItemWin)
-                    bSearchFormatted = pItemWin->IsChecked();
+                    bSearchFormatted = pItemWin->get_active();
             }
         }
     }
@@ -144,52 +189,44 @@ void impl_executeSearch( const css::uno::Reference< css::uno::XComponentContext 
     }
 }
 
-class FindTextFieldControl : public ComboBox
-{
-public:
-    FindTextFieldControl( vcl::Window* pParent, WinBits nStyle,
-        css::uno::Reference< css::frame::XFrame > const & xFrame,
-        const css::uno::Reference< css::uno::XComponentContext >& xContext );
+}
 
-    virtual bool PreNotify( NotifyEvent& rNEvt ) override;
-
-    void Remember_Impl(const OUString& rStr);
-    void SetTextToSelected_Impl();
-
-private:
-
-    css::uno::Reference< css::frame::XFrame > m_xFrame;
-    css::uno::Reference< css::uno::XComponentContext > m_xContext;
-    std::unique_ptr<svt::AcceleratorExecute> m_pAcc;
-};
-
-FindTextFieldControl::FindTextFieldControl( vcl::Window* pParent, WinBits nStyle,
+FindTextFieldControl::FindTextFieldControl( vcl::Window* pParent,
     css::uno::Reference< css::frame::XFrame > const & xFrame,
     const css::uno::Reference< css::uno::XComponentContext >& xContext) :
-    ComboBox( pParent, nStyle ),
+    InterimItemWindow(pParent, "svx/ui/findbox.ui", "FindBox"),
+    m_nAsyncGetFocusId(nullptr),
+    m_xWidget(m_xBuilder->weld_combo_box("find")),
     m_xFrame(xFrame),
     m_xContext(xContext),
     m_pAcc(svt::AcceleratorExecute::createAcceleratorHelper())
 {
-    SetPlaceholderText(SvxResId(RID_SVXSTR_FINDBAR_FIND));
-    EnableAutocomplete(true, true);
+    m_xWidget->set_entry_placeholder_text(SvxResId(RID_SVXSTR_FINDBAR_FIND));
+    m_xWidget->set_entry_completion(true, true);
     m_pAcc->init(m_xContext, m_xFrame);
+
+    m_xWidget->connect_focus_in(LINK(this, FindTextFieldControl, FocusInHdl));
+    m_xWidget->connect_key_press(LINK(this, FindTextFieldControl, KeyInputHdl));
+    m_xWidget->connect_entry_activate(LINK(this, FindTextFieldControl, ActivateHdl));
+
+    m_xWidget->set_size_request(250, -1);
+    SetSizePixel(m_xWidget->get_preferred_size());
 }
 
 void FindTextFieldControl::Remember_Impl(const OUString& rStr)
 {
-    const sal_Int32 nCount = GetEntryCount();
+    const sal_Int32 nCount = m_xWidget->get_count();
 
     for (sal_Int32 i=0; i<nCount; ++i)
     {
-        if ( rStr == GetEntry(i))
+        if (rStr == m_xWidget->get_text(i))
             return;
     }
 
     if (nCount == REMEMBER_SIZE)
-        RemoveEntryAt(REMEMBER_SIZE-1);
+        m_xWidget->remove(REMEMBER_SIZE-1);
 
-    InsertEntry(rStr, 0);
+    m_xWidget->insert_text(0, rStr);
 }
 
 void FindTextFieldControl::SetTextToSelected_Impl()
@@ -214,92 +251,158 @@ void FindTextFieldControl::SetTextToSelected_Impl()
     if ( !aString.isEmpty() )
     {
         // If something is selected in the document, prepopulate with this
-        SetText( aString );
-        GetModifyHdl().Call(*this); // FIXME why SetText doesn't trigger this?
+        m_xWidget->set_entry_text(aString);
+        m_aChangeHdl.Call(*m_xWidget);
     }
-    else if (GetEntryCount() > 0)
+    else if (get_count() > 0)
     {
         // Else, prepopulate with last search word (fdo#84256)
-        SetText(GetEntry(0));
+        m_xWidget->set_entry_text(m_xWidget->get_text(0));
     }
 }
 
-bool FindTextFieldControl::PreNotify( NotifyEvent& rNEvt )
+IMPL_LINK(FindTextFieldControl, KeyInputHdl, const KeyEvent&, rKeyEvent, bool)
 {
     if (isDisposed())
         return true;
-    bool bRet= ComboBox::PreNotify( rNEvt );
 
-    switch ( rNEvt.GetType() )
+    bool bRet = false;
+
+    bool bShift = rKeyEvent.GetKeyCode().IsShift();
+    bool bMod1 = rKeyEvent.GetKeyCode().IsMod1();
+    sal_uInt16 nCode = rKeyEvent.GetKeyCode().GetCode();
+
+    // Close the search bar on Escape
+    if ( KEY_ESCAPE == nCode )
     {
-        case MouseNotifyEvent::KEYINPUT:
+        bRet = true;
+        GrabFocusToDocument();
+
+        // hide the findbar
+        css::uno::Reference< css::beans::XPropertySet > xPropSet(m_xFrame, css::uno::UNO_QUERY);
+        if (xPropSet.is())
         {
-            // Clear SearchLabel when altering the search string
-            #if HAVE_FEATURE_DESKTOP
-            SvxSearchDialogWrapper::SetSearchLabel(SearchLabel::Empty);
-            #endif
-
-            const KeyEvent* pKeyEvent = rNEvt.GetKeyEvent();
-            bool bShift = pKeyEvent->GetKeyCode().IsShift();
-            bool bMod1 = pKeyEvent->GetKeyCode().IsMod1();
-            sal_uInt16 nCode = pKeyEvent->GetKeyCode().GetCode();
-
-            // Close the search bar on Escape
-            if ( KEY_ESCAPE == nCode )
+            css::uno::Reference< css::frame::XLayoutManager > xLayoutManager;
+            css::uno::Any aValue = xPropSet->getPropertyValue("LayoutManager");
+            aValue >>= xLayoutManager;
+            if (xLayoutManager.is())
             {
-                bRet = true;
-                GrabFocusToDocument();
-
-                // hide the findbar
-                css::uno::Reference< css::beans::XPropertySet > xPropSet(m_xFrame, css::uno::UNO_QUERY);
-                if (xPropSet.is())
-                {
-                    css::uno::Reference< css::frame::XLayoutManager > xLayoutManager;
-                    css::uno::Any aValue = xPropSet->getPropertyValue("LayoutManager");
-                    aValue >>= xLayoutManager;
-                    if (xLayoutManager.is())
-                    {
-                        const OUString sResourceURL( "private:resource/toolbar/findbar" );
-                        xLayoutManager->hideElement( sResourceURL );
-                        xLayoutManager->destroyElement( sResourceURL );
-                    }
-                }
+                const OUString sResourceURL( "private:resource/toolbar/findbar" );
+                xLayoutManager->hideElement( sResourceURL );
+                xLayoutManager->destroyElement( sResourceURL );
             }
-            // Select text in the search box when Ctrl-F pressed
-            else if ( bMod1 && nCode == KEY_F )
-                SetSelection( Selection( SELECTION_MIN, SELECTION_MAX ) );
-
-            // Execute the search when Return, Ctrl-G or F3 pressed
-            else if ( KEY_RETURN == nCode || (bMod1 && (KEY_G == nCode)) || (KEY_F3 == nCode) )
-            {
-                Remember_Impl(GetText());
-
-                vcl::Window* pWindow = GetParent();
-                ToolBox* pToolBox = static_cast<ToolBox*>(pWindow);
-
-                impl_executeSearch( m_xContext, m_xFrame, pToolBox, bShift);
-                bRet = true;
-            }
-            else
-            {
-                auto awtKey = svt::AcceleratorExecute::st_VCLKey2AWTKey(pKeyEvent->GetKeyCode());
-                const OUString aCommand(m_pAcc->findCommand(awtKey));
-                if (aCommand == ".uno:SearchDialog")
-                    bRet = m_pAcc->execute(awtKey);
-            }
-            break;
         }
+    }
+    // Select text in the search box when Ctrl-F pressed
+    else if ( bMod1 && nCode == KEY_F )
+        m_xWidget->select_entry_region(0, -1);
 
-        case MouseNotifyEvent::GETFOCUS:
-            SetSelection( Selection( SELECTION_MIN, SELECTION_MAX ) );
-            break;
-
-        default:
-            break;
+    // Execute the search when Return, Ctrl-G or F3 pressed
+    else if ( KEY_RETURN == nCode || (bMod1 && (KEY_G == nCode)) || (KEY_F3 == nCode) )
+    {
+        ActivateFind(bShift);
+        bRet = true;
+    }
+    else
+    {
+        auto awtKey = svt::AcceleratorExecute::st_VCLKey2AWTKey(rKeyEvent.GetKeyCode());
+        const OUString aCommand(m_pAcc->findCommand(awtKey));
+        if (aCommand == ".uno:SearchDialog")
+            bRet = m_pAcc->execute(awtKey);
     }
 
-    return bRet;
+    return bRet || ChildKeyInput(rKeyEvent);
 }
+
+void FindTextFieldControl::ActivateFind(bool bShift)
+{
+    Remember_Impl(m_xWidget->get_active_text());
+
+    vcl::Window* pWindow = GetParent();
+    ToolBox* pToolBox = static_cast<ToolBox*>(pWindow);
+
+    impl_executeSearch(m_xContext, m_xFrame, pToolBox, bShift);
+}
+
+IMPL_LINK_NOARG(FindTextFieldControl, ActivateHdl, weld::ComboBox&, bool)
+{
+    if (isDisposed())
+        return true;
+
+    ActivateFind(false);
+
+    return true;
+}
+
+IMPL_LINK_NOARG(FindTextFieldControl, OnAsyncGetFocus, void*, void)
+{
+    m_nAsyncGetFocusId = nullptr;
+    m_xWidget->select_entry_region(0, -1);
+}
+
+IMPL_LINK_NOARG(FindTextFieldControl, FocusInHdl, weld::Widget&, void)
+{
+    if (m_nAsyncGetFocusId)
+        return;
+    // do it async to defeat entry in combobox having its own ideas about the focus
+    m_nAsyncGetFocusId = Application::PostUserEvent(LINK(this, FindTextFieldControl, OnAsyncGetFocus));
+}
+
+void FindTextFieldControl::dispose()
+{
+    if (m_nAsyncGetFocusId)
+    {
+        Application::RemoveUserEvent(m_nAsyncGetFocusId);
+        m_nAsyncGetFocusId = nullptr;
+    }
+    m_xWidget.reset();
+    InterimItemWindow::dispose();
+}
+
+FindTextFieldControl::~FindTextFieldControl()
+{
+    disposeOnce();
+}
+
+void FindTextFieldControl::connect_changed(const Link<weld::ComboBox&, void>& rLink)
+{
+    m_aChangeHdl = rLink;
+    m_xWidget->connect_changed(rLink);
+}
+
+int FindTextFieldControl::get_count() const
+{
+    return m_xWidget->get_count();
+}
+
+OUString FindTextFieldControl::get_text(int nIndex) const
+{
+    return m_xWidget->get_text(nIndex);
+}
+
+OUString FindTextFieldControl::get_active_text() const
+{
+    return m_xWidget->get_active_text();
+}
+
+void FindTextFieldControl::append_text(const OUString& rText)
+{
+    m_xWidget->append_text(rText);
+}
+
+void FindTextFieldControl::set_entry_message_type(weld::EntryMessageType eType)
+{
+    m_xWidget->set_entry_message_type(eType);
+}
+
+void FindTextFieldControl::GetFocus()
+{
+    if (m_xWidget)
+        m_xWidget->grab_focus();
+    InterimItemWindow::GetFocus();
+}
+
+namespace {
 
 class SearchToolbarControllersManager
 {
@@ -342,11 +445,11 @@ SearchToolbarControllersManager& SearchToolbarControllersManager::createControll
 
 void SearchToolbarControllersManager::saveSearchHistory(const FindTextFieldControl* pFindTextFieldControl)
 {
-    const sal_Int32 nECount( pFindTextFieldControl->GetEntryCount() );
+    const sal_Int32 nECount( pFindTextFieldControl->get_count() );
     m_aSearchStrings.resize( nECount );
     for( sal_Int32 i=0; i<nECount; ++i )
     {
-        m_aSearchStrings[i] = pFindTextFieldControl->GetEntry(i);
+        m_aSearchStrings[i] = pFindTextFieldControl->get_text(i);
     }
 }
 
@@ -354,7 +457,7 @@ void SearchToolbarControllersManager::loadSearchHistory(FindTextFieldControl* pF
 {
     for( size_t i=0; i<m_aSearchStrings.size(); ++i )
     {
-        pFindTextFieldControl->InsertEntry(m_aSearchStrings[i],i);
+        pFindTextFieldControl->append_text(m_aSearchStrings[i]);
     }
 }
 
@@ -443,7 +546,7 @@ public:
     // XStatusListener
     virtual void SAL_CALL statusChanged( const css::frame::FeatureStateEvent& Event ) override;
 
-    DECL_LINK(EditModifyHdl, Edit&, void);
+    DECL_LINK(EditModifyHdl, weld::ComboBox&, void);
 
 private:
 
@@ -542,11 +645,9 @@ css::uno::Reference< css::awt::XWindow > SAL_CALL FindTextToolbarController::cre
     if ( pParent )
     {
         ToolBox* pToolbar = static_cast<ToolBox*>(pParent.get());
-        m_pFindTextFieldControl = VclPtr<FindTextFieldControl>::Create( pToolbar, WinBits( WB_DROPDOWN | WB_VSCROLL), m_xFrame, m_xContext  );
+        m_pFindTextFieldControl = VclPtr<FindTextFieldControl>::Create(pToolbar, m_xFrame, m_xContext);
 
-        Size aSize(250, m_pFindTextFieldControl->GetTextHeight() + 200);
-        m_pFindTextFieldControl->SetSizePixel( aSize );
-        m_pFindTextFieldControl->SetModifyHdl(LINK(this, FindTextToolbarController, EditModifyHdl));
+        m_pFindTextFieldControl->connect_changed(LINK(this, FindTextToolbarController, EditModifyHdl));
         SearchToolbarControllersManager::createControllersManager().loadSearchHistory(m_pFindTextFieldControl);
     }
     xItemWindow = VCLUnoHelper::GetInterface( m_pFindTextFieldControl );
@@ -564,14 +665,19 @@ void SAL_CALL FindTextToolbarController::statusChanged( const css::frame::Featur
     OUString aFeatureURL = rEvent.FeatureURL.Complete;
     if ( aFeatureURL == "AppendSearchHistory" )
     {
-        m_pFindTextFieldControl->Remember_Impl(m_pFindTextFieldControl->GetText());
+        m_pFindTextFieldControl->Remember_Impl(m_pFindTextFieldControl->get_active_text());
     }
     // enable up/down buttons in case there is already text (from the search history)
     textfieldChanged();
 }
 
-IMPL_LINK_NOARG(FindTextToolbarController, EditModifyHdl, Edit&, void)
+IMPL_LINK_NOARG(FindTextToolbarController, EditModifyHdl, weld::ComboBox&, void)
 {
+    // Clear SearchLabel when search string altered
+    #if HAVE_FEATURE_DESKTOP
+    SvxSearchDialogWrapper::SetSearchLabel(SearchLabel::Empty);
+    #endif
+
     textfieldChanged();
 }
 
@@ -581,7 +687,7 @@ void FindTextToolbarController::textfieldChanged() {
     ToolBox* pToolBox = static_cast<ToolBox*>(pWindow.get());
     if ( pToolBox && m_pFindTextFieldControl )
     {
-        bool enableButtons = !m_pFindTextFieldControl->GetText().isEmpty();
+        bool enableButtons = !m_pFindTextFieldControl->get_active_text().isEmpty();
         pToolBox->EnableItem(m_nDownSearchId, enableButtons);
         pToolBox->EnableItem(m_nUpSearchId, enableButtons);
         pToolBox->EnableItem(m_nFindAllId, enableButtons);
@@ -619,7 +725,7 @@ public:
     virtual void SAL_CALL statusChanged( const css::frame::FeatureStateEvent& rEvent ) override;
 
 private:
-    Type const meType;
+    Type meType;
 };
 
 UpDownSearchToolboxController::UpDownSearchToolboxController( const css::uno::Reference< css::uno::XComponentContext > & rxContext, Type eType )
@@ -737,14 +843,14 @@ public:
     virtual void SAL_CALL statusChanged( const css::frame::FeatureStateEvent& rEvent ) override;
 
 private:
-    VclPtr<CheckBox> m_pMatchCaseControl;
+    VclPtr<CheckButtonItemWindow> m_xMatchCaseControl;
 };
 
 MatchCaseToolboxController::MatchCaseToolboxController( const css::uno::Reference< css::uno::XComponentContext >& rxContext )
     : svt::ToolboxController( rxContext,
         css::uno::Reference< css::frame::XFrame >(),
         COMMAND_MATCHCASE )
-    , m_pMatchCaseControl(nullptr)
+    , m_xMatchCaseControl(nullptr)
 {
 }
 
@@ -793,7 +899,7 @@ void SAL_CALL MatchCaseToolboxController::dispose()
 
     svt::ToolboxController::dispose();
 
-    m_pMatchCaseControl.disposeAndClear();
+    m_xMatchCaseControl.disposeAndClear();
 }
 
 // XInitialization
@@ -812,12 +918,9 @@ css::uno::Reference< css::awt::XWindow > SAL_CALL MatchCaseToolboxController::cr
     if ( pParent )
     {
         ToolBox* pToolbar = static_cast<ToolBox*>(pParent.get());
-        m_pMatchCaseControl = VclPtr<CheckBox>::Create( pToolbar, 0 );
-        m_pMatchCaseControl->SetText( SvxResId( RID_SVXSTR_FINDBAR_MATCHCASE ) );
-        Size aSize( m_pMatchCaseControl->GetOptimalSize() );
-        m_pMatchCaseControl->SetSizePixel( aSize );
+        m_xMatchCaseControl = VclPtr<CheckButtonItemWindow>::Create(pToolbar, SvxResId(RID_SVXSTR_FINDBAR_MATCHCASE));
     }
-    xItemWindow = VCLUnoHelper::GetInterface( m_pMatchCaseControl );
+    xItemWindow = VCLUnoHelper::GetInterface(m_xMatchCaseControl);
 
     return xItemWindow;
 }
@@ -856,14 +959,14 @@ public:
     virtual void SAL_CALL statusChanged( const css::frame::FeatureStateEvent& rEvent ) override;
 
 private:
-    VclPtr<CheckBox> m_pSearchFormattedControl;
+    VclPtr<CheckButtonItemWindow> m_xSearchFormattedControl;
 };
 
 SearchFormattedToolboxController::SearchFormattedToolboxController( const css::uno::Reference< css::uno::XComponentContext >& rxContext )
     : svt::ToolboxController( rxContext,
         css::uno::Reference< css::frame::XFrame >(),
         COMMAND_SEARCHFORMATTED )
-    , m_pSearchFormattedControl(nullptr)
+    , m_xSearchFormattedControl(nullptr)
 {
 }
 
@@ -912,7 +1015,7 @@ void SAL_CALL SearchFormattedToolboxController::dispose()
 
     svt::ToolboxController::dispose();
 
-    m_pSearchFormattedControl.disposeAndClear();
+    m_xSearchFormattedControl.disposeAndClear();
 }
 
 // XInitialization
@@ -931,12 +1034,9 @@ css::uno::Reference< css::awt::XWindow > SAL_CALL SearchFormattedToolboxControll
     if ( pParent )
     {
         ToolBox* pToolbar = static_cast<ToolBox*>(pParent.get());
-        m_pSearchFormattedControl = VclPtr<CheckBox>::Create( pToolbar, 0 );
-        m_pSearchFormattedControl->SetText( SvxResId( RID_SVXSTR_FINDBAR_SEARCHFORMATTED ) );
-        Size aSize( m_pSearchFormattedControl->GetOptimalSize() );
-        m_pSearchFormattedControl->SetSizePixel( aSize );
+        m_xSearchFormattedControl = VclPtr<CheckButtonItemWindow>::Create(pToolbar, SvxResId(RID_SVXSTR_FINDBAR_SEARCHFORMATTED));
     }
-    xItemWindow = VCLUnoHelper::GetInterface( m_pSearchFormattedControl );
+    xItemWindow = VCLUnoHelper::GetInterface(m_xSearchFormattedControl);
 
     return xItemWindow;
 }
@@ -1200,7 +1300,7 @@ public:
     virtual void SAL_CALL statusChanged( const css::frame::FeatureStateEvent& rEvent ) override;
 
 private:
-    VclPtr<vcl::Window> m_pSL;
+    VclPtr<LabelItemWindow> m_xSL;
 };
 
 SearchLabelToolboxController::SearchLabelToolboxController( const css::uno::Reference< css::uno::XComponentContext > & rxContext )
@@ -1255,7 +1355,7 @@ void SAL_CALL SearchLabelToolboxController::dispose()
     SearchToolbarControllersManager::createControllersManager().freeController(m_xFrame, m_aCommandURL);
 
     svt::ToolboxController::dispose();
-    m_pSL.disposeAndClear();
+    m_xSL.disposeAndClear();
 }
 
 // XInitialization
@@ -1268,20 +1368,27 @@ void SAL_CALL SearchLabelToolboxController::initialize( const css::uno::Sequence
 // XStatusListener
 void SAL_CALL SearchLabelToolboxController::statusChanged( const css::frame::FeatureStateEvent& )
 {
-    if (m_pSL)
+    if (m_xSL)
     {
         OUString aStr = SvxSearchDialogWrapper::GetSearchLabel();
-        m_pSL->SetText(aStr);
-        long aWidth = !aStr.isEmpty() ? m_pSL->get_preferred_size().getWidth() : 16;
-        m_pSL->SetSizePixel(Size(aWidth, m_pSL->get_preferred_size().getHeight()));
+        m_xSL->set_label(aStr);
+        m_xSL->SetOptimalSize();
+        Size aSize(m_xSL->GetSizePixel());
+        long nWidth = !aStr.isEmpty() ? aSize.getWidth() : 16;
+        m_xSL->SetSizePixel(Size(nWidth, aSize.Height()));
     }
 }
 
 css::uno::Reference< css::awt::XWindow > SAL_CALL SearchLabelToolboxController::createItemWindow( const css::uno::Reference< css::awt::XWindow >& Parent )
 {
-    m_pSL = VclPtr<FixedText>::Create(VCLUnoHelper::GetWindow( Parent ));
-    m_pSL->SetSizePixel(Size(16, 25));
-    return VCLUnoHelper::GetInterface(m_pSL);
+    ToolBox* pToolBox = nullptr;
+    sal_uInt16 nId = 0;
+    if (getToolboxId(nId, &pToolBox))
+        pToolBox->SetItemWindowNonInteractive(nId, true);
+
+    m_xSL = VclPtr<LabelItemWindow>::Create(VCLUnoHelper::GetWindow(Parent), "");
+    m_xSL->SetSizePixel(Size(16, m_xSL->GetSizePixel().Height()));
+    return VCLUnoHelper::GetInterface(m_xSL);
 }
 
 // protocol handler for "vnd.sun.star.findbar:*" URLs

@@ -20,17 +20,11 @@
 #include <sdr/contact/viewcontactofsdrobjcustomshape.hxx>
 #include <svx/svdoashp.hxx>
 #include <svx/sdooitm.hxx>
-#include <svx/sdr/contact/displayinfo.hxx>
-#include <svx/sdr/primitive2d/sdrattributecreator.hxx>
-#include <svx/svditer.hxx>
+#include <sdr/primitive2d/sdrattributecreator.hxx>
 #include <sdr/primitive2d/sdrcustomshapeprimitive2d.hxx>
-#include <basegfx/polygon/b2dpolygontools.hxx>
-#include <basegfx/polygon/b2dpolygon.hxx>
 #include <basegfx/matrix/b2dhommatrixtools.hxx>
 #include <svx/obj3d.hxx>
-#include <drawinglayer/primitive2d/sdrdecompositiontools2d.hxx>
 #include <vcl/canvastools.hxx>
-#include <sal/log.hxx>
 
 
 namespace sdr::contact
@@ -115,8 +109,8 @@ namespace sdr::contact
 
             // #i98072# Get shadow and text; eventually suppress the text if it's
             // a TextPath FontworkGallery object
-            const drawinglayer::attribute::SdrShadowTextAttribute aAttribute(
-                drawinglayer::primitive2d::createNewSdrShadowTextAttribute(
+            const drawinglayer::attribute::SdrEffectsTextAttribute aAttribute(
+                drawinglayer::primitive2d::createNewSdrEffectsTextAttribute(
                     rItemSet,
                     GetCustomShapeObj().getText(0),
                     GetCustomShapeObj().IsTextPath()));
@@ -155,13 +149,13 @@ namespace sdr::contact
                 basegfx::B2DHomMatrix aTextBoxMatrix;
                 bool bWordWrap(false);
 
+                // take unrotated snap rect as default, then get the
+                // unrotated text box. Rotation needs to be done centered
+                const tools::Rectangle aObjectBound(GetCustomShapeObj().GetGeoRect());
+                const basegfx::B2DRange aObjectRange = vcl::unotools::b2DRectangleFromRectangle(aObjectBound);
+
                 if(bHasText)
                 {
-                    // take unrotated snap rect as default, then get the
-                    // unrotated text box. Rotation needs to be done centered
-                    const tools::Rectangle aObjectBound(GetCustomShapeObj().GetGeoRect());
-                    const basegfx::B2DRange aObjectRange = vcl::unotools::b2DRectangleFromRectangle(aObjectBound);
-
                     // #i101684# get the text range unrotated and absolute to the object range
                     const basegfx::B2DRange aTextRange(getCorrectedTextBoundRect());
 
@@ -236,6 +230,12 @@ namespace sdr::contact
                     bWordWrap = GetCustomShapeObj().GetMergedItem(SDRATTR_TEXT_WORDWRAP).GetValue();
                 }
 
+                // fill object matrix
+                const basegfx::B2DHomMatrix aObjectMatrix(basegfx::utils::createScaleShearXRotateTranslateB2DHomMatrix(
+                    aObjectRange.getWidth(), aObjectRange.getHeight(),
+                    /*fShearX=*/0, /*fRotate=*/0,
+                    aObjectRange.getMinX(), aObjectRange.getMinY()));
+
                 // create primitive
                 const drawinglayer::primitive2d::Primitive2DReference xReference(
                     new drawinglayer::primitive2d::SdrCustomShapePrimitive2D(
@@ -243,7 +243,8 @@ namespace sdr::contact
                         xGroup,
                         aTextBoxMatrix,
                         bWordWrap,
-                        b3DShape));
+                        b3DShape,
+                        aObjectMatrix));
                 xRetval = drawinglayer::primitive2d::Primitive2DContainer { xReference };
             }
 

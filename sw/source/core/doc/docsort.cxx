@@ -43,6 +43,7 @@
 #include <cellatr.hxx>
 #include <redline.hxx>
 #include <node2lay.hxx>
+#include <frameformats.hxx>
 
 #include <set>
 #include <utility>
@@ -59,9 +60,6 @@ OUString*           SwSortElement::pLastAlgorithm = nullptr;
 LocaleDataWrapper*  SwSortElement::pLclData = nullptr;
 
 // List of all sorted elements
-
-typedef std::multiset<SwSortTextElement> SwSortTextElements;
-typedef std::multiset<SwSortBoxElement> SwSortBoxElements;
 
 /// Construct a SortElement for the Sort
 void SwSortElement::Init( SwDoc* pD, const SwSortOptions& rOpt,
@@ -245,8 +243,11 @@ OUString SwSortBoxElement::GetKey(sal_uInt16 nKey) const
             // Iterate over all the Box's TextNodes
             const SwNode *pNd = nullptr, *pEndNd = pMyBox->GetSttNd()->EndOfSectionNode();
             for( sal_uLong nIdx = pMyBox->GetSttIdx() + 1; pNd != pEndNd; ++nIdx )
-                if( ( pNd = pDoc->GetNodes()[ nIdx ])->IsTextNode() )
+            {
+                pNd = pDoc->GetNodes()[ nIdx ];
+                if( pNd->IsTextNode() )
                     aRetStr.append(pNd->GetTextNode()->GetText());
+            }
         }
     }
     return aRetStr.makeStringAndClear();
@@ -344,11 +345,14 @@ bool SwDoc::SortText(const SwPaM& rPaM, const SwSortOptions& rOpt)
             pRedlPam->GetPoint()->nNode.Assign( aEndIdx.GetNode() );
             pCNd = pRedlPam->GetContentNode();
             sal_Int32 nCLen = 0;
-            if( !pCNd &&
-                nullptr != (pCNd = GetNodes()[ aEndIdx.GetIndex()-1 ]->GetContentNode()))
+            if( !pCNd )
             {
-                nCLen = pCNd->Len();
-                pRedlPam->GetPoint()->nNode.Assign( *pCNd );
+                pCNd = GetNodes()[ aEndIdx.GetIndex()-1 ]->GetContentNode();
+                if( pCNd )
+                {
+                    nCLen = pCNd->Len();
+                    pRedlPam->GetPoint()->nNode.Assign( *pCNd );
+                }
             }
             pRedlPam->GetPoint()->nContent.Assign( pCNd, nCLen );
 
@@ -365,7 +369,7 @@ bool SwDoc::SortText(const SwPaM& rPaM, const SwSortOptions& rOpt)
 
     SwNodeIndex aStart(pStart->nNode);
     SwSortElement::Init( this, rOpt );
-    SwSortTextElements aSortSet;
+    std::multiset<SwSortTextElement> aSortSet;
     while( aStart <= pEnd->nNode )
     {
         // Iterate over a selected range
@@ -544,7 +548,7 @@ bool SwDoc::SortTable(const SwSelBoxes& rBoxes, const SwSortOptions& rOpt)
 
     // Sort SortList by Key
     SwSortElement::Init( this, rOpt, &aFlatBox );
-    SwSortBoxElements aSortList;
+    std::multiset<SwSortBoxElement> aSortList;
 
     // When sorting, do not include the first row if the HeaderLine is repeated
     for( sal_uInt16 i = static_cast<sal_uInt16>(nStart); i < nCount; ++i)

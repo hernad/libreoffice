@@ -26,9 +26,9 @@
 #include <com/sun/star/beans/PropertyValue.hpp>
 
 
-namespace com { namespace sun { namespace star {
-    namespace xml { namespace sax { class XAttributeList; } }
-} } }
+namespace com::sun::star {
+    namespace xml::sax { class XAttributeList; }
+}
 class XMLIndexTemplateContext;
 
 /**
@@ -39,7 +39,7 @@ class XMLIndexChapterInfoEntryContext : public XMLIndexSimpleEntryContext
     // chapter format
     sal_Int16 nChapterInfo;
     bool bChapterInfoOK;
-    bool const bTOC;
+    bool bTOC;
     sal_Int16 nOutlineLevel;
     bool bOutlineLevelOK;
 

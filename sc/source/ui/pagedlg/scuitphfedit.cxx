@@ -183,8 +183,8 @@ void ScHFEditPage::InitPreDefinedList()
 {
     SvtUserOptions aUserOpt;
 
-    o3tl::optional<Color> pTxtColour;
-    o3tl::optional<Color> pFldColour;
+    std::optional<Color> pTxtColour;
+    std::optional<Color> pFldColour;
 
     // Get the all field values at the outset.
     OUString aPageFieldValue(m_xWndLeft->GetEditEngine()->CalcFieldValue(SvxFieldItem(SvxPageField(), EE_FEATURE_FIELD), 0,0, pTxtColour, pFldColour));
@@ -453,7 +453,7 @@ bool ScHFEditPage::IsPageEntry(EditEngine*pEngine, const EditTextObject* pTextOb
                 aSel.nStartPos = aSel.nEndPos;
                 aSel.nEndPos++;
                 std::unique_ptr< EditTextObject > pPageObj = pEngine->CreateTextObject(aSel);
-                if(pPageObj.get() && pPageObj->IsFieldObject() )
+                if(pPageObj && pPageObj->IsFieldObject() )
                 {
                     const SvxFieldItem* pFieldItem = pPageObj->GetField();
                     if(pFieldItem)

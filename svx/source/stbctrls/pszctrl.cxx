@@ -17,11 +17,10 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <limits.h>
 #include <vcl/builder.hxx>
 #include <vcl/commandevent.hxx>
 #include <vcl/event.hxx>
-#include <vcl/field.hxx>
+#include <vcl/fieldvalues.hxx>
 #include <vcl/status.hxx>
 #include <vcl/menu.hxx>
 #include <vcl/image.hxx>
@@ -29,11 +28,7 @@
 #include <vcl/svapp.hxx>
 #include <svl/stritem.hxx>
 #include <svl/ptitem.hxx>
-#include <svl/itempool.hxx>
-#include <sfx2/app.hxx>
 #include <sfx2/module.hxx>
-#include <sfx2/dispatch.hxx>
-#include <sfx2/objsh.hxx>
 #include <svl/intitem.hxx>
 #include <sal/log.hxx>
 
@@ -42,7 +37,6 @@
 #define PAINT_OFFSET    5
 
 #include <editeng/sizeitem.hxx>
-#include <svx/dlgutil.hxx>
 #include "stbctrls.h"
 
 #include <svx/svxids.hrc>
@@ -70,7 +64,7 @@ OUString SvxPosSizeStatusBarControl::GetMetricStr_Impl( long nVal )
 
     OUString sMetric;
     const sal_Unicode cSep = Application::GetSettings().GetLocaleDataWrapper().getNumDecimalSep()[0];
-    sal_Int64 nConvVal = MetricField::ConvertValue( nVal * 100, 0, 0, FieldUnit::MM_100TH, eOutUnit );
+    sal_Int64 nConvVal = vcl::ConvertValue( nVal * 100, 0, 0, FieldUnit::MM_100TH, eOutUnit );
 
     if ( nConvVal < 0 && ( nConvVal / 100 == 0 ) )
         sMetric += "-";
@@ -100,7 +94,7 @@ class FunctionPopup_Impl
 {
     VclBuilder        m_aBuilder;
     VclPtr<PopupMenu> m_xMenu;
-    sal_uInt32 const  m_nSelected;
+    sal_uInt32        m_nSelected;
     static sal_uInt16 id_to_function(const OString& rIdent);
     sal_uInt16 function_to_id(sal_uInt16 nFunc) const;
 public:

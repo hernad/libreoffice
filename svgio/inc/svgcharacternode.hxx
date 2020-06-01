@@ -22,7 +22,7 @@
 
 #include "svgnode.hxx"
 
-namespace drawinglayer { namespace primitive2d { class TextSimplePortionPrimitive2D; }}
+namespace drawinglayer::primitive2d { class TextSimplePortionPrimitive2D; }
 
 namespace svgio
 {
@@ -96,7 +96,7 @@ namespace svgio
             // advancing rotation index
             sal_uInt32                  mnRotationIndex;
 
-            bool const                  mbLengthAdjust : 1; // true = spacing, false = spacingAndGlyphs
+            bool                        mbLengthAdjust : 1; // true = spacing, false = spacingAndGlyphs
             bool                        mbAbsoluteX : 1;
 
         public:

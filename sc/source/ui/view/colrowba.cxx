@@ -18,7 +18,7 @@
  */
 
 #include <unotools/localedatawrapper.hxx>
-#include <vcl/field.hxx>
+#include <vcl/fieldvalues.hxx>
 
 #include <colrowba.hxx>
 #include <document.hxx>
@@ -39,10 +39,10 @@ static OUString lcl_MetricString( long nTwips, const OUString& rText )
     {
         FieldUnit eUserMet = SC_MOD()->GetAppOptions().GetAppMetric();
 
-        sal_Int64 nUserVal = MetricField::ConvertValue( nTwips*100, 1, 2, FieldUnit::TWIP, eUserMet );
+        sal_Int64 nUserVal = vcl::ConvertValue( nTwips*100, 1, 2, FieldUnit::TWIP, eUserMet );
 
         OUString aStr = rText + " "
-                        + ScGlobal::pLocaleData->getNum( nUserVal, 2 )
+                        + ScGlobal::getLocaleDataPtr()->getNum( nUserVal, 2 )
                         + " " + SdrFormatter::GetUnitStr(eUserMet);
         return aStr;
     }
@@ -190,7 +190,7 @@ bool ScColBar::ResizeAllowed() const
 void ScColBar::DrawInvert( long nDragPosP )
 {
     tools::Rectangle aRect( nDragPosP,0, nDragPosP+HDR_SLIDERSIZE-1,GetOutputSizePixel().Width()-1 );
-    Update();
+    PaintImmediately();
     Invert(aRect);
 
     pTabView->GetViewData().GetView()->InvertVertical(meWhich,nDragPosP);
@@ -350,7 +350,7 @@ bool ScRowBar::ResizeAllowed() const
 void ScRowBar::DrawInvert( long nDragPosP )
 {
     tools::Rectangle aRect( 0,nDragPosP, GetOutputSizePixel().Width()-1,nDragPosP+HDR_SLIDERSIZE-1 );
-    Update();
+    PaintImmediately();
     Invert(aRect);
 
     pTabView->GetViewData().GetView()->InvertHorizontal(meWhich,nDragPosP);

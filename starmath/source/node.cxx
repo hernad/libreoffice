@@ -35,6 +35,7 @@
 #include <vcl/outdev.hxx>
 #include <sal/log.hxx>
 #include <osl/diagnose.h>
+#include <rtl/math.hxx>
 
 #include <cassert>
 #include <math.h>
@@ -322,20 +323,24 @@ const SmNode * SmNode::FindRectClosestTo(const Point &rPoint) const
             if (!pNode)
                 continue;
 
-            long  nTmp;
             const SmNode *pFound = pNode->FindRectClosestTo(rPoint);
-            if (pFound  &&  (nTmp = pFound->OrientedDist(rPoint)) < nDist)
-            {   nDist   = nTmp;
-                pResult = pFound;
+            if (pFound)
+            {
+                long nTmp = pFound->OrientedDist(rPoint);
+                if (nTmp < nDist)
+                {
+                    nDist   = nTmp;
+                    pResult = pFound;
 
-                // quit immediately if 'rPoint' is inside the *should not
-                // overlap with other rectangles* part.
-                // This (partly) serves for getting the attributes in eg
-                // "bar overstrike a".
-                // ('nDist < 0' is used as *quick shot* to avoid evaluation of
-                // the following expression, where the result is already determined)
-                if (nDist < 0  &&  pFound->IsInsideRect(rPoint))
-                    break;
+                    // quit immediately if 'rPoint' is inside the *should not
+                    // overlap with other rectangles* part.
+                    // This (partly) serves for getting the attributes in eg
+                    // "bar overstrike a".
+                    // ('nDist < 0' is used as *quick shot* to avoid evaluation of
+                    // the following expression, where the result is already determined)
+                    if (nDist < 0  &&  pFound->IsInsideRect(rPoint))
+                        break;
+                }
             }
         }
     }
@@ -2653,7 +2658,7 @@ void SmSpecialNode::Prepare(const SmFormat &rFormat, const SmDocShell &rDocShell
             static const sal_Unicode cUppercaseOmega = 0x03A9;
             sal_Unicode cChar = rTmp[0];
             // uppercase letters should be straight and lowercase letters italic
-            bItalic = !(cUppercaseAlpha <= cChar && cChar <= cUppercaseOmega);
+            bItalic = (cUppercaseAlpha > cChar || cChar > cUppercaseOmega);
         }
     }
 

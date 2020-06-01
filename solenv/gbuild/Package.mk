@@ -65,7 +65,7 @@ $(dir $(call gb_Package_get_target,%))%/.dir :
 $(call gb_Package_get_clean_target,%) :
 	$(call gb_Output_announce,$*,$(false),PKG,2)
 	RESPONSEFILE=$(call var2file,$(shell $(gb_MKTEMP)),500,$(FILES)) \
-	&& cat $${RESPONSEFILE} | $(if $(filter WNT,$(OS)),env -i PATH="$$PATH") xargs $(if $(filter MACOSX,$(OS_FOR_BUILD)),-n 1000) rm -f \
+	&& cat $${RESPONSEFILE} | $(if $(filter WNT,$(OS)),env -i PATH="$$PATH") xargs $(if $(filter MACOSX,$(OS_FOR_BUILD)),-n 1000) rm -fr \
 	&& rm -f $${RESPONSEFILE}
 
 $(call gb_Package_get_preparation_target,%) :
@@ -79,9 +79,11 @@ $(call gb_Package_get_preparation_target,%) :
 # Package_foo makefiles.
 $(call gb_Package_get_target,%) :
 	$(call gb_Output_announce,$*,$(true),PKG,2)
+	$(call gb_Trace_StartRange,$*,PKG)
 	$(if $(PACKAGE_DEFINED),,$(call gb_Output_error,Something depends on package $* which does not exist.))
 	rm -f $@ && \
 	mv $(call var2file,$@.tmp,100,$(sort $(FILES))) $@
+	$(call gb_Trace_EndRange,$*,PKG)
 
 # for other targets that want to create Packages, does not register at Module
 define gb_Package_Package_internal
@@ -135,7 +137,7 @@ define gb_Package_add_empty_directory
 $(call gb_Package__check,$(1))
 $(if $(strip $(2)),,$(call gb_Output_error,gb_Package_add_directory requires 2 arguments))
 $(call gb_Package_get_target,$(1)) :| $$(gb_Package_OUTDIR_$(1))/$(2)/.dir
-gb_Package_$(1)_FILES += $$(gb_Package_OUTDIR_$(1))/$(2)
+$(call gb_Package_get_target,$(1)) : FILES += $$(gb_Package_OUTDIR_$(1))/$(2)
 $(call gb_Package_get_clean_target,$(1)) : FILES += $$(gb_Package_OUTDIR_$(1))/$(2)
 
 endef

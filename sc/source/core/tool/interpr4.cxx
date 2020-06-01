@@ -42,6 +42,7 @@
 #include <signal.h>
 
 #include <com/sun/star/table/XCellRange.hpp>
+#include <com/sun/star/script/XInvocation.hpp>
 #include <com/sun/star/sheet/XSheetCellRange.hpp>
 
 #include <global.hxx>
@@ -1591,7 +1592,7 @@ bool ScInterpreter::ConvertMatrixParameters()
             xNew = (*aMapIter).second;
         else
         {
-            std::unique_ptr<ScJumpMatrix> pJumpMat( new ScJumpMatrix( pCur->GetOpCode(), nJumpCols, nJumpRows));
+            auto pJumpMat = std::make_shared<ScJumpMatrix>( pCur->GetOpCode(), nJumpCols, nJumpRows);
             pJumpMat->SetAllJumps( 1.0, nStart, nNext, nStop);
             // pop parameters and store in ScJumpMatrix, push in JumpMatrix()
             ScTokenVec aParams(nParams);
@@ -2161,7 +2162,7 @@ double ScInterpreter::GetDoubleWithDefault(double nDefault)
 
 sal_Int32 ScInterpreter::double_to_int32(double fVal)
 {
-    if (!rtl::math::isFinite(fVal))
+    if (!std::isfinite(fVal))
     {
         SetError( GetDoubleErrorValue( fVal));
         return SAL_MAX_INT32;
@@ -2204,7 +2205,7 @@ sal_Int32 ScInterpreter::GetInt32WithDefault( sal_Int32 nDefault )
 sal_Int16 ScInterpreter::GetInt16()
 {
     double fVal = GetDouble();
-    if (!rtl::math::isFinite(fVal))
+    if (!std::isfinite(fVal))
     {
         SetError( GetDoubleErrorValue( fVal));
         return SAL_MAX_INT16;
@@ -2233,7 +2234,7 @@ sal_Int16 ScInterpreter::GetInt16()
 sal_uInt32 ScInterpreter::GetUInt32()
 {
     double fVal = rtl::math::approxFloor( GetDouble());
-    if (!rtl::math::isFinite(fVal))
+    if (!std::isfinite(fVal))
     {
         SetError( GetDoubleErrorValue( fVal));
         return SAL_MAX_UINT32;
@@ -2517,7 +2518,7 @@ void ScInterpreter::ScExternal()
 {
     sal_uInt8 nParamCount = GetByte();
     OUString aUnoName;
-    OUString aFuncName( ScGlobal::pCharClass->uppercase( pCur->GetExternal() ) );
+    OUString aFuncName( ScGlobal::getCharClassPtr()->uppercase( pCur->GetExternal() ) );
     LegacyFuncData* pLegacyFuncData = ScGlobal::GetLegacyFuncCollection()->findByName(aFuncName);
     if (pLegacyFuncData)
     {
@@ -3454,7 +3455,7 @@ void ScInterpreter::ScMacro()
                 {   // array( cols )  one line, several columns
                     pDimArray->GetDim32( 1, nCs, nCe );
                     nC = static_cast<SCSIZE>(nCe - nCs + 1);
-                    nRs = nRe = 0;
+                    nRs = 0;
                     nR = 1;
                     nColIdx = 0;
                     nRowIdx = 1;
@@ -3711,19 +3712,22 @@ void ScInterpreter::ScColRowNameAuto()
         if (aAbs.aEnd.Row() > nRow2)
             aAbs.aEnd.SetRow(nRow2);
         SCROW nMyRow;
-        if ( aPos.Col() == nStartCol
-          && nStartRow <= (nMyRow = aPos.Row()) && nMyRow <= aAbs.aEnd.Row())
-        {   //Formula in the same column and within the range
-            if ( nMyRow == nStartRow )
-            {   // take the rest under the name
-                nStartRow++;
-                if ( nStartRow > pDok->MaxRow() )
-                    nStartRow = pDok->MaxRow();
-                aAbs.aStart.SetRow(nStartRow);
-            }
-            else
-            {   // below the name to the formula cell
-                aAbs.aEnd.SetRow(nMyRow - 1);
+        if ( aPos.Col() == nStartCol )
+        {
+            nMyRow = aPos.Row();
+            if ( nStartRow <= nMyRow && nMyRow <= aAbs.aEnd.Row())
+            {   //Formula in the same column and within the range
+                if ( nMyRow == nStartRow )
+                {   // take the rest under the name
+                    nStartRow++;
+                    if ( nStartRow > pDok->MaxRow() )
+                        nStartRow = pDok->MaxRow();
+                    aAbs.aStart.SetRow(nStartRow);
+                }
+                else
+                {   // below the name to the formula cell
+                    aAbs.aEnd.SetRow(nMyRow - 1);
+                }
             }
         }
     }
@@ -3734,19 +3738,22 @@ void ScInterpreter::ScColRowNameAuto()
         if (aAbs.aEnd.Col() > nCol2)
             aAbs.aEnd.SetCol(nCol2);
         SCCOL nMyCol;
-        if ( aPos.Row() == nStartRow
-          && nStartCol <= (nMyCol = aPos.Col()) && nMyCol <= aAbs.aEnd.Col())
-        {   //Formula in the same column and within the range
-            if ( nMyCol == nStartCol )
-            {    // take the rest under the name
-                nStartCol++;
-                if ( nStartCol > pDok->MaxCol() )
-                    nStartCol = pDok->MaxCol();
-                aAbs.aStart.SetCol(nStartCol);
-            }
-            else
-            {   // below the name to the formula cell
-                aAbs.aEnd.SetCol(nMyCol - 1);
+        if ( aPos.Row() == nStartRow )
+        {
+            nMyCol = aPos.Col();
+            if (nStartCol <= nMyCol && nMyCol <= aAbs.aEnd.Col())
+            {   //Formula in the same column and within the range
+                if ( nMyCol == nStartCol )
+                {    // take the rest under the name
+                    nStartCol++;
+                    if ( nStartCol > pDok->MaxCol() )
+                        nStartCol = pDok->MaxCol();
+                    aAbs.aStart.SetCol(nStartCol);
+                }
+                else
+                {   // below the name to the formula cell
+                    aAbs.aEnd.SetCol(nMyCol - 1);
+                }
             }
         }
     }
@@ -3966,9 +3973,11 @@ StackVar ScInterpreter::Interpret()
 
     OpCode eOp = ocNone;
     aCode.Reset();
-    while( ( pCur = aCode.Next() ) != nullptr
-            && (nGlobalError == FormulaError::NONE || nErrorFunction <= nErrorFunctionCount) )
+    for (;;)
     {
+        pCur = aCode.Next();
+        if (!pCur || (nGlobalError != FormulaError::NONE && nErrorFunction > nErrorFunctionCount) )
+            break;
         eOp = pCur->GetOpCode();
         cPar = pCur->GetByte();
         if ( eOp == ocPush )
@@ -4053,6 +4062,8 @@ StackVar ScInterpreter::Interpret()
                 case ocPercentSign      : ScPercentSign();              break;
                 case ocPi               : ScPi();                       break;
                 case ocRandom           : ScRandom();                   break;
+                case ocRandomNV         : ScRandom();                   break;
+                case ocRandbetweenNV    : ScRandbetween();              break;
                 case ocTrue             : ScTrue();                     break;
                 case ocFalse            : ScFalse();                    break;
                 case ocGetActDate       : ScGetActDate();               break;
@@ -4667,7 +4678,7 @@ StackVar ScInterpreter::Interpret()
                     {
                         // This matrix represents a range reference. Apply implicit intersection.
                         double fVal = applyImplicitIntersection(aMat, aPos);
-                        if (rtl::math::isNan(fVal))
+                        if (std::isnan(fVal))
                             PushNoValue();
                         else
                             PushInt(fVal);

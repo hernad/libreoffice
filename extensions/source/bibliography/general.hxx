@@ -27,7 +27,6 @@
 
 #include <vcl/layout.hxx>
 #include <vcl/tabpage.hxx>
-#include <vcl/scrbar.hxx>
 #include <cppuhelper/implbase1.hxx>
 #include "bibshortcuthandler.hxx"
 
@@ -122,7 +121,7 @@ class BibGeneralPage : public TabPage, public BibShortCutHandler
 
     BibDataManager*     pDatMan;
 
-    css::uno::Reference< css::awt::XControlModel >
+    bool
                                 AddXControl( const OUString& rName, FixedText& rLabel, const OString& sHelpId,
                                             sal_Int16& rIndex, std::vector<vcl::Window*>& rChildren );
 

@@ -23,7 +23,6 @@
 #include <osl/mutex.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/threadpool.hxx>
-#include <ucbhelper/content.hxx>
 #include <cppuhelper/implbase.hxx>
 #include <tools/fract.hxx>
 #include <unotools/configmgr.hxx>
@@ -31,7 +30,7 @@
 #include <tools/urlobj.hxx>
 #include <tools/zcodec.hxx>
 #include <vcl/dibtools.hxx>
-#include <vcl/fltcall.hxx>
+#include <fltcall.hxx>
 #include <vcl/salctype.hxx>
 #include <vcl/pngread.hxx>
 #include <vcl/pngwrite.hxx>
@@ -57,13 +56,12 @@
 #include <com/sun/star/svg/XSVGWriter.hpp>
 #include <com/sun/star/xml/sax/XDocumentHandler.hpp>
 #include <com/sun/star/xml/sax/Writer.hpp>
-#include <com/sun/star/ucb/CommandAbortedException.hpp>
-#include <com/sun/star/ucb/ContentCreationException.hpp>
 #include <unotools/ucbstreamhelper.hxx>
 #include <rtl/bootstrap.hxx>
 #include <rtl/instance.hxx>
 #include <tools/svlibrary.h>
 #include <comphelper/string.hxx>
+#include <unotools/ucbhelper.hxx>
 #include <vector>
 #include <memory>
 
@@ -71,6 +69,7 @@
 #include "graphicfilter_internal.hxx"
 
 #include <graphic/GraphicFormatDetector.hxx>
+#include <graphic/GraphicReader.hxx>
 
 #define PMGCHUNG_msOG       0x6d734f47      // Microsoft Office Animated GIF
 
@@ -100,54 +99,6 @@ public:
     explicit ImpFilterOutputStream( SvStream& rStm ) : mrStm( rStm ) {}
 };
 
-}
-
-static bool DirEntryExists( const INetURLObject& rObj )
-{
-    bool bExists = false;
-
-    try
-    {
-        ::ucbhelper::Content aCnt( rObj.GetMainURL( INetURLObject::DecodeMechanism::NONE ),
-                             css::uno::Reference< css::ucb::XCommandEnvironment >(),
-                             comphelper::getProcessComponentContext() );
-
-        bExists = aCnt.isDocument();
-    }
-    catch(const css::ucb::CommandAbortedException&)
-    {
-        SAL_WARN( "vcl.filter", "CommandAbortedException" );
-    }
-    catch(const css::ucb::ContentCreationException&)
-    {
-        SAL_WARN( "vcl.filter", "ContentCreationException" );
-    }
-    catch( ... )
-    {
-        SAL_WARN( "vcl.filter", "Any other exception" );
-    }
-    return bExists;
-}
-
-static void KillDirEntry( const OUString& rMainUrl )
-{
-    try
-    {
-        ::ucbhelper::Content aCnt( rMainUrl,
-                             css::uno::Reference< css::ucb::XCommandEnvironment >(),
-                             comphelper::getProcessComponentContext() );
-
-        aCnt.executeCommand( "delete",
-                             css::uno::makeAny( true ) );
-    }
-    catch(const css::ucb::CommandAbortedException&)
-    {
-        SAL_WARN( "vcl.filter", "CommandAbortedException" );
-    }
-    catch( ... )
-    {
-        SAL_WARN( "vcl.filter", "Any other exception" );
-    }
 }
 
 // Helper functions
@@ -656,8 +607,8 @@ struct ImpFilterLibCacheEntry
 #ifndef DISABLE_DYNLOADING
     osl::Module             maLibrary;
 #endif
-    OUString const          maFiltername;
-    OUString const          maFormatName;
+    OUString                maFiltername;
+    OUString                maFormatName;
     PFilterCall             mpfnImport;
 
     ImpFilterLibCacheEntry(const OUString& rPathname, const OUString& rFiltername, const OUString& rFormatName);
@@ -1155,7 +1106,7 @@ void GraphicFilter::ImportGraphics(std::vector< std::shared_ptr<Graphic> >& rGra
     {
         rContext.m_pAccess.reset();
 
-        if (rContext.m_nStatus == ERRCODE_NONE && (rContext.m_eLinkType != GfxLinkType::NONE) && !rContext.m_pGraphic->GetContext())
+        if (rContext.m_nStatus == ERRCODE_NONE && (rContext.m_eLinkType != GfxLinkType::NONE) && !rContext.m_pGraphic->GetReaderContext())
         {
             std::unique_ptr<sal_uInt8[]> pGraphicContent;
 
@@ -1456,7 +1407,7 @@ void GraphicFilter::preload()
 
 ErrCode GraphicFilter::ImportGraphic( Graphic& rGraphic, const OUString& rPath, SvStream& rIStream,
                                      sal_uInt16 nFormat, sal_uInt16* pDeterminedFormat, GraphicFilterImportFlags nImportFlags,
-                                     const css::uno::Sequence< css::beans::PropertyValue >* pFilterData,
+                                     const css::uno::Sequence< css::beans::PropertyValue >* /*pFilterData*/,
                                      WmfExternal const *pExtHeader )
 {
     OUString                       aFilterName;
@@ -1466,43 +1417,12 @@ ErrCode GraphicFilter::ImportGraphic( Graphic& rGraphic, const OUString& rPath, 
     GfxLinkType                    eLinkType = GfxLinkType::NONE;
     const bool                     bLinkSet = rGraphic.IsGfxLink();
 
-    Size                aPreviewSizeHint( 0, 0 );
-    bool                bAllowPartialStreamRead = false;
-    bool                bCreateNativeLink = true;
-
     std::unique_ptr<sal_uInt8[]> pGraphicContent;
     sal_Int32  nGraphicContentSize = 0;
 
     ResetLastError();
 
-    if ( pFilterData )
-    {
-        for ( const auto& rPropVal : *pFilterData )
-        {
-            if ( rPropVal.Name == "PreviewSizeHint" )
-            {
-                css::awt::Size aSize;
-                if ( rPropVal.Value >>= aSize )
-                {
-                    aPreviewSizeHint = Size( aSize.Width, aSize.Height );
-                    if ( aSize.Width || aSize.Height )
-                        nImportFlags |= GraphicFilterImportFlags::ForPreview;
-                    else
-                        nImportFlags &=~GraphicFilterImportFlags::ForPreview;
-                }
-            }
-            else if ( rPropVal.Name == "AllowPartialStreamRead" )
-            {
-                rPropVal.Value >>= bAllowPartialStreamRead;
-            }
-            else if ( rPropVal.Name == "CreateNativeLink" )
-            {
-                rPropVal.Value >>= bCreateNativeLink;
-            }
-        }
-    }
-
-    std::shared_ptr<GraphicReader> pContext = rGraphic.GetContext();
+    std::shared_ptr<GraphicReader> pContext = rGraphic.GetReaderContext();
     bool  bDummyContext = rGraphic.IsDummyContext();
     if( !pContext || bDummyContext )
     {
@@ -1557,14 +1477,6 @@ ErrCode GraphicFilter::ImportGraphic( Graphic& rGraphic, const OUString& rPath, 
         {
             vcl::PNGReader aPNGReader( rIStream );
 
-            // ignore animation for previews and set preview size
-            if( aPreviewSizeHint.Width() || aPreviewSizeHint.Height() )
-            {
-                // position the stream at the end of the image if requested
-                if( !bAllowPartialStreamRead )
-                    aPNGReader.GetChunks();
-            }
-            else
             {
                 // check if this PNG contains a GIF chunk!
                 const std::vector<vcl::PNGReader::ChunkData>& rChunkData = aPNGReader.GetChunks();
@@ -1594,7 +1506,7 @@ ErrCode GraphicFilter::ImportGraphic( Graphic& rGraphic, const OUString& rPath, 
 
             if ( eLinkType == GfxLinkType::NONE )
             {
-                BitmapEx aBmpEx( aPNGReader.Read( aPreviewSizeHint ) );
+                BitmapEx aBmpEx( aPNGReader.Read() );
                 if ( aBmpEx.IsEmpty() )
                     nStatus = ERRCODE_GRFILTER_FILTERERROR;
                 else
@@ -1661,7 +1573,7 @@ ErrCode GraphicFilter::ImportGraphic( Graphic& rGraphic, const OUString& rPath, 
 
                         if(!aMemStream.GetError() )
                         {
-                            VectorGraphicDataPtr aVectorGraphicDataPtr = std::make_shared<VectorGraphicData>(aNewData, rPath, VectorGraphicDataType::Svg);
+                            auto aVectorGraphicDataPtr = std::make_shared<VectorGraphicData>(aNewData, rPath, VectorGraphicDataType::Svg);
                             rGraphic = Graphic(aVectorGraphicDataPtr);
                             bOkay = true;
                         }
@@ -1674,7 +1586,7 @@ ErrCode GraphicFilter::ImportGraphic( Graphic& rGraphic, const OUString& rPath, 
 
                     if(!rIStream.GetError())
                     {
-                        VectorGraphicDataPtr aVectorGraphicDataPtr = std::make_shared<VectorGraphicData>(aNewData, rPath, VectorGraphicDataType::Svg);
+                        auto aVectorGraphicDataPtr = std::make_shared<VectorGraphicData>(aNewData, rPath, VectorGraphicDataType::Svg);
                         rGraphic = Graphic(aVectorGraphicDataPtr);
                         bOkay = true;
                     }
@@ -1744,7 +1656,7 @@ ErrCode GraphicFilter::ImportGraphic( Graphic& rGraphic, const OUString& rPath, 
             {
                 const bool bIsWmf(aFilterName.equalsIgnoreAsciiCase(IMP_WMF));
                 const VectorGraphicDataType aDataType(bIsWmf ? VectorGraphicDataType::Wmf : VectorGraphicDataType::Emf);
-                VectorGraphicDataPtr aVectorGraphicDataPtr =
+                auto aVectorGraphicDataPtr =
                     std::make_shared<VectorGraphicData>(
                         aNewData,
                         rPath,
@@ -1832,7 +1744,7 @@ ErrCode GraphicFilter::ImportGraphic( Graphic& rGraphic, const OUString& rPath, 
         }
     }
 
-    if( nStatus == ERRCODE_NONE && bCreateNativeLink && ( eLinkType != GfxLinkType::NONE ) && !rGraphic.GetContext() && !bLinkSet )
+    if( nStatus == ERRCODE_NONE && ( eLinkType != GfxLinkType::NONE ) && !rGraphic.GetReaderContext() && !bLinkSet )
     {
         if (!pGraphicContent)
         {
@@ -1880,9 +1792,10 @@ ErrCode GraphicFilter::ExportGraphic( const Graphic& rGraphic, const INetURLObje
     SAL_INFO( "vcl.filter", "GraphicFilter::ExportGraphic() (thb)" );
     ErrCode  nRetValue = ERRCODE_GRFILTER_FORMATERROR;
     SAL_WARN_IF( rPath.GetProtocol() == INetProtocol::NotValid, "vcl.filter", "GraphicFilter::ExportGraphic() : ProtType == INetProtocol::NotValid" );
-    bool bAlreadyExists = DirEntryExists( rPath );
 
-    OUString    aMainUrl( rPath.GetMainURL( INetURLObject::DecodeMechanism::NONE ) );
+    OUString aMainUrl(rPath.GetMainURL(INetURLObject::DecodeMechanism::NONE));
+    bool bAlreadyExists = utl::UCBContentHelper::IsDocument(aMainUrl);
+
     std::unique_ptr<SvStream> xStream(::utl::UcbStreamHelper::CreateStream( aMainUrl, StreamMode::WRITE | StreamMode::TRUNC ));
     if (xStream)
     {
@@ -1890,7 +1803,7 @@ ErrCode GraphicFilter::ExportGraphic( const Graphic& rGraphic, const INetURLObje
         xStream.reset();
 
         if( ( ERRCODE_NONE != nRetValue ) && !bAlreadyExists )
-            KillDirEntry( aMainUrl );
+            utl::UCBContentHelper::Kill(aMainUrl);
     }
     return nRetValue;
 }
@@ -1998,7 +1911,7 @@ ErrCode GraphicFilter::ExportGraphic( const Graphic& rGraphic, const OUString& r
                 if ( nVersion )
                     rOStm.SetVersion( nVersion );
 
-                // #i119735# just use GetGDIMetaFile, it will create a bufferd version of contained bitmap now automatically
+                // #i119735# just use GetGDIMetaFile, it will create a buffered version of contained bitmap now automatically
                 GDIMetaFile aMTF(aGraphic.GetGDIMetaFile());
 
                 aMTF.Write( rOStm );
@@ -2011,13 +1924,13 @@ ErrCode GraphicFilter::ExportGraphic( const Graphic& rGraphic, const OUString& r
                 bool bDone(false);
 
                 // do we have a native Vector Graphic Data RenderGraphic, whose data can be written directly?
-                const VectorGraphicDataPtr& aVectorGraphicDataPtr(rGraphic.getVectorGraphicData());
+                auto const & rVectorGraphicDataPtr(rGraphic.getVectorGraphicData());
 
-                if (aVectorGraphicDataPtr.get()
-                    && aVectorGraphicDataPtr->getVectorGraphicDataArrayLength()
-                    && VectorGraphicDataType::Wmf == aVectorGraphicDataPtr->getVectorGraphicDataType())
+                if (rVectorGraphicDataPtr
+                    && rVectorGraphicDataPtr->getVectorGraphicDataArrayLength()
+                    && VectorGraphicDataType::Wmf == rVectorGraphicDataPtr->getVectorGraphicDataType())
                 {
-                    rOStm.WriteBytes(aVectorGraphicDataPtr->getVectorGraphicDataArray().getConstArray(), aVectorGraphicDataPtr->getVectorGraphicDataArrayLength());
+                    rOStm.WriteBytes(rVectorGraphicDataPtr->getVectorGraphicDataArray().getConstArray(), rVectorGraphicDataPtr->getVectorGraphicDataArrayLength());
 
                     if (rOStm.GetError())
                     {
@@ -2031,7 +1944,7 @@ ErrCode GraphicFilter::ExportGraphic( const Graphic& rGraphic, const OUString& r
 
                 if (!bDone)
                 {
-                    // #i119735# just use GetGDIMetaFile, it will create a bufferd version of contained bitmap now automatically
+                    // #i119735# just use GetGDIMetaFile, it will create a buffered version of contained bitmap now automatically
                     if (!ConvertGDIMetaFileToWMF(aGraphic.GetGDIMetaFile(), rOStm, &aConfigItem))
                         nStatus = ERRCODE_GRFILTER_FORMATERROR;
 
@@ -2044,13 +1957,13 @@ ErrCode GraphicFilter::ExportGraphic( const Graphic& rGraphic, const OUString& r
                 bool bDone(false);
 
                 // do we have a native Vector Graphic Data RenderGraphic, whose data can be written directly?
-                const VectorGraphicDataPtr& aVectorGraphicDataPtr(rGraphic.getVectorGraphicData());
+                auto const & rVectorGraphicDataPtr(rGraphic.getVectorGraphicData());
 
-                if (aVectorGraphicDataPtr.get()
-                    && aVectorGraphicDataPtr->getVectorGraphicDataArrayLength()
-                    && VectorGraphicDataType::Emf == aVectorGraphicDataPtr->getVectorGraphicDataType())
+                if (rVectorGraphicDataPtr
+                    && rVectorGraphicDataPtr->getVectorGraphicDataArrayLength()
+                    && VectorGraphicDataType::Emf == rVectorGraphicDataPtr->getVectorGraphicDataType())
                 {
-                    rOStm.WriteBytes(aVectorGraphicDataPtr->getVectorGraphicDataArray().getConstArray(), aVectorGraphicDataPtr->getVectorGraphicDataArrayLength());
+                    rOStm.WriteBytes(rVectorGraphicDataPtr->getVectorGraphicDataArray().getConstArray(), rVectorGraphicDataPtr->getVectorGraphicDataArrayLength());
 
                     if (rOStm.GetError())
                     {
@@ -2064,7 +1977,7 @@ ErrCode GraphicFilter::ExportGraphic( const Graphic& rGraphic, const OUString& r
 
                 if (!bDone)
                 {
-                    // #i119735# just use GetGDIMetaFile, it will create a bufferd version of contained bitmap now automatically
+                    // #i119735# just use GetGDIMetaFile, it will create a buffered version of contained bitmap now automatically
                     if (!ConvertGDIMetaFileToEMF(aGraphic.GetGDIMetaFile(), rOStm))
                         nStatus = ERRCODE_GRFILTER_FORMATERROR;
 
@@ -2138,13 +2051,13 @@ ErrCode GraphicFilter::ExportGraphic( const Graphic& rGraphic, const OUString& r
                 bool bDone(false);
 
                 // do we have a native Vector Graphic Data RenderGraphic, whose data can be written directly?
-                const VectorGraphicDataPtr& aVectorGraphicDataPtr(rGraphic.getVectorGraphicData());
+                auto const & rVectorGraphicDataPtr(rGraphic.getVectorGraphicData());
 
-                if (aVectorGraphicDataPtr.get()
-                    && aVectorGraphicDataPtr->getVectorGraphicDataArrayLength()
-                    && VectorGraphicDataType::Svg == aVectorGraphicDataPtr->getVectorGraphicDataType())
+                if (rVectorGraphicDataPtr
+                    && rVectorGraphicDataPtr->getVectorGraphicDataArrayLength()
+                    && VectorGraphicDataType::Svg == rVectorGraphicDataPtr->getVectorGraphicDataType())
                 {
-                    rOStm.WriteBytes(aVectorGraphicDataPtr->getVectorGraphicDataArray().getConstArray(), aVectorGraphicDataPtr->getVectorGraphicDataArrayLength());
+                    rOStm.WriteBytes(rVectorGraphicDataPtr->getVectorGraphicDataArray().getConstArray(), rVectorGraphicDataPtr->getVectorGraphicDataArrayLength());
 
                     if( rOStm.GetError() )
                     {
@@ -2282,7 +2195,7 @@ IMPL_LINK( GraphicFilter, FilterCallback, ConvertData&, rData, bool )
         default:
         break;
     }
-    if( GraphicType::NONE == rData.maGraphic.GetType() || rData.maGraphic.GetContext() ) // Import
+    if( GraphicType::NONE == rData.maGraphic.GetType() || rData.maGraphic.GetReaderContext() ) // Import
     {
         // Import
         nFormat = GetImportFormatNumberForShortName( OStringToOUString( aShortName, RTL_TEXTENCODING_UTF8) );
@@ -2291,13 +2204,13 @@ IMPL_LINK( GraphicFilter, FilterCallback, ConvertData&, rData, bool )
     else if( !aShortName.isEmpty() )
     {
         // Export
-#ifdef IOS
+#if defined(IOS) || defined(ANDROID)
         if (aShortName == PNG_SHORTNAME)
         {
             aFilterData.realloc(aFilterData.getLength() + 1);
             aFilterData[aFilterData.getLength() - 1].Name = "Compression";
             // We "know" that this gets passed to zlib's deflateInit2_(). 1 means best speed.
-            aFilterData[aFilterData.getLength() - 1].Value <<= 1;
+            aFilterData[aFilterData.getLength() - 1].Value <<= static_cast<sal_Int32>(1);
         }
 #endif
         nFormat = GetExportFormatNumberForShortName( OStringToOUString(aShortName, RTL_TEXTENCODING_UTF8) );

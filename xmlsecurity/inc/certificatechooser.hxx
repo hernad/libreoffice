@@ -23,14 +23,12 @@
 #include <com/sun/star/uno/Sequence.hxx>
 #include <vcl/weld.hxx>
 
-namespace com {
-namespace sun {
-namespace star {
-namespace security {
-    class XCertificate; }
-namespace xml { namespace crypto {
-    class XSecurityEnvironment; }}
-}}}
+namespace com::sun::star {
+    namespace security { class XCertificate; }
+    namespace xml::crypto {
+        class XSecurityEnvironment;
+    }
+}
 
 namespace com::sun::star::xml::crypto { class XXMLSecurityContext; }
 
@@ -48,7 +46,7 @@ enum class UserAction
     Encrypt
 };
 
-class CertificateChooser : public weld::GenericDialogController
+class CertificateChooser final : public weld::GenericDialogController
 {
 private:
     std::vector< css::uno::Reference< css::xml::crypto::XXMLSecurityContext > > mxSecurityContexts;

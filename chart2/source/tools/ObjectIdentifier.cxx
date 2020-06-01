@@ -137,18 +137,17 @@ Reference<XChartType> lcl_getFirstStockChartType( const Reference< frame::XModel
     if( !xCooSysContainer.is())
         return nullptr;
 
-    uno::Sequence< Reference< XCoordinateSystem > > aCooSysList( xCooSysContainer->getCoordinateSystems() );
-    for( sal_Int32 nCS = 0; nCS < aCooSysList.getLength(); ++nCS )
+    const uno::Sequence< Reference< XCoordinateSystem > > aCooSysList( xCooSysContainer->getCoordinateSystems() );
+    for( Reference< XCoordinateSystem > const & coords : aCooSysList )
     {
         //iterate through all chart types in the current coordinate system
-        Reference< XChartTypeContainer > xChartTypeContainer( aCooSysList[nCS], uno::UNO_QUERY );
+        Reference< XChartTypeContainer > xChartTypeContainer( coords, uno::UNO_QUERY );
         if( !xChartTypeContainer.is() )
             continue;
 
-        uno::Sequence< Reference< XChartType > > aChartTypeList( xChartTypeContainer->getChartTypes() );
-        for( sal_Int32 nT = 0; nT < aChartTypeList.getLength(); ++nT )
+        const uno::Sequence< Reference< XChartType > > aChartTypeList( xChartTypeContainer->getChartTypes() );
+        for( Reference< XChartType > const & xChartType : aChartTypeList )
         {
-            Reference< XChartType > xChartType( aChartTypeList[nT] );
             if(!xChartType.is())
                 continue;
             OUString aChartType = xChartType->getChartType();
@@ -621,11 +620,10 @@ OUString ObjectIdentifier::createParticleForSeries(
     return aRet.makeStringAndClear();
 }
 
-OUString ObjectIdentifier::createParticleForLegend( ChartModel& rModel )
+OUString ObjectIdentifier::createParticleForLegend( ChartModel&  )
 {
     OUStringBuffer aRet;
 
-    Reference< XDiagram > xDiagram( rModel.getFirstDiagram() );
     //todo: if more than one diagram is implemented, find the correct diagram which is owner of the given legend
 
     aRet.append( ObjectIdentifier::createParticleForDiagram() );
@@ -637,11 +635,10 @@ OUString ObjectIdentifier::createParticleForLegend( ChartModel& rModel )
 }
 
 OUString ObjectIdentifier::createParticleForLegend(
-        const Reference< frame::XModel >& xChartModel )
+        const Reference< frame::XModel >& )
 {
     OUStringBuffer aRet;
 
-    Reference< XDiagram > xDiagram( ChartModelHelper::findDiagram( xChartModel ) );
     //todo: if more than one diagram is implemented, find the correct diagram which is owner of the given legend
 
     aRet.append( ObjectIdentifier::createParticleForDiagram() );
@@ -1129,8 +1126,7 @@ OUString ObjectIdentifier::createSeriesSubObjectStub( ObjectType eSubObjectType
 
 OUString ObjectIdentifier::createPointCID( const OUString& rPointCID_Stub, sal_Int32 nIndex  )
 {
-    OUString aRet(rPointCID_Stub);
-    return aRet+=OUString::number( nIndex );
+    return rPointCID_Stub + OUString::number( nIndex );
 }
 
 OUString ObjectIdentifier::getParticleID( const OUString& rCID )

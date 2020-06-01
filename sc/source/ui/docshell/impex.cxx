@@ -169,7 +169,7 @@ ScImportExport::ScImportExport( ScDocument* p, const OUString& rPos )
     ScRangeName* pRange = pDoc->GetRangeName();
     if (pRange)
     {
-        const ScRangeData* pData = pRange->findByUpperName(ScGlobal::pCharClass->uppercase(aPos));
+        const ScRangeData* pData = pRange->findByUpperName(ScGlobal::getCharClassPtr()->uppercase(aPos));
         if (pData)
         {
             if( pData->HasType( ScRangeData::Type::RefArea )
@@ -262,7 +262,7 @@ void ScImportExport::EndPaste(bool bAutoRowHeight)
         ScDocumentUniquePtr pRedoDoc(new ScDocument( SCDOCMODE_UNDO ));
         pRedoDoc->InitUndo( pDoc, aRange.aStart.Tab(), aRange.aEnd.Tab() );
         pDoc->CopyToDocument(aRange, InsertDeleteFlags::ALL | InsertDeleteFlags::NOCAPTIONS, false, *pRedoDoc);
-        ScMarkData aDestMark(pRedoDoc->MaxRow(), pRedoDoc->MaxCol());
+        ScMarkData aDestMark(pRedoDoc->GetSheetLimits());
         aDestMark.SetMarkArea(aRange);
         pDocSh->GetUndoManager()->AddUndoAction(
             std::make_unique<ScUndoPaste>(pDocSh, aRange, aDestMark, std::move(pUndoDoc), std::move(pRedoDoc), InsertDeleteFlags::ALL, nullptr));
@@ -889,6 +889,8 @@ bool ScImportExport::Text2Doc( SvStream& rStrm )
         for( ;; )
         {
             rStrm.ReadUniOrByteStringLine( aLine, rStrm.GetStreamCharSet(), nArbitraryLineLengthLimit );
+            // tdf#125440 When inserting tab separated string, consider quotes as field markers
+            DoubledQuoteMode mode = aLine.indexOf("\t") >= 0 ? DoubledQuoteMode::ESCAPE : DoubledQuoteMode::KEEP_ALL;
             if( rStrm.eof() )
                 break;
             SCCOL nCol = nStartCol;
@@ -901,7 +903,7 @@ bool ScImportExport::Text2Doc( SvStream& rStrm )
                 {
                     // Always look for a pairing quote and ignore separator in between.
                     while (*p && *p == cStr)
-                        q = p = lcl_ScanString( p, aCell, pSeps, cStr, DoubledQuoteMode::KEEP_ALL, bOverflowCell );
+                        q = p = lcl_ScanString( p, aCell, pSeps, cStr, mode, bOverflowCell );
                     // All until next separator or quote.
                     while (*p && *p != cSep && *p != cStr)
                         ++p;
@@ -1057,8 +1059,8 @@ static bool lcl_PutString(
                     nPos <= nStart[nFound]+2 && rStr[nPos] == 'T')
                 bInNum = false;     // ISO-8601: YYYY-MM-DDThh:mm...
             else if ((((!bInNum && nFound==nMP) || (bInNum && nFound==nMP+1))
-                        && ScGlobal::pCharClass->isLetterNumeric( rStr, nPos))
-                    || ScGlobal::pCharClass->isDigit( rStr, nPos))
+                        && ScGlobal::getCharClassPtr()->isLetterNumeric( rStr, nPos))
+                    || ScGlobal::getCharClassPtr()->isDigit( rStr, nPos))
             {
                 if (!bInNum)
                 {
@@ -1080,7 +1082,7 @@ static bool lcl_PutString(
             sal_Int32 nDateLen = nEnd[0] + 1 - nDateStart;
 
             if ( nDateLen >= 5 && nDateLen <= 8 &&
-                    ScGlobal::pCharClass->isNumeric( rStr.copy( nDateStart, nDateLen ) ) )
+                    ScGlobal::getCharClassPtr()->isNumeric( rStr.copy( nDateStart, nDateLen ) ) )
             {
                 //  6 digits: 2 each for day, month, year
                 //  8 digits: 4 for year, 2 each for day and month
@@ -1276,7 +1278,7 @@ static OUString lcl_GetFixed( const OUString& rLine, sal_Int32 nStart, sal_Int32
         bool bFits = (nSpace - nStart - 3 <= SAL_MAX_UINT16);
         OSL_ENSURE( bFits, "lcl_GetFixed: line doesn't fit into data");
         if (bFits)
-            return rLine.copy(nStart+1, nSpace-nStart-2);
+            return rLine.copy(nStart+1, std::max< sal_Int32 >(0, nSpace-nStart-2));
         else
         {
             rbOverflowCell = true;
@@ -1893,7 +1895,7 @@ bool ScImportExport::Sylk2Doc( SvStream& rStrm )
                             const sal_Unicode* q = p;
                             while( *q && *q != ';' )
                                 q++;
-                            if ( !(*q == ';' && *(q+1) == 'I') && !bInvalidCol && !bInvalidRow )
+                            if ( (*q != ';' || *(q+1) != 'I') && !bInvalidCol && !bInvalidRow )
                             {   // don't ignore value
                                 if( bText )
                                 {
@@ -1947,7 +1949,7 @@ bool ScImportExport::Sylk2Doc( SvStream& rStrm )
                             pDoc->CheckLinkFormulaNeedingCheck(*xCode);
                             if ( ch == 'M' )
                             {
-                                ScMarkData aMark(pDoc->MaxRow(), pDoc->MaxCol());
+                                ScMarkData aMark(pDoc->GetSheetLimits());
                                 aMark.SelectTable( aPos.Tab(), true );
                                 pDoc->InsertMatrixFormula( nCol, nRow, nRefCol,
                                     nRefRow, aMark, EMPTY_OUSTRING, xCode.get() );
@@ -2432,9 +2434,7 @@ Label_RetryWithNewSep:
         sal_Int32 nQuotes = 0;
         while (!rStream.eof() && aStr.getLength() < nArbitraryLineLengthLimit)
         {
-            const sal_Unicode *p, *pStart;
-            p = pStart = aStr.getStr();
-            p += nLastOffset;
+            const sal_Unicode * p = aStr.getStr() + nLastOffset;
             while (*p)
             {
                 if (nQuotes)

@@ -14,13 +14,13 @@
 #include <svx/sdr/overlay/overlayobject.hxx>
 #include <basegfx/vector/b2dsize.hxx>
 
-namespace sdr { namespace overlay {
+namespace sdr::overlay {
 
 
 class OverlayHandle final : public OverlayObjectWithBasePosition
 {
-    basegfx::B2DSize const maSize;
-    Color const maStrokeColor;
+    basegfx::B2DSize maSize;
+    Color maStrokeColor;
 
     // geometry creation for OverlayObject
     virtual drawinglayer::primitive2d::Primitive2DContainer createOverlayObjectPrimitive2DSequence() override;
@@ -34,7 +34,7 @@ public:
     virtual ~OverlayHandle() override;
 };
 
-}} // end of namespace sdr::overlay
+} // end of namespace sdr::overlay
 
 #endif // INCLUDED_SVX_SDR_OVERLAY_OVERLAYHANDLE_HXX
 

@@ -21,7 +21,6 @@
 
 #include <com/sun/star/drawing/XShape.hpp>
 #include <ooo/vba/msforms/XColorFormat.hpp>
-#include <ooo/vba/msforms/XFillFormat.hpp>
 #include <vbahelper/vbahelperinterface.hxx>
 #include "vbafillformat.hxx"
 
@@ -95,7 +94,7 @@ class ScVbaColorFormat : public ScVbaColorFormat_BASE
 private:
     css::uno::Reference< css::beans::XPropertySet > m_xPropertySet;
     ScVbaFillFormat *m_pFillFormat;
-    sal_Int16 const m_nColorFormatType;
+    sal_Int16 m_nColorFormatType;
     sal_Int32 m_nFillFormatBackColor;
 protected:
     virtual OUString getServiceImplName() override;

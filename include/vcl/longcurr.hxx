@@ -20,14 +20,14 @@
 #ifndef INCLUDED_VCL_LONGCURR_HXX
 #define INCLUDED_VCL_LONGCURR_HXX
 
+#include <config_options.h>
 #include <vcl/dllapi.h>
 #include <tools/bigint.hxx>
 #include <vcl/field.hxx>
 
 class LocaleDataWrapper;
 
-
-class VCL_DLLPUBLIC LongCurrencyFormatter : public FormatterBase
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) LongCurrencyFormatter : public FormatterBase
 {
 public:
                             virtual ~LongCurrencyFormatter() override;
@@ -69,7 +69,7 @@ private:
 };
 
 
-class VCL_DLLPUBLIC LongCurrencyField final : public SpinField, public LongCurrencyFormatter
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) LongCurrencyField final : public SpinField, public LongCurrencyFormatter
 {
     friend void ImplNewLongCurrencyFieldValue(LongCurrencyField*, const BigInt&);
 
@@ -95,18 +95,6 @@ public:
     const BigInt&   GetLast() const { return mnLast; }
     void            SetSpinSize(const BigInt& rNewSize) { mnSpinSize = rNewSize; }
     const BigInt&   GetSpinSize() const { return mnSpinSize; }
-};
-
-
-class VCL_DLLPUBLIC LongCurrencyBox final : public ComboBox, public LongCurrencyFormatter
-{
-public:
-                    LongCurrencyBox( vcl::Window* pParent, WinBits nWinStyle );
-
-    virtual bool    EventNotify( NotifyEvent& rNEvt ) override;
-
-    void            Modify() override;
-    void            ReformatAll() override;
 };
 
 #endif // INCLUDED_VCL_LONGCURR_HXX

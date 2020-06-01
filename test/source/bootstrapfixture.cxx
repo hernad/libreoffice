@@ -108,6 +108,8 @@ void test::BootstrapFixture::setUp()
 #if OSL_DEBUG_LEVEL > 0
     Scheduler::ProcessEventsToIdle();
 #endif
+
+    mxComponentContext.set(comphelper::getComponentContext(getMultiServiceFactory()));
 }
 
 test::BootstrapFixture::~BootstrapFixture()
@@ -185,6 +187,7 @@ void test::BootstrapFixture::validate(const OUString& rPath, test::ValidationFor
     OUString aOutputFile = aOutput.GetFileName();
     OUString aCommand = aValidator + " " + rPath + " > " + aOutputFile;
 
+    SAL_INFO("test", "BootstrapFixture::validate: executing '" << aCommand << "'");
     int returnValue = system(OUStringToOString(aCommand, RTL_TEXTENCODING_UTF8).getStr());
 
     OString aContentString = loadFile(aOutput.GetURL());

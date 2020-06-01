@@ -11,14 +11,16 @@ $(eval $(call gb_JunitTest_JunitTest,ridljar_util))
 
 $(eval $(call gb_JunitTest_use_jars,ridljar_util,\
     OOoRunner \
-    ridl \
+    libreoffice \
 ))
 
 $(eval $(call gb_JunitTest_add_sourcefiles,ridljar_util,\
+    ridljar/test/com/sun/star/lib/util/NativeLibraryLoader_Test \
     ridljar/test/com/sun/star/lib/util/WeakMap_Test \
 ))
 
 $(eval $(call gb_JunitTest_add_classes,ridljar_util,\
+    com.sun.star.lib.util.NativeLibraryLoader_Test \
     com.sun.star.lib.util.WeakMap_Test \
 ))
 

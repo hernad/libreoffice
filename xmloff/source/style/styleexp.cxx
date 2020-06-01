@@ -24,6 +24,7 @@
 #include <xmloff/xmltoken.hxx>
 #include <xmloff/xmluconv.hxx>
 #include <xmloff/xmlexppr.hxx>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/lang/IndexOutOfBoundsException.hpp>
 #include <com/sun/star/style/XStyleFamiliesSupplier.hpp>
 #include <com/sun/star/style/XStyle.hpp>
@@ -168,8 +169,12 @@ bool XMLStyleExport::exportStyle(
     {
         aAny = xPropSet->getPropertyValue( "Hidden" );
         bool bHidden = false;
-        if ( ( aAny >>= bHidden ) && bHidden && GetExport( ).getDefaultVersion( ) == SvtSaveOptions::ODFVER_LATEST )
-            GetExport( ).AddAttribute( XML_NAMESPACE_STYLE, XML_HIDDEN, "true" );
+        if ((aAny >>= bHidden) && bHidden
+            && GetExport().getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
+        {
+            GetExport().AddAttribute(XML_NAMESPACE_LO_EXT, XML_HIDDEN, "true");
+            GetExport().AddAttribute(XML_NAMESPACE_STYLE, XML_HIDDEN, "true"); // FIXME for compatibility
+        }
     }
 
     // style:parent-style-name="..."
@@ -230,7 +235,7 @@ bool XMLStyleExport::exportStyle(
                    since ODF 1.2. Thus, suppress its export for former versions. (#i104889#)
                 */
                 if ( ( GetExport().getExportFlags() & SvXMLExportFlags::OASIS ) &&
-                     GetExport().getDefaultVersion() >= SvtSaveOptions::ODFVER_012 )
+                    GetExport().getSaneDefaultVersion() >= SvtSaveOptions::ODFSVER_012)
                 {
                     GetExport().AddAttribute( XML_NAMESPACE_STYLE,
                                               XML_DEFAULT_OUTLINE_LEVEL,
@@ -403,7 +408,7 @@ void XMLStyleExport::exportStyleFamily(
     const char *pFamily,
     const OUString& rXMLFamily,
     const rtl::Reference < SvXMLExportPropertyMapper >& rPropMapper,
-    bool bUsed, sal_uInt16 nFamily, const OUString* pPrefix)
+    bool bUsed, XmlStyleFamily nFamily, const OUString* pPrefix)
 {
     const OUString sFamily(OUString::createFromAscii(pFamily ));
     exportStyleFamily( sFamily, rXMLFamily, rPropMapper, bUsed, nFamily,
@@ -413,7 +418,7 @@ void XMLStyleExport::exportStyleFamily(
 void XMLStyleExport::exportStyleFamily(
     const OUString& rFamily, const OUString& rXMLFamily,
     const rtl::Reference < SvXMLExportPropertyMapper >& rPropMapper,
-    bool bUsed, sal_uInt16 nFamily, const OUString* pPrefix)
+    bool bUsed, XmlStyleFamily nFamily, const OUString* pPrefix)
 {
     assert(GetExport().GetModel().is());
     Reference< XStyleFamiliesSupplier > xFamiliesSupp( GetExport().GetModel(), UNO_QUERY );

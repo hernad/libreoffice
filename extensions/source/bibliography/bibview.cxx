@@ -19,8 +19,6 @@
 
 
 #include <strings.hrc>
-#include "bibcont.hxx"
-#include "bibbeam.hxx"
 #include "general.hxx"
 #include "bibview.hxx"
 #include "datman.hxx"
@@ -31,7 +29,6 @@
 
 #include <vcl/svapp.hxx>
 #include <com/sun/star/sdbc/XResultSetUpdate.hpp>
-#include <com/sun/star/form/XLoadable.hpp>
 #include <vcl/weld.hxx>
 #include <tools/debug.hxx>
 
@@ -137,34 +134,34 @@ namespace bib
             m_pGeneralPage->GrabFocus();
 
         OUString sErrorString( m_pGeneralPage->GetErrorString() );
-        if ( !sErrorString.isEmpty() )
+        if ( sErrorString.isEmpty() )
+            return;
+
+        bool bExecute = BibModul::GetConfig()->IsShowColumnAssignmentWarning();
+        if(!m_pDatMan->HasActiveConnection())
         {
-            bool bExecute = BibModul::GetConfig()->IsShowColumnAssignmentWarning();
-            if(!m_pDatMan->HasActiveConnection())
+            //no connection is available -> the data base has to be assigned
+            m_pDatMan->DispatchDBChangeDialog();
+            bExecute = false;
+        }
+        else if(bExecute)
+        {
+            sErrorString += "\n" + BibResId(RID_MAP_QUESTION);
+
+            MessageWithCheck aQueryBox(GetFrameWeld());
+            aQueryBox.set_primary_text(sErrorString);
+
+            short nResult = aQueryBox.run();
+            BibModul::GetConfig()->SetShowColumnAssignmentWarning(!aQueryBox.get_active());
+
+            if( RET_YES != nResult )
             {
-                //no connection is available -> the data base has to be assigned
-                m_pDatMan->DispatchDBChangeDialog();
                 bExecute = false;
             }
-            else if(bExecute)
-            {
-                sErrorString += "\n" + BibResId(RID_MAP_QUESTION);
-
-                MessageWithCheck aQueryBox(GetFrameWeld());
-                aQueryBox.set_primary_text(sErrorString);
-
-                short nResult = aQueryBox.run();
-                BibModul::GetConfig()->SetShowColumnAssignmentWarning(!aQueryBox.get_active());
-
-                if( RET_YES != nResult )
-                {
-                    bExecute = false;
-                }
-            }
-            if(bExecute)
-            {
-                Application::PostUserEvent( LINK( this, BibView, CallMappingHdl ), nullptr, true );
-            }
+        }
+        if(bExecute)
+        {
+            Application::PostUserEvent( LINK( this, BibView, CallMappingHdl ), nullptr, true );
         }
     }
 

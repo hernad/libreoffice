@@ -27,7 +27,7 @@
 
 #include <vector>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace chart2 {
         class XChartDocument;
         class XDataSeries;
@@ -35,7 +35,7 @@ namespace com { namespace sun { namespace star {
     namespace awt {
         struct Size;
     }
-}}}
+}
 
 // class for child contexts: series, data point and statistics objects
 class SchXMLSeries2Context : public SvXMLImportContext
@@ -48,9 +48,9 @@ private:
     ::std::vector< RegressionStyle >& mrRegressionStyleVector;
 
     css::uno::Reference< css::chart2::XDataSeries > m_xSeries;
-    sal_Int32 const mnSeriesIndex;
+    sal_Int32 mnSeriesIndex;
     sal_Int32 mnDataPointIndex;
-    bool const m_bStockHasVolume;
+    bool m_bStockHasVolume;
 
     GlobalSeriesImportInfo& m_rGlobalSeriesImportInfo;
 
@@ -66,7 +66,7 @@ private:
     tSchXMLLSequencesPerIndex maPostponedSequences;
     bool& mrGlobalChartTypeUsedBySeries;
     bool mbSymbolSizeIsMissingInFile;
-    css::awt::Size const maChartSize;
+    css::awt::Size maChartSize;
 
 public:
     SchXMLSeries2Context( SchXMLImportHelper& rImpHelper,

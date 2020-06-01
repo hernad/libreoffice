@@ -53,7 +53,7 @@ class SwFEShell;
 class Fraction;
 struct PreviewPage;
 namespace vcl { class Window; }
-namespace com { namespace sun { namespace star { namespace accessibility { class XAccessible; } } } }
+namespace com::sun::star::accessibility { class XAccessible; }
 
 // The shape list is filled if an accessible shape is destroyed. It
 // simply keeps a reference to the accessible shape's XShape. These
@@ -120,7 +120,7 @@ class SwAccessibleMap final : public ::accessibility::IAccessibleViewForwarder,
     //mpSelectedFrameMap contains the old selected objects.
     std::unique_ptr<SwAccessibleContextMap_Impl> mpSeletedFrameMap;
 
-    OUString const maDocName;
+    OUString maDocName;
 
     //InvalidateShapeInParaSelection() method is responsible for the updating the selected states of the objects.
     void InvalidateShapeInParaSelection();

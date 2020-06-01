@@ -20,7 +20,7 @@
 #include <memory>
 #include "AppController.hxx"
 #include <core_resource.hxx>
-#include <stringconstants.hxx>
+#include <strings.hxx>
 #include <advancedsettingsdlg.hxx>
 #include "subcomponentmanager.hxx"
 #include <uiservices.hxx>
@@ -31,14 +31,12 @@
 #include <com/sun/star/container/XContentEnumerationAccess.hpp>
 #include <com/sun/star/container/XHierarchicalNameAccess.hpp>
 #include <com/sun/star/container/XHierarchicalNameContainer.hpp>
-#include <com/sun/star/container/XNameContainer.hpp>
 #include <com/sun/star/frame/XStorable.hpp>
 #include <com/sun/star/sdb/CommandType.hpp>
 #include <com/sun/star/sdb/ErrorMessageDialog.hpp>
-#include <com/sun/star/sdb/SQLContext.hpp>
-#include <com/sun/star/sdb/XBookmarksSupplier.hpp>
 #include <com/sun/star/sdb/XOfficeDatabaseDocument.hpp>
-#include <com/sun/star/sdb/XQueryDefinitionsSupplier.hpp>
+#include <com/sun/star/sdbc/SQLException.hpp>
+#include <com/sun/star/sdbc/SQLWarning.hpp>
 #include <com/sun/star/sdbc/XDataSource.hpp>
 #include <com/sun/star/sdbcx/XAlterView.hpp>
 #include <com/sun/star/sdbcx/XAppend.hpp>
@@ -46,31 +44,25 @@
 #include <com/sun/star/sdbcx/XTablesSupplier.hpp>
 #include <com/sun/star/sdbcx/XViewsSupplier.hpp>
 #include <com/sun/star/ui/dialogs/TemplateDescription.hpp>
-#include <com/sun/star/uno/XNamingService.hpp>
 #include <com/sun/star/util/XFlushable.hpp>
 #include <com/sun/star/util/XModifiable.hpp>
 #include <com/sun/star/util/XModifyBroadcaster.hpp>
-#include <com/sun/star/util/XNumberFormatter.hpp>
 #include <com/sun/star/util/XURLTransformer.hpp>
 #include <com/sun/star/ui/dialogs/XExecutableDialog.hpp>
 #include <com/sun/star/document/XEmbeddedScripts.hpp>
 #include <com/sun/star/frame/XModel2.hpp>
-#include <com/sun/star/awt/XTopWindow.hpp>
 #include <com/sun/star/task/XInteractionHandler.hpp>
 #include <com/sun/star/sdb/application/DatabaseObject.hpp>
 #include <com/sun/star/sdb/application/DatabaseObjectContainer.hpp>
 #include <com/sun/star/document/XDocumentEventBroadcaster.hpp>
-#include <com/sun/star/container/XHierarchicalName.hpp>
 #include <tools/diagnose_ex.h>
+#include <tools/urlobj.hxx>
 #include <osl/diagnose.h>
 
-#include <svl/urihelper.hxx>
 #include <svl/filenotation.hxx>
 #include <vcl/treelistbox.hxx>
 #include <vcl/transfer.hxx>
 #include <svtools/cliplistener.hxx>
-#include <vcl/svlbitm.hxx>
-#include <svtools/insdlg.hxx>
 
 #include <comphelper/sequence.hxx>
 #include <comphelper/uno3.hxx>
@@ -78,14 +70,11 @@
 #include <comphelper/interaction.hxx>
 #include <comphelper/processfactory.hxx>
 
-#include <vcl/stdtext.hxx>
 #include <vcl/svapp.hxx>
-#include <vcl/menu.hxx>
 #include <vcl/weld.hxx>
 
 #include <unotools/closeveto.hxx>
 #include <unotools/pathoptions.hxx>
-#include <unotools/tempfile.hxx>
 #include <unotools/moduleoptions.hxx>
 #include <unotools/historyoptions.hxx>
 
@@ -94,7 +83,6 @@
 #include <sfx2/docfilt.hxx>
 #include <sfx2/QuerySaveDocument.hxx>
 
-#include <cppuhelper/typeprovider.hxx>
 #include <cppuhelper/exc_hlp.hxx>
 
 #include <connectivity/dbtools.hxx>
@@ -111,16 +99,12 @@
 #include <strings.hrc>
 #include <defaultobjectnamecheck.hxx>
 #include <databaseobjectview.hxx>
-#include <listviewitems.hxx>
 #include "AppDetailView.hxx"
 #include <linkeddocuments.hxx>
-#include <sqlmessage.hxx>
 #include <UITools.hxx>
 #include <dsntypes.hxx>
 #include <dlgsave.hxx>
 #include <dbaccess_slotid.hrc>
-
-#include <functional>
 
 extern "C" void createRegistryInfo_ODBApplication()
 {
@@ -393,7 +377,7 @@ void SAL_CALL OApplicationController::disposing()
                             aURL.GetURLNoPass( INetURLObject::DecodeMechanism::NONE ),
                             aFilter,
                             getStrippedDatabaseName(),
-                            o3tl::nullopt);
+                            std::nullopt);
 
                     // add to recent document list
                     if ( aURL.GetProtocol() == INetProtocol::File )
@@ -1486,34 +1470,34 @@ void SAL_CALL OApplicationController::elementInserted( const ContainerEvent& _rE
     ::osl::MutexGuard aGuard( getMutex() );
 
     Reference< XContainer > xContainer(_rEvent.Source, UNO_QUERY);
-    if ( std::find(m_aCurrentContainers.begin(),m_aCurrentContainers.end(),xContainer) != m_aCurrentContainers.end() )
-    {
-        OSL_ENSURE(getContainer(),"View is NULL! -> GPF");
-        if ( getContainer() )
-        {
-            OUString sName;
-            _rEvent.Accessor >>= sName;
-            ElementType eType = getElementType(xContainer);
+    if ( std::find(m_aCurrentContainers.begin(),m_aCurrentContainers.end(),xContainer) == m_aCurrentContainers.end() )
+        return;
 
-            switch( eType )
+    OSL_ENSURE(getContainer(),"View is NULL! -> GPF");
+    if ( !getContainer() )
+        return;
+
+    OUString sName;
+    _rEvent.Accessor >>= sName;
+    ElementType eType = getElementType(xContainer);
+
+    switch( eType )
+    {
+        case E_TABLE:
+            ensureConnection();
+            break;
+        case E_FORM:
+        case E_REPORT:
             {
-                case E_TABLE:
-                    ensureConnection();
-                    break;
-                case E_FORM:
-                case E_REPORT:
-                    {
-                        Reference< XContainer > xSubContainer(_rEvent.Element,UNO_QUERY);
-                        if ( xSubContainer.is() )
-                            containerFound(xSubContainer);
-                    }
-                    break;
-                default:
-                    break;
+                Reference< XContainer > xSubContainer(_rEvent.Element,UNO_QUERY);
+                if ( xSubContainer.is() )
+                    containerFound(xSubContainer);
             }
-            getContainer()->elementAdded(eType,sName,_rEvent.Element);
-        }
+            break;
+        default:
+            break;
     }
+    getContainer()->elementAdded(eType,sName,_rEvent.Element);
 }
 
 void SAL_CALL OApplicationController::elementRemoved( const ContainerEvent& _rEvent )
@@ -1522,17 +1506,61 @@ void SAL_CALL OApplicationController::elementRemoved( const ContainerEvent& _rEv
     ::osl::MutexGuard aGuard( getMutex() );
 
     Reference< XContainer > xContainer(_rEvent.Source, UNO_QUERY);
-    if ( std::find(m_aCurrentContainers.begin(),m_aCurrentContainers.end(),xContainer) != m_aCurrentContainers.end() )
+    if ( std::find(m_aCurrentContainers.begin(),m_aCurrentContainers.end(),xContainer) == m_aCurrentContainers.end() )
+        return;
+
+    OSL_ENSURE(getContainer(),"View is NULL! -> GPF");
+    OUString sName;
+    _rEvent.Accessor >>= sName;
+    ElementType eType = getElementType(xContainer);
+    switch( eType )
     {
-        OSL_ENSURE(getContainer(),"View is NULL! -> GPF");
-        OUString sName;
+        case E_TABLE:
+            ensureConnection();
+            break;
+        case E_FORM:
+        case E_REPORT:
+            {
+                Reference<XContent> xContent(xContainer,UNO_QUERY);
+                if ( xContent.is() )
+                {
+                    sName = xContent->getIdentifier()->getContentIdentifier() + "/" + sName;
+                }
+            }
+            break;
+        default:
+            break;
+    }
+    getContainer()->elementRemoved(eType,sName);
+}
+
+void SAL_CALL OApplicationController::elementReplaced( const ContainerEvent& _rEvent )
+{
+    SolarMutexGuard aSolarGuard;
+    ::osl::MutexGuard aGuard( getMutex() );
+
+    Reference< XContainer > xContainer(_rEvent.Source, UNO_QUERY);
+    if ( std::find(m_aCurrentContainers.begin(),m_aCurrentContainers.end(),xContainer) == m_aCurrentContainers.end() )
+        return;
+
+    OSL_ENSURE(getContainer(),"View is NULL! -> GPF");
+    OUString sName;
+    try
+    {
         _rEvent.Accessor >>= sName;
+        Reference<XPropertySet> xProp(_rEvent.Element,UNO_QUERY);
+        OUString sNewName;
+
         ElementType eType = getElementType(xContainer);
         switch( eType )
         {
             case E_TABLE:
+            {
                 ensureConnection();
-                break;
+                if ( xProp.is() && m_xMetaData.is() )
+                    sNewName = ::dbaui::composeTableName( m_xMetaData, xProp, ::dbtools::EComposeRule::InDataManipulation, false );
+            }
+            break;
             case E_FORM:
             case E_REPORT:
                 {
@@ -1546,55 +1574,11 @@ void SAL_CALL OApplicationController::elementRemoved( const ContainerEvent& _rEv
             default:
                 break;
         }
-        getContainer()->elementRemoved(eType,sName);
+        //  getContainer()->elementReplaced(getContainer()->getElementType(),sName,sNewName);
     }
-}
-
-void SAL_CALL OApplicationController::elementReplaced( const ContainerEvent& _rEvent )
-{
-    SolarMutexGuard aSolarGuard;
-    ::osl::MutexGuard aGuard( getMutex() );
-
-    Reference< XContainer > xContainer(_rEvent.Source, UNO_QUERY);
-    if ( std::find(m_aCurrentContainers.begin(),m_aCurrentContainers.end(),xContainer) != m_aCurrentContainers.end() )
+    catch( Exception& )
     {
-        OSL_ENSURE(getContainer(),"View is NULL! -> GPF");
-        OUString sName;
-        try
-        {
-            _rEvent.Accessor >>= sName;
-            Reference<XPropertySet> xProp(_rEvent.Element,UNO_QUERY);
-            OUString sNewName;
-
-            ElementType eType = getElementType(xContainer);
-            switch( eType )
-            {
-                case E_TABLE:
-                {
-                    ensureConnection();
-                    if ( xProp.is() && m_xMetaData.is() )
-                        sNewName = ::dbaui::composeTableName( m_xMetaData, xProp, ::dbtools::EComposeRule::InDataManipulation, false );
-                }
-                break;
-                case E_FORM:
-                case E_REPORT:
-                    {
-                        Reference<XContent> xContent(xContainer,UNO_QUERY);
-                        if ( xContent.is() )
-                        {
-                            sName = xContent->getIdentifier()->getContentIdentifier() + "/" + sName;
-                        }
-                    }
-                    break;
-                default:
-                    break;
-            }
-            //  getContainer()->elementReplaced(getContainer()->getElementType(),sName,sNewName);
-        }
-        catch( Exception& )
-        {
-            DBG_UNHANDLED_EXCEPTION("dbaccess");
-        }
+        DBG_UNHANDLED_EXCEPTION("dbaccess");
     }
 }
 
@@ -1656,6 +1640,11 @@ bool OApplicationController::onContainerSelect(ElementType _eType)
             {
                 return false;
             }
+        }
+        else if ( _eType == E_QUERY )
+        {
+            // tdf#126578: retrieve connection to be able to call "Create as View"
+            ensureConnection();
         }
         Reference< XLayoutManager > xLayoutManager = getLayoutManager( getFrame() );
         if ( xLayoutManager.is() )

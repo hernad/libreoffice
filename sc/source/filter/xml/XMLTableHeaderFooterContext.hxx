@@ -21,12 +21,12 @@
 
 #include <xmloff/xmlictxt.hxx>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace text { class XTextCursor; }
     namespace beans { class XPropertySet; }
-} } }
+}
 
-namespace com { namespace sun { namespace star { namespace sheet { class XHeaderFooterContent; } } } }
+namespace com::sun::star::sheet { class XHeaderFooterContent; }
 
 class XMLTableHeaderFooterContext: public SvXMLImportContext
 {
@@ -35,7 +35,6 @@ class XMLTableHeaderFooterContext: public SvXMLImportContext
     css::uno::Reference< css::beans::XPropertySet > xPropSet;
     css::uno::Reference< css::sheet::XHeaderFooterContent > xHeaderFooterContent;
 
-    const OUString   sOn;
     OUString         sCont;
 
     bool    bContainsLeft;

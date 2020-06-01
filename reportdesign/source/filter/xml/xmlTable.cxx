@@ -21,7 +21,8 @@
 #include <o3tl/safeint.hxx>
 #include <xmloff/xmltoken.hxx>
 #include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
+#include <xmloff/xmlstyle.hxx>
+#include <xmloff/prstylei.hxx>
 #include <xmloff/xmluconv.hxx>
 #include <xmloff/ProgressBarHelper.hxx>
 #include <RptDef.hxx>
@@ -30,11 +31,11 @@
 #include "xmlColumn.hxx"
 #include <com/sun/star/report/ForceNewPage.hpp>
 #include "xmlCondPrtExpr.hxx"
-#include "xmlStyleImport.hxx"
 #include <strings.hxx>
-#include <connectivity/dbtools.hxx>
 #include <com/sun/star/report/XShape.hpp>
 #include <com/sun/star/report/XFixedLine.hpp>
+#include <sal/log.hxx>
+#include <osl/diagnose.h>
 
 #include <numeric>
 
@@ -47,7 +48,6 @@ namespace rptxml
     using namespace ::com::sun::star;
     using ::com::sun::star::uno::Reference;
     using namespace ::com::sun::star::xml::sax;
-    using ::com::sun::star::xml::sax::XAttributeList;
 
     static sal_Int16 lcl_getForceNewPageOption(const OUString& _sValue)
     {
@@ -74,9 +74,7 @@ OXMLTable::OXMLTable( ORptFilter& rImport
     static const OUString s_sTRUE = ::xmloff::token::GetXMLToken(XML_TRUE);
     try
     {
-        sax_fastparser::FastAttributeList *pAttribList =
-                        sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-        for (auto &aIter : *pAttribList)
+        for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
         {
             OUString sValue = aIter.toString();
 
@@ -101,6 +99,7 @@ OXMLTable::OXMLTable( ORptFilter& rImport
                     m_sStyleName = sValue;
                     break;
                 default:
+                    SAL_WARN("reportdesign", "unknown attribute " << SvXMLImport::getPrefixAndNameFromToken(aIter.getToken()) << " = " << sValue);
                     break;
             }
         }
@@ -163,7 +162,7 @@ void OXMLTable::endFastElement(sal_Int32 )
                 const SvXMLStylesContext* pAutoStyles = GetImport().GetAutoStyles();
                 if ( pAutoStyles )
                 {
-                    XMLPropStyleContext* pAutoStyle = const_cast<XMLPropStyleContext*>(dynamic_cast< const XMLPropStyleContext *>(pAutoStyles->FindStyleChildContext(XML_STYLE_FAMILY_TABLE_TABLE,m_sStyleName)));
+                    XMLPropStyleContext* pAutoStyle = const_cast<XMLPropStyleContext*>(dynamic_cast< const XMLPropStyleContext *>(pAutoStyles->FindStyleChildContext(XmlStyleFamily::TABLE_TABLE,m_sStyleName)));
                     if ( pAutoStyle )
                     {
                         pAutoStyle->FillPropertySet(m_xSection.get());

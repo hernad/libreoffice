@@ -24,7 +24,7 @@
 #include <vector>
 
 
-#include <o3tl/optional.hxx>
+#include <optional>
 #include <com/sun/star/beans/NamedValue.hpp>
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
@@ -380,7 +380,7 @@ void UpdateDialog::Thread::prepareUpdateData(
         out_du.unsatisfiedDependencies[i] = dp_misc::Dependencies::getErrorText(ds[i]);
     }
 
-    const ::o3tl::optional< OUString> updateWebsiteURL(infoset.getLocalizedUpdateWebsiteURL());
+    const ::std::optional< OUString> updateWebsiteURL(infoset.getLocalizedUpdateWebsiteURL());
 
     out_du.name = getUpdateDisplayString(out_data, infoset.getVersion());
 
@@ -487,14 +487,12 @@ short UpdateDialog::run() {
     return nRet;
 }
 
-IMPL_LINK(UpdateDialog, entryToggled, const row_col&, rRowCol, void)
+IMPL_LINK(UpdateDialog, entryToggled, const weld::TreeView::iter_col&, rRowCol, void)
 {
-    int nRow = rRowCol.first;
-
     // error's can't be enabled
     const UpdateDialog::Index* p = reinterpret_cast<UpdateDialog::Index const *>(m_xUpdates->get_id(rRowCol.first).toInt64());
     if (p->m_eKind == SPECIFIC_ERROR)
-        m_xUpdates->set_toggle(nRow, TRISTATE_FALSE, 0);
+        m_xUpdates->set_toggle(rRowCol.first, TRISTATE_FALSE, 0);
 
     enableOk();
 }
@@ -775,11 +773,10 @@ void UpdateDialog::getIgnoredUpdates()
     args[0] <<= aValue;
 
     uno::Reference< container::XNameAccess > xNameAccess( xConfig->createInstanceWithArguments( "com.sun.star.configuration.ConfigurationAccess", args), uno::UNO_QUERY_THROW );
-    uno::Sequence< OUString > aElementNames = xNameAccess->getElementNames();
+    const uno::Sequence< OUString > aElementNames = xNameAccess->getElementNames();
 
-    for ( sal_Int32 i = 0; i < aElementNames.getLength(); i++ )
+    for ( OUString const & aIdentifier : aElementNames )
     {
-        OUString aIdentifier = aElementNames[i];
         OUString aVersion;
 
         uno::Any aPropValue( uno::Reference< beans::XPropertySet >( xNameAccess->getByName( aIdentifier ), uno::UNO_QUERY_THROW )->getPropertyValue( PROPERTY_VERSION ) );
@@ -809,7 +806,7 @@ bool UpdateDialog::isIgnoredUpdate( UpdateDialog::Index * index )
         {
             DisabledUpdate &rData = m_disabledUpdates[ index->m_nIndex ];
             dp_misc::DescriptionInfoset aInfoset( m_context, rData.aUpdateInfo );
-            ::o3tl::optional< OUString > aID( aInfoset.getIdentifier() );
+            ::std::optional< OUString > aID( aInfoset.getIdentifier() );
             if ( aID )
                 aExtensionID = *aID;
             aVersion = aInfoset.getVersion();

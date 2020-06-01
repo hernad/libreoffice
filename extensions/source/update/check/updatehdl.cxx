@@ -22,14 +22,10 @@
 #include <helpids.h>
 
 #include <osl/diagnose.h>
-#include <osl/thread.hxx>
 #include <osl/file.hxx>
 #include <rtl/ustring.hxx>
-#include <rtl/bootstrap.hxx>
 
 #include <com/sun/star/uno/Sequence.h>
-
-#include <com/sun/star/style/VerticalAlignment.hpp>
 
 #include <com/sun/star/awt/ActionEvent.hpp>
 #include <com/sun/star/awt/PushButtonType.hpp>
@@ -64,8 +60,6 @@
 #include <unotools/resmgr.hxx>
 #include <tools/urlobj.hxx>
 #include <tools/diagnose_ex.h>
-#include <vcl/settings.hxx>
-#include <vcl/svapp.hxx>
 
 #define COMMAND_CLOSE       "close"
 
@@ -761,9 +755,9 @@ void UpdateHandler::insertControlModel( uno::Reference< awt::XControlModel > con
     uno::Reference< awt::XControlModel > xModel (xFactory->createInstance (rServiceName), uno::UNO_QUERY_THROW);
     uno::Reference< beans::XPropertySet > xPropSet (xModel, uno::UNO_QUERY_THROW);
 
-    for (sal_Int32 i = 0, n = rProps.getLength(); i < n; i++)
+    for (beans::NamedValue const & prop : rProps)
     {
-        xPropSet->setPropertyValue (rProps[i].Name, rProps[i].Value);
+        xPropSet->setPropertyValue (prop.Name, prop.Value);
     }
 
     // @see awt/UnoControlDialogElement.idl
@@ -887,9 +881,9 @@ bool UpdateHandler::showWarning( const OUString &rWarningText,
         {
             uno::Sequence< uno::Reference< awt::XWindow > > xChildren = xMsgBoxCtrls->getWindows();
 
-            for ( long i=0; i < xChildren.getLength(); i++ )
+            for ( uno::Reference< awt::XWindow > const & child : std::as_const(xChildren) )
             {
-                uno::Reference< awt::XVclWindowPeer > xMsgBoxCtrl( xChildren[i], uno::UNO_QUERY );
+                uno::Reference< awt::XVclWindowPeer > xMsgBoxCtrl( child, uno::UNO_QUERY );
                 if ( xMsgBoxCtrl.is() )
                 {
                     bool bIsDefault = true;

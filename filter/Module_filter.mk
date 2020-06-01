@@ -23,7 +23,6 @@ $(eval $(call gb_Module_add_targets,filter,\
 	CustomTarget_svg \
     Library_gie \
 	Library_filterconfig \
-	Library_flash \
     Library_icg \
 	Library_msfilter \
 	Library_odfflatxml \
@@ -67,6 +66,7 @@ $(eval $(call gb_Module_add_check_targets,filter,\
     CppunitTest_filter_ras_test \
     CppunitTest_filter_tiff_test \
     CppunitTest_filter_tga_test \
+    CppunitTest_filter_svg \
 ))
 endif
 

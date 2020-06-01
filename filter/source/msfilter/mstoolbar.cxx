@@ -11,6 +11,7 @@
 #include <sal/log.hxx>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/container/XIndexContainer.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/ui/XUIConfigurationManager.hpp>
 #include <com/sun/star/ui/XUIConfigurationManagerSupplier.hpp>
 #include <com/sun/star/ui/XUIConfigurationPersistence.hpp>
@@ -249,7 +250,7 @@ bool TBCData::Read(SvStream &rS)
         default:
             break;
     }
-    if ( controlSpecificInfo.get() )
+    if ( controlSpecificInfo )
         return controlSpecificInfo->Read( rS );
     //#FIXME I need to be able to handle different controlSpecificInfo types.
     return true;
@@ -475,33 +476,34 @@ TBCGeneralInfo::Print( FILE* fp )
 void
 TBCGeneralInfo::ImportToolBarControlData( CustomToolBarImportHelper& helper, std::vector< beans::PropertyValue >& sControlData )
 {
-    if ( bFlags & 0x5 )
+    if ( !(bFlags & 0x5) )
+        return;
+
+    beans::PropertyValue aProp;
+    // probably access to the header would be a better test than seeing if there is an action, e.g.
+    // if ( rHeader.getTct() == 0x01 && rHeader.getTcID() == 0x01 ) // not defined, probably this is a command
+    if ( !extraInfo.getOnAction().isEmpty() )
     {
-        beans::PropertyValue aProp;
-        // probably access to the header would be a better test than seeing if there is an action, e.g.
-        // if ( rHeader.getTct() == 0x01 && rHeader.getTcID() == 0x01 ) // not defined, probably this is a command
-        if ( !extraInfo.getOnAction().isEmpty() )
-        {
-            aProp.Name = "CommandURL";
-            ooo::vba::MacroResolvedInfo aMacroInf = ooo::vba::resolveVBAMacro( &helper.GetDocShell(), extraInfo.getOnAction(), true );
-            if ( aMacroInf.mbFound )
-                aProp.Value = CustomToolBarImportHelper::createCommandFromMacro( aMacroInf.msResolvedMacro );
-            else
-                aProp.Value <<= OUString( "UnResolvedMacro[" ).concat( extraInfo.getOnAction() ).concat( "]" );
-            sControlData.push_back( aProp );
-        }
-
-        aProp.Name = "Label";
-        aProp.Value <<= customText.getString().replace('&','~');
+        aProp.Name = "CommandURL";
+        ooo::vba::MacroResolvedInfo aMacroInf = ooo::vba::resolveVBAMacro( &helper.GetDocShell(), extraInfo.getOnAction(), true );
+        if ( aMacroInf.mbFound )
+            aProp.Value = CustomToolBarImportHelper::createCommandFromMacro( aMacroInf.msResolvedMacro );
+        else
+            aProp.Value <<= OUString( "UnResolvedMacro[" ).concat( extraInfo.getOnAction() ).concat( "]" );
         sControlData.push_back( aProp );
+    }
 
-        aProp.Name = "Type";
-        aProp.Value <<= ui::ItemType::DEFAULT;
-        sControlData.push_back( aProp );
+    aProp.Name = "Label";
+    aProp.Value <<= customText.getString().replace('&','~');
+    sControlData.push_back( aProp );
 
-        aProp.Name = "Tooltip";
-        aProp.Value <<= tooltip.getString();
-        sControlData.push_back( aProp );
+    aProp.Name = "Type";
+    aProp.Value <<= ui::ItemType::DEFAULT;
+    sControlData.push_back( aProp );
+
+    aProp.Name = "Tooltip";
+    aProp.Value <<= tooltip.getString();
+    sControlData.push_back( aProp );
 /*
 aToolbarItem(0).Name = "CommandURL" wstrOnAction
 aToolbarItem(0).Value = Command
@@ -512,7 +514,6 @@ aToolbarItem(2).Value = 0
 aToolbarItem(3).Name = "Visible"
 aToolbarItem(3).Value = true
 */
-    }
 }
 
 TBCMenuSpecific::TBCMenuSpecific() : tbid( 0 )
@@ -548,7 +549,7 @@ TBCMenuSpecific::Print( FILE* fp )
 OUString TBCMenuSpecific::Name()
 {
     OUString aName;
-    if ( name.get() )
+    if ( name )
         aName = name->getString();
     return aName;
 }
@@ -640,7 +641,7 @@ TBCComboDropdownSpecific::TBCComboDropdownSpecific(const TBCHeader& header )
 bool TBCComboDropdownSpecific::Read( SvStream &rS)
 {
     nOffSet = rS.Tell();
-    if ( data.get() )
+    if ( data )
         return data->Read( rS );
     return true;
 }

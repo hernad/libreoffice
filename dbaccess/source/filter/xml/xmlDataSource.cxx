@@ -22,16 +22,11 @@
 #include "xmlTableFilterList.hxx"
 #include "xmlDataSourceInfo.hxx"
 #include "xmlDataSourceSettings.hxx"
-#include "xmlDataSourceSetting.hxx"
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
-#include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
 #include <xmloff/ProgressBarHelper.hxx>
 #include "xmlEnums.hxx"
-#include <stringconstants.hxx>
 #include <strings.hxx>
-#include <tools/debug.hxx>
 #include <tools/diagnose_ex.h>
 #include "xmlConnectionData.hxx"
 
@@ -57,9 +52,7 @@ OXMLDataSource::OXMLDataSource( ODBFilter& rImport,
     static const OUString s_sTRUE = ::xmloff::token::GetXMLToken(XML_TRUE);
     if (xDataSource.is())
     {
-        sax_fastparser::FastAttributeList *pAttribList =
-                    sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-        for (auto &aIter : *pAttribList)
+        for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
         {
             OUString sValue = aIter.toString();
 
@@ -155,7 +148,7 @@ OXMLDataSource::OXMLDataSource( ODBFilter& rImport,
                     aProperty.Name = "JavaDriverClassPath";
                     break;
                 default:
-                    SAL_WARN("dbaccess", "unknown attribute " << SvXMLImport::getNameFromToken(aIter.getToken()) << " value=" << aIter.toString());
+                    SAL_WARN("dbaccess", "unknown attribute " << SvXMLImport::getPrefixAndNameFromToken(aIter.getToken()) << "=" << aIter.toString());
             }
             if ( !aProperty.Name.isEmpty() )
             {
@@ -165,36 +158,36 @@ OXMLDataSource::OXMLDataSource( ODBFilter& rImport,
             }
         }
     }
-    if ( rImport.isNewFormat() )
+    if ( !rImport.isNewFormat() )
+        return;
+
+    if ( !bFoundTableNameLengthLimited && ( _eUsedFor == eAppSettings ) )
     {
-        if ( !bFoundTableNameLengthLimited && ( _eUsedFor == eAppSettings ) )
+        aProperty.Name = INFO_ALLOWLONGTABLENAMES;
+        aProperty.Value <<= true;
+        rImport.addInfo(aProperty);
+    }
+    if ( !bFoundParamNameSubstitution && ( _eUsedFor == eDriverSettings ) )
+    {
+        aProperty.Name = INFO_PARAMETERNAMESUBST;
+        aProperty.Value <<= true;
+        rImport.addInfo(aProperty);
+    }
+    if ( !bFoundAppendTableAliasName && ( _eUsedFor == eAppSettings ) )
+    {
+        aProperty.Name = INFO_APPEND_TABLE_ALIAS;
+        aProperty.Value <<= true;
+        rImport.addInfo(aProperty);
+    }
+    if ( !bFoundSuppressVersionColumns && ( _eUsedFor == eAppSettings ) )
+    {
+        try
         {
-            aProperty.Name = INFO_ALLOWLONGTABLENAMES;
-            aProperty.Value <<= true;
-            rImport.addInfo(aProperty);
+            xDataSource->setPropertyValue(PROPERTY_SUPPRESSVERSIONCL,makeAny(true));
         }
-        if ( !bFoundParamNameSubstitution && ( _eUsedFor == eDriverSettings ) )
+        catch(const Exception&)
         {
-            aProperty.Name = INFO_PARAMETERNAMESUBST;
-            aProperty.Value <<= true;
-            rImport.addInfo(aProperty);
-        }
-        if ( !bFoundAppendTableAliasName && ( _eUsedFor == eAppSettings ) )
-        {
-            aProperty.Name = INFO_APPEND_TABLE_ALIAS;
-            aProperty.Value <<= true;
-            rImport.addInfo(aProperty);
-        }
-        if ( !bFoundSuppressVersionColumns && ( _eUsedFor == eAppSettings ) )
-        {
-            try
-            {
-                xDataSource->setPropertyValue(PROPERTY_SUPPRESSVERSIONCL,makeAny(true));
-            }
-            catch(const Exception&)
-            {
-                DBG_UNHANDLED_EXCEPTION("dbaccess");
-            }
+            DBG_UNHANDLED_EXCEPTION("dbaccess");
         }
     }
 }

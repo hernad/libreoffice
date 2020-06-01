@@ -179,9 +179,9 @@ const char * aEventOptionTable[] =
 
 class SwHTMLForm_Impl
 {
-    SwDocShell                  * const m_pDocShell;
+    SwDocShell                  *m_pDocShell;
 
-    SvKeyValueIterator          * const m_pHeaderAttrs;
+    SvKeyValueIterator          *m_pHeaderAttrs;
 
     // Cached interfaces
     uno::Reference< drawing::XDrawPage >            m_xDrawPage;
@@ -370,8 +370,8 @@ class SwHTMLImageWatcher :
     uno::Reference< drawing::XShape >       xShape;     // the control
     uno::Reference< XImageProducerSupplier >    xSrc;
     uno::Reference< awt::XImageConsumer >   xThis;      // reference to self
-    bool const                            bSetWidth;
-    bool const                            bSetHeight;
+    bool                            bSetWidth;
+    bool                            bSetHeight;
 
     void clear();
 
@@ -533,7 +533,6 @@ void SwHTMLImageWatcher::init( sal_Int32 Width, sal_Int32 Height )
 
     // unregister and delete self
     clear();
-    uno::Reference< awt::XImageConsumer >  xTmp = static_cast<awt::XImageConsumer*>(this);
     xThis = nullptr;
 }
 
@@ -562,7 +561,6 @@ void SwHTMLImageWatcher::complete( sal_Int32 Status,
     {
         // unregister and delete self
         clear();
-        uno::Reference< awt::XImageConsumer > xTmp = static_cast<awt::XImageConsumer*>(this);
         xThis = nullptr;
     }
 }

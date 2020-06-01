@@ -20,6 +20,7 @@
 #ifndef INCLUDED_TOOLKIT_CONTROLS_UNOCONTROLS_HXX
 #define INCLUDED_TOOLKIT_CONTROLS_UNOCONTROLS_HXX
 
+#include <config_options.h>
 #include <toolkit/dllapi.h>
 #include <com/sun/star/awt/XTextComponent.hpp>
 #include <com/sun/star/awt/XTextListener.hpp>
@@ -54,10 +55,10 @@
 #include <memory>
 #include <vector>
 
-#include <o3tl/optional.hxx>
+#include <optional>
 
-namespace com { namespace sun { namespace star { namespace graphic { class XGraphic; } } } }
-namespace com { namespace sun { namespace star { namespace graphic { class XGraphicObject; } } } }
+namespace com::sun::star::graphic { class XGraphic; }
+namespace com::sun::star::graphic { class XGraphicObject; }
 
 class ImageHelper
 {
@@ -105,7 +106,7 @@ typedef ::cppu::ImplHelper4  <   css::awt::XTextComponent
                              ,   css::awt::XLayoutConstrains
                              ,   css::awt::XTextLayoutConstrains
                              >   UnoEditControl_Base;
-class TOOLKIT_DLLPUBLIC UnoEditControl    :public UnoControlBase
+class UNLESS_MERGELIBS(TOOLKIT_DLLPUBLIC) UnoEditControl    :public UnoControlBase
                                             ,public UnoEditControl_Base
 {
 private:
@@ -784,15 +785,15 @@ protected:
 private:
     void    impl_notifyItemListEvent_nolck(
                 const sal_Int32 i_nItemPosition,
-                const ::o3tl::optional< OUString >& i_rItemText,
-                const ::o3tl::optional< OUString >& i_rItemImageURL,
+                const ::std::optional< OUString >& i_rItemText,
+                const ::std::optional< OUString >& i_rItemImageURL,
                 void ( SAL_CALL css::awt::XItemListListener::*NotificationMethod )( const css::awt::ItemListEvent& )
             );
 
     void    impl_handleInsert(
                 const sal_Int32 i_nItemPosition,
-                const ::o3tl::optional< OUString >& i_rItemText,
-                const ::o3tl::optional< OUString >& i_rItemImageURL,
+                const ::std::optional< OUString >& i_rItemText,
+                const ::std::optional< OUString >& i_rItemImageURL,
                 ::osl::ClearableMutexGuard& i_rClearBeforeNotify
             );
 
@@ -803,8 +804,8 @@ private:
 
     void    impl_handleModify(
                 const sal_Int32 i_nItemPosition,
-                const ::o3tl::optional< OUString >& i_rItemText,
-                const ::o3tl::optional< OUString >& i_rItemImageURL,
+                const ::std::optional< OUString >& i_rItemText,
+                const ::std::optional< OUString >& i_rItemImageURL,
                 ::osl::ClearableMutexGuard& i_rClearBeforeNotify
             );
 

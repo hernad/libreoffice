@@ -39,7 +39,6 @@ merge ExcBoolRecord with Exc1904
 merge ExcelConverterBase with ExcelToSc
 merge ExportTyp with ExportBiff5
 merge FailTest with testMathMalformedXml
-merge FillTypeLB with SvxFillTypeBox
 merge FmGridListener with FmXGridPeer::GridListenerDelegator
 merge FmXDisposeListener with DisposeListenerGridBridge
 merge FmXFormShell_Base_Disambiguation with FmXFormShell
@@ -262,7 +261,6 @@ merge dbahsql::CreateStmtParser with dbahsql::FbCreateStmtParser
 merge dbaui::IController with dbaui::OGenericUnoController
 merge dbaui::IEntryFilter with dbaui::(anonymous namespace)::FilterByEntryDataId
 merge dbaui::IUpdateHelper with dbaui::OParameterUpdateHelper
-merge dbaui::LimitBox with dbaui::LimitBoxImpl
 merge dbaui::OMarkableTreeListBox with dbaui::OTableTreeListBox
 merge dbaui::OSQLNameEntry with dbaui::OPropColumnEditCtrl
 merge dbaui::OSplitterView with dbaui::OApplicationDetailView

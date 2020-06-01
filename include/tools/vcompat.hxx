@@ -20,6 +20,7 @@
 #define INCLUDED_TOOLS_VCOMPAT_HXX
 
 #include <tools/toolsdllapi.h>
+#include <config_options.h>
 
 inline sal_uInt32 COMPAT_FORMAT( char char1, char char2, char char3, char char4 )
 {
@@ -33,12 +34,12 @@ inline sal_uInt32 COMPAT_FORMAT( char char1, char char2, char char3, char char4 
 class SvStream;
 enum class StreamMode;
 
-class TOOLS_DLLPUBLIC VersionCompat
+class UNLESS_MERGELIBS(TOOLS_DLLPUBLIC) VersionCompat
 {
     SvStream*       mpRWStm;
     sal_uInt32      mnCompatPos;
     sal_uInt32      mnTotalSize;
-    StreamMode const mnStmMode;
+    StreamMode      mnStmMode;
     sal_uInt16      mnVersion;
 
                     VersionCompat( const VersionCompat& ) = delete;

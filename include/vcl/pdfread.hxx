@@ -14,18 +14,9 @@
 #include <tools/gen.hxx>
 #include <tools/stream.hxx>
 
-namespace com
-{
-namespace sun
-{
-namespace star
-{
-namespace uno
+namespace com::sun::star::uno
 {
 template <typename> class Sequence;
-}
-}
-}
 }
 class Bitmap;
 class Graphic;
@@ -37,24 +28,13 @@ VCL_DLLPUBLIC size_t RenderPDFBitmaps(const void* pBuffer, int nSize, std::vecto
                                       size_t nFirstPage = 0, int nPages = 1,
                                       double fResolutionDPI = 96.);
 
-/// Imports a PDF stream into rGraphic as a GDIMetaFile.
-VCL_DLLPUBLIC bool ImportPDF(SvStream& rStream, Bitmap& rBitmap, size_t nPageIndex,
-                             std::vector<sal_Int8>& rPdfData,
-                             sal_uInt64 nPos = STREAM_SEEK_TO_BEGIN,
-                             sal_uInt64 nSize = STREAM_SEEK_TO_END, double fResolutionDPI = 96.);
+/// Imports a PDF stream into rGraphic as VectorGraphicData.
+VCL_DLLPUBLIC bool ImportPDF(SvStream& rStream, Graphic& rGraphic);
 
-VCL_DLLPUBLIC bool ImportPDF(SvStream& rStream, Graphic& rGraphic, double fResolutionDPI = 96.);
-
-VCL_DLLPUBLIC size_t ImportPDF(const OUString& rURL, std::vector<Bitmap>& rBitmaps,
-                               std::vector<sal_Int8>& rPdfData, double fResolutionDPI = 96.);
-
-/// Import PDF as Graphic images (1 per page), all unloaded.
-/// Since Graphic is unloaded, we need to return the page size (in pixels) separately.
-/// Does not set rPdfData if no conversion is done.
+/// Import PDF as Graphic images (1 per page), but not loaded yet.
 /// Returns the number of pages read.
 VCL_DLLPUBLIC size_t ImportPDFUnloaded(const OUString& rURL,
-                                       std::vector<std::pair<Graphic, Size>>& rGraphics,
-                                       double fResolutionDPI = 96.);
+                                       std::vector<std::pair<Graphic, Size>>& rGraphics);
 }
 
 #endif // INCLUDED_VCL_SOURCE_FILTER_IPDF_PDFREAD_HXX

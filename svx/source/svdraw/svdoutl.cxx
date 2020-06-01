@@ -21,15 +21,12 @@
 #include <editeng/outliner.hxx>
 #include <svx/svdotext.hxx>
 #include <editeng/editstat.hxx>
-#include <svx/svdmodel.hxx>
-#include <editeng/eeitem.hxx>
 #include <svl/itempool.hxx>
 #include <editeng/editview.hxx>
 
 
 SdrOutliner::SdrOutliner( SfxItemPool* pItemPool, OutlinerMode nMode )
 :   Outliner( pItemPool, nMode ),
-    //mpPaintInfoRec( NULL )
     mpVisualizedPage(nullptr)
 {
 }
@@ -72,7 +69,7 @@ void SdrOutliner::SetTextObjNoInit( const SdrTextObj* pObj )
 }
 
 OUString SdrOutliner::CalcFieldValue(const SvxFieldItem& rField, sal_Int32 nPara, sal_Int32 nPos,
-                                     o3tl::optional<Color>& rpTxtColor, o3tl::optional<Color>& rpFldColor)
+                                     std::optional<Color>& rpTxtColor, std::optional<Color>& rpFldColor)
 {
     bool bOk = false;
     OUString aRet;

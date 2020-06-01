@@ -653,7 +653,7 @@ void Window::SetVisibleXY(double fX, double fY)
         maWinPos.setY( static_cast<long>(fY * maViewSize.Height()) );
     UpdateMapOrigin(false);
     Scroll(nOldX - maWinPos.X(), nOldY - maWinPos.Y(), ScrollFlags::Children);
-    Update();
+    PaintImmediately();
 }
 
 /**
@@ -957,7 +957,7 @@ css::uno::Reference<css::accessibility::XAccessible>
         return vcl::Window::CreateAccessible ();
     }
     css::uno::Reference< css::accessibility::XAccessible > xAcc = GetAccessible(false);
-    if (xAcc.get())
+    if (xAcc)
     {
         return xAcc;
     }
@@ -1009,6 +1009,8 @@ void Window::LogicInvalidate(const ::tools::Rectangle* pRectangle)
     if (!pDrawViewShell || pDrawViewShell->IsInSwitchPage())
         return;
 
+    if (!comphelper::LibreOfficeKit::isActive())
+        return;
     OString sRectangle;
     if (!pRectangle)
         sRectangle = "EMPTY";

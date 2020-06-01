@@ -20,9 +20,8 @@ $(eval $(call gb_JunitTest_JunitTest,toolkit_complex))
 
 $(eval $(call gb_JunitTest_use_jars,toolkit_complex,\
     OOoRunner \
-    ridl \
+    libreoffice \
     test \
-    unoil \
 ))
 
 $(eval $(call gb_JunitTest_add_sourcefiles,toolkit_complex,\

@@ -34,6 +34,7 @@
 #include <com/sun/star/awt/LineEndFormat.hpp>
 #include <com/sun/star/awt/PushButtonType.hpp>
 #include <com/sun/star/awt/VisualEffect.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/style/VerticalAlignment.hpp>
 #include <com/sun/star/util/Date.hpp>
 #include <com/sun/star/util/Time.hpp>
@@ -877,6 +878,17 @@ bool ImportContext::importGraphicOrImageProperty(
             if (xProps.is())
             {
                 xProps->setPropertyValue("Graphic", makeAny(xGraphic));
+                return true;
+            }
+        }
+        else if (!sURL.isEmpty())
+        {
+            // tdf#130793 Above fails if the dialog is not part of a document.
+            // In this case we need to set the ImageURL.
+            Reference<beans::XPropertySet> xProps = getControlModel();
+            if (xProps.is())
+            {
+                xProps->setPropertyValue("ImageURL", makeAny(sURL));
                 return true;
             }
         }

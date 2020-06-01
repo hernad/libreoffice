@@ -19,7 +19,6 @@
 
 #include <core_resource.hxx>
 #include <directsql.hxx>
-#include <dbu_dlg.hxx>
 #include <strings.hrc>
 #include <comphelper/types.hxx>
 #include <editeng/colritem.hxx>
@@ -27,8 +26,8 @@
 #include <editeng/eeitem.hxx>
 #include <osl/mutex.hxx>
 #include <svl/itemset.hxx>
+#include <svtools/editsyntaxhighlighter.hxx>
 #include <tools/diagnose_ex.h>
-#include <rtl/strbuf.hxx>
 #include <vcl/event.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/weld.hxx>
@@ -287,8 +286,11 @@ namespace dbaui
                 }
                 else
                     addOutputText(OUString::number(xMR->getUpdateCount()) + " rows updated\n");
-                while ((hasRS=xMR->getMoreResults()) || (xMR->getUpdateCount() != -1))
+                for (;;)
                 {
+                    hasRS = xMR->getMoreResults();
+                    if (!hasRS && xMR->getUpdateCount() == -1)
+                        break;
                     if(hasRS)
                     {
                         css::uno::Reference< css::sdbc::XResultSet > xRS (xMR->getResultSet());

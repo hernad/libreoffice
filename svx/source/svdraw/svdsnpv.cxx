@@ -21,7 +21,6 @@
 #include <svx/svdsnpv.hxx>
 #include <math.h>
 
-#include <svx/svdetc.hxx>
 #include <svx/svdobj.hxx>
 #include <svx/svdpagv.hxx>
 #include <svx/svdpage.hxx>
@@ -30,7 +29,6 @@
 #include <sdr/overlay/overlaycrosshair.hxx>
 #include <sdr/overlay/overlayhelpline.hxx>
 #include <svx/sdr/overlay/overlaymanager.hxx>
-#include <basegfx/matrix/b2dhommatrix.hxx>
 #include <svx/sdrpaintwindow.hxx>
 #include <tools/debug.hxx>
 #include <vcl/ptrstyle.hxx>
@@ -103,9 +101,9 @@ class ImplHelpLineOverlay
     basegfx::B2DPoint                               maPosition;
 
     // HelpLine specific stuff
-    SdrPageView* const                              mpPageView;
-    sal_uInt16 const                                mnHelpLineNumber;
-    SdrHelpLineKind const                           meHelpLineKind;
+    SdrPageView*                                    mpPageView;
+    sal_uInt16                                      mnHelpLineNumber;
+    SdrHelpLineKind                                 meHelpLineKind;
 
 public:
     ImplHelpLineOverlay(const SdrPaintView& rView, const basegfx::B2DPoint& rStartPos,

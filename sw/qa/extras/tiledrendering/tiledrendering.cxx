@@ -48,6 +48,7 @@
 #include <svx/svxids.hrc>
 #include <flddat.hxx>
 #include <basesh.hxx>
+#include <vcl/ITiledRenderable.hxx>
 
 static char const DATA_DIRECTORY[] = "/sw/qa/extras/tiledrendering/data/";
 
@@ -62,6 +63,7 @@ class SwTiledRenderingTest : public SwModelTestBase
 {
 public:
     SwTiledRenderingTest();
+    virtual void setUp() override;
     virtual void tearDown() override;
     void testRegisterCallback();
     void testPostKeyEvent();
@@ -120,9 +122,17 @@ public:
     void testVisCursorInvalidation();
     void testDeselectCustomShape();
     void testSemiTransparent();
+    void testHighlightNumbering();
+    void testClipText();
     void testAnchorTypes();
     void testLanguageStatus();
     void testRedlineNotificationDuringSave();
+    void testHyperlink();
+    void testFieldmark();
+    void testDropDownFormFieldButton();
+    void testDropDownFormFieldButtonEditing();
+    void testDropDownFormFieldButtonNoSelection();
+    void testDropDownFormFieldButtonNoItem();
 
     CPPUNIT_TEST_SUITE(SwTiledRenderingTest);
     CPPUNIT_TEST(testRegisterCallback);
@@ -182,9 +192,17 @@ public:
     CPPUNIT_TEST(testVisCursorInvalidation);
     CPPUNIT_TEST(testDeselectCustomShape);
     CPPUNIT_TEST(testSemiTransparent);
+    CPPUNIT_TEST(testHighlightNumbering);
+    CPPUNIT_TEST(testClipText);
     CPPUNIT_TEST(testAnchorTypes);
     CPPUNIT_TEST(testLanguageStatus);
     CPPUNIT_TEST(testRedlineNotificationDuringSave);
+    CPPUNIT_TEST(testHyperlink);
+    CPPUNIT_TEST(testFieldmark);
+    CPPUNIT_TEST(testDropDownFormFieldButton);
+    CPPUNIT_TEST(testDropDownFormFieldButtonEditing);
+    CPPUNIT_TEST(testDropDownFormFieldButtonNoSelection);
+    CPPUNIT_TEST(testDropDownFormFieldButtonNoItem);
     CPPUNIT_TEST_SUITE_END();
 
 private:
@@ -203,6 +221,9 @@ private:
     int m_nRedlineTableSizeChanged;
     int m_nRedlineTableEntryModified;
     int m_nTrackedChangeIndex;
+    OString m_sHyperlinkText;
+    OString m_sHyperlinkLink;
+    OString m_aFormFieldButton;
 };
 
 SwTiledRenderingTest::SwTiledRenderingTest()
@@ -214,6 +235,13 @@ SwTiledRenderingTest::SwTiledRenderingTest()
       m_nRedlineTableEntryModified(0),
       m_nTrackedChangeIndex(-1)
 {
+}
+
+void SwTiledRenderingTest::setUp()
+{
+    SwModelTestBase::setUp();
+
+    comphelper::LibreOfficeKit::setActive(true);
 }
 
 void SwTiledRenderingTest::tearDown()
@@ -334,12 +362,29 @@ void SwTiledRenderingTest::callbackImpl(int nType, const char* pPayload)
         }
     }
     break;
+    case LOK_CALLBACK_INVALIDATE_VISIBLE_CURSOR:
+    {
+        if (comphelper::LibreOfficeKit::isViewIdForVisCursorInvalidation())
+        {
+            boost::property_tree::ptree aTree;
+            std::stringstream aStream(pPayload);
+            boost::property_tree::read_json(aStream, aTree);
+            boost::property_tree::ptree &aChild = aTree.get_child("hyperlink");
+            m_sHyperlinkText = aChild.get("text", "").c_str();
+            m_sHyperlinkLink = aChild.get("link", "").c_str();
+        }
+    }
+    break;
+    case LOK_CALLBACK_FORM_FIELD_BUTTON:
+    {
+        m_aFormFieldButton = OString(pPayload);
+    }
+    break;
     }
 }
 
 void SwTiledRenderingTest::testRegisterCallback()
 {
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("dummy.fodt");
     SwWrtShell* pWrtShell = pXTextDocument->GetDocShell()->GetWrtShell();
     pWrtShell->GetSfxViewShell()->registerLibreOfficeKitViewCallback(&SwTiledRenderingTest::callback, this);
@@ -370,7 +415,6 @@ void SwTiledRenderingTest::testPostKeyEvent()
 
 void SwTiledRenderingTest::testPostMouseEvent()
 {
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("dummy.fodt");
     SwWrtShell* pWrtShell = pXTextDocument->GetDocShell()->GetWrtShell();
     pWrtShell->Right(CRSR_SKIP_CHARS, /*bSelect=*/false, 1, /*bBasicCall=*/false);
@@ -414,8 +458,6 @@ void SwTiledRenderingTest::testSetTextSelection()
 
 void SwTiledRenderingTest::testGetTextSelection()
 {
-    comphelper::LibreOfficeKit::setActive();
-
     SwXTextDocument* pXTextDocument = createDoc("shape-with-text.fodt");
     // No crash, just empty output for unexpected mime type.
     CPPUNIT_ASSERT_EQUAL(OString(), apitest::helper::transferable::getTextSelection(pXTextDocument->getSelection(), "foo/bar"));
@@ -497,8 +539,6 @@ void SwTiledRenderingTest::testResetSelection()
 
 void SwTiledRenderingTest::testInsertShape()
 {
-    comphelper::LibreOfficeKit::setActive();
-
     SwXTextDocument* pXTextDocument = createDoc("2-pages.odt");
     SwWrtShell* pWrtShell = pXTextDocument->GetDocShell()->GetWrtShell();
 
@@ -527,8 +567,6 @@ static void lcl_search(bool bBackward)
 
 void SwTiledRenderingTest::testSearch()
 {
-    comphelper::LibreOfficeKit::setActive();
-
     SwXTextDocument* pXTextDocument = createDoc("search.odt");
     SwWrtShell* pWrtShell = pXTextDocument->GetDocShell()->GetWrtShell();
     pWrtShell->GetSfxViewShell()->registerLibreOfficeKitViewCallback(&SwTiledRenderingTest::callback, this);
@@ -594,8 +632,6 @@ void SwTiledRenderingTest::testSearchViewArea()
 
 void SwTiledRenderingTest::testSearchTextFrame()
 {
-    comphelper::LibreOfficeKit::setActive();
-
     SwXTextDocument* pXTextDocument = createDoc("search.odt");
     SwWrtShell* pWrtShell = pXTextDocument->GetDocShell()->GetWrtShell();
     pWrtShell->GetSfxViewShell()->registerLibreOfficeKitViewCallback(&SwTiledRenderingTest::callback, this);
@@ -628,7 +664,6 @@ void SwTiledRenderingTest::testSearchTextFrameWrapAround()
 
 void SwTiledRenderingTest::testDocumentSizeChanged()
 {
-    comphelper::LibreOfficeKit::setActive();
     // Get the current document size.
     SwXTextDocument* pXTextDocument = createDoc("2-pages.odt");
     SwWrtShell* pWrtShell = pXTextDocument->GetDocShell()->GetWrtShell();
@@ -646,8 +681,6 @@ void SwTiledRenderingTest::testDocumentSizeChanged()
 
 void SwTiledRenderingTest::testSearchAll()
 {
-    comphelper::LibreOfficeKit::setActive();
-
     SwXTextDocument* pXTextDocument = createDoc("search.odt");
     SwWrtShell* pWrtShell = pXTextDocument->GetDocShell()->GetWrtShell();
     pWrtShell->GetSfxViewShell()->registerLibreOfficeKitViewCallback(&SwTiledRenderingTest::callback, this);
@@ -666,7 +699,6 @@ void SwTiledRenderingTest::testSearchAll()
 
 void SwTiledRenderingTest::testSearchAllNotifications()
 {
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("search.odt");
     SwWrtShell* pWrtShell = pXTextDocument->GetDocShell()->GetWrtShell();
     pWrtShell->GetSfxViewShell()->registerLibreOfficeKitViewCallback(&SwTiledRenderingTest::callback, this);
@@ -689,8 +721,6 @@ void SwTiledRenderingTest::testSearchAllNotifications()
 
 void SwTiledRenderingTest::testPageDownInvalidation()
 {
-    comphelper::LibreOfficeKit::setActive();
-
     SwXTextDocument* pXTextDocument = createDoc("pagedown-invalidation.odt");
     uno::Sequence<beans::PropertyValue> aPropertyValues(comphelper::InitPropertySequence(
     {
@@ -707,8 +737,6 @@ void SwTiledRenderingTest::testPageDownInvalidation()
 
 void SwTiledRenderingTest::testPartHash()
 {
-    comphelper::LibreOfficeKit::setActive();
-
     SwXTextDocument* pXTextDocument = createDoc("pagedown-invalidation.odt");
     int nParts = pXTextDocument->getParts();
     for (int it = 0; it < nParts; it++)
@@ -932,8 +960,6 @@ public:
 
 void SwTiledRenderingTest::testMissingInvalidation()
 {
-    comphelper::LibreOfficeKit::setActive();
-
     // Create two views.
     SwXTextDocument* pXTextDocument = createDoc("dummy.fodt");
     ViewCallback aView1(SfxViewShell::Current());
@@ -966,8 +992,6 @@ void SwTiledRenderingTest::testMissingInvalidation()
 
 void SwTiledRenderingTest::testViewCursors()
 {
-    comphelper::LibreOfficeKit::setActive();
-
     SwXTextDocument* pXTextDocument = createDoc("dummy.fodt");
     ViewCallback aView1(SfxViewShell::Current());
     SfxLokHelper::createView();
@@ -1003,8 +1027,6 @@ void SwTiledRenderingTest::testViewCursors()
 
 void SwTiledRenderingTest::testShapeViewCursors()
 {
-    comphelper::LibreOfficeKit::setActive();
-
     // Load a document and create a view, so we have 2 ones.
     SwXTextDocument* pXTextDocument = createDoc("shape.fodt");
     ViewCallback aView1(SfxViewShell::Current());
@@ -1042,8 +1064,6 @@ void SwTiledRenderingTest::testShapeViewCursors()
 
 void SwTiledRenderingTest::testViewCursorVisibility()
 {
-    comphelper::LibreOfficeKit::setActive();
-
     // Load a document that has a shape and create two views.
     SwXTextDocument* pXTextDocument = createDoc("shape.fodt");
     ViewCallback aView1(SfxViewShell::Current());
@@ -1068,8 +1088,6 @@ void SwTiledRenderingTest::testViewCursorVisibility()
 
 void SwTiledRenderingTest::testViewCursorCleanup()
 {
-    comphelper::LibreOfficeKit::setActive();
-
     // Load a document that has a shape and create two views.
     SwXTextDocument* pXTextDocument = createDoc("shape.fodt");
     ViewCallback aView1(SfxViewShell::Current());
@@ -1100,8 +1118,6 @@ void SwTiledRenderingTest::testViewCursorCleanup()
 
 void SwTiledRenderingTest::testViewLock()
 {
-    comphelper::LibreOfficeKit::setActive();
-
     // Load a document that has a shape and create two views.
     SwXTextDocument* pXTextDocument = createDoc("shape.fodt");
     ViewCallback aView1(SfxViewShell::Current());
@@ -1128,7 +1144,6 @@ void SwTiledRenderingTest::testViewLock()
 void SwTiledRenderingTest::testTextEditViewInvalidations()
 {
     // Load a document that has a shape and create two views.
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("shape.fodt");
     ViewCallback aView1(SfxViewShell::Current());
     SfxLokHelper::createView();
@@ -1159,7 +1174,6 @@ void SwTiledRenderingTest::testTextEditViewInvalidations()
 void SwTiledRenderingTest::testUndoInvalidations()
 {
     // Load a document and create two views.
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("dummy.fodt");
     ViewCallback aView1(SfxViewShell::Current());
     int nView1 = SfxLokHelper::getView();
@@ -1192,7 +1206,6 @@ void SwTiledRenderingTest::testUndoInvalidations()
 void SwTiledRenderingTest::testUndoLimiting()
 {
     // Load a document and create two views.
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("dummy.fodt");
     SwWrtShell* pWrtShell1 = pXTextDocument->GetDocShell()->GetWrtShell();
     int nView1 = SfxLokHelper::getView();
@@ -1221,7 +1234,6 @@ void SwTiledRenderingTest::testUndoLimiting()
 void SwTiledRenderingTest::testUndoShapeLimiting()
 {
     // Load a document and create a view.
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("shape.fodt");
     SwWrtShell* pWrtShell1 = pXTextDocument->GetDocShell()->GetWrtShell();
     int nView1 = SfxLokHelper::getView();
@@ -1259,7 +1271,6 @@ void SwTiledRenderingTest::testUndoShapeLimiting()
 void SwTiledRenderingTest::testUndoDispatch()
 {
     // Load a document and create two views.
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("dummy.fodt");
     int nView1 = SfxLokHelper::getView();
     SfxLokHelper::createView();
@@ -1299,7 +1310,6 @@ void SwTiledRenderingTest::testUndoDispatch()
 void SwTiledRenderingTest::testUndoRepairDispatch()
 {
     // Load a document and create two views.
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("dummy.fodt");
     int nView1 = SfxLokHelper::getView();
     SfxLokHelper::createView();
@@ -1342,7 +1352,6 @@ void SwTiledRenderingTest::testUndoRepairDispatch()
 void SwTiledRenderingTest::testShapeTextUndoShells()
 {
     // Load a document and create a view.
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("shape.fodt");
     sal_Int32 nView1 = SfxLokHelper::getView();
 
@@ -1367,7 +1376,6 @@ void SwTiledRenderingTest::testShapeTextUndoShells()
 void SwTiledRenderingTest::testShapeTextUndoGroupShells()
 {
     // Load a document and create a view.
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("shape.fodt");
     ViewCallback aView1(SfxViewShell::Current());
     sal_Int32 nView1 = SfxLokHelper::getView();
@@ -1419,7 +1427,6 @@ void SwTiledRenderingTest::testShapeTextUndoGroupShells()
 void SwTiledRenderingTest::testTrackChanges()
 {
     // Load a document.
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("dummy.fodt");
 
     // Turn on track changes, type "zzz" at the end, and move to the start.
@@ -1453,7 +1460,6 @@ void SwTiledRenderingTest::testTrackChanges()
 void SwTiledRenderingTest::testTrackChangesCallback()
 {
     // Load a document.
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("dummy.fodt");
     SwWrtShell* pWrtShell = pXTextDocument->GetDocShell()->GetWrtShell();
     pWrtShell->GetSfxViewShell()->registerLibreOfficeKitViewCallback(&SwTiledRenderingTest::callback, this);
@@ -1481,7 +1487,6 @@ void SwTiledRenderingTest::testTrackChangesCallback()
 void SwTiledRenderingTest::testRedlineUpdateCallback()
 {
     // Load a document.
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("dummy.fodt");
     SwWrtShell* pWrtShell = pXTextDocument->GetDocShell()->GetWrtShell();
     pWrtShell->GetSfxViewShell()->registerLibreOfficeKitViewCallback(&SwTiledRenderingTest::callback, this);
@@ -1521,7 +1526,6 @@ void SwTiledRenderingTest::testRedlineUpdateCallback()
 void SwTiledRenderingTest::testSetViewGraphicSelection()
 {
     // Load a document.
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("frame.odt");
     int nView1 = SfxLokHelper::getView();
     ViewCallback aView1(SfxViewShell::Current());
@@ -1547,7 +1551,6 @@ void SwTiledRenderingTest::testSetViewGraphicSelection()
 void SwTiledRenderingTest::testCreateViewGraphicSelection()
 {
     // Load a document.
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("frame.odt");
     ViewCallback aView1(SfxViewShell::Current());
 
@@ -1581,7 +1584,6 @@ void SwTiledRenderingTest::testCreateViewGraphicSelection()
 void SwTiledRenderingTest::testCreateViewTextSelection()
 {
     // Load a document.
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("dummy.fodt");
     ViewCallback aView1(SfxViewShell::Current());
 
@@ -1607,7 +1609,6 @@ void SwTiledRenderingTest::testCreateViewTextSelection()
 void SwTiledRenderingTest::testRedlineColors()
 {
     // Load a document.
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("dummy.fodt");
 
     // Turn on track changes, type "zzz" at the end.
@@ -1628,7 +1629,6 @@ void SwTiledRenderingTest::testRedlineColors()
 void SwTiledRenderingTest::testCommentEndTextEdit()
 {
     // Create a document, type a character and remember the cursor position.
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc();
     ViewCallback aView1(SfxViewShell::Current());
     pXTextDocument->postKeyEvent(LOK_KEYEVENT_KEYINPUT, 'x', 0);
@@ -1666,7 +1666,6 @@ void SwTiledRenderingTest::testCommentEndTextEdit()
 void SwTiledRenderingTest::testCommentInsert()
 {
     // Load a document with an as-char image in it.
-    comphelper::LibreOfficeKit::setActive();
     comphelper::LibreOfficeKit::setTiledAnnotations(false);
     SwXTextDocument* pXTextDocument = createDoc("image-comment.odt");
     SwDoc* pDoc = pXTextDocument->GetDocShell()->GetDoc();
@@ -1700,7 +1699,6 @@ void SwTiledRenderingTest::testCommentInsert()
 void SwTiledRenderingTest::testCursorPosition()
 {
     // Load a document and register a callback, should get an own cursor.
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc();
     ViewCallback aView1(SfxViewShell::Current());
 
@@ -1721,7 +1719,6 @@ void SwTiledRenderingTest::testPaintCallbacks()
     // paint <-> invalidate loop.
 
     // Load a document and register a callback for the first view.
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc();
     ViewCallback aView1(SfxViewShell::Current());
 
@@ -1742,7 +1739,6 @@ void SwTiledRenderingTest::testPaintCallbacks()
 void SwTiledRenderingTest::testUndoRepairResult()
 {
     // Load a document and create two views.
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("dummy.fodt");
     int nView1 = SfxLokHelper::getView();
     SfxLokHelper::createView();
@@ -1778,7 +1774,6 @@ void SwTiledRenderingTest::testUndoRepairResult()
 void SwTiledRenderingTest::testRedoRepairResult()
 {
     // Load a document and create two views.
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("dummy.fodt");
     int nView1 = SfxLokHelper::getView();
     SfxLokHelper::createView();
@@ -1837,8 +1832,6 @@ void checkUndoRepairStates(SwXTextDocument* pXTextDocument, SwView* pView1, SwVi
 
 void SwTiledRenderingTest::testDisableUndoRepair()
 {
-    comphelper::LibreOfficeKit::setActive();
-
     // Create two views.
     SwXTextDocument* pXTextDocument = createDoc("dummy.fodt");
     ViewCallback aView1(SfxViewShell::Current());
@@ -1899,7 +1892,6 @@ void SwTiledRenderingTest::testDisableUndoRepair()
 void SwTiledRenderingTest::testAllTrackedChanges()
 {
     // Load a document.
-    comphelper::LibreOfficeKit::setActive();
     createDoc("dummy.fodt");
 
     uno::Reference<beans::XPropertySet> xPropSet(mxComponent, uno::UNO_QUERY);
@@ -1972,8 +1964,6 @@ void SwTiledRenderingTest::testAllTrackedChanges()
 
 void SwTiledRenderingTest::testDocumentRepair()
 {
-    comphelper::LibreOfficeKit::setActive();
-
     // Create two views.
     SwXTextDocument* pXTextDocument = createDoc("dummy.fodt");
     // view #1
@@ -2045,8 +2035,6 @@ void checkPageHeaderOrFooter(const SfxViewShell* pViewShell, sal_uInt16 nWhich, 
 
 void SwTiledRenderingTest::testPageHeader()
 {
-    comphelper::LibreOfficeKit::setActive();
-
     createDoc("dummy.fodt");
     SfxViewShell* pViewShell = SfxViewShell::Current();
     // Check Page Header State
@@ -2072,8 +2060,6 @@ void SwTiledRenderingTest::testPageHeader()
 
 void SwTiledRenderingTest::testPageFooter()
 {
-    comphelper::LibreOfficeKit::setActive();
-
     createDoc("dummy.fodt");
     SfxViewShell* pViewShell = SfxViewShell::Current();
     // Check Page Footer State
@@ -2099,8 +2085,6 @@ void SwTiledRenderingTest::testPageFooter()
 
 void SwTiledRenderingTest::testTdf115088()
 {
-    comphelper::LibreOfficeKit::setActive();
-
     // We have three lines in the test document and we try to copy the second and third line
     // To the beginning of the document
     SwXTextDocument* pXTextDocument = createDoc("tdf115088.odt");
@@ -2135,7 +2119,6 @@ void SwTiledRenderingTest::testTdf115088()
 void SwTiledRenderingTest::testRedlineField()
 {
     // Load a document.
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("dummy.fodt");
     SwWrtShell* pWrtShell = pXTextDocument->GetDocShell()->GetWrtShell();
 
@@ -2156,7 +2139,6 @@ void SwTiledRenderingTest::testRedlineField()
 
 void SwTiledRenderingTest::testIMESupport()
 {
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("dummy.fodt");
     VclPtr<vcl::Window> pDocWindow = pXTextDocument->getDocWindow();
 
@@ -2188,7 +2170,6 @@ void SwTiledRenderingTest::testIMESupport()
 void SwTiledRenderingTest::testSplitNodeRedlineCallback()
 {
     // Load a document.
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("splitnode_redline_callback.fodt");
     SwWrtShell* pWrtShell = pXTextDocument->GetDocShell()->GetWrtShell();
     pWrtShell->GetSfxViewShell()->registerLibreOfficeKitViewCallback(&SwTiledRenderingTest::callback, this);
@@ -2247,7 +2228,6 @@ void SwTiledRenderingTest::testSplitNodeRedlineCallback()
 void SwTiledRenderingTest::testDeleteNodeRedlineCallback()
 {
     // Load a document.
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("removenode_redline_callback.fodt");
     SwWrtShell* pWrtShell = pXTextDocument->GetDocShell()->GetWrtShell();
     pWrtShell->GetSfxViewShell()->registerLibreOfficeKitViewCallback(&SwTiledRenderingTest::callback, this);
@@ -2306,8 +2286,6 @@ void SwTiledRenderingTest::testDeleteNodeRedlineCallback()
 
 void SwTiledRenderingTest::testVisCursorInvalidation()
 {
-    comphelper::LibreOfficeKit::setActive();
-
     SwXTextDocument* pXTextDocument = createDoc("dummy.fodt");
     ViewCallback aView1(SfxViewShell::Current());
     int nView1 = SfxLokHelper::getView();
@@ -2379,8 +2357,6 @@ void SwTiledRenderingTest::testVisCursorInvalidation()
 
 void SwTiledRenderingTest::testDeselectCustomShape()
 {
-    comphelper::LibreOfficeKit::setActive();
-
     SwXTextDocument* pXTextDocument = createDoc("dummy.fodt");
     SwWrtShell* pWrtShell = pXTextDocument->GetDocShell()->GetWrtShell();
     SwShellCursor* pShellCursor = pWrtShell->getShellCursor(false);
@@ -2401,7 +2377,6 @@ void SwTiledRenderingTest::testDeselectCustomShape()
 void SwTiledRenderingTest::testSemiTransparent()
 {
     // Load a document where the top left tile contains a semi-transparent rectangle shape.
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("semi-transparent.odt");
 
     // Render a larger area, and then get the color of the bottom right corner of our tile.
@@ -2428,9 +2403,84 @@ void SwTiledRenderingTest::testSemiTransparent()
     CPPUNIT_ASSERT_GREATEREQUAL(190, static_cast<int>(aColor.B));
 }
 
+void SwTiledRenderingTest::testHighlightNumbering()
+{
+    // Load a document where the top left tile contains a semi-transparent rectangle shape.
+    SwXTextDocument* pXTextDocument = createDoc("tdf114799.docx");
+
+    // Render a larger area, and then get the color of the bottom right corner of our tile.
+    size_t nCanvasWidth = 1024;
+    size_t nCanvasHeight = 512;
+    size_t nTileSize = 256;
+    std::vector<unsigned char> aPixmap(nCanvasWidth * nCanvasHeight * 4, 0);
+    ScopedVclPtrInstance<VirtualDevice> pDevice(DeviceFormat::DEFAULT);
+    pDevice->SetBackground(Wallpaper(COL_TRANSPARENT));
+    pDevice->SetOutputSizePixelScaleOffsetAndBuffer(Size(nCanvasWidth, nCanvasHeight),
+                                                    Fraction(1.0), Point(), aPixmap.data());
+    pXTextDocument->paintTile(*pDevice, nCanvasWidth, nCanvasHeight, /*nTilePosX=*/0,
+                              /*nTilePosY=*/0, /*nTileWidth=*/15360, /*nTileHeight=*/7680);
+    pDevice->EnableMapMode(false);
+    Bitmap aBitmap = pDevice->GetBitmap(Point(0, 0), Size(nTileSize, nTileSize));
+    Bitmap::ScopedReadAccess pAccess(aBitmap);
+
+    // Yellow highlighting over numbering
+    Color aColor(pAccess->GetPixel(103, 148));
+    CPPUNIT_ASSERT_EQUAL(COL_YELLOW, aColor);
+}
+
+void SwTiledRenderingTest::testClipText()
+{
+    // Load a document where the top left tile contains table text with
+    // too small line height, but with top and bottom paragraph margins,
+    // avoiding of clipping top and bottom parts of the characters.
+    SwXTextDocument* pXTextDocument = createDoc("tdf117448.fodt");
+
+    // Render a larger area, and then get the top and bottom of the text in that tile
+    size_t nCanvasWidth = 1024;
+    size_t nCanvasHeight = 512;
+    size_t nTileSize = 256;
+    std::vector<unsigned char> aPixmap(nCanvasWidth * nCanvasHeight * 4, 0);
+    ScopedVclPtrInstance<VirtualDevice> pDevice(DeviceFormat::DEFAULT);
+    pDevice->SetBackground(Wallpaper(COL_TRANSPARENT));
+    pDevice->SetOutputSizePixelScaleOffsetAndBuffer(Size(nCanvasWidth, nCanvasHeight),
+                                                    Fraction(1.0), Point(), aPixmap.data());
+    pXTextDocument->paintTile(*pDevice, nCanvasWidth, nCanvasHeight, /*nTilePosX=*/0,
+                              /*nTilePosY=*/0, /*nTileWidth=*/15360, /*nTileHeight=*/7680);
+    pDevice->EnableMapMode(false);
+    Bitmap aBitmap = pDevice->GetBitmap(Point(0, 0), Size(nTileSize, nTileSize));
+    Bitmap::ScopedReadAccess pAccess(aBitmap);
+
+    // check top margin, it's not white completely (i.e. showing top of letter "T")
+    bool bClipTop = true;
+    for (int i = 0; i < 150; i++)
+    {
+        Color aTopTextColor(pAccess->GetPixel(98, 98 + i));
+        if (aTopTextColor.R < 255)
+        {
+            bClipTop = false;
+            break;
+        }
+    }
+    CPPUNIT_ASSERT(!bClipTop);
+    // switch off because of false alarm on some platform, maybe related to font replacements
+#if 0
+    // check bottom margin, it's not white completely (i.e. showing bottom of letter "g")
+    bool bClipBottom = true;
+    for (int i = 0; i < 150; i++)
+    {
+        Color aBottomTextColor(pAccess->GetPixel(110, 98 + i));
+        if (aBottomTextColor.R < 255)
+        {
+            bClipBottom = false;
+            break;
+        }
+    }
+    CPPUNIT_ASSERT(!bClipBottom);
+#endif
+}
+
 void SwTiledRenderingTest::testAnchorTypes()
 {
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("shape.fodt");
     SwDoc* pDoc = pXTextDocument->GetDocShell()->GetDoc();
     SwView* pView = pXTextDocument->GetDocShell()->GetView();
@@ -2447,7 +2497,6 @@ void SwTiledRenderingTest::testAnchorTypes()
 
 void SwTiledRenderingTest::testLanguageStatus()
 {
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("dummy.fodt");
     SwView* pView = pXTextDocument->GetDocShell()->GetView();
     std::unique_ptr<SfxPoolItem> pItem;
@@ -2464,7 +2513,6 @@ void SwTiledRenderingTest::testRedlineNotificationDuringSave()
 {
     // Load a document with redlines which are hidden at a layout level.
     // It's an empty document, just settings.xml and content.xml are custom.
-    comphelper::LibreOfficeKit::setActive();
     SwXTextDocument* pXTextDocument = createDoc("redline-notification-during-save.odt");
     SwWrtShell* pWrtShell = pXTextDocument->GetDocShell()->GetWrtShell();
     pWrtShell->GetSfxViewShell()->registerLibreOfficeKitViewCallback(&SwTiledRenderingTest::callback, this);
@@ -2476,6 +2524,235 @@ void SwTiledRenderingTest::testRedlineNotificationDuringSave()
     // Without the accompanying fix in place, this test would have never returned due to an infinite
     // loop while sending not needed LOK notifications for redline changes during save.
     xStorable->storeToURL(maTempFile.GetURL(), aMediaDescriptor.getAsConstPropertyValueList());
+}
+
+void SwTiledRenderingTest::testHyperlink()
+{
+    comphelper::LibreOfficeKit::setViewIdForVisCursorInvalidation(true);
+    SwXTextDocument* pXTextDocument = createDoc("hyperlink.odt");
+    SwWrtShell* pWrtShell = pXTextDocument->GetDocShell()->GetWrtShell();
+    pWrtShell->GetSfxViewShell()->registerLibreOfficeKitViewCallback(&SwTiledRenderingTest::callback, this);
+    SwShellCursor* pShellCursor = pWrtShell->getShellCursor(false);
+
+    Point aStart = pShellCursor->GetSttPos();
+    aStart.setX(aStart.getX() + 1800);
+    pXTextDocument->postMouseEvent(LOK_MOUSEEVENT_MOUSEBUTTONDOWN, aStart.getX(), aStart.getY(), 1,
+                                   MOUSE_LEFT, 0);
+    pXTextDocument->postMouseEvent(LOK_MOUSEEVENT_MOUSEBUTTONUP, aStart.getX(), aStart.getY(), 1,
+                                   MOUSE_LEFT, 0);
+    Scheduler::ProcessEventsToIdle();
+
+    CPPUNIT_ASSERT_EQUAL(OString("hyperlink"), m_sHyperlinkText);
+    CPPUNIT_ASSERT_EQUAL(OString("http://example.com/"), m_sHyperlinkLink);
+}
+
+void SwTiledRenderingTest::testFieldmark()
+{
+    // Without the accompanying fix in place, this crashed on load.
+    createDoc("fieldmark.docx");
+}
+
+void SwTiledRenderingTest::testDropDownFormFieldButton()
+{
+    SwXTextDocument* pXTextDocument = createDoc("drop_down_form_field.odt");
+    pXTextDocument->setClientVisibleArea(tools::Rectangle(0, 0, 10000, 4000));
+
+    SwWrtShell* pWrtShell = pXTextDocument->GetDocShell()->GetWrtShell();
+    pWrtShell->GetSfxViewShell()->registerLibreOfficeKitViewCallback(&SwTiledRenderingTest::callback, this);
+
+    // Move the cursor to trigger displaying of the field button.
+    pWrtShell->Right(CRSR_SKIP_CHARS, /*bSelect=*/false, 1, /*bBasicCall=*/false);
+    CPPUNIT_ASSERT(m_aFormFieldButton.isEmpty());
+
+    // Do a tile rendering to trigger the button message with a valid text area
+    size_t nCanvasWidth = 1024;
+    size_t nCanvasHeight = 512;
+    std::vector<unsigned char> aPixmap(nCanvasWidth * nCanvasHeight * 4, 0);
+    ScopedVclPtrInstance<VirtualDevice> pDevice(DeviceFormat::DEFAULT);
+    pDevice->SetBackground(Wallpaper(COL_TRANSPARENT));
+    pDevice->SetOutputSizePixelScaleOffsetAndBuffer(Size(nCanvasWidth, nCanvasHeight),
+                                                    Fraction(1.0), Point(), aPixmap.data());
+    pXTextDocument->paintTile(*pDevice, nCanvasWidth, nCanvasHeight, /*nTilePosX=*/0,
+                              /*nTilePosY=*/0, /*nTileWidth=*/10000, /*nTileHeight=*/4000);
+
+    CPPUNIT_ASSERT(!m_aFormFieldButton.isEmpty());
+    {
+        std::stringstream aStream(m_aFormFieldButton.getStr());
+        boost::property_tree::ptree aTree;
+        boost::property_tree::read_json(aStream, aTree);
+
+        OString sAction = aTree.get_child("action").get_value<std::string>().c_str();
+        CPPUNIT_ASSERT_EQUAL(OString("show"), sAction);
+
+        OString sType = aTree.get_child("type").get_value<std::string>().c_str();
+        CPPUNIT_ASSERT_EQUAL(OString("drop-down"), sType);
+
+        OString sTextArea = aTree.get_child("textArea").get_value<std::string>().c_str();
+        CPPUNIT_ASSERT_EQUAL(OString("1538, 1418, 1026, 275"), sTextArea);
+
+        boost::property_tree::ptree aItems = aTree.get_child("params").get_child("items");
+        CPPUNIT_ASSERT_EQUAL(size_t(6), aItems.size());
+
+        OStringBuffer aItemList;
+        for (auto &item : aItems)
+        {
+            aItemList.append(item.second.get_value<std::string>().c_str());
+            aItemList.append(";");
+        }
+        CPPUNIT_ASSERT_EQUAL(OString("2019/2020;2020/2021;2021/2022;2022/2023;2023/2024;2024/2025;"), aItemList.toString());
+
+        OString sSelected = aTree.get_child("params").get_child("selected").get_value<std::string>().c_str();
+        CPPUNIT_ASSERT_EQUAL(OString("1"), sSelected);
+
+        OString sPlaceholder = aTree.get_child("params").get_child("placeholderText").get_value<std::string>().c_str();
+        CPPUNIT_ASSERT_EQUAL(OString("No Item specified"), sPlaceholder);
+    }
+
+    // Move the cursor back so the button becomes hidden.
+    pWrtShell->Left(CRSR_SKIP_CHARS, /*bSelect=*/false, 1, /*bBasicCall=*/false);
+
+    CPPUNIT_ASSERT(!m_aFormFieldButton.isEmpty());
+    {
+        std::stringstream aStream(m_aFormFieldButton.getStr());
+        boost::property_tree::ptree aTree;
+        boost::property_tree::read_json(aStream, aTree);
+
+        OString sAction = aTree.get_child("action").get_value<std::string>().c_str();
+        CPPUNIT_ASSERT_EQUAL(OString("hide"), sAction);
+
+        OString sType = aTree.get_child("type").get_value<std::string>().c_str();
+        CPPUNIT_ASSERT_EQUAL(OString("drop-down"), sType);
+    }
+}
+
+void SwTiledRenderingTest::testDropDownFormFieldButtonEditing()
+{
+    SwXTextDocument* pXTextDocument = createDoc("drop_down_form_field2.odt");
+    pXTextDocument->setClientVisibleArea(tools::Rectangle(0, 0, 10000, 4000));
+
+    SwWrtShell* pWrtShell = pXTextDocument->GetDocShell()->GetWrtShell();
+    pWrtShell->GetSfxViewShell()->registerLibreOfficeKitViewCallback(&SwTiledRenderingTest::callback, this);
+
+    // Move the cursor to trigger displaying of the field button.
+    pWrtShell->Right(CRSR_SKIP_CHARS, /*bSelect=*/false, 1, /*bBasicCall=*/false);
+    CPPUNIT_ASSERT(m_aFormFieldButton.isEmpty());
+
+    // Do a tile rendering to trigger the button message with a valid text area
+    size_t nCanvasWidth = 1024;
+    size_t nCanvasHeight = 512;
+    std::vector<unsigned char> aPixmap(nCanvasWidth * nCanvasHeight * 4, 0);
+    ScopedVclPtrInstance<VirtualDevice> pDevice(DeviceFormat::DEFAULT);
+    pDevice->SetBackground(Wallpaper(COL_TRANSPARENT));
+    pDevice->SetOutputSizePixelScaleOffsetAndBuffer(Size(nCanvasWidth, nCanvasHeight),
+                                                    Fraction(1.0), Point(), aPixmap.data());
+    pXTextDocument->paintTile(*pDevice, nCanvasWidth, nCanvasHeight, /*nTilePosX=*/0,
+                              /*nTilePosY=*/0, /*nTileWidth=*/10000, /*nTileHeight=*/4000);
+
+    // The item with the index '1' is selected by default
+    CPPUNIT_ASSERT(!m_aFormFieldButton.isEmpty());
+    {
+        std::stringstream aStream(m_aFormFieldButton.getStr());
+        boost::property_tree::ptree aTree;
+        boost::property_tree::read_json(aStream, aTree);
+
+        OString sSelected = aTree.get_child("params").get_child("selected").get_value<std::string>().c_str();
+        CPPUNIT_ASSERT_EQUAL(OString("1"), sSelected);
+    }
+    m_aFormFieldButton = "";
+
+    // Trigger a form field event to select a different item.
+    vcl::ITiledRenderable::StringMap aArguments;
+    aArguments["type"] = "drop-down";
+    aArguments["cmd"] = "selected";
+    aArguments["data"] = "3";
+    pXTextDocument->executeFromFieldEvent(aArguments);
+
+    // Do a tile rendering to trigger the button message.
+    pXTextDocument->paintTile(*pDevice, nCanvasWidth, nCanvasHeight, /*nTilePosX=*/0,
+                              /*nTilePosY=*/0, /*nTileWidth=*/10000, /*nTileHeight=*/4000);
+
+    CPPUNIT_ASSERT(!m_aFormFieldButton.isEmpty());
+    {
+        std::stringstream aStream(m_aFormFieldButton.getStr());
+        boost::property_tree::ptree aTree;
+        boost::property_tree::read_json(aStream, aTree);
+
+        OString sSelected = aTree.get_child("params").get_child("selected").get_value<std::string>().c_str();
+        CPPUNIT_ASSERT_EQUAL(OString("3"), sSelected);
+    }
+}
+
+void SwTiledRenderingTest::testDropDownFormFieldButtonNoSelection()
+{
+    SwXTextDocument* pXTextDocument = createDoc("drop_down_form_field_noselection.odt");
+    pXTextDocument->setClientVisibleArea(tools::Rectangle(0, 0, 10000, 4000));
+
+    SwWrtShell* pWrtShell = pXTextDocument->GetDocShell()->GetWrtShell();
+    pWrtShell->GetSfxViewShell()->registerLibreOfficeKitViewCallback(&SwTiledRenderingTest::callback, this);
+
+    // Move the cursor to trigger displaying of the field button.
+    pWrtShell->Right(CRSR_SKIP_CHARS, /*bSelect=*/false, 1, /*bBasicCall=*/false);
+    CPPUNIT_ASSERT(m_aFormFieldButton.isEmpty());
+
+    // Do a tile rendering to trigger the button message with a valid text area
+    size_t nCanvasWidth = 1024;
+    size_t nCanvasHeight = 512;
+    std::vector<unsigned char> aPixmap(nCanvasWidth * nCanvasHeight * 4, 0);
+    ScopedVclPtrInstance<VirtualDevice> pDevice(DeviceFormat::DEFAULT);
+    pDevice->SetBackground(Wallpaper(COL_TRANSPARENT));
+    pDevice->SetOutputSizePixelScaleOffsetAndBuffer(Size(nCanvasWidth, nCanvasHeight),
+                                                    Fraction(1.0), Point(), aPixmap.data());
+    pXTextDocument->paintTile(*pDevice, nCanvasWidth, nCanvasHeight, /*nTilePosX=*/0,
+                              /*nTilePosY=*/0, /*nTileWidth=*/10000, /*nTileHeight=*/4000);
+
+    // None of the items is selected
+    CPPUNIT_ASSERT(!m_aFormFieldButton.isEmpty());
+    {
+        std::stringstream aStream(m_aFormFieldButton.getStr());
+        boost::property_tree::ptree aTree;
+        boost::property_tree::read_json(aStream, aTree);
+
+        OString sSelected = aTree.get_child("params").get_child("selected").get_value<std::string>().c_str();
+        CPPUNIT_ASSERT_EQUAL(OString("-1"), sSelected);
+    }
+}
+
+void SwTiledRenderingTest::testDropDownFormFieldButtonNoItem()
+{
+    SwXTextDocument* pXTextDocument = createDoc("drop_down_form_field_noitem.odt");
+    pXTextDocument->setClientVisibleArea(tools::Rectangle(0, 0, 10000, 4000));
+
+    SwWrtShell* pWrtShell = pXTextDocument->GetDocShell()->GetWrtShell();
+    pWrtShell->GetSfxViewShell()->registerLibreOfficeKitViewCallback(&SwTiledRenderingTest::callback, this);
+
+    // Move the cursor to trigger displaying of the field button.
+    pWrtShell->Right(CRSR_SKIP_CHARS, /*bSelect=*/false, 1, /*bBasicCall=*/false);
+    CPPUNIT_ASSERT(m_aFormFieldButton.isEmpty());
+
+    // Do a tile rendering to trigger the button message with a valid text area
+    size_t nCanvasWidth = 1024;
+    size_t nCanvasHeight = 512;
+    std::vector<unsigned char> aPixmap(nCanvasWidth * nCanvasHeight * 4, 0);
+    ScopedVclPtrInstance<VirtualDevice> pDevice(DeviceFormat::DEFAULT);
+    pDevice->SetBackground(Wallpaper(COL_TRANSPARENT));
+    pDevice->SetOutputSizePixelScaleOffsetAndBuffer(Size(nCanvasWidth, nCanvasHeight),
+                                                    Fraction(1.0), Point(), aPixmap.data());
+    pXTextDocument->paintTile(*pDevice, nCanvasWidth, nCanvasHeight, /*nTilePosX=*/0,
+                              /*nTilePosY=*/0, /*nTileWidth=*/10000, /*nTileHeight=*/4000);
+
+    // There is not item specified for the field
+    CPPUNIT_ASSERT(!m_aFormFieldButton.isEmpty());
+    {
+        std::stringstream aStream(m_aFormFieldButton.getStr());
+        boost::property_tree::ptree aTree;
+        boost::property_tree::read_json(aStream, aTree);
+
+        boost::property_tree::ptree aItems = aTree.get_child("params").get_child("items");
+        CPPUNIT_ASSERT_EQUAL(size_t(0), aItems.size());
+
+        OString sSelected = aTree.get_child("params").get_child("selected").get_value<std::string>().c_str();
+        CPPUNIT_ASSERT_EQUAL(OString("-1"), sSelected);
+    }
 }
 
 CPPUNIT_TEST_SUITE_REGISTRATION(SwTiledRenderingTest);

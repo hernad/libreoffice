@@ -39,7 +39,7 @@ public:
         SvXMLImport& rImport, sal_uInt16 nPrfx,
         const OUString& rLName,
         const css::uno::Reference< css::xml::sax::XAttributeList > & xAttrList,
-        SvXMLStylesContext& rStyles, sal_uInt16 nFamily );
+        SvXMLStylesContext& rStyles, XmlStyleFamily nFamily );
     virtual ~XMLChartStyleContext() override;
 
     /// is called after all styles have been read to apply styles
@@ -51,6 +51,8 @@ public:
         sal_uInt16 nPrefix,
         const OUString& rLocalName,
         const css::uno::Reference< css::xml::sax::XAttributeList > & xAttrList ) override;
+
+    bool isEmptyDataStyleName() override { return msDataStyleName.isEmpty(); }
 };
 
 #endif // INCLUDED_XMLOFF_INC_XMLCHARTSTYLECONTEXT_HXX

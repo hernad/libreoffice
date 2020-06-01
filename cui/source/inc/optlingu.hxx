@@ -24,15 +24,16 @@
 #include <com/sun/star/uno/Reference.hxx>
 #include <com/sun/star/uno/Sequence.hxx>
 
-namespace com{namespace sun{namespace star{
-namespace beans{
-    class XPropertySet;
+namespace com::sun::star{
+    namespace beans{
+        class XPropertySet;
+    }
+    namespace linguistic2{
+        class XDictionary;
+        class XDictionaryList;
+        class XLinguProperties;
+    }
 }
-namespace linguistic2{
-    class XDictionary;
-    class XDictionaryList;
-    class XLinguProperties;
-}}}}
 
 class SvTreeListEntry;
 class SvxLinguData_Impl;
@@ -66,8 +67,7 @@ class SvxEditModulesDlg : public weld::GenericDialogController
     DECL_LINK( ClickHdl_Impl, weld::Button&, void );
     DECL_LINK( BackHdl_Impl, weld::Button&, void );
     DECL_LINK( LangSelectListBoxHdl_Impl, weld::ComboBox&, void );
-    typedef std::pair<int, int> row_col;
-    DECL_LINK( BoxCheckButtonHdl_Impl, const row_col&, void );
+    DECL_LINK( BoxCheckButtonHdl_Impl, const weld::TreeView::iter_col&, void );
     void LangSelectHdl_Impl(const SvxLanguageBox* pBox);
 
 public:
@@ -124,9 +124,8 @@ private:
     DECL_LINK( SelectHdl_Impl, weld::TreeView&, void );
     DECL_LINK( ClickHdl_Impl, weld::Button&, void );
     DECL_LINK( BoxDoubleClickHdl_Impl, weld::TreeView&, bool );
-    typedef std::pair<int, int> row_col;
-    DECL_LINK( ModulesBoxCheckButtonHdl_Impl, const row_col&, void );
-    DECL_LINK( DicsBoxCheckButtonHdl_Impl, const row_col&, void );
+    DECL_LINK( ModulesBoxCheckButtonHdl_Impl, const weld::TreeView::iter_col&, void );
+    DECL_LINK( DicsBoxCheckButtonHdl_Impl, const weld::TreeView::iter_col&, void );
     DECL_LINK( PostDblClickHdl_Impl, void *, void);
 
     void                UpdateModulesBox_Impl();

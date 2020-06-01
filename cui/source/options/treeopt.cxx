@@ -97,9 +97,9 @@
 #include <unotools/moduleoptions.hxx>
 #include <unotools/optionsdlg.hxx>
 #include <unotools/viewoptions.hxx>
-#include <vcl/edit.hxx>
 #include <vcl/help.hxx>
 #include <vcl/svapp.hxx>
+#include <vcl/window.hxx>
 #include <sal/log.hxx>
 
 using namespace ::com::sun::star;
@@ -482,8 +482,13 @@ void OfaTreeOptionsDialog::InitWidgets()
     xTabBox = m_xBuilder->weld_container("box");
     Size aSize(xTreeLB->get_approximate_digit_width() * 82, xTreeLB->get_height_rows(30));
 #if HAVE_FEATURE_GPGME
-    // tdf#115015: make enough space for crypto settings (approx. 14 text edits + padding)
-    aSize.setHeight((Edit::GetMinimumEditSize().Height() + 6) * 14);
+    {
+        // load this little .ui just to measure the height of an Entry
+        std::unique_ptr<weld::Builder> xBuilder(Application::CreateBuilder(m_xDialog.get(), "cui/ui/namedialog.ui"));
+        std::unique_ptr<weld::Entry> xEntry(xBuilder->weld_entry("name_entry"));
+        // tdf#115015: make enough space for crypto settings (approx. 14 text edits + padding)
+        aSize.setHeight((xEntry->get_preferred_size().Height() + 6) * 14);
+    }
 #endif
     xTabBox->set_size_request(aSize.Width(), aSize.Height());
     xTreeLB->set_size_request(xTreeLB->get_approximate_digit_width() * 30, aSize.Height());
@@ -618,20 +623,20 @@ IMPL_LINK_NOARG(OfaTreeOptionsDialog, ShowPageHdl_Impl, weld::TreeView&, void)
 
 IMPL_LINK_NOARG(OfaTreeOptionsDialog, BackHdl_Impl, weld::Button&, void)
 {
-    if (xCurrentPageEntry && xTreeLB->get_iter_depth(*xCurrentPageEntry))
+    if (!(xCurrentPageEntry && xTreeLB->get_iter_depth(*xCurrentPageEntry)))
+        return;
+
+    OptionsPageInfo* pPageInfo = reinterpret_cast<OptionsPageInfo*>(xTreeLB->get_id(*xCurrentPageEntry).toInt64());
+    if (pPageInfo->m_xPage)
     {
-        OptionsPageInfo* pPageInfo = reinterpret_cast<OptionsPageInfo*>(xTreeLB->get_id(*xCurrentPageEntry).toInt64());
-        if (pPageInfo->m_xPage)
-        {
-            std::unique_ptr<weld::TreeIter> xParent = xTreeLB->make_iterator(xCurrentPageEntry.get());
-            xTreeLB->iter_parent(*xParent);
-            OptionsGroupInfo* pGroupInfo =
-                reinterpret_cast<OptionsGroupInfo*>(xTreeLB->get_id(*xParent).toInt64());
-            pPageInfo->m_xPage->Reset( pGroupInfo->m_pInItemSet.get() );
-        }
-        else if ( pPageInfo->m_xExtPage )
-            pPageInfo->m_xExtPage->ResetPage();
+        std::unique_ptr<weld::TreeIter> xParent = xTreeLB->make_iterator(xCurrentPageEntry.get());
+        xTreeLB->iter_parent(*xParent);
+        OptionsGroupInfo* pGroupInfo =
+            reinterpret_cast<OptionsGroupInfo*>(xTreeLB->get_id(*xParent).toInt64());
+        pPageInfo->m_xPage->Reset( pGroupInfo->m_pInItemSet.get() );
     }
+    else if ( pPageInfo->m_xExtPage )
+        pPageInfo->m_xExtPage->ResetPage();
 }
 
 void OfaTreeOptionsDialog::ApplyOptions(bool deactivate)
@@ -1570,23 +1575,23 @@ void OfaTreeOptionsDialog::Initialize( const Reference< XFrame >& _xFrame )
     }
 
     // Internet options
-    if ( !lcl_isOptionHidden( SID_INET_DLG, aOptionsDlgOpt ) )
-    {
-        setGroupName("Internet", CuiResId(SID_INET_DLG_RES[0].first));
-        nGroup = AddGroup(CuiResId(SID_INET_DLG_RES[0].first), nullptr, nullptr, SID_INET_DLG );
+    if ( lcl_isOptionHidden( SID_INET_DLG, aOptionsDlgOpt ) )
+        return;
 
-        for ( size_t i = 1; i < SAL_N_ELEMENTS(SID_INET_DLG_RES); ++i )
-        {
-            nPageId = static_cast<sal_uInt16>(SID_INET_DLG_RES[i].second);
-            if ( lcl_isOptionHidden( nPageId, aOptionsDlgOpt ) )
-                continue;
+    setGroupName("Internet", CuiResId(SID_INET_DLG_RES[0].first));
+    nGroup = AddGroup(CuiResId(SID_INET_DLG_RES[0].first), nullptr, nullptr, SID_INET_DLG );
+
+    for ( size_t i = 1; i < SAL_N_ELEMENTS(SID_INET_DLG_RES); ++i )
+    {
+        nPageId = static_cast<sal_uInt16>(SID_INET_DLG_RES[i].second);
+        if ( lcl_isOptionHidden( nPageId, aOptionsDlgOpt ) )
+            continue;
 #if defined(_WIN32)
-            // Disable E-mail tab-page on Windows
-            if ( nPageId == RID_SVXPAGE_INET_MAIL )
-                continue;
+        // Disable E-mail tab-page on Windows
+        if ( nPageId == RID_SVXPAGE_INET_MAIL )
+            continue;
 #endif
-            AddTabPage( nPageId, CuiResId(SID_INET_DLG_RES[i].first), nGroup );
-        }
+        AddTabPage( nPageId, CuiResId(SID_INET_DLG_RES[i].first), nGroup );
     }
 }
 
@@ -1733,20 +1738,19 @@ VectorOfNodes OfaTreeOptionsDialog::LoadNodes(
     Reference< XNameAccess > xSet(
         officecfg::Office::OptionsDialog::Nodes::get());
     VectorOfNodes aNodeList;
-    Sequence< OUString > seqNames = xSet->getElementNames();
+    const Sequence< OUString > seqNames = xSet->getElementNames();
 
-    for ( int i = 0; i < seqNames.getLength(); ++i )
+    for ( OUString const & sGroupName : seqNames )
     {
-        OUString sGroupName( seqNames[i] );
         Reference< XNameAccess > xNodeAccess;
-        xSet->getByName( seqNames[i] ) >>= xNodeAccess;
+        xSet->getByName( sGroupName ) >>= xNodeAccess;
 
         if ( xNodeAccess.is() )
         {
             OUString sNodeId, sLabel, sPageURL;
             bool bAllModules = false;
 
-            sNodeId = seqNames[i];
+            sNodeId = sGroupName;
             xNodeAccess->getByName( "Label" ) >>= sLabel;
             xNodeAccess->getByName( "OptionsPage" ) >>= sPageURL;
             xNodeAccess->getByName( "AllModules" ) >>= bAllModules;
@@ -1767,11 +1771,11 @@ VectorOfNodes OfaTreeOptionsDialog::LoadNodes(
             xNodeAccess->getByName( "Leaves" ) >>= xLeavesSet;
             if ( xLeavesSet.is() )
             {
-                Sequence< OUString > seqLeaves = xLeavesSet->getElementNames();
-                for ( int j = 0; j < seqLeaves.getLength(); ++j )
+                const Sequence< OUString > seqLeaves = xLeavesSet->getElementNames();
+                for ( OUString const & leafName : seqLeaves )
                 {
                     Reference< XNameAccess > xLeaveAccess;
-                    xLeavesSet->getByName( seqLeaves[j] ) >>= xLeaveAccess;
+                    xLeavesSet->getByName( leafName ) >>= xLeaveAccess;
 
                     if ( xLeaveAccess.is() )
                     {

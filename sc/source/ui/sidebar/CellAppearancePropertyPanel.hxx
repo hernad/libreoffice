@@ -21,16 +21,14 @@
 
 #include <sfx2/sidebar/ControllerItem.hxx>
 #include <sfx2/sidebar/IContextChangeReceiver.hxx>
-#include <svx/sidebar/PanelLayout.hxx>
-#include <vcl/image.hxx>
-#include <vcl/toolbox.hxx>
+#include <sfx2/sidebar/PanelLayout.hxx>
 #include "CellBorderStyleControl.hxx"
 #include "CellLineStyleControl.hxx"
 
 class ToolbarUnoDispatcher;
 class ToolbarPopupContainer;
 
-namespace sc { namespace sidebar {
+namespace sc::sidebar {
 
 class CellAppearancePropertyPanel
 :   public PanelLayout,
@@ -57,6 +55,10 @@ public:
         const sal_uInt16 nSId,
         const SfxItemState eState,
         const SfxPoolItem* pState) override;
+
+    virtual void GetControlState(
+        const sal_uInt16 /*nSId*/,
+        boost::property_tree::ptree& /*rState*/) override {};
 
     SfxBindings* GetBindings() { return mpBindings;}
 
@@ -131,7 +133,7 @@ private:
     bool                                    mbDiagBLTR : 1;
 
     vcl::EnumContext                        maContext;
-    SfxBindings* const                      mpBindings;
+    SfxBindings*                            mpBindings;
 
     DECL_LINK(TbxCellBorderSelectHdl, const OString&, void);
     DECL_LINK(TbxCellBorderMenuHdl, const OString&, void);
@@ -144,7 +146,7 @@ private:
     void UpdateCellBorder(bool bTop, bool bBot, bool bLeft, bool bRight, bool bVer, bool bHor);
 };
 
-} } // end of namespace ::sc::sidebar
+} // end of namespace ::sc::sidebar
 
 #endif
 

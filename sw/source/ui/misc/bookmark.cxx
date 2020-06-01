@@ -17,9 +17,11 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <rtl/ustrbuf.hxx>
 #include <sfx2/request.hxx>
 #include <svl/stritem.hxx>
 #include <vcl/weld.hxx>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/text/XBookmarksSupplier.hpp>
 
 #include <swabstdlg.hxx>

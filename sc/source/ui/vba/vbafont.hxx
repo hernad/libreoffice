@@ -24,7 +24,7 @@
 #include <ooo/vba/excel/XFont.hpp>
 #include <vbahelper/vbafontbase.hxx>
 
-namespace com { namespace sun { namespace star { namespace beans { class XPropertySet; } } } }
+namespace com::sun::star::beans { class XPropertySet; }
 
 class ScCellRangeObj;
 class SfxItemSet;
@@ -34,7 +34,7 @@ typedef cppu::ImplInheritanceHelper< VbaFontBase, ov::excel::XFont > ScVbaFont_B
 
 class ScVbaFont : public ScVbaFont_BASE
 {
-    ScCellRangeObj* const mpRangeObj;
+    ScCellRangeObj* mpRangeObj;
     SfxItemSet*  GetDataSet();
 public:
     /// @throws css::uno::RuntimeException

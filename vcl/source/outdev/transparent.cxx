@@ -21,6 +21,7 @@
 
 #include <sal/types.h>
 #include <tools/helpers.hxx>
+#include <rtl/math.hxx>
 
 #include <memory>
 
@@ -247,6 +248,7 @@ void OutputDevice::DrawTransparent(
 
         // create ObjectToDevice transformation
         const basegfx::B2DHomMatrix aFullTransform(ImplGetDeviceTransformation() * rObjectTransform);
+        const double fAdjustedTransparency = mpAlphaVDev ? 0 : fTransparency;
         bool bDrawnOk(true);
 
         if( IsFillColor() )
@@ -254,13 +256,12 @@ void OutputDevice::DrawTransparent(
             bDrawnOk = mpGraphics->DrawPolyPolygon(
                 aFullTransform,
                 aB2DPolyPolygon,
-                fTransparency,
+                fAdjustedTransparency,
                 this);
         }
 
         if( bDrawnOk && IsLineColor() )
         {
-            const basegfx::B2DVector aHairlineWidth(1,1);
             const bool bPixelSnapHairline(mnAntialiasing & AntialiasingFlags::PixelSnapHairline);
 
             for(auto const& rPolygon : aB2DPolyPolygon)
@@ -268,8 +269,9 @@ void OutputDevice::DrawTransparent(
                 mpGraphics->DrawPolyLine(
                     aFullTransform,
                     rPolygon,
-                    fTransparency,
-                    aHairlineWidth,
+                    fAdjustedTransparency,
+                    0.0, // tdf#124848 hairline
+                    nullptr, // MM01
                     basegfx::B2DLineJoin::NONE,
                     css::drawing::LineCap_BUTT,
                     basegfx::deg2rad(15.0), // not used with B2DLineJoin::NONE, but the correct default
@@ -289,6 +291,21 @@ void OutputDevice::DrawTransparent(
                     new MetaTransparentAction(
                         tools::PolyPolygon(aB2DPolyPoly),
                         static_cast< sal_uInt16 >(fTransparency * 100.0)));
+            }
+
+            if (mpAlphaVDev)
+            {
+                const Color aFillCol(mpAlphaVDev->GetFillColor());
+                const Color aLineColor(mpAlphaVDev->GetLineColor());
+                const auto nGreyScale = static_cast<sal_uInt8>(std::round(255 * fTransparency));
+                const Color aNewColor(nGreyScale, nGreyScale, nGreyScale);
+                mpAlphaVDev->SetFillColor(aNewColor);
+                mpAlphaVDev->SetLineColor(aNewColor);
+
+                mpAlphaVDev->DrawTransparent(rObjectTransform, rB2DPolyPoly, fTransparency);
+
+                mpAlphaVDev->SetFillColor(aFillCol);
+                mpAlphaVDev->SetLineColor(aLineColor);
             }
 
             return;
@@ -382,7 +399,6 @@ bool OutputDevice::DrawTransparentNatively ( const tools::PolyPolygon& rPolyPoly
             mpGraphics->SetFillColor();
 
             // draw the border line
-            const basegfx::B2DVector aLineWidths( 1, 1 );
             const bool bPixelSnapHairline(mnAntialiasing & AntialiasingFlags::PixelSnapHairline);
 
             for(auto const& rPolygon : aB2DPolyPolygon)
@@ -391,7 +407,8 @@ bool OutputDevice::DrawTransparentNatively ( const tools::PolyPolygon& rPolyPoly
                     aTransform,
                     rPolygon,
                     fTransparency,
-                    aLineWidths,
+                    0.0, // tdf#124848 hairline
+                    nullptr, // MM01
                     basegfx::B2DLineJoin::NONE,
                     css::drawing::LineCap_BUTT,
                     basegfx::deg2rad(15.0), // not used with B2DLineJoin::NONE, but the correct default

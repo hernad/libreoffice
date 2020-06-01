@@ -27,7 +27,7 @@
 #include "SwRewriter.hxx"
 #include "swundo.hxx"
 #include <o3tl/typed_flags_set.hxx>
-#include <o3tl/optional.hxx>
+#include <optional>
 
 class SwHistory;
 class SwPaM;
@@ -53,12 +53,12 @@ class SwUndo
 {
     SwUndoId const m_nId;
     RedlineFlags   m_nOrigRedlineFlags;
-    ViewShellId const    m_nViewShellId;
+    ViewShellId    m_nViewShellId;
     bool m_isRepeatIgnored; ///< for multi-selection, only repeat 1st selection
 
 protected:
     bool m_bCacheComment;
-    mutable o3tl::optional<OUString> maComment;
+    mutable std::optional<OUString> maComment;
 
     static void RemoveIdxFromSection( SwDoc&, sal_uLong nSttIdx, const sal_uLong* pEndIdx = nullptr );
     static void RemoveIdxFromRange( SwPaM& rPam, bool bMoveNext );
@@ -309,7 +309,7 @@ public:
 class SwUndoInsLayFormat : public SwUndoFlyBase
 {
     sal_uLong mnCursorSaveIndexPara;           // Cursor position
-    sal_Int32 const mnCursorSaveIndexPos;            // for undo
+    sal_Int32 mnCursorSaveIndexPos;            // for undo
 public:
     SwUndoInsLayFormat( SwFrameFormat* pFormat, sal_uLong nNodeIdx, sal_Int32 nCntIdx );
 

@@ -17,6 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <vcl/metric.hxx>
 #include <vcl/outdev.hxx>
 #include <vcl/print.hxx>
 #include <tools/debug.hxx>
@@ -53,6 +54,36 @@ SvxFont::SvxFont( const SvxFont &rFont )
     nPropr = rFont.GetPropr();
     eCaseMap = rFont.GetCaseMap();
     SetLanguage(rFont.GetLanguage());
+}
+
+void SvxFont::SetNonAutoEscapement(short nNewEsc, const OutputDevice* pOutDev)
+{
+    nEsc = nNewEsc;
+    if ( abs(nEsc) == DFLT_ESC_AUTO_SUPER )
+    {
+        double fAutoAscent = .8;
+        double fAutoDescent = .2;
+        if ( pOutDev )
+        {
+            const FontMetric& rFontMetric = pOutDev->GetFontMetric();
+            double fFontHeight = rFontMetric.GetAscent() + rFontMetric.GetDescent();
+            if ( fFontHeight )
+            {
+                fAutoAscent = rFontMetric.GetAscent() / fFontHeight;
+                fAutoDescent = rFontMetric.GetDescent() / fFontHeight;
+            }
+        }
+
+        if ( nEsc == DFLT_ESC_AUTO_SUPER )
+            nEsc = fAutoAscent * (100 - nPropr);
+        else //DFLT_ESC_AUTO_SUB
+            nEsc = fAutoDescent * -(100 - nPropr);
+    }
+
+    if ( nEsc > MAX_ESC_POS )
+        nEsc = MAX_ESC_POS;
+    else if  ( nEsc < -MAX_ESC_POS )
+        nEsc = -MAX_ESC_POS;
 }
 
 void SvxFont::DrawArrow( OutputDevice &rOut, const tools::Rectangle& rRect,
@@ -510,9 +541,17 @@ void SvxFont::DrawPrev( OutputDevice *pOut, Printer* pPrinter,
     {
         short nTmpEsc;
         if( DFLT_ESC_AUTO_SUPER == nEsc )
+        {
+            nTmpEsc = .8 * (100 - nPropr);
+            assert (nTmpEsc == DFLT_ESC_SUPER && "I'm sure this formula needs to be changed, but how to confirm that???");
             nTmpEsc = DFLT_ESC_SUPER;
+        }
         else if( DFLT_ESC_AUTO_SUB == nEsc )
+        {
+            nTmpEsc = .2 * -(100 - nPropr);
+            assert (nTmpEsc == -20 && "I'm sure this formula needs to be changed, but how to confirm that???");
             nTmpEsc = -20;
+        }
         else
             nTmpEsc = nEsc;
         Size aSize = GetFontSize();
@@ -665,21 +704,21 @@ public:
 
 void SvxDoDrawCapital::DoSpace( const bool bDraw )
 {
-    if ( bDraw || pFont->IsWordLineMode() )
+    if ( !(bDraw || pFont->IsWordLineMode()) )
+        return;
+
+    sal_uLong nDiff = static_cast<sal_uLong>(aPos.X() - aSpacePos.X());
+    if ( nDiff )
     {
-        sal_uLong nDiff = static_cast<sal_uLong>(aPos.X() - aSpacePos.X());
-        if ( nDiff )
-        {
-            bool bWordWise = pFont->IsWordLineMode();
-            bool bTrans = pFont->IsTransparent();
-            pFont->SetWordLineMode( false );
-            pFont->SetTransparent( true );
-            pFont->SetPhysFont( pOut );
-            pOut->DrawStretchText( aSpacePos, nDiff, "  ", 0, 2 );
-            pFont->SetWordLineMode( bWordWise );
-            pFont->SetTransparent( bTrans );
-            pFont->SetPhysFont( pOut );
-        }
+        bool bWordWise = pFont->IsWordLineMode();
+        bool bTrans = pFont->IsTransparent();
+        pFont->SetWordLineMode( false );
+        pFont->SetTransparent( true );
+        pFont->SetPhysFont( pOut );
+        pOut->DrawStretchText( aSpacePos, nDiff, "  ", 0, 2 );
+        pFont->SetWordLineMode( bWordWise );
+        pFont->SetTransparent( bTrans );
+        pFont->SetPhysFont( pOut );
     }
 }
 

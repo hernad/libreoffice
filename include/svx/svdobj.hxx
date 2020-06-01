@@ -203,8 +203,8 @@ public:
  */
 class SVXCORE_DLLPUBLIC SdrObjUserData
 {
-    SdrInventor const                     nInventor;
-    sal_uInt16 const                      nIdentifier;
+    SdrInventor                      nInventor;
+    sal_uInt16                       nIdentifier;
 
     void operator=(const SdrObjUserData& rData) = delete;
     bool operator==(const SdrObjUserData& rData) const = delete;
@@ -427,6 +427,7 @@ public:
     // It may also have a Title and a Description for accessibility purposes.
     void SetName(const OUString& rStr);
     OUString GetName() const;
+    void MakeNameUnique();
     void MakeNameUnique(std::unordered_set<OUString>& rNameSet);
     void SetTitle(const OUString& rStr);
     OUString GetTitle() const;
@@ -1041,8 +1042,8 @@ struct SVXCORE_DLLPUBLIC SdrObjectFreeOp
 
 struct SdrObjCreatorParams
 {
-    SdrInventor const nInventor;
-    sal_uInt16 const  nObjIdentifier;
+    SdrInventor nInventor;
+    sal_uInt16  nObjIdentifier;
     SdrModel&   rSdrModel;
 };
 

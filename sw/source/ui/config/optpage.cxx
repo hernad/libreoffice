@@ -497,15 +497,15 @@ SwStdFontTabPage::SwStdFontTabPage(weld::Container* pPage, weld::DialogControlle
     , m_sScriptComplex(SwResId(ST_SCRIPT_CTL))
     , m_xLabelFT(m_xBuilder->weld_label("label1"))
     , m_xStandardBox(m_xBuilder->weld_combo_box("standardbox"))
-    , m_xStandardHeightLB(new SvtFontSizeBox(m_xBuilder->weld_combo_box("standardheight")))
+    , m_xStandardHeightLB(new FontSizeBox(m_xBuilder->weld_combo_box("standardheight")))
     , m_xTitleBox(m_xBuilder->weld_combo_box("titlebox"))
-    , m_xTitleHeightLB(new SvtFontSizeBox(m_xBuilder->weld_combo_box("titleheight")))
+    , m_xTitleHeightLB(new FontSizeBox(m_xBuilder->weld_combo_box("titleheight")))
     , m_xListBox(m_xBuilder->weld_combo_box("listbox"))
-    , m_xListHeightLB(new SvtFontSizeBox(m_xBuilder->weld_combo_box("listheight")))
+    , m_xListHeightLB(new FontSizeBox(m_xBuilder->weld_combo_box("listheight")))
     , m_xLabelBox(m_xBuilder->weld_combo_box("labelbox"))
-    , m_xLabelHeightLB(new SvtFontSizeBox(m_xBuilder->weld_combo_box("labelheight")))
+    , m_xLabelHeightLB(new FontSizeBox(m_xBuilder->weld_combo_box("labelheight")))
     , m_xIdxBox(m_xBuilder->weld_combo_box("idxbox"))
-    , m_xIndexHeightLB(new SvtFontSizeBox(m_xBuilder->weld_combo_box("indexheight")))
+    , m_xIndexHeightLB(new FontSizeBox(m_xBuilder->weld_combo_box("indexheight")))
     , m_xStandardPB(m_xBuilder->weld_button("standard"))
 {
     m_xStandardBox->make_sorted();
@@ -948,7 +948,7 @@ IMPL_LINK( SwStdFontTabPage, ModifyHdl, weld::ComboBox&, rBox, void )
 IMPL_LINK( SwStdFontTabPage, LoseFocusHdl, weld::Widget&, rControl, void )
 {
     weld::ComboBox& rBox = dynamic_cast<weld::ComboBox&>(rControl);
-    SvtFontSizeBox* pHeightLB = nullptr;
+    FontSizeBox* pHeightLB = nullptr;
     const OUString sEntry = rBox.get_active_text();
     if (&rBox == m_xStandardBox.get())
     {
@@ -1189,9 +1189,11 @@ SwShdwCursorOptionsTabPage::SwShdwCursorOptionsTabPage(weld::Container* pPage, w
     , m_xSpacesCB(m_xBuilder->weld_check_button("spaces"))
     , m_xHSpacesCB(m_xBuilder->weld_check_button("nonbreak"))
     , m_xTabCB(m_xBuilder->weld_check_button("tabs"))
+    , m_xTabLabel(m_xBuilder->weld_label("tabs_label"))
     , m_xBreakCB(m_xBuilder->weld_check_button("break"))
     , m_xCharHiddenCB(m_xBuilder->weld_check_button("hiddentext"))
     , m_xBookmarkCB(m_xBuilder->weld_check_button("bookmarks"))
+    , m_xBookmarkLabel(m_xBuilder->weld_label("bookmarks_label"))
     , m_xDirectCursorFrame(m_xBuilder->weld_frame("directcrsrframe"))
     , m_xOnOffCB(m_xBuilder->weld_check_button("cursoronoff"))
     , m_xDirectCursorFillMode(m_xBuilder->weld_combo_box("cxDirectCursorFillMode"))
@@ -1200,7 +1202,7 @@ SwShdwCursorOptionsTabPage::SwShdwCursorOptionsTabPage(weld::Container* pPage, w
     , m_xMathBaselineAlignmentCB(m_xBuilder->weld_check_button("mathbaseline"))
 {
     const SfxPoolItem* pItem = nullptr;
-    sal_uInt8 eMode = SwFillMode::FILL_TAB;
+    SwFillMode eMode = SwFillMode::Tab;
     bool bIsOn = false;
 
     if( SfxItemState::SET == rSet.GetItemState( FN_PARAM_SHADOWCURSOR, false, &pItem ))
@@ -1211,14 +1213,16 @@ SwShdwCursorOptionsTabPage::SwShdwCursorOptionsTabPage(weld::Container* pPage, w
     }
     m_xOnOffCB->set_active( bIsOn );
 
-    m_xDirectCursorFillMode->set_active( eMode );
+    m_xDirectCursorFillMode->set_active( static_cast<int>(eMode) );
     if(SfxItemState::SET != rSet.GetItemState(SID_HTML_MODE, false, &pItem )
         || !(static_cast<const SfxUInt16Item*>(pItem)->GetValue() & HTMLMODE_ON))
         return;
 
     m_xTabCB->hide();
+    m_xTabLabel->hide();
     m_xCharHiddenCB->hide();
     m_xBookmarkCB->hide();
+    m_xBookmarkLabel->hide();
 
     m_xDirectCursorFrame->hide();
     m_xOnOffCB->hide();
@@ -1248,8 +1252,7 @@ bool SwShdwCursorOptionsTabPage::FillItemSet( SfxItemSet* rSet )
     SwShadowCursorItem aOpt;
     aOpt.SetOn( m_xOnOffCB->get_active() );
 
-    sal_uInt8 eMode;
-    eMode = m_xDirectCursorFillMode->get_active();
+    SwFillMode eMode = static_cast<SwFillMode>(m_xDirectCursorFillMode->get_active());
     aOpt.SetMode( eMode );
 
     bool bRet = false;
@@ -1297,7 +1300,7 @@ bool SwShdwCursorOptionsTabPage::FillItemSet( SfxItemSet* rSet )
 void SwShdwCursorOptionsTabPage::Reset( const SfxItemSet* rSet )
 {
     const SfxPoolItem* pItem = nullptr;
-    sal_uInt8 eMode = SwFillMode::FILL_TAB;
+    SwFillMode eMode = SwFillMode::Tab;
     bool bIsOn = false;
 
     if( SfxItemState::SET == rSet->GetItemState( FN_PARAM_SHADOWCURSOR, false, &pItem ))
@@ -1308,7 +1311,7 @@ void SwShdwCursorOptionsTabPage::Reset( const SfxItemSet* rSet )
     }
     m_xOnOffCB->set_active( bIsOn );
 
-    m_xDirectCursorFillMode->set_active( eMode );
+    m_xDirectCursorFillMode->set_active( static_cast<int>(eMode) );
     if (m_pWrtShell) {
         m_xMathBaselineAlignmentCB->set_active( m_pWrtShell->GetDoc()->getIDocumentSettingAccess().get( DocumentSettingId::MATH_BASELINE_ALIGNMENT ) );
         m_xMathBaselineAlignmentCB->save_state();
@@ -1342,8 +1345,8 @@ namespace {
 // TabPage for Redlining
 struct CharAttr
 {
-    sal_uInt16 const nItemId;
-    sal_uInt16 const nAttr;
+    sal_uInt16 nItemId;
+    sal_uInt16 nAttr;
 };
 
 }

@@ -109,7 +109,7 @@ static const sal_uInt16 aDocInfoSubTypeFromService[] =
     DI_PRINT | DI_SUB_AUTHOR,   //PROPERTY_MAP_FLDTYP_DOCINFO_PRINT_AUTHOR
     DI_PRINT | DI_SUB_DATE,     //PROPERTY_MAP_FLDTYP_DOCINFO_PRINT_DATE_TIME
     DI_KEYS,                    //PROPERTY_MAP_FLDTYP_DOCINFO_KEY_WORDS
-    DI_THEMA,                   //PROPERTY_MAP_FLDTYP_DOCINFO_SUBJECT
+    DI_SUBJECT,                 //PROPERTY_MAP_FLDTYP_DOCINFO_SUBJECT
     DI_TITLE,                   //PROPERTY_MAP_FLDTYP_DOCINFO_TITLE
     DI_DOCNO                    //PROPERTY_MAP_FLDTYP_DOCINFO_REVISION
 };
@@ -118,8 +118,8 @@ namespace {
 
 struct ServiceIdResId
 {
-    SwFieldIds const    nResId;
-    SwServiceType const nServiceId;
+    SwFieldIds    nResId;
+    SwServiceType nServiceId;
 };
 
 }
@@ -226,7 +226,7 @@ static SwServiceType lcl_GetServiceForField( const SwField& rField )
             case DI_EDIT:   nSrvId = SwServiceType::FieldTypeDocInfoEditTime;break;
             case DI_COMMENT:nSrvId = SwServiceType::FieldTypeDocInfoDescription;break;
             case DI_KEYS:   nSrvId = SwServiceType::FieldTypeDocInfoKeywords;break;
-            case DI_THEMA:  nSrvId = SwServiceType::FieldTypeDocInfoSubject;  break;
+            case DI_SUBJECT:nSrvId = SwServiceType::FieldTypeDocInfoSubject;  break;
             case DI_TITLE:  nSrvId = SwServiceType::FieldTypeDocInfoTitle;    break;
             case DI_DOCNO:  nSrvId = SwServiceType::FieldTypeDocInfoRevision; break;
             case DI_CUSTOM: nSrvId = SwServiceType::FieldTypeDocInfoCustom;   break;
@@ -413,7 +413,7 @@ public:
     SwDoc*          m_pDoc;
     SwFieldType* m_pType;
 
-    SwFieldIds const      m_nResTypeId;
+    SwFieldIds      m_nResTypeId;
 
     OUString        m_sParam1;  // Content / Database / NumberingSeparator
     OUString        m_sParam2;  // -    /DataTablename
@@ -826,27 +826,12 @@ SwXFieldMaster::getPropertyValue(const OUString& rPropertyName)
         else if(rPropertyName == UNO_NAME_DEPENDENT_TEXT_FIELDS)
         {
             //fill all text fields into a sequence
-            std::vector<SwFormatField*>  aFieldArr;
-            SwIterator<SwFormatField,SwFieldType> aIter( *pType );
-            SwFormatField* pField = aIter.First();
-            while(pField)
-            {
-                if(pField->IsFieldInDoc())
-                    aFieldArr.push_back(pField);
-                pField = aIter.Next();
-            }
-
-            uno::Sequence<uno::Reference <text::XDependentTextField> > aRetSeq(aFieldArr.size());
-            uno::Reference<text::XDependentTextField>* pRetSeq = aRetSeq.getArray();
-            for(size_t i = 0; i < aFieldArr.size(); ++i)
-            {
-                pField = aFieldArr[i];
-                uno::Reference<text::XTextField> const xField =
-                    SwXTextField::CreateXTextField(m_pImpl->m_pDoc, pField);
-
-                pRetSeq[i].set(xField, uno::UNO_QUERY);
-            }
-            aRet <<= aRetSeq;
+            std::vector<SwFormatField*> vpFields;
+            pType->GatherFields(vpFields);
+            uno::Sequence<uno::Reference <text::XDependentTextField> > aSeq(vpFields.size());
+            std::transform(vpFields.begin(), vpFields.end(), aSeq.begin(),
+                    [this](SwFormatField* pF) { return uno::Reference<text::XDependentTextField>(SwXTextField::CreateXTextField(m_pImpl->m_pDoc, pF), uno::UNO_QUERY); });
+            aRet <<= aSeq;
         }
         else
         {
@@ -979,17 +964,10 @@ void SAL_CALL SwXFieldMaster::dispose()
     }
 
     // first delete all fields
-    SwIterator<SwFormatField,SwFieldType> aIter( *pFieldType );
-    SwFormatField* pField = aIter.First();
-    while(pField)
-    {
-        SwTextField *pTextField = pField->GetTextField();
-        if(pTextField && pTextField->GetTextNode().GetNodes().IsDocNodes() )
-        {
-            SwTextField::DeleteTextField(*pTextField);
-        }
-        pField = aIter.Next();
-    }
+    std::vector<SwFormatField*> vpFields;
+    pFieldType->GatherFields(vpFields);
+    for(auto pField : vpFields)
+        SwTextField::DeleteTextField(*pField->GetTextField());
     // then delete FieldType
     m_pImpl->m_pDoc->getIDocumentFieldsAccess().RemoveFieldType(nTypeIdx);
 }
@@ -1122,7 +1100,7 @@ public:
     rtl::Reference<SwTextAPIObject> m_xTextObject;
     bool m_bIsDescriptor;
     bool m_bCallUpdate;
-    SwServiceType const m_nServiceId;
+    SwServiceType m_nServiceId;
     OUString m_sTypeName;
     std::unique_ptr<SwFieldProperties_Impl> m_pProps;
 
@@ -3010,21 +2988,11 @@ SwXFieldEnumeration::SwXFieldEnumeration(SwDoc & rDoc)
     const size_t nCount = pFieldTypes->size();
     for(size_t nType = 0;  nType < nCount;  ++nType)
     {
-        const SwFieldType *pCurType = (*pFieldTypes)[nType].get();
-        SwIterator<SwFormatField,SwFieldType> aIter( *pCurType );
-        const SwFormatField* pCurFieldFormat = aIter.First();
-        while (pCurFieldFormat)
-        {
-            const SwTextField *pTextField = pCurFieldFormat->GetTextField();
-            // skip fields that are currently not in the document
-            // e.g. fields in undo or redo array
-            bool bSkip = !pTextField ||
-                         !pTextField->GetpTextNode()->GetNodes().IsDocNodes();
-            if (!bSkip)
-                m_pImpl->m_Items.push_back( SwXTextField::CreateXTextField(
-                        m_pImpl->m_pDoc, pCurFieldFormat));
-            pCurFieldFormat = aIter.Next();
-        }
+        const SwFieldType* pCurType = (*pFieldTypes)[nType].get();
+        std::vector<SwFormatField*> vFormatFields;
+        pCurType->GatherFields(vFormatFields);
+        std::for_each(vFormatFields.begin(), vFormatFields.end(),
+                [this](SwFormatField* pF) { m_pImpl->m_Items.push_back(SwXTextField::CreateXTextField(m_pImpl->m_pDoc, pF)); });
     }
     // now handle meta-fields, which are not SwFields
     const std::vector< uno::Reference<text::XTextField> > MetaFields(

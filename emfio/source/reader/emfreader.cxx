@@ -624,26 +624,26 @@ namespace emfio
             return;
 
         // taking the amount of points of each polygon, retrieving the total number of points
-        if ( mpInputStream->good() &&
+        if ( !(mpInputStream->good() &&
              ( nNumberOfPolylines < SAL_MAX_UINT32 / sizeof( sal_uInt16 ) ) &&
-             ( nNumberOfPolylines * sizeof( sal_uInt16 ) ) <= ( nEndPos - mpInputStream->Tell() )
+             ( nNumberOfPolylines * sizeof( sal_uInt16 ) ) <= ( nEndPos - mpInputStream->Tell() ))
            )
-        {
-            std::unique_ptr< sal_uInt32[] > pnPolylinePointCount( new sal_uInt32[ nNumberOfPolylines ] );
-            for ( sal_uInt32 i = 0; i < nNumberOfPolylines && mpInputStream->good(); i++ )
-            {
-                sal_uInt32 nPoints;
-                mpInputStream->ReadUInt32( nPoints );
-                SAL_INFO("emfio", "\t\t\tPoint " << i << " of " << nNumberOfPolylines << ": " << nPoints);
-                pnPolylinePointCount[ i ] = nPoints;
-            }
+            return;
 
-            // Get polyline points:
-            for ( sal_uInt32 i = 0; ( i < nNumberOfPolylines ) && mpInputStream->good(); i++ )
-            {
-                tools::Polygon aPolygon = ReadPolygon<T>(0, pnPolylinePointCount[i], nNextPos);
-                DrawPolyLine(aPolygon, false, mbRecordPath);
-            }
+        std::unique_ptr< sal_uInt32[] > pnPolylinePointCount( new sal_uInt32[ nNumberOfPolylines ] );
+        for ( sal_uInt32 i = 0; i < nNumberOfPolylines && mpInputStream->good(); i++ )
+        {
+            sal_uInt32 nPoints;
+            mpInputStream->ReadUInt32( nPoints );
+            SAL_INFO("emfio", "\t\t\tPoint " << i << " of " << nNumberOfPolylines << ": " << nPoints);
+            pnPolylinePointCount[ i ] = nPoints;
+        }
+
+        // Get polyline points:
+        for ( sal_uInt32 i = 0; ( i < nNumberOfPolylines ) && mpInputStream->good(); i++ )
+        {
+            tools::Polygon aPolygon = ReadPolygon<T>(0, pnPolylinePointCount[i], nNextPos);
+            DrawPolyLine(aPolygon, false, mbRecordPath);
         }
     }
 
@@ -2088,6 +2088,11 @@ namespace emfio
         mpInputStream->ReadInt32(nBottom);
 
         SAL_INFO("emfio", "\t\tLeft: " << nLeft << ", top: " << nTop << ", right: " << nRight << ", bottom: " << nBottom);
+        if (nLeft > nRight || nTop > nBottom)
+        {
+            SAL_WARN("emfio", "broken rectangle");
+            return tools::Rectangle::Justify(Point(nLeft, nTop), Point(nRight, nBottom));
+        }
 
         return tools::Rectangle(nLeft, nTop, nRight, nBottom);
     }

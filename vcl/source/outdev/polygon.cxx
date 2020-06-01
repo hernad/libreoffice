@@ -88,7 +88,6 @@ void OutputDevice::DrawPolyPolygon( const tools::PolyPolygon& rPolyPoly )
 
         if(bSuccess && IsLineColor())
         {
-            const basegfx::B2DVector aB2DLineWidth( 1.0, 1.0 );
             const bool bPixelSnapHairline(mnAntialiasing & AntialiasingFlags::PixelSnapHairline);
 
             for(auto const& rPolygon : aB2DPolyPolygon)
@@ -97,7 +96,8 @@ void OutputDevice::DrawPolyPolygon( const tools::PolyPolygon& rPolyPoly )
                     aTransform,
                     rPolygon,
                     0.0,
-                    aB2DLineWidth,
+                    0.0, // tdf#124848 hairline
+                    nullptr, // MM01
                     basegfx::B2DLineJoin::NONE,
                     css::drawing::LineCap_BUTT,
                     basegfx::deg2rad(15.0), // not used with B2DLineJoin::NONE, but the correct default
@@ -208,14 +208,14 @@ void OutputDevice::DrawPolygon( const tools::Polygon& rPoly )
 
         if(bSuccess && IsLineColor())
         {
-            const basegfx::B2DVector aB2DLineWidth( 1.0, 1.0 );
             const bool bPixelSnapHairline(mnAntialiasing & AntialiasingFlags::PixelSnapHairline);
 
             bSuccess = mpGraphics->DrawPolyLine(
                 aTransform,
                 aB2DPolygon,
                 0.0,
-                aB2DLineWidth,
+                0.0, // tdf#124848 hairline
+                nullptr, // MM01
                 basegfx::B2DLineJoin::NONE,
                 css::drawing::LineCap_BUTT,
                 basegfx::deg2rad(15.0), // not used with B2DLineJoin::NONE, but the correct default
@@ -316,7 +316,6 @@ void OutputDevice::ImplDrawPolyPolygonWithB2DPolyPolygon(const basegfx::B2DPolyP
 
         if(bSuccess && IsLineColor())
         {
-            const basegfx::B2DVector aB2DLineWidth( 1.0, 1.0 );
             const bool bPixelSnapHairline(mnAntialiasing & AntialiasingFlags::PixelSnapHairline);
 
             for(auto const& rPolygon : aB2DPolyPolygon)
@@ -325,7 +324,8 @@ void OutputDevice::ImplDrawPolyPolygonWithB2DPolyPolygon(const basegfx::B2DPolyP
                     aTransform,
                     rPolygon,
                     0.0,
-                    aB2DLineWidth,
+                    0.0, // tdf#124848 hairline
+                    nullptr, // MM01
                     basegfx::B2DLineJoin::NONE,
                     css::drawing::LineCap_BUTT,
                     basegfx::deg2rad(15.0), // not used with B2DLineJoin::NONE, but the correct default
@@ -338,6 +338,9 @@ void OutputDevice::ImplDrawPolyPolygonWithB2DPolyPolygon(const basegfx::B2DPolyP
 
         if(bSuccess)
         {
+            if (mpAlphaVDev)
+                mpAlphaVDev->ImplDrawPolyPolygonWithB2DPolyPolygon(rB2DPolyPoly);
+
             return;
         }
     }

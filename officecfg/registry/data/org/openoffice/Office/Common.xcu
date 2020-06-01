@@ -58,6 +58,11 @@
     <prop oor:name="UseOpenGL" oor:type="xs:boolean">
       <value install:module="macosx">false</value>
       <value install:module="unx">false</value>
+      <value install:module="wnt">false</value>
+    </prop>
+    <prop oor:name="UseSkia" oor:type="xs:boolean">
+      <value install:module="macosx">false</value>
+      <value install:module="unx">false</value>
       <value install:module="wnt">true</value>
     </prop>
   </node>
@@ -500,11 +505,6 @@
     </prop>
   </node>
   <node oor:name="Save">
-    <node oor:name="Document">
-      <prop oor:name="SaveBackwardCompatibleODF" oor:type="xs:boolean">
-        <value>false</value>
-      </prop>
-    </node>
     <node oor:name="ODF">
       <prop oor:name="DefaultVersion" oor:type="xs:short">
         <value>3</value>
@@ -554,6 +554,9 @@
         <value install:module="unx">true</value>
       </prop>
       <prop oor:name="EnableLangpackInstallation" oor:type="xs:boolean">
+        <value install:module="unx">true</value>
+      </prop>
+      <prop oor:name="EnableBaseInstallation" oor:type="xs:boolean">
         <value install:module="unx">true</value>
       </prop>
   </node>

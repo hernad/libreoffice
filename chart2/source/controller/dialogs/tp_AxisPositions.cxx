@@ -37,11 +37,15 @@ AxisPositionsTabPage::AxisPositionsTabPage(weld::Container* pPage, weld::DialogC
     , m_bCrossingAxisIsCategoryAxis(false)
     , m_aCategories()
     , m_bSupportAxisPositioning(false)
+    , m_bSupportCategoryPositioning(false)
     , m_xFL_AxisLine(m_xBuilder->weld_frame("FL_AXIS_LINE"))
     , m_xLB_CrossesAt(m_xBuilder->weld_combo_box("LB_CROSSES_OTHER_AXIS_AT"))
     , m_xED_CrossesAt(m_xBuilder->weld_formatted_spin_button("EDT_CROSSES_OTHER_AXIS_AT"))
     , m_xED_CrossesAtCategory(m_xBuilder->weld_combo_box( "EDT_CROSSES_OTHER_AXIS_AT_CATEGORY"))
     , m_xCB_AxisBetweenCategories(m_xBuilder->weld_check_button("CB_AXIS_BETWEEN_CATEGORIES"))
+    , m_xFL_Position(m_xBuilder->weld_frame("FL_POSITION"))
+    , m_xRB_On(m_xBuilder->weld_radio_button("RB_ON"))
+    , m_xRB_Between(m_xBuilder->weld_radio_button("RB_BETWEEN"))
     , m_xFL_Labels(m_xBuilder->weld_frame("FL_LABELS"))
     , m_xLB_PlaceLabels(m_xBuilder->weld_combo_box("LB_PLACE_LABELS"))
     , m_xED_LabelDistance(m_xBuilder->weld_formatted_spin_button("EDT_AXIS_LABEL_DISTANCE"))
@@ -83,6 +87,10 @@ bool AxisPositionsTabPage::FillItemSet(SfxItemSet* rOutAttrs)
         rOutAttrs->Put(SvxDoubleItem(fCrossover,SCHATTR_AXIS_POSITION_VALUE));
     }
 
+    // shifted category position
+    if (m_xFL_Position->get_visible())
+        rOutAttrs->Put(SfxBoolItem(SCHATTR_AXIS_SHIFTED_CATEGORY_POSITION, m_xRB_Between->get_active()));
+
     // labels
     sal_Int32 nLabelPos = m_xLB_PlaceLabels->get_active();
     if (nLabelPos != -1)
@@ -118,12 +126,8 @@ void AxisPositionsTabPage::Reset(const SfxItemSet* rInAttrs)
     m_xED_CrossesAtCategory->set_visible( m_bCrossingAxisIsCategoryAxis );
     if (m_bCrossingAxisIsCategoryAxis)
     {
-        for( sal_Int32 nN=0; nN<m_aCategories.getLength(); nN++ )
-            m_xED_CrossesAtCategory->append_text(m_aCategories[nN]);
-
-        sal_Int32 nCount = m_xED_CrossesAtCategory->get_count();
-        if( nCount>30 )
-            nCount=30;
+        for( auto const & cat : std::as_const(m_aCategories) )
+            m_xED_CrossesAtCategory->append_text(cat);
     }
 
     if( m_xLB_CrossesAt->get_count() > 3 )
@@ -176,6 +180,17 @@ void AxisPositionsTabPage::Reset(const SfxItemSet* rInAttrs)
         m_xLB_CrossesAt->set_active(-1);
         m_xED_CrossesAt->set_sensitive( false );
     }
+
+    // shifted category position
+    if (m_bSupportCategoryPositioning && rInAttrs->GetItemState(SCHATTR_AXIS_SHIFTED_CATEGORY_POSITION, true, &pPoolItem) == SfxItemState::SET)
+    {
+        if (static_cast<const SfxBoolItem*>(pPoolItem)->GetValue())
+            m_xRB_Between->set_active(true);
+        else
+            m_xRB_On->set_active(true);
+    }
+    else
+        m_xFL_Position->hide();
 
     // Labels
     if( rInAttrs->GetItemState( SCHATTR_AXIS_LABEL_POSITION, false, &pPoolItem ) == SfxItemState::SET )
@@ -259,6 +274,11 @@ void AxisPositionsTabPage::SetCategories( const css::uno::Sequence< OUString >& 
 void AxisPositionsTabPage::SupportAxisPositioning( bool bSupportAxisPositioning )
 {
     m_bSupportAxisPositioning = bSupportAxisPositioning;
+}
+
+void AxisPositionsTabPage::SupportCategoryPositioning( bool bSupportCategoryPositioning )
+{
+    m_bSupportCategoryPositioning = bSupportCategoryPositioning;
 }
 
 IMPL_LINK_NOARG(AxisPositionsTabPage, CrossesAtSelectHdl, weld::ComboBox&, void)

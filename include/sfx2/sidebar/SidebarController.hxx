@@ -36,7 +36,7 @@
 #include <com/sun/star/ui/XContextChangeEventListener.hpp>
 #include <com/sun/star/ui/XSidebar.hpp>
 
-#include <o3tl/optional.hxx>
+#include <optional>
 #include <cppuhelper/compbase.hxx>
 #include <cppuhelper/basemutex.hxx>
 
@@ -54,7 +54,7 @@ typedef cppu::WeakComponentImplHelper <
 
 class SfxSplitWindow;
 
-namespace sfx2 { namespace sidebar {
+namespace sfx2::sidebar {
 
 class DeckDescriptor;
 class SidebarDockingWindow;
@@ -197,8 +197,8 @@ private:
         mbIsDeckRequestedOpen.  Normally both flags have the same
         value.  A document being read-only can prevent the deck from opening.
     */
-    ::o3tl::optional<bool> mbIsDeckRequestedOpen;
-    ::o3tl::optional<bool> mbIsDeckOpen;
+    ::std::optional<bool> mbIsDeckRequestedOpen;
+    ::std::optional<bool> mbIsDeckOpen;
 
     bool mbFloatingDeckClosed;
 
@@ -288,7 +288,7 @@ private:
 
 };
 
-} } // end of namespace sfx2::sidebar
+} // end of namespace sfx2::sidebar
 
 #endif
 

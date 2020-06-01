@@ -26,6 +26,7 @@
 #include "format.hxx"
 
 #include <o3tl/typed_flags_set.hxx>
+#include <rtl/ustrbuf.hxx>
 
 #include <cassert>
 #include <vector>
@@ -97,7 +98,7 @@ class SmNode : public SmRect
     SmFace      maFace;
 
     SmToken     maNodeToken;
-    SmNodeType const meType;
+    SmNodeType      meType;
     SmScaleMode     meScaleMode;
     RectHorAlign    meRectHorAlign;
     FontChangeMask  mnFlags;
@@ -434,7 +435,7 @@ public:
  */
 class SmSpecialNode : public SmTextNode
 {
-    bool const mbIsFromGreekSymbolSet;
+    bool mbIsFromGreekSymbolSet;
 
 protected:
     SmSpecialNode(SmNodeType eNodeType, const SmToken &rNodeToken, sal_uInt16 _nFontDesc);

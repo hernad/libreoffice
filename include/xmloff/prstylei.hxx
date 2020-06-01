@@ -29,11 +29,11 @@
 
 struct XMLPropertyState;
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace beans { class XPropertySet; }
-} } }
+}
 
-namespace com { namespace sun { namespace star { namespace style { class XStyle; } } } }
+namespace com::sun::star::style { class XStyle; }
 
 typedef std::unordered_set<OUString> OldFillStyleDefinitionSet;
 
@@ -42,17 +42,19 @@ class XMLOFF_DLLPUBLIC XMLPropStyleContext : public SvXMLStyleContext
 private:
     ::std::vector< XMLPropertyState >          maProperties;
     css::uno::Reference < css::style::XStyle > mxStyle;
-    SvXMLImportContextRef const                mxStyles;
+    SvXMLImportContextRef                      mxStyles;
 
     XMLPropStyleContext(XMLPropStyleContext const &) = delete;
     XMLPropStyleContext& operator =(XMLPropStyleContext const &) = delete;
 
-protected:
+public:
 
     // Helper to check if the local maProperties contains the given
     // FillStyle tag and if the FillStyle there is different from FillStyle_NONE
     bool doNewDrawingLayerFillStyleDefinitionsExist(
         const OUString& rFillStyleTag) const;
+
+protected:
 
     // Helper which will deactivate all old fill definitions (identified by
     // the given OldFillStyleDefinitionSet) in the local maProperties. Deactivation
@@ -89,7 +91,7 @@ public:
     XMLPropStyleContext( SvXMLImport& rImport, sal_uInt16 nPrfx,
             const OUString& rLName,
             const css::uno::Reference< css::xml::sax::XAttributeList > & xAttrList,
-            SvXMLStylesContext& rStyles, sal_uInt16 nFamily,
+            SvXMLStylesContext& rStyles, XmlStyleFamily nFamily,
             bool bDefaultStyle=false );
     virtual ~XMLPropStyleContext() override;
 
@@ -100,6 +102,8 @@ public:
 
     virtual void FillPropertySet(
             const css::uno::Reference< css::beans::XPropertySet > & rPropSet );
+
+    virtual bool isEmptyDataStyleName() { return false; };
 
     const SvXMLStylesContext *GetStyles() const { return static_cast<const SvXMLStylesContext *>(mxStyles.get()); }
     const ::std::vector< XMLPropertyState > & GetProperties() const { return maProperties; }

@@ -22,9 +22,9 @@
 #include <com/sun/star/accessibility/AccessibleEventId.hpp>
 #include <com/sun/star/accessibility/AccessibleStateType.hpp>
 #include <com/sun/star/accessibility/AccessibleRole.hpp>
+#include <com/sun/star/drawing/XShape.hpp>
 #include <com/sun/star/lang/IndexOutOfBoundsException.hpp>
 
-#include <comphelper/accessiblewrapper.hxx>
 #include <vcl/svapp.hxx>
 
 #include <AccessibleTableShape.hxx>

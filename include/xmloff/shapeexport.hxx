@@ -34,10 +34,10 @@
 #include <xmloff/txtparae.hxx>
 #include <o3tl/typed_flags_set.hxx>
 
-namespace com { namespace sun { namespace star { namespace awt { struct Point; } } } }
-namespace com { namespace sun { namespace star { namespace beans { class XPropertySet; } } } }
-namespace com { namespace sun { namespace star { namespace drawing { class XShape; } } } }
-namespace com { namespace sun { namespace star { namespace drawing { class XShapes; } } } }
+namespace com::sun::star::awt { struct Point; }
+namespace com::sun::star::beans { class XPropertySet; }
+namespace com::sun::star::drawing { class XShape; }
+namespace com::sun::star::drawing { class XShapes; }
 
 class XMLTableExport;
 class SvXMLAttributeList;
@@ -130,12 +130,12 @@ struct ImplXMLShapeExportInfo
 {
     OUString   msStyleName;
     OUString   msTextStyleName;
-    sal_Int32       mnFamily;
+    XmlStyleFamily  mnFamily;
     XmlShapeType    meShapeType;
 
     css::uno::Reference< css::drawing::XShape > xCustomShapeReplacement;
 
-    ImplXMLShapeExportInfo() : mnFamily( XML_STYLE_FAMILY_SD_GRAPHICS_ID ), meShapeType( XmlShapeTypeNotYetSet ) {}
+    ImplXMLShapeExportInfo() : mnFamily( XmlStyleFamily::SD_GRAPHICS_ID ), meShapeType( XmlShapeTypeNotYetSet ) {}
 };
 
 /** a vector for shape style and type cache information */

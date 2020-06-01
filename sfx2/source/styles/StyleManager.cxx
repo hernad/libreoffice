@@ -12,16 +12,13 @@
 
 namespace sfx2
 {
-
 SfxStyleSheetBase* StyleManager::Search(const OUString& rStyleName, SfxStyleFamily eFamily)
 {
     SfxStyleSheetBasePool* pPool = mrShell.GetStyleSheetPool();
     if (!pPool)
         return nullptr;
 
-    pPool->SetSearchMask(eFamily);
-
-    SfxStyleSheetBase* pStyle = pPool->First();
+    SfxStyleSheetBase* pStyle = pPool->First(eFamily);
     while (pStyle)
     {
         if (rStyleName == pStyle->GetName())

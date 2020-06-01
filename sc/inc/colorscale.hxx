@@ -214,8 +214,8 @@ enum ScIconSetType
 
 struct ScIconSetMap {
     const char* pName;
-    ScIconSetType const eType;
-    sal_Int32 const nElements;
+    ScIconSetType eType;
+    sal_Int32 nElements;
 };
 
 class SC_DLLPUBLIC ScColorFormat : public ScFormatEntry
@@ -268,7 +268,7 @@ public:
 
     virtual void SetParent(ScConditionalFormat* pParent) override;
 
-    o3tl::optional<Color> GetColor(const ScAddress& rAddr) const;
+    std::optional<Color> GetColor(const ScAddress& rAddr) const;
     void AddEntry(ScColorScaleEntry* pEntry);
 
     virtual void UpdateReference( sc::RefUpdateContext& rCxt ) override;

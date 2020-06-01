@@ -13,7 +13,7 @@
  manual changes will be rewritten by the next run of update_pch.sh (which presumably
  also fixes all possible problems, so it's usually better to use it).
 
- Generated on 2020-02-01 10:59:03 using:
+ Generated on 2020-05-07 20:21:38 using:
  ./bin/update_pch vcl vcl --cutoff=6 --exclude:system --include:module --include:local
 
  If after updating build fails, use the following command to locate conflicting headers:
@@ -22,7 +22,9 @@
 
 #if PCH_LEVEL >= 1
 #include <algorithm>
+#include <atomic>
 #include <cassert>
+#include <cmath>
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
@@ -37,6 +39,7 @@
 #include <math.h>
 #include <memory>
 #include <new>
+#include <optional>
 #include <ostream>
 #include <set>
 #include <stddef.h>
@@ -85,7 +88,6 @@
 #include <rtl/textenc.h>
 #include <rtl/unload.h>
 #include <rtl/uri.hxx>
-#include <rtl/ustrbuf.h>
 #include <rtl/ustrbuf.hxx>
 #include <rtl/ustring.h>
 #include <rtl/ustring.hxx>
@@ -93,7 +95,6 @@
 #include <sal/config.h>
 #include <sal/log.hxx>
 #include <sal/macros.h>
-#include <sal/mathconf.h>
 #include <sal/saldllapi.h>
 #include <sal/types.h>
 #endif // PCH_LEVEL >= 2
@@ -113,6 +114,7 @@
 #include <basegfx/tuple/b2dtuple.hxx>
 #include <basegfx/tuple/b2ituple.hxx>
 #include <basegfx/tuple/b3dtuple.hxx>
+#include <basegfx/utils/common.hxx>
 #include <basegfx/vector/b2dvector.hxx>
 #include <basegfx/vector/b2enums.hxx>
 #include <basegfx/vector/b2ivector.hxx>
@@ -161,6 +163,7 @@
 #include <com/sun/star/util/Date.hpp>
 #include <com/sun/star/util/DateTime.hpp>
 #include <comphelper/comphelperdllapi.h>
+#include <comphelper/fileformat.h>
 #include <comphelper/lok.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/sequence.hxx>
@@ -182,7 +185,6 @@
 #include <i18nlangtag/mslangid.hxx>
 #include <i18nutil/i18nutildllapi.h>
 #include <o3tl/cow_wrapper.hxx>
-#include <o3tl/optional.hxx>
 #include <o3tl/safeint.hxx>
 #include <o3tl/strong_int.hxx>
 #include <o3tl/typed_flags_set.hxx>
@@ -201,6 +203,7 @@
 #include <svl/svldllapi.h>
 #include <svl/typedwhich.hxx>
 #include <test/outputdevice.hxx>
+#include <tools/UnitConversion.hxx>
 #include <tools/color.hxx>
 #include <tools/contnr.hxx>
 #include <tools/date.hxx>
@@ -212,7 +215,6 @@
 #include <tools/gen.hxx>
 #include <tools/globname.hxx>
 #include <tools/helpers.hxx>
-#include <tools/lineend.hxx>
 #include <tools/link.hxx>
 #include <tools/mapunit.hxx>
 #include <tools/poly.hxx>
@@ -241,6 +243,7 @@
 #include <TypeSerializer.hxx>
 #include <bitmapwriteaccess.hxx>
 #include <brdwin.hxx>
+#include <configsettings.hxx>
 #include <controldata.hxx>
 #include <fontattributes.hxx>
 #include <impglyphitem.hxx>
@@ -258,6 +261,7 @@
 #include <saltimer.hxx>
 #include <salusereventlist.hxx>
 #include <salvd.hxx>
+#include <salvtables.hxx>
 #include <svdata.hxx>
 #include <vcl/BitmapFilter.hxx>
 #include <vcl/BitmapTools.hxx>
@@ -267,16 +271,13 @@
 #include <vcl/bitmapaccess.hxx>
 #include <vcl/bitmapex.hxx>
 #include <vcl/builder.hxx>
-#include <vcl/button.hxx>
 #include <vcl/canvastools.hxx>
 #include <vcl/commandevent.hxx>
 #include <vcl/commandinfoprovider.hxx>
-#include <configsettings.hxx>
 #include <vcl/ctrl.hxx>
 #include <vcl/cursor.hxx>
 #include <vcl/cvtgrf.hxx>
 #include <vcl/decoview.hxx>
-#include <vcl/dialog.hxx>
 #include <vcl/dibtools.hxx>
 #include <vcl/dllapi.h>
 #include <vcl/dockwin.hxx>
@@ -304,7 +305,9 @@
 #include <vcl/outdev.hxx>
 #include <vcl/ptrstyle.hxx>
 #include <vcl/quickselectionengine.hxx>
+#include <vcl/scrbar.hxx>
 #include <vcl/settings.hxx>
+#include <vcl/spinfld.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/svlbitm.hxx>
 #include <vcl/syswin.hxx>
@@ -313,6 +316,8 @@
 #include <vcl/taskpanelist.hxx>
 #include <vcl/timer.hxx>
 #include <vcl/toolbox.hxx>
+#include <vcl/toolkit/button.hxx>
+#include <vcl/toolkit/dialog.hxx>
 #include <vcl/toolkit/unowrap.hxx>
 #include <vcl/transfer.hxx>
 #include <vcl/treelist.hxx>

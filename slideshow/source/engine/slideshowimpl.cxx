@@ -129,7 +129,7 @@ private:
         one used by SlideShowImpl: it is not paused or modified by
         animations.
     */
-    canvas::tools::ElapsedTime const maTimer;
+    canvas::tools::ElapsedTime maTimer;
     /** Time between the display of frames.  Enforced only when mbIsActive
         is <TRUE/>.
     */
@@ -400,13 +400,13 @@ private:
     //map of vector of Polygons, containing polygons drawn on each slide.
     PolygonMap                              maPolygons;
 
-    o3tl::optional<RGBColor>               maUserPaintColor;
+    std::optional<RGBColor>               maUserPaintColor;
 
     double                                  maUserPaintStrokeWidth;
 
     //changed for the eraser project
-    o3tl::optional<bool>           maEraseAllInk;
-    o3tl::optional<sal_Int32>          maEraseInk;
+    std::optional<bool>           maEraseAllInk;
+    std::optional<sal_Int32>          maEraseInk;
     //end changed
 
     std::shared_ptr<canvas::tools::ElapsedTime> mpPresTimer;
@@ -840,7 +840,7 @@ ActivitySharedPtr SlideShowImpl::createSlideTransition(
                 nTransitionDuration,
                 nMinFrames,
                 false,
-                o3tl::optional<double>(1.0),
+                std::optional<double>(1.0),
                 0.0,
                 0.0,
                 ShapeSharedPtr(),
@@ -1376,25 +1376,32 @@ void SlideShowImpl::registerUserPaintPolygons( const uno::Reference< lang::XMult
         maPolygons.insert(make_pair(mpCurrentSlide->getXDrawPage(),mpCurrentSlide->getPolygons()));
     }
 
-    //Creating the layer for shapes
+    //Creating the layer for shapes drawn during slideshow
     // query for the XLayerManager
     uno::Reference< drawing::XLayerSupplier > xLayerSupplier(xDocFactory, uno::UNO_QUERY);
     uno::Reference< container::XNameAccess > xNameAccess = xLayerSupplier->getLayerManager();
-
     uno::Reference< drawing::XLayerManager > xLayerManager(xNameAccess, uno::UNO_QUERY);
-    // create a layer and set its properties
-    uno::Reference< drawing::XLayer > xDrawnInSlideshow = xLayerManager->insertNewByIndex(xLayerManager->getCount());
 
-    //Layer Name which enables to catch annotations
-    OUString layerName = "DrawnInSlideshow";
+    // create layer
+    uno::Reference< drawing::XLayer > xDrawnInSlideshow;
     uno::Any aPropLayer;
+    OUString sLayerName = "DrawnInSlideshow";
+    if (xNameAccess->hasByName(sLayerName))
+    {
+        xNameAccess->getByName(sLayerName) >>= xDrawnInSlideshow;
+    }
+    else
+    {
+        xDrawnInSlideshow = xLayerManager->insertNewByIndex(xLayerManager->getCount());
+        aPropLayer <<= sLayerName;
+        xDrawnInSlideshow->setPropertyValue("Name", aPropLayer);
+    }
 
-    aPropLayer <<= layerName;
-    xDrawnInSlideshow->setPropertyValue("Name", aPropLayer);
-
+    // ODF defaults from ctor of SdrLayer are not automatically set on the here
+    // created XLayer. Need to be done explicitly here.
     aPropLayer <<= true;
     xDrawnInSlideshow->setPropertyValue("IsVisible", aPropLayer);
-
+    xDrawnInSlideshow->setPropertyValue("IsPrintable", aPropLayer);
     aPropLayer <<= false;
     xDrawnInSlideshow->setPropertyValue("IsLocked", aPropLayer);
 
@@ -1403,7 +1410,7 @@ void SlideShowImpl::registerUserPaintPolygons( const uno::Reference< lang::XMult
     {
         PolyPolygonVector aPolygons = rPoly.second;
         //Get shapes for the slide
-        css::uno::Reference< css::drawing::XShapes > Shapes(rPoly.first, css::uno::UNO_QUERY);
+        css::uno::Reference< css::drawing::XShapes > Shapes = rPoly.first;
         //Retrieve polygons for one slide
         for( const auto& pPolyPoly : aPolygons )
         {
@@ -1801,7 +1808,7 @@ void SlideShowImpl::addShapeEventListener(
     }
 
     // add new listener to broadcaster
-    if( aIter->second.get() )
+    if( aIter->second )
         aIter->second->addInterface( xListener );
 
     maEventMultiplexer.notifyShapeListenerAdded(xShape);
@@ -1823,7 +1830,7 @@ void SlideShowImpl::removeShapeEventListener(
         // entry for this shape found -> remove listener from
         // helper object
         ENSURE_OR_THROW(
-            aIter->second.get(),
+            aIter->second,
             "SlideShowImpl::removeShapeEventListener(): "
             "listener map contains NULL broadcast helper" );
 

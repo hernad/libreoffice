@@ -14,17 +14,13 @@ gb_JavaClassSet_JAVACDEBUG:= -g
 $(eval $(call gb_Jar_Jar,OOoRunner))
 
 $(eval $(call gb_Jar_add_manifest_classpath,OOoRunner,\
-	ridl.jar \
-	unoil.jar \
+	libreoffice.jar \
 ))
 
 $(eval $(call gb_Jar_set_manifest,OOoRunner,$(SRCDIR)/qadevOOo/runner/manifest))
 
 $(eval $(call gb_Jar_use_jars,OOoRunner,\
-	ridl \
-	unoil \
-	jurt \
-	juh \
+	libreoffice \
 	java_uno \
 ))
 
@@ -965,7 +961,6 @@ $(eval $(call gb_Jar_add_sourcefiles,OOoRunner,\
     qadevOOo/tests/java/mod/_sc/ScSheetLinkObj \
     qadevOOo/tests/java/mod/_sc/ScStyleObj \
     qadevOOo/tests/java/mod/_sc/ScTableSheetObj \
-    qadevOOo/tests/java/mod/_sc/ScTableSheetsObj \
     qadevOOo/tests/java/mod/_sc/ScTabViewObj \
     qadevOOo/tests/java/mod/_sc/XMLContentExporter \
     qadevOOo/tests/java/mod/_sc/XMLContentImporter \

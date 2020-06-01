@@ -1671,12 +1671,12 @@ SwTwips SwFrame::AdjustNeighbourhood( SwTwips nDiff, bool bTst )
         {
             {
                 SwFrameAreaDefinition::FrameAreaWriteAccess aFrm(*pUp);
-                aFrm.SSize().AdjustHeight(nChg );
+                aFrm.AddHeight(nChg );
             }
 
             {
                 SwFrameAreaDefinition::FramePrintAreaWriteAccess aPrt(*pUp);
-                aPrt.SSize().AdjustHeight(nChg );
+                aPrt.AddHeight(nChg );
             }
 
             if ( pViewShell )
@@ -1686,7 +1686,7 @@ SwTwips SwFrame::AdjustNeighbourhood( SwTwips nDiff, bool bTst )
                 GetNext()->InvalidatePos_();
 
             //Trigger a repaint if necessary.
-            std::shared_ptr<SvxBrushItem> aBack(pUp->GetFormat()->makeBackgroundBrushItem());
+            std::unique_ptr<SvxBrushItem> aBack(pUp->GetFormat()->makeBackgroundBrushItem());
             const SvxGraphicPosition ePos = aBack ? aBack->GetGraphicPos() : GPOS_NONE;
             if ( ePos != GPOS_NONE && ePos != GPOS_TILED )
                 pViewShell->InvalidateWindows( pUp->getFrameArea() );
@@ -1707,7 +1707,7 @@ SwTwips SwFrame::AdjustNeighbourhood( SwTwips nDiff, bool bTst )
                 if ( IsBodyFrame() )
                 {
                     SwFrameAreaDefinition::FramePrintAreaWriteAccess aPrt(*this);
-                    aPrt.SSize().setHeight( nOldFrameHeight );
+                    aPrt.Height( nOldFrameHeight );
                 }
 
                 if ( pUp->GetUpper() )
@@ -1716,10 +1716,10 @@ SwTwips SwFrame::AdjustNeighbourhood( SwTwips nDiff, bool bTst )
                 }
 
                 SwFrameAreaDefinition::FrameAreaWriteAccess aFrm(*this);
-                aFrm.SSize().setHeight( nOldFrameHeight );
+                aFrm.Height( nOldFrameHeight );
 
                 SwFrameAreaDefinition::FramePrintAreaWriteAccess aPrt(*this);
-                aPrt.SSize().setHeight( nOldPrtHeight );
+                aPrt.Height( nOldPrtHeight );
 
                 mbCompletePaint = bOldComplete;
             }
@@ -2723,7 +2723,7 @@ SwTwips SwLayoutFrame::GrowFrame( SwTwips nDist, bool bTst, bool bInfo )
             if( IsCellFrame() )
                 InvaPercentLowers( nReal );
 
-            std::shared_ptr<SvxBrushItem> aBack(GetFormat()->makeBackgroundBrushItem());
+            std::unique_ptr<SvxBrushItem> aBack(GetFormat()->makeBackgroundBrushItem());
             const SvxGraphicPosition ePos = aBack ? aBack->GetGraphicPos() : GPOS_NONE;
             if ( GPOS_NONE != ePos && GPOS_TILED != ePos )
                 SetCompletePaint();
@@ -2909,7 +2909,7 @@ SwTwips SwLayoutFrame::ShrinkFrame( SwTwips nDist, bool bTst, bool bInfo )
             const SwFrameFormat* pFormat = GetFormat();
             if (pFormat)
             {
-                std::shared_ptr<SvxBrushItem> aBack(pFormat->makeBackgroundBrushItem());
+                std::unique_ptr<SvxBrushItem> aBack(pFormat->makeBackgroundBrushItem());
                 const SvxGraphicPosition ePos = aBack ? aBack->GetGraphicPos() : GPOS_NONE;
                 if ( GPOS_NONE == ePos || GPOS_TILED == ePos )
                     bCompletePaint = false;

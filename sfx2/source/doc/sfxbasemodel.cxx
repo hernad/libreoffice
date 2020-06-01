@@ -135,7 +135,6 @@ using ::com::sun::star::frame::XController;
 using ::com::sun::star::frame::XController2;
 using ::com::sun::star::lang::IllegalArgumentException;
 using ::com::sun::star::io::IOException;
-using ::com::sun::star::lang::WrappedTargetException;
 using ::com::sun::star::uno::Sequence;
 using ::com::sun::star::document::XDocumentRecovery;
 using ::com::sun::star::document::XUndoManager;
@@ -525,29 +524,6 @@ Any SAL_CALL SfxBaseModel::queryInterface( const uno::Type& rType )
         return Any();
 
     return SfxBaseModel_Base::queryInterface( rType );
-}
-
-//  XInterface
-void SAL_CALL SfxBaseModel::acquire() throw( )
-{
-    // Attention:
-    //  Don't use mutex or guard in this method!!! Is a method of XInterface.
-
-    // Forward to baseclass
-    OWeakObject::acquire() ;
-}
-
-
-//  XInterface
-
-
-void SAL_CALL SfxBaseModel::release() throw( )
-{
-    // Attention:
-    //  Don't use mutex or guard in this method!!! Is a method of XInterface.
-
-    // Forward to baseclass
-    OWeakObject::release() ;
 }
 
 
@@ -1121,6 +1097,19 @@ void SAL_CALL SfxBaseModel::setArgs(const Sequence<beans::PropertyValue>& aArgs)
                 pMedium->GetItemSet()->Put(SfxBoolItem(SID_LOCK_EDITDOC, bValue));
                 ok = true;
             }
+        }
+        else if (rArg.Name == "Replaceable")
+        {
+            if (rArg.Value >>= bValue)
+            {
+                pMedium->GetItemSet()->Put(SfxBoolItem(SID_REPLACEABLE, bValue));
+                ok = true;
+            }
+        }
+        else if (rArg.Name == "EncryptionData")
+        {
+            pMedium->GetItemSet()->Put(SfxUnoAnyItem(SID_ENCRYPTIONDATA, rArg.Value));
+            ok = true;
         }
         if (!ok)
         {
@@ -2476,8 +2465,10 @@ void SAL_CALL SfxBaseModel::notifyDocumentEvent( const OUString&, const Referenc
     throw lang::NoSupportException("SfxBaseModel controls all the sent notifications itself!" );
 }
 
-Sequence< document::CmisProperty > SAL_CALL SfxBaseModel::getCmisProperties()
+Sequence<document::CmisProperty> SAL_CALL SfxBaseModel::getCmisProperties()
 {
+    if (impl_isDisposed())
+        return Sequence<document::CmisProperty>();
     return m_pData->m_cmisProperties;
 }
 
@@ -2615,7 +2606,9 @@ void SAL_CALL SfxBaseModel::checkIn( sal_Bool bIsMajor, const OUString& rMessage
 
 uno::Sequence< document::CmisVersion > SAL_CALL SfxBaseModel::getAllVersions( )
 {
-    uno::Sequence< document::CmisVersion > aVersions;
+    uno::Sequence<document::CmisVersion> aVersions;
+    if (impl_isDisposed())
+        return aVersions;
     SfxMedium* pMedium = m_pData->m_pObjectShell->GetMedium();
     if ( pMedium )
     {
@@ -3475,7 +3468,7 @@ bool SfxBaseModel::hasValidSignatures() const
 
 void SfxBaseModel::getGrabBagItem(css::uno::Any& rVal) const
 {
-    if (m_pData->m_xGrabBagItem.get())
+    if (m_pData->m_xGrabBagItem)
         m_pData->m_xGrabBagItem->QueryValue(rVal);
     else
         rVal <<= uno::Sequence<beans::PropertyValue>();
@@ -3483,7 +3476,7 @@ void SfxBaseModel::getGrabBagItem(css::uno::Any& rVal) const
 
 void SfxBaseModel::setGrabBagItem(const css::uno::Any& rVal)
 {
-    if (!m_pData->m_xGrabBagItem.get())
+    if (!m_pData->m_xGrabBagItem)
         m_pData->m_xGrabBagItem = std::make_shared<SfxGrabBagItem>();
 
     m_pData->m_xGrabBagItem->PutValue(rVal, 0);
@@ -3931,7 +3924,7 @@ OUString SAL_CALL SfxBaseModel::getTitle()
     SfxModelGuard aGuard( *this );
 
     OUString aResult = impl_getTitleHelper()->getTitle ();
-    if ( !m_pData->m_bExternalTitle && m_pData->m_pObjectShell.get() )
+    if ( !m_pData->m_bExternalTitle && m_pData->m_pObjectShell )
     {
         SfxMedium* pMedium = m_pData->m_pObjectShell->GetMedium();
         if ( pMedium )

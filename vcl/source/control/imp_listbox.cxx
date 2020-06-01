@@ -25,6 +25,7 @@
 #include <vcl/scrbar.hxx>
 #include <vcl/lstbox.hxx>
 #include <vcl/i18nhelp.hxx>
+#include <vcl/naturalsort.hxx>
 
 #include <listbox.hxx>
 #include <controldata.hxx>
@@ -110,10 +111,13 @@ namespace
     };
 }
 
-sal_Int32 ListBox::NaturalSortCompare(const OUString &rA, const OUString &rB)
+namespace vcl
 {
-    const comphelper::string::NaturalStringSorter &rSorter = theSorter::get();
-    return rSorter.compare(rA, rB);
+    sal_Int32 NaturalSortCompare(const OUString &rA, const OUString &rB)
+    {
+        const comphelper::string::NaturalStringSorter &rSorter = theSorter::get();
+        return rSorter.compare(rA, rB);
+    }
 }
 
 sal_Int32 ImplEntryList::InsertEntry( sal_Int32 nPos, ImplEntryType* pNewEntry, bool bSort )
@@ -359,12 +363,6 @@ void ImplEntryList::SetEntryFlags( sal_Int32 nPos, ListBoxEntryFlags nFlags )
         pImplEntry->mnFlags = nFlags;
 }
 
-ListBoxEntryFlags ImplEntryList::GetEntryFlags( sal_Int32 nPos ) const
-{
-    ImplEntryType* pImplEntry = GetEntry( nPos );
-    return pImplEntry ? pImplEntry->mnFlags : ListBoxEntryFlags::NONE;
-}
-
 sal_Int32 ImplEntryList::GetSelectedEntryCount() const
 {
     sal_Int32 nSelCount = 0;
@@ -469,7 +467,7 @@ ImplListBoxWindow::ImplListBoxWindow( vcl::Window* pParent, WinBits nWinStyle ) 
     mbCenter            = ( nWinStyle & WB_CENTER );
     mbSimpleMode        = ( nWinStyle & WB_SIMPLEMODE );
     mbSort              = ( nWinStyle & WB_SORT );
-    mbIsComboboxDropdown = ( nWinStyle & WB_DROPDOWN );
+    mbIsDropdown        = ( nWinStyle & WB_DROPDOWN );
     mbEdgeBlending      = false;
 
     // pb: #106948# explicit mirroring for calc
@@ -477,7 +475,6 @@ ImplListBoxWindow::ImplListBoxWindow( vcl::Window* pParent, WinBits nWinStyle ) 
 
     mnCurrentPos            = LISTBOX_ENTRY_NOTFOUND;
     mnTrackingSaveSelection = LISTBOX_ENTRY_NOTFOUND;
-    meProminentType         = ProminentEntry::TOP;
 
     SetLineColor();
     SetTextFillColor();
@@ -609,11 +606,6 @@ SalLayoutGlyphs* ImplEntryType::GetTextGlyphs(const OutputDevice* pOutputDevice)
     return &maStrGlyphs;
 }
 
-void ImplListBoxWindow::EnableQuickSelection( bool b )
-{
-    maQuickSelectionEngine.SetEnabled( b );
-}
-
 void ImplListBoxWindow::ImplUpdateEntryMetrics( ImplEntryType& rEntry )
 {
     ImplEntryMetrics aMetrics;
@@ -669,16 +661,18 @@ void ImplListBoxWindow::ImplUpdateEntryMetrics( ImplEntryType& rEntry )
         aMetrics.nEntryHeight = std::max( aMetrics.nImgHeight, aMetrics.nEntryHeight );
 
     }
-    if ( IsUserDrawEnabled() || aMetrics.bImage )
+
+    bool bIsUserDrawEnabled = IsUserDrawEnabled();
+    if (bIsUserDrawEnabled || aMetrics.bImage)
     {
         aMetrics.nEntryWidth = std::max( aMetrics.nImgWidth, maUserItemSize.Width() );
-        if ( aMetrics.bText )
+        if (!bIsUserDrawEnabled && aMetrics.bText)
             aMetrics.nEntryWidth += aMetrics.nTextWidth + IMG_TXT_DISTANCE;
         aMetrics.nEntryHeight = std::max( std::max( mnMaxImgHeight, maUserItemSize.Height() ) + 2,
                                      aMetrics.nEntryHeight );
     }
 
-    if ( !aMetrics.bText && !aMetrics.bImage && !IsUserDrawEnabled() )
+    if (!aMetrics.bText && !aMetrics.bImage && !bIsUserDrawEnabled)
     {
         // entries which have no (aka an empty) text, and no image,
         // and are not user-drawn, should be shown nonetheless
@@ -734,19 +728,24 @@ void ImplListBoxWindow::ImplCallSelect()
     mbSelectionChanged = false;
 }
 
-sal_Int32 ImplListBoxWindow::InsertEntry( sal_Int32 nPos, ImplEntryType* pNewEntry )
+sal_Int32 ImplListBoxWindow::InsertEntry(sal_Int32 nPos, ImplEntryType* pNewEntry, bool bSort)
 {
     assert(nPos >= 0);
     assert(mpEntryList->GetEntryCount() < LISTBOX_MAX_ENTRIES);
 
     ImplClearLayoutData();
-    sal_Int32 nNewPos = mpEntryList->InsertEntry( nPos, pNewEntry, mbSort );
+    sal_Int32 nNewPos = mpEntryList->InsertEntry( nPos, pNewEntry, bSort );
 
     if( GetStyle() & WB_WORDBREAK )
         pNewEntry->mnFlags |= ListBoxEntryFlags::MultiLine;
 
     ImplUpdateEntryMetrics( *pNewEntry );
     return nNewPos;
+}
+
+sal_Int32 ImplListBoxWindow::InsertEntry( sal_Int32 nPos, ImplEntryType* pNewEntry )
+{
+    return InsertEntry(nPos, pNewEntry, mbSort);
 }
 
 void ImplListBoxWindow::RemoveEntry( sal_Int32 nPos )
@@ -1625,7 +1624,7 @@ bool ImplListBoxWindow::ProcessKeyInput( const KeyEvent& rKEvt )
         if(SelectEntries( nSelect, eLET, bShift, bCtrl, bCurPosChange))
         {
             // tdf#129043 Correctly deliver events when changing values with arrow keys in combobox
-            if (mbIsComboboxDropdown && IsReallyVisible())
+            if (mbIsDropdown && IsReallyVisible())
                 mbTravelSelect = true;
             mnSelectModifier = rKEvt.GetKeyCode().GetModifier();
             ImplCallSelect();
@@ -1711,7 +1710,8 @@ void ImplListBoxWindow::ImplPaint(vcl::RenderContext& rRenderContext, sal_Int32 
     long nY = mpEntryList->GetAddedHeight(nPos, mnTop);
     tools::Rectangle aRect(Point(0, nY), Size(nWidth, pEntry->getHeightWithMargin()));
 
-    if (mpEntryList->IsEntryPosSelected(nPos))
+    bool bSelected = mpEntryList->IsEntryPosSelected(nPos);
+    if (bSelected)
     {
         rRenderContext.SetTextColor(!IsEnabled() ? rStyleSettings.GetDisableColor() : rStyleSettings.GetHighlightTextColor());
         rRenderContext.SetFillColor(rStyleSettings.GetHighlightColor());
@@ -1734,12 +1734,8 @@ void ImplListBoxWindow::ImplPaint(vcl::RenderContext& rRenderContext, sal_Int32 
         if (nPos < GetEntryList()->GetMRUCount())
             nPos = GetEntryList()->FindEntry(GetEntryList()->GetEntryText(nPos));
         nPos = nPos - GetEntryList()->GetMRUCount();
-        sal_Int32 nCurr = mnCurrentPos;
-        if (mnCurrentPos < GetEntryList()->GetMRUCount())
-            nCurr = GetEntryList()->FindEntry(GetEntryList()->GetEntryText(nCurr));
-        nCurr = sal::static_int_cast<sal_Int32>(nCurr - GetEntryList()->GetMRUCount());
 
-        UserDrawEvent aUDEvt(this, &rRenderContext, aRect, nPos, nCurr);
+        UserDrawEvent aUDEvt(this, &rRenderContext, aRect, nPos, bSelected);
         maUserDrawHdl.Call( &aUDEvt );
         mbInUserDraw = false;
     }
@@ -1749,7 +1745,7 @@ void ImplListBoxWindow::ImplPaint(vcl::RenderContext& rRenderContext, sal_Int32 
     }
 }
 
-void ImplListBoxWindow::DrawEntry(vcl::RenderContext& rRenderContext, sal_Int32 nPos, bool bDrawImage, bool bDrawText, bool bDrawTextAtImagePos)
+void ImplListBoxWindow::DrawEntry(vcl::RenderContext& rRenderContext, sal_Int32 nPos, bool bDrawImage, bool bDrawText)
 {
     const ImplEntryType* pEntry = mpEntryList->GetEntryPtr(nPos);
     if (!pEntry)
@@ -1820,7 +1816,7 @@ void ImplListBoxWindow::DrawEntry(vcl::RenderContext& rRenderContext, sal_Int32 
             tools::Rectangle aTextRect(Point(gnBorder - mnLeft, nY),
                                 Size(nMaxWidth, nEntryHeight));
 
-            if (!bDrawTextAtImagePos && (mpEntryList->HasEntryImage(nPos) || IsUserDrawEnabled()))
+            if (mpEntryList->HasEntryImage(nPos) || IsUserDrawEnabled())
             {
                 long nImageWidth = std::max(mnMaxImgWidth, maUserItemSize.Width());
                 aTextRect.AdjustLeft(nImageWidth + IMG_TXT_DISTANCE );
@@ -1978,11 +1974,11 @@ void ImplListBoxWindow::SetTopEntry( sal_Int32 nTop )
     {
         ImplClearLayoutData();
         long nDiff = mpEntryList->GetAddedHeight( mnTop, nTop );
-        Update();
+        PaintImmediately();
         ImplHideFocusRect();
         mnTop = nTop;
         Scroll( 0, nDiff );
-        Update();
+        PaintImmediately();
         if( HasFocus() )
             ImplShowFocusRect();
         maScrollHdl.Call( this );
@@ -1991,13 +1987,6 @@ void ImplListBoxWindow::SetTopEntry( sal_Int32 nTop )
 
 void ImplListBoxWindow::ShowProminentEntry( sal_Int32 nEntryPos )
 {
-    if( meProminentType == ProminentEntry::MIDDLE )
-    {
-        sal_Int32 nPos = nEntryPos;
-        long nWHeight = PixelToLogic( GetSizePixel() ).Height();
-        while( nEntryPos > 0 && mpEntryList->GetAddedHeight( nPos+1, nEntryPos ) < nWHeight/2 )
-            nEntryPos--;
-    }
     SetTopEntry( nEntryPos );
 }
 
@@ -2028,10 +2017,10 @@ void ImplListBoxWindow::ScrollHorz( long n )
     {
         ImplClearLayoutData();
         mnLeft = sal::static_int_cast<sal_uInt16>(mnLeft + nDiff);
-        Update();
+        PaintImmediately();
         ImplHideFocusRect();
         Scroll( -nDiff, 0 );
-        Update();
+        PaintImmediately();
         if( HasFocus() )
             ImplShowFocusRect();
         maScrollHdl.Call( this );
@@ -2560,7 +2549,7 @@ void ImplListBox::SetMRUEntries( const OUString& rEntries, sal_Unicode cSep )
         if ( GetEntryList()->FindEntry( aEntry ) != LISTBOX_ENTRY_NOTFOUND )
         {
             ImplEntryType* pNewEntry = new ImplEntryType( aEntry );
-            maLBWindow->GetEntryList()->InsertEntry( nMRUCount++, pNewEntry, false );
+            maLBWindow->InsertEntry(nMRUCount++, pNewEntry, false);
             bChanges = true;
         }
     }
@@ -2606,7 +2595,6 @@ ImplWin::ImplWin( vcl::Window* pParent, WinBits nWinStyle ) :
 
     ImplGetWindowImpl()->mbUseNativeFocus = ImplGetSVData()->maNWFData.mbNoFocusRects;
 
-    mbUserDrawEnabled = false;
     mbEdgeBlending = false;
     mnItemPos = LISTBOX_ENTRY_NOTFOUND;
 }
@@ -2628,18 +2616,16 @@ void ImplWin::FillLayoutData() const
 
 bool ImplWin::PreNotify( NotifyEvent& rNEvt )
 {
-    const MouseEvent* pMouseEvt = nullptr;
-
-    if( (rNEvt.GetType() == MouseNotifyEvent::MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) != nullptr )
+    if( rNEvt.GetType() == MouseNotifyEvent::MOUSEMOVE )
     {
-        if( pMouseEvt->IsEnterWindow() || pMouseEvt->IsLeaveWindow() )
+        const MouseEvent* pMouseEvt = rNEvt.GetMouseEvent();
+        if( pMouseEvt && (pMouseEvt->IsEnterWindow() || pMouseEvt->IsLeaveWindow()) )
         {
             // trigger redraw as mouse over state has changed
             if ( IsNativeControlSupported(ControlType::Listbox, ControlPart::Entire)
             && ! IsNativeControlSupported(ControlType::Listbox, ControlPart::ButtonDown) )
             {
                 GetParent()->GetWindow( GetWindowType::Border )->Invalidate( InvalidateFlags::NoErase );
-                GetParent()->GetWindow( GetWindowType::Border )->Update();
             }
         }
     }
@@ -2684,8 +2670,13 @@ void ImplWin::ImplDraw(vcl::RenderContext& rRenderContext, bool bLayout)
 
             bool bMouseOver = false;
             vcl::Window *pChild = pWin->GetWindow( GetWindowType::FirstChild );
-            while( pChild && !(bMouseOver = pChild->IsMouseOver()) )
+            while( pChild )
+            {
+                bMouseOver = pChild->IsMouseOver();
+                if (bMouseOver)
+                    break;
                 pChild = pChild->GetWindow( GetWindowType::Next );
+            }
             if( bMouseOver )
                 nState |= ControlState::ROLLOVER;
 
@@ -2752,15 +2743,7 @@ void ImplWin::ImplDraw(vcl::RenderContext& rRenderContext, bool bLayout)
         }
     }
 
-    if ( IsUserDrawEnabled() )
-    {
-        UserDrawEvent aUDEvt(this, &rRenderContext, maFocusRect, mnItemPos, 0);
-        maUserDrawHdl.Call( &aUDEvt );
-    }
-    else
-    {
-        DrawEntry(rRenderContext, bLayout);
-    }
+    DrawEntry(rRenderContext, bLayout);
 }
 
 void ImplWin::ApplySettings(vcl::RenderContext& rRenderContext)
@@ -2839,7 +2822,7 @@ void ImplWin::DrawEntry(vcl::RenderContext& rRenderContext, bool bLayout)
 
         tools::Rectangle aTextRect( Point( nBorder, 0 ), Size( aOutSz.Width()-2*nBorder, aOutSz.Height() ) );
 
-        if ( bImage || IsUserDrawEnabled() )
+        if ( bImage )
         {
             aTextRect.AdjustLeft(maImage.GetSizePixel().Width() + IMG_TXT_DISTANCE );
         }

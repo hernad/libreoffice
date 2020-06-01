@@ -29,7 +29,7 @@
 #include <cstddef>
 #include <memory>
 #include <vector>
-#include <o3tl/optional.hxx>
+#include <optional>
 
 
 class SfxItemSet;
@@ -92,10 +92,10 @@ class SW_DLLPUBLIC SwRedlineData
 
     OUString m_sComment;
     DateTime m_aStamp;
+    std::size_t m_nAuthor;
     RedlineType m_eType;
-    bool m_bAutoFormat;
-    std::size_t const m_nAuthor;
     sal_uInt16 m_nSeqNo;
+    bool m_bAutoFormat;
 
 public:
     SwRedlineData( RedlineType eT, std::size_t nAut );
@@ -156,9 +156,9 @@ class SW_DLLPUBLIC SwRangeRedline : public SwPaM
     SwNodeIndex* m_pContentSect;
     bool m_bDelLastPara : 1;
     bool m_bIsVisible : 1;
-    sal_uInt32 const m_nId;
+    sal_uInt32 m_nId;
 
-    o3tl::optional<long> m_oLOKLastNodeTop;
+    std::optional<long> m_oLOKLastNodeTop;
 
     void MoveToSection();
     void CopyToSection();

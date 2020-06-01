@@ -25,7 +25,6 @@
 #include <com/sun/star/awt/FontDescriptor.hpp>
 #include <com/sun/star/report/XFormatCondition.hpp>
 #include <com/sun/star/container/XContainer.hpp>
-#include <com/sun/star/lang/IndexOutOfBoundsException.hpp>
 #include <com/sun/star/lang/Locale.hpp>
 #include <com/sun/star/style/ParagraphAdjust.hpp>
 #include <comphelper/interfacecontainer2.hxx>
@@ -77,7 +76,7 @@ namespace reportdesign
         ::comphelper::OInterfaceContainerHelper2                  aContainerListeners;
         OReportComponentProperties                          aComponent;
         OFormatProperties                                   aFormatProperties;
-        css::container::XContainer* const                   m_pOwner;
+        css::container::XContainer*                         m_pOwner;
         ::std::vector< css::uno::Reference< css::report::XFormatCondition> >
                                                             m_aFormatConditions;
         osl::Mutex&                                         m_rMutex;

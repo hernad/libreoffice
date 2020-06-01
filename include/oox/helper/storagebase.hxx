@@ -29,12 +29,12 @@
 #include <oox/helper/refmap.hxx>
 #include <rtl/ustring.hxx>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace embed { class XStorage; }
     namespace io { class XInputStream; }
     namespace io { class XOutputStream; }
     namespace io { class XStream; }
-} } }
+}
 
 namespace oox {
 
@@ -178,10 +178,10 @@ private:
                         mxInStream;         ///< Cached base input stream (to keep it alive).
     css::uno::Reference< css::io::XStream >
                         mxOutStream;        ///< Cached base output stream (to keep it alive).
-    OUString const      maParentPath;       ///< Full path of parent storage.
-    OUString const      maStorageName;      ///< Name of this storage, if it is a substorage.
-    bool const          mbBaseStreamAccess; ///< True = access base streams with empty stream name.
-    bool const          mbReadOnly;         ///< True = storage opened read-only (based on input stream).
+    OUString            maParentPath;       ///< Full path of parent storage.
+    OUString            maStorageName;      ///< Name of this storage, if it is a substorage.
+    bool                mbBaseStreamAccess; ///< True = access base streams with empty stream name.
+    bool                mbReadOnly;         ///< True = storage opened read-only (based on input stream).
 };
 
 

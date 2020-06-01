@@ -25,12 +25,14 @@
 #include <com/sun/star/embed/Aspects.hpp>
 #include <com/sun/star/embed/ElementModes.hpp>
 #include <com/sun/star/frame/XModel.hpp>
+#include <com/sun/star/packages/XPackageEncryption.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 
 #include <i18nlangtag/languagetag.hxx>
 
 #include <unotools/configmgr.hxx>
 #include <unotools/ucbstreamhelper.hxx>
+#include <unotools/streamwrap.hxx>
 #include <rtl/random.h>
 #include <rtl/ustring.hxx>
 #include <rtl/ustrbuf.hxx>
@@ -336,12 +338,12 @@ void SwWW8ImplReader::ReadEmbeddedData(SvStream& rStrm, SwDocShell const * pDocS
         xTextMark.reset(new OUString(read_uInt32_lenPrefixed_uInt16s_ToOUString(rStrm)));
     }
 
-    if (!xLongName && xShortName.get())
+    if (!xLongName && xShortName)
     {
         xLongName.reset( new OUString );
         *xLongName += *xShortName;
     }
-    else if (!xLongName && xTextMark.get())
+    else if (!xLongName && xTextMark)
         xLongName.reset( new OUString );
 
     if (xLongName)
@@ -380,7 +382,7 @@ bool BasicProjImportHelper::import( const uno::Reference< io::XInputStream >& rx
     {
         oox::ole::OleStorage root( mxCtx, rxIn, false );
         oox::StorageRef vbaStg = root.openSubStorage( "Macros" , false );
-        if ( vbaStg.get() )
+        if ( vbaStg )
         {
             oox::ole::VbaProject aVbaPrj( mxCtx, mrDocShell.GetModel(), "Writer" );
             bRet = aVbaPrj.importVbaProject( *vbaStg );
@@ -1191,7 +1193,7 @@ void SwWW8FltControlStack::NewAttr(const SwPosition& rPos,
 }
 
 SwFltStackEntry* SwWW8FltControlStack::SetAttr(const SwPosition& rPos, sal_uInt16 nAttrId,
-    bool bTstEnde, long nHand, bool )
+    bool bTstEnd, long nHand, bool )
 {
     SwFltStackEntry *pRet = nullptr;
     // Doing a textbox, and using the control stack only as a temporary
@@ -1211,7 +1213,7 @@ SwFltStackEntry* SwWW8FltControlStack::SetAttr(const SwPosition& rPos, sal_uInt1
         }
     }
     else // Normal case, set the attribute into the document
-        pRet = SwFltControlStack::SetAttr(rPos, nAttrId, bTstEnde, nHand);
+        pRet = SwFltControlStack::SetAttr(rPos, nAttrId, bTstEnd, nHand);
     return pRet;
 }
 
@@ -1841,6 +1843,8 @@ void SwWW8ImplReader::ImportDop()
     // tdf#117923
     m_rDoc.getIDocumentSettingAccess().set(
         DocumentSettingId::APPLY_PARAGRAPH_MARK_FORMAT_TO_NUMBERING, true);
+    m_rDoc.getIDocumentSettingAccess().set(
+        DocumentSettingId::MS_WORD_COMP_TRAILING_BLANKS, true);
 
     // Import Default Tabs
     long nDefTabSiz = m_xWDop->dxaTab;
@@ -1934,8 +1938,11 @@ void SwWW8ImplReader::ImportDop()
         }
     }
 
-    // Still allow editing of form fields.
-    if (!m_xWDop->fProtEnabled)
+    // The password can force read-only, comments-only, fill-in-form-only, or require track-changes.
+    // Treat comments-only like read-only since Writer has no support for that.
+    // Still allow editing of form fields, without requiring the password.
+    // Still allow editing if track-changes is locked on. (Currently LockRev is ignored/lost on export anyway.)
+    if (!m_xWDop->fProtEnabled && !m_xWDop->fLockRev)
         m_pDocShell->SetModifyPasswordHash(m_xWDop->lKeyProtDoc);
     else if ( xDocProps.is() )
     {
@@ -4986,12 +4993,12 @@ ErrCode SwWW8ImplReader::CoreLoad(WW8Glossary const *pGloss)
         }
         catch (const uno::Exception&)
         {
-            DBG_UNHANDLED_EXCEPTION("sw.ww8", "failed to initialize RDF metadata");
+            TOOLS_WARN_EXCEPTION("sw.ww8", "failed to initialize RDF metadata");
         }
         ReadDocInfo();
     }
 
-    ::ww8::WW8FibData * pFibData = new ::ww8::WW8FibData();
+    auto pFibData = std::make_shared<::ww8::WW8FibData>();
 
     if (m_xWwFib->m_fReadOnlyRecommended)
         pFibData->setReadOnlyRecommended(true);
@@ -5003,9 +5010,7 @@ ErrCode SwWW8ImplReader::CoreLoad(WW8Glossary const *pGloss)
     else
         pFibData->setWriteReservation(false);
 
-    ::sw::tExternalDataPointer pExternalFibData(pFibData);
-
-    m_rDoc.getIDocumentExternalData().setExternalData(::sw::tExternalDataType::FIB, pExternalFibData);
+    m_rDoc.getIDocumentExternalData().setExternalData(::sw::tExternalDataType::FIB, pFibData);
 
     ::sw::tExternalDataPointer pSttbfAsoc
           = std::make_shared<::ww8::WW8Sttb<ww8::WW8Struct>>(*m_pTableStream, m_xWwFib->m_fcSttbfAssoc, m_xWwFib->m_lcbSttbfAssoc);
@@ -5037,7 +5042,6 @@ ErrCode SwWW8ImplReader::CoreLoad(WW8Glossary const *pGloss)
     size_t nPageDescOffset = m_rDoc.GetPageDescCnt();
 
     SwNodeIndex aSttNdIdx( m_rDoc.GetNodes() );
-    SwRelNumRuleSpaces aRelNumRule(m_rDoc, m_bNewDoc);
 
     RedlineFlags eMode = RedlineFlags::ShowInsert | RedlineFlags::ShowDelete;
 
@@ -5127,16 +5131,6 @@ ErrCode SwWW8ImplReader::CoreLoad(WW8Glossary const *pGloss)
 
     m_xSBase.reset(new WW8ScannerBase(m_pStrm,m_pTableStream,m_pDataStream, m_xWwFib.get()));
 
-    static const SvxNumType eNumTA[16] =
-    {
-        SVX_NUM_ARABIC, SVX_NUM_ROMAN_UPPER, SVX_NUM_ROMAN_LOWER,
-        SVX_NUM_CHARS_UPPER_LETTER_N, SVX_NUM_CHARS_LOWER_LETTER_N,
-        SVX_NUM_ARABIC, SVX_NUM_ARABIC, SVX_NUM_ARABIC,
-        SVX_NUM_ARABIC, SVX_NUM_ARABIC, SVX_NUM_ARABIC,
-        SVX_NUM_ARABIC, SVX_NUM_ARABIC, SVX_NUM_ARABIC,
-        SVX_NUM_ARABIC, SVX_NUM_ARABIC
-    };
-
     if (m_xSBase->AreThereFootnotes())
     {
         static const SwFootnoteNum eNumA[4] =
@@ -5148,8 +5142,8 @@ ErrCode SwWW8ImplReader::CoreLoad(WW8Glossary const *pGloss)
 
         aInfo.m_ePos = FTNPOS_PAGE;
         aInfo.m_eNum = eNumA[m_xWDop->rncFootnote];
-        sal_uInt16 nfcFootnoteRef = m_xWDop->nfcFootnoteRef & 0xF;
-        aInfo.m_aFormat.SetNumberingType( eNumTA[nfcFootnoteRef] );
+        sal_uInt16 nfcFootnoteRef = m_xWDop->nfcFootnoteRef;
+        aInfo.m_aFormat.SetNumberingType(WW8ListManager::GetSvxNumTypeFromMSONFC(nfcFootnoteRef));
         if( m_xWDop->nFootnote )
             aInfo.m_nFootnoteOffset = m_xWDop->nFootnote - 1;
         m_rDoc.SetFootnoteInfo( aInfo );
@@ -5157,8 +5151,8 @@ ErrCode SwWW8ImplReader::CoreLoad(WW8Glossary const *pGloss)
     if (m_xSBase->AreThereEndnotes())
     {
         SwEndNoteInfo aInfo = m_rDoc.GetEndNoteInfo(); // Same as for Footnote
-        sal_uInt16 nfcEdnRef = m_xWDop->nfcEdnRef & 0xF;
-        aInfo.m_aFormat.SetNumberingType( eNumTA[nfcEdnRef] );
+        sal_uInt16 nfcEdnRef = m_xWDop->nfcEdnRef;
+        aInfo.m_aFormat.SetNumberingType(WW8ListManager::GetSvxNumTypeFromMSONFC(nfcEdnRef));
         if( m_xWDop->nEdn )
             aInfo.m_nFootnoteOffset = m_xWDop->nEdn - 1;
         m_rDoc.SetEndNoteInfo( aInfo );
@@ -6337,6 +6331,95 @@ ErrCode WW8Reader::OpenMainStream( tools::SvRef<SotStorageStream>& rRef, sal_uIn
     return nRet;
 }
 
+static void lcl_getListOfStreams(SotStorage * pStorage, comphelper::SequenceAsHashMap& aStreamsData, const OUString& sPrefix)
+{
+    SvStorageInfoList aElements;
+    pStorage->FillInfoList(&aElements);
+    for (const auto & aElement : aElements)
+    {
+        OUString sStreamFullName = sPrefix.getLength() ? sPrefix + "/" + aElement.GetName() : aElement.GetName();
+        if (aElement.IsStorage())
+        {
+            SotStorage * pSubStorage = pStorage->OpenSotStorage(aElement.GetName(), StreamMode::STD_READ | StreamMode::SHARE_DENYALL);
+            lcl_getListOfStreams(pSubStorage, aStreamsData, sStreamFullName);
+        }
+        else
+        {
+            // Read stream
+            tools::SvRef<SotStorageStream> rStream = pStorage->OpenSotStream(aElement.GetName(), StreamMode::READ | StreamMode::SHARE_DENYALL);
+            if (rStream.is())
+            {
+                sal_Int32 nStreamSize = rStream->GetSize();
+                css::uno::Sequence< sal_Int8 > oData;
+                oData.realloc(nStreamSize);
+                sal_Int32 nReadBytes = rStream->ReadBytes(oData.getArray(), nStreamSize);
+                if (nStreamSize == nReadBytes)
+                    aStreamsData[sStreamFullName] <<= oData;
+            }
+        }
+    }
+}
+
+ErrCode WW8Reader::DecryptDRMPackage()
+{
+    // We have DRM encrypted storage. We should try to decrypt it first, if we can
+    uno::Sequence< uno::Any > aArguments;
+    uno::Reference<uno::XComponentContext> xComponentContext(comphelper::getProcessComponentContext());
+    uno::Reference< packages::XPackageEncryption > xPackageEncryption(
+        xComponentContext->getServiceManager()->createInstanceWithArgumentsAndContext(
+            "com.sun.star.comp.oox.crypto.DRMDataSpace", aArguments, xComponentContext), uno::UNO_QUERY);
+
+    if (!xPackageEncryption.is())
+    {
+        // We do not know how to decrypt this
+        return ERRCODE_IO_ACCESSDENIED;
+    }
+
+    comphelper::SequenceAsHashMap aStreamsData;
+    lcl_getListOfStreams(m_pStorage.get(), aStreamsData, "");
+
+    try {
+        uno::Sequence<beans::NamedValue> aStreams = aStreamsData.getAsConstNamedValueList();
+        if (!xPackageEncryption->readEncryptionInfo(aStreams))
+        {
+            // We failed with decryption
+            return ERRCODE_IO_ACCESSDENIED;
+        }
+
+        tools::SvRef<SotStorageStream> rContentStream = m_pStorage->OpenSotStream("\011DRMContent", StreamMode::READ | StreamMode::SHARE_DENYALL);
+        if (!rContentStream.is())
+        {
+            return ERRCODE_IO_NOTEXISTS;
+        }
+
+        mDecodedStream = std::make_shared<SvMemoryStream>();
+
+        uno::Reference<io::XInputStream > xInputStream(new utl::OSeekableInputStreamWrapper(rContentStream.get(), false));
+        uno::Reference<io::XOutputStream > xDecryptedStream(new utl::OSeekableOutputStreamWrapper(*mDecodedStream));
+
+        if (!xPackageEncryption->decrypt(xInputStream, xDecryptedStream))
+        {
+            // We failed with decryption
+            return ERRCODE_IO_ACCESSDENIED;
+        }
+
+        mDecodedStream->Seek(0);
+
+        // Further reading is done from new document
+        m_pStorage = new SotStorage(*mDecodedStream);
+
+        // Set the media descriptor data
+        uno::Sequence<beans::NamedValue> aEncryptionData = xPackageEncryption->createEncryptionData("");
+        m_pMedium->GetItemSet()->Put(SfxUnoAnyItem(SID_ENCRYPTIONDATA, uno::makeAny(aEncryptionData)));
+    }
+    catch (const std::exception&)
+    {
+        return ERRCODE_IO_ACCESSDENIED;
+    }
+
+    return ERRCODE_NONE;
+}
+
 ErrCode WW8Reader::Read(SwDoc &rDoc, const OUString& rBaseURL, SwPaM &rPaM, const OUString & /* FileName */)
 {
     sal_uInt16 nOldBuffSize = 32768;
@@ -6368,7 +6451,13 @@ ErrCode WW8Reader::Read(SwDoc &rDoc, const OUString& rBaseURL, SwPaM &rPaM, cons
 
         if( m_pStorage.is() )
         {
-            nRet = OpenMainStream( refStrm, nOldBuffSize );
+            // Check if we have special encrypted content
+            tools::SvRef<SotStorageStream> rRef = m_pStorage->OpenSotStream("\006DataSpaces/DataSpaceInfo/\011DRMDataSpace", StreamMode::READ | StreamMode::SHARE_DENYALL);
+            if (rRef.is())
+            {
+                nRet = DecryptDRMPackage();
+            }
+            nRet = OpenMainStream(refStrm, nOldBuffSize);
             pIn = refStrm.get();
         }
         else

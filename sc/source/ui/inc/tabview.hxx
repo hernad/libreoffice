@@ -52,11 +52,7 @@ class SdrObject;
 class ScPageBreakData;
 class SdrHdlList;
 class TabBar;
-
-namespace com { namespace sun { namespace star {
-namespace chart2 { namespace data {
-    struct HighlightedRange;
-}}}}}
+namespace com::sun::star::chart2::data { struct HighlightedRange; }
 
 enum HeaderType
 {
@@ -70,15 +66,14 @@ enum HeaderType
 class ScCornerButton : public vcl::Window
 {
 private:
-    ScViewData* const     pViewData;
-    bool const            bAdd;
+    ScViewData*     pViewData;
 
 protected:
     virtual void    Paint( vcl::RenderContext& rRenderContext, const tools::Rectangle& rRect ) override;
     virtual void    Resize() override;
     virtual void    MouseButtonDown( const MouseEvent& rMEvt ) override;
 public:
-                    ScCornerButton( vcl::Window* pParent, ScViewData* pData, bool bAdditional );
+                    ScCornerButton( vcl::Window* pParent, ScViewData* pData );
                     virtual ~ScCornerButton() override;
 
     virtual void    StateChanged( StateChangedType nType ) override;
@@ -112,7 +107,7 @@ private:
     void Modifier(ScGridWindow* pWin);
 
 private:
-    ScTabViewShell* const mpThisViewShell;
+    ScTabViewShell* mpThisViewShell;
     std::array<VclPtr<ScGridWindow>, 4> const & mpGridWin;
     EditView* mpOtherEditView;
     int nTotalWindows;
@@ -340,8 +335,6 @@ public:
     bool            SelMouseButtonDown( const MouseEvent& rMEvt );
 
     ScDrawView*     GetScDrawView()         { return pDrawView.get(); }
-    // against CLOKs
-    SdrView*        GetSdrView()            { return pDrawView.get(); }
 
     bool            IsMinimized() const     { return bMinimized; }
 

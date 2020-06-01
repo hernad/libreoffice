@@ -36,6 +36,7 @@ ifneq ($(gb_SUPPRESS_TESTS),)
 	@true
 else
 	$(call gb_Output_announce,$*,$(true),JUT,2)
+	$(call gb_Trace_StartRange,$*,JUT)
 	$(call gb_Helper_abbreviate_dirs,\
         rm -rf $(call gb_JunitTest_get_userdir,$*) && \
 		mkdir -p $(call gb_JunitTest_get_userdir,$*)/user && \
@@ -56,6 +57,7 @@ else
 		&& echo \
 		&& false)))
 	$(CLEAN_CMD)
+	$(call gb_Trace_EndRange,$*,JUT)
 endif
 
 define gb_JunitTest_JunitTest
@@ -117,6 +119,12 @@ $(call gb_JunitTest_get_target,$(1)) : T_CP := $$(T_CP)$$(gb_CLASSPATHSEP)$(call
 
 endef
 
+define gb_JunitTest_add_classpath
+$(call gb_JavaClassSet_add_classpath,$(call gb_JunitTest_get_classsetname,$(1)),$(2))
+$(call gb_JunitTest_get_target,$(1)) : T_CP := $$(T_CP)$$(gb_CLASSPATHSEP)$(2)
+
+endef
+
 define gb_JunitTest_use_system_jar
 $(call gb_JavaClassSet_use_system_jar,$(call gb_JunitTest_get_classsetname,$(1)),$(2))
 
@@ -155,10 +163,8 @@ endef
 define gb_JunitTest_use_unoapi_jars
 $(eval $(call gb_JunitTest_use_jars,$(1),\
     OOoRunner \
-    jurt \
-    ridl \
+    libreoffice \
     test \
-    unoil \
 ))
 
 endef

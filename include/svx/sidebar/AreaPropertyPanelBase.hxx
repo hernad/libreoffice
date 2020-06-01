@@ -31,7 +31,7 @@
 #include <svx/xflgrit.hxx>
 #include <svx/xflhtit.hxx>
 #include <svx/xbtmpit.hxx>
-#include <svx/sidebar/PanelLayout.hxx>
+#include <sfx2/sidebar/PanelLayout.hxx>
 #include <svl/intitem.hxx>
 #include <svx/svxdllapi.h>
 #include <sfx2/sidebar/Panel.hxx>
@@ -45,7 +45,7 @@ class XFillColorItem;
 class XFillHatchItem;
 class XFillBitmapItem;
 
-namespace svx { namespace sidebar {
+namespace svx::sidebar {
 
 class SVX_DLLPUBLIC AreaPropertyPanelBase
 :   public PanelLayout,
@@ -62,6 +62,10 @@ public:
         const sal_uInt16 nSId,
         const SfxItemState eState,
         const SfxPoolItem* pState) override;
+
+    virtual void GetControlState(
+        const sal_uInt16 /*nSId*/,
+        boost::property_tree::ptree& /*rState*/) override {};
 
     const static sal_Int32 DEFAULT_CENTERX;
     const static sal_Int32 DEFAULT_CENTERY;
@@ -167,7 +171,7 @@ protected:
     void SelectFillAttrHdl_Impl();
 };
 
-} } // end of namespace svx::sidebar
+} // end of namespace svx::sidebar
 
 #endif // INCLUDED_SVX_SOURCE_SIDEBAR_AREA_AREAPROPERTYPANEL_HXX
 

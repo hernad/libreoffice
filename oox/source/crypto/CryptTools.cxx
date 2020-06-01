@@ -9,7 +9,6 @@
  */
 
 #include <oox/crypto/CryptTools.hxx>
-#include <filter/msfilter/mscodec.hxx>
 #include <com/sun/star/uno/RuntimeException.hpp>
 
 #include <config_oox.h>
@@ -23,10 +22,9 @@
 #if USE_TLS_NSS
 #include <nss.h>
 #include <pk11pub.h>
-#include <sechash.h>
 #endif // USE_TLS_NSS
 
-namespace oox::core {
+namespace oox::crypto {
 
 #if USE_TLS_OPENSSL
 struct CryptoImpl
@@ -480,6 +478,6 @@ std::vector<sal_uInt8> CryptoHash::finalize()
     return aHash;
 }
 
-} // namespace oox::core
+} // namespace oox::crypto
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

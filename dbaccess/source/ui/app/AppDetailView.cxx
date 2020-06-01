@@ -30,15 +30,11 @@
 #include <com/sun/star/graphic/XGraphic.hpp>
 #include <com/sun/star/util/URL.hpp>
 #include <core_resource.hxx>
-#include <listviewitems.hxx>
 #include <vcl/event.hxx>
 #include <vcl/image.hxx>
 #include <vcl/mnemonic.hxx>
 #include <vcl/settings.hxx>
-#include <browserids.hxx>
 #include "AppDetailPageHelper.hxx"
-#include <vcl/svapp.hxx>
-#include <callbacks.hxx>
 #include <dbaccess/IController.hxx>
 #include <vcl/treelistentry.hxx>
 #include <vcl/viewdataentry.hxx>
@@ -147,13 +143,13 @@ void OCreationList::ExecuteSearchEntry( const void* _pEntry ) const
         onSelected( pEntry );
 }
 
-tools::Rectangle OCreationList::GetFocusRect( SvTreeListEntry* _pEntry, long _nLine )
+tools::Rectangle OCreationList::GetFocusRect(const SvTreeListEntry* _pEntry, long _nLine)
 {
     tools::Rectangle aRect = SvTreeListBox::GetFocusRect( _pEntry, _nLine );
     aRect.SetLeft( 0 );
 
     // try to let the focus rect start before the bitmap item - this looks better
-    SvLBoxItem* pBitmapItem = _pEntry->GetFirstItem(SvLBoxItemType::ContextBmp);
+    const SvLBoxItem* pBitmapItem = _pEntry->GetFirstItem(SvLBoxItemType::ContextBmp);
     SvLBoxTab* pTab = pBitmapItem ? GetTab( _pEntry, pBitmapItem ) : nullptr;
     SvViewDataItem* pItemData = pBitmapItem ? GetViewDataItem( _pEntry, pBitmapItem ) : nullptr;
     OSL_ENSURE( pTab && pItemData, "OCreationList::GetFocusRect: could not find the first bitmap item!" );

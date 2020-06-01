@@ -17,13 +17,10 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <vcl/metaact.hxx>
 #include <svx/svdedtv.hxx>
 #include <svx/svdundo.hxx>
 #include <svx/svdograf.hxx>
-#include <svx/svdopath.hxx>
 #include <svx/svdoole2.hxx>
-#include <svx/svdopage.hxx>
 #include <svx/svdoedge.hxx>
 #include <svx/svdlayer.hxx>
 #include <svx/svdpagv.hxx>
@@ -610,8 +607,7 @@ void SdrEditView::CheckPossibilities()
                     if (pSdrGrafObj != nullptr)
                     {
                         if ((pSdrGrafObj->HasGDIMetaFile() && !pSdrGrafObj->IsEPS()) ||
-                            pSdrGrafObj->isEmbeddedVectorGraphicData() ||
-                            pSdrGrafObj->isEmbeddedPdfData())
+                            pSdrGrafObj->isEmbeddedVectorGraphicData())
                         {
                             m_bImportMtfPossible = true;
                         }

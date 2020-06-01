@@ -28,7 +28,7 @@
 #include <memory>
 #include <vector>
 
-namespace com { namespace sun { namespace star { namespace frame { struct FeatureStateEvent; } } } }
+namespace com::sun::star::frame { struct FeatureStateEvent; }
 template <class T> class VclPtr;
 
 class Color;
@@ -122,7 +122,7 @@ public:
     virtual void    KeyInput( const KeyEvent& rKEvt ) override;
     virtual void    KeyUp( const KeyEvent& rKEvt ) override;
     virtual void    Paint( vcl::RenderContext& rRenderContext, const tools::Rectangle& rRect ) override;
-    virtual void    Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawFlags nFlags ) override;
+    virtual void    Draw( OutputDevice* pDev, const Point& rPos, DrawFlags nFlags ) override;
     virtual void    Resize() override;
     virtual void    GetFocus() override;
     virtual void    LoseFocus() override;
@@ -247,30 +247,6 @@ public:
     virtual void    Click() override;
 };
 
-class CloseButton final : public CancelButton
-{
-public:
-    explicit CloseButton(vcl::Window* pParent, WinBits nStyle = 0);
-};
-
-class VCL_DLLPUBLIC HelpButton : public PushButton
-{
-protected:
-    using PushButton::ImplInit;
-private:
-    SAL_DLLPRIVATE void ImplInit( vcl::Window* pParent, WinBits nStyle );
-
-                        HelpButton( const HelpButton & ) = delete;
-                        HelpButton & operator= ( const HelpButton & ) = delete;
-
-    virtual void    StateChanged( StateChangedType nStateChange ) override;
-
-public:
-    explicit        HelpButton( vcl::Window* pParent, WinBits nStyle = 0 );
-
-    virtual void    Click() override;
-};
-
 class VCL_DLLPUBLIC RadioButton : public Button
 {
 private:
@@ -283,6 +259,7 @@ private:
     bool            mbChecked;
     bool            mbRadioCheck;
     bool            mbStateChanged;
+    bool            mbUsesExplicitGroup;
     Link<RadioButton&,void> maToggleHdl;
     SAL_DLLPRIVATE void     ImplInitRadioButtonData();
     SAL_DLLPRIVATE WinBits  ImplInitStyle( const vcl::Window* pPrevWindow, WinBits nStyle );
@@ -317,7 +294,14 @@ protected:
     void            ImplAdjustNWFSizes() override;
 
 public:
-    explicit        RadioButton( vcl::Window* pParent, WinBits nWinStyle = 0 );
+    /*
+     bUsesExplicitGroup of true means that group() is used to set what radiobuttons are part of a group
+     while false means that contiguous radiobuttons are considered part of a group where WB_GROUP designates
+     the start of the group and all contiguous radiobuttons without WB_GROUP set form the rest of the group.
+
+     true is fairly straightforward, false leads to trick situations and is the legacy case
+    */
+    explicit        RadioButton(vcl::Window* pParent, bool bUsesExplicitGroup = true, WinBits nWinStyle = 0);
     virtual         ~RadioButton() override;
     virtual void    dispose() override;
 
@@ -326,7 +310,7 @@ public:
     virtual void    KeyInput( const KeyEvent& rKEvt ) override;
     virtual void    KeyUp( const KeyEvent& rKEvt ) override;
     virtual void    Paint( vcl::RenderContext& rRenderContext, const tools::Rectangle& rRect ) override;
-    virtual void    Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawFlags nFlags ) override;
+    virtual void    Draw( OutputDevice* pDev, const Point& rPos, DrawFlags nFlags ) override;
     virtual void    Resize() override;
     virtual void    GetFocus() override;
     virtual void    LoseFocus() override;
@@ -349,7 +333,7 @@ public:
 
     static Image    GetRadioImage( const AllSettings& rSettings, DrawButtonFlags nFlags );
 
-    Size            CalcMinimumSize() const;
+    Size            CalcMinimumSize( long nMaxWidth = 0 ) const;
     virtual Size    GetOptimalSize() const override;
 
     void            SetToggleHdl( const Link<RadioButton&,void>& rLink ) { maToggleHdl = rLink; }
@@ -434,7 +418,7 @@ public:
     virtual void    KeyInput( const KeyEvent& rKEvt ) override;
     virtual void    KeyUp( const KeyEvent& rKEvt ) override;
     virtual void    Paint( vcl::RenderContext& rRenderContext, const tools::Rectangle& rRect ) override;
-    virtual void    Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawFlags nFlags ) override;
+    virtual void    Draw( OutputDevice* pDev, const Point& rPos, DrawFlags nFlags ) override;
     virtual void    Resize() override;
     virtual void    GetFocus() override;
     virtual void    LoseFocus() override;
@@ -497,25 +481,6 @@ private:
 
 public:
                  ImageButton( vcl::Window* pParent, WinBits nStyle = 0 );
-};
-
-class VCL_DLLPUBLIC TriStateBox final : public CheckBox
-{
-                    TriStateBox( const TriStateBox & ) = delete;
-                    TriStateBox & operator= ( const TriStateBox & ) = delete;
-
-public:
-    explicit        TriStateBox( vcl::Window* pParent, WinBits nStyle );
-};
-
-class DisclosureButton final : public CheckBox
-{
-    virtual void ImplDrawCheckBoxState(vcl::RenderContext& rRenderContext) override;
-
-public:
-    explicit DisclosureButton( vcl::Window* pParent );
-
-    virtual void    KeyInput( const KeyEvent& rKEvt ) override;
 };
 
 #endif // INCLUDED_VCL_BUTTON_HXX

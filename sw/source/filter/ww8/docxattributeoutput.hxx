@@ -37,7 +37,7 @@
 #include <fldbas.hxx>
 
 #include <vector>
-#include <o3tl/optional.hxx>
+#include <optional>
 #include <o3tl/sorted_vector.hxx>
 #include <oox/export/vmlexport.hxx>
 #include <oox/export/drawingml.hxx>
@@ -51,7 +51,7 @@ class SdrObject;
 enum class SvxBoxItemLine;
 
 namespace docx { class FootnotesList; }
-namespace oox { namespace drawingml { class DrawingML; } }
+namespace oox::drawingml { class DrawingML; }
 
 struct FieldInfos
 {
@@ -300,7 +300,7 @@ public:
 
     /// The style of the page numbers.
     ///
-    virtual void SectionPageNumbering( sal_uInt16 nNumType, const ::o3tl::optional<sal_uInt16>& oPageRestartNumber ) override;
+    virtual void SectionPageNumbering( sal_uInt16 nNumType, const ::std::optional<sal_uInt16>& oPageRestartNumber ) override;
 
     /// The type of breaking.
     virtual void SectionType( sal_uInt8 nBreakCode ) override;
@@ -330,8 +330,9 @@ public:
     virtual void NumberingDefinition( sal_uInt16 nId, const SwNumRule &rRule ) override;
 
     /// Numbering definition that overrides abstract numbering definition
-    virtual void OverrideNumberingDefinition(SwNumRule const& rRule,
-            sal_uInt16 nNum, sal_uInt16 nAbstractNum) override;
+    virtual void OverrideNumberingDefinition( SwNumRule const& rRule,
+            sal_uInt16 nNum, sal_uInt16 nAbstractNum,
+            const std::map< size_t, size_t > & rLevelOverrides ) override;
 
     /// Start of the abstract numbering definition instance.
     virtual void StartAbstractNumbering( sal_uInt16 nId ) override;
@@ -402,9 +403,9 @@ private:
     /// @see WriteOLE2Obj()
     void FlyFrameGraphic( const SwGrfNode* pGrfNode, const Size& rSize, const SwFlyFrameFormat* pOLEFrameFormat, SwOLENode* pOLENode, const SdrObject* pSdrObj = nullptr);
     void WriteSrcRect( const SdrObject* pSdrObj, const SwFrameFormat* pFrameFormat );
-    void WriteOLE2Obj( const SdrObject* pSdrObj, SwOLENode& rNode, const Size& rSize, const SwFlyFrameFormat* pFlyFrameFormat);
+    void WriteOLE2Obj( const SdrObject* pSdrObj, SwOLENode& rNode, const Size& rSize, const SwFlyFrameFormat* pFlyFrameFormat, const sal_Int8 nFormulaAlignment);
     bool WriteOLEChart( const SdrObject* pSdrObj, const Size& rSize, const SwFlyFrameFormat* pFlyFrameFormat);
-    bool WriteOLEMath( const SwOLENode& rNode );
+    bool WriteOLEMath( const SwOLENode& rNode, const sal_Int8 nAlign );
     void PostponeOLE( SwOLENode& rNode, const Size& rSize, const SwFlyFrameFormat* pFlyFrameFormat );
     void WriteOLE( SwOLENode& rNode, const Size& rSize, const SwFlyFrameFormat* rFlyFrameFormat );
 
@@ -699,7 +700,7 @@ private:
 
     void DoWriteAnnotationMarks( );
     void WritePostponedGraphic();
-    void WritePostponedMath(const SwOLENode* pObject);
+    void WritePostponedMath(const SwOLENode* pObject, sal_Int8 /*nAlign*/);
     void WritePostponedFormControl(const SdrObject* pObject);
     void WritePostponedActiveXControl(bool bInsideRun);
     void WritePostponedDiagram();
@@ -718,7 +719,9 @@ private:
     void EndSdtBlock();
 
     void WriteFormDateStart(const OUString& sFullDate, const OUString& sDateFormat, const OUString& sLang);
-    void WriteFormDateEnd();
+    void WriteSdtDropDownStart(OUString const& rName, OUString const& rSelected, uno::Sequence<OUString> const& rListItems);
+    void WriteSdtDropDownEnd(OUString const& rSelected, uno::Sequence<OUString> const& rListItems);
+    void WriteSdtEnd();
 
     void StartField_Impl( const SwTextNode* pNode, sal_Int32 nPos, FieldInfos const & rInfos, bool bWriteRun = false );
     void DoWriteCmd( const OUString& rCmd );
@@ -868,7 +871,7 @@ private:
             : grfNode( n ), size( s ), pSdrObj(sObj) {};
 
         const SwGrfNode* grfNode;
-        Size const size;
+        Size size;
         const SdrObject* pSdrObj;
     };
     std::unique_ptr< std::vector<PostponedGraphic> > m_pPostponedGraphic;
@@ -898,7 +901,12 @@ private:
     };
     std::unique_ptr< std::vector<PostponedOLE> > m_pPostponedOLEs;
 
-    std::vector<const SwOLENode*> m_aPostponedMaths;
+    struct PostponedMathObjects
+    {
+        SwOLENode* pMathObject;
+        sal_Int8 nMathObjAlignment;
+    };
+    std::vector<PostponedMathObjects> m_aPostponedMaths;
     /// count charts consistently for unit tests
     unsigned int m_nChartCount;
     struct PostponedChart
@@ -934,7 +942,7 @@ private:
     std::vector<sal_Int32> lastOpenCell;
     std::vector<sal_Int32> lastClosedCell;
 
-    o3tl::optional<css::drawing::FillStyle> m_oFillStyle;
+    std::optional<css::drawing::FillStyle> m_oFillStyle;
     /// If FormatBox() already handled fill style / gradient.
     bool m_bIgnoreNextFill;
 
@@ -945,8 +953,6 @@ private:
     bool m_bParaBeforeAutoSpacing,m_bParaAfterAutoSpacing;
     // store hardcoded value which was set during import.
     sal_Int32 m_nParaBeforeSpacing,m_nParaAfterSpacing;
-
-    bool m_setFootnote;
 
     /// RelId <-> Graphic* cache, so that in case of alternate content, the same graphic only gets written once.
     std::stack< std::map<const Graphic*, OString> > m_aRelIdCache;

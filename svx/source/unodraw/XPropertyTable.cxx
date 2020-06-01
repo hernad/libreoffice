@@ -19,7 +19,7 @@
 
 
 #include <memory>
-#include <svx/XPropertyTable.hxx>
+#include <XPropertyTable.hxx>
 #include <com/sun/star/drawing/PolyPolygonBezierCoords.hpp>
 #include <com/sun/star/drawing/LineDash.hpp>
 #include <com/sun/star/awt/Gradient.hpp>
@@ -36,8 +36,6 @@
 #include <svx/xdef.hxx>
 
 #include <svx/unoapi.hxx>
-#include <editeng/unoprnms.hxx>
-#include <basegfx/polygon/b2dpolygon.hxx>
 #include <basegfx/polygon/b2dpolypolygontools.hxx>
 
 using namespace com::sun::star;
@@ -49,7 +47,7 @@ class SvxUnoXPropertyTable : public WeakImplHelper< container::XNameContainer, l
 {
 private:
     XPropertyList*  mpList;
-    sal_Int16 const mnWhich;
+    sal_Int16 mnWhich;
 
     long getCount() const { return mpList ? mpList->Count() : 0; }
     const XPropertyEntry* get(long index) const;

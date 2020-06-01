@@ -21,7 +21,7 @@
 #include <emfreader.hxx>
 
 #include <memory>
-#include <o3tl/optional.hxx>
+#include <optional>
 #include <o3tl/safeint.hxx>
 #include <rtl/crc.h>
 #include <rtl/tencinfo.h>
@@ -165,6 +165,11 @@ namespace emfio
         aTL = ReadYX();
         aBR.AdjustX( -1 );
         aBR.AdjustY( -1 );
+        if (aTL.X() > aBR.X() || aTL.Y() > aBR.Y())
+        {
+            SAL_WARN("vcl.wmf", "broken rectangle");
+            return tools::Rectangle::Justify(aTL, aBR);
+        }
         return tools::Rectangle( aTL, aBR );
     }
 
@@ -1490,10 +1495,10 @@ namespace emfio
         auto nEnd = nPos + pStm->remainingSize();
 
         Point aWinOrg(0,0);
-        o3tl::optional<Size>  aWinExt;
+        std::optional<Size>  aWinExt;
 
         Point aViewportOrg(0,0);
-        o3tl::optional<Size>  aViewportExt;
+        std::optional<Size>  aViewportExt;
 
         if (nEnd - nPos)
         {
@@ -1813,39 +1818,39 @@ namespace emfio
             bRet = false;
         }
 
-        if (bRet)
+        if (!bRet)
+            return;
+
+        if (aWinExt)
         {
-            if (aWinExt)
-            {
-                rPlaceableBound = tools::Rectangle(aWinOrg, *aWinExt);
-                SAL_INFO("vcl.wmf", "Window dimension "
-                           " t: " << rPlaceableBound.Left()  << " l: " << rPlaceableBound.Top()
-                        << " b: " << rPlaceableBound.Right() << " r: " << rPlaceableBound.Bottom());
-            }
-            else if (aViewportExt)
-            {
-                rPlaceableBound = tools::Rectangle(aViewportOrg, *aViewportExt);
-                SAL_INFO("vcl.wmf", "Viewport dimension "
-                           " t: " << rPlaceableBound.Left()  << " l: " << rPlaceableBound.Top()
-                        << " b: " << rPlaceableBound.Right() << " r: " << rPlaceableBound.Bottom());
-            }
-            else if (bBoundsDetermined)
-            {
-                rPlaceableBound = aBound;
-                SAL_INFO("vcl.wmf", "Determined dimension "
-                           " t: " << rPlaceableBound.Left()  << " l: " << rPlaceableBound.Top()
-                        << " b: " << rPlaceableBound.Right() << " r: " << rPlaceableBound.Bottom());
-            }
-            else
-            {
-                rPlaceableBound.SetLeft( 0 );
-                rPlaceableBound.SetTop( 0 );
-                rPlaceableBound.SetRight( aMaxWidth );
-                rPlaceableBound.SetBottom( aMaxWidth );
-                SAL_INFO("vcl.wmf", "Default dimension "
-                           " t: " << rPlaceableBound.Left()  << " l: " << rPlaceableBound.Top()
-                        << " b: " << rPlaceableBound.Right() << " r: " << rPlaceableBound.Bottom());
-            }
+            rPlaceableBound = tools::Rectangle(aWinOrg, *aWinExt);
+            SAL_INFO("vcl.wmf", "Window dimension "
+                       " t: " << rPlaceableBound.Left()  << " l: " << rPlaceableBound.Top()
+                    << " b: " << rPlaceableBound.Right() << " r: " << rPlaceableBound.Bottom());
+        }
+        else if (aViewportExt)
+        {
+            rPlaceableBound = tools::Rectangle(aViewportOrg, *aViewportExt);
+            SAL_INFO("vcl.wmf", "Viewport dimension "
+                       " t: " << rPlaceableBound.Left()  << " l: " << rPlaceableBound.Top()
+                    << " b: " << rPlaceableBound.Right() << " r: " << rPlaceableBound.Bottom());
+        }
+        else if (bBoundsDetermined)
+        {
+            rPlaceableBound = aBound;
+            SAL_INFO("vcl.wmf", "Determined dimension "
+                       " t: " << rPlaceableBound.Left()  << " l: " << rPlaceableBound.Top()
+                    << " b: " << rPlaceableBound.Right() << " r: " << rPlaceableBound.Bottom());
+        }
+        else
+        {
+            rPlaceableBound.SetLeft( 0 );
+            rPlaceableBound.SetTop( 0 );
+            rPlaceableBound.SetRight( aMaxWidth );
+            rPlaceableBound.SetBottom( aMaxWidth );
+            SAL_INFO("vcl.wmf", "Default dimension "
+                       " t: " << rPlaceableBound.Left()  << " l: " << rPlaceableBound.Top()
+                    << " b: " << rPlaceableBound.Right() << " r: " << rPlaceableBound.Bottom());
         }
     }
 

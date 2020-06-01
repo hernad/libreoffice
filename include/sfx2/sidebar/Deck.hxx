@@ -25,13 +25,16 @@
 
 class ScrollBar;
 
-namespace sfx2 { namespace sidebar {
+namespace sfx2::sidebar {
 
 class DeckDescriptor;
 class DeckTitleBar;
 
 /** This is the parent window of the panels.
     It displays the deck title.
+
+    A deck consists of multiple panels.
+    E.g. Properties, Styles, Navigator.
 */
 class Deck final : public vcl::Window
 {
@@ -101,7 +104,7 @@ private:
 
 };
 
-} } // end of namespace sfx2::sidebar
+} // end of namespace sfx2::sidebar
 
 #endif
 

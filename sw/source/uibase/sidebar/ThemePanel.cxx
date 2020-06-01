@@ -62,7 +62,7 @@ class StyleRedefinition
     ColorVariable maVariable;
 
 public:
-    OUString const maElementName;
+    OUString maElementName;
 
 public:
     explicit StyleRedefinition(const OUString& aElementName)
@@ -335,9 +335,7 @@ void applyTheme(SfxStyleSheetBasePool* pPool, const OUString& sFontSetName, cons
 
     svx::ColorSet aColorSet = rColorSets.getColorSet(sColorSetName);
 
-    pPool->SetSearchMask(SfxStyleFamily::Para);
-    pStyle = static_cast<SwDocStyleSheet*>(pPool->First());
-
+    pStyle = static_cast<SwDocStyleSheet*>(pPool->First(SfxStyleFamily::Para));
     while (pStyle)
     {
         SwTextFormatColl* pCollection = pStyle->GetCollection();
@@ -354,9 +352,7 @@ void applyTheme(SfxStyleSheetBasePool* pPool, const OUString& sFontSetName, cons
         pStyle = static_cast<SwDocStyleSheet*>(pPool->Next());
     }
 
-    pPool->SetSearchMask(SfxStyleFamily::Char);
-    pStyle = static_cast<SwDocStyleSheet*>(pPool->First());
-
+    pStyle = static_cast<SwDocStyleSheet*>(pPool->First(SfxStyleFamily::Char));
     while (pStyle)
     {
         SwCharFormat* pCharFormat = pStyle->GetCharFormat();
@@ -414,9 +410,9 @@ VclPtr<vcl::Window> ThemePanel::Create (vcl::Window* pParent,
 
 ThemePanel::ThemePanel(vcl::Window* pParent,
                        const css::uno::Reference<css::frame::XFrame>& rxFrame)
-    : PanelLayout(pParent, "ThemePanel", "modules/swriter/ui/sidebartheme.ui", rxFrame, true)
+    : PanelLayout(pParent, "ThemePanel", "modules/swriter/ui/sidebartheme.ui", rxFrame)
     , mxListBoxFonts(m_xBuilder->weld_tree_view("listbox_fonts"))
-    , mxValueSetColors(new SvtValueSet(nullptr))
+    , mxValueSetColors(new ValueSet(nullptr))
     , mxValueSetColorsWin(new weld::CustomWeld(*m_xBuilder, "valueset_colors", *mxValueSetColors))
     , mxApplyButton(m_xBuilder->weld_button("apply"))
     , maColorSets()
@@ -470,7 +466,7 @@ IMPL_LINK_NOARG(ThemePanel, ClickHdl, weld::Button&, void)
     DoubleClickHdl();
 }
 
-IMPL_LINK_NOARG(ThemePanel, DoubleClickValueSetHdl, SvtValueSet*, void)
+IMPL_LINK_NOARG(ThemePanel, DoubleClickValueSetHdl, ValueSet*, void)
 {
     DoubleClickHdl();
 }

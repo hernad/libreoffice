@@ -90,12 +90,21 @@ endif # SYSTEM_MDDS
 
 ifneq ($(SYSTEM_GLM),)
 
-gb_LinkTarget__use_glm_headers :=
+define gb_LinkTarget__use_glm_headers
+$(call gb_LinkTarget_add_defs,$(1),\
+    -DGLM_FORCE_CTOR_INIT \
+)
+
+endef
+
 gb_ExternalProject__use_glm_headers :=
 
 else
 
 define gb_LinkTarget__use_glm_headers
+$(call gb_LinkTarget_add_defs,$(1),\
+    -DGLM_FORCE_CTOR_INIT \
+)
 $(call gb_LinkTarget_use_unpacked,$(1),glm)
 $(call gb_LinkTarget_set_include,$(1),\
 	$(GLM_CFLAGS) \
@@ -118,6 +127,7 @@ $(call gb_LinkTarget_set_include,$(1),\
 	-I$(call gb_UnpackedTarball_get_dir,skia)/include/effects \
 	-I$(call gb_UnpackedTarball_get_dir,skia)/include/gpu \
 	-I$(call gb_UnpackedTarball_get_dir,skia)/include/config \
+	-I$(call gb_UnpackedTarball_get_dir,skia)/include/ports \
 	-I$(call gb_UnpackedTarball_get_dir,skia)/include/third_party/vulkan \
 	-I$(call gb_UnpackedTarball_get_dir,skia)/tools/gpu \
 	-I$(call gb_UnpackedTarball_get_dir,skia) \
@@ -3872,6 +3882,8 @@ endef
 define gb_Executable__register_gengal
 $(call gb_Executable_add_runtime_dependencies,gengal,\
 	$(call gb_Library_get_target,$(gb_CPPU_ENV)_uno) \
+	$(if $(filter MACOSX,$(OS)),$(call gb_Library_get_target,vclplug_osx)) \
+	$(if $(filter WNT,$(OS)),$(call gb_Library_get_target,vclplug_win)) \
 	$(call gb_Package_get_target_for_build,postprocess_images) \
 	$(call gb_Package_get_target_for_build,postprocess_registry) \
 	$(INSTROOT_FOR_BUILD)/$(LIBO_URE_ETC_FOLDER)/$(call gb_Helper_get_rcfile,uno) \
@@ -4013,7 +4025,6 @@ else
 
 define gb_ExternalExecutable__register_python
 $(call gb_ExternalExecutable_set_external,python,$(PYTHON_FOR_BUILD))
-$(call gb_ExternalExecutable_set_precommand,python,PYTHONPATH=$$$$PYTHONPATH$$$${PYTHONPATH:+$$$${PYPATH:+:}}$$$$PYPATH)
 
 endef
 
@@ -4197,8 +4208,60 @@ endef
 
 endif # SYSTEM_QRCODEGEN
 
+define gb_LinkTarget__use_dtoa
+$(call gb_LinkTarget_use_unpacked,$(1),dtoa)
+$(call gb_LinkTarget_set_include,$(1),\
+	-I$(call gb_UnpackedTarball_get_dir,dtoa/include/)\
+	$$(INCLUDE) \
+)
+$(call gb_LinkTarget_use_static_libraries,$(1),\
+	dtoa \
+)
+
+endef
+
+define gb_ExternalProject__use_dtoa
+$(call gb_ExternalProject_use_static_libraries,$(1),dtoa)
+
+endef
+
 $(eval $(call gb_Helper_register_packages_for_install,ucrt_binarytable,\
 	$(if $(UCRT_REDISTDIR),ucrt) \
 ))
+
+ifneq ($(SYSTEM_BOX2D),)
+
+define gb_LinkTarget__use_box2d
+$(call gb_LinkTarget_set_include,$(1),\
+	-DSYSTEM_BOX2D \
+	$$(INCLUDE) \
+	$(BOX2D_CFLAGS) \
+)
+$(call gb_LinkTarget_add_libs,$(1),$(BOX2D_LIBS))
+
+endef
+
+gb_ExternalProject__use_box2d :=
+
+else # !SYSTEM_BOX2D
+
+define gb_LinkTarget__use_box2d
+$(call gb_LinkTarget_use_unpacked,$(1),box2d)
+$(call gb_LinkTarget_set_include,$(1),\
+	-I$(call gb_UnpackedTarball_get_dir,box2d/Box2D/)\
+	$$(INCLUDE) \
+)
+$(call gb_LinkTarget_use_static_libraries,$(1),\
+	box2d \
+)
+
+endef
+
+define gb_ExternalProject__use_box2d
+$(call gb_ExternalProject_use_static_libraries,$(1),box2d)
+
+endef
+
+endif # SYSTEM_BOX2D
 
 # vim: set noet sw=4 ts=4:

@@ -84,7 +84,7 @@ private:
     const int       mnFaceNum;
     const int       mnFaceVariation;
     int             mnRefCount;
-    sal_IntPtr const mnFontId;
+    sal_IntPtr      mnFontId;
     FontAttributes  maDevFontAttributes;
 
     FontCharMapRef  mxFontCharMap;
@@ -93,7 +93,7 @@ private:
 class FreetypeFontFace : public PhysicalFontFace
 {
 private:
-    FreetypeFontInfo* const             mpFreetypeFontInfo;
+    FreetypeFontInfo*             mpFreetypeFontInfo;
 
 public:
                             FreetypeFontFace( FreetypeFontInfo*, const FontAttributes& );
@@ -102,11 +102,11 @@ public:
     virtual sal_IntPtr      GetFontId() const override { return mpFreetypeFontInfo->GetFontId(); }
 };
 
-class FreetypeFontInstance : public LogicalFontInstance
+class SAL_DLLPUBLIC_RTTI FreetypeFontInstance : public LogicalFontInstance
 {
     friend rtl::Reference<LogicalFontInstance> FreetypeFontFace::CreateFontInstance(const FontSelectPattern&) const;
 
-    FreetypeFont* mpFreetypeFont;
+    std::unique_ptr<FreetypeFont> mxFreetypeFont;
 
     virtual hb_font_t* ImplInitHbFont() override;
     virtual bool ImplGetGlyphBoundRect(sal_GlyphId, tools::Rectangle&, bool) const override;
@@ -117,8 +117,7 @@ protected:
 public:
     virtual ~FreetypeFontInstance() override;
 
-    void SetFreetypeFont(FreetypeFont* p);
-    FreetypeFont* GetFreetypeFont() const { return mpFreetypeFont; }
+    FreetypeFont& GetFreetypeFont() const { return *mxFreetypeFont; }
 
     virtual bool GetGlyphOutline(sal_GlyphId, basegfx::B2DPolyPolygon&, bool) const override;
 };

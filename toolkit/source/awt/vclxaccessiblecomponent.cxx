@@ -28,7 +28,7 @@
 #include <toolkit/awt/vclxwindow.hxx>
 #include <toolkit/helper/convert.hxx>
 #include <toolkit/awt/vclxfont.hxx>
-#include <vcl/dialog.hxx>
+#include <vcl/toolkit/dialog.hxx>
 #include <vcl/vclevent.hxx>
 #include <vcl/window.hxx>
 #include <vcl/edit.hxx>
@@ -374,9 +374,6 @@ void VCLXAccessibleComponent::FillAccessibleRelationSet( utl::AccessibleRelation
             uno::Sequence< uno::Reference< uno::XInterface > > aSequence { pMemberOf->GetAccessible() };
             rRelationSet.AddRelation( accessibility::AccessibleRelation( accessibility::AccessibleRelationType::MEMBER_OF, aSequence ) );
         }
-
-        for (const auto& rExtraRelation : pWindow->GetExtraAccessibleRelations())
-            rRelationSet.AddRelation(rExtraRelation);
     }
 }
 

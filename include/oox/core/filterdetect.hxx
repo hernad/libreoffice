@@ -33,14 +33,14 @@
 #include <rtl/ustring.hxx>
 #include <sal/types.h>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace beans { struct PropertyValue; }
     namespace io { class XInputStream; }
     namespace uno { class XComponentContext; }
-    namespace xml { namespace sax { class XFastAttributeList; } }
-    namespace xml { namespace sax { class XFastContextHandler; } }
-    namespace xml { namespace sax { class XLocator; } }
-} } }
+    namespace xml::sax { class XFastAttributeList; }
+    namespace xml::sax { class XFastContextHandler; }
+    namespace xml::sax { class XLocator; }
+}
 
 namespace utl { class MediaDescriptor; }
 
@@ -48,6 +48,12 @@ namespace oox { class AttributeList; }
 
 namespace oox {
 namespace core {
+
+enum class OOXMLVariant {
+    ECMA_Transitional,
+    ISO_Transitional,
+    ISO_Strict
+};
 
 
 /** Document handler specifically designed for detecting OOXML file formats.
@@ -79,7 +85,7 @@ public:
 private:
     void                parseRelationship( const AttributeList& rAttribs );
 
-    static OUString     getFilterNameFromContentType( const OUString& rContentType, const OUString& rFileName );
+    OUString            getFilterNameFromContentType( const OUString& rContentType, const OUString& rFileName );
     void                parseContentTypesDefault( const AttributeList& rAttribs );
     void                parseContentTypesOverride( const AttributeList& rAttribs );
 
@@ -87,9 +93,10 @@ private:
     typedef ::std::vector< sal_Int32 > ContextVector;
 
     OUString&           mrFilterName;
-    OUString const      maFileName;
+    OUString            maFileName;
     ContextVector       maContextStack;
     OUString            maTargetPath;
+    OOXMLVariant        maOOXMLVariant;
     css::uno::Reference< css::uno::XComponentContext > mxContext;
 };
 

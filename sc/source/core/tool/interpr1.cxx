@@ -125,7 +125,7 @@ void ScInterpreter::ScIfJump()
                             if (bIsValue)
                             {
                                 fVal = pMat->GetDouble(nC, nR);
-                                bIsValue = ::rtl::math::isFinite(fVal);
+                                bIsValue = std::isfinite(fVal);
                                 bTrue = bIsValue && (fVal != 0.0);
                                 if (bTrue)
                                     fVal = 1.0;
@@ -448,7 +448,7 @@ void ScInterpreter::ScChooseJump()
                             if ( bIsValue )
                             {
                                 fVal = pMat->GetDouble(nC, nR);
-                                bIsValue = ::rtl::math::isFinite( fVal );
+                                bIsValue = std::isfinite( fVal );
                                 if ( bIsValue )
                                 {
                                     fVal = ::rtl::math::approxFloor( fVal);
@@ -1736,13 +1736,14 @@ void ScInterpreter::ScPi()
     PushDouble(F_PI);
 }
 
-void ScInterpreter::ScRandom()
+void ScInterpreter::ScRandomImpl( const std::function<double( double fFirst, double fLast )>& RandomFunc,
+        double fFirst, double fLast )
 {
     if (bMatrixFormula)
     {
         SCCOL nCols = 0;
         SCROW nRows = 0;
-        if(pMyFormulaCell)
+        if (pMyFormulaCell)
             pMyFormulaCell->GetMatColsRows( nCols, nRows);
 
         if (nCols == 1 && nRows == 1)
@@ -1752,7 +1753,7 @@ void ScInterpreter::ScRandom()
             // default are executed in array context unless
             // FA.setPropertyValue("IsArrayFunction",False) was set, return a
             // scalar double instead of a 1x1 matrix object. tdf#128218
-            PushDouble( comphelper::rng::uniform_real_distribution());
+            PushDouble( RandomFunc( fFirst, fLast));
             return;
         }
 
@@ -1773,7 +1774,7 @@ void ScInterpreter::ScRandom()
             {
                 for (SCROW j=0; j < nRows; ++j)
                 {
-                    pResMat->PutDouble( comphelper::rng::uniform_real_distribution(),
+                    pResMat->PutDouble( RandomFunc( fFirst, fLast),
                             static_cast<SCSIZE>(i), static_cast<SCSIZE>(j));
                 }
             }
@@ -1782,8 +1783,39 @@ void ScInterpreter::ScRandom()
     }
     else
     {
-        PushDouble( comphelper::rng::uniform_real_distribution());
+        PushDouble( RandomFunc( fFirst, fLast));
     }
+}
+
+void ScInterpreter::ScRandom()
+{
+    auto RandomFunc = []( double, double )
+    {
+        return comphelper::rng::uniform_real_distribution();
+    };
+    ScRandomImpl( RandomFunc, 0.0, 0.0);
+}
+
+void ScInterpreter::ScRandbetween()
+{
+    if (!MustHaveParamCount( GetByte(), 2))
+        return;
+
+    // Same like scaddins/source/analysis/analysis.cxx
+    // AnalysisAddIn::getRandbetween()
+    double fMax = rtl::math::round( GetDouble(), 0, rtl_math_RoundingMode_Up);
+    double fMin = rtl::math::round( GetDouble(), 0, rtl_math_RoundingMode_Up);
+    if (nGlobalError != FormulaError::NONE || fMin > fMax)
+    {
+        PushIllegalArgument();
+        return;
+    }
+    fMax = std::nextafter( fMax+1, -DBL_MAX);
+    auto RandomFunc = []( double fFirst, double fLast )
+    {
+        return floor( comphelper::rng::uniform_real_distribution( fFirst, fLast));
+    };
+    ScRandomImpl( RandomFunc, fMin, fMax);
 }
 
 void ScInterpreter::ScTrue()
@@ -2202,59 +2234,7 @@ namespace {
 
 void getFormatString(SvNumberFormatter* pFormatter, sal_uLong nFormat, OUString& rFmtStr)
 {
-    bool        bAppendPrec = true;
-    sal_uInt16  nPrec, nLeading;
-    bool        bThousand, bIsRed;
-    pFormatter->GetFormatSpecialInfo( nFormat, bThousand, bIsRed, nPrec, nLeading );
-
-    switch( pFormatter->GetType( nFormat ) )
-    {
-        case SvNumFormatType::NUMBER:
-            if(bThousand) rFmtStr = ","; else rFmtStr = "F";
-            break;
-        case SvNumFormatType::CURRENCY:
-            rFmtStr = "C";
-            break;
-        case SvNumFormatType::SCIENTIFIC:
-            rFmtStr = "S";
-            break;
-        case SvNumFormatType::PERCENT:
-            rFmtStr = "P";
-            break;
-        default:
-        {
-            bAppendPrec = false;
-            switch( pFormatter->GetIndexTableOffset( nFormat ) )
-            {
-                case NF_DATE_SYSTEM_SHORT:
-                case NF_DATE_SYS_DMMMYY:
-                case NF_DATE_SYS_DDMMYY:
-                case NF_DATE_SYS_DDMMYYYY:
-                case NF_DATE_SYS_DMMMYYYY:
-                case NF_DATE_DIN_DMMMYYYY:
-                case NF_DATE_SYS_DMMMMYYYY:
-                case NF_DATE_DIN_DMMMMYYYY: rFmtStr = "D1"; break;
-                case NF_DATE_SYS_DDMMM:     rFmtStr = "D2"; break;
-                case NF_DATE_SYS_MMYY:      rFmtStr = "D3"; break;
-                case NF_DATETIME_SYSTEM_SHORT_HHMM:
-                case NF_DATETIME_SYS_DDMMYYYY_HHMMSS:
-                                            rFmtStr = "D4"; break;
-                case NF_DATE_DIN_MMDD:      rFmtStr = "D5"; break;
-                case NF_TIME_HHMMSSAMPM:    rFmtStr = "D6"; break;
-                case NF_TIME_HHMMAMPM:      rFmtStr = "D7"; break;
-                case NF_TIME_HHMMSS:        rFmtStr = "D8"; break;
-                case NF_TIME_HHMM:          rFmtStr = "D9"; break;
-                default:                    rFmtStr = "G";
-            }
-        }
-    }
-    if( bAppendPrec )
-        rFmtStr += OUString::number(nPrec);
-    const SvNumberformat* pFormat = pFormatter->GetEntry( nFormat );
-    if( lcl_FormatHasNegColor( pFormat ) )
-        rFmtStr += "-";
-    if( lcl_FormatHasOpenPar( pFormat ) )
-        rFmtStr += "()";
+    rFmtStr = pFormatter->GetCalcCellReturn( nFormat);
 }
 
 }
@@ -2481,7 +2461,7 @@ void ScInterpreter::ScCellExternal()
         // For SHEET, No idea what number we should set, but let's always set
         // 1 if the external sheet exists, no matter what sheet.  Excel does
         // the same.
-        if (pRefMgr->getCacheTable(nFileId, aTabName, false).get())
+        if (pRefMgr->getCacheTable(nFileId, aTabName, false))
             PushInt(1);
         else
             SetError(FormulaError::NoName);
@@ -3165,7 +3145,7 @@ void ScInterpreter::ScTrim()
 
 void ScInterpreter::ScUpper()
 {
-    OUString aString = ScGlobal::pCharClass->uppercase(GetString().getString());
+    OUString aString = ScGlobal::getCharClassPtr()->uppercase(GetString().getString());
     PushString(aString);
 }
 
@@ -3176,14 +3156,14 @@ void ScInterpreter::ScProper()
     const sal_Int32 nLen = aStr.getLength();
     if ( nLen > 0 )
     {
-        OUString aUpr(ScGlobal::pCharClass->uppercase(aStr.toString()));
-        OUString aLwr(ScGlobal::pCharClass->lowercase(aStr.toString()));
+        OUString aUpr(ScGlobal::getCharClassPtr()->uppercase(aStr.toString()));
+        OUString aLwr(ScGlobal::getCharClassPtr()->lowercase(aStr.toString()));
         aStr[0] = aUpr[0];
         sal_Int32 nPos = 1;
         while( nPos < nLen )
         {
             OUString aTmpStr( aStr[nPos-1] );
-            if ( !ScGlobal::pCharClass->isLetter( aTmpStr, 0 ) )
+            if ( !ScGlobal::getCharClassPtr()->isLetter( aTmpStr, 0 ) )
                 aStr[nPos] = aUpr[nPos];
             else
                 aStr[nPos] = aLwr[nPos];
@@ -3195,7 +3175,7 @@ void ScInterpreter::ScProper()
 
 void ScInterpreter::ScLower()
 {
-    OUString aString = ScGlobal::pCharClass->lowercase(GetString().getString());
+    OUString aString = ScGlobal::getCharClassPtr()->lowercase(GetString().getString());
     PushString(aString);
 }
 
@@ -3773,7 +3753,7 @@ void ScInterpreter::ScMin( bool bTextAsZero )
     }
     else
     {
-        if (!rtl::math::isFinite(nVal))
+        if (!std::isfinite(nVal))
             PushError( GetDoubleErrorValue( nVal));
         else if ( nVal < nMin  )
             PushDouble(0.0);    // zero or only empty arguments
@@ -3931,7 +3911,7 @@ void ScInterpreter::ScMax( bool bTextAsZero )
     }
     else
     {
-        if (!rtl::math::isFinite(nVal))
+        if (!std::isfinite(nVal))
             PushError( GetDoubleErrorValue( nVal));
         else if ( nVal > nMax  )
             PushDouble(0.0);    // zero or only empty arguments
@@ -4690,7 +4670,7 @@ public:
 
 private:
     const ScMatrix& mrMat;
-    bool const mbColVec;
+    bool mbColVec;
 };
 
 /** returns -1 when the matrix value is smaller than the query value, 0 when
@@ -4713,7 +4693,7 @@ sal_Int32 lcl_CompareMatrix2Query(
     if (rMat.IsValue(i))
     {
         const double nVal1 = rMat.GetDouble(i);
-        if (!rtl::math::isFinite(nVal1))
+        if (!std::isfinite(nVal1))
         {
             // XXX Querying for error values is not required, otherwise we'd
             // need to check here.
@@ -6866,7 +6846,7 @@ void ScInterpreter::ScLookup()
             for (SCSIZE i=0; i < nElements; ++i)
             {
                 const double fVal = aMatAcc.GetDouble(i);
-                if (rtl::math::isFinite(fVal))
+                if (std::isfinite(fVal))
                 {
                     vArray.push_back(fVal);
                     vIndex.push_back(i);
@@ -8142,7 +8122,7 @@ void ScInterpreter::ScIndirect()
 
             do
             {
-                OUString aName( ScGlobal::pCharClass->uppercase( sRefStr));
+                OUString aName( ScGlobal::getCharClassPtr()->uppercase( sRefStr));
                 ScDBCollection::NamedDBs& rDBs = pDok->GetDBCollection()->getNamedDBs();
                 const ScDBData* pData = rDBs.findByUpperName( aName);
                 if (!pData)
@@ -8179,8 +8159,8 @@ void ScInterpreter::ScIndirect()
             // Anything else that resolves to one reference could be added
             // here, but we don't want to compile every arbitrary string. This
             // is already nasty enough...
-            sal_Int32 nIndex = 0;
-            if ((nIndex = sRefStr.indexOf('[')) >= 0 && sRefStr.indexOf(']',nIndex+1) > nIndex)
+            sal_Int32 nIndex = sRefStr.indexOf('[');
+            if (nIndex >= 0 && sRefStr.indexOf(']',nIndex+1) > nIndex)
             {
                 do
                 {
@@ -8957,8 +8937,8 @@ void ScInterpreter::ScLeft()
 namespace {
 
 struct UBlockScript {
-    UBlockCode const from;
-    UBlockCode const to;
+    UBlockCode from;
+    UBlockCode to;
 };
 
 }
@@ -9220,7 +9200,7 @@ void ScInterpreter::ScSearchB()
             sal_Int32 nEndPos = aSubStr.getLength();
             utl::SearchParam::SearchType eSearchType = DetectSearchType( asStr, pDok );
             utl::SearchParam sPar( asStr, eSearchType, false, '~', false );
-            utl::TextSearch sT( sPar, *ScGlobal::pCharClass );
+            utl::TextSearch sT( sPar, *ScGlobal::getCharClassPtr() );
             if ( !sT.SearchForward( aSubStr, &nPos, &nEndPos ) )
                 PushNoValue();
             else
@@ -9296,7 +9276,7 @@ void ScInterpreter::ScSearch()
         {
             utl::SearchParam::SearchType eSearchType = DetectSearchType( SearchStr, pDok );
             utl::SearchParam sPar(SearchStr, eSearchType, false, '~', false);
-            utl::TextSearch sT( sPar, *ScGlobal::pCharClass );
+            utl::TextSearch sT( sPar, *ScGlobal::getCharClassPtr() );
             bool bBool = sT.SearchForward(sStr, &nPos, &nEndPos);
             if (!bBool)
                 PushNoValue();
@@ -9582,6 +9562,18 @@ void ScInterpreter::ScText()
         }
         if (nGlobalError != FormulaError::NONE)
             PushError( nGlobalError);
+        else if (sFormatString.isEmpty())
+        {
+            // Mimic the Excel behaviour that
+            // * anything numeric returns an empty string
+            // * text convertible to numeric returns an empty string
+            // * any other text returns that text
+            // Conversion was detected above.
+            if (bString)
+                PushString( aStr);
+            else
+                PushString( OUString());
+        }
         else
         {
             OUString aResult;

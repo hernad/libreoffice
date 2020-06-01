@@ -69,6 +69,7 @@ enum class WindowType : sal_uInt16
     PATTERNFIELD         ,
     NUMERICFIELD         , // 40 (344)
     METRICFIELD          ,
+    FORMATTEDFIELD       ,
     CURRENCYFIELD        ,
     DATEFIELD            ,
     TIMEFIELD            ,
@@ -263,10 +264,6 @@ enum class StandardButtonType
     Finish       = 13,
     Count        = 14,
 };
-
-// prominent place for ListBox window types
-
-enum class ProminentEntry { TOP, MIDDLE };
 
 #endif
 

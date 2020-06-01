@@ -23,18 +23,14 @@
 #include <com/sun/star/text/XTextDocument.hpp>
 #include <com/sun/star/text/XTextCursor.hpp>
 #include <com/sun/star/text/XTextAppend.hpp>
-#include <com/sun/star/text/XTextAppendAndConvert.hpp>
-#include <com/sun/star/text/XTextFrame.hpp>
 #include <com/sun/star/style/TabStop.hpp>
 #include <com/sun/star/container/XNameContainer.hpp>
 #include <queue>
 #include <stack>
-#include <tuple>
+#include <set>
 #include <unordered_map>
 #include <vector>
-#include <o3tl/optional.hxx>
-
-#include <ooxml/resourceids.hxx>
+#include <optional>
 
 #include "DomainMapper.hxx"
 #include "DomainMapperTableManager.hxx"
@@ -52,9 +48,7 @@
 #include "FormControlHelper.hxx"
 #include <map>
 
-#include <string.h>
-
-namespace com{ namespace sun{ namespace star{
+namespace com::sun::star{
         namespace awt{
             struct Size;
         }
@@ -68,7 +62,7 @@ namespace com{ namespace sun{ namespace star{
                 class XFormField;
         }
         namespace beans{ class XPropertySet;}
-}}}
+}
 
 namespace writerfilter {
 namespace dmapper {
@@ -139,7 +133,7 @@ enum class SkipFootnoteSeparator
  */
 class HeaderFooterContext
 {
-    bool const m_bTextInserted;
+    bool      m_bTextInserted;
     sal_Int32 m_nTableDepth;
 
 public:
@@ -163,7 +157,7 @@ class FieldContext : public virtual SvRefBase
 
     OUString m_sCommand;
     OUString m_sResult;
-    o3tl::optional<FieldId> m_eFieldId;
+    std::optional<FieldId> m_eFieldId;
     bool m_bFieldLocked;
 
     css::uno::Reference<css::text::XTextField> m_xTextField;
@@ -193,7 +187,7 @@ public:
     const OUString&  GetCommand() const {return m_sCommand; }
 
     void SetFieldId(FieldId eFieldId ) { m_eFieldId = eFieldId; }
-    o3tl::optional<FieldId> const & GetFieldId() const { return m_eFieldId; }
+    std::optional<FieldId> const & GetFieldId() const { return m_eFieldId; }
 
     void AppendResult(OUString const& rResult) { m_sResult += rResult; }
     const OUString&  GetResult() const { return m_sResult; }
@@ -290,7 +284,7 @@ struct DeletableTabStop : public css::style::TabStop
 /// helper to remember bookmark start position
 struct BookmarkInsertPosition
 {
-    bool const                                                       m_bIsStartOfText;
+    bool                                                             m_bIsStartOfText;
     OUString                                                         m_sBookmarkName;
     css::uno::Reference<css::text::XTextRange> m_xTextRange;
     BookmarkInsertPosition(bool bIsStartOfText, const OUString& rName, css::uno::Reference<css::text::XTextRange> const& xTextRange):
@@ -302,8 +296,8 @@ struct BookmarkInsertPosition
 
 struct PermInsertPosition
 {
-    bool const        m_bIsStartOfText;
-    sal_Int32 const   m_Id;
+    bool        m_bIsStartOfText;
+    sal_Int32   m_Id;
     OUString    m_Ed;
     OUString    m_EdGrp;
 
@@ -386,9 +380,9 @@ struct FloatingTableInfo
 {
     css::uno::Reference<css::text::XTextRange> m_xStart;
     css::uno::Reference<css::text::XTextRange> m_xEnd;
-    css::uno::Sequence<css::beans::PropertyValue> const m_aFrameProperties;
-    sal_Int32 const m_nTableWidth;
-    sal_Int32 const m_nTableWidthType;
+    css::uno::Sequence<css::beans::PropertyValue> m_aFrameProperties;
+    sal_Int32 m_nTableWidth;
+    sal_Int32 m_nTableWidthType;
     /// Break type of the section that contains this table.
     sal_Int32 m_nBreakType = -1;
 
@@ -438,7 +432,7 @@ public:
     typedef std::map < sal_Int32, PermInsertPosition >    PermMap_t;
 
 private:
-    SourceDocumentType const                                                        m_eDocumentType;
+    SourceDocumentType                                                              m_eDocumentType;
     DomainMapper&                                                                   m_rDMapper;
     OUString m_aBaseUrl;
     css::uno::Reference<css::text::XTextDocument> m_xTextDocument;
@@ -447,7 +441,7 @@ private:
     css::uno::Reference<css::uno::XComponentContext> m_xComponentContext;
     css::uno::Reference<css::container::XNameContainer> m_xPageStyles1;
     // cache next available number, expensive to repeatedly compute
-    o3tl::optional<int> m_xNextUnusedPageStyleNo;
+    std::optional<int> m_xNextUnusedPageStyleNo;
     css::uno::Reference<css::text::XText> m_xBodyText;
     css::uno::Reference<css::text::XTextContent> m_xEmbedded;
 
@@ -491,6 +485,8 @@ private:
     // TableManagers are stacked: one for each stream to avoid any confusion
     std::stack< tools::SvRef< DomainMapperTableManager > > m_aTableManagers;
     tools::SvRef<DomainMapperTableHandler> m_pTableHandler;
+    // List of document lists overrides. They are applied only once on first occurrence in document
+    std::set<sal_Int32> m_aListOverrideApplied;
 
     //each context needs a stack of currently used attributes
     std::stack<PropertyMapPtr>  m_aPropertyStacks[NUMBER_OF_CONTEXTS];
@@ -589,8 +585,8 @@ private:
 public:
     css::uno::Reference<css::text::XTextRange> m_xInsertTextRange;
 private:
-    bool const m_bIsNewDoc;
-    bool const m_bIsReadGlossaries;
+    bool m_bIsNewDoc;
+    bool m_bIsReadGlossaries;
 public:
     DomainMapper_Impl(
             DomainMapper& rDMapper,
@@ -685,7 +681,8 @@ public:
     void appendTextPortion( const OUString& rString, const PropertyMapPtr& pPropertyMap );
     void appendTextContent(const css::uno::Reference<css::text::XTextContent>&, const css::uno::Sequence<css::beans::PropertyValue>&);
     void appendOLE( const OUString& rStreamName, const std::shared_ptr<OLEHandler>& pOleHandler );
-    void appendStarMath( const Value& v );
+    void appendStarMath( const Value& v);
+    void adjustLastPara(sal_Int8 nAlign);
     css::uno::Reference<css::beans::XPropertySet> appendTextSectionAfter(css::uno::Reference<css::text::XTextRange> const & xBefore);
 
     /// AutoText import: each entry is placed in the separate section
@@ -725,6 +722,7 @@ public:
             m_pStyleSheetTable = new StyleSheetTable( m_rDMapper, m_xTextDocument, m_bIsNewDoc );
         return m_pStyleSheetTable;
     }
+    OUString GetListStyleName(sal_Int32 nListId);
     ListsManager::Pointer const & GetListTable();
     ThemeTablePtr const & GetThemeTable()
     {
@@ -754,7 +752,7 @@ public:
     OUString  GetDefaultParaStyleName();
 
     // specified style - including inherited properties. Indicate whether paragraph defaults should be checked.
-    css::uno::Any GetPropertyFromStyleSheet(PropertyIds eId, StyleSheetEntryPtr pEntry, const bool bDocDefaults, const bool bPara);
+    css::uno::Any GetPropertyFromStyleSheet(PropertyIds eId, StyleSheetEntryPtr pEntry, const bool bDocDefaults, const bool bPara, bool* bIsDocDefault = nullptr);
     // current paragraph style - including inherited properties
     css::uno::Any GetPropertyFromParaStyleSheet(PropertyIds eId);
     // context's character style - including inherited properties
@@ -890,7 +888,7 @@ public:
 
     void appendTableHandler( )
     {
-        if (m_pTableHandler.get())
+        if (m_pTableHandler)
             m_aTableManagers.top()->setHandler(m_pTableHandler);
     }
 
@@ -984,7 +982,7 @@ public:
     tools::SvRef<SdtHelper> m_pSdtHelper;
 
     /// Document background color, applied to every page style.
-    o3tl::optional<sal_Int32> m_oBackgroundColor;
+    std::optional<sal_Int32> m_oBackgroundColor;
 
     /**
      * This contains the raw table depth. m_nTableDepth > 0 is the same as

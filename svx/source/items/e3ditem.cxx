@@ -18,14 +18,10 @@
  */
 
 #include <com/sun/star/drawing/Direction3D.hpp>
-#include <comphelper/fileformat.h>
-#include <tools/stream.hxx>
 #include <rtl/math.hxx>
 #include <libxml/xmlwriter.h>
 
 #include <svx/e3ditem.hxx>
-
-#include <climits>
 
 using namespace ::com::sun::star;
 
@@ -62,7 +58,7 @@ SvxB3DVectorItem* SvxB3DVectorItem::Clone( SfxItemPool* /*pPool*/ ) const
 
 bool SvxB3DVectorItem::QueryValue( uno::Any& rVal, sal_uInt8 /*nMemberId*/ ) const
 {
-    assert(!rtl::math::isNan(aVal.getX()) && !rtl::math::isNan(aVal.getY()) && !rtl::math::isNan(aVal.getZ()));
+    assert(!std::isnan(aVal.getX()) && !std::isnan(aVal.getY()) && !std::isnan(aVal.getZ()));
 
     drawing::Direction3D aDirection;
 
@@ -86,7 +82,7 @@ bool SvxB3DVectorItem::PutValue( const uno::Any& rVal, sal_uInt8 /*nMemberId*/ )
     aVal.setY(aDirection.DirectionY);
     aVal.setZ(aDirection.DirectionZ);
 
-    assert(!rtl::math::isNan(aVal.getX()) && !rtl::math::isNan(aVal.getY()) && !rtl::math::isNan(aVal.getZ()));
+    assert(!std::isnan(aVal.getX()) && !std::isnan(aVal.getY()) && !std::isnan(aVal.getZ()));
 
     return true;
 }

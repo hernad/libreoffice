@@ -20,9 +20,9 @@
 #include <com/sun/star/io/XMarkableStream.hpp>
 #include <com/sun/star/uno/XComponentContext.hpp>
 
-#include <toolkit/controls/stdtabcontrollermodel.hxx>
+#include <controls/stdtabcontrollermodel.hxx>
 #include <toolkit/helper/macros.hxx>
-#include <toolkit/helper/servicenames.hxx>
+#include <helper/servicenames.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <cppuhelper/queryinterface.hxx>
 
@@ -369,7 +369,7 @@ void StdTabControllerModel::getGroupByName( const OUString& rName, css::uno::Seq
 // css::io::XPersistObject
 OUString StdTabControllerModel::getServiceName(  )
 {
-    return OUString::createFromAscii( szServiceName_TabControllerModel );
+    return "stardiv.vcl.controlmodel.TabController";
 }
 
 void StdTabControllerModel::write( const css::uno::Reference< css::io::XObjectOutputStream >& OutStream )
@@ -425,7 +425,7 @@ sal_Bool StdTabControllerModel::supportsService(OUString const & ServiceName)
 css::uno::Sequence<OUString> StdTabControllerModel::getSupportedServiceNames()
 {
     return css::uno::Sequence<OUString>{
-        OUString::createFromAscii(szServiceName2_TabControllerModel),
+        "com.sun.star.awt.TabControllerModel",
         "stardiv.vcl.controlmodel.TabController"};
 }
 

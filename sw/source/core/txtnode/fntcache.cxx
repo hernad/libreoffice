@@ -248,12 +248,12 @@ struct CalcLinePosData
 {
     SwDrawTextInfo& rInf;
     vcl::Font& rFont;
-    TextFrameIndex const nCnt;
+    TextFrameIndex nCnt;
     const bool bSwitchH2V;
     const bool bSwitchH2VLRBT;
     const bool bSwitchL2R;
-    long const nHalfSpace;
-    long* const pKernArray;
+    long nHalfSpace;
+    long* pKernArray;
     const bool bBidiPor;
 
     CalcLinePosData( SwDrawTextInfo& _rInf, vcl::Font& _rFont,
@@ -2619,7 +2619,7 @@ bool SwDrawTextInfo::ApplyAutoColor( vcl::Font* pFont )
                 ///     is a background brush and its color is *not* "no fill"/"auto fill".
                 if( GetFrame()->GetBackgroundBrush( aFillAttributes, pItem, pCol, aOrigBackRect, false, /*bConsiderTextBox=*/true ) )
                 {
-                    if (aFillAttributes.get() && aFillAttributes->isUsed())
+                    if (aFillAttributes && aFillAttributes->isUsed())
                     {
                         // First see if fill attributes provide a color.
                         aColor = Color(aFillAttributes->getAverageColor(aGlobalRetoucheColor.getBColor()));

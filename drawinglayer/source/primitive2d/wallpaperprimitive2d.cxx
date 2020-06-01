@@ -17,7 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <drawinglayer/primitive2d/wallpaperprimitive2d.hxx>
+#include <primitive2d/wallpaperprimitive2d.hxx>
 #include <drawinglayer/primitive2d/bitmapprimitive2d.hxx>
 #include <drawinglayer/primitive2d/drawinglayer_primitivetypes2d.hxx>
 #include <drawinglayer/primitive2d/fillgraphicprimitive2d.hxx>
@@ -26,6 +26,7 @@
 #include <drawinglayer/primitive2d/maskprimitive2d.hxx>
 #include <basegfx/matrix/b2dhommatrixtools.hxx>
 #include <vcl/graph.hxx>
+#include <toolkit/helper/vclunohelper.hxx>
 
 
 namespace drawinglayer::primitive2d
@@ -53,7 +54,7 @@ namespace drawinglayer::primitive2d
 
                         Primitive2DReference xReference(
                             new BitmapPrimitive2D(
-                                getBitmapEx(),
+                                VCLUnoHelper::CreateVCLXBitmap(getBitmapEx()),
                                 aObjectTransform));
 
                         aRetval = xReference;
@@ -152,7 +153,7 @@ namespace drawinglayer::primitive2d
 
                             Primitive2DReference xReference(
                                 new BitmapPrimitive2D(
-                                    getBitmapEx(),
+                                    VCLUnoHelper::CreateVCLXBitmap(getBitmapEx()),
                                     aObjectTransform));
                             aRetval = xReference;
 

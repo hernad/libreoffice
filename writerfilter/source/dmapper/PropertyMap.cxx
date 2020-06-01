@@ -17,6 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 #include "PropertyMap.hxx"
+#include "TagLogger.hxx"
 #include <ooxml/resourceids.hxx>
 #include "DomainMapper_Impl.hxx"
 #include "ConversionHelper.hxx"
@@ -28,7 +29,6 @@
 #include <com/sun/star/beans/PropertyAttribute.hpp>
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/beans/XMultiPropertySet.hpp>
-#include <com/sun/star/drawing/XDrawPageSupplier.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/table/BorderLine2.hpp>
 #include <com/sun/star/container/XEnumeration.hpp>
@@ -36,7 +36,6 @@
 #include <com/sun/star/container/XNameContainer.hpp>
 #include <com/sun/star/style/BreakType.hpp>
 #include <com/sun/star/style/PageStyleLayout.hpp>
-#include <com/sun/star/style/XStyle.hpp>
 #include <com/sun/star/style/XStyleFamiliesSupplier.hpp>
 #include <com/sun/star/table/ShadowFormat.hpp>
 #include <com/sun/star/text/RelOrientation.hpp>
@@ -185,6 +184,14 @@ uno::Sequence< beans::PropertyValue > PropertyMap::GetPropertyValues( bool bChar
     return comphelper::containerToSequence( m_aValues );
 }
 
+std::vector< PropertyIds > PropertyMap::GetPropertyIds()
+{
+    std::vector< PropertyIds > aRet;
+    for ( const auto& rPropPair : m_vMap )
+        aRet.push_back( rPropPair.first );
+    return aRet;
+}
+
 #ifdef DBG_UTIL
 static void lcl_AnyToTag( const uno::Any& rAny )
 {
@@ -223,7 +230,7 @@ static void lcl_AnyToTag( const uno::Any& rAny )
 }
 #endif
 
-void PropertyMap::Insert( PropertyIds eId, const uno::Any& rAny, bool bOverwrite, GrabBagType i_GrabBagType )
+void PropertyMap::Insert( PropertyIds eId, const uno::Any& rAny, bool bOverwrite, GrabBagType i_GrabBagType, bool bDocDefault )
 {
 #ifdef DBG_UTIL
     const OUString& rInsert = getPropertyName(eId);
@@ -235,7 +242,7 @@ void PropertyMap::Insert( PropertyIds eId, const uno::Any& rAny, bool bOverwrite
 #endif
 
     if ( !bOverwrite )
-        m_vMap.insert(std::make_pair(eId, PropValue(rAny, i_GrabBagType)));
+        m_vMap.insert(std::make_pair(eId, PropValue(rAny, i_GrabBagType, bDocDefault)));
     else
         m_vMap[eId] = PropValue(rAny, i_GrabBagType);
 
@@ -250,11 +257,11 @@ void PropertyMap::Erase( PropertyIds eId )
     Invalidate();
 }
 
-o3tl::optional< PropertyMap::Property > PropertyMap::getProperty( PropertyIds eId ) const
+std::optional< PropertyMap::Property > PropertyMap::getProperty( PropertyIds eId ) const
 {
     std::map< PropertyIds, PropValue >::const_iterator aIter = m_vMap.find( eId );
     if ( aIter == m_vMap.end() )
-        return o3tl::optional<Property>();
+        return std::optional<Property>();
     else
         return std::make_pair( eId, aIter->second.getValue() );
 }
@@ -262,6 +269,15 @@ o3tl::optional< PropertyMap::Property > PropertyMap::getProperty( PropertyIds eI
 bool PropertyMap::isSet( PropertyIds eId) const
 {
     return m_vMap.find( eId ) != m_vMap.end();
+}
+
+bool PropertyMap::isDocDefault( PropertyIds eId ) const
+{
+    std::map< PropertyIds, PropValue >::const_iterator aIter = m_vMap.find( eId );
+    if ( aIter == m_vMap.end() )
+        return false;
+    else
+        return aIter->second.getIsDocDefault();
 }
 
 #ifdef DBG_UTIL
@@ -320,7 +336,12 @@ void PropertyMap::InsertProps( const PropertyMapPtr& rMap, const bool bOverwrite
         for ( const auto& rPropPair : rMap->m_vMap )
         {
             if ( bOverwrite || !m_vMap.count(rPropPair.first) )
-                m_vMap[rPropPair.first] = rPropPair.second;
+            {
+                if ( !bOverwrite && !rPropPair.second.getIsDocDefault() )
+                    m_vMap.insert(std::make_pair(rPropPair.first, PropValue(rPropPair.second.getValue(), rPropPair.second.getGrabBagType(), true)));
+                else
+                    m_vMap[rPropPair.first] = rPropPair.second;
+            }
         }
 
         insertTableProperties( rMap.get(), bOverwrite );
@@ -661,7 +682,7 @@ void SectionPropertyMap::ApplySectionProperties( const uno::Reference< beans::XP
     {
         if ( xSection.is() )
         {
-            o3tl::optional< PropertyMap::Property > pProp = getProperty( PROP_WRITING_MODE );
+            std::optional< PropertyMap::Property > pProp = getProperty( PROP_WRITING_MODE );
             if ( pProp )
                 xSection->setPropertyValue( "WritingMode", pProp->second );
         }
@@ -927,15 +948,6 @@ void SectionPropertyMap::CopyLastHeaderFooter( bool bFirstPage, DomainMapper_Imp
 void SectionPropertyMap::PrepareHeaderFooterProperties( bool bFirstPage )
 {
     bool bCopyFirstToFollow = bFirstPage && m_bTitlePage && m_aFollowPageStyle.is();
-    if (bCopyFirstToFollow)
-    {
-        // This is a first page and has a follow style, then enable the
-        // header/footer there as well to be consistent.
-        if (HasHeader(/*bFirstPage=*/true))
-            m_aFollowPageStyle->setPropertyValue("HeaderIsOn", uno::makeAny(true));
-        if (HasFooter(/*bFirstPage=*/true))
-            m_aFollowPageStyle->setPropertyValue("FooterIsOn", uno::makeAny(true));
-    }
 
     sal_Int32 nTopMargin = m_nTopMargin;
     sal_Int32 nHeaderTop = m_nHeaderTop;
@@ -1159,7 +1171,7 @@ bool SectionPropertyMap::FloatingTableConversion( const DomainMapper_Impl& rDM_I
     // here represents this limit.
     const sal_Int32 nMagicNumber = 469;
 
-    // If the table's with is smaller than the text area width, text might
+    // If the table's width is smaller than the text area width, text might
     // be next to the table and so it should behave as a floating table.
     if ( (nTableWidth + nMagicNumber) < nTextAreaWidth )
         return true;
@@ -1232,6 +1244,28 @@ void SectionPropertyMap::HandleIncreasedAnchoredObjectSpacing(DomainMapper_Impl&
         if (rAnchor.m_aAnchoredObjects.size() < 4)
             continue;
 
+        // Ignore this paragraph if none of the objects are wrapped in the background.
+        sal_Int32 nOpaqueCount = 0;
+        for (const auto& rAnchored : rAnchor.m_aAnchoredObjects)
+        {
+            uno::Reference<beans::XPropertySet> xShape(rAnchored.m_xAnchoredObject, uno::UNO_QUERY);
+            if (!xShape.is())
+            {
+                continue;
+            }
+
+            bool bOpaque = true;
+            xShape->getPropertyValue("Opaque") >>= bOpaque;
+            if (!bOpaque)
+            {
+                ++nOpaqueCount;
+            }
+        }
+        if (nOpaqueCount < 1)
+        {
+            continue;
+        }
+
         // Analyze the anchored objects of this paragraph, now that we know the
         // page width.
         sal_Int32 nShapesWidth = 0;
@@ -1299,7 +1333,7 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
         if ( pLastContext )
         {
             bool bIsLandscape = false;
-            o3tl::optional< PropertyMap::Property > pProp = getProperty( PROP_IS_LANDSCAPE );
+            std::optional< PropertyMap::Property > pProp = getProperty( PROP_IS_LANDSCAPE );
             if ( pProp )
                 pProp->second >>= bIsLandscape;
 
@@ -1320,7 +1354,17 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
     {
         rInfo.m_nBreakType = m_nBreakType;
         if ( FloatingTableConversion( rDM_Impl, rInfo ) )
-            xBodyText->convertToTextFrame( rInfo.m_xStart, rInfo.m_xEnd, rInfo.m_aFrameProperties );
+        {
+            try
+            {
+                xBodyText->convertToTextFrame(rInfo.m_xStart, rInfo.m_xEnd,
+                                              rInfo.m_aFrameProperties);
+            }
+            catch (const uno::Exception&)
+            {
+                DBG_UNHANDLED_EXCEPTION("writerfilter", "convertToTextFrame() failed");
+            }
+        }
     }
     rPendingFloatingTables.clear();
 
@@ -1523,7 +1567,7 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
 
         //prepare text grid properties
         sal_Int32 nHeight = 1;
-        o3tl::optional< PropertyMap::Property > pProp = getProperty( PROP_HEIGHT );
+        std::optional< PropertyMap::Property > pProp = getProperty( PROP_HEIGHT );
         if ( pProp )
             pProp->second >>= nHeight;
 
@@ -1562,9 +1606,9 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
 
         sal_Int32 nCharWidth = 423; //240 twip/ 12 pt
         const StyleSheetEntryPtr pEntry = rDM_Impl.GetStyleSheetTable()->FindStyleSheetByConvertedStyleName( "Standard" );
-        if ( pEntry.get() )
+        if ( pEntry )
         {
-            o3tl::optional< PropertyMap::Property > pPropHeight = pEntry->pProperties->getProperty( PROP_CHAR_HEIGHT_ASIAN );
+            std::optional< PropertyMap::Property > pPropHeight = pEntry->pProperties->getProperty( PROP_CHAR_HEIGHT_ASIAN );
             if ( pPropHeight )
             {
                 double fHeight = 0;
@@ -1778,7 +1822,7 @@ namespace {
 class NamedPropertyValue
 {
 private:
-    OUString const m_aName;
+    OUString m_aName;
 
 public:
     explicit NamedPropertyValue( const OUString& i_aStr )
@@ -1869,7 +1913,6 @@ sal_Int32 SectionPropertyMap::GetPageWidth() const
 StyleSheetPropertyMap::StyleSheetPropertyMap()
     : mnListLevel( -1 )
     , mnOutlineLevel( -1 )
-    , mnNumId( -1 )
 {
 }
 

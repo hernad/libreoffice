@@ -20,10 +20,8 @@
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
 #include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
-#include "xmlHelper.hxx"
-#include "xmlEnums.hxx"
-#include <strings.hxx>
+#include <sal/log.hxx>
+#include <osl/diagnose.h>
 
 namespace rptxml
 {
@@ -47,9 +45,7 @@ OXMLFunction::OXMLFunction( ORptFilter& _rImport
     m_xFunction = m_xFunctions->createFunction();
 
     static const OUString s_sTRUE = ::xmloff::token::GetXMLToken(XML_TRUE);
-    sax_fastparser::FastAttributeList *pAttribList =
-                    sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-    for (auto &aIter : *pAttribList)
+    for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
     {
         OUString sValue = aIter.toString();
 
@@ -74,6 +70,7 @@ OXMLFunction::OXMLFunction( ORptFilter& _rImport
                     m_xFunction->setDeepTraversing(sValue == s_sTRUE);
                     break;
                 default:
+                    SAL_WARN("reportdesign", "unknown attribute " << SvXMLImport::getPrefixAndNameFromToken(aIter.getToken()) << " = " << sValue);
                     break;
             }
         }

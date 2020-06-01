@@ -32,7 +32,7 @@ namespace osl {
     typedef oslProfileOption ProfileOption;
 
     const int Profile_DEFAULT   = osl_Profile_DEFAULT;
-    const int Profile_SYSTEM    = osl_Profile_SYSTEM;    /* use system depended functinality */
+    const int Profile_SYSTEM    = osl_Profile_SYSTEM;    /* use system depended functionality */
     const int Profile_READLOCK  = osl_Profile_READLOCK;  /* lock file for reading            */
     const int Profile_WRITELOCK = osl_Profile_WRITELOCK; /* lock file for writing            */
 
@@ -160,8 +160,13 @@ namespace osl {
                 sal_Char* pBuf = new sal_Char[ n+1 ];
                 osl_getProfileSectionEntries( profile, rSection.getStr(), pBuf, n+1 );
                 size_t nLen;
-                for( n = 0; ( nLen = strlen( pBuf+n ) ); n += nLen+1 )
+                for( n = 0; ; n += nLen+1 )
+                {
+                    nLen = strlen( pBuf+n );
+                    if (!nLen)
+                        break;
                     aEntries.push_back( rtl::OString( pBuf+n ) );
+                }
                 delete[] pBuf;
             }
 
@@ -182,8 +187,13 @@ namespace osl {
                 sal_Char* pBuf = new sal_Char[ n+1 ];
                 osl_getProfileSections( profile, pBuf, n+1 );
                 size_t nLen;
-                for( n = 0; ( nLen = strlen( pBuf+n ) ); n += nLen+1 )
+                for( n = 0; ; n += nLen+1 )
+                {
+                    nLen = strlen( pBuf+n );
+                    if (!nLen)
+                        break;
                     aSections.push_back( rtl::OString( pBuf+n ) );
+                }
                 delete[] pBuf;
             }
 

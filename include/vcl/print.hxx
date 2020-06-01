@@ -20,6 +20,7 @@
 #ifndef INCLUDED_VCL_PRINT_HXX
 #define INCLUDED_VCL_PRINT_HXX
 
+#include <config_options.h>
 #include <rtl/ustring.hxx>
 #include <i18nutil/paper.hxx>
 
@@ -59,7 +60,7 @@ enum class PrinterSupport
 };
 
 
-class VCL_DLLPUBLIC QueueInfo
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) QueueInfo
 {
     friend class               Printer;
 
@@ -105,7 +106,7 @@ enum class PrinterBitmapMode
 };
 
 
-class VCL_DLLPUBLIC PrinterOptions
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) PrinterOptions
 {
 private:
 
@@ -240,6 +241,8 @@ public:
                                     const Gradient& rGradient );
     virtual Bitmap              GetBitmap( const Point& rSrcPt, const Size& rSize ) const override;
 
+    bool                        IsScreenComp() const override { return false; }
+
 protected:
     virtual void                DrawDeviceMask( const Bitmap& rMask, const Color& rMaskColor,
                                     const Point& rDestPt, const Size& rDestSize,
@@ -267,6 +270,8 @@ public:
                                 Printer( const OUString& rPrinterName );
     virtual                     ~Printer() override;
     virtual void                dispose() override;
+
+    virtual void SetMetafileMapMode(const MapMode& rNewMapMode, bool) override { SetMapMode(rNewMapMode); }
 
     static const std::vector< OUString >&
                                 GetPrinterQueues();
@@ -364,6 +369,8 @@ public:
 
     virtual void                CopyArea( const Point& rDestPt, const Point& rSrcPt,
                                     const Size& rSrcSize, bool bWindowInvalidate = false ) override;
+
+    virtual tools::Rectangle    GetBackgroundComponentBounds() const override;
 
     // These 3 together are more modular PrintJob(), allowing printing more documents as one print job
     // by repeated calls to ExecutePrintJob(). Used by mailmerge.
@@ -609,9 +616,9 @@ public:
     // helper functions for user to create a single control
     struct UIControlOptions
     {
-        OUString const   maDependsOnName;
-        sal_Int32 const  mnDependsOnEntry;
-        bool const       mbAttachToDependency;
+        OUString         maDependsOnName;
+        sal_Int32        mnDependsOnEntry;
+        bool             mbAttachToDependency;
         OUString         maGroupHint;
         bool             mbInternalOnly;
         bool             mbEnabled;

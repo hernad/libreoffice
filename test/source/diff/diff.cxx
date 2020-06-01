@@ -88,8 +88,8 @@ private:
     void cppunitAssertEqualDouble(const xmlNodePtr node, const xmlAttrPtr attr, double expected, double found, double delta);
 
     ToleranceContainer toleranceContainer;
-    xmlDocPtr const xmlFile1;
-    xmlDocPtr const xmlFile2;
+    xmlDocPtr xmlFile1;
+    xmlDocPtr xmlFile2;
     std::string fileName;
 };
 
@@ -302,7 +302,7 @@ bool XMLDiff::compareAttributes(xmlNodePtr node1, xmlNodePtr node2)
         double dVal1 = xmlXPathCastStringToNumber(val1);
         double dVal2 = xmlXPathCastStringToNumber(val2);
 
-        if(!rtl::math::isNan(dVal1) || !rtl::math::isNan(dVal2))
+        if(!std::isnan(dVal1) || !std::isnan(dVal2))
         {
             //compare by value and respect tolerance
             tolerance tol;

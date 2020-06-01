@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_AVMEDIA_SOURCE_MACAVF_PLAYER_HXX
-#define INCLUDED_AVMEDIA_SOURCE_MACAVF_PLAYER_HXX
+#pragma once
 
 #include <osl/conditn.h>
 #include "macavfcommon.hxx"
@@ -26,7 +25,7 @@
 
 #include <com/sun/star/media/XPlayer.hpp>
 
-namespace avmedia { namespace macavf {
+namespace avmedia::macavf {
 
 class Player
 :   public MacAVObserverHandler
@@ -80,9 +79,6 @@ private:
     bool                mbLooping;
 };
 
-} // namespace macavf
-} // namespace avmedia
-
-#endif // INCLUDED_AVMEDIA_SOURCE_MACAVF_PLAYER_HXX
+} // namespace avmedia::macavf
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -102,15 +102,15 @@ drawing::Direction3D BubbleChart::transformToScreenBubbleSize( double fLogicSize
 {
     drawing::Direction3D aRet(0,0,0);
 
-    if( ::rtl::math::isNan(fLogicSize) || ::rtl::math::isInf(fLogicSize) )
+    if( std::isnan(fLogicSize) || std::isinf(fLogicSize) )
         return aRet;
 
     double fMaxSize = m_fMaxLogicBubbleSize;
 
     double fMaxRadius = sqrt( fMaxSize / F_PI );
-    double fRaduis = sqrt( fLogicSize / F_PI );
+    double fRadius = sqrt( fLogicSize / F_PI );
 
-    aRet.DirectionX = m_fBubbleSizeFactorToScreen * fRaduis / fMaxRadius;
+    aRet.DirectionX = m_fBubbleSizeFactorToScreen * fRadius / fMaxRadius;
     aRet.DirectionY = aRet.DirectionX;
 
     return aRet;
@@ -224,11 +224,11 @@ void BubbleChart::createShapes()
                     if( fBubbleSize<0.0 )
                         continue;
 
-                    if( fBubbleSize == 0.0 || ::rtl::math::isNan(fBubbleSize) )
+                    if( fBubbleSize == 0.0 || std::isnan(fBubbleSize) )
                         continue;
 
-                    if(    ::rtl::math::isNan(fLogicX) || ::rtl::math::isInf(fLogicX)
-                        || ::rtl::math::isNan(fLogicY) || ::rtl::math::isInf(fLogicY) )
+                    if(    std::isnan(fLogicX) || std::isinf(fLogicX)
+                        || std::isnan(fLogicY) || std::isinf(fLogicY) )
                         continue;
 
                     bool bIsVisible = rPosHelper.isLogicVisible(fLogicX, fLogicY, fLogicZ);
@@ -282,7 +282,7 @@ void BubbleChart::createShapes()
                         if(bHasFillColorMapping)
                         {
                             double nPropVal = pSeries->getValueByProperty(nIndex, "FillColor");
-                            if(!rtl::math::isNan(nPropVal))
+                            if(!std::isnan(nPropVal))
                             {
                                 uno::Reference< beans::XPropertySet > xProps( xShape, uno::UNO_QUERY_THROW );
                                 xProps->setPropertyValue("FillColor", uno::Any(static_cast<sal_Int32>(nPropVal)));
@@ -291,7 +291,7 @@ void BubbleChart::createShapes()
                         if(bHasBorderColorMapping)
                         {
                             double nPropVal = pSeries->getValueByProperty(nIndex, "LineColor");
-                            if(!rtl::math::isNan(nPropVal))
+                            if(!std::isnan(nPropVal))
                             {
                                 uno::Reference< beans::XPropertySet > xProps( xShape, uno::UNO_QUERY_THROW );
                                 xProps->setPropertyValue("LineColor", uno::Any(static_cast<sal_Int32>(nPropVal)));

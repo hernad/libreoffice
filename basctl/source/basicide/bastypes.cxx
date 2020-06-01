@@ -38,6 +38,7 @@
 #include <svl/srchdefs.hxx>
 #include <vcl/commandevent.hxx>
 #include <vcl/event.hxx>
+#include <vcl/layout.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/weld.hxx>
 #include <tools/stream.hxx>
@@ -255,11 +256,16 @@ WinBits const DockingWindow::StyleBits =
     WB_BORDER | WB_3DLOOK | WB_CLIPCHILDREN |
     WB_MOVEABLE | WB_SIZEABLE | WB_ROLLABLE | WB_DOCKABLE;
 
-DockingWindow::DockingWindow (vcl::Window* pParent) :
-    ::DockingWindow(pParent, StyleBits),
+DockingWindow::DockingWindow(vcl::Window* pParent, const OUString& rUIXMLDescription, const OString& rID) :
+    ::DockingWindow(pParent, "DockingWindow", "sfx/ui/dockingwindow.ui"),
     pLayout(nullptr),
     nShowCount(0)
-{ }
+{
+    m_xVclContentArea = VclPtr<VclVBox>::Create(this);
+    m_xVclContentArea->Show();
+    m_xBuilder.reset(Application::CreateInterimBuilder(m_xVclContentArea, rUIXMLDescription));
+    m_xContainer = m_xBuilder->weld_container(rID);
+}
 
 DockingWindow::DockingWindow (Layout* pParent) :
     ::DockingWindow(pParent, StyleBits),
@@ -274,6 +280,9 @@ DockingWindow::~DockingWindow()
 
 void DockingWindow::dispose()
 {
+    m_xContainer.reset();
+    m_xBuilder.reset();
+    m_xVclContentArea.disposeAndClear();
     pLayout.clear();
     ::DockingWindow::dispose();
 }
@@ -412,29 +421,6 @@ void DockingWindow::DockThis ()
     }
 }
 
-ExtendedEdit::ExtendedEdit(vcl::Window* pParent, WinBits nStyle)
-    : Edit(pParent, nStyle)
-{
-    aAcc.SetSelectHdl( LINK( this, ExtendedEdit, EditAccHdl ) );
-    Control::SetGetFocusHdl( LINK( this, ExtendedEdit, ImplGetFocusHdl ) );
-    Control::SetLoseFocusHdl( LINK( this, ExtendedEdit, ImplLoseFocusHdl ) );
-}
-
-IMPL_LINK_NOARG(ExtendedEdit, ImplGetFocusHdl, Control&, void)
-{
-    Application::InsertAccel( &aAcc );
-}
-
-IMPL_LINK_NOARG(ExtendedEdit, ImplLoseFocusHdl, Control&, void)
-{
-    Application::RemoveAccel( &aAcc );
-}
-
-IMPL_LINK( ExtendedEdit, EditAccHdl, Accelerator&, rAcc, void )
-{
-    aAccHdl.Call( rAcc );
-}
-
 TabBar::TabBar( vcl::Window* pParent ) :
     ::TabBar( pParent, WinBits( WB_3DLOOK | WB_SCROLL | WB_BORDER | WB_SIZEABLE | WB_DRAG ) )
 {
@@ -519,52 +505,53 @@ struct TabBarSortHelper
 
 void TabBar::Sort()
 {
-    if (Shell* pShell = GetShell())
+    Shell* pShell = GetShell();
+    if (!pShell)
+        return;
+
+    Shell::WindowTable& aWindowTable = pShell->GetWindowTable();
+    TabBarSortHelper aTabBarSortHelper;
+    std::vector<TabBarSortHelper> aModuleList;
+    std::vector<TabBarSortHelper> aDialogList;
+    sal_uInt16 nPageCount = GetPageCount();
+    sal_uInt16 i;
+
+    // create module and dialog lists for sorting
+    for ( i = 0; i < nPageCount; i++)
     {
-        Shell::WindowTable& aWindowTable = pShell->GetWindowTable();
-        TabBarSortHelper aTabBarSortHelper;
-        std::vector<TabBarSortHelper> aModuleList;
-        std::vector<TabBarSortHelper> aDialogList;
-        sal_uInt16 nPageCount = GetPageCount();
-        sal_uInt16 i;
+        sal_uInt16 nId = GetPageId( i );
+        aTabBarSortHelper.nPageId = nId;
+        aTabBarSortHelper.aPageText = GetPageText( nId );
+        BaseWindow* pWin = aWindowTable[ nId ].get();
 
-        // create module and dialog lists for sorting
-        for ( i = 0; i < nPageCount; i++)
+        if (dynamic_cast<ModulWindow*>(pWin))
         {
-            sal_uInt16 nId = GetPageId( i );
-            aTabBarSortHelper.nPageId = nId;
-            aTabBarSortHelper.aPageText = GetPageText( nId );
-            BaseWindow* pWin = aWindowTable[ nId ].get();
-
-            if (dynamic_cast<ModulWindow*>(pWin))
-            {
-                aModuleList.push_back( aTabBarSortHelper );
-            }
-            else if (dynamic_cast<DialogWindow*>(pWin))
-            {
-                aDialogList.push_back( aTabBarSortHelper );
-            }
+            aModuleList.push_back( aTabBarSortHelper );
         }
-
-        // sort module and dialog lists by page text
-        std::sort( aModuleList.begin() , aModuleList.end() );
-        std::sort( aDialogList.begin() , aDialogList.end() );
-
-
-        sal_uInt16 nModules = sal::static_int_cast<sal_uInt16>( aModuleList.size() );
-        sal_uInt16 nDialogs = sal::static_int_cast<sal_uInt16>( aDialogList.size() );
-
-        // move module pages to new positions
-        for (i = 0; i < nModules; i++)
+        else if (dynamic_cast<DialogWindow*>(pWin))
         {
-            MovePage( aModuleList[i].nPageId , i );
+            aDialogList.push_back( aTabBarSortHelper );
         }
+    }
 
-        // move dialog pages to new positions
-        for (i = 0; i < nDialogs; i++)
-        {
-            MovePage( aDialogList[i].nPageId , nModules + i );
-        }
+    // sort module and dialog lists by page text
+    std::sort( aModuleList.begin() , aModuleList.end() );
+    std::sort( aDialogList.begin() , aDialogList.end() );
+
+
+    sal_uInt16 nModules = sal::static_int_cast<sal_uInt16>( aModuleList.size() );
+    sal_uInt16 nDialogs = sal::static_int_cast<sal_uInt16>( aDialogList.size() );
+
+    // move module pages to new positions
+    for (i = 0; i < nModules; i++)
+    {
+        MovePage( aModuleList[i].nPageId , i );
+    }
+
+    // move dialog pages to new positions
+    for (i = 0; i < nDialogs; i++)
+    {
+        MovePage( aDialogList[i].nPageId , nModules + i );
     }
 }
 

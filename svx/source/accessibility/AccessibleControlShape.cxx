@@ -19,7 +19,7 @@
 
 #include <svx/AccessibleControlShape.hxx>
 #include <svx/AccessibleShapeInfo.hxx>
-#include <svx/DescriptionGenerator.hxx>
+#include <DescriptionGenerator.hxx>
 #include <com/sun/star/awt/XWindow.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/drawing/XControlShape.hpp>
@@ -785,8 +785,8 @@ void AccessibleControlShape::initializeComposedState()
     // now, only states which are not in the responsibility of the UNO control should be part of this state set
     {
         Sequence< sal_Int16 > aInitStates = pComposedStates->getStates();
-        for ( sal_Int32 i=0; i<aInitStates.getLength(); ++i )
-            OSL_ENSURE( !isComposedState( aInitStates.getConstArray()[i] ),
+        for ( sal_Int16 state : aInitStates )
+            OSL_ENSURE( !isComposedState( state ),
                 "AccessibleControlShape::initializeComposedState: invalid initial composed state (should be controlled by the UNO-control)!" );
     }
 #endif
@@ -829,7 +829,7 @@ void SAL_CALL AccessibleControlShape::elementInserted( const css::container::Con
 
     Reference< XInterface > xNewNormalized( xControl->getModel(), UNO_QUERY );
     Reference< XInterface > xMyModelNormalized( m_xControlModel, UNO_QUERY );
-    if ( xNewNormalized.get() && xMyModelNormalized.get() )
+    if ( xNewNormalized && xMyModelNormalized )
     {
         // now finally the control for the model we're responsible for has been inserted into the container
         Reference< XInterface > xKeepAlive( *this );

@@ -18,9 +18,9 @@
  */
 
 #include "documentdefinition.hxx"
+#include <ModelImpl.hxx>
 #include <stringconstants.hxx>
 #include <sdbcoretools.hxx>
-#include <tools/debug.hxx>
 #include <tools/diagnose_ex.h>
 #include <osl/diagnose.h>
 #include <comphelper/sequence.hxx>
@@ -37,33 +37,26 @@
 #include <com/sun/star/frame/XTitle.hpp>
 #include <com/sun/star/frame/XController.hpp>
 #include <com/sun/star/task/XJobExecutor.hpp>
-#include <com/sun/star/ucb/InsertCommandArgument.hpp>
 #include <com/sun/star/report/XReportDefinition.hpp>
 #include <com/sun/star/report/XReportEngine.hpp>
 #include <com/sun/star/ucb/OpenMode.hpp>
 #include <com/sun/star/embed/WrongStateException.hpp>
-#include <com/sun/star/embed/XEmbedObjectFactory.hpp>
 #include <com/sun/star/embed/EmbeddedObjectCreator.hpp>
 #include <com/sun/star/embed/Aspects.hpp>
 #include <com/sun/star/embed/OOoEmbeddedObjectFactory.hpp>
 #include <ucbhelper/cancelcommandexecution.hxx>
-#include <com/sun/star/ucb/UnsupportedDataSinkException.hpp>
 #include <com/sun/star/ucb/UnsupportedOpenModeException.hpp>
 #include <com/sun/star/embed/ElementModes.hpp>
 #include <com/sun/star/embed/XEmbedPersist.hpp>
 #include <com/sun/star/embed/EmbedStates.hpp>
-#include <com/sun/star/embed/XComponentSupplier.hpp>
 #include <com/sun/star/embed/EntryInitModes.hpp>
 #include <com/sun/star/ucb/MissingPropertiesException.hpp>
-#include <com/sun/star/ucb/MissingInputStreamException.hpp>
 #include <com/sun/star/ucb/OpenCommandArgument2.hpp>
 #include <com/sun/star/util/CloseVetoException.hpp>
-#include <com/sun/star/util/XCloseBroadcaster.hpp>
 #include <com/sun/star/frame/XModule.hpp>
 #include <com/sun/star/datatransfer/DataFlavor.hpp>
 #include <com/sun/star/datatransfer/XTransferable.hpp>
 #include <com/sun/star/container/XNameContainer.hpp>
-#include <com/sun/star/embed/XTransactedObject.hpp>
 #include <com/sun/star/embed/XCommonEmbedPersist.hpp>
 #include "intercept.hxx"
 #include <com/sun/star/sdb/ErrorCondition.hpp>
@@ -73,19 +66,15 @@
 #include <com/sun/star/document/XDocumentPropertiesSupplier.hpp>
 #include <com/sun/star/document/MacroExecMode.hpp>
 #include <com/sun/star/drawing/XDrawPageSupplier.hpp>
-#include <com/sun/star/container/XIndexContainer.hpp>
 #include <com/sun/star/form/XFormsSupplier.hpp>
 #include <com/sun/star/form/XForm.hpp>
 #include <comphelper/interaction.hxx>
 #include <connectivity/dbtools.hxx>
 #include <vcl/svapp.hxx>
 #include <osl/mutex.hxx>
-#include <sal/macros.h>
 #include <com/sun/star/view/XViewSettingsSupplier.hpp>
 #include <core_resource.hxx>
 #include <strings.hrc>
-#include "datasource.hxx"
-#include <com/sun/star/embed/XStateChangeBroadcaster.hpp>
 #include <com/sun/star/task/XInteractionApprove.hpp>
 #include <com/sun/star/task/XInteractionDisapprove.hpp>
 #include <com/sun/star/frame/XLayoutManager.hpp>
@@ -131,7 +120,7 @@ namespace DatabaseObject = sdb::application::DatabaseObject;
 namespace dbaccess
 {
 
-    typedef ::o3tl::optional< bool > optional_bool;
+    typedef ::std::optional< bool > optional_bool;
 
     // helper
     namespace
@@ -377,17 +366,17 @@ OUString ODocumentDefinition::GetDocumentServiceFromMediaType( const OUString& _
             Reference< XNameAccess > xObjConfig = aConfigHelper.GetObjConfiguration();
             if ( xObjConfig.is() )
             {
-                Sequence< OUString > aClassIDs = xObjConfig->getElementNames();
-                for ( sal_Int32 nInd = 0; nInd < aClassIDs.getLength(); nInd++ )
+                const Sequence< OUString > aClassIDs = xObjConfig->getElementNames();
+                for ( OUString const & classId : aClassIDs )
                 {
                     Reference< XNameAccess > xObjectProps;
                     OUString aEntryDocName;
 
-                    if (    ( xObjConfig->getByName( aClassIDs[nInd] ) >>= xObjectProps ) && xObjectProps.is()
+                    if (    ( xObjConfig->getByName( classId ) >>= xObjectProps ) && xObjectProps.is()
                          && ( xObjectProps->getByName("ObjectDocumentServiceName") >>= aEntryDocName )
                          && aEntryDocName == sResult )
                     {
-                        _rClassId = comphelper::MimeConfigurationHelper::GetSequenceClassIDRepresentation(aClassIDs[nInd]);
+                        _rClassId = comphelper::MimeConfigurationHelper::GetSequenceClassIDRepresentation(classId);
                         break;
                     }
                 }
@@ -790,7 +779,7 @@ Any ODocumentDefinition::onCommandOpenSomething( const Any& _rOpenArgument, cons
     if ( xHandler.is() )
         aDocumentArgs.put( "InteractionHandler", xHandler );
 
-    ::o3tl::optional< sal_Int16 > aDocumentMacroMode;
+    ::std::optional< sal_Int16 > aDocumentMacroMode;
 
     if ( !lcl_extractOpenMode( _rOpenArgument, nOpenMode ) )
     {
@@ -1707,24 +1696,24 @@ void ODocumentDefinition::loadEmbeddedObject( const Reference< XConnection >& i_
 void ODocumentDefinition::onCommandPreview(Any& _rImage)
 {
     loadEmbeddedObjectForPreview();
-    if ( m_xEmbeddedObject.is() )
-    {
-        try
-        {
-            Reference<XTransferable> xTransfer(getComponent(),UNO_QUERY);
-            if ( xTransfer.is() )
-            {
-                DataFlavor aFlavor;
-                aFlavor.MimeType = "image/png";
-                aFlavor.HumanPresentableName = "Portable Network Graphics";
-                aFlavor.DataType = cppu::UnoType<Sequence < sal_Int8 >>::get();
+    if ( !m_xEmbeddedObject.is() )
+        return;
 
-                _rImage = xTransfer->getTransferData( aFlavor );
-            }
-        }
-        catch( const Exception& )
+    try
+    {
+        Reference<XTransferable> xTransfer(getComponent(),UNO_QUERY);
+        if ( xTransfer.is() )
         {
+            DataFlavor aFlavor;
+            aFlavor.MimeType = "image/png";
+            aFlavor.HumanPresentableName = "Portable Network Graphics";
+            aFlavor.DataType = cppu::UnoType<Sequence < sal_Int8 >>::get();
+
+            _rImage = xTransfer->getTransferData( aFlavor );
         }
+    }
+    catch( const Exception& )
+    {
     }
 }
 
@@ -1736,19 +1725,19 @@ void ODocumentDefinition::getPropertyDefaultByHandle( sal_Int32 /*_nHandle*/, An
 void ODocumentDefinition::onCommandGetDocumentProperties( Any& _rProps )
 {
     loadEmbeddedObjectForPreview();
-    if ( m_xEmbeddedObject.is() )
+    if ( !m_xEmbeddedObject.is() )
+        return;
+
+    try
     {
-        try
-        {
-            Reference<XDocumentPropertiesSupplier> xDocSup(
-                getComponent(), UNO_QUERY );
-            if ( xDocSup.is() )
-                _rProps <<= xDocSup->getDocumentProperties();
-        }
-        catch( const Exception& )
-        {
-            DBG_UNHANDLED_EXCEPTION("dbaccess");
-        }
+        Reference<XDocumentPropertiesSupplier> xDocSup(
+            getComponent(), UNO_QUERY );
+        if ( xDocSup.is() )
+            _rProps <<= xDocSup->getDocumentProperties();
+    }
+    catch( const Exception& )
+    {
+        DBG_UNHANDLED_EXCEPTION("dbaccess");
     }
 }
 

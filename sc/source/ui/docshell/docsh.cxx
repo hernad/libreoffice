@@ -301,7 +301,7 @@ void ScDocShell::AfterXMLLoading(bool bRet)
                             {
                                 if ( *pNameBuffer == '\'' && *(pNameBuffer-1) != '\\' )
                                     bQuote = false;
-                                else if( !(*pNameBuffer == '\\' && *(pNameBuffer+1) == '\'') )
+                                else if( *pNameBuffer != '\\' || *(pNameBuffer+1) != '\'' )
                                     aDocURLBuffer.append(*pNameBuffer); // If escaped quote: only quote in the name
                                 ++pNameBuffer;
                             }
@@ -621,7 +621,7 @@ bool ScDocShell::Load( SfxMedium& rMedium )
                 if (pOrcus)
                 {
                     pOrcus->importODS_Styles(m_aDocument, aPath);
-                    m_aDocument.GetStyleSheetPool()->setAllStandard();
+                    m_aDocument.GetStyleSheetPool()->setAllParaStandard();
                 }
             }
 
@@ -1601,7 +1601,7 @@ bool ScDocShell::ConvertFrom( SfxMedium& rMedium )
             m_aDocument.GetCellArea( nTab, nEndCol, nEndRow );
             aColWidthRange.aEnd.SetCol( nEndCol );
             aColWidthRange.aEnd.SetRow( nEndRow );
-            ScMarkData aMark(m_aDocument.MaxRow(), m_aDocument.MaxCol());
+            ScMarkData aMark(m_aDocument.GetSheetLimits());
             aMark.SetMarkArea( aColWidthRange );
             aMark.MarkToMulti();
 
@@ -2743,6 +2743,7 @@ ScDocShell::ScDocShell( const SfxModelFlags i_nSfxCreationFlags ) :
     m_bDocumentModifiedPending( false ),
     m_bUpdateEnabled  ( true ),
     m_bUcalcTest     ( false ),
+    m_bAreasChangedNeedBroadcast( false ),
     m_nDocumentLock   ( 0 ),
     m_nCanUpdate (css::document::UpdateDocMode::ACCORDING_TO_CONFIG)
 {
@@ -2863,6 +2864,12 @@ void ScDocShell::SetDocumentModified()
         m_aDocument.SetDetectiveDirty(false);         // always reset, also if not refreshed
     }
 
+    if (m_bAreasChangedNeedBroadcast)
+    {
+        m_bAreasChangedNeedBroadcast = false;
+        SfxGetpApp()->Broadcast( SfxHint( SfxHintId::ScAreasChanged));
+    }
+
     // notify UNO objects after BCA_BRDCST_ALWAYS etc.
     m_aDocument.BroadcastUno( SfxHint( SfxHintId::DataChanged ) );
 }
@@ -2922,9 +2929,9 @@ void ScDocShell::GetDocStat( ScDocStat& rDocStat )
                 static_cast<sal_uInt16>(ScPrintFunc( this, pPrinter, i ).GetTotalPages()) );
 }
 
-std::unique_ptr<SfxDocumentInfoDialog> ScDocShell::CreateDocumentInfoDialog(weld::Window* pParent, const SfxItemSet &rSet)
+std::shared_ptr<SfxDocumentInfoDialog> ScDocShell::CreateDocumentInfoDialog(weld::Window* pParent, const SfxItemSet &rSet)
 {
-    std::unique_ptr<SfxDocumentInfoDialog> xDlg = std::make_unique<SfxDocumentInfoDialog>(pParent, rSet);
+    std::shared_ptr<SfxDocumentInfoDialog> xDlg = std::make_shared<SfxDocumentInfoDialog>(pParent, rSet);
     ScDocShell*            pDocSh = dynamic_cast< ScDocShell *>( SfxObjectShell::Current() );
 
     // Only for statistics, if this Doc is shown; not from the Doc Manager

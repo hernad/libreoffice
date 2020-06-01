@@ -28,7 +28,7 @@
 
 #include <sw_primitivetypes2d.hxx>
 #include <drawinglayer/primitive2d/primitivetools2d.hxx>
-#include <drawinglayer/primitive2d/polypolygonprimitive2d.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonColorPrimitive2D.hxx>
 #include <drawinglayer/primitive2d/polygonprimitive2d.hxx>
 
 namespace sw::sidebarwindows {
@@ -39,16 +39,16 @@ namespace {
 class AnchorPrimitive : public drawinglayer::primitive2d::DiscreteMetricDependentPrimitive2D
 {
 private:
-    basegfx::B2DPolygon const       maTriangle;
-    basegfx::B2DPolygon const       maLine;
-    basegfx::B2DPolygon const       maLineTop;
+    basegfx::B2DPolygon             maTriangle;
+    basegfx::B2DPolygon             maLine;
+    basegfx::B2DPolygon             maLineTop;
     const AnchorState               maAnchorState;
-    basegfx::BColor const           maColor;
+    basegfx::BColor                 maColor;
 
     // discrete line width
-    double const                    mfDiscreteLineWidth;
+    double                          mfDiscreteLineWidth;
 
-    bool const                      mbLineSolid : 1;
+    bool                            mbLineSolid : 1;
 
 protected:
     virtual void create2DDecomposition(
@@ -80,7 +80,7 @@ public:
 
     virtual bool operator==( const drawinglayer::primitive2d::BasePrimitive2D& rPrimitive ) const override;
 
-    DeclPrimitive2DIDBlock()
+    virtual sal_uInt32 getPrimitive2DID() const override;
 };
 
 }

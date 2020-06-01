@@ -30,10 +30,10 @@
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include "layerimport.hxx"
 
-namespace com { namespace sun { namespace star { namespace util {
+namespace com::sun::star::util {
     struct Time;
     struct Date;
-} } } }
+}
 
 namespace xmloff
 {
@@ -156,7 +156,7 @@ namespace xmloff
     */
     class OPropertyElementsContext : public SvXMLImportContext
     {
-        OPropertyImportRef const  m_xPropertyImporter;    // to add the properties
+        OPropertyImportRef  m_xPropertyImporter;    // to add the properties
 
     public:
         OPropertyElementsContext(SvXMLImport& _rImport, sal_uInt16 _nPrefix, const OUString& _rName,

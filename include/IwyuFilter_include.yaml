@@ -216,6 +216,9 @@ blacklist:
     include/sot/exchange.hxx:
     # Used in a macro #define
     - com/sun/star/datatransfer/dnd/DNDConstants.hpp
+    include/tools/color.hxx:
+    # OSL_BIGENDIAN is being checked
+    - osl/endian.h
     include/tools/debug.hxx:
     # Used behind #ifndef
     - tools/toolsdllapi.h
@@ -321,36 +324,10 @@ blacklist:
     include/toolkit/awt/vclxaccessiblecomponent.hxx:
     # base class has to be a complete type
     - com/sun/star/lang/XServiceInfo.hpp
-    include/toolkit/awt/animatedimagespeer.hxx:
-    # base class has to be a complete type
-    - com/sun/star/awt/XAnimation.hpp
-    - com/sun/star/container/XContainerListener.hpp
-    - com/sun/star/util/XModifyListener.hpp
-    - toolkit/awt/vclxwindow.hxx
-    include/toolkit/awt/vclxpointer.hxx:
-    # base class has to be a complete type
-    - com/sun/star/awt/XPointer.hpp
-    - com/sun/star/lang/XServiceInfo.hpp
-    - com/sun/star/lang/XUnoTunnel.hpp
-    include/toolkit/awt/vclxspinbutton.hxx:
-    # base class has to be a complete type
-    - com/sun/star/awt/XSpinValue.hpp
-    include/toolkit/awt/vclxprinter.hxx:
-    # base class has to be a complete type
-    - com/sun/star/awt/XPrinterPropertySet.hpp
-    - com/sun/star/awt/XInfoPrinter.hpp
-    - com/sun/star/awt/XPrinterPropertySet.hpp
-    - com/sun/star/awt/XPrinterServer.hpp
-    - com/sun/star/lang/XServiceInfo.hpp
     include/toolkit/awt/vclxtopwindow.hxx:
     # base class has to be a complete type
     - com/sun/star/awt/XTopWindow2.hpp
     - com/sun/star/awt/XSystemDependentWindowPeer.hpp
-    include/toolkit/awt/vclxtabpagecontainer.hxx:
-    # base class has to be a complete type
-    - com/sun/star/awt/tab/XTabPageContainer.hpp
-    - com/sun/star/container/XContainerListener.hpp
-    - toolkit/awt/vclxcontainer.hxx
     include/toolkit/awt/vclxwindow.hxx:
     # base class has to be a complete type
     - toolkit/awt/vclxdevice.hxx
@@ -368,55 +345,6 @@ blacklist:
     - com/sun/star/awt/XToggleButton.hpp
     - com/sun/star/awt/XComboBox.hpp
     - com/sun/star/awt/XItemListListener.hpp
-    include/toolkit/controls/accessiblecontrolcontext.hxx:
-    # base class has to be a complete type
-    - com/sun/star/lang/XEventListener.hpp
-    include/toolkit/controls/animatedimages.hxx:
-    # base class has to be a complete type
-    - com/sun/star/awt/XAnimatedImages.hpp
-    - toolkit/controls/unocontrolmodel.hxx
-    include/toolkit/controls/controlmodelcontainerbase.hxx:
-    # base class has to be a complete type
-    - com/sun/star/awt/tab/XTabPageModel.hpp
-    - com/sun/star/awt/XTabControllerModel.hpp
-    - com/sun/star/beans/XPropertyChangeListener.hpp
-    - com/sun/star/container/XContainer.hpp
-    - com/sun/star/container/XNameContainer.hpp
-    - com/sun/star/lang/XInitialization.hpp
-    - com/sun/star/lang/XMultiServiceFactory.hpp
-    - com/sun/star/util/XChangesListener.hpp
-    - com/sun/star/util/XChangesNotifier.hpp
-    - toolkit/controls/unocontrolcontainer.hxx
-    include/toolkit/controls/dialogcontrol.hxx:
-    # base class has to be a complete type
-    - com/sun/star/awt/UnoControlDialog.hpp
-    include/toolkit/controls/eventcontainer.hxx:
-    # base class has to be a complete type
-    - com/sun/star/container/XContainer.hpp
-    - com/sun/star/container/XNameContainer.hpp
-    include/toolkit/controls/geometrycontrolmodel.hxx:
-    # base class has to be a complete type
-    - com/sun/star/script/XScriptEventsSupplier.hpp
-    - com/sun/star/util/XCloneable.hpp
-    # Needed for template classes
-    - toolkit/controls/geometrycontrolmodel_impl.hxx
-    include/toolkit/controls/roadmapcontrol.hxx:
-    # base class has to be a complete type
-    - com/sun/star/awt/XItemEventBroadcaster.hpp
-    - com/sun/star/awt/XItemListener.hpp
-    - com/sun/star/beans/XPropertyChangeListener.hpp
-    - com/sun/star/container/XContainerListener.hpp
-    include/toolkit/controls/roadmapentry.hxx:
-    # base class has to be a complete type
-    - com/sun/star/lang/XServiceInfo.hpp
-    include/toolkit/controls/tabpagecontainer.hxx:
-    # base class has to be a complete type
-    - com/sun/star/awt/tab/XTabPageContainer.hpp
-    - toolkit/controls/controlmodelcontainerbase.hxx
-    include/toolkit/controls/tabpagemodel.hxx:
-    # base class has to be a complete type
-    - com/sun/star/awt/tab/XTabPage.hpp
-    - toolkit/controls/unocontrolcontainer.hxx
     include/toolkit/controls/unocontrol.hxx:
     # base class has to be a complete type
     - com/sun/star/awt/XControl.hpp
@@ -428,13 +356,6 @@ blacklist:
     - com/sun/star/awt/XStyleSettingsSupplier.hpp
     - com/sun/star/accessibility/XAccessible.hpp
     - com/sun/star/util/XModeChangeBroadcaster.hpp
-    include/toolkit/controls/unocontrolcontainer.hxx:
-    # base class has to be a complete type
-    - com/sun/star/awt/XControlContainer.hpp
-    - com/sun/star/awt/XUnoControlContainer.hpp
-    - com/sun/star/container/XContainer.hpp
-    - com/sun/star/container/XIdentifierContainer.hpp
-    - toolkit/controls/unocontrolbase.hxx
     include/toolkit/controls/unocontrolmodel.hxx:
     # base class has to be a complete type
     - com/sun/star/awt/XControlModel.hpp
@@ -563,14 +484,6 @@ blacklist:
     - com/sun/star/document/XDocumentEventListener.hpp
     # Don't propose hxx -> h change in URE libs
     - cppuhelper/interfacecontainer.hxx
-    include/canvas/base/cachedprimitivebase.hxx:
-    # base class has to be a complete type
-    - com/sun/star/rendering/XCachedPrimitive.hpp
-    - com/sun/star/lang/XServiceInfo.hpp
-    include/canvas/parametricpolypolygon.hxx:
-    # base class has to be a complete type
-    - com/sun/star/lang/XServiceInfo.hpp
-    - com/sun/star/rendering/XParametricPolyPolygon2D.hpp
     include/linguistic/hyphdta.hxx:
     # base class has to be a complete type
     - com/sun/star/linguistic2/XHyphenatedWord.hpp
@@ -706,9 +619,6 @@ blacklist:
     include/sfx2/mieclip.hxx:
     # Needed for implicit dtor
     - tools/stream.hxx
-    include/sfx2/recentdocsview.hxx:
-    # Needed for struct declaration
-    - com/sun/star/beans/PropertyValue.hpp
     include/sfx2/sfxbasecontroller.hxx:
     # base class has to be a complete type
     - com/sun/star/frame/XController2.hpp
@@ -772,12 +682,6 @@ blacklist:
     # base class has to be a complete type
     - com/sun/star/frame/XStatusListener.hpp
     - com/sun/star/lang/XComponent.hpp
-    include/sfx2/sidebar/Accessible.hxx:
-    # base class has to be a complete type
-    - com/sun/star/accessibility/XAccessible.hpp
-    include/sfx2/sidebar/Paint.hxx:
-    # Needed for boost::variant
-    - vcl/gradient.hxx
     include/sfx2/sidebar/SidebarController.hxx:
     # base class has to be a complete type
     - com/sun/star/ui/XContextChangeEventListener.hpp
@@ -795,25 +699,9 @@ blacklist:
     include/sfx2/sidebar/Theme.hxx:
     # base class has to be a complete type
     - com/sun/star/beans/XPropertySet.hpp
-    include/sfx2/sidebar/UnoDeck.hxx:
-    # base class has to be a complete type
-    - com/sun/star/ui/XDeck.hpp
-    include/sfx2/sidebar/UnoDecks.hxx:
-    # base class has to be a complete type
-    - com/sun/star/ui/XDecks.hpp
-    include/sfx2/sidebar/UnoPanel.hxx:
-    # base class has to be a complete type
-    - com/sun/star/ui/XPanel.hpp
-    include/sfx2/sidebar/UnoPanels.hxx:
-    # base class has to be a complete type
-    - com/sun/star/ui/XPanels.hpp
     include/sfx2/sidebar/UnoSidebar.hxx:
     # base class has to be a complete type
     - com/sun/star/ui/XSidebarProvider.hpp
-    include/sfx2/unoctitm.hxx:
-    # base class has to be a complete type
-    - com/sun/star/frame/XNotifyingDispatch.hpp
-    - com/sun/star/lang/XUnoTunnel.hpp
     include/sfx2/viewsh.hxx:
     # Needed for macro 
     - class SfxViewFactory

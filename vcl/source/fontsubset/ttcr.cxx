@@ -21,7 +21,10 @@
  * TrueTypeCreator method implementation
  */
 
+#include <iomanip>
 #include <assert.h>
+
+#include <sal/log.hxx>
 
 #include "ttcr.hxx"
 #include "list.h"
@@ -272,18 +275,19 @@ SFErrCodes StreamToFile(TrueTypeCreator *_this, const char* fname)
     FILE* fd;
 
     if ((r = StreamToMemory(_this, &ptr, &length)) != SFErrCodes::Ok) return r;
-    if (fname && (fd = fopen(fname, "wb")) != nullptr)
+    r = SFErrCodes::BadFile;
+    if (fname)
     {
-        if (fwrite(ptr, 1, length, fd) != length) {
-            r = SFErrCodes::FileIo;
-        } else {
-            r = SFErrCodes::Ok;
+        fd = fopen(fname, "wb");
+        if (fd)
+        {
+            if (fwrite(ptr, 1, length, fd) != length) {
+                r = SFErrCodes::FileIo;
+            } else {
+                r = SFErrCodes::Ok;
+            }
+            fclose(fd);
         }
-        fclose(fd);
-    }
-    else
-    {
-        r = SFErrCodes::BadFile;
     }
     free(ptr);
     return r;
@@ -459,7 +463,12 @@ static void TrueTypeTableDispose_post(TrueTypeTable *_this)
             if (p->format == 0x00030000) {
                 /* do nothing */
             } else {
-                fprintf(stderr, "Unsupported format of a 'post' table: %08X.\n", static_cast<int>(p->format));
+                SAL_WARN("vcl.fonts", "Unsupported format of a 'post' table: "
+                        << std::setfill('0')
+                        << std::setw(8)
+                        << std::hex
+                        << std::uppercase
+                        << static_cast<int>(p->format) << ".");
             }
             free(p);
         }
@@ -779,7 +788,12 @@ static int GetRawData_post(TrueTypeTable *_this, sal_uInt8 **ptr, sal_uInt32 *le
         PutUInt16(static_cast<sal_uInt16>(p->isFixedPitch), post, 12);
         ret = TTCR_OK;
     } else {
-        fprintf(stderr, "Unrecognized format of a post table: %08X.\n", static_cast<int>(p->format));
+        SAL_WARN("vcl.fonts", "Unrecognized format of a post table: "
+                << std::setfill('0')
+                << std::setw(8)
+                << std::hex
+                << std::uppercase
+                << static_cast<int>(p->format) << ".");
         ret = TTCR_POSTFORMAT;
     }
 

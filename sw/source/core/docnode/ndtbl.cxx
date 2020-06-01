@@ -86,6 +86,7 @@
 #include <fldupde.hxx>
 #include <calbck.hxx>
 #include <fntcache.hxx>
+#include <frameformats.hxx>
 #include <o3tl/numeric.hxx>
 #include <tools/datetimeutils.hxx>
 #include <sal/log.hxx>
@@ -1496,7 +1497,7 @@ struct DelTabPara
     SwTextNode* pLastNd;
     SwNodes& rNds;
     SwUndoTableToText* pUndo;
-    sal_Unicode const cCh;
+    sal_Unicode cCh;
 
     DelTabPara( SwNodes& rNodes, sal_Unicode cChar, SwUndoTableToText* pU ) :
         pLastNd(nullptr), rNds( rNodes ), pUndo( pU ), cCh( cChar ) {}

@@ -17,15 +17,11 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <string.h>
-
 #include "Columns.hxx"
 #include <property.hxx>
 #include <componenttools.hxx>
 #include "findpos.hxx"
 #include <com/sun/star/io/XPersistObject.hpp>
-#include <com/sun/star/io/XObjectOutputStream.hpp>
-#include <com/sun/star/io/XObjectInputStream.hpp>
 #include <com/sun/star/io/XMarkableStream.hpp>
 #include <com/sun/star/form/XFormComponent.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
@@ -37,7 +33,6 @@
 #include <comphelper/servicehelper.hxx>
 #include <comphelper/types.hxx>
 #include <services.hxx>
-#include <strings.hrc>
 #include <tools/debug.hxx>
 #include <o3tl/sorted_vector.hxx>
 
@@ -98,7 +93,7 @@ sal_Int32 getColumnTypeByModelName(const OUString& aModelName)
 #ifdef DBG_UTIL
         sal_Int32 nCompatiblePrefixPos = aModelName.indexOf(aCompatibleModelPrefix);
         DBG_ASSERT( (nPrefixPos != -1) ||   (nCompatiblePrefixPos != -1),
-                "::getColumnTypeByModelName() : wrong servivce !");
+                "::getColumnTypeByModelName() : wrong service!");
 #endif
 
         OUString aColumnType = (nPrefixPos != -1)
@@ -202,23 +197,23 @@ OGridColumn::OGridColumn( const Reference<XComponentContext>& _rContext, const O
 {
 
     // Create the UnoControlModel
-    if ( !m_aModelName.isEmpty() ) // is there a to-be-aggregated model?
+    if ( m_aModelName.isEmpty() ) // is there a to-be-aggregated model?
+        return;
+
+    osl_atomic_increment( &m_refCount );
+
     {
-        osl_atomic_increment( &m_refCount );
-
-        {
-            m_xAggregate.set( _rContext->getServiceManager()->createInstanceWithContext( m_aModelName, _rContext ), UNO_QUERY );
-            setAggregation( m_xAggregate );
-        }
-
-        if ( m_xAggregate.is() )
-        {   // don't omit those brackets - they ensure that the following temporary is properly deleted
-            m_xAggregate->setDelegator( static_cast< ::cppu::OWeakObject* >( this ) );
-        }
-
-        // Set refcount back to zero
-        osl_atomic_decrement( &m_refCount );
+        m_xAggregate.set( _rContext->getServiceManager()->createInstanceWithContext( m_aModelName, _rContext ), UNO_QUERY );
+        setAggregation( m_xAggregate );
     }
+
+    if ( m_xAggregate.is() )
+    {   // don't omit those brackets - they ensure that the following temporary is properly deleted
+        m_xAggregate->setDelegator( static_cast< ::cppu::OWeakObject* >( this ) );
+    }
+
+    // Set refcount back to zero
+    osl_atomic_decrement( &m_refCount );
 }
 
 

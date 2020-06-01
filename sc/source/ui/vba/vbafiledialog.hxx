@@ -24,16 +24,16 @@
 
 #include <vbahelper/vbacollectionimpl.hxx>
 
-namespace com { namespace sun { namespace star { namespace uno { class XComponentContext; } } } }
-namespace ooo { namespace vba { class XHelperInterface; } }
-namespace ooo { namespace vba { namespace excel { class XFileDialogSelectedItems; } } }
+namespace com::sun::star::uno { class XComponentContext; }
+namespace ooo::vba { class XHelperInterface; }
+namespace ooo::vba::excel { class XFileDialogSelectedItems; }
 
 typedef InheritedHelperInterfaceWeakImpl< ov::excel::XFileDialog > ScVbaFileDialog_BASE;
 
 class ScVbaFileDialog : public ScVbaFileDialog_BASE
 {
 private:
-    sal_Int32 const m_nType;
+    sal_Int32 m_nType;
     OUString m_sTitle;
     OUString m_sInitialFileName;
     css::uno::Reference< ov::excel::XFileDialogSelectedItems> m_xItems;

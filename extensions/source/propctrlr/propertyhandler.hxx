@@ -34,10 +34,8 @@
 #include <com/sun/star/util/Date.hpp>
 #include <com/sun/star/util/Time.hpp>
 #include <com/sun/star/util/DateTime.hpp>
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/inspection/XPropertyHandler.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
-#include <osl/interlck.h>
 #include <cppuhelper/basemutex.hxx>
 #include <cppuhelper/compbase.hxx>
 #include <cppuhelper/implbase1.hxx>
@@ -46,12 +44,12 @@
 #include <memory>
 #include <vector>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace inspection {
         struct LineDescriptor;
         class XPropertyControlFactory;
     }
-} } }
+}
 
 namespace vcl { class Window; }
 namespace weld { class Window; }

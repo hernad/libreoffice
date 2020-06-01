@@ -29,7 +29,7 @@
 #include <cppuhelper/implbase.hxx>
 #include <ucbhelper/ucbhelperdllapi.h>
 
-namespace com { namespace sun { namespace star { namespace uno { class XComponentContext; } } } }
+namespace com::sun::star::uno { class XComponentContext; }
 
 namespace cppu {
     class OInterfaceContainerHelper;
@@ -61,7 +61,7 @@ class UCBHELPER_DLLPUBLIC ResultSetImplHelper :
 
 protected:
     osl::Mutex                                                 m_aMutex;
-    css::ucb::OpenCommandArgument2 const                       m_aCommand;
+    css::ucb::OpenCommandArgument2                             m_aCommand;
     css::uno::Reference< css::uno::XComponentContext >         m_xContext;
     // Resultset #1
     css::uno::Reference< css::sdbc::XResultSet >               m_xResultSet1;

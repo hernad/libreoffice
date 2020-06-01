@@ -191,12 +191,12 @@ XMLShapeExport::XMLShapeExport(SvXMLExport& rExp,
 */
 
     mrExport.GetAutoStylePool()->AddFamily(
-        XML_STYLE_FAMILY_SD_GRAPHICS_ID,
+        XmlStyleFamily::SD_GRAPHICS_ID,
         XML_STYLE_FAMILY_SD_GRAPHICS_NAME,
         GetPropertySetMapper(),
         XML_STYLE_FAMILY_SD_GRAPHICS_PREFIX);
     mrExport.GetAutoStylePool()->AddFamily(
-        XML_STYLE_FAMILY_SD_PRESENTATION_ID,
+        XmlStyleFamily::SD_PRESENTATION_ID,
         XML_STYLE_FAMILY_SD_PRESENTATION_NAME,
         GetPropertySetMapper(),
         XML_STYLE_FAMILY_SD_PRESENTATION_PREFIX);
@@ -359,7 +359,7 @@ void XMLShapeExport::collectShapeAutoStyles(const uno::Reference< drawing::XShap
                         OUString aFamilyName;
                         xStylePropSet->getPropertyValue("Family") >>= aFamilyName;
                         if( !aFamilyName.isEmpty() && aFamilyName != "graphics" )
-                            aShapeInfo.mnFamily = XML_STYLE_FAMILY_SD_PRESENTATION_ID;
+                            aShapeInfo.mnFamily = XmlStyleFamily::SD_PRESENTATION_ID;
                     }
                 }
                 catch(const beans::UnknownPropertyException&)
@@ -370,7 +370,7 @@ void XMLShapeExport::collectShapeAutoStyles(const uno::Reference< drawing::XShap
                 }
 
                 // get parent-style name
-                if(XML_STYLE_FAMILY_SD_PRESENTATION_ID == aShapeInfo.mnFamily)
+                if(XmlStyleFamily::SD_PRESENTATION_ID == aShapeInfo.mnFamily)
                 {
                     aParentName = msPresentationStylePrefix;
                 }
@@ -491,11 +491,11 @@ void XMLShapeExport::collectShapeAutoStyles(const uno::Reference< drawing::XShap
 
             if( nCount )
             {
-                aShapeInfo.msTextStyleName = mrExport.GetAutoStylePool()->Find( XML_STYLE_FAMILY_TEXT_PARAGRAPH, "", aPropStates );
+                aShapeInfo.msTextStyleName = mrExport.GetAutoStylePool()->Find( XmlStyleFamily::TEXT_PARAGRAPH, "", aPropStates );
                 if(aShapeInfo.msTextStyleName.isEmpty())
                 {
                     // Style did not exist, add it to AutoStalePool
-                    aShapeInfo.msTextStyleName = mrExport.GetAutoStylePool()->Add(XML_STYLE_FAMILY_TEXT_PARAGRAPH, "", aPropStates);
+                    aShapeInfo.msTextStyleName = mrExport.GetAutoStylePool()->Add(XmlStyleFamily::TEXT_PARAGRAPH, "", aPropStates);
                 }
             }
         }
@@ -683,7 +683,7 @@ void XMLShapeExport::exportShape(const uno::Reference< drawing::XShape >& xShape
     // export style name
     if( !aShapeInfo.msStyleName.isEmpty() )
     {
-        if(XML_STYLE_FAMILY_SD_GRAPHICS_ID == aShapeInfo.mnFamily)
+        if(XmlStyleFamily::SD_GRAPHICS_ID == aShapeInfo.mnFamily)
             mrExport.AddAttribute(XML_NAMESPACE_DRAW, XML_STYLE_NAME, mrExport.EncodeStyleName( aShapeInfo.msStyleName) );
         else
             mrExport.AddAttribute(XML_NAMESPACE_PRESENTATION, XML_STYLE_NAME, mrExport.EncodeStyleName( aShapeInfo.msStyleName) );
@@ -727,8 +727,8 @@ void XMLShapeExport::exportShape(const uno::Reference< drawing::XShape >& xShape
         }
     }
 
-    // export draw:display (do not export in ODF 1.2 or older)
-    if( xSet.is() && ( mrExport.getDefaultVersion() > SvtSaveOptions::ODFVER_012 ) )
+    // export draw:display (do not export in ODF 1.3 or older)
+    if (xSet.is() && (mrExport.getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED))
     {
         if( aShapeInfo.meShapeType != XmlShapeTypeDrawPageShape && aShapeInfo.meShapeType != XmlShapeTypePresPageShape &&
             aShapeInfo.meShapeType != XmlShapeTypeHandoutShape && aShapeInfo.meShapeType != XmlShapeTypeDrawChartShape )
@@ -1023,12 +1023,12 @@ void XMLShapeExport::exportAutoStyles()
 
     // ...for graphic
     {
-        GetExport().GetAutoStylePool()->exportXML( XML_STYLE_FAMILY_SD_GRAPHICS_ID );
+        GetExport().GetAutoStylePool()->exportXML( XmlStyleFamily::SD_GRAPHICS_ID );
     }
 
     // ...for presentation
     {
-        GetExport().GetAutoStylePool()->exportXML( XML_STYLE_FAMILY_SD_PRESENTATION_ID );
+        GetExport().GetAutoStylePool()->exportXML( XmlStyleFamily::SD_PRESENTATION_ID );
     }
 
     if( mxShapeTableExport.is() )
@@ -1338,7 +1338,7 @@ void XMLShapeExport::ExportGraphicDefaults()
                 aStEx->exportDefaultStyle( xDefaults, XML_STYLE_FAMILY_SD_GRAPHICS_NAME, xPropertySetMapper );
 
                 // write graphic family styles
-                aStEx->exportStyleFamily("graphics", OUString(XML_STYLE_FAMILY_SD_GRAPHICS_NAME), xPropertySetMapper, false, XML_STYLE_FAMILY_SD_GRAPHICS_ID);
+                aStEx->exportStyleFamily("graphics", OUString(XML_STYLE_FAMILY_SD_GRAPHICS_NAME), xPropertySetMapper, false, XmlStyleFamily::SD_GRAPHICS_ID);
             }
         }
         catch(const lang::ServiceNotRegisteredException&)
@@ -1563,9 +1563,9 @@ void XMLShapeExport::ImpExportText( const uno::Reference< drawing::XShape >& xSh
 {
     if (eExtensionNS == TextPNS::EXTENSION)
     {
-        if (mrExport.getDefaultVersion() <= SvtSaveOptions::ODFVER_012)
+        if ((mrExport.getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED) == 0)
         {
-            return; // do not export to ODF 1.1/1.2
+            return; // do not export to ODF 1.1/1.2/1.3
         }
     }
     uno::Reference< text::XText > xText( xShape, uno::UNO_QUERY );
@@ -1924,13 +1924,13 @@ void XMLShapeExport::ImpExportTextBoxShape(
     {
         case XmlShapeTypePresSubtitleShape:
         {
-            aStr = GetXMLToken(XML_PRESENTATION_SUBTITLE);
+            aStr = GetXMLToken(XML_SUBTITLE);
             bIsPresShape = true;
             break;
         }
         case XmlShapeTypePresTitleTextShape:
         {
-            aStr = GetXMLToken(XML_PRESENTATION_TITLE);
+            aStr = GetXMLToken(XML_TITLE);
             bIsPresShape = true;
             break;
         }
@@ -1942,7 +1942,7 @@ void XMLShapeExport::ImpExportTextBoxShape(
         }
         case XmlShapeTypePresNotesShape:
         {
-            aStr = GetXMLToken(XML_PRESENTATION_NOTES);
+            aStr = GetXMLToken(XML_NOTES);
             bIsPresShape = true;
             break;
         }
@@ -2345,15 +2345,13 @@ void XMLShapeExport::ImpExportGraphicObjectShape(
     ImpExportNewTrans(xPropSet, nFeatures, pRefPoint);
 
     if(eShapeType == XmlShapeTypePresGraphicObjectShape)
-        bIsEmptyPresObj = ImpExportPresentationAttributes( xPropSet, GetXMLToken(XML_PRESENTATION_GRAPHIC) );
+        bIsEmptyPresObj = ImpExportPresentationAttributes( xPropSet, GetXMLToken(XML_GRAPHIC) );
 
     bool bCreateNewline( (nFeatures & XMLShapeExportFlags::NO_WS) == XMLShapeExportFlags::NONE ); // #86116#/#92210#
     SvXMLElementExport aElem( mrExport, XML_NAMESPACE_DRAW,
                               XML_FRAME, bCreateNewline, true );
 
-    const bool bSaveBackwardsCompatible = bool( mrExport.getExportFlags() & SvXMLExportFlags::SAVEBACKWARDCOMPATIBLE );
-
-    if (!bIsEmptyPresObj || bSaveBackwardsCompatible)
+    if (!bIsEmptyPresObj)
     {
         uno::Reference<graphic::XGraphic> xGraphic;
         OUString sOutMimeType;
@@ -2408,15 +2406,19 @@ void XMLShapeExport::ImpExportGraphicObjectShape(
         }
 
         {
-            if (GetExport().getDefaultVersion() > SvtSaveOptions::ODFVER_012)
+            if (GetExport().getSaneDefaultVersion() > SvtSaveOptions::ODFSVER_012)
             {
                 if (sOutMimeType.isEmpty())
                 {
                     GetExport().GetGraphicMimeTypeFromStream(xGraphic, sOutMimeType);
                 }
                 if (!sOutMimeType.isEmpty())
-                {
-                    GetExport().AddAttribute(XML_NAMESPACE_LO_EXT, "mime-type", sOutMimeType);
+                {   // ODF 1.3 OFFICE-3943
+                    GetExport().AddAttribute(
+                        SvtSaveOptions::ODFSVER_013 <= GetExport().getSaneDefaultVersion()
+                            ? XML_NAMESPACE_DRAW
+                            : XML_NAMESPACE_LO_EXT,
+                        "mime-type", sOutMimeType);
                 }
             }
 
@@ -2456,8 +2458,14 @@ void XMLShapeExport::ImpExportGraphicObjectShape(
                     mrExport.AddAttribute(XML_NAMESPACE_XLINK, XML_ACTUATE, XML_ONLOAD );
                 }
 
-                if (!aMimeType.isEmpty() && GetExport().getDefaultVersion() > SvtSaveOptions::ODFVER_012)
-                    mrExport.AddAttribute(XML_NAMESPACE_LO_EXT, "mime-type", aMimeType);
+                if (!aMimeType.isEmpty() && GetExport().getSaneDefaultVersion() > SvtSaveOptions::ODFSVER_012)
+                {   // ODF 1.3 OFFICE-3943
+                    mrExport.AddAttribute(
+                        SvtSaveOptions::ODFSVER_013 <= GetExport().getSaneDefaultVersion()
+                            ? XML_NAMESPACE_DRAW
+                            : XML_NAMESPACE_LO_EXT,
+                        "mime-type", aMimeType);
+                }
 
                 SvXMLElementExport aElement(mrExport, XML_NAMESPACE_DRAW, XML_IMAGE, true, true);
 
@@ -2475,7 +2483,7 @@ void XMLShapeExport::ImpExportGraphicObjectShape(
     ImpExportDescription( xShape ); // #i68101#
 
     // Signature Line, QR Code - needs to be after the images!
-    if (GetExport().getDefaultVersion() > SvtSaveOptions::ODFVER_012)
+    if (GetExport().getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
     {
         ImpExportSignatureLine(xShape);
         ImpExportQRCode(xShape);
@@ -2844,11 +2852,11 @@ void XMLShapeExport::ImpExportOLE2Shape(
 
     // presentation settings
     if(eShapeType == XmlShapeTypePresOLE2Shape)
-        bIsEmptyPresObj = ImpExportPresentationAttributes( xPropSet, GetXMLToken(XML_PRESENTATION_OBJECT) );
+        bIsEmptyPresObj = ImpExportPresentationAttributes( xPropSet, GetXMLToken(XML_OBJECT) );
     else if(eShapeType == XmlShapeTypePresChartShape)
-        bIsEmptyPresObj = ImpExportPresentationAttributes( xPropSet, GetXMLToken(XML_PRESENTATION_CHART) );
+        bIsEmptyPresObj = ImpExportPresentationAttributes( xPropSet, GetXMLToken(XML_CHART) );
     else if(eShapeType == XmlShapeTypePresSheetShape)
-        bIsEmptyPresObj = ImpExportPresentationAttributes( xPropSet, GetXMLToken(XML_PRESENTATION_TABLE) );
+        bIsEmptyPresObj = ImpExportPresentationAttributes( xPropSet, GetXMLToken(XML_TABLE) );
 
     bool bCreateNewline( (nFeatures & XMLShapeExportFlags::NO_WS) == XMLShapeExportFlags::NONE ); // #86116#/#92210#
     bool bExportEmbedded(mrExport.getExportFlags() & SvXMLExportFlags::EMBEDDED);
@@ -2856,9 +2864,7 @@ void XMLShapeExport::ImpExportOLE2Shape(
     SvXMLElementExport aElement( mrExport, XML_NAMESPACE_DRAW,
                               XML_FRAME, bCreateNewline, true );
 
-    const bool bSaveBackwardsCompatible = bool( mrExport.getExportFlags() & SvXMLExportFlags::SAVEBACKWARDCOMPATIBLE );
-
-    if( !bIsEmptyPresObj || bSaveBackwardsCompatible )
+    if (!bIsEmptyPresObj)
     {
         if (pAttrList)
         {
@@ -3006,7 +3012,7 @@ void XMLShapeExport::ImpExportPageShape(
         if(eShapeType == XmlShapeTypePresPageShape)
         {
             mrExport.AddAttribute(XML_NAMESPACE_PRESENTATION, XML_CLASS,
-                                 XML_PRESENTATION_PAGE);
+                                 XML_PAGE);
         }
 
         // write Page shape
@@ -3283,7 +3289,7 @@ void XMLShapeExport::ImpExportMediaShape(
 
     if(eShapeType == XmlShapeTypePresMediaShape)
     {
-        (void)ImpExportPresentationAttributes( xPropSet, GetXMLToken(XML_PRESENTATION_OBJECT) );
+        (void)ImpExportPresentationAttributes( xPropSet, GetXMLToken(XML_OBJECT) );
     }
     bool bCreateNewline( (nFeatures & XMLShapeExportFlags::NO_WS) == XMLShapeExportFlags::NONE ); // #86116#/#92210#
     SvXMLElementExport aElem( mrExport, XML_NAMESPACE_DRAW,
@@ -3307,7 +3313,7 @@ void XMLShapeExport::ImpExportMediaShape(
     mrExport.AddAttribute( XML_NAMESPACE_DRAW, XML_MIME_TYPE, sMimeType );
 
     // write plugin
-    auto pPluginOBJ = std::make_unique<SvXMLElementExport>(mrExport, XML_NAMESPACE_DRAW, XML_PLUGIN, !( nFeatures & XMLShapeExportFlags::NO_WS ), true);
+    SvXMLElementExport aPluginOBJ(mrExport, XML_NAMESPACE_DRAW, XML_PLUGIN, !( nFeatures & XMLShapeExportFlags::NO_WS ), true);
 
     // export parameters
     const OUString aFalseStr(  "false"  ), aTrueStr(  "true"  );
@@ -4116,7 +4122,7 @@ static void ImpExportEnhancedPath( SvXMLExport& rExport,
     }
     aStr = aStrBuffer.makeStringAndClear();
     rExport.AddAttribute( bExtended ? XML_NAMESPACE_DRAW_EXT : XML_NAMESPACE_DRAW, XML_ENHANCED_PATH, aStr );
-    if ( !bExtended && bNeedExtended && (rExport.getDefaultVersion() > SvtSaveOptions::ODFVER_012) )
+    if (!bExtended && bNeedExtended && (rExport.getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED))
         ImpExportEnhancedPath( rExport, rCoordinates, rSegments, true );
 }
 
@@ -4578,8 +4584,8 @@ static void ImpExportEnhancedGeometry( SvXMLExport& rExport, const uno::Referenc
                                 {
                                     case EAS_SubViewSize:
                                     {
-                                        // export draw:sub-view-size (do not export in ODF 1.2 or older)
-                                        if (rExport.getDefaultVersion() <= SvtSaveOptions::ODFVER_012)
+                                        // export draw:sub-view-size (do not export in ODF 1.3 or older)
+                                        if ((rExport.getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED) == 0)
                                         {
                                             continue;
                                         }
@@ -4827,7 +4833,7 @@ void XMLShapeExport::ImpExportTableShape( const uno::Reference< drawing::XShape 
 
         // presentation settings
         if(eShapeType == XmlShapeTypePresTableShape)
-            bIsEmptyPresObj = ImpExportPresentationAttributes( xPropSet, GetXMLToken(XML_PRESENTATION_TABLE) );
+            bIsEmptyPresObj = ImpExportPresentationAttributes( xPropSet, GetXMLToken(XML_TABLE) );
 
         const bool bCreateNewline( (nFeatures & XMLShapeExportFlags::NO_WS) == XMLShapeExportFlags::NONE );
         const bool bExportEmbedded(mrExport.getExportFlags() & SvXMLExportFlags::EMBEDDED);
@@ -4835,7 +4841,7 @@ void XMLShapeExport::ImpExportTableShape( const uno::Reference< drawing::XShape 
         SvXMLElementExport aElement( mrExport, XML_NAMESPACE_DRAW, XML_FRAME, bCreateNewline, true );
 
         // do not export in ODF 1.1 or older
-        if( mrExport.getDefaultVersion() >= SvtSaveOptions::ODFVER_012 )
+        if (mrExport.getSaneDefaultVersion() >= SvtSaveOptions::ODFSVER_012)
         {
             if( !bIsEmptyPresObj )
             {

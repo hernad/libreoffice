@@ -24,6 +24,7 @@
 #include "xmlReportElement.hxx"
 #include "xmlEnums.hxx"
 #include "xmlTable.hxx"
+#include <osl/diagnose.h>
 
 namespace rptxml
 {
@@ -48,14 +49,6 @@ OXMLReportElementBase::~OXMLReportElementBase()
 }
 
 css::uno::Reference< css::xml::sax::XFastContextHandler > OXMLReportElementBase::createFastChildContext(
-        sal_Int32 nElement,
-        const Reference< XFastAttributeList > & xAttrList )
-{
-    css::uno::Reference< css::xml::sax::XFastContextHandler > xContext = createFastChildContext_(nElement,xAttrList);
-    return xContext;
-}
-
-css::uno::Reference< css::xml::sax::XFastContextHandler > OXMLReportElementBase::createFastChildContext_(
         sal_Int32 nElement,
         const Reference< XFastAttributeList > & xAttrList )
 {

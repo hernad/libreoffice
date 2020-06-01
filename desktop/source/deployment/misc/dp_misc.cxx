@@ -79,8 +79,8 @@ OUString OfficePipeId::operator () ()
     OUString userPath;
     ::utl::Bootstrap::PathStatus aLocateResult =
     ::utl::Bootstrap::locateUserInstallation( userPath );
-    if (!(aLocateResult == ::utl::Bootstrap::PATH_EXISTS ||
-        aLocateResult == ::utl::Bootstrap::PATH_VALID))
+    if (aLocateResult != ::utl::Bootstrap::PATH_EXISTS &&
+        aLocateResult != ::utl::Bootstrap::PATH_VALID)
     {
         throw Exception("Extension Manager: Could not obtain path for UserInstallation.", nullptr);
     }
@@ -535,9 +535,9 @@ void disposeBridges(Reference<css::uno::XComponentContext> const & ctx)
     Reference<css::bridge::XBridgeFactory2> bridgeFac( css::bridge::BridgeFactory::create(ctx) );
 
     const Sequence< Reference<css::bridge::XBridge> >seqBridges = bridgeFac->getExistingBridges();
-    for (sal_Int32 i = 0; i < seqBridges.getLength(); i++)
+    for (const Reference<css::bridge::XBridge>& bridge : seqBridges)
     {
-        Reference<css::lang::XComponent> comp(seqBridges[i], UNO_QUERY);
+        Reference<css::lang::XComponent> comp(bridge, UNO_QUERY);
         if (comp.is())
         {
             try {

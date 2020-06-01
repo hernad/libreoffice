@@ -18,6 +18,7 @@
  */
 
 #include <com/sun/star/ui/dialogs/XExecutableDialog.hpp>
+#include <com/sun/star/ui/dialogs/XFilePicker3.hpp>
 #include <com/sun/star/ui/dialogs/XFilePickerControlAccess.hpp>
 #include <com/sun/star/ui/dialogs/CommonFilePickerElementIds.hpp>
 #include <com/sun/star/ui/dialogs/ExtendedFilePickerElementIds.hpp>
@@ -198,7 +199,7 @@ class DocumentSettingsGuard
     bool m_bPreserveReadOnly;
     bool m_bReadOnlySupported;
 
-    bool const m_bRestoreSettings;
+    bool m_bRestoreSettings;
 public:
     DocumentSettingsGuard( const uno::Reference< frame::XModel >& xModel, bool bReadOnly, bool bRestore )
     : m_bPreserveReadOnly( false )

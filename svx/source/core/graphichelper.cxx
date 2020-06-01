@@ -36,6 +36,7 @@
 #include <com/sun/star/container/NoSuchElementException.hpp>
 #include <com/sun/star/document/XExporter.hpp>
 #include <com/sun/star/drawing/GraphicExportFilter.hpp>
+#include <com/sun/star/drawing/XShape.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/lang/XComponent.hpp>
 #include <com/sun/star/io/XInputStream.hpp>
@@ -58,7 +59,6 @@ using namespace css::document;
 using namespace css::ui::dialogs;
 using namespace css::container;
 using namespace com::sun::star::task;
-using namespace css::frame;
 
 using namespace sfx2;
 
@@ -67,11 +67,11 @@ namespace drawing = com::sun::star::drawing;
 void GraphicHelper::GetPreferredExtension( OUString& rExtension, const Graphic& rGraphic )
 {
     OUString aExtension = "png";
-    const VectorGraphicDataPtr& aVectorGraphicDataPtr(rGraphic.getVectorGraphicData());
+    auto const & rVectorGraphicDataPtr(rGraphic.getVectorGraphicData());
 
-    if (aVectorGraphicDataPtr.get() && aVectorGraphicDataPtr->getVectorGraphicDataArrayLength())
+    if (rVectorGraphicDataPtr && rVectorGraphicDataPtr->getVectorGraphicDataArrayLength())
     {
-        switch (aVectorGraphicDataPtr->getVectorGraphicDataType())
+        switch (rVectorGraphicDataPtr->getVectorGraphicDataType())
         {
         case VectorGraphicDataType::Wmf:
             aExtension = "wmf";

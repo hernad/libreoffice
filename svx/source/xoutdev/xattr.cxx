@@ -26,8 +26,6 @@
 #include <com/sun/star/drawing/LineStyle.hpp>
 #include <com/sun/star/drawing/LineDash.hpp>
 #include <com/sun/star/drawing/DashStyle.hpp>
-#include <com/sun/star/awt/Point.hpp>
-#include <com/sun/star/drawing/PointSequence.hpp>
 #include <com/sun/star/drawing/FillStyle.hpp>
 #include <com/sun/star/awt/Gradient.hpp>
 #include <com/sun/star/uno/Sequence.hxx>
@@ -35,7 +33,6 @@
 #include <o3tl/any.hxx>
 #include <svl/itempool.hxx>
 #include <editeng/memberids.h>
-#include <tools/stream.hxx>
 #include <tools/mapunit.hxx>
 #include <osl/diagnose.h>
 
@@ -68,7 +65,6 @@
 #include <svx/xlnstcit.hxx>
 #include <svx/xlnedcit.hxx>
 #include <editeng/itemtype.hxx>
-#include <editeng/editrids.hrc>
 #include <editeng/eerdll.hxx>
 #include <svx/xdef.hxx>
 #include <svx/unomid.hxx>
@@ -81,14 +77,9 @@
 #include <svx/xftshcit.hxx>
 #include <svx/xftshxy.hxx>
 #include <svx/xftadit.hxx>
-#include <basegfx/polygon/b2dpolygon.hxx>
-#include <basegfx/point/b2dpoint.hxx>
-#include <basegfx/vector/b2dvector.hxx>
 #include <basegfx/polygon/b2dpolypolygontools.hxx>
 #include <unotools/intlwrapper.hxx>
 #include <unotools/syslocale.hxx>
-#include <vcl/gradient.hxx>
-#include <svx/svxids.hrc>
 #include <string>
 
 #include <boost/property_tree/json_parser.hpp>
@@ -185,7 +176,7 @@ OUString NameOrIndex::CheckNamedItem( const NameOrIndex* pCheckItem, const sal_u
         sal_Int32 nUserIndex = 1;
         const OUString aUser(SvxResId(pPrefixResId) + " ");
 
-        if( pDefaults.get() )
+        if( pDefaults )
         {
             const int nCount = pDefaults->Count();
             int nIndex;
@@ -887,7 +878,7 @@ std::unique_ptr<XLineDashItem> XLineDashItem::checkForUniqueItem( SdrModel* pMod
     {
         const OUString aUniqueName = NameOrIndex::CheckNamedItem(
                 this, XATTR_LINEDASH, &pModel->GetItemPool(),
-                XLineDashItem::CompareValueFunc, RID_SVXSTR_DASH11,
+                XLineDashItem::CompareValueFunc, RID_SVXSTR_DASH20,
                 pModel->GetPropertyList( XPropertyListType::Dash ) );
 
         // if the given name is not valid, replace it!
@@ -1925,6 +1916,18 @@ void XFillColorItem::dumpAsXml(xmlTextWriterPtr pWriter) const
     xmlTextWriterEndElement(pWriter);
 }
 
+boost::property_tree::ptree XFillColorItem::dumpAsJSON() const
+{
+    boost::property_tree::ptree aTree = SfxPoolItem::dumpAsJSON();
+
+    if (Which() == XATTR_FILLCOLOR)
+        aTree.put("commandName", ".uno:FillPageColor");
+
+    aTree.put("state", GetColorValue().AsRGBHexString());
+
+    return aTree;
+}
+
 XSecondaryFillColorItem::XSecondaryFillColorItem(const OUString& rName, const Color& rTheColor) :
     XColorItem(XATTR_SECONDARYFILLCOLOR, rName, rTheColor)
 {
@@ -2510,6 +2513,19 @@ boost::property_tree::ptree XFillFloatTransparenceItem::dumpAsJSON() const
 {
     boost::property_tree::ptree aTree = XFillGradientItem::dumpAsJSON();
     aTree.put("commandName", ".uno:FillFloatTransparence");
+
+    if (!bEnabled)
+    {
+        boost::property_tree::ptree& rState = aTree.get_child("state");
+        // When gradient fill is disabled, the intensity fields contain the
+        // constant encoded percent-transparency. However we use that here to just
+        // distinguish between 'None' and 'Solid' types and correct the 'style'
+        // property appropriately.
+        if (GetGradientValue().GetStartIntens() == 100)
+            rState.put("style", "NONE");
+        else
+            rState.put("style", "SOLID");
+    }
 
     return aTree;
 }

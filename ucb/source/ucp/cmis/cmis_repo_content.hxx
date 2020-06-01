@@ -25,7 +25,7 @@
 #include <vector>
 #include <list>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace beans {
         struct Property;
         struct PropertyValue;
@@ -33,7 +33,7 @@ namespace com { namespace sun { namespace star {
     namespace sdbc {
         class XRow;
     }
-}}}
+}
 namespace ucbhelper
 {
     class Content;
@@ -49,8 +49,8 @@ class RepoContent : public ::ucbhelper::ContentImplHelper,
                     public ChildrenProvider
 {
 private:
-    ContentProvider* const       m_pProvider;
-    URL const                    m_aURL;
+    ContentProvider*       m_pProvider;
+    URL                    m_aURL;
     OUString          m_sRepositoryId;
 
     std::vector< libcmis::RepositoryPtr > m_aRepositories;

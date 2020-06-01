@@ -17,8 +17,10 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_BASEGFX_POLYGON_B2DPOLYGONTOOLS_HXX
-#define INCLUDED_BASEGFX_POLYGON_B2DPOLYGONTOOLS_HXX
+#pragma once
+
+#include <vector>
+#include <functional>
 
 #include <basegfx/point/b2dpoint.hxx>
 #include <basegfx/vector/b2dvector.hxx>
@@ -27,7 +29,6 @@
 #include <basegfx/polygon/b2dpolygontriangulator.hxx>
 #include <com/sun/star/drawing/PointSequence.hpp>
 #include <com/sun/star/drawing/FlagSequence.hpp>
-#include <vector>
 #include <basegfx/basegfxdllapi.h>
 #include <o3tl/typed_flags_set.hxx>
 
@@ -53,12 +54,12 @@ namespace o3tl
 
 namespace basegfx
 {
-    // predefinitions
     class B2DPolygon;
     class B2DRange;
+}
 
-    namespace utils
-    {
+namespace basegfx::utils
+{
         // B2DPolygon tools
 
         // open/close with point add/remove and control point corrections
@@ -188,13 +189,33 @@ namespace basegfx
             @param fFullDashDotLen
             The summed-up length of the rDotDashArray. If zero, it will
             be calculated internally.
+
+            There is now a 2nd version that allows to provide callback
+            functions that get called when a snippet of a line/gap is
+            produced and needs to be added. This allows to use it like
+            a 'pipeline'. When using this (e.g. the 1st version uses
+            this internally to guarantee the same algorithm is used)
+            it is not needed to accumulate a potentially huge number
+            of polygons in the result-polyPolygons, but e.g. consume
+            them directly in the caller. Example is rendering a
+            dashed line but without creating the potentially huge amount
+            of polygons.
+            The 2nd version will also merge first/last line/gap snippets
+            if the input polygon is closed and the start/end-points match
+            accordingly - at the cost that this will be delivered last.
         */
+        BASEGFX_DLLPUBLIC void applyLineDashing(
+            const B2DPolygon& rCandidate,
+            const std::vector<double>& rDotDashArray,
+            std::function<void(const basegfx::B2DPolygon& rSnippet)> aLineTargetCallback,
+            std::function<void(const basegfx::B2DPolygon& rSnippet)> aGapTargetCallback = std::function<void(const basegfx::B2DPolygon&)>(),
+            double fDotDashLength = 0.0);
         BASEGFX_DLLPUBLIC void applyLineDashing(
             const B2DPolygon& rCandidate,
             const ::std::vector<double>& rDotDashArray,
             B2DPolyPolygon* pLineTarget,
             B2DPolyPolygon* pGapTarget = nullptr,
-            double fFullDashDotLen = 0.0);
+            double fDotDashLength = 0.0);
 
         // test if point is inside epsilon-range around an edge defined
         // by the two given points. Can be used for HitTesting. The epsilon-range
@@ -503,9 +524,6 @@ namespace basegfx
          */
         BASEGFX_DLLPUBLIC OUString exportToSvgPoints( const B2DPolygon& rPoly );
 
-    } // end of namespace utils
-} // end of namespace basegfx
-
-#endif // INCLUDED_BASEGFX_POLYGON_B2DPOLYGONTOOLS_HXX
+} // end of namespace basegfx::utils
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -18,6 +18,7 @@
  */
 
 #include "richtextcontrol.hxx"
+#include <frm_strings.hxx>
 #include <services.hxx>
 
 #include "richtextmodel.hxx"
@@ -29,6 +30,7 @@
 #include <com/sun/star/awt/PosSize.hpp>
 
 #include <toolkit/helper/vclunohelper.hxx>
+#include <tools/debug.hxx>
 #include <tools/diagnose_ex.h>
 #include <sal/log.hxx>
 #include <vcl/svapp.hxx>
@@ -166,51 +168,51 @@ namespace frm
 
         SolarMutexGuard aGuard;
 
-        if (!getPeer().is())
+        if (getPeer().is())
+            return;
+
+        mbCreatingPeer = true;
+
+        // determine the VLC window for the parent
+        vcl::Window* pParentWin = nullptr;
+        if ( _rParentPeer.is() )
         {
-            mbCreatingPeer = true;
-
-            // determine the VLC window for the parent
-            vcl::Window* pParentWin = nullptr;
-            if ( _rParentPeer.is() )
-            {
-                VCLXWindow* pParentXWin = comphelper::getUnoTunnelImplementation<VCLXWindow>( _rParentPeer );
-                if ( pParentXWin )
-                    pParentWin = pParentXWin->GetWindow().get();
-                DBG_ASSERT( pParentWin, "ORichTextControl::createPeer: could not obtain the VCL-level parent window!" );
-            }
-
-            // create the peer
-            Reference< XControlModel > xModel( getModel() );
-            rtl::Reference<ORichTextPeer> pPeer = ORichTextPeer::Create( xModel, pParentWin, getWinBits( xModel ) );
-            DBG_ASSERT( pPeer, "ORichTextControl::createPeer: invalid peer returned!" );
-            if ( pPeer )
-            {
-                // announce the peer to the base class
-                setPeer( pPeer.get() );
-
-                // initialize ourself (and thus the peer) with the model properties
-                updateFromModel();
-
-                Reference< XView >  xPeerView( getPeer(), UNO_QUERY );
-                if ( xPeerView.is() )
-                {
-                    xPeerView->setZoom( maComponentInfos.nZoomX, maComponentInfos.nZoomY );
-                    xPeerView->setGraphics( mxGraphics );
-                }
-
-                // a lot of initial settings from our component infos
-                setPosSize( maComponentInfos.nX, maComponentInfos.nY, maComponentInfos.nWidth, maComponentInfos.nHeight, PosSize::POSSIZE );
-
-                pPeer->setVisible   ( maComponentInfos.bVisible && !mbDesignMode );
-                pPeer->setEnable    ( maComponentInfos.bEnable                   );
-                pPeer->setDesignMode( mbDesignMode                               );
-
-                peerCreated();
-            }
-
-            mbCreatingPeer = false;
+            VCLXWindow* pParentXWin = comphelper::getUnoTunnelImplementation<VCLXWindow>( _rParentPeer );
+            if ( pParentXWin )
+                pParentWin = pParentXWin->GetWindow().get();
+            DBG_ASSERT( pParentWin, "ORichTextControl::createPeer: could not obtain the VCL-level parent window!" );
         }
+
+        // create the peer
+        Reference< XControlModel > xModel( getModel() );
+        rtl::Reference<ORichTextPeer> pPeer = ORichTextPeer::Create( xModel, pParentWin, getWinBits( xModel ) );
+        DBG_ASSERT( pPeer, "ORichTextControl::createPeer: invalid peer returned!" );
+        if ( pPeer )
+        {
+            // announce the peer to the base class
+            setPeer( pPeer.get() );
+
+            // initialize ourself (and thus the peer) with the model properties
+            updateFromModel();
+
+            Reference< XView >  xPeerView( getPeer(), UNO_QUERY );
+            if ( xPeerView.is() )
+            {
+                xPeerView->setZoom( maComponentInfos.nZoomX, maComponentInfos.nZoomY );
+                xPeerView->setGraphics( mxGraphics );
+            }
+
+            // a lot of initial settings from our component infos
+            setPosSize( maComponentInfos.nX, maComponentInfos.nY, maComponentInfos.nWidth, maComponentInfos.nHeight, PosSize::POSSIZE );
+
+            pPeer->setVisible   ( maComponentInfos.bVisible && !mbDesignMode );
+            pPeer->setEnable    ( maComponentInfos.bEnable                   );
+            pPeer->setDesignMode( mbDesignMode                               );
+
+            peerCreated();
+        }
+
+        mbCreatingPeer = false;
     }
 
     OUString SAL_CALL ORichTextControl::getImplementationName()
@@ -323,17 +325,13 @@ namespace frm
         if ( !pTargetDevice )
             return;
 
-        ::Size aSize = pControl->GetSizePixel();
         const MapUnit eTargetUnit = pTargetDevice->GetMapMode().GetMapUnit();
-        if ( eTargetUnit != MapUnit::MapPixel )
-            aSize = pTargetDevice->PixelToLogic( aSize );
-
         ::Point aPos( _nX, _nY );
         // the XView::draw API talks about pixels, always ...
         if ( eTargetUnit != MapUnit::MapPixel )
             aPos = pTargetDevice->PixelToLogic( aPos );
 
-        pControl->Draw( pTargetDevice, aPos, aSize, DrawFlags::NoControls );
+        pControl->Draw( pTargetDevice, aPos, DrawFlags::NoControls );
     }
 
 

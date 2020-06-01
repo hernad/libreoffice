@@ -10,20 +10,30 @@
 #include <test/bootstrapfixture.hxx>
 #include <unotest/macros_test.hxx>
 
+#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/frame/Desktop.hpp>
 #include <com/sun/star/uno/Reference.hxx>
+#include <com/sun/star/drawing/FillStyle.hpp>
+#include <com/sun/star/frame/DispatchHelper.hpp>
 
 #include <comphelper/processfactory.hxx>
+#include <comphelper/propertysequence.hxx>
 #include <sfx2/dispatch.hxx>
 #include <sfx2/request.hxx>
 #include <sfx2/viewfrm.hxx>
 #include <svl/intitem.hxx>
 #include <svx/svxids.hrc>
 #include <svx/svdoashp.hxx>
+#include <svx/svdotable.hxx>
+#include <svx/xfillit0.hxx>
+#include <svx/xflclit.hxx>
+#include <svx/xflgrit.hxx>
 #include <svl/stritem.hxx>
 #include <undo/undomanager.hxx>
+#include <vcl/scheduler.hxx>
 
 #include <DrawDocShell.hxx>
+#include <DrawController.hxx>
 #include <ViewShell.hxx>
 #include <app.hrc>
 #include <drawdoc.hxx>
@@ -36,19 +46,19 @@ using namespace ::com::sun::star;
 class SdUiImpressTest : public test::BootstrapFixture, public unotest::MacrosTest
 {
 protected:
-    uno::Reference<uno::XComponentContext> mxComponentContext;
     uno::Reference<lang::XComponent> mxComponent;
 
 public:
     virtual void setUp() override;
     virtual void tearDown() override;
+
+    void checkCurrentPageNumber(sal_uInt16 nNum);
 };
 
 void SdUiImpressTest::setUp()
 {
     test::BootstrapFixture::setUp();
 
-    mxComponentContext.set(comphelper::getComponentContext(getMultiServiceFactory()));
     mxDesktop.set(frame::Desktop::create(mxComponentContext));
 }
 
@@ -58,6 +68,18 @@ void SdUiImpressTest::tearDown()
         mxComponent->dispose();
 
     test::BootstrapFixture::tearDown();
+}
+
+void SdUiImpressTest::checkCurrentPageNumber(sal_uInt16 nNum)
+{
+    uno::Reference<frame::XModel> xModel(mxComponent, uno::UNO_QUERY);
+    uno::Reference<drawing::XDrawView> xDrawView(xModel->getCurrentController(), uno::UNO_QUERY);
+    uno::Reference<drawing::XDrawPage> xPage(xDrawView->getCurrentPage(), uno::UNO_SET_THROW);
+    uno::Reference<beans::XPropertySet> xPropertySet(xPage, uno::UNO_QUERY);
+
+    sal_uInt16 nPageNumber;
+    xPropertySet->getPropertyValue("Number") >>= nPageNumber;
+    CPPUNIT_ASSERT_EQUAL(nNum, nPageNumber);
 }
 
 CPPUNIT_TEST_FIXTURE(SdUiImpressTest, testTdf111522)
@@ -189,6 +211,139 @@ CPPUNIT_TEST_FIXTURE(SdUiImpressTest, testTdf128651)
     pViewShell->GetViewFrame()->GetDispatcher()->Execute(SID_REDO, SfxCallMode::SYNCHRON);
     const sal_Int32 nRedoWidth(pCustomShape->GetSnapRect().GetWidth());
     CPPUNIT_ASSERT_EQUAL_MESSAGE("Redo changes width", nUndoWidth, nRedoWidth);
+}
+
+CPPUNIT_TEST_FIXTURE(SdUiImpressTest, testTdf129346)
+{
+    mxComponent = loadFromDesktop("private:factory/simpress",
+                                  "com.sun.star.presentation.PresentationDocument");
+
+    CPPUNIT_ASSERT(mxComponent.is());
+
+    dispatchCommand(mxComponent, ".uno:DiaMode", {});
+    Scheduler::ProcessEventsToIdle();
+    checkCurrentPageNumber(1);
+
+    dispatchCommand(mxComponent, ".uno:InsertPage", {});
+    Scheduler::ProcessEventsToIdle();
+    checkCurrentPageNumber(2);
+
+    dispatchCommand(mxComponent, ".uno:Undo", {});
+    Scheduler::ProcessEventsToIdle();
+    checkCurrentPageNumber(1);
+}
+
+CPPUNIT_TEST_FIXTURE(SdUiImpressTest, testTdf127481)
+{
+    mxComponent = loadFromDesktop("private:factory/simpress",
+                                  "com.sun.star.presentation.PresentationDocument");
+
+    CPPUNIT_ASSERT(mxComponent.is());
+
+    auto pXImpressDocument = dynamic_cast<SdXImpressDocument*>(mxComponent.get());
+    sd::ViewShell* pViewShell = pXImpressDocument->GetDocShell()->GetViewShell();
+    SdPage* pActualPage = pViewShell->GetActualPage();
+    CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(2), pActualPage->GetObjCount());
+
+    uno::Sequence<beans::PropertyValue> aArgs(comphelper::InitPropertySequence(
+        { { "Rows", uno::makeAny(sal_Int32(1)) }, { "Columns", uno::makeAny(sal_Int32(1)) } }));
+
+    dispatchCommand(mxComponent, ".uno:InsertTable", aArgs);
+    Scheduler::ProcessEventsToIdle();
+
+    CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(3), pActualPage->GetObjCount());
+
+    dispatchCommand(mxComponent, ".uno:DuplicatePage", aArgs);
+    Scheduler::ProcessEventsToIdle();
+
+    checkCurrentPageNumber(2);
+
+    pActualPage = pViewShell->GetActualPage();
+    CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(3), pActualPage->GetObjCount());
+
+    auto pTableObject = dynamic_cast<sdr::table::SdrTableObj*>(pActualPage->GetObj(2));
+    CPPUNIT_ASSERT(pTableObject);
+
+    //without the fix, it would crash here
+    pViewShell->GetView()->SdrBeginTextEdit(pTableObject);
+
+    CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(3), pActualPage->GetObjCount());
+}
+
+namespace
+{
+void dispatchCommand(const uno::Reference<lang::XComponent>& xComponent, const OUString& rCommand,
+                     const uno::Sequence<beans::PropertyValue>& rPropertyValues)
+{
+    uno::Reference<frame::XController> xController
+        = uno::Reference<frame::XModel>(xComponent, uno::UNO_QUERY_THROW)->getCurrentController();
+    CPPUNIT_ASSERT(xController.is());
+    uno::Reference<frame::XDispatchProvider> xFrame(xController->getFrame(), uno::UNO_QUERY);
+    CPPUNIT_ASSERT(xFrame.is());
+
+    uno::Reference<uno::XComponentContext> xContext = ::comphelper::getProcessComponentContext();
+    uno::Reference<frame::XDispatchHelper> xDispatchHelper(frame::DispatchHelper::create(xContext));
+    CPPUNIT_ASSERT(xDispatchHelper.is());
+
+    xDispatchHelper->executeDispatch(xFrame, rCommand, OUString(), 0, rPropertyValues);
+}
+}
+
+CPPUNIT_TEST_FIXTURE(SdUiImpressTest, testPageFillColor)
+{
+    // Load the document and create two new windows.
+    mxComponent = loadFromDesktop(m_directories.getURLFromSrc("sd/qa/unit/data/tdf126197.odp"));
+    auto pImpressDocument = dynamic_cast<SdXImpressDocument*>(mxComponent.get());
+    sd::ViewShell* pViewShell = pImpressDocument->GetDocShell()->GetViewShell();
+
+    // Set FillPageColor
+
+    uno::Sequence<beans::PropertyValue> aPropertyValues(comphelper::InitPropertySequence({
+        { "Color", uno::makeAny(OUString("ff0000")) },
+    }));
+
+    ::dispatchCommand(mxComponent, ".uno:FillPageColor", aPropertyValues);
+
+    SdPage* pPage = pViewShell->getCurrentPage();
+    const SfxItemSet& rPageAttr = pPage->getSdrPageProperties().GetItemSet();
+
+    const XFillStyleItem* pFillStyle = rPageAttr.GetItem(XATTR_FILLSTYLE);
+    drawing::FillStyle eXFS = pFillStyle->GetValue();
+    CPPUNIT_ASSERT_EQUAL(drawing::FillStyle_SOLID, eXFS);
+
+    Color aColor = rPageAttr.GetItem(XATTR_FILLCOLOR)->GetColorValue();
+    CPPUNIT_ASSERT_EQUAL(OUString("ff0000"), aColor.AsRGBHexString());
+}
+
+CPPUNIT_TEST_FIXTURE(SdUiImpressTest, testPageFillGradient)
+{
+    // Load the document and create two new windows.
+    mxComponent = loadFromDesktop(m_directories.getURLFromSrc("sd/qa/unit/data/tdf126197.odp"));
+    auto pImpressDocument = dynamic_cast<SdXImpressDocument*>(mxComponent.get());
+    sd::ViewShell* pViewShell = pImpressDocument->GetDocShell()->GetViewShell();
+
+    // Set FillPageColor
+
+    uno::Sequence<beans::PropertyValue> aPropertyValues(comphelper::InitPropertySequence({
+        { "FillPageGradientJSON",
+          uno::makeAny(
+              OUString("{\"style\":\"LINEAR\",\"startcolor\":\"ff0000\",\"endcolor\":\"0000ff\","
+                       "\"angle\":\"300\",\"border\":\"0\",\"x\":\"0\",\"y\":\"0\",\"intensstart\":"
+                       "\"100\",\"intensend\":\"100\",\"stepcount\":\"0\"}")) },
+    }));
+
+    dispatchCommand(mxComponent, ".uno:FillPageGradient", aPropertyValues);
+
+    SdPage* pPage = pViewShell->getCurrentPage();
+    const SfxItemSet& rPageAttr = pPage->getSdrPageProperties().GetItemSet();
+
+    const XFillStyleItem* pFillStyle = rPageAttr.GetItem(XATTR_FILLSTYLE);
+    drawing::FillStyle eXFS = pFillStyle->GetValue();
+    CPPUNIT_ASSERT_EQUAL(drawing::FillStyle_GRADIENT, eXFS);
+
+    XGradient aGradient = rPageAttr.GetItem(XATTR_FILLGRADIENT)->GetGradientValue();
+    CPPUNIT_ASSERT_EQUAL(OUString("ff0000"), aGradient.GetStartColor().AsRGBHexString());
+    CPPUNIT_ASSERT_EQUAL(OUString("0000ff"), aGradient.GetEndColor().AsRGBHexString());
 }
 CPPUNIT_PLUGIN_IMPLEMENT();
 

@@ -17,7 +17,6 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <stringconstants.hxx>
 #include <strings.hxx>
 #include <FilteredContainer.hxx>
 #include <RefreshListener.hxx>
@@ -28,7 +27,7 @@
 #include <connectivity/dbtools.hxx>
 #include <tools/wldcrd.hxx>
 #include <tools/diagnose_ex.h>
-#include <o3tl/optional.hxx>
+#include <optional>
 #include <sal/log.hxx>
 
 namespace dbaccess
@@ -99,7 +98,7 @@ static sal_Int32 createWildCardVector(Sequence< OUString >& _rTableFilter, std::
         return bFilterMatch;
     }
 
-    typedef ::o3tl::optional< OUString >    OptionalString;
+    typedef ::std::optional< OUString >    OptionalString;
 
     namespace {
 

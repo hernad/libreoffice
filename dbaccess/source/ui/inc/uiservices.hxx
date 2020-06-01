@@ -22,8 +22,6 @@
 
 #include <sal/config.h>
 
-#include <sal/types.h>
-
 extern "C" {
 
 void createRegistryInfo_ComposerDialogs();
@@ -50,7 +48,6 @@ void createRegistryInfo_OTextConnectionSettingsDialog();
 void createRegistryInfo_OUserSettingsDialog();
 void createRegistryInfo_OViewControl();
 void createRegistryInfo_SbaXGridControl();
-
 }
 
 #endif

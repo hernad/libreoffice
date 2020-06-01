@@ -22,17 +22,17 @@
 
 #include <com/sun/star/uno/Reference.hxx>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace container { class XIndexAccess; }
     namespace frame { class XModel; }
-} } }
+}
 
 class SfxObjectShell;
 
 class ScVbaPalette
 {
 private:
-    SfxObjectShell* const m_pShell;
+    SfxObjectShell* m_pShell;
 public:
     explicit ScVbaPalette( SfxObjectShell* pShell ) : m_pShell( pShell ) {}
     explicit ScVbaPalette( const css::uno::Reference< css::frame::XModel >& rxModel );

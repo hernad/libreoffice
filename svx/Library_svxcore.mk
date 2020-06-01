@@ -46,7 +46,6 @@ $(eval $(call gb_Library_set_precompiled_header,svxcore,svx/inc/pch/precompiled_
 
 $(eval $(call gb_Library_add_defs,svxcore,\
     -DSVXCORE_DLLIMPLEMENTATION \
-    -DBOOST_SPIRIT_USE_OLD_NAMESPACE \
 ))
 
 $(eval $(call gb_Library_use_libraries,svxcore,\
@@ -164,11 +163,11 @@ $(eval $(call gb_Library_add_exception_objects,svxcore,\
     svx/source/sdr/animation/objectanimator \
     svx/source/sdr/animation/animationstate \
     svx/source/sdr/attribute/sdrallfillattributeshelper \
-    svx/source/sdr/attribute/sdrlinefillshadowtextattribute \
+    svx/source/sdr/attribute/sdrlinefilleffectstextattribute \
     svx/source/sdr/attribute/sdrfilltextattribute \
-    svx/source/sdr/attribute/sdrshadowtextattribute \
+    svx/source/sdr/attribute/sdreffectstextattribute \
     svx/source/sdr/attribute/sdrtextattribute \
-    svx/source/sdr/attribute/sdrlineshadowtextattribute \
+    svx/source/sdr/attribute/sdrlineeffectstextattribute \
     svx/source/sdr/attribute/sdrformtextattribute \
     svx/source/sdr/attribute/sdrformtextoutlineattribute \
     svx/source/sdr/contact/viewobjectcontactofgroup \
@@ -273,7 +272,6 @@ $(eval $(call gb_Library_add_exception_objects,svxcore,\
     svx/source/sdr/properties/connectorproperties \
     svx/source/sdr/properties/e3dcompoundproperties \
     svx/source/sdr/properties/oleproperties \
-    svx/source/sidebar/PanelLayout \
     svx/source/svdraw/clonelist \
     svx/source/svdraw/charthelper \
     svx/source/svdraw/gradtrns \
@@ -435,6 +433,7 @@ $(eval $(call gb_Library_add_exception_objects,svxcore,\
     svx/source/form/datalistener \
     svx/source/form/datanavi \
     svx/source/form/delayedevent \
+    svx/source/form/labelitemwindow \
     svx/source/form/fmcontrolbordermanager \
     svx/source/form/fmcontrollayout \
     svx/source/form/fmdmod \

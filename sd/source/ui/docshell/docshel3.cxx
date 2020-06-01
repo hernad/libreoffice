@@ -38,6 +38,8 @@
 #include <editeng/editobj.hxx>
 #include <com/sun/star/i18n/TextConversionOption.hpp>
 #include <sfx2/notebookbar/SfxNotebookBar.hxx>
+#include <drawview.hxx>
+#include <editeng/editeng.hxx>
 
 #include <sdmod.hxx>
 #include <drawdoc.hxx>
@@ -265,6 +267,7 @@ void DrawDocShell::Execute( SfxRequest& rReq )
             const SfxStringItem* pItem = rReq.GetArg<SfxStringItem>(SID_LANGUAGE_STATUS);
             if (pItem)
                 aNewLangTxt = pItem->GetValue();
+
             if (aNewLangTxt == "*" )
             {
                 // open the dialog "Tools/Options/Language Settings - Language"
@@ -282,25 +285,70 @@ void DrawDocShell::Execute( SfxRequest& rReq )
                     // setting the new language...
                     if (!aNewLangTxt.isEmpty())
                     {
+                        const OUString aSelectionLangPrefix("Current_");
+                        const OUString aParagraphLangPrefix("Paragraph_");
                         const OUString aDocumentLangPrefix("Default_");
                         const OUString aStrNone("LANGUAGE_NONE");
                         const OUString aStrResetLangs("RESET_LANGUAGES");
+
+                        bool bSelection = false;
+                        bool bParagraph = false;
+
                         SdDrawDocument* pDoc = mpViewShell->GetDoc();
                         sal_Int32 nPos = -1;
                         if (-1 != (nPos = aNewLangTxt.indexOf( aDocumentLangPrefix )))
                         {
                             aNewLangTxt = aNewLangTxt.replaceAt( nPos, aDocumentLangPrefix.getLength(), "" );
+
+                            if (aNewLangTxt == aStrNone)
+                                lcl_setLanguage( pDoc, OUString(), true );
+                            else if (aNewLangTxt == aStrResetLangs)
+                                lcl_setLanguage( pDoc, OUString() );
+                            else
+                                lcl_setLanguage( pDoc, aNewLangTxt );
                         }
-                        else
+                        else if (-1 != (nPos = aNewLangTxt.indexOf( aSelectionLangPrefix )))
                         {
-                            break;
+                            bSelection = true;
+                            aNewLangTxt = aNewLangTxt.replaceAt( nPos, aSelectionLangPrefix.getLength(), "" );
                         }
-                        if (aNewLangTxt == aStrNone)
-                            lcl_setLanguage( pDoc, OUString(), true );
-                        else if (aNewLangTxt == aStrResetLangs)
-                            lcl_setLanguage( pDoc, OUString() );
-                        else
-                            lcl_setLanguage( pDoc, aNewLangTxt );
+                        else if (-1 != (nPos = aNewLangTxt.indexOf( aParagraphLangPrefix )))
+                        {
+                            bParagraph = true;
+                            aNewLangTxt = aNewLangTxt.replaceAt( nPos, aParagraphLangPrefix.getLength(), "" );
+                        }
+
+                        if (bSelection || bParagraph)
+                        {
+                            SdrView* pSdrView = mpViewShell->GetDrawView();
+                            if (!pSdrView)
+                                return;
+
+                            EditView& rEditView = pSdrView->GetTextEditOutlinerView()->GetEditView();
+                            const LanguageType nLangToUse = SvtLanguageTable::GetLanguageType( aNewLangTxt );
+                            SvtScriptType nScriptType = SvtLanguageOptions::GetScriptTypeOfLanguage( nLangToUse );
+
+                            SfxItemSet aAttrs = rEditView.GetEditEngine()->GetEmptyItemSet();
+                            if (nScriptType == SvtScriptType::LATIN)
+                                aAttrs.Put( SvxLanguageItem( nLangToUse, EE_CHAR_LANGUAGE ) );
+                            if (nScriptType == SvtScriptType::COMPLEX)
+                                aAttrs.Put( SvxLanguageItem( nLangToUse, EE_CHAR_LANGUAGE_CTL ) );
+                            if (nScriptType == SvtScriptType::ASIAN)
+                                aAttrs.Put( SvxLanguageItem( nLangToUse, EE_CHAR_LANGUAGE_CJK ) );
+                            ESelection aOldSel;
+                            if (bParagraph)
+                            {
+                                ESelection aSel = rEditView.GetSelection();
+                                aOldSel = aSel;
+                                aSel.nStartPos = 0;
+                                aSel.nEndPos = EE_TEXTPOS_ALL;
+                                rEditView.SetSelection( aSel );
+                            }
+
+                            rEditView.SetAttribs( aAttrs );
+                            if (bParagraph)
+                                rEditView.SetSelection( aOldSel );
+                        }
 
                         if ( pDoc->GetOnlineSpell() )
                         {
@@ -310,6 +358,52 @@ void DrawDocShell::Execute( SfxRequest& rReq )
                 }
             }
             Broadcast(SfxHint(SfxHintId::LanguageChanged));
+        }
+        break;
+        case SID_SPELLCHECK_IGNORE_ALL:
+        {
+            if (!mpViewShell)
+                return;
+            SdrView* pSdrView = mpViewShell->GetDrawView();
+            if (!pSdrView)
+                return;
+
+            EditView& rEditView = pSdrView->GetTextEditOutlinerView()->GetEditView();
+            OUString sIgnoreText;
+            const SfxStringItem* pItem2 = rReq.GetArg<SfxStringItem>(FN_PARAM_1);
+            if (pItem2)
+                sIgnoreText = pItem2->GetValue();
+
+            const OUString sSpellingType("Spelling");
+            if(sIgnoreText == sSpellingType)
+            {
+                ESelection aOldSel = rEditView.GetSelection();
+                rEditView.SpellIgnoreWord();
+                rEditView.SetSelection( aOldSel );
+            }
+        }
+        break;
+        case SID_SPELLCHECK_APPLY_SUGGESTION:
+        {
+            if (!mpViewShell)
+                return;
+            SdrView* pSdrView = mpViewShell->GetDrawView();
+            if (!pSdrView)
+                return;
+
+            EditView& rEditView = pSdrView->GetTextEditOutlinerView()->GetEditView();
+            OUString sApplyText;
+            const SfxStringItem* pItem2 = rReq.GetArg<SfxStringItem>(FN_PARAM_1);
+            if (pItem2)
+                sApplyText = pItem2->GetValue();
+
+            const OUString sSpellingRule("Spelling_");
+            sal_Int32 nPos = 0;
+            if(-1 != (nPos = sApplyText.indexOf( sSpellingRule )))
+            {
+                sApplyText = sApplyText.replaceAt(nPos, sSpellingRule.getLength(), "");
+                rEditView.InsertText( sApplyText );
+            }
         }
         break;
 

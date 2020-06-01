@@ -20,43 +20,34 @@
 #include <vector>
 #include <unordered_set>
 #include <editeng/editdata.hxx>
-#include <editeng/editeng.hxx>
 #include <rtl/strbuf.hxx>
 #include <svx/xfillit0.hxx>
-#include <svx/xflclit.hxx>
 #include <svx/xlineit0.hxx>
 #include <svx/svdxcgv.hxx>
 #include <svx/svdoutl.hxx>
-#include <svx/svdetc.hxx>
 #include <svx/svdundo.hxx>
 #include <svx/svdograf.hxx>
 #include <svx/svdoole2.hxx>
 #include <svx/svdorect.hxx>
-#include <svx/svdoedge.hxx>
 #include <svx/svdopage.hxx>
 #include <svx/svdpage.hxx>
 #include <svx/svdpagv.hxx>
 #include <svx/svdtrans.hxx>
 #include <svx/strings.hrc>
 #include <svx/dialmgr.hxx>
-#include <svx/xoutbmp.hxx>
-#include <vcl/metaact.hxx>
-#include <svl/poolitem.hxx>
-#include <svl/itempool.hxx>
 #include <tools/bigint.hxx>
-#include <sot/formats.hxx>
 #include <clonelist.hxx>
 #include <vcl/virdev.hxx>
 #include <svl/style.hxx>
 #include <fmobj.hxx>
 #include <vcl/vectorgraphicdata.hxx>
-#include <drawinglayer/primitive2d/baseprimitive2d.hxx>
 #include <drawinglayer/primitive2d/groupprimitive2d.hxx>
 #include <drawinglayer/geometry/viewinformation2d.hxx>
 #include <svx/sdr/contact/viewcontact.hxx>
-#include <svx/sdr/contact/objectcontactofobjlistpainter.hxx>
+#include <sdr/contact/objectcontactofobjlistpainter.hxx>
 #include <svx/sdr/contact/displayinfo.hxx>
 #include <svx/svdotable.hxx>
+#include <sal/log.hxx>
 
 using namespace com::sun::star;
 
@@ -532,7 +523,7 @@ GDIMetaFile SdrExchangeView::GetMarkedObjMetaFile(bool bNoVDevIfOneMtfMarked) co
             {
                 Graphic aGraphic( pGrafObj->GetTransformedGraphic() );
 
-                // #119735# just use GetGDIMetaFile, it will create a bufferd version of contained bitmap now automatically
+                // #119735# just use GetGDIMetaFile, it will create a buffered version of contained bitmap now automatically
                 aMtf = aGraphic.GetGDIMetaFile();
             }
         }
@@ -745,16 +736,16 @@ std::unique_ptr<SdrModel> SdrExchangeView::CreateMarkedObjModel() const
         if(nullptr == pNewObj)
         {
             // not cloned yet
-            if (pObj->GetObjIdentifier() == OBJ_OLE2)
+            if(pObj->GetObjIdentifier() == OBJ_OLE2 && nullptr == mpModel->GetPersist())
             {
-                // tdf#125520
-                pNewObj = pObj->CloneSdrObject(pObj->getSdrModelFromSdrObject());
+                // tdf#125520 - former fix was wrong, the SdrModel
+                // has to have a GetPersist() already, see task.
+                // We can still warn here when this is not the case
+                SAL_WARN( "svx", "OLE gets cloned Persist, EmbeddedObjectContainer will not be copied" );
             }
-            else
-            {
-                // use default way
-                pNewObj = pObj->CloneSdrObject(*pNewModel);
-            }
+
+            // use default way
+            pNewObj = pObj->CloneSdrObject(*pNewModel);
         }
 
         if(pNewObj)

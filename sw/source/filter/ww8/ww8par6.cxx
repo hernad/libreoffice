@@ -767,7 +767,9 @@ void SwWW8ImplReader::HandleLineNumbering(const wwSection &rSection)
 
             aInfo.SetRestartEachPage(rSection.maSep.lnc == 0);
 
-            aInfo.SetPosFromLeft(writer_cast<sal_uInt16>(rSection.maSep.dxaLnn));
+            // A value of 0 (auto) indicates that the application MUST automatically determine positioning.
+            if ( rSection.maSep.dxaLnn )
+                aInfo.SetPosFromLeft(writer_cast<sal_uInt16>(rSection.maSep.dxaLnn));
 
             //Paint only for every n line
             aInfo.SetCountBy(rSection.maSep.nLnnMod);
@@ -846,7 +848,7 @@ void wwSectionManager::CreateSep(const long nTextPos)
     if (!pSep)
         return;
 
-    if (!maSegments.empty() && mrReader.m_pLastAnchorPos.get() && *mrReader.m_pLastAnchorPos == *mrReader.m_pPaM->GetPoint())
+    if (!maSegments.empty() && mrReader.m_pLastAnchorPos && *mrReader.m_pLastAnchorPos == *mrReader.m_pPaM->GetPoint())
     {
         bool insert = true;
         SwPaM pam( *mrReader.m_pLastAnchorPos );
@@ -3069,6 +3071,9 @@ void SwWW8ImplReader::Read_Bidi(sal_uInt16, const sal_uInt8* pData, short nLen)
         m_bBidi = true;
         sal_uInt8 nBidi = *pData;
         NewAttr( SfxInt16Item( RES_CHRATR_BIDIRTL, (nBidi!=0)? 1 : 0 ) );
+
+        if( m_pCurrentColl && m_xStyles )    // in style definition
+            m_xStyles->mbBidiChanged = true;
     }
 }
 
@@ -3445,7 +3450,7 @@ void SwWW8ImplReader::Read_SubSuperProp( sal_uInt16, const sal_uInt8* pData, sho
     if ( m_xPlcxMan )
     {
         const sal_uInt16 nFontsizeID = m_bVer67 ? NS_sprm::v6::sprmCHps : NS_sprm::sprmCHps;
-        const SprmResult aFontsize = m_xPlcxMan->GetChpPLCF()->HasSprm( nFontsizeID );
+        const SprmResult aFontsize = m_xPlcxMan->GetChpPLCF()->HasSprm( nFontsizeID, /*bFindFirst=*/false );
         if ( aFontsize.pSprm && aFontsize.nRemainingData )
             Read_FontSize(nFontsizeID, aFontsize.pSprm, aFontsize.nRemainingData);
     }
@@ -3589,6 +3594,13 @@ void SwWW8ImplReader::Read_TextForeColor(sal_uInt16, const sal_uInt8* pData, sho
     else
     {
         Color aColor(msfilter::util::BGRToRGB(SVBT32ToUInt32(pData)));
+
+        // At least when transparency is 0xff and the color is black, Word renders that as black.
+        if (aColor.GetTransparency() && aColor != COL_AUTO)
+        {
+            aColor.SetTransparency(0);
+        }
+
         NewAttr(SvxColorItem(aColor, RES_CHRATR_COLOR));
         if (m_pCurrentColl && m_xStyles)
             m_xStyles->mbTextColChanged = true;
@@ -5051,7 +5063,7 @@ void SwWW8ImplReader::Read_CharBorder(sal_uInt16 nId, const sal_uInt8* pData, sh
             = static_cast<const SvxBoxItem*>(GetFormatAttr( RES_CHRATR_BOX ));
         if( pBox )
         {
-            std::shared_ptr<SvxBoxItem> aBoxItem(pBox->Clone());
+            std::unique_ptr<SvxBoxItem> aBoxItem(pBox->Clone());
             WW8_BRCVer9 aBrc;
             int nBrcVer = (nId == NS_sprm::sprmCBrc) ? 9 : (m_bVer67 ? 6 : 8);
 

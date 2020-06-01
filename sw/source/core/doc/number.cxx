@@ -44,6 +44,7 @@
 #include <unordered_map>
 #include <libxml/xmlwriter.h>
 
+#include <rtl/ustrbuf.hxx>
 #include <i18nlangtag/languagetag.hxx>
 #include <unotools/saveopt.hxx>
 #include <osl/diagnose.h>
@@ -514,14 +515,16 @@ void SwNumRule::CheckCharFormats( SwDoc* pDoc )
 {
     for(auto& rpNumFormat : maFormats)
     {
-        SwCharFormat* pFormat;
-        if( rpNumFormat && nullptr != ( pFormat = rpNumFormat->GetCharFormat() ) &&
-            pFormat->GetDoc() != pDoc )
+        if( rpNumFormat )
         {
-            // copy
-            SwNumFormat* pNew = new SwNumFormat( *rpNumFormat );
-            pNew->SetCharFormat( pDoc->CopyCharFormat( *pFormat ) );
-            rpNumFormat.reset(pNew);
+            SwCharFormat* pFormat = rpNumFormat->GetCharFormat();
+            if( pFormat && pFormat->GetDoc() != pDoc )
+            {
+                // copy
+                SwNumFormat* pNew = new SwNumFormat( *rpNumFormat );
+                pNew->SetCharFormat( pDoc->CopyCharFormat( *pFormat ) );
+                rpNumFormat.reset(pNew);
+            }
         }
     }
 }
@@ -639,64 +642,94 @@ OUString SwNumRule::MakeNumString( const SwNumberTree::tNumberVector & rNumVecto
         const SwNumFormat& rMyNFormat = Get( static_cast<sal_uInt16>(nLevel) );
 
         {
-            SwNumberTree::tNumberVector::size_type i = nLevel;
-
-            if( !IsContinusNum() &&
-                // - do not include upper levels, if level isn't numbered.
-                rMyNFormat.GetNumberingType() != SVX_NUM_NUMBER_NONE &&
-                rMyNFormat.GetIncludeUpperLevels() )  // Just the own level?
-            {
-                sal_uInt8 n = rMyNFormat.GetIncludeUpperLevels();
-                if( 1 < n )
-                {
-                    if( i+1 >= n )
-                        i -= n - 1;
-                    else
-                        i = 0;
-                }
-            }
-
             css::lang::Locale aLocale( LanguageTag::convertToLocale(nLang));
 
-            for( ; i <= nLevel; ++i )
+            if (rMyNFormat.HasListFormat())
             {
-                const SwNumFormat& rNFormat = Get( i );
-                if( SVX_NUM_NUMBER_NONE == rNFormat.GetNumberingType() )
+                OUString sLevelFormat = rMyNFormat.GetListFormat();
+                // In this case we are ignoring GetIncludeUpperLevels: we put all
+                // level numbers requested by level format
+                for (SwNumberTree::tNumberVector::size_type i=0; i <= nLevel; ++i)
                 {
-                    // Should 1.1.1 --> 2. NoNum --> 1..1 or 1.1 ??
-                    //                 if( i != rNum.nMyLevel )
-                    //                    aStr += ".";
-                    continue;
-                }
-
-                if( rNumVector[ i ] )
-                {
-                    if( bOnlyArabic )
-                        aStr.append(OUString::number( rNumVector[ i ] ));
+                    OUString sReplacement;
+                    if (rNumVector[i])
+                    {
+                        if (bOnlyArabic)
+                            sReplacement = OUString::number(rNumVector[i]);
+                        else
+                            sReplacement = Get(i).GetNumStr(rNumVector[i], aLocale);
+                    }
                     else
-                        aStr.append(rNFormat.GetNumStr( rNumVector[ i ], aLocale ));
+                        sReplacement = "0";        // all 0 level are a 0
+
+                    OUString sFind("%" + OUString::number(i + 1));
+                    sal_Int32 nPosition = sLevelFormat.indexOf(sFind);
+                    if (nPosition >= 0)
+                        sLevelFormat = sLevelFormat.replaceAt(nPosition, sFind.getLength(), sReplacement);
                 }
-                else
-                    aStr.append("0");        // all 0 level are a 0
-                if( i != nLevel && !aStr.isEmpty() )
-                    aStr.append(".");
+                aStr = sLevelFormat;
             }
-
-            // The type doesn't have any number, so don't append
-            // the post-/prefix string
-            if( bInclStrings && !bOnlyArabic &&
-                SVX_NUM_CHAR_SPECIAL != rMyNFormat.GetNumberingType() &&
-                SVX_NUM_BITMAP != rMyNFormat.GetNumberingType() )
+            else
             {
-                const OUString& sPrefix = rMyNFormat.GetPrefix();
-                const OUString& sSuffix = rMyNFormat.GetSuffix();
+                // Fallback case: level format is not defined
+                // So use old way with levels joining by dot "."
+                SwNumberTree::tNumberVector::size_type i = nLevel;
 
-                aStr.insert(0, sPrefix);
-                aStr.append(sSuffix);
-                if ( pExtremities )
+                if (!IsContinusNum() &&
+                    // - do not include upper levels, if level isn't numbered.
+                    rMyNFormat.GetNumberingType() != SVX_NUM_NUMBER_NONE &&
+                    rMyNFormat.GetIncludeUpperLevels())  // Just the own level?
                 {
-                    pExtremities->nPrefixChars = sPrefix.getLength();
-                    pExtremities->nSuffixChars = sSuffix.getLength();
+                    sal_uInt8 n = rMyNFormat.GetIncludeUpperLevels();
+                    if (1 < n)
+                    {
+                        if (i + 1 >= n)
+                            i -= n - 1;
+                        else
+                            i = 0;
+                    }
+                }
+
+                for (; i <= nLevel; ++i)
+                {
+                    const SwNumFormat& rNFormat = Get(i);
+                    if (SVX_NUM_NUMBER_NONE == rNFormat.GetNumberingType())
+                    {
+                        // Should 1.1.1 --> 2. NoNum --> 1..1 or 1.1 ??
+                        //                 if( i != rNum.nMyLevel )
+                        //                    aStr += ".";
+                        continue;
+                    }
+
+                    if (rNumVector[i])
+                    {
+                        if (bOnlyArabic)
+                            aStr.append(OUString::number(rNumVector[i]));
+                        else
+                            aStr.append(rNFormat.GetNumStr(rNumVector[i], aLocale));
+                    }
+                    else
+                        aStr.append("0");        // all 0 level are a 0
+                    if (i != nLevel && !aStr.isEmpty())
+                        aStr.append(".");
+                }
+
+                // The type doesn't have any number, so don't append
+                // the post-/prefix string
+                if (bInclStrings && !bOnlyArabic &&
+                    SVX_NUM_CHAR_SPECIAL != rMyNFormat.GetNumberingType() &&
+                    SVX_NUM_BITMAP != rMyNFormat.GetNumberingType())
+                {
+                    const OUString& sPrefix = rMyNFormat.GetPrefix();
+                    const OUString& sSuffix = rMyNFormat.GetSuffix();
+
+                    aStr.insert(0, sPrefix);
+                    aStr.append(sSuffix);
+                    if (pExtremities)
+                    {
+                        pExtremities->nPrefixChars = sPrefix.getLength();
+                        pExtremities->nSuffixChars = sSuffix.getLength();
+                    }
                 }
             }
         }
@@ -1029,12 +1062,23 @@ void SwNumRule::dumpAsXml(xmlTextWriterPtr pWriter) const
     xmlTextWriterWriteAttribute(pWriter, BAD_CAST("msName"), BAD_CAST(msName.toUtf8().getStr()));
     xmlTextWriterWriteAttribute(pWriter, BAD_CAST("mnPoolFormatId"), BAD_CAST(OString::number(mnPoolFormatId).getStr()));
     xmlTextWriterWriteAttribute(pWriter, BAD_CAST("mbAutoRuleFlag"), BAD_CAST(OString::boolean(mbAutoRuleFlag).getStr()));
+
+    for (const auto& pFormat : maFormats)
+    {
+        if (!pFormat)
+        {
+            continue;
+        }
+
+        pFormat->dumpAsXml(pWriter);
+    }
+
     xmlTextWriterEndElement(pWriter);
 }
 
 void SwNumRule::GetGrabBagItem(uno::Any& rVal) const
 {
-    if (mpGrabBagItem.get())
+    if (mpGrabBagItem)
         mpGrabBagItem->QueryValue(rVal);
     else
         rVal <<= uno::Sequence<beans::PropertyValue>();
@@ -1042,7 +1086,7 @@ void SwNumRule::GetGrabBagItem(uno::Any& rVal) const
 
 void SwNumRule::SetGrabBagItem(const uno::Any& rVal)
 {
-    if (!mpGrabBagItem.get())
+    if (!mpGrabBagItem)
         mpGrabBagItem = std::make_shared<SfxGrabBagItem>();
 
     mpGrabBagItem->PutValue(rVal, 0);
@@ -1182,8 +1226,7 @@ namespace numfunc
     void SwDefBulletConfig::LoadConfig()
     {
         uno::Sequence<OUString> aPropNames = GetPropNames();
-        uno::Sequence<uno::Any> aValues =
-                                                    GetProperties( aPropNames );
+        uno::Sequence<uno::Any> aValues = GetProperties( aPropNames );
         const uno::Any* pValues = aValues.getConstArray();
         OSL_ENSURE( aValues.getLength() == aPropNames.getLength(),
                 "<SwDefBulletConfig::SwDefBulletConfig()> - GetProperties failed");
@@ -1395,15 +1438,15 @@ namespace numfunc
 
         SvxNumberFormat::SvxNumPositionAndSpaceMode ePosAndSpaceMode;
         SvtSaveOptions aSaveOptions;
-        switch ( aSaveOptions.GetODFDefaultVersion() )
+        switch (aSaveOptions.GetODFSaneDefaultVersion())
         {
-            case SvtSaveOptions::ODFVER_010:
-            case SvtSaveOptions::ODFVER_011:
+            case SvtSaveOptions::ODFSVER_010:
+            case SvtSaveOptions::ODFSVER_011:
             {
                 ePosAndSpaceMode = SvxNumberFormat::LABEL_WIDTH_AND_POSITION;
             }
             break;
-            default: // ODFVER_UNKNOWN or ODFVER_012
+            default: // >= ODFSVER_012
             {
                 ePosAndSpaceMode = SvxNumberFormat::LABEL_ALIGNMENT;
             }

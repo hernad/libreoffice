@@ -20,7 +20,7 @@
 #include <sal/config.h>
 
 #include <svx/xflbckit.hxx>
-#include <svx/xftshtit.hxx>
+#include <xftshtit.hxx>
 #include <svx/xflboxy.hxx>
 #include <svx/xflbstit.hxx>
 #include <svx/xflclit.hxx>
@@ -29,7 +29,6 @@
 #include <svx/xbtmpit.hxx>
 #include <svx/xflftrit.hxx>
 #include <svx/xsflclit.hxx>
-#include <svx/xtable.hxx>
 #include <svx/xlntrit.hxx>
 #include <svx/xfltrit.hxx>
 #include <svx/xgrscit.hxx>

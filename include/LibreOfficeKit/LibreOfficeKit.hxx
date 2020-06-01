@@ -761,9 +761,32 @@ public:
      *
      * @param nIndex is the index of the selected function
      */
-    void completeFunction(int nIndex)
+    void completeFunction(const char* pFunctionName)
     {
-        mpDoc->pClass->completeFunction(mpDoc, nIndex);
+        mpDoc->pClass->completeFunction(mpDoc, pFunctionName);
+    }
+
+    /**
+     * Sets the start or end of a text selection for a dialog.
+     *
+     * @param nWindowId
+     * @param bSwap swap anchor and cursor position of current selection
+     * @param nX horizontal position in document coordinates
+     * @param nY vertical position in document coordinates
+     */
+    void setWindowTextSelection(unsigned nWindowId, bool bSwap, int nX, int nY)
+    {
+        mpDoc->pClass->setWindowTextSelection(mpDoc, nWindowId, bSwap, nX, nY);
+    }
+
+    /**
+     * Posts an event for the form field at the cursor position.
+     *
+     * @param pArguments arguments of the event.
+     */
+    void sendFormFieldEvent(const char* pArguments)
+    {
+        mpDoc->pClass->sendFormFieldEvent(mpDoc, pArguments);
     }
 
 #endif // defined LOK_USE_UNSTABLE_API || defined LIBO_INTERNAL_ONLY

@@ -63,11 +63,8 @@
 
 #include <map>
 #include <vector>
+#include <config_lgpl.h>
 #include "lwpfrib.hxx"
-#include "lwpobjstrm.hxx"
-#include "lwpbasetype.hxx"
-#include "lwpoverride.hxx"
-#include "lwpfoundry.hxx"
 #include "xfilter/xfchange.hxx"
 #include "xfilter/xfcontentcontainer.hxx"
 
@@ -81,10 +78,11 @@ public:
     void SetHeadFootChange(XFContentContainer* pCont);
     ~LwpChangeMgr();
     LwpChangeMgr();
+
 private:
-    std::map<LwpFrib*,OUString>* m_pFribMap;
-    std::map<LwpFrib*,OUString> m_DocFribMap;
-    std::map<LwpFrib*,OUString> m_HeadFootFribMap;
+    std::map<LwpFrib*, OUString>* m_pFribMap;
+    std::map<LwpFrib*, OUString> m_DocFribMap;
+    std::map<LwpFrib*, OUString> m_HeadFootFribMap;
     std::vector<rtl::Reference<XFChangeRegion>> m_ChangeList;
     sal_uInt32 m_nCounter;
 };

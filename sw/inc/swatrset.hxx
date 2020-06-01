@@ -145,7 +145,7 @@ private:
     friend void InitCore();            // For creating/deleting of version maps.
     friend void FinitCore();
 
-    SwDoc* const m_pDoc;
+    SwDoc* m_pDoc;
 
 public:
     SwAttrPool( SwDoc* pDoc );
@@ -224,7 +224,6 @@ public:
     inline const SvxEscapementItem      &GetEscapement( bool = true ) const;
     inline const SvxCaseMapItem         &GetCaseMap( bool = true ) const;
     inline const SvxNoHyphenItem      &GetNoHyphenHere( bool = true ) const;
-    inline const SvxBlinkItem         &GetBlink( bool = true ) const;
     inline const SvxFontItem          &GetCJKFont( bool = true ) const;
     inline const SvxFontHeightItem    &GetCJKSize( bool = true ) const;
     inline const SvxLanguageItem      &GetCJKLanguage( bool = true ) const;

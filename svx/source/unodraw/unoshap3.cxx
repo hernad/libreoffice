@@ -36,13 +36,11 @@
 #include <svx/svditer.hxx>
 #include <svx/unoshape.hxx>
 #include <svx/unopage.hxx>
-#include <editeng/unoprnms.hxx>
-#include <svx/globl3d.hxx>
 #include <svx/cube3d.hxx>
 #include <svx/sphere3d.hxx>
 #include <svx/lathe3d.hxx>
-#include <svx/extrud3d.hxx>
-#include <svx/polygn3d.hxx>
+#include <extrud3d.hxx>
+#include <polygn3d.hxx>
 #include <svx/unoshprp.hxx>
 #include <svx/svdmodel.hxx>
 #include <svx/scene3d.hxx>
@@ -98,16 +96,6 @@ uno::Any SAL_CALL Svx3DSceneObject::queryAggregation( const uno::Type & rType )
 uno::Any SAL_CALL Svx3DSceneObject::queryInterface( const uno::Type & rType )
 {
     return SvxShape::queryInterface( rType );
-}
-
-void SAL_CALL Svx3DSceneObject::acquire() throw ( )
-{
-    SvxShape::acquire();
-}
-
-void SAL_CALL Svx3DSceneObject::release() throw ( )
-{
-    SvxShape::release();
 }
 
 // XTypeProvider

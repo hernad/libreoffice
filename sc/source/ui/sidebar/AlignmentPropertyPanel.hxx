@@ -22,9 +22,10 @@
 #include <sfx2/sidebar/ControllerItem.hxx>
 #include <sfx2/sidebar/IContextChangeReceiver.hxx>
 #include <sfx2/weldutils.hxx>
-#include <svx/sidebar/PanelLayout.hxx>
+#include <sfx2/sidebar/PanelLayout.hxx>
+#include <vcl/EnumContext.hxx>
 
-namespace sc { namespace sidebar {
+namespace sc::sidebar {
 
 class AlignmentPropertyPanel
 :   public PanelLayout,
@@ -48,7 +49,13 @@ public:
         const SfxItemState eState,
         const SfxPoolItem* pState) override;
 
+    virtual void GetControlState(
+        const sal_uInt16 /*nSId*/,
+        boost::property_tree::ptree& /*rState*/) override {};
+
     SfxBindings* GetBindings() { return mpBindings;}
+
+    virtual boost::property_tree::ptree DumpAsPropertyTree() override;
 
     // constructor/destructor
     AlignmentPropertyPanel(
@@ -96,7 +103,7 @@ private:
     bool                                        mbSettingToggles : 1;
 
     vcl::EnumContext                            maContext;
-    SfxBindings* const                          mpBindings;
+    SfxBindings*                                mpBindings;
 
     DECL_LINK( MFLeftIndentMdyHdl, weld::MetricSpinButton&, void );
     DECL_LINK( CBOXMergnCellClkHdl, weld::ToggleButton&, void );
@@ -108,7 +115,7 @@ private:
     void Initialize();
 };
 
-} } // end of namespace ::sc::sidebar
+} // end of namespace ::sc::sidebar
 
 #endif
 

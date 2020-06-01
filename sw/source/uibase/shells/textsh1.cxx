@@ -598,7 +598,7 @@ void SwTextShell::Execute(SfxRequest &rReq)
         case FN_INSERT_BREAK_DLG:
         {
             sal_uInt16 nKind=0;
-            ::o3tl::optional<sal_uInt16> oPageNumber;
+            ::std::optional<sal_uInt16> oPageNumber;
             OUString aTemplateName;
             if ( pItem )
             {
@@ -1384,6 +1384,20 @@ void SwTextShell::Execute(SfxRequest &rReq)
         GetView().UpdateWordCount(this, nSlot);
     }
     break;
+    case FN_PROTECT_FIELDS:
+    case FN_PROTECT_BOOKMARKS:
+    {
+        IDocumentSettingAccess& rIDSA = rWrtSh.getIDocumentSettingAccess();
+        DocumentSettingId aSettingId = nSlot == FN_PROTECT_FIELDS
+                                           ? DocumentSettingId::PROTECT_FIELDS
+                                           : DocumentSettingId::PROTECT_BOOKMARKS;
+        rIDSA.set(aSettingId, !rIDSA.get(aSettingId));
+        // Invalidate so that toggle state gets updated
+        SfxViewFrame* pViewFrame = GetView().GetViewFrame();
+        pViewFrame->GetBindings().Invalidate(nSlot);
+        pViewFrame->GetBindings().Update(nSlot);
+    }
+    break;
     case SID_FM_CTL_PROPERTIES:
     {
         SwPosition aPos(*GetShell().GetCursor()->GetPoint());
@@ -2156,10 +2170,20 @@ void SwTextShell::GetState( SfxItemSet &rSet )
             case SID_COPY:
             case SID_CUT:
             {
-                if (GetShell().GetView().isContentExtractionLocked())
+                if (GetObjectShell()->isContentExtractionLocked())
                     rSet.DisableItem(nWhich);
                 break;
             }
+            case FN_PROTECT_FIELDS:
+            case FN_PROTECT_BOOKMARKS:
+            {
+                DocumentSettingId aSettingId = nWhich == FN_PROTECT_FIELDS
+                                                   ? DocumentSettingId::PROTECT_FIELDS
+                                                   : DocumentSettingId::PROTECT_BOOKMARKS;
+                bool bProtected = rSh.getIDocumentSettingAccess().get(aSettingId);
+                rSet.Put(SfxBoolItem(nWhich, bProtected));
+            }
+            break;
         }
         nWhich = aIter.NextWhich();
     }

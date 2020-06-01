@@ -374,7 +374,7 @@ namespace comphelper
 
     void EnumerableMap::impl_initValues_throw( const Sequence< Pair< Any, Any > >& _initialValues )
     {
-        OSL_PRECOND( m_aData.m_pValues.get() && m_aData.m_pValues->empty(), "EnumerableMap::impl_initValues_throw: illegal call!" );
+        OSL_PRECOND( m_aData.m_pValues && m_aData.m_pValues->empty(), "EnumerableMap::impl_initValues_throw: illegal call!" );
         if (!m_aData.m_pValues || !m_aData.m_pValues->empty())
             throw RuntimeException();
 
@@ -471,7 +471,7 @@ namespace comphelper
         {
             double nValue(0);
             if ( _keyOrValue >>= nValue )
-                if ( ::rtl::math::isNan( nValue ) )
+                if ( std::isnan( nValue ) )
                     throw IllegalArgumentException(
                         "NaN (not-a-number) not supported by this implementation.",
                         *const_cast< EnumerableMap* >( this ), 0 );

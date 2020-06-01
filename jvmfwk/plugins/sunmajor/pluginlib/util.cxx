@@ -383,26 +383,12 @@ bool getJavaProps(const OUString & exePath,
         sClassPath += "/../Resources/java";
 #endif
 
-#ifdef UNX
-    // Java is no longer required for a11y - we use atk directly.
-    bool bNoAccessibility = true;
-#else
-    bool bNoAccessibility = false;
-#endif
-
     //prepare the arguments
-    sal_Int32 cArgs = 3;
+    sal_Int32 const cArgs = 3;
     OUString arg1 = "-classpath";// + sClassPath;
     OUString arg2 = sClassPath;
     OUString arg3("JREProperties");
-    OUString arg4 = "noaccessibility";
-    rtl_uString *args[4] = {arg1.pData, arg2.pData, arg3.pData};
-    // Only add the fourth param if the bootstrap parameter is set.
-    if (bNoAccessibility)
-    {
-        args[3] = arg4.pData;
-        cArgs = 4;
-    }
+    rtl_uString *args[cArgs] = {arg1.pData, arg2.pData, arg3.pData};
 
     oslProcess javaProcess= nullptr;
     oslFileHandle fileOut= nullptr;
@@ -1049,44 +1035,44 @@ void addJavaInfosFromPath(
 #if !defined JVM_ONE_PATH_CHECK
 // Get Java from PATH environment variable
     char *szPath= getenv("PATH");
-    if(szPath)
+    if(!szPath)
+        return;
+
+    OUString usAllPath(szPath, strlen(szPath), osl_getThreadTextEncoding());
+    sal_Int32 nIndex = 0;
+    do
     {
-        OUString usAllPath(szPath, strlen(szPath), osl_getThreadTextEncoding());
-        sal_Int32 nIndex = 0;
-        do
+        OUString usToken = usAllPath.getToken( 0, SAL_PATHSEPARATOR, nIndex );
+        OUString usTokenUrl;
+        if(File::getFileURLFromSystemPath(usToken, usTokenUrl) == File::E_None)
         {
-            OUString usToken = usAllPath.getToken( 0, SAL_PATHSEPARATOR, nIndex );
-            OUString usTokenUrl;
-            if(File::getFileURLFromSystemPath(usToken, usTokenUrl) == File::E_None)
+            if(!usTokenUrl.isEmpty())
             {
-                if(!usTokenUrl.isEmpty())
+                OUString usBin;
+                if(usTokenUrl == ".")
                 {
-                    OUString usBin;
-                    if(usTokenUrl == ".")
-                    {
-                        OUString usWorkDirUrl;
-                        if(osl_Process_E_None == osl_getProcessWorkingDir(&usWorkDirUrl.pData))
-                            usBin= usWorkDirUrl;
-                    }
-                    else if(usTokenUrl == "..")
-                    {
-                        OUString usWorkDir;
-                        if(osl_Process_E_None == osl_getProcessWorkingDir(&usWorkDir.pData))
-                            usBin= getDirFromFile(usWorkDir);
-                    }
-                    else
-                    {
-                        usBin = usTokenUrl;
-                    }
-                    if(!usBin.isEmpty())
-                    {
-                        addJREInfoFromBinPath(usBin, allInfos, addedInfos);
-                    }
+                    OUString usWorkDirUrl;
+                    if(osl_Process_E_None == osl_getProcessWorkingDir(&usWorkDirUrl.pData))
+                        usBin= usWorkDirUrl;
+                }
+                else if(usTokenUrl == "..")
+                {
+                    OUString usWorkDir;
+                    if(osl_Process_E_None == osl_getProcessWorkingDir(&usWorkDir.pData))
+                        usBin= getDirFromFile(usWorkDir);
+                }
+                else
+                {
+                    usBin = usTokenUrl;
+                }
+                if(!usBin.isEmpty())
+                {
+                    addJREInfoFromBinPath(usBin, allInfos, addedInfos);
                 }
             }
         }
-        while ( nIndex >= 0 );
     }
+    while ( nIndex >= 0 );
 #endif
 }
 
@@ -1266,7 +1252,7 @@ void addJavaInfosDirScan(
                             OUString usDir3(usDir2 + arNames[k]);
 
                             DirectoryItem item3;
-                            if(DirectoryItem::get(usDir3, item) == File::E_None)
+                            if(DirectoryItem::get(usDir3, item3) == File::E_None)
                             {
                                 //remove trailing '/'
                                 sal_Int32 islash = usDir3.lastIndexOf('/');

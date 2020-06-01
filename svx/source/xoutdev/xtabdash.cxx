@@ -17,7 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <svx/XPropertyTable.hxx>
+#include <XPropertyTable.hxx>
 
 #include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
@@ -26,6 +26,8 @@
 #include <svx/strings.hrc>
 #include <svx/dialmgr.hxx>
 #include <svx/xtable.hxx>
+
+#include <comphelper/lok.hxx>
 
 #include <drawinglayer/attribute/lineattribute.hxx>
 #include <drawinglayer/attribute/strokeattribute.hxx>
@@ -211,7 +213,8 @@ OUString const & XDashList::GetStringForUiNoLine() const
     {
         // formerly was RID_SVXSTR_INVISIBLE, but to make equal
         // everywhere, use RID_SVXSTR_NONE
-        const_cast< XDashList* >(this)->maStringNoLine = SvxResId(RID_SVXSTR_NONE);
+        const_cast< XDashList* >(this)->maStringNoLine = comphelper::LibreOfficeKit::isActive() ? SvxResId(RID_SVXSTR_INVISIBLE) :
+            SvxResId(RID_SVXSTR_NONE);
     }
 
     return maStringNoLine;

@@ -18,7 +18,6 @@
  */
 #include "ConversionHelper.hxx"
 #include <com/sun/star/table/BorderLine2.hpp>
-#include <com/sun/star/table/BorderLineStyle.hpp>
 #include <com/sun/star/lang/Locale.hpp>
 #include <com/sun/star/text/HoriOrientation.hpp>
 #include <com/sun/star/style/NumberingType.hpp>
@@ -27,8 +26,6 @@
 #include <rtl/ustrbuf.hxx>
 #include <tools/color.hxx>
 #include <tools/mapunit.hxx>
-#include <algorithm>
-#include <functional>
 
 using namespace com::sun::star;
 
@@ -593,6 +590,9 @@ sal_Int16 ConvertNumberingType(sal_Int32 nFmt)
         case NS_ooxml::LN_Value_ST_NumberFormat_chicago:
             nRet = style::NumberingType::SYMBOL_CHICAGO;
             break;
+        case NS_ooxml::LN_Value_ST_NumberFormat_decimalZero:
+            nRet = style::NumberingType::ARABIC_ZERO;
+            break;
         default: nRet = style::NumberingType::ARABIC;
     }
 /*  TODO: Lots of additional values are available - some are supported in the I18 framework
@@ -600,7 +600,6 @@ sal_Int16 ConvertNumberingType(sal_Int32 nFmt)
     NS_ooxml::LN_Value_ST_NumberFormat_decimalFullWidth = 91691;
     NS_ooxml::LN_Value_ST_NumberFormat_decimalHalfWidth = 91692;
     NS_ooxml::LN_Value_ST_NumberFormat_japaneseDigitalTenThousand = 91694;
-    NS_ooxml::LN_Value_ST_NumberFormat_decimalZero = 91699;
     NS_ooxml::LN_Value_ST_NumberFormat_decimalEnclosedFullstop = 91703;
     NS_ooxml::LN_Value_ST_NumberFormat_decimalEnclosedParen = 91704;
     NS_ooxml::LN_Value_ST_NumberFormat_ideographZodiacTraditional = 91709;
@@ -616,6 +615,26 @@ sal_Int16 ConvertNumberingType(sal_Int32 nFmt)
     NS_ooxml::LN_Value_ST_NumberFormat_hindiCounting = 91733;
     NS_ooxml::LN_Value_ST_NumberFormat_thaiNumbers = 91735;
     NS_ooxml::LN_Value_ST_NumberFormat_thaiCounting = 91736;*/
+    return nRet;
+}
+
+sal_Int16 ConvertCustomNumberFormat(const OUString& rFormat)
+{
+    sal_Int16 nRet = -1;
+
+    if (rFormat == "001, 002, 003, ...")
+    {
+        nRet = style::NumberingType::ARABIC_ZERO3;
+    }
+    else if (rFormat == "0001, 0002, 0003, ...")
+    {
+        nRet = style::NumberingType::ARABIC_ZERO4;
+    }
+    else if (rFormat == "00001, 00002, 00003, ...")
+    {
+        nRet = style::NumberingType::ARABIC_ZERO5;
+    }
+
     return nRet;
 }
 

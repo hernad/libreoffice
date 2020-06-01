@@ -23,7 +23,7 @@
 #include <rtl/string.hxx>
 
 typedef struct _FcPattern   FcPattern;
-class FontConfigFontOptions
+class VCL_DLLPUBLIC FontConfigFontOptions
 {
 public:
                         FontConfigFontOptions(FcPattern* pPattern) :
@@ -34,7 +34,7 @@ public:
     FcPattern*          GetPattern() const;
     static void         cairo_font_options_substitute(FcPattern* pPattern);
 private:
-    FcPattern* const mpPattern;
+    FcPattern* mpPattern;
 };
 
 

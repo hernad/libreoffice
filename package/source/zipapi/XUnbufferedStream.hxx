@@ -32,9 +32,9 @@
 #include <ZipEntry.hxx>
 #include <CRC32.hxx>
 
-namespace com { namespace sun { namespace star { namespace uno {
+namespace com::sun::star::uno {
     class XComponentContext;
-} } } }
+}
 
 #define UNBUFF_STREAM_DATA          0
 #define UNBUFF_STREAM_RAW           1
@@ -59,7 +59,7 @@ class XUnbufferedStream final : public cppu::WeakImplHelper
     sal_Int16 mnHeaderToRead;
     sal_Int64 mnZipCurrent, mnZipEnd, mnZipSize, mnMyCurrent;
     CRC32 maCRC;
-    bool const mbCheckCRC;
+    bool mbCheckCRC;
 
 public:
     XUnbufferedStream(

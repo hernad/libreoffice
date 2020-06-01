@@ -69,6 +69,8 @@
 #include <ndole.hxx>
 #include <fefly.hxx>
 #include <fmtcnct.hxx>
+#include <frameformats.hxx>
+#include <textboxhelper.hxx>
 
 
 using namespace ::com::sun::star;
@@ -137,7 +139,7 @@ static bool lcl_FindAnchorPos(
             {
                 // textnode should be found, as only in those
                 // a content bound frame can be anchored
-                SwCursorMoveState aState( MV_SETONLYTEXT );
+                SwCursorMoveState aState( CursorMoveState::SetOnlyText );
                 aTmpPnt.setX(aTmpPnt.getX() - 1);                   // do not land in the fly!
                 if( !pNewAnch->GetModelPositionForViewPoint( &aPos, aTmpPnt, &aState ) )
                 {
@@ -170,7 +172,7 @@ static bool lcl_FindAnchorPos(
         {
             // starting from the upper-left corner of the Fly
             // search nearest SwFlyFrame
-            SwCursorMoveState aState( MV_SETONLYTEXT );
+            SwCursorMoveState aState( CursorMoveState::SetOnlyText );
             SwPosition aPos( rDoc.GetNodes() );
             aTmpPnt.setX(aTmpPnt.getX() - 1);                   // do not land in the fly!
             rDoc.getIDocumentLayoutAccess().GetCurrentLayout()->GetModelPositionForViewPoint( &aPos, aTmpPnt, &aState );
@@ -348,7 +350,7 @@ const SwFrameFormat* SwFEShell::IsFlyInFly()
 
     SwFrame *pTextFrame;
     {
-        SwCursorMoveState aState( MV_SETONLYTEXT );
+        SwCursorMoveState aState( CursorMoveState::SetOnlyText );
         SwNodeIndex aSwNodeIndex( GetDoc()->GetNodes() );
         SwPosition aPos( aSwNodeIndex );
         Point aPoint( aTmpPos );
@@ -439,6 +441,12 @@ Point SwFEShell::FindAnchorPos( const Point& rAbsPos, bool bMoveIt )
 
     bool bFlyFrame = dynamic_cast<SwVirtFlyDrawObj *>(pObj) != nullptr;
 
+    bool bTextBox = false;
+    if (rFormat.Which() == RES_DRAWFRMFMT)
+    {
+        bTextBox = SwTextBoxHelper::isTextBox(&rFormat, RES_DRAWFRMFMT);
+    }
+
     SwFlyFrame* pFly = nullptr;
     const SwFrame* pFooterOrHeader = nullptr;
 
@@ -459,6 +467,16 @@ Point SwFEShell::FindAnchorPos( const Point& rAbsPos, bool bMoveIt )
             pFooterOrHeader = pContent->FindFooterOrHeader();
         }
     }
+    else if (bTextBox)
+    {
+        auto pFlyFormat = dynamic_cast<const SwFlyFrameFormat*>(
+            SwTextBoxHelper::getOtherTextBoxFormat(&rFormat, RES_DRAWFRMFMT));
+        if (pFlyFormat)
+        {
+            pFly = pFlyFormat->GetFrame();
+        }
+    }
+
     // set <pFooterOrHeader> also for drawing
     // objects, but not for control objects.
     // Necessary for moving 'anchor symbol' at the user interface inside header/footer.
@@ -474,7 +492,7 @@ Point SwFEShell::FindAnchorPos( const Point& rAbsPos, bool bMoveIt )
     // of the fly
     SwContentFrame *pTextFrame = nullptr;
     {
-        SwCursorMoveState aState( MV_SETONLYTEXT );
+        SwCursorMoveState aState( CursorMoveState::SetOnlyText );
         SwPosition aPos( GetDoc()->GetNodes().GetEndOfExtras() );
         Point aTmpPnt( rAbsPos );
         GetLayout()->GetModelPositionForViewPoint( &aPos, aTmpPnt, &aState );
@@ -506,7 +524,7 @@ Point SwFEShell::FindAnchorPos( const Point& rAbsPos, bool bMoveIt )
 
     if( pNewAnch && !pNewAnch->IsProtected() )
     {
-        const SwFlyFrame* pCheck = bFlyFrame ? pNewAnch->FindFlyFrame() : nullptr;
+        const SwFlyFrame* pCheck = (bFlyFrame || bTextBox) ? pNewAnch->FindFlyFrame() : nullptr;
         // If we land inside the frame, make sure
         // that the frame does not land inside its own content
         while( pCheck )
@@ -924,7 +942,7 @@ void SwFEShell::InsertDrawObj( SdrObject& rDrawObj,
     // find anchor position
     SwPaM aPam( mxDoc->GetNodes() );
     {
-        SwCursorMoveState aState( MV_SETONLYTEXT );
+        SwCursorMoveState aState( CursorMoveState::SetOnlyText );
         Point aTmpPt( rInsertPosition );
         GetLayout()->GetModelPositionForViewPoint( aPam.GetPoint(), aTmpPt, &aState );
         const SwFrame* pFrame = aPam.GetContentNode()->getLayoutFrame(GetLayout(), nullptr, nullptr);
@@ -935,8 +953,6 @@ void SwFEShell::InsertDrawObj( SdrObject& rDrawObj,
     }
     // insert drawing object into the document creating a new <SwDrawFrameFormat> instance
     SwDrawFrameFormat* pFormat = GetDoc()->getIDocumentContentOperations().InsertDrawObj( aPam, rDrawObj, rFlyAttrSet );
-    pFormat->SetName(GetDoc()->GetUniqueShapeName());
-    rDrawObj.SetName(pFormat->GetName());
 
     // move object to visible layer
     SwContact* pContact = static_cast<SwContact*>(rDrawObj.GetUserCall());
@@ -945,8 +961,9 @@ void SwFEShell::InsertDrawObj( SdrObject& rDrawObj,
         pContact->MoveObjToVisibleLayer( &rDrawObj );
     }
 
-    if ( pFormat )
+    if (pFormat)
     {
+        pFormat->SetName(rDrawObj.GetName());
         // select drawing object
         Imp()->GetDrawView()->MarkObj( &rDrawObj, Imp()->GetPageView() );
     }
@@ -1343,7 +1360,7 @@ Size SwFEShell::RequestObjectResize( const SwRect &rRect, const uno::Reference <
         }
 
         // set the new Size at the fly themself
-        if ( pFly->getFramePrintArea().Height() > 0 && pFly->getFramePrintArea().Width() > 0 )
+        if ( !pFly->getFramePrintArea().IsEmpty() )
         {
             aSz.AdjustWidth(pFly->getFrameArea().Width() - pFly->getFramePrintArea().Width() );
             aSz.AdjustHeight(pFly->getFrameArea().Height()- pFly->getFramePrintArea().Height() );

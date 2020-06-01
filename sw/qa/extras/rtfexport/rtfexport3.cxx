@@ -25,6 +25,7 @@ public:
 
 DECLARE_RTFEXPORT_TEST(testTdf108949, "tdf108949_footnoteCharFormat.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     CPPUNIT_ASSERT_EQUAL_MESSAGE("Paragraph Numbering style", OUString(),
                                  getProperty<OUString>(getParagraph(2), "NumberingStyleName"));
 
@@ -55,8 +56,29 @@ DECLARE_RTFEXPORT_TEST(testTdf108949_footnote, "tdf108949_footnote.rtf")
                                  getProperty<sal_Int32>(xFootnote->getAnchor(), "CharColor"));
 }
 
+DECLARE_RTFEXPORT_TEST(testTdf130817, "tdf130817.rtf")
+{
+    uno::Reference<text::XEndnotesSupplier> xEndnotesSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<container::XIndexAccess> xEndnotes = xEndnotesSupplier->getEndnotes();
+
+    uno::Reference<text::XFootnote> xEndnote1;
+    xEndnotes->getByIndex(0) >>= xEndnote1;
+    uno::Reference<text::XText> xEndnoteText1;
+    xEndnotes->getByIndex(0) >>= xEndnoteText1;
+    CPPUNIT_ASSERT_EQUAL(OUString("Titolo 1"), xEndnoteText1->getString().trim());
+    CPPUNIT_ASSERT_EQUAL(OUString("$"), xEndnote1->getAnchor()->getString());
+
+    uno::Reference<text::XFootnote> xEndnote2;
+    xEndnotes->getByIndex(1) >>= xEndnote2;
+    uno::Reference<text::XText> xEndnoteText2;
+    xEndnotes->getByIndex(1) >>= xEndnoteText2;
+    CPPUNIT_ASSERT_EQUAL(OUString("Titolo 2"), xEndnoteText2->getString().trim());
+    CPPUNIT_ASSERT_EQUAL(OUString("$"), xEndnote1->getAnchor()->getString());
+}
+
 DECLARE_RTFEXPORT_TEST(testTdf116436_tableBackground, "tdf116436_tableBackground.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<text::XTextTablesSupplier> xTextTablesSupplier(mxComponent, uno::UNO_QUERY);
     uno::Reference<container::XIndexAccess> xTables(xTextTablesSupplier->getTextTables(),
                                                     uno::UNO_QUERY);
@@ -73,6 +95,7 @@ DECLARE_RTFEXPORT_TEST(testTdf116436_tableBackground, "tdf116436_tableBackground
 
 DECLARE_RTFEXPORT_TEST(testTdf122589_firstSection, "tdf122589_firstSection.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<beans::XPropertySet> xPageStyle(getStyles("PageStyles")->getByName("Standard"),
                                                    uno::UNO_QUERY);
     uno::Reference<text::XTextRange> xHeaderText
@@ -123,6 +146,19 @@ DECLARE_RTFEXPORT_TEST(testTdf115180, "tdf115180.docx")
     CPPUNIT_ASSERT_MESSAGE("Second cell width", cell2Width >= 218 && cell2Width <= 220);
 }
 
+DECLARE_ODFEXPORT_TEST(testArabicZeroNumbering, "arabic-zero-numbering.rtf")
+{
+    auto xNumberingRules
+        = getProperty<uno::Reference<container::XIndexAccess>>(getParagraph(1), "NumberingRules");
+    comphelper::SequenceAsHashMap aMap(xNumberingRules->getByIndex(0));
+    // Without the accompanying fix in place, this test would have failed with:
+    // - Expected: 64
+    // - Actual  : 4
+    // i.e. numbering type was ARABIC, not ARABIC_ZERO.
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_uInt16>(style::NumberingType::ARABIC_ZERO),
+                         aMap["NumberingType"].get<sal_uInt16>());
+}
+
 DECLARE_RTFEXPORT_TEST(testTdf116841, "tdf116841.rtf")
 {
     // This was 0, left margin was ignored as we assumed the default is already
@@ -169,6 +205,8 @@ DECLARE_RTFEXPORT_TEST(testTdf117268, "tdf117268.rtf")
 
 DECLARE_RTFEXPORT_TEST(testTdf117505, "tdf117505.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<container::XNameAccess> xPageStyles(getStyles("PageStyles"));
     uno::Reference<beans::XPropertySet> xFirstPage(xPageStyles->getByName("First Page"),
                                                    uno::UNO_QUERY);

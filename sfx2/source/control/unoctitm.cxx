@@ -19,6 +19,7 @@
 
 #include <config_java.h>
 
+#include <rtl/strbuf.hxx>
 #include <tools/debug.hxx>
 #include <svl/eitem.hxx>
 #include <svl/intitem.hxx>
@@ -47,9 +48,10 @@
 #include <uno/current_context.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/uitest/logger.hxx>
+#include <boost/property_tree/json_parser.hpp>
 
 #include <sfx2/app.hxx>
-#include <sfx2/unoctitm.hxx>
+#include <unoctitm.hxx>
 #include <sfx2/viewfrm.hxx>
 #include <sfx2/frame.hxx>
 #include <sfx2/ctrlitem.hxx>
@@ -107,7 +109,7 @@ const char* const URLTypeNames[URLType_COUNT] =
     "double"
 };
 
-static void InterceptLOKStateChangeEvent( const SfxViewFrame* pViewFrame, const css::frame::FeatureStateEvent& aEvent, const SfxPoolItem* pState );
+static void InterceptLOKStateChangeEvent( sal_uInt16 nSID, SfxViewFrame* pViewFrame, const css::frame::FeatureStateEvent& aEvent, const SfxPoolItem* pState );
 
 void SfxStatusDispatcher::ReleaseAll()
 {
@@ -955,7 +957,7 @@ void SfxDispatchController_Impl::StateChanged( sal_uInt16 nSID, SfxItemState eSt
 
     if (pDispatcher && pDispatcher->GetFrame())
     {
-        InterceptLOKStateChangeEvent(pDispatcher->GetFrame(), aEvent, pState);
+        InterceptLOKStateChangeEvent(nSID, pDispatcher->GetFrame(), aEvent, pState);
     }
 
     const css::uno::Sequence<OUString> aContainedTypes = pDispatch->GetListeners().getContainedTypes();
@@ -971,7 +973,7 @@ void SfxDispatchController_Impl::StateChanged( sal_uInt16 nSID, SfxItemState eSt
     StateChanged( nSID, eState, pState, nullptr );
 }
 
-static void InterceptLOKStateChangeEvent(const SfxViewFrame* pViewFrame, const css::frame::FeatureStateEvent& aEvent, const SfxPoolItem* pState)
+static void InterceptLOKStateChangeEvent(sal_uInt16 nSID, SfxViewFrame* pViewFrame, const css::frame::FeatureStateEvent& aEvent, const SfxPoolItem* pState)
 {
     if (!comphelper::LibreOfficeKit::isActive())
         return;
@@ -1006,7 +1008,10 @@ static void InterceptLOKStateChangeEvent(const SfxViewFrame* pViewFrame, const c
         aEvent.FeatureURL.Path == "AlignLeft" ||
         aEvent.FeatureURL.Path == "AlignHorizontalCenter" ||
         aEvent.FeatureURL.Path == "AlignRight" ||
-        aEvent.FeatureURL.Path == "DocumentRepair")
+        aEvent.FeatureURL.Path == "DocumentRepair" ||
+        aEvent.FeatureURL.Path == "ObjectAlignLeft" ||
+        aEvent.FeatureURL.Path == "ObjectAlignRight" ||
+        aEvent.FeatureURL.Path == "AlignCenter")
     {
         bool bTemp = false;
         aEvent.State >>= bTemp;
@@ -1034,7 +1039,8 @@ static void InterceptLOKStateChangeEvent(const SfxViewFrame* pViewFrame, const c
              aEvent.FeatureURL.Path == "BackgroundColor" ||
              aEvent.FeatureURL.Path == "CharBackColor" ||
              aEvent.FeatureURL.Path == "Color" ||
-             aEvent.FeatureURL.Path == "FontColor")
+             aEvent.FeatureURL.Path == "FontColor" ||
+             aEvent.FeatureURL.Path == "FrameLineColor")
     {
         sal_Int32 nColor = -1;
         aEvent.State >>= nColor;
@@ -1087,7 +1093,11 @@ static void InterceptLOKStateChangeEvent(const SfxViewFrame* pViewFrame, const c
              aEvent.FeatureURL.Path == "InsertIndexesEntry" ||
              aEvent.FeatureURL.Path == "TransformDialog" ||
              aEvent.FeatureURL.Path == "EditRegion" ||
-             aEvent.FeatureURL.Path == "ThesaurusDialog")
+             aEvent.FeatureURL.Path == "ThesaurusDialog" ||
+             aEvent.FeatureURL.Path == "OutlineRight" ||
+             aEvent.FeatureURL.Path == "OutlineLeft" ||
+             aEvent.FeatureURL.Path == "OutlineDown" ||
+             aEvent.FeatureURL.Path == "OutlineUp")
 
     {
         aBuffer.append(aEvent.IsEnabled ? OUStringLiteral("enabled") : OUStringLiteral("disabled"));
@@ -1103,6 +1113,28 @@ static void InterceptLOKStateChangeEvent(const SfxViewFrame* pViewFrame, const c
         if (aEvent.IsEnabled && (aEvent.State >>= aInt32))
         {
             aBuffer.append(OUString::number(aInt32));
+        }
+    }
+    else if (aEvent.FeatureURL.Path == "TransformPosX" ||
+             aEvent.FeatureURL.Path == "TransformPosY" ||
+             aEvent.FeatureURL.Path == "TransformWidth" ||
+             aEvent.FeatureURL.Path == "TransformHeight")
+    {
+        const SfxViewShell* pViewShell = SfxViewShell::Current();
+        if (aEvent.IsEnabled && pViewShell && pViewShell->isLOKMobilePhone())
+        {
+            boost::property_tree::ptree aTree;
+            boost::property_tree::ptree aState;
+            OUString aStr(aEvent.FeatureURL.Complete);
+
+            aTree.put("commandName", aStr.toUtf8().getStr());
+            pViewFrame->GetBindings().QueryControlState(nSID, aState);
+            aTree.add_child("state", aState);
+
+            aBuffer.setLength(0);
+            std::stringstream aStream;
+            boost::property_tree::write_json(aStream, aTree);
+            aBuffer.appendAscii(aStream.str().c_str());
         }
     }
     else if (aEvent.FeatureURL.Path == "StatusDocPos" ||
@@ -1127,6 +1159,7 @@ static void InterceptLOKStateChangeEvent(const SfxViewFrame* pViewFrame, const c
              aEvent.FeatureURL.Path == "WrapText" ||
              aEvent.FeatureURL.Path == "NumberFormatCurrency" ||
              aEvent.FeatureURL.Path == "NumberFormatPercent" ||
+             aEvent.FeatureURL.Path == "NumberFormatDecimal" ||
              aEvent.FeatureURL.Path == "NumberFormatDate")
     {
         bool aBool;
@@ -1203,6 +1236,18 @@ static void InterceptLOKStateChangeEvent(const SfxViewFrame* pViewFrame, const c
                 }
                 aBuffer.append(u'}');
             }
+        }
+    }
+    else if (aEvent.FeatureURL.Path == "TableColumWidth" ||
+             aEvent.FeatureURL.Path == "TableRowHeight")
+    {
+        sal_Int32 nValue;
+        if (aEvent.State >>= nValue)
+        {
+            float nScaleValue = 1000.0;
+            nValue *= nScaleValue;
+            sal_Int32 nConvertedValue = OutputDevice::LogicToLogic(nValue, MapUnit::MapTwip, MapUnit::MapInch);
+            aBuffer.append(OUString::number(nConvertedValue / nScaleValue));
         }
     }
     else

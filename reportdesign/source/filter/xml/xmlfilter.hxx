@@ -22,17 +22,8 @@
 #include <com/sun/star/container/XNamed.hpp>
 #include <com/sun/star/document/XFilter.hpp>
 #include <com/sun/star/document/XImporter.hpp>
-#include <com/sun/star/document/XExporter.hpp>
-#include <com/sun/star/lang/XInitialization.hpp>
-#include <com/sun/star/lang/XServiceInfo.hpp>
-#include <com/sun/star/beans/XPropertySet.hpp>
-#include <com/sun/star/lang/XComponent.hpp>
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/io/XActiveDataSource.hpp>
 #include <com/sun/star/report/XReportDefinition.hpp>
-#include <osl/diagnose.h>
-#include <unotools/tempfile.hxx>
-#include <unotools/localfilehelper.hxx>
 #include <xmloff/xmlimp.hxx>
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <map>
@@ -67,7 +58,6 @@ private:
 
     TGroupFunctionMap                               m_aFunctions;
 
-    mutable ::std::unique_ptr<SvXMLTokenMap>        m_pDocContentElemTokenMap;
     mutable ::std::unique_ptr<SvXMLTokenMap>        m_pReportElemTokenMap;
     mutable ::std::unique_ptr<SvXMLTokenMap>        m_pCellElemTokenMap;
 
@@ -84,8 +74,7 @@ private:
 
 public:
     using SvXMLImport::SetMasterStyles;
-    SvXMLImportContext* CreateStylesContext(const OUString& rLocalName,
-                                            const Reference< XAttributeList>& xAttrList, bool bIsAutoStyle );
+    SvXMLImportContext* CreateStylesContext( bool bIsAutoStyle );
     SvXMLImportContext* CreateMetaContext(const sal_Int32 nElement);
     SvXMLImportContext* CreateFontDeclsContext();
 protected:
@@ -118,7 +107,6 @@ public:
     virtual void SAL_CALL startDocument() override;
     virtual void SAL_CALL endDocument() override;
 
-    const SvXMLTokenMap& GetDocContentElemTokenMap() const;
     const SvXMLTokenMap& GetReportElemTokenMap() const;
     const SvXMLTokenMap& GetCellElemTokenMap() const;
 

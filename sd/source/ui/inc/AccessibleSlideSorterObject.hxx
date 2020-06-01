@@ -29,10 +29,7 @@
 #include <com/sun/star/lang/XServiceInfo.hpp>
 
 class SdPage;
-
-namespace sd { namespace slidesorter {
-class SlideSorter;
-} }
+namespace sd::slidesorter { class SlideSorter; }
 
 namespace accessibility {
 
@@ -168,7 +165,7 @@ public:
 
 private:
     css::uno::Reference<css::accessibility::XAccessible> mxParent;
-    sal_uInt16 const mnPageNumber;
+    sal_uInt16 mnPageNumber;
     ::sd::slidesorter::SlideSorter& mrSlideSorter;
     sal_uInt32 mnClientId;
 

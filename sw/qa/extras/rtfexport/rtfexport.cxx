@@ -129,6 +129,7 @@ DECLARE_RTFEXPORT_TEST(testFdo50831, "fdo50831.rtf")
 
 DECLARE_RTFEXPORT_TEST(testFdo48335, "fdo48335.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(3, getPages());
     /*
      * The problem was that we exported a fake pagebreak, make sure it's just a soft one now.
      *
@@ -186,14 +187,13 @@ DECLARE_RTFEXPORT_TEST(testFdo38244, "fdo38244.rtf")
 
 DECLARE_RTFEXPORT_TEST(testCommentsNested, "comments-nested.odt")
 {
-    uno::Reference<beans::XPropertySet> xOuter(
-        getProperty<uno::Reference<beans::XPropertySet>>(getRun(getParagraph(1), 2), "TextField"),
-        uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+    uno::Reference<beans::XPropertySet> xOuter
+        = getProperty<uno::Reference<beans::XPropertySet>>(getRun(getParagraph(1), 2), "TextField");
     CPPUNIT_ASSERT_EQUAL(OUString("Outer"), getProperty<OUString>(xOuter, "Content").trim());
 
-    uno::Reference<beans::XPropertySet> xInner(
-        getProperty<uno::Reference<beans::XPropertySet>>(getRun(getParagraph(1), 4), "TextField"),
-        uno::UNO_QUERY);
+    uno::Reference<beans::XPropertySet> xInner
+        = getProperty<uno::Reference<beans::XPropertySet>>(getRun(getParagraph(1), 4), "TextField");
     CPPUNIT_ASSERT_EQUAL(OUString("Inner"), getProperty<OUString>(xInner, "Content").trim());
 }
 
@@ -389,6 +389,7 @@ DECLARE_RTFEXPORT_TEST(testMathRuns, "math-runs.rtf")
 
 DECLARE_RTFEXPORT_TEST(testFdo77979, "fdo77979.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // font name is encoded with \fcharset of font
     OUString aExpected(u"\u5FAE\u8F6F\u96C5\u9ED1");
     CPPUNIT_ASSERT_EQUAL(aExpected,
@@ -397,6 +398,8 @@ DECLARE_RTFEXPORT_TEST(testFdo77979, "fdo77979.odt")
 
 DECLARE_RTFEXPORT_TEST(testFdo53113, "fdo53113.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     /*
      * The problem was that a custom shape was missing its second (and all the other remaining) coordinates.
      *
@@ -407,19 +410,17 @@ DECLARE_RTFEXPORT_TEST(testFdo53113, "fdo53113.odt")
      * xray oCoordinates(1).Second.Value ' 102
      */
 
-    uno::Sequence<beans::PropertyValue> aProps
+    const uno::Sequence<beans::PropertyValue> aProps
         = getProperty<uno::Sequence<beans::PropertyValue>>(getShape(1), "CustomShapeGeometry");
     uno::Sequence<beans::PropertyValue> aPathProps;
-    for (int i = 0; i < aProps.getLength(); ++i)
+    for (beans::PropertyValue const& rProp : aProps)
     {
-        const beans::PropertyValue& rProp = aProps[i];
         if (rProp.Name == "Path")
             rProp.Value >>= aPathProps;
     }
     uno::Sequence<drawing::EnhancedCustomShapeParameterPair> aPairs;
-    for (int i = 0; i < aPathProps.getLength(); ++i)
+    for (beans::PropertyValue const& rProp : std::as_const(aPathProps))
     {
-        const beans::PropertyValue& rProp = aPathProps[i];
         if (rProp.Name == "Coordinates")
             rProp.Value >>= aPairs;
     }
@@ -430,6 +431,7 @@ DECLARE_RTFEXPORT_TEST(testFdo53113, "fdo53113.odt")
 
 DECLARE_RTFEXPORT_TEST(testFdo55939, "fdo55939.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // The problem was that the exported RTF was invalid.
     // Also, the 'Footnote text.' had an additional newline at its end.
     uno::Reference<text::XTextRange> xParagraph(getParagraph(1));
@@ -446,6 +448,8 @@ DECLARE_RTFEXPORT_TEST(testFdo55939, "fdo55939.odt")
 
 DECLARE_RTFEXPORT_TEST(testTextFrames, "textframes.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(3, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // The output was simply invalid, so let's check if all 3 frames were imported back.
     uno::Reference<text::XTextFramesSupplier> xTextFramesSupplier(mxComponent, uno::UNO_QUERY);
     uno::Reference<container::XIndexAccess> xIndexAccess(xTextFramesSupplier->getTextFrames(),
@@ -455,6 +459,7 @@ DECLARE_RTFEXPORT_TEST(testTextFrames, "textframes.odt")
 
 DECLARE_RTFEXPORT_TEST(testFdo53604, "fdo53604.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // Invalid output on empty footnote.
     uno::Reference<text::XFootnotesSupplier> xFootnotesSupplier(mxComponent, uno::UNO_QUERY);
     uno::Reference<container::XIndexAccess> xFootnotes = xFootnotesSupplier->getFootnotes();
@@ -463,6 +468,7 @@ DECLARE_RTFEXPORT_TEST(testFdo53604, "fdo53604.odt")
 
 DECLARE_RTFEXPORT_TEST(testFdo52286, "fdo52286.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // The problem was that font size wasn't reduced in sub/super script.
     CPPUNIT_ASSERT_EQUAL(
         sal_Int32(58), getProperty<sal_Int32>(getRun(getParagraph(1), 2), "CharEscapementHeight"));
@@ -501,6 +507,7 @@ DECLARE_RTFEXPORT_TEST(testFdo30983, "fdo30983.rtf")
 
 DECLARE_RTFEXPORT_TEST(testPlaceholder, "placeholder.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // Only the field text was exported, make sure we still have a field with the correct Hint text.
     uno::Reference<text::XTextRange> xRun(getRun(getParagraph(1), 2));
     CPPUNIT_ASSERT_EQUAL(OUString("TextField"), getProperty<OUString>(xRun, "TextPortionType"));
@@ -531,10 +538,8 @@ DECLARE_RTFEXPORT_TEST(testI120928, "i120928.rtf")
     uno::Reference<awt::XBitmap> xBitmap;
     sal_Int16 nNumberingType = -1;
 
-    for (int i = 0; i < aProps.getLength(); ++i)
+    for (beans::PropertyValue const& rProp : std::as_const(aProps))
     {
-        const beans::PropertyValue& rProp = aProps[i];
-
         if (rProp.Name == "NumberingType")
             nNumberingType = rProp.Value.get<sal_Int16>();
         else if (rProp.Name == "GraphicBitmap")
@@ -659,16 +664,14 @@ DECLARE_RTFEXPORT_TEST(testFdo66682, "fdo66682.rtf")
     uno::Sequence<beans::PropertyValue> aProps;
     xLevels->getByIndex(0) >>= aProps; // 1st level
 
-    OUString aSuffix;
-    for (int i = 0; i < aProps.getLength(); ++i)
+    OUString aListFormat;
+    for (beans::PropertyValue const& rProp : std::as_const(aProps))
     {
-        const beans::PropertyValue& rProp = aProps[i];
-
-        if (rProp.Name == "Suffix")
-            aSuffix = rProp.Value.get<OUString>();
+        if (rProp.Name == "ListFormat")
+            aListFormat = rProp.Value.get<OUString>();
     }
     // Suffix was '\0' instead of ' '.
-    CPPUNIT_ASSERT_EQUAL(OUString(" "), aSuffix);
+    CPPUNIT_ASSERT_EQUAL(OUString(" %1 "), aListFormat);
 }
 
 DECLARE_RTFEXPORT_TEST(testParaShadow, "para-shadow.rtf")
@@ -683,6 +686,7 @@ DECLARE_RTFEXPORT_TEST(testParaShadow, "para-shadow.rtf")
 
 DECLARE_RTFEXPORT_TEST(testCharacterBorder, "charborder.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<beans::XPropertySet> xRun(getRun(getParagraph(1), 1), uno::UNO_QUERY);
     // RTF has just one border attribute (chbrdr) for text border so all side has
     // the same border with the same padding
@@ -793,6 +797,8 @@ DECLARE_RTFEXPORT_TEST(testFdo80167, "fdo80167.rtf")
 
 DECLARE_RTFEXPORT_TEST(testFdo32613, "fdo32613.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // This was AS_CHARACTER, RTF export did not support writing anchored pictures.
     CPPUNIT_ASSERT_EQUAL(text::TextContentAnchorType_AT_CHARACTER,
                          getProperty<text::TextContentAnchorType>(getShape(1), "AnchorType"));
@@ -825,6 +831,8 @@ DECLARE_RTFEXPORT_TEST(testTdf113408, "tdf113408.rtf")
 
 DECLARE_RTFEXPORT_TEST(testAbi10039, "abi10039.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // Make sure we don't just crash on export, and additionally the shape should not be inline (as it's at-page anchored originally).
     CPPUNIT_ASSERT(text::TextContentAnchorType_AS_CHARACTER
                    != getProperty<text::TextContentAnchorType>(getShape(1), "AnchorType"));
@@ -832,6 +840,7 @@ DECLARE_RTFEXPORT_TEST(testAbi10039, "abi10039.odt")
 
 DECLARE_RTFEXPORT_TEST(testAbi10076, "abi10076.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(2, getPages());
     // Just make sure that we don't crash after exporting a fully calculated layout.
 }
 
@@ -862,6 +871,8 @@ DECLARE_RTFEXPORT_TEST(testNumberingFont, "numbering-font.rtf")
 
 DECLARE_RTFEXPORT_TEST(testFdo82860, "fdo82860.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // The problem was that:
     // 1) The import tried to use fieldmarks for SHAPE fields
     // 2) The exporter did not handle "shape with textbox" text.
@@ -935,6 +946,7 @@ DECLARE_RTFEXPORT_TEST(testTdf104081, "tdf104081.rtf")
 
 DECLARE_RTFEXPORT_TEST(testTdf88583, "tdf88583.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // This was FillStyle_NONE, as background color was missing from the color table during export.
     CPPUNIT_ASSERT_EQUAL(drawing::FillStyle_SOLID,
                          getProperty<drawing::FillStyle>(getParagraph(1), "FillStyle"));
@@ -1264,9 +1276,9 @@ DECLARE_RTFEXPORT_TEST(testTdf104085, "tdf104085.rtf")
                                                     uno::UNO_QUERY);
     uno::Sequence<beans::PropertyValue> aProps;
     xLevels->getByIndex(0) >>= aProps;
-    for (int i = 0; i < aProps.getLength(); ++i)
+    for (beans::PropertyValue const& prop : std::as_const(aProps))
     {
-        if (aProps[i].Name == "BulletChar")
+        if (prop.Name == "BulletChar")
             return;
     }
     CPPUNIT_FAIL("no BulletChar property");
@@ -1292,12 +1304,12 @@ DECLARE_RTFEXPORT_TEST(testLeveljcCenter, "leveljc-center.rtf")
                                                     uno::UNO_QUERY);
     uno::Sequence<beans::PropertyValue> aProps;
     xLevels->getByIndex(0) >>= aProps;
-    for (int i = 0; i < aProps.getLength(); ++i)
+    for (beans::PropertyValue const& prop : std::as_const(aProps))
     {
-        if (aProps[i].Name == "Adjust")
+        if (prop.Name == "Adjust")
         {
             sal_Int16 nValue = 0;
-            CPPUNIT_ASSERT(aProps[i].Value >>= nValue);
+            CPPUNIT_ASSERT(prop.Value >>= nValue);
             CPPUNIT_ASSERT_EQUAL(text::HoriOrientation::CENTER, nValue);
             return;
         }

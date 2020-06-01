@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_DRAWINGLAYER_ATTRIBUTE_LINEATTRIBUTE_HXX
-#define INCLUDED_DRAWINGLAYER_ATTRIBUTE_LINEATTRIBUTE_HXX
+#pragma once
 
 #include <drawinglayer/drawinglayerdllapi.h>
 
@@ -27,60 +26,50 @@
 #include <com/sun/star/drawing/LineCap.hpp>
 #include <o3tl/cow_wrapper.hxx>
 
-
-// predefines
-
-namespace basegfx {
-    class BColor;
+namespace basegfx
+{
+class BColor;
 }
 
-namespace drawinglayer { namespace attribute {
-    class ImpLineAttribute;
-}}
-
-
-namespace drawinglayer
+namespace drawinglayer::attribute
 {
-    namespace attribute
-    {
-        class DRAWINGLAYER_DLLPUBLIC LineAttribute
-        {
-        public:
-            typedef o3tl::cow_wrapper< ImpLineAttribute > ImplType;
+class ImpLineAttribute;
+}
 
-        private:
-            ImplType  mpLineAttribute;
+namespace drawinglayer::attribute
+{
+class DRAWINGLAYER_DLLPUBLIC LineAttribute
+{
+public:
+    typedef o3tl::cow_wrapper<ImpLineAttribute> ImplType;
 
-        public:
-            /// constructors/assignmentoperator/destructor
-            explicit LineAttribute(
-                const basegfx::BColor& rColor,
-                double fWidth = 0.0,
-                basegfx::B2DLineJoin aB2DLineJoin = basegfx::B2DLineJoin::Round,
-                css::drawing::LineCap aLineCap = css::drawing::LineCap_BUTT,
-                double fMiterMinimumAngle = basegfx::deg2rad(15.0));
-            LineAttribute();
-            LineAttribute(const LineAttribute&);
-            LineAttribute& operator=(const LineAttribute&);
-            ~LineAttribute();
+private:
+    ImplType mpLineAttribute;
 
-            // checks if the incarnation is default constructed
-            bool isDefault() const;
+public:
+    /// constructors/assignmentoperator/destructor
+    explicit LineAttribute(const basegfx::BColor& rColor, double fWidth = 0.0,
+                           basegfx::B2DLineJoin aB2DLineJoin = basegfx::B2DLineJoin::Round,
+                           css::drawing::LineCap aLineCap = css::drawing::LineCap_BUTT,
+                           double fMiterMinimumAngle = basegfx::deg2rad(15.0));
+    LineAttribute();
+    LineAttribute(const LineAttribute&);
+    LineAttribute& operator=(const LineAttribute&);
+    ~LineAttribute();
 
-            // compare operator
-            bool operator==(const LineAttribute& rCandidate) const;
+    // checks if the incarnation is default constructed
+    bool isDefault() const;
 
-            // data read access
-            const basegfx::BColor& getColor() const;
-            double getWidth() const;
-            basegfx::B2DLineJoin getLineJoin() const;
-            css::drawing::LineCap getLineCap() const;
-            double getMiterMinimumAngle() const;
-        };
-    } // end of namespace attribute
+    // compare operator
+    bool operator==(const LineAttribute& rCandidate) const;
+
+    // data read access
+    const basegfx::BColor& getColor() const;
+    double getWidth() const;
+    basegfx::B2DLineJoin getLineJoin() const;
+    css::drawing::LineCap getLineCap() const;
+    double getMiterMinimumAngle() const;
+};
 } // end of namespace drawinglayer
-
-
-#endif //INCLUDED_DRAWINGLAYER_ATTRIBUTE_LINEATTRIBUTE_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

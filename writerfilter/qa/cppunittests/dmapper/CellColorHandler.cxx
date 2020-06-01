@@ -10,13 +10,10 @@
 #include <test/bootstrapfixture.hxx>
 #include <unotest/macros_test.hxx>
 
-#include <com/sun/star/drawing/XDrawPagesSupplier.hpp>
 #include <com/sun/star/frame/Desktop.hpp>
 #include <com/sun/star/text/XTextDocument.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/drawing/FillStyle.hpp>
-
-#include <comphelper/processfactory.hxx>
 
 using namespace ::com::sun::star;
 
@@ -26,7 +23,6 @@ namespace
 class Test : public test::BootstrapFixture, public unotest::MacrosTest
 {
 private:
-    uno::Reference<uno::XComponentContext> mxComponentContext;
     uno::Reference<lang::XComponent> mxComponent;
 
 public:
@@ -39,7 +35,6 @@ void Test::setUp()
 {
     test::BootstrapFixture::setUp();
 
-    mxComponentContext.set(comphelper::getComponentContext(getMultiServiceFactory()));
     mxDesktop.set(frame::Desktop::create(mxComponentContext));
 }
 

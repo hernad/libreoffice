@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_CANVAS_SOURCE_CAIRO_CAIRO_CANVASHELPER_HXX
-#define INCLUDED_CANVAS_SOURCE_CAIRO_CAIRO_CANVASHELPER_HXX
+#pragma once
 
 #include <com/sun/star/geometry/IntegerPoint2D.hpp>
 #include <com/sun/star/geometry/IntegerRectangle2D.hpp>
@@ -258,9 +257,6 @@ namespace cairocanvas
         ::cairo::CairoSharedPtr     mpCairo;
         ::cairo::SurfaceSharedPtr   mpSurface;
         ::basegfx::B2ISize maSize;
-
-        void clip_cairo_from_dev(::OutputDevice const & rOutDev);
-
     };
 
     /// also needed from SpriteHelper
@@ -271,7 +267,5 @@ namespace cairocanvas
                                       const SurfaceProviderRef& pDevice,
                                       css::rendering::FillRule eFillrule );
 }
-
-#endif // INCLUDED_CANVAS_SOURCE_CAIRO_CAIRO_CANVASHELPER_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

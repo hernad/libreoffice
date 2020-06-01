@@ -20,16 +20,17 @@
 #ifndef INCLUDED_VCL_TABDLG_HXX
 #define INCLUDED_VCL_TABDLG_HXX
 
-#if !defined(VCL_DLLIMPLEMENTATION) && !defined(TOOLKIT_DLLIMPLEMENTATION)
+#if !defined(VCL_DLLIMPLEMENTATION) && !defined(TOOLKIT_DLLIMPLEMENTATION) && !defined(VCL_INTERNALS)
 #error "don't use this in new code"
 #endif
 
+#include <config_options.h>
 #include <vcl/dllapi.h>
-#include <vcl/dialog.hxx>
+#include <vcl/toolkit/dialog.hxx>
 
 class FixedLine;
 
-class VCL_DLLPUBLIC TabDialog final : public Dialog
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) TabDialog final : public Dialog
 {
 private:
     VclPtr<FixedLine>   mpFixedLine;

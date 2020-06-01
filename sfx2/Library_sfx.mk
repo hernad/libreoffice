@@ -98,6 +98,7 @@ $(eval $(call gb_Library_add_exception_objects,sfx,\
     sfx2/source/appl/fileobj \
     sfx2/source/appl/flatpak \
     sfx2/source/appl/fwkhelper \
+    sfx2/source/appl/getbasctlfunction \
     sfx2/source/appl/helpdispatch \
     sfx2/source/appl/helpinterceptor \
     sfx2/source/appl/impldde \
@@ -230,6 +231,7 @@ $(eval $(call gb_Library_add_exception_objects,sfx,\
     sfx2/source/doc/sfxbasemodel \
     sfx2/source/doc/sfxmodelfactory \
     sfx2/source/doc/SfxRedactionHelper \
+    sfx2/source/doc/signaturestate \
     sfx2/source/doc/syspath \
     sfx2/source/doc/zoomitem \
     sfx2/source/doc/templatedlg \
@@ -277,6 +279,7 @@ $(eval $(call gb_Library_add_exception_objects,sfx,\
     sfx2/source/sidebar/Paint \
     sfx2/source/sidebar/Panel \
     sfx2/source/sidebar/PanelDescriptor \
+    sfx2/source/sidebar/PanelLayout \
     sfx2/source/sidebar/PanelTitleBar \
     sfx2/source/sidebar/ResourceManager \
     sfx2/source/sidebar/TabBar \

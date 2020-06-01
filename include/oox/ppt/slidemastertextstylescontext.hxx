@@ -27,7 +27,7 @@
 
 namespace oox { class AttributeList; }
 
-namespace oox { namespace ppt {
+namespace oox::ppt {
 
 class SlideMasterTextStylesContext final : public oox::core::FragmentHandler2
 {
@@ -37,10 +37,10 @@ public:
     virtual ::oox::core::ContextHandlerRef onCreateContext( sal_Int32 aElementToken, const AttributeList& rAttribs ) override;
 
 private:
-    SlidePersistPtr const mpSlidePersistPtr;
+    SlidePersistPtr     mpSlidePersistPtr;
 };
 
-} }
+}
 
 #endif // INCLUDED_OOX_PPT_SLIDEMASTERTEXTSTYLESCONTEXT_HXX
 

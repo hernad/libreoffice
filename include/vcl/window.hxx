@@ -67,30 +67,30 @@ enum class ImplPaintFlags;
 enum class VclEventId;
 enum class PointerStyle;
 
-namespace com { namespace sun { namespace star {
-namespace accessibility {
-    struct AccessibleRelation;
-    class XAccessible;
+namespace com::sun::star {
+    namespace accessibility {
+        struct AccessibleRelation;
+        class XAccessible;
+    }
+    namespace rendering {
+        class XCanvas;
+        class XSpriteCanvas;
+    }
+    namespace awt {
+        class XWindowPeer;
+    }
+    namespace uno {
+        class Any;
+    }
+    namespace datatransfer::clipboard {
+        class XClipboard;
+    }
+    namespace datatransfer::dnd {
+        class XDragGestureRecognizer;
+        class XDragSource;
+        class XDropTarget;
+    }
 }
-
-namespace rendering {
-    class XCanvas;
-    class XSpriteCanvas;
-}
-namespace awt {
-    class XWindowPeer;
-}
-namespace uno {
-    class Any;
-}
-namespace datatransfer { namespace clipboard {
-    class XClipboard;
-}
-namespace dnd {
-    class XDragGestureRecognizer;
-    class XDragSource;
-    class XDropTarget;
-}}}}}
 
 namespace vcl {
     struct ControlLayoutData;
@@ -717,7 +717,7 @@ private:
 
     SAL_DLLPRIVATE vcl::Window*         ImplGetTopmostFrameWindow();
 
-    SAL_DLLPRIVATE tools::Rectangle     ImplGetWindowExtentsRelative( vcl::Window *pRelativeWindow, bool bClientOnly ) const;
+    SAL_DLLPRIVATE tools::Rectangle     ImplGetWindowExtentsRelative( vcl::Window *pRelativeWindow ) const;
 
     SAL_DLLPRIVATE bool                 ImplStopDnd();
     SAL_DLLPRIVATE void                 ImplStartDnd();
@@ -729,6 +729,7 @@ private:
 
 public:
     virtual vcl::Region                 GetActiveClipRegion() const override;
+    virtual vcl::Region                 GetOutputBoundsClipRegion() const override;
 
 protected:
     // Single argument ctors shall be explicit.
@@ -752,6 +753,8 @@ protected:
     virtual void                        ImplAdjustNWFSizes();
 
     virtual void                        CopyDeviceArea( SalTwoRect& aPosAry, bool bWindowInvalidate) override;
+    virtual const OutputDevice*         DrawOutDevDirectCheck(const OutputDevice* pSrcDev) const override;
+    virtual void                        DrawOutDevDirectProcess( const OutputDevice* pSrcDev, SalTwoRect& rPosAry, SalGraphics* pSrcGraphics ) override;
     virtual void                        ClipToPaintRegion( tools::Rectangle& rDstRect ) override;
     virtual bool                        UsePolyPolygonForComplexGradient() override;
 
@@ -783,7 +786,7 @@ public:
     using OutputDevice::Erase;
     void                                Erase(vcl::RenderContext& rRenderContext);
 
-    virtual void                        Draw( ::OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawFlags nFlags );
+    virtual void                        Draw( ::OutputDevice* pDev, const Point& rPos, DrawFlags nFlags );
     virtual void                        Move();
     virtual void                        Resize();
     virtual void                        Activate();
@@ -1041,8 +1044,6 @@ public:
     tools::Rectangle                           GetDesktopRectPixel() const;
     //  window extents including border and decoration
     tools::Rectangle                           GetWindowExtentsRelative( vcl::Window *pRelativeWindow ) const;
-    // window extents of the client window, coordinates to be used in SetPosPixel
-    tools::Rectangle                           GetClientWindowExtentsRelative() const;
 
     bool                                IsScrollable() const;
     virtual void                        Scroll( long nHorzScroll, long nVertScroll,
@@ -1069,7 +1070,7 @@ public:
     virtual void                        PixelInvalidate(const tools::Rectangle* pRectangle);
     void                                Validate();
     bool                                HasPaintEvent() const;
-    void                                Update();
+    void                                PaintImmediately();
     void                                Flush() override;
 
     // toggles new docking support, enabled via toolkit
@@ -1254,10 +1255,6 @@ public:
 
     void                                SetAccessibleRelationMemberOf( vcl::Window* pMemberOf );
     vcl::Window*                        GetAccessibleRelationMemberOf() const;
-
-    void                                AddExtraAccessibleRelation(const css::accessibility::AccessibleRelation &rRelation);
-    const std::vector<css::accessibility::AccessibleRelation>& GetExtraAccessibleRelations() const;
-    void                                ClearExtraAccessibleRelations();
 
     // to avoid sending accessibility events in cases like closing dialogs
     // by default checks complete parent path
@@ -1544,7 +1541,7 @@ public:
     bool    IsNativeWidgetEnabled() const;
 
     // a helper method for a Control's Draw method
-    void PaintToDevice( ::OutputDevice* pDevice, const Point& rPos, const Size& rSize );
+    void PaintToDevice( ::OutputDevice* pDevice, const Point& rPos );
 
     /* tdf#119390 set parent to default window. Typically for use in advance of destroying
      * a floating windows which has the current focus so focus will revert to the main
@@ -1578,6 +1575,7 @@ public:
     void SetHelpHdl(const Link<vcl::Window&, bool>& rLink);
     void SetMnemonicActivateHdl(const Link<vcl::Window&, bool>& rLink);
     void SetModalHierarchyHdl(const Link<bool, void>& rLink);
+    void SetDumpAsPropertyTreeHdl(const Link<boost::property_tree::ptree&, void>& rLink);
 };
 
 }

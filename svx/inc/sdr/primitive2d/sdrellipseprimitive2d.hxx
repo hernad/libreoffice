@@ -22,7 +22,7 @@
 
 #include <drawinglayer/primitive2d/baseprimitive2d.hxx>
 #include <basegfx/matrix/b2dhommatrix.hxx>
-#include <svx/sdr/attribute/sdrlinefillshadowtextattribute.hxx>
+#include <sdr/attribute/sdrlinefilleffectstextattribute.hxx>
 
 
 // predefines
@@ -35,8 +35,8 @@ namespace drawinglayer
         class SdrEllipsePrimitive2D : public BufferedDecompositionPrimitive2D
         {
         private:
-            ::basegfx::B2DHomMatrix const                     maTransform;
-            attribute::SdrLineFillShadowTextAttribute const   maSdrLFSTAttribute;
+            ::basegfx::B2DHomMatrix                     maTransform;
+            attribute::SdrLineFillEffectsTextAttribute   maSdrLFSTAttribute;
 
             // local decomposition.
             virtual void create2DDecomposition(Primitive2DContainer& rContainer, const geometry::ViewInformation2D& aViewInformation) const override;
@@ -44,17 +44,17 @@ namespace drawinglayer
         public:
             SdrEllipsePrimitive2D(
                 const ::basegfx::B2DHomMatrix& rTransform,
-                const attribute::SdrLineFillShadowTextAttribute& rSdrLFSTAttribute);
+                const attribute::SdrLineFillEffectsTextAttribute& rSdrLFSTAttribute);
 
             // data access
             const ::basegfx::B2DHomMatrix& getTransform() const { return maTransform; }
-            const attribute::SdrLineFillShadowTextAttribute& getSdrLFSTAttribute() const { return maSdrLFSTAttribute; }
+            const attribute::SdrLineFillEffectsTextAttribute& getSdrLFSTAttribute() const { return maSdrLFSTAttribute; }
 
             // compare operator
             virtual bool operator==(const BasePrimitive2D& rPrimitive) const override;
 
             // provide unique ID
-            DeclPrimitive2DIDBlock()
+            virtual sal_uInt32 getPrimitive2DID() const override;
         };
     } // end of namespace primitive2d
 } // end of namespace drawinglayer
@@ -67,11 +67,11 @@ namespace drawinglayer
         class SdrEllipseSegmentPrimitive2D final : public SdrEllipsePrimitive2D
         {
         private:
-            double const                                      mfStartAngle;
-            double const                                      mfEndAngle;
+            double                                      mfStartAngle;
+            double                                      mfEndAngle;
 
-            bool const                                        mbCloseSegment : 1;
-            bool const                                        mbCloseUsingCenter : 1;
+            bool                                        mbCloseSegment : 1;
+            bool                                        mbCloseUsingCenter : 1;
 
             // local decomposition.
             virtual void create2DDecomposition(Primitive2DContainer& rContainer, const geometry::ViewInformation2D& aViewInformation) const override;
@@ -79,7 +79,7 @@ namespace drawinglayer
         public:
             SdrEllipseSegmentPrimitive2D(
                 const ::basegfx::B2DHomMatrix& rTransform,
-                const attribute::SdrLineFillShadowTextAttribute& rSdrLFSTAttribute,
+                const attribute::SdrLineFillEffectsTextAttribute& rSdrLFSTAttribute,
                 double fStartAngle,
                 double fEndAngle,
                 bool bCloseSegment,
@@ -89,7 +89,7 @@ namespace drawinglayer
             virtual bool operator==(const BasePrimitive2D& rPrimitive) const override;
 
             // provide unique ID
-            DeclPrimitive2DIDBlock()
+            virtual sal_uInt32 getPrimitive2DID() const override;
         };
     } // end of namespace primitive2d
 } // end of namespace drawinglayer

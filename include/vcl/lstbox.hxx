@@ -20,6 +20,7 @@
 #ifndef INCLUDED_VCL_LSTBOX_HXX
 #define INCLUDED_VCL_LSTBOX_HXX
 
+#include <config_options.h>
 #include <sal/types.h>
 #include <o3tl/typed_flags_set.hxx>
 #include <vcl/dllapi.h>
@@ -86,7 +87,6 @@ private:
     sal_Int32                   mnSaveValue;
     sal_Int32                   m_nMaxWidthChars;
     Link<ListBox&,void>          maSelectHdl;
-    Link<ListBox&,void>         maDoubleClickHdl;
     sal_uInt16                  mnLineCount;
 
     bool            mbDDAutoSize : 1;
@@ -100,7 +100,6 @@ private:
     DECL_DLLPRIVATE_LINK( ImplDoubleClickHdl, ImplListBoxWindow*, void );
     DECL_DLLPRIVATE_LINK( ImplPopupModeEndHdl, FloatingWindow*, void );
     DECL_DLLPRIVATE_LINK( ImplSelectionChangedHdl, sal_Int32, void );
-    DECL_DLLPRIVATE_LINK( ImplUserDrawHdl, UserDrawEvent*, void );
     DECL_DLLPRIVATE_LINK( ImplFocusHdl, sal_Int32, void );
     DECL_DLLPRIVATE_LINK( ImplListItemSelectHdl, LinkParamNone*, void );
 
@@ -123,15 +122,14 @@ public:
     virtual void        dispose() override;
 
     virtual void        ApplySettings(vcl::RenderContext& rRenderContext) override;
-    virtual void        Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawFlags nFlags ) override;
+    virtual void        Draw( OutputDevice* pDev, const Point& rPos, DrawFlags nFlags ) override;
     virtual void        Resize() override;
     virtual bool        PreNotify( NotifyEvent& rNEvt ) override;
     virtual void        StateChanged( StateChangedType nType ) override;
     virtual void        DataChanged( const DataChangedEvent& rDCEvt ) override;
-    virtual void        UserDraw( const UserDrawEvent& rUDEvt );
 
     virtual void        Select();
-    virtual void        DoubleClick();
+    void                DoubleClick();
     virtual void        GetFocus() override;
     virtual void        LoseFocus() override;
 
@@ -151,7 +149,6 @@ public:
 
     sal_Int32           InsertEntry( const OUString& rStr, sal_Int32  nPos = LISTBOX_APPEND );
     sal_Int32           InsertEntry( const OUString& rStr, const Image& rImage, sal_Int32  nPos = LISTBOX_APPEND );
-    void                RemoveEntry( const OUString& rStr );
     void                RemoveEntry( sal_Int32  nPos );
 
     void                Clear();
@@ -174,7 +171,6 @@ public:
 
     void                SetEntryData( sal_Int32  nPos, void* pNewData );
     void*               GetEntryData( sal_Int32  nPos ) const;
-    void*               GetSelectedEntryData() const { return GetEntryData(GetSelectedEntryPos()); }
 
     /** this methods stores a combination of flags from the
         ListBoxEntryFlags::* defines at the given entry.
@@ -186,19 +182,8 @@ public:
     */
     void                SetEntryFlags( sal_Int32  nPos, ListBoxEntryFlags nFlags );
 
-    /** this methods gets the current combination of flags from the
-        ListBoxEntryFlags::* defines from the given entry.
-        See description of the possible ListBoxEntryFlags::* flags
-        for details.
-    */
-    ListBoxEntryFlags   GetEntryFlags( sal_Int32  nPos ) const;
-
     void                SetTopEntry( sal_Int32  nPos );
     sal_Int32           GetTopEntry() const;
-
-    void                SaveValue() { mnSaveValue = GetSelectedEntryPos(); }
-    sal_Int32           GetSavedValue() const { return mnSaveValue; }
-    bool                IsValueChangedFromSaved() const { return mnSaveValue != GetSelectedEntryPos(); }
 
     /**
      * Removes existing separators, and sets the position of the
@@ -229,14 +214,7 @@ public:
 
     tools::Rectangle           GetBoundingRectangle( sal_Int32  nItem ) const;
 
-    void                EnableUserDraw( bool bUserDraw );
-
-    void                DrawEntry( const UserDrawEvent& rEvt );
-
     void                SetSelectHdl( const Link<ListBox&,void>& rLink )     { maSelectHdl = rLink; }
-    const Link<ListBox&,void>& GetSelectHdl() const                    { return maSelectHdl; }
-    void                SetDoubleClickHdl( const Link<ListBox&,void>& rLink ) { maDoubleClickHdl = rLink; }
-    const Link<ListBox&,void>& GetDoubleClickHdl() const               { return maDoubleClickHdl; }
 
     Size                CalcSubEditSize() const;    //size of area inside lstbox, i.e. no scrollbar/dropdown
     Size                CalcMinimumSize() const;    //size of lstbox area, i.e. including scrollbar/dropdown
@@ -274,16 +252,12 @@ public:
 
     virtual bool set_property(const OString &rKey, const OUString &rValue) override;
 
-    void EnableQuickSelection( bool b );
-
-    static sal_Int32 NaturalSortCompare(const OUString &rA, const OUString &rB);
-
     virtual FactoryFunction GetUITestFactory() const override;
 
     virtual boost::property_tree::ptree DumpAsPropertyTree() override;
 };
 
-class VCL_DLLPUBLIC MultiListBox final : public ListBox
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) MultiListBox final : public ListBox
 {
 public:
     explicit        MultiListBox( vcl::Window* pParent, WinBits nStyle );

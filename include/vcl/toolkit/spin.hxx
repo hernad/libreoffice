@@ -20,15 +20,16 @@
 #ifndef INCLUDED_VCL_SPIN_HXX
 #define INCLUDED_VCL_SPIN_HXX
 
-#if !defined(VCL_DLLIMPLEMENTATION) && !defined(TOOLKIT_DLLIMPLEMENTATION)
+#if !defined(VCL_DLLIMPLEMENTATION) && !defined(TOOLKIT_DLLIMPLEMENTATION) && !defined(VCL_INTERNALS)
 #error "don't use this in new code"
 #endif
 
+#include <config_options.h>
 #include <vcl/dllapi.h>
 #include <vcl/ctrl.hxx>
 #include <vcl/timer.hxx>
 
-class VCL_DLLPUBLIC SpinButton final : public Control
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) SpinButton final : public Control
 {
 private:
     AutoTimer       maRepeatTimer;
@@ -60,7 +61,7 @@ public:
 
     virtual void    Resize() override;
     virtual void    Paint( vcl::RenderContext& rRenderContext, const tools::Rectangle& rRect ) override;
-    virtual void    Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawFlags nFlags ) override;
+    virtual void    Draw( OutputDevice* pDev, const Point& rPos, DrawFlags nFlags ) override;
     virtual void    MouseButtonDown( const MouseEvent& rMEvt ) override;
     virtual void    MouseButtonUp( const MouseEvent& rMEvt ) override;
     virtual void    MouseMove( const MouseEvent& rMEvt ) override;

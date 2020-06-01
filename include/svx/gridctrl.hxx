@@ -20,10 +20,8 @@
 #define INCLUDED_SVX_GRIDCTRL_HXX
 
 #include <com/sun/star/util/Date.hpp>
-#include <vcl/fixed.hxx>
 #include <vcl/field.hxx>
 
-#include <vcl/button.hxx>
 #include <tools/ref.hxx>
 #include <svtools/editbrowsebox.hxx>
 #include <osl/mutex.hxx>
@@ -39,6 +37,10 @@ namespace com::sun::star::sdbc { class XRowSet; }
 namespace com::sun::star::sdb { class XRowsChangeListener; }
 namespace com::sun::star::uno { class XComponentContext; }
 namespace com::sun::star::util { class XNumberFormatter; }
+
+class Button;
+class ImageButton;
+class FixedText;
 
 class CursorWrapper;
 
@@ -324,7 +326,7 @@ protected:
 
     virtual sal_uInt16 AppendColumn(const OUString& rName, sal_uInt16 nWidth, sal_uInt16 nPos = HEADERBAR_APPEND, sal_uInt16 nId = sal_uInt16(-1)) override;
     void RemoveColumn(sal_uInt16 nId);
-    std::unique_ptr<DbGridColumn> CreateColumn(sal_uInt16 nId) const;
+    std::unique_ptr<DbGridColumn> CreateColumn(sal_uInt16 nId);
     virtual void ColumnMoved(sal_uInt16 nId) override;
     virtual bool SaveRow() override;
     virtual bool IsTabAllowed(bool bForward) const override;
@@ -432,7 +434,7 @@ public:
     bool HasNavigationBar() const {return m_bNavigationBar;}
 
     DbGridControlOptions GetOptions() const {return m_nOptions;}
-    NavigationBar& GetNavigationBar() {return *m_aBar.get();}
+    NavigationBar& GetNavigationBar() {return *m_aBar;}
     DbGridControlOptions SetOptions(DbGridControlOptions nOpt);
         // The new options are interpreted with respect to the current data source. If it is unable
         // to update, to insert or to restore, the according options are ignored. If the grid isn't

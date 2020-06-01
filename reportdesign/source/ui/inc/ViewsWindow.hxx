@@ -23,13 +23,8 @@
 #include <vcl/window.hxx>
 #include <svtools/colorcfg.hxx>
 #include "ReportDefines.hxx"
-#include "ReportSection.hxx"
-#include <cppuhelper/basemutex.hxx>
-#include <com/sun/star/beans/NamedValue.hpp>
-#include <svx/svdedtv.hxx>
 #include "SectionView.hxx"
 #include <unotools/options.hxx>
-#include <list>
 #include <vector>
 
 #include "MarkedSection.hxx"
@@ -47,8 +42,8 @@ namespace rptui
     struct RectangleLess
     {
         enum CompareMode { POS_LEFT,POS_RIGHT,POS_UPPER,POS_DOWN,POS_CENTER_HORIZONTAL,POS_CENTER_VERTICAL };
-        CompareMode const m_eCompareMode;
-        Point const m_aRefPoint;
+        CompareMode m_eCompareMode;
+        Point       m_aRefPoint;
         RectangleLess(CompareMode _eCompareMode,const Point& _rRefPoint ) : m_eCompareMode(_eCompareMode),m_aRefPoint(_rRefPoint){}
         bool operator() (const tools::Rectangle& lhs, const tools::Rectangle& rhs) const
         {

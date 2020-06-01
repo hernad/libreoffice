@@ -28,7 +28,7 @@
 #include <editeng/swafopt.hxx>
 #include <editeng/editengdllapi.h>
 
-#include <o3tl/optional.hxx>
+#include <optional>
 #include <map>
 #include <memory>
 
@@ -79,6 +79,15 @@ enum class ACFlags : sal_uInt32 {
 namespace o3tl {
     template<> struct typed_flags<ACFlags> : is_typed_flags<ACFlags, 0xe0003fff> {};
 }
+
+enum class ACQuotes
+{
+    NONE,
+    NonBreakingSpace,
+    CapitalizeIAm,
+    DoubleAngleQuote,
+    UseApostrophe,
+};
 
 // TODO: handle code points > U+FFFF and check users of this class
 
@@ -155,7 +164,7 @@ public:
                            ~SvxAutocorrWordList();
     void                   DeleteAndDestroyAll();
     const SvxAutocorrWord* Insert(SvxAutocorrWord aWord) const;
-    o3tl::optional<SvxAutocorrWord> FindAndRemove(const SvxAutocorrWord *pWord);
+    std::optional<SvxAutocorrWord> FindAndRemove(const SvxAutocorrWord *pWord);
     void                   LoadEntry(const OUString& sWrong, const OUString& sRight, bool bOnlyTxt);
     bool                   empty() const;
 
@@ -324,7 +333,8 @@ public:
     OUString GetQuote( SvxAutoCorrDoc const & rDoc, sal_Int32 nInsPos,
                     sal_Unicode cInsChar, bool bSttQuote );
     void InsertQuote( SvxAutoCorrDoc& rDoc, sal_Int32 nInsPos,
-                    sal_Unicode cInsChar, bool bSttQuote, bool bIns, bool b_iApostrophe ) const;
+                    sal_Unicode cInsChar, bool bSttQuote, bool bIns,
+                    LanguageType eLang, ACQuotes eType ) const;
 
     // Query/Set the name of the AutoCorrect file
     // the default is "autocorr.dat"

@@ -29,6 +29,9 @@ $(eval $(call gb_UnpackedTarball_update_autoconf_configs,coinmp,\
 	Osi \
 ))
 
+# * external/coinmp/Wnon-c-typedef-for-linkage.patch upstream at
+#   <https://list.coin-or.org/pipermail/coin-discuss/2020-February/003972.html> "[Coin-discuss]
+#   Small patch to fix Clang -Wnon-c-typedef-for-linkage in Clp":
 $(eval $(call gb_UnpackedTarball_add_patches,coinmp,\
 	external/coinmp/osi_cuts_iterator.patch.0 \
 	external/coinmp/no-binaries.patch.1 \
@@ -40,6 +43,7 @@ $(eval $(call gb_UnpackedTarball_add_patches,coinmp,\
 	external/coinmp/ubsan.patch.0 \
 	external/coinmp/rpath.patch \
 	external/coinmp/libtool.patch \
+	external/coinmp/Wnon-c-typedef-for-linkage.patch \
 ))
 
 # vim: set noet sw=4 ts=4:

@@ -18,24 +18,23 @@
  */
 #include "dbloader2.hxx"
 #include <tools/urlobj.hxx>
+#include <comphelper/documentconstants.hxx>
 #include <comphelper/sequenceashashmap.hxx>
 #include <comphelper/storagehelper.hxx>
+#include <comphelper/types.hxx>
 #include <cppuhelper/supportsservice.hxx>
+#include <com/sun/star/beans/XPropertySet.hpp>
+#include <com/sun/star/embed/XStorage.hpp>
 
 namespace rptxml
 {
 
-using namespace ::ucbhelper;
-using namespace ::com::sun::star::task;
 using namespace ::com::sun::star::uno;
-using namespace ::com::sun::star::ucb;
 using namespace ::com::sun::star::io;
 using namespace ::com::sun::star::util;
 using namespace ::com::sun::star::beans;
-using namespace ::com::sun::star::container;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::document;
-using namespace ::com::sun::star::registry;
 using namespace ::com::sun::star::embed;
 using namespace ::com::sun::star::ui::dialogs;
 

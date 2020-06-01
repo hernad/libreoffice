@@ -24,11 +24,11 @@
 #include <memory>
 
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace beans { class XMultiPropertySet; }
     namespace beans { class XPropertySet; }
     namespace beans { class XPropertySetInfo; }
-} } }
+}
 
 
 /**
@@ -75,7 +75,7 @@ class MultiPropertySetHelper
     const css::uno::Any* pValues;
 
     /// an empty Any
-    css::uno::Any const aEmptyAny;
+    css::uno::Any aEmptyAny;
 
 public:
 

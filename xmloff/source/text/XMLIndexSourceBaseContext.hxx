@@ -25,10 +25,10 @@
 #include <rtl/ustring.hxx>
 
 
-namespace com { namespace sun { namespace star {
-    namespace xml { namespace sax { class XAttributeList; } }
+namespace com::sun::star {
+    namespace xml::sax { class XAttributeList; }
     namespace beans { class XPropertySet; }
-} } }
+}
 
 enum IndexSourceParamEnum
 {
@@ -75,7 +75,7 @@ enum IndexSourceParamEnum
  */
 class XMLIndexSourceBaseContext : public SvXMLImportContext
 {
-    bool const bUseLevelFormats;
+    bool bUseLevelFormats;
     bool bChapterIndex;     /// chapter-wise or document index?
     bool bRelativeTabs;     /// tab stops relative to margin or indent?
 

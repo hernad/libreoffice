@@ -68,7 +68,7 @@ namespace {
 
 class InstallLangpack : public Idle
 {
-    std::vector<OUString> const m_aPackages;
+    std::vector<OUString> m_aPackages;
 public:
     explicit InstallLangpack(const std::vector<OUString>& rPackages)
         : Idle("install langpack")
@@ -142,8 +142,7 @@ OUString getInstalledLocaleForSystemUILanguage(const css::uno::Sequence<OUString
                     else
                         aPackages.emplace_back("libreoffice-langpack-" + install);
                 }
-                //Debian would be: "The Document Foundation/Debian"
-                else if (sVendor == "The Document Foundation, Debian and Ubuntu")
+                else if (sVendor == "The Document Foundation/Debian" || sVendor == "The Document Foundation, Debian and Ubuntu")
                 {
                     // l10n is the typical Debian/Ubuntu naming convention
                     aPackages.emplace_back("libreoffice-l10n-" + install);

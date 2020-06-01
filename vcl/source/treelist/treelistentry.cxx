@@ -51,6 +51,7 @@ SvTreeListEntry::SvTreeListEntry()
     : pParent(nullptr)
     , nAbsPos(0)
     , nListPos(0)
+    , mnExtraIndent(0)
     , pUserData(nullptr)
     , nEntryFlags(SvTLEntryFlags::NONE)
     , maBackColor(Application::GetSettings().GetStyleSettings().GetWindowColor())
@@ -89,7 +90,8 @@ void SvTreeListEntry::Clone(SvTreeListEntry* pSource)
 {
     nListPos &= 0x80000000;
     nListPos |= ( pSource->nListPos & 0x7fffffff);
-    nAbsPos     = pSource->nAbsPos;
+    nAbsPos = pSource->nAbsPos;
+    mnExtraIndent = pSource->mnExtraIndent;
 
     m_Items.clear();
     for (auto const& it : pSource->m_Items)
@@ -149,7 +151,7 @@ namespace {
 
 class FindByType
 {
-    SvLBoxItemType const meType;
+    SvLBoxItemType meType;
 public:
     explicit FindByType(SvLBoxItemType eType) : meType(eType) {}
     bool operator() (const std::unique_ptr<SvLBoxItem>& rpItem) const

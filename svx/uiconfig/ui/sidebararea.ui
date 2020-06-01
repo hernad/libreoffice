@@ -101,13 +101,13 @@
           </packing>
         </child>
         <child>
-          <object class="GtkComboBoxText" id="fillstyle">
+          <object class="GtkComboBoxText" id="fillstylearea">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="tooltip_text" translatable="yes" context="sidebararea|fillstyle|tooltip_text">Select the fill type to apply.</property>
+            <property name="tooltip_text" translatable="yes" context="sidebararea|fillstylearea|tooltip_text">Select the fill type to apply.</property>
             <child internal-child="accessible">
-              <object class="AtkObject" id="fillstyle-atkobject">
-                <property name="AtkObject::accessible-name" translatable="yes" context="sidebararea|fillstyle-atkobject">Fill Type</property>
+              <object class="AtkObject" id="fillstylearea-atkobject">
+                <property name="AtkObject::accessible-name" translatable="yes" context="sidebararea|fillstylearea-atkobject">Fill Type</property>
               </object>
             </child>
           </object>
@@ -198,10 +198,10 @@
               </packing>
             </child>
             <child>
-              <object class="GtkComboBox" id="fillattr">
+              <object class="GtkComboBox" id="fillattrhb">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="tooltip_text" translatable="yes" context="sidebararea|fillattr|tooltip_text">Select the effect to apply.</property>
+                <property name="tooltip_text" translatable="yes" context="sidebararea|fillattrhb|tooltip_text">Select the effect to apply.</property>
                 <property name="hexpand">True</property>
                 <property name="model">liststore4</property>
                 <property name="entry_text_column">0</property>
@@ -214,10 +214,13 @@
                 </child>
                 <child>
                   <object class="GtkCellRendererPixbuf" id="cellrenderertext4"/>
+                  <attributes>
+                    <attribute name="surface">3</attribute>
+                  </attributes>
                 </child>
                 <child internal-child="accessible">
-                  <object class="AtkObject" id="fillattr-atkobject">
-                    <property name="AtkObject::accessible-name" translatable="yes" context="sidebararea|fillattr-atkobject">Hatching/Bitmap</property>
+                  <object class="AtkObject" id="fillattrhb-atkobject">
+                    <property name="AtkObject::accessible-name" translatable="yes" context="sidebararea|fillattrhb-atkobject">Hatching/Bitmap</property>
                   </object>
                 </child>
               </object>

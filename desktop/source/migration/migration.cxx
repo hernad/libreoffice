@@ -54,6 +54,7 @@
 #include <com/sun/star/frame/theUICommandDescription.hpp>
 #include <com/sun/star/ui/UIConfigurationManager.hpp>
 #include <com/sun/star/ui/XUIConfigurationPersistence.hpp>
+#include <vcl/commandinfoprovider.hxx>
 
 using namespace osl;
 using namespace std;
@@ -72,44 +73,6 @@ namespace desktop
 static const char ITEM_DESCRIPTOR_COMMANDURL[] = "CommandURL";
 static const char ITEM_DESCRIPTOR_CONTAINER[] = "ItemDescriptorContainer";
 static const char ITEM_DESCRIPTOR_LABEL[] = "Label";
-
-static OUString retrieveLabelFromCommand(const OUString& sCommand, const OUString& sModuleIdentifier)
-{
-    OUString sLabel;
-
-    uno::Reference< container::XNameAccess > xUICommands;
-    uno::Reference< container::XNameAccess > const xNameAccess(
-        frame::theUICommandDescription::get(
-            ::comphelper::getProcessComponentContext()) );
-    xNameAccess->getByName( sModuleIdentifier ) >>= xUICommands;
-    if (xUICommands.is()) {
-        if ( !sCommand.isEmpty() ) {
-            OUString aStr;
-            ::uno::Sequence< beans::PropertyValue > aPropSeq;
-            try {
-                uno::Any a( xUICommands->getByName( sCommand ));
-                if ( a >>= aPropSeq ) {
-                    for ( sal_Int32 i = 0; i < aPropSeq.getLength(); i++ ) {
-                        if ( aPropSeq[i].Name == "Label" ) {
-                            aPropSeq[i].Value >>= aStr;
-                            break;
-                        }
-                    }
-                }
-
-                sLabel = aStr;
-            } catch (const container::NoSuchElementException&) {
-                sLabel = sCommand;
-                sal_Int32 nIndex = sLabel.indexOf(':');
-                if (nIndex>=0 && nIndex <= sLabel.getLength()-1)
-                    sLabel = sLabel.copy(nIndex+1);
-            }
-
-        }
-    }
-
-    return sLabel;
-}
 
 static OUString mapModuleShortNameToIdentifier(const OUString& sShortName)
 {
@@ -343,23 +306,23 @@ void MigrationImpl::readAvailableMigrations(migrations_available& rAvailableMigr
 {
     // get supported version names
     uno::Reference< XNameAccess > aMigrationAccess(getConfigAccess("org.openoffice.Setup/Migration/SupportedVersions"), uno::UNO_SET_THROW);
-    uno::Sequence< OUString > seqSupportedVersions = aMigrationAccess->getElementNames();
+    const uno::Sequence< OUString > seqSupportedVersions = aMigrationAccess->getElementNames();
 
     const OUString aVersionIdentifiers( "VersionIdentifiers" );
     const OUString aPriorityIdentifier( "Priority" );
 
-    for (sal_Int32 i=0; i<seqSupportedVersions.getLength(); i++) {
+    for (OUString const & supportedVersion :seqSupportedVersions) {
         sal_Int32                 nPriority( 0 );
         uno::Sequence< OUString > seqVersions;
-        uno::Reference< XNameAccess > xMigrationData( aMigrationAccess->getByName(seqSupportedVersions[i]), uno::UNO_QUERY_THROW );
+        uno::Reference< XNameAccess > xMigrationData( aMigrationAccess->getByName(supportedVersion), uno::UNO_QUERY_THROW );
         xMigrationData->getByName( aVersionIdentifiers ) >>= seqVersions;
         xMigrationData->getByName( aPriorityIdentifier ) >>= nPriority;
 
         supported_migration aSupportedMigration;
-        aSupportedMigration.name      = seqSupportedVersions[i];
+        aSupportedMigration.name      = supportedVersion;
         aSupportedMigration.nPriority = nPriority;
-        for (sal_Int32 j=0; j<seqVersions.getLength(); j++)
-            aSupportedMigration.supported_versions.push_back(seqVersions[j].trim());
+        for (OUString const & s : std::as_const(seqVersions))
+            aSupportedMigration.supported_versions.push_back(s.trim());
         insertSorted( rAvailableMigrations, aSupportedMigration );
         SAL_INFO( "desktop.migration", " available migration '" << aSupportedMigration.name << "'" );
     }
@@ -874,14 +837,9 @@ std::vector< MigrationModuleInfo > MigrationImpl::dectectUIChangesForAllModules(
 
             uno::Reference< embed::XStorage > xToolbar = xModule->openStorageElement(TOOLBAR, embed::ElementModes::READ);
             if (xToolbar.is()) {
-                const OUString RESOURCEURL_CUSTOM_ELEMENT("custom_");
-                sal_Int32 nCustomLen = 7;
-
-                ::uno::Sequence< OUString > lToolbars = xToolbar->getElementNames();
-                for (sal_Int32 j=0; j<lToolbars.getLength(); ++j) {
-                    OUString sToolbarName = lToolbars[j];
-                    if (sToolbarName.getLength()>=nCustomLen &&
-                        sToolbarName.copy(0, nCustomLen) == RESOURCEURL_CUSTOM_ELEMENT)
+                const ::uno::Sequence< OUString > lToolbars = xToolbar->getElementNames();
+                for (OUString const & sToolbarName : lToolbars) {
+                    if (sToolbarName.startsWith("custom_"))
                         continue;
 
                     aModuleInfo.sModuleShortName = sModuleShortName;
@@ -912,18 +870,18 @@ void MigrationImpl::compareOldAndNewConfig(const OUString& sParent,
 
     std::vector< MigrationItem > vOldItems;
     std::vector< MigrationItem > vNewItems;
-    uno::Sequence< beans::PropertyValue > aProp;
+    uno::Sequence< beans::PropertyValue > aProps;
     sal_Int32 nOldCount = xIndexOld->getCount();
     sal_Int32 nNewCount = xIndexNew->getCount();
 
     for (int n=0; n<nOldCount; ++n) {
         MigrationItem aMigrationItem;
-        if (xIndexOld->getByIndex(n) >>= aProp) {
-            for(int i=0; i<aProp.getLength(); ++i) {
-                if ( aProp[i].Name == ITEM_DESCRIPTOR_COMMANDURL )
-                    aProp[i].Value >>= aMigrationItem.m_sCommandURL;
-                else if ( aProp[i].Name == ITEM_DESCRIPTOR_CONTAINER )
-                    aProp[i].Value >>= aMigrationItem.m_xPopupMenu;
+        if (xIndexOld->getByIndex(n) >>= aProps) {
+            for(beans::PropertyValue const & prop : std::as_const(aProps)) {
+                if ( prop.Name == ITEM_DESCRIPTOR_COMMANDURL )
+                    prop.Value >>= aMigrationItem.m_sCommandURL;
+                else if ( prop.Name == ITEM_DESCRIPTOR_CONTAINER )
+                    prop.Value >>= aMigrationItem.m_xPopupMenu;
             }
 
             if (!aMigrationItem.m_sCommandURL.isEmpty())
@@ -933,12 +891,12 @@ void MigrationImpl::compareOldAndNewConfig(const OUString& sParent,
 
     for (int n=0; n<nNewCount; ++n) {
         MigrationItem aMigrationItem;
-        if (xIndexNew->getByIndex(n) >>= aProp) {
-            for(int i=0; i<aProp.getLength(); ++i) {
-                if ( aProp[i].Name == ITEM_DESCRIPTOR_COMMANDURL )
-                    aProp[i].Value >>= aMigrationItem.m_sCommandURL;
-                else if ( aProp[i].Name == ITEM_DESCRIPTOR_CONTAINER )
-                    aProp[i].Value >>= aMigrationItem.m_xPopupMenu;
+        if (xIndexNew->getByIndex(n) >>= aProps) {
+            for(beans::PropertyValue const & prop : std::as_const(aProps)) {
+                if ( prop.Name == ITEM_DESCRIPTOR_COMMANDURL )
+                    prop.Value >>= aMigrationItem.m_sCommandURL;
+                else if ( prop.Name == ITEM_DESCRIPTOR_CONTAINER )
+                    prop.Value >>= aMigrationItem.m_xPopupMenu;
             }
 
             if (!aMigrationItem.m_sCommandURL.isEmpty())
@@ -1001,14 +959,14 @@ void MigrationImpl::mergeOldToNewVersion(const uno::Reference< ui::XUIConfigurat
 
                 uno::Sequence< beans::PropertyValue > aPropSeq;
                 xTemp->getByIndex(i) >>= aPropSeq;
-                for (sal_Int32 j=0; j<aPropSeq.getLength(); ++j) {
-                    OUString sPropName = aPropSeq[j].Name;
+                for (beans::PropertyValue const & prop : std::as_const(aPropSeq)) {
+                    OUString sPropName = prop.Name;
                     if ( sPropName == ITEM_DESCRIPTOR_COMMANDURL )
-                        aPropSeq[j].Value >>= sCommandURL;
+                        prop.Value >>= sCommandURL;
                     else if ( sPropName == ITEM_DESCRIPTOR_LABEL )
-                        aPropSeq[j].Value >>= sLabel;
+                        prop.Value >>= sLabel;
                     else if ( sPropName == ITEM_DESCRIPTOR_CONTAINER )
-                        aPropSeq[j].Value >>= xChild;
+                        prop.Value >>= xChild;
                 }
 
                 if (sCommandURL == sToken) {
@@ -1020,9 +978,10 @@ void MigrationImpl::mergeOldToNewVersion(const uno::Reference< ui::XUIConfigurat
         } while (nIndex >= 0);
 
         if (nIndex == -1) {
+            auto aProperties = vcl::CommandInfoProvider::GetCommandProperties(elem.m_sCommandURL, sModuleIdentifier);
             uno::Sequence< beans::PropertyValue > aPropSeq {
                 beans::PropertyValue(ITEM_DESCRIPTOR_COMMANDURL, 0, uno::makeAny(elem.m_sCommandURL), beans::PropertyState_DIRECT_VALUE),
-                beans::PropertyValue(ITEM_DESCRIPTOR_LABEL, 0, uno::makeAny(retrieveLabelFromCommand(elem.m_sCommandURL, sModuleIdentifier)), beans::PropertyState_DIRECT_VALUE),
+                beans::PropertyValue(ITEM_DESCRIPTOR_LABEL, 0, uno::makeAny(vcl::CommandInfoProvider::GetLabelForCommand(aProperties)), beans::PropertyState_DIRECT_VALUE),
                 beans::PropertyValue(ITEM_DESCRIPTOR_CONTAINER, 0, uno::makeAny(elem.m_xPopupMenu), beans::PropertyState_DIRECT_VALUE)
             };
 
@@ -1035,9 +994,9 @@ void MigrationImpl::mergeOldToNewVersion(const uno::Reference< ui::XUIConfigurat
                     OUString sCmd;
                     uno::Sequence< beans::PropertyValue > aTempPropSeq;
                     xTemp->getByIndex(i) >>= aTempPropSeq;
-                    for (sal_Int32 j=0; j<aTempPropSeq.getLength(); ++j) {
-                        if ( aTempPropSeq[j].Name == ITEM_DESCRIPTOR_COMMANDURL ) {
-                            aTempPropSeq[j].Value >>= sCmd;
+                    for (beans::PropertyValue const & prop : std::as_const(aTempPropSeq)) {
+                        if ( prop.Name == ITEM_DESCRIPTOR_COMMANDURL ) {
+                            prop.Value >>= sCmd;
                             break;
                         }
                     }
@@ -1077,9 +1036,9 @@ uno::Reference< container::XIndexContainer > NewVersionUIInfo::getNewMenubarSett
 {
     uno::Reference< container::XIndexContainer > xNewMenuSettings;
 
-    for (sal_Int32 i=0; i<m_lNewVersionMenubarSettingsSeq.getLength(); ++i) {
-        if (m_lNewVersionMenubarSettingsSeq[i].Name == sModuleShortName) {
-            m_lNewVersionMenubarSettingsSeq[i].Value >>= xNewMenuSettings;
+    for (auto const & prop : m_lNewVersionMenubarSettingsSeq) {
+        if (prop.Name == sModuleShortName) {
+            prop.Value >>= xNewMenuSettings;
             break;
         }
     }
@@ -1091,13 +1050,13 @@ uno::Reference< container::XIndexContainer > NewVersionUIInfo::getNewToolbarSett
 {
     uno::Reference< container::XIndexContainer > xNewToolbarSettings;
 
-    for (sal_Int32 i=0; i<m_lNewVersionToolbarSettingsSeq.getLength(); ++i) {
-        if (m_lNewVersionToolbarSettingsSeq[i].Name == sModuleShortName) {
+    for (auto const & newProp : m_lNewVersionToolbarSettingsSeq) {
+        if (newProp.Name == sModuleShortName) {
             uno::Sequence< beans::PropertyValue > lToolbarSettingsSeq;
-            m_lNewVersionToolbarSettingsSeq[i].Value >>= lToolbarSettingsSeq;
-            for (sal_Int32 j=0; j<lToolbarSettingsSeq.getLength(); ++j) {
-                if (lToolbarSettingsSeq[j].Name == sToolbarName) {
-                    lToolbarSettingsSeq[j].Value >>= xNewToolbarSettings;
+            newProp.Value >>= lToolbarSettingsSeq;
+            for (auto const & prop : std::as_const(lToolbarSettingsSeq)) {
+                if (prop.Name == sToolbarName) {
+                    prop.Value >>= xNewToolbarSettings;
                     break;
                 }
             }

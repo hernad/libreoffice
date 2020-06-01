@@ -32,7 +32,7 @@ typedef std::vector< NamedColor > ColorList;
 class PaletteASE final : public Palette
 {
     bool        mbValidPalette;
-    OUString const    maFPath;
+    OUString    maFPath;
     OUString    maASEPaletteName;
     ColorList   maColors;
 
@@ -43,8 +43,7 @@ public:
 
     virtual const OUString&     GetName() override;
     virtual const OUString&     GetPath() override;
-    virtual void                LoadColorSet( SvxColorValueSet& rColorSet ) override;
-    virtual void                LoadColorSet( ColorValueSet& rColorSet ) override;
+    virtual void                LoadColorSet(SvxColorValueSet& rColorSet) override;
 
     virtual bool                IsValid() override;
 };
@@ -55,8 +54,8 @@ class PaletteGPL final : public Palette
 {
     bool        mbLoadedPalette;
     bool        mbValidPalette;
-    OUString const    maFName;
-    OUString const    maFPath;
+    OUString    maFName;
+    OUString    maFPath;
     OUString    maGPLPaletteName;
     ColorList   maColors;
 
@@ -69,8 +68,7 @@ public:
 
     virtual const OUString&     GetName() override;
     virtual const OUString&     GetPath() override;
-    virtual void                LoadColorSet( SvxColorValueSet& rColorSet ) override;
-    virtual void                LoadColorSet( ColorValueSet& rColorSet ) override;
+    virtual void                LoadColorSet(SvxColorValueSet& rColorSet) override;
 
     virtual bool                IsValid() override;
 };
@@ -80,8 +78,8 @@ public:
 class PaletteSOC final : public Palette
 {
     bool            mbLoadedPalette;
-    OUString const        maFPath;
-    OUString const        maSOCPaletteName;
+    OUString        maFPath;
+    OUString        maSOCPaletteName;
     XColorListRef   mpColorList;
 public:
     PaletteSOC( const OUString &rFPath, const OUString &rFName );
@@ -89,8 +87,7 @@ public:
 
     virtual const OUString&     GetName() override;
     virtual const OUString&     GetPath() override;
-    virtual void                LoadColorSet( SvxColorValueSet& rColorSet ) override;
-    virtual void                LoadColorSet( ColorValueSet& rColorSet ) override;
+    virtual void                LoadColorSet(SvxColorValueSet& rColorSet) override;
 
     virtual bool                IsValid() override;
 };

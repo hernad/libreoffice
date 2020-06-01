@@ -17,53 +17,60 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <string>
 #include <svl/intitem.hxx>
 #include <svl/eitem.hxx>
 #include <svl/stritem.hxx>
-#include <sfx2/dispatch.hxx>
 #include <vcl/event.hxx>
 #include <vcl/toolbox.hxx>
-#include <vcl/fixed.hxx>
 #include <vcl/settings.hxx>
-#include <formtoolbars.hxx>
-
 
 #include <svx/dialmgr.hxx>
+#include <svx/labelitemwindow.hxx>
 #include <svx/svxids.hrc>
 #include <svx/strings.hrc>
-#include <svx/tbxctl.hxx>
 #include <tbxform.hxx>
-#include <sfx2/viewfrm.hxx>
-#include <sfx2/viewsh.hxx>
 
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::beans;
 
-SvxFmAbsRecWin::SvxFmAbsRecWin( vcl::Window* _pParent, SfxToolBoxControl* _pController )
-    :NumericField( _pParent, WB_BORDER )
-    ,m_pController(_pController)
+SvxFmAbsRecWin::SvxFmAbsRecWin(vcl::Window* pParent, SfxToolBoxControl* pController)
+    : InterimItemWindow(pParent, "svx/ui/absrecbox.ui", "AbsRecBox")
+    , m_xWidget(m_xBuilder->weld_entry("entry"))
+    , m_pController(pController)
 {
-    SetMin(1);
-    SetFirst(1);
-    SetSpinSize(1);
-    SetSizePixel( Size(70,19) );
+    m_xWidget->connect_key_press(LINK(this, SvxFmAbsRecWin, KeyInputHdl));
+    m_xWidget->connect_activate(LINK(this, SvxFmAbsRecWin, ActivatedHdl));
+    m_xWidget->connect_focus_out(LINK(this, SvxFmAbsRecWin, FocusOutHdl));
 
-    SetDecimalDigits(0);
-    SetStrictFormat(true);
+    SetSizePixel(m_xWidget->get_preferred_size());
 }
 
+void SvxFmAbsRecWin::dispose()
+{
+    m_xWidget.reset();
+    InterimItemWindow::dispose();
+}
+
+void SvxFmAbsRecWin::GetFocus()
+{
+    if (m_xWidget)
+        m_xWidget->grab_focus();
+    InterimItemWindow::GetFocus();
+}
+
+SvxFmAbsRecWin::~SvxFmAbsRecWin()
+{
+    disposeOnce();
+}
 
 void SvxFmAbsRecWin::FirePosition( bool _bForce )
 {
-    if ( !_bForce && !IsValueChangedFromSaved() )
+    if (!_bForce && !m_xWidget->get_value_changed_from_saved())
         return;
 
-    sal_Int64 nRecord = GetValue();
-    if (nRecord < GetMin() || nRecord > GetMax())
-    {
-        return;
-    }
+    sal_Int64 nRecord = m_xWidget->get_text().toInt64();
+    if (nRecord < 1)
+        nRecord = 1;
 
     SfxInt32Item aPositionParam( FN_PARAM_1, static_cast<sal_Int32>(nRecord) );
 
@@ -76,24 +83,25 @@ void SvxFmAbsRecWin::FirePosition( bool _bForce )
                              aArgs );
     m_pController->updateStatus();
 
-    SaveValue();
+    m_xWidget->save_value();
 }
 
-
-void SvxFmAbsRecWin::LoseFocus()
+IMPL_LINK_NOARG(SvxFmAbsRecWin, FocusOutHdl, weld::Widget&, void)
 {
     FirePosition( false );
 }
 
-
-void SvxFmAbsRecWin::KeyInput( const KeyEvent& rKeyEvent )
+IMPL_LINK(SvxFmAbsRecWin, KeyInputHdl, const KeyEvent&, rKEvt, bool)
 {
-    if( rKeyEvent.GetKeyCode() == KEY_RETURN && !GetText().isEmpty() )
-        FirePosition( true );
-    else
-        NumericField::KeyInput( rKeyEvent );
+    return ChildKeyInput(rKEvt);
 }
 
+IMPL_LINK_NOARG(SvxFmAbsRecWin, ActivatedHdl, weld::Entry&, bool)
+{
+    if (!m_xWidget->get_text().isEmpty())
+        FirePosition( true );
+    return true;
+}
 
 SFX_IMPL_TOOLBOX_CONTROL( SvxFmTbxCtlAbsRec, SfxInt32Item );
 
@@ -107,7 +115,6 @@ SvxFmTbxCtlAbsRec::~SvxFmTbxCtlAbsRec()
 {
 }
 
-
 void SvxFmTbxCtlAbsRec::StateChanged( sal_uInt16 nSID, SfxItemState eState, const SfxPoolItem* pState )
 {
     sal_uInt16              nId = GetId();
@@ -120,12 +127,12 @@ void SvxFmTbxCtlAbsRec::StateChanged( sal_uInt16 nSID, SfxItemState eState, cons
     {
         const SfxInt32Item* pItem = dynamic_cast< const SfxInt32Item* >( pState );
         DBG_ASSERT( pItem, "SvxFmTbxCtlAbsRec::StateChanged: invalid item!" );
-        pWin->SetValue( pItem ? pItem->GetValue() : -1 );
+        pWin->set_text(OUString::number(pItem ? pItem->GetValue() : -1));
     }
 
     bool bEnable = SfxItemState::DISABLED != eState && pState;
     if (!bEnable)
-        pWin->SetText(OUString());
+        pWin->set_text(OUString());
 
 
     // enabling/disabling of the window
@@ -133,7 +140,7 @@ void SvxFmTbxCtlAbsRec::StateChanged( sal_uInt16 nSID, SfxItemState eState, cons
     SfxToolBoxControl::StateChanged( nSID, eState,pState );
 }
 
-VclPtr<vcl::Window> SvxFmTbxCtlAbsRec::CreateItemWindow( vcl::Window* pParent )
+VclPtr<InterimItemWindow> SvxFmTbxCtlAbsRec::CreateItemWindow( vcl::Window* pParent )
 {
     return VclPtrInstance<SvxFmAbsRecWin>(pParent, this);
 }
@@ -143,23 +150,21 @@ SFX_IMPL_TOOLBOX_CONTROL( SvxFmTbxCtlRecText, SfxBoolItem );
 SvxFmTbxCtlRecText::SvxFmTbxCtlRecText( sal_uInt16 nSlotId, sal_uInt16 nId, ToolBox& rTbx )
     :SfxToolBoxControl( nSlotId, nId, rTbx )
 {
+    rTbx.SetItemWindowNonInteractive(nId, true);
 }
 
 SvxFmTbxCtlRecText::~SvxFmTbxCtlRecText()
 {
 }
 
-VclPtr<vcl::Window> SvxFmTbxCtlRecText::CreateItemWindow( vcl::Window* pParent )
+VclPtr<InterimItemWindow> SvxFmTbxCtlRecText::CreateItemWindow( vcl::Window* pParent )
 {
     OUString aText(SvxResId(RID_STR_REC_TEXT));
-    VclPtrInstance<FixedText> pFixedText( pParent );
-    Size aSize( pFixedText->GetTextWidth( aText ), pFixedText->GetTextHeight( ) );
-    pFixedText->SetText( aText );
-    aSize.AdjustWidth(6 );
-    pFixedText->SetSizePixel( aSize );
-    pFixedText->SetBackground(Wallpaper(COL_TRANSPARENT));
+    VclPtrInstance<LabelItemWindow> xFixedText(pParent, aText);
 
-    return pFixedText;
+    xFixedText->Show();
+
+    return xFixedText;
 }
 
 SFX_IMPL_TOOLBOX_CONTROL( SvxFmTbxCtlRecFromText, SfxBoolItem );
@@ -167,57 +172,48 @@ SFX_IMPL_TOOLBOX_CONTROL( SvxFmTbxCtlRecFromText, SfxBoolItem );
 SvxFmTbxCtlRecFromText::SvxFmTbxCtlRecFromText( sal_uInt16 nSlotId, sal_uInt16 nId, ToolBox& rTbx )
     :SfxToolBoxControl( nSlotId, nId, rTbx )
 {
+    rTbx.SetItemWindowNonInteractive(nId, true);
 }
-
 
 SvxFmTbxCtlRecFromText::~SvxFmTbxCtlRecFromText()
 {
 }
 
-
-VclPtr<vcl::Window> SvxFmTbxCtlRecFromText::CreateItemWindow( vcl::Window* pParent )
+VclPtr<InterimItemWindow> SvxFmTbxCtlRecFromText::CreateItemWindow( vcl::Window* pParent )
 {
     OUString aText(SvxResId(RID_STR_REC_FROM_TEXT));
-    VclPtrInstance<FixedText> pFixedText( pParent, WB_CENTER );
-    Size aSize( pFixedText->GetTextWidth( aText ), pFixedText->GetTextHeight( ) );
-    aSize.AdjustWidth(12 );
-    pFixedText->SetText( aText );
-    pFixedText->SetSizePixel( aSize );
-    pFixedText->SetBackground(Wallpaper(COL_TRANSPARENT));
-    return pFixedText.get();
+    VclPtrInstance<LabelItemWindow> xFixedText(pParent, aText);
+
+    xFixedText->Show();
+
+    return xFixedText;
 }
 
 SFX_IMPL_TOOLBOX_CONTROL( SvxFmTbxCtlRecTotal, SfxStringItem );
 
-
 SvxFmTbxCtlRecTotal::SvxFmTbxCtlRecTotal( sal_uInt16 nSlotId, sal_uInt16 nId, ToolBox& rTbx )
-    :SfxToolBoxControl( nSlotId, nId, rTbx )
-    ,pFixedText( nullptr )
+    : SfxToolBoxControl( nSlotId, nId, rTbx )
 {
+    rTbx.SetItemWindowNonInteractive(nId, true);
 }
-
 
 SvxFmTbxCtlRecTotal::~SvxFmTbxCtlRecTotal()
 {
 }
 
-
-VclPtr<vcl::Window> SvxFmTbxCtlRecTotal::CreateItemWindow( vcl::Window* pParent )
+VclPtr<InterimItemWindow> SvxFmTbxCtlRecTotal::CreateItemWindow( vcl::Window* pParent )
 {
-    pFixedText.reset(VclPtr<FixedText>::Create( pParent ));
     OUString const aSample("123456");
-    Size aSize( pFixedText->GetTextWidth( aSample ), pFixedText->GetTextHeight( ) );
-    aSize.AdjustWidth(12 );
-    pFixedText->SetSizePixel( aSize );
-    pFixedText->SetBackground();
-    pFixedText->SetPaintTransparent(true);
-    return pFixedText;
-}
+    m_xFixedText.reset(VclPtr<LabelItemWindow>::Create(pParent, aSample));
+    m_xFixedText->set_label("");
 
+    m_xFixedText->Show();
+
+    return m_xFixedText;
+}
 
 void SvxFmTbxCtlRecTotal::StateChanged( sal_uInt16 nSID, SfxItemState eState, const SfxPoolItem* pState )
 {
-
     // setting the FixedText
     if (GetSlotId() != SID_FM_RECORD_TOTAL)
         return;
@@ -228,9 +224,7 @@ void SvxFmTbxCtlRecTotal::StateChanged( sal_uInt16 nSID, SfxItemState eState, co
     else
         aText = "?";
 
-    pFixedText->SetText( aText );
-    pFixedText->Update();
-    pFixedText->Flush();
+    m_xFixedText->set_label(aText);
 
     SfxToolBoxControl::StateChanged( nSID, eState,pState );
 }

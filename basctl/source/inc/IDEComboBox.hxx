@@ -22,7 +22,7 @@
 
 #include <svl/stritem.hxx>
 #include <sfx2/tbxctrl.hxx>
-#include <vcl/lstbox.hxx>
+#include <vcl/InterimItemWindow.hxx>
 
 #include "doceventnotifier.hxx"
 #include "scriptdocument.hxx"
@@ -70,7 +70,7 @@ public:
      * @param pParent -- parent window
      * @return ComboBox of macro and dialog Library
      */
-    virtual VclPtr<vcl::Window> CreateItemWindow(vcl::Window* pParent) override;
+    virtual VclPtr<InterimItemWindow> CreateItemWindow(vcl::Window* pParent) override;
 };
 
 /*!
@@ -79,15 +79,32 @@ public:
  * Base class for ComboBoxes which need to update their content according
  * to the list of open documents.
  */
-class DocListenerBox : public ListBox, public DocumentEventListener
+class DocListenerBox : public InterimItemWindow, public DocumentEventListener
 {
+private:
+    DECL_LINK(SelectHdl, weld::ComboBox&, void);
+    DECL_LINK(KeyInputHdl, const KeyEvent&, bool);
+
 protected:
+    std::unique_ptr<weld::ComboBox> m_xWidget;
+
     /// @param pParent -- parent window
     DocListenerBox(vcl::Window* pParent);
     virtual ~DocListenerBox() override;
     virtual void dispose() override;
 
+    virtual void Select() = 0;
     virtual void FillBox() = 0;
+
+    virtual void GetFocus() override
+    {
+        if (m_xWidget)
+            m_xWidget->grab_focus();
+        InterimItemWindow::GetFocus();
+    }
+
+    /// key strokes the ComboBox receives
+    virtual bool HandleKeyInput(const KeyEvent& rKEvt);
 
 private:
     // DocumentEventListener
@@ -102,6 +119,9 @@ private:
     virtual void onDocumentModeChanged(const ScriptDocument& _rDoc) override;
 
     DocumentEventNotifier maNotifier;
+
+public:
+    void set_sensitive(bool bSensitive);
 };
 
 /*!
@@ -117,7 +137,6 @@ public:
     virtual ~LibBox() override;
     virtual void dispose() override;
 
-    using Window::Update;
     /*!
      * Update selection in ComboBox of macro and dialog Library
      *
@@ -135,7 +154,7 @@ protected:
      * @param rNEvt represents mouse event
      * @return a bool value: true if was handled, and false if there was nothing handled
      */
-    virtual bool PreNotify(NotifyEvent& rNEvt) override;
+    //TODO    virtual bool PreNotify(NotifyEvent& rNEvt) override;
 
 private:
     static void ReleaseFocus();
@@ -153,6 +172,11 @@ private:
 
     /// Fill up the combobox
     virtual void FillBox() override;
+
+    virtual bool HandleKeyInput(const KeyEvent& rKEvt) override;
+
+    DECL_LINK(FocusInHdl, weld::Widget&, void);
+    DECL_LINK(FocusOutHdl, weld::Widget&, void);
 
     OUString maCurrentText;
     bool mbIgnoreSelect;
@@ -199,7 +223,7 @@ public:
      * @param pParent
      * @return LanguageBox ComboBox
      */
-    virtual VclPtr<vcl::Window> CreateItemWindow(vcl::Window* pParent) override;
+    virtual VclPtr<InterimItemWindow> CreateItemWindow(vcl::Window* pParent) override;
 };
 
 /*!
@@ -217,7 +241,6 @@ public:
     virtual ~LanguageBox() override;
     virtual void dispose() override;
 
-    using Window::Update;
     /*!
      * Update selection in ComboBox of macro and dialog Library
      *
@@ -229,13 +252,15 @@ protected:
     /// Called for setting language when user selects a language in ComboBox
     virtual void Select() override;
 
+    virtual bool HandleKeyInput(const KeyEvent& rKEvt) override;
+
     /*!
      * Handle keystrokes and mouse
      *
      * @param rNEvt represents mouse event
      * @return a bool value: true if was handled, and false if there was nothing handled
      */
-    virtual bool PreNotify(NotifyEvent& rNEvt) override;
+    //TODO    virtual bool PreNotify(NotifyEvent& rNEvt) override;
 
 private:
     /// Delete all languages from ComboBox

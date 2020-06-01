@@ -572,8 +572,8 @@ namespace
 {
 struct ApiNameMap
 {
-    OUStringLiteral const mpApiName;
-    sal_uInt32 const mnHelpId;
+    OUStringLiteral mpApiName;
+    sal_uInt32 mnHelpId;
 } const pApiNameMap[]
     = { { OUStringLiteral("title"), HID_PSEUDOSHEET_TITLE },
         { OUStringLiteral("subtitle"), HID_PSEUDOSHEET_SUBTITLE },
@@ -1316,12 +1316,12 @@ void SdStyleSheet::BroadcastSdStyleSheetChange(SfxStyleSheetBase const * pStyleS
     SdStyleSheet* pRealSheet = static_cast<SdStyleSheet const *>(pStyleSheet)->GetRealStyleSheet();
     pRealSheet->Broadcast(SfxHint(SfxHintId::DataChanged));
 
-    if( !((ePO >= PO_OUTLINE_1) && (ePO <= PO_OUTLINE_8)) )
+    if( (ePO < PresentationObjects::Outline_1) || (ePO > PresentationObjects::Outline_8) )
         return;
 
     OUString sStyleName(SdResId(STR_PSEUDOSHEET_OUTLINE) + " ");
 
-    for( sal_uInt16 n = static_cast<sal_uInt16>(ePO - PO_OUTLINE_1 + 2); n < 10; n++ )
+    for( sal_uInt16 n = static_cast<sal_uInt16>(ePO) - static_cast<sal_uInt16>(PresentationObjects::Outline_1) + 2; n < 10; n++ )
     {
         OUString aName( sStyleName + OUString::number(n) );
 

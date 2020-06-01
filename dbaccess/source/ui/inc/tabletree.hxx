@@ -23,11 +23,8 @@
 #include "imageprovider.hxx"
 #include "marktree.hxx"
 
-#include <com/sun/star/beans/PropertyValue.hpp>
-#include <com/sun/star/container/XNameAccess.hpp>
 #include <com/sun/star/sdbc/XDatabaseMetaData.hpp>
 #include <com/sun/star/sdbc/XConnection.hpp>
-#include <com/sun/star/sdbc/XDriver.hpp>
 #include <com/sun/star/sdb/application/NamedDatabaseObject.hpp>
 #include <vcl/weld.hxx>
 #include <memory>
@@ -203,11 +200,11 @@ public:
 
     void            CheckButtons();     // make the button states consistent (bottom-up)
 
-    void            checkedButton_noBroadcast(weld::TreeIter& rEntry);
+    void            checkedButton_noBroadcast(const weld::TreeIter& rEntry);
 private:
     TriState implDetermineState(weld::TreeIter& rEntry);
 
-    void implEmphasize(weld::TreeIter& rEntry, bool _bChecked, bool _bUpdateDescendants = true, bool _bUpdateAncestors = true);
+    void implEmphasize(const weld::TreeIter& rEntry, bool _bChecked, bool _bUpdateDescendants = true, bool _bUpdateAncestors = true);
 
     /** adds the given entry to our list
         @precond

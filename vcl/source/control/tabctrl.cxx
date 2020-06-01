@@ -25,10 +25,10 @@
 #include <vcl/help.hxx>
 #include <vcl/event.hxx>
 #include <vcl/menu.hxx>
-#include <vcl/button.hxx>
+#include <vcl/toolkit/button.hxx>
 #include <vcl/tabpage.hxx>
 #include <vcl/tabctrl.hxx>
-#include <vcl/controllayout.hxx>
+#include <vcl/toolkit/controllayout.hxx>
 #include <vcl/layout.hxx>
 #include <vcl/lstbox.hxx>
 #include <vcl/settings.hxx>
@@ -39,6 +39,7 @@
 #include <svdata.hxx>
 #include <window.h>
 
+#include <deque>
 #include <unordered_map>
 #include <vector>
 
@@ -679,7 +680,6 @@ void TabControl::ImplChangeTabPage( sal_uInt16 nId, sal_uInt16 nOldId )
             pCtrlParent->SetHelpId( pPage->GetHelpId() );
         }
 
-        pPage->ActivatePage();
         pPage->Show();
 
         if ( pOldPage && pOldPage->HasChildPathFocus() )
@@ -1540,11 +1540,10 @@ ImplTabItem* TabControl::ImplGetItem(const Point& rPt) const
 
 bool TabControl::PreNotify( NotifyEvent& rNEvt )
 {
-    const MouseEvent* pMouseEvt = nullptr;
-
-    if( (rNEvt.GetType() == MouseNotifyEvent::MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) != nullptr )
+    if( rNEvt.GetType() == MouseNotifyEvent::MOUSEMOVE )
     {
-        if( !pMouseEvt->GetButtons() && !pMouseEvt->IsSynthetic() && !pMouseEvt->IsModifierChanged() )
+        const MouseEvent* pMouseEvt = rNEvt.GetMouseEvent();
+        if( pMouseEvt && !pMouseEvt->GetButtons() && !pMouseEvt->IsSynthetic() && !pMouseEvt->IsModifierChanged() )
         {
             // trigger redraw if mouse over state has changed
             if( IsNativeControlSupported(ControlType::TabItem, ControlPart::Entire) )
@@ -2162,6 +2161,24 @@ FactoryFunction TabControl::GetUITestFactory() const
     return TabControlUIObject::create;
 }
 
+boost::property_tree::ptree TabControl::DumpAsPropertyTree()
+{
+    boost::property_tree::ptree aTree = Control::DumpAsPropertyTree();
+
+    boost::property_tree::ptree aTabs;
+    for(auto id : GetPageIDs())
+    {
+        boost::property_tree::ptree aTab;
+        aTab.put("text", GetPageText(id));
+        aTab.put("id", id);
+        aTabs.push_back(std::make_pair("", aTab));
+    }
+
+    aTree.add_child("tabs", aTabs);
+
+    return aTree;
+}
+
 sal_uInt16 NotebookbarTabControlBase::m_nHeaderHeight = 0;
 
 IMPL_LINK_NOARG(NotebookbarTabControlBase, OpenMenu, Button*, void)
@@ -2345,10 +2362,14 @@ bool NotebookbarTabControlBase::ImplPlaceTabs( long nWidth )
 
     // position the shortcutbox
     if (m_pShortcuts)
-        m_pShortcuts->SetPosPixel(Point(0, 0));
+    {
+        long nPosY = (m_nHeaderHeight - m_pShortcuts->GetSizePixel().getHeight()) / 2;
+        m_pShortcuts->SetPosPixel(Point(0, nPosY));
+    }
 
+    long nPosY = (m_nHeaderHeight - m_pOpenMenu->GetSizePixel().getHeight()) / 2;
     // position the menu
-    m_pOpenMenu->SetPosPixel(Point(nWidth - HAMBURGER_DIM, 0));
+    m_pOpenMenu->SetPosPixel(Point(nWidth - HAMBURGER_DIM, nPosY));
 
     return true;
 }

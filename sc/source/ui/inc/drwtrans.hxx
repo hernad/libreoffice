@@ -35,7 +35,7 @@ class ScDrawView;
 class SdrOle2Obj;
 enum class ScDragSrc;
 
-class ScDrawTransferObj : public TransferableHelper
+class ScDrawTransferObj : public TransferDataContainer
 {
 private:
     std::unique_ptr<SdrModel>       m_pModel;
@@ -58,7 +58,7 @@ private:
 
     ScRangeListVector               m_aProtectedChartRangesVector;
 
-    OUString const maShellID;
+    OUString maShellID;
 
     void                InitDocShell();
     SdrOle2Obj* GetSingleObject();

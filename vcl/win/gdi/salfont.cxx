@@ -58,11 +58,10 @@
 #include <win/saldata.hxx>
 #include <win/salgdi.h>
 #include <win/winlayout.hxx>
+#include <win/wingdiimpl.hxx>
 #include <impfontcharmap.hxx>
 #include <impfontmetricdata.hxx>
 #include <impglyphitem.hxx>
-
-#include <vcl/skia/SkiaHelper.hxx>
 
 using namespace vcl;
 
@@ -796,9 +795,7 @@ void ImplGetLogFontFromFontSelect( HDC hDC,
     static BYTE nDefaultQuality = NONANTIALIASED_QUALITY;
     if (nDefaultQuality == NONANTIALIASED_QUALITY)
     {
-        if (SkiaHelper::isVCLSkiaEnabled())
-            nDefaultQuality = ANTIALIASED_QUALITY;
-        else if (OpenGLWrapper::isVCLOpenGLEnabled())
+        if (OpenGLWrapper::isVCLOpenGLEnabled())
             nDefaultQuality = ANTIALIASED_QUALITY;
         else
             nDefaultQuality = DEFAULT_QUALITY;
@@ -1274,6 +1271,9 @@ void WinSalGraphics::GetDevFontList( PhysicalFontCollection* pFontCollection )
 
 void WinSalGraphics::ClearDevFontCache()
 {
+    WinSalGraphicsImplBase* pImpl = dynamic_cast<WinSalGraphicsImplBase*>(GetImpl());
+    assert(pImpl != nullptr);
+    pImpl->ClearDevFontCache();
     ImplReleaseTempFonts(*GetSalData(), false);
 }
 

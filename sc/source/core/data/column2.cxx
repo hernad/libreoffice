@@ -575,7 +575,7 @@ namespace {
 class MaxStrLenFinder
 {
     ScDocument& mrDoc;
-    sal_uInt32 const mnFormat;
+    sal_uInt32 mnFormat;
     OUString maMaxLenStr;
     sal_Int32 mnMaxLen;
 
@@ -783,7 +783,7 @@ void ScColumn::GetOptimalHeight(
     sc::RowHeightContext& rCxt, SCROW nStartRow, SCROW nEndRow, sal_uInt16 nMinHeight, SCROW nMinStart )
 {
     ScDocument* pDocument = GetDoc();
-    ScFlatUInt16RowSegments& rHeights = rCxt.getHeightArray();
+    RowHeightsArray& rHeights = rCxt.getHeightArray();
     ScAttrIterator aIter( pAttrArray.get(), nStartRow, nEndRow, pDocument->GetDefPattern() );
 
     SCROW nStart = -1;
@@ -883,7 +883,20 @@ void ScColumn::GetOptimalHeight(
                     nStdEnd = (nMinStart>0) ? nMinStart-1 : 0;
 
                 if (nStart <= nStdEnd)
-                    rHeights.setValueIf(nStart, nStdEnd, nDefHeight, [=](sal_uInt16 nRowHeight){ return nDefHeight > nRowHeight; });
+                {
+                    SCROW nRow = nStart;
+                    for (;;)
+                    {
+                        size_t nIndex;
+                        SCROW nRangeEnd;
+                        sal_uInt16 nRangeHeight = rHeights.GetValue(nRow, nIndex, nRangeEnd);
+                        if (nRangeHeight < nDefHeight)
+                            rHeights.SetValue(nRow, std::min(nRangeEnd, nStdEnd), nDefHeight);
+                        nRow = nRangeEnd + 1;
+                        if (nRow > nStdEnd)
+                            break;
+                    }
+                }
 
                 if ( bStdOnly )
                 {
@@ -903,22 +916,22 @@ void ScColumn::GetOptimalHeight(
                             {
                                 if ( nCjkHeight == 0 )
                                     nCjkHeight = lcl_GetAttribHeight( *pPattern, ATTR_CJK_FONT_HEIGHT );
-                                if (nCjkHeight > rHeights.getValue(nRow))
-                                    rHeights.setValue(nRow, nRow, nCjkHeight);
+                                if (nCjkHeight > rHeights.GetValue(nRow))
+                                    rHeights.SetValue(nRow, nRow, nCjkHeight);
                             }
                             else if ( nScript == SvtScriptType::COMPLEX )
                             {
                                 if ( nCtlHeight == 0 )
                                     nCtlHeight = lcl_GetAttribHeight( *pPattern, ATTR_CTL_FONT_HEIGHT );
-                                if (nCtlHeight > rHeights.getValue(nRow))
-                                    rHeights.setValue(nRow, nRow, nCtlHeight);
+                                if (nCtlHeight > rHeights.GetValue(nRow))
+                                    rHeights.SetValue(nRow, nRow, nCtlHeight);
                             }
                             else
                             {
                                 if ( nLatHeight == 0 )
                                     nLatHeight = lcl_GetAttribHeight( *pPattern, ATTR_FONT_HEIGHT );
-                                if (nLatHeight > rHeights.getValue(nRow))
-                                    rHeights.setValue(nRow, nRow, nLatHeight);
+                                if (nLatHeight > rHeights.GetValue(nRow))
+                                    rHeights.SetValue(nRow, nRow, nLatHeight);
                             }
                         }
                     }
@@ -945,8 +958,8 @@ void ScColumn::GetOptimalHeight(
                                                    rCxt.getZoomX(), rCxt.getZoomY(), false, aOptions,
                                                    &pPattern) / rCxt.getPPTY(),
                                     double(std::numeric_limits<sal_uInt16>::max())));
-                            if (nHeight > rHeights.getValue(nRow))
-                                rHeights.setValue(nRow, nRow, nHeight);
+                            if (nHeight > rHeights.GetValue(nRow))
+                                rHeights.SetValue(nRow, nRow, nHeight);
                             // Pattern changed due to calculation? => sync.
                             if (pPattern != pOldPattern)
                             {
@@ -1034,8 +1047,8 @@ class StrEntries
 protected:
     struct StrEntry
     {
-        SCROW const mnRow;
-        OUString const maStr;
+        SCROW mnRow;
+        OUString maStr;
 
         StrEntry(SCROW nRow, const OUString& rStr) : mnRow(nRow), maStr(rStr) {}
     };
@@ -1118,7 +1131,7 @@ public:
 
 class TestTabRefAbsHandler
 {
-    SCTAB const mnTab;
+    SCTAB mnTab;
     bool mbTestResult;
 public:
     explicit TestTabRefAbsHandler(SCTAB nTab) : mnTab(nTab), mbTestResult(false) {}
@@ -1748,7 +1761,7 @@ void ScColumn::CopyCellTextAttrsToDocument(SCROW nRow1, SCROW nRow2, ScColumn& r
         // Specified range not found. Bail out.
         return;
 
-    size_t nBlockEnd = nBlockStart + itBlk->size;
+    size_t nBlockEnd;
     size_t nOffsetInBlock = nRowPos - nBlockStart;
 
     nRowPos = static_cast<size_t>(nRow2); // End row position.
@@ -1797,12 +1810,12 @@ class CopyCellNotesHandler
     ScColumn& mrDestCol;
     sc::CellNoteStoreType& mrDestNotes;
     sc::CellNoteStoreType::iterator miPos;
-    SCTAB const mnSrcTab;
-    SCCOL const mnSrcCol;
-    SCTAB const mnDestTab;
-    SCCOL const mnDestCol;
-    SCROW const mnDestOffset; /// Add this to the source row position to get the destination row.
-    bool const mbCloneCaption;
+    SCTAB mnSrcTab;
+    SCCOL mnSrcCol;
+    SCTAB mnDestTab;
+    SCCOL mnDestCol;
+    SCROW mnDestOffset; /// Add this to the source row position to get the destination row.
+    bool mbCloneCaption;
 
 public:
     CopyCellNotesHandler( const ScColumn& rSrcCol, ScColumn& rDestCol, SCROW nDestOffset, bool bCloneCaption ) :
@@ -2160,9 +2173,9 @@ namespace {
 class ToMatrixHandler
 {
     ScMatrix& mrMat;
-    SCCOL const mnMatCol;
-    SCROW const mnTopRow;
-    ScDocument* const mpDoc;
+    SCCOL mnMatCol;
+    SCROW mnTopRow;
+    ScDocument* mpDoc;
     svl::SharedStringPool& mrStrPool;
 public:
     ToMatrixHandler(ScMatrix& rMat, SCCOL nMatCol, SCROW nTopRow, ScDocument* pDoc) :
@@ -2253,10 +2266,10 @@ struct CellBucket
 class FillMatrixHandler
 {
     ScMatrix& mrMat;
-    size_t const mnMatCol;
-    size_t const mnTopRow;
+    size_t mnMatCol;
+    size_t mnTopRow;
 
-    ScDocument* const mpDoc;
+    ScDocument* mpDoc;
     svl::SharedStringPool& mrPool;
     svl::SharedStringPool* mpPool; // if matrix is not in the same document
 
@@ -3518,7 +3531,7 @@ public:
         const SCROW nRow1 = node.position;
         const SCROW nRow2 = nRow1 + 1;
 
-        if (! ((nRow2 < mnStartRow) || (nRow1 > mnEndRow)))
+        if ((nRow2 >= mnStartRow) && (nRow1 <= mnEndRow))
         {
             mnCount += WeightedCounter::getWeight(node);
         }

@@ -16,7 +16,7 @@
 #include <basegfx/polygon/b2dpolygontriangulator.hxx>
 #include <basegfx/utils/canvastools.hxx>
 #include <canvas/canvastools.hxx>
-#include <canvas/verifyinput.hxx>
+#include <verifyinput.hxx>
 #include <tools/diagnose_ex.h>
 
 #include "ogl_canvascustomsprite.hxx"
@@ -38,7 +38,7 @@ namespace oglcanvas
         mfAlpha(0.0),
         mfPriority(0.0)
     {
-        ENSURE_OR_THROW( rRefDevice.get(),
+        ENSURE_OR_THROW( rRefDevice,
                          "CanvasCustomSprite::CanvasCustomSprite(): Invalid sprite canvas" );
 
         ::canvas::tools::setIdentityAffineMatrix2D(maTransformation);

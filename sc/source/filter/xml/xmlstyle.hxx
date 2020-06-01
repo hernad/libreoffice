@@ -24,7 +24,6 @@
 #include <xmloff/xmlaustp.hxx>
 #include <xmloff/xmltypes.hxx>
 #include <xmloff/prhdlfac.hxx>
-#include <xmloff/styleexp.hxx>
 #include <xmloff/xmlexppr.hxx>
 #include <xmloff/contextid.hxx>
 #include <xmloff/xmlprhdl.hxx>
@@ -185,7 +184,7 @@ class ScXMLAutoStylePoolP : public SvXMLAutoStylePoolP
 
     virtual void exportStyleAttributes(
             SvXMLAttributeList& rAttrList,
-            sal_Int32 nFamily,
+            XmlStyleFamily nFamily,
             const ::std::vector< XMLPropertyState >& rProperties,
             const SvXMLExportPropertyMapper& rPropExp,
             const SvXMLUnitConverter& rUnitConverter,
@@ -194,7 +193,7 @@ class ScXMLAutoStylePoolP : public SvXMLAutoStylePoolP
 
     virtual void exportStyleContent(
             const css::uno::Reference< css::xml::sax::XDocumentHandler > & rHandler,
-            sal_Int32 nFamily,
+            XmlStyleFamily nFamily,
             const ::std::vector< XMLPropertyState >& rProperties,
             const SvXMLExportPropertyMapper& rPropExp
             , const SvXMLUnitConverter& rUnitConverter,
@@ -204,19 +203,6 @@ class ScXMLAutoStylePoolP : public SvXMLAutoStylePoolP
 public:
     explicit ScXMLAutoStylePoolP(ScXMLExport& rScXMLExport);
     virtual ~ScXMLAutoStylePoolP() override;
-};
-
-class ScXMLStyleExport : public XMLStyleExport
-{
-    virtual void exportStyleAttributes(
-        const css::uno::Reference< css::style::XStyle > & rStyle ) override;
-    virtual void exportStyleContent(
-        const css::uno::Reference< css::style::XStyle > & rStyle ) override;
-public:
-    ScXMLStyleExport(
-        SvXMLExport& rExp,
-        SvXMLAutoStylePoolP *pAutoStyleP );
-    virtual ~ScXMLStyleExport() override;
 };
 
 class XMLScPropHdlFactory : public XMLPropertyHandlerFactory

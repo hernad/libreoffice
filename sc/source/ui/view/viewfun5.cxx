@@ -33,6 +33,7 @@
 #include <svx/svdpage.hxx>
 #include <sfx2/dispatch.hxx>
 #include <sfx2/docfile.hxx>
+#include <sfx2/lokhelper.hxx>
 #include <comphelper/classids.hxx>
 #include <sot/formats.hxx>
 #include <sot/filelist.hxx>
@@ -139,7 +140,7 @@ bool ScViewFunc::PasteDataFormat( SotClipboardFormatId nFormatId,
                     if (!rSrcDoc.HasTable(nSrcTab))
                         nSrcTab = 0;
 
-                    ScMarkData aSrcMark(rSrcDoc.MaxRow(), rSrcDoc.MaxCol());
+                    ScMarkData aSrcMark(rSrcDoc.GetSheetLimits());
                     aSrcMark.SelectOneTable( nSrcTab );         // for CopyToClip
                     ScDocumentUniquePtr pClipDoc(new ScDocument( SCDOCMODE_CLIP ));
 
@@ -335,8 +336,9 @@ bool ScViewFunc::PasteDataFormat( SotClipboardFormatId nFormatId,
                     && aDataHelper.GetString( nFormatId, *pStrBuffer ))
             {
                 // Do CSV dialog if more than one line. But not if invoked from Automation.
+                const SfxViewShell* pViewShell = SfxViewShell::Current();
                 sal_Int32 nDelim = pStrBuffer->indexOf('\n');
-                if (!comphelper::Automation::AutomationInvokedZone::isActive()
+                if (!(pViewShell && pViewShell->isLOKMobilePhone()) && !comphelper::Automation::AutomationInvokedZone::isActive()
                     && nDelim >= 0 && nDelim != pStrBuffer->getLength () - 1)
                 {
                     vcl::Window* pParent = GetActiveWin();

@@ -24,7 +24,6 @@
 #include <vcl/image.hxx>
 #include <callbacks.hxx>
 #include <AppElementType.hxx>
-#include <memory>
 
 using namespace ::dbaui;
 OApplicationIconControl::OApplicationIconControl(vcl::Window* _pParent)
@@ -65,13 +64,13 @@ OApplicationIconControl::~OApplicationIconControl()
 
 void OApplicationIconControl::dispose()
 {
-    sal_uLong nCount = GetEntryCount();
-    for ( sal_uLong i = 0; i < nCount; ++i )
+    sal_Int32 nCount = GetEntryCount();
+    for ( sal_Int32 i = 0; i < nCount; ++i )
     {
         SvxIconChoiceCtrlEntry* pEntry = GetEntry( i );
         if ( pEntry )
         {
-            std::unique_ptr<ElementType> aType(static_cast<ElementType*>(pEntry->GetUserData()));
+            delete static_cast<ElementType*>(pEntry->GetUserData());
             pEntry->SetUserData(nullptr);
         }
     }

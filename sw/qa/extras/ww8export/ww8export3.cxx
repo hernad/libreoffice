@@ -20,6 +20,7 @@
 #include <com/sun/star/text/XTextTable.hpp>
 #include <com/sun/star/text/XTextTablesSupplier.hpp>
 #include <com/sun/star/text/WritingMode2.hpp>
+#include <com/sun/star/text/XTextContentAppend.hpp>
 
 class Test : public SwModelTestBase
 {
@@ -52,6 +53,95 @@ DECLARE_WW8EXPORT_TEST(testTdf37778_readonlySection, "tdf37778_readonlySection.d
     CPPUNIT_ASSERT(drawing::FillStyle_NONE != getProperty<drawing::FillStyle>(xStyle, "FillStyle"));
 }
 
+DECLARE_WW8EXPORT_TEST(testArabicZeroNumbering, "arabic-zero-numbering.doc")
+{
+    auto xNumberingRules
+        = getProperty<uno::Reference<container::XIndexAccess>>(getParagraph(1), "NumberingRules");
+    comphelper::SequenceAsHashMap aMap(xNumberingRules->getByIndex(0));
+    // Without the accompanying fix in place, this test would have failed with:
+    // - Expected: 64
+    // - Actual  : 4
+    // i.e. numbering type was ARABIC, not ARABIC_ZERO.
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_uInt16>(style::NumberingType::ARABIC_ZERO),
+                         aMap["NumberingType"].get<sal_uInt16>());
+}
+
+CPPUNIT_TEST_FIXTURE(SwModelTestBase, testArabicZeroNumberingFootnote)
+{
+    // Create a document, set footnote numbering type to ARABIC_ZERO.
+    loadURL("private:factory/swriter", nullptr);
+    uno::Reference<text::XFootnotesSupplier> xFootnotesSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<beans::XPropertySet> xFootnoteSettings
+        = xFootnotesSupplier->getFootnoteSettings();
+    sal_uInt16 nNumberingType = style::NumberingType::ARABIC_ZERO;
+    xFootnoteSettings->setPropertyValue("NumberingType", uno::makeAny(nNumberingType));
+
+    // Insert a footnote.
+    uno::Reference<lang::XMultiServiceFactory> xFactory(mxComponent, uno::UNO_QUERY);
+    uno::Reference<text::XTextContent> xFootnote(
+        xFactory->createInstance("com.sun.star.text.Footnote"), uno::UNO_QUERY);
+    uno::Reference<text::XTextDocument> xTextDocument(mxComponent, uno::UNO_QUERY);
+    uno::Reference<text::XTextContentAppend> xTextContentAppend(xTextDocument->getText(),
+                                                                uno::UNO_QUERY);
+    xTextContentAppend->appendTextContent(xFootnote, {});
+
+    reload("MS Word 97", "");
+    xFootnotesSupplier.set(mxComponent, uno::UNO_QUERY);
+    sal_uInt16 nExpected = style::NumberingType::ARABIC_ZERO;
+    auto nActual = getProperty<sal_uInt16>(xFootnotesSupplier->getFootnoteSettings(), "NumberingType");
+    // Without the accompanying fix in place, this test would have failed with:
+    // - Expected: 64
+    // - Actual  : 4
+    // i.e. the numbering type was ARABIC, not ARABIC_ZERO.
+    CPPUNIT_ASSERT_EQUAL(nExpected, nActual);
+}
+
+CPPUNIT_TEST_FIXTURE(SwModelTestBase, testChicagoNumberingFootnote)
+{
+    // Create a document, set footnote numbering type to SYMBOL_CHICAGO.
+    loadURL("private:factory/swriter", nullptr);
+    uno::Reference<text::XFootnotesSupplier> xFootnotesSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<beans::XPropertySet> xFootnoteSettings
+        = xFootnotesSupplier->getFootnoteSettings();
+    sal_uInt16 nNumberingType = style::NumberingType::SYMBOL_CHICAGO;
+    xFootnoteSettings->setPropertyValue("NumberingType", uno::makeAny(nNumberingType));
+
+    // Insert a footnote.
+    uno::Reference<lang::XMultiServiceFactory> xFactory(mxComponent, uno::UNO_QUERY);
+    uno::Reference<text::XTextContent> xFootnote(
+        xFactory->createInstance("com.sun.star.text.Footnote"), uno::UNO_QUERY);
+    uno::Reference<text::XTextDocument> xTextDocument(mxComponent, uno::UNO_QUERY);
+    uno::Reference<text::XTextContentAppend> xTextContentAppend(xTextDocument->getText(),
+                                                                uno::UNO_QUERY);
+    xTextContentAppend->appendTextContent(xFootnote, {});
+
+    reload("MS Word 97", "");
+    xFootnotesSupplier.set(mxComponent, uno::UNO_QUERY);
+    sal_uInt16 nExpected = style::NumberingType::SYMBOL_CHICAGO;
+    auto nActual = getProperty<sal_uInt16>(xFootnotesSupplier->getFootnoteSettings(), "NumberingType");
+    // Without the accompanying fix in place, this test would have failed with:
+    // - Expected: 63
+    // - Actual  : 4
+    // i.e. the numbering type was ARABIC, not SYMBOL_CHICAGO.
+    CPPUNIT_ASSERT_EQUAL(nExpected, nActual);
+}
+
+DECLARE_WW8EXPORT_TEST(testdf79553_lineNumbers, "tdf79553_lineNumbers.doc")
+{
+    bool bValue = false;
+    sal_Int32 nValue = -1;
+
+    uno::Reference< text::XTextDocument > xtextDocument(mxComponent, uno::UNO_QUERY);
+    uno::Reference< text::XLineNumberingProperties > xLineProperties( xtextDocument, uno::UNO_QUERY_THROW );
+    uno::Reference< beans::XPropertySet > xPropertySet = xLineProperties->getLineNumberingProperties();
+
+    xPropertySet->getPropertyValue("IsOn") >>= bValue;
+    CPPUNIT_ASSERT_EQUAL(true, bValue);
+
+    xPropertySet->getPropertyValue("Distance") >>= nValue;
+    CPPUNIT_ASSERT_MESSAGE("automatic distance", nValue > 0);
+}
+
 DECLARE_WW8EXPORT_TEST(testTdf122429_header, "tdf122429_header.doc")
 {
     uno::Reference<container::XNameAccess> pageStyles = getStyles("PageStyles");
@@ -62,6 +152,7 @@ DECLARE_WW8EXPORT_TEST(testTdf122429_header, "tdf122429_header.doc")
 
 DECLARE_WW8EXPORT_TEST(testTdf122460_header, "tdf122460_header.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<container::XNameAccess> pageStyles = getStyles("PageStyles");
     uno::Reference<style::XStyle> pageStyle(pageStyles->getByName("Default Page Style"), uno::UNO_QUERY);
     bool headerIsOn = getProperty<bool>(pageStyle, "HeaderIsOn");
@@ -89,6 +180,18 @@ DECLARE_WW8EXPORT_TEST(testFdo53985, "fdo53985.doc")
     CPPUNIT_ASSERT_EQUAL_MESSAGE("Section4 is protected", false, getProperty<bool>(xSect, "IsProtected"));
 }
 
+DECLARE_WW8EXPORT_TEST(testTdf73056_cellMargins, "tdf73056_cellMargins.doc")
+{
+    uno::Reference< text::XTextTablesSupplier > xTablesSupplier( mxComponent, uno::UNO_QUERY );
+    uno::Reference< container::XIndexAccess >   xTables( xTablesSupplier->getTextTables(), uno::UNO_QUERY );
+    uno::Reference< text::XTextTable > xTable1( xTables->getByIndex( 0 ), uno::UNO_QUERY );
+    uno::Reference< table::XCell > xCell = xTable1->getCellByName( "B4" );
+
+    // only the first cell with specific margins was processed, leaving the rest at table defaults. Was 0.
+    uno::Reference< beans::XPropertySet > xPropSet( xCell, uno::UNO_QUERY_THROW );
+    CPPUNIT_ASSERT_EQUAL_MESSAGE( "bottom cell spacing to contents",
+        sal_Int32(101), getProperty<sal_Int32>(xPropSet, "BottomBorderDistance" ) );
+}
 DECLARE_WW8EXPORT_TEST(testTdf79435_legacyInputFields, "tdf79435_legacyInputFields.docx")
 {
     //using .docx input file to verify cross-format compatibility.
@@ -176,6 +279,7 @@ DECLARE_WW8EXPORT_TEST(testTdf120225_textControlCrossRef, "tdf120225_textControl
 
 DECLARE_WW8EXPORT_TEST(testTdf127316_autoEscapement, "tdf127316_autoEscapement.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<text::XTextRange> xPara = getParagraph(2);
     CPPUNIT_ASSERT_DOUBLES_EQUAL( 0.f, getProperty<float>(getRun(xPara, 1, "Normal text "), "CharEscapement"), 0);
     // Negative escapements (subscripts) were decreasing by 1% every round-trip due to bad manual rounding.
@@ -188,6 +292,7 @@ DECLARE_WW8EXPORT_TEST(testTdf127316_autoEscapement, "tdf127316_autoEscapement.o
 
 DECLARE_WW8EXPORT_TEST(testTdf127316_autoEscapement2, "tdf127316_autoEscapement2.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(2, getPages());
     uno::Reference<text::XTextRange> xPara = getParagraph(1);
     CPPUNIT_ASSERT_DOUBLES_EQUAL( 0.f, getProperty<float>(getRun(xPara, 1, "Base1"), "CharEscapement"), 0);
     // Font is 80% of 40pt or 32pt, original escapement is 6.4pt, so round-trip escapement is 20%.
@@ -207,6 +312,11 @@ DECLARE_WW8EXPORT_TEST(testTdf120412_proportionalEscapement, "tdf120412_proporti
     CPPUNIT_ASSERT_EQUAL(2, getPages());
 }
 
+DECLARE_WW8EXPORT_TEST(testTdf133453_realFontSize, "tdf133453_realFontSize.doc")
+{
+    CPPUNIT_ASSERT_EQUAL( -95.f, getProperty<float>(getRun(getParagraph(1), 2, "2"), "CharEscapement") );
+}
+
 DECLARE_WW8EXPORT_TEST(testTdf121111_fillStyleNone, "tdf121111_fillStyleNone.docx")
 {
     uno::Reference<beans::XPropertySet> xStyle(getStyles("ParagraphStyles")->getByName("Numbering - First level"),
@@ -221,9 +331,20 @@ DECLARE_WW8EXPORT_TEST(testTdf121111_fillStyleNone, "tdf121111_fillStyleNone.doc
 
 DECLARE_WW8EXPORT_TEST(testTdf128608_fillStyleNoneB, "tdf128608_fillStyleNoneB.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<text::XTextRange> xText(getParagraph(1));
     CPPUNIT_ASSERT_EQUAL(COL_AUTO, Color(getProperty<sal_uInt32>(xText, "ParaBackColor")));
     CPPUNIT_ASSERT_EQUAL_MESSAGE("No fill", drawing::FillStyle_NONE, getProperty<drawing::FillStyle>(xText, "FillStyle"));
+}
+
+DECLARE_WW8EXPORT_TEST(testTdf132094_transparentPageImage, "tdf132094_transparentPageImage.doc")
+{
+    uno::Reference<drawing::XShape> image (getShape(1), uno::UNO_QUERY);
+    // Don't add fillstyle when none is set.
+    // Well, ok, at least make it transparent if you do uselessly set a solid color...
+    const bool bFillNone = drawing::FillStyle_NONE == getProperty<drawing::FillStyle>(image, "FillStyle");
+    const bool bTransparent = sal_Int16(0) != getProperty<sal_Int16>(image, "FillTransparence");
+    CPPUNIT_ASSERT_MESSAGE("no background fill", bTransparent || bFillNone);
 }
 
 DECLARE_WW8EXPORT_TEST(testTdf112618_textbox_no_bg, "tdf112618_textbox_no_bg.doc")
@@ -252,6 +373,7 @@ DECLARE_WW8EXPORT_TEST(testTdf123433_fillStyleStop, "tdf123433_fillStyleStop.doc
 
 DECLARE_WW8EXPORT_TEST(testTdf127862_pageFillStyle, "tdf127862_pageFillStyle.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(6, getPages());
     uno::Reference<beans::XPropertySet> xStyle(getStyles("PageStyles")->getByName("Standard"), uno::UNO_QUERY);
     CPPUNIT_ASSERT(drawing::FillStyle_NONE != getProperty<drawing::FillStyle>(xStyle, "FillStyle"));
 }
@@ -274,6 +396,7 @@ DECLARE_WW8EXPORT_TEST(testTdf128608_tableParaBackColor, "tdf128608_tableParaBac
 
 DECLARE_WW8EXPORT_TEST(testTdf94009_zeroPgMargin, "tdf94009_zeroPgMargin.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<beans::XPropertySet> defaultStyle(getStyles("PageStyles")->getByName("Standard"),
                                                      uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(0), getProperty<sal_Int32>(defaultStyle, "TopMargin"));
@@ -288,6 +411,7 @@ DECLARE_WW8EXPORT_TEST(testTdf120711_joinedParagraphWithChangeTracking, "tdf1207
 
 DECLARE_WW8EXPORT_TEST(testTdf129522_removeShadowStyle, "tdf129522_removeShadowStyle.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference< container::XNameAccess > paragraphStyles = getStyles("ParagraphStyles");
     uno::Reference< beans::XPropertySet > xStyleProps(paragraphStyles->getByName("Shadow"), uno::UNO_QUERY_THROW);
     table::ShadowFormat aShadow = getProperty<table::ShadowFormat>(xStyleProps, "ParaShadowFormat");
@@ -369,6 +493,8 @@ DECLARE_WW8EXPORT_TEST(testImageCommentAtChar, "image-comment-at-char.doc")
 
 DECLARE_WW8EXPORT_TEST(testTdf126708emf, "tdf126708_containsemf.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     auto xShape = getShape(1);
     // First check the size of the EMF graphic contained in the shape.
     auto xGraphic = getProperty< uno::Reference<graphic::XGraphic> >(
@@ -386,6 +512,8 @@ DECLARE_WW8EXPORT_TEST(testTdf126708emf, "tdf126708_containsemf.odt")
 
 DECLARE_WW8EXPORT_TEST(testBtlrFrame, "btlr-frame.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     if (!mbExported)
     {
         return;
@@ -431,15 +559,6 @@ DECLARE_WW8EXPORT_TEST(testPresetDash, "tdf127166_prstDash_Word97.doc")
                         && aPresetLineDash.Distance == aShapeLineDash.Distance;
         CPPUNIT_ASSERT_MESSAGE("LineDash differ", bIsEqual);
     }
-}
-
-DECLARE_WW8EXPORT_TEST(testTdf104017, "tdf104017.doc")
-{
-    // Without the accompanying fix in place, this test would have failed with:
-    // - Expected: 2
-    // - Actual  : 1
-    // i.e. the tables on the two pages were merged together to a single one on export.
-    CPPUNIT_ASSERT_EQUAL(2, getPages());
 }
 
 CPPUNIT_PLUGIN_IMPLEMENT();

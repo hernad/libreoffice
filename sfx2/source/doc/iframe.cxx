@@ -19,6 +19,7 @@
 
 #include <sal/config.h>
 
+#include <com/sun/star/awt/XWindowPeer.hpp>
 #include <com/sun/star/frame/XDispatch.hpp>
 #include <com/sun/star/frame/Frame.hpp>
 #include <com/sun/star/frame/XFrame2.hpp>
@@ -57,7 +58,7 @@ class IFrameObject : public ::cppu::WeakImplHelper <
     css::uno::Reference < css::uno::XComponentContext > mxContext;
     css::uno::Reference < css::frame::XFrame2 > mxFrame;
     css::uno::Reference < css::embed::XEmbeddedObject > mxObj;
-    SfxItemPropertyMap const  maPropMap;
+    SfxItemPropertyMap  maPropMap;
     SfxFrameDescriptor  maFrmDescr;
 
 public:

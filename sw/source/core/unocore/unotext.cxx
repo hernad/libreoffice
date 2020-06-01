@@ -67,6 +67,7 @@
 #include <ndtxt.hxx>
 #include <SwRewriter.hxx>
 #include <strings.hrc>
+#include <frameformats.hxx>
 
 using namespace ::com::sun::star;
 
@@ -995,14 +996,18 @@ bool SwXText::Impl::CheckForOwnMember(
     const SwNode& rSrcNode = rPaM.GetNode();
     const SwStartNode* pTmp = rSrcNode.FindSttNodeByType(eSearchNodeType);
 
-    // skip SectionNodes
-    while(pTmp && pTmp->IsSectionNode())
+    // skip SectionNodes / TableNodes to be able to compare across table/section boundaries
+    while (pTmp
+           && (pTmp->IsSectionNode() || pTmp->IsTableNode()
+               || (m_eType != CursorType::TableText
+                   && pTmp->GetStartNodeType() == SwTableBoxStartNode)))
     {
         pTmp = pTmp->StartOfSectionNode();
     }
 
-    //if the document starts with a section
-    while(pOwnStartNode->IsSectionNode())
+    while (pOwnStartNode->IsSectionNode() || pOwnStartNode->IsTableNode()
+           || (m_eType != CursorType::TableText
+               && pOwnStartNode->GetStartNodeType() == SwTableBoxStartNode))
     {
         pOwnStartNode = pOwnStartNode->StartOfSectionNode();
     }
@@ -1270,6 +1275,26 @@ SwXText::Impl::finishOrAppendParagraph(
             aSwMapProvider.GetPropertySet(PROPERTY_MAP_PARAGRAPH);
 
         SwUnoCursorHelper::SetPropertyValues(aPam, *pParaPropSet, rProperties);
+
+        // tdf#127616 keep direct character formatting of empty paragraphs,
+        // if character style of the paragraph sets also the same attributes
+        if (aPam.Start()->nNode.GetNode().GetTextNode()->Len() == 0)
+        {
+            auto itCharStyle = std::find_if(rProperties.begin(), rProperties.end(), [](const beans::PropertyValue& rValue)
+            {
+                return rValue.Name == "CharStyleName";
+            });
+            if ( itCharStyle != rProperties.end() )
+            {
+                for (const auto& rValue : rProperties)
+                {
+                    if ( rValue != *itCharStyle && rValue.Name.startsWith("Char") )
+                    {
+                        SwUnoCursorHelper::SetPropertyValue(aPam, *pParaPropSet, rValue.Name, rValue.Value);
+                    }
+                }
+            }
+        }
     }
     catch (const lang::IllegalArgumentException& rIllegal)
     {
@@ -1473,8 +1498,8 @@ SwXText::insertTextContentWithProperties(
 uno::Reference< text::XTextRange > SAL_CALL
 SwXText::appendTextContent(
     const uno::Reference< text::XTextContent >& xTextContent,
-    const uno::Sequence< beans::PropertyValue >&
-        rCharacterAndParagraphProperties)
+    const uno::Sequence< beans::PropertyValue >& rCharacterAndParagraphProperties
+    )
 {
     // Right now this doesn't need a guard, as it's just calling the insert
     // version, that has it already.
@@ -1783,7 +1808,7 @@ namespace {
 struct VerticallyMergedCell
 {
     std::vector<uno::Reference< beans::XPropertySet > > aCells;
-    sal_Int32 const                                     nLeftPosition;
+    sal_Int32                                           nLeftPosition;
     bool                                                bOpen;
 
     VerticallyMergedCell(uno::Reference< beans::XPropertySet > const& rxCell,
@@ -2252,7 +2277,7 @@ SwXText::copyText(
             // Explicitly request copy text mode, so
             // sw::DocumentContentOperationsManager::CopyFlyInFlyImpl() will copy shapes anchored to
             // us, even if we have only a single paragraph.
-            m_pImpl->m_pDoc->getIDocumentContentOperations().CopyRange(temp, rPos, /*bCopyAll=*/false, /*bCheckPos=*/true, /*bCopyText=*/false);
+            m_pImpl->m_pDoc->getIDocumentContentOperations().CopyRange(temp, rPos, SwCopyFlags::CheckPosInFly);
         }
         if (!pFirstNode)
         {   // the node at rPos was split; get rid of the first empty one so
@@ -2263,7 +2288,7 @@ SwXText::copyText(
     }
     else
     {
-        m_pImpl->m_pDoc->getIDocumentContentOperations().CopyRange(*pCursor->GetPaM(), rPos, /*bCopyAll=*/false, /*bCheckPos=*/true, /*bCopyText=*/false);
+        m_pImpl->m_pDoc->getIDocumentContentOperations().CopyRange(*pCursor->GetPaM(), rPos, SwCopyFlags::CheckPosInFly);
     }
 
 }
@@ -2478,7 +2503,7 @@ class SwXHeadFootText::Impl
 {
     public:
         SwFrameFormat* m_pHeadFootFormat;
-        bool const m_bIsHeader;
+        bool m_bIsHeader;
 
         Impl(SwFrameFormat& rHeadFootFormat, const bool bIsHeader)
             : m_pHeadFootFormat(&rHeadFootFormat)

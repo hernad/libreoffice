@@ -34,13 +34,14 @@
 #include <com/sun/star/embed/ElementModes.hpp>
 #include <com/sun/star/embed/XTransactedObject.hpp>
 #include <com/sun/star/embed/XStorage.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/ucb/SimpleFileAccess.hpp>
 #include <com/sun/star/style/XStyleFamiliesSupplier.hpp>
 #include <com/sun/star/style/XStyle.hpp>
 #include <com/sun/star/container/XNameAccess.hpp>
 
 #include <XMLBase64Export.hxx>
-#include <xmloff/AutoStyleEntry.hxx>
+#include <AutoStyleEntry.hxx>
 #include <comphelper/hash.hxx>
 
 using namespace ::com::sun::star;
@@ -51,12 +52,12 @@ namespace {
 
 class XMLFontAutoStylePoolEntry_Impl
 {
-    OUString const    sName;
-    OUString const    sFamilyName;
-    OUString const    sStyleName;
-    FontFamily const  nFamily;
-    FontPitch const   nPitch;
-    rtl_TextEncoding const eEnc;
+    OUString    sName;
+    OUString    sFamilyName;
+    OUString    sStyleName;
+    FontFamily  nFamily;
+    FontPitch   nPitch;
+    rtl_TextEncoding eEnc;
 
 public:
 

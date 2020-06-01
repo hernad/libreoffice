@@ -18,20 +18,13 @@
  */
 
 #include "resultcolumn.hxx"
-#include <com/sun/star/lang/DisposedException.hpp>
 #include <com/sun/star/sdbc/SQLException.hpp>
-#include <com/sun/star/sdbc/XResultSetMetaDataSupplier.hpp>
 #include <com/sun/star/sdbc/DataType.hpp>
 #include <com/sun/star/sdbc/ColumnValue.hpp>
 #include <com/sun/star/sdbc/XRow.hpp>
-#include <cppuhelper/typeprovider.hxx>
-#include <tools/debug.hxx>
 #include <tools/diagnose_ex.h>
 #include <stringconstants.hxx>
 #include <apitools.hxx>
-#include <com/sun/star/beans/PropertyAttribute.hpp>
-#include <cppuhelper/exc_hlp.hxx>
-#include <osl/thread.h>
 
 using namespace ::com::sun::star::sdbc;
 using namespace ::com::sun::star::beans;
@@ -165,7 +158,7 @@ void OResultColumn::disposing()
 namespace
 {
     template< typename T >
-    void obtain( Any& _out_rValue, ::o3tl::optional< T > & _rCache, const sal_Int32 _nPos, const Reference < XResultSetMetaData >& _rxResultMeta, T (SAL_CALL XResultSetMetaData::*Getter)( sal_Int32 ) )
+    void obtain( Any& _out_rValue, ::std::optional< T > & _rCache, const sal_Int32 _nPos, const Reference < XResultSetMetaData >& _rxResultMeta, T (SAL_CALL XResultSetMetaData::*Getter)( sal_Int32 ) )
     {
         if ( !_rCache )
             _rCache = (_rxResultMeta.get()->*Getter)(_nPos);

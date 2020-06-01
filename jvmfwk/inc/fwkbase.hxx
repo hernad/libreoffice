@@ -21,7 +21,7 @@
 
 #include <sal/config.h>
 
-#include <o3tl/optional.hxx>
+#include <optional>
 
 #include <rtl/ustring.hxx>
 #include "libxmlutil.hxx"
@@ -33,14 +33,13 @@ struct VersionInfo;
 
 class VendorSettings
 {
-    OUString m_xmlDocVendorSettingsFileUrl;
     CXmlDocPtr m_xmlDocVendorSettings;
     CXPathContextPtr m_xmlPathContextVendorSettings;
 
 public:
     VendorSettings();
 
-    o3tl::optional<VersionInfo> getVersionInformation(const OUString & sVendor) const;
+    std::optional<VersionInfo> getVersionInformation(const OUString & sVendor) const;
 };
 
 /* The class offers functions to retrieve verified bootstrap parameters.

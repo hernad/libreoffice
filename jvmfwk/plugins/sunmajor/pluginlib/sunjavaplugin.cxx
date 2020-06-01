@@ -168,7 +168,6 @@ std::unique_ptr<JavaInfo> createJavaInfo(
     return std::unique_ptr<JavaInfo>(
         new JavaInfo{
             info->getVendor(), info->getHome(), info->getVersion(),
-            sal_uInt64(info->supportsAccessibility() ? 1 : 0),
             sal_uInt64(info->needsRestart() ? JFW_REQUIRE_NEEDRESTART : 0),
             rtl::ByteSequence(
                 reinterpret_cast<sal_Int8*>(sVendorData.pData->buffer),
@@ -199,6 +198,37 @@ extern "C" void JNICALL abort_handler()
         longjmp( jmp_jvm_abort, 0);
     }
 }
+
+typedef jint JNICALL JNI_CreateVM_Type(JavaVM **, JNIEnv **, void *);
+
+#ifndef ANDROID
+int createJvm(
+    JNI_CreateVM_Type * pCreateJavaVM, JavaVM ** pJavaVM, JNIEnv ** ppEnv, JavaVMInitArgs * vm_args)
+{
+    /* We set a global flag which is used by the abort handler in order to
+       determine whether it is  should use longjmp to get back into this function.
+       That is, the abort handler determines if it is on the same stack as this function
+       and then jumps back into this function.
+    */
+    g_bInGetJavaVM = 1;
+    jint err;
+    memset( jmp_jvm_abort, 0, sizeof(jmp_jvm_abort));
+    /* If the setjmp return value is not "0" then this point was reached by a longjmp in the
+       abort_handler, which was called indirectly by JNI_CreateVM.
+    */
+    if( setjmp( jmp_jvm_abort ) == 0)
+    {
+        //returns negative number on failure
+        err= pCreateJavaVM(pJavaVM, ppEnv, vm_args);
+        g_bInGetJavaVM = 0;
+    }
+    else
+        // set err to a positive number, so as or recognize that an abort (longjmp)
+        //occurred
+        err= 1;
+    return err;
+}
+#endif
 
 /** helper function to check Java version requirements
 
@@ -587,12 +617,8 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     assert(pInfo != nullptr);
     assert(ppVm != nullptr);
     assert(ppEnv != nullptr);
-    // unless guard is volatile the following warning occurs on gcc:
-    // warning: variable 't' might be clobbered by `longjmp' or `vfork'
-    volatile osl::MutexGuard guard(PluginMutex::get());
-    // unless errorcode is volatile the following warning occurs on gcc:
-    // warning: variable 'errorcode' might be clobbered by `longjmp' or `vfork'
-    volatile javaPluginError errorcode = javaPluginError::NONE;
+    osl::MutexGuard guard(PluginMutex::get());
+    javaPluginError errorcode = javaPluginError::NONE;
 #ifdef MACOSX
     rtl::Reference<VendorBase> aVendorInfo = getJREInfoByPath( pInfo->sLocation );
     if ( !aVendorInfo.is() || aVendorInfo->compareVersions( pInfo->sVersion ) < 0 )
@@ -644,7 +670,6 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     osl_setEnvironment(OUString("JAVA_HOME").pData, sPathLocation.pData);
 #endif
 
-    typedef jint JNICALL JNI_CreateVM_Type(JavaVM **, JNIEnv **, void *);
     OUString sSymbolCreateJava("JNI_CreateJavaVM");
 
     JNI_CreateVM_Type * pCreateJavaVM =
@@ -763,29 +788,8 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     vm_args.nOptions= options.size(); //TODO overflow
     vm_args.ignoreUnrecognized= JNI_TRUE;
 
-    /* We set a global flag which is used by the abort handler in order to
-       determine whether it is  should use longjmp to get back into this function.
-       That is, the abort handler determines if it is on the same stack as this function
-       and then jumps back into this function.
-    */
-    g_bInGetJavaVM = 1;
-    jint err;
     JavaVM * pJavaVM = nullptr;
-    memset( jmp_jvm_abort, 0, sizeof(jmp_jvm_abort));
-    int jmpval= setjmp( jmp_jvm_abort );
-    /* If jmpval is not "0" then this point was reached by a longjmp in the
-       abort_handler, which was called indirectly by JNI_CreateVM.
-    */
-    if( jmpval == 0)
-    {
-        //returns negative number on failure
-        err= pCreateJavaVM(&pJavaVM, ppEnv, &vm_args);
-        g_bInGetJavaVM = 0;
-    }
-    else
-        // set err to a positive number, so as or recognize that an abort (longjmp)
-        //occurred
-        err= 1;
+    jint err = createJvm(pCreateJavaVM, &pJavaVM, ppEnv, &vm_args);
 
     if(err != 0)
     {
@@ -818,14 +822,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 #endif
 
     return errorcode;
-#if defined __GNUC__ && __GNUC__ == 7 && !defined __clang__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wclobbered"
-#endif
 }
-#if defined __GNUC__ && __GNUC__ == 7 && !defined __clang__
-#pragma GCC diagnostic pop
-#endif
 
 javaPluginError jfw_plugin_existJRE(const JavaInfo *pInfo, bool *exist)
 {
@@ -867,6 +864,18 @@ javaPluginError jfw_plugin_existJRE(const JavaInfo *pInfo, bool *exist)
             *exist = true;
             JFW_TRACE2("Java runtime library exist: " << sRuntimeLib);
 
+            // Check version
+            rtl::Reference<VendorBase> aVendorInfo = getJREInfoByPath(sLocation);
+            if (!aVendorInfo.is())
+            {
+                *exist = false;
+                JFW_TRACE2("JRE or supported vendor not accessible at location: " << sLocation);
+            }
+            else if(pInfo->sVersion!=aVendorInfo->getVersion())
+            {
+                *exist = false;
+                JFW_TRACE2("Mismatch between version number in libreoffice settings and installed JRE:  " << pInfo->sVersion <<" != " << aVendorInfo->getVersion());
+            }
         }
         else if (::osl::File::E_NOENT == rc_itemRt)
         {

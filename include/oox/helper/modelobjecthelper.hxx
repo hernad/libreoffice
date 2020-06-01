@@ -26,7 +26,7 @@
 #include <rtl/ustring.hxx>
 #include <sal/types.h>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace awt { struct Gradient;
                     class XBitmap; }
     namespace graphic { class XGraphic; }
@@ -35,7 +35,7 @@ namespace com { namespace sun { namespace star {
     namespace drawing { struct Hatch; }
     namespace drawing { struct PolyPolygonBezierCoords; }
     namespace lang { class XMultiServiceFactory; }
-} } }
+}
 
 namespace oox {
 
@@ -69,7 +69,7 @@ private:
                         mxModelFactory;         ///< Factory to create the container.
     mutable css::uno::Reference< css::container::XNameContainer >
                         mxContainer;            ///< Container for the objects.
-    OUString const      maServiceName;          ///< Service name to create the container.
+    OUString            maServiceName;          ///< Service name to create the container.
     sal_Int32           mnIndex;                ///< Index to create unique identifiers.
 };
 

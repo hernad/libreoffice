@@ -41,21 +41,17 @@
 #include <sot/filelist.hxx>
 #include <vcl/virdev.hxx>
 #include <vcl/cvtgrf.hxx>
-#include <svl/itempool.hxx>
-#include <sfx2/docfile.hxx>
 #include <avmedia/mediawindow.hxx>
-#include <svx/svxids.hrc>
 #include <svx/svdograf.hxx>
-#include <svx/fmpage.hxx>
 #include "codec.hxx"
 #include <svx/unomodel.hxx>
 #include <svx/fmmodel.hxx>
 #include <svx/fmview.hxx>
 #include <svx/galmisc.hxx>
 #include <svx/galtheme.hxx>
+#include <svx/svdpage.hxx>
 #include <com/sun/star/sdbc/XResultSet.hpp>
 #include <com/sun/star/ucb/XContentAccess.hpp>
-#include <com/sun/star/io/XInputStream.hpp>
 #include <galobj.hxx>
 #include <svx/gallery1.hxx>
 #include "gallerydrawmodel.hxx"
@@ -289,8 +285,8 @@ INetURLObject GalleryTheme::ImplCreateUniqueURL( SgaObjKind eObjKind, ConvertDat
         // get URL
         if( SgaObjKind::SvDraw == eObjKind )
         {
-            OUString aFileName( "gallery/svdraw/dd" );
-            aNewURL = INetURLObject( aFileName += OUString::number( ++nNextNumber % 99999999 ), INetProtocol::PrivSoffice );
+            OUString aFileName = "gallery/svdraw/dd" + OUString::number( ++nNextNumber % 99999999 );
+            aNewURL = INetURLObject( aFileName, INetProtocol::PrivSoffice );
 
             bExists = false;
 
@@ -1388,8 +1384,8 @@ SvStream& GalleryTheme::ReadData( SvStream& rIStm )
             {
                 if( SgaObjKind::SvDraw == pObj->eObjKind )
                 {
-                    OUString aDummyURL( "gallery/svdraw/" );
-                    pObj->aURL = INetURLObject( aDummyURL += aFileName, INetProtocol::PrivSoffice );
+                    OUString aDummyURL = "gallery/svdraw/" + aFileName;
+                    pObj->aURL = INetURLObject( aDummyURL, INetProtocol::PrivSoffice );
                 }
                 else
                 {

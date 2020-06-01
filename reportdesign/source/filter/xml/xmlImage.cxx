@@ -20,15 +20,11 @@
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
 #include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
 #include <xmloff/xmluconv.hxx>
-#include "xmlEnums.hxx"
-#include "xmlComponent.hxx"
-#include "xmlReportElement.hxx"
-#include "xmlControlProperty.hxx"
 #include "xmlHelper.hxx"
 #include <unotools/pathoptions.hxx>
 #include <sal/log.hxx>
+#include <osl/diagnose.h>
 
 #include <com/sun/star/awt/ImageScaleMode.hpp>
 
@@ -51,9 +47,7 @@ OXMLImage::OXMLImage( ORptFilter& rImport,
 
     try
     {
-        sax_fastparser::FastAttributeList *pAttribList =
-                        sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-        for (auto &aIter : *pAttribList)
+        for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
         {
             OUString sValue = aIter.toString();
 
@@ -89,6 +83,7 @@ OXMLImage::OXMLImage( ORptFilter& rImport,
                     _xComponent->setDataField(ORptFilter::convertFormula(sValue));
                     break;
                 default:
+                    SAL_WARN("reportdesign", "unknown attribute " << SvXMLImport::getPrefixAndNameFromToken(aIter.getToken()) << " = " << sValue);
                     break;
             }
         }

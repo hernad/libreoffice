@@ -17,6 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <vcl/builder.hxx>
 #include <vcl/event.hxx>
 #include <vcl/cursor.hxx>
 #include <vcl/menu.hxx>
@@ -62,6 +63,7 @@
 #include <o3tl/safeint.hxx>
 #include <officecfg/Office/Common.hxx>
 
+#include <algorithm>
 #include <memory>
 
 using namespace ::com::sun::star;
@@ -107,10 +109,10 @@ struct DDInfo
 
 struct Impl_IMEInfos
 {
-    OUString const aOldTextAfterStartPos;
+    OUString      aOldTextAfterStartPos;
     std::unique_ptr<ExtTextInputAttr[]>
                   pAttribs;
-    sal_Int32 const nPos;
+    sal_Int32     nPos;
     sal_Int32     nLen;
     bool          bCursor;
     bool          bWasCursorOverwrite;
@@ -260,7 +262,6 @@ void Edit::ImplInitEditData()
     mbModified              = false;
     mbInternModified        = false;
     mbReadOnly              = false;
-    mbSelectAllSingleClick  = false;
     mbInsertMode            = true;
     mbClickedInSelection    = false;
     mbActivePopup           = false;
@@ -440,7 +441,7 @@ void Edit::ImplInvalidateOrRepaint()
         Invalidate();
         // FIXME: this is currently only on macOS
         if( ImplGetSVData()->maNWFData.mbNoFocusRects )
-            Update();
+            PaintImmediately();
     }
     else
         Invalidate();
@@ -688,10 +689,14 @@ void Edit::ImplDelete( const Selection& rSelection, sal_uInt8 nDirection, sal_uI
             {
                 i18n::Boundary aBoundary = xBI->getWordBoundary( maText.toString(), aSelection.Min(),
                         GetSettings().GetLanguageTag().getLocale(), i18n::WordType::ANYWORD_IGNOREWHITESPACES, true );
-                if ( aBoundary.startPos == aSelection.Min() )
+                auto startPos = aBoundary.startPos;
+                if ( startPos == aSelection.Min() )
+                {
                     aBoundary = xBI->previousWord( maText.toString(), aSelection.Min(),
                             GetSettings().GetLanguageTag().getLocale(), i18n::WordType::ANYWORD_IGNOREWHITESPACES );
-                aSelection.Min() = aBoundary.startPos;
+                    startPos = std::max(aBoundary.startPos, sal_Int32(0));
+                }
+                aSelection.Min() = startPos;
             }
             else if ( nMode == EDIT_DELMODE_RESTOFCONTENT )
                {
@@ -726,7 +731,7 @@ void Edit::ImplDelete( const Selection& rSelection, sal_uInt8 nDirection, sal_uI
     }
 
     const auto nSelectionMin = aSelection.Min();
-    maText.remove( static_cast<sal_Int32>(nSelectionMin), static_cast<sal_Int32>(aSelection.Len()) );
+    maText.remove( nSelectionMin, aSelection.Len() );
     maSelection.Min() = nSelectionMin;
     maSelection.Max() = nSelectionMin;
     ImplAlignAndPaint();
@@ -790,9 +795,9 @@ void Edit::ImplInsertText( const OUString& rStr, const Selection* pNewSel, bool 
     ImplClearLayoutData();
 
     if ( aSelection.Len() )
-        maText.remove( static_cast<sal_Int32>(aSelection.Min()), static_cast<sal_Int32>(aSelection.Len()) );
+        maText.remove( aSelection.Min(), aSelection.Len() );
     else if (!mbInsertMode && aSelection.Max() < maText.getLength())
-        maText.remove( static_cast<sal_Int32>(aSelection.Max()), 1 );
+        maText.remove( aSelection.Max(), 1 );
 
     // take care of input-sequence-checking now
     if (bIsUserInput && !rStr.isEmpty())
@@ -808,50 +813,53 @@ void Edit::ImplInsertText( const OUString& rStr, const Selection* pNewSel, bool 
                 aSelection.Min() > 0 && /* first char needs not to be checked */
                 xBI.is() && i18n::ScriptType::COMPLEX == xBI->getScriptType( rStr, 0 );
 
-        uno::Reference < i18n::XExtendedInputSequenceChecker > xISC;
-        if (bIsInputSequenceChecking && (xISC = ImplGetInputSequenceChecker()).is())
+        if (bIsInputSequenceChecking)
         {
-            sal_Unicode cChar = rStr[0];
-            sal_Int32 nTmpPos = static_cast< sal_Int32 >( aSelection.Min() );
-            sal_Int16 nCheckMode = officecfg::Office::Common::I18N::CTL::CTLSequenceCheckingRestricted::get()?
-                    i18n::InputSequenceCheckMode::STRICT : i18n::InputSequenceCheckMode::BASIC;
-
-            // the text that needs to be checked is only the one
-            // before the current cursor position
-            const OUString aOldText( maText.getStr(), nTmpPos);
-            OUString aTmpText( aOldText );
-            if (officecfg::Office::Common::I18N::CTL::CTLSequenceCheckingTypeAndReplace::get())
+            uno::Reference < i18n::XExtendedInputSequenceChecker > xISC = ImplGetInputSequenceChecker();
+            if (xISC.is())
             {
-                xISC->correctInputSequence( aTmpText, nTmpPos - 1, cChar, nCheckMode );
+                sal_Unicode cChar = rStr[0];
+                sal_Int32 nTmpPos = aSelection.Min();
+                sal_Int16 nCheckMode = officecfg::Office::Common::I18N::CTL::CTLSequenceCheckingRestricted::get()?
+                        i18n::InputSequenceCheckMode::STRICT : i18n::InputSequenceCheckMode::BASIC;
 
-                // find position of first character that has changed
-                sal_Int32 nOldLen = aOldText.getLength();
-                sal_Int32 nTmpLen = aTmpText.getLength();
-                const sal_Unicode *pOldTxt = aOldText.getStr();
-                const sal_Unicode *pTmpTxt = aTmpText.getStr();
-                sal_Int32 nChgPos = 0;
-                while ( nChgPos < nOldLen && nChgPos < nTmpLen &&
-                        pOldTxt[nChgPos] == pTmpTxt[nChgPos] )
-                    ++nChgPos;
-
-                const OUString aChgText( aTmpText.copy( nChgPos ) );
-
-                // remove text from first pos to be changed to current pos
-                maText.remove( nChgPos, nTmpPos - nChgPos );
-
-                if (!aChgText.isEmpty())
+                // the text that needs to be checked is only the one
+                // before the current cursor position
+                const OUString aOldText( maText.getStr(), nTmpPos);
+                OUString aTmpText( aOldText );
+                if (officecfg::Office::Common::I18N::CTL::CTLSequenceCheckingTypeAndReplace::get())
                 {
-                    aNewText = aChgText;
-                    aSelection.Min() = nChgPos; // position for new text to be inserted
+                    xISC->correctInputSequence( aTmpText, nTmpPos - 1, cChar, nCheckMode );
+
+                    // find position of first character that has changed
+                    sal_Int32 nOldLen = aOldText.getLength();
+                    sal_Int32 nTmpLen = aTmpText.getLength();
+                    const sal_Unicode *pOldTxt = aOldText.getStr();
+                    const sal_Unicode *pTmpTxt = aTmpText.getStr();
+                    sal_Int32 nChgPos = 0;
+                    while ( nChgPos < nOldLen && nChgPos < nTmpLen &&
+                            pOldTxt[nChgPos] == pTmpTxt[nChgPos] )
+                        ++nChgPos;
+
+                    const OUString aChgText( aTmpText.copy( nChgPos ) );
+
+                    // remove text from first pos to be changed to current pos
+                    maText.remove( nChgPos, nTmpPos - nChgPos );
+
+                    if (!aChgText.isEmpty())
+                    {
+                        aNewText = aChgText;
+                        aSelection.Min() = nChgPos; // position for new text to be inserted
+                    }
+                    else
+                        aNewText.clear();
                 }
                 else
-                    aNewText.clear();
-            }
-            else
-            {
-                // should the character be ignored (i.e. not get inserted) ?
-                if (!xISC->checkInputSequence( aOldText, nTmpPos - 1, cChar, nCheckMode ))
-                    aNewText.clear();
+                {
+                    // should the character be ignored (i.e. not get inserted) ?
+                    if (!xISC->checkInputSequence( aOldText, nTmpPos - 1, cChar, nCheckMode ))
+                        aNewText.clear();
+                }
             }
         }
 
@@ -859,7 +867,7 @@ void Edit::ImplInsertText( const OUString& rStr, const Selection* pNewSel, bool 
     }
 
     if ( !aNewText.isEmpty() )
-        maText.insert( static_cast<sal_Int32>(aSelection.Min()), aNewText );
+        maText.insert( aSelection.Min(), aNewText );
 
     if ( !pNewSel )
     {
@@ -946,6 +954,7 @@ ControlType Edit::ImplGetNativeControlType() const
         case WindowType::LONGCURRENCYFIELD:
         case WindowType::NUMERICFIELD:
         case WindowType::SPINFIELD:
+        case WindowType::FORMATTEDFIELD:
             if (pControl->GetStyle() & WB_SPIN)
                 nCtrl = ControlType::Spinbox;
             else
@@ -1725,12 +1734,12 @@ void Edit::Resize()
     }
 }
 
-void Edit::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawFlags nFlags )
+void Edit::Draw( OutputDevice* pDev, const Point& rPos, DrawFlags nFlags )
 {
     ApplySettings(*pDev);
 
     Point aPos = pDev->LogicToPixel( rPos );
-    Size aSize = pDev->LogicToPixel( rSize );
+    Size aSize = GetSizePixel();
     vcl::Font aFont = GetDrawPixelFont( pDev );
 
     pDev->Push();
@@ -1809,17 +1818,23 @@ void Edit::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawF
 
     if ( GetSubEdit() )
     {
-        GetSubEdit()->Draw( pDev, rPos, rSize, nFlags );
+        Size aOrigSize(GetSubEdit()->GetSizePixel());
+        GetSubEdit()->SetSizePixel(GetSizePixel());
+        GetSubEdit()->Draw(pDev, rPos, nFlags);
+        GetSubEdit()->SetSizePixel(aOrigSize);
     }
 }
 
 void Edit::ImplInvalidateOutermostBorder( vcl::Window* pWin )
 {
     // allow control to show focused state
-    vcl::Window *pInvalWin = pWin, *pBorder = pWin;
-    while( ( pBorder = pInvalWin->GetWindow( GetWindowType::Border ) ) != pInvalWin && pBorder &&
-           pInvalWin->ImplGetFrame() == pBorder->ImplGetFrame() )
+    vcl::Window *pInvalWin = pWin;
+    for (;;)
     {
+        vcl::Window* pBorder = pInvalWin->GetWindow( GetWindowType::Border );
+        if (pBorder == pInvalWin || !pBorder ||
+           pInvalWin->ImplGetFrame() != pBorder->ImplGetFrame() )
+           break;
         pInvalWin = pBorder;
     }
 
@@ -1833,11 +1848,6 @@ void Edit::GetFocus()
     else if ( !mbActivePopup )
     {
         maUndoText = maText.toString();
-        if(mbSelectAllSingleClick)
-        {
-            maSelection.Min() = 0;
-            maSelection.Max() = maText.getLength();
-        }
         SelectionOptions nSelOptions = GetSettings().GetStyleSettings().GetSelectionOptions();
         if ( !( GetStyle() & (WB_NOHIDESELECTION|WB_READONLY) )
                 && ( GetGetFocusFlags() & (GetFocusFlags::Init|GetFocusFlags::Tab|GetFocusFlags::CURSOR|GetFocusFlags::Mnemonic) ) )
@@ -2018,7 +2028,7 @@ void Edit::Command( const CommandEvent& rCEvt )
     else if ( rCEvt.GetCommand() == CommandEventId::StartExtTextInput )
     {
         DeleteSelected();
-        sal_Int32 nPos = static_cast<sal_Int32>(maSelection.Max());
+        sal_Int32 nPos = maSelection.Max();
         mpIMEInfos.reset(new Impl_IMEInfos( nPos, OUString(maText.getStr() + nPos ) ));
         mpIMEInfos->bWasCursorOverwrite = !IsInsertMode();
     }
@@ -2348,15 +2358,6 @@ void Edit::SetReadOnly( bool bReadOnly )
     }
 }
 
-void Edit::SetSelectAllSingleClick( bool bSelectAllSingleClick )
-{
-    if ( mbSelectAllSingleClick != bSelectAllSingleClick )
-    {
-        mbSelectAllSingleClick = bSelectAllSingleClick;
-        if ( mpSubEdit )
-            mpSubEdit->SetSelectAllSingleClick( bSelectAllSingleClick );
-    }
-}
 void Edit::SetInsertMode( bool bInsert )
 {
     if ( bInsert != mbInsertMode )

@@ -18,9 +18,7 @@
  */
 #include <svx/TextCharacterSpacingPopup.hxx>
 #include "TextCharacterSpacingControl.hxx"
-#include <unotools/viewoptions.hxx>
 #include <vcl/toolbox.hxx>
-#include <editeng/kernitem.hxx>
 
 using namespace svx;
 
@@ -32,6 +30,12 @@ TextCharacterSpacingPopup::TextCharacterSpacingPopup(const css::uno::Reference<c
 void TextCharacterSpacingPopup::initialize( const css::uno::Sequence< css::uno::Any >& rArguments )
 {
     PopupWindowController::initialize(rArguments);
+
+    if (m_pToolbar)
+    {
+        mxPopoverContainer.reset(new ToolbarPopupContainer(m_pToolbar));
+        m_pToolbar->set_item_popover(m_aCommandURL.toUtf8(), mxPopoverContainer->getTopLevel());
+    }
 
     ToolBox* pToolBox = nullptr;
     sal_uInt16 nId = 0;

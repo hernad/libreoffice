@@ -21,20 +21,14 @@
 
 #include <strings.hxx>
 #include <strings.hrc>
-#include <rptui_slotid.hrc>
 #include <core_resource.hxx>
-#include <UITools.hxx>
 #include <ReportController.hxx>
 #include "Condition.hxx"
 
-#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/lang/IllegalArgumentException.hpp>
 #include <o3tl/safeint.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
 
-#include <vcl/settings.hxx>
-
-#include <tools/debug.hxx>
 #include <tools/diagnose_ex.h>
 
 #include <comphelper/property.hxx>
@@ -65,18 +59,18 @@ namespace rptui
 
         //allow dialog to resize itself
         size_t nCount = impl_getConditionCount();
-        if (nCount)
+        if (!nCount)
+            return;
+
+        auto nHeight = m_aConditions[0]->get_preferred_size().Height();
+        size_t nVisibleConditions = ::std::min(nCount, MAX_CONDITIONS);
+        nHeight *= nVisibleConditions;
+        nHeight += 2;
+        if (nHeight != m_xScrollWindow->get_size_request().Height())
         {
-            auto nHeight = m_aConditions[0]->get_preferred_size().Height();
-            size_t nVisibleConditions = ::std::min(nCount, MAX_CONDITIONS);
-            nHeight *= nVisibleConditions;
-            nHeight += 2;
-            if (nHeight != m_xScrollWindow->get_size_request().Height())
-            {
-                m_xScrollWindow->set_size_request(-1, nHeight);
-                if (!bFirst)
-                    m_xDialog->resize_to_request();
-            }
+            m_xScrollWindow->set_size_request(-1, nHeight);
+            if (!bFirst)
+                m_xDialog->resize_to_request();
         }
     }
 

@@ -74,8 +74,7 @@ void ImplDrawDefault( OutputDevice* pOutDev, const OUString* pText,
     aSize.AdjustWidth( -(2*nPixelWidth + 4*nPixel) );
     aSize.AdjustHeight( -(2*nPixelWidth + 4*nPixel) );
 
-    if( aSize.Width() > 0 && aSize.Height() > 0
-        && ( pBitmapEx && !!*pBitmapEx ) )
+    if( !aSize.IsEmpty() && pBitmapEx && !!*pBitmapEx )
     {
         Size aBitmapSize( pOutDev->PixelToLogic( pBitmapEx->GetSizePixel() ) );
 
@@ -87,8 +86,7 @@ void ImplDrawDefault( OutputDevice* pOutDev, const OUString* pText,
         }
     }
 
-    if ( aSize.Width() > 0 && aSize.Height() > 0 && pFont && pText && pText->getLength()
-         && pOutDev->IsOutputEnabled() )
+    if ( !aSize.IsEmpty() && pFont && pText && pText->getLength() && pOutDev->IsOutputEnabled() )
     {
         MapMode aMapMode( MapUnit::MapPoint );
         Size    aSz = pOutDev->LogicToLogic( Size( 0, 12 ), &aMapMode, nullptr );
@@ -222,7 +220,7 @@ Graphic::Graphic(const Image& rImage)
         mxImpGraphic->setOriginURL("private:graphicrepository/" + aStock);
 }
 
-Graphic::Graphic(const VectorGraphicDataPtr& rVectorGraphicDataPtr)
+Graphic::Graphic(const std::shared_ptr<VectorGraphicData>& rVectorGraphicDataPtr)
     : mxImpGraphic(vcl::graphic::Manager::get().newInstance(rVectorGraphicDataPtr))
 {
 }
@@ -493,12 +491,12 @@ sal_uInt32 Graphic::GetAnimationLoopCount() const
     return mxImpGraphic->ImplGetAnimationLoopCount();
 }
 
-std::shared_ptr<GraphicReader>& Graphic::GetContext()
+std::shared_ptr<GraphicReader>& Graphic::GetReaderContext()
 {
     return mxImpGraphic->ImplGetContext();
 }
 
-void Graphic::SetContext( const std::shared_ptr<GraphicReader> &pReader )
+void Graphic::SetReaderContext( const std::shared_ptr<GraphicReader> &pReader )
 {
     mxImpGraphic->ImplSetContext( pReader );
 }
@@ -555,36 +553,14 @@ void WriteGraphic( SvStream& rOStream, const Graphic& rGraphic )
     WriteImpGraphic(rOStream, *rGraphic.mxImpGraphic);
 }
 
-const VectorGraphicDataPtr& Graphic::getVectorGraphicData() const
+const std::shared_ptr<VectorGraphicData>& Graphic::getVectorGraphicData() const
 {
     return mxImpGraphic->getVectorGraphicData();
 }
 
-void Graphic::setPdfData(const std::shared_ptr<std::vector<sal_Int8>>& rPdfData)
-{
-    ImplTestRefCount();
-    mxImpGraphic->setPdfData(rPdfData);
-}
-
-const std::shared_ptr<std::vector<sal_Int8>> & Graphic::getPdfData() const
-{
-    return mxImpGraphic->getPdfData();
-}
-
-bool Graphic::hasPdfData() const
-{
-    std::shared_ptr<std::vector<sal_Int8>> pPdfData(getPdfData());
-    return pPdfData && !pPdfData->empty();
-}
-
-void Graphic::setPageNumber(sal_Int32 nPageNumber)
-{
-    mxImpGraphic->mnPageNumber = nPageNumber;
-}
-
 sal_Int32 Graphic::getPageNumber() const
 {
-    return mxImpGraphic->mnPageNumber;
+    return mxImpGraphic->getPageNumber();
 }
 
 OUString Graphic::getOriginURL() const

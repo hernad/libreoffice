@@ -101,6 +101,7 @@
 #include <xmloff/XMLEventExport.hxx>
 #include <xmloff/xmlprmap.hxx>
 #include <xmloff/ProgressBarHelper.hxx>
+#include <xmloff/table/XMLTableExport.hxx>
 
 #include <sax/tools/converter.hxx>
 #include <tools/fldunit.hxx>
@@ -138,7 +139,7 @@
 #include <com/sun/star/style/XStyleFamiliesSupplier.hpp>
 #include <com/sun/star/table/XColumnRowRange.hpp>
 #include <com/sun/star/util/XProtectable.hpp>
-
+#include <com/sun/star/xml/sax/XDocumentHandler.hpp>
 #include <com/sun/star/chart2/XChartDocument.hpp>
 #include <com/sun/star/chart2/data/XRangeXMLConversion.hpp>
 #include <com/sun/star/chart2/data/XDataReceiver.hpp>
@@ -379,13 +380,13 @@ ScXMLExport::ScXMLExport(
     xRowStylesExportPropertySetMapper = new ScXMLRowExportPropertyMapper(xRowStylesPropertySetMapper);
     xTableStylesExportPropertySetMapper = new ScXMLTableExportPropertyMapper(xTableStylesPropertySetMapper);
 
-    GetAutoStylePool()->AddFamily(XML_STYLE_FAMILY_TABLE_CELL, XML_STYLE_FAMILY_TABLE_CELL_STYLES_NAME,
+    GetAutoStylePool()->AddFamily(XmlStyleFamily::TABLE_CELL, XML_STYLE_FAMILY_TABLE_CELL_STYLES_NAME,
         xCellStylesExportPropertySetMapper, XML_STYLE_FAMILY_TABLE_CELL_STYLES_PREFIX);
-    GetAutoStylePool()->AddFamily(XML_STYLE_FAMILY_TABLE_COLUMN, XML_STYLE_FAMILY_TABLE_COLUMN_STYLES_NAME,
+    GetAutoStylePool()->AddFamily(XmlStyleFamily::TABLE_COLUMN, XML_STYLE_FAMILY_TABLE_COLUMN_STYLES_NAME,
         xColumnStylesExportPropertySetMapper, XML_STYLE_FAMILY_TABLE_COLUMN_STYLES_PREFIX);
-    GetAutoStylePool()->AddFamily(XML_STYLE_FAMILY_TABLE_ROW, XML_STYLE_FAMILY_TABLE_ROW_STYLES_NAME,
+    GetAutoStylePool()->AddFamily(XmlStyleFamily::TABLE_ROW, XML_STYLE_FAMILY_TABLE_ROW_STYLES_NAME,
         xRowStylesExportPropertySetMapper, XML_STYLE_FAMILY_TABLE_ROW_STYLES_PREFIX);
-    GetAutoStylePool()->AddFamily(XML_STYLE_FAMILY_TABLE_TABLE, XML_STYLE_FAMILY_TABLE_TABLE_STYLES_NAME,
+    GetAutoStylePool()->AddFamily(XmlStyleFamily::TABLE_TABLE, XML_STYLE_FAMILY_TABLE_TABLE_STYLES_NAME,
         xTableStylesExportPropertySetMapper, XML_STYLE_FAMILY_TABLE_TABLE_STYLES_PREFIX);
 
     if( getExportFlags() & (SvXMLExportFlags::STYLES|SvXMLExportFlags::AUTOSTYLES|SvXMLExportFlags::MASTERSTYLES|SvXMLExportFlags::CONTENT) )
@@ -394,7 +395,7 @@ ScXMLExport::ScXMLExport(
         // should not conflict with user-defined styles since this name is
         // used for a table style which is not available in the UI.
         sExternalRefTabStyleName = "ta_extref";
-        GetAutoStylePool()->RegisterName(XML_STYLE_FAMILY_TABLE_TABLE, sExternalRefTabStyleName);
+        GetAutoStylePool()->RegisterName(XmlStyleFamily::TABLE_TABLE, sExternalRefTabStyleName);
 
         sAttrName = GetNamespaceMap().GetQNameByKey( XML_NAMESPACE_TABLE, GetXMLToken(XML_NAME));
         sAttrStyleName = GetNamespaceMap().GetQNameByKey( XML_NAMESPACE_TABLE, GetXMLToken(XML_STYLE_NAME));
@@ -905,7 +906,7 @@ void ScXMLExport::ExportExternalRefCacheStyles()
 
         OUString aName;
         sal_Int32 nIndex;
-        if (GetAutoStylePool()->Add(aName, XML_STYLE_FAMILY_TABLE_CELL, aDefaultStyle, aProps))
+        if (GetAutoStylePool()->Add(aName, XmlStyleFamily::TABLE_CELL, aDefaultStyle, aProps))
         {
             pCellStyles->AddStyleName(aName, nIndex);
         }
@@ -1266,7 +1267,7 @@ void ScXMLExport::ExportCellTextAutoStyles(sal_Int32 nTable)
             std::vector<XMLPropertyState> aPropStates;
             toXMLPropertyStates(aPropStates, rSecAttrs, xMapper, rAttrMap);
             if (!aPropStates.empty())
-                xStylePool->Add(XML_STYLE_FAMILY_TEXT_TEXT, OUString(), aPropStates);
+                xStylePool->Add(XmlStyleFamily::TEXT_TEXT, OUString(), aPropStates);
         }
     }
 
@@ -1700,13 +1701,13 @@ void ScXMLExport::SetBodyAttributes()
         if (!aBuffer.isEmpty())
         {
             AddAttribute(XML_NAMESPACE_TABLE, XML_PROTECTION_KEY, aBuffer.makeStringAndClear());
-            if ( getDefaultVersion() >= SvtSaveOptions::ODFVER_012 )
+            if (getSaneDefaultVersion() >= SvtSaveOptions::ODFSVER_012)
             {
                 if (eHashUsed == PASSHASH_XL)
                 {
                     AddAttribute(XML_NAMESPACE_TABLE, XML_PROTECTION_KEY_DIGEST_ALGORITHM,
                                  ScPassHashHelper::getHashURI(PASSHASH_XL));
-                    if (getDefaultVersion() > SvtSaveOptions::ODFVER_012)
+                    if (getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
                         AddAttribute(XML_NAMESPACE_LO_EXT, XML_PROTECTION_KEY_DIGEST_ALGORITHM_2,
                                 ScPassHashHelper::getHashURI(PASSHASH_SHA1));
                 }
@@ -1847,7 +1848,7 @@ void ScXMLExport::RegisterDefinedStyleNames( const uno::Reference< css::sheet::X
     auto xAutoStylePool = GetAutoStylePool();
     for (const auto& rFormatInfo : pFormatData->maIDToName)
     {
-        xAutoStylePool->RegisterDefinedName(XML_STYLE_FAMILY_TABLE_CELL, rFormatInfo.second);
+        xAutoStylePool->RegisterDefinedName(XmlStyleFamily::TABLE_CELL, rFormatInfo.second);
     }
 }
 
@@ -1957,7 +1958,7 @@ void ScXMLExport::ExportStyles_( bool bUsed )
         sal_Int32 nShapesCount(0);
         CollectSharedData(nTableCount, nShapesCount);
     }
-    rtl::Reference<ScXMLStyleExport> aStylesExp(new ScXMLStyleExport(*this, GetAutoStylePool().get()));
+    rtl::Reference<XMLCellStyleExport> aStylesExp(new XMLCellStyleExport(*this, GetAutoStylePool().get()));
     if (GetModel().is())
     {
         uno::Reference <lang::XMultiServiceFactory> xMultiServiceFactory(GetModel(), uno::UNO_QUERY);
@@ -1971,48 +1972,24 @@ void ScXMLExport::ExportStyles_( bool bUsed )
                 GetShapeExport()->ExportGraphicDefaults();
             }
         }
-        uno::Reference <style::XStyleFamiliesSupplier> xStyleFamiliesSupplier (GetModel(), uno::UNO_QUERY);
-        if (xStyleFamiliesSupplier.is())
-        {
-            uno::Reference <container::XNameAccess> xStylesFamilies(xStyleFamiliesSupplier->getStyleFamilies());
-            if (xStylesFamilies.is())
-            {
-                uno::Reference <container::XIndexAccess> xCellStyles(xStylesFamilies->getByName("CellStyles"), uno::UNO_QUERY);
-                if (xCellStyles.is())
-                {
-                    sal_Int32 nCount(xCellStyles->getCount());
-                    for (sal_Int32 i = 0; i < nCount; ++i)
-                    {
-                        uno::Reference <beans::XPropertySet> xCellProperties(xCellStyles->getByIndex(i), uno::UNO_QUERY);
-                        if (xCellProperties.is())
-                        {
-                            sal_Int32 nNumberFormat = 0;
-                            if (xCellProperties->getPropertyValue(SC_UNONAME_NUMFMT) >>= nNumberFormat)
-                                addDataStyle(nNumberFormat);
-                        }
-                    }
-                }
-            }
-        }
+        collectDataStyles(false);
     }
     exportDataStyles();
 
     aStylesExp->exportStyleFamily(OUString("CellStyles"),
-        OUString(XML_STYLE_FAMILY_TABLE_CELL_STYLES_NAME), xCellStylesExportPropertySetMapper, false, XML_STYLE_FAMILY_TABLE_CELL);
+        OUString(XML_STYLE_FAMILY_TABLE_CELL_STYLES_NAME), xCellStylesExportPropertySetMapper, false, XmlStyleFamily::TABLE_CELL);
 
     SvXMLExport::ExportStyles_(bUsed);
 }
 
-void ScXMLExport::AddStyleFromCells(const uno::Reference<beans::XPropertySet>& xProperties,
+void ScXMLExport::AddStyleFromCells(const uno::Reference<sheet::XSheetCellRanges>& xCellRanges,
                                     const uno::Reference<sheet::XSpreadsheet>& xTable,
                                     sal_Int32 nTable, const OUString* pOldName)
 {
+    uno::Reference<beans::XPropertySet> xProperties(xCellRanges, uno::UNO_QUERY_THROW);
     css::uno::Any aAny = xProperties->getPropertyValue("FormatID");
     sal_uInt64 nKey = 0;
     aAny >>= nKey;
-
-    //! pass xCellRanges instead
-    uno::Reference<sheet::XSheetCellRanges> xCellRanges( xProperties, uno::UNO_QUERY );
 
     OUString sStyleName;
     sal_Int32 nNumberFormat(-1);
@@ -2079,9 +2056,9 @@ void ScXMLExport::AddStyleFromCells(const uno::Reference<beans::XPropertySet>& x
             sal_Int32 nIndex;
             if (pOldName)
             {
-                if (GetAutoStylePool()->AddNamed(*pOldName, XML_STYLE_FAMILY_TABLE_CELL, sStyleName, aPropStates))
+                if (GetAutoStylePool()->AddNamed(*pOldName, XmlStyleFamily::TABLE_CELL, sStyleName, aPropStates))
                 {
-                    GetAutoStylePool()->RegisterName(XML_STYLE_FAMILY_TABLE_CELL, *pOldName);
+                    GetAutoStylePool()->RegisterName(XmlStyleFamily::TABLE_CELL, *pOldName);
                     // add to pCellStyles, so the name is found for normal sheets
                     pCellStyles->AddStyleName(*pOldName, nIndex);
                 }
@@ -2098,13 +2075,13 @@ void ScXMLExport::AddStyleFromCells(const uno::Reference<beans::XPropertySet>& x
                     if (itr != pFormatData->maIDToName.end())
                     {
                         sName = itr->second;
-                        bAdded = GetAutoStylePool()->AddNamed(sName, XML_STYLE_FAMILY_TABLE_CELL, sStyleName, aPropStates);
+                        bAdded = GetAutoStylePool()->AddNamed(sName, XmlStyleFamily::TABLE_CELL, sStyleName, aPropStates);
                         if (bAdded)
-                            GetAutoStylePool()->RegisterName(XML_STYLE_FAMILY_TABLE_CELL, sName);
+                            GetAutoStylePool()->RegisterName(XmlStyleFamily::TABLE_CELL, sName);
                     }
                 }
                 bool bIsAutoStyle(true);
-                if (bAdded || GetAutoStylePool()->Add(sName, XML_STYLE_FAMILY_TABLE_CELL, sStyleName, aPropStates))
+                if (bAdded || GetAutoStylePool()->Add(sName, XmlStyleFamily::TABLE_CELL, sStyleName, aPropStates))
                 {
                     pCellStyles->AddStyleName(sName, nIndex);
                 }
@@ -2165,9 +2142,9 @@ void ScXMLExport::AddStyleFromColumn(const uno::Reference<beans::XPropertySet>& 
         OUString sParent;
         if (pOldName)
         {
-            if (GetAutoStylePool()->AddNamed(*pOldName, XML_STYLE_FAMILY_TABLE_COLUMN, sParent, aPropStates))
+            if (GetAutoStylePool()->AddNamed(*pOldName, XmlStyleFamily::TABLE_COLUMN, sParent, aPropStates))
             {
-                GetAutoStylePool()->RegisterName(XML_STYLE_FAMILY_TABLE_COLUMN, *pOldName);
+                GetAutoStylePool()->RegisterName(XmlStyleFamily::TABLE_COLUMN, *pOldName);
                 // add to pColumnStyles, so the name is found for normal sheets
                 rIndex = pColumnStyles->AddStyleName(*pOldName);
             }
@@ -2175,7 +2152,7 @@ void ScXMLExport::AddStyleFromColumn(const uno::Reference<beans::XPropertySet>& 
         else
         {
             OUString sName;
-            if (GetAutoStylePool()->Add(sName, XML_STYLE_FAMILY_TABLE_COLUMN, sParent, aPropStates))
+            if (GetAutoStylePool()->Add(sName, XmlStyleFamily::TABLE_COLUMN, sParent, aPropStates))
             {
                 rIndex = pColumnStyles->AddStyleName(sName);
             }
@@ -2194,9 +2171,9 @@ void ScXMLExport::AddStyleFromRow(const uno::Reference<beans::XPropertySet>& xRo
         OUString sParent;
         if (pOldName)
         {
-            if (GetAutoStylePool()->AddNamed(*pOldName, XML_STYLE_FAMILY_TABLE_ROW, sParent, aPropStates))
+            if (GetAutoStylePool()->AddNamed(*pOldName, XmlStyleFamily::TABLE_ROW, sParent, aPropStates))
             {
-                GetAutoStylePool()->RegisterName(XML_STYLE_FAMILY_TABLE_ROW, *pOldName);
+                GetAutoStylePool()->RegisterName(XmlStyleFamily::TABLE_ROW, *pOldName);
                 // add to pRowStyles, so the name is found for normal sheets
                 rIndex = pRowStyles->AddStyleName(*pOldName);
             }
@@ -2204,7 +2181,7 @@ void ScXMLExport::AddStyleFromRow(const uno::Reference<beans::XPropertySet>& xRo
         else
         {
             OUString sName;
-            if (GetAutoStylePool()->Add(sName, XML_STYLE_FAMILY_TABLE_ROW, sParent, aPropStates))
+            if (GetAutoStylePool()->Add(sName, XmlStyleFamily::TABLE_ROW, sParent, aPropStates))
             {
                 rIndex = pRowStyles->AddStyleName(sName);
             }
@@ -2279,10 +2256,10 @@ void ScXMLExport::collectAutoStyles()
                 if (bCopySheet)
                 {
                     uno::Reference <sheet::XSpreadsheet> xTable(xIndex->getByIndex(nTable), uno::UNO_QUERY);
-                    uno::Reference <beans::XPropertySet> xProperties(
+                    uno::Reference <sheet::XSheetCellRanges> xCellRanges(
                         xTable->getCellByPosition( aPos.Col(), aPos.Row() ), uno::UNO_QUERY );
 
-                    AddStyleFromCells(xProperties, xTable, nTable, &rCellEntry.maName);
+                    AddStyleFromCells(xCellRanges, xTable, nTable, &rCellEntry.maName);
                 }
             }
 
@@ -2338,8 +2315,8 @@ void ScXMLExport::collectAutoStyles()
                     {
                         std::vector<XMLPropertyState> aPropStates(xTableStylesExportPropertySetMapper->Filter(xTableProperties));
                         OUString sName( rTableEntry.maName );
-                        GetAutoStylePool()->AddNamed(sName, XML_STYLE_FAMILY_TABLE_TABLE, OUString(), aPropStates);
-                        GetAutoStylePool()->RegisterName(XML_STYLE_FAMILY_TABLE_TABLE, sName);
+                        GetAutoStylePool()->AddNamed(sName, XmlStyleFamily::TABLE_TABLE, OUString(), aPropStates);
+                        GetAutoStylePool()->RegisterName(XmlStyleFamily::TABLE_TABLE, sName);
                     }
                 }
             }
@@ -2372,16 +2349,16 @@ void ScXMLExport::collectAutoStyles()
                             {
                                 std::vector<XMLPropertyState> aPropStates(xShapeMapper->Filter(xShapeProperties));
                                 OUString sName( rNoteEntry.maStyleName );
-                                GetAutoStylePool()->AddNamed(sName, XML_STYLE_FAMILY_SD_GRAPHICS_ID, OUString(), aPropStates);
-                                GetAutoStylePool()->RegisterName(XML_STYLE_FAMILY_SD_GRAPHICS_ID, sName);
+                                GetAutoStylePool()->AddNamed(sName, XmlStyleFamily::SD_GRAPHICS_ID, OUString(), aPropStates);
+                                GetAutoStylePool()->RegisterName(XmlStyleFamily::SD_GRAPHICS_ID, sName);
                             }
                             if ( !rNoteEntry.maTextStyle.isEmpty() )
                             {
                                 std::vector<XMLPropertyState> aPropStates(
                                     GetTextParagraphExport()->GetParagraphPropertyMapper()->Filter(xShapeProperties));
                                 OUString sName( rNoteEntry.maTextStyle );
-                                GetAutoStylePool()->AddNamed(sName, XML_STYLE_FAMILY_TEXT_PARAGRAPH, OUString(), aPropStates);
-                                GetAutoStylePool()->RegisterName(XML_STYLE_FAMILY_TEXT_PARAGRAPH, sName);
+                                GetAutoStylePool()->AddNamed(sName, XmlStyleFamily::TEXT_PARAGRAPH, OUString(), aPropStates);
+                                GetAutoStylePool()->RegisterName(XmlStyleFamily::TEXT_PARAGRAPH, sName);
                             }
                         }
                     }
@@ -2412,8 +2389,8 @@ void ScXMLExport::collectAutoStyles()
                         {
                             std::vector<XMLPropertyState> aPropStates(xParaPropMapper->Filter(xParaProp));
                             OUString sName( rNoteParaEntry.maName );
-                            GetAutoStylePool()->AddNamed(sName, XML_STYLE_FAMILY_TEXT_PARAGRAPH, OUString(), aPropStates);
-                            GetAutoStylePool()->RegisterName(XML_STYLE_FAMILY_TEXT_PARAGRAPH, sName);
+                            GetAutoStylePool()->AddNamed(sName, XmlStyleFamily::TEXT_PARAGRAPH, OUString(), aPropStates);
+                            GetAutoStylePool()->RegisterName(XmlStyleFamily::TEXT_PARAGRAPH, sName);
                         }
                     }
                 }
@@ -2445,8 +2422,8 @@ void ScXMLExport::collectAutoStyles()
 
                             std::vector<XMLPropertyState> aPropStates(xTextPropMapper->Filter(xCursorProp));
                             OUString sName( rNoteTextEntry.maName );
-                            GetAutoStylePool()->AddNamed(sName, XML_STYLE_FAMILY_TEXT_TEXT, OUString(), aPropStates);
-                            GetAutoStylePool()->RegisterName(XML_STYLE_FAMILY_TEXT_TEXT, sName);
+                            GetAutoStylePool()->AddNamed(sName, XmlStyleFamily::TEXT_TEXT, OUString(), aPropStates);
+                            GetAutoStylePool()->RegisterName(XmlStyleFamily::TEXT_TEXT, sName);
                         }
                     }
                 }
@@ -2486,8 +2463,8 @@ void ScXMLExport::collectAutoStyles()
 
                 std::vector<XMLPropertyState> aPropStates(xTextPropMapper->Filter(xCursorProp));
                 OUString sName( rTextEntry.maName );
-                GetAutoStylePool()->AddNamed(sName, XML_STYLE_FAMILY_TEXT_TEXT, OUString(), aPropStates);
-                GetAutoStylePool()->RegisterName(XML_STYLE_FAMILY_TEXT_TEXT, sName);
+                GetAutoStylePool()->AddNamed(sName, XmlStyleFamily::TEXT_TEXT, OUString(), aPropStates);
+                GetAutoStylePool()->RegisterName(XmlStyleFamily::TEXT_TEXT, sName);
                 xPrevCursorProp = xCursorProp;
                 aPrevPos = aPos;
             }
@@ -2518,7 +2495,7 @@ void ScXMLExport::collectAutoStyles()
                 if(!aPropStates.empty())
                 {
                     OUString sName;
-                    GetAutoStylePool()->Add(sName, XML_STYLE_FAMILY_TABLE_TABLE, OUString(), aPropStates);
+                    GetAutoStylePool()->Add(sName, XmlStyleFamily::TABLE_TABLE, OUString(), aPropStates);
                     aTableStyles.push_back(sName);
                 }
             }
@@ -2537,12 +2514,8 @@ void ScXMLExport::collectAutoStyles()
                         uno::Reference< sheet::XSheetCellRanges> xCellRanges(xFormatRangesIndex->getByIndex(nFormatRange), uno::UNO_QUERY);
                         if (xCellRanges.is())
                         {
-                            uno::Reference <beans::XPropertySet> xProperties (xCellRanges, uno::UNO_QUERY);
-                            if (xProperties.is())
-                            {
-                                AddStyleFromCells(xProperties, xTable, nTable, nullptr);
-                                IncrementProgressBar(false);
-                            }
+                            AddStyleFromCells(xCellRanges, xTable, nTable, nullptr);
+                            IncrementProgressBar(false);
                         }
                     }
                 }
@@ -2641,11 +2614,11 @@ void ScXMLExport::ExportAutoStyles_()
 
     if (getExportFlags() & SvXMLExportFlags::CONTENT)
     {
-        GetAutoStylePool()->exportXML(XML_STYLE_FAMILY_TABLE_COLUMN);
-        GetAutoStylePool()->exportXML(XML_STYLE_FAMILY_TABLE_ROW);
-        GetAutoStylePool()->exportXML(XML_STYLE_FAMILY_TABLE_TABLE);
+        GetAutoStylePool()->exportXML(XmlStyleFamily::TABLE_COLUMN);
+        GetAutoStylePool()->exportXML(XmlStyleFamily::TABLE_ROW);
+        GetAutoStylePool()->exportXML(XmlStyleFamily::TABLE_TABLE);
         exportAutoDataStyles();
-        GetAutoStylePool()->exportXML(XML_STYLE_FAMILY_TABLE_CELL);
+        GetAutoStylePool()->exportXML(XmlStyleFamily::TABLE_CELL);
 
         GetShapeExport()->exportAutoStyles();
         GetFormExport()->exportAutoStyles( );
@@ -2845,13 +2818,13 @@ void ScXMLExport::WriteTable(sal_Int32 nTable, const uno::Reference<sheet::XSpre
                 if (!aBuffer.isEmpty())
                 {
                     AddAttribute(XML_NAMESPACE_TABLE, XML_PROTECTION_KEY, aBuffer.makeStringAndClear());
-                    if ( getDefaultVersion() >= SvtSaveOptions::ODFVER_012 )
+                    if (getSaneDefaultVersion() >= SvtSaveOptions::ODFSVER_012)
                     {
                         if (eHashUsed == PASSHASH_XL)
                         {
                             AddAttribute(XML_NAMESPACE_TABLE, XML_PROTECTION_KEY_DIGEST_ALGORITHM,
                                          ScPassHashHelper::getHashURI(PASSHASH_XL));
-                            if (getDefaultVersion() > SvtSaveOptions::ODFVER_012)
+                            if (getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
                                 AddAttribute(XML_NAMESPACE_LO_EXT, XML_PROTECTION_KEY_DIGEST_ALGORITHM_2,
                                         ScPassHashHelper::getHashURI(PASSHASH_SHA1));
                         }
@@ -2880,7 +2853,7 @@ void ScXMLExport::WriteTable(sal_Int32 nTable, const uno::Reference<sheet::XSpre
         AddAttribute( XML_NAMESPACE_TABLE, XML_PRINT, XML_FALSE);
     SvXMLElementExport aElemT(*this, sElemTab, true, true);
 
-    if (pProtect && pProtect->isProtected() && getDefaultVersion() > SvtSaveOptions::ODFVER_012)
+    if (pProtect && pProtect->isProtected() && getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
     {
         if (pProtect->isOptionEnabled(ScTableProtection::SELECT_LOCKED_CELLS))
             AddAttribute(XML_NAMESPACE_LO_EXT, XML_SELECT_PROTECTED_CELLS, XML_TRUE);
@@ -2906,7 +2879,7 @@ void ScXMLExport::WriteTable(sal_Int32 nTable, const uno::Reference<sheet::XSpre
     CheckAttrList();
 
     if ( pDoc && pDoc->GetSheetEvents( static_cast<SCTAB>(nTable) ) &&
-         getDefaultVersion() >= SvtSaveOptions::ODFVER_012 )
+        getSaneDefaultVersion() >= SvtSaveOptions::ODFSVER_012)
     {
         // store sheet events
         uno::Reference<document::XEventsSupplier> xSupplier(xTable, uno::UNO_QUERY);
@@ -3002,7 +2975,7 @@ void ScXMLExport::WriteTable(sal_Int32 nTable, const uno::Reference<sheet::XSpre
             WriteNamedRange(pRangeName);
         }
 
-        if(getDefaultVersion() > SvtSaveOptions::ODFVER_012)
+        if (getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
         {
             //export new conditional format information
             ExportConditionalFormat(nTable);
@@ -3123,7 +3096,7 @@ void flushParagraph(
 
         std::vector<XMLPropertyState> aPropStates;
         const SvxFieldData* pField = toXMLPropertyStates(aPropStates, rSec.maAttributes, xMapper, rAttrMap);
-        OUString aStyleName = xStylePool->Find(XML_STYLE_FAMILY_TEXT_TEXT, OUString(), aPropStates);
+        OUString aStyleName = xStylePool->Find(XmlStyleFamily::TEXT_TEXT, OUString(), aPropStates);
         writeContent(rExport, aStyleName, aContent, pField);
     }
 }
@@ -3159,7 +3132,7 @@ void ScXMLExport::WriteCell(ScMyCell& aCell, sal_Int32 nEqualCellCount)
             {
                 GetNumberFormatAttributesExportHelper()->SetNumberFormatAttributes(
                     aCell.nNumberFormat, aCell.maBaseCell.mfValue);
-                if( getDefaultVersion() > SvtSaveOptions::ODFVER_012 )
+                if (getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
                     GetNumberFormatAttributesExportHelper()->SetNumberFormatAttributes(
                             aCell.nNumberFormat, aCell.maBaseCell.mfValue, false, XML_NAMESPACE_CALC_EXT, false);
             }
@@ -3170,7 +3143,7 @@ void ScXMLExport::WriteCell(ScMyCell& aCell, sal_Int32 nEqualCellCount)
                 OUString sCellString = aCell.maBaseCell.getString(pDoc);
                 GetNumberFormatAttributesExportHelper()->SetNumberFormatAttributes(
                         sCellString, sFormattedString);
-                if( getDefaultVersion() > SvtSaveOptions::ODFVER_012 )
+                if (getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
                     GetNumberFormatAttributesExportHelper()->SetNumberFormatAttributes(
                             sCellString, sFormattedString, false, XML_NAMESPACE_CALC_EXT);
             }
@@ -3206,7 +3179,7 @@ void ScXMLExport::WriteCell(ScMyCell& aCell, sal_Int32 nEqualCellCount)
                     {
                         AddAttribute(sAttrValueType, XML_STRING);
                         AddAttribute(sAttrStringValue, aCell.maBaseCell.getString(pDoc));
-                        if( getDefaultVersion() > SvtSaveOptions::ODFVER_012 )
+                        if (getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
                         {
                             //export calcext:value-type="error"
                             AddAttribute(XML_NAMESPACE_CALC_EXT,XML_VALUE_TYPE, OUString("error"));
@@ -3221,7 +3194,7 @@ void ScXMLExport::WriteCell(ScMyCell& aCell, sal_Int32 nEqualCellCount)
                         {
                             GetNumberFormatAttributesExportHelper()->SetNumberFormatAttributes(
                                     aCell.nNumberFormat, pDoc->GetValue(aCell.maCellAddress));
-                            if( getDefaultVersion() > SvtSaveOptions::ODFVER_012 )
+                            if (getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
                             {
                                 GetNumberFormatAttributesExportHelper()->SetNumberFormatAttributes(
                                         aCell.nNumberFormat, pDoc->GetValue(aCell.maCellAddress), false, XML_NAMESPACE_CALC_EXT, false );
@@ -3234,7 +3207,7 @@ void ScXMLExport::WriteCell(ScMyCell& aCell, sal_Int32 nEqualCellCount)
                         {
                             AddAttribute(sAttrValueType, XML_STRING);
                             AddAttribute(sAttrStringValue, aCell.maBaseCell.getString(pDoc));
-                            if( getDefaultVersion() > SvtSaveOptions::ODFVER_012 )
+                            if (getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
                             {
                                 AddAttribute(XML_NAMESPACE_CALC_EXT,XML_VALUE_TYPE, XML_STRING);
                             }
@@ -4019,7 +3992,7 @@ void ScXMLExport::WriteExternalDataMapping()
     if (!pDoc)
         return;
 
-    if (getDefaultVersion() <= SvtSaveOptions::ODFVER_012)
+    if ((getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED) == 0)
         // Export this only for 1.2 extended and above.
         return;
 
@@ -4352,7 +4325,7 @@ void ScXMLExport::WriteDataStream()
         // Export this only in experimental mode.
         return;
 
-    if (getDefaultVersion() <= SvtSaveOptions::ODFVER_012)
+    if ((getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED) == 0)
         // Export this only for 1.2 extended and above.
         return;
 
@@ -4828,7 +4801,7 @@ void ScXMLExport::WriteExternalRefCaches()
         for (const auto& rTabName : aTabNames)
         {
             ScExternalRefCache::TableTypeRef pTable = pRefMgr->getCacheTable(nFileId, rTabName, false);
-            if (!pTable.get() || !pTable->isReferenced())
+            if (!pTable || !pTable->isReferenced())
                 continue;
 
             AddAttribute(XML_NAMESPACE_TABLE, XML_NAME, "'" + *pUrl + "'#" + rTabName);
@@ -5250,7 +5223,7 @@ ErrCode ScXMLExport::exportDoc( enum XMLTokenEnum eClass )
                 {
                     xRowStylesPropertySetMapper = new XMLPropertySetMapper(aXMLScFromXLSRowStylesProperties, xScPropHdlFactory, true);
                     xRowStylesExportPropertySetMapper = new ScXMLRowExportPropertyMapper(xRowStylesPropertySetMapper);
-                    GetAutoStylePool()->SetFamilyPropSetMapper( XML_STYLE_FAMILY_TABLE_ROW,
+                    GetAutoStylePool()->SetFamilyPropSetMapper( XmlStyleFamily::TABLE_ROW,
                         xRowStylesExportPropertySetMapper );
                 }
             }
@@ -5267,7 +5240,7 @@ ErrCode ScXMLExport::exportDoc( enum XMLTokenEnum eClass )
 
             // sheet events use officeooo namespace
             if( (getExportFlags() & SvXMLExportFlags::CONTENT) &&
-                getDefaultVersion() >= SvtSaveOptions::ODFVER_012 )
+                getSaneDefaultVersion() >= SvtSaveOptions::ODFSVER_012)
             {
                 bool bAnySheetEvents = false;
                 SCTAB nTabCount = pDoc->GetTableCount();
@@ -5301,12 +5274,12 @@ void SAL_CALL ScXMLExport::setSourceDocument( const uno::Reference<lang::XCompon
 
     // Set the document's storage grammar corresponding to the ODF version that
     // is to be written.
-    SvtSaveOptions::ODFDefaultVersion meODFDefaultVersion = getDefaultVersion();
+    SvtSaveOptions::ODFSaneDefaultVersion meODFDefaultVersion = getSaneDefaultVersion();
     switch (meODFDefaultVersion)
     {
         // ODF 1.0 and 1.1 use GRAM_PODF, everything later or unspecified GRAM_ODFF
-        case SvtSaveOptions::ODFVER_010:
-        case SvtSaveOptions::ODFVER_011:
+        case SvtSaveOptions::ODFSVER_010:
+        case SvtSaveOptions::ODFSVER_011:
             pDoc->SetStorageGrammar( formula::FormulaGrammar::GRAM_PODF);
             break;
         default:

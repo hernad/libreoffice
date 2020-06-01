@@ -33,7 +33,7 @@
 #include <vcl/svapp.hxx>
 #include <vcl/unohelp2.hxx>
 #include <vcl/status.hxx>
-#include <vcl/controllayout.hxx>
+#include <vcl/toolkit/controllayout.hxx>
 #include <vcl/settings.hxx>
 #include <i18nlangtag/languagetag.hxx>
 
@@ -581,5 +581,10 @@ sal_Bool VCLXAccessibleStatusBarItem::copyText( sal_Int32 nStartIndex, sal_Int32
     return bReturn;
 }
 
+
+sal_Bool VCLXAccessibleStatusBarItem::scrollSubstringTo( sal_Int32, sal_Int32, AccessibleScrollType )
+{
+    return false;
+}
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

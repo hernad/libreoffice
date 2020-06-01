@@ -662,7 +662,7 @@ namespace {
 
 struct DataField
 {
-    long const mnPos; // field index in pivot cache.
+    long mnPos; // field index in pivot cache.
     const ScDPSaveDimension* mpDim;
 
     DataField( long nPos, const ScDPSaveDimension* pDim ) : mnPos(nPos), mpDim(pDim) {}
@@ -1121,7 +1121,7 @@ void XclExpXmlPivotTables::SavePivotTableXml( XclExpXmlStream& rStrm, const ScDP
             long nDimIdx = rDataField.mnPos;
             assert(aCachedDims[nDimIdx]); // the loop above should have screened for NULL's.
             const ScDPSaveDimension& rDim = *rDataField.mpDim;
-            o3tl::optional<OUString> pName = rDim.GetLayoutName();
+            std::optional<OUString> pName = rDim.GetLayoutName();
             // tdf#124651: despite being optional in CT_DataField according to ECMA-376 Part 1,
             // Excel (at least 2016) seems to insist on the presence of "name" attribute in
             // dataField element.

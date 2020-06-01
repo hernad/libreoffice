@@ -53,7 +53,9 @@ BreakIteratorImpl::~BreakIteratorImpl()
 sal_Int32 SAL_CALL BreakIteratorImpl::nextCharacters( const OUString& Text, sal_Int32 nStartPos,
         const Locale &rLocale, sal_Int16 nCharacterIteratorMode, sal_Int32 nCount, sal_Int32& nDone )
 {
-    if (nCount < 0) throw RuntimeException();
+    if (nCount < 0)
+        throw RuntimeException("BreakIteratorImpl::nextCharacters: expected nCount >=0, got "
+                               + OUString::number(nCount));
 
     return LBI->nextCharacters( Text, nStartPos, rLocale, nCharacterIteratorMode, nCount, nDone);
 }
@@ -61,7 +63,9 @@ sal_Int32 SAL_CALL BreakIteratorImpl::nextCharacters( const OUString& Text, sal_
 sal_Int32 SAL_CALL BreakIteratorImpl::previousCharacters( const OUString& Text, sal_Int32 nStartPos,
         const Locale& rLocale, sal_Int16 nCharacterIteratorMode, sal_Int32 nCount, sal_Int32& nDone )
 {
-    if (nCount < 0) throw RuntimeException();
+    if (nCount < 0)
+        throw RuntimeException("BreakIteratorImpl::previousCharacters: expected nCount >=0, got "
+                               + OUString::number(nCount));
 
     return LBI->previousCharacters( Text, nStartPos, rLocale, nCharacterIteratorMode, nCount, nDone);
 }
@@ -75,23 +79,57 @@ static sal_Int32 skipSpace(const OUString& Text, sal_Int32 nPos, sal_Int32 len, 
     switch (rWordType) {
         case WordType::ANYWORD_IGNOREWHITESPACES:
             if (bDirection)
-                while (nPos < len && (u_isWhitespace(ch = Text.iterateCodePoints(&pos)) || isZWSP(ch))) nPos=pos;
+                while (nPos < len)
+                {
+                    ch = Text.iterateCodePoints(&pos);
+                    if (!u_isWhitespace(ch) && !isZWSP(ch))
+                        break;
+                    nPos = pos;
+                }
             else
-                while (nPos > 0 && (u_isWhitespace(ch = Text.iterateCodePoints(&pos, -1)) || isZWSP(ch))) nPos=pos;
+                while (nPos > 0)
+                {
+                    ch = Text.iterateCodePoints(&pos, -1);
+                    if (!u_isWhitespace(ch) && !isZWSP(ch))
+                        break;
+                    nPos = pos;
+                }
             break;
         case WordType::DICTIONARY_WORD:
             if (bDirection)
-                while (nPos < len && (u_isWhitespace(ch = Text.iterateCodePoints(&pos)) || isZWSP(ch) ||
-                            ! (ch == 0x002E || u_isalnum(ch)))) nPos=pos;
+                while (nPos < len)
+                {
+                    ch = Text.iterateCodePoints(&pos);
+                    if (!u_isWhitespace(ch) && !isZWSP(ch) && (ch == 0x002E || u_isalnum(ch)))
+                        break;
+                    nPos = pos;
+                }
             else
-                while (nPos > 0 && (u_isWhitespace(ch = Text.iterateCodePoints(&pos, -1)) || isZWSP(ch) ||
-                            ! (ch == 0x002E || u_isalnum(ch)))) nPos=pos;
+                while (nPos > 0)
+                {
+                    ch = Text.iterateCodePoints(&pos, -1);
+                    if (!u_isWhitespace(ch) && !isZWSP(ch) && (ch == 0x002E || u_isalnum(ch)))
+                        break;
+                    nPos = pos;
+                }
             break;
         case WordType::WORD_COUNT:
             if (bDirection)
-                while (nPos < len && (u_isUWhiteSpace(ch = Text.iterateCodePoints(&pos)) || isZWSP(ch))) nPos=pos;
+                while (nPos < len)
+                {
+                    ch = Text.iterateCodePoints(&pos);
+                    if (!u_isUWhiteSpace(ch) && !isZWSP(ch))
+                        break;
+                    nPos = pos;
+                }
             else
-                while (nPos > 0 && (u_isUWhiteSpace(ch = Text.iterateCodePoints(&pos, -1)) || isZWSP(ch))) nPos=pos;
+                while (nPos > 0)
+                {
+                    ch = Text.iterateCodePoints(&pos, -1);
+                    if (!u_isUWhiteSpace(ch) && !isZWSP(ch))
+                        break;
+                    nPos = pos;
+                }
             break;
     }
     return nPos;
@@ -578,7 +616,10 @@ BreakIteratorImpl::getLocaleSpecificBreakIterator(const Locale& rLocale)
 
         for (const lookupTableItem& listItem : lookupTable) {
             if (rLocale == listItem.aLocale)
-                return xBI = listItem.xBI;
+            {
+                xBI = listItem.xBI;
+                return xBI;
+            }
         }
 
         OUStringLiteral under("_");
@@ -610,7 +651,7 @@ BreakIteratorImpl::getLocaleSpecificBreakIterator(const Locale& rLocale)
             return xBI;
         }
     }
-    throw RuntimeException();
+    throw RuntimeException("getLocaleSpecificBreakIterator: iterator not found");
 }
 
 OUString SAL_CALL

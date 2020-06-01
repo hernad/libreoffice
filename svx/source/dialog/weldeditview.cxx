@@ -241,8 +241,8 @@ public:
     virtual SfxItemPool* GetPool() const override;
 
     virtual OUString CalcFieldValue(const SvxFieldItem& rField, sal_Int32 nPara, sal_Int32 nPos,
-                                    o3tl::optional<Color>& rpTxtColor,
-                                    o3tl::optional<Color>& rpFldColor) override;
+                                    std::optional<Color>& rpTxtColor,
+                                    std::optional<Color>& rpFldColor) override;
     virtual void FieldClicked(const SvxFieldItem&) override;
     virtual bool IsValid() const override;
 
@@ -905,8 +905,8 @@ bool WeldTextForwarder::IsValid() const
 }
 
 OUString WeldTextForwarder::CalcFieldValue(const SvxFieldItem& rField, sal_Int32 nPara,
-                                           sal_Int32 nPos, o3tl::optional<Color>& rpTxtColor,
-                                           o3tl::optional<Color>& rpFldColor)
+                                           sal_Int32 nPos, std::optional<Color>& rpTxtColor,
+                                           std::optional<Color>& rpFldColor)
 {
     EditEngine* pEditEngine = m_rEditAcc.GetEditEngine();
     return pEditEngine ? pEditEngine->CalcFieldValue(rField, nPara, nPos, rpTxtColor, rpFldColor)
@@ -1082,8 +1082,8 @@ tools::Rectangle WeldTextForwarder::GetParaBounds(sal_Int32 nPara) const
     if (pEditEngine)
     {
         const Point aPnt = pEditEngine->GetDocPosTopLeft(nPara);
-        const sal_uLong nWidth = pEditEngine->CalcTextWidth();
-        const sal_uLong nHeight = pEditEngine->GetTextHeight(nPara);
+        const sal_Int32 nWidth = pEditEngine->CalcTextWidth();
+        const sal_Int32 nHeight = pEditEngine->GetTextHeight(nPara);
         aRect = tools::Rectangle(aPnt.X(), aPnt.Y(), aPnt.X() + nWidth, aPnt.Y() + nHeight);
     }
 

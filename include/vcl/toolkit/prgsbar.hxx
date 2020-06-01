@@ -20,10 +20,11 @@
 #ifndef INCLUDED_VCL_PRGSBAR_HXX
 #define INCLUDED_VCL_PRGSBAR_HXX
 
-#if !defined(VCL_DLLIMPLEMENTATION) && !defined(TOOLKIT_DLLIMPLEMENTATION)
+#if !defined(VCL_DLLIMPLEMENTATION) && !defined(TOOLKIT_DLLIMPLEMENTATION) && !defined(VCL_INTERNALS)
 #error "don't use this in new code"
 #endif
 
+#include <config_options.h>
 #include <vcl/dllapi.h>
 #include <vcl/window.hxx>
 
@@ -50,7 +51,7 @@
  ************************************************************************/
 
 
-class VCL_DLLPUBLIC ProgressBar final : public vcl::Window
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) ProgressBar final : public vcl::Window
 {
 private:
     Point               maPos;

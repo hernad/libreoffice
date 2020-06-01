@@ -21,17 +21,13 @@
 #define INCLUDED_WRITERFILTER_SOURCE_DMAPPER_SETTINGSTABLE_HXX
 
 #include "LoggedResources.hxx"
-#include <com/sun/star/lang/XComponent.hpp>
 #include <com/sun/star/text/XTextDocument.hpp>
-#include <map>
 #include <memory>
 
-namespace com{ namespace sun{ namespace star{
-namespace lang{
-class XMultiServiceFactory;
-struct Locale;
+namespace com::sun::star::lang {
+    class XMultiServiceFactory;
+    struct Locale;
 }
-}}}
 
 namespace writerfilter {
 namespace dmapper
@@ -77,7 +73,9 @@ class SettingsTable : public LoggedProperties, public LoggedTable
     bool GetDoNotExpandShiftReturn() const;
     bool GetNoColumnBalance() const;
     bool GetProtectForm() const;
+    bool GetReadOnly() const;
     bool GetLongerSpaceSequence() const;
+    bool GetNoLeading() const;
     bool GetNoHyphenateCaps() const;
     sal_Int16 GetHypenationZone() const;
 
@@ -89,6 +87,7 @@ class SettingsTable : public LoggedProperties, public LoggedTable
 
     void ApplyProperties(css::uno::Reference<css::text::XTextDocument> const& xDoc);
 
+    bool GetCompatSettingValue( const OUString& sCompatName ) const;
     sal_Int32 GetWordCompatibilityMode() const;
 
     const OUString & GetCurrentDatabaseDataSource() const;

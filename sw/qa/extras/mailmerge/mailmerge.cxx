@@ -224,7 +224,7 @@ public:
     /**
      * Like parseExport(), but for given mail merge document.
      */
-    xmlDocPtr parseMailMergeExport(const OUString& rStreamName)
+    xmlDocUniquePtr parseMailMergeExport(const OUString& rStreamName)
     {
         if (mnCurOutputType != text::MailMergeType::FILE)
             return nullptr;
@@ -392,9 +392,7 @@ DECLARE_FILE_MAILMERGE_TEST(testMissingDefaultLineColor, "missing-default-line-c
     executeMailMerge();
     // The document was created by LO version which didn't write out the default value for line color
     // (see XMLGraphicsDefaultStyle::SetDefaults()).
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDraws = xDrawPageSupplier->getDrawPage();
-    uno::Reference<beans::XPropertySet> xPropertySet(xDraws->getByIndex(0), uno::UNO_QUERY);
+    uno::Reference<beans::XPropertySet> xPropertySet(getShape(1), uno::UNO_QUERY);
     // Lines do not have a line color.
     CPPUNIT_ASSERT( !xPropertySet->getPropertySetInfo()->hasPropertyByName( "LineColor" ));
     SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument *>(mxComponent.get());
@@ -409,7 +407,7 @@ DECLARE_FILE_MAILMERGE_TEST(testMissingDefaultLineColor, "missing-default-line-c
     // And the default value is black (wasn't copied properly by mailmerge).
     CPPUNIT_ASSERT_EQUAL( COL_BLACK, lineColor );
     // And check that the resulting file has the proper default.
-    xmlDocPtr pXmlDoc = parseMailMergeExport( "styles.xml" );
+    xmlDocUniquePtr pXmlDoc = parseMailMergeExport( "styles.xml" );
     CPPUNIT_ASSERT_EQUAL( OUString( "graphic" ), getXPath(pXmlDoc, "/office:document-styles/office:styles/style:default-style[1]", "family"));
     CPPUNIT_ASSERT_EQUAL( OUString( "#000000" ), getXPath(pXmlDoc, "/office:document-styles/office:styles/style:default-style[1]/style:graphic-properties", "stroke-color"));
 }

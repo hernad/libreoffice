@@ -19,16 +19,12 @@
 
 
 #include <svx/svdovirt.hxx>
-#include <svx/xpool.hxx>
-#include <svx/svdtrans.hxx>
-#include <svx/svdetc.hxx>
 #include <svx/svdhdl.hxx>
 #include <svx/sdr/contact/viewcontactofvirtobj.hxx>
-#include <basegfx/matrix/b2dhommatrix.hxx>
 #include <svx/svdograf.hxx>
 #include <svx/svddrgv.hxx>
 #include <basegfx/matrix/b2dhommatrixtools.hxx>
-
+#include <rtl/ustrbuf.hxx>
 
 sdr::properties::BaseProperties& SdrVirtObj::GetProperties() const
 {
@@ -330,7 +326,7 @@ void SdrVirtObj::NbcShear(const Point& rRef, long nAngle, double tn, bool bVShea
 
 void SdrVirtObj::Move(const Size& rSiz)
 {
-    if (rSiz.Width()!=0 || rSiz.Height()!=0) {
+    if (!rSiz.IsEmpty()) {
         tools::Rectangle aBoundRect0; if (pUserCall!=nullptr) aBoundRect0=GetLastBoundRect();
         NbcMove(rSiz);
         SetChanged();

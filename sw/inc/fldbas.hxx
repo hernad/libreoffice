@@ -22,16 +22,22 @@
 #include <i18nlangtag/lang.h>
 #include "swdllapi.h"
 #include "calbck.hxx"
+#include "ndindex.hxx"
+
 #include <cppuhelper/weakref.hxx>
 #include <editeng/svxenum.hxx>
 #include <vector>
 #include <climits>
 
 class SwDoc;
+class SwField;
+class SwFormatField;
 class SwRootFrame;
 class SvNumberFormatter;
-namespace com { namespace sun { namespace star { namespace beans { class XPropertySet; } } } }
-namespace com { namespace sun { namespace star { namespace uno { class Any; } } } }
+class IDocumentRedlineAccess;
+class SwGetRefField;
+namespace com::sun::star::beans { class XPropertySet; }
+namespace com::sun::star::uno { class Any; }
 
 typedef struct _xmlTextWriter* xmlTextWriterPtr;
 
@@ -235,7 +241,7 @@ class SW_DLLPUBLIC SwFieldType : public SwModify, public sw::BroadcasterMixin
 {
     css::uno::WeakReference<css::beans::XPropertySet> m_wXFieldMaster;
 
-    SwFieldIds const m_nWhich;
+    SwFieldIds m_nWhich;
 
     friend void FinitUI();     ///< In order to delete pointer!
     static  std::vector<OUString>* s_pFieldNames;
@@ -267,6 +273,13 @@ public:
 
     inline  void            UpdateFields() const;
     virtual void dumpAsXml(xmlTextWriterPtr pWriter) const;
+    SwFormatField* FindFormatForField(const SwField*) const;
+    SwFormatField* FindFormatForPostItId(sal_uInt32 nPostItId) const;
+    void CollectPostIts(std::vector<SwFormatField*>& rvFormatFields, IDocumentRedlineAccess const& rIDRA, bool HideRedlines);
+    bool HasHiddenInformationNotes();
+    void GatherNodeIndex(std::vector<sal_uLong>& rvNodeIndex);
+    void GatherRefFields(std::vector<SwGetRefField*>& rvRFields, const sal_uInt16 nTyp);
+    void GatherFields(std::vector<SwFormatField*>& rvFormatFields, bool bCollectOnlyInDocNodes=true) const;
 };
 
 inline void SwFieldType::UpdateFields() const
@@ -281,11 +294,11 @@ class SW_DLLPUBLIC SwField
 {
 private:
     mutable OUString    m_Cache;                ///< Cached expansion (for clipboard).
-    bool                m_bUseFieldValueCache;  /// control the usage of the cached field value
-    LanguageType        m_nLang;                ///< Always change via SetLanguage!
-    bool                m_bIsAutomaticLanguage;
-    sal_uInt32          m_nFormat;              /// this can be either SvxNumType or SwChapterFormat depending on the subtype
     SwFieldType*        m_pType;
+    sal_uInt32          m_nFormat;              /// this can be either SvxNumType or SwChapterFormat depending on the subtype
+    LanguageType        m_nLang;                ///< Always change via SetLanguage!
+    bool                m_bUseFieldValueCache;  /// control the usage of the cached field value
+    bool                m_bIsAutomaticLanguage;
 
     virtual OUString    ExpandImpl(SwRootFrame const* pLayout) const = 0;
     virtual std::unique_ptr<SwField> Copy() const = 0;

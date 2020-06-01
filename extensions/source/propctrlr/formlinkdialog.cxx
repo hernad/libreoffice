@@ -38,7 +38,7 @@
 #include <com/sun/star/sdbc/XRowSet.hpp>
 #include <com/sun/star/sdb/CommandType.hpp>
 #include <com/sun/star/sdb/SQLContext.hpp>
-
+#include <com/sun/star/sdb/XSingleSelectQueryComposer.hpp>
 
 namespace pcr
 {
@@ -46,7 +46,6 @@ namespace pcr
 
     using namespace ::com::sun::star::uno;
     using namespace ::com::sun::star::lang;
-    using namespace ::com::sun::star::form;
     using namespace ::com::sun::star::sdb;
     using namespace ::com::sun::star::sdbc;
     using namespace ::com::sun::star::sdbcx;
@@ -404,19 +403,19 @@ namespace pcr
             TOOLS_WARN_EXCEPTION( "extensions.propctrlr", "FormLinkDialog::getFormFields: caught a non-SQL exception!" );
         }
 
-        if ( aErrorInfo.isValid() )
-        {
-            OUString sErrorMessage;
-            {
-                sErrorMessage = PcrRes(STR_ERROR_RETRIEVING_COLUMNS);
-                sErrorMessage = sErrorMessage.replaceFirst("#", sCommand);
-            }
+        if ( !aErrorInfo.isValid() )
+            return;
 
-            SQLContext aContext;
-            aContext.Message = sErrorMessage;
-            aContext.NextException = aErrorInfo.get();
-            ::dbtools::showError(aContext, m_xDialog->GetXWindow(), m_xContext);
+        OUString sErrorMessage;
+        {
+            sErrorMessage = PcrRes(STR_ERROR_RETRIEVING_COLUMNS);
+            sErrorMessage = sErrorMessage.replaceFirst("#", sCommand);
         }
+
+        SQLContext aContext;
+        aContext.Message = sErrorMessage;
+        aContext.NextException = aErrorInfo.get();
+        ::dbtools::showError(aContext, m_xDialog->GetXWindow(), m_xContext);
     }
 
     void FormLinkDialog::ensureFormConnection( const Reference< XPropertySet >& _rxFormProps, Reference< XConnection >& /* [out] */ _rxConnection ) const

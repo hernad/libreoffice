@@ -21,10 +21,10 @@
 #include <com/sun/star/beans/PropertyAttribute.hpp>
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include "controlfontdialog.hxx"
-#include <cppuhelper/typeprovider.hxx>
 #include <vcl/svapp.hxx>
 #include "fontdialog.hxx"
 #include "formstrings.hxx"
+#include "modulepcr.hxx"
 #include "pcrcommon.hxx"
 #include "pcrservices.hxx"
 

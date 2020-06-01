@@ -22,14 +22,14 @@
 #include <com/sun/star/lang/Locale.hpp>
 #include <vbahelper/vbahelperinterface.hxx>
 
-namespace com { namespace sun { namespace star { namespace beans { class XPropertySet; } } } }
-namespace com { namespace sun { namespace star { namespace beans { class XPropertyState; } } } }
-namespace com { namespace sun { namespace star { namespace frame { class XModel; } } } }
-namespace com { namespace sun { namespace star { namespace util { class XNumberFormats; } } } }
-namespace com { namespace sun { namespace star { namespace util { class XNumberFormatsSupplier; } } } }
-namespace com { namespace sun { namespace star { namespace util { class XNumberFormatTypes; } } } }
-namespace ooo { namespace vba { namespace excel { class XFont; } } }
-namespace ooo { namespace vba { namespace excel { class XInterior; } } }
+namespace com::sun::star::beans { class XPropertySet; }
+namespace com::sun::star::beans { class XPropertyState; }
+namespace com::sun::star::frame { class XModel; }
+namespace com::sun::star::util { class XNumberFormats; }
+namespace com::sun::star::util { class XNumberFormatsSupplier; }
+namespace com::sun::star::util { class XNumberFormatTypes; }
+namespace ooo::vba::excel { class XFont; }
+namespace ooo::vba::excel { class XInterior; }
 
 class ScCellRangesBase;
 class SfxItemSet;
@@ -38,7 +38,7 @@ template< typename... Ifc >
 class ScVbaFormat : public InheritedHelperInterfaceWeakImpl< Ifc... >
 {
 typedef InheritedHelperInterfaceWeakImpl< Ifc... > ScVbaFormat_BASE;
-    css::lang::Locale const m_aDefaultLocale;
+    css::lang::Locale m_aDefaultLocale;
 protected:
     css::uno::Reference< css::beans::XPropertySet > mxPropertySet;
     css::uno::Reference< css::util::XNumberFormatsSupplier > mxNumberFormatsSupplier;
@@ -46,7 +46,7 @@ protected:
     css::uno::Reference< css::util::XNumberFormatTypes > xNumberFormatTypes;
     css::uno::Reference< css::frame::XModel > mxModel;
     css::uno::Reference< css::beans::XPropertyState > xPropertyState;
-    bool const mbCheckAmbiguoity;
+    bool mbCheckAmbiguoity;
     bool mbAddIndent;
     /// @throws css::script::BasicErrorException
     bool isAmbiguous(const OUString& _sPropertyName);

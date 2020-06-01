@@ -19,6 +19,7 @@ $(eval $(call gb_Module_add_moduledirs,external,\
 	$(call gb_Helper_optional,APACHE_COMMONS,apache-commons) \
 	$(call gb_Helper_optional,APR,apr) \
 	$(call gb_Helper_optional,BOOST,boost) \
+	$(call gb_Helper_optional,BOX2D,box2d) \
 	$(call gb_Helper_optional,BREAKPAD,breakpad) \
 	$(call gb_Helper_optional,BSH,beanshell) \
 	$(call gb_Helper_optional,BZIP2,bzip2) \
@@ -31,6 +32,7 @@ $(eval $(call gb_Module_add_moduledirs,external,\
 	$(call gb_Helper_optional,CPPUNIT,cppunit) \
 	$(call gb_Helper_optional,CT2N,ct2n) \
 	$(call gb_Helper_optional,CURL,curl) \
+	dtoa \
 	$(call gb_Helper_optional,EBOOK,libebook) \
 	$(call gb_Helper_optional,EPM,epm) \
 	$(call gb_Helper_optional,EPOXY,epoxy) \

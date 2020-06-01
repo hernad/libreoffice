@@ -17,23 +17,17 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <string>
-
-#include <i18nutil/unicode.hxx>
 #include <vcl/toolbox.hxx>
-#include <vcl/field.hxx>
-#include <vcl/fixed.hxx>
 #include <vcl/idle.hxx>
-#include <vcl/svapp.hxx>
 #include <svl/intitem.hxx>
+#include <svl/itempool.hxx>
 #include <svl/eitem.hxx>
 #include <svl/whiter.hxx>
-#include <sfx2/app.hxx>
-#include <sfx2/dispatch.hxx>
-#include <sfx2/objsh.hxx>
 #include <sfx2/viewsh.hxx>
 #include <sfx2/request.hxx>
 #include <sfx2/basedlgs.hxx>
+#include <vcl/InterimItemWindow.hxx>
+#include <sfx2/sfxdlg.hxx>
 #include <tools/urlobj.hxx>
 
 #include <svx/dialogs.hrc>
@@ -43,7 +37,6 @@
 #include <editeng/sizeitem.hxx>
 #include <svx/sdgcpitm.hxx>
 
-#include <svx/itemwin.hxx>
 #include <svx/dialmgr.hxx>
 #include <svx/svdview.hxx>
 #include <svx/svdmodel.hxx>
@@ -52,17 +45,14 @@
 #include <svx/svdtrans.hxx>
 #include <svx/grafctrl.hxx>
 #include <svx/tbxcolor.hxx>
-#include <svx/sdgcoitm.hxx>
+#include <sdgcoitm.hxx>
 #include <svx/sdggaitm.hxx>
 #include <svx/sdgluitm.hxx>
 #include <svx/sdgmoitm.hxx>
-#include <svx/sdgtritm.hxx>
+#include <sdgtritm.hxx>
 #include <bitmaps.hlst>
 
 #include <com/sun/star/frame/XDispatchProvider.hpp>
-
-#include <comphelper/lok.hxx>
-#include <LibreOfficeKit/LibreOfficeKitEnums.h>
 
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::frame;
@@ -70,80 +60,50 @@ using namespace ::com::sun::star::util;
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::lang;
 
-#include <svx/svxdlg.hxx>
-
-#define SYMBOL_TO_FIELD_OFFSET      4
 #define TOOLBOX_NAME                "colorbar"
 #define RID_SVXSTR_UNDO_GRAFCROP    RID_SVXSTR_GRAFCROP
 
 namespace {
 
-class ImplGrafMetricField : public MetricField
+class ImplGrafControl final : public InterimItemWindow
 {
-    using Window::Update;
-
 private:
-    Idle                maIdle;
-    OUString const      maCommand;
-    Reference< XFrame > mxFrame;
+    Idle maIdle;
+    OUString maCommand;
+    Reference<XFrame> mxFrame;
+    std::unique_ptr<weld::Image> mxImage;
+    std::unique_ptr<weld::MetricSpinButton> mxField;
 
-                    DECL_LINK(ImplModifyHdl, Timer *, void);
-
-protected:
-
-    virtual void    Modify() override;
+    DECL_LINK(ValueChangedHdl, weld::MetricSpinButton&, void);
+    DECL_LINK(KeyInputHdl, const KeyEvent&, bool);
+    DECL_LINK(ImplModifyHdl, Timer*, void);
 
 public:
-                    ImplGrafMetricField( vcl::Window* pParent, const OUString& aCmd, const Reference< XFrame >& rFrame );
+    ImplGrafControl( vcl::Window* pParent, const OUString& rCmd, const Reference< XFrame >& rFrame );
+    virtual ~ImplGrafControl() override;
+    virtual void            dispose() override;
 
-    void            Update( const SfxPoolItem* pItem );
+    virtual void            GetFocus() override;
+    void Update( const SfxPoolItem* pItem );
+    void set_field_text(const OUString& rStr) { mxField->set_text(rStr); }
+    void set_sensitive(bool bSensitive)
+    {
+        Enable(bSensitive);
+        mxImage->set_sensitive(bSensitive);
+        mxField->set_sensitive(bSensitive);
+    }
 };
 
 }
 
-ImplGrafMetricField::ImplGrafMetricField( vcl::Window* pParent, const OUString& rCmd, const Reference< XFrame >& rFrame ) :
-    MetricField( pParent, WB_BORDER | WB_SPIN | WB_REPEAT | WB_3DLOOK ),
-    maCommand( rCmd ),
-    mxFrame( rFrame )
-{
-    Size aSize(CalcMinimumSizeForText(unicode::formatPercent(-100, Application::GetSettings().GetUILanguageTag())));
-    SetSizePixel(aSize);
-
-    if ( maCommand == ".uno:GrafGamma" )
-    {
-        SetDecimalDigits( 2 );
-
-        SetMin( 10 );
-        SetFirst( 10 );
-        SetMax( 1000 );
-        SetLast( 1000 );
-        SetSpinSize( 10 );
-    }
-    else
-    {
-        const long nMinVal = maCommand == ".uno:GrafTransparence" ? 0 : -100;
-
-        SetUnit(FieldUnit::PERCENT);
-        SetDecimalDigits( 0 );
-
-        SetMin( nMinVal );
-        SetFirst( nMinVal );
-        SetMax( 100 );
-        SetLast( 100 );
-        SetSpinSize( 1 );
-    }
-
-    maIdle.SetInvokeHandler( LINK( this, ImplGrafMetricField, ImplModifyHdl ) );
-}
-
-void ImplGrafMetricField::Modify()
+IMPL_LINK_NOARG(ImplGrafControl, ValueChangedHdl, weld::MetricSpinButton&, void)
 {
     maIdle.Start();
 }
 
-IMPL_LINK_NOARG(ImplGrafMetricField, ImplModifyHdl, Timer *, void)
+IMPL_LINK_NOARG(ImplGrafControl, ImplModifyHdl, Timer*, void)
 {
-    const sal_Int64 nVal = GetValue();
+    const sal_Int64 nVal = mxField->get_value(FieldUnit::NONE);
 
     // Convert value to an any to be usable with dispatch API
     Any a;
@@ -172,7 +132,7 @@ IMPL_LINK_NOARG(ImplGrafMetricField, ImplModifyHdl, Timer *, void)
     }
 }
 
-void ImplGrafMetricField::Update( const SfxPoolItem* pItem )
+void ImplGrafControl::Update( const SfxPoolItem* pItem )
 {
     if( pItem )
     {
@@ -185,10 +145,10 @@ void ImplGrafMetricField::Update( const SfxPoolItem* pItem )
         else
             nValue = static_cast<const SfxInt16Item*>( pItem )->GetValue();
 
-        SetValue( nValue );
+        mxField->set_value(nValue, FieldUnit::NONE);
     }
     else
-        SetText( OUString() );
+        mxField->set_text(OUString());
 }
 
 namespace {
@@ -231,76 +191,52 @@ static OUString ImplGetRID( const OUString& aCommand )
     return sRID;
 }
 
-namespace {
-
-class ImplGrafControl : public Control
-{
-    using Window::Update;
-private:
-    VclPtr<FixedImage>          maImage;
-    VclPtr<ImplGrafMetricField> maField;
-
-protected:
-
-    virtual void            GetFocus() override;
-
-public:
-
-                            ImplGrafControl( vcl::Window* pParent, const OUString& rCmd, const Reference< XFrame >& rFrame );
-                            virtual ~ImplGrafControl() override;
-    virtual void            dispose() override;
-
-    void                    Update( const SfxPoolItem* pItem ) { maField->Update( pItem ); }
-    void                    SetText( const OUString& rStr ) override { maField->SetText( rStr ); }
-    virtual void            Resize() override;
-};
-
-}
-
 ImplGrafControl::ImplGrafControl(
     vcl::Window* pParent,
     const OUString& rCmd,
-    const Reference< XFrame >& rFrame
-)   : Control( pParent, WB_TABSTOP )
-    , maImage( VclPtr<FixedImage>::Create(this) )
-    , maField( VclPtr<ImplGrafMetricField>::Create(this, rCmd, rFrame) )
+    const Reference< XFrame >& rFrame)
+    : InterimItemWindow(pParent, "svx/ui/grafctrlbox.ui", "GrafCtrlBox")
+    , maCommand(rCmd)
+    , mxFrame(rFrame)
+    , mxImage(m_xBuilder->weld_image("image"))
+    , mxField(m_xBuilder->weld_metric_spin_button("spinfield", FieldUnit::NONE))
 {
     OUString sResId(ImplGetRID(rCmd));
-    BitmapEx aBitmapEx(sResId);
-
-    Size    aImgSize(aBitmapEx.GetSizePixel());
-    Size    aFldSize(maField->GetSizePixel());
-    long    nFldY, nImgY;
-
-    maImage->SetImage(Image(aBitmapEx));
-    maImage->SetSizePixel( aImgSize );
-    // we want to see the background of the toolbox, not of the FixedImage or Control
-    maImage->SetBackground( Wallpaper( COL_TRANSPARENT ) );
-    SetBackground( Wallpaper( COL_TRANSPARENT ) );
-
-    if( aImgSize.Height() > aFldSize.Height() )
-    {
-        nImgY = 0;
-        nFldY = ( aImgSize.Height() - aFldSize.Height() ) >> 1;
-    }
-    else
-    {
-        nFldY = 0;
-        nImgY = ( aFldSize.Height() - aImgSize.Height() ) >> 1;
-    }
-
-    long nOffset = SYMBOL_TO_FIELD_OFFSET / 2;
-    maImage->SetPosPixel( Point( nOffset, nImgY ) );
-    maField->SetPosPixel( Point( aImgSize.Width() + SYMBOL_TO_FIELD_OFFSET, nFldY ) );
-    SetSizePixel( Size( aImgSize.Width() + aFldSize.Width() + SYMBOL_TO_FIELD_OFFSET + nOffset,
-                  std::max( aImgSize.Height(), aFldSize.Height() ) ) );
+    mxImage->set_from_icon_name(sResId);
+    mxImage->set_toolbar_background();
 
     SetBackground( Wallpaper() ); // transparent background
 
-    maImage->Show();
+    mxField->set_help_id(OUStringToOString(rCmd, RTL_TEXTENCODING_UTF8));
+    mxField->get_widget().connect_key_press(LINK(this, ImplGrafControl, KeyInputHdl));
+    mxField->connect_value_changed(LINK(this, ImplGrafControl, ValueChangedHdl));
 
-    maField->SetHelpId( OUStringToOString( rCmd, RTL_TEXTENCODING_UTF8 ) );
-    maField->Show();
+    if (maCommand == ".uno:GrafGamma")
+    {
+        mxField->set_digits(2);
+
+        mxField->set_range(10, 1000, FieldUnit::NONE);
+        mxField->set_increments(10, 100, FieldUnit::NONE);
+    }
+    else
+    {
+        const long nMinVal = maCommand == ".uno:GrafTransparence" ? 0 : -100;
+
+        mxField->set_unit(FieldUnit::PERCENT);
+        mxField->set_digits(0);
+
+        mxField->set_range(nMinVal, 100, FieldUnit::PERCENT);
+        mxField->set_increments(1, 10, FieldUnit::PERCENT);
+    }
+
+    maIdle.SetInvokeHandler( LINK( this, ImplGrafControl, ImplModifyHdl ) );
+
+    SetSizePixel(m_xContainer->get_preferred_size());
+}
+
+IMPL_LINK(ImplGrafControl, KeyInputHdl, const KeyEvent&, rKEvt, bool)
+{
+    return ChildKeyInput(rKEvt);
 }
 
 ImplGrafControl::~ImplGrafControl()
@@ -310,121 +246,124 @@ ImplGrafControl::~ImplGrafControl()
 
 void ImplGrafControl::dispose()
 {
-    maImage.disposeAndClear();
-    maField.disposeAndClear();
-    Control::dispose();
+    mxImage.reset();
+    mxField.reset();
+    InterimItemWindow::dispose();
 }
 
 void ImplGrafControl::GetFocus()
 {
-    if (maField)
-        maField->GrabFocus();
-}
-
-void ImplGrafControl::Resize()
-{
-    Size aFldSize(maField->GetSizePixel());
-    aFldSize.setWidth( GetSizePixel().Width() - SYMBOL_TO_FIELD_OFFSET - maImage->GetSizePixel().Width() );
-    maField->SetSizePixel(aFldSize);
-
-    Control::Resize();
+    if (mxField)
+        mxField->grab_focus();
+    InterimItemWindow::GetFocus();
 }
 
 namespace {
 
-class ImplGrafModeControl : public ListBox
+class ImplGrafModeControl final : public InterimItemWindow
 {
-    using Window::Update;
 private:
-    sal_uInt16              mnCurPos;
+    sal_uInt16 mnCurPos;
     Reference< XFrame > mxFrame;
+    std::unique_ptr<weld::ComboBox> m_xWidget;
 
-    virtual void    Select() override;
-    virtual bool    PreNotify( NotifyEvent& rNEvt ) override;
-    virtual bool    EventNotify( NotifyEvent& rNEvt ) override;
+    DECL_LINK(SelectHdl, weld::ComboBox&, void);
+    DECL_LINK(KeyInputHdl, const KeyEvent&, bool);
+    DECL_LINK(FocusInHdl, weld::Widget&, void);
+
     static void     ImplReleaseFocus();
 
 public:
-                    ImplGrafModeControl( vcl::Window* pParent, const Reference< XFrame >& rFrame );
+    ImplGrafModeControl( vcl::Window* pParent, const Reference< XFrame >& rFrame );
+    virtual void dispose() override;
+    virtual ~ImplGrafModeControl() override;
+
+    virtual void GetFocus() override
+    {
+        if (m_xWidget)
+            m_xWidget->grab_focus();
+        InterimItemWindow::GetFocus();
+    }
+
+    void set_sensitive(bool bSensitive)
+    {
+        Enable(bSensitive);
+        m_xWidget->set_sensitive(true);
+    }
+
+    void set_active(int nActive)
+    {
+        m_xWidget->set_active(nActive);
+    }
 
     void            Update( const SfxPoolItem* pItem );
 };
 
 }
 
-ImplGrafModeControl::ImplGrafModeControl( vcl::Window* pParent, const Reference< XFrame >& rFrame ) :
-    ListBox( pParent, WB_BORDER | WB_DROPDOWN | WB_AUTOHSCROLL ),
-    mnCurPos( 0 ),
-    mxFrame( rFrame )
+ImplGrafModeControl::ImplGrafModeControl(vcl::Window* pParent, const Reference<XFrame>& rFrame)
+    : InterimItemWindow(pParent, "svx/ui/grafmodebox.ui", "GrafModeBox")
+    , mnCurPos(0)
+    , mxFrame(rFrame)
+    , m_xWidget(m_xBuilder->weld_combo_box("grafmode"))
 {
-    SetSizePixel( Size( 100, 260 ) );
+    m_xWidget->append_text( SvxResId( RID_SVXSTR_GRAFMODE_STANDARD  ) );
+    m_xWidget->append_text( SvxResId( RID_SVXSTR_GRAFMODE_GREYS     ) );
+    m_xWidget->append_text( SvxResId( RID_SVXSTR_GRAFMODE_MONO      ) );
+    m_xWidget->append_text( SvxResId( RID_SVXSTR_GRAFMODE_WATERMARK ) );
 
-    InsertEntry( SvxResId( RID_SVXSTR_GRAFMODE_STANDARD  ) );
-    InsertEntry( SvxResId( RID_SVXSTR_GRAFMODE_GREYS     ) );
-    InsertEntry( SvxResId( RID_SVXSTR_GRAFMODE_MONO      ) );
-    InsertEntry( SvxResId( RID_SVXSTR_GRAFMODE_WATERMARK ) );
+    m_xWidget->connect_changed(LINK(this, ImplGrafModeControl, SelectHdl));
+    m_xWidget->connect_key_press(LINK(this, ImplGrafModeControl, KeyInputHdl));
+    m_xWidget->connect_focus_in(LINK(this, ImplGrafModeControl, FocusInHdl));
 
-    Show();
+    SetSizePixel(m_xWidget->get_preferred_size());
 }
 
-void ImplGrafModeControl::Select()
+void ImplGrafModeControl::dispose()
 {
-    if ( !IsTravelSelect() )
-    {
-        Sequence< PropertyValue > aArgs( 1 );
-        aArgs[0].Name = "GrafMode";
-        aArgs[0].Value <<= sal_Int16( GetSelectedEntryPos() );
+    m_xWidget.reset();
+    InterimItemWindow::dispose();
+}
 
-        /*  #i33380# DR 2004-09-03 Moved the following line above the Dispatch() call.
-            This instance may be deleted in the meantime (i.e. when a dialog is opened
-            while in Dispatch()), accessing members will crash in this case. */
+ImplGrafModeControl::~ImplGrafModeControl()
+{
+    disposeOnce();
+}
+
+IMPL_LINK(ImplGrafModeControl, SelectHdl, weld::ComboBox&, rBox, void)
+{
+    Sequence< PropertyValue > aArgs( 1 );
+    aArgs[0].Name = "GrafMode";
+    aArgs[0].Value <<= sal_Int16(rBox.get_active());
+
+    /*  #i33380# DR 2004-09-03 Moved the following line above the Dispatch() call.
+        This instance may be deleted in the meantime (i.e. when a dialog is opened
+        while in Dispatch()), accessing members will crash in this case. */
+    ImplReleaseFocus();
+
+    SfxToolBoxControl::Dispatch(
+        Reference< XDispatchProvider >( mxFrame->getController(), UNO_QUERY ),
+        ".uno:GrafMode",
+        aArgs );
+}
+
+IMPL_LINK(ImplGrafModeControl, KeyInputHdl, const KeyEvent&, rKEvt, bool)
+{
+    bool bHandled(false);
+
+    if (rKEvt.GetKeyCode().GetCode() == KEY_ESCAPE)
+    {
+        m_xWidget->set_active(mnCurPos);
         ImplReleaseFocus();
-
-        SfxToolBoxControl::Dispatch(
-            Reference< XDispatchProvider >( mxFrame->getController(), UNO_QUERY ),
-            ".uno:GrafMode",
-            aArgs );
-    }
-}
-
-bool ImplGrafModeControl::PreNotify( NotifyEvent& rNEvt )
-{
-    MouseNotifyEvent nType = rNEvt.GetType();
-
-    if( MouseNotifyEvent::MOUSEBUTTONDOWN == nType || MouseNotifyEvent::GETFOCUS == nType )
-        mnCurPos = GetSelectedEntryPos();
-
-    return ListBox::PreNotify( rNEvt );
-}
-
-bool ImplGrafModeControl::EventNotify( NotifyEvent& rNEvt )
-{
-    bool bHandled = ListBox::EventNotify( rNEvt );
-
-    if( rNEvt.GetType() == MouseNotifyEvent::KEYINPUT )
-    {
-        const KeyEvent* pKEvt = rNEvt.GetKeyEvent();
-
-        switch( pKEvt->GetKeyCode().GetCode() )
-        {
-            case KEY_RETURN:
-            {
-                Select();
-                bHandled = true;
-            }
-            break;
-
-            case KEY_ESCAPE:
-            {
-                SelectEntryPos( mnCurPos );
-                ImplReleaseFocus();
-                bHandled = true;
-            }
-            break;
-        }
+        bHandled = true;
     }
 
-    return bHandled;
+    return bHandled || ChildKeyInput(rKEvt);
+}
+
+IMPL_LINK_NOARG(ImplGrafModeControl, FocusInHdl, weld::Widget&, void)
+{
+    mnCurPos = m_xWidget->get_active();
 }
 
 void ImplGrafModeControl::ImplReleaseFocus()
@@ -441,9 +380,9 @@ void ImplGrafModeControl::ImplReleaseFocus()
 void ImplGrafModeControl::Update( const SfxPoolItem* pItem )
 {
     if( pItem )
-        SelectEntryPos( static_cast<const SfxUInt16Item*>(pItem)->GetValue() );
+        m_xWidget->set_active(static_cast<const SfxUInt16Item*>(pItem)->GetValue());
     else
-        SetNoSelection();
+        m_xWidget->set_active(-1);
 }
 
 SvxGrafToolBoxControl::SvxGrafToolBoxControl( sal_uInt16 nSlotId, sal_uInt16 nId, ToolBox& rTbx) :
@@ -458,19 +397,18 @@ SvxGrafToolBoxControl::~SvxGrafToolBoxControl()
 }
 
 void SvxGrafToolBoxControl::StateChanged( sal_uInt16, SfxItemState eState, const SfxPoolItem* pState )
-
 {
     ImplGrafControl* pCtrl = static_cast<ImplGrafControl*>( GetToolBox().GetItemWindow( GetId() ) );
     DBG_ASSERT( pCtrl, "Control not found" );
 
     if( eState == SfxItemState::DISABLED )
     {
-        pCtrl->Disable();
-        pCtrl->SetText( OUString() );
+        pCtrl->set_sensitive(false);
+        pCtrl->set_field_text( OUString() );
     }
     else
     {
-        pCtrl->Enable();
+        pCtrl->set_sensitive(true);
 
         if( eState == SfxItemState::DEFAULT )
             pCtrl->Update( pState );
@@ -479,7 +417,7 @@ void SvxGrafToolBoxControl::StateChanged( sal_uInt16, SfxItemState eState, const
     }
 }
 
-VclPtr<vcl::Window> SvxGrafToolBoxControl::CreateItemWindow( vcl::Window *pParent )
+VclPtr<InterimItemWindow> SvxGrafToolBoxControl::CreateItemWindow( vcl::Window *pParent )
 {
     return VclPtr<ImplGrafControl>::Create( pParent, m_aCommandURL, m_xFrame ).get();
 }
@@ -552,12 +490,12 @@ void SvxGrafModeToolBoxControl::StateChanged( sal_uInt16, SfxItemState eState, c
 
     if( eState == SfxItemState::DISABLED )
     {
-        pCtrl->Disable();
-        pCtrl->SetText( OUString() );
+        pCtrl->set_sensitive(false);
+        pCtrl->set_active(-1);
     }
     else
     {
-        pCtrl->Enable();
+        pCtrl->set_sensitive(true);
 
         if( eState == SfxItemState::DEFAULT )
             pCtrl->Update( pState );
@@ -566,7 +504,7 @@ void SvxGrafModeToolBoxControl::StateChanged( sal_uInt16, SfxItemState eState, c
     }
 }
 
-VclPtr<vcl::Window> SvxGrafModeToolBoxControl::CreateItemWindow( vcl::Window *pParent )
+VclPtr<InterimItemWindow> SvxGrafModeToolBoxControl::CreateItemWindow( vcl::Window *pParent )
 {
     return VclPtr<ImplGrafModeControl>::Create( pParent, m_xFrame ).get();
 }

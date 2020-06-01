@@ -33,11 +33,12 @@
 #include <com/sun/star/lang/DisposedException.hpp>
 #include <com/sun/star/text/WritingMode2.hpp>
 #include <toolkit/awt/vclxwindow.hxx>
-#include <toolkit/awt/vclxpointer.hxx>
+#include <awt/vclxpointer.hxx>
 #include <toolkit/awt/vclxwindows.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
 #include <toolkit/helper/convert.hxx>
 #include <toolkit/helper/property.hxx>
+#include <rtl/math.hxx>
 #include <sal/log.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/window.hxx>
@@ -64,7 +65,6 @@ using namespace ::com::sun::star;
 
 using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::UNO_QUERY;
-using ::com::sun::star::uno::RuntimeException;
 using ::com::sun::star::lang::EventObject;
 using ::com::sun::star::awt::XWindowListener2;
 using ::com::sun::star::awt::XDockableWindowListener;
@@ -114,7 +114,7 @@ public:
     bool                                mbDisposing             : 1;
     bool                                mbDesignMode            : 1;
     bool                                mbSynthesizingVCLEvent  : 1;
-    bool const                          mbWithDefaultProps      : 1;
+    bool                                mbWithDefaultProps      : 1;
 
     sal_uLong                           mnListenerLockLevel;
     sal_Int16                           mnWritingMode;
@@ -269,8 +269,7 @@ IMPL_LINK_NOARG(VCLXWindowImpl, OnProcessCallbacks, void*, void)
     CallbackArray aCallbacksCopy;
     {
         SolarMutexGuard aGuard;
-        aCallbacksCopy = maCallbackEvents;
-        maCallbackEvents.clear();
+        aCallbacksCopy.swap(maCallbackEvents);
 
         // we acquired our VCLXWindow once before posting the event, release this one ref now
         mrAntiImpl.release();
@@ -2218,12 +2217,8 @@ void VCLXWindow::draw( sal_Int32 nX, sal_Int32 nY )
         if ( pTabPage )
         {
             Point aPos( nX, nY );
-            Size  aSize = pWindow->GetSizePixel();
-
-            aPos  = pDev->PixelToLogic( aPos );
-            aSize = pDev->PixelToLogic( aSize );
-
-            pTabPage->Draw( pDev, aPos, aSize, DrawFlags::NONE );
+            aPos = pDev->PixelToLogic( aPos );
+            pTabPage->Draw( pDev, aPos, DrawFlags::NONE );
             return;
         }
 
@@ -2245,7 +2240,7 @@ void VCLXWindow::draw( sal_Int32 nX, sal_Int32 nY )
 
                 if ( bWasVisible && aOldPos == aPos )
                 {
-                    pWindow->Update();
+                    pWindow->PaintImmediately();
                     return;
                 }
 
@@ -2255,10 +2250,10 @@ void VCLXWindow::draw( sal_Int32 nX, sal_Int32 nY )
                 // of this window, as it may otherwise cause the parent
                 // to hide this window again
                 if( pWindow->GetParent() )
-                    pWindow->GetParent()->Update();
+                    pWindow->GetParent()->PaintImmediately();
 
                 pWindow->Show();
-                pWindow->Update();
+                pWindow->PaintImmediately();
                 pWindow->SetParentUpdateMode( false );
                 pWindow->Hide();
                 pWindow->SetParentUpdateMode( true );
@@ -2270,8 +2265,6 @@ void VCLXWindow::draw( sal_Int32 nX, sal_Int32 nY )
         }
         else if ( pDev )
         {
-            Size aSz = pWindow->GetSizePixel();
-            aSz = pDev->PixelToLogic( aSz );
             Point aP = pDev->PixelToLogic( aPos );
 
             vcl::PDFExtOutDevData* pPDFExport   = dynamic_cast<vcl::PDFExtOutDevData*>(pDev->GetExtOutDevData());
@@ -2280,14 +2273,14 @@ void VCLXWindow::draw( sal_Int32 nX, sal_Int32 nY )
                                || ( pPDFExport != nullptr );
             if ( bDrawSimple )
             {
-                pWindow->Draw( pDev, aP, aSz, DrawFlags::NoControls );
+                pWindow->Draw( pDev, aP, DrawFlags::NoControls );
             }
             else
             {
                 bool bOldNW =pWindow->IsNativeWidgetEnabled();
                 if( bOldNW )
                     pWindow->EnableNativeWidget(false);
-                pWindow->PaintToDevice( pDev, aP, aSz );
+                pWindow->PaintToDevice( pDev, aP );
                 if( bOldNW )
                     pWindow->EnableNativeWidget();
             }
@@ -2442,29 +2435,15 @@ sal_Bool SAL_CALL VCLXWindow::isInPopupMode(  )
 void SAL_CALL VCLXWindow::setOutputSize( const css::awt::Size& aSize )
 {
     SolarMutexGuard aGuard;
-    VclPtr<vcl::Window> pWindow;
-    if( (pWindow = GetWindow()) != nullptr )
-    {
-        DockingWindow *pDockingWindow = dynamic_cast< DockingWindow* >(pWindow.get());
-        if( pDockingWindow )
-            pDockingWindow->SetOutputSizePixel( VCLSize( aSize ) );
-        else
-            pWindow->SetOutputSizePixel( VCLSize( aSize ) );
-    }
+    if( VclPtr<vcl::Window> pWindow = GetWindow() )
+        pWindow->SetOutputSizePixel( VCLSize( aSize ) );
 }
 
 css::awt::Size SAL_CALL VCLXWindow::getOutputSize(  )
 {
     SolarMutexGuard aGuard;
-    VclPtr<vcl::Window> pWindow;
-    if( (pWindow = GetWindow()) != nullptr )
-    {
-        DockingWindow *pDockingWindow = dynamic_cast< DockingWindow* >(pWindow.get());
-        if( pDockingWindow )
-            return AWTSize( pDockingWindow->GetOutputSizePixel() );
-        else
-            return AWTSize( pWindow->GetOutputSizePixel() );
-    }
+    if( VclPtr<vcl::Window> pWindow = GetWindow() )
+        return AWTSize( pWindow->GetOutputSizePixel() );
     else
         return css::awt::Size();
 }

@@ -19,26 +19,17 @@
 
 #include <oox/ppt/slidetransitioncontext.hxx>
 
-#include <cppuhelper/exc_hlp.hxx>
-
-#include <com/sun/star/beans/XMultiPropertySet.hpp>
-#include <com/sun/star/container/XNamed.hpp>
-
 #include <oox/ppt/backgroundproperties.hxx>
-#include <oox/ppt/slidefragmenthandler.hxx>
 #include <oox/ppt/soundactioncontext.hxx>
-#include <oox/drawingml/shapegroupcontext.hxx>
 #include <oox/helper/attributelist.hxx>
 #include <oox/token/namespaces.hxx>
 #include <oox/token/tokens.hxx>
-#include <oox/token/properties.hxx>
 
 using namespace ::com::sun::star;
 using namespace ::oox::core;
 using namespace ::oox::drawingml;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::xml::sax;
-using namespace ::com::sun::star::container;
 
 namespace oox::ppt {
 
@@ -147,6 +138,7 @@ SlideTransitionContext::~SlideTransitionContext() throw()
     case P14_TOKEN( ripple ):
     case P14_TOKEN( glitter ):
     case P14_TOKEN( honeycomb ):
+    case P14_TOKEN( flash ):
         // CT_Empty
         if (!mbHasTransition)
         {
@@ -173,6 +165,13 @@ SlideTransitionContext::~SlideTransitionContext() throw()
         {
             mbHasTransition = true;
             maTransition.setPresetTransition(rAttribs.getString(XML_prst, ""));
+        }
+        return this;
+    case PPT_TOKEN( strips ):
+        if (!mbHasTransition)
+        {
+            mbHasTransition = true;
+            maTransition.setOoxTransitionType( aElementToken, rAttribs.getToken( XML_dir, XML_ld ), 0 );
         }
         return this;
 

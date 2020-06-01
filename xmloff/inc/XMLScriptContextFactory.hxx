@@ -24,9 +24,9 @@
 #include <xmloff/xmlevent.hxx>
 
 
-namespace com { namespace sun { namespace star {
-    namespace xml { namespace sax { class XAttributeList; } }
-} } }
+namespace com::sun::star {
+    namespace xml::sax { class XAttributeList; }
+}
 class SvXMLImport;
 class XMLEventsImportContext;
 
@@ -38,8 +38,6 @@ public:
 
     virtual SvXMLImportContext *
     CreateContext(SvXMLImport & rImport, /// import context
-                  sal_uInt16 nPrefix,    /// element: namespace prefix
-                  const OUString & rLocalName, /// element: local name
                   /// attribute list
                   const css::uno::Reference< css::xml::sax::XAttributeList> & xAttrList,
                   /// the context for the enclosing <script:events> element

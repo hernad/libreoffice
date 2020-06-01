@@ -198,6 +198,10 @@ public:
                     {
                         mnGeneratorVersion = SvXMLImport::LO_6x;
                     }
+                    else if ('7' == loVersion[0])
+                    {
+                        mnGeneratorVersion = SvXMLImport::LO_7x;
+                    }
                     else
                     {
                         SAL_INFO("xmloff.core", "unknown LO version: " << loVersion);
@@ -283,7 +287,7 @@ public:
     bool mbTextDocInOOoFileFormat;
 
     const uno::Reference< uno::XComponentContext > mxComponentContext;
-    OUString const implementationName;
+    OUString implementationName;
 
     uno::Reference< embed::XStorage > mxSourceStorage;
 
@@ -322,14 +326,6 @@ public:
 
     ::comphelper::UnoInterfaceToUniqueIdentifierMapper maInterfaceToIdentifierMapper;
 };
-
-SvXMLImportContext *SvXMLImport::CreateDocumentContext(sal_uInt16 const nPrefix,
-                                         const OUString& rLocalName,
-                                         const uno::Reference< xml::sax::XAttributeList >& )
-{
-    SAL_WARN( "xmloff.core", "CreateDocumentContext should be overridden, for element " << rLocalName);
-    return new SvXMLImportContext( *this, nPrefix, rLocalName );
-}
 
 SvXMLImportContext *SvXMLImport::CreateFastContext( sal_Int32 nElement,
         const uno::Reference< xml::sax::XFastAttributeList >& /*xAttrList*/ )
@@ -736,19 +732,15 @@ void SAL_CALL SvXMLImport::startElement( const OUString& rName,
     }
     else
     {
-        xContext.set(CreateDocumentContext(nPrefix, aLocalName, xAttrList));
-        if( (nPrefix & XML_NAMESPACE_UNKNOWN_FLAG) != 0 &&
-            dynamic_cast< const SvXMLImportContext*>(xContext.get()) !=  nullptr )
-        {
-            Reference<xml::sax::XLocator> xDummyLocator;
-            Sequence < OUString > aParams { rName };
+        Reference<xml::sax::XLocator> xDummyLocator;
+        Sequence < OUString > aParams { rName };
 
-            SetError( XMLERROR_FLAG_SEVERE|XMLERROR_UNKNOWN_ROOT,
-                      aParams, "Root element " + aLocalName + " unknown", xDummyLocator );
-        }
+        SetError( XMLERROR_FLAG_SEVERE|XMLERROR_UNKNOWN_ROOT,
+                  aParams, "Root element " + rName + " unknown", xDummyLocator );
     }
 
-    SAL_WARN_IF( !xContext.is(), "xmloff.core", "SvXMLImport::startElement: missing context for element " << rName );
+    if ( !xContext.is() )
+        SAL_INFO_IF( !xContext.is(), "xmloff.core", "SvXMLImport::startElement: missing context for element " << rName );
 
     if( !xContext.is() )
         xContext.set(new SvXMLImportContext( *this, nPrefix, aLocalName ));
@@ -850,10 +842,10 @@ void SAL_CALL SvXMLImport::startFastElement (sal_Int32 Element,
 {
     if ( Attribs.is() )
     {
-        sax_fastparser::FastAttributeList *pAttribList =
-            sax_fastparser::FastAttributeList::castToFastAttributeList( Attribs );
-        auto aIter( pAttribList->find( XML_ELEMENT( OFFICE, XML_VERSION ) ) );
-        if( aIter != pAttribList->end() )
+        sax_fastparser::FastAttributeList& rAttribList =
+            sax_fastparser::castToFastAttributeList( Attribs );
+        auto aIter( rAttribList.find( XML_ELEMENT( OFFICE, XML_VERSION ) ) );
+        if( aIter != rAttribList.end() )
         {
             mpImpl->aODFVersion = aIter.toString();
 
@@ -1469,7 +1461,7 @@ OUString SvXMLImport::ResolveEmbeddedObjectURLFromBase64()
     return sRet;
 }
 
-void SvXMLImport::AddStyleDisplayName( sal_uInt16 nFamily,
+void SvXMLImport::AddStyleDisplayName( XmlStyleFamily nFamily,
                                        const OUString& rName,
                                        const OUString& rDisplayName )
 {
@@ -1496,11 +1488,11 @@ void SvXMLImport::AddStyleDisplayName( sal_uInt16 nFamily,
     ::std::pair<StyleMap::iterator,bool> aRes( mpStyleMap->insert( aValue ) );
     SAL_WARN_IF( !aRes.second,
                  "xmloff.core",
-       "duplicate style name of family " << nFamily << ": \"" << rName << "\"");
+       "duplicate style name of family " << static_cast<int>(nFamily) << ": \"" << rName << "\"");
 
 }
 
-OUString SvXMLImport::GetStyleDisplayName( sal_uInt16 nFamily,
+OUString SvXMLImport::GetStyleDisplayName( XmlStyleFamily nFamily,
                                            const OUString& rName ) const
 {
     OUString sName( rName );
@@ -1717,9 +1709,8 @@ bool SvXMLImport::IsODFVersionConsistent( const OUString& aODFVersion )
         // check the consistency only for the ODF1.2 and later ( according to content.xml )
         // manifest.xml might have no version, it should be checked here and the correct version should be set
         try
-        {
-            uno::Reference< document::XStorageBasedDocument > xDoc( mxModel, uno::UNO_QUERY_THROW );
-            uno::Reference< embed::XStorage > xStor = xDoc->getDocumentStorage();
+        {   // don't use getDocumentStorage(), it's temporary and latest version
+            uno::Reference<embed::XStorage> const xStor(GetSourceStorage());
             uno::Reference< beans::XPropertySet > xStorProps( xStor, uno::UNO_QUERY_THROW );
 
             // the check should be done only for OASIS format
@@ -2030,6 +2021,16 @@ const OUString & SvXMLImport::getNameFromToken( sal_Int32 nToken )
     return xTokenHandler->getIdentifier( nToken & TOKEN_MASK );
 }
 
+OUString SvXMLImport::getPrefixAndNameFromToken( sal_Int32 nToken )
+{
+    OUString rv;
+    sal_Int32 nNamespaceToken = ( nToken & NMSP_MASK ) >> NMSP_SHIFT;
+    auto aIter( aNamespaceMap.find( nNamespaceToken ) );
+    if( aIter != aNamespaceMap.end() )
+        rv = (*aIter).second.second + " " + aIter->second.first + ":";
+    return rv + xTokenHandler->getIdentifier( nToken & TOKEN_MASK );
+}
+
 OUString SvXMLImport::getNamespacePrefixFromToken(sal_Int32 nToken, const SvXMLNamespaceMap* pMap)
 {
     sal_Int32 nNamespaceToken = ( nToken & NMSP_MASK ) >> NMSP_SHIFT;
@@ -2075,45 +2076,47 @@ void SvXMLImport::initializeNamespaceMaps()
         {
             const OUString& sNamespace = GetXMLToken( static_cast<XMLTokenEnum>( nNamespace ) );
             const OUString& sPrefix = GetXMLToken( static_cast<XMLTokenEnum>( nPrefix ) );
+            assert( aNamespaceMap.find(nToken +1) == aNamespaceMap.end() && "cannot map two namespaces to the same token here");
             aNamespaceMap[ nToken + 1 ] = std::make_pair( sPrefix, sNamespace );
             aNamespaceURIPrefixMap.emplace( sNamespace, sPrefix );
         }
     };
 
     mapTokenToNamespace( XML_NAMESPACE_OFFICE,           XML_NP_OFFICE,        XML_N_OFFICE           );
-    mapTokenToNamespace( XML_OLD_NAMESPACE_OFFICE,       XML_NP_OFFICE,        XML_N_OFFICE_OLD       );
+    mapTokenToNamespace( XML_NAMESPACE_OFFICE_SO52,      XML_NP_OFFICE,        XML_N_OFFICE_OLD       );
     mapTokenToNamespace( XML_NAMESPACE_OFFICE_OOO,       XML_NP_OFFICE,        XML_N_OFFICE_OOO       );
     mapTokenToNamespace( XML_NAMESPACE_STYLE,            XML_NP_STYLE,         XML_N_STYLE            );
-    mapTokenToNamespace( XML_OLD_NAMESPACE_STYLE,        XML_NP_STYLE,         XML_N_STYLE_OLD        );
+    mapTokenToNamespace( XML_NAMESPACE_STYLE_SO52,       XML_NP_STYLE,         XML_N_STYLE_OLD        );
     mapTokenToNamespace( XML_NAMESPACE_STYLE_OOO,        XML_NP_STYLE,         XML_N_STYLE_OOO        );
     mapTokenToNamespace( XML_NAMESPACE_TEXT,             XML_NP_TEXT,          XML_N_TEXT             );
-    mapTokenToNamespace( XML_OLD_NAMESPACE_TEXT,         XML_NP_TEXT,          XML_N_TEXT_OLD         );
+    mapTokenToNamespace( XML_NAMESPACE_TEXT_SO52,        XML_NP_TEXT,          XML_N_TEXT_OLD         );
     mapTokenToNamespace( XML_NAMESPACE_TEXT_OOO,         XML_NP_TEXT,          XML_N_TEXT_OOO         );
     mapTokenToNamespace( XML_NAMESPACE_TABLE,            XML_NP_TABLE,         XML_N_TABLE            );
-    mapTokenToNamespace( XML_OLD_NAMESPACE_TABLE,        XML_NP_TABLE,         XML_N_TABLE_OLD        );
+    mapTokenToNamespace( XML_NAMESPACE_TABLE_SO52,       XML_NP_TABLE,         XML_N_TABLE_OLD        );
     mapTokenToNamespace( XML_NAMESPACE_TABLE_OOO,        XML_NP_TABLE,         XML_N_TABLE_OOO        );
     mapTokenToNamespace( XML_NAMESPACE_DRAW,             XML_NP_DRAW,          XML_N_DRAW             );
-    mapTokenToNamespace( XML_OLD_NAMESPACE_DRAW,         XML_NP_DRAW,          XML_N_DRAW_OLD         );
+    mapTokenToNamespace( XML_NAMESPACE_DRAW_SO52,        XML_NP_DRAW,          XML_N_DRAW_OLD         );
     mapTokenToNamespace( XML_NAMESPACE_DRAW_OOO,         XML_NP_DRAW,          XML_N_DRAW_OOO         );
     mapTokenToNamespace( XML_NAMESPACE_FO,               XML_NP_FO,            XML_N_FO               );
-    mapTokenToNamespace( XML_OLD_NAMESPACE_FO,           XML_NP_FO,            XML_N_FO_OLD           );
+    mapTokenToNamespace( XML_NAMESPACE_FO_SO52,          XML_NP_FO,            XML_N_FO_OLD           );
     mapTokenToNamespace( XML_NAMESPACE_FO_COMPAT,        XML_NP_FO,            XML_N_FO_COMPAT        );
     mapTokenToNamespace( XML_NAMESPACE_XLINK,            XML_NP_XLINK,         XML_N_XLINK            );
-    mapTokenToNamespace( XML_OLD_NAMESPACE_XLINK,        XML_NP_XLINK,         XML_N_XLINK_OLD        );
+    mapTokenToNamespace( XML_NAMESPACE_XLINK_SO52,       XML_NP_XLINK,         XML_N_XLINK_OLD        );
     mapTokenToNamespace( XML_NAMESPACE_DC,               XML_NP_DC,            XML_N_DC               );
     mapTokenToNamespace( XML_NAMESPACE_META,             XML_NP_META,          XML_N_META             );
-    mapTokenToNamespace( XML_OLD_NAMESPACE_META,         XML_NP_META,          XML_N_META_OLD         );
+    mapTokenToNamespace( XML_NAMESPACE_META_SO52,        XML_NP_META,          XML_N_META_OLD         );
     mapTokenToNamespace( XML_NAMESPACE_META_OOO,         XML_NP_META,          XML_N_META_OOO         );
     mapTokenToNamespace( XML_NAMESPACE_NUMBER,           XML_NP_NUMBER,        XML_N_NUMBER           );
-    mapTokenToNamespace( XML_OLD_NAMESPACE_NUMBER,       XML_NP_NUMBER,        XML_N_NUMBER_OLD       );
+    mapTokenToNamespace( XML_NAMESPACE_NUMBER_SO52,      XML_NP_NUMBER,        XML_N_NUMBER_OLD       );
     mapTokenToNamespace( XML_NAMESPACE_NUMBER_OOO,       XML_NP_NUMBER,        XML_N_NUMBER_OOO       );
     mapTokenToNamespace( XML_NAMESPACE_PRESENTATION,     XML_NP_PRESENTATION,  XML_N_PRESENTATION     );
-    mapTokenToNamespace( XML_OLD_NAMESPACE_PRESENTATION, XML_NP_PRESENTATION,  XML_N_PRESENTATION_OLD );
+    mapTokenToNamespace( XML_NAMESPACE_PRESENTATION_SO52,XML_NP_PRESENTATION,  XML_N_PRESENTATION_OLD );
     mapTokenToNamespace( XML_NAMESPACE_PRESENTATION_OOO, XML_NP_PRESENTATION,  XML_N_PRESENTATION_OOO );
+    mapTokenToNamespace( XML_NAMESPACE_PRESENTATION_OASIS, XML_NP_PRESENTATION, XML_N_PRESENTATION_OASIS );
     mapTokenToNamespace( XML_NAMESPACE_SVG,              XML_NP_SVG,           XML_N_SVG              );
     mapTokenToNamespace( XML_NAMESPACE_SVG_COMPAT,       XML_NP_SVG,           XML_N_SVG_COMPAT       );
     mapTokenToNamespace( XML_NAMESPACE_CHART,            XML_NP_CHART,         XML_N_CHART            );
-    mapTokenToNamespace( XML_OLD_NAMESPACE_CHART,        XML_NP_CHART,         XML_N_CHART_OLD        );
+    mapTokenToNamespace( XML_NAMESPACE_CHART_SO52,       XML_NP_CHART,         XML_N_CHART_OLD        );
     mapTokenToNamespace( XML_NAMESPACE_CHART_OOO,        XML_NP_CHART,         XML_N_CHART_OOO        );
     mapTokenToNamespace( XML_NAMESPACE_DR3D,             XML_NP_DR3D,          XML_N_DR3D             );
     mapTokenToNamespace( XML_NAMESPACE_DR3D_OOO,         XML_NP_DR3D,          XML_N_DR3D_OOO         );
@@ -2137,9 +2140,10 @@ void SvXMLImport::initializeNamespaceMaps()
     mapTokenToNamespace( XML_NAMESPACE_XSD,              XML_NP_XSD,           XML_N_XSD              );
     mapTokenToNamespace( XML_NAMESPACE_XSI,              XML_NP_XSI,           XML_N_XSI              );
     mapTokenToNamespace( XML_NAMESPACE_SMIL,             XML_NP_SMIL,          XML_N_SMIL             );
-    mapTokenToNamespace( XML_OLD_NAMESPACE_SMIL,         XML_NP_SMIL,          XML_N_SMIL_OLD         );
+    mapTokenToNamespace( XML_NAMESPACE_SMIL_SO52,        XML_NP_SMIL,          XML_N_SMIL_OLD         );
     mapTokenToNamespace( XML_NAMESPACE_SMIL_COMPAT,      XML_NP_SMIL,          XML_N_SMIL_COMPAT      );
     mapTokenToNamespace( XML_NAMESPACE_ANIMATION,        XML_NP_ANIMATION,     XML_N_ANIMATION        );
+    mapTokenToNamespace( XML_NAMESPACE_ANIMATION_OOO,    XML_NP_ANIMATION,     XML_N_ANIMATION_OOO    );
     mapTokenToNamespace( XML_NAMESPACE_REPORT,           XML_NP_RPT,           XML_N_RPT              );
     mapTokenToNamespace( XML_NAMESPACE_REPORT_OASIS,     XML_NP_RPT,           XML_N_RPT_OASIS        );
     mapTokenToNamespace( XML_NAMESPACE_OF,               XML_NP_OF,            XML_N_OF               );
@@ -2214,8 +2218,7 @@ OUString SvXMLImportFastNamespaceHandler::getNamespaceURI( const OUString&/* rNa
 
 SvXMLLegacyToFastDocHandler::SvXMLLegacyToFastDocHandler( const rtl::Reference< SvXMLImport > & rImport )
 :   mrImport( rImport ),
-    mxFastAttributes( new sax_fastparser::FastAttributeList( SvXMLImport::xTokenHandler.get(),
-        dynamic_cast< sax_fastparser::FastTokenHandlerBase *>( SvXMLImport::xTokenHandler.get() ) ) )
+    mxFastAttributes( new sax_fastparser::FastAttributeList( SvXMLImport::xTokenHandler.get() ) )
 {
 }
 

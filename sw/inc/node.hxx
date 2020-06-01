@@ -70,10 +70,10 @@ class Point;
 enum class SvxFrameDirection;
 typedef std::vector<SwOLENode*> SwOLENodes; // docary.hxx
 
-namespace drawinglayer { namespace attribute {
+namespace drawinglayer::attribute {
     class SdrAllFillAttributesHelper;
     typedef std::shared_ptr< SdrAllFillAttributesHelper > SdrAllFillAttributesHelperPtr;
-}}
+}
 
 /// Base class of the Writer document model elements.
 class SW_DLLPUBLIC SwNode
@@ -81,7 +81,7 @@ class SW_DLLPUBLIC SwNode
 {
     friend class SwNodes;
 
-    SwNodeType const m_nNodeType;
+    SwNodeType m_nNodeType;
 
     /// For text nodes: level of auto format. Was put here because we had still free bits.
     sal_uInt8 m_nAFormatNumLvl : 3;
@@ -100,7 +100,7 @@ private:
 
 #ifdef DBG_UTIL
     static long s_nSerial;
-    long const m_nSerial;
+    long m_nSerial;
 #endif
 
     /// all SwFrameFormat that are anchored at the node
@@ -307,7 +307,7 @@ class SAL_DLLPUBLIC_RTTI SwStartNode: public SwNode
     friend class SwEndNode;     ///< to set the theEndOfSection !!
 
     SwEndNode* m_pEndOfSection;
-    SwStartNodeType const m_eStartNodeType;
+    SwStartNodeType m_eStartNodeType;
 
     /// for the initial StartNode
     SwStartNode( SwNodes& rNodes, sal_uLong nPos );

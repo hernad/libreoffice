@@ -33,7 +33,7 @@ class SwUndoRedline : public SwUndo, public SwUndRng
 protected:
     std::unique_ptr<SwRedlineData> mpRedlData;
     std::unique_ptr<SwRedlineSaveDatas> mpRedlSaveData;
-    SwUndoId const mnUserId;
+    SwUndoId mnUserId;
     bool mbHiddenRedlines;
 
     virtual void UndoRedlineImpl(SwDoc & rDoc, SwPaM & rPam);
@@ -52,9 +52,9 @@ public:
 
 class SwUndoRedlineDelete : public SwUndoRedline
 {
-    bool bCanGroup : 1;
-    bool bIsDelim : 1;
-    bool bIsBackspace : 1;
+    bool m_bCanGroup : 1;
+    bool m_bIsDelim : 1;
+    bool m_bIsBackspace : 1;
 
     OUString m_sRedlineText;
 
@@ -76,9 +76,9 @@ public:
 
 class SwUndoRedlineSort : public SwUndoRedline
 {
-    std::unique_ptr<SwSortOptions> pOpt;
-    sal_uLong nSaveEndNode;
-    sal_Int32 nSaveEndContent;
+    std::unique_ptr<SwSortOptions> m_pOpt;
+    sal_uLong m_nSaveEndNode;
+    sal_Int32 m_nSaveEndContent;
 
     virtual void UndoRedlineImpl(SwDoc & rDoc, SwPaM & rPam) override;
     virtual void RedoRedlineImpl(SwDoc & rDoc, SwPaM & rPam) override;
@@ -117,10 +117,10 @@ public:
 
 class SwUndoCompDoc : public SwUndo, public SwUndRng
 {
-    std::unique_ptr<SwRedlineData> pRedlData;
-    std::unique_ptr<SwUndoDelete> pUnDel, pUnDel2;
-    std::unique_ptr<SwRedlineSaveDatas> pRedlSaveData;
-    bool const bInsert;
+    std::unique_ptr<SwRedlineData> m_pRedlineData;
+    std::unique_ptr<SwUndoDelete> m_pUndoDelete, m_pUndoDelete2;
+    std::unique_ptr<SwRedlineSaveDatas> m_pRedlineSaveDatas;
+    bool m_bInsert;
 
 public:
     SwUndoCompDoc( const SwPaM& rRg, bool bIns );

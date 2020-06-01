@@ -8,10 +8,8 @@
  */
 
 #include <swmodeltestbase.hxx>
-#include <unotest/bootstrapfixturebase.hxx>
 #include <comphelper/propertysequence.hxx>
 #include <com/sun/star/linguistic2/LinguServiceManager.hpp>
-#include <com/sun/star/frame/DispatchHelper.hpp>
 #include <com/sun/star/text/WrapTextMode.hpp>
 #include <comphelper/scopeguard.hxx>
 #include <unotools/syslocaleoptions.hxx>
@@ -67,7 +65,7 @@ SwDoc* SwLayoutWriter::createDoc(const char* pName)
 void SwLayoutWriter::CheckRedlineFootnotesHidden()
 {
     discardDumpedLayout();
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/merged", "paraPropsNodeIndex", "24");
     assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/Special[1]", "nType", "PortionType::Footnote");
     assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/Special[1]", "rText", "1");
@@ -106,7 +104,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineFootnotes)
     dispatchCommand(mxComponent, ".uno:ShowTrackedChanges", {});
     CPPUNIT_ASSERT(!pLayout->IsHideRedlines());
     discardDumpedLayout();
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
 
     // show: nothing is merged
     xmlXPathObjectPtr pXmlObj = getXPathNode(pXmlDoc, "//merged");
@@ -245,7 +243,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineFlysInBody)
         dispatchCommand(mxComponent, ".uno:ShowTrackedChanges", {});
         CPPUNIT_ASSERT(pLayout->IsHideRedlines());
         discardDumpedLayout();
-        xmlDocPtr pXmlDoc = parseLayoutDump();
+        xmlDocUniquePtr pXmlDoc = parseLayoutDump();
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/merged", "paraPropsNodeIndex", "14");
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/Text[1]", "nType", "PortionType::Para");
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/Text[1]", "Portion", "foaz");
@@ -321,7 +319,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineFlysInBody)
         dispatchCommand(mxComponent, ".uno:ShowTrackedChanges", {});
         CPPUNIT_ASSERT(pLayout->IsHideRedlines());
         discardDumpedLayout();
-        xmlDocPtr pXmlDoc = parseLayoutDump();
+        xmlDocUniquePtr pXmlDoc = parseLayoutDump();
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/merged", "paraPropsNodeIndex", "14");
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/Text[1]", "nType", "PortionType::Para");
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/Text[1]", "Portion", "foaz");
@@ -397,7 +395,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineFlysInBody)
         dispatchCommand(mxComponent, ".uno:ShowTrackedChanges", {});
         CPPUNIT_ASSERT(pLayout->IsHideRedlines());
         discardDumpedLayout();
-        xmlDocPtr pXmlDoc = parseLayoutDump();
+        xmlDocUniquePtr pXmlDoc = parseLayoutDump();
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/merged", "paraPropsNodeIndex", "14");
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/Text[1]", "nType", "PortionType::Para");
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/Text[1]", "Portion", "foaz");
@@ -515,7 +513,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineFlysInHeader)
         dispatchCommand(mxComponent, ".uno:ShowTrackedChanges", {});
         CPPUNIT_ASSERT(pLayout->IsHideRedlines());
         discardDumpedLayout();
-        xmlDocPtr pXmlDoc = parseLayoutDump();
+        xmlDocUniquePtr pXmlDoc = parseLayoutDump();
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/Text[1]", "nType", "PortionType::Para");
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/Text[1]", "nLength", "0");
         assertXPath(pXmlDoc, "/root/page[1]/header/txt[1]/merged", "paraPropsNodeIndex", "6");
@@ -595,7 +593,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineFlysInHeader)
         dispatchCommand(mxComponent, ".uno:ShowTrackedChanges", {});
         CPPUNIT_ASSERT(pLayout->IsHideRedlines());
         discardDumpedLayout();
-        xmlDocPtr pXmlDoc = parseLayoutDump();
+        xmlDocUniquePtr pXmlDoc = parseLayoutDump();
         // now the frame has no Text portion? not sure why it's a 0-length one first and now none?
         //        assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/Text[1]", "nType", "PortionType::Para");
         //        assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/Text[1]", "nLength", "0");
@@ -676,7 +674,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineFlysInHeader)
         dispatchCommand(mxComponent, ".uno:ShowTrackedChanges", {});
         CPPUNIT_ASSERT(pLayout->IsHideRedlines());
         discardDumpedLayout();
-        xmlDocPtr pXmlDoc = parseLayoutDump();
+        xmlDocUniquePtr pXmlDoc = parseLayoutDump();
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/Text[1]", "nType", "PortionType::Para");
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/Text[1]", "nLength", "0");
         assertXPath(pXmlDoc, "/root/page[1]/header/txt[1]/merged", "paraPropsNodeIndex", "6");
@@ -818,7 +816,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineFlysInFootnote)
         dispatchCommand(mxComponent, ".uno:ShowTrackedChanges", {});
         CPPUNIT_ASSERT(pLayout->IsHideRedlines());
         discardDumpedLayout();
-        xmlDocPtr pXmlDoc = parseLayoutDump();
+        xmlDocUniquePtr pXmlDoc = parseLayoutDump();
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/merged", "paraPropsNodeIndex", "25");
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/Special[1]", "nType",
                     "PortionType::Footnote");
@@ -923,7 +921,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineFlysInFootnote)
         dispatchCommand(mxComponent, ".uno:ShowTrackedChanges", {});
         CPPUNIT_ASSERT(pLayout->IsHideRedlines());
         discardDumpedLayout();
-        xmlDocPtr pXmlDoc = parseLayoutDump();
+        xmlDocUniquePtr pXmlDoc = parseLayoutDump();
 
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/merged", "paraPropsNodeIndex", "25");
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/Special[1]", "nType",
@@ -1031,7 +1029,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineFlysInFootnote)
         dispatchCommand(mxComponent, ".uno:ShowTrackedChanges", {});
         CPPUNIT_ASSERT(pLayout->IsHideRedlines());
         discardDumpedLayout();
-        xmlDocPtr pXmlDoc = parseLayoutDump();
+        xmlDocUniquePtr pXmlDoc = parseLayoutDump();
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/merged", "paraPropsNodeIndex", "25");
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/Special[1]", "nType",
                     "PortionType::Footnote");
@@ -1197,7 +1195,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineFlysInFlys)
         dispatchCommand(mxComponent, ".uno:ShowTrackedChanges", {});
         CPPUNIT_ASSERT(pLayout->IsHideRedlines());
         discardDumpedLayout();
-        xmlDocPtr pXmlDoc = parseLayoutDump();
+        xmlDocUniquePtr pXmlDoc = parseLayoutDump();
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/merged", "paraPropsNodeIndex", "19");
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/anchored/fly[1]/txt[1]/merged",
                     "paraPropsNodeIndex", "6");
@@ -1339,7 +1337,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineFlysInFlys)
         dispatchCommand(mxComponent, ".uno:ShowTrackedChanges", {});
         CPPUNIT_ASSERT(pLayout->IsHideRedlines());
         discardDumpedLayout();
-        xmlDocPtr pXmlDoc = parseLayoutDump();
+        xmlDocUniquePtr pXmlDoc = parseLayoutDump();
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/merged", "paraPropsNodeIndex", "19");
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/Text[1]", "nType", "PortionType::Para");
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/Text[1]", "Portion", "foaz");
@@ -1466,7 +1464,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineFlysInFlys)
         dispatchCommand(mxComponent, ".uno:ShowTrackedChanges", {});
         CPPUNIT_ASSERT(pLayout->IsHideRedlines());
         discardDumpedLayout();
-        xmlDocPtr pXmlDoc = parseLayoutDump();
+        xmlDocUniquePtr pXmlDoc = parseLayoutDump();
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/merged", "paraPropsNodeIndex", "19");
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/anchored/fly[1]/txt[1]/merged",
                     "paraPropsNodeIndex", "6");
@@ -1646,7 +1644,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineFlysAtFlys)
     dispatchCommand(mxComponent, ".uno:ShowTrackedChanges", {});
     CPPUNIT_ASSERT(pLayout->IsHideRedlines());
     discardDumpedLayout();
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/merged", "paraPropsNodeIndex", "19");
     assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/anchored/fly[1]/txt[1]/merged",
                 "paraPropsNodeIndex", "6");
@@ -1844,7 +1842,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineFlysAtFlys)
 void SwLayoutWriter::CheckRedlineSectionsHidden()
 {
     discardDumpedLayout();
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/merged", "paraPropsNodeIndex", "12");
     assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/Text[1]", "nType", "PortionType::Para");
     assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/Text[1]", "Portion", "folah");
@@ -1871,7 +1869,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineSections)
     // why is this needed explicitly?
     pDoc->getIDocumentLayoutAccess().GetCurrentViewShell()->CalcLayout();
     discardDumpedLayout();
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
 
     // show: nothing is merged
     xmlXPathObjectPtr pXmlObj = getXPathNode(pXmlDoc, "//merged");
@@ -1933,7 +1931,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineTables)
 
     // verify after load
     discardDumpedLayout();
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/merged", "paraPropsNodeIndex", "12");
     assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/Text[1]", "nType", "PortionType::Para");
     assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/Text[1]", "Portion", "foar");
@@ -1990,7 +1988,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineTables)
 void SwLayoutWriter::CheckRedlineCharAttributesHidden()
 {
     discardDumpedLayout();
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/merged", "paraPropsNodeIndex", "9");
     assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/Text[1]", "nType", "PortionType::Para");
     assertXPath(pXmlDoc, "/root/page[1]/body/txt[1]/Text[1]", "Portion", "foobaz");
@@ -2059,7 +2057,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineCharAttributes)
     // why is this needed explicitly?
     pDoc->getIDocumentLayoutAccess().GetCurrentViewShell()->CalcLayout();
     discardDumpedLayout();
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
 
     // show: nothing is merged
     xmlXPathObjectPtr pXmlObj = getXPathNode(pXmlDoc, "//merged");
@@ -2151,6 +2149,51 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineCharAttributes)
     CheckRedlineCharAttributesHidden();
 }
 
+CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineShowHideFootnotePagination)
+{
+    createDoc("redline_footnote_pagination.fodt");
+    SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
+    CPPUNIT_ASSERT(pTextDoc);
+    SwDoc* pDoc(pTextDoc->GetDocShell()->GetDoc());
+    SwRootFrame* pLayout(pDoc->getIDocumentLayoutAccess().GetCurrentLayout());
+    CPPUNIT_ASSERT(!pLayout->IsHideRedlines());
+
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
+
+    // check footnotes
+    assertXPath(pXmlDoc, "/root/page[1]/ftncont/ftn", 6);
+    assertXPath(pXmlDoc, "/root/page[2]/ftncont/ftn", 3);
+    // check that first page ends with the y line and second page starts with z
+    assertXPath(pXmlDoc, "/root/page[1]/body/txt[last()]/LineBreak[last()]", "Line",
+                "yyyyyyyyy yyy yyyyyyyyyyyyyyyy yyyyyyy yyy yyyyy yyyyyyyyy yyy yyyyyyyyy ");
+    assertXPath(pXmlDoc, "/root/page[2]/body/txt[1]/LineBreak[1]", "Line",
+                "zzz. zzz zzzz zzzz7 zzz zzz zzzzzzz zzz zzzz zzzzzzzzzzzzzz zzzzzzzzzzzz ");
+
+    // hide redlines - all still visible footnotes move to page 1
+    dispatchCommand(mxComponent, ".uno:ShowTrackedChanges", {});
+
+    discardDumpedLayout();
+    pXmlDoc = parseLayoutDump();
+
+    assertXPath(pXmlDoc, "/root/page[1]/ftncont/ftn", 2);
+    assertXPath(pXmlDoc, "/root/page[2]/ftncont/ftn", 0);
+
+    // show again - should now get the same result as on loading
+    dispatchCommand(mxComponent, ".uno:ShowTrackedChanges", {});
+
+    discardDumpedLayout();
+    pXmlDoc = parseLayoutDump();
+
+    // check footnotes
+    assertXPath(pXmlDoc, "/root/page[1]/ftncont/ftn", 6);
+    assertXPath(pXmlDoc, "/root/page[2]/ftncont/ftn", 3);
+    // check that first page ends with the y line and second page starts with z
+    assertXPath(pXmlDoc, "/root/page[1]/body/txt[last()]/LineBreak[last()]", "Line",
+                "yyyyyyyyy yyy yyyyyyyyyyyyyyyy yyyyyyy yyy yyyyy yyyyyyyyy yyy yyyyyyyyy ");
+    assertXPath(pXmlDoc, "/root/page[2]/body/txt[1]/LineBreak[1]", "Line",
+                "zzz. zzz zzzz zzzz7 zzz zzz zzzzzzz zzz zzzz zzzzzzzzzzzzzz zzzzzzzzzzzz ");
+}
+
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineNumberInNumbering)
 {
     SwDoc* pDoc = createDoc("tdf42748.fodt");
@@ -2160,7 +2203,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineNumberInNumbering)
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
 
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     CPPUNIT_ASSERT(pXmlDoc);
 
     // Assert the tracked deletion of the number of joined list item and
@@ -2177,7 +2220,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf125300)
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
 
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     CPPUNIT_ASSERT(pXmlDoc);
 
     // Keep line spacing before bottom cell border (it was 1892)
@@ -2199,7 +2242,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf116830)
     // Dump the rendering of the first page as an XML file.
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     CPPUNIT_ASSERT(pXmlDoc);
 
     // Assert that the yellow rectangle (cell background) is painted after the
@@ -2226,7 +2269,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf114163)
     // Dump the rendering of the first page as an XML file.
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     CPPUNIT_ASSERT(pXmlDoc);
 
     assertXPathContent(
@@ -2234,6 +2277,16 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf114163)
         "/metafile/push[1]/push[1]/push[1]/push[3]/push[1]/push[1]/push[1]/textarray[12]/text",
         "Data3");
     // This failed, if the legend first label is not "Data3". The legend position is right.
+}
+
+CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf131707)
+{
+    createDoc("tdf131707_flyWrap.doc");
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
+
+    assertXPath(pXmlDoc, "//body/tab/row[3]/cell[2]/txt/infos/bounds", "top", "2185");
+    // the image should be inside of the cell boundary - so the same top or higher
+    assertXPath(pXmlDoc, "//body/tab/row[3]/cell[2]/txt/anchored/fly/infos/bounds", "top", "2185");
 }
 
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf125335)
@@ -2244,7 +2297,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf125335)
     // Dump the rendering of the first page as an XML file.
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     CPPUNIT_ASSERT(pXmlDoc);
 
     assertXPathContent(
@@ -2262,7 +2315,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf75659)
     // Dump the rendering of the first page as an XML file.
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     CPPUNIT_ASSERT(pXmlDoc);
 
     assertXPathContent(
@@ -2276,6 +2329,50 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf75659)
     // These failed, if the legend names are empty strings.
 }
 
+CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf123268)
+{
+    SwDoc* pDoc = createDoc("tdf123268.odt");
+    SwDocShell* pShell = pDoc->GetDocShell();
+
+    // Dump the rendering of the first page as an XML file.
+    std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
+    MetafileXmlDump dumper;
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    CPPUNIT_ASSERT(pXmlDoc);
+    // Without the accompanying fix in place, this test would have failed with:
+    // - Expected: 41
+    // - Actual  : 0
+    // i.e. the chart lost.
+    assertXPath(pXmlDoc, "/metafile/push[1]/push[1]/push[1]/push[3]/push[1]/push[1]/push[1]/push",
+                41);
+}
+
+CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf133005)
+{
+    SwDoc* pDoc = createDoc("tdf133005.odt");
+    SwDocShell* pShell = pDoc->GetDocShell();
+
+    // Dump the rendering of the first page as an XML file.
+    std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
+    MetafileXmlDump dumper;
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    CPPUNIT_ASSERT(pXmlDoc);
+
+    sal_Int32 nXChartWall = getXPath(pXmlDoc,
+                                     "/metafile/push[1]/push[1]/push[1]/push[3]/push[1]/push[1]/"
+                                     "push[1]/push[1]/polyline[1]/point[2]",
+                                     "x")
+                                .toInt32();
+    sal_Int32 nXColumn = getXPath(pXmlDoc,
+                                  "/metafile/push[1]/push[1]/push[1]/push[3]/push[1]/push[1]/"
+                                  "push[1]/push[42]/polypolygon/polygon/point[1]",
+                                  "x")
+                             .toInt32();
+
+    // This failed, if the value axis doesn't appear inside category.
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(nXChartWall, nXColumn, 5);
+}
+
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf115630)
 {
     SwDoc* pDoc = createDoc("tdf115630.docx");
@@ -2284,7 +2381,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf115630)
     // Dump the rendering of the first page as an XML file.
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     CPPUNIT_ASSERT(pXmlDoc);
 
     // Test wide of inner chart area.
@@ -2298,7 +2395,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf115630)
                    "/metafile/push[1]/push[1]/push[1]/push[4]/push[1]/push[3]/polyline[1]/point[2]",
                    "x")
               .toInt32();
-    CPPUNIT_ASSERT_DOUBLES_EQUAL(2886, nXRight - nXLeft, 2);
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(2895, nXRight - nXLeft, 50);
 }
 
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf108021)
@@ -2309,7 +2406,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf108021)
     // Dump the rendering of the first page as an XML file.
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     CPPUNIT_ASSERT(pXmlDoc);
 
     assertXPath(
@@ -2327,7 +2424,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf125334)
     // Dump the rendering of the first page as an XML file.
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     CPPUNIT_ASSERT(pXmlDoc);
 
     assertXPath(
@@ -2345,7 +2442,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf122800)
     // Dump the rendering of the first page as an XML file.
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     CPPUNIT_ASSERT(pXmlDoc);
 
     assertXPath(
@@ -2353,6 +2450,30 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf122800)
         "/metafile/push[1]/push[1]/push[1]/push[3]/push[1]/push[1]/push[1]/textarray[@length='22']",
         9);
     // This failed, if the textarray length of the first axis label not 22.
+}
+
+CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTruncatedAxisLabel)
+{
+    SwDoc* pDoc = createDoc("testTruncatedAxisLabel.odt");
+    SwDocShell* pShell = pDoc->GetDocShell();
+
+    // Dump the rendering of the first page as an XML file.
+    std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
+    MetafileXmlDump dumper;
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    CPPUNIT_ASSERT(pXmlDoc);
+
+    // test the X axis label visibility
+    assertXPathContent(
+        pXmlDoc,
+        "/metafile/push[1]/push[1]/push[1]/push[3]/push[1]/push[1]/push[1]/textarray[1]/text",
+        "Long axis label truncated 1");
+
+    // test the Y axis label visibility
+    assertXPathContent(
+        pXmlDoc,
+        "/metafile/push[1]/push[1]/push[1]/push[3]/push[1]/push[1]/push[1]/textarray[3]/text",
+        "-5.00");
 }
 
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf128996)
@@ -2363,7 +2484,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf128996)
     // Dump the rendering of the first page as an XML file.
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     CPPUNIT_ASSERT(pXmlDoc);
 
     assertXPathContent(pXmlDoc,
@@ -2379,7 +2500,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf126244)
     // Dump the rendering of the first page as an XML file.
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     CPPUNIT_ASSERT(pXmlDoc);
     // Test the first level of vertical category axis labels orientation. The first level orientation should be horizontal.
     assertXPath(pXmlDoc, "/metafile/push[1]/push[1]/push[1]/push[4]/push[1]/font[1]", "orientation",
@@ -2405,7 +2526,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf127304)
     // Dump the rendering of the first page as an XML file.
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     CPPUNIT_ASSERT(pXmlDoc);
     // Test the first level of horizontal category axis labels orientation. The first level orientation should be vertical.
     sal_Int32 nRotation
@@ -2429,7 +2550,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testHorizontal_multilevel)
     // Dump the rendering of the first page as an XML file.
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     CPPUNIT_ASSERT(pXmlDoc);
     // Test the Y position of horizontal category axis label.
     sal_Int32 nYposition
@@ -2446,7 +2567,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf124796)
     // Dump the rendering of the first page as an XML file.
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     CPPUNIT_ASSERT(pXmlDoc);
 
     // This failed, if the minimum value of Y axis is not -10.
@@ -2462,6 +2583,22 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf124796)
         "15");
 }
 
+CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf130969)
+{
+    SwDoc* pDoc = createDoc("tdf130969.docx");
+    SwDocShell* pShell = pDoc->GetDocShell();
+
+    // Dump the rendering of the first page as an XML file.
+    std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
+    MetafileXmlDump dumper;
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    CPPUNIT_ASSERT(pXmlDoc);
+
+    // This failed, if the minimum value of Y axis is not 0.35781
+    assertXPathContent(
+        pXmlDoc, "/metafile/push[1]/push[1]/push[1]/push[4]/push[1]/textarray[5]/text", "0.35781");
+}
+
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf129054)
 {
     SwDoc* pDoc = createDoc("tdf129054.docx");
@@ -2470,7 +2607,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf129054)
     // Dump the rendering of the first page as an XML file.
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     CPPUNIT_ASSERT(pXmlDoc);
 
     // Test the size of diameter of Pie chart.
@@ -2496,7 +2633,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf129173)
     // Dump the rendering of the first page as an XML file.
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     CPPUNIT_ASSERT(pXmlDoc);
 
     // Check the first data label of area chart.
@@ -2512,7 +2649,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf130031)
     // Dump the rendering of the first page as an XML file.
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     CPPUNIT_ASSERT(pXmlDoc);
     sal_Int32 nY = getXPath(pXmlDoc, "//textarray[11]", "y").toInt32();
     // Without the accompanying fix in place, this test would have failed with:
@@ -2531,7 +2668,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf130242)
     // Dump the rendering of the first page as an XML file.
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     CPPUNIT_ASSERT(pXmlDoc);
     sal_Int32 nY = getXPath(pXmlDoc, "//textarray[11]", "y").toInt32();
     // Without the accompanying fix in place, this test would have failed with:
@@ -2550,6 +2687,61 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf130242)
     CPPUNIT_ASSERT_DOUBLES_EQUAL(3018, nY, 50);
 }
 
+CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf130380)
+{
+    SwDoc* pDoc = createDoc("tdf130380.docx");
+    SwDocShell* pShell = pDoc->GetDocShell();
+
+    // Dump the rendering of the first page as an XML file.
+    std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
+    MetafileXmlDump dumper;
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    CPPUNIT_ASSERT(pXmlDoc);
+    sal_Int32 nY = getXPath(pXmlDoc,
+                            "/metafile/push[1]/push[1]/push[1]/push[4]/push[1]/push[1]/polypolygon/"
+                            "polygon/point[1]",
+                            "y")
+                       .toInt32();
+    // Without the accompanying fix in place, this test would have failed with:
+    // - Expected: 6727
+    // - Actual  : 4411
+    // - Delta   : 50
+    // i.e. the area chart shrank.
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(6727, nY, 50);
+}
+
+CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf129095)
+{
+    SwDoc* pDoc = createDoc("tdf129095.docx");
+    SwDocShell* pShell = pDoc->GetDocShell();
+
+    // Dump the rendering of the first page as an XML file.
+    std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
+    MetafileXmlDump dumper;
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    CPPUNIT_ASSERT(pXmlDoc);
+
+    // check the inner chart area (relative size) visibility with testing the X axis label
+    assertXPathContent(pXmlDoc, "/metafile/push[1]/push[1]/push[1]/push[4]/push[1]/textarray/text",
+                       "Category 1");
+}
+
+CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf132956)
+{
+    SwDoc* pDoc = createDoc("tdf132956.docx");
+    SwDocShell* pShell = pDoc->GetDocShell();
+
+    // Dump the rendering of the first page as an XML file.
+    std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
+    MetafileXmlDump dumper;
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    CPPUNIT_ASSERT(pXmlDoc);
+
+    // check the inner chart area (default size) visibility with testing the X axis label
+    assertXPathContent(pXmlDoc, "/metafile/push[1]/push[1]/push[1]/push[4]/push[1]/textarray/text",
+                       "Category 1");
+}
+
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf116925)
 {
     SwDoc* pDoc = createDoc("tdf116925.docx");
@@ -2558,7 +2750,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf116925)
     // Dump the rendering of the first page as an XML file.
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     CPPUNIT_ASSERT(pXmlDoc);
 
     assertXPathContent(pXmlDoc,
@@ -2578,7 +2770,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf117028)
     // Dump the rendering of the first page as an XML file.
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     CPPUNIT_ASSERT(pXmlDoc);
 
     // The only polypolygon in the rendering result was the white background we
@@ -2600,7 +2792,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf106390)
     // Dump the rendering of the first page as an XML file.
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     CPPUNIT_ASSERT(pXmlDoc);
     sal_Int32 nBottom = getXPath(pXmlDoc, "//sectrectclipregion", "bottom").toInt32();
 
@@ -2618,7 +2810,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTableExtrusion1)
     // Dump the rendering of the first page as an XML file.
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     CPPUNIT_ASSERT(pXmlDoc);
     sal_Int32 nRight = getXPath(pXmlDoc, "//sectrectclipregion", "right").toInt32();
     sal_Int32 nLeft = static_cast<sal_Int32>(nRight * 0.95);
@@ -2638,7 +2830,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTableExtrusion2)
     // Dump the rendering of the first page as an XML file.
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     CPPUNIT_ASSERT(pXmlDoc);
     // End point position of the outer table.
     sal_Int32 nX = getXPath(pXmlDoc, "(//polyline[1]/point)[2]", "x").toInt32();
@@ -2647,6 +2839,15 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTableExtrusion2)
     const OString sXPath = "//polyline/point[@x>" + OString::number(nX) + "]";
 
     assertXPath(pXmlDoc, sXPath, 0);
+}
+
+CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf105478)
+{
+    createDoc("tdf105478_rowMinHeight.odt");
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
+
+    // Minimum row height forces the cell (with table header as row 1) to start on page 2, not page 1.
+    assertXPathContent(pXmlDoc, "/root/page[2]/body/tab/row[2]/cell/txt[1]", "Cell 1");
 }
 
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf116848)
@@ -2659,7 +2860,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf116848)
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf117245)
 {
     createDoc("tdf117245.odt");
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     // This was 2, TabOverMargin did not use a single line when there was
     // enough space for the text.
     assertXPath(pXmlDoc, "/root/page/body/txt[1]/LineBreak", 1);
@@ -2671,7 +2872,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf117245)
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf118672)
 {
     createDoc("tdf118672.odt");
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
 
     // Check if we have hyphenation support, otherwise can't test SwHyphPortion.
     uno::Reference<linguistic2::XHyphenator> xHyphenator = LinguMgr::GetHyphenator();
@@ -2698,7 +2899,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf117923)
     CPPUNIT_ASSERT(pViewShell);
     pViewShell->Reformat();
 
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
 
     // Check that we actually test the line we need
     assertXPathContent(pXmlDoc, "/root/page/body/tab/row/cell/txt[3]", "GHI GHI GHI GHI");
@@ -2709,10 +2910,41 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf117923)
     assertXPath(pXmlDoc, "/root/page/body/tab/row/cell/txt[3]/Special", "nHeight", "220");
 }
 
+CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf127606)
+{
+    createDoc("tdf117923.docx");
+    // Ensure that all text portions are calculated before testing.
+    SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
+    CPPUNIT_ASSERT(pTextDoc);
+    SwViewShell* pViewShell
+        = pTextDoc->GetDocShell()->GetDoc()->getIDocumentLayoutAccess().GetCurrentViewShell();
+    CPPUNIT_ASSERT(pViewShell);
+    pViewShell->Reformat();
+
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
+
+    // Check that we actually test the line we need
+    assertXPathContent(pXmlDoc, "/root/page/body/tab/row/cell/txt[3]", "GHI GHI GHI GHI");
+    assertXPath(pXmlDoc, "/root/page/body/tab/row/cell/txt[3]/Special", "nType",
+                "PortionType::Number");
+    assertXPath(pXmlDoc, "/root/page/body/tab/row/cell/txt[3]/Special", "rText", "2.");
+    // The numbering height was 960 in DOC format.
+    assertXPath(pXmlDoc, "/root/page/body/tab/row/cell/txt[3]/Special", "nHeight", "220");
+
+    // tdf#127606: now it's possible to change formatting of numbering
+    // increase font size (220 -> 260)
+    dispatchCommand(mxComponent, ".uno:SelectAll", {});
+    dispatchCommand(mxComponent, ".uno:Grow", {});
+    pViewShell->Reformat();
+    discardDumpedLayout();
+    pXmlDoc = parseLayoutDump();
+    assertXPath(pXmlDoc, "/root/page/body/tab/row/cell/txt[3]/Special", "nHeight", "260");
+}
+
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf109077)
 {
     createDoc("tdf109077.docx");
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     sal_Int32 nShapeTop
         = getXPath(pXmlDoc, "//anchored/SwAnchoredDrawObject/bounds", "top").toInt32();
     sal_Int32 nTextBoxTop = getXPath(pXmlDoc, "//anchored/fly/infos/bounds", "top").toInt32();
@@ -2736,7 +2968,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testUserFieldTypeLanguage)
     SwDoc* pDoc = createDoc("user-field-type-language.fodt");
     SwViewShell* pViewShell = pDoc->getIDocumentLayoutAccess().GetCurrentViewShell();
     pViewShell->UpdateFields();
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     // This was "123,456.00", via a buggy 1234.56 -> 1234,56 -> 123456 ->
     // 123,456.00 transform chain.
     assertXPath(pXmlDoc, "/root/page/body/txt/Special[@nType='PortionType::Field']", "rText",
@@ -2754,7 +2986,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf109137)
     }));
     xStorable->storeToURL(aTempFile.GetURL(), aDescriptor);
     loadURL(aTempFile.GetURL(), "tdf109137.odt");
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     // This was 0, the blue rectangle moved from the 1st to the 2nd page.
     assertXPath(pXmlDoc, "/root/page[1]/body/txt/anchored/fly/notxt",
                 /*nNumberOfNodes=*/1);
@@ -2785,7 +3017,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf118058)
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf128611)
 {
     createDoc("tdf128611.fodt");
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     CPPUNIT_ASSERT(pXmlDoc);
     // Without the accompanying fix in place, this test would have failed with:
     // - Expected: 1
@@ -2806,7 +3038,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf117188)
     }));
     xStorable->storeToURL(aTempFile.GetURL(), aDescriptor);
     loadURL(aTempFile.GetURL(), "tdf117188.odt");
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     OUString sWidth = getXPath(pXmlDoc, "/root/page/body/txt/anchored/fly/infos/bounds", "width");
     OUString sHeight = getXPath(pXmlDoc, "/root/page/body/txt/anchored/fly/infos/bounds", "height");
     // The text box must have zero border distances
@@ -2819,7 +3051,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf117188)
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf117187)
 {
     createDoc("tdf117187.odt");
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
 
     // there should be no fly portions
     assertXPath(pXmlDoc, "/root/page/body/txt/Special[@nType='PortionType::Fly']", 0);
@@ -2828,7 +3060,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf117187)
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf119875)
 {
     createDoc("tdf119875.odt");
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     sal_Int32 nFirstTop
         = getXPath(pXmlDoc, "/root/page[2]/body/section[1]/infos/bounds", "top").toInt32();
     sal_Int32 nSecondTop
@@ -2841,7 +3073,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf119875)
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf120287)
 {
     createDoc("tdf120287.fodt");
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     // This was 2, TabOverMargin Word-specific compat flag did not imply
     // default-in-Word printer-independent layout, resulting in an additional
     // line break.
@@ -2851,7 +3083,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf120287)
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf120287b)
 {
     createDoc("tdf120287b.fodt");
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     // This was 1418, TabOverMargin did the right split of the paragraph to two
     // lines, but then calculated a too large tab portion size on the first
     // line.
@@ -2862,7 +3094,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf120287b)
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf120287c)
 {
     createDoc("tdf120287c.fodt");
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     // This was 2, the second line was not broken into a 2nd and a 3rd one,
     // rendering text outside the paragraph frame.
     assertXPath(pXmlDoc, "/root/page/body/txt[1]/LineBreak", 3);
@@ -2871,7 +3103,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf120287c)
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf122878)
 {
     createDoc("tdf122878.docx");
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     // FIXME: the XPath should be adjusted when the proper floating table would be imported
     const sal_Int32 nTblTop
         = getXPath(pXmlDoc, "/root/page[1]/footer/txt/anchored/fly/tab/infos/bounds", "top")
@@ -2893,7 +3125,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf122878)
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf115094)
 {
     createDoc("tdf115094.docx");
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
 
     sal_Int32 nTopOfD1
         = getXPath(pXmlDoc, "/root/page/body/txt/anchored/fly/tab/row[1]/cell[4]/infos/bounds",
@@ -2920,7 +3152,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf115094)
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf122607)
 {
     createDoc("tdf122607.odt");
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     assertXPath(pXmlDoc,
                 "/root/page[1]/anchored/fly/txt[1]/anchored/fly/tab/row[2]/cell/txt[7]/anchored/"
                 "fly/txt/Text[1]",
@@ -2967,7 +3199,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf122607_regression)
     uno::Reference<frame::XStorable> xStorable(mxComponent, uno::UNO_QUERY);
     xStorable->storeToURL(aTempFile.GetURL(), props);
 
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     // somehow these 2 rows overlapped in the PDF unless CalcLayout() runs
     assertXPath(pXmlDoc, "/root/page[1]/anchored/fly/tab[1]/row[1]/infos/bounds", "mbFixSize",
                 "false");
@@ -2990,7 +3222,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testBtlrCell)
     // Dump the rendering of the first page as an XML file.
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     CPPUNIT_ASSERT(pXmlDoc);
 
     // Without the accompanying fix in place, this test would have failed, as
@@ -3081,7 +3313,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testBtlrCell)
     Point aPoint;
     aPoint.setX(nSecondParaLeft + nSecondParaWidth / 2);
     aPoint.setY(nSecondParaTop + nSecondParaHeight - 100);
-    SwCursorMoveState aState(MV_NONE);
+    SwCursorMoveState aState(CursorMoveState::NONE);
     pLayout->GetModelPositionForViewPoint(&aPosition, aPoint, &aState);
     CPPUNIT_ASSERT_EQUAL(aCellStart.nNode.GetIndex() + 1, aPosition.nNode.GetIndex());
     // Without the accompanying fix in place, this test would have failed: character position was 5,
@@ -3151,7 +3383,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf123898)
     // Make sure spellchecker has done its job already
     Scheduler::ProcessEventsToIdle();
 
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     // Make sure that the arrow on the left is not there (there are 43 children if it's there)
     assertXPathChildren(pXmlDoc, "/root/page/body/txt/anchored/fly/txt", 42);
 }
@@ -3159,7 +3391,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf123898)
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf123651)
 {
     createDoc("tdf123651.docx");
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     // Without the accompanying fix in place, this test would have failed with 'Expected: 7639;
     // Actual: 12926'. The shape was below the second "Lorem ipsum" text, not above it.
     assertXPath(pXmlDoc, "//SwAnchoredDrawObject/bounds", "top", "7639");
@@ -3196,7 +3428,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf118719)
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTabOverMargin)
 {
     createDoc("tab-over-margin.odt");
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
 
     // 2nd paragraph has a tab over the right margin, and with the TabOverMargin compat option,
     // there is enough space to have all content in a single line.
@@ -3242,7 +3474,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testImageComment)
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf64222)
 {
     createDoc("tdf64222.docx");
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     assertXPath(pXmlDoc, "/root/page/body/txt[2]/Special", "nHeight", "560");
 }
 
@@ -3254,7 +3486,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf113014)
     // Dump the rendering of the first page as an XML file.
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     CPPUNIT_ASSERT(pXmlDoc);
 
     // This failed, if numbering of cell A1 is missing
@@ -3381,7 +3613,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testShapeAllowOverlapWrap)
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf124600)
 {
     createDoc("tdf124600.docx");
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
 
     // Without the accompanying fix in place, this test would have failed with:
     // - Expected: 1
@@ -3397,7 +3629,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf124601)
     // The document has 2 pages, the endnote anchor is on the first page.
     // The endnote should be on the 2nd page together with the last page content.
     createDoc("tdf124601.doc");
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
 
     // Without the accompanying fix in place, this test would have failed with:
     // - Expected: 2
@@ -3416,7 +3648,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf124601b)
     // Also the horizontal position should be in the last column, even if the anchor is in the
     // last-but-one column.
     createDoc("tdf124601b.doc");
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
 
     sal_Int32 nFlyTop = getXPath(pXmlDoc, "//fly/infos/bounds", "top").toInt32();
     sal_Int32 nFlyLeft = getXPath(pXmlDoc, "//fly/infos/bounds", "left").toInt32();
@@ -3478,7 +3710,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf124770)
     // Insert the text.
     pWrtShell->Insert2("HHH");
 
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     // Without the accompanying fix in place, this test would have failed with:
     // - Expected: 1
     // - Actual  : 2
@@ -3503,7 +3735,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testContinuousEndnotesInsertPageAtStart)
     pWrtShell->InsertPageBreak();
 
     // Make sure that the endnote is moved from the 2nd page to the 3rd one.
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     assertXPath(pXmlDoc, "/root/page", 3);
     // Without the accompanying fix in place, this test would have failed with:
     // - Expected: 1
@@ -3529,7 +3761,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testContinuousEndnotesDeletePageAtStart)
     pWrtShell->DelRight();
 
     // Make sure that the endnote is moved from the 2nd page to the 1st one.
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     // Without the accompanying fix in place, this test would have failed with:
     // - Expected: 1
     // - Actual  : 2
@@ -3553,7 +3785,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf128399)
     SwWrtShell* pWrtShell = pDoc->GetDocShell()->GetWrtShell();
     SwPosition aPosition = *pWrtShell->GetCursor()->Start();
     SwPosition aFirstRow(aPosition);
-    SwCursorMoveState aState(MV_NONE);
+    SwCursorMoveState aState(CursorMoveState::NONE);
     pLayout->GetModelPositionForViewPoint(&aPosition, aPoint, &aState);
     // Second row is +3: end node, start node and the first text node in the 2nd row.
     sal_uLong nExpected = aFirstRow.nNode.GetIndex() + 3;
@@ -3568,7 +3800,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf128399)
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf105481)
 {
     createDoc("tdf105481.odt");
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     CPPUNIT_ASSERT(pXmlDoc);
 
     // Without the accompanying fix in place, this test would have failed
@@ -3634,7 +3866,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf117982)
     SwDocShell* pShell = pDocument->GetDocShell();
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     assertXPathContent(pXmlDoc, "/metafile/push[1]/push[1]/push[1]/textarray[1]/text", "FOO AAA");
     //The first cell must be "FOO AAA". If not, this means the first cell content not visible in
     //the source document.
@@ -3646,7 +3878,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf128959)
     SwDoc* pDocument = createDoc("tdf128959.docx");
     CPPUNIT_ASSERT(pDocument);
     discardDumpedLayout();
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
 
     // first two lines of the paragraph in the split table cell on the first page
     // (these lines were completely lost)
@@ -3668,7 +3900,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf121658)
         return;
 
     createDoc("tdf121658.odt");
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
 
     // Only 2 hyphenated words should appear in the document (in the lowercase words).
     // Uppercase words should not be hyphenated.
@@ -3678,7 +3910,7 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf121658)
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testWriterImageNoCapture)
 {
     createDoc("writer-image-no-capture.docx");
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     CPPUNIT_ASSERT(pXmlDoc);
     sal_Int32 nPageLeft = getXPath(pXmlDoc, "//page/infos/bounds", "left").toInt32();
     sal_Int32 nImageLeft = getXPath(pXmlDoc, "//fly/infos/bounds", "left").toInt32();

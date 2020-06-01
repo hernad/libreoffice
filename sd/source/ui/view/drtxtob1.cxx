@@ -321,6 +321,7 @@ void TextObjectBar::Execute( SfxRequest &rReq )
             Invalidate();
             // to refresh preview (in outline mode), slot has to be invalidated:
             mpViewShell->GetViewFrame()->GetBindings().Invalidate( SID_PREVIEW_STATE, true );
+            mpViewShell->GetViewFrame()->GetBindings().Invalidate( SID_ATTR_PARA_ULSPACE, true );
         }
         break;
 
@@ -416,6 +417,9 @@ void TextObjectBar::Execute( SfxRequest &rReq )
         case SID_TEXTDIRECTION_TOP_TO_BOTTOM:
         {
             mpView->SdrEndTextEdit();
+            // tdf#131571: SdrEndTextEdit invalidates pTextEditOutlinerView, the pointer retrieved for pOLV
+            // so reinitialize pOLV
+            pOLV=mpView->GetTextEditOutlinerView();
             SfxItemSet aAttr( mpView->GetDoc().GetPool(), svl::Items<SDRATTR_TEXTDIRECTION, SDRATTR_TEXTDIRECTION>{} );
             aAttr.Put( SvxWritingModeItem(
                 nSlot == SID_TEXTDIRECTION_LEFT_TO_RIGHT ?
@@ -489,7 +493,7 @@ void TextObjectBar::Execute( SfxRequest &rReq )
 
                             pFirstStyleSheet->GetItemSet().Put(SvxNumBulletItem(aNewRule, EE_PARA_NUMBULLET));
 
-                            SdStyleSheet::BroadcastSdStyleSheetChange(pFirstStyleSheet, PO_OUTLINE_1, pSSPool);
+                            SdStyleSheet::BroadcastSdStyleSheetChange(pFirstStyleSheet, PresentationObjects::Outline_1, pSSPool);
                         }
                     }
                 }
@@ -827,7 +831,7 @@ void TextObjectBar::Execute( SfxRequest &rReq )
         break;
     }
 
-    if ( pOLV )
+    if ( nSlot != SID_STYLE_APPLY && pOLV )
     {
         pOLV->ShowCursor();
         pOLV->GetWindow()->GrabFocus();

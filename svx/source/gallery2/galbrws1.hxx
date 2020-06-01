@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_SVX_SOURCE_GALLERY2_GALBRWS1_HXX
-#define INCLUDED_SVX_SOURCE_GALLERY2_GALBRWS1_HXX
+#pragma once
 
 #include <svl/lstner.hxx>
 #include <vector>
@@ -35,7 +34,7 @@ class VclAbstractDialog;
 struct ExchangeData;
 class SfxItemSet;
 
-namespace svx { namespace sidebar { class GalleryControl; } }
+namespace svx::sidebar { class GalleryControl; }
 
 class GalleryBrowser1 final : public SfxListener
 {
@@ -54,7 +53,7 @@ private:
     OUString aImgDefault;
     OUString aImgReadOnly;
 
-    ::std::function<void ()> const maThemeSlectionHandler;
+    ::std::function<void ()> maThemeSlectionHandler;
 
     void                    ImplInsertThemeEntry( const GalleryThemeEntry* pEntry );
     static void             ImplFillExchangeData( const GalleryTheme* pThm, ExchangeData& rData );
@@ -86,7 +85,5 @@ public:
     OUString                GetSelectedTheme() const { return mxThemes->get_selected_text(); }
     void                    GrabFocus();
 };
-
-#endif // INCLUDED_SVX_SOURCE_GALLERY2_GALBRWS1_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -491,8 +491,11 @@ uno::Any SAL_CALL ScAccessibleCell::getExtendedAttributes()
     if (mpViewShell)
     {
         OUString strFor = mpViewShell->GetFormula(maCellAddress) ;
-        strFor = strFor.copy(1);
-        strFor = ReplaceFourChar(strFor);
+        if (!strFor.isEmpty())
+        {
+            strFor = strFor.copy(1);
+            strFor = ReplaceFourChar(strFor);
+        }
         strFor = "Formula:" + strFor +
             ";Note:" +
             ReplaceFourChar(GetAllDisplayNote()) + ";" +
@@ -564,7 +567,7 @@ bool ScAccessibleCell::IsDropdown() const
         if ( nTab+1<nTabCount && mpDoc->IsScenario(nTab+1) && !mpDoc->IsScenario(nTab) )
         {
             SCTAB i;
-            ScMarkData aMarks(mpDoc->MaxRow(), mpDoc->MaxCol());
+            ScMarkData aMarks(mpDoc->GetSheetLimits());
             for (i=nTab+1; i<nTabCount && mpDoc->IsScenario(i); i++)
                 mpDoc->MarkScenario( i, nTab, aMarks, false, ScScenarioFlags::ShowFrame );
             ScRangeList aRanges;

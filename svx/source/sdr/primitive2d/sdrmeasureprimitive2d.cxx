@@ -18,13 +18,11 @@
  */
 
 #include <sdr/primitive2d/sdrmeasureprimitive2d.hxx>
-#include <svx/sdr/primitive2d/sdrdecompositiontools.hxx>
+#include <sdr/primitive2d/sdrdecompositiontools.hxx>
 #include <basegfx/matrix/b2dhommatrix.hxx>
 #include <sdr/primitive2d/sdrtextprimitive2d.hxx>
-#include <svx/sdr/attribute/sdrtextattribute.hxx>
+#include <sdr/attribute/sdrtextattribute.hxx>
 #include <basegfx/polygon/b2dpolypolygontools.hxx>
-#include <basegfx/utils/canvastools.hxx>
-#include <drawinglayer/primitive2d/groupprimitive2d.hxx>
 #include <rtl/ref.hxx>
 #include <svx/sdr/primitive2d/svx_primitivetypes2d.hxx>
 #include <basegfx/matrix/b2dhommatrixtools.hxx>
@@ -435,7 +433,7 @@ namespace drawinglayer::primitive2d
         }
 
         SdrMeasurePrimitive2D::SdrMeasurePrimitive2D(
-            const attribute::SdrLineShadowTextAttribute& rSdrLSTAttribute,
+            const attribute::SdrLineEffectsTextAttribute& rSdrLSTAttribute,
             const basegfx::B2DPoint& rStart,
             const basegfx::B2DPoint& rEnd,
             MeasureTextPosition eHorizontal,

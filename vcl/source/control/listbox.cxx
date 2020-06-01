@@ -34,11 +34,6 @@
 #include <com/sun/star/datatransfer/dnd/XDropTarget.hpp>
 #include <boost/property_tree/ptree.hpp>
 
-void ListBox::EnableQuickSelection( bool b )
-{
-    mpImplLB->GetMainWindow()->EnableQuickSelection(b);
-}
-
 ListBox::ListBox(WindowType nType)
     : Control(nType)
     , mpImplLB(nullptr)
@@ -123,7 +118,6 @@ void ListBox::ImplInit( vcl::Window* pParent, WinBits nStyle )
 
         mpImplWin = VclPtr<ImplWin>::Create( this, (nStyle & (WB_LEFT|WB_RIGHT|WB_CENTER))|WB_NOBORDER );
         mpImplWin->SetMBDownHdl( LINK( this, ListBox, ImplClickBtnHdl ) );
-        mpImplWin->SetUserDrawHdl( LINK( this, ListBox, ImplUserDrawHdl ) );
         mpImplWin->Show();
         mpImplWin->GetDropTarget()->addDropTargetListener(xDrop);
         mpImplWin->SetEdgeBlending(false);
@@ -143,7 +137,6 @@ void ListBox::ImplInit( vcl::Window* pParent, WinBits nStyle )
     mpImplLB->SetScrollHdl( LINK( this, ListBox, ImplScrollHdl ) );
     mpImplLB->SetCancelHdl( LINK( this, ListBox, ImplCancelHdl ) );
     mpImplLB->SetDoubleClickHdl( LINK( this, ListBox, ImplDoubleClickHdl ) );
-    mpImplLB->SetUserDrawHdl( LINK( this, ListBox, ImplUserDrawHdl ) );
     mpImplLB->SetFocusHdl( LINK( this, ListBox, ImplFocusHdl ) );
     mpImplLB->SetListItemSelectHdl( LINK( this, ListBox, ImplListItemSelectHdl ) );
     mpImplLB->SetPosPixel( Point() );
@@ -322,12 +315,12 @@ void ListBox::ApplySettings(vcl::RenderContext& rRenderContext)
     rRenderContext.SetBackground();
 }
 
-void ListBox::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawFlags nFlags )
+void ListBox::Draw( OutputDevice* pDev, const Point& rPos, DrawFlags nFlags )
 {
     mpImplLB->GetMainWindow()->ApplySettings(*pDev);
 
     Point aPos = pDev->LogicToPixel( rPos );
-    Size aSize = pDev->LogicToPixel( rSize );
+    Size aSize = GetSizePixel();
     vcl::Font aFont = mpImplLB->GetMainWindow()->GetDrawPixelFont( pDev );
 
     pDev->Push();
@@ -909,7 +902,7 @@ void ListBox::Select()
 
 void ListBox::DoubleClick()
 {
-    ImplCallEventListenersAndHandler( VclEventId::ListboxDoubleClick, [this] () { maDoubleClickHdl.Call(*this); } );
+    ImplCallEventListenersAndHandler( VclEventId::ListboxDoubleClick, {} );
 }
 
 void ListBox::Clear()
@@ -955,11 +948,6 @@ sal_Int32 ListBox::InsertEntry( const OUString& rStr, const Image& rImage, sal_I
     nRealPos = sal::static_int_cast<sal_Int32>(nRealPos - mpImplLB->GetEntryList()->GetMRUCount());
     CallEventListeners( VclEventId::ListboxItemAdded, reinterpret_cast<void*>(nRealPos) );
     return nRealPos;
-}
-
-void ListBox::RemoveEntry( const OUString& rStr )
-{
-    RemoveEntry( GetEntryPos( rStr ) );
 }
 
 void ListBox::RemoveEntry( sal_Int32 nPos )
@@ -1098,11 +1086,6 @@ void* ListBox::GetEntryData( sal_Int32 nPos ) const
 void ListBox::SetEntryFlags( sal_Int32 nPos, ListBoxEntryFlags nFlags )
 {
     mpImplLB->SetEntryFlags( nPos + mpImplLB->GetEntryList()->GetMRUCount(), nFlags );
-}
-
-ListBoxEntryFlags ListBox::GetEntryFlags( sal_Int32 nPos ) const
-{
-    return mpImplLB->GetEntryList()->GetEntryFlags( nPos + mpImplLB->GetEntryList()->GetMRUCount() );
 }
 
 void ListBox::SetTopEntry( sal_Int32 nPos )
@@ -1332,30 +1315,6 @@ void ListBox::GetMaxVisColumnsAndLines( sal_uInt16& rnCols, sal_uInt16& rnLines 
         rnCols = static_cast<sal_uInt16>(aOutSz.Width()/nCharWidth);
         rnLines = 1;
     }
-}
-
-IMPL_LINK( ListBox, ImplUserDrawHdl, UserDrawEvent*, pEvent, void )
-{
-    UserDraw( *pEvent );
-}
-
-void ListBox::UserDraw( const UserDrawEvent& )
-{
-}
-
-void ListBox::DrawEntry(const UserDrawEvent& rEvt)
-{
-    if (rEvt.GetWindow() == mpImplLB->GetMainWindow())
-        mpImplLB->GetMainWindow()->DrawEntry(*rEvt.GetRenderContext(), rEvt.GetItemId(), true/*bDrawImage*/, true/*bDrawText*/, false/*bDrawTextAtImagePos*/ );
-    else if (rEvt.GetWindow() == mpImplWin)
-        mpImplWin->DrawEntry(*rEvt.GetRenderContext(), false/*layout*/);
-}
-
-void ListBox::EnableUserDraw( bool bUserDraw )
-{
-    mpImplLB->GetMainWindow()->EnableUserDraw( bUserDraw );
-    if ( mpImplWin )
-        mpImplWin->EnableUserDraw( bUserDraw );
 }
 
 void ListBox::SetReadOnly( bool bReadOnly )

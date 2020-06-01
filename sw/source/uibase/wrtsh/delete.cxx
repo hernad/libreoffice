@@ -31,6 +31,7 @@
 #include <IDocumentUndoRedo.hxx>
 #include <i18nutil/unicode.hxx>
 #include <rtl/character.hxx>
+#include <doc.hxx>
 
 inline void SwWrtShell::OpenMark()
 {
@@ -279,6 +280,12 @@ bool SwWrtShell::DelLeft()
     if( !bRet && bSwap )
         SwCursorShell::SwapPam();
     CloseMark( bRet );
+    if (!bRet)
+    {   // false indicates HasReadonlySel failed
+        std::unique_ptr<weld::Builder> xBuilder(Application::CreateBuilder(GetView().GetFrameWeld(), "modules/swriter/ui/inforeadonlydialog.ui"));
+        std::unique_ptr<weld::MessageDialog> xInfo(xBuilder->weld_message_dialog("InfoReadonlyDialog"));
+        xInfo->run();
+    }
     return bRet;
 }
 
@@ -394,6 +401,12 @@ bool SwWrtShell::DelRight()
         SwCursorShell::Right(1, CRSR_SKIP_CELLS);
         bRet = Delete();
         CloseMark( bRet );
+        if (!bRet)
+        {   // false indicates HasReadonlySel failed
+            std::unique_ptr<weld::Builder> xBuilder(Application::CreateBuilder(GetView().GetFrameWeld(), "modules/swriter/ui/inforeadonlydialog.ui"));
+            std::unique_ptr<weld::MessageDialog> xInfo(xBuilder->weld_message_dialog("InfoReadonlyDialog"));
+            xInfo->run();
+        }
         break;
 
     case SelectionType::Frame:

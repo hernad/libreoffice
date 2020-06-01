@@ -56,6 +56,7 @@
 #include <inputwin.hxx>
 #include <dbdata.hxx>
 #include <reffact.hxx>
+#include <fuinsert.hxx>
 #include <viewuno.hxx>
 #include <dispuno.hxx>
 #include <chgtrack.hxx>
@@ -305,7 +306,7 @@ void ScTabViewShell::UpdateOleZoom()
     {
         //TODO/LATER: is there a difference between the two GetVisArea methods?
         Size aObjSize = static_cast<const SfxObjectShell*>(pDocSh)->GetVisArea().GetSize();
-        if ( aObjSize.Width() > 0 && aObjSize.Height() > 0 )
+        if ( !aObjSize.IsEmpty() )
         {
             vcl::Window* pWin = GetActiveWin();
             Size aWinHMM = pWin->PixelToLogic(pWin->GetOutputSizePixel(), MapMode(MapUnit::Map100thMM));
@@ -330,7 +331,7 @@ void ScTabViewShell::InnerResizePixel( const Point &rOfs, const Size &rSize, boo
         aSize.AdjustWidth( -(aBorder.Left() + aBorder.Right()) );
         aSize.AdjustHeight( -(aBorder.Top() + aBorder.Bottom()) );
 
-        if ( aObjSize.Width() > 0 && aObjSize.Height() > 0 )
+        if ( !aObjSize.IsEmpty() )
         {
             Size aLogicSize = GetWindow()->PixelToLogic(aSize, MapMode(MapUnit::Map100thMM));
             SfxViewShell::SetZoomFactor( Fraction( aLogicSize.Width(),aObjSize.Width() ),
@@ -550,7 +551,7 @@ void ScTabViewShell::UpdateDrawShell()
     // Called after user interaction that may delete the selected drawing object.
     // Remove DrawShell if nothing is selected.
 
-    SdrView* pDrView = GetSdrView();
+    SdrView* pDrView = GetScDrawView();
     if ( pDrView && !pDrView->AreObjectsMarked() && !IsDrawSelMode() )
         SetDrawShell( false );
 }
@@ -1343,6 +1344,27 @@ bool ScTabViewShell::TabKeyInput(const KeyEvent& rKEvt)
             case KEY_PAGEDOWN:
                 nSlotId = bShift ? SID_CURSORPAGERIGHT_SEL : SID_CURSORPAGERIGHT_;
                 break;
+            case KEY_EQUAL:
+            {
+                // #tdf39302: Use "Alt + =" for autosum
+                if ( !bAnyEdit ) // Ignore shortcut if currently editing a cell
+                {
+                    ScInputHandler* pHdl = pScMod->GetInputHdl(this);
+                    if ( pHdl )
+                    {
+                        ScInputWindow* pWin = pHdl->GetInputWindow();
+                        if ( pWin )
+                        {
+                            bool bRangeFinder = false;
+                            bool bSubTotal = false;
+                            pWin->AutoSum( bRangeFinder, bSubTotal, ocSum );
+                        }
+                    }
+
+                    bUsed = true;
+                    break;
+                }
+            }
         }
         if ( nSlotId )
         {
@@ -1650,7 +1672,7 @@ ScTabViewShell::ScTabViewShell( SfxViewFrame* pViewFrame,
     // available to them.
     bool bInstalledScTabViewObjAsTempController = false;
     uno::Reference<frame::XController> xCurrentController(GetViewData().GetDocShell()->GetModel()->getCurrentController());
-    if (!xCurrentController.get())
+    if (!xCurrentController)
     {
         //GetController here returns the ScTabViewObj above
         GetViewData().GetDocShell()->GetModel()->setCurrentController(GetController());

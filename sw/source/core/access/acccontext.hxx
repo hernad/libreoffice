@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_SW_SOURCE_CORE_ACCESS_ACCCONTEXT_HXX
-#define INCLUDED_SW_SOURCE_CORE_ACCESS_ACCCONTEXT_HXX
+#pragma once
 
 #include "accframe.hxx"
 #include <accmap.hxx>
@@ -80,7 +79,7 @@ private:
     std::weak_ptr<SwAccessibleMap> m_wMap;
 
     sal_uInt32 m_nClientId;  // client id in the AccessibleEventNotifier queue
-    sal_Int16 const m_nRole; // immutable outside constructor
+    sal_Int16 m_nRole;        // immutable outside constructor
 
     // The current states (protected by mutex)
     bool m_isShowingState : 1;
@@ -357,7 +356,5 @@ public:
                                 const OUString *pArg1 = nullptr,
                                 const OUString *pArg2 = nullptr);
 };
-
-#endif
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

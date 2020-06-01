@@ -17,9 +17,9 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_BASEGFX_TUPLE_B3DTUPLE_HXX
-#define INCLUDED_BASEGFX_TUPLE_B3DTUPLE_HXX
+#pragma once
 
+#include <config_options.h>
 #include <sal/types.h>
 #include <basegfx/numeric/ftools.hxx>
 #include <basegfx/basegfxdllapi.h>
@@ -36,7 +36,7 @@ namespace basegfx
         @derive Use this class to implement Points or Vectors
         which are based on three double values
     */
-    class SAL_WARN_UNUSED BASEGFX_DLLPUBLIC B3DTuple
+    class SAL_WARN_UNUSED UNLESS_MERGELIBS(BASEGFX_DLLPUBLIC) B3DTuple
     {
     protected:
         double                                      mfX;
@@ -285,9 +285,9 @@ namespace basegfx
     inline B3DTuple average(const B3DTuple& rOld1, const B3DTuple& rOld2)
     {
         return B3DTuple(
-            rtl::math::approxEqual(rOld1.getX(), rOld2.getX()) ? rOld1.getX() : (rOld1.getX() + rOld2.getX()) * 0.5,
-            rtl::math::approxEqual(rOld1.getY(), rOld2.getY()) ? rOld1.getY() : (rOld1.getY() + rOld2.getY()) * 0.5,
-            rtl::math::approxEqual(rOld1.getZ(), rOld2.getZ()) ? rOld1.getZ() : (rOld1.getZ() + rOld2.getZ()) * 0.5);
+            rtl_math_approxEqual(rOld1.getX(), rOld2.getX()) ? rOld1.getX() : (rOld1.getX() + rOld2.getX()) * 0.5,
+            rtl_math_approxEqual(rOld1.getY(), rOld2.getY()) ? rOld1.getY() : (rOld1.getY() + rOld2.getY()) * 0.5,
+            rtl_math_approxEqual(rOld1.getZ(), rOld2.getZ()) ? rOld1.getZ() : (rOld1.getZ() + rOld2.getZ()) * 0.5);
     }
 
     inline B3DTuple operator+(const B3DTuple& rTupA, const B3DTuple& rTupB)
@@ -331,7 +331,5 @@ namespace basegfx
     */
     BASEGFX_DLLPUBLIC B3ITuple fround(const B3DTuple& rTup);
 } // end of namespace basegfx
-
-#endif // INCLUDED_BASEGFX_TUPLE_B3DTUPLE_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

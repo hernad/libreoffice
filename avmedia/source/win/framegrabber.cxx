@@ -44,13 +44,13 @@
 
 using namespace ::com::sun::star;
 
-namespace avmedia { namespace win {
+namespace avmedia::win {
 
 
 FrameGrabber::FrameGrabber( const uno::Reference< lang::XMultiServiceFactory >& rxMgr ) :
     mxMgr( rxMgr )
 {
-    ::CoInitialize( nullptr );
+    ::CoInitializeEx( nullptr, COINIT_APARTMENTTHREADED );
 }
 
 
@@ -219,7 +219,7 @@ uno::Sequence< OUString > SAL_CALL FrameGrabber::getSupportedServiceNames(  )
     return { AVMEDIA_WIN_FRAMEGRABBER_SERVICENAME };
 }
 
-} // namespace win
-} // namespace avmedia
+} // namespace avmedia::win
+
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

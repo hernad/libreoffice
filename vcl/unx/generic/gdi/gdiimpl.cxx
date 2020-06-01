@@ -18,6 +18,8 @@
  */
 
 #include <memory>
+#include <numeric>
+
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/extensions/Xrender.h>
@@ -1580,25 +1582,29 @@ private:
 
     // all other values the triangulation is based on and
     // need to be compared with to check for data validity
-    basegfx::B2DVector                          maLineWidth;
+    double                                      mfLineWidth;
     basegfx::B2DLineJoin                        meJoin;
     css::drawing::LineCap                       meCap;
     double                                      mfMiterMinimumAngle;
+    std::vector< double >                       maStroke;
 
 public:
     SystemDependentData_Triangulation(
         basegfx::SystemDependentDataManager& rSystemDependentDataManager,
         const basegfx::triangulator::B2DTriangleVector& rTriangles,
-        const basegfx::B2DVector& rLineWidth,
+        double fLineWidth,
         basegfx::B2DLineJoin eJoin,
         css::drawing::LineCap eCap,
-        double fMiterMinimumAngle);
+        double fMiterMinimumAngle,
+        const std::vector< double >* pStroke); // MM01
 
+    // read access
     const basegfx::triangulator::B2DTriangleVector& getTriangles() const { return maTriangles; }
-    const basegfx::B2DVector& getLineWidth() const { return maLineWidth; }
+    double getLineWidth() const { return mfLineWidth; }
     const basegfx::B2DLineJoin& getJoin() const { return meJoin; }
     const css::drawing::LineCap& getCap() const { return meCap; }
     double getMiterMinimumAngle() const { return mfMiterMinimumAngle; }
+    const std::vector< double >& getStroke() const { return maStroke; }
 
     virtual sal_Int64 estimateUsageInBytes() const override;
 };
@@ -1608,17 +1614,23 @@ public:
 SystemDependentData_Triangulation::SystemDependentData_Triangulation(
     basegfx::SystemDependentDataManager& rSystemDependentDataManager,
     const basegfx::triangulator::B2DTriangleVector& rTriangles,
-    const basegfx::B2DVector& rLineWidth,
+    double fLineWidth,
     basegfx::B2DLineJoin eJoin,
     css::drawing::LineCap eCap,
-    double fMiterMinimumAngle)
+    double fMiterMinimumAngle,
+    const std::vector< double >* pStroke)
 :   basegfx::SystemDependentData(rSystemDependentDataManager),
     maTriangles(rTriangles),
-    maLineWidth(rLineWidth),
+    mfLineWidth(fLineWidth),
     meJoin(eJoin),
     meCap(eCap),
-    mfMiterMinimumAngle(fMiterMinimumAngle)
+    mfMiterMinimumAngle(fMiterMinimumAngle),
+    maStroke()
 {
+    if(nullptr != pStroke)
+    {
+        maStroke = *pStroke;
+    }
 }
 
 sal_Int64 SystemDependentData_Triangulation::estimateUsageInBytes() const
@@ -1637,7 +1649,8 @@ bool X11SalGraphicsImpl::drawPolyLine(
     const basegfx::B2DHomMatrix& rObjectToDevice,
     const basegfx::B2DPolygon& rPolygon,
     double fTransparency,
-    const basegfx::B2DVector& rLineWidth,
+    double fLineWidth,
+    const std::vector< double >* pStroke, // MM01
     basegfx::B2DLineJoin eLineJoin,
     css::drawing::LineCap eLineCap,
     double fMiterMinimumAngle,
@@ -1650,28 +1663,53 @@ bool X11SalGraphicsImpl::drawPolyLine(
     }
 
     // need to check/handle LineWidth when ObjectToDevice transformation is used
-    basegfx::B2DVector aLineWidth(rLineWidth);
     const bool bObjectToDeviceIsIdentity(rObjectToDevice.isIdentity());
-    const basegfx::B2DVector aDeviceLineWidths(bObjectToDeviceIsIdentity ? rLineWidth : rObjectToDevice * rLineWidth);
-    const bool bCorrectLineWidth(!bObjectToDeviceIsIdentity && aDeviceLineWidths.getX() < 1.0 && aLineWidth.getX() >= 1.0);
     basegfx::B2DHomMatrix aObjectToDeviceInv;
-    basegfx::B2DPolygon aPolygon(rPolygon);
 
-    if(bCorrectLineWidth)
+    // tdf#124848 calculate-back logical LineWidth for a hairline.
+    // This implementation does not hand over the transformation to
+    // the graphic sub-system, but the triangulation data is prepared
+    // view-independent based on the logic LineWidth, so we need to
+    // know it
+    if(fLineWidth == 0)
     {
-        if(aObjectToDeviceInv.isIdentity())
-        {
-            aObjectToDeviceInv = rObjectToDevice;
-            aObjectToDeviceInv.invert();
-        }
+        fLineWidth = 1.0;
 
-        // calculate-back logical LineWidth for a hairline
-        aLineWidth = aObjectToDeviceInv * basegfx::B2DVector(1.0, 1.0);
+        if(!bObjectToDeviceIsIdentity)
+        {
+            if(aObjectToDeviceInv.isIdentity())
+            {
+                aObjectToDeviceInv = rObjectToDevice;
+                aObjectToDeviceInv.invert();
+            }
+
+            fLineWidth = (aObjectToDeviceInv * basegfx::B2DVector(fLineWidth, 0)).getLength();
+        }
     }
 
     // try to access buffered data
     std::shared_ptr<SystemDependentData_Triangulation> pSystemDependentData_Triangulation(
         rPolygon.getSystemDependentData<SystemDependentData_Triangulation>());
+
+    // MM01 need to do line dashing as fallback stuff here now
+    const double fDotDashLength(nullptr != pStroke ? std::accumulate(pStroke->begin(), pStroke->end(), 0.0) : 0.0);
+    const bool bStrokeUsed(0.0 != fDotDashLength);
+    assert(!bStrokeUsed || (bStrokeUsed && pStroke));
+
+    if(pSystemDependentData_Triangulation)
+    {
+        // MM01 - check on stroke change. Used against not used, or if oth used,
+        // equal or different? Triangulation geometry creation depends heavily
+        // on stroke, independent of being transformation independent
+        const bool bStrokeWasUsed(!pSystemDependentData_Triangulation->getStroke().empty());
+
+        if(bStrokeWasUsed != bStrokeUsed
+        || (bStrokeUsed && *pStroke != pSystemDependentData_Triangulation->getStroke()))
+        {
+            // data invalid, forget
+            pSystemDependentData_Triangulation.reset();
+        }
+    }
 
     if(pSystemDependentData_Triangulation)
     {
@@ -1688,18 +1726,14 @@ bool X11SalGraphicsImpl::drawPolyLine(
     if(pSystemDependentData_Triangulation)
     {
         // check data validity (II)
-        if(pSystemDependentData_Triangulation->getLineWidth() != aLineWidth)
+        if(pSystemDependentData_Triangulation->getLineWidth() != fLineWidth)
         {
             // sometimes small inconsistencies, use a percentage tolerance
-            const double fFactorX(basegfx::fTools::equalZero(aLineWidth.getX())
+            const double fFactor(basegfx::fTools::equalZero(fLineWidth)
                 ? 0.0
-                : fabs(1.0 - (pSystemDependentData_Triangulation->getLineWidth().getX() / aLineWidth.getX())));
-            const double fFactorY(basegfx::fTools::equalZero(aLineWidth.getY())
-                ? 0.0
-                : fabs(1.0 - (pSystemDependentData_Triangulation->getLineWidth().getY() / aLineWidth.getY())));
-
+                : fabs(1.0 - (pSystemDependentData_Triangulation->getLineWidth() / fLineWidth)));
             // compare with 5.0% tolerance
-            if(basegfx::fTools::more(fFactorX, 0.05) || basegfx::fTools::more(fFactorY, 0.05))
+            if(basegfx::fTools::more(fFactor, 0.05))
             {
                 // data invalid, forget
                 pSystemDependentData_Triangulation.reset();
@@ -1709,15 +1743,36 @@ bool X11SalGraphicsImpl::drawPolyLine(
 
     if(!pSystemDependentData_Triangulation)
     {
+        // MM01 need to do line dashing as fallback stuff here now
+        basegfx::B2DPolyPolygon aPolyPolygonLine;
+
+        if(bStrokeUsed)
+        {
+            // apply LineStyle
+            basegfx::utils::applyLineDashing(
+                rPolygon, // source
+                *pStroke, // pattern
+                &aPolyPolygonLine, // target for lines
+                nullptr, // target for gaps
+                fDotDashLength); // full length if available
+        }
+        else
+        {
+            // no line dashing, just copy
+            aPolyPolygonLine.append(rPolygon);
+        }
+
         // try to create data
         if(bPixelSnapHairline)
         {
+            // Do NOT transform, but keep device-independent. To
+            // do so, transform to device for snap, but back again after
             if(!bObjectToDeviceIsIdentity)
             {
-                aPolygon.transform(rObjectToDevice);
+                aPolyPolygonLine.transform(rObjectToDevice);
             }
 
-            aPolygon = basegfx::utils::snapPointsOfHorizontalOrVerticalEdges(aPolygon);
+            aPolyPolygonLine = basegfx::utils::snapPointsOfHorizontalOrVerticalEdges(aPolyPolygonLine);
 
             if(!bObjectToDeviceIsIdentity)
             {
@@ -1727,11 +1782,30 @@ bool X11SalGraphicsImpl::drawPolyLine(
                     aObjectToDeviceInv.invert();
                 }
 
-                aPolygon.transform(aObjectToDeviceInv);
+                aPolyPolygonLine.transform(aObjectToDeviceInv);
             }
         }
 
         basegfx::triangulator::B2DTriangleVector aTriangles;
+
+        // MM01 checked/verified for X11 (linux)
+        for(sal_uInt32 a(0); a < aPolyPolygonLine.count(); a++)
+        {
+            const basegfx::B2DPolygon aPolyLine(aPolyPolygonLine.getB2DPolygon(a));
+            // MM01 upps - commit 51b5b93092d6231615de470c62494c24e54828a1 removed
+            // this *central* geometry-creating lines (!) probably due to aAreaPolyPoly
+            // *not* being used - that's true, but the work is inside of filling
+            // aTriangles data (!)
+            basegfx::utils::createAreaGeometry(
+                aPolyLine,
+                0.5 * fLineWidth,
+                eLineJoin,
+                eLineCap,
+                basegfx::deg2rad(12.5),
+                0.4,
+                fMiterMinimumAngle,
+                &aTriangles); // CAUTION! This is *needed* since it creates the data!
+        }
 
         if(!aTriangles.empty())
         {
@@ -1741,10 +1815,11 @@ bool X11SalGraphicsImpl::drawPolyLine(
             pSystemDependentData_Triangulation = rPolygon.addOrReplaceSystemDependentData<SystemDependentData_Triangulation>(
                 ImplGetSystemDependentDataManager(),
                 aTriangles,
-                aLineWidth,
+                fLineWidth,
                 eLineJoin,
                 eLineCap,
-                fMiterMinimumAngle);
+                fMiterMinimumAngle,
+                pStroke);
         }
     }
 

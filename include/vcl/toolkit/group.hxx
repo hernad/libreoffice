@@ -20,14 +20,15 @@
 #ifndef INCLUDED_VCL_GROUP_HXX
 #define INCLUDED_VCL_GROUP_HXX
 
-#if !defined(VCL_DLLIMPLEMENTATION) && !defined(TOOLKIT_DLLIMPLEMENTATION)
+#if !defined(VCL_DLLIMPLEMENTATION) && !defined(TOOLKIT_DLLIMPLEMENTATION) && !defined(VCL_INTERNALS)
 #error "don't use this in new code"
 #endif
 
+#include <config_options.h>
 #include <vcl/dllapi.h>
 #include <vcl/ctrl.hxx>
 
-class VCL_DLLPUBLIC GroupBox : public Control
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) GroupBox : public Control
 {
 private:
     using Control::ImplInitSettings;
@@ -48,7 +49,7 @@ public:
     explicit        GroupBox( vcl::Window* pParent, WinBits nStyle );
 
     virtual void    Paint( vcl::RenderContext& rRenderContext, const tools::Rectangle& rRect ) override;
-    virtual void    Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawFlags nFlags ) override;
+    virtual void    Draw( OutputDevice* pDev, const Point& rPos, DrawFlags nFlags ) override;
     virtual void    Resize() override;
     virtual void    StateChanged( StateChangedType nType ) override;
     virtual void    DataChanged( const DataChangedEvent& rDCEvt ) override;

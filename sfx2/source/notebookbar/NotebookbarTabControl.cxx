@@ -18,11 +18,12 @@
  */
 
 #include <vcl/builderfactory.hxx>
+#include <vcl/button.hxx>
 #include <vcl/layout.hxx>
 #include <vcl/notebookbar.hxx>
 #include <vcl/tabpage.hxx>
 #include <sfx2/viewfrm.hxx>
-#include <sfx2/notebookbar/NotebookbarTabControl.hxx>
+#include <notebookbar/NotebookbarTabControl.hxx>
 #include <com/sun/star/ui/theModuleUIConfigurationManagerSupplier.hpp>
 #include <com/sun/star/ui/ItemType.hpp>
 #include <com/sun/star/frame/XModuleManager.hpp>
@@ -125,6 +126,7 @@ public:
     : sfx2::sidebar::SidebarToolBox( pParent )
     {
         mbUseDefaultButtonSize = false;
+        mbSideBar = false;
         SetToolboxButtonSize(ToolBoxButtonSize::Small);
     }
 

@@ -20,6 +20,7 @@
 #ifndef INCLUDED_VCL_ACCEL_HXX
 #define INCLUDED_VCL_ACCEL_HXX
 
+#include <config_options.h>
 #include <tools/link.hxx>
 #include <vcl/keycod.hxx>
 #include <vcl/dllapi.h>
@@ -29,7 +30,7 @@ class ImplAccelData;
 class ImplAccelEntry;
 class CommandEvent;
 
-class VCL_DLLPUBLIC Accelerator
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) Accelerator
 {
     friend class ImplAccelManager;
 
@@ -39,7 +40,6 @@ private:
     Link<Accelerator&,void> maSelectHdl;
 
     // Will be set by AcceleratorManager
-    vcl::KeyCode            maCurKeyCode;
     sal_uInt16              mnCurId;
     bool*                   mpDel;
 
@@ -66,7 +66,6 @@ public:
     void                    InsertItem( sal_uInt16 nItemId, const vcl::KeyCode& rKeyCode );
 
     sal_uInt16              GetCurItemId() const { return mnCurId; }
-    const vcl::KeyCode&     GetCurKeyCode() const { return maCurKeyCode; }
 
     sal_uInt16              GetItemCount() const;
     sal_uInt16              GetItemId( sal_uInt16 nPos ) const;

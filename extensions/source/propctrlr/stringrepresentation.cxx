@@ -19,10 +19,9 @@
 
 #include <sal/config.h>
 
-#include <cppuhelper/factory.hxx>
-#include <cppuhelper/implementationentry.hxx>
 #include <cppuhelper/implbase.hxx>
 #include <cppuhelper/supportsservice.hxx>
+#include <com/sun/star/lang/IllegalArgumentException.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/inspection/XStringRepresentation.hpp>
 #include <com/sun/star/lang/XInitialization.hpp>
@@ -30,7 +29,6 @@
 #include <com/sun/star/script/XTypeConverter.hpp>
 #include <com/sun/star/container/XHierarchicalNameAccess.hpp>
 #include <com/sun/star/reflection/XConstantsTypeDescription.hpp>
-#include <com/sun/star/beans/XIntrospection.hpp>
 #include <com/sun/star/util/DateTime.hpp>
 #include <com/sun/star/util/Date.hpp>
 #include <com/sun/star/util/Time.hpp>
@@ -39,13 +37,11 @@
 #include <osl/diagnose.h>
 #include <rtl/ustrbuf.hxx>
 #include <sal/log.hxx>
-#include <strings.hrc>
 #include <yesno.hrc>
 #include "pcrservices.hxx"
 #include <comphelper/types.hxx>
 #include "modulepcr.hxx"
 
-#include <functional>
 #include <algorithm>
 
 // component helper namespace
@@ -250,31 +246,31 @@ struct CompareConstants {
 void SAL_CALL StringRepresentation::initialize(const uno::Sequence< uno::Any > & aArguments)
 {
     sal_Int32 nLength = aArguments.getLength();
-    if ( nLength )
-    {
-        const uno::Any* pIter = aArguments.getConstArray();
-        m_xTypeConverter.set(*pIter++,uno::UNO_QUERY);
-        if ( nLength == 3 )
-        {
-            OUString sConstantName;
-            *pIter++ >>= sConstantName;
-            *pIter >>= m_aValues;
+    if ( !nLength )
+        return;
 
-            if ( m_xContext.is() )
-            {
-                uno::Reference< container::XHierarchicalNameAccess > xTypeDescProv(
-                    m_xContext->getValueByName("/singletons/com.sun.star.reflection.theTypeDescriptionManager"),
-                    uno::UNO_QUERY_THROW );
+    const uno::Any* pIter = aArguments.getConstArray();
+    m_xTypeConverter.set(*pIter++,uno::UNO_QUERY);
+    if ( nLength != 3 )
+        return;
 
-                m_xTypeDescription.set( xTypeDescProv->getByHierarchicalName( sConstantName ), uno::UNO_QUERY_THROW );
-                uno::Sequence<
-                    uno::Reference< reflection::XConstantTypeDescription > >
-                    cs(m_xTypeDescription->getConstants());
-                std::sort(cs.begin(), cs.end(), CompareConstants());
-                m_aConstants = cs;
-            }
-        }
-    }
+    OUString sConstantName;
+    *pIter++ >>= sConstantName;
+    *pIter >>= m_aValues;
+
+    if ( !m_xContext.is() )
+        return;
+
+    uno::Reference< container::XHierarchicalNameAccess > xTypeDescProv(
+        m_xContext->getValueByName("/singletons/com.sun.star.reflection.theTypeDescriptionManager"),
+        uno::UNO_QUERY_THROW );
+
+    m_xTypeDescription.set( xTypeDescProv->getByHierarchicalName( sConstantName ), uno::UNO_QUERY_THROW );
+    uno::Sequence<
+        uno::Reference< reflection::XConstantTypeDescription > >
+        cs(m_xTypeDescription->getConstants());
+    std::sort(cs.begin(), cs.end(), CompareConstants());
+    m_aConstants = cs;
 }
 
 OUString StringRepresentation::convertSimpleToString( const uno::Any& _rValue )

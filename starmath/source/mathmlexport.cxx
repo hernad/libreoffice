@@ -570,8 +570,7 @@ void SmXMLExport::ExportBinaryHorizontal(const SmNode *pNode, int nLevel)
 {
     TG nGroup = pNode->GetToken().nGroup;
 
-    std::unique_ptr<SvXMLElementExport> pRow( new SvXMLElementExport(*this,
-        XML_NAMESPACE_MATH, XML_MROW, true, true) );
+    SvXMLElementExport aRow(*this, XML_NAMESPACE_MATH, XML_MROW, true, true);
 
     // Unfold the binary tree structure as long as the nodes are SmBinHorNode
     // with the same nGroup. This will reduce the number of nested <mrow>
@@ -664,8 +663,7 @@ void SmXMLExport::ExportBinaryDiagonal(const SmNode *pNode, int nLevel)
     {
         // widebslash
         // We can not use <mfrac> to a backslash, so just use <mo>\</mo>
-        std::unique_ptr<SvXMLElementExport> pRow( new SvXMLElementExport(*this,
-            XML_NAMESPACE_MATH, XML_MROW, true, true) );
+        SvXMLElementExport aRow(*this, XML_NAMESPACE_MATH, XML_MROW, true, true);
 
         ExportNodes(pNode->GetSubNode(0), nLevel);
 
@@ -833,9 +831,8 @@ void SmXMLExport::ExportBlank(const SmNode *pNode)
         AddAttribute(XML_NAMESPACE_MATH, XML_WIDTH, sStrBuf.getStr());
     }
 
-    std::unique_ptr<SvXMLElementExport> pText(
-        new SvXMLElementExport(*this, XML_NAMESPACE_MATH, XML_MSPACE,
-                                true, false));
+    SvXMLElementExport aTextExport(*this, XML_NAMESPACE_MATH, XML_MSPACE,
+                                true, false);
 
     GetDocHandler()->characters( OUString() );
 }
@@ -996,9 +993,8 @@ void SmXMLExport::ExportBrace(const SmNode *pNode, int nLevel)
     // See #fdo 66282.
 
     // <mrow>
-    std::unique_ptr<SvXMLElementExport> pRow(
-            new SvXMLElementExport(*this, XML_NAMESPACE_MATH, XML_MROW,
-                                    true, true));
+    SvXMLElementExport aRow(*this, XML_NAMESPACE_MATH, XML_MROW,
+                                    true, true);
 
     //   <mo fence="true"> opening-fence </mo>
     if (pLeft && (pLeft->GetToken().eType != TNONE))
@@ -1014,7 +1010,7 @@ void SmXMLExport::ExportBrace(const SmNode *pNode, int nLevel)
     if (nullptr != (pTemp = pNode->GetSubNode(1)))
     {
         // <mrow>
-        SvXMLElementExport aRow(*this, XML_NAMESPACE_MATH, XML_MROW,
+        SvXMLElementExport aRowExport(*this, XML_NAMESPACE_MATH, XML_MROW,
             true, true);
         ExportNodes(pTemp, nLevel+1);
         // </mrow>
@@ -1143,8 +1139,11 @@ void SmXMLExport::ExportFont(const SmNode *pNode, int nLevel)
     int nItalic = -1;   // for the following variables: -1 = yet undefined; 0 = false; 1 = true;
     int nSansSerifFixed   = -1;
     SmTokenType eNodeType = TUNKNOWN;
-    while (lcl_HasEffectOnMathvariant( (eNodeType = pNode->GetToken().eType) ))
+    for (;;)
     {
+        eNodeType = pNode->GetToken().eType;
+        if (!lcl_HasEffectOnMathvariant(eNodeType))
+            break;
         switch (eNodeType)
         {
             case TBOLD      : nBold   = 1; break;

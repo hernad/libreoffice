@@ -28,10 +28,10 @@
 #include <sal/types.h>
 
 namespace oox { class AttributeList; }
-namespace oox { namespace core { class ContextHandler2Helper; } }
-namespace oox { namespace vml { struct OleObjectInfo; } }
+namespace oox::core { class ContextHandler2Helper; }
+namespace oox::vml { struct OleObjectInfo; }
 
-namespace oox { namespace drawingml {
+namespace oox::drawingml {
 
 class OOX_DLLPUBLIC GraphicShapeContext : public ShapeContext
 {
@@ -51,8 +51,8 @@ public:
     virtual void onEndElement() override;
 
 private:
-    bool const          mbEmbedShapesInChart;
-    ::oox::core::ContextHandler2Helper* const mpParent;
+    bool                mbEmbedShapesInChart;
+    ::oox::core::ContextHandler2Helper* mpParent;
 };
 
 
@@ -103,7 +103,7 @@ private:
 };
 
 
-} }
+}
 
 #endif // INCLUDED_OOX_DRAWINGML_GRAPHICSHAPECONTEXT_HXX
 

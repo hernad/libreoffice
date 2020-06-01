@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Generated with glade 3.22.1 -->
-<interface domain="sw">
+<interface domain="sfx">
   <requires lib="gtk+" version="3.18"/>
   <object class="GtkDialog" id="AddTargetDialog">
     <property name="can_focus">False</property>
@@ -164,7 +164,7 @@
                 <property name="active">0</property>
                 <items>
                   <item id="text" translatable="yes" context="addtargetdialog|type">Text</item>
-                  <item id="regex" translatable="yes" context="addtargetdialog|type">Regex</item>
+                  <item id="regex" translatable="yes" context="addtargetdialog|type">Regular expression</item>
                   <item id="predefined" translatable="yes" context="addtargetdialog|type">Predefined</item>
                 </items>
                 <accessibility>

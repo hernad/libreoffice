@@ -18,25 +18,22 @@
  */
 
 #include <definitioncontainer.hxx>
-#include <stringconstants.hxx>
 #include <apitools.hxx>
 #include <core_resource.hxx>
 #include <strings.hrc>
 
-#include <tools/debug.hxx>
 #include <tools/diagnose_ex.h>
 #include <osl/diagnose.h>
 #include <comphelper/enumhelper.hxx>
 #include <cppuhelper/exc_hlp.hxx>
 #include <com/sun/star/lang/IndexOutOfBoundsException.hpp>
 #include <com/sun/star/lang/WrappedTargetRuntimeException.hpp>
-#include <com/sun/star/lang/XComponent.hpp>
-#include <com/sun/star/ucb/CommandInfo.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/sdb/ErrorCondition.hpp>
 #include <comphelper/servicehelper.hxx>
 #include <comphelper/types.hxx>
-#include <ucbhelper/contentidentifier.hxx>
+#include <cppuhelper/interfacecontainer.hxx>
+#include <rtl/ref.hxx>
 
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::lang;
@@ -605,27 +602,27 @@ void ODefinitionContainer::approveNewObject(const OUString& _sName,const Referen
 void SAL_CALL ODefinitionContainer::propertyChange( const PropertyChangeEvent& evt )
 {
     MutexGuard aGuard(m_aMutex);
-    if( evt.PropertyName == PROPERTY_NAME || evt.PropertyName ==  "Title" )
+    if( !(evt.PropertyName == PROPERTY_NAME || evt.PropertyName ==  "Title") )
+        return;
+
+    m_bInPropertyChange = true;
+    try
     {
-        m_bInPropertyChange = true;
-        try
-        {
-            OUString sNewName,sOldName;
-            evt.OldValue >>= sOldName;
-            evt.NewValue >>= sNewName;
-            Reference<XContent> xContent( evt.Source, UNO_QUERY );
-            removeObjectListener( xContent );
-            implRemove( sOldName );
-            implAppend( sNewName, xContent );
-        }
-        catch(const Exception& ex)
-        {
-            css::uno::Any anyEx = cppu::getCaughtException();
-            throw css::lang::WrappedTargetRuntimeException( ex.Message,
-                            nullptr, anyEx );
-        }
-        m_bInPropertyChange = false;
+        OUString sNewName,sOldName;
+        evt.OldValue >>= sOldName;
+        evt.NewValue >>= sNewName;
+        Reference<XContent> xContent( evt.Source, UNO_QUERY );
+        removeObjectListener( xContent );
+        implRemove( sOldName );
+        implAppend( sNewName, xContent );
     }
+    catch(const Exception& ex)
+    {
+        css::uno::Any anyEx = cppu::getCaughtException();
+        throw css::lang::WrappedTargetRuntimeException( ex.Message,
+                        nullptr, anyEx );
+    }
+    m_bInPropertyChange = false;
 }
 
 // XVetoableChangeListener

@@ -22,13 +22,11 @@
 #include <svl/itemset.hxx>
 #include <sfx2/request.hxx>
 #include <svl/stritem.hxx>
-#include <editeng/unolingu.hxx>
 #include <svtools/ctrltool.hxx>
 #include <sfx2/objsh.hxx>
 #include <editeng/flstitem.hxx>
 #include <svl/itempool.hxx>
 #include <vcl/outdev.hxx>
-#include <svx/gallery.hxx>
 #include <editeng/brushitem.hxx>
 #include <svx/dialmgr.hxx>
 #include <svx/strings.hrc>
@@ -38,22 +36,16 @@
 #include <i18nlangtag/languagetag.hxx>
 #include <tools/debug.hxx>
 #include <tools/urlobj.hxx>
-#include <unotools/streamwrap.hxx>
 #include <unotools/ucbstreamhelper.hxx>
 #include <unotools/pathoptions.hxx>
 #include <editeng/eeitem.hxx>
 
-#include <com/sun/star/text/HoriOrientation.hpp>
 #include <com/sun/star/text/VertOrientation.hpp>
-#include <com/sun/star/text/RelOrientation.hpp>
 #include <com/sun/star/style/NumberingType.hpp>
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/container/XIndexAccess.hpp>
 #include <com/sun/star/text/DefaultNumberingProvider.hpp>
-#include <com/sun/star/text/XNumberingFormatter.hpp>
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <comphelper/processfactory.hxx>
-#include <com/sun/star/text/XNumberingTypeInfo.hpp>
 #include <memory>
 
 using namespace com::sun::star;
@@ -433,11 +425,11 @@ void NumberingTypeMgr::Init()
         for(sal_Int32 i = 0; i < nLength; i++)
         {
             NumSettings_Impl* pNew = lcl_CreateNumberingSettingsPtr(pValuesArr[i]);
-            NumberSettings_Impl* pNumEntry = new NumberSettings_Impl;
+            std::shared_ptr<NumberSettings_Impl> pNumEntry = std::make_shared<NumberSettings_Impl>();
             pNumEntry->pNumSetting = pNew;
             if ( i < 8 )
                 pNumEntry->sDescription = SvxResId(RID_SVXSTR_SINGLENUM_DESCRIPTIONS[i]);
-            maNumberSettingsArr.push_back(std::shared_ptr<NumberSettings_Impl>(pNumEntry));
+            maNumberSettingsArr.push_back(pNumEntry);
         }
     }
     catch(Exception&)
@@ -853,12 +845,10 @@ void OutlineTypeMgr::ApplyNumRule(SvxNumRule& aNum, sal_uInt16 nIndex, sal_uInt1
                     const Graphic* pGrf = pLevelSettings->pBrushItem->GetGraphic();
                     Size aSize = pLevelSettings->aSize;
                     sal_Int16 eOrient = text::VertOrientation::LINE_CENTER;
-                    if (!isResetSize  && aFmt.GetGraphicSize()!=Size(0,0)) aSize=aFmt.GetGraphicSize();
-                    else {
-                        if (aSize.Width()==0 && aSize.Height()==0 && pGrf) {
-                            aSize = SvxNumberFormat::GetGraphicSizeMM100( pGrf );
-                        }
-                    }
+                    if (!isResetSize  && aFmt.GetGraphicSize()!=Size(0,0))\
+                        aSize = aFmt.GetGraphicSize();
+                    else if (aSize.IsEmpty() && pGrf)
+                        aSize = SvxNumberFormat::GetGraphicSizeMM100( pGrf );
                     aSize = OutputDevice::LogicToLogic(aSize, MapMode(MapUnit::Map100thMM), MapMode(GetMapUnit()));
                     aFmt.SetGraphicBrush( pLevelSettings->pBrushItem, &aSize, &eOrient );
             }

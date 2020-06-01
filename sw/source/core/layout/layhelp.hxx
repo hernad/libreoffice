@@ -83,8 +83,8 @@ public:
 // by controlling nested sections.
 class SwActualSection
 {
-    SwActualSection * const pUpper;
-    SwSectionFrame  *pSectFrame;
+    SwActualSection *pUpper;
+    SwSectionFrame    *pSectFrame;
     SwSectionNode   *pSectNode;
 public:
     SwActualSection( SwActualSection *pUpper,
@@ -94,6 +94,7 @@ public:
     SwSectionFrame    *GetSectionFrame()                    { return pSectFrame; }
     void             SetSectionFrame( SwSectionFrame *p )   { pSectFrame = p; }
     SwSectionNode   *GetSectionNode()                   { return pSectNode;}
+    void             SetUpper(SwActualSection *p)       { pUpper = p; }
     SwActualSection *GetUpper()                         { return pUpper; }
 };
 
@@ -145,8 +146,8 @@ class SwLayCacheIoImpl
 {
 private:
     struct RecTypeSize {
-        sal_uInt8 const type;
-        sal_uLong const size;
+        sal_uInt8 type;
+        sal_uLong size;
         RecTypeSize(sal_uInt8 typ, sal_uLong siz) : type(typ), size(siz) {}
     };
     std::vector<RecTypeSize> aRecords;
@@ -158,7 +159,7 @@ private:
     sal_uInt16          nMajorVersion;
     sal_uInt16          nMinorVersion;
 
-    bool const      bWriteMode : 1;
+    bool            bWriteMode : 1;
     bool            bError : 1;
 
 public:
@@ -205,8 +206,8 @@ public:
 class SwFlyCache : public SwRect // position and size
 {
 public:
-    sal_uLong const nOrdNum;      ///< Id to recognize text frames
-    sal_uInt16 const nPageNum;    ///< page number
+    sal_uLong nOrdNum;      ///< Id to recognize text frames
+    sal_uInt16 nPageNum;    ///< page number
     SwFlyCache( sal_uInt16 nP, sal_uLong nO, long nXL, long nYL, long nWL, long nHL ) :
         SwRect( nXL, nYL, nWL, nHL ), nOrdNum( nO ), nPageNum( nP ){}
 };

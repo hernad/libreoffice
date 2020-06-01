@@ -19,6 +19,7 @@
 
 #include <Qt5Graphics.hxx>
 
+#include <Qt5Data.hxx>
 #include <Qt5Font.hxx>
 #include <Qt5Frame.hxx>
 #include <Qt5Graphics_Controls.hxx>
@@ -44,8 +45,10 @@ Qt5Graphics::Qt5Graphics( Qt5Frame *pFrame, QImage *pQImage )
     if (!initWidgetDrawBackends(false))
     {
         if (!Qt5Data::noNativeControls())
-            m_pWidgetDraw.reset(new Qt5Graphics_Controls());
+            m_pWidgetDraw.reset(new Qt5Graphics_Controls(*this));
     }
+    if (m_pFrame)
+        setDevicePixelRatioF(m_pFrame->devicePixelRatioF());
 }
 
 Qt5Graphics::~Qt5Graphics() { ReleaseFonts(); }
@@ -101,11 +104,6 @@ css::uno::Any Qt5Graphics::GetNativeSurfaceHandle(cairo::SurfaceSharedPtr& /*rSu
     return css::uno::Any();
 }
 
-SystemFontData Qt5Graphics::GetSysFontData(int /*nFallbacklevel*/) const
-{
-    return SystemFontData();
-}
-
 #endif
 
 void Qt5Graphics::handleDamage(const tools::Rectangle& rDamagedRegion)
@@ -115,8 +113,10 @@ void Qt5Graphics::handleDamage(const tools::Rectangle& rDamagedRegion)
     assert(!rDamagedRegion.IsEmpty());
 
     QImage* pImage = static_cast<Qt5Graphics_Controls*>(m_pWidgetDraw.get())->getImage();
+    QImage blit(*pImage);
+    blit.setDevicePixelRatio(1);
     Qt5Painter aPainter(*this);
-    aPainter.drawImage(QPoint(rDamagedRegion.getX(), rDamagedRegion.getY()), *pImage);
+    aPainter.drawImage(QPoint(rDamagedRegion.getX(), rDamagedRegion.getY()), blit);
     aPainter.update(toQRect(rDamagedRegion));
 }
 

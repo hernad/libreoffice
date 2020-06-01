@@ -34,10 +34,10 @@ NumberFormatPropertyPanel::NumberFormatPropertyPanel(
     vcl::Window* pParent,
     const css::uno::Reference<css::frame::XFrame>& rxFrame,
     SfxBindings* pBindings)
-    : PanelLayout(pParent,"NumberFormatPropertyPanel", "modules/scalc/ui/sidebarnumberformat.ui", rxFrame, true)
-    , mxLbCategory(m_xBuilder->weld_combo_box("category"))
+    : PanelLayout(pParent,"NumberFormatPropertyPanel", "modules/scalc/ui/sidebarnumberformat.ui", rxFrame)
+    , mxLbCategory(m_xBuilder->weld_combo_box("numberformatcombobox"))
     , mxTBCategory(m_xBuilder->weld_toolbar("numberformat"))
-    , mxCatagoryDispatch(new ToolbarUnoDispatcher(*mxTBCategory, rxFrame))
+    , mxCatagoryDispatch(new ToolbarUnoDispatcher(*mxTBCategory, *m_xBuilder, rxFrame))
     , mxFtDecimals(m_xBuilder->weld_label("decimalplaceslabel"))
     , mxEdDecimals(m_xBuilder->weld_spin_button("decimalplaces"))
     , mxFtDenominator(m_xBuilder->weld_label("denominatorplaceslabel"))

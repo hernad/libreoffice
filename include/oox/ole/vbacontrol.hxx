@@ -30,12 +30,12 @@
 #include <rtl/ustring.hxx>
 #include <sal/types.h>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace awt { class XControlModel; }
     namespace container { class XNameContainer; }
     namespace frame { class XModel; }
     namespace uno { class XComponentContext; }
-} } }
+}
 
 namespace oox {
     class BinaryInputStream;
@@ -204,7 +204,7 @@ public:
 private:
     css::uno::Reference< css::uno::XComponentContext > mxContext;
     css::uno::Reference< css::frame::XModel >          mxDocModel;
-    ControlConverter const                             maConverter;
+    ControlConverter                                   maConverter;
 };
 
 

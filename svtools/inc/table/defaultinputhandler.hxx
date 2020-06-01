@@ -19,12 +19,12 @@
 
 #pragma once
 
-#include <svtools/table/tableinputhandler.hxx>
+#include <table/tableinputhandler.hxx>
 
 #include <memory>
 
 
-namespace svt { namespace table
+namespace svt::table
 {
 
 
@@ -51,7 +51,7 @@ namespace svt { namespace table
     };
 
 
-} } // namespace svt::table
+} // namespace svt::table
 
 
 

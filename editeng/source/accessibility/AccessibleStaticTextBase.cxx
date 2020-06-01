@@ -25,6 +25,7 @@
 #include <memory>
 #include <vector>
 #include <algorithm>
+#include <rtl/ustrbuf.hxx>
 #include <tools/debug.hxx>
 #include <vcl/window.hxx>
 #include <vcl/svapp.hxx>
@@ -880,6 +881,11 @@ namespace accessibility
 
         return mpImpl->CopyText( aStartIndex.nPara, aStartIndex.nIndex,
                                  aEndIndex.nPara, aEndIndex.nIndex );
+    }
+
+    sal_Bool SAL_CALL AccessibleStaticTextBase::scrollSubstringTo( sal_Int32, sal_Int32, AccessibleScrollType )
+    {
+        return false;
     }
 
     // XAccessibleTextAttributes

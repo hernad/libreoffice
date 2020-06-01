@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_AVMEDIA_SOURCE_WIN_FRAMEGRABBER_HXX
-#define INCLUDED_AVMEDIA_SOURCE_WIN_FRAMEGRABBER_HXX
+#pragma once
 
 #include "wincommon.hxx"
 #include <cppuhelper/implbase.hxx>
@@ -26,7 +25,7 @@
 
 struct IMediaDet;
 
-namespace avmedia { namespace win {
+namespace avmedia::win {
 
 class FrameGrabber : public ::cppu::WeakImplHelper< css::media::XFrameGrabber,
                                                     css::lang::XServiceInfo >
@@ -52,9 +51,7 @@ private:
     OUString                                                  maURL;
 };
 
-} // namespace win
-} // namespace avmedia
+} // namespace avmedia::win
 
-#endif // INCLUDED_AVMEDIA_SOURCE_WIN_FRAMEGRABBER_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

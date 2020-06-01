@@ -79,7 +79,6 @@ class SAL_WARN_UNUSED SVX_DLLPUBLIC Svx3DWin final : public SfxDockingWindow
 {
     friend class        Svx3DChildWindow;
     friend class        Svx3DCtrlItem;
-    using Window::Update;
 
 private:
     std::unique_ptr<weld::ToggleButton> m_xBtnGeo;
@@ -200,7 +199,7 @@ private:
     // Model, Page, View etc. for favourites
     std::unique_ptr<FmFormModel>         pModel;
 
-    SfxBindings* const                   pBindings;
+    SfxBindings*                         pBindings;
     std::unique_ptr<Svx3DCtrlItem>       pControllerItem;
 
     std::unique_ptr<SvxConvertTo3DItem>  pConvertTo3DItem;
@@ -214,7 +213,7 @@ private:
     std::unique_ptr<SfxItemSet> mpRemember2DAttributes;
 
     DECL_LINK( ClickViewTypeHdl, weld::Button&, void );
-    DECL_LINK( ClickUpdateHdl, weld::Button&, void );
+    DECL_LINK( ClickUpdateHdl, weld::ToggleButton&, void );
     DECL_LINK( ClickAssignHdl, weld::Button&, void );
     DECL_LINK( ClickHdl, weld::Button&, void );
     DECL_LINK( ClickColorHdl, weld::Button&, void );

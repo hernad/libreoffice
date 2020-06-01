@@ -17,14 +17,13 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_AVMEDIA_SOURCE_GSTREAMER_GSTMANAGER_HXX
-#define INCLUDED_AVMEDIA_SOURCE_GSTREAMER_GSTMANAGER_HXX
+#pragma once
 
 #include "gstcommon.hxx"
 #include <cppuhelper/implbase.hxx>
 #include <com/sun/star/media/XManager.hpp>
 
-namespace avmedia { namespace gstreamer {
+namespace avmedia::gstreamer {
 
 class Manager : public ::cppu::WeakImplHelper< css::media::XManager,
                                                css::lang::XServiceInfo >
@@ -43,9 +42,6 @@ public:
     virtual css::uno::Sequence< OUString > SAL_CALL getSupportedServiceNames(  ) override;
 };
 
-} // namespace gstreamer
-} // namespace avmedia
-
-#endif // INCLUDED_AVMEDIA_SOURCE_GSTREAMER_GSTMANAGER_HXX
+} // namespace avmedia::gstreamer
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

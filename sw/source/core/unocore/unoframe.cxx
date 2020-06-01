@@ -339,7 +339,7 @@ bool BaseFrameProperties_Impl::FillBaseProperties(SfxItemSet& rToSet, const SfxI
     if(bXFillStyleItemUsed)
     {
         XFillStyleItem aXFillStyleItem;
-        std::shared_ptr<SvxBrushItem> aBrush(std::make_shared<SvxBrushItem>(RES_BACKGROUND));
+        std::unique_ptr<SvxBrushItem> aBrush(std::make_unique<SvxBrushItem>(RES_BACKGROUND));
 
         if(pXFillStyleItem)
         {
@@ -1746,8 +1746,8 @@ void SwXFrame::setPropertyValue(const OUString& rPropertyName, const ::uno::Any&
             if(RES_BACKGROUND == pEntry->nWID)
             {
                 const SwAttrSet& rSet = pFormat->GetAttrSet();
-                const std::shared_ptr<SvxBrushItem> aOriginalBrushItem(getSvxBrushItemFromSourceSet(rSet, RES_BACKGROUND, true, pDoc->IsInXMLImport()));
-                std::shared_ptr<SvxBrushItem> aChangedBrushItem(aOriginalBrushItem->Clone());
+                const std::unique_ptr<SvxBrushItem> aOriginalBrushItem(getSvxBrushItemFromSourceSet(rSet, RES_BACKGROUND, true, pDoc->IsInXMLImport()));
+                std::unique_ptr<SvxBrushItem> aChangedBrushItem(aOriginalBrushItem->Clone());
 
                 aChangedBrushItem->PutValue(aValue, nMemberId);
 
@@ -2238,7 +2238,7 @@ uno::Any SwXFrame::getPropertyValue(const OUString& rPropertyName)
 
             if(RES_BACKGROUND == pEntry->nWID)
             {
-                const std::shared_ptr<SvxBrushItem> aOriginalBrushItem(getSvxBrushItemFromSourceSet(rSet, RES_BACKGROUND));
+                const std::unique_ptr<SvxBrushItem> aOriginalBrushItem(getSvxBrushItemFromSourceSet(rSet, RES_BACKGROUND));
 
                 if(!aOriginalBrushItem->QueryValue(aAny, nMemberId))
                 {
@@ -3014,15 +3014,12 @@ void SwXFrame::attachToRange(uno::Reference<text::XTextRange> const& xTextRange,
 
             pDoc->GetIDocumentUndoRedo().StartUndo(SwUndoId::INSERT, nullptr);
 
-            // Not sure if these setParent() and InsertEmbeddedObject() calls are really
-            // needed, it seems to work without, but logic from code elsewhere suggests
-            // they should be done.
-            SfxObjectShell& rPers = *pDoc->GetPersist();
-            uno::Reference < container::XChild > xChild( obj, uno::UNO_QUERY );
-            if ( xChild.is() )
-                xChild->setParent( rPers.GetModel() );
-            OUString rName;
-            rPers.GetEmbeddedObjectContainer().InsertEmbeddedObject( obj, rName );
+            // Do not call here container::XChild(obj)->setParent() and
+            // pDoc->GetPersist()->GetEmbeddedObjectContainer().InsertEmbeddedObject:
+            // they are called indirectly by pDoc->getIDocumentContentOperations().InsertEmbObject
+            // below. Calling them twice will add the same object twice to EmbeddedObjectContainer's
+            // pImpl->maNameToObjectMap, and then it will misbehave in
+            // EmbeddedObjectContainer::StoreAsChildren and SfxObjectShell::SaveCompletedChildren.
 
             SwFlyFrameFormat* pFrameFormat
                 = pDoc->getIDocumentContentOperations().InsertEmbObject(aPam, xObj, &aFrameSet);

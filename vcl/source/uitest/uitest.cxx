@@ -8,10 +8,11 @@
  */
 
 #include <memory>
+#include <vcl/floatwin.hxx>
 #include <vcl/uitest/uitest.hxx>
 #include <vcl/uitest/uiobject.hxx>
 
-#include <vcl/dialog.hxx>
+#include <vcl/toolkit/dialog.hxx>
 
 #include <svdata.hxx>
 

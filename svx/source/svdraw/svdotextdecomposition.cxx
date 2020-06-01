@@ -23,8 +23,8 @@
 #include <svx/svdpage.hxx>
 #include <svx/svdotext.hxx>
 #include <svx/svdmodel.hxx>
-#include <svx/textchain.hxx>
-#include <svx/textchainflow.hxx>
+#include <textchain.hxx>
+#include <textchainflow.hxx>
 #include <svx/sdtacitm.hxx>
 #include <svx/sdtayitm.hxx>
 #include <svx/sdtaiitm.hxx>
@@ -38,10 +38,7 @@
 #include <editeng/eeitem.hxx>
 #include <editeng/editstat.hxx>
 #include <tools/helpers.hxx>
-#include <svx/sdtfchim.hxx>
 #include <svl/itemset.hxx>
-#include <basegfx/polygon/b2dpolygontools.hxx>
-#include <basegfx/polygon/b2dpolygon.hxx>
 #include <drawinglayer/animation/animationtiming.hxx>
 #include <basegfx/color/bcolor.hxx>
 #include <vcl/svapp.hxx>
@@ -50,7 +47,6 @@
 #include <editeng/flditem.hxx>
 #include <editeng/adjustitem.hxx>
 #include <drawinglayer/primitive2d/texthierarchyprimitive2d.hxx>
-#include <vcl/metaact.hxx>
 #include <drawinglayer/primitive2d/wrongspellprimitive2d.hxx>
 #include <drawinglayer/primitive2d/graphicprimitive2d.hxx>
 #include <drawinglayer/primitive2d/textlayoutdevice.hxx>
@@ -58,8 +54,6 @@
 #include <svx/unoapi.hxx>
 #include <drawinglayer/geometry/viewinformation2d.hxx>
 #include <editeng/outlobj.hxx>
-#include <editeng/editobj.hxx>
-#include <editeng/overflowingtxt.hxx>
 #include <basegfx/matrix/b2dhommatrixtools.hxx>
 #include <sal/log.hxx>
 
@@ -177,7 +171,8 @@ namespace
         aNewTransform.scale(aFontScaling.getX(), aFontScaling.getY());
 
         // look for proportional font scaling, if necessary, scale accordingly
-        if(100 != rInfo.mrFont.GetPropr())
+        sal_Int8 nPropr(rInfo.mrFont.GetPropr());
+        if(100 != nPropr)
         {
             const double fFactor(rInfo.mrFont.GetPropr() / 100.0);
             aNewTransform.scale(fFactor, fFactor);
@@ -196,20 +191,24 @@ namespace
 
             if(DFLT_ESC_AUTO_SUPER == nEsc)
             {
-                nEsc = 33;
+                nEsc = .8 * (100 - nPropr);
+                assert (nEsc == DFLT_ESC_SUPER && "I'm sure this formula needs to be changed, but how to confirm that???");
+                nEsc = DFLT_ESC_SUPER;
             }
             else if(DFLT_ESC_AUTO_SUB == nEsc)
             {
+                nEsc = .2 * -(100 - nPropr);
+                assert (nEsc == -20 && "I'm sure this formula needs to be changed, but how to confirm that???");
                 nEsc = -20;
             }
 
-            if(nEsc > 100)
+            if(nEsc > MAX_ESC_POS)
             {
-                nEsc = 100;
+                nEsc = MAX_ESC_POS;
             }
-            else if(nEsc < -100)
+            else if(nEsc < -MAX_ESC_POS)
             {
-                nEsc = -100;
+                nEsc = -MAX_ESC_POS;
             }
 
             const double fEscapement(nEsc / -100.0);

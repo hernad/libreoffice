@@ -88,6 +88,7 @@ $(eval $(call gb_Library_add_generated_exception_objects,localedata_others,\
 	CustomTarget/i18npool/localedata/localedata_lo_LA \
 	CustomTarget/i18npool/localedata/localedata_mai_IN \
 	CustomTarget/i18npool/localedata/localedata_mdw_CG \
+	CustomTarget/i18npool/localedata/localedata_min_ID \
 	CustomTarget/i18npool/localedata/localedata_mkw_CG \
 	CustomTarget/i18npool/localedata/localedata_ml_IN \
 	CustomTarget/i18npool/localedata/localedata_mn_Cyrl_MN \
@@ -120,6 +121,7 @@ $(eval $(call gb_Library_add_generated_exception_objects,localedata_others,\
 	CustomTarget/i18npool/localedata/localedata_so_SO \
 	CustomTarget/i18npool/localedata/localedata_ss_ZA \
 	CustomTarget/i18npool/localedata/localedata_st_ZA \
+	CustomTarget/i18npool/localedata/localedata_sun_ID \
 	CustomTarget/i18npool/localedata/localedata_sw_TZ \
 	CustomTarget/i18npool/localedata/localedata_ta_IN \
 	CustomTarget/i18npool/localedata/localedata_te_IN \

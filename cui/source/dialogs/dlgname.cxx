@@ -41,10 +41,19 @@ SvxNameDialog::SvxNameDialog(weld::Window* pParent, const OUString& rName, const
 IMPL_LINK_NOARG(SvxNameDialog, ModifyHdl, weld::Entry&, void)
 {
     // Do not allow empty names
+    bool bEnable;
     if (m_aCheckNameHdl.IsSet())
-        m_xBtnOK->set_sensitive(!m_xEdtName->get_text().isEmpty() && m_aCheckNameHdl.Call(*this));
+        bEnable = !m_xEdtName->get_text().isEmpty() && m_aCheckNameHdl.Call(*this);
     else
-        m_xBtnOK->set_sensitive(!m_xEdtName->get_text().isEmpty());
+        bEnable = !m_xEdtName->get_text().isEmpty();
+    m_xBtnOK->set_sensitive(bEnable);
+    // tdf#129032: feedback on reason to disabled controls
+    m_xEdtName->set_message_type(bEnable ? weld::EntryMessageType::Normal : weld::EntryMessageType::Error);
+    OUString rTip = "";
+    if (!bEnable && m_aCheckNameTooltipHdl.IsSet())
+       rTip = m_aCheckNameTooltipHdl.Call(*this);
+    m_xBtnOK->set_tooltip_text(rTip);
+    m_xEdtName->set_tooltip_text(rTip);
 }
 
 // #i68101#
@@ -77,7 +86,7 @@ IMPL_LINK_NOARG(SvxObjectNameDialog, ModifyHdl, weld::Entry&, void)
 // Dialog for editing Object Title and Description
 
 SvxObjectTitleDescDialog::SvxObjectTitleDescDialog(weld::Window* pParent, const OUString& rTitle,
-    const OUString& rDescription)
+                                                   const OUString& rDescription)
     : GenericDialogController(pParent, "cui/ui/objecttitledescdialog.ui", "ObjectTitleDescDialog")
     , m_xEdtTitle(m_xBuilder->weld_entry("object_title_entry"))
     , m_xEdtDescription(m_xBuilder->weld_text_view("desc_entry"))

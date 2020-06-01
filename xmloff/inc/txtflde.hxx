@@ -38,7 +38,7 @@
 class SvXMLExport;
 struct XMLPropertyState;
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace util { struct DateTime; }
     namespace util { struct Date; }
     namespace text { class XTextField; }
@@ -47,7 +47,7 @@ namespace com { namespace sun { namespace star {
     namespace beans { class XPropertySetInfo; }
     namespace frame { class XModel; }
     namespace uno { template<typename A> class Sequence; }
-} } }
+}
 
 
 /// field IDs,
@@ -317,7 +317,7 @@ private:
         double fValue,          /// float content; possibly invalid
         bool bExportValue,  /// export value attribute?
         bool bExportValueType,  /// export value-type attribute?
-        bool bExportStyle,  /// export style-sttribute?
+        bool bExportStyle,  /// export style-attribute?
         bool bForceSystemLanguage, /// no style language export
         bool bTimeStyle = false); /// exporting a time style?
 

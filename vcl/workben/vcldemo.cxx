@@ -44,7 +44,7 @@
 #include <vcl/virdev.hxx>
 #include <vcl/graphicfilter.hxx>
 #include <vcl/button.hxx>
-#include <vcl/combobox.hxx>
+#include <vcl/toolkit/combobox.hxx>
 #include <vcl/toolbox.hxx>
 #include <vcl/pngwrite.hxx>
 #include <vcl/floatwin.hxx>
@@ -359,9 +359,9 @@ public:
                                   aToplevelRegions[2].BottomRight());
                 DemoRenderer::clearRects(rDev,aSubRegions);
                 static struct {
-                    bool const mbClip;
-                    bool const mbArabicText;
-                    bool const mbRotate;
+                    bool mbClip;
+                    bool mbArabicText;
+                    bool mbRotate;
                 } const aRenderData[] = {
                     { false, false, false },
                     { false, true,  false },
@@ -2092,7 +2092,7 @@ class DemoPopup : public FloatingWindow
         SetBackground(Wallpaper(COL_YELLOW));
 
         Show( true, ShowFlags::NoActivate );
-        Update();
+        PaintImmediately();
     }
 
     virtual void Paint(vcl::RenderContext& /*rRenderContext*/, const tools::Rectangle&) override

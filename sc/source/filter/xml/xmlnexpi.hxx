@@ -64,12 +64,12 @@ public:
         virtual void insert(ScMyNamedExpression* pExp) override;
     private:
         ScXMLImport& mrImport;
-        SCTAB const mnTab;
+        SCTAB mnTab;
     };
 
     ScXMLNamedExpressionsContext(
         ScXMLImport& rImport,
-        Inserter* pInserter );
+        std::shared_ptr<Inserter> pInserter );
 
     virtual ~ScXMLNamedExpressionsContext() override;
 

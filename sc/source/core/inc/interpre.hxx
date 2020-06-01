@@ -221,7 +221,7 @@ private:
     FormulaError  mnStringNoValueError; // the error set in ConvertStringToValue() if no value
     SubtotalFlags mnSubTotalFlags;      // flags for subtotal and aggregate functions
     sal_uInt8   cPar;                   // current count of parameters
-    bool const  bCalcAsShown;           // precision as shown
+    bool        bCalcAsShown;           // precision as shown
     bool        bMatrixFormula;         // formula cell is a matrix formula
 
     VolatileType meVolatileType;
@@ -530,6 +530,9 @@ private:
     void ScUnionFunc();
     void ScPi();
     void ScRandom();
+    void ScRandbetween();
+    void ScRandomImpl( const std::function<double( double fFirst, double fLast )>& RandomFunc,
+            double fFirst, double fLast );
     void ScTrue();
     void ScFalse();
     void ScDeg();
@@ -1088,7 +1091,7 @@ inline bool ScInterpreter::MustHaveParamCountMin( short nAct, short nMin )
 
 inline bool ScInterpreter::CheckStringPositionArgument( double & fVal )
 {
-    if (!rtl::math::isFinite( fVal))
+    if (!std::isfinite( fVal))
     {
         fVal = -1.0;
         return false;
@@ -1141,7 +1144,7 @@ inline bool ScInterpreter::CheckStringResultLen( OUStringBuffer& rResult, const 
 
 inline void ScInterpreter::TreatDoubleError( double& rVal )
 {
-    if ( !::rtl::math::isFinite( rVal ) )
+    if ( !std::isfinite( rVal ) )
     {
         FormulaError nErr = GetDoubleErrorValue( rVal );
         if ( nErr != FormulaError::NONE )

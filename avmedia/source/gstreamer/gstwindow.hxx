@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_AVMEDIA_SOURCE_GSTREAMER_GSTWINDOW_HXX
-#define INCLUDED_AVMEDIA_SOURCE_GSTREAMER_GSTWINDOW_HXX
+#pragma once
 
 #include "gstcommon.hxx"
 #include <cppuhelper/implbase.hxx>
@@ -26,7 +25,7 @@
 
 #include <com/sun/star/media/XPlayerWindow.hpp>
 
-namespace avmedia { namespace gstreamer {
+namespace avmedia::gstreamer {
 
 class Player;
 
@@ -78,9 +77,6 @@ private:
     css::media::ZoomLevel                       meZoomLevel;
 };
 
-} // namespace gstreamer
-} // namespace avmedia
-
-#endif // INCLUDED_AVMEDIA_SOURCE_GSTREAMER_GSTWINDOW_HXX
+} // namespace avmedia::gstreamer
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

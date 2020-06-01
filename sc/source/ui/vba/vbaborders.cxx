@@ -26,6 +26,7 @@
 #include <ooo/vba/excel/XlColorIndex.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/table/TableBorder.hpp>
+#include <com/sun/star/table/XCellRange.hpp>
 #include <com/sun/star/table/XColumnRowRange.hpp>
 
 #include "vbapalette.hxx"
@@ -55,7 +56,7 @@ class ScVbaBorder : public ScVbaBorder_Base
 {
 private:
     uno::Reference< beans::XPropertySet > m_xProps;
-    sal_Int32 const m_LineType;
+    sal_Int32 m_LineType;
     ScVbaPalette m_Palette;
     void setBorderLine( const table::BorderLine& rBorderLine )
     {

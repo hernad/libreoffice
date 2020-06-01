@@ -76,6 +76,7 @@ $(eval $(call gb_CompilerTest_add_exception_objects,compilerplugins_clang, \
     compilerplugins/clang/test/simplifybool \
     compilerplugins/clang/test/simplifyconstruct \
     compilerplugins/clang/test/simplifydynamiccast \
+    compilerplugins/clang/test/simplifypointertobool \
     compilerplugins/clang/test/singlevalfields \
     compilerplugins/clang/test/staticconstfield \
     compilerplugins/clang/test/staticvar \
@@ -105,6 +106,7 @@ $(eval $(call gb_CompilerTest_add_exception_objects,compilerplugins_clang, \
     compilerplugins/clang/test/vclwidgets \
     compilerplugins/clang/test/weakbase \
     compilerplugins/clang/test/writeonlyvars \
+    compilerplugins/clang/test/xmlimport \
 ))
 
 $(eval $(call gb_CompilerTest_use_externals,compilerplugins_clang, \

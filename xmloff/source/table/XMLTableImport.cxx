@@ -17,6 +17,9 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <sal/config.h>
+
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/style/XStyleFamiliesSupplier.hpp>
 #include <com/sun/star/table/XTableRows.hpp>
 #include <com/sun/star/table/XMergeableCell.hpp>
@@ -78,10 +81,10 @@ private:
 
 struct MergeInfo
 {
-    sal_Int32 const mnStartColumn;
-    sal_Int32 const mnStartRow;
-    sal_Int32 const mnEndColumn;
-    sal_Int32 const mnEndRow;
+    sal_Int32 mnStartColumn;
+    sal_Int32 mnStartRow;
+    sal_Int32 mnEndColumn;
+    sal_Int32 mnEndRow;
 
     MergeInfo( sal_Int32 nStartColumn, sal_Int32 nStartRow, sal_Int32 nColumnSpan, sal_Int32 nRowSpan )
         : mnStartColumn( nStartColumn ), mnStartRow( nStartRow ), mnEndColumn( nStartColumn + nColumnSpan - 1 ), mnEndRow( nStartRow + nRowSpan - 1 ) {};
@@ -158,11 +161,13 @@ public:
 
     virtual SvXMLImportContextRef CreateChildContext( sal_uInt16 nPrefix, const OUString& rLocalName, const Reference< XAttributeList >& xAttrList ) override;
 
-    virtual void StartElement( const Reference< XAttributeList >& xAttrList ) override;
-
     virtual void EndElement() override;
 
     virtual void CreateAndInsert( bool bOverwrite ) override;
+protected:
+    virtual void SetAttribute( sal_uInt16 nPrefixKey,
+                               const OUString& rLocalName,
+                               const OUString& rValue ) override;
 private:
     XMLTableTemplate maTableTemplate;
     OUString msTemplateStyleName;
@@ -440,7 +445,7 @@ void XMLTableImportContext::InitColumns()
             {
                 const XMLPropStyleContext* pStyle =
                     dynamic_cast< const XMLPropStyleContext* >(
-                        pAutoStyles->FindStyleChildContext(XML_STYLE_FAMILY_TABLE_COLUMN, xInfo->msStyleName) );
+                        pAutoStyles->FindStyleChildContext(XmlStyleFamily::TABLE_COLUMN, xInfo->msStyleName) );
 
                 if( pStyle )
                 {
@@ -513,7 +518,7 @@ SvXMLImportContext * XMLTableImportContext::ImportRow( sal_uInt16 nPrefix, const
             {
                 const XMLPropStyleContext* pStyle =
                     dynamic_cast< const XMLPropStyleContext* >(
-                        pAutoStyles->FindStyleChildContext(XML_STYLE_FAMILY_TABLE_ROW, sStyleName) );
+                        pAutoStyles->FindStyleChildContext(XmlStyleFamily::TABLE_ROW, sStyleName) );
 
                 if( pStyle )
                 {
@@ -588,7 +593,7 @@ void XMLTableImportContext::EndElement()
 {
     for( const std::shared_ptr< MergeInfo >& xInfo : maMergeInfos )
     {
-        if( xInfo.get() ) try
+        if( xInfo ) try
         {
             Reference< XCellRange > xRange( mxTable->getCellRangeByPosition( xInfo->mnStartColumn, xInfo->mnStartRow, xInfo->mnEndColumn, xInfo->mnEndRow ) );
             Reference< XMergeableCellRange > xCursor( mxTable->createCursorByRange( xRange ), UNO_QUERY_THROW );
@@ -671,7 +676,7 @@ XMLCellImportContext::XMLCellImportContext( SvXMLImport& rImport, const Referenc
         {
             const XMLPropStyleContext* pStyle =
                 dynamic_cast< const XMLPropStyleContext* >(
-                    pAutoStyles->FindStyleChildContext(XML_STYLE_FAMILY_TABLE_CELL, sStyleName) );
+                    pAutoStyles->FindStyleChildContext(XmlStyleFamily::TABLE_CELL, sStyleName) );
 
             if( pStyle )
             {
@@ -739,24 +744,19 @@ void XMLCellImportContext::EndElement()
 
 
 XMLTableTemplateContext::XMLTableTemplateContext( SvXMLImport& rImport, sal_uInt16 nPrfx, const OUString& rLName, const Reference< XAttributeList >& xAttrList )
-: SvXMLStyleContext( rImport, nPrfx, rLName, xAttrList, XML_STYLE_FAMILY_TABLE_TEMPLATE_ID, false )
+: SvXMLStyleContext( rImport, nPrfx, rLName, xAttrList, XmlStyleFamily::TABLE_TEMPLATE_ID, false )
 {
 }
 
-void XMLTableTemplateContext::StartElement( const Reference< XAttributeList >& xAttrList )
+void XMLTableTemplateContext::SetAttribute( sal_uInt16 nPrefixKey,
+                               const OUString& rLocalName,
+                               const OUString& rValue )
 {
-    sal_Int16 nAttrCount = xAttrList.is() ? xAttrList->getLength() : 0;
-    for(sal_Int16 i=0; i < nAttrCount; i++)
+    if( (nPrefixKey == XML_NAMESPACE_TEXT && IsXMLToken( rLocalName, XML_STYLE_NAME ))
+        // Writer specific: according to oasis odf 1.2 prefix should be "table" and element name should be "name"
+        || (nPrefixKey == XML_NAMESPACE_TABLE && IsXMLToken( rLocalName, XML_NAME )))
     {
-        OUString sAttrName;
-        sal_uInt16 nAttrPrefix = GetImport().GetNamespaceMap().GetKeyByAttrName( xAttrList->getNameByIndex( i ), &sAttrName );
-        if( (nAttrPrefix == XML_NAMESPACE_TEXT && IsXMLToken( sAttrName, XML_STYLE_NAME ))
-            // Writer specific: according to oasis odf 1.2 prefix should be "table" and element name should be "name"
-            || (nAttrPrefix == XML_NAMESPACE_TABLE && IsXMLToken( sAttrName, XML_NAME )))
-        {
-            msTemplateStyleName = xAttrList->getValueByIndex( i );
-            break;
-        }
+        msTemplateStyleName = rValue;
     }
 }
 

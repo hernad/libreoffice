@@ -34,7 +34,6 @@ using namespace com::sun::star;
 using namespace xmloff::token;
 
 using ::com::sun::star::uno::Reference;
-using ::com::sun::star::xml::sax::XAttributeList;
 
 ScXMLFilterContext::ConnStackItem::ConnStackItem(bool bOr) : mbOr(bOr), mnCondCount(0) {}
 
@@ -99,7 +98,7 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL ScXMLFilterContext::cre
 {
     SvXMLImportContext *pContext(nullptr);
     sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
+        &sax_fastparser::castToFastAttributeList( xAttrList );
 
     switch (nElement)
     {
@@ -203,7 +202,7 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL ScXMLAndContext::create
 {
     SvXMLImportContext *pContext(nullptr);
     sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
+        &sax_fastparser::castToFastAttributeList( xAttrList );
 
     switch (nElement)
     {
@@ -247,7 +246,7 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL ScXMLOrContext::createF
 {
     SvXMLImportContext *pContext(nullptr);
     sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
+        &sax_fastparser::castToFastAttributeList( xAttrList );
 
     switch (nElement)
     {
@@ -331,7 +330,7 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL ScXMLConditionContext::
 {
     SvXMLImportContext *pContext = nullptr;
     sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
+        &sax_fastparser::castToFastAttributeList( xAttrList );
 
     switch (nElement)
     {
@@ -519,7 +518,7 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL ScXMLDPFilterContext::c
 {
     SvXMLImportContext *pContext(nullptr);
     sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
+        &sax_fastparser::castToFastAttributeList( xAttrList );
 
     switch (nElement)
     {
@@ -578,7 +577,7 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL ScXMLDPAndContext::crea
 {
     SvXMLImportContext *pContext(nullptr);
     sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
+        &sax_fastparser::castToFastAttributeList( xAttrList );
 
     switch (nElement)
     {
@@ -619,7 +618,7 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL ScXMLDPOrContext::creat
 {
     SvXMLImportContext *pContext(nullptr);
     sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
+        &sax_fastparser::castToFastAttributeList( xAttrList );
 
     switch (nElement)
     {

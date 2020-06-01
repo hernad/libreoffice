@@ -599,7 +599,7 @@ void SmGraphicWindow::ZoomToFitInWindow()
     Size       aSize (LogicToPixel(rDoc.GetSize()));
     Size       aWindowSize (GetSizePixel());
 
-    if (aSize.Width() > 0  &&  aSize.Height() > 0)
+    if (!aSize.IsEmpty())
     {
         long nVal = std::min ((85 * aWindowSize.Width())  / aSize.Width(),
                       (85 * aWindowSize.Height()) / aSize.Height());
@@ -884,7 +884,7 @@ SFX_IMPL_NAMED_VIEWFACTORY(SmViewShell, "Default")
 void SmViewShell::InnerResizePixel(const Point &rOfs, const Size &rSize, bool)
 {
     Size aObjSize = GetObjectShell()->GetVisArea().GetSize();
-    if ( aObjSize.Width() > 0 && aObjSize.Height() > 0 )
+    if ( !aObjSize.IsEmpty() )
     {
         Size aProvidedSize = GetWindow()->PixelToLogic(rSize, MapMode(MapUnit::Map100thMM));
         SfxViewShell::SetZoomFactor( Fraction( aProvidedSize.Width(), aObjSize.Width() ),
@@ -902,7 +902,7 @@ void SmViewShell::OuterResizePixel(const Point &rOfs, const Size &rSize)
     rWin.SetPosSizePixel(rOfs, rSize);
     if (GetDoc()->IsPreview())
         rWin.ZoomToFitInWindow();
-    rWin.Update();
+    rWin.PaintImmediately();
 }
 
 void SmViewShell::QueryObjAreaPixel( tools::Rectangle& rRect ) const
@@ -1192,7 +1192,7 @@ void SmViewShell::Impl_Print(OutputDevice &rOutDev, const SmPrintUIOptions &rPri
             break;
 
         case PRINT_SIZE_SCALED:
-            if ((aSize.Width() > 0) && (aSize.Height() > 0))
+            if (!aSize.IsEmpty())
             {
                 Size     OutputSize (rOutDev.LogicToPixel(Size(aOutRect.GetWidth(),
                                                             aOutRect.GetHeight()), MapMode(MapUnit::Map100thMM)));
@@ -1329,7 +1329,7 @@ void SmViewShell::Insert( SfxMedium& rMedium )
     uno::Reference <embed::XStorage> xStorage = rMedium.GetStorage();
     if (xStorage.is() && xStorage->getElementNames().hasElements())
     {
-        if (xStorage->hasByName("content.xml") || xStorage->hasByName("Content.xml"))
+        if (xStorage->hasByName("content.xml"))
         {
             // is this a fabulous math package ?
             Reference<css::frame::XModel> xModel(pDoc->GetModel());
@@ -1582,7 +1582,8 @@ void SmViewShell::Execute(SfxRequest& rReq)
             SotClipboardFormatId nId = SOT_FORMAT_SYSTEM_START; //dummy initialize to avoid warning
             if  ( aDataHelper.GetTransferable().is() )
             {
-                if (aDataHelper.HasFormat(nId = SotClipboardFormatId::MATHML))
+                nId = SotClipboardFormatId::MATHML;
+                if (aDataHelper.HasFormat(nId))
                 {
                     xStrm = aDataHelper.GetInputStream(nId, "");
                     if (xStrm.is())
@@ -1599,7 +1600,8 @@ void SmViewShell::Execute(SfxRequest& rReq)
                 }
                 else
                 {
-                    if (aDataHelper.HasFormat(nId = SotClipboardFormatId::STRING))
+                    nId = SotClipboardFormatId::STRING;
+                    if (aDataHelper.HasFormat(nId))
                     {
                         // In case of FORMAT_STRING no stream exists, need to generate one
                         OUString aString;

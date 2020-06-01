@@ -195,7 +195,7 @@ std::unique_ptr<EditTextObject> ScEditUtil::Clone( const EditTextObject& rObj, S
 }
 
 OUString ScEditUtil::GetCellFieldValue(
-    const SvxFieldData& rFieldData, const ScDocument* pDoc, o3tl::optional<Color>* ppTextColor )
+    const SvxFieldData& rFieldData, const ScDocument* pDoc, std::optional<Color>* ppTextColor )
 {
     OUString aRet;
     switch (rFieldData.GetClassId())
@@ -241,7 +241,7 @@ OUString ScEditUtil::GetCellFieldValue(
         case text::textfield::Type::DATE:
         {
             Date aDate(Date::SYSTEM);
-            aRet = ScGlobal::pLocaleData->getDate(aDate);
+            aRet = ScGlobal::getLocaleDataPtr()->getDate(aDate);
         }
         break;
         case text::textfield::Type::DOCINFO_TITLE:
@@ -371,8 +371,7 @@ tools::Rectangle ScEditUtil::GetEditArea( const ScPatternAttr* pPattern, bool bF
     return tools::Rectangle( aStartPos, Size(nCellX-1,nCellY-1) );
 }
 
-ScEditAttrTester::ScEditAttrTester( ScEditEngineDefaulter* pEng ) :
-    pEngine( pEng ),
+ScEditAttrTester::ScEditAttrTester( ScEditEngineDefaulter* pEngine ) :
     bNeedsObject( false ),
     bNeedsCellAttr( false )
 {
@@ -796,7 +795,7 @@ ScHeaderEditEngine::ScHeaderEditEngine( SfxItemPool* pEnginePoolP )
 
 OUString ScHeaderEditEngine::CalcFieldValue( const SvxFieldItem& rField,
                                     sal_Int32 /* nPara */, sal_Int32 /* nPos */,
-                                    o3tl::optional<Color>& /* rTxtColor */, o3tl::optional<Color>& /* rFldColor */ )
+                                    std::optional<Color>& /* rTxtColor */, std::optional<Color>& /* rFldColor */ )
 {
     const SvxFieldData* pFieldData = rField.GetField();
     if (!pFieldData)
@@ -815,7 +814,7 @@ OUString ScHeaderEditEngine::CalcFieldValue( const SvxFieldItem& rField,
         case text::textfield::Type::EXTENDED_TIME:
         case text::textfield::Type::TIME:
             // For now, time field in the header / footer is always dynamic.
-            aRet = ScGlobal::pLocaleData->getTime(aData.aDateTime);
+            aRet = ScGlobal::getLocaleDataPtr()->getTime(aData.aDateTime);
         break;
         case text::textfield::Type::DOCINFO_TITLE:
             aRet = aData.aTitle;
@@ -836,7 +835,7 @@ OUString ScHeaderEditEngine::CalcFieldValue( const SvxFieldItem& rField,
             aRet = aData.aTabName;
         break;
         case text::textfield::Type::DATE:
-            aRet = ScGlobal::pLocaleData->getDate(aData.aDateTime);
+            aRet = ScGlobal::getLocaleDataPtr()->getDate(aData.aDateTime);
         break;
         default:
             aRet = "?";
@@ -860,7 +859,7 @@ ScFieldEditEngine::ScFieldEditEngine(
 
 OUString ScFieldEditEngine::CalcFieldValue( const SvxFieldItem& rField,
                                     sal_Int32 /* nPara */, sal_Int32 /* nPos */,
-                                    o3tl::optional<Color>& rTxtColor, o3tl::optional<Color>& /* rFldColor */ )
+                                    std::optional<Color>& rTxtColor, std::optional<Color>& /* rFldColor */ )
 {
     const SvxFieldData* pFieldData = rField.GetField();
 

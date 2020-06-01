@@ -122,7 +122,7 @@ namespace pdfi
     public:
         virtual void visitedBy( ElementTreeVisitor&, const std::list< std::unique_ptr<Element> >::const_iterator& ) override;
 
-        OUString const URI;
+        OUString URI;
     };
 
     struct GraphicalElement : public Element
@@ -234,7 +234,7 @@ namespace pdfi
     public:
         virtual void visitedBy( ElementTreeVisitor&, const std::list< std::unique_ptr<Element> >::const_iterator& ) override;
 
-        ImageId const Image;
+        ImageId Image;
     };
 
     struct PageElement : public Element
@@ -257,7 +257,7 @@ namespace pdfi
         void resolveFontStyles( PDFIProcessor const & rProc );
         void resolveUnderlines( PDFIProcessor const & rProc );
 
-        sal_Int32 const PageNumber;
+        sal_Int32      PageNumber;
         ListElement    Hyperlinks; // contains not yet realized links on this page
         double         TopMargin;
         double         BottomMargin;
@@ -270,9 +270,8 @@ namespace pdfi
     struct DocumentElement : public Element
     {
         friend class ElementFactory;
-    protected:
-        DocumentElement() : Element( nullptr ) {}
     public:
+        DocumentElement() : Element( nullptr ) {}
         virtual ~DocumentElement() override;
 
         virtual void visitedBy( ElementTreeVisitor&, const std::list< std::unique_ptr<Element> >::const_iterator& ) override;
@@ -307,8 +306,8 @@ namespace pdfi
         static PageElement* createPageElement( Element* pParent,
                                                 sal_Int32 nPageNr )
         { return new PageElement( pParent, nPageNr ); }
-        static DocumentElement* createDocumentElement()
-        { return new DocumentElement(); }
+        static std::shared_ptr<DocumentElement> createDocumentElement()
+        { return std::make_shared<DocumentElement>(); }
     };
 }
 

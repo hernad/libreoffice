@@ -20,10 +20,10 @@
 
 #include <sdr/contact/viewcontactofsdrmeasureobj.hxx>
 #include <svx/svdomeas.hxx>
-#include <svx/sdr/primitive2d/sdrattributecreator.hxx>
+#include <sdr/primitive2d/sdrattributecreator.hxx>
 #include <svl/itemset.hxx>
+#include <svx/sdmetitm.hxx>
 #include <svx/sxmbritm.hxx>
-#include <svx/sxmlhitm.hxx>
 #include <svx/sxmtritm.hxx>
 #include <sxmtaitm.hxx>
 #include <sdr/primitive2d/sdrmeasureprimitive2d.hxx>
@@ -44,8 +44,8 @@ namespace sdr::contact
         drawinglayer::primitive2d::Primitive2DContainer ViewContactOfSdrMeasureObj::createViewIndependentPrimitive2DSequence() const
         {
             const SfxItemSet& rItemSet = GetMeasureObj().GetMergedItemSet();
-            const drawinglayer::attribute::SdrLineShadowTextAttribute aAttribute(
-                drawinglayer::primitive2d::createNewSdrLineShadowTextAttribute(
+            const drawinglayer::attribute::SdrLineEffectsTextAttribute aAttribute(
+                drawinglayer::primitive2d::createNewSdrLineEffectsTextAttribute(
                     rItemSet,
                     GetMeasureObj().getText(0)));
 

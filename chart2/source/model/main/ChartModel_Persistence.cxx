@@ -362,18 +362,18 @@ void ChartModel::impl_store(
     //notify parent data provider after saving thus the parent document can store
     //the ranges for which a load and update of the chart will be necessary
     Reference< beans::XPropertySet > xPropSet( m_xParent, uno::UNO_QUERY );
-    if ( !hasInternalDataProvider() && xPropSet.is() )
+    if ( !(!hasInternalDataProvider() && xPropSet.is()) )
+        return;
+
+    apphelper::MediaDescriptorHelper aMDHelper(rMediaDescriptor);
+    try
     {
-        apphelper::MediaDescriptorHelper aMDHelper(rMediaDescriptor);
-        try
-        {
-            xPropSet->setPropertyValue(
-                "SavedObject",
-                uno::Any( aMDHelper.HierarchicalDocumentName ) );
-        }
-        catch ( const uno::Exception& )
-        {
-        }
+        xPropSet->setPropertyValue(
+            "SavedObject",
+            uno::Any( aMDHelper.HierarchicalDocumentName ) );
+    }
+    catch ( const uno::Exception& )
+    {
     }
 }
 
@@ -600,13 +600,13 @@ void ChartModel::impl_loadGraphics(
             const uno::Sequence< OUString > aElementNames(
                 xGraphicsStorage->getElementNames() );
 
-            for( int i = 0; i < aElementNames.getLength(); ++i )
+            for( OUString const & streamName : aElementNames )
             {
-                if( xGraphicsStorage->isStreamElement( aElementNames[ i ] ) )
+                if( xGraphicsStorage->isStreamElement( streamName ) )
                 {
                     uno::Reference< io::XStream > xElementStream(
                         xGraphicsStorage->openStreamElement(
-                            aElementNames[ i ],
+                            streamName,
                             embed::ElementModes::READ ) );
 
                     if( xElementStream.is() )

@@ -111,9 +111,11 @@ $(eval $(call gb_UIConfig_add_uifiles,modules/swriter,\
 	sw/uiconfig/swriter/ui/ccdialog \
 	sw/uiconfig/swriter/ui/characterproperties \
 	sw/uiconfig/swriter/ui/charurlpage \
+	sw/uiconfig/swriter/ui/checkbox \
 	sw/uiconfig/swriter/ui/columndialog \
 	sw/uiconfig/swriter/ui/columnpage \
 	sw/uiconfig/swriter/ui/columnwidth \
+	sw/uiconfig/swriter/ui/combobox \
 	sw/uiconfig/swriter/ui/comboboxfragment \
 	sw/uiconfig/swriter/ui/conditionpage \
 	sw/uiconfig/swriter/ui/converttexttable \
@@ -126,6 +128,7 @@ $(eval $(call gb_UIConfig_add_uifiles,modules/swriter,\
 	sw/uiconfig/swriter/ui/dropcapspage \
 	sw/uiconfig/swriter/ui/dropdownfielddialog \
 	sw/uiconfig/swriter/ui/dropdownformfielddialog \
+	sw/uiconfig/swriter/ui/editbox \
 	sw/uiconfig/swriter/ui/editcategories \
 	sw/uiconfig/swriter/ui/editfielddialog \
 	sw/uiconfig/swriter/ui/editsectiondialog \
@@ -147,6 +150,7 @@ $(eval $(call gb_UIConfig_add_uifiles,modules/swriter,\
 	sw/uiconfig/swriter/ui/floatingsync \
 	sw/uiconfig/swriter/ui/formatsectiondialog \
 	sw/uiconfig/swriter/ui/formattablepage \
+	sw/uiconfig/swriter/ui/formdropdown \
 	sw/uiconfig/swriter/ui/footendnotedialog \
 	sw/uiconfig/swriter/ui/footnotepage \
 	sw/uiconfig/swriter/ui/footnoteareapage \
@@ -163,6 +167,7 @@ $(eval $(call gb_UIConfig_add_uifiles,modules/swriter,\
 	sw/uiconfig/swriter/ui/indentpage \
 	sw/uiconfig/swriter/ui/infonotfounddialog \
 	sw/uiconfig/swriter/ui/inforeadonlydialog \
+	sw/uiconfig/swriter/ui/inputeditbox \
 	sw/uiconfig/swriter/ui/insertautotextdialog \
 	sw/uiconfig/swriter/ui/insertbookmark \
 	sw/uiconfig/swriter/ui/insertbreak \
@@ -172,6 +177,7 @@ $(eval $(call gb_UIConfig_add_uifiles,modules/swriter,\
 	sw/uiconfig/swriter/ui/insertsectiondialog \
 	sw/uiconfig/swriter/ui/insertscript \
 	sw/uiconfig/swriter/ui/inserttable \
+	sw/uiconfig/swriter/ui/jumpposbox \
 	sw/uiconfig/swriter/ui/labeldialog \
 	sw/uiconfig/swriter/ui/labelformatpage \
 	sw/uiconfig/swriter/ui/labeloptionspage \
@@ -204,6 +210,7 @@ $(eval $(call gb_UIConfig_add_uifiles,modules/swriter,\
 	sw/uiconfig/swriter/ui/querysavelabeldialog \
 	sw/uiconfig/swriter/ui/mailmerge \
 	sw/uiconfig/swriter/ui/managechangessidebar \
+	sw/uiconfig/swriter/ui/mastercontextmenu \
 	sw/uiconfig/swriter/ui/mmaddressblockpage \
 	sw/uiconfig/swriter/ui/mmcreatingdialog \
 	sw/uiconfig/swriter/ui/mmlayoutpage \
@@ -215,6 +222,7 @@ $(eval $(call gb_UIConfig_add_uifiles,modules/swriter,\
 	sw/uiconfig/swriter/ui/mmselectpage \
 	sw/uiconfig/swriter/ui/mmsendmails \
 	sw/uiconfig/swriter/ui/mmsalutationpage \
+	sw/uiconfig/swriter/ui/navigatorcontextmenu \
 	sw/uiconfig/swriter/ui/navigatorpanel \
 	sw/uiconfig/swriter/ui/notebookbar \
 	sw/uiconfig/swriter/ui/notebookbar_compact \
@@ -255,6 +263,7 @@ $(eval $(call gb_UIConfig_add_uifiles,modules/swriter,\
 	sw/uiconfig/swriter/ui/pagestylespanel \
 	sw/uiconfig/swriter/ui/pageheaderpanel \
 	sw/uiconfig/swriter/ui/pagefooterpanel \
+	sw/uiconfig/swriter/ui/poseditbox \
 	sw/uiconfig/swriter/ui/sidebarwrap \
 	sw/uiconfig/swriter/ui/sidebarstylepresets \
 	sw/uiconfig/swriter/ui/sidebartableedit \
@@ -289,8 +298,10 @@ $(eval $(call gb_UIConfig_add_uifiles,modules/swriter,\
 	sw/uiconfig/swriter/ui/warnemaildialog \
 	sw/uiconfig/swriter/ui/watermarkdialog \
 	sw/uiconfig/swriter/ui/wordcount \
+	sw/uiconfig/swriter/ui/wordcount-mobile \
 	sw/uiconfig/swriter/ui/wrapdialog \
 	sw/uiconfig/swriter/ui/wrappage \
+	sw/uiconfig/swriter/ui/zoombox \
 ))
 
 # vim: set noet sw=4 ts=4:

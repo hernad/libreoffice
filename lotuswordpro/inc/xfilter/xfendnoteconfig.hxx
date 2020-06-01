@@ -60,10 +60,13 @@
 #ifndef INCLUDED_LOTUSWORDPRO_INC_XFILTER_XFENDNOTECONFIG_HXX
 #define INCLUDED_LOTUSWORDPRO_INC_XFILTER_XFENDNOTECONFIG_HXX
 
+#include <xfilter/xffootnoteconfig.hxx>
+
 class XFEndnoteConfig : public XFFootnoteConfig
 {
 public:
-    XFEndnoteConfig() : XFFootnoteConfig()
+    XFEndnoteConfig()
+        : XFFootnoteConfig()
     {
         m_bIsFootnote = false;
         m_bInsertInPage = false;

@@ -25,11 +25,12 @@
 #include "MasterPageContainer.hxx"
 #include "PreviewValueSet.hxx"
 #include <sfx2/sidebar/ILayoutableWindow.hxx>
-#include <svx/sidebar/PanelLayout.hxx>
+#include <sfx2/sidebar/PanelLayout.hxx>
+#include <vcl/menu.hxx>
 
 #include <osl/mutex.hxx>
 
-namespace com { namespace sun { namespace star { namespace ui { class XSidebar; } } } }
+namespace com::sun::star::ui { class XSidebar; }
 class MouseEvent;
 class SdDrawDocument;
 class SdPage;
@@ -38,7 +39,7 @@ namespace sd {
 class ViewShellBase;
 }
 
-namespace sd { namespace sidebar {
+namespace sd::sidebar {
 
 /** Base class of a menu that lets the user select from a list of
     templates or designs that are loaded from files.
@@ -162,7 +163,7 @@ private:
         last seen.  This value is used heuristically to speed up the lookup
         of an index for a token.
     */
-    DECL_LINK(ClickHandler, SvtValueSet*, void);
+    DECL_LINK(ClickHandler, ValueSet*, void);
     DECL_LINK(RightClickHandler, const MouseEvent&, void);
     DECL_LINK(ContainerChangeListener, MasterPageContainerChangeEvent&, void);
     DECL_LINK(OnMenuItemSelected, Menu*, bool);
@@ -178,7 +179,7 @@ private:
         MasterPageContainer::Token aToken);
 };
 
-} } // end of namespace sd::sidebar
+} // end of namespace sd::sidebar
 
 #endif
 

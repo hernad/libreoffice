@@ -55,14 +55,14 @@ const std::tuple<const char*, OUString, OUString> TIPOFTHEDAY_STRINGARRAY[] =
      { NC_("RID_CUI_TIPOFTHEDAY", "Create fillable form documents (even PDFs) with %PRODUCTNAME."), "https://www.techrepublic.com/article/how-to-create-interactive-pdfs-with-libreoffice", ""},
      { NC_("RID_CUI_TIPOFTHEDAY", "Cannot see all the text in a cell? Expand the input line in the formula bar and you can scroll."), "", "tipoftheday_c.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "Optimize your table layout with Table ▸ Size ▸ Distribute Rows / Columns Evenly."), "", "tipoftheday_w.png"},
-     { NC_("RID_CUI_TIPOFTHEDAY", "Find all expressions in brackets per Edit ▸ Find & Replace ▸ Find ▸ \\([^)]+\\) (check “Regular expressions”)"), "", "tipoftheday_w.png"},
+     { NC_("RID_CUI_TIPOFTHEDAY", "Find all expressions in brackets per Edit ▸ Find and Replace ▸ Find ▸ \\([^)]+\\) (check “Regular expressions”)"), "", "tipoftheday_w.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "Select a different icon set from Tools ▸ Options ▸ %PRODUCTNAME ▸ View ▸ User Interface ▸ Icon style."), "", ""},
      { NC_("RID_CUI_TIPOFTHEDAY", "You can display a number as a fraction (0.125 = 1/8): Format ▸ Cells, Number ▸ Fraction."), "", "tipoftheday_c.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "To remove a hyperlink but keep its text, right-click on the hyperlink, and use “Remove Hyperlink”."), "", "tipoftheday_w.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "To remove several hyperlinks at once, select the text with the hyperlinks, then right-click and use “Remove Hyperlink”."), "", "tipoftheday_w.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "To zoom a selection to fit the entire window in Draw, use the / (divide key) on the number pad."), "", "tipoftheday_d.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "Click a column field (row) PivotTable and press F12 to group data. Choices adapt to content: Date (month, quarter, year), number (classes)"), "", "tipoftheday_c.png"},
-     { NC_("RID_CUI_TIPOFTHEDAY", "You can restarts the slide show after a pause specified at Slide Show ▸ Slide Show Settings ▸ Loop and repeat."), "", "tipoftheday_i.png"},
+     { NC_("RID_CUI_TIPOFTHEDAY", "You can restart the slide show after a pause specified at Slide Show ▸ Slide Show Settings ▸ Loop and repeat."), "", "tipoftheday_i.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "To distribute some text in multi-columns select the text and apply Format ▸ Columns."), "", "tipoftheday_w.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "Use View ▸ Value Highlighting to display cell contents in colors: Text/black, Formulas/green, Numbers/blue, Protected cells/grey background."), "https://help.libreoffice.org/%PRODUCTVERSION/%LANGUAGENAME/text/scalc/01/03080000.html", "tipoftheday_c.png"}, //local help missing
      { NC_("RID_CUI_TIPOFTHEDAY", "Create different master pages in a presentation template: View ▸ Master Slide and Slide ▸ New Master (or per toolbar or right click in slide pane)."), "", "tipoftheday_i.png"},
@@ -93,7 +93,7 @@ const std::tuple<const char*, OUString, OUString> TIPOFTHEDAY_STRINGARRAY[] =
      { NC_("RID_CUI_TIPOFTHEDAY", "Data ▸ Validity allows you to create drop-down lists where the user selects a value instead of typing."), "https://help.libreoffice.org/%PRODUCTVERSION/%LANGUAGENAME/text/scalc/guide/validity.html", "tipoftheday_c.png"}, //local help missing
      { NC_("RID_CUI_TIPOFTHEDAY", "Hold down %MOD1 and turn the mouse wheel to change the zoom factor."), "", ""},
      { NC_("RID_CUI_TIPOFTHEDAY", "%PRODUCTNAME has great extensions to increase your productivity—check them out."), "https://extensions.libreoffice.org", ""},
-     { NC_("RID_CUI_TIPOFTHEDAY", "Want to count words for just one particular paragraph style? Use Edit ▸ Find & Replace, click Paragraph Styles, select the style in Find, and click Find All. Read the result in the status bar."), "", "tipoftheday_w.png"},
+     { NC_("RID_CUI_TIPOFTHEDAY", "Want to count words for just one particular paragraph style? Use Edit ▸ Find and Replace, click Paragraph Styles, select the style in Find, and click Find All. Read the result in the status bar."), "", "tipoftheday_w.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "Generate fully customized PDF documents with the exact format, image compression, comments, access rights, password, etc., via File ▸ Export as PDF."), "", ""},
      { NC_("RID_CUI_TIPOFTHEDAY", "Writer includes LibreLogo: simple Logo-like programming environment with turtle vector graphics, DTP and graphic design."), "https://help.libreoffice.org/%PRODUCTVERSION/%LANGUAGENAME/text/swriter/librelogo/LibreLogo.html", "tipoftheday_w.png"}, //local help missing
      { NC_("RID_CUI_TIPOFTHEDAY", "Construct your own 2D shapes in Draw. Select two or more objects, and explore possibilities with Shape ▸ Combine, Shape ▸ Merge, Shape ▸ Subtract, and Shape ▸ Intersect."), "https://help.libreoffice.org/%PRODUCTVERSION/%LANGUAGENAME/text/sdraw/guide/combine_etc.html", "tipoftheday_d.png"},
@@ -107,7 +107,7 @@ const std::tuple<const char*, OUString, OUString> TIPOFTHEDAY_STRINGARRAY[] =
      { NC_("RID_CUI_TIPOFTHEDAY", "Did you know that you can attach comments to portions of text? Just use the shortcut %MOD1+%MOD2+C."), "", ""},
      { NC_("RID_CUI_TIPOFTHEDAY", "Need to move one or more paragraphs? No need to cut and paste: Use the keyboard shortcut %MOD1+%MOD2+Arrow (Up/Down)"), "", "tipoftheday_w.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "Change the basic fonts for the predefined template or current document per Tools ▸ Options ▸ %PRODUCTNAME Writer ▸ Basic Fonts."), "modules/swriter/ui/optfonttabpage/OptFontTabPage", "tipoftheday_w.png"}, //https://help.libreoffice.org/%PRODUCTVERSION/%LANGUAGENAME/text/shared/optionen/01040300.html
-     { NC_("RID_CUI_TIPOFTHEDAY", "Want to find words containing more than 10 characters? Edit ▸ Find & Replace ▸ Search ▸ [a-z]{10,} ▸ Other Options ▸ check Regular expressions."), "", "tipoftheday_w.png"},
+     { NC_("RID_CUI_TIPOFTHEDAY", "Want to find words containing more than 10 characters? Edit ▸ Find and Replace ▸ Search ▸ [a-z]{10,} ▸ Other Options ▸ check Regular expressions."), "", "tipoftheday_w.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "Open a CSV file as a new sheet in the current spreadsheet via Sheet ▸ Sheet from file."), "", "tipoftheday_c.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "Typing in bold, italics, or underlined in Writer you can continue with the default attributes using just the shortcut %MOD1+Shift+X (remove direct character formats)."), "", "tipoftheday_w.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "Use %MOD1+%MOD2+Shift+V to paste the contents of the clipboard as unformatted text."), "", "tipoftheday_w.png"},
@@ -137,7 +137,7 @@ const std::tuple<const char*, OUString, OUString> TIPOFTHEDAY_STRINGARRAY[] =
      { NC_("RID_CUI_TIPOFTHEDAY", "Mix portrait and landscape orientations in a Calc spreadsheet by applying different page styles on sheets."), "", "tipoftheday_c.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "Click on the special character icon in the toolbar to get quick access to favorite and recent characters to insert."), "", ""},
      { NC_("RID_CUI_TIPOFTHEDAY", "Choose “Hierarchical View” in the Styles sidebar to see the relation between styles."), "", "tipoftheday_w.png"},
-     { NC_("RID_CUI_TIPOFTHEDAY", "You can use styles to make the tables in your document consistent. Choose one from the predefined per Styles (F11) or  via Table ▸ AutoFormat."), "", "tipoftheday_w.png"},
+     { NC_("RID_CUI_TIPOFTHEDAY", "You can use styles to make the tables in your document consistent. Choose one from the predefined per Styles (F11) or via Table ▸ AutoFormat."), "", "tipoftheday_w.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "Configure use of the %MOD1 key to open hyperlinks? Tools ▸ Options ▸ %PRODUCTNAME ▸ Security ▸ Options ▸ “%MOD1+click required to open hyperlinks”."), "", ""},
      { NC_("RID_CUI_TIPOFTHEDAY", "You would like to view the calculation of individual elements of a formula, select the respective elements and press F9."), "", "tipoftheday_c.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "You can protect cells with Format ▸ Cells ▸ Protection. To prevent insert, delete, rename, move/copy of sheets use Tools ▸ Protect Sheet."), "https://help.libreoffice.org/%PRODUCTVERSION/%LANGUAGENAME/text/scalc/guide/cell_protect.html", "tipoftheday_c.png"}, //local help missing
@@ -149,7 +149,7 @@ const std::tuple<const char*, OUString, OUString> TIPOFTHEDAY_STRINGARRAY[] =
      { NC_("RID_CUI_TIPOFTHEDAY", "With %PRODUCTNAME it is very easy to install a new dictionary: they are supplied as extensions."), "https://extensions.libreoffice.org/extensions?getCategories=Dictionary", ""},
      { NC_("RID_CUI_TIPOFTHEDAY", "%PRODUCTNAME has a portable version which gives you mobility. Even without administrator rights on your computer you can install %PRODUCTNAME Portable to your hard drive too."), "http://www.libreoffice.org/download/portable-versions/", ""},
      { NC_("RID_CUI_TIPOFTHEDAY", "Writer lets you number your footnotes per page, chapter, document: Tools ▸ Footnotes and Endnotes ▸ Footnotes tab ▸ Counting."), "", "tipoftheday_w.png"},
-     { NC_("RID_CUI_TIPOFTHEDAY", "Your Writer document does not reopen with the text cursor at the same editing position it was when you saved it? Add First or Last name in Check Tools ▸ Options ▸ %PRODUCTNAME ▸ User Data ▸ First/last name."), "", ""},
+     { NC_("RID_CUI_TIPOFTHEDAY", "Your Writer document does not reopen with the text cursor at the same editing position it was when you saved it? Add First or Last name in Tools ▸ Options ▸ %PRODUCTNAME ▸ User Data ▸ First/last name."), "", ""},
      { NC_("RID_CUI_TIPOFTHEDAY", "Citation management? Use a 3rd party extension."), "https://wiki.documentfoundation.org/Referencing_Systems_in_LibreOffice", ""},
      { NC_("RID_CUI_TIPOFTHEDAY", "Want to insert a value in the same place on several sheets? Select the sheets: hold down %MOD1 key and click their tabs before entering."), "", "tipoftheday_c.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "Want to hide some text in a document? Select the text. Insert ▸ Section, and select “Hide”."), "modules/swriter/ui/editsectiondialog/hide", "tipoftheday_w.png"},  // online help is different https://help.libreoffice.org/%PRODUCTVERSION/%LANGUAGENAME/text/swriter/guide/hidden_text.html#hd_id3148675
@@ -161,7 +161,7 @@ const std::tuple<const char*, OUString, OUString> TIPOFTHEDAY_STRINGARRAY[] =
      { NC_("RID_CUI_TIPOFTHEDAY", "Play music throughout a slideshow by assigning the sound to the first slide transition without clicking the “Apply to All Slides” button."), "", "tipoftheday_i.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "%PRODUCTNAME Calc does not calculate from left to right but respects the order Parentheses – Exponents – Multiplication – Division – Addition – Subtraction."), "", "tipoftheday_c.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "Get %PRODUCTNAME documentation and free user guide books at:"), "http://www.libreoffice.org/get-help/documentation", ""},
-     { NC_("RID_CUI_TIPOFTHEDAY", "Want to remove all <> at once and keep the text inside? Edit ▸ Find & Replace: Search = [<>], Replace = blank and check “Regular expressions” under Other options."), "https://help.libreoffice.org/%PRODUCTVERSION/%LANGUAGENAME/text/shared/01/02100001.html", ""}, //local help missing
+     { NC_("RID_CUI_TIPOFTHEDAY", "Want to remove all <> at once and keep the text inside? Edit ▸ Find and Replace: Search = [<>], Replace = blank and check “Regular expressions” under Other options."), "https://help.libreoffice.org/%PRODUCTVERSION/%LANGUAGENAME/text/shared/01/02100001.html", ""}, //local help missing
      { NC_("RID_CUI_TIPOFTHEDAY", "Need to present a report written with Writer? File ▸ Send ▸ Outline to Presentation automatically creates a slideshow from the outline."), "", "tipoftheday_w.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "Want to manage the presentation of hyperlinks in a spreadsheet? Insert them with the HYPERLINK function."), "https://help.libreoffice.org/%PRODUCTVERSION/%LANGUAGENAME/text/scalc/01/04060109.html", "tipoftheday_c.png"}, //local help missing
      { NC_("RID_CUI_TIPOFTHEDAY", "Uncheck Tools ▸ Options ▸ %PRODUCTNAME Calc ▸ View ▸ Zoom: “Synchronize sheets” so that each sheet in Calc has its own zoom factor."), "", "tipoftheday_c.png"},
@@ -199,7 +199,7 @@ const std::tuple<const char*, OUString, OUString> TIPOFTHEDAY_STRINGARRAY[] =
      { NC_("RID_CUI_TIPOFTHEDAY", "You want to start working with Basic macros? Take a look at the examples under Tools ▸ Macros ▸ Edit Macros."), "", ""},
      { NC_("RID_CUI_TIPOFTHEDAY", "Apply Heading paragraph styles in Writer with shortcut keys: %MOD1+1 applies Heading 1, %MOD1+2 applies Heading 2, etc."), "", "tipoftheday_w.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "Do not get lost in large documents. Use the Navigator (F5) to find your way through the content."), "", ""},
-     { NC_("RID_CUI_TIPOFTHEDAY", "Edit ▸ Find & Replace lets you insert special characters directly: right click in input fields or press Shift+%MOD1+S."), "", ""},
+     { NC_("RID_CUI_TIPOFTHEDAY", "Edit ▸ Find and Replace lets you insert special characters directly: right click in input fields or press Shift+%MOD1+S."), "", ""},
      { NC_("RID_CUI_TIPOFTHEDAY", "Need custom contents for metadata properties? File ▸ Properties ▸ Custom Properties tab lets you create what you want."), "", ""},
      { NC_("RID_CUI_TIPOFTHEDAY", "Want to see, but not print, an object in Draw? Draw it on a layer for which the “Printable” flag is not set (right click on the tab and “Modify Layer”)."), "", "tipoftheday_d.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "To insert the current date in your document, use Insert ▸ Field ▸ Date."), "", "tipoftheday_w.png"},
@@ -207,7 +207,7 @@ const std::tuple<const char*, OUString, OUString> TIPOFTHEDAY_STRINGARRAY[] =
      { NC_("RID_CUI_TIPOFTHEDAY", "Use Sheet ▸ Fill Cells ▸ Random Number to generate a random series based on various distributions."), "modules/scalc/ui/randomnumbergenerator/RandomNumberGeneratorDialog", "tipoftheday_c.png"}, //https://help.libreoffice.org/%PRODUCTVERSION/%LANGUAGENAME/text/scalc/01/02140700.html
      { NC_("RID_CUI_TIPOFTHEDAY", "Rename your slides in Impress to help you define “Go to page” interactions and to have a summary more explicit than Slide1, Slide2…"), "", "tipoftheday_i.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "Chapter numbering dialog lets you set text to be displayed before the chapter number. For example, type “Chapter ” to display “Chapter 1”"), "", "tipoftheday_w.png"},
-     { NC_("RID_CUI_TIPOFTHEDAY", "Transpose a writer table? Copy and paste in Calc, transpose with copy/paste special then copy/paste special ▸ Formatted text in Writer."), "", "tipoftheday_w.png"},
+     { NC_("RID_CUI_TIPOFTHEDAY", "Transpose a Writer table? Copy and paste in Calc, transpose with copy/paste special then copy/paste special ▸ Formatted text in Writer."), "", "tipoftheday_w.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "To get the “Vertical Text” tool in the Drawing toolbar, check Tools ▸ Options ▸ Language Settings ▸ Languages ▸ Default languages ▸ Asian (and make the button visible with right-click)."), "", ""},
      { NC_("RID_CUI_TIPOFTHEDAY", "To quickly zoom in on range selection, right click on the zoom part of the status bar and choose Optimal."), "", "tipoftheday_c.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "You can sign existing PDF files and also verify those signatures."), "https://help.libreoffice.org/%PRODUCTVERSION/%LANGUAGENAME/text/shared/guide/digital_signatures.html", ""}, //local help missing
@@ -242,7 +242,7 @@ const std::tuple<const char*, OUString, OUString> TIPOFTHEDAY_STRINGARRAY[] =
      { NC_("RID_CUI_TIPOFTHEDAY", "Want to jump to a particular page by its number? Click the left-most statusbar entry or use Edit ▸ Go To Page… or press %MOD1+G."), "", "tipoftheday_w.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "%PRODUCTNAME supports over 150 languages."), "https://wiki.documentfoundation.org/Language_support_of_LibreOffice", ""},
      { NC_("RID_CUI_TIPOFTHEDAY", "Uncheck Slide Show ▸ Settings ▸ Presentation always on top if you need another program displays its window to the front of your presentation."), "", "tipoftheday_i.png"},
-     { NC_("RID_CUI_TIPOFTHEDAY", "Want to find the words in bold in a Writer document? Edit ▸ Find & Replace ▸ Other options ▸ Attributes ▸ Font weight."), "https://help.libreoffice.org/%PRODUCTVERSION/%LANGUAGENAME/text/swriter/guide/finding.html", "tipoftheday_w.png"}, //local help missing
+     { NC_("RID_CUI_TIPOFTHEDAY", "Want to find the words in bold in a Writer document? Edit ▸ Find and Replace ▸ Other options ▸ Attributes ▸ Font weight."), "https://help.libreoffice.org/%PRODUCTVERSION/%LANGUAGENAME/text/swriter/guide/finding.html", "tipoftheday_w.png"}, //local help missing
      { NC_("RID_CUI_TIPOFTHEDAY", "You can sort paragraphs or table rows alphabetically or numerically per Tools ▸ Sort."), "modules/swriter/ui/sortdialog/SortDialog", "tipoftheday_w.png"}, //https://help.libreoffice.org/%PRODUCTVERSION/%LANGUAGENAME/text/swriter/01/06100000.html
      { NC_("RID_CUI_TIPOFTHEDAY", "To insert a paragraph before (after) a section, press %MOD2+Enter at the beginning (end) of the section."), "", "tipoftheday_w.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "%PRODUCTNAME has a template center to create good looking documents—check it out."), "http://templates.libreoffice.org/template-center", ""},
@@ -265,7 +265,7 @@ const std::tuple<const char*, OUString, OUString> TIPOFTHEDAY_STRINGARRAY[] =
      { NC_("RID_CUI_TIPOFTHEDAY", "Want the cursor to go into the cell to the right, after entering a value in Calc? Use the Tab key instead of Enter."), "", "tipoftheday_c.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "To display the scrollbar to the left, enable Tools ▸ Options ▸ Language Settings ▸ Languages ▸ Complex text and check Sheet ▸ Right-To-Left."), "", "tipoftheday_c.png"},
      { NC_("RID_CUI_TIPOFTHEDAY", "Drag a formatted object to the Styles and Formatting window. A dialog box opens, just enter the name of the new style."), "", ""},
-     { NC_("RID_CUI_TIPOFTHEDAY", "New versions of %PRODUCTNAME do not only bring new features and bug fixes. They also include security patches. Stay safe, and keep yourself updated!"), "", ""},
+     { NC_("RID_CUI_TIPOFTHEDAY", "New versions of %PRODUCTNAME provide new features, bug fixes, and security patches. Keep your software updated!"), "SFX2_HID_DLG_CHECKFORONLINEUPDATE", ""},
      { NC_("RID_CUI_TIPOFTHEDAY", "Developing new XSLT and XML filters?"), "http://fridrich.blogspot.com.tr/2013/08/extending-swiss-army-knife-overview.html", ""},
 };
 

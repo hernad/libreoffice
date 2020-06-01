@@ -61,6 +61,7 @@
 
 #include <com/sun/star/document/XDocumentProperties.hpp>
 #include <com/sun/star/document/XDocumentPropertiesSupplier.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <utility>
 
 using ::editeng::SvxBorderLine;
@@ -1888,36 +1889,36 @@ ScHTMLTable::~ScHTMLTable()
 const SfxItemSet& ScHTMLTable::GetCurrItemSet() const
 {
     // first try cell item set, then row item set, then table item set
-    return mxDataItemSet.get() ? *mxDataItemSet : (mxRowItemSet.get() ? *mxRowItemSet : maTableItemSet);
+    return mxDataItemSet ? *mxDataItemSet : (mxRowItemSet ? *mxRowItemSet : maTableItemSet);
 }
 
 ScHTMLSize ScHTMLTable::GetSpan( const ScHTMLPos& rCellPos ) const
 {
     ScHTMLSize aSpan( 1, 1 );
-    const ScRange* pRange = nullptr;
-    if(  ( (pRange = maVMergedCells.Find( rCellPos.MakeAddr() ) ) != nullptr)
-      || ( (pRange = maHMergedCells.Find( rCellPos.MakeAddr() ) ) != nullptr)
-      )
+    const ScRange* pRange = maVMergedCells.Find( rCellPos.MakeAddr() );
+    if (!pRange)
+        pRange = maHMergedCells.Find( rCellPos.MakeAddr() );
+    if (pRange)
         aSpan.Set( pRange->aEnd.Col() - pRange->aStart.Col() + 1, pRange->aEnd.Row() - pRange->aStart.Row() + 1 );
     return aSpan;
 }
 
 ScHTMLTable* ScHTMLTable::FindNestedTable( ScHTMLTableId nTableId ) const
 {
-    return mxNestedTables.get() ? mxNestedTables->FindTable( nTableId ) : nullptr;
+    return mxNestedTables ? mxNestedTables->FindTable( nTableId ) : nullptr;
 }
 
 void ScHTMLTable::PutItem( const SfxPoolItem& rItem )
 {
-    OSL_ENSURE( mxCurrEntry.get(), "ScHTMLTable::PutItem - no current entry" );
-    if( mxCurrEntry.get() && mxCurrEntry->IsEmpty() )
+    OSL_ENSURE( mxCurrEntry, "ScHTMLTable::PutItem - no current entry" );
+    if( mxCurrEntry && mxCurrEntry->IsEmpty() )
         mxCurrEntry->GetItemSet().Put( rItem );
 }
 
 void ScHTMLTable::PutText( const HtmlImportInfo& rInfo )
 {
-    OSL_ENSURE( mxCurrEntry.get(), "ScHTMLTable::PutText - no current entry" );
-    if( mxCurrEntry.get() )
+    OSL_ENSURE( mxCurrEntry, "ScHTMLTable::PutText - no current entry" );
+    if( mxCurrEntry )
     {
         if( !mxCurrEntry->HasContents() && IsSpaceCharInfo( rInfo ) )
             mxCurrEntry->AdjustStart( rInfo );
@@ -1928,7 +1929,7 @@ void ScHTMLTable::PutText( const HtmlImportInfo& rInfo )
 
 void ScHTMLTable::InsertPara( const HtmlImportInfo& rInfo )
 {
-    if( mxCurrEntry.get() && mbDataOn && !IsEmptyCell() )
+    if( mxCurrEntry && mbDataOn && !IsEmptyCell() )
         mxCurrEntry->SetImportAlways();
     PushEntry( rInfo );
     CreateNewEntry( rInfo );
@@ -1955,9 +1956,9 @@ void ScHTMLTable::InsertLeadingEmptyLine()
 
 void ScHTMLTable::AnchorOn()
 {
-    OSL_ENSURE( mxCurrEntry.get(), "ScHTMLTable::AnchorOn - no current entry" );
+    OSL_ENSURE( mxCurrEntry, "ScHTMLTable::AnchorOn - no current entry" );
     // don't skip entries with single hyperlinks
-    if( mxCurrEntry.get() )
+    if( mxCurrEntry )
         mxCurrEntry->SetImportAlways();
 }
 
@@ -2058,7 +2059,7 @@ void ScHTMLTable::DataOn( const HtmlImportInfo& rInfo )
     {
         // read needed options from the <td> tag
         ScHTMLSize aSpanSize( 1, 1 );
-        o3tl::optional<OUString> pValStr, pNumStr;
+        std::optional<OUString> pValStr, pNumStr;
         const HTMLOptions& rOptions = static_cast<HTMLParser*>(rInfo.pParser)->GetOptions();
         sal_uInt32 nNumberFormat = NUMBERFORMAT_ENTRY_NOT_FOUND;
         for (const auto& rOption : rOptions)
@@ -2288,7 +2289,7 @@ ScHTMLTable::ScHTMLEntryPtr ScHTMLTable::CreateEntry() const
 
 void ScHTMLTable::CreateNewEntry( const HtmlImportInfo& rInfo )
 {
-    OSL_ENSURE( !mxCurrEntry.get(), "ScHTMLTable::CreateNewEntry - old entry still present" );
+    OSL_ENSURE( !mxCurrEntry, "ScHTMLTable::CreateNewEntry - old entry still present" );
     mxCurrEntry = CreateEntry();
     mxCurrEntry->aSel = rInfo.aSelection;
 }
@@ -2304,7 +2305,7 @@ void ScHTMLTable::ImplPushEntryToVector( ScHTMLEntryVector& rEntryVector, ScHTML
 bool ScHTMLTable::PushEntry( ScHTMLEntryPtr& rxEntry )
 {
     bool bPushed = false;
-    if( rxEntry.get() && rxEntry->HasContents() )
+    if( rxEntry && rxEntry->HasContents() )
     {
         if( mpCurrEntryVector )
         {
@@ -2331,9 +2332,9 @@ bool ScHTMLTable::PushEntry( ScHTMLEntryPtr& rxEntry )
 
 bool ScHTMLTable::PushEntry( const HtmlImportInfo& rInfo, bool bLastInCell )
 {
-    OSL_ENSURE( mxCurrEntry.get(), "ScHTMLTable::PushEntry - no current entry" );
+    OSL_ENSURE( mxCurrEntry, "ScHTMLTable::PushEntry - no current entry" );
     bool bPushed = false;
-    if( mxCurrEntry.get() )
+    if( mxCurrEntry )
     {
         mxCurrEntry->AdjustEnd( rInfo );
         mxCurrEntry->Strip( mrEditEngine );
@@ -2365,7 +2366,7 @@ void ScHTMLTable::PushTableEntry( ScHTMLTableId nTableId )
 
 ScHTMLTable* ScHTMLTable::GetExistingTable( ScHTMLTableId nTableId ) const
 {
-    ScHTMLTable* pTable = ((nTableId != SC_HTML_GLOBAL_TABLE) && mxNestedTables.get()) ?
+    ScHTMLTable* pTable = ((nTableId != SC_HTML_GLOBAL_TABLE) && mxNestedTables) ?
         mxNestedTables->FindTable( nTableId, false ) : nullptr;
     OSL_ENSURE( pTable || (nTableId == SC_HTML_GLOBAL_TABLE), "ScHTMLTable::GetExistingTable - table not found" );
     return pTable;
@@ -2373,7 +2374,7 @@ ScHTMLTable* ScHTMLTable::GetExistingTable( ScHTMLTableId nTableId ) const
 
 ScHTMLTable* ScHTMLTable::InsertNestedTable( const HtmlImportInfo& rInfo, bool bPreFormText )
 {
-    if( !mxNestedTables.get() )
+    if( !mxNestedTables )
         mxNestedTables.reset( new ScHTMLTableMap( *this ) );
     if( bPreFormText )      // enclose new preformatted table with empty lines
         InsertLeadingEmptyLine();
@@ -2386,8 +2387,15 @@ void ScHTMLTable::InsertNewCell( const ScHTMLSize& rSpanSize )
 
     /*  Find an unused cell by skipping all merged ranges that cover the
         current cell position stored in maCurrCell. */
-    while( ((pRange = maVMergedCells.Find( maCurrCell.MakeAddr() )) != nullptr) || ((pRange = maHMergedCells.Find( maCurrCell.MakeAddr() )) != nullptr) )
+    for (;;)
+    {
+        pRange = maVMergedCells.Find( maCurrCell.MakeAddr() );
+        if (!pRange)
+            pRange = maHMergedCells.Find( maCurrCell.MakeAddr() );
+        if (!pRange)
+            break;
         maCurrCell.mnCol = pRange->aEnd.Col() + 1;
+    }
     mpCurrEntryVector = &maEntryMap[ maCurrCell ];
 
     /*  If the new cell is merged horizontally, try to find collisions with

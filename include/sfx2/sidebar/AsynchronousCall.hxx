@@ -25,7 +25,7 @@
 
 struct ImplSVEvent;
 
-namespace sfx2 { namespace sidebar {
+namespace sfx2::sidebar {
 
 /** A simple asynchronous call via Application::PostUserCall.
 */
@@ -34,7 +34,6 @@ class AsynchronousCall
 public:
     typedef ::std::function<void()> Action;
 
-    AsynchronousCall();
     AsynchronousCall (const Action& rAction);
     ~AsynchronousCall();
 
@@ -43,13 +42,13 @@ public:
     void Sync();
 
 private:
-    Action const maAction;
+    Action maAction;
     ImplSVEvent * mnCallId;
 
     DECL_LINK(HandleUserCall, void*, void);
 };
 
-} } // end of namespace sfx2::sidebar
+} // end of namespace sfx2::sidebar
 
 #endif
 

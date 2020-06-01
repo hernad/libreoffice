@@ -19,6 +19,7 @@
 
 #include <UndoDelete.hxx>
 #include <hintids.hxx>
+#include <rtl/ustrbuf.hxx>
 #include <unotools/charclass.hxx>
 #include <frmfmt.hxx>
 #include <fmtanchr.hxx>
@@ -39,6 +40,7 @@
 #include <txtfrm.hxx>
 #include <rootfrm.hxx>
 #include <strings.hrc>
+#include <frameformats.hxx>
 #include <vector>
 
 // DELETE
@@ -773,7 +775,7 @@ SwRewriter SwUndoDelete::GetRewriter() const
         }
         else
         {
-            o3tl::optional<OUString> aTmpStr;
+            std::optional<OUString> aTmpStr;
             if (m_aSttStr)
                 aTmpStr = m_aSttStr;
             else if (m_aEndStr)
@@ -964,7 +966,8 @@ void SwUndoDelete::UndoImpl(::sw::UndoRedoContext & rContext)
                 SwNodeIndex aMvIdx(rDoc.GetNodes(), nMoveIndex);
                 SwNodeRange aRg( aPos.nNode, 0, aPos.nNode, 1 );
                 pMovedNode = &aPos.nNode.GetNode();
-                rDoc.GetNodes().MoveNodes(aRg, rDoc.GetNodes(), aMvIdx);
+                // tdf#131684 without deleting frames
+                rDoc.GetNodes().MoveNodes(aRg, rDoc.GetNodes(), aMvIdx, false);
                 rDoc.GetNodes().Delete( aMvIdx);
             }
         }
@@ -1079,30 +1082,7 @@ void SwUndoDelete::UndoImpl(::sw::UndoRedoContext & rContext)
         // frames
         SwTextNode *const pStartNode(aIdx.GetNodes()[m_nSttNode]->GetTextNode());
         assert(pStartNode);
-        std::vector<SwTextFrame*> frames;
-        SwIterator<SwTextFrame, SwTextNode, sw::IteratorMode::UnwrapMulti> aIter(*pStartNode);
-        for (SwTextFrame* pFrame = aIter.First(); pFrame; pFrame = aIter.Next())
-        {
-            if (pFrame->getRootFrame()->IsHideRedlines())
-            {
-                frames.push_back(pFrame);
-            }
-        }
-        auto eMode(sw::FrameMode::Existing);
-        for (SwTextFrame * pFrame : frames)
-        {
-            // SplitNode could have moved the original frame to the start node
-            // & created a new one on end, or could have created new frame on
-            // start node... grab start node's frame and recreate MergedPara.
-            SwTextNode & rFirstNode(pFrame->GetMergedPara()
-                ? *pFrame->GetMergedPara()->pFirstNode
-                : *pStartNode);
-            assert(rFirstNode.GetIndex() <= pStartNode->GetIndex());
-            pFrame->SetMergedPara(sw::CheckParaRedlineMerge(
-                        *pFrame, rFirstNode, eMode));
-            eMode = sw::FrameMode::New; // Existing is not idempotent!
-            // note: this may or may not delete frames on the end node
-        }
+        sw::RecreateStartTextFrames(*pStartNode);
     }
 
     // create frames after SetSaveData has recreated redlines
@@ -1111,6 +1091,7 @@ void SwUndoDelete::UndoImpl(::sw::UndoRedoContext & rContext)
         // tdf#121031 if the start node is a text node, it already has a frame;
         // if it's a table, it does not
         // tdf#109376 exception: end on non-text-node -> start node was inserted
+        assert(!m_bDelFullPara || (m_nSectDiff == 0));
         SwNodeIndex const start(rDoc.GetNodes(), m_nSttNode +
             ((m_bDelFullPara || !rDoc.GetNodes()[m_nSttNode]->IsTextNode() || pInsNd)
                  ? 0 : 1));

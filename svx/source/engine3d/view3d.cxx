@@ -29,7 +29,7 @@
 #include <svx/dialmgr.hxx>
 #include <svx/obj3d.hxx>
 #include <svx/lathe3d.hxx>
-#include <svx/extrud3d.hxx>
+#include <extrud3d.hxx>
 #include <dragmt3d.hxx>
 #include <svx/scene3d.hxx>
 #include <svx/view3d.hxx>
@@ -50,6 +50,7 @@
 #include <drawinglayer/primitive2d/transformprimitive2d.hxx>
 #include <basegfx/matrix/b2dhommatrixtools.hxx>
 #include <basegfx/polygon/b2dpolypolygoncutter.hxx>
+#include <svx/e3dsceneupdater.hxx>
 
 using namespace com::sun::star;
 
@@ -737,8 +738,13 @@ void E3dView::ImpCreateSingle3DObjectFlat(E3dScene* pScene, SdrObject* pObj, boo
         }
         else
         {
+            // rLatheMat expects coordinates with y-axis up, pPath uses y-axis down
+            basegfx::B2DHomMatrix aFlipVerticalMat(1.0, 0.0, 0.0, 0.0, -1.0, 0.0);
             basegfx::B2DPolyPolygon aPolyPoly2D(pPath->GetPathPoly());
+            aPolyPoly2D.transform(aFlipVerticalMat);
             aPolyPoly2D.transform(rLatheMat);
+            // ctor E3dLatheObj expects coordinates with y-axis down
+            aPolyPoly2D.transform(aFlipVerticalMat);
             p3DObj = new E3dLatheObj(pObj->getSdrModelFromSdrObject(), aDefault, aPolyPoly2D);
         }
 
@@ -964,23 +970,22 @@ void E3dView::ConvertMarkedObjTo3D(bool bExtrude, const basegfx::B2DPoint& rPnt1
         MarkObj(pScene, pPV);
 
         // Rotate Rotation body around the axis of rotation
-        basegfx::B3DHomMatrix aRotate;
-
         if(!bExtrude && fRot3D != 0.0)
         {
+            basegfx::B3DHomMatrix aRotate;
             aRotate.rotate(0.0, 0.0, fRot3D);
-        }
-
-        // Set default rotation
-        aRotate.rotate(DEG2RAD(20.0), 0.0, 0.0);
-
-        if(!aRotate.isIdentity())
-        {
             pScene->SetTransform(aRotate * pScene->GetTransform());
         }
 
-        // Invalid SnapRects of objects
-        pScene->SetSnapRect(aRect);
+        // Set default rotation
+        {
+            basegfx::B3DHomMatrix aRotate;
+            aRotate.rotate(DEG2RAD(20.0), 0.0, 0.0);
+            // E3DModifySceneSnapRectUpdater updates the 2D representation of the scene.
+            // It prepares things in ctor and acts in dtor.
+            E3DModifySceneSnapRectUpdater aUpdater(pScene->getSdrObjectFromSdrObjList());
+            pScene->SetTransform(aRotate * pScene->GetTransform());
+        }
     }
     else
     {

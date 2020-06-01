@@ -40,15 +40,17 @@
 #include <comphelper/processfactory.hxx>
 #include <sal/log.hxx>
 
+#include <controls/filectrl.hxx>
+#include <svl/zforlist.hxx>
 #include <vcl/button.hxx>
 #include <vcl/graph.hxx>
 #include <vcl/lstbox.hxx>
-#include <vcl/combobox.hxx>
+#include <vcl/toolkit/combobox.hxx>
 #include <vcl/toolkit/field.hxx>
 #include <vcl/toolkit/fixedhyper.hxx>
 #include <vcl/longcurr.hxx>
 #include <vcl/toolkit/imgctrl.hxx>
-#include <vcl/dialog.hxx>
+#include <vcl/toolkit/dialog.hxx>
 #include <vcl/toolkit/prgsbar.hxx>
 #include <vcl/scrbar.hxx>
 #include <vcl/svapp.hxx>
@@ -56,6 +58,7 @@
 #include <vcl/tabctrl.hxx>
 #include <vcl/settings.hxx>
 #include <tools/diagnose_ex.h>
+#include <tools/debug.hxx>
 
 #include <helper/imagealign.hxx>
 #include <helper/msgbox.hxx>
@@ -937,7 +940,7 @@ css::awt::Size VCLXCheckBox::calcAdjustedSize( const css::awt::Size& rNewSize )
     VclPtr< CheckBox > pCheckBox = GetAs< CheckBox >();
     if ( pCheckBox )
     {
-        Size aMinSz = pCheckBox->CalcMinimumSize();
+        Size aMinSz = pCheckBox->CalcMinimumSize(rNewSize.Width);
         if ( ( aSz.Width() > aMinSz.Width() ) && ( aSz.Height() < aMinSz.Height() ) )
             aSz.setHeight( aMinSz.Height() );
         else
@@ -1285,7 +1288,7 @@ css::awt::Size VCLXRadioButton::calcAdjustedSize( const css::awt::Size& rNewSize
     VclPtr< RadioButton > pRadioButton = GetAs< RadioButton >();
     if ( pRadioButton )
     {
-        Size aMinSz = pRadioButton->CalcMinimumSize();
+        Size aMinSz = pRadioButton->CalcMinimumSize(rNewSize.Width);
         if ( ( aSz.Width() > aMinSz.Width() ) && ( aSz.Height() < aMinSz.Height() ) )
             aSz.setHeight( aMinSz.Height() );
         else
@@ -2383,10 +2386,8 @@ void SAL_CALL VCLXDialog::draw( sal_Int32 nX, sal_Int32 nY )
         if ( !pDev )
             pDev = pWindow->GetParent();
 
-        Size aSize = pDev->PixelToLogic( pWindow->GetSizePixel() );
         Point aPos = pDev->PixelToLogic( Point( nX, nY ) );
-
-        pWindow->Draw( pDev, aPos, aSize, DrawFlags::NoControls );
+        pWindow->Draw( pDev, aPos, DrawFlags::NoControls );
     }
 }
 
@@ -2506,10 +2507,8 @@ void SAL_CALL VCLXMultiPage::draw( sal_Int32 nX, sal_Int32 nY )
         if ( !pDev )
             pDev = pWindow->GetParent();
 
-        Size aSize = pDev->PixelToLogic( pWindow->GetSizePixel() );
         Point aPos = pDev->PixelToLogic( Point( nX, nY ) );
-
-        pWindow->Draw( pDev, aPos, aSize, DrawFlags::NoControls );
+        pWindow->Draw( pDev, aPos, DrawFlags::NoControls );
     }
 }
 
@@ -2753,10 +2752,8 @@ void SAL_CALL VCLXTabPage::draw( sal_Int32 nX, sal_Int32 nY )
         if ( !pDev )
             pDev = pWindow->GetParent();
 
-        Size aSize = pDev->PixelToLogic( pWindow->GetSizePixel() );
         Point aPos = pDev->PixelToLogic( Point( nX, nY ) );
-
-        pWindow->Draw( pDev, aPos, aSize, DrawFlags::NoControls );
+        pWindow->Draw( pDev, aPos, DrawFlags::NoControls );
     }
 }
 
@@ -3021,13 +3018,18 @@ css::awt::Size VCLXFixedHyperlink::getPreferredSize(  )
 css::awt::Size VCLXFixedHyperlink::calcAdjustedSize( const css::awt::Size& rNewSize )
 {
     SolarMutexGuard aGuard;
+    Size aSz( VCLUnoHelper::ConvertToVCLSize( rNewSize ));
+    VclPtr< FixedText > pFixedText = GetAs< FixedText >();
+    if (pFixedText)
+    {
+        Size aMinSz = pFixedText->CalcMinimumSize(rNewSize.Width);
+        if ( ( aSz.Width() > aMinSz.Width() ) && ( aSz.Height() < aMinSz.Height() ) )
+            aSz.setHeight( aMinSz.Height() );
+        else
+            aSz = aMinSz;
+    }
 
-    css::awt::Size aSz = rNewSize;
-    css::awt::Size aMinSz = getMinimumSize();
-    if ( aSz.Height != aMinSz.Height )
-        aSz.Height = aMinSz.Height;
-
-    return aSz;
+    return VCLUnoHelper::ConvertToAWTSize(aSz);
 }
 
 void VCLXFixedHyperlink::setProperty( const OUString& PropertyName, const css::uno::Any& Value)
@@ -6610,10 +6612,8 @@ void SAL_CALL VCLXFrame::draw( sal_Int32 nX, sal_Int32 nY )
         if ( !pDev )
             pDev = pWindow->GetParent();
 
-        Size aSize = pDev->PixelToLogic( pWindow->GetSizePixel() );
         Point aPos = pDev->PixelToLogic( Point( nX, nY ) );
-
-        pWindow->Draw( pDev, aPos, aSize, DrawFlags::NoControls );
+        pWindow->Draw( pDev, aPos, DrawFlags::NoControls );
     }
 }
 
@@ -6879,6 +6879,1279 @@ void VCLXProgressBar::ImplGetPropertyIds( std::vector< sal_uInt16 > &rIds )
                      BASEPROPERTY_FILLCOLOR,
                      0);
     VCLXWindow::ImplGetPropertyIds( rIds, true );
+}
+
+VCLXFileControl::VCLXFileControl() : maTextListeners( *this )
+{
+}
+
+VCLXFileControl::~VCLXFileControl()
+{
+    VclPtr< FileControl > pControl = GetAs< FileControl >();
+    if ( pControl )
+        pControl->GetEdit().SetModifyHdl( Link<Edit&,void>() );
+}
+
+css::uno::Any VCLXFileControl::queryInterface( const css::uno::Type & rType )
+{
+    css::uno::Any aRet = ::cppu::queryInterface( rType,
+                                        static_cast< css::awt::XTextComponent* >(this),
+                                        static_cast< css::awt::XTextLayoutConstrains* >(this),
+                                        static_cast< css::lang::XTypeProvider* >(this) );
+    return (aRet.hasValue() ? aRet : VCLXWindow::queryInterface( rType ));
+}
+
+IMPL_IMPLEMENTATION_ID( VCLXFileControl )
+
+// css::lang::XTypeProvider
+css::uno::Sequence< css::uno::Type > VCLXFileControl::getTypes()
+{
+    static const ::cppu::OTypeCollection aTypeList(
+        cppu::UnoType<css::lang::XTypeProvider>::get(),
+        cppu::UnoType<css::awt::XTextComponent>::get(),
+        cppu::UnoType<css::awt::XTextLayoutConstrains>::get(),
+        VCLXWindow::getTypes()
+    );
+    return aTypeList.getTypes();
+}
+
+namespace
+{
+    void lcl_setWinBits( vcl::Window* _pWindow, WinBits _nBits, bool _bSet )
+    {
+        WinBits nStyle = _pWindow->GetStyle();
+        if ( _bSet )
+            nStyle |= _nBits;
+        else
+            nStyle &= ~_nBits;
+        _pWindow->SetStyle( nStyle );
+    }
+}
+
+void SAL_CALL VCLXFileControl::setProperty( const OUString& PropertyName, const css::uno::Any& Value)
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr< FileControl > pControl = GetAs< FileControl >();
+    if ( !pControl )
+        return;
+
+    sal_uInt16 nPropType = GetPropertyId( PropertyName );
+    switch ( nPropType )
+    {
+    case BASEPROPERTY_HIDEINACTIVESELECTION:
+    {
+        bool bValue(false);
+        OSL_VERIFY( Value >>= bValue );
+
+        lcl_setWinBits( pControl, WB_NOHIDESELECTION, !bValue );
+        lcl_setWinBits( &pControl->GetEdit(), WB_NOHIDESELECTION, !bValue );
+    }
+    break;
+
+    default:
+        VCLXWindow::setProperty( PropertyName, Value );
+        break;
+    }
+}
+
+void VCLXFileControl::SetWindow( const VclPtr< vcl::Window > &pWindow )
+{
+    VclPtr< FileControl > pPrevFileControl = GetAsDynamic< FileControl >();
+    if ( pPrevFileControl )
+        pPrevFileControl->SetEditModifyHdl( Link<Edit&,void>() );
+
+    FileControl* pNewFileControl = dynamic_cast<FileControl*>( pWindow.get() );
+    if ( pNewFileControl )
+        pNewFileControl->SetEditModifyHdl( LINK( this, VCLXFileControl, ModifyHdl ) );
+
+    VCLXWindow::SetWindow( pWindow );
+}
+
+void VCLXFileControl::addTextListener( const css::uno::Reference< css::awt::XTextListener > & l )
+{
+    maTextListeners.addInterface( l );
+}
+
+void VCLXFileControl::removeTextListener( const css::uno::Reference< css::awt::XTextListener > & l )
+{
+    maTextListeners.removeInterface( l );
+}
+
+void VCLXFileControl::setText( const OUString& aText )
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<vcl::Window> pWindow = GetWindow();
+    if ( pWindow )
+    {
+        pWindow->SetText( aText );
+
+        // also in Java a textChanged is triggered, not in VCL.
+        // css::awt::Toolkit should be JAVA-compliant...
+        ModifyHdl();
+    }
+}
+
+void VCLXFileControl::insertText( const css::awt::Selection& rSel, const OUString& aText )
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr< FileControl > pFileControl = GetAs< FileControl >();
+    if ( pFileControl )
+    {
+        pFileControl->GetEdit().SetSelection( Selection( rSel.Min, rSel.Max ) );
+        pFileControl->GetEdit().ReplaceSelected( aText );
+    }
+}
+
+OUString VCLXFileControl::getText()
+{
+    SolarMutexGuard aGuard;
+
+    OUString aText;
+    VclPtr<vcl::Window> pWindow = GetWindow();
+    if ( pWindow )
+        aText = pWindow->GetText();
+    return aText;
+}
+
+OUString VCLXFileControl::getSelectedText()
+{
+    SolarMutexGuard aGuard;
+
+    OUString aText;
+    VclPtr< FileControl > pFileControl = GetAs< FileControl >();
+    if ( pFileControl)
+        aText = pFileControl->GetEdit().GetSelected();
+    return aText;
+
+}
+
+void VCLXFileControl::setSelection( const css::awt::Selection& aSelection )
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr< FileControl > pFileControl = GetAs< FileControl >();
+    if ( pFileControl )
+        pFileControl->GetEdit().SetSelection( Selection( aSelection.Min, aSelection.Max ) );
+}
+
+css::awt::Selection VCLXFileControl::getSelection()
+{
+    SolarMutexGuard aGuard;
+
+    css::awt::Selection aSel;
+    VclPtr< FileControl > pFileControl = GetAs< FileControl >();
+    if ( pFileControl )
+    {
+        aSel.Min = pFileControl->GetEdit().GetSelection().Min();
+        aSel.Max = pFileControl->GetEdit().GetSelection().Max();
+    }
+    return aSel;
+}
+
+sal_Bool VCLXFileControl::isEditable()
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr< FileControl > pFileControl = GetAs< FileControl >();
+    return pFileControl && !pFileControl->GetEdit().IsReadOnly() && pFileControl->GetEdit().IsEnabled();
+}
+
+void VCLXFileControl::setEditable( sal_Bool bEditable )
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr< FileControl > pFileControl = GetAs< FileControl >();
+    if ( pFileControl )
+        pFileControl->GetEdit().SetReadOnly( !bEditable );
+}
+
+void VCLXFileControl::setMaxTextLen( sal_Int16 nLen )
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr< FileControl > pFileControl = GetAs< FileControl >();
+    if ( pFileControl )
+        pFileControl->GetEdit().SetMaxTextLen( nLen );
+}
+
+sal_Int16 VCLXFileControl::getMaxTextLen()
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr< FileControl > pFileControl = GetAs< FileControl >();
+    return pFileControl ? pFileControl->GetEdit().GetMaxTextLen() : 0;
+}
+
+
+IMPL_LINK_NOARG(VCLXFileControl, ModifyHdl, Edit&, void)
+{
+    ModifyHdl();
+}
+
+void VCLXFileControl::ModifyHdl()
+{
+    css::awt::TextEvent aEvent;
+    aEvent.Source = static_cast<cppu::OWeakObject*>(this);
+    maTextListeners.textChanged( aEvent );
+}
+
+css::awt::Size VCLXFileControl::getMinimumSize()
+{
+    SolarMutexGuard aGuard;
+
+    css::awt::Size aSz;
+    VclPtr< FileControl > pControl = GetAs< FileControl >();
+    if ( pControl )
+    {
+        Size aTmpSize = pControl->GetEdit().CalcMinimumSize();
+        aTmpSize.AdjustWidth(pControl->GetButton().CalcMinimumSize().Width() );
+        aSz = AWTSize(pControl->CalcWindowSize( aTmpSize ));
+    }
+    return aSz;
+}
+
+css::awt::Size VCLXFileControl::getPreferredSize()
+{
+    css::awt::Size aSz = getMinimumSize();
+    aSz.Height += 4;
+    return aSz;
+}
+
+css::awt::Size VCLXFileControl::calcAdjustedSize( const css::awt::Size& rNewSize )
+{
+    SolarMutexGuard aGuard;
+
+    css::awt::Size aSz =rNewSize;
+    VclPtr< FileControl > pControl = GetAs< FileControl >();
+    if ( pControl )
+    {
+        css::awt::Size aMinSz = getMinimumSize();
+        if ( aSz.Height != aMinSz.Height )
+            aSz.Height = aMinSz.Height;
+    }
+    return aSz;
+}
+
+css::awt::Size VCLXFileControl::getMinimumSize( sal_Int16 nCols, sal_Int16 )
+{
+    SolarMutexGuard aGuard;
+
+    css::awt::Size aSz;
+    VclPtr< FileControl > pControl = GetAs< FileControl >();
+    if ( pControl )
+    {
+        aSz = AWTSize(pControl->GetEdit().CalcSize( nCols ));
+        aSz.Width += pControl->GetButton().CalcMinimumSize().Width();
+    }
+    return aSz;
+}
+
+void VCLXFileControl::getColumnsAndLines( sal_Int16& nCols, sal_Int16& nLines )
+{
+    SolarMutexGuard aGuard;
+
+    nCols = 0;
+    nLines = 1;
+    VclPtr< FileControl > pControl = GetAs< FileControl >();
+    if ( pControl )
+        nCols = pControl->GetEdit().GetMaxVisChars();
+}
+
+void VCLXFileControl::ImplGetPropertyIds( std::vector< sal_uInt16 > &rIds )
+{
+    PushPropertyIds( rIds,
+                     // FIXME: elide duplication ?
+                     BASEPROPERTY_HIDEINACTIVESELECTION,
+                     0);
+    VCLXWindow::ImplGetPropertyIds( rIds, true );
+}
+
+SVTXFormattedField::SVTXFormattedField()
+    :bIsStandardSupplier(true)
+    ,nKeyToSetDelayed(-1)
+{
+}
+
+
+SVTXFormattedField::~SVTXFormattedField()
+{
+}
+
+
+void SVTXFormattedField::SetWindow( const VclPtr< vcl::Window > &_pWindow )
+{
+    VCLXSpinField::SetWindow(_pWindow);
+    if (GetAs< FormattedField >())
+        GetAs< FormattedField >()->SetAutoColor(true);
+}
+
+
+void SVTXFormattedField::setProperty( const OUString& PropertyName, const css::uno::Any& Value)
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if ( pField )
+    {
+        sal_uInt16 nPropType = GetPropertyId( PropertyName );
+        switch (nPropType)
+        {
+            case BASEPROPERTY_ENFORCE_FORMAT:
+            {
+                bool bEnable( true );
+                if ( Value >>= bEnable )
+                    pField->EnableNotANumber( !bEnable );
+            }
+            break;
+
+            case BASEPROPERTY_EFFECTIVE_MIN:
+            case BASEPROPERTY_VALUEMIN_DOUBLE:
+                SetMinValue(Value);
+                break;
+
+            case BASEPROPERTY_EFFECTIVE_MAX:
+            case BASEPROPERTY_VALUEMAX_DOUBLE:
+                SetMaxValue(Value);
+                break;
+
+            case BASEPROPERTY_EFFECTIVE_DEFAULT:
+                SetDefaultValue(Value);
+                break;
+
+            case BASEPROPERTY_TREATASNUMBER:
+            {
+                bool b;
+                if ( Value >>= b )
+                    SetTreatAsNumber(b);
+            }
+            break;
+
+            case BASEPROPERTY_FORMATSSUPPLIER:
+                if (!Value.hasValue())
+                    setFormatsSupplier(css::uno::Reference< css::util::XNumberFormatsSupplier > (nullptr));
+                else
+                {
+                    css::uno::Reference< css::util::XNumberFormatsSupplier > xNFS;
+                    if ( Value >>= xNFS )
+                        setFormatsSupplier(xNFS);
+                }
+                break;
+            case BASEPROPERTY_FORMATKEY:
+                if (!Value.hasValue())
+                    setFormatKey(0);
+                else
+                {
+                    sal_Int32 n = 0;
+                    if ( Value >>= n )
+                        setFormatKey(n);
+                }
+                break;
+
+            case BASEPROPERTY_EFFECTIVE_VALUE:
+            case BASEPROPERTY_VALUE_DOUBLE:
+            {
+                const css::uno::TypeClass rTC = Value.getValueType().getTypeClass();
+                if (rTC != css::uno::TypeClass_STRING)
+                    // no string
+                    if (rTC != css::uno::TypeClass_DOUBLE)
+                        // no double
+                        if (Value.hasValue())
+                        {   // but a value
+                            // try if it is something convertible
+                            sal_Int32 nValue = 0;
+                            if (!(Value >>= nValue))
+                                throw css::lang::IllegalArgumentException();
+                            SetValue(css::uno::makeAny(static_cast<double>(nValue)));
+                            break;
+                        }
+
+                SetValue(Value);
+            }
+            break;
+            case BASEPROPERTY_VALUESTEP_DOUBLE:
+            {
+                double d = 0.0;
+                if ( Value >>= d )
+                     pField->SetSpinSize( d );
+                else
+                {
+                    sal_Int32 n = 0;
+                    if ( Value >>= n )
+                         pField->SetSpinSize( n );
+                }
+            }
+            break;
+            case BASEPROPERTY_DECIMALACCURACY:
+            {
+                sal_Int32 n = 0;
+                if ( Value >>= n )
+                     pField->SetDecimalDigits( static_cast<sal_uInt16>(n) );
+            }
+            break;
+            case BASEPROPERTY_NUMSHOWTHOUSANDSEP:
+            {
+                    bool b;
+                    if ( Value >>= b )
+                     pField->SetThousandsSep( b );
+            }
+            break;
+
+            default:
+                VCLXSpinField::setProperty( PropertyName, Value );
+        }
+
+        if (BASEPROPERTY_TEXTCOLOR == nPropType)
+        {   // after setting a new text color, think again about the AutoColor flag of the control
+            // 17.05.2001 - 86859 - frank.schoenheit@germany.sun.com
+            pField->SetAutoColor(!Value.hasValue());
+        }
+    }
+    else
+        VCLXSpinField::setProperty( PropertyName, Value );
+}
+
+
+css::uno::Any SVTXFormattedField::getProperty( const OUString& PropertyName )
+{
+    SolarMutexGuard aGuard;
+
+    css::uno::Any aReturn;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if ( pField )
+    {
+        sal_uInt16 nPropType = GetPropertyId( PropertyName );
+        switch (nPropType)
+        {
+            case BASEPROPERTY_EFFECTIVE_MIN:
+            case BASEPROPERTY_VALUEMIN_DOUBLE:
+                aReturn = GetMinValue();
+                break;
+
+            case BASEPROPERTY_EFFECTIVE_MAX:
+            case BASEPROPERTY_VALUEMAX_DOUBLE:
+                aReturn = GetMaxValue();
+                break;
+
+            case BASEPROPERTY_EFFECTIVE_DEFAULT:
+                aReturn = GetDefaultValue();
+                break;
+
+            case BASEPROPERTY_TREATASNUMBER:
+                aReturn <<= GetTreatAsNumber();
+                break;
+
+            case BASEPROPERTY_EFFECTIVE_VALUE:
+            case BASEPROPERTY_VALUE_DOUBLE:
+                aReturn = GetValue();
+                break;
+
+            case BASEPROPERTY_VALUESTEP_DOUBLE:
+                aReturn <<= pField->GetSpinSize();
+                break;
+
+            case BASEPROPERTY_DECIMALACCURACY:
+                aReturn <<= pField->GetDecimalDigits();
+                break;
+
+            case BASEPROPERTY_FORMATSSUPPLIER:
+            {
+                if (!bIsStandardSupplier)
+                {   // ansonsten void
+                    css::uno::Reference< css::util::XNumberFormatsSupplier >  xSupplier = m_xCurrentSupplier.get();
+                    aReturn <<= xSupplier;
+                }
+            }
+            break;
+
+            case BASEPROPERTY_FORMATKEY:
+            {
+                if (!bIsStandardSupplier)
+                    aReturn <<= getFormatKey();
+            }
+            break;
+
+            default:
+                aReturn = VCLXSpinField::getProperty(PropertyName);
+        }
+    }
+    return aReturn;
+}
+
+css::uno::Any SVTXFormattedField::convertEffectiveValue(const css::uno::Any& rValue)
+{
+    css::uno::Any aReturn;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if (!pField)
+        return aReturn;
+
+    switch (rValue.getValueType().getTypeClass())
+    {
+        case css::uno::TypeClass_DOUBLE:
+            if (pField->TreatingAsNumber())
+            {
+                double d = 0.0;
+                rValue >>= d;
+                aReturn <<= d;
+            }
+            else
+            {
+                SvNumberFormatter* pFormatter = pField->GetFormatter();
+                if (!pFormatter)
+                    pFormatter = pField->StandardFormatter();
+                    // should never fail
+
+                Color* pDum;
+                double d = 0.0;
+                rValue >>= d;
+                OUString sConverted;
+                pFormatter->GetOutputString(d, 0, sConverted, &pDum);
+                aReturn <<= sConverted;
+            }
+            break;
+        case css::uno::TypeClass_STRING:
+        {
+            OUString aStr;
+            rValue >>= aStr;
+            if (pField->TreatingAsNumber())
+            {
+                SvNumberFormatter* pFormatter = pField->GetFormatter();
+                if (!pFormatter)
+                    pFormatter = pField->StandardFormatter();
+
+                double dVal;
+                sal_uInt32 nTestFormat(0);
+                if (!pFormatter->IsNumberFormat(aStr, nTestFormat, dVal))
+                    aReturn.clear();
+                aReturn <<= dVal;
+            }
+            else
+                aReturn <<= aStr;
+        }
+        break;
+        default:
+            aReturn.clear();
+            break;
+    }
+    return aReturn;
+}
+
+
+void SVTXFormattedField::SetMinValue(const css::uno::Any& rValue)
+{
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if (!pField)
+        return;
+
+    switch (rValue.getValueType().getTypeClass())
+
+    {
+        case css::uno::TypeClass_DOUBLE:
+        {
+            double d = 0.0;
+            rValue >>= d;
+            pField->SetMinValue(d);
+        }
+            break;
+        default:
+            DBG_ASSERT(rValue.getValueType().getTypeClass() == css::uno::TypeClass_VOID, "SVTXFormattedField::SetMinValue : invalid argument (an exception will be thrown) !");
+            if ( rValue.getValueType().getTypeClass() != css::uno::TypeClass_VOID )
+
+            {
+                throw css::lang::IllegalArgumentException();
+            }
+            pField->ClearMinValue();
+            break;
+    }
+}
+
+
+css::uno::Any SVTXFormattedField::GetMinValue() const
+{
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if (!pField || !pField->HasMinValue())
+        return css::uno::Any();
+
+    css::uno::Any aReturn;
+    aReturn <<= pField->GetMinValue();
+    return aReturn;
+}
+
+
+void SVTXFormattedField::SetMaxValue(const css::uno::Any& rValue)
+{
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if (!pField)
+        return;
+
+    switch (rValue.getValueType().getTypeClass())
+
+    {
+        case css::uno::TypeClass_DOUBLE:
+        {
+            double d = 0.0;
+            rValue >>= d;
+            pField->SetMaxValue(d);
+        }
+            break;
+        default:
+            if (rValue.getValueType().getTypeClass() != css::uno::TypeClass_VOID)
+
+            {
+                throw css::lang::IllegalArgumentException();
+            }
+            pField->ClearMaxValue();
+            break;
+    }
+}
+
+
+css::uno::Any SVTXFormattedField::GetMaxValue() const
+{
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if (!pField || !pField->HasMaxValue())
+        return css::uno::Any();
+
+    css::uno::Any aReturn;
+    aReturn <<= pField->GetMaxValue();
+    return aReturn;
+}
+
+
+void SVTXFormattedField::SetDefaultValue(const css::uno::Any& rValue)
+{
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if (!pField)
+        return;
+
+    css::uno::Any aConverted = convertEffectiveValue(rValue);
+
+    switch (aConverted.getValueType().getTypeClass())
+
+    {
+        case css::uno::TypeClass_DOUBLE:
+        {
+            double d = 0.0;
+            aConverted >>= d;
+            pField->SetDefaultValue(d);
+        }
+        break;
+        case css::uno::TypeClass_STRING:
+        {
+            OUString aStr;
+            aConverted >>= aStr;
+            pField->SetDefaultText( aStr );
+        }
+        break;
+        default:
+            pField->EnableEmptyField(true);
+                // only void accepted
+            break;
+    }
+}
+
+
+css::uno::Any SVTXFormattedField::GetDefaultValue() const
+{
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if (!pField || pField->IsEmptyFieldEnabled())
+        return css::uno::Any();
+
+    css::uno::Any aReturn;
+    if (pField->TreatingAsNumber())
+        aReturn <<= pField->GetDefaultValue();
+    else
+        aReturn <<= pField->GetDefaultText();
+    return aReturn;
+}
+
+
+bool SVTXFormattedField::GetTreatAsNumber() const
+{
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if (pField)
+        return pField->TreatingAsNumber();
+
+    return true;
+}
+
+
+void SVTXFormattedField::SetTreatAsNumber(bool bSet)
+{
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if (pField)
+        pField->TreatAsNumber(bSet);
+}
+
+
+css::uno::Any SVTXFormattedField::GetValue() const
+{
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if (!pField)
+        return css::uno::Any();
+
+    css::uno::Any aReturn;
+    if (!pField->TreatingAsNumber())
+    {
+        OUString sText = pField->GetTextValue();
+        aReturn <<= sText;
+    }
+    else
+    {
+        if (!pField->GetText().isEmpty())    // empty is returned as void by default
+            aReturn <<= pField->GetValue();
+    }
+
+    return aReturn;
+}
+
+
+void SVTXFormattedField::SetValue(const css::uno::Any& rValue)
+{
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if (!pField)
+        return;
+
+    if (!rValue.hasValue())
+    {
+        pField->SetText("");
+    }
+    else
+    {
+        if (rValue.getValueType().getTypeClass() == css::uno::TypeClass_DOUBLE )
+        {
+            double d = 0.0;
+            rValue >>= d;
+            pField->SetValue(d);
+        }
+        else
+        {
+            DBG_ASSERT(rValue.getValueType().getTypeClass() == css::uno::TypeClass_STRING, "SVTXFormattedField::SetValue : invalid argument !");
+
+            OUString sText;
+            rValue >>= sText;
+            if (!pField->TreatingAsNumber())
+                pField->SetTextFormatted(sText);
+            else
+                pField->SetTextValue(sText);
+        }
+    }
+//  NotifyTextListeners();
+}
+
+
+void SVTXFormattedField::setFormatsSupplier(const css::uno::Reference< css::util::XNumberFormatsSupplier > & xSupplier)
+{
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+
+    SvNumberFormatsSupplierObj* pNew = nullptr;
+    if (!xSupplier.is())
+    {
+        if (pField)
+        {
+            pNew = new SvNumberFormatsSupplierObj(pField->StandardFormatter());
+            bIsStandardSupplier = true;
+        }
+    }
+    else
+    {
+        pNew = comphelper::getUnoTunnelImplementation<SvNumberFormatsSupplierObj>(xSupplier);
+        bIsStandardSupplier = false;
+    }
+
+    if (!pNew)
+        return;     // TODO : how to process ?
+
+    m_xCurrentSupplier = pNew;
+    if (!pField)
+        return;
+
+    // save the actual value
+    css::uno::Any aCurrent = GetValue();
+    pField->SetFormatter(m_xCurrentSupplier->GetNumberFormatter(), false);
+    if (nKeyToSetDelayed != -1)
+    {
+        pField->SetFormatKey(nKeyToSetDelayed);
+        nKeyToSetDelayed = -1;
+    }
+    SetValue(aCurrent);
+    NotifyTextListeners();
+}
+
+
+sal_Int32 SVTXFormattedField::getFormatKey() const
+{
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    return pField ? pField->GetFormatKey() : 0;
+}
+
+
+void SVTXFormattedField::setFormatKey(sal_Int32 nKey)
+{
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if (!pField)
+        return;
+
+    if (pField->GetFormatter())
+        pField->SetFormatKey(nKey);
+    else
+    {
+        // probably I am in a block, in which first the key and next the formatter will be set,
+        // initially this happens quite certain, as the properties are set in alphabetic sequence,
+        // and the FormatsSupplier is processed before the FormatKey
+        nKeyToSetDelayed = nKey;
+    }
+    NotifyTextListeners();
+}
+
+
+void SVTXFormattedField::NotifyTextListeners()
+{
+    if ( GetTextListeners().getLength() )
+    {
+        css::awt::TextEvent aEvent;
+        aEvent.Source = static_cast<cppu::OWeakObject*>(this);
+        GetTextListeners().textChanged( aEvent );
+    }
+}
+
+void SVTXFormattedField::ImplGetPropertyIds( std::vector< sal_uInt16 > &rIds )
+{
+    PushPropertyIds( rIds,
+                     // FIXME: elide duplication ?
+                     BASEPROPERTY_EFFECTIVE_MIN,
+                     BASEPROPERTY_VALUEMIN_DOUBLE,
+                     BASEPROPERTY_EFFECTIVE_MAX,
+                     BASEPROPERTY_VALUEMAX_DOUBLE,
+                     BASEPROPERTY_EFFECTIVE_DEFAULT,
+                     BASEPROPERTY_TREATASNUMBER,
+                     BASEPROPERTY_EFFECTIVE_VALUE,
+                     BASEPROPERTY_VALUE_DOUBLE,
+                     BASEPROPERTY_VALUESTEP_DOUBLE,
+                     BASEPROPERTY_DECIMALACCURACY,
+                     BASEPROPERTY_FORMATSSUPPLIER,
+                     BASEPROPERTY_NUMSHOWTHOUSANDSEP,
+                     BASEPROPERTY_FORMATKEY,
+                     BASEPROPERTY_TREATASNUMBER,
+                     BASEPROPERTY_ENFORCE_FORMAT,
+                     0);
+    VCLXWindow::ImplGetPropertyIds( rIds, true );
+    VCLXSpinField::ImplGetPropertyIds( rIds );
+}
+
+
+
+
+
+SVTXCurrencyField::SVTXCurrencyField()
+{
+}
+
+SVTXCurrencyField::~SVTXCurrencyField()
+{
+}
+
+css::uno::Any SVTXCurrencyField::queryInterface( const css::uno::Type & rType )
+{
+    css::uno::Any aRet = ::cppu::queryInterface( rType,
+                                        static_cast< css::awt::XCurrencyField* >(this),
+                                        static_cast< css::lang::XTypeProvider* >(this) );
+    return (aRet.hasValue() ? aRet : SVTXFormattedField::queryInterface( rType ));
+}
+
+IMPL_IMPLEMENTATION_ID( SVTXCurrencyField )
+
+// css::lang::XTypeProvider
+css::uno::Sequence< css::uno::Type > SVTXCurrencyField::getTypes()
+{
+    static const ::cppu::OTypeCollection aTypeList(
+        cppu::UnoType<css::lang::XTypeProvider>::get(),
+        cppu::UnoType<css::awt::XCurrencyField>::get(),
+        SVTXFormattedField::getTypes()
+    );
+    return aTypeList.getTypes();
+}
+
+void SVTXCurrencyField::setValue( double Value )
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if ( pField )
+        pField->SetValue( Value );
+}
+
+double SVTXCurrencyField::getValue()
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    return pField ? pField->GetValue() : 0;
+}
+
+void SVTXCurrencyField::setMin( double Value )
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if ( pField )
+        pField->SetMinValue( Value );
+}
+
+double SVTXCurrencyField::getMin()
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    return pField ? pField->GetMinValue() : 0;
+}
+
+void SVTXCurrencyField::setMax( double Value )
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if ( pField )
+        pField->SetMaxValue( Value );
+}
+
+double SVTXCurrencyField::getMax()
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    return pField ? pField->GetMaxValue() : 0;
+}
+
+void SVTXCurrencyField::setFirst( double Value )
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if ( pField )
+        pField->SetSpinFirst( Value );
+}
+
+double SVTXCurrencyField::getFirst()
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    return pField ? pField->GetSpinFirst() : 0;
+}
+
+void SVTXCurrencyField::setLast( double Value )
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if ( pField )
+        pField->SetSpinLast( Value );
+}
+
+double SVTXCurrencyField::getLast()
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    return pField ? pField->GetSpinLast() : 0;
+}
+
+void SVTXCurrencyField::setSpinSize( double Value )
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if ( pField )
+        pField->SetSpinSize( Value );
+}
+
+double SVTXCurrencyField::getSpinSize()
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    return pField ? pField->GetSpinSize() : 0;
+}
+
+void SVTXCurrencyField::setDecimalDigits( sal_Int16 Value )
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if ( pField )
+        pField->SetDecimalDigits( Value );
+}
+
+sal_Int16 SVTXCurrencyField::getDecimalDigits()
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    return pField ? pField->GetDecimalDigits() : 0;
+}
+
+void SVTXCurrencyField::setStrictFormat( sal_Bool bStrict )
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if ( pField )
+        pField->SetStrictFormat( bStrict );
+}
+
+sal_Bool SVTXCurrencyField::isStrictFormat()
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    return pField && pField->IsStrictFormat();
+}
+
+void SVTXCurrencyField::setProperty( const OUString& PropertyName, const css::uno::Any& Value)
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr< DoubleCurrencyField > pField = GetAs< DoubleCurrencyField >();
+    if ( pField )
+    {
+        sal_uInt16 nPropType = GetPropertyId( PropertyName );
+        switch (nPropType)
+        {
+            case BASEPROPERTY_CURRENCYSYMBOL:
+            {
+                OUString aStr;
+                Value >>= aStr;
+                pField->setCurrencySymbol( aStr );
+            }
+            break;
+            case BASEPROPERTY_CURSYM_POSITION:
+            {
+                bool b = false;
+                Value >>= b;
+                pField->setPrependCurrSym(b);
+            }
+            break;
+
+            default:
+                SVTXFormattedField::setProperty(PropertyName, Value);
+        }
+    }
+    else
+        SVTXFormattedField::setProperty(PropertyName, Value);
+}
+
+css::uno::Any SVTXCurrencyField::getProperty( const OUString& PropertyName )
+{
+    SolarMutexGuard aGuard;
+
+    css::uno::Any aReturn;
+
+    VclPtr< DoubleCurrencyField > pField = GetAs< DoubleCurrencyField >();
+    if ( pField )
+    {
+        sal_uInt16 nPropType = GetPropertyId( PropertyName );
+        switch (nPropType)
+        {
+            case BASEPROPERTY_CURRENCYSYMBOL:
+            {
+                aReturn <<= pField->getCurrencySymbol();
+            }
+            break;
+            case BASEPROPERTY_CURSYM_POSITION:
+            {
+                aReturn <<= pField->getPrependCurrSym();
+            }
+            break;
+            default:
+                return SVTXFormattedField::getProperty(PropertyName);
+        }
+    }
+    return SVTXFormattedField::getProperty(PropertyName);
+}
+
+void SVTXCurrencyField::ImplGetPropertyIds( std::vector< sal_uInt16 > &rIds )
+{
+    PushPropertyIds( rIds,
+                     BASEPROPERTY_CURRENCYSYMBOL,
+                     BASEPROPERTY_CURSYM_POSITION,
+                     0);
+    SVTXFormattedField::ImplGetPropertyIds( rIds );
+}
+
+SVTXNumericField::SVTXNumericField()
+{
+}
+
+SVTXNumericField::~SVTXNumericField()
+{
+}
+
+css::uno::Any SVTXNumericField::queryInterface( const css::uno::Type & rType )
+{
+    css::uno::Any aRet = ::cppu::queryInterface( rType,
+                                        static_cast< css::awt::XNumericField* >(this),
+                                        static_cast< css::lang::XTypeProvider* >(this) );
+    return (aRet.hasValue() ? aRet : SVTXFormattedField::queryInterface( rType ));
+}
+
+IMPL_IMPLEMENTATION_ID( SVTXNumericField )
+
+// css::lang::XTypeProvider
+css::uno::Sequence< css::uno::Type > SVTXNumericField::getTypes()
+{
+    static const ::cppu::OTypeCollection aTypeList(
+        cppu::UnoType<css::lang::XTypeProvider>::get(),
+        cppu::UnoType<css::awt::XNumericField>::get(),
+        SVTXFormattedField::getTypes()
+    );
+    return aTypeList.getTypes();
+}
+
+
+void SVTXNumericField::setValue( double Value )
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if ( pField )
+        pField->SetValue( Value );
+}
+
+double SVTXNumericField::getValue()
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    return pField ? pField->GetValue() : 0;
+}
+
+void SVTXNumericField::setMin( double Value )
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if ( pField )
+        pField->SetMinValue( Value );
+}
+
+double SVTXNumericField::getMin()
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    return pField ? pField->GetMinValue() : 0;
+}
+
+void SVTXNumericField::setMax( double Value )
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if ( pField )
+        pField->SetMaxValue( Value );
+}
+
+double SVTXNumericField::getMax()
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    return pField ? pField->GetMaxValue() : 0;
+}
+
+void SVTXNumericField::setFirst( double Value )
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if ( pField )
+        pField->SetSpinFirst( Value );
+}
+
+double SVTXNumericField::getFirst()
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    return pField ? pField->GetSpinFirst() : 0;
+}
+
+void SVTXNumericField::setLast( double Value )
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if ( pField )
+        pField->SetSpinLast( Value );
+}
+
+double SVTXNumericField::getLast()
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    return pField ? pField->GetSpinLast() : 0;
+}
+
+void SVTXNumericField::setSpinSize( double Value )
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if ( pField )
+        pField->SetSpinSize( Value );
+}
+
+double SVTXNumericField::getSpinSize()
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    return pField ? pField->GetSpinSize() : 0;
+}
+
+void SVTXNumericField::setDecimalDigits( sal_Int16 Value )
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if ( pField )
+        pField->SetDecimalDigits( Value );
+}
+
+sal_Int16 SVTXNumericField::getDecimalDigits()
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    return pField ? pField->GetDecimalDigits() : 0;
+}
+
+void SVTXNumericField::setStrictFormat( sal_Bool bStrict )
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    if ( pField )
+        pField->SetStrictFormat( bStrict );
+}
+
+sal_Bool SVTXNumericField::isStrictFormat()
+{
+    SolarMutexGuard aGuard;
+
+    VclPtr<FormattedField> pField = GetAs< FormattedField >();
+    return pField && pField->IsStrictFormat();
+}
+
+void SVTXNumericField::GetPropertyIds( std::vector< sal_uInt16 > &rIds )
+{
+    SVTXFormattedField::ImplGetPropertyIds( rIds );
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

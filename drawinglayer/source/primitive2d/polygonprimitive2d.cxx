@@ -19,12 +19,12 @@
 
 #include <drawinglayer/primitive2d/polygonprimitive2d.hxx>
 #include <basegfx/polygon/b2dpolygontools.hxx>
-#include <drawinglayer/primitive2d/polypolygonprimitive2d.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonHairlinePrimitive2D.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonColorPrimitive2D.hxx>
 #include <drawinglayer/primitive2d/drawinglayer_primitivetypes2d.hxx>
 #include <drawinglayer/geometry/viewinformation2d.hxx>
 #include <basegfx/polygon/b2dlinegeometry.hxx>
 #include <com/sun/star/drawing/LineCap.hpp>
-#include <comphelper/random.hxx>
 
 #include <converters.hxx>
 
@@ -196,76 +196,71 @@ namespace drawinglayer::primitive2d
 
 namespace drawinglayer
 {
-    double getRandomColorRange()
-    {
-        return comphelper::rng::uniform_real_distribution(0.0, nextafter(1.0, DBL_MAX));
-    }
-
     namespace primitive2d
     {
         void PolygonStrokePrimitive2D::create2DDecomposition(Primitive2DContainer& rContainer, const geometry::ViewInformation2D& /*rViewInformation*/) const
         {
-            if(getB2DPolygon().count())
+            if(!getB2DPolygon().count())
+                return;
+
+            // #i102241# try to simplify before usage
+            const basegfx::B2DPolygon aB2DPolygon(basegfx::utils::simplifyCurveSegments(getB2DPolygon()));
+            basegfx::B2DPolyPolygon aHairLinePolyPolygon;
+
+            if(getStrokeAttribute().isDefault() || 0.0 == getStrokeAttribute().getFullDotDashLen())
             {
-                // #i102241# try to simplify before usage
-                const basegfx::B2DPolygon aB2DPolygon(basegfx::utils::simplifyCurveSegments(getB2DPolygon()));
-                basegfx::B2DPolyPolygon aHairLinePolyPolygon;
+                // no line dashing, just copy
+                aHairLinePolyPolygon.append(aB2DPolygon);
+            }
+            else
+            {
+                // apply LineStyle
+                basegfx::utils::applyLineDashing(
+                    aB2DPolygon, getStrokeAttribute().getDotDashArray(),
+                    &aHairLinePolyPolygon, nullptr, getStrokeAttribute().getFullDotDashLen());
+            }
 
-                if(getStrokeAttribute().isDefault() || 0.0 == getStrokeAttribute().getFullDotDashLen())
+            const sal_uInt32 nCount(aHairLinePolyPolygon.count());
+
+            if(!getLineAttribute().isDefault() && getLineAttribute().getWidth())
+            {
+                // create fat line data
+                const double fHalfLineWidth(getLineAttribute().getWidth() / 2.0);
+                const basegfx::B2DLineJoin aLineJoin(getLineAttribute().getLineJoin());
+                const css::drawing::LineCap aLineCap(getLineAttribute().getLineCap());
+                basegfx::B2DPolyPolygon aAreaPolyPolygon;
+                const double fMiterMinimumAngle(getLineAttribute().getMiterMinimumAngle());
+
+                for(sal_uInt32 a(0); a < nCount; a++)
                 {
-                    // no line dashing, just copy
-                    aHairLinePolyPolygon.append(aB2DPolygon);
+                    // New version of createAreaGeometry; now creates bezier polygons
+                    aAreaPolyPolygon.append(basegfx::utils::createAreaGeometry(
+                        aHairLinePolyPolygon.getB2DPolygon(a),
+                        fHalfLineWidth,
+                        aLineJoin,
+                        aLineCap,
+                        basegfx::deg2rad(12.5) /* default fMaxAllowedAngle*/ ,
+                        0.4 /* default fMaxPartOfEdge*/ ,
+                        fMiterMinimumAngle));
                 }
-                else
+
+                // create primitive
+                for(sal_uInt32 b(0); b < aAreaPolyPolygon.count(); b++)
                 {
-                    // apply LineStyle
-                    basegfx::utils::applyLineDashing(
-                        aB2DPolygon, getStrokeAttribute().getDotDashArray(),
-                        &aHairLinePolyPolygon, nullptr, getStrokeAttribute().getFullDotDashLen());
+                    // put into single polyPolygon primitives to make clear that this is NOT meant
+                    // to be painted as a single tools::PolyPolygon (XORed as fill rule). Alternatively, a
+                    // melting process may be used here one day.
+                    const basegfx::B2DPolyPolygon aNewPolyPolygon(aAreaPolyPolygon.getB2DPolygon(b));
+                    const basegfx::BColor aColor(getLineAttribute().getColor());
+                    rContainer.push_back(new PolyPolygonColorPrimitive2D(aNewPolyPolygon, aColor));
                 }
-
-                const sal_uInt32 nCount(aHairLinePolyPolygon.count());
-
-                if(!getLineAttribute().isDefault() && getLineAttribute().getWidth())
-                {
-                    // create fat line data
-                    const double fHalfLineWidth(getLineAttribute().getWidth() / 2.0);
-                    const basegfx::B2DLineJoin aLineJoin(getLineAttribute().getLineJoin());
-                    const css::drawing::LineCap aLineCap(getLineAttribute().getLineCap());
-                    basegfx::B2DPolyPolygon aAreaPolyPolygon;
-                    const double fMiterMinimumAngle(getLineAttribute().getMiterMinimumAngle());
-
-                    for(sal_uInt32 a(0); a < nCount; a++)
-                    {
-                        // New version of createAreaGeometry; now creates bezier polygons
-                        aAreaPolyPolygon.append(basegfx::utils::createAreaGeometry(
-                            aHairLinePolyPolygon.getB2DPolygon(a),
-                            fHalfLineWidth,
-                            aLineJoin,
-                            aLineCap,
-                            basegfx::deg2rad(12.5) /* default fMaxAllowedAngle*/ ,
-                            0.4 /* default fMaxPartOfEdge*/ ,
-                            fMiterMinimumAngle));
-                    }
-
-                    // create primitive
-                    for(sal_uInt32 b(0); b < aAreaPolyPolygon.count(); b++)
-                    {
-                        // put into single polyPolygon primitives to make clear that this is NOT meant
-                        // to be painted as a single tools::PolyPolygon (XORed as fill rule). Alternatively, a
-                        // melting process may be used here one day.
-                        const basegfx::B2DPolyPolygon aNewPolyPolygon(aAreaPolyPolygon.getB2DPolygon(b));
-                        const basegfx::BColor aColor(getLineAttribute().getColor());
-                        rContainer.push_back(new PolyPolygonColorPrimitive2D(aNewPolyPolygon, aColor));
-                    }
-                }
-                else
-                {
-                    rContainer.push_back(
-                        new PolyPolygonHairlinePrimitive2D(
-                            aHairLinePolyPolygon,
-                            getLineAttribute().getColor()));
-                }
+            }
+            else
+            {
+                rContainer.push_back(
+                    new PolyPolygonHairlinePrimitive2D(
+                        aHairLinePolyPolygon,
+                        getLineAttribute().getColor()));
             }
         }
 
@@ -278,6 +273,7 @@ namespace drawinglayer
             maLineAttribute(rLineAttribute),
             maStrokeAttribute(rStrokeAttribute)
         {
+            // MM01: keep these - these are no curve-decompposers but just checks
             // simplify curve segments: moved here to not need to use it
             // at VclPixelProcessor2D::tryDrawPolygonStrokePrimitive2DDirect
             maPolygon = basegfx::utils::simplifyCurveSegments(maPolygon);
@@ -291,6 +287,7 @@ namespace drawinglayer
             maLineAttribute(rLineAttribute),
             maStrokeAttribute()
         {
+            // MM01: keep these - these are no curve-decompposers but just checks
             // simplify curve segments: moved here to not need to use it
             // at VclPixelProcessor2D::tryDrawPolygonStrokePrimitive2DDirect
             maPolygon = basegfx::utils::simplifyCurveSegments(maPolygon);
@@ -383,22 +380,22 @@ namespace drawinglayer
 
         void PolygonWavePrimitive2D::create2DDecomposition(Primitive2DContainer& rContainer, const geometry::ViewInformation2D& /*rViewInformation*/) const
         {
-            if(getB2DPolygon().count())
-            {
-                const bool bHasWidth(!basegfx::fTools::equalZero(getWaveWidth()));
-                const bool bHasHeight(!basegfx::fTools::equalZero(getWaveHeight()));
+            if(!getB2DPolygon().count())
+                return;
 
-                if(bHasWidth && bHasHeight)
-                {
-                    // create waveline curve
-                    const basegfx::B2DPolygon aWaveline(basegfx::utils::createWaveline(getB2DPolygon(), getWaveWidth(), getWaveHeight()));
-                    rContainer.push_back(new PolygonStrokePrimitive2D(aWaveline, getLineAttribute(), getStrokeAttribute()));
-                }
-                else
-                {
-                    // flat waveline, decompose to simple line primitive
-                    rContainer.push_back(new PolygonStrokePrimitive2D(getB2DPolygon(), getLineAttribute(), getStrokeAttribute()));
-                }
+            const bool bHasWidth(!basegfx::fTools::equalZero(getWaveWidth()));
+            const bool bHasHeight(!basegfx::fTools::equalZero(getWaveHeight()));
+
+            if(bHasWidth && bHasHeight)
+            {
+                // create waveline curve
+                const basegfx::B2DPolygon aWaveline(basegfx::utils::createWaveline(getB2DPolygon(), getWaveWidth(), getWaveHeight()));
+                rContainer.push_back(new PolygonStrokePrimitive2D(aWaveline, getLineAttribute(), getStrokeAttribute()));
+            }
+            else
+            {
+                // flat waveline, decompose to simple line primitive
+                rContainer.push_back(new PolygonStrokePrimitive2D(getB2DPolygon(), getLineAttribute(), getStrokeAttribute()));
             }
         }
 

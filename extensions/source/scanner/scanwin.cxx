@@ -22,6 +22,7 @@
 #include <com/sun/star/uno/Reference.hxx>
 #include <com/sun/star/frame/XFrame.hpp>
 #include <com/sun/star/frame/Desktop.hpp>
+#include <com/sun/star/scanner/ScannerException.hpp>
 
 #include "twain32shim.hxx"
 
@@ -43,7 +44,6 @@
 
 namespace
 {
-
 enum TwainState
 {
     TWAIN_STATE_NONE = 0,
@@ -253,7 +253,7 @@ void Twain::ShimListenerThread::execute()
                 ThrowLastError("DuplicateHandle");
             // we will not need our copy as soon as shim has its own inherited one
             ScopedHANDLE hScopedDup(hDup);
-            DWORD nDup = reinterpret_cast<DWORD>(hDup);
+            DWORD nDup = static_cast<DWORD>(reinterpret_cast<sal_uIntPtr>(hDup));
             if (reinterpret_cast<HANDLE>(nDup) != hDup)
                 throw std::exception("HANDLE does not fit to 32 bit - cannot pass to shim!");
 
@@ -342,8 +342,7 @@ bool Twain::InitializeNewShim(ScannerManager& rMgr, const VclPtr<vcl::Window>& x
         return false; // Have a shim for another task already!
 
     // hold reference to ScannerManager, to prevent premature death
-    mxMgr.set(static_cast<OWeakObject*>(mpCurMgr = &rMgr),
-              css::uno::UNO_QUERY);
+    mxMgr.set(static_cast<OWeakObject*>(mpCurMgr = &rMgr), css::uno::UNO_QUERY);
 
     mpThread.set(new ShimListenerThread(xTopWindow));
     mpThread->launch();
@@ -595,8 +594,8 @@ sal_Bool SAL_CALL ScannerManager::configureScannerAndScan(
 
     VclPtr<vcl::Window> xTopWindow = ImplGetActiveFrameWindow();
     if (xTopWindow)
-        xTopWindow->IncModalCount(); // to avoid changes between the two operations that each
-                                     // block the window
+        xTopWindow
+            ->IncModalCount(); // to avoid changes between the two operations that each block the window
     comphelper::ScopeGuard aModalGuard([xTopWindow]() {
         if (xTopWindow)
             xTopWindow->DecModalCount();

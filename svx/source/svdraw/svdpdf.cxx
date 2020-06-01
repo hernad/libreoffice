@@ -17,23 +17,19 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "svdpdf.hxx"
+#include <svdpdf.hxx>
 
 #include <config_features.h>
 
 #if HAVE_FEATURE_PDFIUM
 #include <fpdfview.h>
 #include <fpdf_edit.h>
-#include <fpdf_save.h>
 #include <fpdf_text.h>
 
-#include <vcl/bitmapaccess.hxx>
 #include <vcl/graph.hxx>
+#include <vcl/vectorgraphicdata.hxx>
 
-#include <editeng/editdata.hxx>
 #include <math.h>
-#include <svx/xpoly.hxx>
-#include <vcl/svapp.hxx>
 #include <editeng/eeitem.hxx>
 #include <editeng/fhgtitem.hxx>
 #include <editeng/wghtitem.hxx>
@@ -45,16 +41,12 @@
 #include <svx/xlncapit.hxx>
 #include <svx/xlnwtit.hxx>
 #include <svx/xflclit.hxx>
-#include <svx/xgrad.hxx>
-#include <svx/xflgrit.hxx>
 #include <editeng/fontitem.hxx>
-#include <editeng/autokernitem.hxx>
 #include <editeng/wrlmitem.hxx>
 #include <editeng/contouritem.hxx>
 #include <editeng/colritem.hxx>
 #include <vcl/metric.hxx>
 #include <editeng/charscaleitem.hxx>
-#include <svx/xflhtit.hxx>
 #include <svx/sdtditm.hxx>
 #include <svx/sdtagitm.hxx>
 #include <svx/sdtfsitm.hxx>
@@ -63,7 +55,6 @@
 #include <svx/svdobj.hxx>
 #include <svx/svdotext.hxx>
 #include <svx/svdorect.hxx>
-#include <svx/svdocirc.hxx>
 #include <svx/svdograf.hxx>
 #include <svx/svdopath.hxx>
 #include <svx/svdetc.hxx>
@@ -77,41 +68,19 @@
 #include <basegfx/polygon/b2dpolygonclipper.hxx>
 #include <svx/xbtmpit.hxx>
 #include <svx/xfillit0.hxx>
-#include <svx/xfltrit.hxx>
 #include <svx/xflbmtit.hxx>
 #include <svx/xflbstit.hxx>
 #include <svx/xlineit0.hxx>
-#include <svx/svdpntv.hxx>
 #include <basegfx/polygon/b2dpolypolygontools.hxx>
 #include <svx/svditer.hxx>
 #include <svx/svdogrp.hxx>
-#include <vcl/BitmapTools.hxx>
 #include <vcl/dibtools.hxx>
-#include <com/sun/star/geometry/Matrix2D.hpp>
 #include <sal/log.hxx>
 
 namespace
 {
-/// Convert from DPI to pixels.
-/// PDFs don't have resolution, rather,
-/// dimensions are in inches, with 72 points / inch.
-/// Here we effectively render at 96 DPI (to match
-/// the image rendered in vcl::ImportPDF in pdfread.cxx).
-double lcl_PointToPixel(double fPoint) { return fPoint * 96. / 72.; }
-/// Convert from pixels to logic (twips).
-long lcl_ToLogic(double value)
-{
-    // Convert to integral preserving two dp.
-    const long in = static_cast<long>(value * 100.);
-    const long out = OutputDevice::LogicToLogic(in, MapUnit::MapPixel, MapUnit::Map100thMM);
-    return out / 100;
-}
-
 double sqrt2(double a, double b) { return sqrt(a * a + b * b); }
-}
 
-namespace
-{
 struct FPDFBitmapDeleter
 {
     void operator()(FPDF_BITMAP bitmap) { FPDFBitmap_Destroy(bitmap); }
@@ -121,11 +90,10 @@ struct FPDFBitmapDeleter
 using namespace com::sun::star;
 
 ImpSdrPdfImport::ImpSdrPdfImport(SdrModel& rModel, SdrLayerID nLay, const tools::Rectangle& rRect,
-                                 const std::shared_ptr<std::vector<sal_Int8>>& pPdfData)
+                                 Graphic const& rGraphic)
     : maTmpList()
     , mpVD(VclPtr<VirtualDevice>::Create())
     , maScaleRect(rRect)
-    , mpPdfData(pPdfData)
     , mnMapScalingOfs(0)
     , mpModel(&rModel)
     , mnLayer(nLay)
@@ -169,8 +137,10 @@ ImpSdrPdfImport::ImpSdrPdfImport(SdrModel& rModel, SdrLayerID nLay, const tools:
     FPDF_InitLibraryWithConfig(&aConfig);
 
     // Load the buffer using pdfium.
-    mpPdfDocument = FPDF_LoadMemDocument(mpPdfData->data(), mpPdfData->size(),
-                                         /*password=*/nullptr);
+    auto const& rVectorGraphicData = rGraphic.getVectorGraphicData();
+    mpPdfDocument = FPDF_LoadMemDocument(
+        rVectorGraphicData->getVectorGraphicDataArray().getConstArray(),
+        rVectorGraphicData->getVectorGraphicDataArrayLength(), /*password=*/nullptr);
     if (!mpPdfDocument)
     {
         //TODO: Handle failure to load.
@@ -259,8 +229,7 @@ void ImpSdrPdfImport::SetupPageScale(const double dPageWidth, const double dPage
     mdPageWidthPts = dPageWidth;
     mdPageHeightPts = dPageHeight;
 
-    Size aPageSize(lcl_ToLogic(lcl_PointToPixel(dPageWidth)),
-                   lcl_ToLogic(lcl_PointToPixel(dPageHeight)));
+    Size aPageSize(convertPointToMm100(dPageWidth), convertPointToMm100(dPageHeight));
 
     if (aPageSize.Width() && aPageSize.Height() && (!maScaleRect.IsEmpty()))
     {
@@ -768,11 +737,12 @@ void ImpSdrPdfImport::ImportForm(FPDF_PAGEOBJECT pPageObject, FPDF_TEXTPAGE pTex
                                  int /*nPageObjectIndex*/)
 {
     // Get the form matrix to perform correct translation/scaling of the form sub-objects.
-    const Matrix aOldMatrix = mCurMatrix;
+    const basegfx::B2DHomMatrix aOldMatrix = maCurrentMatrix;
 
     FS_MATRIX matrix;
     FPDFFormObj_GetMatrix(pPageObject, &matrix);
-    mCurMatrix = Matrix(matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f);
+    maCurrentMatrix
+        = basegfx::B2DHomMatrix::abcdef(matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f);
 
     const int nCount = FPDFFormObj_CountObjects(pPageObject);
     for (int nIndex = 0; nIndex < nCount; ++nIndex)
@@ -782,7 +752,7 @@ void ImpSdrPdfImport::ImportForm(FPDF_PAGEOBJECT pPageObject, FPDF_TEXTPAGE pTex
     }
 
     // Restore the old one.
-    mCurMatrix = aOldMatrix;
+    maCurrentMatrix = aOldMatrix;
 }
 
 void ImpSdrPdfImport::ImportText(FPDF_PAGEOBJECT pPageObject, FPDF_TEXTPAGE pTextPage,
@@ -802,29 +772,32 @@ void ImpSdrPdfImport::ImportText(FPDF_PAGEOBJECT pPageObject, FPDF_TEXTPAGE pTex
 
     FS_MATRIX matrix;
     FPDFTextObj_GetMatrix(pPageObject, &matrix);
-    Matrix aTextMatrix(mCurMatrix);
+    basegfx::B2DHomMatrix aTextMatrix(maCurrentMatrix);
+    basegfx::B2DRange aTextRect(left, top, right, bottom);
+    aTextRect *= aTextMatrix;
+    const tools::Rectangle aRect = PointsToLogic(aTextRect.getMinX(), aTextRect.getMaxX(),
+                                                 aTextRect.getMinY(), aTextRect.getMaxY());
 
-    aTextMatrix.Transform(left, right, top, bottom);
-    const tools::Rectangle aRect = PointsToLogic(left, right, top, bottom);
+    const int nBytes = FPDFTextObj_GetText(pPageObject, pTextPage, nullptr, 0);
+    std::unique_ptr<sal_Unicode[]> pText(new sal_Unicode[nBytes]);
 
-    const int nChars = FPDFTextObj_GetText(pPageObject, pTextPage, nullptr, 0);
-    std::unique_ptr<sal_Unicode[]> pText(new sal_Unicode[nChars]);
-
-    const int nActualChars = FPDFTextObj_GetText(pPageObject, pTextPage, pText.get(), nChars);
-    if (nActualChars <= 0)
+    const int nActualBytes = FPDFTextObj_GetText(pPageObject, pTextPage, pText.get(), nBytes);
+    if (nActualBytes <= 0)
     {
         return;
     }
 
-    OUString sText(pText.get(), nActualChars);
+    // Let's rely on null-termination for the length of the string. We
+    // just know the number of bytes the string takes, but in OUString
+    // needs the number of characters.
+    OUString sText(pText.get());
 
     const double dFontSize = FPDFTextObj_GetFontSize(pPageObject);
     double dFontSizeH = fabs(sqrt2(matrix.a, matrix.c) * dFontSize);
     double dFontSizeV = fabs(sqrt2(matrix.b, matrix.d) * dFontSize);
-    dFontSizeH = lcl_PointToPixel(dFontSizeH);
-    dFontSizeV = lcl_PointToPixel(dFontSizeV);
-    dFontSizeH = lcl_ToLogic(dFontSizeH);
-    dFontSizeV = lcl_ToLogic(dFontSizeV);
+
+    dFontSizeH = convertPointToMm100(dFontSizeH);
+    dFontSizeV = convertPointToMm100(dFontSizeV);
 
     const Size aFontSize(dFontSizeH, dFontSizeV);
     vcl::Font aFnt = mpVD->GetFont();
@@ -885,29 +858,30 @@ void ImpSdrPdfImport::ImportText(FPDF_PAGEOBJECT pPageObject, FPDF_TEXTPAGE pTex
         mbFntDirty = true;
     }
 
-    ImportText(aRect.TopLeft(), aRect.GetSize(), sText);
+    InsertTextObject(aRect.TopLeft(), aRect.GetSize(), sText);
 }
 
-void ImpSdrPdfImport::ImportText(const Point& rPos, const Size& rSize, const OUString& rStr)
+void ImpSdrPdfImport::InsertTextObject(const Point& rPos, const Size& rSize, const OUString& rStr)
 {
     // calc text box size, add 5% to make it fit safely
 
     FontMetric aFontMetric(mpVD->GetFontMetric());
-    vcl::Font aFnt(mpVD->GetFont());
-    FontAlign eAlg(aFnt.GetAlignment());
+    vcl::Font aFont(mpVD->GetFont());
+    FontAlign eAlignment(aFont.GetAlignment());
 
     // sal_Int32 nTextWidth = static_cast<sal_Int32>(mpVD->GetTextWidth(rStr) * mfScaleX);
     sal_Int32 nTextHeight = static_cast<sal_Int32>(mpVD->GetTextHeight() * mfScaleY);
 
-    Point aPos(FRound(rPos.X() * mfScaleX + maOfs.X()), FRound(rPos.Y() * mfScaleY + maOfs.Y()));
+    Point aPosition(FRound(rPos.X() * mfScaleX + maOfs.X()),
+                    FRound(rPos.Y() * mfScaleY + maOfs.Y()));
     Size aSize(FRound(rSize.Width() * mfScaleX), FRound(rSize.Height() * mfScaleY));
 
-    if (eAlg == ALIGN_BASELINE)
-        aPos.AdjustY(-FRound(aFontMetric.GetAscent() * mfScaleY));
-    else if (eAlg == ALIGN_BOTTOM)
-        aPos.AdjustY(-nTextHeight);
+    if (eAlignment == ALIGN_BASELINE)
+        aPosition.AdjustY(-FRound(aFontMetric.GetAscent() * mfScaleY));
+    else if (eAlignment == ALIGN_BOTTOM)
+        aPosition.AdjustY(-nTextHeight);
 
-    tools::Rectangle aTextRect(aPos, aSize);
+    tools::Rectangle aTextRect(aPosition, aSize);
     SdrRectObj* pText = new SdrRectObj(*mpModel, OBJ_TEXT, aTextRect);
 
     pText->SetMergedItem(makeSdrTextUpperDistItem(0));
@@ -915,7 +889,7 @@ void ImpSdrPdfImport::ImportText(const Point& rPos, const Size& rSize, const OUS
     pText->SetMergedItem(makeSdrTextRightDistItem(0));
     pText->SetMergedItem(makeSdrTextLeftDistItem(0));
 
-    if (aFnt.GetAverageFontWidth())
+    if (aFont.GetAverageFontWidth())
     {
         pText->ClearMergedItem(SDRATTR_TEXT_AUTOGROWWIDTH);
         pText->SetMergedItem(makeSdrTextAutoGrowHeightItem(false));
@@ -932,21 +906,21 @@ void ImpSdrPdfImport::ImportText(const Point& rPos, const Size& rSize, const OUS
     SetAttributes(pText, true);
     pText->SetSnapRect(aTextRect);
 
-    if (!aFnt.IsTransparent())
+    if (!aFont.IsTransparent())
     {
         SfxItemSet aAttr(*mpFillAttr->GetPool(), svl::Items<XATTR_FILL_FIRST, XATTR_FILL_LAST>{});
         aAttr.Put(XFillStyleItem(drawing::FillStyle_SOLID));
-        aAttr.Put(XFillColorItem(OUString(), aFnt.GetFillColor()));
+        aAttr.Put(XFillColorItem(OUString(), aFont.GetFillColor()));
         pText->SetMergedItemSet(aAttr);
     }
-    sal_uInt32 nAngle = aFnt.GetOrientation();
+    sal_uInt32 nAngle = aFont.GetOrientation();
     if (nAngle)
     {
         nAngle *= 10;
         double a = nAngle * F_PI18000;
         double nSin = sin(a);
         double nCos = cos(a);
-        pText->NbcRotate(aPos, nAngle, nSin, nCos);
+        pText->NbcRotate(aPosition, nAngle, nSin, nCos);
     }
     InsertObj(pText, false);
 }
@@ -1038,8 +1012,10 @@ void ImpSdrPdfImport::ImportPath(FPDF_PAGEOBJECT pPageObject, int /*nPageObjectI
 {
     FS_MATRIX matrix;
     FPDFPath_GetMatrix(pPageObject, &matrix);
-    Matrix aPathMatrix(matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f);
-    aPathMatrix.Concatinate(mCurMatrix);
+
+    auto aPathMatrix
+        = basegfx::B2DHomMatrix::abcdef(matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f);
+    aPathMatrix *= maCurrentMatrix;
 
     basegfx::B2DPolyPolygon aPolyPoly;
     basegfx::B2DPolygon aPoly;
@@ -1058,26 +1034,26 @@ void ImpSdrPdfImport::ImportPath(FPDF_PAGEOBJECT pPageObject, int /*nPageObjectI
                 continue;
             }
 
-            double x = fx;
-            double y = fy;
-            aPathMatrix.Transform(x, y);
+            basegfx::B2DPoint aB2DPoint(fx, fy);
+            aB2DPoint *= aPathMatrix;
+
             const bool bClose = FPDFPathSegment_GetClose(pPathSegment);
             if (bClose)
                 aPoly.setClosed(bClose); // TODO: Review
 
-            Point aPoint = PointsToLogic(x, y);
-            x = aPoint.X();
-            y = aPoint.Y();
+            Point aPoint = PointsToLogic(aB2DPoint.getX(), aB2DPoint.getY());
+            aB2DPoint.setX(aPoint.X());
+            aB2DPoint.setY(aPoint.Y());
 
             const int nSegmentType = FPDFPathSegment_GetType(pPathSegment);
             switch (nSegmentType)
             {
                 case FPDF_SEGMENT_LINETO:
-                    aPoly.append(basegfx::B2DPoint(x, y));
+                    aPoly.append(aB2DPoint);
                     break;
 
                 case FPDF_SEGMENT_BEZIERTO:
-                    aBezier.emplace_back(x, y);
+                    aBezier.emplace_back(aB2DPoint.getX(), aB2DPoint.getY());
                     if (aBezier.size() == 3)
                     {
                         aPoly.appendBezierSegment(aBezier[0], aBezier[1], aBezier[2]);
@@ -1093,7 +1069,7 @@ void ImpSdrPdfImport::ImportPath(FPDF_PAGEOBJECT pPageObject, int /*nPageObjectI
                         aPoly.clear();
                     }
 
-                    aPoly.append(basegfx::B2DPoint(x, y));
+                    aPoly.append(aB2DPoint);
                     break;
 
                 case FPDF_SEGMENT_UNKNOWN:
@@ -1123,7 +1099,7 @@ void ImpSdrPdfImport::ImportPath(FPDF_PAGEOBJECT pPageObject, int /*nPageObjectI
     float fWidth = 1;
     FPDFPageObj_GetStrokeWidth(pPageObject, &fWidth);
     const double dWidth = 0.5 * fabs(sqrt2(aPathMatrix.a(), aPathMatrix.c()) * fWidth);
-    mnLineWidth = lcl_ToLogic(lcl_PointToPixel(dWidth));
+    mnLineWidth = convertPointToMm100(dWidth);
 
     int nFillMode = FPDF_FILLMODE_ALTERNATE;
     FPDF_BOOL bStroke = 1; // Assume we have to draw, unless told otherwise.
@@ -1163,10 +1139,8 @@ void ImpSdrPdfImport::ImportPath(FPDF_PAGEOBJECT pPageObject, int /*nPageObjectI
 Point ImpSdrPdfImport::PointsToLogic(double x, double y) const
 {
     y = correctVertOrigin(y);
-    x = lcl_PointToPixel(x);
-    y = lcl_PointToPixel(y);
 
-    Point aPos(lcl_ToLogic(x), lcl_ToLogic(y));
+    Point aPos(convertPointToMm100(x), convertPointToMm100(y));
     return aPos;
 }
 
@@ -1176,15 +1150,10 @@ tools::Rectangle ImpSdrPdfImport::PointsToLogic(double left, double right, doubl
     top = correctVertOrigin(top);
     bottom = correctVertOrigin(bottom);
 
-    left = lcl_PointToPixel(left);
-    right = lcl_PointToPixel(right);
-    top = lcl_PointToPixel(top);
-    bottom = lcl_PointToPixel(bottom);
+    Point aPos(convertPointToMm100(left), convertPointToMm100(top));
+    Size aSize(convertPointToMm100(right - left), convertPointToMm100(bottom - top));
 
-    Point aPos(lcl_ToLogic(left), lcl_ToLogic(top));
-    Size aSize(lcl_ToLogic(right - left), lcl_ToLogic(bottom - top));
-    tools::Rectangle aRect(aPos, aSize);
-    return aRect;
+    return tools::Rectangle(aPos, aSize);
 }
 
 #endif // HAVE_FEATURE_PDFIUM

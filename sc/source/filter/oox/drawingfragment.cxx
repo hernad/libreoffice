@@ -22,9 +22,11 @@
 #include <basegfx/matrix/b2dhommatrix.hxx>
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
+#include <com/sun/star/container/XIndexContainer.hpp>
 #include <com/sun/star/container/XNameReplace.hpp>
 #include <com/sun/star/document/XEventsSupplier.hpp>
 #include <com/sun/star/drawing/XControlShape.hpp>
+#include <com/sun/star/drawing/XDrawPage.hpp>
 #include <com/sun/star/drawing/XShapes.hpp>
 #include <com/sun/star/script/ScriptEventDescriptor.hpp>
 #include <com/sun/star/script/XEventAttacherManager.hpp>
@@ -171,12 +173,12 @@ ContextHandlerRef GroupShapeContext::onCreateContext(
         sal_Int32 nElement, const AttributeList& rAttribs )
 {
     ContextHandlerRef xContext = createShapeContext( *this, *this, nElement, rAttribs, mpGroupShapePtr );
-    return xContext.get() ? xContext.get() : ShapeGroupContext::onCreateContext( nElement, rAttribs );
+    return xContext ? xContext : ShapeGroupContext::onCreateContext( nElement, rAttribs );
 }
 
 DrawingFragment::DrawingFragment( const WorksheetHelper& rHelper, const OUString& rFragmentPath ) :
     WorksheetFragmentBase( rHelper, rFragmentPath ),
-    mxDrawPage( rHelper.getDrawPage(), UNO_QUERY )
+    mxDrawPage( rHelper.getDrawPage() )
 {
     OSL_ENSURE( mxDrawPage.is(), "DrawingFragment::DrawingFragment - missing drawing page" );
 }
@@ -210,9 +212,9 @@ ContextHandlerRef DrawingFragment::onCreateContext( sal_Int32 nElement, const At
                 case XDR_TOKEN( from ):
                 case XDR_TOKEN( to ):           return this;
 
-                case XDR_TOKEN( pos ):          if( mxAnchor.get() ) mxAnchor->importPos( rAttribs );           break;
-                case XDR_TOKEN( ext ):          if( mxAnchor.get() ) mxAnchor->importExt( rAttribs );           break;
-                case XDR_TOKEN( clientData ):   if( mxAnchor.get() ) mxAnchor->importClientData( rAttribs );    break;
+                case XDR_TOKEN( pos ):          if( mxAnchor ) mxAnchor->importPos( rAttribs );           break;
+                case XDR_TOKEN( ext ):          if( mxAnchor ) mxAnchor->importExt( rAttribs );           break;
+                case XDR_TOKEN( clientData ):   if( mxAnchor ) mxAnchor->importClientData( rAttribs );    break;
 
                 default:                        return GroupShapeContext::createShapeContext( *this, *this, nElement, rAttribs, ShapePtr(), &mxShape );
             }
@@ -241,7 +243,7 @@ void DrawingFragment::onCharacters( const OUString& rChars )
         case XDR_TOKEN( row ):
         case XDR_TOKEN( colOff ):
         case XDR_TOKEN( rowOff ):
-            if( mxAnchor.get() ) mxAnchor->setCellPos( getCurrentElement(), getParentElement(), rChars );
+            if( mxAnchor ) mxAnchor->setCellPos( getCurrentElement(), getParentElement(), rChars );
         break;
     }
 }
@@ -253,16 +255,45 @@ void DrawingFragment::onEndElement()
         case XDR_TOKEN( absoluteAnchor ):
         case XDR_TOKEN( oneCellAnchor ):
         case XDR_TOKEN( twoCellAnchor ):
-            if( mxDrawPage.is() && mxShape.get() && mxAnchor.get() )
+            if( mxDrawPage.is() && mxShape && mxAnchor )
             {
-                // Rotation is decided by orientation of shape determined
-                // by the anchor position given by 'editAs="oneCell"'
-                if ( mxAnchor->getEditAs() != ShapeAnchor::ANCHOR_ONECELL )
-                        mxShape->setRotation(0);
                 EmuRectangle aShapeRectEmu = mxAnchor->calcAnchorRectEmu( getDrawPageSize() );
                 const bool bIsShapeVisible = mxAnchor->isAnchorValid();
                 if( (aShapeRectEmu.X >= 0) && (aShapeRectEmu.Y >= 0) && (aShapeRectEmu.Width >= 0) && (aShapeRectEmu.Height >= 0) )
                 {
+                    const sal_Int32 aRotation = mxShape->getRotation();
+                    if ((aRotation >= 45  * PER_DEGREE && aRotation < 135 * PER_DEGREE)
+                     || (aRotation >= 225 * PER_DEGREE && aRotation < 315 * PER_DEGREE))
+                    {
+                        // When rotating any shape in MSO Excel within the range of degrees given above,
+                        // Excel changes the cells in which the shape is anchored. The new position of
+                        // the anchors are always calculated using a 90 degrees rotation anticlockwise.
+                        // There is an important result of this operation: the top left point of the shape changes,
+                        // it will be another vertex.
+                        // The anchor position is given in the xml file, it is in the xdr:from and xdr:to elements.
+                        // Let's see what happens in time order:
+                        // We create a shape in Excel, the anchor position is in a given cell, then the rotation happens
+                        // as mentioned above, and excel recalculates the cells in which the anchors are positioned.
+                        // This new cell is exported into the xml elements xdr:from and xdr:to, when Excel exports the document!
+                        // Thus, if we have a 90 degrees rotation and an already rotated point from which we base
+                        // our calculations here in LO, the result is an incorrect 180 degrees rotation.
+                        // Now, we need to create the bounding rectangle of the shape with this in mind.
+                        // (Important to mention that at this point we don't talk about rotations at all, this bounding
+                        // rectangle contains the original not-rotated shape. Rotation happens later in the code.)
+                        // We get the new (x, y) coords, then swap width with height.
+                        // To get the new coords we reflect the rectangle in the line y = x. (This will return the
+                        // correct vertex, which is the actual top left one.)
+                        // Another fact that appears to be true in Excel is that there are only 2 of possible anchor
+                        // positions for a shape that is only rotated (and not resized for example).
+                        // The first position happens in the set of degrees {[45, 135) U [225, 315)} and the second
+                        // set is all the other angles. The two sets partition the circle (of all rotations: 360 degrees).
+                        sal_Int64 nHalfWidth = aShapeRectEmu.Width / 2;
+                        sal_Int64 nHalfHeight = aShapeRectEmu.Height / 2;
+                        aShapeRectEmu.X = aShapeRectEmu.X + nHalfWidth - nHalfHeight;
+                        aShapeRectEmu.Y = aShapeRectEmu.Y + nHalfHeight - nHalfWidth;
+                        std::swap(aShapeRectEmu.Width, aShapeRectEmu.Height);
+                    }
+
                     // TODO: DrawingML implementation expects 32-bit coordinates for EMU rectangles (change that to EmuRectangle)
                     Rectangle aShapeRectEmu32(
                         getLimitedValue< sal_Int32, sal_Int64 >( aShapeRectEmu.X, 0, SAL_MAX_INT32 ),
@@ -315,8 +346,8 @@ public:
     bool                operator()( const ::oox::vml::ShapeBase& rShape ) const;
 
 private:
-    sal_Int32 const           mnCol;
-    sal_Int32 const           mnRow;
+    sal_Int32           mnCol;
+    sal_Int32           mnRow;
 };
 
 VmlFindNoteFunc::VmlFindNoteFunc( const ScAddress& rPos ) :

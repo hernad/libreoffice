@@ -73,7 +73,7 @@ enum class BmpConversion
     N24Bit,
     N32Bit,
     N8BitTrans,
-    Ghosted
+    N8BitNoConversion // make 8bit without color conversion (e.g. take the red channel)
 };
 
 enum class BmpCombine
@@ -534,8 +534,6 @@ public:
 private:
     SAL_DLLPRIVATE bool ImplConvertUp(sal_uInt16 nBitCount, Color const* pExtColor = nullptr);
     SAL_DLLPRIVATE bool ImplConvertDown(sal_uInt16 nBitCount, Color const* pExtColor = nullptr);
-
-    SAL_DLLPRIVATE bool ImplConvertGhosted();
 
 private:
     std::shared_ptr<SalBitmap> mxSalBmp;

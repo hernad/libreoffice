@@ -54,6 +54,18 @@ inline QRect toQRect(const tools::Rectangle& rRect)
     return QRect(rRect.Left(), rRect.Top(), rRect.GetWidth(), rRect.GetHeight());
 }
 
+inline QRect toQRect(const tools::Rectangle& rRect, const qreal fScale)
+{
+    return QRect(floor(rRect.Left() * fScale), floor(rRect.Top() * fScale),
+                 ceil(rRect.GetWidth() * fScale), ceil(rRect.GetHeight() * fScale));
+}
+
+inline QRect scaledQRect(const QRect& rRect, const qreal fScale)
+{
+    return QRect(floor(rRect.x() * fScale), floor(rRect.y() * fScale), ceil(rRect.width() * fScale),
+                 ceil(rRect.height() * fScale));
+}
+
 inline tools::Rectangle toRectangle(const QRect& rRect)
 {
     return tools::Rectangle(rRect.left(), rRect.top(), rRect.right(), rRect.bottom());
@@ -79,9 +91,9 @@ Qt::DropAction getPreferredDropAction(sal_Int8 dragOperation);
 inline QList<int> toQList(const css::uno::Sequence<sal_Int32>& aSequence)
 {
     QList<int> aList;
-    for (sal_Int32 i = 0; i < aSequence.getLength(); i++)
+    for (sal_Int32 i : aSequence)
     {
-        aList.append(aSequence[i]);
+        aList.append(i);
     }
     return aList;
 }

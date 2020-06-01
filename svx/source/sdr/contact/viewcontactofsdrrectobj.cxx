@@ -17,12 +17,11 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <svx/sdr/contact/viewcontactofsdrrectobj.hxx>
+#include <sdr/contact/viewcontactofsdrrectobj.hxx>
 #include <svx/svdorect.hxx>
-#include <svx/sdr/primitive2d/sdrattributecreator.hxx>
+#include <sdr/primitive2d/sdrattributecreator.hxx>
 #include <sdr/primitive2d/sdrrectangleprimitive2d.hxx>
 #include <svl/itemset.hxx>
-#include <sdr/primitive2d/sdrprimitivetools.hxx>
 #include <basegfx/matrix/b2dhommatrixtools.hxx>
 #include <svx/svdmodel.hxx>
 #include <vcl/canvastools.hxx>
@@ -42,8 +41,8 @@ ViewContactOfSdrRectObj::~ViewContactOfSdrRectObj()
 drawinglayer::primitive2d::Primitive2DContainer ViewContactOfSdrRectObj::createViewIndependentPrimitive2DSequence() const
 {
     const SfxItemSet& rItemSet = GetRectObj().GetMergedItemSet();
-    const drawinglayer::attribute::SdrLineFillShadowTextAttribute aAttribute(
-        drawinglayer::primitive2d::createNewSdrLineFillShadowTextAttribute(
+    const drawinglayer::attribute::SdrLineFillEffectsTextAttribute aAttribute(
+        drawinglayer::primitive2d::createNewSdrLineFillEffectsTextAttribute(
             rItemSet,
             GetRectObj().getText(0),
             false));

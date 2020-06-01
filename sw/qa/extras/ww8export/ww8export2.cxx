@@ -55,6 +55,17 @@ DECLARE_WW8EXPORT_TEST(testTdf41542_borderlessPadding, "tdf41542_borderlessPaddi
     CPPUNIT_ASSERT_EQUAL( 3, getPages() );
 }
 
+DECLARE_WW8EXPORT_TEST(testTdf60378_mergedBorders, "tdf60378_mergedBorders.doc")
+{
+    uno::Reference<text::XTextTablesSupplier> xTextTablesSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<container::XIndexAccess> xTables(xTextTablesSupplier->getTextTables(), uno::UNO_QUERY);
+    uno::Reference<text::XTextTable> xTable(xTables->getByIndex(0), uno::UNO_QUERY);
+
+    // The border width was zero
+    table::BorderLine2 aBorder = getProperty<table::BorderLine2>(xTable->getCellByName("B2"), "RightBorder");
+    CPPUNIT_ASSERT(aBorder.LineWidth > 0);
+}
+
 DECLARE_WW8EXPORT_TEST(testTdf55528_relativeTableWidth, "tdf55528_relativeTableWidth.doc")
 {
 
@@ -78,6 +89,7 @@ DECLARE_WW8EXPORT_TEST(testTdf128700_relativeTableWidth, "tdf128700_relativeTabl
 
 DECLARE_WW8EXPORT_TEST(testTdf116436_tableBackground, "tdf116436_tableBackground.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<text::XTextTablesSupplier> xTextTablesSupplier(mxComponent, uno::UNO_QUERY);
     uno::Reference<container::XIndexAccess> xTables(xTextTablesSupplier->getTextTables(), uno::UNO_QUERY);
     uno::Reference<text::XTextTable> xTable(xTables->getByIndex(0), uno::UNO_QUERY);
@@ -99,7 +111,7 @@ DECLARE_WW8EXPORT_TEST(testTdf37153, "tdf37153_considerWrapOnObjPos.doc")
     CPPUNIT_ASSERT_EQUAL(text::VertOrientation::BOTTOM, getProperty<sal_Int16>(xTable->getCellByName("A1"), "VertOrient"));
 
     //For MSO compatibility, the image should be at the top of the cell, not at the bottom - despite VertOrientation::BOTTOM
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     sal_Int32 nFlyTop  = getXPath(pXmlDoc, "/root/page/body/tab/row/cell[1]/txt/anchored/fly/infos/bounds", "top").toInt32();
     CPPUNIT_ASSERT_MESSAGE("FlyTop should be 3820, not 6623", nFlyTop < 4000);
     sal_Int32 nTextTop  = getXPath(pXmlDoc, "/root/page/body/tab/row/cell[2]/txt[1]/infos/bounds", "top").toInt32();
@@ -225,6 +237,7 @@ DECLARE_WW8EXPORT_TEST(testTdf112517_maxSprms, "tdf112517_maxSprms.doc")
 
 DECLARE_WW8EXPORT_TEST(testTdf108448_endNote, "tdf108448_endNote.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<text::XEndnotesSupplier> xEndnotesSupplier(mxComponent, uno::UNO_QUERY);
     uno::Reference<container::XIndexAccess> xEndnotes = xEndnotesSupplier->getEndnotes();
     uno::Reference<text::XText> xEndnote;
@@ -235,6 +248,7 @@ DECLARE_WW8EXPORT_TEST(testTdf108448_endNote, "tdf108448_endNote.odt")
 
 DECLARE_WW8EXPORT_TEST(testTdf106062_nonHangingFootnote, "tdf106062_nonHangingFootnote.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<text::XFootnotesSupplier> xFootnotesSupplier(mxComponent, uno::UNO_QUERY);
     uno::Reference<container::XIndexAccess> xFootnotes = xFootnotesSupplier->getFootnotes();
     uno::Reference<text::XTextRange> xTextRange(xFootnotes->getByIndex(0), uno::UNO_QUERY);
@@ -244,12 +258,76 @@ DECLARE_WW8EXPORT_TEST(testTdf106062_nonHangingFootnote, "tdf106062_nonHangingFo
 
 DECLARE_WW8EXPORT_TEST(testTdf116570_exportFootnote, "tdf116570_exportFootnote.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<text::XFootnotesSupplier> xFootnotesSupplier(mxComponent, uno::UNO_QUERY);
     uno::Reference<container::XIndexAccess> xFootnotes = xFootnotesSupplier->getFootnotes();
     uno::Reference<text::XText> xFootnoteText;
     xFootnotes->getByIndex(0) >>= xFootnoteText;
 
     CPPUNIT_ASSERT_EQUAL_MESSAGE( "Number of paragraphs in first footnote", 2, getParagraphs(xFootnoteText) );
+}
+
+DECLARE_WW8EXPORT_TEST(testTdf80635_pageRightRTL, "tdf80635_pageRightRTL.doc")
+{
+    // tdf#80635 - transfer the float orientation to the table.
+    uno::Reference<text::XTextTablesSupplier> xTextTablesSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<container::XIndexAccess> xTables(xTextTablesSupplier->getTextTables(), uno::UNO_QUERY);
+    uno::Reference<text::XTextTable> xTable(xTables->getByIndex(0), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Horizontal Orientation", text::HoriOrientation::LEFT_AND_WIDTH, getProperty<sal_Int16>(xTable, "HoriOrient"));
+    CPPUNIT_ASSERT_DOUBLES_EQUAL_MESSAGE("Table Indent", long(3500), getProperty<long>(xTable, "LeftMargin"), 100);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Did you fix me? Text probably should wrap here", 2, getPages() );
+    // If so, replace test with the table set to a greater preferred width so that the text shouldn't wrap
+}
+
+DECLARE_WW8EXPORT_TEST(testTdf80635_marginRTL, "tdf80635_marginRightRTL.doc")
+{
+    // tdf#80635 - transfer the float orientation to the table.
+    uno::Reference<text::XTextTablesSupplier> xTextTablesSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<container::XIndexAccess> xTables(xTextTablesSupplier->getTextTables(), uno::UNO_QUERY);
+    uno::Reference<text::XTextTable> xTable(xTables->getByIndex(0), uno::UNO_QUERY);
+    if ( !mbExported )
+        CPPUNIT_ASSERT_EQUAL_MESSAGE("Horizontal Orientation", text::HoriOrientation::RIGHT, getProperty<sal_Int16>(xTable, "HoriOrient"));
+}
+
+DECLARE_WW8EXPORT_TEST(testTdf80635_marginLeft, "tdf80635_marginLeft.doc")
+{
+    // tdf#80635 - transfer the float orientation to the table.
+    uno::Reference<text::XTextTablesSupplier> xTextTablesSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<container::XIndexAccess> xTables(xTextTablesSupplier->getTextTables(), uno::UNO_QUERY);
+    uno::Reference<text::XTextTable> xTable(xTables->getByIndex(0), uno::UNO_QUERY);
+    // This was just the GetMinLeft of -199
+    CPPUNIT_ASSERT_DOUBLES_EQUAL_MESSAGE("Table Indent", long(-2950), getProperty<long>(xTable, "LeftMargin"), 100);
+}
+
+DECLARE_WW8EXPORT_TEST(testTdf80635_pageLeft, "tdf80635_pageLeft.doc")
+{
+    // tdf#80635 - transfer the float orientation to the table.
+    uno::Reference<text::XTextTablesSupplier> xTextTablesSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<container::XIndexAccess> xTables(xTextTablesSupplier->getTextTables(), uno::UNO_QUERY);
+    uno::Reference<text::XTextTable> xTable(xTables->getByIndex(0), uno::UNO_QUERY);
+    // This was just the GetMinLeft of -199
+    CPPUNIT_ASSERT_DOUBLES_EQUAL_MESSAGE("Table Indent", long(-2750), getProperty<long>(xTable, "LeftMargin"), 100);
+}
+
+DECLARE_WW8EXPORT_TEST(testTdf99197_defaultLTR, "tdf99197_defaultLTR.doc")
+{
+    CPPUNIT_ASSERT_EQUAL_MESSAGE( "Default Paragraph style, LTR",
+        text::WritingMode2::LR_TB, getProperty<sal_Int16>(getParagraph(1), "WritingMode") );
+
+    CPPUNIT_ASSERT_EQUAL_MESSAGE( "myDefaultStyle - no base style, LTR",
+        text::WritingMode2::LR_TB, getProperty<sal_Int16>(getParagraph(2), "WritingMode") );
+}
+
+DECLARE_WW8EXPORT_TEST(testTdf107773, "tdf107773.doc")
+{
+    // This was 1, multi-page table was imported as a floating one.
+    CPPUNIT_ASSERT_EQUAL(0, getShapes());
+
+    // tdf#80635 - transfer the float orientation to the table.
+    uno::Reference<text::XTextTablesSupplier> xTextTablesSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<container::XIndexAccess> xTables(xTextTablesSupplier->getTextTables(), uno::UNO_QUERY);
+    uno::Reference<text::XTextTable> xTable(xTables->getByIndex(0), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Horizontal Orientation", text::HoriOrientation::CENTER, getProperty<sal_Int16>(xTable, "HoriOrient"));
 }
 
 DECLARE_WW8EXPORT_TEST(testTdf112074_RTLtableJustification, "tdf112074_RTLtableJustification.doc")
@@ -366,6 +444,8 @@ DECLARE_WW8EXPORT_TEST(testTdf111480, "tdf111480.doc")
 
 DECLARE_WW8EXPORT_TEST(testTdf70838, "tdf70838.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument *>(mxComponent.get());
     CPPUNIT_ASSERT(pTextDoc);
     SwDoc* pDoc = pTextDoc->GetDocShell()->GetDoc();
@@ -376,6 +456,8 @@ DECLARE_WW8EXPORT_TEST(testTdf70838, "tdf70838.odt")
 
 DECLARE_WW8EXPORT_TEST(testTdf70838b_verticalRotation, "tdf70838b_verticalRotation.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(3, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument *>(mxComponent.get());
     CPPUNIT_ASSERT(pTextDoc);
     SwDoc* pDoc = pTextDoc->GetDocShell()->GetDoc();
@@ -389,6 +471,8 @@ DECLARE_WW8EXPORT_TEST(testTdf70838b_verticalRotation, "tdf70838b_verticalRotati
 
 DECLARE_WW8EXPORT_TEST( testActiveXCheckbox, "checkbox_control.odt" )
 {
+    CPPUNIT_ASSERT_EQUAL(2, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // First check box anchored as a floating object
     uno::Reference<drawing::XControlShape> xControlShape;
     if(!mbExported)
@@ -424,6 +508,13 @@ DECLARE_WW8EXPORT_TEST( testActiveXCheckbox, "checkbox_control.odt" )
     CPPUNIT_ASSERT_EQUAL(text::TextContentAnchorType_AS_CHARACTER,getProperty<text::TextContentAnchorType>(xPropertySet2,"AnchorType"));
 }
 
+DECLARE_WW8EXPORT_TEST( testTdf115896_layoutInCell, "tdf115896_layoutInCell.doc" )
+{
+    // Check anchor type - was anchored to page because of unknown version of Word
+    uno::Reference<beans::XPropertySet> xPropertySet(getShape(1), uno::UNO_QUERY_THROW);
+    CPPUNIT_ASSERT_EQUAL(text::TextContentAnchorType_AT_CHARACTER,getProperty<text::TextContentAnchorType>(xPropertySet,"AnchorType"));
+}
+
 DECLARE_WW8EXPORT_TEST(testTdf67207_MERGEFIELD, "mailmerge.doc")
 {
     uno::Reference<beans::XPropertySet> xTextField = getProperty< uno::Reference<beans::XPropertySet> >(getRun(getParagraph(1), 2), "TextField");
@@ -452,6 +543,7 @@ DECLARE_WW8EXPORT_TEST(testTdf67207_MERGEFIELD, "mailmerge.doc")
 
 DECLARE_OOXMLEXPORT_TEST( testTableCrossReference, "table_cross_reference.odt" )
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // tdf#42346: Cross references to tables were not saved
     // MSO uses simple bookmarks for referencing table caption, so we do the same by export
     if (!mbExported)
@@ -610,6 +702,7 @@ DECLARE_OOXMLEXPORT_TEST( testTableCrossReference, "table_cross_reference.odt" )
 
 DECLARE_OOXMLEXPORT_TEST( testTableCrossReferenceCustomFormat, "table_cross_reference_custom_format.odt" )
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // tdf#42346: Cross references to tables were not saved
     // Check also captions with custom formatting
     if (!mbExported)
@@ -726,6 +819,7 @@ DECLARE_OOXMLEXPORT_TEST( testTableCrossReferenceCustomFormat, "table_cross_refe
 
 DECLARE_OOXMLEXPORT_TEST( testObjectCrossReference, "object_cross_reference.odt" )
 {
+    CPPUNIT_ASSERT_EQUAL(2, getPages());
     // tdf#42346: Cross references to objects were not saved
     // MSO uses simple bookmarks for referencing table caption, so we do the same by export
     if (!mbExported)
@@ -907,7 +1001,7 @@ DECLARE_WW8EXPORT_TEST(testTdf117503, "tdf117503.docx")
 
 DECLARE_WW8EXPORT_TEST(testTdf117885, "tdf117885.doc")
 {
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
 
     /* Get the vertical position of the paragraph containing the text "Start" */
     sal_Int32 nParaA_Top = getXPath(pXmlDoc,

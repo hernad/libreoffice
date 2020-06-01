@@ -22,11 +22,11 @@
 #include <sal/types.h>
 #include <vcl/seleng.hxx>
 
-#include <svtools/table/tabletypes.hxx>
-#include <svtools/table/tablemodel.hxx>
+#include <table/tabletypes.hxx>
+#include <table/tablemodel.hxx>
 
 
-namespace svt { namespace table
+namespace svt::table
 {
 
 
@@ -87,8 +87,8 @@ namespace svt { namespace table
 
     struct TableCell
     {
-        ColPos const    nColumn;
-        RowPos const    nRow;
+        ColPos          nColumn;
+        RowPos          nRow;
         TableCellArea   eArea;
 
         TableCell( ColPos const i_column, RowPos const i_row )
@@ -220,7 +220,7 @@ namespace svt { namespace table
         /// shows a tracking rectangle
         virtual void    showTracking( tools::Rectangle const & i_location, ShowTrackFlags const i_flags ) = 0;
 
-        /// hides a prviously shown tracking rectangle
+        /// hides a previously shown tracking rectangle
         virtual void    hideTracking() = 0;
 
         /// does a hit test for the given pixel coordinates
@@ -236,7 +236,7 @@ namespace svt { namespace table
     };
 
 
-} } // namespace svt::table
+} // namespace svt::table
 
 
 

@@ -9,38 +9,8 @@
 
 $(eval $(call gb_Jar_Jar,ridl))
 
-$(eval $(call gb_Jar_use_customtargets,ridl,\
-    ridljar/javamaker \
-))
-
-$(eval $(call gb_Jar_set_packageroot,ridl,com))
-
-$(eval $(call gb_Jar_add_packagedirs,ridl,\
-    $(call gb_CustomTarget_get_workdir,ridljar/javamaker)/com \
-))
-
-$(eval $(call gb_Jar_add_sourcefiles,ridl,\
-    ridljar/com/sun/star/lib/uno/typedesc/FieldDescription \
-    ridljar/com/sun/star/lib/uno/typedesc/MemberDescriptionHelper \
-    ridljar/com/sun/star/lib/uno/typedesc/MethodDescription \
-    ridljar/com/sun/star/lib/uno/typedesc/TypeDescription \
-    ridljar/com/sun/star/lib/uno/typeinfo/AttributeTypeInfo \
-    ridljar/com/sun/star/lib/uno/typeinfo/ConstantTypeInfo \
-    ridljar/com/sun/star/lib/uno/typeinfo/MemberTypeInfo \
-    ridljar/com/sun/star/lib/uno/typeinfo/MethodTypeInfo \
-    ridljar/com/sun/star/lib/uno/typeinfo/ParameterTypeInfo \
-    ridljar/com/sun/star/lib/uno/typeinfo/TypeInfo \
-    ridljar/com/sun/star/lib/util/DisposeListener \
-    ridljar/com/sun/star/lib/util/DisposeNotifier \
-    ridljar/com/sun/star/lib/util/WeakMap \
-    ridljar/com/sun/star/uno/Any \
-    ridljar/com/sun/star/uno/Enum \
-    ridljar/com/sun/star/uno/IBridge \
-    ridljar/com/sun/star/uno/IEnvironment \
-    ridljar/com/sun/star/uno/IMapping \
-    ridljar/com/sun/star/uno/IQueryInterface \
-    ridljar/com/sun/star/uno/Type \
-    ridljar/com/sun/star/uno/UnoRuntime \
+$(eval $(call gb_Jar_add_manifest_classpath,ridl, \
+    libreoffice.jar \
 ))
 
 # vim:set noet sw=4 ts=4:

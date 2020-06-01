@@ -27,7 +27,7 @@
 #include <vcl/vclptr.hxx>
 #include <vcl/outdev.hxx>
 #include <vcl/window.hxx>
-#include <o3tl/optional.hxx>
+#include <optional>
 
 class CommandEvent;
 
@@ -109,7 +109,7 @@ private:
     sal_uInt16          mnCode;
 
     // Set, if the document relative logic position are available
-    o3tl::optional<Point> maLogicPosition;
+    std::optional<Point> maLogicPosition;
 
 public:
     explicit        MouseEvent();
@@ -127,7 +127,7 @@ public:
         maLogicPosition = aLogicPosition;
     }
 
-    o3tl::optional<Point> getLogicPosition() const
+    std::optional<Point> getLogicPosition() const
     {
         return maLogicPosition;
     }
@@ -194,7 +194,7 @@ namespace o3tl
 class VCL_DLLPUBLIC HelpEvent
 {
 private:
-    Point const     maPos;
+    Point           maPos;
     HelpEventMode   mnMode;
     bool            mbKeyboardActivated;
 
@@ -224,36 +224,32 @@ private:
     /// RenderContext to which we should draw - can be a VirtualDevice or anything.
     VclPtr<vcl::RenderContext> mpRenderContext;
 
-    tools::Rectangle const    maOutRect;
-    sal_uInt16 const          mnItemId;
-    sal_uInt16 const          mnStyle;
+    tools::Rectangle    maOutRect;
+    sal_uInt16          mnItemId;
+    bool                mbSelected;
 
 public:
     UserDrawEvent(vcl::Window* pWindow, vcl::RenderContext* pRenderContext,
-            const tools::Rectangle& rOutRect, sal_uInt16 nId, sal_uInt16 nStyle = 0);
+                  const tools::Rectangle& rOutRect, sal_uInt16 nId, bool bSelected = false)
+        : mpWindow(pWindow)
+        , mpRenderContext(pRenderContext)
+        , maOutRect( rOutRect )
+        , mnItemId(nId)
+        , mbSelected(bSelected)
+    {
+    }
 
     vcl::Window*        GetWindow() const { return mpWindow; }
     vcl::RenderContext* GetRenderContext() const { return mpRenderContext; }
     const tools::Rectangle&    GetRect() const { return maOutRect; }
     sal_uInt16          GetItemId() const { return mnItemId; }
-    sal_uInt16          GetStyle() const { return mnStyle; }
+    bool                IsSelected() const { return mbSelected; }
 };
-
-inline UserDrawEvent::UserDrawEvent(vcl::Window* pWindow, vcl::RenderContext* pRenderContext,
-        const tools::Rectangle& rOutRect, sal_uInt16 nId, sal_uInt16 nStyle)
-    : mpWindow(pWindow)
-    , mpRenderContext(pRenderContext)
-    , maOutRect( rOutRect )
-    , mnItemId(nId)
-    , mnStyle(nStyle)
-{
-}
-
 
 class VCL_DLLPUBLIC TrackingEvent
 {
 private:
-    MouseEvent const    maMEvt;
+    MouseEvent          maMEvt;
     TrackingEventFlags  mnFlags;
 
 public:

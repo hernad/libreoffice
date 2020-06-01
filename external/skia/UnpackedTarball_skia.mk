@@ -11,6 +11,8 @@ $(eval $(call gb_UnpackedTarball_UnpackedTarball,skia))
 
 $(eval $(call gb_UnpackedTarball_set_tarball,skia,$(SKIA_TARBALL)))
 
+# * c++20.patch.0 has been reported upstream at
+#   <https://groups.google.com/forum/#!topic/skia-discuss/pYZQq_sLnv8> "C++20 operator== issue":
 skia_patches := \
     lerp.patch \
     fix-pch.patch.1 \
@@ -20,13 +22,23 @@ skia_patches := \
     fix-alpha-difference-copy.patch.1 \
     libvulkan-name.patch.1 \
     share-grcontext.patch.1 \
-    c++20-comparison.patch.0 \
-    Wdeprecated-copy.patch.0 \
     Wdeprecated-copy-dtor.patch.0 \
     fix-msvc.patch.1 \
     fix-gcc-x86.patch.1	\
-    msvc-vectorcall-sse.patch.1 \
+    fix-sse.patch.1 \
     clang11-flax-vector-conversion.patch.0 \
+    clang-attributes-warning.patch.1 \
+    fontconfig-get-typeface.patch.0 \
+    windows-do-not-modify-logfont.patch.0 \
+    windows-text-gamma.patch.0 \
+    windows-force-unicode-api.patch.0 \
+    operator-eq-bool.patch.0 \
+    fix-without-gl.patch.0 \
+    extend-rgb-to-rgba.patch.0 \
+    windows-typeface-directwrite.patch.0 \
+    windows-raster-surface-no-copies.patch.1 \
+    fix-windows-dwrite.patch.1 \
+    c++20.patch.0 \
 
 $(eval $(call gb_UnpackedTarball_set_patchlevel,skia,1))
 

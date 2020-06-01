@@ -88,7 +88,7 @@
 // Need own entries for PageMasterStyleMap since these get *filtered*
 // at export time using CTF_PM_FLAGMASK and XML_PM_CTF_START as detector
 // to find the first entry for header/footer (!), see
-// SvXMLAutoStylePoolP_Impl::exportXML, look for XML_STYLE_FAMILY_PAGE_MASTER
+// SvXMLAutoStylePoolP_Impl::exportXML, look for XmlStyleFamily::PAGE_MASTER
 #define CTF_PM_REPEAT_OFFSET_X          (XML_PM_CTF_START + 0x0037)
 #define CTF_PM_REPEAT_OFFSET_Y          (XML_PM_CTF_START + 0x0038)
 #define CTF_PM_FILLGRADIENTNAME         (XML_PM_CTF_START + 0x0039)
@@ -96,6 +96,8 @@
 #define CTF_PM_FILLBITMAPNAME           (XML_PM_CTF_START + 0x0041)
 #define CTF_PM_FILLTRANSNAME            (XML_PM_CTF_START + 0x0042)
 #define CTF_PM_FILLBITMAPMODE           (XML_PM_CTF_START + 0x0043)
+#define CTF_PM_FILL                     (XML_PM_CTF_START + 0x0044)
+#define CTF_PM_BACKGROUNDSIZE           (XML_PM_CTF_START + 0x0045)
 
 #define CTF_PM_SCALETO                  (XML_PM_CTF_START + 0x0051) // calc specific
 #define CTF_PM_SCALETOPAGES             (XML_PM_CTF_START + 0x0052)
@@ -187,6 +189,7 @@
 #define CTF_PM_FTN_LINE_STYLE           (XML_PM_CTF_START + 0x0067)
 
 extern const XMLPropertyMapEntry aXMLPageMasterStyleMap[];
+extern const XMLPropertyMapEntry g_XMLPageMasterDrawingPageStyleMap[];
 extern const XMLPropertyMapEntry aXMLPageMasterHeaderImportStyleMap[];
 extern const XMLPropertyMapEntry aXMLPageMasterFooterImportStyleMap[];
 

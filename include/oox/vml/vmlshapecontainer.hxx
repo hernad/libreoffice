@@ -31,9 +31,9 @@
 #include <oox/helper/refvector.hxx>
 #include <rtl/ustring.hxx>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace drawing { class XShapes; }
-} } }
+}
 
 namespace oox {
 namespace vml {
@@ -126,6 +126,7 @@ template< typename ShapeT >
 std::shared_ptr<ShapeT> ShapeContainer::createShape()
 {
     auto xShape = std::make_shared<ShapeT>( mrDrawing );
+    xShape->setContainer(this);
     maShapes.push_back( xShape );
     return xShape;
 }

@@ -19,8 +19,6 @@
 #include "FormattedField.hxx"
 #include <services.hxx>
 #include <property.hxx>
-#include <frm_resource.hxx>
-#include <strings.hrc>
 #include <propertybaghelper.hxx>
 #include <comphelper/property.hxx>
 #include <comphelper/sequence.hxx>
@@ -31,13 +29,11 @@
 #include <o3tl/any.hxx>
 #include <svl/zforlist.hxx>
 #include <svl/numuno.hxx>
-#include <vcl/keycod.hxx>
+#include <vcl/keycodes.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
 #include <tools/debug.hxx>
-#include <tools/wintypes.hxx>
 #include <i18nlangtag/languagetag.hxx>
-#include <rtl/textenc.h>
 #include <com/sun/star/sdbc/DataType.hpp>
 #include <com/sun/star/util/NumberFormat.hpp>
 #include <com/sun/star/util/Date.hpp>
@@ -45,9 +41,7 @@
 #include <com/sun/star/awt/MouseEvent.hpp>
 #include <com/sun/star/form/XSubmit.hpp>
 #include <com/sun/star/awt/XWindow.hpp>
-#include <com/sun/star/awt/XKeyListener.hpp>
 #include <com/sun/star/form/FormComponentType.hpp>
-#include <com/sun/star/util/XNumberFormatsSupplier.hpp>
 #include <com/sun/star/util/XNumberFormatTypes.hpp>
 #include <com/sun/star/form/XForm.hpp>
 #include <com/sun/star/container/XIndexAccess.hpp>
@@ -417,43 +411,43 @@ void OFormattedModel::_propertyChanged( const css::beans::PropertyChangeEvent& e
 {
     // TODO: check how this works with external bindings
     OSL_ENSURE( evt.Source == m_xAggregateSet, "OFormattedModel::_propertyChanged: where did this come from?" );
-    if ( evt.Source == m_xAggregateSet )
+    if ( evt.Source != m_xAggregateSet )
+        return;
+
+    if ( evt.PropertyName == PROPERTY_FORMATKEY )
     {
-        if ( evt.PropertyName == PROPERTY_FORMATKEY )
+        if ( evt.NewValue.getValueType().getTypeClass() == TypeClass_LONG )
         {
-            if ( evt.NewValue.getValueType().getTypeClass() == TypeClass_LONG )
+            try
             {
-                try
+                ::osl::MutexGuard aGuard( m_aMutex );
+                Reference<XNumberFormatsSupplier> xSupplier( calcFormatsSupplier() );
+                m_nKeyType  = getNumberFormatType(xSupplier->getNumberFormats(), getINT32( evt.NewValue ) );
+                // as m_aSaveValue (which is used by commitControlValueToDbColumn) is format dependent we have
+                // to recalc it, which is done by translateDbColumnToControlValue
+                if ( m_xColumn.is() && m_xAggregateFastSet.is()  && !m_xCursor->isBeforeFirst() && !m_xCursor->isAfterLast())
                 {
-                    ::osl::MutexGuard aGuard( m_aMutex );
-                    Reference<XNumberFormatsSupplier> xSupplier( calcFormatsSupplier() );
-                    m_nKeyType  = getNumberFormatType(xSupplier->getNumberFormats(), getINT32( evt.NewValue ) );
-                    // as m_aSaveValue (which is used by commitControlValueToDbColumn) is format dependent we have
-                    // to recalc it, which is done by translateDbColumnToControlValue
-                    if ( m_xColumn.is() && m_xAggregateFastSet.is()  && !m_xCursor->isBeforeFirst() && !m_xCursor->isAfterLast())
-                    {
-                        setControlValue( translateDbColumnToControlValue(), eOther );
-                    }
-                    // if we're connected to an external value binding, then re-calculate the type
-                    // used to exchange the value - it depends on the format, too
-                    if ( hasExternalValueBinding() )
-                    {
-                        calculateExternalValueType();
-                    }
+                    setControlValue( translateDbColumnToControlValue(), eOther );
                 }
-                catch(const Exception&)
+                // if we're connected to an external value binding, then re-calculate the type
+                // used to exchange the value - it depends on the format, too
+                if ( hasExternalValueBinding() )
                 {
+                    calculateExternalValueType();
                 }
             }
-            return;
+            catch(const Exception&)
+            {
+            }
         }
-        if ( evt.PropertyName == PROPERTY_FORMATSSUPPLIER )
-        {
-            updateFormatterNullDate();
-            return;
-        }
-        OBoundControlModel::_propertyChanged( evt );
+        return;
     }
+    if ( evt.PropertyName == PROPERTY_FORMATSSUPPLIER )
+    {
+        updateFormatterNullDate();
+        return;
+    }
+    OBoundControlModel::_propertyChanged( evt );
 }
 
 void OFormattedModel::updateFormatterNullDate()

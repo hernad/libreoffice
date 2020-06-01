@@ -142,7 +142,7 @@ class SectRepr
 private:
     SwSectionData           m_SectionData;
     SwFormatCol                m_Col;
-    std::shared_ptr<SvxBrushItem>            m_Brush;
+    std::unique_ptr<SvxBrushItem>            m_Brush;
     SwFormatFootnoteAtTextEnd        m_FootnoteNtAtEnd;
     SwFormatEndAtTextEnd        m_EndNtAtEnd;
     SwFormatNoBalancedColumns  m_Balance;
@@ -160,7 +160,7 @@ public:
 
     SwSectionData &     GetSectionData()        { return m_SectionData; }
     SwFormatCol&               GetCol()            { return m_Col; }
-    std::shared_ptr<SvxBrushItem>&           GetBackground()     { return m_Brush; }
+    std::unique_ptr<SvxBrushItem>&   GetBackground()     { return m_Brush; }
     SwFormatFootnoteAtTextEnd&       GetFootnoteNtAtEnd()     { return m_FootnoteNtAtEnd; }
     SwFormatEndAtTextEnd&       GetEndNtAtEnd()     { return m_EndNtAtEnd; }
     SwFormatNoBalancedColumns& GetBalance()        { return m_Balance; }
@@ -187,7 +187,7 @@ public:
 
 SectRepr::SectRepr( size_t nPos, SwSection& rSect )
     : m_SectionData( rSect )
-    , m_Brush(std::make_shared<SvxBrushItem>(RES_BACKGROUND))
+    , m_Brush(std::make_unique<SvxBrushItem>(RES_BACKGROUND))
     , m_FrameDirItem(std::make_shared<SvxFrameDirectionItem>(SvxFrameDirection::Environment, RES_FRAMEDIR))
     , m_LRSpaceItem(std::make_shared<SvxLRSpaceItem>(RES_LR_SPACE))
     , m_nArrPos(nPos)
@@ -715,31 +715,6 @@ IMPL_LINK(SwEditRegionDlg, GetFirstEntryHdl, weld::TreeView&, rBox, void)
     bDontCheckPasswd = false;
 }
 
-#if 0
-IMPL_LINK( SwEditRegionDlg, DeselectHdl, SvTreeListBox *, pBox, void )
-{
-    if( pBox->GetSelectionCount() )
-        return;
-
-    m_xHideCB->set_sensitive(false);
-    m_xProtectCB->set_sensitive(false);
-    // edit in readonly sections
-    m_xEditInReadonlyCB->set_sensitive(false);
-
-    m_xPasswdCB->set_sensitive(false);
-    m_xConditionFT->set_sensitive(false);
-    m_xConditionED->set_sensitive(false);
-    m_xFileCB->set_sensitive(false);
-    m_xDDEFrame->set_sensitive(false);
-    m_xDDECB->set_sensitive(false);
-    m_xCurName->set_sensitive(false);
-
-    UseFileHdl(*m_xFileCB);
-    DDEHdl(m_xDDECB);
-
-}
-#endif
-
 // in OkHdl the modified settings are being applied and reversed regions are deleted
 IMPL_LINK_NOARG(SwEditRegionDlg, OkHdl, weld::Button&, void)
 {
@@ -775,8 +750,8 @@ IMPL_LINK_NOARG(SwEditRegionDlg, OkHdl, weld::Button&, void)
                 if( pFormat->GetCol() != pRepr->GetCol() )
                     pSet->Put( pRepr->GetCol() );
 
-                std::shared_ptr<SvxBrushItem> aBrush(pFormat->makeBackgroundBrushItem(false));
-                if( aBrush != pRepr->GetBackground() || (aBrush && pRepr->GetBackground() && *aBrush != *pRepr->GetBackground()))
+                std::unique_ptr<SvxBrushItem> aBrush(pFormat->makeBackgroundBrushItem(false));
+                if( aBrush && pRepr->GetBackground() && *aBrush != *pRepr->GetBackground() )
                     pSet->Put( *pRepr->GetBackground() );
 
                 if( pFormat->GetFootnoteAtTextEnd(false) != pRepr->GetFootnoteNtAtEnd() )
@@ -894,7 +869,7 @@ IMPL_LINK_NOARG(SwEditRegionDlg, ChangeDismissHdl, weld::Button&, void)
             if (m_xTree->iter_has_child(*xEntry))
             {
                 std::unique_ptr<weld::TreeIter> xChild(m_xTree->make_iterator(xEntry.get()));
-                m_xTree->iter_children(*xChild);
+                (void)m_xTree->iter_children(*xChild);
                 std::unique_ptr<weld::TreeIter> xParent(m_xTree->make_iterator(xEntry.get()));
                 if (!m_xTree->iter_parent(*xParent))
                     xParent.reset();

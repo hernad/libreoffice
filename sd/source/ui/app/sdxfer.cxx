@@ -17,6 +17,9 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <sal/config.h>
+
+#include <com/sun/star/embed/XEmbeddedObject.hpp>
 #include <com/sun/star/embed/XTransactedObject.hpp>
 #include <com/sun/star/embed/XEmbedPersist.hpp>
 #include <com/sun/star/embed/ElementModes.hpp>
@@ -243,7 +246,7 @@ void SdTransferable::CreateData()
 
         SdPage* pPage = mpSdDrawDocument->GetSdPage(0, PageKind::Standard);
 
-        if( 1 == pPage->GetObjCount() )
+        if( pPage && 1 == pPage->GetObjCount() )
             CreateObjectReplacement( pPage->GetObj( 0 ) );
 
         mpVDev = VclPtr<VirtualDevice>::Create( *Application::GetDefaultDevice() );

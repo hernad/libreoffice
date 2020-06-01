@@ -59,6 +59,7 @@ SwGrfNode::SwGrfNode(
         SwAttrSet const * pAutoAttr ) :
     SwNoTextNode( rWhere, SwNodeType::Grf, pGrfColl, pAutoAttr ),
     maGrfObj(),
+    mbInBaseLinkSwapIn(true),
     // #i73788#
     mbLinkedInputStreamReady( false ),
     mbIsStreamReadOnly( false )
@@ -75,6 +76,7 @@ SwGrfNode::SwGrfNode( const SwNodeIndex & rWhere,
                       SwAttrSet const * pAutoAttr ) :
     SwNoTextNode( rWhere, SwNodeType::Grf, pGrfColl, pAutoAttr ),
     maGrfObj(rGrfObj),
+    mbInBaseLinkSwapIn(true),
     // #i73788#
     mbLinkedInputStreamReady( false ),
     mbIsStreamReadOnly( false )
@@ -96,6 +98,7 @@ SwGrfNode::SwGrfNode( const SwNodeIndex & rWhere,
                       SwAttrSet const * pAutoAttr ) :
     SwNoTextNode( rWhere, SwNodeType::Grf, pGrfColl, pAutoAttr ),
     maGrfObj(),
+    mbInBaseLinkSwapIn(true),
     // #i73788#
     mbLinkedInputStreamReady( false ),
     mbIsStreamReadOnly( false )
@@ -159,13 +162,13 @@ bool SwGrfNode::ReRead(
             OUString sCmd( sURLLink );
             if( !rFltName.isEmpty() )
             {
-                sal_uInt16 nNewType;
+                sfx2::SvBaseLinkObjectType nNewType;
                 if( rFltName == "DDE" )
-                    nNewType = OBJECT_CLIENT_DDE;
+                    nNewType = sfx2::SvBaseLinkObjectType::ClientDde;
                 else
                 {
                     sfx2::MakeLnkName( sCmd, nullptr, sURLLink, OUString(), &rFltName );
-                    nNewType = OBJECT_CLIENT_GRF;
+                    nNewType = sfx2::SvBaseLinkObjectType::ClientGraphic;
                 }
 
                 if( nNewType != mxLink->GetObjType() )
@@ -310,9 +313,9 @@ void SwGrfNode::onGraphicChanged()
         OUString aName;
         OUString aTitle;
         OUString aDesc;
-        const VectorGraphicDataPtr& rVectorGraphicDataPtr = GetGrf().getVectorGraphicData();
+        auto const & rVectorGraphicDataPtr = GetGrf().getVectorGraphicData();
 
-        if(rVectorGraphicDataPtr.get())
+        if (rVectorGraphicDataPtr)
         {
             const drawinglayer::primitive2d::Primitive2DContainer aSequence(rVectorGraphicDataPtr->getPrimitive2DSequence());
 
@@ -372,14 +375,13 @@ const GraphicObject* SwGrfNode::GetReplacementGrfObj() const
 {
     if(!mpReplacementGraphic)
     {
-        const VectorGraphicDataPtr& rVectorGraphicDataPtr = GetGrfObj().GetGraphic().getVectorGraphicData();
+        auto const & rVectorGraphicDataPtr = GetGrfObj().GetGraphic().getVectorGraphicData();
 
-        if(rVectorGraphicDataPtr.get())
+        if (rVectorGraphicDataPtr)
         {
             const_cast< SwGrfNode* >(this)->mpReplacementGraphic.reset( new GraphicObject(rVectorGraphicDataPtr->getReplacement()) );
         }
-        else if (GetGrfObj().GetGraphic().hasPdfData() ||
-                 GetGrfObj().GetGraphic().GetType() == GraphicType::GdiMetafile)
+        else if (GetGrfObj().GetGraphic().GetType() == GraphicType::GdiMetafile)
         {
             // Replacement graphic for PDF and metafiles is just the bitmap.
             const_cast<SwGrfNode*>(this)->mpReplacementGraphic.reset( new GraphicObject(GetGrfObj().GetGraphic().GetBitmapEx()) );
@@ -440,13 +442,15 @@ bool SwGrfNode::SwapIn(bool bWaitForData)
 
     if( pLink )
     {
-        if( GraphicType::NONE == maGrfObj.GetType() ||
-            GraphicType::Default == maGrfObj.GetType() )
+        if( (GraphicType::NONE == maGrfObj.GetType() ||
+             GraphicType::Default == maGrfObj.GetType()) &&
+            mbInBaseLinkSwapIn)
         {
             // link was not loaded yet
             if( pLink->SwapIn( bWaitForData ) )
             {
                 bRet = true;
+                mbInBaseLinkSwapIn = false;
             }
             else if( GraphicType::Default == maGrfObj.GetType() )
             {
@@ -481,11 +485,11 @@ bool SwGrfNode::GetFileFilterNms( OUString* pFileNm, OUString* pFilterNm ) const
     bool bRet = false;
     if( mxLink.is() && mxLink->GetLinkManager() )
     {
-        sal_uInt16 nType = mxLink->GetObjType();
-        if( OBJECT_CLIENT_GRF == nType )
+        sfx2::SvBaseLinkObjectType nType = mxLink->GetObjType();
+        if( sfx2::SvBaseLinkObjectType::ClientGraphic == nType )
             bRet = sfx2::LinkManager::GetDisplayNames(
                     mxLink.get(), nullptr, pFileNm, nullptr, pFilterNm );
-        else if( OBJECT_CLIENT_DDE == nType && pFileNm && pFilterNm )
+        else if( sfx2::SvBaseLinkObjectType::ClientDde == nType && pFileNm && pFilterNm )
         {
             OUString sApp;
             OUString sTopic;
@@ -572,7 +576,7 @@ void SwGrfNode::InsertLink( const OUString& rGrfName, const OUString& rFltName )
             mxLink->SetContentType( SotClipboardFormatId::SVXB );
 
             rIDLA.GetLinkManager().InsertFileLink( *mxLink,
-                                            OBJECT_CLIENT_GRF, rGrfName,
+                                            sfx2::SvBaseLinkObjectType::ClientGraphic, rGrfName,
                                 (!bSync && !rFltName.isEmpty() ? &rFltName : nullptr) );
         }
     }

@@ -31,8 +31,8 @@
 
 #include <mdds/flat_segment_tree.hpp>
 
-namespace com { namespace sun { namespace star { namespace uno { class Any; } } } }
-namespace com { namespace sun { namespace star { namespace uno { template <typename > class Sequence; } } } }
+namespace com::sun::star::uno { class Any; }
+namespace com::sun::star::uno { template <typename > class Sequence; }
 
 class ScDPCache;
 struct ScDPValue;
@@ -69,7 +69,7 @@ public:
         virtual std::vector<ScDPItemData> getMatchValues() const override;
 
     private:
-        ScDPItemData const maItem;
+        ScDPItemData maItem;
     };
 
     /** multi-item (group) filter. */

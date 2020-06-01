@@ -20,21 +20,17 @@
 #ifndef INCLUDED_OOX_DRAWINGML_CHART_CONVERTERBASE_HXX
 #define INCLUDED_OOX_DRAWINGML_CHART_CONVERTERBASE_HXX
 
-#include <drawingml/chart/chartcontextbase.hxx>
 #include <drawingml/chart/objectformatter.hxx>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace awt { struct Rectangle; }
     namespace awt { struct Size; }
     namespace chart2 { class XChartDocument; }
     namespace chart2 { class XTitle; }
     namespace drawing { class XShape; }
     namespace uno { class XComponentContext; }
-} } }
-
-namespace oox { namespace core {
-    class XmlFilterBase;
-} }
+}
+namespace oox::core { class XmlFilterBase; }
 
 namespace oox {
 namespace drawingml {

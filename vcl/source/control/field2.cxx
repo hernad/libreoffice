@@ -944,7 +944,7 @@ static ExtDateFieldFormat ImplGetExtFormat( DateOrder eOld )
 static sal_uInt16 ImplCutNumberFromString( OUString& rStr )
 {
     sal_Int32 i1 = 0;
-    while (i1 != rStr.getLength() && !(rStr[i1] >= '0' && rStr[i1] <= '9')) {
+    while (i1 != rStr.getLength() && (rStr[i1] < '0' || rStr[i1] > '9')) {
         ++i1;
     }
     sal_Int32 i2 = i1;
@@ -2598,6 +2598,32 @@ void TimeField::SetExtFormat( ExtTimeFieldFormat eFormat )
         {
             SetTimeFormat( TimeFormat::Hour24 );
             SetDuration( false );
+            SetFormat( TimeFieldFormat::F_SEC );
+        }
+        break;
+        case ExtTimeFieldFormat::Short12H:
+        {
+            SetTimeFormat( TimeFormat::Hour12 );
+            SetDuration( false );
+            SetFormat( TimeFieldFormat::F_NONE );
+        }
+        break;
+        case ExtTimeFieldFormat::Long12H:
+        {
+            SetTimeFormat( TimeFormat::Hour12 );
+            SetDuration( false );
+            SetFormat( TimeFieldFormat::F_SEC );
+        }
+        break;
+        case ExtTimeFieldFormat::ShortDuration:
+        {
+            SetDuration( true );
+            SetFormat( TimeFieldFormat::F_NONE );
+        }
+        break;
+        case ExtTimeFieldFormat::LongDuration:
+        {
+            SetDuration( true );
             SetFormat( TimeFieldFormat::F_SEC );
         }
         break;

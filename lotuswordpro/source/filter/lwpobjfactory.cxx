@@ -95,6 +95,7 @@
 #include "lwpnotes.hxx"
 #include "lwpverdocument.hxx"
 #include <sal/log.hxx>
+#include <osl/diagnose.h>
 
 //LwpObjectFactory* LwpObjectFactory::m_pMgr = NULL;
 
@@ -104,26 +105,21 @@ LwpObjectFactory::LwpObjectFactory(LwpSvStream* pSvStream)
     m_IdToObjList.clear();
 }
 
-LwpObjectFactory::~LwpObjectFactory()
-{
-}
+LwpObjectFactory::~LwpObjectFactory() {}
 
 /**
  * @descr       read the index manager
 */
-void LwpObjectFactory::ReadIndex(LwpSvStream* pStrm)
-{
-    m_IndexMgr.Read(pStrm);
-}
+void LwpObjectFactory::ReadIndex(LwpSvStream* pStrm) { m_IndexMgr.Read(pStrm); }
 
 /**
  * @descr       create all kinds of objects except lwp7
 */
-rtl::Reference<LwpObject> LwpObjectFactory::CreateObject(sal_uInt32 type, LwpObjectHeader &objHdr)
+rtl::Reference<LwpObject> LwpObjectFactory::CreateObject(sal_uInt32 type, LwpObjectHeader& objHdr)
 {
     rtl::Reference<LwpObject> newObj;
-    SAL_WARN_IF(type>=300, "lwp", "invalid type: " << type);
-    switch(type)
+    SAL_WARN_IF(type >= 300, "lwp", "invalid type: " << type);
+    switch (type)
     {
         case VO_DOCUMENT:
         {
@@ -309,7 +305,7 @@ rtl::Reference<LwpObject> LwpObjectFactory::CreateObject(sal_uInt32 type, LwpObj
             newObj = new LwpTabPiece(objHdr, m_pSvStream);
             break;
         }
-        case VO_PARABACKGROUNDPIECE:    //perhaps wrong.
+        case VO_PARABACKGROUNDPIECE: //perhaps wrong.
         {
             newObj = new LwpBackgroundPiece(objHdr, m_pSvStream);
             break;
@@ -673,14 +669,14 @@ rtl::Reference<LwpObject> LwpObjectFactory::CreateObject(sal_uInt32 type, LwpObj
  * @descr       query object by object id
  *          object is created if not in the factory
 */
-rtl::Reference<LwpObject> LwpObjectFactory::QueryObject(const LwpObjectID &objID)
+rtl::Reference<LwpObject> LwpObjectFactory::QueryObject(const LwpObjectID& objID)
 {
-    rtl::Reference<LwpObject> obj = FindObject( objID );
-    if(!obj.is())
+    rtl::Reference<LwpObject> obj = FindObject(objID);
+    if (!obj.is())
     {
         //Read the object from file
         sal_uInt32 nStreamOffset = m_IndexMgr.GetObjOffset(objID);
-        if(nStreamOffset == BAD_OFFSET) //does not find the offset in index manager
+        if (nStreamOffset == BAD_OFFSET) //does not find the offset in index manager
             return nullptr;
 
         sal_Int64 nDesiredPos = nStreamOffset + LwpSvStream::LWP_STREAM_BASE;
@@ -697,7 +693,8 @@ rtl::Reference<LwpObject> LwpObjectFactory::QueryObject(const LwpObjectID &objID
             return nullptr;
         }
 
-        if (std::find(m_aObjsIDInCreation.begin(), m_aObjsIDInCreation.end(), objID) != m_aObjsIDInCreation.end())
+        if (std::find(m_aObjsIDInCreation.begin(), m_aObjsIDInCreation.end(), objID)
+            != m_aObjsIDInCreation.end())
             throw std::runtime_error("recursion in object creation");
 
         m_aObjsIDInCreation.push_back(objID);
@@ -710,10 +707,11 @@ rtl::Reference<LwpObject> LwpObjectFactory::QueryObject(const LwpObjectID &objID
 /**
  * @descr       find object in the factory per the object id
 */
-rtl::Reference<LwpObject> LwpObjectFactory::FindObject(const LwpObjectID &objID)
+rtl::Reference<LwpObject> LwpObjectFactory::FindObject(const LwpObjectID& objID)
 {
-    LwpIdToObjMap::const_iterator it =  m_IdToObjList.find(objID);
-    if (it != m_IdToObjList.end()) {
+    LwpIdToObjMap::const_iterator it = m_IdToObjList.find(objID);
+    if (it != m_IdToObjList.end())
+    {
         return (*it).second;
     }
     else
@@ -724,9 +722,6 @@ rtl::Reference<LwpObject> LwpObjectFactory::FindObject(const LwpObjectID &objID)
 /**
  * @descr       release object in the factory per the object id
 */
-void LwpObjectFactory::ReleaseObject(const LwpObjectID &objID)
-{
-    m_IdToObjList.erase(objID);
-}
+void LwpObjectFactory::ReleaseObject(const LwpObjectID& objID) { m_IdToObjList.erase(objID); }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

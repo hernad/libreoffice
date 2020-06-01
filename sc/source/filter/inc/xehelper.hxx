@@ -175,7 +175,7 @@ class XclExpHyperlink;
 class XclExpHyperlinkHelper : protected XclExpRoot
 {
 public:
-    typedef std::shared_ptr< XclExpHyperlink > XclExpHyperlinkRef;
+    typedef rtl::Reference< XclExpHyperlink > XclExpHyperlinkRef;
 
     explicit            XclExpHyperlinkHelper( const XclExpRoot& rRoot, const ScAddress& rScPos );
                         virtual ~XclExpHyperlinkHelper() override;
@@ -196,7 +196,7 @@ public:
 
 private:
     XclExpHyperlinkRef  mxLinkRec;          /// Created HLINK record.
-    ScAddress const     maScPos;            /// Cell position to set at the HLINK record.
+    ScAddress           maScPos;            /// Cell position to set at the HLINK record.
     OUString            maUrlList;          /// List with all processed URLs.
     bool                mbMultipleUrls;     /// true = Multiple URL fields processed.
 };

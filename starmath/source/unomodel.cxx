@@ -946,7 +946,7 @@ uno::Sequence< beans::PropertyValue > SAL_CALL SmModel::getRenderer(
 
     // if paper size is 0 (usually if no 'real' printer is found),
     // guess the paper size
-    if (aPrtPaperSize.Height() == 0 || aPrtPaperSize.Width() == 0)
+    if (aPrtPaperSize.IsEmpty())
         aPrtPaperSize = lcl_GuessPaperSize();
     awt::Size   aPageSize( aPrtPaperSize.Width(), aPrtPaperSize.Height() );
 
@@ -1019,7 +1019,7 @@ void SAL_CALL SmModel::render(
     Point   aPrtPageOffset( pPrinter->GetPageOffset() );
 
     // no real printer ??
-    if (aPrtPaperSize.Height() == 0 || aPrtPaperSize.Width() == 0)
+    if (aPrtPaperSize.IsEmpty())
     {
         aPrtPaperSize = lcl_GuessPaperSize();
         // factors from Windows DIN A4
@@ -1077,9 +1077,9 @@ void SAL_CALL SmModel::setParent( const uno::Reference< uno::XInterface >& xPare
 void SmModel::writeFormulaOoxml(
         ::sax_fastparser::FSHelperPtr const pSerializer,
         oox::core::OoxmlVersion const version,
-        oox::drawingml::DocumentType const documentType)
+        oox::drawingml::DocumentType const documentType, sal_Int8 nAlign)
 {
-    static_cast<SmDocShell*>(GetObjectShell())->writeFormulaOoxml(pSerializer, version, documentType);
+    static_cast<SmDocShell*>(GetObjectShell())->writeFormulaOoxml(pSerializer, version, documentType, nAlign);
 }
 
 void SmModel::writeFormulaRtf(OStringBuffer& rBuffer, rtl_TextEncoding nEncoding)

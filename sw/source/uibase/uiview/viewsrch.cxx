@@ -234,16 +234,6 @@ void SwView::ExecSearch(SfxRequest& rReq)
                         lcl_emitSearchResultCallbacks(s_pSrchItem, m_pWrtShell.get(), /* bHighlightAll = */ false);
                 }
                 rReq.SetReturnValue(SfxBoolItem(nSlot, bRet));
-#if HAVE_FEATURE_DESKTOP
-                {
-                    pSrchDlg = GetSearchDialog();
-                    if (pSrchDlg)
-                    {
-                        pSrchDlg->SetDocWin(m_pEditWin, eCommand);
-                        pSrchDlg->SetSrchFlag(false);
-                    }
-                }
-#endif
             }
             break;
             case SvxSearchCmd::FIND_ALL:
@@ -267,16 +257,6 @@ void SwView::ExecSearch(SfxRequest& rReq)
                 else if (comphelper::LibreOfficeKit::isActive())
                     lcl_emitSearchResultCallbacks(s_pSrchItem, m_pWrtShell.get(), /* bHighlightAll = */ true);
                 rReq.SetReturnValue(SfxBoolItem(nSlot, bRet));
-#if HAVE_FEATURE_DESKTOP
-                {
-                    pSrchDlg = GetSearchDialog();
-                    if (pSrchDlg)
-                    {
-                        pSrchDlg->SetDocWin(m_pEditWin, eCommand);
-                        pSrchDlg->SetSrchFlag(false);
-                    }
-                }
-#endif
             }
             break;
             case SvxSearchCmd::REPLACE:
@@ -297,7 +277,7 @@ void SwView::ExecSearch(SfxRequest& rReq)
                             m_pWrtShell->Push();
                         OUString aReplace( s_pSrchItem->GetReplaceString() );
                         i18nutil::SearchOptions2 aTmp( s_pSrchItem->GetSearchOptions() );
-                        o3tl::optional<OUString> xBackRef = sw::ReplaceBackReferences(aTmp,
+                        std::optional<OUString> xBackRef = sw::ReplaceBackReferences(aTmp,
                             m_pWrtShell->GetCursor(), m_pWrtShell->GetLayout());
                         if( xBackRef )
                             s_pSrchItem->SetReplaceString( *xBackRef );
@@ -325,16 +305,6 @@ void SwView::ExecSearch(SfxRequest& rReq)
                     s_pSrchItem->SetCommand( nOldCmd );
                     rReq.SetReturnValue(SfxBoolItem(nSlot, bRet));
                 }
-#if HAVE_FEATURE_DESKTOP
-                {
-                    pSrchDlg = GetSearchDialog();
-                    if (pSrchDlg)
-                    {
-                        pSrchDlg->SetDocWin(m_pEditWin, eCommand);
-                        pSrchDlg->SetSrchFlag(false);
-                    }
-                }
-#endif
                 break;
 
             case SvxSearchCmd::REPLACE_ALL:
@@ -394,14 +364,6 @@ void SwView::ExecSearch(SfxRequest& rReq)
                         SvxSearchDialogWrapper::SetSearchLabel(sText);
                     }
                 }
-#if HAVE_FEATURE_DESKTOP
-                pSrchDlg = GetSearchDialog();
-                if (pSrchDlg)
-                {
-                    pSrchDlg->SetDocWin(m_pEditWin, eCommand);
-                    pSrchDlg->SetSrchFlag(false);
-                }
-#endif
                 break;
             }
 

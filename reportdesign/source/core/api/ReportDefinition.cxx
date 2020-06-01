@@ -23,18 +23,13 @@
 
 #include <ReportDefinition.hxx>
 
-#include <FixedLine.hxx>
-#include <FixedText.hxx>
-#include <FormattedField.hxx>
 #include <Functions.hxx>
 #include <Groups.hxx>
-#include <ImageControl.hxx>
 #include <ReportComponent.hxx>
 #include <ReportHelperImpl.hxx>
 #include <RptDef.hxx>
 #include <RptModel.hxx>
 #include <Section.hxx>
-#include <Shape.hxx>
 #include <Tools.hxx>
 #include <UndoEnv.hxx>
 #include <strings.hrc>
@@ -55,19 +50,16 @@
 #include <com/sun/star/embed/Aspects.hpp>
 #include <com/sun/star/embed/ElementModes.hpp>
 #include <com/sun/star/embed/EmbedMapUnits.hpp>
-#include <com/sun/star/embed/EntryInitModes.hpp>
-#include <com/sun/star/embed/XEmbedPersist.hpp>
 #include <com/sun/star/embed/XTransactedObject.hpp>
 #include <com/sun/star/embed/StorageFactory.hpp>
 #include <com/sun/star/frame/Desktop.hpp>
 #include <com/sun/star/io/IOException.hpp>
-#include <com/sun/star/io/XActiveDataSource.hpp>
 #include <com/sun/star/io/XSeekable.hpp>
+#include <com/sun/star/lang/IndexOutOfBoundsException.hpp>
 #include <com/sun/star/lang/XSingleServiceFactory.hpp>
 #include <com/sun/star/report/GroupKeepTogether.hpp>
 #include <com/sun/star/report/ReportPrintOption.hpp>
 #include <com/sun/star/sdb/CommandType.hpp>
-#include <com/sun/star/sdb/XOfficeDatabaseDocument.hpp>
 #include <com/sun/star/style/GraphicLocation.hpp>
 #include <com/sun/star/style/NumberingType.hpp>
 #include <com/sun/star/style/PageStyleLayout.hpp>
@@ -76,9 +68,7 @@
 #include <com/sun/star/table/ShadowFormat.hpp>
 #include <com/sun/star/task/InteractionHandler.hpp>
 #include <com/sun/star/task/XStatusIndicator.hpp>
-#include <com/sun/star/task/XStatusIndicatorFactory.hpp>
 #include <com/sun/star/ui/UIConfigurationManager.hpp>
-#include <com/sun/star/ui/XUIConfigurationStorage.hpp>
 #include <com/sun/star/util/CloseVetoException.hpp>
 #include <com/sun/star/util/NumberFormatsSupplier.hpp>
 #include <com/sun/star/xml/AttributeData.hpp>
@@ -100,13 +90,13 @@
 #include <comphelper/storagehelper.hxx>
 #include <comphelper/uno3.hxx>
 #include <connectivity/CommonTools.hxx>
-#include <connectivity/dbconversion.hxx>
 #include <connectivity/dbtools.hxx>
 #include <cppuhelper/exc_hlp.hxx>
 #include <cppuhelper/implbase.hxx>
 #include <cppuhelper/interfacecontainer.h>
 #include <cppuhelper/supportsservice.hxx>
 #include <cppuhelper/typeprovider.hxx>
+#include <comphelper/types.hxx>
 #include <dbaccess/dbaundomanager.hxx>
 #include <editeng/paperinf.hxx>
 #include <framework/titlehelper.hxx>
@@ -116,13 +106,9 @@
 #include <svx/unofill.hxx>
 #include <svx/xmleohlp.hxx>
 #include <svx/xmlgrhlp.hxx>
-#include <tools/debug.hxx>
 #include <tools/diagnose_ex.h>
-#include <unotools/moduleoptions.hxx>
 #include <unotools/saveopt.hxx>
-#include <unotools/streamwrap.hxx>
 #include <vcl/svapp.hxx>
-#include <vcl/virdev.hxx>
 
 //  page styles
 #define SC_UNO_PAGE_LEFTBORDER      "LeftBorder"
@@ -1173,10 +1159,11 @@ void SAL_CALL OReportDefinition::connectController( const uno::Reference< frame:
     ::osl::MutexGuard aGuard(m_aMutex);
     ::connectivity::checkDisposed(ReportDefinitionBase::rBHelper.bDisposed);
     m_pImpl->m_aControllers.push_back(_xController);
-    sal_Int32 nCount;
-    if ( _xController.is() && m_pImpl->m_xViewData.is() && ( nCount = m_pImpl->m_xViewData->getCount()) != 0)
+    if ( _xController.is() && m_pImpl->m_xViewData.is() )
     {
-        _xController->restoreViewData(m_pImpl->m_xViewData->getByIndex(nCount - 1));
+        sal_Int32 nCount = m_pImpl->m_xViewData->getCount();
+        if (nCount)
+            _xController->restoreViewData(m_pImpl->m_xViewData->getByIndex(nCount - 1));
     }
 }
 
@@ -1997,7 +1984,7 @@ std::shared_ptr<rptui::OReportModel> OReportDefinition::getSdrModel(const uno::R
 
 SdrModel& OReportDefinition::getSdrModelFromUnoModel() const
 {
-    OSL_ENSURE(m_pImpl->m_pReportModel.get(), "No SdrModel in ReportDesign, should not happen");
+    OSL_ENSURE(m_pImpl->m_pReportModel, "No SdrModel in ReportDesign, should not happen");
     return *m_pImpl->m_pReportModel;
 }
 
@@ -2235,7 +2222,7 @@ class OStylesHelper:
     typedef ::std::map< OUString, uno::Any  , ::comphelper::UStringMixLess> TStyleElements;
     TStyleElements                                  m_aElements;
     ::std::vector<TStyleElements::iterator>         m_aElementsPos;
-    uno::Type const                                 m_aType;
+    uno::Type                                       m_aType;
 
 protected:
     virtual ~OStylesHelper() override {}

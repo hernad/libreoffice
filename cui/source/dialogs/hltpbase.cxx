@@ -74,7 +74,7 @@ OUString CreateUiNameFromURL( const OUString& aStrURL )
 
 // ComboBox-Control for URL's with History and Autocompletion
 SvxHyperURLBox::SvxHyperURLBox(std::unique_ptr<weld::ComboBox> xControl)
-    : URLBox(std::move(xControl))
+    : SvtURLBox(std::move(xControl))
     , DropTargetHelper(getWidget()->get_drop_target())
 {
     SetSmartProtocol(INetProtocol::Http);
@@ -181,7 +181,7 @@ void SvxHyperlinkTabPageBase::ShowMarkWnd()
 
     weld::Dialog* pDialog = mpDialog->getDialog();
 
-    mxMarkWnd = std::make_unique<SvxHlinkDlgMarkWnd>(pDialog, this);
+    mxMarkWnd = std::make_shared<SvxHlinkDlgMarkWnd>(pDialog, this);
 
     // Size of dialog-window in screen pixels
     Point aDlgPos(pDialog->get_position());
@@ -331,47 +331,47 @@ IMPL_LINK_NOARG(SvxHyperlinkTabPageBase, ClickScriptHdl_Impl, weld::Button&, voi
     SvxHyperlinkItem *pHyperlinkItem = const_cast<SvxHyperlinkItem*>(static_cast<const SvxHyperlinkItem *>(
                                        GetItemSet().GetItem (SID_HYPERLINK_GETLINK)));
 
-    if ( pHyperlinkItem->GetMacroEvents() != HyperDialogEvent::NONE )
+    if ( pHyperlinkItem->GetMacroEvents() == HyperDialogEvent::NONE )
+        return;
+
+    // get macros from itemset
+    const SvxMacroTableDtor* pMacroTbl = pHyperlinkItem->GetMacroTable();
+    SvxMacroItem aItem ( SID_ATTR_MACROITEM );
+    if( pMacroTbl )
+        aItem.SetMacroTable( *pMacroTbl );
+
+    // create empty itemset for macro-dlg
+    std::unique_ptr<SfxItemSet> pItemSet( new SfxItemSet(SfxGetpApp()->GetPool(),
+                                          svl::Items<SID_ATTR_MACROITEM,
+                                          SID_ATTR_MACROITEM>{} ) );
+    pItemSet->Put ( aItem );
+
+    DisableClose( true );
+
+    SfxMacroAssignDlg aDlg(mpDialog->getDialog(), mxDocumentFrame, *pItemSet);
+
+    // add events
+    SfxMacroTabPage *pMacroPage = aDlg.GetTabPage();
+
+    if ( pHyperlinkItem->GetMacroEvents() & HyperDialogEvent::MouseOverObject )
+        pMacroPage->AddEvent( CuiResId(RID_SVXSTR_HYPDLG_MACROACT1),
+                              SvMacroItemId::OnMouseOver );
+    if ( pHyperlinkItem->GetMacroEvents() & HyperDialogEvent::MouseClickObject )
+        pMacroPage->AddEvent( CuiResId(RID_SVXSTR_HYPDLG_MACROACT2),
+                              SvMacroItemId::OnClick);
+    if ( pHyperlinkItem->GetMacroEvents() & HyperDialogEvent::MouseOutObject )
+        pMacroPage->AddEvent( CuiResId(RID_SVXSTR_HYPDLG_MACROACT3),
+                              SvMacroItemId::OnMouseOut);
+    // execute dlg
+    short nRet = aDlg.run();
+    DisableClose( false );
+    if ( RET_OK == nRet )
     {
-        // get macros from itemset
-        const SvxMacroTableDtor* pMacroTbl = pHyperlinkItem->GetMacroTable();
-        SvxMacroItem aItem ( SID_ATTR_MACROITEM );
-        if( pMacroTbl )
-            aItem.SetMacroTable( *pMacroTbl );
-
-        // create empty itemset for macro-dlg
-        std::unique_ptr<SfxItemSet> pItemSet( new SfxItemSet(SfxGetpApp()->GetPool(),
-                                              svl::Items<SID_ATTR_MACROITEM,
-                                              SID_ATTR_MACROITEM>{} ) );
-        pItemSet->Put ( aItem );
-
-        DisableClose( true );
-
-        SfxMacroAssignDlg aDlg(mpDialog->getDialog(), mxDocumentFrame, *pItemSet);
-
-        // add events
-        SfxMacroTabPage *pMacroPage = aDlg.GetTabPage();
-
-        if ( pHyperlinkItem->GetMacroEvents() & HyperDialogEvent::MouseOverObject )
-            pMacroPage->AddEvent( CuiResId(RID_SVXSTR_HYPDLG_MACROACT1),
-                                  SvMacroItemId::OnMouseOver );
-        if ( pHyperlinkItem->GetMacroEvents() & HyperDialogEvent::MouseClickObject )
-            pMacroPage->AddEvent( CuiResId(RID_SVXSTR_HYPDLG_MACROACT2),
-                                  SvMacroItemId::OnClick);
-        if ( pHyperlinkItem->GetMacroEvents() & HyperDialogEvent::MouseOutObject )
-            pMacroPage->AddEvent( CuiResId(RID_SVXSTR_HYPDLG_MACROACT3),
-                                  SvMacroItemId::OnMouseOut);
-        // execute dlg
-        short nRet = aDlg.run();
-        DisableClose( false );
-        if ( RET_OK == nRet )
+        const SfxItemSet* pOutSet = aDlg.GetOutputItemSet();
+        const SfxPoolItem* pItem;
+        if( SfxItemState::SET == pOutSet->GetItemState( SID_ATTR_MACROITEM, false, &pItem ))
         {
-            const SfxItemSet* pOutSet = aDlg.GetOutputItemSet();
-            const SfxPoolItem* pItem;
-            if( SfxItemState::SET == pOutSet->GetItemState( SID_ATTR_MACROITEM, false, &pItem ))
-            {
-                pHyperlinkItem->SetMacroTable( static_cast<const SvxMacroItem*>(pItem)->GetMacroTable() );
-            }
+            pHyperlinkItem->SetMacroTable( static_cast<const SvxMacroItem*>(pItem)->GetMacroTable() );
         }
     }
 }

@@ -470,6 +470,7 @@ void ImplSmallBorderWindowView::Init( OutputDevice* pDev, long nWidth, long nHei
                     case WindowType::LONGCURRENCYFIELD:
                     case WindowType::NUMERICFIELD:
                     case WindowType::SPINFIELD:
+                    case WindowType::FORMATTEDFIELD:
                     case WindowType::CALCINPUTLINE:
                         mbNWFBorder = true;
                         if (pCtrl->GetStyle() & WB_SPIN)
@@ -611,6 +612,7 @@ void ImplSmallBorderWindowView::DrawWindow(vcl::RenderContext& rRenderContext, c
             case WindowType::LONGCURRENCYFIELD:
             case WindowType::NUMERICFIELD:
             case WindowType::SPINFIELD:
+            case WindowType::FORMATTEDFIELD:
             case WindowType::CALCINPUTLINE:
                 if (pCtrl->GetStyle() & WB_SPIN)
                     aCtrlType = ControlType::Spinbox;
@@ -679,8 +681,11 @@ void ImplSmallBorderWindowView::DrawWindow(vcl::RenderContext& rRenderContext, c
 
         bool bMouseOver = false;
         vcl::Window *pCtrlChild = pCtrl->GetWindow(GetWindowType::FirstChild);
-        while(pCtrlChild && !(bMouseOver = pCtrlChild->IsMouseOver()))
+        while(pCtrlChild)
         {
+            bMouseOver = pCtrlChild->IsMouseOver();
+            if (bMouseOver)
+                break;
             pCtrlChild = pCtrlChild->GetWindow(GetWindowType::Next);
         }
 

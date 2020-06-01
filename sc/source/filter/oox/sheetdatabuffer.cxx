@@ -21,6 +21,9 @@
 
 #include <algorithm>
 #include <com/sun/star/sheet/XArrayFormulaTokens.hpp>
+#include <com/sun/star/sheet/XSpreadsheetDocument.hpp>
+#include <com/sun/star/table/XCell.hpp>
+#include <com/sun/star/table/XCellRange.hpp>
 #include <com/sun/star/util/DateTime.hpp>
 #include <com/sun/star/util/NumberFormat.hpp>
 #include <com/sun/star/util/XNumberFormatTypes.hpp>
@@ -138,7 +141,7 @@ void SheetDataBuffer::setStringCell( const CellModel& rModel, const OUString& rT
 
 void SheetDataBuffer::setStringCell( const CellModel& rModel, const RichStringRef& rxString )
 {
-    OSL_ENSURE( rxString.get(), "SheetDataBuffer::setStringCell - missing rich string object" );
+    OSL_ENSURE( rxString, "SheetDataBuffer::setStringCell - missing rich string object" );
     const oox::xls::Font* pFirstPortionFont = getStyles().getFontFromCellXf( rModel.mnXfId ).get();
     OUString aText;
     if( rxString->extractPlainString( aText, pFirstPortionFont ) )
@@ -155,7 +158,7 @@ void SheetDataBuffer::setStringCell( const CellModel& rModel, const RichStringRe
 void SheetDataBuffer::setStringCell( const CellModel& rModel, sal_Int32 nStringId )
 {
     RichStringRef xString = getSharedStrings().getString( nStringId );
-    if( xString.get() )
+    if( xString )
         setStringCell( rModel, xString );
     else
         setBlankCell( rModel );

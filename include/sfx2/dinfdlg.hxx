@@ -19,6 +19,7 @@
 #ifndef INCLUDED_SFX2_DINFDLG_HXX
 #define INCLUDED_SFX2_DINFDLG_HXX
 
+#include <config_options.h>
 #include <sal/config.h>
 #include <sfx2/dllapi.h>
 
@@ -30,35 +31,34 @@
 #include <svl/stritem.hxx>
 #include <svl/zforlist.hxx>
 
-#include <svtools/ctrlbox.hxx>
-
 #include <vcl/idle.hxx>
 
 #include <sfx2/tabdlg.hxx>
 
-#include <o3tl/optional.hxx>
+#include <optional>
 #include <memory>
 
 namespace com::sun::star::beans { struct PropertyValue; }
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace document {
         class XDocumentProperties;
     }
-} } }
+}
 
 struct CustomProperty;
+class SvtCalendarBox;
 
 // class SfxDocumentInfoItem ---------------------------------------------
 
-class SFX2_DLLPUBLIC SfxDocumentInfoItem final : public SfxStringItem
+class UNLESS_MERGELIBS(SFX2_DLLPUBLIC) SfxDocumentInfoItem final : public SfxStringItem
 {
 private:
     sal_Int32                    m_AutoloadDelay;
     OUString                     m_AutoloadURL;
     bool                         m_isAutoloadEnabled;
     OUString                     m_DefaultTarget;
-    OUString const               m_TemplateName;
+    OUString                     m_TemplateName;
     OUString                     m_Author;
     css::util::DateTime          m_CreationDate;
     OUString                     m_ModifiedBy;
@@ -239,12 +239,12 @@ class CustomPropertiesDateField
 private:
     std::unique_ptr<SvtCalendarBox> m_xDateField;
 public:
-    ::o3tl::optional<sal_Int16> m_TZ;
+    ::std::optional<sal_Int16> m_TZ;
 
     CustomPropertiesDateField(SvtCalendarBox* pDateField);
-    void set_visible(bool bVisible) { m_xDateField->set_visible(bVisible); }
-    Date get_date() const { return m_xDateField->get_date(); }
-    void set_date(const Date& rDate) { m_xDateField->set_date(rDate); }
+    void set_visible(bool bVisible);
+    Date get_date() const;
+    void set_date(const Date& rDate);
     ~CustomPropertiesDateField();
 };
 

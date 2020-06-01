@@ -304,7 +304,7 @@ SwBoxAutoFormat& SwBoxAutoFormat::operator=(const SwBoxAutoFormat& rRef)
     return *this;
 }
 
-bool SwBoxAutoFormat::operator==(const SwBoxAutoFormat& rRight)
+bool SwBoxAutoFormat::operator==(const SwBoxAutoFormat& rRight) const
 {
     return GetBackground().GetColor() == rRight.GetBackground().GetColor();
 }
@@ -763,7 +763,7 @@ bool SwTableAutoFormat::Load( SvStream& rStream, const SwAfVersions& rVersions )
         {
             rStream.ReadUInt16( m_nStrResId );
             // start from 3d because default is added via constructor
-            if( m_nStrResId < RES_POOLTABSTYLE_END - RES_POOLTABLESTYLE_3D )
+            if( m_nStrResId < RES_POOLTABLESTYLE_END - RES_POOLTABLESTYLE_3D )
             {
                 m_aName = SwStyleNameMapper::GetUIName(RES_POOLTABLESTYLE_3D + m_nStrResId, m_aName);
             }
@@ -1012,7 +1012,7 @@ SwTableAutoFormatTable::SwTableAutoFormatTable()
     : m_pImpl(new Impl)
 {
     std::unique_ptr<SwTableAutoFormat> pNew(new SwTableAutoFormat(
-                SwStyleNameMapper::GetUIName(RES_POOLTABSTYLE_DEFAULT, OUString())));
+                SwStyleNameMapper::GetUIName(RES_POOLTABLESTYLE_DEFAULT, OUString())));
 
     sal_uInt8 i;
 

@@ -111,7 +111,7 @@ void SAL_CALL ScXMLTableColContext::endFastElement( sal_Int32 /*nElement*/ )
                     if ( pStyles )
                     {
                         XMLTableStyleContext* pStyle = const_cast<XMLTableStyleContext*>(static_cast<const XMLTableStyleContext *>(pStyles->FindStyleChildContext(
-                            XML_STYLE_FAMILY_TABLE_COLUMN, sStyleName, true)));
+                            XmlStyleFamily::TABLE_COLUMN, sStyleName, true)));
                         if (pStyle)
                         {
                             pStyle->FillPropertySet(xColumnProperties);
@@ -177,7 +177,7 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL ScXMLTableColsContext::
 {
     SvXMLImportContext *pContext = nullptr;
     sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
+        &sax_fastparser::castToFastAttributeList( xAttrList );
 
     switch (nElement)
     {

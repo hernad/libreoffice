@@ -435,7 +435,7 @@ Sequence< beans::PropertyValue > SAL_CALL SmGraphicAccessible::getCharacterAttri
 {
     SolarMutexGuard aGuard;
     sal_Int32 nLen = GetAccessibleText_Impl().getLength();
-    if (!(0 <= nIndex  &&  nIndex < nLen))
+    if (0 > nIndex  ||  nIndex >= nLen)
         throw IndexOutOfBoundsException();
     return Sequence< beans::PropertyValue >();
 }
@@ -455,7 +455,7 @@ awt::Rectangle SAL_CALL SmGraphicAccessible::getCharacterBounds( sal_Int32 nInde
     if (!pDoc)
         throw RuntimeException();
     OUString aTxt( GetAccessibleText_Impl() );
-    if (!(0 <= nIndex  &&  nIndex <= aTxt.getLength()))   // aTxt.getLength() is valid
+    if (0 > nIndex  ||  nIndex > aTxt.getLength())   // aTxt.getLength() is valid
         throw IndexOutOfBoundsException();
 
     // find a reasonable rectangle for position aTxt.getLength().
@@ -595,8 +595,8 @@ sal_Bool SAL_CALL SmGraphicAccessible::setSelection(
 {
     SolarMutexGuard aGuard;
     sal_Int32 nLen = GetAccessibleText_Impl().getLength();
-    if (!(0 <= nStartIndex  &&  nStartIndex < nLen) ||
-        !(0 <= nEndIndex    &&  nEndIndex   < nLen))
+    if (0 > nStartIndex  ||  nStartIndex >= nLen ||
+        0 > nEndIndex    ||  nEndIndex   >= nLen)
         throw IndexOutOfBoundsException();
     return false;
 }
@@ -716,6 +716,11 @@ sal_Bool SAL_CALL SmGraphicAccessible::copyText(
 
 
     return bReturn;
+}
+
+sal_Bool SAL_CALL SmGraphicAccessible::scrollSubstringTo( sal_Int32, sal_Int32, AccessibleScrollType )
+{
+    return false;
 }
 
 OUString SAL_CALL SmGraphicAccessible::getImplementationName()
@@ -997,7 +1002,7 @@ bool SmTextForwarder::IsValid() const
     return pEditEngine && pEditEngine->GetUpdateMode();
 }
 
-OUString SmTextForwarder::CalcFieldValue( const SvxFieldItem& rField, sal_Int32 nPara, sal_Int32 nPos, o3tl::optional<Color>& rpTxtColor, o3tl::optional<Color>& rpFldColor )
+OUString SmTextForwarder::CalcFieldValue( const SvxFieldItem& rField, sal_Int32 nPara, sal_Int32 nPos, std::optional<Color>& rpTxtColor, std::optional<Color>& rpFldColor )
 {
     EditEngine *pEditEngine = rEditAcc.GetEditEngine();
     return pEditEngine ? pEditEngine->CalcFieldValue(rField, nPara, nPos, rpTxtColor, rpFldColor) : OUString();

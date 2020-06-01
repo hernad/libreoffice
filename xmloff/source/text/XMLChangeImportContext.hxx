@@ -25,11 +25,11 @@
 #include <com/sun/star/uno/Reference.h>
 
 
-namespace com { namespace sun { namespace star {
-    namespace xml { namespace sax {
+namespace com::sun::star {
+    namespace xml::sax {
         class XAttributeList;
-    } }
-} } }
+    }
+}
 
 
 /**
@@ -62,8 +62,8 @@ public:
         const css::uno::Reference<css::xml::sax::XAttributeList> & xAttrList) override;
 
 private:
-    Element const m_Element;
-    bool const m_bIsOutsideOfParagraph;
+    Element m_Element;
+    bool m_bIsOutsideOfParagraph;
 };
 
 #endif

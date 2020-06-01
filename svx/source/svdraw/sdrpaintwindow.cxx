@@ -18,7 +18,6 @@
  */
 
 #include <comphelper/lok.hxx>
-#include <comphelper/random.hxx>
 #include <svx/sdrpaintwindow.hxx>
 #include <sdr/overlay/overlaymanagerbuffered.hxx>
 #include <svx/svdpntv.hxx>
@@ -106,7 +105,7 @@ void CandidateMgr::PaintTransparentChildren(vcl::Window const & rWindow, tools::
         // important: actually paint the child here!
         if (m_aDeletedCandidates.find(pCandidate) != m_aDeletedCandidates.end())
             continue;
-        pCandidate->Update();
+        pCandidate->PaintImmediately();
     }
 }
 
@@ -241,7 +240,8 @@ SdrPaintWindow::SdrPaintWindow(SdrPaintView& rNewPaintView, OutputDevice& rOut, 
     mpWindow(pWindow),
     mrPaintView(rNewPaintView),
     mbTemporaryTarget(false), // #i72889#
-    mbOutputToWindow(OUTDEV_WINDOW == mpOutputDevice->GetOutDevType())
+    mbOutputToWindow(OUTDEV_WINDOW == mpOutputDevice->GetOutDevType()),
+    mpPatched(nullptr)
 {
 }
 

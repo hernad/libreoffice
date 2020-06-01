@@ -66,6 +66,9 @@ BasicDLL::~BasicDLL()
 {
     osl::MutexGuard aGuard(BasicDLLImpl::getMutex());
     const bool bLastRef = m_xImpl->GetRefCount() == 1;
+    if (bLastRef) {
+        BasicDLLImpl::BASIC_DLL->xSbxAppData->m_aGlobErr.clear();
+    }
     m_xImpl.clear();
     // only reset BASIC_DLL after the object had been destroyed
     if (bLastRef)
@@ -95,22 +98,22 @@ void BasicDLL::BasicBreak()
 {
     DBG_ASSERT( BasicDLLImpl::BASIC_DLL, "BasicDLL::EnableBreak: No instance yet!" );
 #if HAVE_FEATURE_SCRIPTING
-    if (BasicDLLImpl::BASIC_DLL)
+    if (!BasicDLLImpl::BASIC_DLL)
+        return;
+
+    // bJustStopping: if there's someone pressing STOP like crazy umpteen times,
+    // but the Basic doesn't stop early enough, the box might appear more often...
+    static bool bJustStopping = false;
+    if (StarBASIC::IsRunning() && !bJustStopping
+        && (BasicDLLImpl::BASIC_DLL->bBreakEnabled || BasicDLLImpl::BASIC_DLL->bDebugMode))
     {
-        // bJustStopping: if there's someone pressing STOP like crazy umpteen times,
-        // but the Basic doesn't stop early enough, the box might appear more often...
-        static bool bJustStopping = false;
-        if (StarBASIC::IsRunning() && !bJustStopping
-            && (BasicDLLImpl::BASIC_DLL->bBreakEnabled || BasicDLLImpl::BASIC_DLL->bDebugMode))
-        {
-            bJustStopping = true;
-            StarBASIC::Stop();
-            std::unique_ptr<weld::MessageDialog> xInfoBox(Application::CreateMessageDialog(nullptr,
-                                                          VclMessageType::Info, VclButtonsType::Ok,
-                                                          BasResId(IDS_SBERR_TERMINATED)));
-            xInfoBox->run();
-            bJustStopping = false;
-        }
+        bJustStopping = true;
+        StarBASIC::Stop();
+        std::unique_ptr<weld::MessageDialog> xInfoBox(Application::CreateMessageDialog(nullptr,
+                                                      VclMessageType::Info, VclButtonsType::Ok,
+                                                      BasResId(IDS_SBERR_TERMINATED)));
+        xInfoBox->run();
+        bJustStopping = false;
     }
 #endif
 }

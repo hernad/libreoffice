@@ -59,6 +59,7 @@
  ************************************************************************/
 
 #include "lwpbulletstylemgr.hxx"
+#include "lwpfribheader.hxx"
 #include "lwpdoc.hxx"
 #include "lwpstory.hxx"
 #include "lwpdivinfo.hxx"
@@ -125,7 +126,7 @@ OUString LwpBulletStyleMgr::RegisterBulletStyle(LwpPara* pPara, const LwpBulletO
     }
 
     LwpObjectID aBulletID = pBullOver->GetSilverBullet();
-    std::shared_ptr<LwpBulletOverride> pBulletOver(pBullOver->clone());
+    std::unique_ptr<LwpBulletOverride> pBulletOver(pBullOver->clone());
 
     sal_uInt16 nNameIndex = 0;
     for (auto const& vIDsPair : m_vIDsPairList)
@@ -141,7 +142,7 @@ OUString LwpBulletStyleMgr::RegisterBulletStyle(LwpPara* pPara, const LwpBulletO
         }
     }
 
-    m_vIDsPairList.emplace_back(pBulletOver, aIndentID);
+    m_vIDsPairList.emplace_back(std::move(pBulletOver), aIndentID);
     OUString aStyleName;
 
     LwpFribPtr& rBulletParaFribs = pBulletPara->GetFribs();

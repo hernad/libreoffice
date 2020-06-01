@@ -52,7 +52,6 @@
 #include <svx/AccessibleShapeTreeInfo.hxx>
 #include <svx/AccessibleShapeInfo.hxx>
 #include <svx/IAccessibleParent.hxx>
-#include <comphelper/accflowenum.hxx>
 #include <comphelper/sequence.hxx>
 #include <sfx2/viewfrm.hxx>
 #include <sfx2/docfile.hxx>
@@ -93,13 +92,13 @@ struct ScAccessibleShapeData
     ScAccessibleShapeData(css::uno::Reference< css::drawing::XShape > xShape_);
     ~ScAccessibleShapeData();
     mutable rtl::Reference< ::accessibility::AccessibleShape > pAccShape;
-    mutable o3tl::optional<ScAddress> xRelationCell; // if it is NULL this shape is anchored on the table
+    mutable std::optional<ScAddress> xRelationCell; // if it is NULL this shape is anchored on the table
     css::uno::Reference< css::drawing::XShape > xShape;
     mutable bool            bSelected;
     bool                    bSelectable;
     // cache these to make the sorting cheaper
-    o3tl::optional<sal_Int16> mxLayerID;
-    o3tl::optional<sal_Int32> mxZOrder;
+    std::optional<sal_Int16> mxLayerID;
+    std::optional<sal_Int32> mxZOrder;
 };
 
 }
@@ -265,12 +264,12 @@ private:
     mutable sal_uInt32 mnShapesSelected;
     ScTabViewShell* mpViewShell;
     ScAccessibleDocument* mpAccessibleDocument;
-    ScSplitPos const meSplitPos;
+    ScSplitPos meSplitPos;
 
     void FillShapes(std::vector < uno::Reference < drawing::XShape > >& rShapes) const;
     bool FindSelectedShapesChanges(const css::uno::Reference<css::drawing::XShapes>& xShapes) const;
 
-    o3tl::optional<ScAddress> GetAnchor(const uno::Reference<drawing::XShape>& xShape) const;
+    std::optional<ScAddress> GetAnchor(const uno::Reference<drawing::XShape>& xShape) const;
     uno::Reference<XAccessibleRelationSet> GetRelationSet(const ScAccessibleShapeData* pData) const;
     void SetAnchor(const uno::Reference<drawing::XShape>& xShape, ScAccessibleShapeData* pData) const;
     void AddShape(const uno::Reference<drawing::XShape>& xShape, bool bCommitChange) const;
@@ -489,7 +488,7 @@ ScChildrenShapes::GetAccessibleCaption (const css::uno::Reference < css::drawing
         return nullptr;
     ScAccessibleShapeData* pShape = it->second;
     css::uno::Reference< css::accessibility::XAccessible > xNewChild( pShape->pAccShape.get() );
-    if(xNewChild.get())
+    if(xNewChild)
         return xNewChild;
     return nullptr;
 }
@@ -1118,7 +1117,7 @@ bool ScChildrenShapes::FindSelectedShapesChanges(const uno::Reference<drawing::X
     return bResult;
 }
 
-o3tl::optional<ScAddress> ScChildrenShapes::GetAnchor(const uno::Reference<drawing::XShape>& xShape) const
+std::optional<ScAddress> ScChildrenShapes::GetAnchor(const uno::Reference<drawing::XShape>& xShape) const
 {
     if (mpViewShell)
     {
@@ -1129,12 +1128,12 @@ o3tl::optional<ScAddress> ScChildrenShapes::GetAnchor(const uno::Reference<drawi
             if (SdrObject *pSdrObj = pShapeImp->GetSdrObject())
             {
                 if (ScDrawObjData *pAnchor = ScDrawLayer::GetObjData(pSdrObj))
-                    return o3tl::optional<ScAddress>(pAnchor->maStart);
+                    return std::optional<ScAddress>(pAnchor->maStart);
             }
         }
     }
 
-    return o3tl::optional<ScAddress>();
+    return std::optional<ScAddress>();
 }
 
 uno::Reference<XAccessibleRelationSet> ScChildrenShapes::GetRelationSet(const ScAccessibleShapeData* pData) const
@@ -1170,7 +1169,7 @@ void ScChildrenShapes::SetAnchor(const uno::Reference<drawing::XShape>& xShape, 
 {
     if (pData)
     {
-        o3tl::optional<ScAddress> xAddress = GetAnchor(xShape);
+        std::optional<ScAddress> xAddress = GetAnchor(xShape);
         if ((xAddress && pData->xRelationCell && (*xAddress != *(pData->xRelationCell))) ||
             (!xAddress && pData->xRelationCell) || (xAddress && !pData->xRelationCell))
         {
@@ -1616,13 +1615,6 @@ void SAL_CALL ScAccessibleDocument::selectionChanged( const lang::EventObject& /
 
 uno::Any SAL_CALL ScAccessibleDocument::queryInterface( uno::Type const & rType )
 {
-    uno::Any aAnyTmp;
-    if(rType == cppu::UnoType<XAccessibleGetAccFlowTo>::get())
-    {
-         css::uno::Reference<XAccessibleGetAccFlowTo> AccFromXShape = this;
-         aAnyTmp <<= AccFromXShape;
-         return aAnyTmp;
-    }
     uno::Any aAny (ScAccessibleDocumentImpl::queryInterface(rType));
     return aAny.hasValue() ? aAny : ScAccessibleContextBase::queryInterface(rType);
 }
@@ -2232,92 +2224,6 @@ uno::Any SAL_CALL ScAccessibleDocument::getExtendedAttributes()
         ";total-pages:" + OUString::number(GetDocument()->GetTableCount()) + ";";
     anyAtrribute <<= sValue;
     return anyAtrribute;
-}
-
-css::uno::Sequence< css::uno::Any > ScAccessibleDocument::GetScAccFlowToSequence()
-{
-    if ( getAccessibleChildCount() )
-    {
-        uno::Reference < XAccessible > xSCTableAcc = getAccessibleChild( 0 ); // table
-        if ( xSCTableAcc.is() )
-        {
-            uno::Reference < XAccessibleSelection > xAccSelection( xSCTableAcc, uno::UNO_QUERY );
-            sal_Int32 nSelCount = xAccSelection->getSelectedAccessibleChildCount();
-            if( nSelCount )
-            {
-                uno::Reference < XAccessible > xSel = xAccSelection->getSelectedAccessibleChild( 0 ); // selected cell
-                if ( xSel.is() )
-                {
-                    uno::Reference < XAccessibleContext > xSelContext( xSel->getAccessibleContext() );
-                    if ( xSelContext.is() )
-                    {
-                        if ( xSelContext->getAccessibleRole() == AccessibleRole::TABLE_CELL )
-                        {
-                            sal_Int32 nParaCount = 0;
-                            uno::Sequence <uno::Any> aSequence(nSelCount);
-                            for ( sal_Int32 i = 0; i < nSelCount; i++ )
-                            {
-                                xSel = xAccSelection->getSelectedAccessibleChild( i )   ;
-                                if ( xSel.is() )
-                                {
-                                    xSelContext = xSel->getAccessibleContext();
-                                    if ( xSelContext.is() )
-                                    {
-                                        if ( xSelContext->getAccessibleRole() == AccessibleRole::TABLE_CELL )
-                                        {
-                                            aSequence[nParaCount] <<= xSel;
-                                            nParaCount++;
-                                        }
-                                    }
-                                }
-                            }
-                            aSequence.realloc(nParaCount);
-                            return aSequence;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    uno::Sequence <uno::Any> aEmpty;
-    return aEmpty;
-}
-
-css::uno::Sequence< css::uno::Any >
-        SAL_CALL ScAccessibleDocument::getAccFlowTo(const css::uno::Any& rAny, sal_Int32 nType)
-{
-    AccessibilityFlowTo eType = static_cast<AccessibilityFlowTo>(nType);
-
-#if OSL_DEBUG_LEVEL > 0 && !defined NDEBUG
-    assert(eType == AccessibilityFlowTo::ForFindReplaceItem || eType == AccessibilityFlowTo::ForFindReplaceRange);
-#endif
-
-    SolarMutexGuard g;
-
-    bool bSuccess(false);
-    rAny >>= bSuccess;
-    if ( bSuccess )
-    {
-        if (eType == AccessibilityFlowTo::ForFindReplaceRange)
-        {
-            uno::Sequence< uno::Any> aSeq = GetScAccFlowToSequence();
-            if ( aSeq.hasElements() )
-            {
-                return aSeq;
-            }
-        }
-
-        if( mpAccessibleSpreadsheet.is() )
-        {
-            uno::Reference < XAccessible > xFindCellAcc = mpAccessibleSpreadsheet->GetActiveCell();
-            // add xFindCellAcc to the return the Sequence
-            uno::Sequence< uno::Any> aSeq2(1);
-            aSeq2[0] <<= xFindCellAcc;
-            return aSeq2;
-        }
-    }
-    uno::Sequence< uno::Any> aEmpty;
-    return aEmpty;
 }
 
 sal_Int32 SAL_CALL ScAccessibleDocument::getForeground(  )

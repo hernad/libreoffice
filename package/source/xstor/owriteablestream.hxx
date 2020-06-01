@@ -50,9 +50,9 @@
 
 #include "ocompinstream.hxx"
 
-namespace com { namespace sun { namespace star { namespace uno {
+namespace com::sun::star::uno {
     class XComponentContext;
-} } } }
+}
 
 namespace package {
     // all data in aHash1 is contained in aHash2
@@ -105,7 +105,7 @@ struct OWriteStream_Impl
 
     bool m_bHasInsertedStreamOptimization;
 
-    sal_Int32 const m_nStorageType;
+    sal_Int32 m_nStorageType;
 
     // Relations info related data, stored in *.rels file in OFOPXML format
     css::uno::Reference< css::io::XInputStream > m_xOrigRelInfoStream;
@@ -249,7 +249,7 @@ protected:
     bool m_bInitOnDemand;
     sal_Int64 m_nInitPosition;
 
-    bool const m_bTransacted;
+    bool m_bTransacted;
 
     OWriteStream( OWriteStream_Impl* pImpl, bool bTransacted );
     OWriteStream( OWriteStream_Impl* pImpl, css::uno::Reference< css::io::XStream > const & xStream, bool bTransacted );

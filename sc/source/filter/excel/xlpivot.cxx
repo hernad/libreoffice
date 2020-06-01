@@ -32,7 +32,6 @@
 #include <com/sun/star/sheet/DataPilotFieldReferenceType.hpp>
 #include <com/sun/star/sheet/DataPilotFieldReferenceItemType.hpp>
 
-using ::com::sun::star::sheet::GeneralFunction;
 using ::com::sun::star::sheet::DataPilotFieldOrientation;
 
 namespace ScDPSortMode = ::com::sun::star::sheet::DataPilotFieldSortMode;
@@ -994,7 +993,7 @@ void XclPTViewEx9Info::Init( const ScDPObject& rDPObj )
     const ScDPSaveData* pData = rDPObj.GetSaveData();
     if (pData)
     {
-        const o3tl::optional<OUString> & pGrandTotal = pData->GetGrandTotalName();
+        const std::optional<OUString> & pGrandTotal = pData->GetGrandTotalName();
         if (pGrandTotal)
             maGrandTotalName = *pGrandTotal;
     }

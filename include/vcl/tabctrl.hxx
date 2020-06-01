@@ -20,16 +20,19 @@
 #ifndef INCLUDED_VCL_TABCTRL_HXX
 #define INCLUDED_VCL_TABCTRL_HXX
 
+#include <config_options.h>
 #include <vcl/dllapi.h>
 #include <vcl/ctrl.hxx>
 #include <vcl/toolbox.hxx>
-#include <vcl/button.hxx>
 #include <vcl/EnumContext.hxx>
 #include <vcl/NotebookbarContextControl.hxx>
+#include <boost/property_tree/json_parser.hpp>
 
 class ImplTabItem;
 struct ImplTabCtrlData;
 class TabPage;
+class Button;
+class PushButton;
 class ListBox;
 
 #ifndef TAB_APPEND
@@ -183,11 +186,13 @@ public:
     virtual FactoryFunction GetUITestFactory() const override;
 
     virtual void queue_resize(StateChangedType eReason = StateChangedType::Layout) override;
+
+    virtual boost::property_tree::ptree DumpAsPropertyTree() override;
 };
 
 class NotebookBar;
 
-class VCL_DLLPUBLIC NotebookbarTabControlBase : public TabControl,
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) NotebookbarTabControlBase : public TabControl,
                                             public NotebookbarContextControl
 {
 public:

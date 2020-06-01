@@ -11,9 +11,11 @@
 
 #include <comphelper/processfactory.hxx>
 #include <tools/stream.hxx>
+#include <dialmgr.hxx>
+#include <strings.hrc>
 #include <unotools/streamwrap.hxx>
 #include <utility>
-#include <vcl/weld.hxx>
+#include <vcl/svapp.hxx>
 
 #if defined(SYSTEM_QRCODEGEN)
 #include <qrcodegen/QrCode.hpp>
@@ -66,6 +68,7 @@ QrCodeGenDialog::QrCodeGenDialog(weld::Widget* pParent, Reference<XModel> xModel
               m_xBuilder->weld_radio_button("button_quartile"),
               m_xBuilder->weld_radio_button("button_high") }
     , m_xSpinBorder(m_xBuilder->weld_spin_button("edit_border"))
+    , mpParent(pParent)
 {
     if (!bEditExisting)
     {
@@ -101,9 +104,28 @@ QrCodeGenDialog::QrCodeGenDialog(weld::Widget* pParent, Reference<XModel> xModel
 
 short QrCodeGenDialog::run()
 {
-    short nRet = GenericDialogController::run();
-    if (nRet == RET_OK)
-        Apply();
+    short nRet;
+    while (true)
+    {
+        nRet = GenericDialogController::run();
+        if (nRet == RET_OK)
+        {
+            try
+            {
+                Apply();
+                break;
+            }
+            catch (const qrcodegen::data_too_long&)
+            {
+                std::unique_ptr<weld::MessageDialog> xBox(Application::CreateMessageDialog(
+                    mpParent, VclMessageType::Warning, VclButtonsType::Ok,
+                    CuiResId(RID_SVXSTR_QRCODEDATALONG)));
+                xBox->run();
+            }
+        }
+        else
+            break;
+    }
     return nRet;
 }
 
@@ -164,69 +186,69 @@ void QrCodeGenDialog::Apply()
     // Set QRCode properties
     xShapeProps->setPropertyValue("QRCodeProperties", Any(aQRCode));
 
-    if (!bIsExistingQRCode)
+    if (bIsExistingQRCode)
+        return;
+
+    // Default size
+    Reference<XShape> xShape(xShapeProps, UNO_QUERY);
+    awt::Size aShapeSize;
+    aShapeSize.Height = 4000;
+    aShapeSize.Width = 4000;
+    xShape->setSize(aShapeSize);
+
+    // Default anchoring
+    xShapeProps->setPropertyValue("AnchorType", Any(TextContentAnchorType_AT_PARAGRAPH));
+
+    const Reference<XServiceInfo> xServiceInfo(m_xModel, UNO_QUERY_THROW);
+
+    // Writer
+    if (xServiceInfo->supportsService("com.sun.star.text.TextDocument"))
     {
-        // Default size
-        Reference<XShape> xShape(xShapeProps, UNO_QUERY);
-        awt::Size aShapeSize;
-        aShapeSize.Height = 4000;
-        aShapeSize.Width = 4000;
-        xShape->setSize(aShapeSize);
+        Reference<XTextContent> xTextContent(xShape, UNO_QUERY_THROW);
+        Reference<XTextViewCursorSupplier> xViewCursorSupplier(m_xModel->getCurrentController(),
+                                                               UNO_QUERY_THROW);
+        Reference<XTextViewCursor> xCursor = xViewCursorSupplier->getViewCursor();
+        // use cursor's XText - it might be in table cell, frame, ...
+        Reference<XText> const xText(xCursor->getText());
+        assert(xText.is());
+        xText->insertTextContent(xCursor, xTextContent, true);
+        return;
+    }
 
-        // Default anchoring
-        xShapeProps->setPropertyValue("AnchorType", Any(TextContentAnchorType_AT_PARAGRAPH));
+    // Calc
+    else if (xServiceInfo->supportsService("com.sun.star.sheet.SpreadsheetDocument"))
+    {
+        Reference<XPropertySet> xSheetCell(m_xModel->getCurrentSelection(), UNO_QUERY_THROW);
+        awt::Point aCellPosition;
+        xSheetCell->getPropertyValue("Position") >>= aCellPosition;
+        xShape->setPosition(aCellPosition);
 
-        const Reference<XServiceInfo> xServiceInfo(m_xModel, UNO_QUERY_THROW);
+        Reference<XSpreadsheetView> xView(m_xModel->getCurrentController(), UNO_QUERY_THROW);
+        Reference<XSpreadsheet> xSheet(xView->getActiveSheet(), UNO_SET_THROW);
+        Reference<XDrawPageSupplier> xDrawPageSupplier(xSheet, UNO_QUERY_THROW);
+        Reference<XDrawPage> xDrawPage(xDrawPageSupplier->getDrawPage(), UNO_SET_THROW);
+        Reference<XShapes> xShapes(xDrawPage, UNO_QUERY_THROW);
 
-        // Writer
-        if (xServiceInfo->supportsService("com.sun.star.text.TextDocument"))
-        {
-            Reference<XTextContent> xTextContent(xShape, UNO_QUERY_THROW);
-            Reference<XTextViewCursorSupplier> xViewCursorSupplier(m_xModel->getCurrentController(),
-                                                                   UNO_QUERY_THROW);
-            Reference<XTextViewCursor> xCursor = xViewCursorSupplier->getViewCursor();
-            // use cursor's XText - it might be in table cell, frame, ...
-            Reference<XText> const xText(xCursor->getText());
-            assert(xText.is());
-            xText->insertTextContent(xCursor, xTextContent, true);
-            return;
-        }
+        xShapes->add(xShape);
+        return;
+    }
 
-        // Calc
-        else if (xServiceInfo->supportsService("com.sun.star.sheet.SpreadsheetDocument"))
-        {
-            Reference<XPropertySet> xSheetCell(m_xModel->getCurrentSelection(), UNO_QUERY_THROW);
-            awt::Point aCellPosition;
-            xSheetCell->getPropertyValue("Position") >>= aCellPosition;
-            xShape->setPosition(aCellPosition);
+    //Impress and Draw
+    else if (xServiceInfo->supportsService("com.sun.star.presentation.PresentationDocument")
+             || xServiceInfo->supportsService("com.sun.star.drawing.DrawingDocument"))
+    {
+        Reference<XDrawView> xView(m_xModel->getCurrentController(), UNO_QUERY_THROW);
+        Reference<XDrawPage> xPage(xView->getCurrentPage(), UNO_SET_THROW);
+        Reference<XShapes> xShapes(xPage, UNO_QUERY_THROW);
 
-            Reference<XSpreadsheetView> xView(m_xModel->getCurrentController(), UNO_QUERY_THROW);
-            Reference<XSpreadsheet> xSheet(xView->getActiveSheet(), UNO_SET_THROW);
-            Reference<XDrawPageSupplier> xDrawPageSupplier(xSheet, UNO_QUERY_THROW);
-            Reference<XDrawPage> xDrawPage(xDrawPageSupplier->getDrawPage(), UNO_SET_THROW);
-            Reference<XShapes> xShapes(xDrawPage, UNO_QUERY_THROW);
+        xShapes->add(xShape);
+        return;
+    }
 
-            xShapes->add(xShape);
-            return;
-        }
-
-        //Impress and Draw
-        else if (xServiceInfo->supportsService("com.sun.star.presentation.PresentationDocument")
-                 || xServiceInfo->supportsService("com.sun.star.drawing.DrawingDocument"))
-        {
-            Reference<XDrawView> xView(m_xModel->getCurrentController(), UNO_QUERY_THROW);
-            Reference<XDrawPage> xPage(xView->getCurrentPage(), UNO_SET_THROW);
-            Reference<XShapes> xShapes(xPage, UNO_QUERY_THROW);
-
-            xShapes->add(xShape);
-            return;
-        }
-
-        else
-        {
-            //Not implemented for math,base and other apps.
-            throw uno::RuntimeException("Not implemented");
-        }
+    else
+    {
+        //Not implemented for math,base and other apps.
+        throw uno::RuntimeException("Not implemented");
     }
 }
 
@@ -266,12 +288,11 @@ OUString QrCodeGenDialog::GenerateQRCode(OUString aQRText, long aQRECC, int aQRB
     OString o = OUStringToOString(aQRText, RTL_TEXTENCODING_UTF8);
     const char* qrtext = o.pData->buffer;
 
-    //From Qr Code library.
+    // From QR Code library
     qrcodegen::QrCode qr0 = qrcodegen::QrCode::encodeText(qrtext, bqrEcc);
     std::string svg = qr0.toSvgString(aQRBorder);
     //cstring to OUString
-    char* cstr = &svg[0];
-    return OUString::createFromAscii(cstr);
+    return OUString::createFromAscii(svg.c_str());
 #endif
 }
 

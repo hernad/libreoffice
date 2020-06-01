@@ -20,11 +20,14 @@
 #include <config_features.h>
 
 #include "text/TextPropertyPanel.hxx"
+#include "inspector/InspectorTextPanel.hxx"
 #include "styles/StylesPropertyPanel.hxx"
 #include "paragraph/ParaPropertyPanel.hxx"
 #include "lists/ListsPropertyPanel.hxx"
 #include "area/AreaPropertyPanel.hxx"
+#include "glow/GlowPropertyPanel.hxx"
 #include "shadow/ShadowPropertyPanel.hxx"
+#include "softedge/SoftEdgePropertyPanel.hxx"
 #include "graphic/GraphicPropertyPanel.hxx"
 #include "line/LinePropertyPanel.hxx"
 #include "possize/PosSizePropertyPanel.hxx"
@@ -35,12 +38,9 @@
 #include <GalleryControl.hxx>
 #include "EmptyPanel.hxx"
 #include <sfx2/sidebar/SidebarPanelBase.hxx>
-#include <sfx2/sidebar/Tools.hxx>
-#include <sfx2/sfxbasecontroller.hxx>
 #include <sfx2/templdlg.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
 #include <vcl/window.hxx>
-#include <rtl/ref.hxx>
 #include <comphelper/namedvaluecollection.hxx>
 #include <cppuhelper/basemutex.hxx>
 #include <cppuhelper/compbase.hxx>
@@ -125,6 +125,10 @@ Reference<ui::XUIElement> SAL_CALL PanelFactory::createUIElement (
     {
         pControl = TextPropertyPanel::Create(pParentWindow, xFrame);
     }
+    else if (rsResourceURL.endsWith("/InspectorTextPanel"))
+    {
+        pControl = InspectorTextPanel::Create(pParentWindow, xFrame);
+    }
     else if (rsResourceURL.endsWith("/StylesPropertyPanel"))
     {
         pControl = StylesPropertyPanel::Create(pParentWindow, xFrame);
@@ -141,9 +145,17 @@ Reference<ui::XUIElement> SAL_CALL PanelFactory::createUIElement (
     {
         pControl = AreaPropertyPanel::Create(pParentWindow, xFrame, pBindings);
     }
+    else if (rsResourceURL.endsWith("/GlowPropertyPanel"))
+    {
+        pControl = GlowPropertyPanel::Create(pParentWindow, xFrame, pBindings);
+    }
     else if (rsResourceURL.endsWith("/ShadowPropertyPanel"))
     {
         pControl = ShadowPropertyPanel::Create(pParentWindow, xFrame, pBindings);
+    }
+    else if (rsResourceURL.endsWith("/SoftEdgePropertyPanel"))
+    {
+        pControl = SoftEdgePropertyPanel::Create(pParentWindow, xFrame, pBindings);
     }
     else if (rsResourceURL.endsWith("/GraphicPropertyPanel"))
     {

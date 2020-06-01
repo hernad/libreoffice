@@ -21,9 +21,9 @@
 #include "ldapaccess.hxx"
 
 #include <osl/diagnose.h>
-#include <rtl/ustrbuf.hxx>
-#include <rtl/strbuf.hxx>
 #include <o3tl/char16_t2wchar_t.hxx>
+
+#include <com/sun/star/ldap/LdapConnectionException.hpp>
 
 
 namespace extensions::config::ldap {
@@ -106,43 +106,43 @@ void  LdapConnection::connectSimple(const LdapDefinition& aDefinition)
 
 void  LdapConnection::connectSimple()
 {
-    if (!isValid())
-    {
-        // Connect to the server
-        initConnection() ;
-        // Set Protocol V3
-        int version = LDAP_VERSION3;
-        ldap_set_option(mConnection,
-                        LDAP_OPT_PROTOCOL_VERSION,
-                        &version);
+    if (isValid())
+        return;
+
+    // Connect to the server
+    initConnection() ;
+    // Set Protocol V3
+    int version = LDAP_VERSION3;
+    ldap_set_option(mConnection,
+                    LDAP_OPT_PROTOCOL_VERSION,
+                    &version);
 
 #ifdef LDAP_X_OPT_CONNECT_TIMEOUT // OpenLDAP doesn't support this and the func
-        /* timeout is specified in milliseconds -> 4 seconds*/
-        int timeout = 4000;
+    /* timeout is specified in milliseconds -> 4 seconds*/
+    int timeout = 4000;
 #ifdef _WIN32
-        ldap_set_optionW( mConnection,
-                        LDAP_X_OPT_CONNECT_TIMEOUT,
-                        &timeout );
+    ldap_set_optionW( mConnection,
+                    LDAP_X_OPT_CONNECT_TIMEOUT,
+                    &timeout );
 #else
-        ldap_set_option( mConnection,
-                        LDAP_X_OPT_CONNECT_TIMEOUT,
-                        &timeout );
+    ldap_set_option( mConnection,
+                    LDAP_X_OPT_CONNECT_TIMEOUT,
+                    &timeout );
 #endif
 #endif
 
-        // Do the bind
+    // Do the bind
 #ifdef _WIN32
-        LdapErrCode retCode = ldap_simple_bind_sW(mConnection,
-                                               const_cast<PWSTR>(o3tl::toW(mLdapDefinition.mAnonUser.getStr())),
-                                               const_cast<PWSTR>(o3tl::toW(mLdapDefinition.mAnonCredentials.getStr())) );
+    LdapErrCode retCode = ldap_simple_bind_sW(mConnection,
+                                           const_cast<PWSTR>(o3tl::toW(mLdapDefinition.mAnonUser.getStr())),
+                                           const_cast<PWSTR>(o3tl::toW(mLdapDefinition.mAnonCredentials.getStr())) );
 #else
-        LdapErrCode retCode = ldap_simple_bind_s(mConnection,
-                                               OUStringToOString( mLdapDefinition.mAnonUser, RTL_TEXTENCODING_UTF8 ).getStr(),
-                                               OUStringToOString( mLdapDefinition.mAnonCredentials, RTL_TEXTENCODING_UTF8 ).getStr()) ;
+    LdapErrCode retCode = ldap_simple_bind_s(mConnection,
+                                           OUStringToOString( mLdapDefinition.mAnonUser, RTL_TEXTENCODING_UTF8 ).getStr(),
+                                           OUStringToOString( mLdapDefinition.mAnonCredentials, RTL_TEXTENCODING_UTF8 ).getStr()) ;
 #endif
 
-        checkLdapReturnCode("SimpleBind", retCode) ;
-    }
+    checkLdapReturnCode("SimpleBind", retCode) ;
 }
 
 void LdapConnection::initConnection()

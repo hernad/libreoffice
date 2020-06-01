@@ -47,7 +47,7 @@ class SwFrameFormats;
 class SwRegionRects;
 class SwTextNode;
 namespace sw { struct Extent; }
-namespace basegfx { namespace utils { class B2DClipState; } }
+namespace basegfx::utils { class B2DClipState; }
 
 #define FAR_AWAY (SAL_MAX_INT32 - 20000)  // initial position of a Fly
 #define BROWSE_HEIGHT (56700L * 10L) // 10 Meters
@@ -95,6 +95,15 @@ void paintGraphicUsingPrimitivesHelper(
     vcl::RenderContext & rOutputDevice,
     GraphicObject const& rGraphicObj,
     GraphicAttr const& rGraphicAttr,
+    const basegfx::B2DHomMatrix& rGraphicTransform,
+    const OUString& rName,
+    const OUString& rTitle,
+    const OUString& rDescription);
+
+// MM02 new VOC and primitive-based version
+void paintGraphicUsingPrimitivesHelper(
+    vcl::RenderContext & rOutputDevice,
+    drawinglayer::primitive2d::Primitive2DContainer& rContent,
     const basegfx::B2DHomMatrix& rGraphicTransform,
     const OUString& rName,
     const OUString& rTitle,
@@ -150,8 +159,14 @@ extern bool bSetCompletePaintOnInvalidate;
 SwTwips CalcRowRstHeight( SwLayoutFrame *pRow );
 long CalcHeightWithFlys( const SwFrame *pFrame );
 
+namespace sw {
+
+bool IsRightPageByNumber(SwRootFrame const& rLayout, sal_uInt16 nPageNum);
+
+} // namespace sw
+
 SwPageFrame *InsertNewPage( SwPageDesc &rDesc, SwFrame *pUpper,
-                          bool bOdd, bool bFirst, bool bInsertEmpty, bool bFootnote,
+                          bool isRightPage, bool bFirst, bool bInsertEmpty, bool bFootnote,
                           SwFrame *pSibling );
 
 // connect Flys with page
@@ -214,7 +229,7 @@ protected:
     SwTwips mnFlyAnchorOfstNoWrap;
     bool     mbHadFollow;
     bool     mbInvaKeep;
-    bool const     mbValidSize;
+    bool     mbValidSize;
 
 public:
     SwFrameNotify( SwFrame *pFrame );
@@ -238,7 +253,7 @@ public:
 
 class SwFlyNotify : public SwLayNotify
 {
-    SwPageFrame * const pOldPage;
+    SwPageFrame *pOldPage;
     const SwRect aFrameAndSpace;
 
 public:

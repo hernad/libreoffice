@@ -68,6 +68,7 @@
 #include <memory>
 #include <swcrsr.hxx>
 #include <hints.hxx>
+#include <frameformats.hxx>
 
 using namespace ::com::sun::star::i18n;
 
@@ -893,6 +894,43 @@ void SwNode::dumpAsXml(xmlTextWriterPtr pWriter) const
     xmlTextWriterWriteAttribute(pWriter, BAD_CAST("type"), BAD_CAST(OString::number(static_cast<sal_uInt8>(GetNodeType())).getStr()));
     xmlTextWriterWriteAttribute(pWriter, BAD_CAST("index"), BAD_CAST(OString::number(GetIndex()).getStr()));
 
+    switch (GetNodeType())
+    {
+        case SwNodeType::Grf:
+        {
+            auto pNoTextNode = static_cast<const SwNoTextNode*>(this);
+            const tools::PolyPolygon* pContour = pNoTextNode->HasContour();
+            if (pContour)
+            {
+                xmlTextWriterStartElement(pWriter, BAD_CAST("pContour"));
+                for (sal_uInt16 i = 0; i < pContour->Count(); ++i)
+                {
+                    xmlTextWriterStartElement(pWriter, BAD_CAST("polygon"));
+                    xmlTextWriterWriteAttribute(pWriter, BAD_CAST("index"),
+                                                BAD_CAST(OString::number(i).getStr()));
+                    const tools::Polygon& rPolygon = pContour->GetObject(i);
+                    for (sal_uInt16 j = 0; j < rPolygon.GetSize(); ++j)
+                    {
+                        xmlTextWriterStartElement(pWriter, BAD_CAST("point"));
+                        xmlTextWriterWriteAttribute(pWriter, BAD_CAST("index"),
+                                                    BAD_CAST(OString::number(j).getStr()));
+                        const Point& rPoint = rPolygon.GetPoint(j);
+                        xmlTextWriterWriteAttribute(pWriter, BAD_CAST("x"),
+                                                    BAD_CAST(OString::number(rPoint.X()).getStr()));
+                        xmlTextWriterWriteAttribute(pWriter, BAD_CAST("y"),
+                                                    BAD_CAST(OString::number(rPoint.Y()).getStr()));
+                        xmlTextWriterEndElement(pWriter);
+                    }
+                    xmlTextWriterEndElement(pWriter);
+                }
+                xmlTextWriterEndElement(pWriter);
+            }
+        }
+        break;
+        default:
+            break;
+    }
+
     xmlTextWriterEndElement(pWriter);
     if (GetNodeType() == SwNodeType::End)
         xmlTextWriterEndElement(pWriter); // end start node
@@ -1042,7 +1080,7 @@ SwContentNode::~SwContentNode()
     m_aCondCollListener.EndListeningAll();
     m_pCondColl = nullptr;
 
-    if ( mpAttrSet.get() && mbSetModifyAtAttr )
+    if ( mpAttrSet && mbSetModifyAtAttr )
         const_cast<SwAttrSet*>(static_cast<const SwAttrSet*>(mpAttrSet.get()))->SetModifyAtAttr( nullptr );
 }
 
@@ -1385,16 +1423,29 @@ void SwContentNode::DelFrames(SwRootFrame const*const pLayout)
                                 break;
                             }
                         }
+                        assert(pMerged->listener.IsListeningTo(pMerged->pParaPropsNode));
                     }
+                    assert(GetIndex() <= pMerged->pLastNode->GetIndex());
                     if (this == pMerged->pLastNode)
                     {
-                        pMerged->pLastNode = GetNodes()[GetIndex()-1]->GetTextNode();
-                        // at first glance nothing guarantees this...
-                        // but the redline must end on a text-node...
-                        // so everything before this node that isn't a text
-                        // node should have been deleted already so that
-                        // there's a text node before.
-                        assert(pMerged->pLastNode->IsTextNode());
+                        // tdf#130680 find the previous node that is a
+                        // listener of pMerged; see CheckParaRedlineMerge()
+                        for (sal_uLong i = GetIndex() - 1;
+                             this == pMerged->pLastNode; --i)
+                        {
+                            SwNode *const pNode = GetNodes()[i];
+                            if (pNode->IsTextNode())
+                            {
+                                pMerged->pLastNode = pNode->GetTextNode();
+                            }
+                            else if (SwEndNode const*const pEnd = pNode->GetEndNode())
+                            {
+                                SwStartNode const*const pStart(pEnd->StartOfSectionNode());
+                                i = pStart->GetIndex(); // skip table or section
+                            }
+                        }
+                        assert(pMerged->pFirstNode->GetIndex() <= pMerged->pLastNode->GetIndex());
+                        assert(pMerged->listener.IsListeningTo(pMerged->pLastNode));
                     }
                     // avoid re-parenting mess (ModifyChangedHint)
                     pMerged->listener.EndListening(this);
@@ -1617,7 +1668,7 @@ bool SwContentNode::ResetAttr( sal_uInt16 nWhich1, sal_uInt16 nWhich2 )
         else
             nDel = AttrSetHandleHelper::ClearItem_BC( mpAttrSet, *this, nWhich1, nWhich2, nullptr, nullptr );
 
-        if( !GetpSwAttrSet()->Count() ) // Empt? Delete
+        if( !GetpSwAttrSet()->Count() ) // Empty? Delete
             mpAttrSet.reset();
         return 0 != nDel;
     }

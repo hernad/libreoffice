@@ -18,6 +18,7 @@
  */
 
 #include <com/sun/star/document/XDocumentPropertiesSupplier.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <osl/diagnose.h>
 #include <xmloff/xmlmetai.hxx>
 #include <xmloff/ProgressBarHelper.hxx>
@@ -79,7 +80,7 @@ enum SvXMLTokenMapAttrs
 };
 
 struct statistic {
-    SvXMLTokenMapAttrs const token;
+    SvXMLTokenMapAttrs token;
     const char* name;
     sal_uInt16 SwDocStat::* target16;
     sal_uLong  SwDocStat::* target32; /* or 64, on LP64 platforms */
@@ -142,6 +143,7 @@ void SwXMLImport::SetStatistics(
     // and autostyles.
     bool bSetFallback = true;
     sal_Int32 nProgressReference = sal_Int32(); // silence C4701
+    const sal_Int32 nProgressReferenceWriggleRoom = 3 * PROGRESS_BAR_STEP;
     if (nTokens & XML_TOK_META_STAT_PARA)
     {
         nProgressReference = static_cast<sal_Int32>(aDocStat.nPara);
@@ -149,10 +151,12 @@ void SwXMLImport::SetStatistics(
     }
     else if (nTokens & XML_TOK_META_STAT_PAGE)
         bSetFallback = o3tl::checked_multiply<sal_Int32>(aDocStat.nPage, 10, nProgressReference);
+    if (!bSetFallback)
+        bSetFallback = o3tl::checked_add(nProgressReference, nProgressReferenceWriggleRoom, nProgressReference);
     if (bSetFallback)
-        nProgressReference = 250;
+        nProgressReference = 250 + nProgressReferenceWriggleRoom;
     ProgressBarHelper* pProgress = GetProgressBarHelper();
-    pProgress->SetReference( nProgressReference + 3*PROGRESS_BAR_STEP );
+    pProgress->SetReference(nProgressReference);
     pProgress->SetValue( 0 );
 }
 

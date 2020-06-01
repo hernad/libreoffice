@@ -30,6 +30,7 @@
 #include <view.hxx>
 #include <swundo.hxx>
 #include <sfx2/docfilt.hxx>
+#include <sfx2/fcontnr.hxx>
 #include <svtools/unitconv.hxx>
 #include <com/sun/star/view/XViewSettingsSupplier.hpp>
 #include <com/sun/star/view/DocumentZoomType.hpp>
@@ -83,9 +84,10 @@ SwMailMergeLayoutPage::SwMailMergeLayoutPage(weld::Container* pPage, SwMailMerge
     , m_xDownPB(m_xBuilder->weld_button("down"))
     , m_xZoomLB(m_xBuilder->weld_combo_box("zoom"))
 {
-    std::shared_ptr<const SfxFilter> pSfxFlt = SwIoSystem::GetFilterOfFormat(
-            FILTER_XML,
-            SwDocShell::Factory().GetFilterContainer() );
+    std::shared_ptr<const SfxFilter> pSfxFlt =
+            SwDocShell::Factory().GetFilterContainer()->
+            GetFilter4FilterName("writer8", SfxFilterFlags::EXPORT);
+
     //save the current document into a temporary file
     {
         //temp file needs its own block
@@ -392,7 +394,7 @@ void SwMailMergeLayoutPage::InsertGreeting(SwWrtShell& rShell, SwMailMergeConfig
     const SwRect& rPageRect = rShell.GetAnyCurRect(CurRectType::Page);
     const Point aGreetingPos( DEFAULT_LEFT_DISTANCE + rPageRect.Left(), GREETING_TOP_DISTANCE );
 
-    const bool bRet = rShell.SetShadowCursorPos( aGreetingPos, FILL_TAB_SPACE );
+    const bool bRet = rShell.SetShadowCursorPos( aGreetingPos, SwFillMode::TabSpace );
 
     if(!bRet)
     {

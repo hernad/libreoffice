@@ -32,6 +32,7 @@
 #include <com/sun/star/form/XFormsSupplier.hpp>
 #include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
+#include <com/sun/star/sheet/XSpreadsheet.hpp>
 #include "vbasheetobject.hxx"
 #include <cppuhelper/implbase.hxx>
 
@@ -393,7 +394,7 @@ protected:
 
 protected:
     uno::Reference< container::XIndexContainer > mxFormIC;
-    OUString const maModelServiceName;
+    OUString maModelServiceName;
     sal_Int16 /* css::form::FormComponentType */ meType;
 };
 

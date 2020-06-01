@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_CUI_SOURCE_INC_SVXCONFIGPAGEHELPER_HXX
-#define INCLUDED_CUI_SOURCE_INC_SVXCONFIGPAGEHELPER_HXX
+#pragma once
 
 #include <com/sun/star/frame/XModuleManager2.hpp>
 
@@ -81,15 +80,10 @@ public:
     static css::uno::Sequence< css::beans::PropertyValue > ConvertToolbarEntry(
         const SvxConfigEntry* pEntry );
 
-    static bool showKeyConfigTabPage(
-        const css::uno::Reference< css::frame::XFrame >& xFrame );
-
     static bool EntrySort( SvxConfigEntry const * a, SvxConfigEntry const * b );
 
     static bool SvxConfigEntryModified( SvxConfigEntry const * pEntry );
 
 };
-
-#endif // INCLUDED_CUI_SOURCE_INC_SVXCONFIGPAGEHELPER_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

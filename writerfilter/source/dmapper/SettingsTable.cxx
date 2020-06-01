@@ -18,6 +18,7 @@
  */
 
 #include "SettingsTable.hxx"
+#include "TagLogger.hxx"
 
 #include <vector>
 
@@ -28,6 +29,7 @@
 #include <com/sun/star/container/XNameContainer.hpp>
 #include <com/sun/star/style/XStyle.hpp>
 #include <com/sun/star/style/XStyleFamiliesSupplier.hpp>
+#include <comphelper/propertysequence.hxx>
 #include <comphelper/sequence.hxx>
 #include <ooxml/resourceids.hxx>
 #include "ConversionHelper.hxx"
@@ -240,6 +242,7 @@ struct SettingsTable_Impl
     bool                m_bLinkStyles;
     sal_Int16           m_nZoomFactor;
     sal_Int16 m_nZoomType = 0;
+    sal_Int32           m_nWordCompatibilityMode;
     Id                  m_nView;
     bool                m_bEvenAndOddHeaders;
     bool                m_bUsePrinterMetrics;
@@ -258,7 +261,9 @@ struct SettingsTable_Impl
     bool                m_bProtectForm;
     bool                m_bRedlineProtection;
     OUString            m_sRedlineProtectionKey;
+    bool                m_bReadOnly;
     bool                m_bDisplayBackgroundShape;
+    bool                m_bNoLeading = false;
 
     uno::Sequence<beans::PropertyValue> m_pThemeFontLangProps;
 
@@ -276,6 +281,7 @@ struct SettingsTable_Impl
     , m_bShowMarkupChanges(true)
     , m_bLinkStyles(false)
     , m_nZoomFactor(0)
+    , m_nWordCompatibilityMode(-1)
     , m_nView(0)
     , m_bEvenAndOddHeaders(false)
     , m_bUsePrinterMetrics(false)
@@ -294,6 +300,7 @@ struct SettingsTable_Impl
     , m_bProtectForm(false)
     , m_bRedlineProtection(false)
     , m_sRedlineProtectionKey()
+    , m_bReadOnly(false)
     , m_bDisplayBackgroundShape(false)
     , m_pThemeFontLangProps(3)
     , m_pCurrentCompatSetting(3)
@@ -361,6 +368,10 @@ void SettingsTable::lcl_attribute(Id nName, Value & val)
         break;
     case NS_ooxml::LN_CT_DocProtect_edit: // 92037
         m_pImpl->m_DocumentProtection.m_nEdit = nIntValue;
+        // multiple DocProtect_edits should not exist. If they do, last one wins
+        m_pImpl->m_bRedlineProtection = false;
+        m_pImpl->m_bProtectForm = false;
+        m_pImpl->m_bReadOnly = false;
         switch (nIntValue)
         {
         case NS_ooxml::LN_Value_doc_ST_DocProtect_trackedChanges:
@@ -372,19 +383,13 @@ void SettingsTable::lcl_attribute(Id nName, Value & val)
         case NS_ooxml::LN_Value_doc_ST_DocProtect_forms:
             m_pImpl->m_bProtectForm = true;
             break;
+        case NS_ooxml::LN_Value_doc_ST_DocProtect_readOnly:
+            m_pImpl->m_bReadOnly = true;
+            break;
         }
         break;
     case NS_ooxml::LN_CT_DocProtect_enforcement: // 92039
         m_pImpl->m_DocumentProtection.m_bEnforcement = (nIntValue != 0);
-        switch (m_pImpl->m_DocumentProtection.m_nEdit)
-        {
-        case NS_ooxml::LN_Value_doc_ST_DocProtect_trackedChanges:
-            m_pImpl->m_bRedlineProtection = (nIntValue != 0);
-            break;
-        case NS_ooxml::LN_Value_doc_ST_DocProtect_forms:
-            m_pImpl->m_bProtectForm = (nIntValue != 0);
-            break;
-        }
         break;
     case NS_ooxml::LN_CT_DocProtect_formatting: // 92038
         m_pImpl->m_DocumentProtection.m_bFormatting = (nIntValue != 0);
@@ -516,7 +521,7 @@ void SettingsTable::lcl_sprm(Sprm& rSprm)
     case NS_ooxml::LN_CT_Settings_mailMerge:
     {
         writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-        if (pProperties.get())
+        if (pProperties)
             pProperties->resolve(*this);
     }
     break;
@@ -539,7 +544,7 @@ void SettingsTable::lcl_sprm(Sprm& rSprm)
     case NS_ooxml::LN_CT_Compat_compatSetting:
     {
         writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-        if (pProperties.get())
+        if (pProperties)
         {
             pProperties->resolve(*this);
 
@@ -570,6 +575,9 @@ void SettingsTable::lcl_sprm(Sprm& rSprm)
         break;
     case NS_ooxml::LN_CT_Settings_displayBackgroundShape:
         m_pImpl->m_bDisplayBackgroundShape = nIntValue;
+        break;
+    case NS_ooxml::LN_CT_Compat_noLeading:
+        m_pImpl->m_bNoLeading = nIntValue != 0;
         break;
     default:
     {
@@ -660,7 +668,12 @@ bool SettingsTable::GetDoNotExpandShiftReturn() const
 
 bool SettingsTable::GetProtectForm() const
 {
-    return m_pImpl->m_bProtectForm;
+    return m_pImpl->m_bProtectForm && m_pImpl->m_DocumentProtection.m_bEnforcement;
+}
+
+bool SettingsTable::GetReadOnly() const
+{
+    return m_pImpl->m_bReadOnly && m_pImpl->m_DocumentProtection.m_bEnforcement;
 }
 
 bool SettingsTable::GetNoHyphenateCaps() const
@@ -680,6 +693,22 @@ uno::Sequence<beans::PropertyValue> const & SettingsTable::GetThemeFontLangPrope
 
 uno::Sequence<beans::PropertyValue> SettingsTable::GetCompatSettings() const
 {
+    if ( GetWordCompatibilityMode() == -1 )
+    {
+        // the default value for an undefined compatibilityMode is 12 (Word 2007)
+        uno::Sequence<beans::PropertyValue> aCompatSetting( comphelper::InitPropertySequence({
+            { "name", uno::Any(OUString("compatibilityMode")) },
+            { "uri", uno::Any(OUString("http://schemas.microsoft.com/office/word")) },
+            { "val", uno::Any(OUString("12")) } //12: Use word processing features specified in ECMA-376. This is the default.
+        }));
+
+        beans::PropertyValue aValue;
+        aValue.Name = "compatSetting";
+        aValue.Value <<= aCompatSetting;
+
+        m_pImpl->m_aCompatSettings.push_back(aValue);
+    }
+
     return comphelper::containerToSequence(m_pImpl->m_aCompatSettings);
 }
 
@@ -714,7 +743,7 @@ void SettingsTable::ApplyProperties(uno::Reference<text::XTextDocument> const& x
     {
         xDocProps->setPropertyValue("RecordChanges", uno::makeAny( m_pImpl->m_bRecordChanges ) );
         // Password protected Record changes
-        if ( m_pImpl->m_bRecordChanges && m_pImpl->m_bRedlineProtection )
+        if ( m_pImpl->m_bRecordChanges && m_pImpl->m_bRedlineProtection && m_pImpl->m_DocumentProtection.m_bEnforcement )
         {
             // use dummy protection key to forbid disabling of Record changes without a notice
             // (extending the recent GrabBag support)    TODO support password verification...
@@ -756,36 +785,79 @@ void SettingsTable::ApplyProperties(uno::Reference<text::XTextDocument> const& x
     }
 }
 
-sal_Int32 SettingsTable::GetWordCompatibilityMode() const
+bool SettingsTable::GetCompatSettingValue( const OUString& sCompatName ) const
 {
+    bool bRet = false;
     for (const auto& rProp : m_pImpl->m_aCompatSettings)
     {
-        if (rProp.Name == "compatSetting")
+        if (rProp.Name == "compatSetting") //always true
         {
             css::uno::Sequence<css::beans::PropertyValue> aCurrentCompatSettings;
             rProp.Value >>= aCurrentCompatSettings;
 
             OUString sName;
-            OUString sUri;
-            OUString sVal;
-
             aCurrentCompatSettings[0].Value >>= sName;
-            aCurrentCompatSettings[1].Value >>= sUri;
-            aCurrentCompatSettings[2].Value >>= sVal;
+            if ( sName != sCompatName )
+                continue;
 
-            if (sName == "compatibilityMode" && sUri == "http://schemas.microsoft.com/office/word")
-            {
-                return sVal.toInt32();
-            }
+            OUString sUri;
+            aCurrentCompatSettings[1].Value >>= sUri;
+            if ( sUri != "http://schemas.microsoft.com/office/word" )
+                continue;
+
+            OUString sVal;
+            aCurrentCompatSettings[2].Value >>= sVal;
+            // if repeated, what happens?  Last one wins
+            bRet = sVal.toBoolean();
         }
     }
 
-    return -1; // Word compatibility mode not found
+    return bRet;
+}
+
+//Keep this function in-sync with the one in sw/.../docxattributeoutput.cxx
+sal_Int32 SettingsTable::GetWordCompatibilityMode() const
+{
+    if ( m_pImpl->m_nWordCompatibilityMode != -1 )
+        return m_pImpl->m_nWordCompatibilityMode;
+
+    for (const auto& rProp : m_pImpl->m_aCompatSettings)
+    {
+        if (rProp.Name == "compatSetting") //always true
+        {
+            css::uno::Sequence<css::beans::PropertyValue> aCurrentCompatSettings;
+            rProp.Value >>= aCurrentCompatSettings;
+
+            OUString sName;
+            aCurrentCompatSettings[0].Value >>= sName;
+            if ( sName != "compatibilityMode" )
+                continue;
+
+            OUString sUri;
+            aCurrentCompatSettings[1].Value >>= sUri;
+            if ( sUri != "http://schemas.microsoft.com/office/word" )
+                continue;
+
+            OUString sVal;
+            aCurrentCompatSettings[2].Value >>= sVal;
+            const sal_Int32 nValidMode = sVal.toInt32();
+            // if repeated, highest mode wins in MS Word. 11 is the first valid mode.
+            if ( nValidMode > 10 && nValidMode > m_pImpl->m_nWordCompatibilityMode )
+                m_pImpl->m_nWordCompatibilityMode = nValidMode;
+        }
+    }
+
+    return m_pImpl->m_nWordCompatibilityMode;
 }
 
 bool SettingsTable::GetLongerSpaceSequence() const
 {
     return m_pImpl->m_bLongerSpaceSequence;
+}
+
+bool SettingsTable::GetNoLeading() const
+{
+    return m_pImpl->m_bNoLeading;
 }
 
 }//namespace dmapper

@@ -52,7 +52,7 @@ SwParaDlg::SwParaDlg(weld::Window *pParent,
     , rView(rVw)
     , bDrawParaDlg(bDraw)
 {
-    nHtmlMode = ::GetHtmlMode(rVw.GetDocShell());
+    sal_uInt16 nHtmlMode = ::GetHtmlMode(rVw.GetDocShell());
     bool bHtmlMode = (nHtmlMode & HTMLMODE_ON) == HTMLMODE_ON;
     if(pTitle)
     {
@@ -208,8 +208,7 @@ void SwParaDlg::PageCreated(const OString& rId, SfxTabPage& rPage)
         static_cast<SwParagraphNumTabPage&>(rPage).EnableNewStart();
         weld::ComboBox& rBox = static_cast<SwParagraphNumTabPage&>(rPage).GetStyleBox();
         SfxStyleSheetBasePool* pPool = rView.GetDocShell()->GetStyleSheetPool();
-        pPool->SetSearchMask(SfxStyleFamily::Pseudo);
-        const SfxStyleSheetBase* pBase = pPool->First();
+        const SfxStyleSheetBase* pBase = pPool->First(SfxStyleFamily::Pseudo);
         std::set<OUString> aNames;
         while(pBase)
         {

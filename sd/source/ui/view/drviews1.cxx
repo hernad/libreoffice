@@ -1118,7 +1118,7 @@ bool DrawViewShell::SwitchPage(sal_uInt16 nSelectedPage)
 
                 while( (pObj = rShapeList.getNextShape()) )
                 {
-                    if( pMaster->GetPresObjKind(pObj) == PRESOBJ_HANDOUT )
+                    if( pMaster->GetPresObjKind(pObj) == PresObjKind::Handout )
                     {
                         // #i105146# We want no content to be displayed for PageKind::Handout,
                         // so just never set a page as content
@@ -1283,12 +1283,9 @@ sal_Int8 DrawViewShell::AcceptDrop (
     const AcceptDropEvent& rEvt,
     DropTargetHelper& rTargetHelper,
     ::sd::Window* /*pTargetWindow*/,
-    sal_uInt16 nPage,
+    sal_uInt16 /*nPage*/,
     SdrLayerID nLayer )
 {
-    if( nPage != SDRPAGE_NOTFOUND )
-        nPage = GetDoc()->GetSdPage( nPage, mePageKind )->GetPageNum();
-
     if( SlideShow::IsRunning( GetViewShellBase() ) )
         return DND_ACTION_NONE;
 

@@ -19,15 +19,14 @@
 
 #include <oox/ppt/slidetransition.hxx>
 
-#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/animations/TransitionType.hpp>
 #include <com/sun/star/animations/TransitionSubType.hpp>
 #include <com/sun/star/animations/XTransitionFilter.hpp>
 
 #include <osl/diagnose.h>
 #include <sal/log.hxx>
+#include <tools/color.hxx>
 
-#include <oox/helper/helper.hxx>
 #include <oox/helper/propertymap.hxx>
 #include <oox/token/namespaces.hxx>
 #include <oox/token/properties.hxx>
@@ -35,7 +34,6 @@
 #include <oox/ppt/pptfilterhelpers.hxx>
 
 using namespace ::com::sun::star::uno;
-using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::animations;
 using namespace ::com::sun::star::presentation;
 
@@ -49,6 +47,7 @@ namespace oox::ppt {
         , mfTransitionDurationInSeconds( -1.0 )
         , mbMode( true )
         , mnAdvanceTime( -1 )
+        , mnTransitionFadeColor( 0 )
     {
 
     }
@@ -61,6 +60,7 @@ namespace oox::ppt {
         , mfTransitionDurationInSeconds( -1.0 )
         , mbMode( true )
         , mnAdvanceTime( -1 )
+        , mnTransitionFadeColor( 0 )
     {
         const transition *p = transition::find( sFilterName );
         if( p )
@@ -81,7 +81,7 @@ namespace oox::ppt {
             aProps.setProperty( PROP_Speed, mnAnimationSpeed);
             if( mfTransitionDurationInSeconds >= 0.0 )
                 aProps.setProperty( PROP_TransitionDuration, mfTransitionDurationInSeconds);
-            aProps.setProperty( PROP_TransitionFadeColor, sal_Int32(0));
+            aProps.setProperty( PROP_TransitionFadeColor, mnTransitionFadeColor);
             if( mnAdvanceTime != -1 ) {
                 aProps.setProperty( PROP_Duration, mnAdvanceTime/1000);
                 aProps.setProperty( PROP_Change, static_cast<sal_Int32>(1));
@@ -433,6 +433,15 @@ namespace oox::ppt {
         case P14_TOKEN(honeycomb):
             mnTransitionType = TransitionType::MISCSHAPEWIPE;
             mnTransitionSubType = TransitionSubType::HEART;
+            break;
+        case P14_TOKEN(flash):
+            mnTransitionType = TransitionType::FADE;
+            mnTransitionSubType = TransitionSubType::FADEOVERCOLOR;
+            mnTransitionFadeColor = static_cast<sal_Int32>(COL_WHITE);
+            break;
+        case PPT_TOKEN(strips):
+            mnTransitionType = TransitionType::SLIDEWIPE;
+            mnTransitionSubType = ooxToOdpCornerDirections( param1 );
             break;
         default:
             mnTransitionType = 0;

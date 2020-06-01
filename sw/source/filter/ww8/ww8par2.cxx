@@ -1493,29 +1493,33 @@ void WW8TabBandDesc::ProcessSpecificSpacing(const sal_uInt8* pParams)
     OSL_ENSURE(nLen == 6, "Unexpected spacing len");
     if (nLen != 6)
         return;
-    sal_uInt8 nWhichCell = *pParams++;
-    OSL_ENSURE(nWhichCell < MAX_COL + 1, "Cell out of range in spacings");
-    if (nWhichCell >= MAX_COL + 1)
+
+    const sal_uInt8 nStartCell = *pParams++; // The first cell these margins could apply to.
+    const sal_uInt8 nEndCell = *pParams++;   // The cell that does NOT apply these margins.
+    OSL_ENSURE(nStartCell < MAX_COL + 1, "Cell out of range in spacings");
+    if ( nStartCell >= nEndCell || nEndCell > MAX_COL+1 )
         return;
 
-    ++pParams; //unknown byte
     sal_uInt8 nSideBits = *pParams++;
     OSL_ENSURE(nSideBits < 0x10, "Unexpected value for nSideBits");
-    nOverrideSpacing[nWhichCell] |= nSideBits;
 
-    OSL_ENSURE(nOverrideSpacing[nWhichCell] < 0x10,
-        "Unexpected value for nSideBits");
-#if OSL_DEBUG_LEVEL > 0
-    sal_uInt8 nUnknown2 = *pParams;
-    OSL_ENSURE(nUnknown2 == 0x3, "Unexpected value for spacing2");
-#endif
-    ++pParams;
+    const sal_uInt8 nSizeType = *pParams++; // Fts: FtsDxa(0x3) is the only type that mentions cellMargin
+    OSL_ENSURE(nSizeType == 0x3, "Unexpected non-twip value for margin width");
+    if ( nSizeType != 0x3 )           // i.e FtsNil: The size is wrong (or unconverted) and MUST be ignored
+        return;
+
     sal_uInt16 nValue =  SVBT16ToUInt16( pParams );
 
-    for (int i=0; i < 4; i++)
+    for (int nCell = nStartCell; nCell < nEndCell; ++nCell)
     {
-        if (nSideBits & (1 << i))
-            nOverrideValues[nWhichCell][i] = nValue;
+        nOverrideSpacing[ nCell ] |= nSideBits;
+        OSL_ENSURE(nOverrideSpacing[ nCell ] < 0x10, "Unexpected value for nSideBits");
+
+        for (int i=0; i < 4; i++)
+        {
+            if (nSideBits & (1 << i))
+                nOverrideValues[ nCell ][ i ] = nValue;
+        }
     }
 }
 
@@ -1767,7 +1771,7 @@ WW8TabDesc::WW8TabDesc(SwWW8ImplReader* pIoClass, WW8_CP nStartCp) :
     m_nPercentWidth(0),
     m_bOk(true),
     m_bClaimLineFormat(false),
-    m_eOri(text::HoriOrientation::NONE),
+    m_eOri(text::HoriOrientation::LEFT),
     m_bIsBiDi(false),
     m_nCurrentRow(0),
     m_nCurrentBandRow(0),
@@ -1792,8 +1796,6 @@ WW8TabDesc::WW8TabDesc(SwWW8ImplReader* pIoClass, WW8_CP nStartCp) :
     m_pIo->m_xPlcxMan->GetPap()->Save( aSave );
 
     WW8PLCFx_Cp_FKP* pPap = m_pIo->m_xPlcxMan->GetPapPLCF();
-
-    m_eOri = text::HoriOrientation::LEFT;
 
     WW8TabBandDesc* pNewBand = new WW8TabBandDesc;
 
@@ -2423,6 +2425,33 @@ void WW8TabDesc::CreateSwTable()
 
     m_xTmpPos.reset(new SwPosition(*m_pIo->m_pPaM->GetPoint()));
 
+    // Because SW cannot handle multi-page floating frames,
+    // _any unnecessary_ floating tables have been converted to inline.
+    long nLeft = 0;
+    if ( m_pIo->m_xSFlyPara && !m_pIo->m_xSFlyPara->pFlyFormat )
+    {
+        // Get the table orientation from the fly
+        // Do we also need to check m_pIo->m_xSFlyPara->bToggelPos/IsPosToggle()? [Probably not - layout-only concern]
+        const bool bAdjustMargin = m_pIo->m_xSFlyPara->eHRel == text::RelOrientation::PAGE_FRAME || m_pIo->m_xSFlyPara->nXPos;
+        const bool bIsInsideMargin = m_bIsBiDi ? m_pIo->m_xSFlyPara->eHAlign == text::HoriOrientation::RIGHT
+                                               : m_pIo->m_xSFlyPara->eHAlign == text::HoriOrientation::LEFT;
+        if ( bIsInsideMargin && bAdjustMargin )
+            m_eOri = text::HoriOrientation::LEFT_AND_WIDTH;
+        else if ( m_pIo->m_xSFlyPara->eHAlign != text::HoriOrientation::NONE )
+            m_eOri = m_pIo->m_xSFlyPara->eHAlign;
+        if ( m_eOri == text::HoriOrientation::LEFT_AND_WIDTH )
+        {
+            nLeft = m_pIo->m_xSFlyPara->nXPos;
+            if ( m_pIo->m_xSFlyPara->eHRel == text::RelOrientation::PAGE_FRAME )
+            {
+                if ( !m_bIsBiDi )
+                    nLeft -= m_pIo->m_aSectionManager.GetPageLeft();
+                else
+                    nLeft += m_pIo->m_aSectionManager.GetPageRight();
+            }
+        }
+    }
+
     // The table is small: The number of columns is the lowest count of
     // columns of the origin, because inserting is faster than deleting.
     // The number of rows is the count of bands because (identically)
@@ -2472,7 +2501,7 @@ void WW8TabDesc::CreateSwTable()
     if( m_nMaxRight - m_nMinLeft > MINLAY * m_nDefaultSwCols )
     {
         SwFormatFrameSize aFrameSize(SwFrameSize::Fixed, m_nSwWidth);
-        // Don't set relative width if the table has been converted into a floating frame
+        // Don't set relative width if the table is in a floating frame
         if ( m_nPercentWidth && (!m_pIo->m_xSFlyPara || !m_pIo->m_xSFlyPara->pFlyFormat) )
             aFrameSize.SetWidthPercent(m_nPercentWidth);
         m_pTable->GetFrameFormat()->SetFormatAttr(aFrameSize);
@@ -2503,22 +2532,21 @@ void WW8TabDesc::CreateSwTable()
                 m_pIo->m_xSFlyPara->pFlyFormat->SetFormatAttr(aHori);
             }
         }
-        else
+        else   // Not directly in a floating frame.
         {
-            //If bApo is set, then this table is being placed in a floating
+            //Historical note: If InLocalApo(), then this table is being placed in a floating
             //frame, and the frame matches the left and right *lines* of the
             //table, so the space to the left of the table isn't to be used
             //inside the frame, in word the dialog involved greys out the
             //ability to set the margin.
             SvxLRSpaceItem aL( RES_LR_SPACE );
 
-            long nLeft = 0;
             if (!m_bIsBiDi)
-                nLeft = GetMinLeft();
+                nLeft += GetMinLeft();
             else
             {
                 const short nTableWidth = m_nPreferredWidth ? m_nPreferredWidth : m_nSwWidth;
-                nLeft = m_pIo->m_aSectionManager.GetTextAreaWidth();
+                nLeft += m_pIo->m_aSectionManager.GetTextAreaWidth();
                 nLeft = nLeft - nTableWidth - GetMinLeft();
             }
             aL.SetLeft(nLeft);
@@ -2733,7 +2761,7 @@ void WW8TabDesc::ParkPaM()
 
 void WW8TabDesc::MoveOutsideTable()
 {
-    OSL_ENSURE(m_xTmpPos.get() && m_pIo, "I've forgotten where the table is anchored");
+    OSL_ENSURE(m_xTmpPos && m_pIo, "I've forgotten where the table is anchored");
     if (m_xTmpPos && m_pIo)
         *m_pIo->m_pPaM->GetPoint() = *m_xTmpPos;
 }
@@ -3211,21 +3239,7 @@ void WW8TabDesc::AdjustNewBand()
 
         SetTabBorders(pBox, j);
 
-        // #i18128# word has only one line between adjoining vertical cells
-        // we have to mimic this in the filter by picking the larger of the
-        // sides and using that one on one side of the line (right)
         SvxBoxItem aCurrentBox(sw::util::ItemGet<SvxBoxItem>(*(pBox->GetFrameFormat()), RES_BOX));
-        if (i != 0)
-        {
-            SwTableBox* pBox2 = (*m_pTabBoxes)[i-1];
-            SvxBoxItem aOldBox(sw::util::ItemGet<SvxBoxItem>(*(pBox2->GetFrameFormat()), RES_BOX));
-            if( aOldBox.CalcLineWidth(SvxBoxItemLine::RIGHT) > aCurrentBox.CalcLineWidth(SvxBoxItemLine::LEFT) )
-                aCurrentBox.SetLine(aOldBox.GetLine(SvxBoxItemLine::RIGHT), SvxBoxItemLine::LEFT);
-
-            aOldBox.SetLine(nullptr, SvxBoxItemLine::RIGHT);
-            pBox2->GetFrameFormat()->SetFormatAttr(aOldBox);
-        }
-
         pBox->GetFrameFormat()->SetFormatAttr(aCurrentBox);
 
         SetTabVertAlign(pBox, j);
@@ -3727,6 +3741,7 @@ WW8RStyle::WW8RStyle(WW8Fib& _rFib, SwWW8ImplReader* pI)
     , mbFSizeChanged(false)
     , mbFCTLSizeChanged(false)
     , mbWidowsChanged(false)
+    , mbBidiChanged(false)
 {
     mpIo->m_vColl.resize(m_cstd);
 }
@@ -3771,6 +3786,14 @@ void WW8RStyle::Set1StyleDefaults()
         {
             mpIo->m_pCurrentColl->SetFormatAttr( SvxWidowsItem( 2, RES_PARATR_WIDOWS ) );
             mpIo->m_pCurrentColl->SetFormatAttr( SvxOrphansItem( 2, RES_PARATR_ORPHANS ) );
+        }
+
+        // Word defaults to ltr, not inheriting from the environment like Writer. Regardless of
+        // the page/sections rtl setting, the standard/no-inherit styles lack of rtl still means ltr
+        if( !mbBidiChanged )  // likely, since no UI to change LTR except in default style
+        {
+            mpIo->m_pCurrentColl->SetFormatAttr(
+                SvxFrameDirectionItem(SvxFrameDirection::Horizontal_LR_TB, RES_FRAMEDIR));
         }
     }
 }
@@ -4525,18 +4548,6 @@ void WW8RStyle::Import()
             aAttr.GetMaxHyphens() = 0;
 
             mpIo->m_pStandardFormatColl->SetFormatAttr( aAttr );
-        }
-
-        /*
-        Word defaults to ltr not from environment like writer. Regardless of
-        the page/sections rtl setting the standard style lack of rtl still
-        means ltr
-        */
-        if (SfxItemState::SET != mpIo->m_pStandardFormatColl->GetItemState(RES_FRAMEDIR,
-            false))
-        {
-           mpIo->m_pStandardFormatColl->SetFormatAttr(
-                SvxFrameDirectionItem(SvxFrameDirection::Horizontal_LR_TB, RES_FRAMEDIR));
         }
     }
 

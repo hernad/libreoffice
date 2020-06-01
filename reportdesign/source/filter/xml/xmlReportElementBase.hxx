@@ -21,7 +21,6 @@
 
 #include <xmloff/xmlictxt.hxx>
 #include <com/sun/star/report/XReportComponent.hpp>
-#include <vector>
 
 namespace rptxml
 {
@@ -46,8 +45,6 @@ namespace rptxml
         OXMLTable*    m_pContainer;
         css::uno::Reference< css::report::XReportComponent >      m_xReportComponent;
 
-        virtual css::uno::Reference< css::xml::sax::XFastContextHandler > createFastChildContext_( sal_Int32 nElement,
-                    const css::uno::Reference< css::xml::sax::XFastAttributeList > & xAttrList );
     public:
 
         OXMLReportElementBase( ORptFilter& rImport

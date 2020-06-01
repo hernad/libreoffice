@@ -22,6 +22,7 @@
 
 #include <vcl/weld.hxx>
 #include <vcl/svapp.hxx>
+#include <vcl/commandevent.hxx>
 
 #include <strings.hrc>
 #include <helpids.h>
@@ -55,6 +56,10 @@ SvxMenuConfigPage::SvxMenuConfigPage(weld::Container* pPage, weld::DialogControl
 
     rTreeView.connect_changed(
         LINK( this, SvxMenuConfigPage, SelectMenuEntry ) );
+    rTreeView.connect_popup_menu( LINK( this, SvxMenuConfigPage, ContentContextMenuHdl ) );
+
+    m_xFunctions->get_widget().connect_popup_menu(
+        LINK( this, SvxMenuConfigPage, FunctionContextMenuHdl ) );
 
     m_xGearBtn->connect_selected(LINK(this, SvxMenuConfigPage, GearHdl));
 
@@ -167,7 +172,7 @@ void SvxMenuConfigPage::UpdateButtonStates()
     bool  bIsSeparator =
         selection != -1 && reinterpret_cast<SvxConfigEntry*>(m_xContentsListBox->get_id(selection).toInt64())->IsSeparator();
     bool bIsValidSelection =
-        !(m_xContentsListBox->n_children() == 0 || selection == -1);
+        (m_xContentsListBox->n_children() != 0 && selection != -1);
 
     m_xMoveUpButton->set_sensitive(
         bIsValidSelection &&  selection != 0 );
@@ -216,33 +221,33 @@ void SvxMenuConfigPage::DeleteSelectedContent()
 {
     int nActEntry = m_xContentsListBox->get_selected_index();
 
-    if (nActEntry != -1)
+    if (nActEntry == -1)
+        return;
+
+    // get currently selected menu entry
+    SvxConfigEntry* pMenuEntry =
+        reinterpret_cast<SvxConfigEntry*>(m_xContentsListBox->get_id(nActEntry).toInt64());
+
+    // get currently selected menu
+    SvxConfigEntry* pMenu = GetTopLevelSelection();
+
+    // remove menu entry from the list for this menu
+    SvxConfigPageHelper::RemoveEntry( pMenu->GetEntries(), pMenuEntry );
+
+    // remove menu entry from UI
+    m_xContentsListBox->remove(nActEntry);
+
+    // if this is a submenu entry, redraw the menus list box
+    if ( pMenuEntry->IsPopup() )
     {
-        // get currently selected menu entry
-        SvxConfigEntry* pMenuEntry =
-            reinterpret_cast<SvxConfigEntry*>(m_xContentsListBox->get_id(nActEntry).toInt64());
-
-        // get currently selected menu
-        SvxConfigEntry* pMenu = GetTopLevelSelection();
-
-        // remove menu entry from the list for this menu
-        SvxConfigPageHelper::RemoveEntry( pMenu->GetEntries(), pMenuEntry );
-
-        // remove menu entry from UI
-        m_xContentsListBox->remove(nActEntry);
-
-        // if this is a submenu entry, redraw the menus list box
-        if ( pMenuEntry->IsPopup() )
-        {
-            ReloadTopLevelListBox();
-        }
-
-        // delete data for menu entry
-        delete pMenuEntry;
-
-        GetSaveInData()->SetModified();
-        pMenu->SetModified();
+        ReloadTopLevelListBox();
     }
+
+    // delete data for menu entry
+    delete pMenuEntry;
+
+    GetSaveInData()->SetModified();
+    pMenu->SetModified();
 }
 
 short SvxMenuConfigPage::QueryReset()
@@ -484,23 +489,23 @@ IMPL_LINK_NOARG(SvxMenuConfigPage, ResetMenuHdl, weld::Button&, void)
 
     // Resetting individual top-level menus is not possible at the moment.
     // So we are resetting only if it is a context menu
-    if (!m_bIsMenuBar && xQueryBox->run() == RET_YES)
-    {
-        sal_Int32 nPos = m_xTopLevelListBox->get_active();
-        ContextMenuSaveInData* pSaveInData = static_cast< ContextMenuSaveInData* >(GetSaveInData());
+    if (m_bIsMenuBar || xQueryBox->run() != RET_YES)
+        return;
 
-        pSaveInData->ResetContextMenu(pMenuData);
+    sal_Int32 nPos = m_xTopLevelListBox->get_active();
+    ContextMenuSaveInData* pSaveInData = static_cast< ContextMenuSaveInData* >(GetSaveInData());
 
-        // ensure that the UI is cleared before populating it
-        m_xTopLevelListBox->clear();
-        m_xContentsListBox->clear();
+    pSaveInData->ResetContextMenu(pMenuData);
 
-        ReloadTopLevelListBox();
+    // ensure that the UI is cleared before populating it
+    m_xTopLevelListBox->clear();
+    m_xContentsListBox->clear();
 
-        // Reselect the reset menu
-        m_xTopLevelListBox->set_active(nPos);
-        SelectElement();
-    }
+    ReloadTopLevelListBox();
+
+    // Reselect the reset menu
+    m_xTopLevelListBox->set_active(nPos);
+    SelectElement();
 }
 
 SaveInData* SvxMenuConfigPage::CreateSaveInData(
@@ -513,6 +518,81 @@ SaveInData* SvxMenuConfigPage::CreateSaveInData(
         return static_cast< SaveInData* >( new ContextMenuSaveInData( xCfgMgr, xParentCfgMgr, aModuleId, bDocConfig ) );
 
     return static_cast< SaveInData* >( new MenuSaveInData( xCfgMgr, xParentCfgMgr, aModuleId, bDocConfig ) );
+}
+
+IMPL_LINK( SvxMenuConfigPage, ContentContextMenuHdl, const CommandEvent&, rCEvt, bool )
+{
+    if (rCEvt.GetCommand() != CommandEventId::ContextMenu)
+        return false;
+
+    weld::TreeView& rTreeView = m_xContentsListBox->get_widget();
+
+    // Select clicked entry
+    std::unique_ptr<weld::TreeIter> xIter(rTreeView.make_iterator());
+    rTreeView.get_dest_row_at_pos( rCEvt.GetMousePosPixel(), xIter.get(), false );
+    rTreeView.select(*xIter);
+    SelectMenuEntry( rTreeView );
+
+    int nSelectIndex = m_xContentsListBox->get_selected_index();
+
+    bool  bIsSeparator =
+        nSelectIndex != -1 && reinterpret_cast<SvxConfigEntry*>(m_xContentsListBox->get_id(nSelectIndex).toInt64())->IsSeparator();
+    bool bIsValidSelection =
+        ( m_xContentsListBox->n_children() != 0 && nSelectIndex != -1 );
+
+    std::unique_ptr<weld::Builder> xBuilder(Application::CreateBuilder( &rTreeView, "cui/ui/entrycontextmenu.ui" ) );
+    auto xContextMenu = xBuilder->weld_menu("menu");
+    xContextMenu->set_visible("add", false);
+    xContextMenu->set_visible("remove", bIsValidSelection);
+    xContextMenu->set_visible("rename", bIsValidSelection && !bIsSeparator);
+    xContextMenu->set_visible("changeIcon", false);
+    xContextMenu->set_visible("resetIcon", false);
+    xContextMenu->set_visible("restoreDefault", false);
+    OString sCommand(xContextMenu->popup_at_rect( &rTreeView, tools::Rectangle(rCEvt.GetMousePosPixel(), Size(1,1) ) ) );
+
+    if ( sCommand == "remove")
+    {
+        RemoveCommandHdl( *m_xRemoveCommandButton );
+    }
+    else if ( sCommand == "rename" )
+    {
+        ModifyItemHdl( "renameItem" );
+    }
+    else if ( !sCommand.isEmpty() )
+        SAL_WARN("cui.customize", "Unknown context menu action: " << sCommand );
+    return true;
+}
+
+IMPL_LINK( SvxMenuConfigPage, FunctionContextMenuHdl, const CommandEvent&, rCEvt, bool )
+{
+    if (rCEvt.GetCommand() != CommandEventId::ContextMenu)
+        return false;
+
+    weld::TreeView& rTreeView = m_xFunctions->get_widget();
+
+    // Select clicked entry
+    std::unique_ptr<weld::TreeIter> xIter(rTreeView.make_iterator());
+    rTreeView.get_dest_row_at_pos( rCEvt.GetMousePosPixel(), xIter.get(), false );
+    rTreeView.select(*xIter);
+    SelectFunctionHdl( rTreeView );
+
+    std::unique_ptr<weld::Builder> xBuilder(Application::CreateBuilder( &rTreeView, "cui/ui/entrycontextmenu.ui" ) );
+    auto xContextMenu = xBuilder->weld_menu("menu");
+    xContextMenu->set_visible("add", true);
+    xContextMenu->set_visible("remove", false);
+    xContextMenu->set_visible("rename", false);
+    xContextMenu->set_visible("changeIcon", false);
+    xContextMenu->set_visible("resetIcon", false);
+    xContextMenu->set_visible("restoreDefault", false);
+    OString sCommand(xContextMenu->popup_at_rect( &rTreeView, tools::Rectangle(rCEvt.GetMousePosPixel(), Size(1,1) ) ) );
+
+    if ( sCommand == "add")
+    {
+        AddCommandHdl( *m_xAddCommandButton );
+    }
+    else if ( !sCommand.isEmpty() )
+        SAL_WARN("cui.customize", "Unknown context menu action: " << sCommand );
+    return true;
 }
 
  /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

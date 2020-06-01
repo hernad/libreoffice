@@ -10,25 +10,16 @@
 #include "ShadowPropertyPanel.hxx"
 #include <vcl/settings.hxx>
 #include <vcl/svapp.hxx>
-#include <sfx2/sidebar/ControlFactory.hxx>
 #include <svx/colorbox.hxx>
 #include <svx/svxids.hrc>
-#include <sfx2/objsh.hxx>
 #include <sfx2/bindings.hxx>
 #include <sfx2/dispatch.hxx>
-#include <svx/xlineit0.hxx>
-#include <svx/xtable.hxx>
-#include <svtools/valueset.hxx>
 #include <unotools/localedatawrapper.hxx>
-#include <unotools/pathoptions.hxx>
-#include <svx/svddef.hxx>
 #include <svx/sdooitm.hxx>
 #include <svx/sdshitm.hxx>
 #include <svx/sdshtitm.hxx>
 #include <svx/sdprcitm.hxx>
 #include <svx/sdsxyitm.hxx>
-#include <svx/svdmodel.hxx>
-#include <svx/drawitem.hxx>
 #include <svx/sdshcitm.hxx>
 
 using namespace css;
@@ -40,7 +31,7 @@ ShadowPropertyPanel::ShadowPropertyPanel(
     vcl::Window* pParent,
     const uno::Reference<css::frame::XFrame>& rxFrame,
     SfxBindings* pBindings)
-:   PanelLayout(pParent, "ShadowPropertyPanel", "svx/ui/sidebarshadow.ui", rxFrame, true),
+:   PanelLayout(pParent, "ShadowPropertyPanel", "svx/ui/sidebarshadow.ui", rxFrame),
     maShadowController(SID_ATTR_FILL_SHADOW, *pBindings, *this),
     maShadowTransController(SID_ATTR_SHADOW_TRANSPARENCE, *pBindings, *this),
     maShadowColorController(SID_ATTR_SHADOW_COLOR, *pBindings, *this),

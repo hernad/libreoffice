@@ -35,6 +35,7 @@
 #include <sfx2/dispatch.hxx>
 #include <sfx2/viewfrm.hxx>
 #include <vcl/event.hxx>
+#include <vcl/fieldvalues.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/svapp.hxx>
 
@@ -489,7 +490,7 @@ SwColumnPage::SwColumnPage(weld::Container* pPage, weld::DialogController* pCont
         SvxBorderLineStyle::DASHED );
 
     sal_Int64 nLineWidth = m_xLineWidthEdit->get_value(FieldUnit::POINT);
-    nLineWidth = static_cast<long>(MetricField::ConvertDoubleValue(
+    nLineWidth = static_cast<long>(vcl::ConvertDoubleValue(
             nLineWidth,
             m_xLineWidthEdit->get_digits(),
             FieldUnit::POINT, MapUnit::MapTwip ));
@@ -686,7 +687,7 @@ IMPL_LINK_NOARG( SwColumnPage, UpdateColMgr, weld::MetricSpinButton&, void )
         m_xLineColorLbl->set_sensitive(bEnable);
 
         sal_Int64 nLineWidth = m_xLineWidthEdit->get_value(FieldUnit::PERCENT);
-        nLineWidth = static_cast<long>(MetricField::ConvertDoubleValue(
+        nLineWidth = static_cast<long>(vcl::ConvertDoubleValue(
                 nLineWidth,
                 m_xLineWidthEdit->get_digits(),
                 m_xLineWidthEdit->get_unit(), MapUnit::MapTwip ));
@@ -1261,7 +1262,7 @@ DeactivateRC SwColumnPage::DeactivatePage(SfxItemSet *_pSet)
     return DeactivateRC::LeavePage;
 }
 
-IMPL_LINK(SwColumnPage, SetDefaultsHdl, SvtValueSet *, pVS, void)
+IMPL_LINK(SwColumnPage, SetDefaultsHdl, ValueSet *, pVS, void)
 {
     const sal_uInt16 nItem = pVS->GetSelectedItemId();
     if( nItem < 4 )
@@ -1380,7 +1381,7 @@ void ColumnValueSet::StyleUpdated()
 {
     SetFormat();
     Invalidate();
-    SvtValueSet::StyleUpdated();
+    ValueSet::StyleUpdated();
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

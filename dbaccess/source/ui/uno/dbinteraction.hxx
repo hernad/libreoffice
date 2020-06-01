@@ -21,21 +21,17 @@
 #define INCLUDED_DBACCESS_SOURCE_UI_UNO_DBINTERACTION_HXX
 
 #include <cppuhelper/implbase.hxx>
-
-#include <apitools.hxx>
+#include <connectivity/CommonTools.hxx>
 
 #include <com/sun/star/awt/XWindow.hpp>
 #include <com/sun/star/lang/XInitialization.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/task/XInteractionHandler2.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#include <com/sun/star/ucb/AuthenticationRequest.hpp>
 #include <com/sun/star/sdb/ParametersRequest.hpp>
 #include <com/sun/star/sdb/DocumentSaveRequest.hpp>
 
-namespace com { namespace sun { namespace star { namespace uno {
-    class XComponentContext;
-} } } }
+namespace com::sun::star::uno { class XComponentContext; }
 
 namespace dbtools
 {

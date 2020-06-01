@@ -20,6 +20,7 @@
 #include <xmloff/XMLGraphicsDefaultStyle.hxx>
 
 #include <com/sun/star/beans/XPropertySet.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 
 #include <tools/color.hxx>
@@ -49,7 +50,7 @@ using ::xmloff::token::XML_PARAGRAPH_PROPERTIES;
 
 
 XMLGraphicsDefaultStyle::XMLGraphicsDefaultStyle( SvXMLImport& rImport, sal_uInt16 nPrfx, const OUString& rLName, const Reference< XAttributeList >& xAttrList, SvXMLStylesContext& rStyles )
-: XMLPropStyleContext( rImport, nPrfx, rLName, xAttrList, rStyles, XML_STYLE_FAMILY_SD_GRAPHICS_ID, true )
+: XMLPropStyleContext( rImport, nPrfx, rLName, xAttrList, rStyles, XmlStyleFamily::SD_GRAPHICS_ID, true )
 {
 }
 

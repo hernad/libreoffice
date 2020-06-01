@@ -26,8 +26,9 @@
 #include <rtl/ustring.hxx>
 #include <deque>
 #include <memory>
+#include <algorithm>
 
-namespace com { namespace sun { namespace star { namespace graphic { class XPrimitive2D; } } } }
+namespace com::sun::star::graphic { class XPrimitive2D; }
 struct WmfExternal;
 
 typedef css::uno::Sequence<sal_Int8> VectorGraphicDataArray;
@@ -46,7 +47,8 @@ enum class VectorGraphicDataType
 {
     Svg = 0,
     Emf = 1,
-    Wmf = 2
+    Wmf = 2,
+    Pdf = 3
 };
 
 class VCL_DLLPUBLIC VectorGraphicData
@@ -56,7 +58,7 @@ private:
     VectorGraphicDataArray      maVectorGraphicDataArray;
 
     // The absolute Path if available
-    OUString const              maPath;
+    OUString                    maPath;
 
     // on demand created content
     bool                        mbSequenceCreated;
@@ -64,12 +66,16 @@ private:
     std::deque< css::uno::Reference< css::graphic::XPrimitive2D > > maSequence;
     BitmapEx                    maReplacement;
     size_t                      mNestedBitmapSize;
-    VectorGraphicDataType const meVectorGraphicDataType;
+    VectorGraphicDataType       meVectorGraphicDataType;
 
     // extra:
     std::unique_ptr<WmfExternal> mpExternalHeader;
 
+    // If the vector format has more pages this denotes which page to render
+    sal_Int32 mnPageIndex;
+
     // on demand creators
+    void ensurePdfReplacement();
     void ensureReplacement();
     void ensureSequenceAndRange();
 
@@ -80,10 +86,9 @@ public:
     VectorGraphicData(
         const VectorGraphicDataArray& rVectorGraphicDataArray,
         const OUString& rPath,
-        VectorGraphicDataType eVectorDataType);
-    VectorGraphicData(
-        const OUString& rPath,
-        VectorGraphicDataType eVectorDataType);
+        VectorGraphicDataType eVectorDataType,
+        sal_Int32 nPageIndex = -1);
+    VectorGraphicData(const OUString& rPath, VectorGraphicDataType eVectorDataType);
     ~VectorGraphicData();
 
     /// compare op
@@ -105,9 +110,11 @@ public:
     const std::deque< css::uno::Reference< css::graphic::XPrimitive2D > >& getPrimitive2DSequence() const;
     const BitmapEx& getReplacement() const;
     BitmapChecksum GetChecksum() const;
-};
 
-typedef std::shared_ptr< VectorGraphicData > VectorGraphicDataPtr;
+    sal_Int32 getPageIndex() const { return std::max(sal_Int32(0), mnPageIndex); }
+
+    bool isPrimitiveSequenceCreated() const { return mbSequenceCreated; }
+};
 
 #endif // INCLUDED_VCL_VECTORGRAPHICDATA_HXX
 

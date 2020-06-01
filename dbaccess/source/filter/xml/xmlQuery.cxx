@@ -20,15 +20,10 @@
 #include "xmlQuery.hxx"
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
-#include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
 #include <xmloff/ProgressBarHelper.hxx>
 #include "xmlEnums.hxx"
-#include <stringconstants.hxx>
 #include <strings.hxx>
-#include <com/sun/star/beans/PropertyValue.hpp>
-#include <com/sun/star/beans/XPropertySet.hpp>
-#include <com/sun/star/container/XNameContainer.hpp>
+#include <osl/diagnose.h>
 #include <sal/log.hxx>
 
 namespace dbaxml
@@ -46,9 +41,7 @@ OXMLQuery::OXMLQuery( ODBFilter& rImport
     OXMLTable( rImport, _xAttrList,_xParentContainer, "com.sun.star.sdb.CommandDefinition" )
         ,m_bEscapeProcessing(true)
 {
-    sax_fastparser::FastAttributeList *pAttribList =
-                    sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-    for (auto &aIter : *pAttribList)
+    for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
     {
         OUString sValue = aIter.toString();
 
@@ -61,7 +54,7 @@ OXMLQuery::OXMLQuery( ODBFilter& rImport
                 m_bEscapeProcessing = sValue == "true";
                 break;
             default:
-                SAL_WARN("dbaccess", "unknown attribute " << SvXMLImport::getNameFromToken(aIter.getToken()) << " value=" << aIter.toString());
+                SAL_WARN("dbaccess", "unknown attribute " << SvXMLImport::getPrefixAndNameFromToken(aIter.getToken()) << "=" << aIter.toString());
         }
     }
 }

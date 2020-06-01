@@ -23,7 +23,7 @@
 #include <xmloff/xmlimp.hxx>
 #include <xmloff/nmspmap.hxx>
 #include <xmloff/XMLEventsImportContext.hxx>
-#include "xmlbasici.hxx"
+#include "xmlbasicscript.hxx"
 
 #include <com/sun/star/document/XEventsSupplier.hpp>
 #include <com/sun/star/document/XEmbeddedScripts.hpp>
@@ -45,18 +45,15 @@ class XMLScriptChildContext : public SvXMLImportContext
 private:
     css::uno::Reference< css::frame::XModel >                 m_xModel;
     css::uno::Reference< css::document::XEmbeddedScripts >    m_xDocumentScripts;
-    OUString const m_aLanguage;
+    OUString m_aLanguage;
 
 public:
     XMLScriptChildContext( SvXMLImport& rImport,
         const css::uno::Reference< css::frame::XModel>& rxModel,
         const OUString& rLanguage );
 
-    virtual SvXMLImportContextRef CreateChildContext( sal_uInt16 nPrefix, const OUString& rLocalName,
-        const css::uno::Reference< css::xml::sax::XAttributeList >& xAttrList ) override;
     virtual css::uno::Reference< css::xml::sax::XFastContextHandler > SAL_CALL createFastChildContext(
-            sal_Int32 /*nElement*/, const css::uno::Reference< css::xml::sax::XFastAttributeList >& /*xAttrList*/ ) override
-    { return nullptr; }
+            sal_Int32 nElement, const css::uno::Reference< css::xml::sax::XFastAttributeList >& xAttrList ) override;
 
     virtual void SAL_CALL startFastElement( sal_Int32 /*nElement*/,
                 const css::uno::Reference< css::xml::sax::XFastAttributeList >& ) override {}
@@ -73,20 +70,20 @@ XMLScriptChildContext::XMLScriptChildContext( SvXMLImport& rImport,
 {
 }
 
-SvXMLImportContextRef XMLScriptChildContext::CreateChildContext(
-    sal_uInt16 nPrefix, const OUString& rLocalName,
-    const Reference< xml::sax::XAttributeList >& /*xAttrList*/ )
+css::uno::Reference< css::xml::sax::XFastContextHandler > XMLScriptChildContext::createFastChildContext(
+            sal_Int32 nElement, const css::uno::Reference< css::xml::sax::XFastAttributeList >& /*xAttrList*/ )
 {
-    SvXMLImportContextRef xContext;
     if ( m_xDocumentScripts.is() )
     {   // document supports embedding scripts/macros
         OUString aBasic( GetImport().GetNamespaceMap().GetPrefixByKey( XML_NAMESPACE_OOO ) + ":Basic" );
 
-        if ( m_aLanguage == aBasic && nPrefix == XML_NAMESPACE_OOO && IsXMLToken( rLocalName, XML_LIBRARIES ) )
-            xContext = new XMLBasicImportContext( GetImport(), nPrefix, rLocalName, m_xModel );
+        if ( m_aLanguage == aBasic && nElement == XML_ELEMENT(OOO, XML_LIBRARIES) )
+        {
+            return new xmloff::BasicLibrariesElement( GetImport(), m_xModel );
+        }
     }
 
-    return xContext;
+    return nullptr;
 }
 
 // XMLScriptContext: context for <office:scripts> element
@@ -122,26 +119,13 @@ css::uno::Reference< css::xml::sax::XFastContextHandler > XMLScriptContext::crea
             return new XMLScriptChildContext( GetImport(), m_xModel, aLanguage );
         }
     }
-    return nullptr;
-}
-
-SvXMLImportContextRef XMLScriptContext::CreateChildContext(
-    sal_uInt16 nPrefix, const OUString& rLName,
-    const Reference<XAttributeList>& /*xAttrList*/ )
-{
-    SvXMLImportContextRef xContext;
-
-    if ( nPrefix == XML_NAMESPACE_OFFICE )
+    else if ( nElement == XML_ELEMENT(OFFICE, XML_EVENT_LISTENERS) )
     {
-        if ( IsXMLToken( rLName, XML_EVENT_LISTENERS ) )
-        {
-            Reference< XEventsSupplier> xSupplier( GetImport().GetModel(), UNO_QUERY );
-            xContext = new XMLEventsImportContext( GetImport(), nPrefix, rLName, xSupplier );
-        }
+        Reference< XEventsSupplier> xSupplier( GetImport().GetModel(), UNO_QUERY );
+        return new XMLEventsImportContext( GetImport(), xSupplier );
     }
 
-    return xContext;
+    return nullptr;
 }
-
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

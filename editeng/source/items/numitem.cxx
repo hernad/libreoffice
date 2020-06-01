@@ -25,6 +25,7 @@
 
 #include <com/sun/star/text/VertOrientation.hpp>
 #include <editeng/brushitem.hxx>
+#include <rtl/ustrbuf.hxx>
 #include <vcl/font.hxx>
 #include <vcl/settings.hxx>
 #include <editeng/editids.hrc>
@@ -68,18 +69,18 @@ sal_Int32 SvxNumberType::nRefCount = 0;
 css::uno::Reference<css::text::XNumberingFormatter> SvxNumberType::xFormatter;
 static void lcl_getFormatter(css::uno::Reference<css::text::XNumberingFormatter>& _xFormatter)
 {
-    if(!_xFormatter.is())
-       {
-        try
-        {
-            Reference<XComponentContext>         xContext( ::comphelper::getProcessComponentContext() );
-            Reference<XDefaultNumberingProvider> xRet = text::DefaultNumberingProvider::create(xContext);
-            _xFormatter.set(xRet, UNO_QUERY);
-        }
-        catch(const Exception&)
-        {
-            SAL_WARN("editeng", "service missing: \"com.sun.star.text.DefaultNumberingProvider\"");
-        }
+    if(_xFormatter.is())
+        return;
+
+    try
+    {
+        Reference<XComponentContext>         xContext( ::comphelper::getProcessComponentContext() );
+        Reference<XDefaultNumberingProvider> xRet = text::DefaultNumberingProvider::create(xContext);
+        _xFormatter.set(xRet, UNO_QUERY);
+    }
+    catch(const Exception&)
+    {
+        SAL_WARN("editeng", "service missing: \"com.sun.star.text.DefaultNumberingProvider\"");
     }
 }
 
@@ -150,6 +151,13 @@ OUString SvxNumberType::GetNumStr( sal_Int32 nNo, const css::lang::Locale& rLoca
         }
     }
     return OUString();
+}
+
+void SvxNumberType::dumpAsXml( xmlTextWriterPtr pWriter ) const
+{
+    xmlTextWriterStartElement(pWriter, BAD_CAST("SvxNumberType"));
+    xmlTextWriterWriteAttribute(pWriter, BAD_CAST("NumType"), BAD_CAST(OString::number(nNumType).getStr()));
+    xmlTextWriterEndElement(pWriter);
 }
 
 SvxNumberFormat::SvxNumberFormat( SvxNumType eType )
@@ -339,9 +347,10 @@ SvxNumberFormat& SvxNumberFormat::operator=( const SvxNumberFormat& rFormat )
     mnListtabPos = rFormat.mnListtabPos;
     mnFirstLineIndent = rFormat.mnFirstLineIndent;
     mnIndentAt = rFormat.mnIndentAt;
-    eVertOrient         = rFormat.eVertOrient ;
-    sPrefix             = rFormat.sPrefix     ;
-    sSuffix             = rFormat.sSuffix     ;
+    eVertOrient         = rFormat.eVertOrient;
+    sPrefix             = rFormat.sPrefix;
+    sSuffix             = rFormat.sSuffix;
+    sListFormat         = rFormat.sListFormat;
     aGraphicSize        = rFormat.aGraphicSize  ;
     nBulletColor        = rFormat.nBulletColor   ;
     nBulletRelSize      = rFormat.nBulletRelSize;
@@ -376,6 +385,7 @@ bool  SvxNumberFormat::operator==( const SvxNumberFormat& rFormat) const
         eVertOrient         != rFormat.eVertOrient ||
         sPrefix             != rFormat.sPrefix     ||
         sSuffix             != rFormat.sSuffix     ||
+        sListFormat         != rFormat.sListFormat ||
         aGraphicSize        != rFormat.aGraphicSize  ||
         nBulletColor        != rFormat.nBulletColor   ||
         nBulletRelSize      != rFormat.nBulletRelSize ||
@@ -790,20 +800,20 @@ void SvxNumRule::SetLevel( sal_uInt16 i, const SvxNumberFormat& rNumFmt, bool bI
 {
     DBG_ASSERT(i < SVX_MAX_NUM, "Wrong Level" );
 
-    if( i < SVX_MAX_NUM )
-    {
-        bool bReplace = !aFmtsSet[i];
-        if (!bReplace)
-        {
-            const SvxNumberFormat *pFmt = Get(i);
-            bReplace = pFmt == nullptr || rNumFmt != *pFmt;
-        }
+    if( i >= SVX_MAX_NUM )
+        return;
 
-        if (bReplace)
-        {
-            aFmts[i].reset( new SvxNumberFormat(rNumFmt) );
-            aFmtsSet[i] = bIsValid;
-        }
+    bool bReplace = !aFmtsSet[i];
+    if (!bReplace)
+    {
+        const SvxNumberFormat *pFmt = Get(i);
+        bReplace = pFmt == nullptr || rNumFmt != *pFmt;
+    }
+
+    if (bReplace)
+    {
+        aFmts[i].reset( new SvxNumberFormat(rNumFmt) );
+        aFmtsSet[i] = bIsValid;
     }
 }
 
@@ -887,16 +897,17 @@ void SvxNumRule::UnLinkGraphics()
         const SvxBrushItem* pBrush = aFmt.GetBrush();
         if(SVX_NUM_BITMAP == aFmt.GetNumberingType())
         {
-            const Graphic* pGraphic = nullptr;
-            if(pBrush &&
-                !pBrush->GetGraphicLink().isEmpty() &&
-                    nullptr != (pGraphic = pBrush->GetGraphic()))
+            if(pBrush && !pBrush->GetGraphicLink().isEmpty())
             {
-                SvxBrushItem aTempItem(*pBrush);
-                aTempItem.SetGraphicLink("");
-                aTempItem.SetGraphic(*pGraphic);
-                sal_Int16    eOrient = aFmt.GetVertOrient();
-                aFmt.SetGraphicBrush( &aTempItem, &aFmt.GetGraphicSize(), &eOrient );
+                const Graphic* pGraphic = pBrush->GetGraphic();
+                if (pGraphic)
+                {
+                    SvxBrushItem aTempItem(*pBrush);
+                    aTempItem.SetGraphicLink("");
+                    aTempItem.SetGraphic(*pGraphic);
+                    sal_Int16    eOrient = aFmt.GetVertOrient();
+                    aFmt.SetGraphicBrush( &aTempItem, &aFmt.GetGraphicSize(), &eOrient );
+                }
             }
         }
         else if((SVX_NUM_BITMAP|LINK_TOKEN) == static_cast<int>(aFmt.GetNumberingType()))

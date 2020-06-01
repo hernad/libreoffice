@@ -53,8 +53,14 @@ void process_headers( ne_request * req,
 #endif
     while ( ( cursor = ne_response_header_iterate( req, cursor,
                                                    &name, &value ) ) != nullptr ) {
+        // The HTTP header `field-name` must be a `token`, which can only contain a subset of ASCII;
+        // assume that Neon will already have rejected any invalid data, so that it is guaranteed
+        // that `name` is ASCII-only:
         OUString aHeaderName( OUString::createFromAscii( name ) );
-        OUString aHeaderValue( OUString::createFromAscii( value ) );
+        // The HTTP header `field-value` may contain obsolete (as per RFC 7230) `obs-text` non-ASCII
+        // %x80-FF octets, lets preserve them as individual characters in `aHeaderValue` by treating
+        // `value` as ISO 8859-1:
+        OUString aHeaderValue(value, strlen(value), RTL_TEXTENCODING_ISO_8859_1);
 
         SAL_INFO( "ucb.ucp.webdav", "HEAD - received header: " << aHeaderName << ":" << aHeaderValue);
 

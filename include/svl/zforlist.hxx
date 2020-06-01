@@ -19,6 +19,7 @@
 #ifndef INCLUDED_SVL_ZFORLIST_HXX
 #define INCLUDED_SVL_ZFORLIST_HXX
 
+#include <config_options.h>
 #include <svl/svldllapi.h>
 #include <rtl/ustrbuf.hxx>
 #include <rtl/ustring.hxx>
@@ -34,9 +35,9 @@
 #include <memory>
 #include <set>
 
-namespace com { namespace sun { namespace star { namespace i18n { class XNumberFormatCode; } } } }
-namespace com { namespace sun { namespace star { namespace i18n { struct Currency; } } } }
-namespace com { namespace sun { namespace star { namespace i18n { struct NumberFormatCode; } } } }
+namespace com::sun::star::i18n { class XNumberFormatCode; }
+namespace com::sun::star::i18n { struct Currency; }
+namespace com::sun::star::i18n { struct NumberFormatCode; }
 
 class Date;
 class Color;
@@ -46,12 +47,7 @@ class CalendarWrapper;
 class ImpSvNumberformatScan;
 class ImpSvNumberInputScan;
 class SvNumberformat;
-
-namespace com { namespace sun { namespace star {
-    namespace uno {
-        class XComponentContext;
-    }
-}}}
+namespace com::sun::star::uno { class XComponentContext; }
 
 #define SV_COUNTRY_LANGUAGE_OFFSET     10000  // Max count of formats per country/language
 #define SV_MAX_COUNT_STANDARD_FORMATS  100    // Max count of builtin default formats per CL
@@ -136,7 +132,7 @@ namespace o3tl {
 
     Do NOT insert any new values!
     The values here correspond with those in offapi/com/sun/star/i18n/NumberFormatIndex.idl
-    You may append values though.
+    You may append values though after NF_INDEX_TABLE_LOCALE_DATA_DEFAULTS.
  */
 enum NfIndexTableOffset
 {
@@ -222,8 +218,8 @@ enum NfIndexTableOffset
 
     NF_INDEX_TABLE_LOCALE_DATA_DEFAULTS,    // == 50, old number of predefined entries, i18npool locale data additions start after this
 
-    // From here on are values of new built-in formats that are not in the
-    // original NumberFormatIndex.idl
+    // From here on are values of new predefined and built-in formats that are
+    // not in the original NumberFormatIndex.idl
 
     // XXX Values appended here must also get a corresponding entry in
     // svl/source/numbers/zforlist.cxx indexTable[] in the same order.
@@ -233,8 +229,16 @@ enum NfIndexTableOffset
     // formats, make new formats known to svx/source/items/numfmtsh.cxx
     // SvxNumberFormatShell::FillEListWithStd_Impl(), otherwise they will not
     // be listed at all. Yes that is ugly.
+    // DATETIME formats need to be added to
+    // SvxNumberFormatShell::FillEListWithDateTime_Impl().
 
-    NF_FRACTION_3D = NF_INDEX_TABLE_LOCALE_DATA_DEFAULTS,    // # ???/???
+    // New predefined format added to i18npool locale data.
+    NF_DATETIME_SYS_DDMMYYYY_HHMM = NF_INDEX_TABLE_LOCALE_DATA_DEFAULTS,  // 08.10.1997 01:23  formatindex="50"
+
+    // No i18npool defined locale data between here and NF_INDEX_TABLE_ENTRIES.
+    NF_INDEX_TABLE_RESERVED_START,
+
+    NF_FRACTION_3D = NF_INDEX_TABLE_RESERVED_START,  // # ???/???
     NF_FRACTION_2,                          // # ?/2
     NF_FRACTION_4,                          // # ?/4
     NF_FRACTION_8,                          // # ?/8
@@ -248,7 +252,7 @@ enum NfIndexTableOffset
     // XXX When adding values here, follow the comment above about
     // svx/source/items/numfmtsh.cxx
 
-    NF_INDEX_TABLE_ENTRIES                  // == 59, reserved up to #59 to not be used in i18npool locale data.
+    NF_INDEX_TABLE_ENTRIES                  // == 60, reserved to not be used in i18npool locale data.
 
     // XXX Adding values above may increment the reserved area that can't be
     // used by i18npool's locale data FormatCode definitions, see the
@@ -298,7 +302,7 @@ typedef ::std::set< LanguageType > NfInstalledLocales;
 
 /** Language/country dependent currency entries
  */
-class SVL_DLLPUBLIC NfCurrencyEntry
+class UNLESS_MERGELIBS(SVL_DLLPUBLIC) NfCurrencyEntry
 {
     OUString        aSymbol;            /// currency symbol
     OUString        aBankSymbol;        /// currency abbreviation
@@ -607,6 +611,9 @@ public:
                                      sal_uInt16& nPrecision, sal_uInt16& nLeadingCnt,
                                      LanguageType eLnge = LANGUAGE_DONTKNOW );
 
+    /// Get return string for Calc CELL() function, "G", "D1", ...
+    OUString GetCalcCellReturn( sal_uInt32 nFormat ) const;
+
     /// Check if format code string may be deleted by user
     bool IsUserDefined( const OUString& sStr, LanguageType eLnge = LANGUAGE_DONTKNOW );
 
@@ -721,6 +728,8 @@ public:
 
     /// Return the decimal separator matching the given locale / LanguageType.
     OUString GetLangDecimalSep( LanguageType nLang ) const;
+
+    static void resetTheCurrencyTable();
 
     /// Return a NfCurrencyTable with pointers to <type>NfCurrencyEntry</type> entries
     static const NfCurrencyTable& GetTheCurrencyTable();

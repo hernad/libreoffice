@@ -20,6 +20,8 @@
 #include "GraphicExportFilter.hxx"
 
 #include <com/sun/star/drawing/GraphicExportFilter.hpp>
+#include <com/sun/star/drawing/XShape.hpp>
+#include <com/sun/star/drawing/XShapes.hpp>
 #include <com/sun/star/frame/XModel.hpp>
 
 #include <vcl/graphicfilter.hxx>
@@ -42,10 +44,8 @@ void GraphicExportFilter::gatherProperties( const uno::Sequence< beans::Property
 {
     OUString aInternalFilterName;
 
-    for ( sal_Int32 i = 0; i < rProperties.getLength(); i++ )
+    for ( const beans::PropertyValue& rProperty : rProperties )
     {
-        const beans::PropertyValue& rProperty = rProperties[i];
-
         if ( rProperty.Name == "FilterName" )
         {
             rProperty.Value >>= aInternalFilterName;
@@ -74,34 +74,34 @@ void GraphicExportFilter::gatherProperties( const uno::Sequence< beans::Property
         }
     }
 
-    for ( sal_Int32 i = 0; i < maFilterDataSequence.getLength(); i++ )
+    for ( const beans::PropertyValue& rProp : std::as_const(maFilterDataSequence) )
     {
-        if ( maFilterDataSequence[i].Name == "PixelWidth" )
+        if ( rProp.Name == "PixelWidth" )
         {
-            maFilterDataSequence[i].Value >>= mnTargetWidth;
+            rProp.Value >>= mnTargetWidth;
         }
-        else if ( maFilterDataSequence[i].Name == "PixelHeight" )
+        else if ( rProp.Name == "PixelHeight" )
         {
-            maFilterDataSequence[i].Value >>= mnTargetHeight;
+            rProp.Value >>= mnTargetHeight;
         }
     }
 
-    if ( !aInternalFilterName.isEmpty() )
+    if ( aInternalFilterName.isEmpty() )
+        return;
+
+    GraphicFilter aGraphicFilter( true );
+
+    sal_uInt16 nFilterCount = aGraphicFilter.GetExportFormatCount();
+    sal_uInt16 nFormat;
+
+    for ( nFormat = 0; nFormat < nFilterCount; nFormat++ )
     {
-        GraphicFilter aGraphicFilter( true );
-
-        sal_uInt16 nFilterCount = aGraphicFilter.GetExportFormatCount();
-        sal_uInt16 nFormat;
-
-        for ( nFormat = 0; nFormat < nFilterCount; nFormat++ )
-        {
-            if ( aGraphicFilter.GetExportInternalFilterName( nFormat ) == aInternalFilterName )
-                break;
-        }
-        if ( nFormat < nFilterCount )
-        {
-            maFilterExtension = aGraphicFilter.GetExportFormatShortName( nFormat );
-        }
+        if ( aGraphicFilter.GetExportInternalFilterName( nFormat ) == aInternalFilterName )
+            break;
+    }
+    if ( nFormat < nFilterCount )
+    {
+        maFilterExtension = aGraphicFilter.GetExportFormatShortName( nFormat );
     }
 }
 

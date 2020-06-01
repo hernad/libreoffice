@@ -30,9 +30,9 @@
 #include <sal/types.h>
 
 namespace oox { class AttributeList; }
-namespace oox { namespace core { class XmlFilterBase; } }
+namespace oox::core { class XmlFilterBase; }
 
-namespace oox { namespace ppt {
+namespace oox::ppt {
 
 class SlideFragmentHandler : public ::oox::core::FragmentHandler2
 {
@@ -48,7 +48,7 @@ public:
 
 protected:
     SlidePersistPtr     mpSlidePersistPtr;
-    ShapeLocation const meShapeLocation;
+    ShapeLocation       meShapeLocation;
 
 private:
     OUString     maSlideName;
@@ -56,7 +56,7 @@ private:
     ::std::vector< OUString> maCharVector; // handle char in OnCharacters
 };
 
-} }
+}
 
 #endif // INCLUDED_OOX_PPT_SLIDEFRAGMENTHANDLER_HXX
 

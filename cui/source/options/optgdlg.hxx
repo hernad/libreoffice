@@ -30,7 +30,6 @@ namespace vcl {
 }
 
 namespace svt {
-    class OpenGLCfg;
     class SkiaCfg;
 }
 
@@ -90,7 +89,6 @@ private:
     std::unique_ptr<SvtTabAppearanceCfg>    pAppearanceCfg;
     std::unique_ptr<CanvasSettings>         pCanvasSettings;
     std::unique_ptr<SvtOptionsDrawinglayer> mpDrawinglayerOpt;
-    std::unique_ptr<svt::OpenGLCfg> mpOpenGLConfig;
     std::unique_ptr<svt::SkiaCfg> mpSkiaConfig;
 
     std::vector<vcl::IconThemeInfo> mInstalledIconThemes;
@@ -113,25 +111,19 @@ private:
 
     std::unique_ptr<weld::CheckButton> m_xUseHardwareAccell;
     std::unique_ptr<weld::CheckButton> m_xUseAntiAliase;
-    std::unique_ptr<weld::CheckButton> m_xUseOpenGL;
-    std::unique_ptr<weld::CheckButton> m_xForceOpenGL;
     std::unique_ptr<weld::CheckButton> m_xUseSkia;
     std::unique_ptr<weld::CheckButton> m_xForceSkia;
+    std::unique_ptr<weld::CheckButton> m_xForceSkiaRaster;
 
-    std::unique_ptr<weld::Label> m_xOpenGLStatusEnabled;
-    std::unique_ptr<weld::Label> m_xOpenGLStatusDisabled;
     std::unique_ptr<weld::Label> m_xSkiaStatusEnabled;
     std::unique_ptr<weld::Label> m_xSkiaStatusDisabled;
 
     std::unique_ptr<weld::ComboBox> m_xMousePosLB;
     std::unique_ptr<weld::ComboBox> m_xMouseMiddleLB;
 
-#if defined( UNX )
     DECL_LINK(OnAntialiasingToggled, weld::ToggleButton&, void);
-#endif
-    DECL_LINK(OnForceOpenGLToggled, weld::ToggleButton&, void);
     DECL_LINK(OnForceSkiaToggled, weld::ToggleButton&, void);
-    void UpdateOGLStatus();
+    DECL_LINK(OnForceSkiaRasterToggled, weld::ToggleButton&, void);
     void UpdateSkiaStatus();
 
 public:

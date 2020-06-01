@@ -36,7 +36,8 @@ dialogs = [
     {"command": ".uno:FontworkGalleryFloater", "closeButton": "cancel"},
     # {"command": ".uno:HyperlinkDialog", "closeButton": "ok"},
         # dialog opens but is not recognised by execute_dialog_through_command
-    {"command": ".uno:InsertSymbol", "closeButton": "cancel"},
+    #{"command": ".uno:InsertSymbol", "closeButton": "cancel"},
+        # Tested in uitest/demo_ui/char_dialog.py
     {"command": ".uno:EditHeaderAndFooter", "closeButton": "cancel"},
     # {"command": ".uno:InsertSignatureLine", "closeButton": "cancel"},
         # tested in sc/qa/uitest/signatureLine/insertSignatureLine.py
@@ -73,12 +74,14 @@ dialogs = [
     # {"command": ".uno:AddName", "closeButton": "cancel"},
         # Cancel button tested in uitest/demo_ui/edit.py
         # "add" button tested in uitest/calc_tests/create_range_name.py
-    {"command": ".uno:DefineName", "closeButton": "cancel"},
+    #{"command": ".uno:DefineName", "closeButton": "cancel"},
+        # tested in sc/qa/uitest/calc_tests9/tdf130371.py
     # {"command": ".uno:SheetInsertName", "closeButton": "close"},
         # dialog does not open
     {"command": ".uno:CreateNames", "closeButton": "cancel", "skipTestOK": True},
         # OK button triggers a new dialog
-    {"command": ".uno:DefineLabelRange", "closeButton": "cancel"},
+    #{"command": ".uno:DefineLabelRange", "closeButton": "cancel"},
+        # tested in sc/qa/uitest/calc_tests4/tdf131170.py
     # {"command": ".uno:RenameTable", "closeButton": "cancel"},
         # tested in sc/qa/uitest/calc_tests/sheetRename.py
     # {"command": ".uno:Move", "closeButton": "cancel"},

@@ -30,9 +30,9 @@
 
 namespace sd { class Window; }
 
-namespace sd { namespace slidesorter { class SlideSorter; } }
+namespace sd::slidesorter { class SlideSorter; }
 
-namespace sd { namespace slidesorter { namespace controller {
+namespace sd::slidesorter::controller {
 
 /** Manage the horizontal and vertical scroll bars.  Listen for events, set
     their sizes, place them in the window, determine their visibilities.
@@ -178,7 +178,7 @@ private:
     /** The width and height of the border at the inside of the window which
         when entered while in drag mode leads to a scrolling of the window.
     */
-    Size const maScrollBorder;
+    Size maScrollBorder;
     /** The only task of this little window is to paint the little square at
         the bottom right corner left by the two scroll bars (when both are
         visible).
@@ -244,7 +244,7 @@ private:
     void PlaceFiller (const ::tools::Rectangle& aArea);
 };
 
-} } } // end of namespace ::sd::slidesorter::controller
+} // end of namespace ::sd::slidesorter::controller
 
 #endif
 

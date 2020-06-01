@@ -136,19 +136,13 @@ void SwDBFieldType::PutValue( const uno::Any& rAny, sal_uInt16 nWhichId )
             if( sTmp != m_sColumn )
             {
                 m_sColumn = sTmp;
-                SwIterator<SwFormatField,SwFieldType> aIter( *this );
-                SwFormatField* pFormatField = aIter.First();
-                while(pFormatField)
+                std::vector<SwFormatField*> vFields;
+                GatherFields(vFields);
+                for(auto pFormatField: vFields)
                 {
-                    // field in Undo?
-                    SwTextField *pTextField = pFormatField->GetTextField();
-                    if(pTextField && pTextField->GetTextNode().GetNodes().IsDocNodes() )
-                    {
-                        SwDBField* pDBField = static_cast<SwDBField*>(pFormatField->GetField());
-                        pDBField->ClearInitialized();
-                        pDBField->InitContent();
-                    }
-                    pFormatField = aIter.Next();
+                    SwDBField* pDBField = static_cast<SwDBField*>(pFormatField->GetField());
+                    pDBField->ClearInitialized();
+                    pDBField->InitContent();
                 }
             }
         }
@@ -408,20 +402,19 @@ bool SwDBField::PutValue( const uno::Any& rAny, sal_uInt16 nWhichId )
             nSubTyp |= nsSwExtendedSubType::SUB_INVISIBLE;
         SetSubType(nSubTyp);
         //invalidate text node
-        if(GetTyp())
+        auto pType = GetTyp();
+        if(!pType)
+            break;
+        std::vector<SwFormatField*> vFields;
+        pType->GatherFields(vFields, false);
+        for(auto pFormatField: vFields)
         {
-            SwIterator<SwFormatField,SwFieldType> aIter( *GetTyp() );
-            SwFormatField* pFormatField = aIter.First();
-            while(pFormatField)
+            SwTextField* pTextField = pFormatField->GetTextField();
+            if(pTextField && static_cast<SwDBField*>(pFormatField->GetField()) == this)
             {
-                SwTextField *pTextField = pFormatField->GetTextField();
-                if(pTextField && static_cast<SwDBField*>(pFormatField->GetField()) == this )
-                {
-                    //notify the change
-                    pTextField->NotifyContentChange(*pFormatField);
-                    break;
-                }
-                pFormatField = aIter.Next();
+                //notify the change
+                pTextField->NotifyContentChange(*pFormatField);
+                break;
             }
         }
     }

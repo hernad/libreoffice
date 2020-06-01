@@ -19,7 +19,6 @@
 
 #include <oox/ole/olestorage.hxx>
 
-#include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/container/XNameContainer.hpp>
 #include <com/sun/star/embed/XTransactedObject.hpp>
 #include <com/sun/star/io/IOException.hpp>
@@ -36,11 +35,9 @@
 #include <oox/helper/binaryinputstream.hxx>
 #include <oox/helper/binaryoutputstream.hxx>
 #include <oox/helper/containerhelper.hxx>
-#include <oox/helper/helper.hxx>
 
 namespace oox::ole {
 
-using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::container;
 using namespace ::com::sun::star::embed;
 using namespace ::com::sun::star::io;
@@ -79,7 +76,7 @@ private:
     Reference< XStream > mxTempFile;
     Reference< XOutputStream > mxOutStrm;
     Reference< XSeekable > mxSeekable;
-    OUString const      maElementName;
+    OUString            maElementName;
 };
 
 OleOutputStream::OleOutputStream( const Reference< XComponentContext >& rxContext,
@@ -314,13 +311,13 @@ StorageRef OleStorage::implOpenSubStorage( const OUString& rElementName, bool bC
             new OLE storage based on a temporary file. All operations are
             performed on this clean storage. On committing, the storage will be
             completely re-inserted into the parent storage. */
-        if( !isReadOnly() && (bCreateMissing || xSubStorage.get()) ) try
+        if( !isReadOnly() && (bCreateMissing || xSubStorage) ) try
         {
             // create new storage based on a temp file
             Reference< XStream > xTempFile( TempFile::create(mxContext), UNO_QUERY_THROW );
             StorageRef xTempStorage( new OleStorage( *this, xTempFile, rElementName ) );
             // copy existing substorage into temp storage
-            if( xSubStorage.get() )
+            if( xSubStorage )
                 xSubStorage->copyStorageToStorage( *xTempStorage );
             // return the temp storage to caller
             xSubStorage = xTempStorage;

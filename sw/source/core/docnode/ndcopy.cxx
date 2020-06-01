@@ -28,6 +28,7 @@
 #include <ddefld.hxx>
 #include <swddetbl.hxx>
 #include <ndindex.hxx>
+#include <frameformats.hxx>
 #include <vector>
 #include <osl/diagnose.h>
 
@@ -45,7 +46,7 @@ namespace {
 struct MapTableFrameFormat
 {
     const SwFrameFormat *pOld;
-    SwFrameFormat * const pNew;
+    SwFrameFormat *pNew;
     MapTableFrameFormat( const SwFrameFormat *pOldFormat, SwFrameFormat*pNewFormat )
         : pOld( pOldFormat ), pNew( pNewFormat )
     {}
@@ -126,7 +127,7 @@ namespace {
 struct CopyTable
 {
     SwDoc* m_pDoc;
-    sal_uLong const m_nOldTableSttIdx;
+    sal_uLong m_nOldTableSttIdx;
     MapTableFrameFormats& m_rMapArr;
     SwTableLine* m_pInsLine;
     SwTableBox* m_pInsBox;

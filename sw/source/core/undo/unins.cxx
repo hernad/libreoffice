@@ -56,9 +56,9 @@ using namespace ::com::sun::star;
 
 // INSERT
 
-o3tl::optional<OUString> SwUndoInsert::GetTextFromDoc() const
+std::optional<OUString> SwUndoInsert::GetTextFromDoc() const
 {
-    o3tl::optional<OUString> aResult;
+    std::optional<OUString> aResult;
 
     SwNodeIndex aNd( m_pDoc->GetNodes(), m_nNode);
     SwContentNode* pCNd = aNd.GetNode().GetContentNode();
@@ -448,7 +448,7 @@ void SwUndoInsert::RepeatImpl(::sw::RepeatContext & rContext)
 SwRewriter SwUndoInsert::GetRewriter() const
 {
     SwRewriter aResult;
-    o3tl::optional<OUString> aStr;
+    std::optional<OUString> aStr;
     bool bDone = false;
 
     if (maText)
@@ -479,11 +479,11 @@ class SwUndoReplace::Impl
     : private SwUndoSaveContent
 {
     OUString m_sOld;
-    OUString const m_sIns;
+    OUString m_sIns;
     sal_uLong m_nSttNd, m_nEndNd, m_nOffset;
     sal_Int32 m_nSttCnt, m_nEndCnt, m_nSetPos, m_nSelEnd;
     bool m_bSplitNext : 1;
-    bool const m_bRegExp : 1;
+    bool m_bRegExp : 1;
     // metadata references for paragraph and following para (if m_bSplitNext)
     std::shared_ptr< ::sfx2::MetadatableUndo > m_pMetadataUndoStart;
     std::shared_ptr< ::sfx2::MetadatableUndo > m_pMetadataUndoEnd;
@@ -794,7 +794,7 @@ void SwUndoReRead::SetAndSave(::sw::UndoRedoContext & rContext)
 
     // cache the old values
     std::unique_ptr<Graphic> pOldGrf( mpGraphic ? new Graphic(*mpGraphic) : nullptr);
-    o3tl::optional<OUString> aOldNm = maNm;
+    std::optional<OUString> aOldNm = maNm;
     MirrorGraph nOldMirr = mnMirror;
     // since all of them are cleared/modified by SaveGraphicData:
     SaveGraphicData( *pGrfNd );

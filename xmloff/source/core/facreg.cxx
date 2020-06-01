@@ -54,29 +54,8 @@ XMLOFF_DLLPUBLIC void * xo_component_getFactory( const char * pImplName, void * 
 
         const sal_Int32 nImplNameLen = strlen( pImplName );
 
-        // chart oasis import
-        SINGLEFACTORY( SchXMLImport )
-        else SINGLEFACTORY( SchXMLImport_Meta )
-        else SINGLEFACTORY( SchXMLImport_Styles )
-        else SINGLEFACTORY( SchXMLImport_Content )
-
-        // chart oasis export
-        else SINGLEFACTORY( SchXMLExport_Oasis )
-        else SINGLEFACTORY( SchXMLExport_Oasis_Meta )
-        else SINGLEFACTORY( SchXMLExport_Oasis_Styles )
-        else SINGLEFACTORY( SchXMLExport_Oasis_Content )
-
-        // chart OOo export
-        else SINGLEFACTORY( SchXMLExport )
-        else SINGLEFACTORY( SchXMLExport_Styles )
-        else SINGLEFACTORY( SchXMLExport_Content )
-
-        // meta import/export OOo
-        else SINGLEFACTORY( XMLMetaExportOOO )
-
         // auto text import/export
-        else SINGLEFACTORY( XMLAutoTextEventExport )
-        else SINGLEFACTORY( XMLAutoTextEventImport )
+        SINGLEFACTORY( XMLAutoTextEventImport )
         else SINGLEFACTORY( XMLAutoTextEventExportOOO )
 
         if( xFactory.is())

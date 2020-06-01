@@ -19,13 +19,9 @@
 
 #include "WrappedResultSet.hxx"
 #include <com/sun/star/sdbc/XResultSetUpdate.hpp>
-#include <connectivity/dbexception.hxx>
-
-#include <limits>
 
 using namespace dbaccess;
 using namespace ::connectivity;
-using namespace ::dbtools;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::sdbc;
@@ -80,22 +76,22 @@ void WrappedResultSet::insertRow( const ORowSetRow& _rInsertRow,const connectivi
 {
     m_xUpd->moveToInsertRow();
     sal_Int32 i = 1;
-    connectivity::ORowVector< ORowSetValue > ::Vector::const_iterator aEnd = _rInsertRow->get().end();
-    for(connectivity::ORowVector< ORowSetValue > ::Vector::iterator aIter = _rInsertRow->get().begin()+1;aIter != aEnd;++aIter,++i)
+    connectivity::ORowVector< ORowSetValue > ::Vector::const_iterator aEnd = _rInsertRow->end();
+    for(connectivity::ORowVector< ORowSetValue > ::Vector::iterator aIter = _rInsertRow->begin()+1;aIter != aEnd;++aIter,++i)
     {
         aIter->setSigned(m_aSignedFlags[i-1]);
         updateColumn(i,m_xUpdRow,*aIter);
     }
     m_xUpd->insertRow();
-    (*_rInsertRow->get().begin()) = getBookmark();
+    (*_rInsertRow->begin()) = getBookmark();
 }
 
 void WrappedResultSet::updateRow(const ORowSetRow& _rInsertRow ,const ORowSetRow& _rOriginalRow,const connectivity::OSQLTable& /*_xTable*/  )
 {
     sal_Int32 i = 1;
-    connectivity::ORowVector< ORowSetValue > ::Vector::const_iterator aOrgIter = _rOriginalRow->get().begin()+1;
-    connectivity::ORowVector< ORowSetValue > ::Vector::iterator aEnd = _rInsertRow->get().end();
-    for(connectivity::ORowVector< ORowSetValue > ::Vector::iterator aIter = _rInsertRow->get().begin()+1;aIter != aEnd;++aIter,++i,++aOrgIter)
+    connectivity::ORowVector< ORowSetValue > ::Vector::const_iterator aOrgIter = _rOriginalRow->begin()+1;
+    connectivity::ORowVector< ORowSetValue > ::Vector::iterator aEnd = _rInsertRow->end();
+    for(connectivity::ORowVector< ORowSetValue > ::Vector::iterator aIter = _rInsertRow->begin()+1;aIter != aEnd;++aIter,++i,++aOrgIter)
     {
         aIter->setSigned(aOrgIter->isSigned());
         updateColumn(i,m_xUpdRow,*aIter);
@@ -110,77 +106,77 @@ void WrappedResultSet::deleteRow(const ORowSetRow& /*_rDeleteRow*/ ,const connec
 
 void WrappedResultSet::updateColumn(sal_Int32 nPos, const Reference< XRowUpdate >& _xParameter, const ORowSetValue& _rValue)
 {
-    if(_rValue.isBound() && _rValue.isModified())
-    {
-        if(_rValue.isNull())
-            _xParameter->updateNull(nPos);
-        else
-        {
+    if(!(_rValue.isBound() && _rValue.isModified()))
+        return;
 
-            switch(_rValue.getTypeKind())
-            {
-                case DataType::DECIMAL:
-                case DataType::NUMERIC:
-                    _xParameter->updateNumericObject(nPos,_rValue.makeAny(),m_xSetMetaData->getScale(nPos));
-                    break;
-                case DataType::CHAR:
-                case DataType::VARCHAR:
+    if(_rValue.isNull())
+        _xParameter->updateNull(nPos);
+    else
+    {
+
+        switch(_rValue.getTypeKind())
+        {
+            case DataType::DECIMAL:
+            case DataType::NUMERIC:
+                _xParameter->updateNumericObject(nPos,_rValue.makeAny(),m_xSetMetaData->getScale(nPos));
+                break;
+            case DataType::CHAR:
+            case DataType::VARCHAR:
+                _xParameter->updateString(nPos,_rValue);
+                break;
+            case DataType::BIGINT:
+                if ( _rValue.isSigned() )
+                    _xParameter->updateLong(nPos,_rValue);
+                else
                     _xParameter->updateString(nPos,_rValue);
-                    break;
-                case DataType::BIGINT:
-                    if ( _rValue.isSigned() )
-                        _xParameter->updateLong(nPos,_rValue);
-                    else
-                        _xParameter->updateString(nPos,_rValue);
-                    break;
-                case DataType::BIT:
-                case DataType::BOOLEAN:
-                    _xParameter->updateBoolean(nPos,static_cast<bool>(_rValue));
-                    break;
-                case DataType::TINYINT:
-                    if ( _rValue.isSigned() )
-                        _xParameter->updateByte(nPos,_rValue);
-                    else
-                        _xParameter->updateShort(nPos,_rValue);
-                    break;
-                case DataType::SMALLINT:
-                    if ( _rValue.isSigned() )
-                        _xParameter->updateShort(nPos,_rValue);
-                    else
-                        _xParameter->updateInt(nPos,_rValue);
-                    break;
-                case DataType::INTEGER:
-                    if ( _rValue.isSigned() )
-                        _xParameter->updateInt(nPos,_rValue);
-                    else
-                        _xParameter->updateLong(nPos,_rValue);
-                    break;
-                case DataType::FLOAT:
-                    _xParameter->updateFloat(nPos,_rValue);
-                    break;
-                case DataType::DOUBLE:
-                case DataType::REAL:
-                    _xParameter->updateDouble(nPos,_rValue);
-                    break;
-                case DataType::DATE:
-                    _xParameter->updateDate(nPos,_rValue);
-                    break;
-                case DataType::TIME:
-                    _xParameter->updateTime(nPos,_rValue);
-                    break;
-                case DataType::TIMESTAMP:
-                    _xParameter->updateTimestamp(nPos,_rValue);
-                    break;
-                case DataType::BINARY:
-                case DataType::VARBINARY:
-                case DataType::LONGVARBINARY:
-                    _xParameter->updateBytes(nPos,_rValue);
-                    break;
-                case DataType::BLOB:
-                case DataType::CLOB:
-                    _xParameter->updateObject(nPos,_rValue.getAny());
-                    break;
-            }
+                break;
+            case DataType::BIT:
+            case DataType::BOOLEAN:
+                _xParameter->updateBoolean(nPos,static_cast<bool>(_rValue));
+                break;
+            case DataType::TINYINT:
+                if ( _rValue.isSigned() )
+                    _xParameter->updateByte(nPos,_rValue);
+                else
+                    _xParameter->updateShort(nPos,_rValue);
+                break;
+            case DataType::SMALLINT:
+                if ( _rValue.isSigned() )
+                    _xParameter->updateShort(nPos,_rValue);
+                else
+                    _xParameter->updateInt(nPos,_rValue);
+                break;
+            case DataType::INTEGER:
+                if ( _rValue.isSigned() )
+                    _xParameter->updateInt(nPos,_rValue);
+                else
+                    _xParameter->updateLong(nPos,_rValue);
+                break;
+            case DataType::FLOAT:
+                _xParameter->updateFloat(nPos,_rValue);
+                break;
+            case DataType::DOUBLE:
+            case DataType::REAL:
+                _xParameter->updateDouble(nPos,_rValue);
+                break;
+            case DataType::DATE:
+                _xParameter->updateDate(nPos,_rValue);
+                break;
+            case DataType::TIME:
+                _xParameter->updateTime(nPos,_rValue);
+                break;
+            case DataType::TIMESTAMP:
+                _xParameter->updateTimestamp(nPos,_rValue);
+                break;
+            case DataType::BINARY:
+            case DataType::VARBINARY:
+            case DataType::LONGVARBINARY:
+                _xParameter->updateBytes(nPos,_rValue);
+                break;
+            case DataType::BLOB:
+            case DataType::CLOB:
+                _xParameter->updateObject(nPos,_rValue.getAny());
+                break;
         }
     }
 }

@@ -30,12 +30,12 @@
 #include <com/sun/star/uno/Any.hxx>
 
 #include <vector>
-#include <o3tl/optional.hxx>
+#include <optional>
 
 namespace chart { class ExplicitCategoriesProvider; }
-namespace com { namespace sun { namespace star { namespace beans { class XPropertySet; } } } }
-namespace com { namespace sun { namespace star { namespace chart2 { class XAxis; } } } }
-namespace com { namespace sun { namespace star { namespace chart2 { namespace data { class XTextualDataSequence; } } } } }
+namespace com::sun::star::beans { class XPropertySet; }
+namespace com::sun::star::chart2 { class XAxis; }
+namespace com::sun::star::chart2::data { class XTextualDataSequence; }
 
 namespace chart
 {
@@ -101,8 +101,8 @@ struct AxisProperties final
     css::chart::ChartAxisLabelPosition m_eLabelPos;
     css::chart::ChartAxisMarkPosition  m_eTickmarkPos;
 
-    o3tl::optional<double> m_pfMainLinePositionAtOtherAxis;
-    o3tl::optional<double> m_pfExrtaLinePositionAtOtherAxis;
+    std::optional<double> m_pfMainLinePositionAtOtherAxis;
+    std::optional<double> m_pfExrtaLinePositionAtOtherAxis;
 
     bool        m_bCrossingAxisHasReverseDirection;
     bool        m_bCrossingAxisIsCategoryAxes;

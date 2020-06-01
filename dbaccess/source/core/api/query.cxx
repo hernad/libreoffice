@@ -19,31 +19,26 @@
 
 #include "query.hxx"
 #include <stringconstants.hxx>
+#include <connectivity/dbexception.hxx>
+#include <connectivity/PColumn.hxx>
 #include <connectivity/warningscontainer.hxx>
 #include "HelperCollections.hxx"
 #include <core_resource.hxx>
 #include <strings.hrc>
 
-#include <cppuhelper/queryinterface.hxx>
-#include <tools/debug.hxx>
+#include <cppuhelper/interfacecontainer.hxx>
 #include <tools/diagnose_ex.h>
 #include <osl/diagnose.h>
 
 #include <com/sun/star/sdbc/XConnection.hpp>
-#include <com/sun/star/lang/DisposedException.hpp>
 #include <com/sun/star/sdb/XSingleSelectQueryComposer.hpp>
 #include <com/sun/star/sdbc/XResultSetMetaDataSupplier.hpp>
 #include <com/sun/star/sdb/SQLContext.hpp>
 
-#include <comphelper/types.hxx>
 #include <comphelper/property.hxx>
 #include <unotools/sharedunocomponent.hxx>
 #include <definitioncolumn.hxx>
 
-#include <functional>
-
-#include <sdbcoretools.hxx>
-#include <querycomposer.hxx>
 #include <com/sun/star/beans/PropertyAttribute.hpp>
 #include <ContainerMediator.hxx>
 

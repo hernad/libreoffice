@@ -20,10 +20,6 @@
 #define INCLUDED_VBAHELPER_SOURCE_VBAHELPER_VBACOMMANDBAR_HXX
 
 #include <ooo/vba/XCommandBar.hpp>
-#include <com/sun/star/ui/XUIConfigurationManager.hpp>
-#include <com/sun/star/ui/XUIConfigurationPersistence.hpp>
-#include <com/sun/star/container/XIndexContainer.hpp>
-#include <com/sun/star/beans/PropertyValues.hpp>
 
 #include <vbahelper/vbahelperinterface.hxx>
 #include "vbacommandbarhelper.hxx"
@@ -35,8 +31,8 @@ class ScVbaCommandBar : public CommandBar_BASE
 private:
     VbaCommandBarHelperRef pCBarHelper;
     css::uno::Reference< css::container::XIndexAccess > m_xBarSettings;
-    OUString const    m_sResourceUrl;
-    bool const        m_bIsMenu;
+    OUString    m_sResourceUrl;
+    bool        m_bIsMenu;
 
 public:
     /// @throws css::uno::RuntimeException

@@ -21,14 +21,12 @@
 #include <sdr/contact/viewobjectcontactofunocontrol.hxx>
 #include <sdr/contact/viewcontactofunocontrol.hxx>
 #include <svx/sdr/contact/displayinfo.hxx>
-#include <svx/sdr/properties/properties.hxx>
 #include <svx/sdr/contact/objectcontactofpageview.hxx>
 #include <svx/sdr/primitive2d/svx_primitivetypes2d.hxx>
 #include <svx/svdouno.hxx>
 #include <svx/svdpagv.hxx>
 #include <svx/svdview.hxx>
 #include <svx/sdrpagewindow.hxx>
-#include <svx/sdrpaintwindow.hxx>
 
 #include <com/sun/star/awt/XControl.hpp>
 #include <com/sun/star/awt/XControlModel.hpp>
@@ -111,7 +109,6 @@ namespace sdr::contact {
     using ::com::sun::star::awt::XControl;
     using ::com::sun::star::awt::XControlModel;
     using ::com::sun::star::awt::XControlContainer;
-    using ::com::sun::star::awt::XWindow;
     using ::com::sun::star::awt::XWindow2;
     using ::com::sun::star::awt::XWindowListener;
     using ::com::sun::star::awt::PosSize::POSSIZE;
@@ -817,7 +814,7 @@ namespace sdr::contact {
         virtual bool operator==(const BasePrimitive2D& rPrimitive) const override;
 
         // declare unique ID for this primitive class
-        DeclPrimitive2DIDBlock()
+        virtual sal_uInt32 getPrimitive2DID() const override;
 
         static void getTransformation( const ViewContactOfUnoControl& _rVOC, ::basegfx::B2DHomMatrix& _out_Transformation );
 

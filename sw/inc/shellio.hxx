@@ -55,7 +55,7 @@ namespace mark
 class IMark;
 }
 }
-namespace com { namespace sun { namespace star { namespace embed { class XStorage; } } } }
+namespace com::sun::star::embed { class XStorage; }
 
 // Defines the count of chars at which a paragraph read via ASCII/W4W-Reader
 // is forced to wrap. It has to be always greater than 200!!!
@@ -106,7 +106,7 @@ class Reader;
 
 class SwgReaderOption
 {
-    SwAsciiOptions aASCIIOpts;
+    SwAsciiOptions m_aASCIIOpts;
     bool m_bFrameFormats;
     bool m_bPageDescs;
     bool m_bTextFormats;
@@ -132,9 +132,9 @@ public:
     bool IsMerge() const { return m_bMerge; }
     void SetMerge( const bool bNew ) { m_bMerge = bNew; }
 
-    const SwAsciiOptions& GetASCIIOpts() const { return aASCIIOpts; }
-    void SetASCIIOpts( const SwAsciiOptions& rOpts ) { aASCIIOpts = rOpts; }
-    void ResetASCIIOpts() { aASCIIOpts.Reset(); }
+    const SwAsciiOptions& GetASCIIOpts() const { return m_aASCIIOpts; }
+    void SetASCIIOpts( const SwAsciiOptions& rOpts ) { m_aASCIIOpts = rOpts; }
+    void ResetASCIIOpts() { m_aASCIIOpts.Reset(); }
 
     css::uno::Reference<css::io::XInputStream>& GetInputStream() { return m_xInputStream; }
     void SetInputStream(css::uno::Reference<css::io::XInputStream>& xInputStream)
@@ -143,19 +143,19 @@ public:
     }
 
     SwgReaderOption()
-        { ResetAllFormatsOnly(); aASCIIOpts.Reset(); }
+        { ResetAllFormatsOnly(); m_aASCIIOpts.Reset(); }
 };
 
 // Calls reader with its options, document, cursor etc.
 class SW_DLLPUBLIC SwReader: public SwDocFac
 {
     SvStream* mpStrm;
-    tools::SvRef<SotStorage> const mpStg;
+    tools::SvRef<SotStorage> mpStg;
     css::uno::Reference < css::embed::XStorage > mxStg;
-    SfxMedium* const mpMedium;     // Who wants to obtain a Medium (W4W).
+    SfxMedium* mpMedium;     // Who wants to obtain a Medium (W4W).
 
-    SwPaM* const mpCursor;
-    OUString const maFileName;
+    SwPaM* mpCursor;
+    OUString maFileName;
     OUString msBaseURL;
     bool mbSkipImages;
 
@@ -504,15 +504,15 @@ public:
 
 class SW_DLLPUBLIC SwWriter
 {
-    SvStream* pStrm;
-    css::uno::Reference < css::embed::XStorage > xStg;
-    SfxMedium* pMedium;
+    SvStream* m_pStrm;
+    css::uno::Reference < css::embed::XStorage > m_xStg;
+    SfxMedium* m_pMedium;
 
-    SwPaM* const pOutPam;
-    SwCursorShell *pShell;
-    SwDoc &rDoc;
+    SwPaM* m_pOutPam;
+    SwCursorShell *m_pShell;
+    SwDoc &m_rDoc;
 
-    bool bWriteAll;
+    bool m_bWriteAll;
 
 public:
     ErrCode Write( WriterRef const & rxWriter, const OUString* = nullptr);
@@ -535,9 +535,9 @@ ErrCode GetSaveWarningOfMSVBAStorage( SfxObjectShell &rDocS );
 struct SwReaderWriterEntry
 {
     Reader* pReader;
-    FnGetReader const fnGetReader;
-    FnGetWriter const fnGetWriter;
-    bool const bDelReader;
+    FnGetReader fnGetReader;
+    FnGetWriter fnGetWriter;
+    bool bDelReader;
 
     SwReaderWriterEntry( const FnGetReader fnReader, const FnGetWriter fnWriter, bool bDel )
         : pReader( nullptr ), fnGetReader( fnReader ), fnGetWriter( fnWriter ), bDelReader( bDel )

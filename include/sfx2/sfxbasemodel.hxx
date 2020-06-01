@@ -72,9 +72,9 @@ class   SfxObjectShell                      ;
 class   SfxViewFrame;
 struct  IMPL_SfxBaseModel_DataContainer     ;   // impl. struct to hold member of class SfxBaseModel
 
-namespace sfx { namespace intern {
+namespace sfx::intern {
     class ViewCreationGuard;
-} }
+}
 
 namespace com::sun::star::beans { struct PropertyValue; }
 namespace com::sun::star::container { class XNameContainer; }
@@ -191,7 +191,8 @@ public:
         @onerror    A RuntimeException is thrown.
     */
 
-    virtual void SAL_CALL acquire() throw() override ;
+    virtual void SAL_CALL acquire() throw() override
+    { OWeakObject::acquire(); }
 
     /**___________________________________________________________________________________________________
         @short      decrement refcount
@@ -200,7 +201,8 @@ public:
         @onerror    A RuntimeException is thrown.
     */
 
-    virtual void SAL_CALL release() throw() override ;
+    virtual void SAL_CALL release() throw() override
+    { OWeakObject::release(); }
 
 
     //  XTypeProvider

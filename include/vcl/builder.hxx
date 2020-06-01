@@ -47,7 +47,7 @@ class VclExpander;
 class VclMultiLineEdit;
 struct NotebookBarAddonsItem;
 namespace xmlreader { class XmlReader; }
-namespace com { namespace sun { namespace star { namespace frame { class XFrame; } } } }
+namespace com::sun::star::frame { class XFrame; }
 
 struct ComboBoxTextItem
 {
@@ -60,6 +60,7 @@ struct ComboBoxTextItem
     }
 };
 
+/// Creates a hierarchy of vcl::Windows (widgets) from a .ui file for dialogs, sidebar, etc.
 class VCL_DLLPUBLIC VclBuilder
 {
 public:
@@ -82,7 +83,7 @@ public:
     template <typename T> T* get(VclPtr<T>& ret, const OString& sID);
 
     //sID may not exist, but must be of type T if it does
-    template <typename T /*= vcl::Window if we had c++11*/> T* get(const OString& sID);
+    template <typename T = vcl::Window> T* get(const OString& sID);
 
     vcl::Window*    get_widget_root();
 
@@ -150,7 +151,7 @@ private:
 
     struct MenuAndId
     {
-        OString const m_sID;
+        OString m_sID;
         VclPtr<Menu> m_pMenu;
         MenuAndId(const OString &rId, Menu *pMenu);
     };
@@ -158,8 +159,8 @@ private:
 
     struct StringPair
     {
-        OString const m_sID;
-        OString const m_sValue;
+        OString m_sID;
+        OString m_sValue;
         StringPair(const OString &rId, const OString &rValue)
             : m_sID(rId)
             , m_sValue(rValue)
@@ -182,9 +183,9 @@ private:
 
     struct ButtonImageWidgetMap
     {
-        OString const m_sID;
-        OUString const m_sValue;
-        bool const m_bRadio;
+        OString m_sID;
+        OUString m_sValue;
+        bool m_bRadio;
         ButtonImageWidgetMap(const OString &rId, const OUString &rValue, bool bRadio)
             : m_sID(rId)
             , m_sValue(rValue)
@@ -200,9 +201,9 @@ private:
 
     struct ComboBoxModelMap
     {
-        OString const m_sID;
-        OUString const m_sValue;
-        sal_Int32 const m_nActiveId;
+        OString m_sID;
+        OUString m_sValue;
+        sal_Int32 m_nActiveId;
         ComboBoxModelMap(const OString &rId, const OUString &rValue, sal_Int32 nActiveId)
             : m_sID(rId)
             , m_sValue(rValue)
@@ -302,12 +303,12 @@ private:
 
     OString     m_sID;
     OString     m_sHelpRoot;
-    ResHookProc const m_pStringReplace;
+    ResHookProc m_pStringReplace;
     VclPtr<vcl::Window> m_pParent;
     bool        m_bToplevelHasDeferredInit;
     bool        m_bToplevelHasDeferredProperties;
     bool        m_bToplevelParentFound;
-    bool const        m_bLegacy;
+    bool        m_bLegacy;
     std::unique_ptr<ParserState> m_pParserState;
 
     vcl::Window *get_by_name(const OString& sID);
@@ -322,7 +323,7 @@ private:
         bool    operator()(const vcl::Window *pA, const vcl::Window *pB) const;
 
     private:
-        VclBuilder * const m_pBuilder;
+        VclBuilder *m_pBuilder;
     };
 
     /// XFrame to be able to extract labels and other properties of the UNO commands (like of .uno:Bold).
@@ -435,7 +436,7 @@ inline T* VclBuilder::get(VclPtr<T>& ret, const OString& sID)
 }
 
 //sID may not exist, but must be of type T if it does
-template <typename T /*= vcl::Window if we had c++11*/>
+template <typename T>
 inline T* VclBuilder::get(const OString& sID)
 {
     vcl::Window *w = get_by_name(sID);
@@ -474,7 +475,7 @@ public:
     {
         return m_pUIBuilder->get<T>(ret, sID);
     }
-    template <typename T /*= vcl::Window if we had c++11*/> T* get(const OString & sID)
+    template <typename T = vcl::Window> T* get(const OString & sID)
     {
         return m_pUIBuilder->get<T>(sID);
     }

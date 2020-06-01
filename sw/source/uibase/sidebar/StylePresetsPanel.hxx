@@ -14,13 +14,13 @@
 #include <memory>
 #include <com/sun/star/frame/XFrame.hpp>
 
-#include <svx/sidebar/PanelLayout.hxx>
+#include <sfx2/sidebar/PanelLayout.hxx>
 
 #include <sfx2/sidebar/ControllerItem.hxx>
 
 #include <svtools/valueset.hxx>
 
-namespace sw { namespace sidebar {
+namespace sw::sidebar {
 
 class StylePresetsPanel : public PanelLayout,
                        public sfx2::sidebar::ControllerItem::ItemUpdateReceiverInterface
@@ -34,6 +34,10 @@ public:
                                   const SfxItemState eState,
                                   const SfxPoolItem* pState) override;
 
+    virtual void GetControlState(
+        const sal_uInt16 /*nSId*/,
+        boost::property_tree::ptree& /*rState*/) override {};
+
 private:
     struct TemplateEntry
     {
@@ -41,7 +45,7 @@ private:
             : maURL(rURL)
         {}
 
-        OUString const maURL;
+        OUString maURL;
     };
 
     void RefreshList();
@@ -52,15 +56,15 @@ private:
     virtual ~StylePresetsPanel() override;
     virtual void dispose() override;
 
-    std::unique_ptr<SvtValueSet> mxValueSet;
+    std::unique_ptr<ValueSet> mxValueSet;
     std::unique_ptr<weld::CustomWeld> mxValueSetWin;
 
     std::vector<std::unique_ptr<TemplateEntry>> maTemplateEntries;
 
-    DECL_LINK(DoubleClickHdl, SvtValueSet*, void);
+    DECL_LINK(DoubleClickHdl, ValueSet*, void);
 };
 
-}} // end of namespace sw::sidebar
+} // end of namespace sw::sidebar
 
 #endif // INCLUDED_SW_SOURCE_UIBASE_SIDEBAR_STYLEPRESETSPANEL_HXX
 

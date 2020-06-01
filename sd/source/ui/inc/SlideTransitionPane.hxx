@@ -22,7 +22,7 @@
 #include "SlideSorterViewShell.hxx"
 
 #include <svtools/valueset.hxx>
-#include <svx/sidebar/PanelLayout.hxx>
+#include <sfx2/sidebar/PanelLayout.hxx>
 #include <vcl/weld.hxx>
 
 #include <vector>
@@ -30,9 +30,9 @@
 
 class SdDrawDocument;
 
-namespace com { namespace sun { namespace star { namespace drawing { class XDrawView; } } } }
-namespace com { namespace sun { namespace star { namespace frame { class XModel; } } } }
-namespace sd { namespace tools { class EventMultiplexerEvent; } }
+namespace com::sun::star::drawing { class XDrawView; }
+namespace com::sun::star::frame { class XModel; }
+namespace sd::tools { class EventMultiplexerEvent; }
 
 namespace sd
 {
@@ -88,7 +88,7 @@ private:
     DECL_LINK( PlayButtonClicked, weld::Button&, void );
     DECL_LINK( AutoPreviewClicked, weld::ToggleButton&, void );
 
-    DECL_LINK( TransitionSelected, SvtValueSet*, void );
+    DECL_LINK( TransitionSelected, ValueSet*, void );
     DECL_LINK( AdvanceSlideRadioButtonToggled, weld::ToggleButton&, void );
     DECL_LINK( AdvanceTimeModified, weld::MetricSpinButton&, void );
     DECL_LINK( VariantListBoxSelected, weld::ComboBox&, void );
@@ -100,7 +100,7 @@ private:
     DECL_LINK(LateInitCallback, Timer *, void);
 
     ViewShellBase &   mrBase;
-    SdDrawDocument * const  mpDrawDoc;
+    SdDrawDocument *  mpDrawDoc;
 
     std::unique_ptr<TransitionPane> mxVS_TRANSITION_ICONS;
     std::unique_ptr<weld::CustomWeld> mxVS_TRANSITION_ICONSWin;

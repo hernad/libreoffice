@@ -11,6 +11,7 @@
 
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/embed/XStorage.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/frame/XStorable.hpp>
 #include <com/sun/star/graphic/XGraphic.hpp>
 #include <com/sun/star/security/DocumentDigitalSignatures.hpp>
@@ -60,15 +61,17 @@ SignatureLineContext::SignatureLineContext(SvXMLImport& rImport, sal_uInt16 nPrf
     xPropSet->setPropertyValue("SignatureLineShowSignDate", Any(bShowSignDate));
     xPropSet->setPropertyValue("SignatureLineCanAddComment", Any(bCanAddComment));
 
+    // Save unsigned graphic (need it when exporting)
+    Reference<XGraphic> xUnsignedGraphic;
+    xPropSet->getPropertyValue("Graphic") >>= xUnsignedGraphic;
+    if (xUnsignedGraphic.is())
+        xPropSet->setPropertyValue("SignatureLineUnsignedImage", Any(xUnsignedGraphic));
+
     Reference<XGraphic> xGraphic;
     bool bIsSigned(false);
     try
     {
         // Get the document signatures
-        Reference<XDocumentDigitalSignatures> xSignatures(
-            security::DocumentDigitalSignatures::createWithVersion(
-                comphelper::getProcessComponentContext(), "1.2"));
-
         css::uno::Reference<XStorable> xStorable(GetImport().GetModel(), UNO_QUERY_THROW);
         Reference<XStorage> xStorage = comphelper::OStorageHelper::GetStorageOfFormatFromURL(
             ZIP_STORAGE_FORMAT_STRING, xStorable->getLocation(), ElementModes::READ);
@@ -78,6 +81,11 @@ SignatureLineContext::SignatureLineContext(SvXMLImport& rImport, sal_uInt16 nPrf
             SAL_WARN("xmloff", "No xStorage!");
             return;
         }
+
+        OUString const aODFVersion(comphelper::OStorageHelper::GetODFVersionFromStorage(xStorage));
+        Reference<XDocumentDigitalSignatures> xSignatures(
+            security::DocumentDigitalSignatures::createWithVersion(
+                comphelper::getProcessComponentContext(), aODFVersion));
 
         Sequence<DocumentSignatureInformation> xSignatureInfo
             = xSignatures->verifyDocumentContentSignatures(xStorage, Reference<XInputStream>());
@@ -106,12 +114,6 @@ SignatureLineContext::SignatureLineContext(SvXMLImport& rImport, sal_uInt16 nPrf
                             "No InvalidSignatureLineImage!");
                 xGraphic = pSignatureInfo->InvalidSignatureLineImage;
             }
-
-            // Save unsigned graphic
-            Reference<XGraphic> xUnsignedGraphic;
-            xPropSet->getPropertyValue("Graphic") >>= xUnsignedGraphic;
-            if (xUnsignedGraphic.is())
-                xPropSet->setPropertyValue("SignatureLineUnsignedImage", Any(xUnsignedGraphic));
 
             xPropSet->setPropertyValue("Graphic", Any(xGraphic));
         }

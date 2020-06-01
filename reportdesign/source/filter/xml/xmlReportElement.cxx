@@ -20,13 +20,13 @@
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
 #include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
 #include <xmloff/ProgressBarHelper.hxx>
 #include "xmlEnums.hxx"
 #include "xmlComponent.hxx"
 #include "xmlCondPrtExpr.hxx"
 #include "xmlFormatCondition.hxx"
-
+#include <sal/log.hxx>
+#include <osl/diagnose.h>
 
 namespace rptxml
 {
@@ -47,9 +47,7 @@ OXMLReportElement::OXMLReportElement( ORptFilter& rImport,
     static const OUString s_sTRUE = ::xmloff::token::GetXMLToken(XML_TRUE);
     try
     {
-        sax_fastparser::FastAttributeList *pAttribList =
-                        sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-        for (auto &aIter : *pAttribList)
+        for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
         {
             OUString sValue = aIter.toString();
 
@@ -62,6 +60,7 @@ OXMLReportElement::OXMLReportElement( ORptFilter& rImport,
                     m_xComponent->setPrintRepeatedValues(sValue == s_sTRUE);
                     break;
                 default:
+                    SAL_WARN("reportdesign", "unknown attribute " << SvXMLImport::getPrefixAndNameFromToken(aIter.getToken()) << " = " << sValue);
                     break;
             }
         }

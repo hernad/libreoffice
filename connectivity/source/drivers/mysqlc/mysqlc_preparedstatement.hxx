@@ -27,6 +27,7 @@
 #include <com/sun/star/sdbc/XResultSetMetaDataSupplier.hpp>
 #include <com/sun/star/sdbc/XPreparedBatchExecution.hpp>
 #include <com/sun/star/io/XInputStream.hpp>
+#include <cppuhelper/compbase4.hxx>
 
 namespace connectivity
 {
@@ -52,8 +53,7 @@ struct BindMetaData
     my_bool error = false;
 };
 
-typedef ::cppu::ImplHelper5<css::sdbc::XPreparedStatement, css::sdbc::XParameters,
-                            css::sdbc::XPreparedBatchExecution,
+typedef ::cppu::ImplHelper4<css::sdbc::XPreparedStatement, css::sdbc::XParameters,
                             css::sdbc::XResultSetMetaDataSupplier, css::lang::XServiceInfo>
     OPreparedStatement_BASE;
 
@@ -92,11 +92,6 @@ public:
     sal_Int32 SAL_CALL executeUpdate() override;
     sal_Bool SAL_CALL execute() override;
     Reference<css::sdbc::XConnection> SAL_CALL getConnection() override;
-
-    // XStatement
-    using OCommonStatement::execute;
-    using OCommonStatement::executeQuery;
-    using OCommonStatement::executeUpdate;
 
     // XParameters
     void SAL_CALL setNull(sal_Int32 parameter, sal_Int32 sqlType) override;
@@ -149,9 +144,9 @@ public:
     void SAL_CALL clearParameters() override;
 
     // XPreparedBatchExecution
-    void SAL_CALL addBatch() override;
-    void SAL_CALL clearBatch() override;
-    css::uno::Sequence<sal_Int32> SAL_CALL executeBatch() override;
+    // void SAL_CALL addBatch() override;
+    // void SAL_CALL clearBatch() override;
+    // css::uno::Sequence<sal_Int32> SAL_CALL executeBatch() override;
 
     // XCloseable
     void SAL_CALL close() override;

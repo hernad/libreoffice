@@ -30,8 +30,6 @@
 #include <connectivity/dbmetadata.hxx>
 #include <connectivity/dbtools.hxx>
 #include <connectivity/sqlerror.hxx>
-#include <cppuhelper/exc_hlp.hxx>
-#include <rtl/ustrbuf.hxx>
 #include <osl/diagnose.h>
 
 #include <memory>
@@ -206,7 +204,7 @@ namespace sdbtools
             :m_pPrimary( _pPrimary )
             ,m_pSecondary( _pSecondary )
         {
-            OSL_ENSURE( m_pPrimary.get() && m_pSecondary.get(), "CombinedNameCheck::CombinedNameCheck: this will crash!" );
+            OSL_ENSURE( m_pPrimary && m_pSecondary, "CombinedNameCheck::CombinedNameCheck: this will crash!" );
         }
 
         // INameValidation

@@ -19,11 +19,8 @@
 #include <svx/sidebar/ValueSetWithTextControl.hxx>
 #include <sfx2/sidebar/Theme.hxx>
 
-#include <limits.h>
 #include <i18nlangtag/mslangid.hxx>
 #include <svtools/valueset.hxx>
-#include <editeng/brushitem.hxx>
-#include <vcl/graph.hxx>
 #include <vcl/event.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/svapp.hxx>
@@ -31,13 +28,13 @@
 namespace svx::sidebar {
 
 ValueSetWithTextControl::ValueSetWithTextControl()
-    : SvtValueSet(nullptr)
+    : ValueSet(nullptr)
 {
 }
 
 void ValueSetWithTextControl::SetDrawingArea(weld::DrawingArea* pDrawingArea)
 {
-    SvtValueSet::SetDrawingArea(pDrawingArea);
+    ValueSet::SetDrawingArea(pDrawingArea);
 
     Size aSize(250, 300);
     pDrawingArea->set_size_request(aSize.Width(), aSize.Height());

@@ -44,6 +44,7 @@
 #include <svl/nfsymbol.hxx>
 
 #include <cmath>
+#include <array>
 
 using namespace svt;
 
@@ -137,6 +138,11 @@ void ImpSvNumberformatInfo::Copy( const ImpSvNumberformatInfo& rNumFor, sal_uInt
     nCntExp      = rNumFor.nCntExp;
 }
 
+static const std::map<LanguageType, std::array<sal_uInt8, 4>> tblDBNumToNatNum
+    = { { primary(LANGUAGE_CHINESE),    { 4, 5, 3, 0 } },
+        { primary(LANGUAGE_JAPANESE),   { 4, 5, 3, 0 } },
+        { primary(LANGUAGE_KOREAN),     { 4, 5, 6, 10 } } };
+
 // static
 sal_uInt8 SvNumberNatNum::MapDBNumToNatNum( sal_uInt8 nDBNum, LanguageType eLang, bool bDate )
 {
@@ -147,7 +153,7 @@ sal_uInt8 SvNumberNatNum::MapDBNumToNatNum( sal_uInt8 nDBNum, LanguageType eLang
     {
         if ( nDBNum == 4 && eLang == primary(LANGUAGE_KOREAN) )
         {
-            nNatNum = 9;
+            nNatNum = 10;
         }
         else if ( nDBNum <= 3 )
         {
@@ -156,42 +162,21 @@ sal_uInt8 SvNumberNatNum::MapDBNumToNatNum( sal_uInt8 nDBNum, LanguageType eLang
     }
     else
     {
-        switch ( nDBNum )
+        if (1 <= nDBNum && nDBNum <= 4)
         {
-        case 1:
-            if ( eLang == primary(LANGUAGE_CHINESE) )
-                nNatNum = 4;
-            else if ( eLang == primary(LANGUAGE_JAPANESE) )
-                nNatNum = 1;
-            else if ( eLang == primary(LANGUAGE_KOREAN) )
-                nNatNum = 1;
-            break;
-        case 2:
-            if ( eLang == primary(LANGUAGE_CHINESE))
-                nNatNum = 5;
-            else if ( eLang == primary(LANGUAGE_JAPANESE) )
-                nNatNum = 4;
-            else if ( eLang == primary(LANGUAGE_KOREAN) )
-                nNatNum = 2;
-            break;
-        case 3:
-            if ( eLang == primary(LANGUAGE_CHINESE) )
-                nNatNum = 6;
-            else if ( eLang == primary(LANGUAGE_JAPANESE) )
-                nNatNum = 5;
-            else if ( eLang == primary(LANGUAGE_KOREAN) )
-                nNatNum = 3;
-            break;
-        case 4:
-            if ( eLang == primary(LANGUAGE_JAPANESE) )
-                nNatNum = 7;
-            else if ( eLang == primary(LANGUAGE_KOREAN) )
-                nNatNum = 9;
-            break;
+            auto const it = tblDBNumToNatNum.find(eLang);
+            if (it != tblDBNumToNatNum.end())
+                nNatNum = it->second[nDBNum - 1];
+
         }
     }
     return nNatNum;
 }
+
+static const std::map<LanguageType, std::array<sal_uInt8, 9>> tblNatNumToDBNum
+    = { { primary(LANGUAGE_CHINESE),    { 1, 0, 0, 1, 2, 3, 0, 0, 0 } },
+        { primary(LANGUAGE_JAPANESE),   { 1, 2, 3, 1, 2, 3, 1, 2, 0 } },
+        { primary(LANGUAGE_KOREAN),     { 1, 2, 3, 1, 2, 3, 1, 2, 4 } } };
 
 // static
 sal_uInt8 SvNumberNatNum::MapNatNumToDBNum( sal_uInt8 nNatNum, LanguageType eLang, bool bDate )
@@ -201,7 +186,7 @@ sal_uInt8 SvNumberNatNum::MapNatNumToDBNum( sal_uInt8 nNatNum, LanguageType eLan
     eLang = primary(eLang);    // 10 bit primary language
     if ( bDate )
     {
-        if ( nNatNum == 9 && eLang == primary(LANGUAGE_KOREAN) )
+        if ( nNatNum == 10 && eLang == primary(LANGUAGE_KOREAN) )
         {
             nDBNum = 4;
         }
@@ -212,52 +197,11 @@ sal_uInt8 SvNumberNatNum::MapNatNumToDBNum( sal_uInt8 nNatNum, LanguageType eLan
     }
     else
     {
-        switch ( nNatNum )
+        if (1 <= nNatNum && nNatNum <= 9)
         {
-        case 1:
-            if ( eLang == primary(LANGUAGE_JAPANESE) )
-                nDBNum = 1;
-            else if ( eLang == primary(LANGUAGE_KOREAN) )
-                nDBNum = 1;
-            break;
-        case 2:
-            if ( eLang == primary(LANGUAGE_KOREAN) )
-                nDBNum = 2;
-            break;
-        case 3:
-            if ( eLang == primary(LANGUAGE_KOREAN) )
-                nDBNum = 3;
-            break;
-        case 4:
-            if ( eLang == primary(LANGUAGE_CHINESE) )
-                nDBNum = 1;
-            else if ( eLang == primary(LANGUAGE_JAPANESE) )
-                nDBNum = 2;
-            break;
-        case 5:
-            if ( eLang == primary(LANGUAGE_CHINESE) )
-                nDBNum = 2;
-            else if ( eLang == primary(LANGUAGE_JAPANESE) )
-                nDBNum = 3;
-            break;
-        case 6:
-            if ( eLang == primary(LANGUAGE_CHINESE) )
-                nDBNum = 3;
-            break;
-        case 7:
-            if ( eLang == primary(LANGUAGE_JAPANESE) )
-                nDBNum = 4;
-            break;
-        case 8:
-            break;
-        case 9:
-            if ( eLang == primary(LANGUAGE_KOREAN) )
-                nDBNum = 4;
-            break;
-        case 10:
-            break;
-        case 11:
-            break;
+            auto const it = tblNatNumToDBNum.find(eLang);
+            if (it != tblNatNumToDBNum.end())
+                nDBNum = it->second[nNatNum - 1];
         }
     }
     return nDBNum;
@@ -1046,6 +990,22 @@ SvNumberformat::SvNumberformat(OUString& rString,
                             {
                                 maLocale = aTmpLocale;
                                 eLan = aTmpLocale.meLanguage;   // return to caller
+
+                                // Set new target locale also at scanner.
+                                // We have to do this because switching locale
+                                // may make replacing keywords and separators
+                                // necessary.
+                                // We can do this because it's the first
+                                // subformat and we're still at parsing the
+                                // modifiers, not keywords.
+                                rScan.SetNewLnge( eLan);
+                                // We can not force conversion though because
+                                // the caller may have explicitly not set it.
+                                // In the usual case the target locale is the
+                                // originating locale the conversion is not
+                                // necessary, when reading alien documents
+                                // conversion is enabled anyway.
+
                                 /* TODO: fiddle with scanner to make this
                                  * known? A change in the locale may affect
                                  * separators and keywords. On the other
@@ -1444,8 +1404,11 @@ sal_Int32 SvNumberformat::ImpGetNumber(OUStringBuffer& rString,
     sal_Unicode cToken;
     sal_Int32 nLen = rString.getLength();
     OUStringBuffer sBuffSymbol;
-    while ( nPos < nLen && ((cToken = rString[nPos]) != ']') )
+    while ( nPos < nLen )
     {
+        cToken = rString[nPos];
+        if (cToken == ']')
+            break;
         if (cToken == ' ')
         {                                               // delete spaces
             rString.remove(nPos,1);
@@ -1610,8 +1573,11 @@ SvNumberformat::LocaleType SvNumberformat::ImpGetLocaleType(const OUString& rStr
     sal_Unicode cToken = 0;
     sal_Int32 nStart = nPos;
     sal_Int32 nLen = rString.getLength();
-    while ( nPos < nLen && (nPos - nStart < 8) && ((cToken = rString[nPos]) != ']') )
+    while ( nPos < nLen && (nPos - nStart < 8) )
     {
+        cToken = rString[nPos];
+        if (cToken == ']')
+            break;
         if ( '0' <= cToken && cToken <= '9' )
         {
             nNum *= 16;
@@ -2010,15 +1976,17 @@ OUString SvNumberformat::StripNewCurrencyDelimiters( const OUString& rStr )
             do
             {
                 nDash = rStr.indexOf( '-', ++nEnd );
+                nEnd = GetQuoteEnd( rStr, nDash );
             }
-            while ( (nEnd = GetQuoteEnd( rStr, nDash )) >= 0 );
+            while ( nEnd >= 0 );
             sal_Int32 nClose;
             nEnd = nStartPos - 1;
             do
             {
                 nClose = rStr.indexOf( ']', ++nEnd );
+                nEnd = GetQuoteEnd( rStr, nClose );
             }
-            while ( (nEnd = GetQuoteEnd( rStr, nClose )) >= 0 );
+            while ( nEnd >= 0 );
 
             if(nClose < 0)
             {
@@ -2245,7 +2213,7 @@ namespace {
 void lcl_GetOutputStringScientific(double fNumber, sal_uInt16 nCharCount,
                                    const SvNumberFormatter& rFormatter, OUString& rOutString)
 {
-    bool bSign = ::rtl::math::isSignBitSet(fNumber);
+    bool bSign = std::signbit(fNumber);
 
     // 1.000E+015 (one digit and the decimal point, and the two chars +
     // nExpDigit for the exponential part, totalling 6 or 7).
@@ -2263,6 +2231,33 @@ void lcl_GetOutputStringScientific(double fNumber, sal_uInt16 nCharCount,
 
     rOutString = ::rtl::math::doubleToUString(fNumber, rtl_math_StringFormat_E2,
                                               nPrec, rFormatter.GetNumDecimalSep()[0], true );
+}
+
+OUString lcl_GetPercentString(const ImpSvNumberformatInfo &rInfo, sal_uInt16 nCnt)
+{
+    sal_Int32 i;
+    OUStringBuffer aPercentString;
+    for( i = 0; i < nCnt; i++ )
+    {
+        if( rInfo.nTypeArray[i] == NF_SYMBOLTYPE_PERCENT )
+        {
+            aPercentString.append( rInfo.sStrArray[i] );
+            bool bStringFound = false;
+            for( i--; i >= 0 && rInfo.nTypeArray[i] == NF_SYMBOLTYPE_STRING ; i-- )
+            {
+                if( !bStringFound )
+                {
+                    bStringFound = true;
+                    aPercentString.insert( 0, "\"" );
+                }
+                aPercentString.insert( 0, rInfo.sStrArray[i] );
+            }
+            i = nCnt;
+            if( bStringFound )
+                aPercentString.insert( 0, "\"" );
+      }
+    }
+    return aPercentString.makeStringAndClear();
 }
 
 OUString lcl_GetDenominatorString(const ImpSvNumberformatInfo &rInfo, sal_uInt16 nCnt)
@@ -2339,6 +2334,13 @@ OUString lcl_GetIntegerFractionDelimiterString(const ImpSvNumberformatInfo &rInf
 
 }
 
+OUString SvNumberformat::GetPercentString( sal_uInt16 nNumFor ) const
+{
+    const ImpSvNumberformatInfo& rInfo = NumFor[nNumFor].Info();
+    sal_uInt16 nCnt = NumFor[nNumFor].GetCount();
+    return lcl_GetPercentString( rInfo, nCnt );
+}
+
 OUString SvNumberformat::GetDenominatorString( sal_uInt16 nNumFor ) const
 {
     const ImpSvNumberformatInfo& rInfo = NumFor[nNumFor].Info();
@@ -2369,7 +2371,7 @@ bool SvNumberformat::GetOutputString(double fNumber, sal_uInt16 nCharCount, OUSt
         return false;
     }
     double fTestNum = fNumber;
-    bool bSign = ::rtl::math::isSignBitSet(fTestNum);
+    bool bSign = std::signbit(fTestNum);
     if (bSign)
     {
         fTestNum = -fTestNum;
@@ -2474,7 +2476,7 @@ bool SvNumberformat::GetOutputString(double fNumber,
         case SvNumFormatType::NUMBER: // Standard number format
             if (rScan.GetStandardPrec() == SvNumberFormatter::UNLIMITED_PRECISION)
             {
-                if (::rtl::math::isSignBitSet(fNumber))
+                if (std::signbit(fNumber))
                 {
                     if (!(fNumber < 0.0))
                         fNumber = -fNumber;     // do not display -0.0
@@ -2982,7 +2984,7 @@ bool SvNumberformat::ImpGetFractionOutput(double fNumber,
         bRes |= ImpNumberFillWithThousands(sStr, fNumber, k, j, nIx,
                                            rInfo.nCntPre);
     }
-    if (bSign && !(nFrac == 0 && fNum == 0.0))
+    if (bSign && (nFrac != 0 || fNum != 0.0))
     {
         sBuff.insert(0, '-'); // Not -0
     }
@@ -4245,7 +4247,7 @@ bool SvNumberformat::ImpGetNumberOutput(double fNumber,
     else
     {
         bSign = false;
-        if ( ::rtl::math::isSignBitSet( fNumber ) )
+        if ( std::signbit( fNumber ) )
         {
             fNumber = -fNumber; // yes, -0.0 is possible, eliminate '-'
         }
@@ -5559,8 +5561,8 @@ OUString SvNumberformat::impTransliterateImpl(const OUString& rStr,
         nField = rNum.GetParams().indexOf(rKeywords[nDateKey] + "=", ++nField);
     }
     while (nField != -1 && nField != 0 &&
-            !(rNum.GetParams()[nField - 1] == ',' ||
-              rNum.GetParams()[nField - 1] == ' '));
+            (rNum.GetParams()[nField - 1] != ',' &&
+              rNum.GetParams()[nField - 1] != ' '));
 
     // no format specified for actual keyword
     if (nField == -1)

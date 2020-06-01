@@ -483,7 +483,7 @@ published constants NumberingType
     const short TEXT_ORDINAL = 62;
 
     /** Footnoting symbols according the University of Chicago style:
-          *, &#2020;, &#2021;, &#00a7;, **, &#2020;&#2020; etc.
+          \*, &#2020;, &#2021;, &#00a7;, **, &#2020;&#2020; etc.
 
         @since LibreOffice 6.4
      */
@@ -492,6 +492,34 @@ published constants NumberingType
         ASTERISK ASTERISK, DAGGER DAGGER, etc.
       */
     const short SYMBOL_CHICAGO = 63;
+
+    /** Numbering is in Arabic numbers, padded with zero to have a length of at least two, as "01,
+        02, ..., 10, 11, ...".
+
+        @since LibreOffice 7.0
+     */
+    const short ARABIC_ZERO = 64;
+
+    /** Numbering is in Arabic numbers, padded with zero to have a length of at least three, as
+        "001, 002, ..., 100, 101, ...".
+
+        @since LibreOffice 7.0
+     */
+    const short ARABIC_ZERO3 = 65;
+
+    /** Numbering is in Arabic numbers, padded with zero to have a length of at least four, as
+        "0001, 0002, ..., 1000, 1001, ...".
+
+        @since LibreOffice 7.0
+     */
+    const short ARABIC_ZERO4 = 66;
+
+    /** Numbering is in Arabic numbers, padded with zero to have a length of at least five, as
+        "00001, 00002, ..., 10000, 10001, ...".
+
+        @since LibreOffice 7.0
+     */
+    const short ARABIC_ZERO5 = 67;
 };
 
 

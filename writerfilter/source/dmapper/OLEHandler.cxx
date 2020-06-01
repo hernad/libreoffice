@@ -18,10 +18,8 @@
  */
 #include "OLEHandler.hxx"
 #include "DomainMapper.hxx"
-#include "PropertyMap.hxx"
 #include "GraphicHelpers.hxx"
 
-#include <editeng/unoprnms.hxx>
 #include <oox/ole/oleobjecthelper.hxx>
 #include <ooxml/resourceids.hxx>
 #include <rtl/ustring.hxx>
@@ -30,20 +28,15 @@
 #include <tools/diagnose_ex.h>
 #include <unotools/mediadescriptor.hxx>
 #include <officecfg/Office/Common.hxx>
-#include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/container/XNameAccess.hpp>
 #include <com/sun/star/document/XEmbeddedObjectResolver.hpp>
 #include <com/sun/star/document/XEmbeddedObjectSupplier.hpp>
 #include <com/sun/star/document/XFilter.hpp>
 #include <com/sun/star/document/XImporter.hpp>
-#include <com/sun/star/document/XStorageBasedDocument.hpp>
 #include <com/sun/star/drawing/XShape.hpp>
-#include <com/sun/star/embed/XEmbeddedObject.hpp>
-#include <com/sun/star/embed/XEmbedObjectCreator.hpp>
 #include <com/sun/star/graphic/XGraphic.hpp>
-#include <com/sun/star/io/XStream.hpp>
+#include <com/sun/star/io/XOutputStream.hpp>
 #include <com/sun/star/lang/XComponent.hpp>
-#include <com/sun/star/lang/XInitialization.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/text/XTextDocument.hpp>
@@ -146,7 +139,7 @@ void OLEHandler::lcl_sprm(Sprm & rSprm)
         case NS_ooxml::LN_OLEObject_OLEObject:
         {
             writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-            if( pProperties.get())
+            if( pProperties )
             {
                 pProperties->resolve(*this);
             }
@@ -155,7 +148,7 @@ void OLEHandler::lcl_sprm(Sprm & rSprm)
         case NS_ooxml::LN_wrap_wrap:
         {
             writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-            if ( pProperties.get( ) )
+            if ( pProperties )
             {
                 tools::SvRef<WrapHandler> pHandler( new WrapHandler );
                 pProperties->resolve( *pHandler );

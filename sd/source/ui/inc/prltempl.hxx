@@ -45,14 +45,13 @@ private:
     XDashListRef          pDashList;
     XLineEndListRef       pLineEndList;
 
-    PresentationObjects const ePO;
+    PresentationObjects   ePO;
 
     virtual void        PageCreated(const OString& rId, SfxTabPage &rPage) override;
 
     // for mapping with the new SvxNumBulletItem
     SfxItemSet aInputSet;
     std::unique_ptr<SfxItemSet> pOutSet;
-    const SfxItemSet* pOrgSet;
 
     sal_uInt16 GetOutlineLevel() const;
 

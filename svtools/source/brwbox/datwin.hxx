@@ -21,20 +21,19 @@
 
 #include <svtools/brwbox.hxx>
 #include <svtools/brwhead.hxx>
+#include <vcl/scrbar.hxx>
 #include <vcl/timer.hxx>
 #include <vcl/transfer.hxx>
 #include <vector>
 
-
 #define MIN_COLUMNWIDTH  2
-
 
 class ButtonFrame
 {
-    tools::Rectangle const   aRect;
-    tools::Rectangle const   aInnerRect;
-    OUString const    aText;
-    bool const        m_bDrawDisabled;
+    tools::Rectangle   aRect;
+    tools::Rectangle   aInnerRect;
+    OUString    aText;
+    bool        m_bDrawDisabled;
 
 public:
                ButtonFrame( const Point& rPt, const Size& rSz,
@@ -54,7 +53,7 @@ public:
 
 class BrowserColumn final
 {
-    sal_uInt16 const    _nId;
+    sal_uInt16          _nId;
     sal_uLong           _nOriginalWidth;
     sal_uLong           _nWidth;
     OUString            _aTitle;

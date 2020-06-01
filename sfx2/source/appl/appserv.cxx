@@ -18,7 +18,6 @@
  */
 
 #include <config_features.h>
-
 #include <com/sun/star/document/XEmbeddedScripts.hpp>
 #include <com/sun/star/drawing/ModuleDispatcher.hpp>
 #include <com/sun/star/frame/Desktop.hpp>
@@ -68,7 +67,6 @@
 #include <rtl/ustrbuf.hxx>
 #include <sal/log.hxx>
 #include <osl/file.hxx>
-#include <osl/module.hxx>
 #include <vcl/EnumContext.hxx>
 
 #include <unotools/moduleoptions.hxx>
@@ -110,6 +108,8 @@
 #include <memory>
 
 #include <openuriexternally.hxx>
+
+#include "getbasctlfunction.hxx"
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::beans;
@@ -174,20 +174,23 @@ namespace
         // make sure we actually can instantiate services from base first
         if(!lcl_isBaseAvailable())
         {
-            try
+            if (officecfg::Office::Common::PackageKit::EnableBaseInstallation::get())
             {
-                using namespace org::freedesktop::PackageKit;
-                using namespace svtools;
-                Reference< XSyncDbusSessionHelper > xSyncDbusSessionHelper(SyncDbusSessionHelper::create(comphelper::getProcessComponentContext()));
-                Sequence< OUString > vPackages { "libreoffice-base" };
-                xSyncDbusSessionHelper->InstallPackageNames(vPackages, OUString());
-                // Ill be back (hopefully)!
-                SolarMutexGuard aGuard;
-                executeRestartDialog(comphelper::getProcessComponentContext(), nullptr, RESTART_REASON_BIBLIOGRAPHY_INSTALL);
-            }
-            catch (const Exception &)
-            {
-                TOOLS_INFO_EXCEPTION("sfx.appl", "trying to install LibreOffice Base");
+                try
+                {
+                    using namespace org::freedesktop::PackageKit;
+                    using namespace svtools;
+                    Reference< XSyncDbusSessionHelper > xSyncDbusSessionHelper(SyncDbusSessionHelper::create(comphelper::getProcessComponentContext()));
+                    Sequence< OUString > vPackages { "libreoffice-base" };
+                    xSyncDbusSessionHelper->InstallPackageNames(vPackages, OUString());
+                    // I'll be back (hopefully)!
+                    SolarMutexGuard aGuard;
+                    executeRestartDialog(comphelper::getProcessComponentContext(), nullptr, RESTART_REASON_BIBLIOGRAPHY_INSTALL);
+                }
+                catch (const Exception &)
+                {
+                    TOOLS_INFO_EXCEPTION("sfx.appl", "trying to install LibreOffice Base");
+                }
             }
             return;
         }
@@ -650,7 +653,7 @@ void SfxApplication::MiscExec_Impl( SfxRequest& rReq )
         // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         case SID_ABOUT:
         {
-            SfxAbstractDialogFactory* pFact = SfxAbstractDialogFactory::Create();
+            VclAbstractDialogFactory* pFact = VclAbstractDialogFactory::Create();
             ScopedVclPtr<VclAbstractDialog> pDlg(pFact->CreateAboutDialog(rReq.GetFrameWeld()));
             pDlg->Execute();
             bDone = true;
@@ -1203,8 +1206,6 @@ void SfxApplication::MiscState_Impl(SfxItemSet &rSet)
 
 typedef rtl_uString* (*basicide_choose_macro)(void*, void*, void*, sal_Bool);
 
-extern "C" { static void thisModule() {} }
-
 #else
 
 extern "C" rtl_uString* basicide_choose_macro(void*, void*, void*, sal_Bool);
@@ -1214,17 +1215,7 @@ extern "C" rtl_uString* basicide_choose_macro(void*, void*, void*, sal_Bool);
 static OUString ChooseMacro(weld::Window* pParent, const Reference<XModel>& rxLimitToDocument, const Reference<XFrame>& xDocFrame, bool bChooseOnly)
 {
 #ifndef DISABLE_DYNLOADING
-    osl::Module aMod;
-
-    // load basctl module
-    aMod.loadRelative(&thisModule, SVLIBRARY("basctl"));
-
-    // get symbol
-    basicide_choose_macro pSymbol = reinterpret_cast<basicide_choose_macro>(aMod.getFunctionSymbol("basicide_choose_macro"));
-    SAL_WARN_IF(!pSymbol, "sfx.appl", "SfxApplication::MacroOrganizer, no symbol!");
-    if (!pSymbol)
-        return OUString();
-    aMod.release();
+    basicide_choose_macro pSymbol = reinterpret_cast<basicide_choose_macro>(sfx2::getBasctlFunction("basicide_choose_macro"));
 #else
 #define pSymbol basicide_choose_macro
 #endif

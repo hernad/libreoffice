@@ -17,6 +17,9 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <sal/config.h>
+
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/style/XStyle.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/beans/XMultiPropertyStates.hpp>
@@ -30,6 +33,7 @@
 #include <xmloff/xmltoken.hxx>
 #include <xmloff/XMLTextMasterPageContext.hxx>
 #include <XMLTextHeaderFooterContext.hxx>
+#include <PageMasterImportContext.hxx>
 #include <xmloff/xmlimp.hxx>
 
 
@@ -66,7 +70,7 @@ XMLTextMasterPageContext::XMLTextMasterPageContext( SvXMLImport& rImport,
         sal_uInt16 nPrfx, const OUString& rLName,
         const Reference< XAttributeList > & xAttrList,
         bool bOverwrite )
-:   SvXMLStyleContext( rImport, nPrfx, rLName, xAttrList, XML_STYLE_FAMILY_MASTER_PAGE )
+:   SvXMLStyleContext( rImport, nPrfx, rLName, xAttrList, XmlStyleFamily::MASTER_PAGE )
 ,   bInsertHeader( false )
 ,   bInsertFooter( false )
 ,   bInsertHeaderLeft( false )
@@ -102,11 +106,16 @@ XMLTextMasterPageContext::XMLTextMasterPageContext( SvXMLImport& rImport,
                 sPageMasterName = xAttrList->getValueByIndex( i );
             }
         }
+        else if (XML_NAMESPACE_DRAW == nPrefix
+                 && IsXMLToken(aLocalName, XML_STYLE_NAME))
+        {
+            m_sDrawingPageStyle = xAttrList->getValueByIndex(i);
+        }
     }
 
     if( !sDisplayName.isEmpty() )
     {
-        rImport.AddStyleDisplayName( XML_STYLE_FAMILY_MASTER_PAGE, sName,
+        rImport.AddStyleDisplayName( XmlStyleFamily::MASTER_PAGE, sName,
                                      sDisplayName );
     }
     else
@@ -256,14 +265,24 @@ void XMLTextMasterPageContext::Finish( bool bOverwrite )
     if( xStyle.is() && (IsNew() || bOverwrite) )
     {
         Reference < XPropertySet > xPropSet( xStyle, UNO_QUERY );
+        XMLPropStyleContext * pDrawingPageStyle(nullptr);
+        if (!m_sDrawingPageStyle.isEmpty())
+        {
+            pDrawingPageStyle = GetImport().GetTextImport()->FindDrawingPage(m_sDrawingPageStyle);
+        }
+        PageStyleContext * pPageLayout(nullptr);
         if( !sPageMasterName.isEmpty() )
         {
-            XMLPropStyleContext* pStyle =
-                GetImport().GetTextImport()->FindPageMaster( sPageMasterName );
-            if (pStyle)
-            {
-                pStyle->FillPropertySet(xPropSet);
-            }
+            pPageLayout = static_cast<PageStyleContext *>(GetImport().GetTextImport()->FindPageMaster(sPageMasterName));
+        }
+        if (pPageLayout)
+        {
+            pPageLayout->FillPropertySet_PageStyle(xPropSet, pDrawingPageStyle);
+        }
+        else if (pDrawingPageStyle)
+        {
+            // don't need to care about old background attributes in this case
+            pDrawingPageStyle->FillPropertySet(xPropSet);
         }
 
         Reference < XNameContainer > xPageStyles =
@@ -277,7 +296,7 @@ void XMLTextMasterPageContext::Finish( bool bOverwrite )
         {
             OUString sDisplayFollow(
                 GetImport().GetStyleDisplayName(
-                        XML_STYLE_FAMILY_MASTER_PAGE, sFollow ) );
+                        XmlStyleFamily::MASTER_PAGE, sFollow ) );
             if( sDisplayFollow.isEmpty() ||
                 !xPageStyles->hasByName( sDisplayFollow ) )
                 sDisplayFollow = xStyle->getName();

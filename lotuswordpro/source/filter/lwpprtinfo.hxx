@@ -61,7 +61,6 @@
 #ifndef INCLUDED_LOTUSWORDPRO_SOURCE_FILTER_LWPPRTINFO_HXX
 #define INCLUDED_LOTUSWORDPRO_SOURCE_FILTER_LWPPRTINFO_HXX
 
-#include <lwpatomholder.hxx>
 #include <lwpobjstrm.hxx>
 /**
  * @brief   printer info used in VO_DOCUMENT
@@ -73,7 +72,7 @@ public:
     explicit LwpPrinterInfo(LwpObjectStream* pStrm);
 
 public:
-    static void Skip(LwpObjectStream *pStrm);
+    static void Skip(LwpObjectStream* pStrm);
 };
 #endif
 

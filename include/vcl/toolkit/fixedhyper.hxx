@@ -20,14 +20,15 @@
 #ifndef INCLUDED_VCL_FIXEDHYPER_HXX
 #define INCLUDED_VCL_FIXEDHYPER_HXX
 
-#if !defined(VCL_DLLIMPLEMENTATION) && !defined(TOOLKIT_DLLIMPLEMENTATION)
+#if !defined(VCL_DLLIMPLEMENTATION) && !defined(TOOLKIT_DLLIMPLEMENTATION) && !defined(VCL_INTERNALS)
 #error "don't use this in new code"
 #endif
 
+#include <config_options.h>
 #include <vcl/dllapi.h>
 #include <vcl/fixed.hxx>
 
-class VCL_DLLPUBLIC FixedHyperlink final : public FixedText
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) FixedHyperlink final : public FixedText
 {
 private:
     long                m_nTextLen;

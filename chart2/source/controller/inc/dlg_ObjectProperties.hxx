@@ -22,7 +22,7 @@
 #include <ObjectIdentifier.hxx>
 #include <sfx2/tabdlg.hxx>
 
-namespace com { namespace sun { namespace star { namespace util { class XNumberFormatsSupplier; } } } }
+namespace com::sun::star::util { class XNumberFormatsSupplier; }
 class Graphic;
 
 namespace chart
@@ -48,12 +48,14 @@ public:
     bool HasNumberProperties() const { return m_bHasNumberProperties;}
     bool ProvidesStartingAngle() const { return m_bProvidesStartingAngle;}
     bool ProvidesMissingValueTreatments() const { return m_bProvidesMissingValueTreatments;}
+    bool IsPieChartDataPoint() const { return m_bIsPieChartDataPoint;}
 
     bool HasScaleProperties() const { return m_bHasScaleProperties;}
     bool CanAxisLabelsBeStaggered() const { return m_bCanAxisLabelsBeStaggered;}
     bool IsSupportingAxisPositioning() const { return m_bSupportingAxisPositioning;}
     bool ShowAxisOrigin() const { return m_bShowAxisOrigin;}
     bool IsCrossingAxisIsCategoryAxis() const { return m_bIsCrossingAxisIsCategoryAxis;}
+    bool IsSupportingCategoryPositioning() const { return m_bSupportingCategoryPositioning;}
     const css::uno::Sequence< OUString >& GetCategories() const { return m_aCategories;}
 
     const css::uno::Reference< css::chart2::XChartDocument >&
@@ -80,6 +82,7 @@ private:
     bool m_bHasNumberProperties;
     bool m_bProvidesStartingAngle;
     bool m_bProvidesMissingValueTreatments;
+    bool m_bIsPieChartDataPoint;
 
     bool m_bHasScaleProperties;
     bool m_bCanAxisLabelsBeStaggered;
@@ -87,6 +90,7 @@ private:
     bool m_bSupportingAxisPositioning;
     bool m_bShowAxisOrigin;
     bool m_bIsCrossingAxisIsCategoryAxis;
+    bool m_bSupportingCategoryPositioning;
     css::uno::Sequence< OUString > m_aCategories;
 
     css::uno::Reference< css::chart2::XChartDocument > m_xChartDocument;

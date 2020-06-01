@@ -19,17 +19,18 @@
 #ifndef INCLUDED_UNOTOOLS_ZIPPACKAGEHELPER_HXX
 #define INCLUDED_UNOTOOLS_ZIPPACKAGEHELPER_HXX
 
+#include <config_options.h>
 #include <unotools/unotoolsdllapi.h>
 
 #include <com/sun/star/uno/XInterface.hpp>
 
-namespace com { namespace sun { namespace star { namespace container { class XHierarchicalNameAccess; } } } }
-namespace com { namespace sun { namespace star { namespace lang { class XSingleServiceFactory; } } } }
-namespace com { namespace sun { namespace star { namespace uno { class XComponentContext; } } } }
+namespace com::sun::star::container { class XHierarchicalNameAccess; }
+namespace com::sun::star::lang { class XSingleServiceFactory; }
+namespace com::sun::star::uno { class XComponentContext; }
 
 namespace utl {
 
-class UNOTOOLS_DLLPUBLIC ZipPackageHelper
+class UNLESS_MERGELIBS(UNOTOOLS_DLLPUBLIC) ZipPackageHelper
 {
 public:
     ZipPackageHelper( const css::uno::Reference< css::uno::XComponentContext >& rxContext,

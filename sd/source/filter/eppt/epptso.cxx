@@ -38,6 +38,7 @@
 #include <com/sun/star/awt/FontPitch.hpp>
 #include <com/sun/star/awt/Rectangle.hpp>
 #include <com/sun/star/awt/FontDescriptor.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/style/TabStop.hpp>
 #include <com/sun/star/drawing/CircleKind.hpp>
 #include <com/sun/star/drawing/FillStyle.hpp>
@@ -92,13 +93,9 @@ sal_uInt16 PPTExBulletProvider::GetId(Graphic const & rGraphic, Size& rGraphicSi
 
         if ( rGraphicSize.Width() && rGraphicSize.Height() )
         {
-            Size aNewSize;
-            bool changed = false;
-            if (aPrefSize.Width() == 0 || aPrefSize.Height() == 0)
+            if (aPrefSize.IsEmpty())
             {
                 aBmpEx.Scale(aPrefSize);
-                aNewSize = aPrefSize;
-                changed = true;
             }
             else
             {
@@ -115,14 +112,8 @@ sal_uInt16 PPTExBulletProvider::GetId(Graphic const & rGraphic, Size& rGraphicSi
                 if ( ( fXScale != 1.0 ) || ( fYScale != 1.0 ) )
                 {
                     aBmpEx.Scale( fXScale, fYScale );
-                    aNewSize = Size( static_cast<sal_Int32>(static_cast<double>(rGraphicSize.Width()) / fXScale + 0.5 ),
+                    rGraphicSize = Size( static_cast<sal_Int32>(static_cast<double>(rGraphicSize.Width()) / fXScale + 0.5 ),
                                      static_cast<sal_Int32>(static_cast<double>(rGraphicSize.Height()) / fYScale + 0.5 ) );
-                    changed = true;
-                }
-
-                if (changed)
-                {
-                    rGraphicSize = aNewSize;
 
                     aMappedGraphic = Graphic( aBmpEx );
                     xGraphicObject.reset(new GraphicObject(aMappedGraphic));
@@ -673,7 +664,7 @@ void PPTWriter::ImplWriteParagraphs( SvStream& rOut, TextObj& rTextObj )
                 if ( !pPara->mbFixedLineSpacing && rPortion.mnCharHeight > static_cast<sal_uInt16>( static_cast<double>(-nLineSpacing) * 0.001 * 72.0 / 2.54 ) ) // 1/100mm to point
                     nLineSpacing = nNormalSpacing;
                 else
-                    nLineSpacing = static_cast<sal_Int16>( static_cast<double>(nLineSpacing) / 4.40972 );
+                    nLineSpacing = static_cast<sal_Int16>( convertTwipToMasterUnit(nLineSpacing) );
             }
             if ( ( pPara->meLineSpacing == css::beans::PropertyState_DIRECT_VALUE ) ||
                 ( mpStyleSheet->IsHardAttribute( nInstance, pPara->nDepth, ParaAttr_LineFeed, nLineSpacing ) ) )
@@ -1180,9 +1171,8 @@ void PPTWriter::ImplWriteTextStyleAtom( SvStream& rOut, int nTextInstance, sal_u
         pPara = aTextObj.GetParagraph(0);
         sal_uInt32  nParaFlags = 0x1f;
         sal_Int16   nMask, nNumberingRule[ 10 ];
-        sal_uInt32  nTextOfs = pPara->nTextOfs;
-        sal_uInt32  nTabs = pPara->maTabStop.getLength();
-        const css::style::TabStop* pTabStop = pPara->maTabStop.getConstArray();
+        const sal_uInt32  nTabs = pPara->maTabStop.getLength();
+        const auto& rTabStops = pPara->maTabStop;
 
         for ( sal_uInt32 i = 0; i < aTextObj.ParagraphCount(); ++i )
         {
@@ -1219,7 +1209,7 @@ void PPTWriter::ImplWriteTextStyleAtom( SvStream& rOut, int nTextInstance, sal_u
         const sal_uInt32 nDefaultTabSize = MapSize( awt::Size( nDefaultTabSizeSrc, 1 ) ).Width;
         sal_uInt32  nDefaultTabs = std::abs( maRect.GetWidth() ) / nDefaultTabSize;
         if ( nTabs )
-            nDefaultTabs -= static_cast<sal_Int32>( ( ( pTabStop[ nTabs - 1 ].Position / 4.40972 ) + nTextOfs ) / nDefaultTabSize );
+            nDefaultTabs -= static_cast<sal_Int32>( convertTwipToMasterUnit(rTabStops[ nTabs - 1 ].Position) / nDefaultTabSize );
         if ( static_cast<sal_Int32>(nDefaultTabs) < 0 )
             nDefaultTabs = 0;
 
@@ -1246,9 +1236,9 @@ void PPTWriter::ImplWriteTextStyleAtom( SvStream& rOut, int nTextInstance, sal_u
             if ( nTextRulerAtomFlags & 4 )
             {
                 pRuleOut->WriteUInt16( nTabCount );
-                for ( const css::style::TabStop& rTabStop : std::as_const(pPara->maTabStop) )
+                for ( const css::style::TabStop& rTabStop : rTabStops )
                 {
-                    sal_uInt16 nPosition = static_cast<sal_uInt16>( ( rTabStop.Position / 4.40972 ) + nTextOfs );
+                    sal_uInt16 nPosition = static_cast<sal_uInt16>( convertTwipToMasterUnit(rTabStop.Position) );
                     sal_uInt16 nType;
                     switch ( rTabStop.Alignment )
                     {
@@ -1265,7 +1255,7 @@ void PPTWriter::ImplWriteTextStyleAtom( SvStream& rOut, int nTextInstance, sal_u
 
                 sal_uInt32 nWidth = 1;
                 if ( nTabs )
-                    nWidth += static_cast<sal_Int32>( ( pTabStop[ nTabs - 1 ].Position / 4.40972 + nTextOfs ) / nDefaultTabSize );
+                    nWidth += static_cast<sal_Int32>( convertTwipToMasterUnit(rTabStops[ nTabs - 1 ].Position) / nDefaultTabSize );
                 nWidth *= nDefaultTabSize;
                 for ( i = 0; i < nDefaultTabs; i++, nWidth += nDefaultTabSize )
                     pRuleOut->WriteUInt32( nWidth );

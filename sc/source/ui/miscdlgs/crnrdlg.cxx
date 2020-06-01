@@ -366,7 +366,7 @@ void ScColRowNameRangesDlg::UpdateNames()
     OUString strDelim(" --- ");
     OUString aString = strDelim + ScResId( STR_COLUMN ) + strDelim;
     m_xLbRange->append(OUString::number(nEntryDataDelim), aString);
-    if ( (nCount = xColNameRanges->size()) > 0 )
+    if ( xColNameRanges->size() > 0 )
     {
         std::vector<const ScRangePair*> aSortArray(xColNameRanges->CreateNameSortedArray(
                pDoc ));
@@ -400,12 +400,12 @@ void ScColRowNameRangesDlg::UpdateNames()
             //@008 Add string to listbox
             OUString aInsStr = aString + strShow.makeStringAndClear();
             aRangeMap.emplace( aInsStr, aRange );
-            m_xLbRange->append(OUString::number(nEntryDataDelim), aInsStr);
+            m_xLbRange->append(OUString::number(nEntryDataCol), aInsStr);
         }
     }
     aString = strDelim + ScResId( STR_ROW ) + strDelim;
     m_xLbRange->append(OUString::number(nEntryDataDelim), aString);
-    if ( (nCount = xRowNameRanges->size()) > 0 )
+    if ( xRowNameRanges->size() > 0 )
     {
         std::vector<const ScRangePair*> aSortArray(xRowNameRanges->CreateNameSortedArray(
                pDoc ));

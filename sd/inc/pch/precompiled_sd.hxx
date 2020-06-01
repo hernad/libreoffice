@@ -13,7 +13,7 @@
  manual changes will be rewritten by the next run of update_pch.sh (which presumably
  also fixes all possible problems, so it's usually better to use it).
 
- Generated on 2020-02-01 10:58:15 using:
+ Generated on 2020-04-25 20:55:27 using:
  ./bin/update_pch sd sd --cutoff=4 --exclude:system --exclude:module --include:local
 
  If after updating build fails, use the following command to locate conflicting headers:
@@ -27,11 +27,12 @@
 #include <functional>
 #include <initializer_list>
 #include <iomanip>
-#include <limits.h>
+#include <list>
 #include <locale>
 #include <map>
 #include <memory>
 #include <new>
+#include <optional>
 #include <ostream>
 #include <set>
 #include <stddef.h>
@@ -47,6 +48,7 @@
 #include <osl/diagnose.h>
 #include <osl/diagnose.hxx>
 #include <osl/doublecheckedlocking.h>
+#include <osl/endian.h>
 #include <osl/file.hxx>
 #include <osl/getglobalmutex.hxx>
 #include <osl/interlck.h>
@@ -58,6 +60,7 @@
 #include <osl/time.h>
 #include <rtl/alloc.h>
 #include <rtl/character.hxx>
+#include <rtl/math.hxx>
 #include <rtl/ref.hxx>
 #include <rtl/strbuf.hxx>
 #include <rtl/string.hxx>
@@ -72,18 +75,13 @@
 #include <sal/typesizes.h>
 #include <vcl/EnumContext.hxx>
 #include <vcl/bitmapex.hxx>
-#include <vcl/builderfactory.hxx>
-#include <vcl/button.hxx>
 #include <vcl/commandevent.hxx>
 #include <vcl/commandinfoprovider.hxx>
-#include <vcl/ctrl.hxx>
 #include <vcl/customweld.hxx>
 #include <vcl/dllapi.h>
-#include <vcl/edit.hxx>
 #include <vcl/errcode.hxx>
 #include <vcl/errinf.hxx>
 #include <vcl/event.hxx>
-#include <vcl/fixed.hxx>
 #include <vcl/fntstyle.hxx>
 #include <vcl/font.hxx>
 #include <vcl/graph.hxx>
@@ -93,8 +91,6 @@
 #include <vcl/image.hxx>
 #include <vcl/imapobj.hxx>
 #include <vcl/keycod.hxx>
-#include <vcl/lstbox.hxx>
-#include <vcl/menu.hxx>
 #include <vcl/outdev.hxx>
 #include <vcl/ptrstyle.hxx>
 #include <vcl/scrbar.hxx>
@@ -170,6 +166,7 @@
 #include <com/sun/star/drawing/XDrawPagesSupplier.hpp>
 #include <com/sun/star/drawing/XDrawView.hpp>
 #include <com/sun/star/drawing/XMasterPagesSupplier.hpp>
+#include <com/sun/star/drawing/XShape.hpp>
 #include <com/sun/star/drawing/framework/ResourceId.hpp>
 #include <com/sun/star/drawing/framework/XConfiguration.hpp>
 #include <com/sun/star/drawing/framework/XConfigurationController.hpp>
@@ -216,12 +213,12 @@
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <com/sun/star/uno/XInterface.hpp>
 #include <com/sun/star/uno/genfunc.hxx>
-#include <com/sun/star/util/Time.hpp>
 #include <com/sun/star/util/URLTransformer.hpp>
 #include <com/sun/star/util/XCloneable.hpp>
 #include <com/sun/star/view/XSelectionSupplier.hpp>
 #include <comphelper/classids.hxx>
 #include <comphelper/comphelperdllapi.h>
+#include <comphelper/extract.hxx>
 #include <comphelper/lok.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/propertysequence.hxx>
@@ -299,7 +296,6 @@
 #include <model/SlsPageEnumerationProvider.hxx>
 #include <o3tl/cow_wrapper.hxx>
 #include <o3tl/deleter.hxx>
-#include <o3tl/optional.hxx>
 #include <o3tl/safeint.hxx>
 #include <o3tl/strong_int.hxx>
 #include <o3tl/typed_flags_set.hxx>
@@ -440,7 +436,6 @@
 #include <svx/xtable.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
 #include <tools/color.hxx>
-#include <tools/date.hxx>
 #include <tools/debug.hxx>
 #include <tools/diagnose_ex.h>
 #include <tools/fldunit.hxx>
@@ -453,10 +448,10 @@
 #include <tools/ref.hxx>
 #include <tools/solar.h>
 #include <tools/stream.hxx>
-#include <tools/time.hxx>
 #include <tools/toolsdllapi.h>
 #include <tools/urlobj.hxx>
 #include <tools/weakbase.h>
+#include <tools/wintypes.hxx>
 #include <typelib/typedescription.h>
 #include <undo/undomanager.hxx>
 #include <undo/undoobjects.hxx>

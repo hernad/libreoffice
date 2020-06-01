@@ -32,11 +32,9 @@
 #include <strings.hxx>
 #include <rptui_slotid.hrc>
 #include <dlgedclip.hxx>
-#include <ColorChanger.hxx>
 #include <RptObject.hxx>
 #include <EndMarker.hxx>
 #include <sal/log.hxx>
-#include <svx/svdpagv.hxx>
 #include <svx/unoshape.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
@@ -493,19 +491,19 @@ void OViewsWindow::SelectAll(const sal_uInt16 _nObjectType)
 
 void OViewsWindow::unmarkAllObjects(OSectionView const * _pSectionView)
 {
-    if ( !m_bInUnmark )
+    if ( m_bInUnmark )
+        return;
+
+    m_bInUnmark = true;
+    for (const auto& rxSection : m_aSections)
     {
-        m_bInUnmark = true;
-        for (const auto& rxSection : m_aSections)
+        if ( &rxSection->getReportSection().getSectionView() != _pSectionView )
         {
-            if ( &rxSection->getReportSection().getSectionView() != _pSectionView )
-            {
-                rxSection->getReportSection().deactivateOle();
-                rxSection->getReportSection().getSectionView().UnmarkAllObj();
-            }
+            rxSection->getReportSection().deactivateOle();
+            rxSection->getReportSection().getSectionView().UnmarkAllObj();
         }
-        m_bInUnmark = false;
     }
+    m_bInUnmark = false;
 }
 
 void OViewsWindow::ConfigurationChanged( utl::ConfigurationBroadcaster*, ConfigurationHints)
@@ -539,20 +537,20 @@ void OViewsWindow::showRuler(bool _bShow)
 
 void OViewsWindow::MouseButtonUp( const MouseEvent& rMEvt )
 {
-    if ( rMEvt.IsLeft() )
-    {
-        auto aIter = std::find_if(m_aSections.begin(), m_aSections.end(),
-            [](const VclPtr<OSectionWindow>& rxSection) { return rxSection->getReportSection().getSectionView().AreObjectsMarked(); });
-        if (aIter != m_aSections.end())
-        {
-            (*aIter)->getReportSection().MouseButtonUp(rMEvt);
-        }
+    if ( !rMEvt.IsLeft() )
+        return;
 
-        // remove special insert mode
-        for (const auto& rxSection : m_aSections)
-        {
-            rxSection->getReportSection().getPage()->resetSpecialMode();
-        }
+    auto aIter = std::find_if(m_aSections.begin(), m_aSections.end(),
+        [](const VclPtr<OSectionWindow>& rxSection) { return rxSection->getReportSection().getSectionView().AreObjectsMarked(); });
+    if (aIter != m_aSections.end())
+    {
+        (*aIter)->getReportSection().MouseButtonUp(rMEvt);
+    }
+
+    // remove special insert mode
+    for (const auto& rxSection : m_aSections)
+    {
+        rxSection->getReportSection().getPage()->resetSpecialMode();
     }
 }
 
@@ -915,7 +913,7 @@ namespace
     class ApplySectionViewAction
     {
     private:
-        SectionViewAction const m_eAction;
+        SectionViewAction   m_eAction;
 
     public:
         explicit ApplySectionViewAction()

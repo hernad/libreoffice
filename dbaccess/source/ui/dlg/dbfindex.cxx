@@ -22,8 +22,6 @@
 #include <osl/file.hxx>
 #include <osl/thread.hxx>
 #include <tools/config.hxx>
-#include <sfx2/app.hxx>
-#include <dbu_dlg.hxx>
 #include <osl/diagnose.h>
 #include <unotools/localfilehelper.hxx>
 #include <tools/urlobj.hxx>
@@ -410,20 +408,20 @@ void OTableInfo::WriteInfFile( const OUString& rDSN ) const
     aInfFile.Flush();
 
     // if only [dbase] is left in INF-file, delete file
-    if(!nPos)
+    if(nPos)
+        return;
+
+    try
     {
-        try
-        {
-            ::ucbhelper::Content aContent(aURL.GetURLNoPass(),Reference<XCommandEnvironment>(), comphelper::getProcessComponentContext());
-            aContent.executeCommand( "delete", makeAny( true ) );
-        }
-        catch (const Exception& )
-        {
-            // simply silent this. The strange algorithm here does a lot of
-            // things even if no files at all were created or accessed, so it's
-            // possible that the file we're trying to delete does not even
-            // exist, and this is a valid condition.
-        }
+        ::ucbhelper::Content aContent(aURL.GetURLNoPass(),Reference<XCommandEnvironment>(), comphelper::getProcessComponentContext());
+        aContent.executeCommand( "delete", makeAny( true ) );
+    }
+    catch (const Exception& )
+    {
+        // simply silent this. The strange algorithm here does a lot of
+        // things even if no files at all were created or accessed, so it's
+        // possible that the file we're trying to delete does not even
+        // exist, and this is a valid condition.
     }
 }
 

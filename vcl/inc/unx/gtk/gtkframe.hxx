@@ -189,6 +189,7 @@ class GtkSalFrame final : public SalFrame
     bool                            m_bSpanMonitorsWhenFullscreen;
     bool                            m_bDefaultPos;
     bool                            m_bDefaultSize;
+    bool                            m_bTooltipBlocked;
     OUString                        m_sWMClass;
 
     std::unique_ptr<IMHandler>      m_pIMHandler;
@@ -433,6 +434,7 @@ public:
     // pointer style
     virtual void                SetPointer( PointerStyle ePointerStyle ) override;
     virtual void                CaptureMouse( bool bMouse ) override;
+    virtual void                GrabFocus() override;
     virtual void                SetPointerPos( long nX, long nY ) override;
 
     // flush output buffer
@@ -488,13 +490,15 @@ public:
     virtual void                SetModal(bool bModal) override;
     virtual bool                GetModal() const override;
     void                        HideTooltip();
+    void                        BlockTooltip();
+    void                        UnblockTooltip();
     virtual bool                ShowTooltip(const OUString& rHelpText, const tools::Rectangle& rHelpArea) override;
     virtual void*               ShowPopover(const OUString& rHelpText, vcl::Window* pParent, const tools::Rectangle& rHelpArea, QuickHelpFlags nFlags) override;
     virtual bool                UpdatePopover(void* nId, const OUString& rHelpText, vcl::Window* pParent, const tools::Rectangle& rHelpArea) override;
     virtual bool                HidePopover(void* nId) override;
     virtual weld::Window*       GetFrameWeld() const override;
 
-    static GtkSalFrame         *getFromWindow( GtkWindow *pWindow );
+    static GtkSalFrame         *getFromWindow( GtkWidget *pWindow );
 
     sal_uIntPtr                 GetNativeWindowHandle(GtkWidget *pWidget);
     virtual sal_uIntPtr         GetNativeWindowHandle() override;
@@ -527,6 +531,30 @@ GType ooo_fixed_get_type();
 AtkObject* ooo_fixed_get_accessible(GtkWidget *obj);
 
 } // extern "C"
+
+#if !GTK_CHECK_VERSION(3, 20, 0)
+enum GdkDragCancelReason
+{
+  GDK_DRAG_CANCEL_NO_TARGET,
+  GDK_DRAG_CANCEL_USER_CANCELLED,
+  GDK_DRAG_CANCEL_ERROR
+};
+#endif
+
+#if !GTK_CHECK_VERSION(3, 22, 0)
+enum GdkAnchorHints
+{
+  GDK_ANCHOR_FLIP_X   = 1 << 0,
+  GDK_ANCHOR_FLIP_Y   = 1 << 1,
+  GDK_ANCHOR_SLIDE_X  = 1 << 2,
+  GDK_ANCHOR_SLIDE_Y  = 1 << 3,
+  GDK_ANCHOR_RESIZE_X = 1 << 4,
+  GDK_ANCHOR_RESIZE_Y = 1 << 5,
+  GDK_ANCHOR_FLIP     = GDK_ANCHOR_FLIP_X | GDK_ANCHOR_FLIP_Y,
+  GDK_ANCHOR_SLIDE    = GDK_ANCHOR_SLIDE_X | GDK_ANCHOR_SLIDE_Y,
+  GDK_ANCHOR_RESIZE   = GDK_ANCHOR_RESIZE_X | GDK_ANCHOR_RESIZE_Y
+};
+#endif
 
 #endif // INCLUDED_VCL_INC_UNX_GTK_GTKFRAME_HXX
 

@@ -20,9 +20,12 @@
 #include "PageMasterExportPropMapper.hxx"
 #include <xmloff/xmlprmap.hxx>
 #include <xmloff/xmltoken.hxx>
+#include <xmloff/xmlexp.hxx>
 #include <comphelper/types.hxx>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/table/BorderLine2.hpp>
+#include <com/sun/star/drawing/FillStyle.hpp>
+#include <com/sun/star/drawing/BitmapMode.hpp>
 #include <PageMasterStyleMap.hxx>
 #include <rtl/ref.hxx>
 #include <comphelper/extract.hxx>
@@ -328,7 +331,13 @@ void XMLPageMasterExportPropMapper::ContextFilter(
     XMLPropertyState* pFooterRepeatOffsetX = nullptr;
     XMLPropertyState* pFooterRepeatOffsetY = nullptr;
 
+    XMLPropertyState* pFill = nullptr;
+    XMLPropertyState* pFillBitmapMode = nullptr;
+
     rtl::Reference < XMLPropertySetMapper > aPropMapper(getPropertySetMapper());
+
+    // distinguish 2 cases: drawing-page export has CTF_PM_FILL, page-layout-properties export does not
+    bool const isDrawingPageExport(aPropMapper->FindEntryIndex(CTF_PM_FILL) != -1);
 
     for( auto& rProp : rPropState )
     {
@@ -337,6 +346,17 @@ void XMLPageMasterExportPropMapper::ContextFilter(
         sal_Int16 nFlag         = nContextId & CTF_PM_FLAGMASK;
         sal_Int16 nSimpleId     = nContextId & (~CTF_PM_FLAGMASK | XML_PM_CTF_START);
         sal_Int16 nPrintId      = nContextId & CTF_PM_PRINTMASK;
+
+
+        // tdf#103602 don't export draw:fill attributes on page-layout-properties in strict ODF
+        if (!isDrawingPageExport
+            && aPropMapper->GetEntryAPIName(rProp.mnIndex).startsWith("Fill")
+            && ((aBackgroundImageExport.GetExport().getSaneDefaultVersion()
+                & SvtSaveOptions::ODFSVER_EXTENDED) == 0))
+        {
+            lcl_RemoveState(&rProp);
+            continue;
+        }
 
         XMLPropertyStateBuffer* pBuffer;
         switch( nFlag )
@@ -348,6 +368,20 @@ void XMLPageMasterExportPropMapper::ContextFilter(
 
         switch( nSimpleId )
         {
+            case CTF_PM_FILL: // tdf#103602: add background-size attribute to ODT
+                if (nFlag != CTF_PM_HEADERFLAG && nFlag != CTF_PM_FOOTERFLAG
+                    && rProp.maValue.hasValue())
+                {
+                    pFill = &rProp;
+                }
+                break;
+            case CTF_PM_FILLBITMAPMODE:
+                if (nFlag != CTF_PM_HEADERFLAG && nFlag != CTF_PM_FOOTERFLAG
+                    && rProp.maValue.hasValue())
+                {
+                    pFillBitmapMode = &rProp;
+                }
+                break;
             case CTF_PM_MARGINALL:          pBuffer->pPMMarginAll           = pProp;    break;
             case CTF_PM_BORDERALL:          pBuffer->pPMBorderAll           = pProp;    break;
             case CTF_PM_BORDERTOP:          pBuffer->pPMBorderTop           = pProp;    break;
@@ -542,6 +576,45 @@ void XMLPageMasterExportPropMapper::ContextFilter(
         lcl_AddState(rPropState, aPropMapper->FindEntryIndex(CTF_PM_PRINT_HEADERS), "PrintHeaders", rPropSet);
         lcl_AddState(rPropState, aPropMapper->FindEntryIndex(CTF_PM_PRINT_OBJECTS), "PrintObjects", rPropSet);
         lcl_AddState(rPropState, aPropMapper->FindEntryIndex(CTF_PM_PRINT_ZEROVALUES), "PrintZeroValues", rPropSet);
+    }
+
+    if (pFill)
+    {   // note: only drawing-page export should write this, because CTF_PM_FILL
+        uno::Any backgroundSize;
+        switch (pFill->maValue.get<drawing::FillStyle>())
+        {
+            case drawing::FillStyle_NONE:
+                break;
+            case drawing::FillStyle_SOLID:
+            case drawing::FillStyle_GRADIENT:
+            case drawing::FillStyle_HATCH:
+                backgroundSize <<= true;
+                break;
+            case drawing::FillStyle_BITMAP:
+                assert(pFillBitmapMode);
+                switch (pFillBitmapMode->maValue.get<drawing::BitmapMode>())
+                {
+                    case drawing::BitmapMode_REPEAT:
+                        backgroundSize <<= true;
+                        break;
+                    case drawing::BitmapMode_STRETCH:
+                    case drawing::BitmapMode_NO_REPEAT:
+                        backgroundSize <<= false;
+                        break;
+                    default:
+                        assert(false);
+                }
+                break;
+            default:
+                assert(false);
+        }
+
+        if (backgroundSize.hasValue())
+        {
+            auto const nIndex(aPropMapper->FindEntryIndex(CTF_PM_BACKGROUNDSIZE));
+            assert(0 <= nIndex);
+            rPropState.emplace_back(nIndex, backgroundSize);
+        }
     }
 
     SvXMLExportPropertyMapper::ContextFilter(bEnableFoFontFamily, rPropState, rPropSet);

@@ -39,6 +39,7 @@
 #include <comphelper/lok.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/propertyvalue.hxx>
+#include <rtl/strbuf.hxx>
 #include <sal/log.hxx>
 #include <sfx2/app.hxx>
 #include <sfx2/bindings.hxx>
@@ -219,11 +220,8 @@ void SfxDispatcher::Call_Impl(SfxShell& rShell, const SfxSlot &rSlot, SfxRequest
     if ( GetFrame() )
     {
         // Recording may start
-        css::uno::Reference< css::frame::XFrame > xFrame =
-                GetFrame()->GetFrame().GetFrameInterface();
-
         css::uno::Reference< css::beans::XPropertySet > xSet(
-                xFrame,
+                GetFrame()->GetFrame().GetFrameInterface(),
                 css::uno::UNO_QUERY);
 
         if ( xSet.is() )
@@ -711,7 +709,7 @@ bool SfxDispatcher::GetShellAndSlot_Impl(sal_uInt16 nSlot, SfxShell** ppShell,
         if ( nullptr == (*ppSlot)->GetExecFnc() && bRealSlot )
             *ppSlot = (*ppShell)->GetInterface()->GetRealSlot(*ppSlot);
         // Check only real slots as enum slots don't have an execute function!
-        return !bRealSlot || !((nullptr == *ppSlot) || (nullptr == (*ppSlot)->GetExecFnc()) );
+        return !bRealSlot || ((nullptr != *ppSlot) && (nullptr != (*ppSlot)->GetExecFnc()) );
     }
 
     return false;

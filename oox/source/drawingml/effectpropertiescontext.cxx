@@ -9,8 +9,7 @@
 
 #include "effectpropertiescontext.hxx"
 #include "effectproperties.hxx"
-#include <oox/drawingml/drawingmltypes.hxx>
-#include <drawingml/misccontexts.hxx>
+#include <drawingml/colorchoicecontext.hxx>
 #include <oox/helper/attributelist.hxx>
 #include <oox/token/namespaces.hxx>
 #include <oox/token/tokens.hxx>
@@ -83,6 +82,8 @@ ContextHandlerRef EffectPropertiesContext::onCreateContext( sal_Int32 nElement, 
 
             mrEffectProperties.maShadow.moShadowDist = rAttribs.getInteger( XML_dist, 0 );
             mrEffectProperties.maShadow.moShadowDir = rAttribs.getInteger( XML_dir, 0 );
+            mrEffectProperties.maShadow.moShadowSx = rAttribs.getInteger( XML_sx, 0 );
+            mrEffectProperties.maShadow.moShadowSy = rAttribs.getInteger( XML_sy, 0 );
             return new ColorContext(*this, mrEffectProperties.m_Effects[nPos]->moColor);
         }
         break;
@@ -97,15 +98,22 @@ ContextHandlerRef EffectPropertiesContext::onCreateContext( sal_Int32 nElement, 
         }
         break;
         case A_TOKEN( glow ):
+        {
+            mrEffectProperties.maGlow.moGlowRad = rAttribs.getInteger( XML_rad, 0 );
+            // undo push_back to effects
+            mrEffectProperties.m_Effects.pop_back();
+            return new ColorContext(*this, mrEffectProperties.maGlow.moGlowColor);
+
+        }
         case A_TOKEN( softEdge ):
+        {
+            mrEffectProperties.maSoftEdge.moRad = rAttribs.getInteger(XML_rad, 0);
+            return this; // no inner elements
+        }
         case A_TOKEN( reflection ):
         case A_TOKEN( blur ):
         {
-            if( nElement == A_TOKEN( glow ) )
-                mrEffectProperties.m_Effects[nPos]->msName = "glow";
-            else if( nElement == A_TOKEN( softEdge ) )
-                mrEffectProperties.m_Effects[nPos]->msName = "softEdge";
-            else if( nElement == A_TOKEN( reflection ) )
+            if (nElement == A_TOKEN(reflection))
                 mrEffectProperties.m_Effects[nPos]->msName = "reflection";
             else if( nElement == A_TOKEN( blur ) )
                 mrEffectProperties.m_Effects[nPos]->msName = "blur";

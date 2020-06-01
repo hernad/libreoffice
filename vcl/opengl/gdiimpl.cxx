@@ -27,6 +27,7 @@
 #include <basegfx/matrix/b2dhommatrixtools.hxx>
 #include <basegfx/polygon/b2dlinegeometry.hxx>
 #include <basegfx/polygon/b2dpolygontools.hxx>
+#include <basegfx/polygon/b2dpolypolygontools.hxx>
 #include <basegfx/polygon/b2dpolygontriangulator.hxx>
 #include <basegfx/polygon/b2dpolypolygoncutter.hxx>
 #include <basegfx/polygon/b2dtrapezoid.hxx>
@@ -43,6 +44,7 @@
 
 #include <cmath>
 #include <vector>
+#include <numeric>
 
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/norm.hpp>
@@ -1558,7 +1560,8 @@ void OpenGLSalGraphicsImpl::drawPolyLine( sal_uInt32 nPoints, const SalPoint* pP
         basegfx::B2DHomMatrix(),
         aPoly,
         0.0,
-        basegfx::B2DVector(1.0, 1.0),
+        1.0,
+        nullptr, // MM01
         basegfx::B2DLineJoin::Miter,
         css::drawing::LineCap_BUTT,
         basegfx::deg2rad(15.0) /*default*/,
@@ -1635,7 +1638,8 @@ bool OpenGLSalGraphicsImpl::drawPolyLine(
     const basegfx::B2DHomMatrix& rObjectToDevice,
     const basegfx::B2DPolygon& rPolygon,
     double fTransparency,
-    const basegfx::B2DVector& rLineWidth,
+    double fLineWidth,
+    const std::vector< double >* pStroke, // MM01
     basegfx::B2DLineJoin eLineJoin,
     css::drawing::LineCap eLineCap,
     double fMiterMinimumAngle,
@@ -1643,28 +1647,66 @@ bool OpenGLSalGraphicsImpl::drawPolyLine(
 {
     VCL_GL_INFO("::drawPolyLine " << rPolygon.getB2DRange());
 
+    // MM01 check done for simple reasons
+    if(!rPolygon.count() || fTransparency < 0.0 || fTransparency > 1.0)
+    {
+        return true;
+    }
+
+    // MM01 need to do line dashing as fallback stuff here now
+    const double fDotDashLength(nullptr != pStroke ? std::accumulate(pStroke->begin(), pStroke->end(), 0.0) : 0.0);
+    const bool bStrokeUsed(0.0 != fDotDashLength);
+    assert(!bStrokeUsed || (bStrokeUsed && pStroke));
+    basegfx::B2DPolyPolygon aPolyPolygonLine;
+
+    if(bStrokeUsed)
+    {
+        // apply LineStyle
+        basegfx::utils::applyLineDashing(
+            rPolygon, // source
+            *pStroke, // pattern
+            &aPolyPolygonLine, // target for lines
+            nullptr, // target for gaps
+            fDotDashLength); // full length if available
+    }
+    else
+    {
+        // no line dashing, just copy
+        aPolyPolygonLine.append(rPolygon);
+    }
+
     // Transform to DeviceCoordinates, get DeviceLineWidth, execute PixelSnapHairline
-    basegfx::B2DPolygon aPolyLine(rPolygon);
-    aPolyLine.transform(rObjectToDevice);
-    if(bPixelSnapHairline) { aPolyLine = basegfx::utils::snapPointsOfHorizontalOrVerticalEdges(aPolyLine); }
-    const basegfx::B2DVector aLineWidth(rObjectToDevice * rLineWidth);
+    aPolyPolygonLine.transform(rObjectToDevice);
+    if(bPixelSnapHairline) { aPolyPolygonLine = basegfx::utils::snapPointsOfHorizontalOrVerticalEdges(aPolyPolygonLine); }
 
-    // addDrawPolyLine() assumes that there are no duplicate points in the
-    // polygon.
-    // basegfx::B2DPolygon aPolygon(rPolygon);
-    aPolyLine.removeDoublePoints();
+    // tdf#124848 get correct LineWidth in discrete coordinates,
+    if(fLineWidth == 0) // hairline
+        fLineWidth = 1.0;
+    else // Adjust line width for object-to-device scale.
+        fLineWidth = (rObjectToDevice * basegfx::B2DVector(fLineWidth, 0)).getLength();
 
-    mpRenderList->addDrawPolyLine(
-        aPolyLine,
-        fTransparency,
-        aLineWidth,
-        eLineJoin,
-        eLineCap,
-        fMiterMinimumAngle,
-        mnLineColor,
-        mrParent.getAntiAliasB2DDraw());
+    for(sal_uInt32 a(0); a < aPolyPolygonLine.count(); a++)
+    {
+        // addDrawPolyLine() assumes that there are no duplicate points in the polygon
+        basegfx::B2DPolygon aPolyLine(aPolyPolygonLine.getB2DPolygon(a));
+        basegfx::utils::simplifyCurveSegments(aPolyLine);
+        aPolyLine.removeDoublePoints();
 
-    PostBatchDraw();
+        mpRenderList->addDrawPolyLine(
+            aPolyLine,
+            fTransparency,
+            fLineWidth,
+            eLineJoin,
+            eLineCap,
+            fMiterMinimumAngle,
+            mnLineColor,
+            mrParent.getAntiAliasB2DDraw());
+
+        // MM01: not sure - maybe this can be moved out of this loop, but to
+        // keep on the safe side for now, do not really change something for now
+        PostBatchDraw();
+    }
+
     return true;
 }
 

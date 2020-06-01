@@ -27,7 +27,7 @@
 #include <formula/IFunctionDescription.hxx>
 #include <sal/types.h>
 #include <rtl/ustring.hxx>
-#include <o3tl/optional.hxx>
+#include <optional>
 #include <map>
 #include <memory>
 
@@ -121,6 +121,13 @@ public:
     virtual sal_uInt32 getVarArgsStart() const override ;
 
     /**
+      Returns maximum number of (variable) arguments
+
+      @return   maximum number of arguments, or 0 if there is no specific limit other than the general limit
+    */
+    virtual sal_uInt32 getVarArgsLimit() const override ;
+
+    /**
       Returns description of parameter at given position
 
       @param _nPos
@@ -207,8 +214,8 @@ public:
         ParameterFlags() : bOptional(false) {}
     };
 
-    o3tl::optional<OUString> mxFuncName;         /**< Function name */
-    o3tl::optional<OUString> mxFuncDesc;         /**< Description of function */
+    std::optional<OUString> mxFuncName;         /**< Function name */
+    std::optional<OUString> mxFuncDesc;         /**< Description of function */
     std::vector<OUString> maDefArgNames;          /**< Parameter name(s) */
     std::vector<OUString> maDefArgDescs;          /**< Description(s) of parameter(s) */
     ParameterFlags       *pDefArgFlags;           /**< Flags for each parameter */
@@ -216,6 +223,7 @@ public:
     sal_uInt16            nCategory;              /**< Function category */
     sal_uInt16            nArgCount;              /**< All parameter count, suppressed and unsuppressed */
     sal_uInt16            nVarArgsStart;          /**< Start of variable arguments, for numbering */
+    sal_uInt16            nVarArgsLimit;          /**< Limit maximum of (variable) arguments, for numbering */
     OString               sHelpId;                /**< HelpId of function */
     bool                  bIncomplete         :1; /**< Incomplete argument info (set for add-in info from configuration) */
     bool                  mbHidden            :1; /**< Whether function is hidden */
@@ -288,7 +296,7 @@ public:
 private:
     ::std::vector<const ScFuncDesc*>* m_pCategory; /**< list of functions in this category */
     mutable OUString m_sName; /**< name of this category */
-    sal_uInt32 const m_nCategory; /**< index number of this category */
+    sal_uInt32 m_nCategory; /**< index number of this category */
 };
 
 #define SC_FUNCGROUP_COUNT  ID_FUNCTION_GRP_ADDINS
@@ -387,7 +395,6 @@ public:
     virtual sal_Unicode getSingleToken(const formula::IFunctionManager::EToken _eToken) const override;
 
 private:
-    ScFunctionList* pFuncList; /**< list of all calc functions */
     std::unique_ptr<std::vector<const ScFuncDesc*>> aCatLists[MAX_FUNCCAT]; /**< array of all categories, 0 is the cumulative ('All') category */
     mutable std::map< sal_uInt32, std::shared_ptr<ScFunctionCategory> > m_aCategories; /**< map of category pos to IFunctionCategory */
     mutable std::vector<const ScFuncDesc*>::iterator pCurCatListIter; /**< position in current category */

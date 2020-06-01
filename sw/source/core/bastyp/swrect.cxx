@@ -19,6 +19,8 @@
 
 #include <swrect.hxx>
 
+#include <libxml/xmlwriter.h>
+
 #ifdef DBG_UTIL
 #include <tools/stream.hxx>
 #endif
@@ -75,19 +77,15 @@ SwRect& SwRect::Intersection( const SwRect& rRect )
     return *this;
 }
 
-SwRect& SwRect::Intersection_( const SwRect& rRect )
+SwRect& SwRect::Intersection_( const SwRect& rOther )
 {
     // get smaller right and lower, and greater left and upper edge
-    if ( Left() < rRect.Left() )
-        Left( rRect.Left() );
-    if ( Top() < rRect.Top() )
-        Top( rRect.Top() );
-    long n = rRect.Right();
-    if ( Right() > n )
-        Right( n );
-    n = rRect.Bottom();
-    if ( Bottom() > n )
-        Bottom( n );
+    auto left   = std::max( m_Point.X(), rOther.m_Point.X() );
+    auto top    = std::max( m_Point.Y(), rOther.m_Point.Y() );
+    long right  = std::min( m_Point.X() + m_Size.Width(), rOther.m_Point.X() + rOther.m_Size.Width() );
+    auto bottom = std::min( m_Point.Y() + m_Size.Height(), rOther.m_Point.Y() + rOther.m_Size.Height() );
+
+    *this = SwRect( left, top, right - left, bottom - top );
 
     return *this;
 }
@@ -161,8 +159,10 @@ long SwRect::Bottom_() const{ return m_Point.getY() + m_Size.getHeight(); }
 
 void SwRect::AddWidth( const long nAdd ) { m_Size.AdjustWidth(nAdd ); }
 void SwRect::AddHeight( const long nAdd ) { m_Size.AdjustHeight(nAdd ); }
+void SwRect::AddLeft( const long nAdd ){ m_Size.AdjustWidth(-nAdd ); m_Point.setX(m_Point.getX() + nAdd); }
 void SwRect::SubLeft( const long nSub ){ m_Size.AdjustWidth(nSub ); m_Point.setX(m_Point.getX() - nSub); }
 void SwRect::AddRight( const long nAdd ){ m_Size.AdjustWidth(nAdd ); }
+void SwRect::AddTop( const long nAdd ){ m_Size.AdjustHeight(-nAdd ); m_Point.setY(m_Point.getY() + nAdd); }
 void SwRect::SubTop( const long nSub ){ m_Size.AdjustHeight(nSub ); m_Point.setY(m_Point.getY() - nSub); }
 void SwRect::AddBottom( const long nAdd ){ m_Size.AdjustHeight(nAdd ); }
 void SwRect::SetPosX( const long nNew ){ m_Point.setX(nNew); }
@@ -217,6 +217,16 @@ void SwRect::SetUpperRightCorner(  const Point& rNew )
     { m_Point = Point(rNew.X() - m_Size.getWidth(), rNew.Y()); }
 void SwRect::SetLowerLeftCorner(  const Point& rNew )
     { m_Point = Point(rNew.X(), rNew.Y() - m_Size.getHeight()); }
+
+void SwRect::dumpAsXmlAttributes(xmlTextWriterPtr writer) const
+{
+    xmlTextWriterWriteFormatAttribute(writer, BAD_CAST("left"), "%li", Left());
+    xmlTextWriterWriteFormatAttribute(writer, BAD_CAST("top"), "%li", Top());
+    xmlTextWriterWriteFormatAttribute(writer, BAD_CAST("width"), "%li", Width());
+    xmlTextWriterWriteFormatAttribute(writer, BAD_CAST("height"), "%li", Height());
+    xmlTextWriterWriteFormatAttribute(writer, BAD_CAST("bottom"), "%li", Bottom());
+    xmlTextWriterWriteFormatAttribute(writer, BAD_CAST("right"), "%li", Right());
+}
 
 #ifdef DBG_UTIL
 SvStream& WriteSwRect(SvStream &rStream, const SwRect &rRect)

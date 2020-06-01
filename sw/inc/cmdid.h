@@ -184,6 +184,8 @@
 #define FN_VIEW_HIDE_WHITESPACE (FN_VIEW + 59)  /* Hide header, footer, and pagebreak */
 #define FN_SHOW_INLINETOOLTIPS  (FN_VIEW + 60)  /* Show tooltips for tracked changes */
 #define FN_USE_HEADERFOOTERMENU (FN_VIEW + 61)  /* Show advanced header/footer menu */
+#define FN_VIEW_SHOW_WHITESPACE (FN_VIEW + 62)  /* Show header, footer, and pagebreak */
+
 
 // Region: Insert
 #define FN_INSERT_BOOKMARK      (FN_INSERT + 2 )  /* Bookmark */
@@ -283,6 +285,9 @@
 
 // MSO content controls
 #define FN_INSERT_DATE_FORMFIELD        (FN_INSERT2 + 25)
+
+#define FN_PROTECT_FIELDS               (FN_INSERT2 + 26)
+#define FN_PROTECT_BOOKMARKS            (FN_INSERT2 + 27)
 
 // clipboard table content
 #define FN_PASTE_NESTED_TABLE       (FN_INSERT2 + 30)  /* instead of the cell-by-cell copy between source and target tables */

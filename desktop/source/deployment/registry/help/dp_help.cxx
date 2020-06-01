@@ -40,7 +40,7 @@
 #include <com/sun/star/deployment/ExtensionRemovedException.hpp>
 #include <com/sun/star/ucb/SimpleFileAccess.hpp>
 #include <com/sun/star/util/XMacroExpander.hpp>
-#include <o3tl/optional.hxx>
+#include <optional>
 
 using namespace ::dp_misc;
 using namespace ::com::sun::star;
@@ -95,7 +95,7 @@ class BackendImpl : public ::dp_registry::backend::PackageRegistryBackend
     void implCollectXhpFiles( const OUString& aDir,
         std::vector< OUString >& o_rXhpFileVector );
 
-    ::o3tl::optional<HelpBackendDb::Data> readDataFromDb(OUString const & url);
+    ::std::optional<HelpBackendDb::Data> readDataFromDb(OUString const & url);
     bool hasActiveEntry(OUString const & url);
     bool activateEntry(OUString const & url);
 
@@ -129,20 +129,20 @@ BackendImpl::BackendImpl(
       m_typeInfos( 1 )
 {
     m_typeInfos[ 0 ] = m_xHelpTypeInfo;
-    if (!transientMode())
-    {
-        OUString dbFile = makeURL(getCachePath(), "backenddb.xml");
-        m_backendDb.reset(
-            new HelpBackendDb(getComponentContext(), dbFile));
+    if (transientMode())
+        return;
 
-        //clean up data folders which are no longer used.
-        //This must not be done in the same process where the help files
-        //are still registers. Only after revoking and restarting OOo the folders
-        //can be removed. This works now, because the extension manager is a singleton
-        //and the backends are only create once per process.
-        std::vector<OUString> folders = m_backendDb->getAllDataUrls();
-        deleteUnusedFolders(folders);
-   }
+    OUString dbFile = makeURL(getCachePath(), "backenddb.xml");
+    m_backendDb.reset(
+        new HelpBackendDb(getComponentContext(), dbFile));
+
+    //clean up data folders which are no longer used.
+    //This must not be done in the same process where the help files
+    //are still registers. Only after revoking and restarting OOo the folders
+    //can be removed. This works now, because the extension manager is a singleton
+    //and the backends are only create once per process.
+    std::vector<OUString> folders = m_backendDb->getAllDataUrls();
+    deleteUnusedFolders(folders);
 }
 
 // XPackageRegistry
@@ -200,10 +200,10 @@ Reference<deployment::XPackage> BackendImpl::bindPackage_(
         static_cast<sal_Int16>(-1) );
 }
 
-::o3tl::optional<HelpBackendDb::Data> BackendImpl::readDataFromDb(
+::std::optional<HelpBackendDb::Data> BackendImpl::readDataFromDb(
     OUString const & url)
 {
-    ::o3tl::optional<HelpBackendDb::Data> data;
+    ::std::optional<HelpBackendDb::Data> data;
     if (m_backendDb)
         data = m_backendDb->getEntry(url);
     return data;
@@ -333,7 +333,7 @@ beans::Optional< OUString > BackendImpl::PackageImpl::getRegistrationDataURL()
     if (m_bRemoved)
         throw deployment::ExtensionRemovedException();
 
-    ::o3tl::optional<HelpBackendDb::Data> data =
+    ::std::optional<HelpBackendDb::Data> data =
           getMyBackend()->readDataFromDb(getURL());
 
     if (data && getMyBackend()->hasActiveEntry(getURL()))

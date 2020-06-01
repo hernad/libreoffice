@@ -36,17 +36,17 @@
 
 #include "grouptable.hxx"
 
-namespace com { namespace sun { namespace star { namespace task { class XStatusIndicator; } } } }
-namespace com { namespace sun { namespace star { namespace frame { class XModel; } } } }
-namespace com { namespace sun { namespace star { namespace awt { struct Rectangle; } } } }
-namespace com { namespace sun { namespace star { namespace drawing { class XMasterPagesSupplier; } } } }
-namespace com { namespace sun { namespace star { namespace drawing { class XDrawPage; } } } }
-namespace com { namespace sun { namespace star { namespace drawing { class XDrawPages; } } } }
-namespace com { namespace sun { namespace star { namespace drawing { class XDrawPagesSupplier; } } } }
-namespace com { namespace sun { namespace star { namespace beans { struct PropertyValue; } } } }
-namespace com { namespace sun { namespace star { namespace beans { class XPropertySet; } } } }
-namespace com { namespace sun { namespace star { namespace drawing { class XShape; } } } }
-namespace com { namespace sun { namespace star { namespace drawing { class XShapes; } } } }
+namespace com::sun::star::task { class XStatusIndicator; }
+namespace com::sun::star::frame { class XModel; }
+namespace com::sun::star::awt { struct Rectangle; }
+namespace com::sun::star::drawing { class XMasterPagesSupplier; }
+namespace com::sun::star::drawing { class XDrawPage; }
+namespace com::sun::star::drawing { class XDrawPages; }
+namespace com::sun::star::drawing { class XDrawPagesSupplier; }
+namespace com::sun::star::beans { struct PropertyValue; }
+namespace com::sun::star::beans { class XPropertySet; }
+namespace com::sun::star::drawing { class XShape; }
+namespace com::sun::star::drawing { class XShapes; }
 
 class VirtualDevice;
 
@@ -79,7 +79,7 @@ enum class EppLayout
 struct PHLayout
 {
     EppLayout   nLayout;
-    sal_uInt8 nPlaceHolder[ 8 ];
+    sal_uInt8   nPlaceHolder[ 8 ];
 
     sal_uInt8   nUsedObjectPlaceHolder;
     sal_uInt8   nTypeOfTitle;
@@ -148,7 +148,7 @@ struct FontCollectionEntry
         sal_Int16               Pitch;
         sal_Int16               CharSet;
 
-        OUString const          Original;
+        OUString                Original;
 
         FontCollectionEntry( const OUString& rName, sal_Int16 nFamily, sal_Int16 nPitch, sal_Int16 nCharSet ) :
                             Scaling ( 1.0 ),
@@ -345,9 +345,9 @@ protected:
     sal_uInt32          mnPages;            ///< number of Slides ( w/o master pages & notes & handout )
     sal_uInt32          mnMasterPages;
 
-    Fraction const     maFraction;
-    MapMode const      maMapModeSrc;
-    MapMode const      maMapModeDest;
+    Fraction           maFraction;
+    MapMode            maMapModeSrc;
+    MapMode            maMapModeDest;
     css::awt::Size     maDestPageSize;
     css::awt::Size     maPageSize; // #i121183# Keep size in logic coordinates (100th mm)
     css::awt::Size     maNotesPageSize;
@@ -405,7 +405,8 @@ public:
     bool CreateSlideMaster( sal_uInt32 nPageNum );
     bool CreateNotes( sal_uInt32 nPageNum );
 
-    static sal_Int8 GetTransition( sal_Int16 nTransitionType, sal_Int16 nTransitionSubtype, css::presentation::FadeEffect eEffect, sal_uInt8& nDirection );
+    static sal_Int8 GetTransition( sal_Int16 nTransitionType, sal_Int16 nTransitionSubtype, css::presentation::FadeEffect eEffect,
+        sal_Int32 nTransitionFadeColor, sal_uInt8& nDirection );
     static sal_Int8 GetTransition( css::presentation::FadeEffect eEffect, sal_uInt8& nDirection );
 };
 

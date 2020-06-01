@@ -45,15 +45,12 @@
 #include <vcl/metaact.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/virdev.hxx>
-#include <vcl/FilterConfigItem.hxx>
 #include <svl/outstrm.hxx>
-#include <svx/sdr/contact/objectcontactofobjlistpainter.hxx>
+#include <sdr/contact/objectcontactofobjlistpainter.hxx>
 #include <svx/sdr/contact/viewobjectcontact.hxx>
 #include <svx/sdr/contact/viewcontact.hxx>
 #include <svx/sdr/contact/displayinfo.hxx>
-#include <svx/sdr/contact/viewcontactofsdrobj.hxx>
 #include <editeng/numitem.hxx>
-#include <svx/svdpagv.hxx>
 #include <svx/svdograf.hxx>
 #include <svx/xoutbmp.hxx>
 #include <vcl/graphicfilter.hxx>
@@ -63,8 +60,6 @@
 #include <svx/fmview.hxx>
 #include <svx/fmmodel.hxx>
 #include <svx/unopage.hxx>
-#include <svx/pageitem.hxx>
-#include <editeng/eeitem.hxx>
 #include <svx/svdoutl.hxx>
 #include <svx/xlineit0.hxx>
 #include <editeng/flditem.hxx>
@@ -159,7 +154,7 @@ namespace {
         virtual sal_Bool SAL_CALL supportsMimeType( const OUString& MimeTypeName ) override;
         virtual Sequence< OUString > SAL_CALL getSupportedMimeTypeNames(  ) override;
 
-        VclPtr<VirtualDevice> CreatePageVDev( SdrPage* pPage, sal_uIntPtr nWidthPixel, sal_uIntPtr nHeightPixel ) const;
+        VclPtr<VirtualDevice> CreatePageVDev( SdrPage* pPage, long nWidthPixel, long nHeightPixel ) const;
 
         DECL_LINK( CalcFieldValueHdl, EditFieldInfo*, void );
 
@@ -285,7 +280,7 @@ public:
         const sdr::contact::DisplayInfo& rDisplayInfo) override;
 
 private:
-    SdrPage* const    mpCurrentPage;
+    SdrPage*    mpCurrentPage;
 };
 
 ImplExportCheckVisisbilityRedirector::ImplExportCheckVisisbilityRedirector( SdrPage* pCurrentPage )
@@ -381,7 +376,7 @@ IMPL_LINK(GraphicExporter, CalcFieldValueHdl, EditFieldInfo*, pInfo, void)
 
     @return the returned VirtualDevice is owned by the caller
 */
-VclPtr<VirtualDevice> GraphicExporter::CreatePageVDev( SdrPage* pPage, sal_uIntPtr nWidthPixel, sal_uIntPtr nHeightPixel ) const
+VclPtr<VirtualDevice> GraphicExporter::CreatePageVDev( SdrPage* pPage, long nWidthPixel, long nHeightPixel ) const
 {
     VclPtr<VirtualDevice>  pVDev = VclPtr<VirtualDevice>::Create();
     MapMode         aMM( MapUnit::Map100thMM );
@@ -390,9 +385,9 @@ VclPtr<VirtualDevice> GraphicExporter::CreatePageVDev( SdrPage* pPage, sal_uIntP
     Size aPageSize(pPage->GetSize());
 
     // use scaling?
-    if( nWidthPixel )
+    if( nWidthPixel != 0 )
     {
-        const Fraction aFrac( static_cast<long>(nWidthPixel), pVDev->LogicToPixel( aPageSize, aMM ).Width() );
+        const Fraction aFrac( nWidthPixel, pVDev->LogicToPixel( aPageSize, aMM ).Width() );
 
         aMM.SetScaleX( aFrac );
 
@@ -400,9 +395,9 @@ VclPtr<VirtualDevice> GraphicExporter::CreatePageVDev( SdrPage* pPage, sal_uIntP
             aMM.SetScaleY( aFrac );
     }
 
-    if( nHeightPixel )
+    if( nHeightPixel != 0 )
     {
-        const Fraction aFrac( static_cast<long>(nHeightPixel), pVDev->LogicToPixel( aPageSize, aMM ).Height() );
+        const Fraction aFrac( nHeightPixel, pVDev->LogicToPixel( aPageSize, aMM ).Height() );
 
         if( nWidthPixel == 0 )
             aMM.SetScaleX( aFrac );
@@ -1043,7 +1038,7 @@ sal_Bool SAL_CALL GraphicExporter::filter( const Sequence< PropertyValue >& aDes
     {
         // export graphic only if it has a size
         const Size aGraphSize( aGraphic.GetPrefSize() );
-        if ( ( aGraphSize.Width() == 0 ) || ( aGraphSize.Height() == 0 ) )
+        if ( aGraphSize.IsEmpty() )
         {
             nStatus = ERRCODE_GRFILTER_FILTERERROR;
         }

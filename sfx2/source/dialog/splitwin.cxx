@@ -22,6 +22,7 @@
 #endif
 
 #include <unotools/viewoptions.hxx>
+#include <rtl/ustrbuf.hxx>
 #include <sal/log.hxx>
 #include <tools/debug.hxx>
 
@@ -804,7 +805,7 @@ void SfxSplitWindow::RemoveWindow( SfxDockingWindow const * pDockWin, bool bHide
 
     // Remove Windows, and if it was the last of the line, then also remove
     // the line (line = itemset)
-    std::unique_ptr<DeactivateUpdateMode> pDeactivateUpdateMode( new DeactivateUpdateMode( *this ) );
+    DeactivateUpdateMode aDeactivateUpdateMode( *this );
 
     RemoveItem( pDockWin->GetType() );
 

@@ -32,7 +32,7 @@
 #include <tools/link.hxx>
 #include <tools/solar.h>
 #include <unotools/options.hxx>
-#include <o3tl/optional.hxx>
+#include <optional>
 #include "global.hxx"
 #include "bigrange.hxx"
 #include "scdllapi.h"
@@ -108,7 +108,7 @@ protected:
 
     ScChangeActionLinkEntry*    pNext;
     ScChangeActionLinkEntry**   ppPrev;
-    ScChangeAction* const       pAction;
+    ScChangeAction*             pAction;
     ScChangeActionLinkEntry*    pLink;
 
 public:
@@ -367,7 +367,7 @@ class SAL_DLLPUBLIC_RTTI ScChangeActionIns : public ScChangeAction
 {
     friend class ScChangeTrack;
 
-    bool const mbEndOfList; /// whether or not a row was auto-inserted at the bottom.
+    bool mbEndOfList; /// whether or not a row was auto-inserted at the bottom.
 
     ScChangeActionIns( const ScDocument* pDoc, const ScRange& rRange, bool bEndOfList = false );
 
@@ -405,8 +405,8 @@ class ScChangeActionDelMoveEntry final : public ScChangeActionLinkEntry
     friend class ScChangeActionDel;
     friend class ScChangeTrack;
 
-    short const               nCutOffFrom;
-    short const               nCutOffTo;
+    short               nCutOffFrom;
+    short               nCutOffTo;
 
     inline ScChangeActionDelMoveEntry(
         ScChangeActionDelMoveEntry** ppPrevP,
@@ -849,7 +849,7 @@ class SAL_DLLPUBLIC_RTTI ScChangeTrack : public utl::ConfigurationListener
     ScChangeActionLinkEntry*    pLinkInsertRow;
     ScChangeActionLinkEntry*    pLinkInsertTab;
     ScChangeActionLinkEntry*    pLinkMove;
-    o3tl::optional<ScChangeTrackMsgInfo> xBlockModifyMsg;
+    std::optional<ScChangeTrackMsgInfo> xBlockModifyMsg;
     ScDocument*             pDoc;
     sal_uLong               nActionMax;
     sal_uLong               nGeneratedMin;

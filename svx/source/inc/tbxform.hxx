@@ -20,25 +20,31 @@
 #define INCLUDED_SVX_SOURCE_INC_TBXFORM_HXX
 
 #include <sfx2/tbxctrl.hxx>
-#include <vcl/field.hxx>
+#include <vcl/InterimItemWindow.hxx>
 
-class SvxFmAbsRecWin final : public NumericField
+class SvxFmAbsRecWin final : public InterimItemWindow
 {
 public:
     SvxFmAbsRecWin( vcl::Window* _pParent, SfxToolBoxControl* _pController );
+    virtual void dispose() override;
+    virtual ~SvxFmAbsRecWin() override;
 
-    virtual void KeyInput( const KeyEvent& rKeyEvt ) override;
-    virtual void LoseFocus() override;
+    void set_text(const OUString& rText) { m_xWidget->set_text(rText); }
+
+    virtual void GetFocus() override;
 
 private:
+    std::unique_ptr<weld::Entry> m_xWidget;
+
+    DECL_LINK(KeyInputHdl, const KeyEvent&, bool);
+    DECL_LINK(ActivatedHdl, weld::Entry&, bool);
+    DECL_LINK(FocusOutHdl, weld::Widget&, void); // for invalidating our content when losing the focus
+
     void FirePosition( bool _bForce );
 
     SfxToolBoxControl*  m_pController;
-        // for invalidating our content when losing the focus
 };
 
-
-class FixedText;
 class SvxFmTbxCtlAbsRec : public SfxToolBoxControl
 {
 public:
@@ -47,12 +53,11 @@ public:
     SvxFmTbxCtlAbsRec( sal_uInt16 nSlotId, sal_uInt16 nId, ToolBox& rTbx );
     virtual ~SvxFmTbxCtlAbsRec() override;
 
-    virtual VclPtr<vcl::Window> CreateItemWindow( vcl::Window* pParent ) override;
+    virtual VclPtr<InterimItemWindow> CreateItemWindow( vcl::Window* pParent ) override;
 
     virtual void    StateChanged( sal_uInt16 nSID, SfxItemState eState,
                                   const SfxPoolItem* pState ) override;
 };
-
 
 class SvxFmTbxCtlRecText : public SfxToolBoxControl
 {
@@ -62,9 +67,8 @@ public:
     SvxFmTbxCtlRecText( sal_uInt16 nSlotId, sal_uInt16 nId, ToolBox& rTbx );
     virtual ~SvxFmTbxCtlRecText() override;
 
-    virtual VclPtr<vcl::Window> CreateItemWindow( vcl::Window* pParent ) override;
+    virtual VclPtr<InterimItemWindow> CreateItemWindow( vcl::Window* pParent ) override;
 };
-
 
 class SvxFmTbxCtlRecFromText : public SfxToolBoxControl
 {
@@ -74,13 +78,14 @@ public:
     SvxFmTbxCtlRecFromText( sal_uInt16 nSlotId, sal_uInt16 nId, ToolBox& rTbx );
     virtual ~SvxFmTbxCtlRecFromText() override;
 
-    virtual VclPtr<vcl::Window> CreateItemWindow( vcl::Window* pParent ) override;
+    virtual VclPtr<InterimItemWindow> CreateItemWindow( vcl::Window* pParent ) override;
 };
 
+class LabelItemWindow;
 
 class SvxFmTbxCtlRecTotal : public SfxToolBoxControl
 {
-    VclPtr<FixedText> pFixedText;
+    VclPtr<LabelItemWindow> m_xFixedText;
 
 public:
     SFX_DECL_TOOLBOX_CONTROL();
@@ -88,7 +93,7 @@ public:
     SvxFmTbxCtlRecTotal( sal_uInt16 nSlotId, sal_uInt16 nId, ToolBox& rTbx );
     virtual ~SvxFmTbxCtlRecTotal() override;
 
-    virtual VclPtr<vcl::Window> CreateItemWindow( vcl::Window* pParent ) override;
+    virtual VclPtr<InterimItemWindow> CreateItemWindow( vcl::Window* pParent ) override;
     virtual void    StateChanged( sal_uInt16 nSID, SfxItemState eState,
                                   const SfxPoolItem* pState ) override;
 };

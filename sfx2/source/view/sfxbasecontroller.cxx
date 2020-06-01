@@ -19,7 +19,7 @@
 
 #include <time.h>
 #include <sfx2/sfxbasecontroller.hxx>
-
+#include <com/sun/star/awt/XWindowPeer.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/util/XCloseable.hpp>
 #include <com/sun/star/util/XCloseBroadcaster.hpp>
@@ -50,7 +50,7 @@
 #include <sfx2/dispatch.hxx>
 #include <sfx2/userinputinterception.hxx>
 
-#include <sfx2/unoctitm.hxx>
+#include <unoctitm.hxx>
 #include <sfx2/childwin.hxx>
 #include <sfx2/sfxsids.hrc>
 #include <sfx2/sfxresid.hxx>
@@ -64,6 +64,7 @@
 #include <toolkit/helper/convert.hxx>
 #include <framework/titlehelper.hxx>
 #include <comphelper/processfactory.hxx>
+#include <vcl/button.hxx>
 #include <vcl/svapp.hxx>
 #include <tools/svborder.hxx>
 
@@ -75,7 +76,7 @@
 #include <unordered_map>
 
 #include <com/sun/star/ui/XSidebarProvider.hpp>
-#include <sfx2/sidebar/UnoSidebar.hxx>
+#include <sidebar/UnoSidebar.hxx>
 
 #define TIMEOUT_START_RESCHEDULE    10L /* 10th s */
 
@@ -310,7 +311,7 @@ public:
 
 private:
 
-    SfxBaseController* const      m_pController;
+    SfxBaseController*      m_pController;
 
 } ; // class IMPL_SfxBaseController_ListenerContainer
 
@@ -1532,6 +1533,13 @@ void SAL_CALL SfxBaseController::removeInfobar(const OUString& sId)
     if (!pViewFrame->HasInfoBarWithID(sId))
         throw css::container::NoSuchElementException("Infobar with ID '" + sId + "' not found.");
     pViewFrame->RemoveInfoBar(sId);
+}
+
+sal_Bool SAL_CALL SfxBaseController::hasInfobar(const OUString& sId)
+{
+    SolarMutexGuard aGuard;
+    SfxViewFrame* pViewFrame = m_pData->m_pViewShell->GetFrame();
+    return pViewFrame->HasInfoBarWithID(sId);
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

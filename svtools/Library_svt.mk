@@ -96,7 +96,6 @@ $(eval $(call gb_Library_add_exception_objects,svt,\
     svtools/source/control/collatorres \
     svtools/source/control/ctrlbox \
     svtools/source/control/ctrltool \
-    svtools/source/control/filectrl \
     svtools/source/control/indexentryres \
     svtools/source/control/inettbc \
     svtools/source/control/managedmenubutton \
@@ -164,7 +163,6 @@ $(eval $(call gb_Library_add_exception_objects,svt,\
     svtools/source/table/mousefunction \
     svtools/source/table/cellvalueconversion \
     svtools/source/table/tablegeometry \
-    svtools/source/uitest/uiobject \
     svtools/source/uno/addrtempuno \
     svtools/source/uno/fpicker \
     svtools/source/uno/framestatuslistener \
@@ -176,7 +174,6 @@ $(eval $(call gb_Library_add_exception_objects,svt,\
     svtools/source/uno/statusbarcontroller \
     svtools/source/uno/svtxgridcontrol \
     svtools/source/uno/toolboxcontroller \
-    svtools/source/uno/treecontrolpeer \
     svtools/source/uno/unocontroltablemodel \
     svtools/source/uno/unogridcolumnfacade \
     svtools/source/uno/unoevent \

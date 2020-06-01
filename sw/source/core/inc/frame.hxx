@@ -116,10 +116,10 @@ enum MakePageType
     MAKEPAGE_NOSECTION  // Don't create section frames
 };
 
-namespace drawinglayer { namespace attribute {
+namespace drawinglayer::attribute {
     class SdrAllFillAttributesHelper;
     typedef std::shared_ptr< SdrAllFillAttributesHelper > SdrAllFillAttributesHelperPtr;
-}}
+}
 
 /// Helper class to isolate geometry-defining members of SwFrame
 /// and to control their accesses. Moved to own class to have no
@@ -130,6 +130,8 @@ namespace drawinglayer { namespace attribute {
 class SAL_DLLPUBLIC_RTTI SwFrameAreaDefinition
 {
 private:
+    friend void FriendHackInvalidateRowFrame(SwFrameAreaDefinition &);
+
     // The absolute position and size of the SwFrame in the document.
     // This values are set by the layouter implementations
     SwRect  maFrameArea;

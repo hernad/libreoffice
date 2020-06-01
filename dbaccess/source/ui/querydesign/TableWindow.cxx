@@ -19,11 +19,11 @@
 
 #include <TableWindow.hxx>
 #include <TableWindowListBox.hxx>
-#include <QueryTableView.hxx>
-#include <QueryDesignView.hxx>
 #include <TableWindowData.hxx>
 #include <imageprovider.hxx>
-#include <tools/diagnose_ex.h>
+#include <JoinController.hxx>
+#include <JoinTableView.hxx>
+#include <JoinDesignView.hxx>
 #include <osl/diagnose.h>
 #include <vcl/svapp.hxx>
 #include <vcl/wall.hxx>
@@ -32,19 +32,15 @@
 #include <vcl/event.hxx>
 #include <vcl/ptrstyle.hxx>
 
-#include <com/sun/star/sdbcx/XColumnsSupplier.hpp>
+#include <com/sun/star/container/XContainer.hpp>
 #include <com/sun/star/container/XNameAccess.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
-#include <com/sun/star/accessibility/AccessibleEventId.hpp>
-#include <com/sun/star/accessibility/AccessibleRole.hpp>
-#include <querycontroller.hxx>
-#include <stringconstants.hxx>
+#include <com/sun/star/sdb/application/DatabaseObject.hpp>
 #include <bitmaps.hlst>
-#include <UITools.hxx>
 #include <TableWindowAccess.hxx>
-#include <browserids.hxx>
 #include <connectivity/dbtools.hxx>
 #include <vcl/treelistentry.hxx>
+#include <vcl/builder.hxx>
 
 using namespace dbaui;
 using namespace ::utl;
@@ -253,18 +249,18 @@ void OTableWindow::deleteUserData(void*& _pUserData)
 
 void OTableWindow::clearListBox()
 {
-    if ( m_xListBox )
-    {
-        SvTreeListEntry* pEntry = m_xListBox->First();
+    if ( !m_xListBox )
+        return;
 
-        while(pEntry)
-        {
-            void* pUserData = pEntry->GetUserData();
-            deleteUserData(pUserData);
-            SvTreeListEntry* pNextEntry = m_xListBox->Next(pEntry);
-            m_xListBox->GetModel()->Remove(pEntry);
-            pEntry = pNextEntry;
-        }
+    SvTreeListEntry* pEntry = m_xListBox->First();
+
+    while(pEntry)
+    {
+        void* pUserData = pEntry->GetUserData();
+        deleteUserData(pUserData);
+        SvTreeListEntry* pNextEntry = m_xListBox->Next(pEntry);
+        m_xListBox->GetModel()->Remove(pEntry);
+        pEntry = pNextEntry;
     }
 }
 
@@ -536,20 +532,20 @@ void OTableWindow::StateChanged( StateChangedType nType )
 
     // FIXME RenderContext
 
-    if ( nType == StateChangedType::Zoom )
-    {
-        const StyleSettings& rStyleSettings = GetSettings().GetStyleSettings();
+    if ( nType != StateChangedType::Zoom )
+        return;
 
-        vcl::Font aFont = rStyleSettings.GetGroupFont();
-        if ( IsControlFont() )
-            aFont.Merge( GetControlFont() );
-        SetZoomedPointFont(*this, aFont);
+    const StyleSettings& rStyleSettings = GetSettings().GetStyleSettings();
 
-        m_xTitle->SetZoom(GetZoom());
-        m_xListBox->SetZoom(GetZoom());
-        Resize();
-        Invalidate();
-    }
+    vcl::Font aFont = rStyleSettings.GetGroupFont();
+    if ( IsControlFont() )
+        aFont.Merge( GetControlFont() );
+    SetZoomedPointFont(*this, aFont);
+
+    m_xTitle->SetZoom(GetZoom());
+    m_xListBox->SetZoom(GetZoom());
+    Resize();
+    Invalidate();
 }
 
 Reference< XAccessible > OTableWindow::CreateAccessible()

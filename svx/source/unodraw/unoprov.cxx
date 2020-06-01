@@ -35,20 +35,13 @@
 #include <comphelper/sequence.hxx>
 #include <svx/dialmgr.hxx>
 #include <svx/unoapi.hxx>
-#include <editeng/unotext.hxx>
 #include <svx/unoshprp.hxx>
 #include <svx/svx3ditems.hxx>
 #include <svx/svxids.hrc>
-#include <editeng/editeng.hxx>
 #include <svx/globl3d.hxx>
 #include <svx/strings.hrc>
 #include <strings.hxx>
-#include <svx/svdpool.hxx>
 #include <svx/svdobj.hxx>
-#include <svx/sdtaaitm.hxx>
-#include <svx/sdtacitm.hxx>
-#include <svx/sdtaiitm.hxx>
-#include <svx/sdtayitm.hxx>
 
 #include "shapeimpl.hxx"
 #include <unordered_map>
@@ -68,6 +61,8 @@ static SfxItemPropertyMapEntry const * ImplGetSvxShapePropertyMap()
         SHAPE_DESCRIPTOR_PROPERTIES
         MISC_OBJ_PROPERTIES
         LINKTARGET_PROPERTIES
+        GLOW_PROPERTIES
+        SOFTEDGE_PROPERTIES
         SHADOW_PROPERTIES
         TEXT_PROPERTIES
         // #FontWork#
@@ -91,6 +86,8 @@ static SfxItemPropertyMapEntry const * ImplGetSvxTextShapePropertyMap()
         SHAPE_DESCRIPTOR_PROPERTIES
         MISC_OBJ_PROPERTIES_NO_SHEAR
         LINKTARGET_PROPERTIES
+        GLOW_PROPERTIES
+        SOFTEDGE_PROPERTIES
         SHADOW_PROPERTIES
         TEXT_PROPERTIES
         // #FontWork#
@@ -115,6 +112,8 @@ static SfxItemPropertyMapEntry const * ImplGetSvxConnectorPropertyMap()
         SHAPE_DESCRIPTOR_PROPERTIES
         MISC_OBJ_PROPERTIES
         LINKTARGET_PROPERTIES
+        GLOW_PROPERTIES
+        SOFTEDGE_PROPERTIES
         SHADOW_PROPERTIES
         TEXT_PROPERTIES
         // #FontWork#
@@ -139,6 +138,8 @@ static SfxItemPropertyMapEntry const * ImplGetSvxDimensioningPropertyMap()
         SHAPE_DESCRIPTOR_PROPERTIES
         MISC_OBJ_PROPERTIES
         LINKTARGET_PROPERTIES
+        GLOW_PROPERTIES
+        SOFTEDGE_PROPERTIES
         SHADOW_PROPERTIES
         TEXT_PROPERTIES
         // #FontWork#
@@ -163,6 +164,8 @@ static SfxItemPropertyMapEntry const * ImplGetSvxCirclePropertyMap()
         SHAPE_DESCRIPTOR_PROPERTIES
         MISC_OBJ_PROPERTIES
         LINKTARGET_PROPERTIES
+        GLOW_PROPERTIES
+        SOFTEDGE_PROPERTIES
         SHADOW_PROPERTIES
         TEXT_PROPERTIES
         // #FontWork#
@@ -189,6 +192,8 @@ static SfxItemPropertyMapEntry const * ImplGetSvxPolyPolygonPropertyMap()
         SHAPE_DESCRIPTOR_PROPERTIES
         MISC_OBJ_PROPERTIES
         LINKTARGET_PROPERTIES
+        GLOW_PROPERTIES
+        SOFTEDGE_PROPERTIES
         SHADOW_PROPERTIES
         TEXT_PROPERTIES
         // #FontWork#
@@ -218,6 +223,8 @@ static SfxItemPropertyMapEntry const * ImplGetSvxGraphicObjectPropertyMap()
         MISC_OBJ_PROPERTIES
 
         LINKTARGET_PROPERTIES
+        GLOW_PROPERTIES
+        SOFTEDGE_PROPERTIES
         SHADOW_PROPERTIES
         TEXT_PROPERTIES
         // #FontWork#
@@ -368,6 +375,8 @@ static SfxItemPropertyMapEntry const * ImplGetSvxAllPropertyMap()
 {
     static SfxItemPropertyMapEntry const aAllPropertyMap_Impl[] =
     {
+        GLOW_PROPERTIES
+        SOFTEDGE_PROPERTIES
         SHADOW_PROPERTIES
         LINE_PROPERTIES
         LINE_PROPERTIES_START_END
@@ -430,6 +439,8 @@ static SfxItemPropertyMapEntry const * ImplGetSvxOle2PropertyMap()
         SHAPE_DESCRIPTOR_PROPERTIES
         MISC_OBJ_PROPERTIES
         LINKTARGET_PROPERTIES
+        GLOW_PROPERTIES
+        SOFTEDGE_PROPERTIES
         SHADOW_PROPERTIES
         TEXT_PROPERTIES
         FONTWORK_PROPERTIES
@@ -681,6 +692,8 @@ static SfxItemPropertyMapEntry const * ImplGetSvxCustomShapePropertyMap()
         SHAPE_DESCRIPTOR_PROPERTIES
         MISC_OBJ_PROPERTIES
         LINKTARGET_PROPERTIES
+        GLOW_PROPERTIES
+        SOFTEDGE_PROPERTIES
         SHADOW_PROPERTIES
         TEXT_PROPERTIES
         {OUString("UserDefinedAttributes"),     SDRATTR_XMLATTRIBUTES,      cppu::UnoType<css::container::XNameContainer>::get(),        0,     0},
@@ -759,6 +772,8 @@ static comphelper::PropertyMapEntry const * ImplGetSvxDrawingDefaultsPropertyMap
 {
     static comphelper::PropertyMapEntry const aSvxDrawingDefaultsPropertyMap_Impl[] =
     {
+        GLOW_PROPERTIES
+        SOFTEDGE_PROPERTIES
         SHADOW_PROPERTIES
         LINE_PROPERTIES_DEFAULTS
         FILL_PROPERTIES_BMP
@@ -1090,7 +1105,24 @@ static const char* RID_SVXSTR_BMP_DEF[] =
     RID_SVXSTR_BMP72_DEF,
     RID_SVXSTR_BMP73_DEF,
     RID_SVXSTR_BMP74_DEF,
-    RID_SVXSTR_BMP75_DEF
+    RID_SVXSTR_BMP75_DEF,
+    RID_SVXSTR_BMP76_DEF,
+    RID_SVXSTR_BMP77_DEF,
+    RID_SVXSTR_BMP78_DEF,
+    RID_SVXSTR_BMP79_DEF,
+    RID_SVXSTR_BMP80_DEF,
+    RID_SVXSTR_BMP81_DEF,
+    RID_SVXSTR_BMP82_DEF,
+    RID_SVXSTR_BMP83_DEF,
+    RID_SVXSTR_BMP84_DEF,
+    RID_SVXSTR_BMP85_DEF,
+    RID_SVXSTR_BMP86_DEF,
+    RID_SVXSTR_BMP87_DEF,
+    RID_SVXSTR_BMP88_DEF,
+    RID_SVXSTR_BMP89_DEF,
+    RID_SVXSTR_BMP90_DEF,
+    RID_SVXSTR_BMP91_DEF,
+    RID_SVXSTR_BMP92_DEF
 };
 
 static const char* RID_SVXSTR_BMP[] =
@@ -1170,7 +1202,24 @@ static const char* RID_SVXSTR_BMP[] =
     RID_SVXSTR_BMP72,
     RID_SVXSTR_BMP73,
     RID_SVXSTR_BMP74,
-    RID_SVXSTR_BMP75
+    RID_SVXSTR_BMP75,
+    RID_SVXSTR_BMP76,
+    RID_SVXSTR_BMP77,
+    RID_SVXSTR_BMP78,
+    RID_SVXSTR_BMP79,
+    RID_SVXSTR_BMP80,
+    RID_SVXSTR_BMP81,
+    RID_SVXSTR_BMP82,
+    RID_SVXSTR_BMP83,
+    RID_SVXSTR_BMP84,
+    RID_SVXSTR_BMP85,
+    RID_SVXSTR_BMP86,
+    RID_SVXSTR_BMP87,
+    RID_SVXSTR_BMP88,
+    RID_SVXSTR_BMP89,
+    RID_SVXSTR_BMP90,
+    RID_SVXSTR_BMP91,
+    RID_SVXSTR_BMP92
 };
 
 static const char* RID_SVXSTR_DASH_DEF[] =
@@ -1187,7 +1236,16 @@ static const char* RID_SVXSTR_DASH_DEF[] =
     RID_SVXSTR_DASH9_DEF,
     RID_SVXSTR_DASH10_DEF,
     RID_SVXSTR_DASH11_DEF,
-    RID_SVXSTR_DASH12_DEF
+    RID_SVXSTR_DASH12_DEF,
+    RID_SVXSTR_DASH13_DEF,
+    RID_SVXSTR_DASH14_DEF,
+    RID_SVXSTR_DASH15_DEF,
+    RID_SVXSTR_DASH16_DEF,
+    RID_SVXSTR_DASH17_DEF,
+    RID_SVXSTR_DASH18_DEF,
+    RID_SVXSTR_DASH19_DEF,
+    RID_SVXSTR_DASH20_DEF,
+    RID_SVXSTR_DASH21_DEF
 };
 
 static const char* RID_SVXSTR_DASH[] =
@@ -1204,7 +1262,16 @@ static const char* RID_SVXSTR_DASH[] =
     RID_SVXSTR_DASH9,
     RID_SVXSTR_DASH10,
     RID_SVXSTR_DASH11,
-    RID_SVXSTR_DASH12
+    RID_SVXSTR_DASH12,
+    RID_SVXSTR_DASH13,
+    RID_SVXSTR_DASH14,
+    RID_SVXSTR_DASH15,
+    RID_SVXSTR_DASH16,
+    RID_SVXSTR_DASH17,
+    RID_SVXSTR_DASH18,
+    RID_SVXSTR_DASH19,
+    RID_SVXSTR_DASH20,
+    RID_SVXSTR_DASH21
 };
 
 static const char* RID_SVXSTR_LEND_DEF[] =
@@ -1229,7 +1296,18 @@ static const char* RID_SVXSTR_LEND_DEF[] =
     RID_SVXSTR_LEND17_DEF,
     RID_SVXSTR_LEND18_DEF,
     RID_SVXSTR_LEND19_DEF,
-    RID_SVXSTR_LEND20_DEF
+    RID_SVXSTR_LEND20_DEF,
+    RID_SVXSTR_LEND21_DEF,
+    RID_SVXSTR_LEND22_DEF,
+    RID_SVXSTR_LEND23_DEF,
+    RID_SVXSTR_LEND24_DEF,
+    RID_SVXSTR_LEND25_DEF,
+    RID_SVXSTR_LEND26_DEF,
+    RID_SVXSTR_LEND27_DEF,
+    RID_SVXSTR_LEND28_DEF,
+    RID_SVXSTR_LEND29_DEF,
+    RID_SVXSTR_LEND30_DEF,
+    RID_SVXSTR_LEND31_DEF
 };
 
 static const char* RID_SVXSTR_LEND[] =
@@ -1254,7 +1332,18 @@ static const char* RID_SVXSTR_LEND[] =
     RID_SVXSTR_LEND17,
     RID_SVXSTR_LEND18,
     RID_SVXSTR_LEND19,
-    RID_SVXSTR_LEND20
+    RID_SVXSTR_LEND20,
+    RID_SVXSTR_LEND21,
+    RID_SVXSTR_LEND22,
+    RID_SVXSTR_LEND23,
+    RID_SVXSTR_LEND24,
+    RID_SVXSTR_LEND25,
+    RID_SVXSTR_LEND26,
+    RID_SVXSTR_LEND27,
+    RID_SVXSTR_LEND28,
+    RID_SVXSTR_LEND29,
+    RID_SVXSTR_LEND30,
+    RID_SVXSTR_LEND31
 };
 
 static const char* RID_SVXSTR_GRDT_DEF[] =
@@ -1698,15 +1787,7 @@ static const char* SvxUnoColorNameDefResId[] =
     RID_SVXSTR_COLOR_LIBRE_ORANGE_ACCENT_DEF,
     RID_SVXSTR_COLOR_LIBRE_PURPLE_DEF,
     RID_SVXSTR_COLOR_LIBRE_PURPLE_ACCENT_DEF,
-    RID_SVXSTR_COLOR_LIBRE_YELLOW_ACCENT_DEF,
-    RID_SVXSTR_COLOR_TANGO_BUTTER_DEF,
-    RID_SVXSTR_COLOR_TANGO_ORANGE_DEF,
-    RID_SVXSTR_COLOR_TANGO_CHOCOLATE_DEF,
-    RID_SVXSTR_COLOR_TANGO_CHAMELEON_DEF,
-    RID_SVXSTR_COLOR_TANGO_SKY_BLUE_DEF,
-    RID_SVXSTR_COLOR_TANGO_PLUM_DEF,
-    RID_SVXSTR_COLOR_TANGO_SCARLET_RED_DEF,
-    RID_SVXSTR_COLOR_TANGO_ALUMINIUM_DEF
+    RID_SVXSTR_COLOR_LIBRE_YELLOW_ACCENT_DEF
 };
 
 static const char* SvxUnoColorNameResId[] =
@@ -1810,15 +1891,7 @@ static const char* SvxUnoColorNameResId[] =
     RID_SVXSTR_COLOR_LIBRE_ORANGE_ACCENT,
     RID_SVXSTR_COLOR_LIBRE_PURPLE,
     RID_SVXSTR_COLOR_LIBRE_PURPLE_ACCENT,
-    RID_SVXSTR_COLOR_LIBRE_YELLOW_ACCENT,
-    RID_SVXSTR_COLOR_TANGO_BUTTER,
-    RID_SVXSTR_COLOR_TANGO_ORANGE,
-    RID_SVXSTR_COLOR_TANGO_CHOCOLATE,
-    RID_SVXSTR_COLOR_TANGO_CHAMELEON,
-    RID_SVXSTR_COLOR_TANGO_SKY_BLUE,
-    RID_SVXSTR_COLOR_TANGO_PLUM,
-    RID_SVXSTR_COLOR_TANGO_SCARLET_RED,
-    RID_SVXSTR_COLOR_TANGO_ALUMINIUM
+    RID_SVXSTR_COLOR_LIBRE_YELLOW_ACCENT
 };
 
 /// @throws std::exception

@@ -41,19 +41,18 @@ class SfxModelessDialogController;
 
 enum class SfxChildWindowFlags
 {
-    NONE            = 0x00,
-    ZOOMIN          = 0x01, // Fully retracted Float
-    FORCEDOCK       = 0x04, // Float forbidden
-    TASK            = 0x10, // ChildWindow inside the Task
-    CANTGETFOCUS    = 0x20, // ChildWindow can not get focus
-    ALWAYSAVAILABLE = 0x40, // ChildWindow is never disabled
-    NEVERHIDE       = 0x80, // ChildWindow is always visible
+    NONE            = 0x000,
+    FORCEDOCK       = 0x004, // Float forbidden
+    TASK            = 0x010, // ChildWindow inside the Task
+    CANTGETFOCUS    = 0x020, // ChildWindow can not get focus
+    ALWAYSAVAILABLE = 0x040, // ChildWindow is never disabled
+    NEVERHIDE       = 0x080, // ChildWindow is always visible
     NEVERCLONE      = 0x100, // ChildWindow is not recreated in new view
 };
 
 namespace o3tl
 {
-    template<> struct typed_flags<SfxChildWindowFlags> : is_typed_flags<SfxChildWindowFlags, 0x1f5> {};
+    template<> struct typed_flags<SfxChildWindowFlags> : is_typed_flags<SfxChildWindowFlags, 0x1f4> {};
 }
 
 
@@ -90,8 +89,8 @@ typedef std::unique_ptr<SfxChildWindowContext> (*SfxChildWinContextCtor)( vcl::W
                                             SfxChildWinInfo *pInfo);
 struct SfxChildWinContextFactory
 {
-    SfxChildWinContextCtor const  pCtor;      // Factory method
-    sal_uInt16 const              nContextId; // Identifier for SfxInterface
+    SfxChildWinContextCtor  pCtor;      // Factory method
+    sal_uInt16              nContextId; // Identifier for SfxInterface
 
     SfxChildWinContextFactory( SfxChildWinContextCtor pTheCtor, sal_uInt16 nID )
         : pCtor(pTheCtor)
@@ -103,10 +102,10 @@ class SfxChildWinContextArr_Impl;
 
 struct SFX2_DLLPUBLIC SfxChildWinFactory
 {
-    SfxChildWinCtor const       pCtor;  // Factory method
-    sal_uInt16 const            nId;    // ChildWindow-Id ( SlotId )
+    SfxChildWinCtor             pCtor;  // Factory method
+    sal_uInt16                  nId;    // ChildWindow-Id ( SlotId )
     SfxChildWinInfo             aInfo;  // Configuration
-    sal_uInt16 const            nPos;   // Position in UI
+    sal_uInt16                  nPos;   // Position in UI
     std::unique_ptr<SfxChildWinContextArr_Impl> pArr;   // Array for Contexts
 
     SfxChildWinFactory( SfxChildWinCtor pTheCtor, sal_uInt16 nID, sal_uInt16 n );
@@ -142,7 +141,7 @@ public:
 class SFX2_DLLPUBLIC SfxChildWindow
 {
     VclPtr<vcl::Window>        pParent;         // parent window ( Topwindow )
-    sal_uInt16 const           nType;           // ChildWindow-Id
+    sal_uInt16                 nType;           // ChildWindow-Id
     VclPtr<vcl::Window>        pWindow;         // actual contents
     std::shared_ptr<SfxDialogController> xController;     // actual contents
     SfxChildAlignment          eChildAlignment; // Current css::drawing::Alignment

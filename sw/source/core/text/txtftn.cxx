@@ -52,6 +52,7 @@
 
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/awt/CharSet.hpp>
+#include <com/sun/star/text/XTextRange.hpp>
 
 using namespace ::com::sun::star;
 
@@ -585,7 +586,7 @@ void SwTextFrame::ConnectFootnote( SwTextFootnote *pFootnote, const SwTwips nDea
     mbInFootnoteConnect = true; // Just reset!
     // See if pFootnote is an endnote on a separate endnote page.
     const IDocumentSettingAccess& rSettings = GetDoc().getIDocumentSettingAccess();
-    bool bContinuousEndnotes = rSettings.get(DocumentSettingId::CONTINUOUS_ENDNOTES);
+    const bool bContinuousEndnotes = rSettings.get(DocumentSettingId::CONTINUOUS_ENDNOTES);
     const bool bEnd = pFootnote->GetFootnote().IsEndNote();
 
     // We want to store this value, because it is needed as a fallback

@@ -20,8 +20,7 @@
 #include <sdr/primitive2d/sdrcaptionprimitive2d.hxx>
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 #include <basegfx/polygon/b2dpolygontools.hxx>
-#include <svx/sdr/primitive2d/sdrdecompositiontools.hxx>
-#include <drawinglayer/primitive2d/groupprimitive2d.hxx>
+#include <sdr/primitive2d/sdrdecompositiontools.hxx>
 #include <svx/sdr/primitive2d/svx_primitivetypes2d.hxx>
 #include <drawinglayer/primitive2d/sdrdecompositiontools2d.hxx>
 
@@ -123,7 +122,7 @@ namespace drawinglayer::primitive2d
 
         SdrCaptionPrimitive2D::SdrCaptionPrimitive2D(
             const basegfx::B2DHomMatrix& rTransform,
-            const attribute::SdrLineFillShadowTextAttribute& rSdrLFSTAttribute,
+            const attribute::SdrLineFillEffectsTextAttribute& rSdrLFSTAttribute,
             const basegfx::B2DPolygon& rTail,
             double fCornerRadiusX,
             double fCornerRadiusY)

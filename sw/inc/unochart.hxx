@@ -57,7 +57,7 @@ class SwTable;
 class SwTableBox;
 struct SwRangeDescriptor;
 class SwSelBoxes;
-namespace com { namespace sun { namespace star { namespace table { class XCell; } } } }
+namespace com::sun::star::table { class XCell; }
 
 bool FillRangeDescriptor( SwRangeDescriptor &rDesc, const OUString &rCellRangeName );
 
@@ -236,8 +236,8 @@ class SwChartDataSequence final :
     ::comphelper::OInterfaceContainerHelper2          m_aModifyListeners;
     css::chart2::data::DataSequenceRole               m_aRole;
 
-    OUString const  m_aRowLabelText;
-    OUString const  m_aColLabelText;
+    OUString  m_aRowLabelText;
+    OUString  m_aColLabelText;
 
     rtl::Reference<SwChartDataProvider>                m_xDataProvider;
 

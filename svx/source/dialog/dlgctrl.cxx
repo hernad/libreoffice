@@ -39,7 +39,7 @@
 #include <svx/svdorect.hxx>
 #include <svx/svdmodel.hxx>
 #include <svx/svdopath.hxx>
-#include <svx/sdr/contact/objectcontactofobjlistpainter.hxx>
+#include <sdr/contact/objectcontactofobjlistpainter.hxx>
 #include <svx/sdr/contact/displayinfo.hxx>
 #include <vcl/BitmapTools.hxx>
 
@@ -891,37 +891,6 @@ void SvxPixelCtl::Reset()
     Invalidate();
 }
 
-void FillTypeLB::Fill()
-{
-    SetUpdateMode( false );
-
-    InsertEntry( SvxResId(RID_SVXSTR_INVISIBLE) );
-    InsertEntry( SvxResId(RID_SVXSTR_COLOR) );
-    InsertEntry( SvxResId(RID_SVXSTR_GRADIENT) );
-    InsertEntry( SvxResId(RID_SVXSTR_HATCH) );
-    InsertEntry( SvxResId(RID_SVXSTR_BITMAP) );
-    InsertEntry( SvxResId(RID_SVXSTR_PATTERN) );
-
-    AdaptDropDownLineCountToMaximum();
-    SetUpdateMode( true );
-}
-
-void FillTypeLB::Fill(weld::ComboBox& rListBox)
-{
-    rListBox.freeze();
-
-    rListBox.append_text(SvxResId(RID_SVXSTR_INVISIBLE));
-    rListBox.append_text(SvxResId(RID_SVXSTR_COLOR));
-    rListBox.append_text(SvxResId(RID_SVXSTR_GRADIENT));
-    rListBox.append_text(SvxResId(RID_SVXSTR_HATCH));
-    rListBox.append_text(SvxResId(RID_SVXSTR_BITMAP));
-    rListBox.append_text(SvxResId(RID_SVXSTR_PATTERN));
-
-    rListBox.thaw();
-
-    rListBox.set_active(1); // solid color
-}
-
 SvxLineLB::SvxLineLB(std::unique_ptr<weld::ComboBox> pControl)
     : m_xControl(std::move(pControl))
     , mbAddStandardFields(true)
@@ -1478,7 +1447,7 @@ void padWidthForSidebar(weld::Toolbar& rToolbar, const css::uno::Reference<css::
         // of a "standard" column in a two column panel
         std::unique_ptr<weld::Builder> xBuilder(Application::CreateBuilder(&rToolbar, "svx/ui/measurewidthbar.ui"));
         std::unique_ptr<weld::Toolbar> xToolbar(xBuilder->weld_toolbar("measurewidth"));
-        std::unique_ptr<ToolbarUnoDispatcher> xDispatcher(new ToolbarUnoDispatcher(*xToolbar, rFrame));
+        std::unique_ptr<ToolbarUnoDispatcher> xDispatcher(new ToolbarUnoDispatcher(*xToolbar, *xBuilder, rFrame));
         nColumnWidth = xToolbar->get_preferred_size().Width();
         eSize = rToolbar.get_icon_size();
     }

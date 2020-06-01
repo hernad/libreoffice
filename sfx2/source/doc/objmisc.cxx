@@ -75,6 +75,8 @@
 #include <comphelper/interaction.hxx>
 #include <comphelper/storagehelper.hxx>
 #include <comphelper/documentconstants.hxx>
+#include <comphelper/namedvaluecollection.hxx>
+#include <officecfg/Office/Common.hxx>
 
 #include <sfx2/signaturestate.hxx>
 #include <sfx2/app.hxx>
@@ -928,6 +930,9 @@ void SfxObjectShell::BreakMacroSign_Impl( bool bBreakMacroSign )
 
 void SfxObjectShell::CheckSecurityOnLoading_Impl()
 {
+    // make sure LO evaluates the macro signatures, so it can be preserved
+    GetScriptingSignatureState();
+
     uno::Reference< task::XInteractionHandler > xInteraction;
     if ( GetMedium() )
         xInteraction = GetMedium()->GetInteractionHandler();
@@ -1053,12 +1058,6 @@ void SfxObjectShell::InitOwnModel_Impl()
 
 void SfxObjectShell::FinishedLoading( SfxLoadedFlags nFlags )
 {
-    std::shared_ptr<const SfxFilter> pFlt = pMedium->GetFilter();
-    if( pFlt )
-    {
-        SetFormatSpecificCompatibilityOptions( pFlt->GetTypeName() );
-    }
-
     bool bSetModifiedTRUE = false;
     const SfxStringItem* pSalvageItem = SfxItemSet::GetItem<SfxStringItem>(pMedium->GetItemSet(), SID_DOC_SALVAGE, false);
     if( ( nFlags & SfxLoadedFlags::MAINDOCUMENT ) && !(pImpl->nLoadedFlags & SfxLoadedFlags::MAINDOCUMENT )
@@ -1328,27 +1327,24 @@ ErrCode SfxObjectShell::CallBasic( const OUString& rMacro,
     return nRet;
 }
 
-namespace
+bool SfxObjectShell::isScriptAccessAllowed( const Reference< XInterface >& _rxScriptContext )
 {
-    bool lcl_isScriptAccessAllowed_nothrow( const Reference< XInterface >& _rxScriptContext )
+    try
     {
-        try
+        Reference< XEmbeddedScripts > xScripts( _rxScriptContext, UNO_QUERY );
+        if ( !xScripts.is() )
         {
-            Reference< XEmbeddedScripts > xScripts( _rxScriptContext, UNO_QUERY );
-            if ( !xScripts.is() )
-            {
-                Reference< XScriptInvocationContext > xContext( _rxScriptContext, UNO_QUERY_THROW );
-                xScripts.set( xContext->getScriptContainer(), UNO_SET_THROW );
-            }
+            Reference< XScriptInvocationContext > xContext( _rxScriptContext, UNO_QUERY_THROW );
+            xScripts.set( xContext->getScriptContainer(), UNO_SET_THROW );
+        }
 
-            return xScripts->getAllowMacroExecution();
-        }
-        catch( const Exception& )
-        {
-            DBG_UNHANDLED_EXCEPTION("sfx.doc");
-        }
-        return false;
+        return xScripts->getAllowMacroExecution();
     }
+    catch( const Exception& )
+    {
+        DBG_UNHANDLED_EXCEPTION("sfx.doc");
+    }
+    return false;
 }
 
 // don't allow LibreLogo to be used with our mouseover/etc dom-alike events
@@ -1393,7 +1389,7 @@ ErrCode SfxObjectShell::CallXScript( const Reference< XInterface >& _rxScriptCon
     Any aException;
     try
     {
-        if ( !lcl_isScriptAccessAllowed_nothrow( _rxScriptContext ) )
+        if (!isScriptAccessAllowed(_rxScriptContext))
             return ERRCODE_IO_ACCESSDENIED;
 
         if ( UnTrustedScript(_rScriptURL) )
@@ -1440,7 +1436,7 @@ ErrCode SfxObjectShell::CallXScript( const Reference< XInterface >& _rxScriptCon
     {
         SfxAbstractDialogFactory* pFact = SfxAbstractDialogFactory::Create();
         ScopedVclPtr<VclAbstractDialog> pScriptErrDlg( pFact->CreateScriptErrorDialog( aException ) );
-        if ( pScriptErrDlg.get() )
+        if ( pScriptErrDlg )
             pScriptErrDlg->Execute();
     }
 
@@ -1807,7 +1803,7 @@ bool SfxObjectShell_Impl::hasTrustedScriptingSignature( bool bAllowUIToAddAuthor
             if ( aInfo.hasElements() )
             {
                 if ( nScriptingSignatureState == SignatureState::UNKNOWN )
-                    nScriptingSignatureState = SfxObjectShell::ImplCheckSignaturesInformation( aInfo );
+                    nScriptingSignatureState = DocumentSignatures::getSignatureState(aInfo);
 
                 if ( nScriptingSignatureState == SignatureState::OK
                   || nScriptingSignatureState == SignatureState::NOTVALIDATED )
@@ -1862,6 +1858,53 @@ bool SfxObjectShell::IsContinueImportOnFilterExceptions(const OUString& aErrMess
             mbContinueImportOnFilterExceptions = no;
     }
     return mbContinueImportOnFilterExceptions == yes;
+}
+
+bool SfxObjectShell::isEditDocLocked()
+{
+    Reference<XModel> xModel = GetModel();
+    if (!xModel.is())
+        return false;
+    if (!officecfg::Office::Common::Misc::AllowEditReadonlyDocs::get())
+        return true;
+    comphelper::NamedValueCollection aArgs(xModel->getArgs());
+    return aArgs.getOrDefault("LockEditDoc", false);
+}
+
+bool SfxObjectShell::isContentExtractionLocked()
+{
+    Reference<XModel> xModel = GetModel();
+    if (!xModel.is())
+        return false;
+    comphelper::NamedValueCollection aArgs(xModel->getArgs());
+    return aArgs.getOrDefault("LockContentExtraction", false);
+}
+
+bool SfxObjectShell::isExportLocked()
+{
+    Reference<XModel> xModel = GetModel();
+    if (!xModel.is())
+        return false;
+    comphelper::NamedValueCollection aArgs(xModel->getArgs());
+    return aArgs.getOrDefault("LockExport", false);
+}
+
+bool SfxObjectShell::isPrintLocked()
+{
+    Reference<XModel> xModel = GetModel();
+    if (!xModel.is())
+        return false;
+    comphelper::NamedValueCollection aArgs(xModel->getArgs());
+    return aArgs.getOrDefault("LockPrint", false);
+}
+
+bool SfxObjectShell::isSaveLocked()
+{
+    Reference<XModel> xModel = GetModel();
+    if (!xModel.is())
+        return false;
+    comphelper::NamedValueCollection aArgs(xModel->getArgs());
+    return aArgs.getOrDefault("LockSave", false);
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

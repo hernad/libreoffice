@@ -23,13 +23,11 @@
 #include "binding.hxx"
 #include "mip.hxx"
 #include "evaluationcontext.hxx"
-#include "unohelper.hxx"
 #include "submission/submission_put.hxx"
 #include "submission/submission_post.hxx"
 #include "submission/submission_get.hxx"
 
 #include <rtl/ustring.hxx>
-#include <rtl/ustrbuf.hxx>
 #include <com/sun/star/lang/NoSupportException.hpp>
 #include <com/sun/star/uno/Sequence.hxx>
 #include <com/sun/star/uno/Reference.hxx>
@@ -47,7 +45,6 @@
 #include <com/sun/star/frame/XFrame.hpp>
 #include <cppuhelper/exc_hlp.hxx>
 #include <cppuhelper/typeprovider.hxx>
-#include <comphelper/propertysetinfo.hxx>
 #include <comphelper/interaction.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/servicehelper.hxx>
@@ -252,6 +249,9 @@ bool Submission::doSubmit( const Reference< XInteractionHandler >& xHandler )
         OSL_FAIL("Unsupported xforms submission method");
         return false;
     }
+
+    if (!xSubmission->IsWebProtocol())
+        return false;
 
     CSubmission::SubmissionResult aResult = xSubmission->submit( xHandler );
 
@@ -513,18 +513,18 @@ static void cloneNodes(Model& aModel, const Reference< XNode >& dstParent, const
     Reference< XDocument > dstDoc = dstParent->getOwnerDocument();
     Reference< XNode > imported;
 
-    if (cur.is())
+    if (!cur.is())
+        return;
+
+    //  is this node relevant?
+    MIP mip = aModel.queryMIP(cur);
+    if(mip.isRelevant() && !(bRemoveWSNodes && isIgnorable(cur)))
     {
-        //  is this node relevant?
-        MIP mip = aModel.queryMIP(cur);
-        if(mip.isRelevant() && !(bRemoveWSNodes && isIgnorable(cur)))
-        {
-            imported = dstDoc->importNode(cur, false);
-            imported = dstParent->appendChild(imported);
-            // append source children to new imported parent
-            for( cur = cur->getFirstChild(); cur.is(); cur = cur->getNextSibling() )
-                cloneNodes(aModel, imported, cur, bRemoveWSNodes);
-        }
+        imported = dstDoc->importNode(cur, false);
+        imported = dstParent->appendChild(imported);
+        // append source children to new imported parent
+        for( cur = cur->getFirstChild(); cur.is(); cur = cur->getNextSibling() )
+            cloneNodes(aModel, imported, cur, bRemoveWSNodes);
     }
 }
 Reference< XDocument > Submission::getInstanceDocument(const Reference< XXPathObject >& aObj)

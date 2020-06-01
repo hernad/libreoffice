@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include <svtools/table/tablemodel.hxx>
+#include <table/tablemodel.hxx>
 
 #include <com/sun/star/awt/grid/XGridColumn.hpp>
 #include <com/sun/star/style/HorizontalAlignment.hpp>
@@ -27,7 +27,7 @@
 #include <rtl/ref.hxx>
 
 
-namespace svt { namespace table
+namespace svt::table
 {
 
 
@@ -82,7 +82,7 @@ namespace svt { namespace table
     };
 
 
-} } // svt::table
+} // svt::table
 
 
 

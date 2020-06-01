@@ -175,7 +175,7 @@ class XclExpProtection : public XclExpBoolRecord
 
 class XclExpSheetProtection : public XclExpProtection
 {
-    SCTAB const             mnTab;
+    SCTAB                   mnTab;
     public:
         XclExpSheetProtection(bool bValue, SCTAB nTab);
     virtual void            SaveXml( XclExpXmlStream& rStrm ) override;
@@ -238,7 +238,7 @@ protected:
     sal_uInt64              m_nStrPos;
     sal_uInt64              m_nOwnPos;    // Position after # and Len
     sal_uInt16              nGrbit;
-    SCTAB const             nTab;
+    SCTAB                   nTab;
 
                             ExcBundlesheetBase();
 
@@ -310,10 +310,10 @@ public:
     virtual void SaveXml( XclExpXmlStream& rStrm ) override;
 
 private:
-    SCTAB const mnScTab;
+    SCTAB mnScTab;
     XclExpFilterManager* mpManager;
-    bool const mbFitToPage;
-    Color const maTabColor;
+    bool mbFitToPage;
+    Color maTabColor;
 };
 
 class XclExpFiltermode : public XclExpEmptyRecord
@@ -331,7 +331,7 @@ public:
     SCCOL        GetColCount() const { return static_cast< SCCOL >( GetValue() ); }
 
 private:
-    ScAddress const         maStartPos;
+    ScAddress           maStartPos;
 };
 
 class ExcFilterCondition
@@ -413,8 +413,8 @@ private:
     typedef XclExpAutofilterList::RecordRefType     XclExpAutofilterRef;
 
     XclExpAutofilterList maFilterList;
-    std::unique_ptr<XclExpFiltermode> m_pFilterMode;
-    std::unique_ptr<XclExpAutofilterinfo> m_pFilterInfo;
+    rtl::Reference<XclExpFiltermode> m_pFilterMode;
+    rtl::Reference<XclExpAutofilterinfo> m_pFilterInfo;
     ScRange                 maRef;
     bool mbAutoFilter;
 };
@@ -439,7 +439,7 @@ public:
 private:
     using               XclExpRoot::CreateRecord;
 
-    typedef std::shared_ptr< ExcAutoFilterRecs >  XclExpTabFilterRef;
+    typedef rtl::Reference< ExcAutoFilterRecs >  XclExpTabFilterRef;
     typedef ::std::map< SCTAB, XclExpTabFilterRef > XclExpTabFilterMap;
 
     XclExpTabFilterMap  maFilterMap;

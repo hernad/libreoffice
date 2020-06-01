@@ -32,7 +32,6 @@
 #include <fmundo.hxx>
 #include <fmurl.hxx>
 #include <fmvwimp.hxx>
-#include <formtoolbars.hxx>
 #include <gridcols.hxx>
 #include <svx/svditer.hxx>
 #include <svx/dialmgr.hxx>
@@ -54,18 +53,13 @@
 #include <com/sun/star/awt/XListBox.hpp>
 #include <com/sun/star/awt/XTextComponent.hpp>
 #include <com/sun/star/beans/theIntrospection.hpp>
-#include <com/sun/star/beans/NamedValue.hpp>
 #include <com/sun/star/beans/PropertyAttribute.hpp>
 #include <com/sun/star/beans/XPropertyState.hpp>
 #include <com/sun/star/container/XContainer.hpp>
-#include <com/sun/star/container/XEnumeration.hpp>
-#include <com/sun/star/container/XEnumerationAccess.hpp>
 #include <com/sun/star/container/XIndexAccess.hpp>
 #include <com/sun/star/container/XNamed.hpp>
 #include <com/sun/star/form/ListSourceType.hpp>
 #include <com/sun/star/form/TabOrderDialog.hpp>
-#include <com/sun/star/form/XBoundComponent.hpp>
-#include <com/sun/star/form/XBoundControl.hpp>
 #include <com/sun/star/form/XGrid.hpp>
 #include <com/sun/star/form/XGridPeer.hpp>
 #include <com/sun/star/form/XLoadable.hpp>
@@ -77,10 +71,8 @@
 #include <com/sun/star/script/XEventAttacherManager.hpp>
 #include <com/sun/star/sdbc/SQLException.hpp>
 #include <com/sun/star/ui/dialogs/XExecutableDialog.hpp>
-#include <com/sun/star/util/XCancellable.hpp>
 #include <com/sun/star/util/XModeSelector.hpp>
-#include <com/sun/star/util/XModifyBroadcaster.hpp>
-#include <com/sun/star/util/XNumberFormatter.hpp>
+#include <com/sun/star/util/XNumberFormatsSupplier.hpp>
 #include <com/sun/star/view/XSelectionSupplier.hpp>
 
 #include <comphelper/evtmethodhelper.hxx>
@@ -92,7 +84,6 @@
 #include <comphelper/types.hxx>
 #include <connectivity/dbtools.hxx>
 #include <sfx2/dispatch.hxx>
-#include <sfx2/docfile.hxx>
 #include <sfx2/frame.hxx>
 #include <sfx2/objsh.hxx>
 #include <sfx2/viewfrm.hxx>
@@ -106,7 +97,6 @@
 #include <vcl/svapp.hxx>
 
 #include <algorithm>
-#include <functional>
 #include <map>
 #include <memory>
 #include <vector>
@@ -2641,7 +2631,6 @@ void SAL_CALL FmXFormShell::selectionChanged(const lang::EventObject& rEvent)
     EnableTrackProperties_Lock(false);
 
     bool bMarkChanged = m_pShell->GetFormView()->checkUnMarkAll(rEvent.Source);
-    Reference< XForm > xNewForm( GetForm( rEvent.Source ) );
 
     InterfaceBag aNewSelection;
     aNewSelection.insert( Reference<XInterface>( xSelObj, UNO_QUERY ) );
@@ -3108,10 +3097,12 @@ void FmXFormShell::CreateExternalView_Lock()
     // FS - 21.10.99 - 69219
     {
         FmXBoundFormFieldIterator aModelIterator(xCurrentNavController->getModel());
-        Reference< XPropertySet> xCurrentModelSet;
         bool bHaveUsableControls = false;
-        while ((xCurrentModelSet = Reference< XPropertySet>(aModelIterator.Next(), UNO_QUERY)).is())
+        for (;;)
         {
+            Reference< XPropertySet> xCurrentModelSet(aModelIterator.Next(), UNO_QUERY);
+            if (!xCurrentModelSet.is())
+                break;
             // the FmXBoundFormFieldIterator only supplies controls with a valid control source
             // so we just have to check the field type
             sal_Int16 nClassId = ::comphelper::getINT16(xCurrentModelSet->getPropertyValue(FM_PROP_CLASSID));
@@ -3224,11 +3215,13 @@ void FmXFormShell::CreateExternalView_Lock()
             FmMapUString2Int16      aRadioPositions;
 
             FmXBoundFormFieldIterator aModelIterator(xCurrentNavController->getModel());
-            Reference< XPropertySet> xCurrentModelSet;
             OUString sColumnType,aGroupName,sControlSource;
             Sequence< Property> aProps;
-            while ((xCurrentModelSet = Reference< XPropertySet>(aModelIterator.Next(), UNO_QUERY)).is())
+            for (;;)
             {
+                Reference< XPropertySet> xCurrentModelSet(aModelIterator.Next(), UNO_QUERY);
+                if (!xCurrentModelSet.is())
+                    break;
                 OSL_ENSURE(xCurrentModelSet.is(),"xCurrentModelSet is null!");
                 // create a description of the column to be created
                 // first : determine it's type

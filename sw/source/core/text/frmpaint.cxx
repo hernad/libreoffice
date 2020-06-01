@@ -112,7 +112,7 @@ SwExtraPainter::SwExtraPainter( const SwTextFrame *pFrame, SwViewShell *pVwSh,
         if( m_aRect.Bottom() > nBottom )
             m_aRect.Bottom( nBottom );
     }
-    int nVirtPageNum = 0;
+    std::optional<bool> oIsRightPage;
     if( bLineNum )
     {
         /* Initializes the Members necessary for line numbering:
@@ -138,13 +138,13 @@ SwExtraPainter::SwExtraPainter( const SwTextFrame *pFrame, SwViewShell *pVwSh,
         {
             if( pFrame->FindPageFrame()->OnRightPage() )
             {
-                nVirtPageNum = 1;
+                oIsRightPage = true;
                 ePos = ePos == LINENUMBER_POS_INSIDE ?
                         LINENUMBER_POS_LEFT : LINENUMBER_POS_RIGHT;
             }
             else
             {
-                nVirtPageNum = 2;
+                oIsRightPage = false;
                 ePos = ePos == LINENUMBER_POS_OUTSIDE ?
                         LINENUMBER_POS_LEFT : LINENUMBER_POS_RIGHT;
             }
@@ -164,9 +164,9 @@ SwExtraPainter::SwExtraPainter( const SwTextFrame *pFrame, SwViewShell *pVwSh,
     {
         if( text::HoriOrientation::INSIDE == eHor || text::HoriOrientation::OUTSIDE == eHor )
         {
-            if( !nVirtPageNum )
-                nVirtPageNum = pFrame->FindPageFrame()->OnRightPage() ? 1 : 2;
-            if( nVirtPageNum % 2 )
+            if (!oIsRightPage)
+                oIsRightPage = pFrame->FindPageFrame()->OnRightPage();
+            if (*oIsRightPage)
                 eHor = eHor == text::HoriOrientation::INSIDE ? text::HoriOrientation::LEFT : text::HoriOrientation::RIGHT;
             else
                 eHor = eHor == text::HoriOrientation::OUTSIDE ? text::HoriOrientation::LEFT : text::HoriOrientation::RIGHT;
@@ -431,7 +431,7 @@ SwRect SwTextFrame::GetPaintSwRect()
         l = rRepaint.GetRightOfst();
         if( l && l > rRepaint.Right() )
              rRepaint.Right( l );
-        rRepaint.SetOfst( 0 );
+        rRepaint.SetOffset( 0 );
         aRet = rRepaint;
 
         // In case our left edge is the same as the body frame's left edge,
@@ -629,7 +629,7 @@ void SwTextFrame::PaintSwFrame(vcl::RenderContext& rRenderContext, SwRect const&
     {
         const SwFlyFrame *pFly = FindFlyFrame();
         if( pFly && pFly->IsFlyInContentFrame() )
-            rRepaint.SetOfst( 0 );
+            rRepaint.SetOffset( 0 );
     }
 
     // Ge the String for painting. The length is of special interest.

@@ -17,12 +17,12 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_BASEGFX_TUPLE_B2DTUPLE_HXX
-#define INCLUDED_BASEGFX_TUPLE_B2DTUPLE_HXX
+#pragma once
 
 #include <sal/types.h>
 #include <basegfx/numeric/ftools.hxx>
 #include <basegfx/basegfxdllapi.h>
+#include <basegfx/utils/common.hxx>
 
 namespace basegfx
 {
@@ -39,10 +39,11 @@ namespace basegfx
     class SAL_WARN_UNUSED B2DTuple
     {
     protected:
-        double                                      mfX;
-        double                                      mfY;
+        double mfX;
+        double mfY;
 
     public:
+
         /** Create a 2D Tuple
 
             The tuple is initialized to (0.0, 0.0)
@@ -98,26 +99,20 @@ namespace basegfx
             mfY = fY;
         }
 
-        /// Array-access to 2D Tuple
-        const double& operator[] (int nPos) const
+        double get(Axis2D eAxis)
         {
-            // Here, normally one if(...) should be used. In the assumption that
-            // both double members can be accessed as an array a shortcut is used here.
-            // if(0 == nPos) return mfX; return mfY;
-            return *((&mfX) + nPos);
+            return eAxis == Axis2D::X ? getX() : getY();
         }
 
-        /// Array-access to 2D Tuple
-        double& operator[] (int nPos)
+        void set(Axis2D eAxis, double fValue)
         {
-            // Here, normally one if(...) should be used. In the assumption that
-            // both double members can be accessed as an array a shortcut is used here.
-            // if(0 == nPos) return mfX; return mfY;
-            return *((&mfX) + nPos);
+            if (eAxis == Axis2D::X)
+                setX(fValue);
+            else
+                setY(fValue);
         }
 
         // comparators with tolerance
-
 
         bool equalZero() const
         {
@@ -233,8 +228,8 @@ namespace basegfx
     inline B2DTuple average(const B2DTuple& rOld1, const B2DTuple& rOld2)
     {
         return B2DTuple(
-            rtl::math::approxEqual(rOld1.getX(), rOld2.getX()) ? rOld1.getX() : (rOld1.getX() + rOld2.getX()) * 0.5,
-            rtl::math::approxEqual(rOld1.getY(), rOld2.getY()) ? rOld1.getY() : (rOld1.getY() + rOld2.getY()) * 0.5);
+            rtl_math_approxEqual(rOld1.getX(), rOld2.getX()) ? rOld1.getX() : (rOld1.getX() + rOld2.getX()) * 0.5,
+            rtl_math_approxEqual(rOld1.getY(), rOld2.getY()) ? rOld1.getY() : (rOld1.getY() + rOld2.getY()) * 0.5);
     }
 
     inline B2DTuple operator+(const B2DTuple& rTupA, const B2DTuple& rTupB)
@@ -292,7 +287,5 @@ namespace basegfx
     */
     BASEGFX_DLLPUBLIC B2ITuple fround(const B2DTuple& rTup);
 } // end of namespace basegfx
-
-#endif // INCLUDED_BASEGFX_TUPLE_B2DTUPLE_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

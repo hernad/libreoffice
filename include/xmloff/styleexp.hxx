@@ -25,10 +25,10 @@
 
 #include <salhelper/simplereferenceobject.hxx>
 
-namespace com { namespace sun { namespace star { namespace uno { template <class interface_type> class Reference; } } } }
+namespace com::sun::star::uno { template <class interface_type> class Reference; }
 namespace rtl { template <class reference_type> class Reference; }
 
-namespace com { namespace sun { namespace star
+namespace com::sun::star
 {
     namespace style
     {
@@ -43,11 +43,12 @@ namespace com { namespace sun { namespace star
         class XNameAccess;
     }
 
-} } }
+}
 
 class SvXMLExportPropertyMapper;
 class SvXMLAutoStylePoolP;
 class SvXMLExport;
+enum class XmlStyleFamily;
 
 class XMLOFF_DLLPUBLIC XMLStyleExport : public salhelper::SimpleReferenceObject
 {
@@ -96,13 +97,13 @@ public:
     void exportStyleFamily(
         const OUString& rFamily, const OUString& rXMLFamily,
         const rtl::Reference < SvXMLExportPropertyMapper >& rPropMapper,
-        bool bUsed, sal_uInt16 nFamily,
+        bool bUsed, XmlStyleFamily nFamily,
         const OUString* pPrefix = nullptr);
 
     void exportStyleFamily(
         const char *pFamily, const OUString& rXMLFamily,
         const rtl::Reference < SvXMLExportPropertyMapper >& rPropMapper,
-        bool bUsed, sal_uInt16 nFamily,
+        bool bUsed, XmlStyleFamily nFamily,
         const OUString* pPrefix = nullptr);
 };
 

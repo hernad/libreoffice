@@ -17,10 +17,11 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_VCL_SOURCE_FILTER_JPEG_EXIF_HXX
-#define INCLUDED_VCL_SOURCE_FILTER_JPEG_EXIF_HXX
+#pragma once
 
 #include <tools/stream.hxx>
+
+namespace exif {
 
 enum Orientation {
     TOP_LEFT        = 1,
@@ -32,6 +33,7 @@ enum Orientation {
     RIGHT_BOTTOM    = 7,
     LEFT_BOTTOM     = 8
 };
+};
 
 enum Tag {
     ORIENTATION         = 0x0112
@@ -40,7 +42,7 @@ enum Tag {
 class Exif final
 {
 private:
-    Orientation maOrientation;
+    exif::Orientation maOrientation;
     bool mbExifPresent;
 
     bool processJpeg(SvStream& rStream, bool bSetValue);
@@ -55,12 +57,12 @@ private:
     };
 
     struct TiffHeader {
-        sal_uInt16 const byteOrder;
+        sal_uInt16 byteOrder;
         sal_uInt16 tagAlign;
         sal_uInt32 offset;
     };
 
-    static Orientation convertToOrientation(sal_Int32 value);
+    static exif::Orientation convertToOrientation(sal_Int32 value);
 
 public:
     Exif();
@@ -68,16 +70,14 @@ public:
 
     bool hasExif() const { return mbExifPresent;}
 
-    Orientation getOrientation() const { return maOrientation;}
+    exif::Orientation getOrientation() const { return maOrientation;}
     sal_Int32 getRotation() const;
 
-    void setOrientation(Orientation orientation);
+    void setOrientation(exif::Orientation orientation);
 
     bool read(SvStream& rStream);
     void write(SvStream& rStream);
 
 };
-
-#endif // INCLUDED_VCL_SOURCE_FILTER_JPEG_EXIF_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

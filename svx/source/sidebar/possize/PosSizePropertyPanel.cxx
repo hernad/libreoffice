@@ -21,33 +21,29 @@
 
 #include <algorithm>
 
-#include <sfx2/sidebar/ControlFactory.hxx>
 #include "PosSizePropertyPanel.hxx"
+#include <sal/log.hxx>
 #include <svx/svxids.hrc>
 #include <sfx2/dispatch.hxx>
 #include <sfx2/bindings.hxx>
-#include <sfx2/lokhelper.hxx>
 #include <sfx2/module.hxx>
 #include <sfx2/viewsh.hxx>
 #include <sfx2/objsh.hxx>
 #include <sfx2/viewfrm.hxx>
 #include <sfx2/weldutils.hxx>
 #include <svx/dialcontrol.hxx>
-#include <svx/dlgutil.hxx>
 #include <svx/rectenum.hxx>
-#include <unotools/localedatawrapper.hxx>
 #include <unotools/viewoptions.hxx>
+#include <unotools/localedatawrapper.hxx>
 #include <vcl/canvastools.hxx>
-#include <vcl/virdev.hxx>
-#include <vcl/svapp.hxx>
-#include <svl/aeitem.hxx>
+#include <vcl/fieldvalues.hxx>
 #include <svl/intitem.hxx>
 #include <svx/svdpagv.hxx>
 #include <svx/svdview.hxx>
 #include <svx/transfrmhelper.hxx>
+#include <boost/property_tree/json_parser.hpp>
 
 #include <svtools/unitconv.hxx>
-#include <comphelper/lok.hxx>
 
 using namespace css;
 using namespace css::uno;
@@ -61,7 +57,7 @@ PosSizePropertyPanel::PosSizePropertyPanel(
     const css::uno::Reference<css::frame::XFrame>& rxFrame,
     SfxBindings* pBindings,
     const css::uno::Reference<css::ui::XSidebar>& rxSidebar)
-:   PanelLayout(pParent, "PosSizePropertyPanel", "svx/ui/sidebarpossize.ui", rxFrame, true),
+:   PanelLayout(pParent, "PosSizePropertyPanel", "svx/ui/sidebarpossize.ui", rxFrame),
     mxFtPosX(m_xBuilder->weld_label("horizontallabel")),
     mxMtrPosX(m_xBuilder->weld_metric_spin_button("horizontalpos", FieldUnit::CM)),
     mxFtPosY(m_xBuilder->weld_label("verticallabel")),
@@ -77,9 +73,15 @@ PosSizePropertyPanel::PosSizePropertyPanel(
     mxDial(new weld::CustomWeld(*m_xBuilder, "orientationcontrol", *mxCtrlDial)),
     mxFtFlip(m_xBuilder->weld_label("fliplabel")),
     mxFlipTbx(m_xBuilder->weld_toolbar("selectrotationtype")),
-    mxFlipDispatch(new ToolbarUnoDispatcher(*mxFlipTbx, rxFrame)),
+    mxFlipDispatch(new ToolbarUnoDispatcher(*mxFlipTbx, *m_xBuilder, rxFrame)),
     mxArrangeTbx(m_xBuilder->weld_toolbar("arrangetoolbar")),
-    mxArrangeDispatch(new ToolbarUnoDispatcher(*mxArrangeTbx, rxFrame)),
+    mxArrangeDispatch(new ToolbarUnoDispatcher(*mxArrangeTbx, *m_xBuilder, rxFrame)),
+    mxArrangeTbx2(m_xBuilder->weld_toolbar("arrangetoolbar2")),
+    mxArrangeDispatch2(new ToolbarUnoDispatcher(*mxArrangeTbx2, *m_xBuilder, rxFrame)),
+    mxAlignTbx(m_xBuilder->weld_toolbar("aligntoolbar")),
+    mxAlignDispatch(new ToolbarUnoDispatcher(*mxAlignTbx, *m_xBuilder, rxFrame)),
+    mxAlignTbx2(m_xBuilder->weld_toolbar("aligntoolbar2")),
+    mxAlignDispatch2(new ToolbarUnoDispatcher(*mxAlignTbx2, *m_xBuilder, rxFrame)),
     mxBtnEditChart(m_xBuilder->weld_button("btnEditChart")),
     maRect(),
     mpView(nullptr),
@@ -142,8 +144,14 @@ void PosSizePropertyPanel::dispose()
     mxFtFlip.reset();
     mxFlipDispatch.reset();
     mxFlipTbx.reset();
+    mxAlignDispatch.reset();
+    mxAlignDispatch2.reset();
+    mxAlignTbx.reset();
+    mxAlignTbx2.reset();
     mxArrangeDispatch.reset();
+    mxArrangeDispatch2.reset();
     mxArrangeTbx.reset();
+    mxArrangeTbx2.reset();
     mxBtnEditChart.reset();
 
     maTransfPosXControl.dispose();
@@ -274,12 +282,14 @@ void PosSizePropertyPanel::HandleContextChange(
     bool bShowAngle = false;
     bool bShowFlip = false;
     bool bShowEditChart = false;
+    bool bShowArrangeTbx2 = false;
 
     switch (maContext.GetCombinedContext_DI())
     {
         case CombinedEnumContext(Application::WriterVariants, Context::Draw):
             bShowAngle = true;
             bShowFlip = true;
+            bShowArrangeTbx2 = true;
             break;
 
         case CombinedEnumContext(Application::WriterVariants, Context::Graphic):
@@ -338,6 +348,9 @@ void PosSizePropertyPanel::HandleContextChange(
 
     // Edit Chart
     mxBtnEditChart->set_visible(bShowEditChart);
+
+    // Arrange tool bar 2
+    mxArrangeTbx2->set_visible(bShowArrangeTbx2);
 
     if (mxSidebar.is())
         mxSidebar->requestLayout();
@@ -767,6 +780,32 @@ void PosSizePropertyPanel::NotifyItemUpdate(
     mxCbxScale->set_active(static_cast<bool>(sUserData.toInt32()));
 }
 
+void PosSizePropertyPanel::GetControlState(const sal_uInt16 nSID, boost::property_tree::ptree& rState)
+{
+    weld::MetricSpinButton* pControl = nullptr;
+    switch (nSID)
+    {
+        case SID_ATTR_TRANSFORM_POS_X:
+            pControl = mxMtrPosX.get();
+            break;
+        case SID_ATTR_TRANSFORM_POS_Y:
+            pControl = mxMtrPosY.get();
+            break;
+        case SID_ATTR_TRANSFORM_WIDTH:
+            pControl = mxMtrWidth.get();
+            break;
+        case SID_ATTR_TRANSFORM_HEIGHT:
+            pControl = mxMtrHeight.get();
+            break;
+    }
+
+    if (pControl && !pControl->get_text().isEmpty())
+    {
+        OUString sValue = Application::GetSettings().GetNeutralLocaleDataWrapper().
+            getNum(pControl->get_value(pControl->get_unit()), pControl->get_digits(), false, false);
+        rState.put(pControl->get_buildable_name().getStr(), sValue.toUtf8().getStr());
+    }
+}
 
 void PosSizePropertyPanel::executeSize()
 {
@@ -812,6 +851,16 @@ void PosSizePropertyPanel::executeSize()
             GetBindings()->GetDispatcher()->ExecuteList(SID_ATTR_TRANSFORM,
                 SfxCallMode::RECORD, { &aHeightItem, &aPointItem });
     }
+}
+
+boost::property_tree::ptree PosSizePropertyPanel::DumpAsPropertyTree()
+{
+    if (meDlgUnit != GetCurrentUnit(SfxItemState::DEFAULT, nullptr))
+    {
+        mpBindings->Update( SID_ATTR_METRIC );
+    }
+
+    return PanelLayout::DumpAsPropertyTree();
 }
 
 void PosSizePropertyPanel::MetricState( SfxItemState eState, const SfxPoolItem* pState )
@@ -995,7 +1044,7 @@ void PosSizePropertyPanel::SetPosSizeMinMax()
     fRight  -= maRect.getWidth();
     fBottom -= maRect.getHeight();
 
-    const double fMaxLong(static_cast<double>(MetricField::ConvertValue( LONG_MAX, 0, MapUnit::Map100thMM, meDlgUnit ) - 1));
+    const double fMaxLong(static_cast<double>(vcl::ConvertValue( LONG_MAX, 0, MapUnit::Map100thMM, meDlgUnit ) - 1));
     fLeft = std::clamp(fLeft, -fMaxLong, fMaxLong);
     fRight = std::clamp(fRight, -fMaxLong, fMaxLong);
     fTop = std::clamp(fTop, - fMaxLong, fMaxLong);

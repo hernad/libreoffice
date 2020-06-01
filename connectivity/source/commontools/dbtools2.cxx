@@ -20,12 +20,14 @@
 #include <connectivity/dbtools.hxx>
 #include <connectivity/dbconversion.hxx>
 #include <connectivity/dbcharset.hxx>
-#include <connectivity/SQLStatementHelper.hxx>
+#include <SQLStatementHelper.hxx>
 #include <unotools/confignode.hxx>
 #include <resource/sharedresources.hxx>
 #include <strings.hrc>
+#include <com/sun/star/sdb/XSingleSelectQueryComposer.hpp>
 #include <com/sun/star/sdbc/SQLException.hpp>
 #include <com/sun/star/sdbc/XConnection.hpp>
+#include <com/sun/star/sdbc/XDataSource.hpp>
 #include <com/sun/star/sdbc/ColumnValue.hpp>
 #include <com/sun/star/sdbc/DataType.hpp>
 #include <com/sun/star/sdbc/DriverManager.hpp>
@@ -116,10 +118,11 @@ OUString createStandardTypePart(const Reference< XPropertySet >& xColProp,const 
         }
     }
 
-    sal_Int32 nIndex = 0;
-    if ( !sAutoIncrementValue.isEmpty() && (nIndex = sTypeName.indexOf(sAutoIncrementValue)) != -1 )
+    if ( !sAutoIncrementValue.isEmpty() )
     {
-        sTypeName = sTypeName.replaceAt(nIndex,sTypeName.getLength() - nIndex,OUString());
+        sal_Int32 nIndex = sTypeName.indexOf(sAutoIncrementValue);
+        if (nIndex != -1)
+            sTypeName = sTypeName.replaceAt(nIndex,sTypeName.getLength() - nIndex,OUString());
     }
 
     if ( (nPrecision > 0 || nScale > 0) && bUseLiteral )

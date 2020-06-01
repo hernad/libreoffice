@@ -17,19 +17,13 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <string>
 #include <vcl/customweld.hxx>
 #include <vcl/event.hxx>
 #include <vcl/settings.hxx>
-#include <vcl/stdtext.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/toolbox.hxx>
-#include <svl/intitem.hxx>
-#include <sfx2/dispatch.hxx>
-#include <sfx2/app.hxx>
 
 #include <svx/strings.hrc>
-#include <svx/svxids.hrc>
 #include <svx/layctrl.hxx>
 #include <svx/dialmgr.hxx>
 #include <comphelper/processfactory.hxx>
@@ -37,7 +31,6 @@
 #include <svtools/toolbarmenu.hxx>
 #include <com/sun/star/util/URLTransformer.hpp>
 #include <com/sun/star/frame/XDispatchProvider.hpp>
-#include <com/sun/star/frame/XFrame.hpp>
 
 // namespaces
 using namespace ::com::sun::star::uno;
@@ -196,7 +189,11 @@ bool TableWidget::KeyInput(const KeyEvent& rKEvt)
                 break;
             case KEY_DOWN:
                 if ( nNewLine < TABLE_CELLS_VERT )
+                {
                     nNewLine++;
+                    if ( nNewCol == 0 )
+                        nNewCol = 1;
+                }
                 else
                     mxControl->CloseAndShowTableDialog();
                 break;
@@ -208,7 +205,11 @@ bool TableWidget::KeyInput(const KeyEvent& rKEvt)
                 break;
             case KEY_RIGHT:
                 if ( nNewCol < TABLE_CELLS_HORIZ )
+                {
                     nNewCol++;
+                    if ( nNewLine == 0 )
+                        nNewLine = 1;
+                }
                 else
                     mxControl->CloseAndShowTableDialog();
                 break;

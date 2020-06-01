@@ -24,9 +24,9 @@
 #include <sal/types.h>
 #include <rtl/ustring.hxx>
 
-namespace com { namespace sun { namespace star { namespace util {
+namespace com::sun::star::util {
     struct DateTime;
-} } } }
+}
 
 namespace rtl {
     class OUString;

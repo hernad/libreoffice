@@ -45,6 +45,7 @@
 #include <hints.hxx>
 #include <txatbase.hxx>
 #include <xmloff/odffields.hxx>
+#include <rtl/ustrbuf.hxx>
 
 #include <editsh.hxx>
 
@@ -229,9 +230,13 @@ static bool lcl_ChkOneRange( CHKSECTION eSec, bool bChkSections,
     if( !pNd->StartOfSectionIndex() )
         return false;
 
-    while( ( pTmp = pNd->StartOfSectionNode())->EndOfSectionNode() !=
-            &rBaseEnd )
+    for (;;)
+    {
+        pTmp = pNd->StartOfSectionNode();
+        if (pTmp->EndOfSectionNode() == &rBaseEnd )
+            break;
         pNd = pTmp;
+    }
 
     sal_uLong nSttIdx = pNd->GetIndex(), nEndIdx = pNd->EndOfSectionIndex();
     return nSttIdx <= nStt && nStt <= nEndIdx &&
@@ -789,7 +794,9 @@ bool SwPaM::HasReadonlySel( bool bFormView ) const
                         {
                             break; // after selection
                         }
-                        if (pHint->Which() == RES_TXTATR_FIELD)
+                        if (pHint->Which() == RES_TXTATR_FIELD
+                            // placeholders don't work if you can't delete them
+                            && pHint->GetFormatField().GetField()->GetTyp()->Which() != SwFieldIds::JumpEdit)
                         {
                             return true;
                         }

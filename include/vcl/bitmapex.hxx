@@ -27,10 +27,10 @@
 
 #include <sal/types.h>
 
-namespace com { namespace sun { namespace star { namespace rendering {
+namespace com::sun::star::rendering {
     class XBitmapCanvas;
-} } } }
-namespace com { namespace sun { namespace star { namespace uno { template <class interface_type> class Reference; } } } }
+}
+namespace com::sun::star::uno { template <class interface_type> class Reference; }
 namespace basegfx { class BColorModifierStack; }
 
 enum class TransparentType
@@ -94,11 +94,6 @@ public:
     sal_uInt16          GetBitCount() const { return maBitmap.GetBitCount(); }
     sal_uLong           GetSizeBytes() const;
     BitmapChecksum      GetChecksum() const;
-
-    /**
-     * @brief extract the bitmap and alpha data separately. Used by the SWF filter.
-     */
-    void GetSplitData( std::vector<sal_uInt8>& rvColorData, std::vector<sal_uInt8>& rvAlphaData ) const;
 
     /** Convert bitmap format
 

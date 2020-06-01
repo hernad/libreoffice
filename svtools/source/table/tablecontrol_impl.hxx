@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include <svtools/table/tablemodel.hxx>
+#include <table/tablemodel.hxx>
 #include <table/tablecontrolinterface.hxx>
 
 #include <vcl/svtaccessiblefactory.hxx>
@@ -32,7 +32,7 @@
 class ScrollBar;
 class ScrollBarBox;
 
-namespace svt { namespace table
+namespace svt::table
 {
     struct MutableColumnMetrics : public ColumnMetrics
     {
@@ -472,7 +472,7 @@ namespace svt { namespace table
     };
 
 
-} } // namespace svt::table
+} // namespace svt::table
 
 
 

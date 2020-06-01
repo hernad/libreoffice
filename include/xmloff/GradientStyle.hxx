@@ -20,20 +20,21 @@
 #ifndef INCLUDED_XMLOFF_GRADIENTSTYLE_HXX
 #define INCLUDED_XMLOFF_GRADIENTSTYLE_HXX
 
+#include <config_options.h>
 #include <sal/config.h>
 #include <xmloff/dllapi.h>
 #include <rtl/ustring.hxx>
 
 class SvXMLImport;
 class SvXMLExport;
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace uno { template<class A> class Reference; }
-    namespace xml { namespace sax { class XAttributeList; } }
+    namespace xml::sax { class XAttributeList; }
     namespace uno { class Any; }
-} } }
+}
 
 
-class XMLOFF_DLLPUBLIC XMLGradientStyleImport
+class UNLESS_MERGELIBS(XMLOFF_DLLPUBLIC) XMLGradientStyleImport
 {
     SvXMLImport& rImport;
 
@@ -48,7 +49,7 @@ public:
 };
 
 
-class XMLOFF_DLLPUBLIC XMLGradientStyleExport
+class UNLESS_MERGELIBS(XMLOFF_DLLPUBLIC) XMLGradientStyleExport
 {
     SvXMLExport& rExport;
 

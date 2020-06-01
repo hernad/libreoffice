@@ -51,7 +51,7 @@ bool isDerivedFromTestFixture(const CXXRecordDecl *decl) {
     if (// not sure what hasAnyDependentBases() does,
         // but it avoids classes we don't want, e.g. WeakAggComponentImplHelper1
         !decl->hasAnyDependentBases() &&
-        !decl->forallBases(BaseCheckNotTestFixtureSubclass, true)) {
+        !decl->forallBases(BaseCheckNotTestFixtureSubclass)) {
         return true;
     }
     return false;
@@ -158,6 +158,8 @@ bool StaticMethods::TraverseCXXMethodDecl(const CXXMethodDecl * pCXXMethodDecl) 
         || (fdc.Function("InitializeDde").Class("SfxApplication")
             .GlobalNamespace())
         || (fdc.Function("RemoveDdeTopic").Class("SfxApplication")
+            .GlobalNamespace())
+        || (fdc.Function("UpdateSkiaStatus").Class("OfaViewTabPage")
             .GlobalNamespace())
         || (fdc.Function("ReleaseData").Class("ScannerManager")
             .GlobalNamespace()))

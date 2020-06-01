@@ -28,17 +28,17 @@
 
 #include <HashMaps.hxx>
 
-namespace com { namespace sun { namespace star {
-    namespace xml { namespace sax { class XAttributeList; } }
+namespace com::sun::star {
+    namespace xml::sax { class XAttributeList; }
     namespace beans { struct PropertyValue; }
-} } }
+}
 
 typedef std::unordered_map< OUString, OUString > StringHashMap;
 
 struct ManifestScopeEntry
 {
-    OUString const m_aConvertedName;
-    StringHashMap const m_aNamespaces;
+    OUString        m_aConvertedName;
+    StringHashMap   m_aNamespaces;
     bool            m_bValid;
 
     ManifestScopeEntry( const OUString& aConvertedName, const StringHashMap& aNamespaces )

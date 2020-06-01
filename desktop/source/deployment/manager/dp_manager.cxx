@@ -1380,7 +1380,7 @@ bool PackageManagerImpl::synchronizeAddedExtensions(
                     // shall the license be suppressed?
                     DescriptionInfoset info =
                         dp_misc::getDescriptionInfoset(url);
-                    ::o3tl::optional<dp_misc::SimpleLicenseAttributes>
+                    ::std::optional<dp_misc::SimpleLicenseAttributes>
                           attr = info.getSimpleLicenseAttributes();
                     ExtensionProperties props(url, xCmdEnv, m_xComponentContext);
                     bool bNoLicense = false;
@@ -1446,7 +1446,7 @@ Sequence< Reference<deployment::XPackage> > PackageManagerImpl::getExtensionsWit
             sal_Int32 failedPrereq = dbData.failedPrerequisites.toInt32();
             //If the installation failed for other reason then the license then we
             //ignore it.
-            if (failedPrereq ^= deployment::Prerequisites::LICENSE)
+            if (failedPrereq ^ deployment::Prerequisites::LICENSE)
                 continue;
 
             //Prepare the URL to the extension

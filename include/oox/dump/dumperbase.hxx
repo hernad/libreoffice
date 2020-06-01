@@ -42,20 +42,20 @@
 
 #ifdef DBG_UTIL
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace io { class XInputStream; }
     namespace io { class XOutputStream; }
     namespace io { class XTextOutputStream2; }
     namespace uno { class XComponentContext; }
-} } }
+}
 
 namespace oox {
     class TextInputStream;
 }
 
-namespace oox { namespace core {
+namespace oox::core {
     class FilterBase;
-} }
+}
 
 namespace oox {
 namespace dump {
@@ -138,7 +138,7 @@ class BinaryInputStreamRef : public ::oox::BinaryInputStreamRef
 public:
     BinaryInputStreamRef() {}
 
-    /*implicit*/ BinaryInputStreamRef( BinaryInputStream* pInStrm ) :
+    /*implicit*/ BinaryInputStreamRef( std::shared_ptr<BinaryInputStream> const & pInStrm ) :
                             ::oox::BinaryInputStreamRef( pInStrm ) {}
 
     /*implicit*/ BinaryInputStreamRef( const css::uno::Reference< css::io::XInputStream >& rxInStrm ) :
@@ -447,7 +447,7 @@ public:
     Base & operator =(Base &&) = default;
 
     bool         isValid() const { return implIsValid(); }
-    static bool  isValid( const std::shared_ptr< Base >& rxBase ) { return rxBase.get() && rxBase->isValid(); }
+    static bool  isValid( const std::shared_ptr< Base >& rxBase ) { return rxBase && rxBase->isValid(); }
 
 protected:
                         Base() {}
@@ -798,8 +798,8 @@ private:
     typedef ::std::map< OUString, NameListRef >      NameListMap;
 
     css::uno::Reference< css::uno::XComponentContext > mxContext;
-    StorageRef const    mxRootStrg;
-    OUString const      maSysFileName;
+    StorageRef          mxRootStrg;
+    OUString            maSysFileName;
     ConfigFileSet       maConfigFiles;
     ConfigDataMap       maConfigData;
     NameListMap         maNameLists;
@@ -824,7 +824,7 @@ template< typename ListType >
 void SharedConfigData::readNameList( TextInputStream& rStrm, const OUString& rListName )
 {
     NameListRef xList = createNameList< ListType >( rListName );
-    if( xList.get() )
+    if( xList )
         xList->readConfigBlock( rStrm );
 }
 
@@ -912,7 +912,7 @@ template< typename Type >
 OUString Config::getName( const NameListWrapper& rListWrp, Type nKey ) const
 {
     NameListRef xList = rListWrp.getNameList( *this );
-    return xList.get() ? xList->getName( *this, nKey ) : OOX_DUMP_ERR_NOMAP;
+    return xList ? xList->getName( *this, nKey ) : OOX_DUMP_ERR_NOMAP;
 }
 
 template< typename Type >
@@ -1182,8 +1182,8 @@ private:
 private:
     struct PreferredItem
     {
-        OUString const maName;
-        bool const          mbStorage;
+        OUString     maName;
+        bool                mbStorage;
 
         explicit     PreferredItem( const OUString& rName, bool bStorage ) :
                                 maName( rName ), mbStorage( bStorage ) {}

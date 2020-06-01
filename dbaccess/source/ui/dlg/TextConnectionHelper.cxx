@@ -17,40 +17,17 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <config_java.h>
-
 #include <core_resource.hxx>
 #include "TextConnectionHelper.hxx"
-#include <sqlmessage.hxx>
-#include <dbu_dlg.hxx>
 #include <strings.hrc>
 #include <strings.hxx>
 #include <svl/itemset.hxx>
 #include <svl/stritem.hxx>
 #include <svl/eitem.hxx>
-#include <svl/intitem.hxx>
 #include <dsitems.hxx>
-#include "dbfindex.hxx"
 #include <vcl/svapp.hxx>
 #include <vcl/weld.hxx>
 #include <vcl/mnemonic.hxx>
-#include <svl/cjkoptions.hxx>
-#if HAVE_FEATURE_JAVA
-#include <jvmaccess/virtualmachine.hxx>
-#endif
-#include <connectivity/CommonTools.hxx>
-#include "DriverSettings.hxx"
-#include <dbadmin.hxx>
-#include <comphelper/string.hxx>
-#include <com/sun/star/task/XInteractionHandler.hpp>
-#include <svl/filenotation.hxx>
-#include <unotools/localfilehelper.hxx>
-#include <unotools/ucbhelper.hxx>
-#include <ucbhelper/commandenvironment.hxx>
-#include "finteraction.hxx"
-#include "DBSetupConnectionPages.hxx"
-#include <unotools/pathoptions.hxx>
-#include <vcl/roadmapwizard.hxx>
 
 namespace
 {
@@ -381,7 +358,7 @@ namespace dbaui
         if (nPos == -1)
             return rBox.get_active_text().copy(0);
 
-        if ( !( m_xTextSeparator.get() == &rBox && nPos == (rBox.get_count()-1) ) )
+        if ( m_xTextSeparator.get() != &rBox || nPos != (rBox.get_count()-1) )
             return OUString(
                 static_cast< sal_Unicode >( rList.getToken((nPos*2)+1, nTok ).toInt32() ));
         // somewhat strange ... translates for instance an "32" into " "

@@ -40,6 +40,7 @@
 #include <com/sun/star/linguistic2/XSearchableDictionaryList.hpp>
 #include <com/sun/star/linguistic2/XSpellChecker1.hpp>
 #include <sfx2/app.hxx>
+#include <rtl/ustrbuf.hxx>
 #include <vcl/specialchars.hxx>
 #include <vcl/event.hxx>
 #include <vcl/svapp.hxx>
@@ -349,35 +350,35 @@ void SpellDialog::SpellContinue_Impl(bool bUseSavedSentence, bool bIgnoreCurrent
     //then GetNextSentence() has to be called followed again by MarkNextError()
     //MarkNextError is not initially called if the UndoEdit mode is active
     bool bNextSentence = false;
-    if((!m_xSentenceED->IsUndoEditMode() && m_xSentenceED->MarkNextError( bIgnoreCurrentError, xSpell )) ||
-            ( bNextSentence = GetNextSentence_Impl(bUseSavedSentence, m_xSentenceED->IsUndoEditMode()) && m_xSentenceED->MarkNextError( false, xSpell )))
-    {
-        SpellErrorDescription aSpellErrorDescription;
-        bool bSpellErrorDescription = m_xSentenceED->GetAlternatives(aSpellErrorDescription);
-        if (bSpellErrorDescription)
-        {
-            UpdateBoxes_Impl();
-            weld::Widget* aControls[] =
-            {
-                m_xNotInDictFT.get(),
-                m_xSentenceED->GetDrawingArea(),
-                m_xLanguageFT.get(),
-                nullptr
-            };
-            sal_Int32 nIdx = 0;
-            do
-            {
-                aControls[nIdx]->set_sensitive(true);
-            }
-            while(aControls[++nIdx]);
+    if(!((!m_xSentenceED->IsUndoEditMode() && m_xSentenceED->MarkNextError( bIgnoreCurrentError, xSpell )) ||
+            ( bNextSentence = GetNextSentence_Impl(bUseSavedSentence, m_xSentenceED->IsUndoEditMode()) && m_xSentenceED->MarkNextError( false, xSpell ))))
+        return;
 
-        }
-        if( bNextSentence )
+    SpellErrorDescription aSpellErrorDescription;
+    bool bSpellErrorDescription = m_xSentenceED->GetAlternatives(aSpellErrorDescription);
+    if (bSpellErrorDescription)
+    {
+        UpdateBoxes_Impl();
+        weld::Widget* aControls[] =
         {
-            //remove undo if a new sentence is active
-            m_xSentenceED->ResetUndo();
-            m_xUndoPB->set_sensitive(false);
+            m_xNotInDictFT.get(),
+            m_xSentenceED->GetDrawingArea(),
+            m_xLanguageFT.get(),
+            nullptr
+        };
+        sal_Int32 nIdx = 0;
+        do
+        {
+            aControls[nIdx]->set_sensitive(true);
         }
+        while(aControls[++nIdx]);
+
+    }
+    if( bNextSentence )
+    {
+        //remove undo if a new sentence is active
+        m_xSentenceED->ResetUndo();
+        m_xUndoPB->set_sensitive(false);
     }
 }
 /* Initialize, asynchronous to prevent virtual calls
@@ -898,18 +899,18 @@ void SpellDialog::ToplevelFocusChanged()
     *   The only sensible thing would be to call the new Method differently,
     *   e.g. DialogGot/LostFocus or so.
     */
-    if (m_xDialog->get_visible() && !bFocusLocked)
+    if (!(m_xDialog->get_visible() && !bFocusLocked))
+        return;
+
+    if (m_xDialog->has_toplevel_focus())
     {
-        if (m_xDialog->has_toplevel_focus())
-        {
-            //notify the child window of the focus change
-            rParent.GetFocus();
-        }
-        else
-        {
-            //notify the child window of the focus change
-            rParent.LoseFocus();
-        }
+        //notify the child window of the focus change
+        rParent.GetFocus();
+    }
+    else
+    {
+        //notify the child window of the focus change
+        rParent.LoseFocus();
     }
 }
 
@@ -1111,6 +1112,8 @@ void SentenceEditWindow_Impl::SetDrawingArea(weld::DrawingArea* pDrawingArea)
                pDrawingArea->get_text_height() * 6);
     pDrawingArea->set_size_request(aSize.Width(), aSize.Height());
     WeldEditView::SetDrawingArea(pDrawingArea);
+    // tdf#132288 don't merge equal adjacent attributes
+    m_xEditEngine->DisableAttributeExpanding();
 }
 
 SentenceEditWindow_Impl::~SentenceEditWindow_Impl()
@@ -1119,13 +1122,14 @@ SentenceEditWindow_Impl::~SentenceEditWindow_Impl()
 
 namespace
 {
-    const EECharAttrib* FindCharAttrib(int nStartPosition, int nEndPosition, sal_uInt16 nWhich, std::vector<EECharAttrib>& rAttribList)
+    const EECharAttrib* FindCharAttrib(int nPosition, sal_uInt16 nWhich, std::vector<EECharAttrib>& rAttribList)
     {
-        for (const auto& rTextAtr : rAttribList)
+        for (auto it = rAttribList.rbegin(); it != rAttribList.rend(); ++it)
         {
+            const auto& rTextAtr = *it;
             if (rTextAtr.pAttr->Which() != nWhich)
                 continue;
-            if (rTextAtr.nStart <= nStartPosition && rTextAtr.nEnd >= nEndPosition)
+            if (rTextAtr.nStart <= nPosition && rTextAtr.nEnd >= nPosition)
             {
                 return &rTextAtr;
             }
@@ -1241,8 +1245,8 @@ bool SentenceEditWindow_Impl::KeyInput(const KeyEvent& rKeyEvt)
         m_xEditEngine->GetCharAttribs(0, aAttribList);
 
         auto nCursor = aCurrentSelection.nStartPos;
-        const EECharAttrib* pBackAttr = FindCharAttrib(nCursor, nCursor, EE_CHAR_BKGCOLOR, aAttribList);
-        const EECharAttrib* pErrorAttr = FindCharAttrib(nCursor, nCursor, EE_CHAR_GRABBAG, aAttribList);
+        const EECharAttrib* pBackAttr = FindCharAttrib(nCursor, EE_CHAR_BKGCOLOR, aAttribList);
+        const EECharAttrib* pErrorAttr = FindCharAttrib(nCursor, EE_CHAR_GRABBAG, aAttribList);
         const EECharAttrib* pBackAttrLeft = nullptr;
         const EECharAttrib* pErrorAttrLeft = nullptr;
 
@@ -1268,8 +1272,8 @@ bool SentenceEditWindow_Impl::KeyInput(const KeyEvent& rKeyEvt)
                 while (nCursor < aCurrentSelection.nEndPos)
                 {
                     ++nCursor;
-                    const EECharAttrib* pIntBackAttr = FindCharAttrib(nCursor, nCursor, EE_CHAR_BKGCOLOR, aAttribList);
-                    const EECharAttrib* pIntErrorAttr = FindCharAttrib(nCursor, nCursor, EE_CHAR_GRABBAG, aAttribList);
+                    const EECharAttrib* pIntBackAttr = FindCharAttrib(nCursor, EE_CHAR_BKGCOLOR, aAttribList);
+                    const EECharAttrib* pIntErrorAttr = FindCharAttrib(nCursor, EE_CHAR_GRABBAG, aAttribList);
                     //if any attr has been found then BRACE
                     if (pIntBackAttr || pIntErrorAttr)
                         nSelectionType = BRACE;
@@ -1311,8 +1315,8 @@ bool SentenceEditWindow_Impl::KeyInput(const KeyEvent& rKeyEvt)
             if (nCursor)
             {
                 --nCursor;
-                pBackAttrLeft = FindCharAttrib(nCursor, nCursor, EE_CHAR_BKGCOLOR, aAttribList);
-                pErrorAttrLeft = FindCharAttrib(nCursor, nCursor, EE_CHAR_GRABBAG, aAttribList);
+                pBackAttrLeft = FindCharAttrib(nCursor, EE_CHAR_BKGCOLOR, aAttribList);
+                pErrorAttrLeft = FindCharAttrib(nCursor, EE_CHAR_GRABBAG, aAttribList);
                 bHasFieldLeft = pBackAttrLeft !=nullptr;
                 bHasErrorLeft = pErrorAttrLeft != nullptr;
                 ++nCursor;
@@ -1461,8 +1465,8 @@ bool SentenceEditWindow_Impl::KeyInput(const KeyEvent& rKeyEvt)
         //start position
         if (!IsUndoEditMode() && bIsErrorActive)
         {
-            const EECharAttrib* pFontColor = FindCharAttrib(nCursor, nCursor, EE_CHAR_COLOR, aAttribList);
-            const EECharAttrib* pErrorAttrib = FindCharAttrib(m_nErrorStart, m_nErrorStart, EE_CHAR_GRABBAG, aAttribList);
+            const EECharAttrib* pFontColor = FindCharAttrib(nCursor, EE_CHAR_COLOR, aAttribList);
+            const EECharAttrib* pErrorAttrib = FindCharAttrib(m_nErrorStart, EE_CHAR_GRABBAG, aAttribList);
             if (pFontColor && pErrorAttrib)
             {
                 m_nErrorStart = pFontColor->nStart;
@@ -1665,7 +1669,7 @@ int SentenceEditWindow_Impl::ChangeMarkedWord(const OUString& rNewWord, Language
     auto nDiffLen = rNewWord.getLength() - m_nErrorEnd + m_nErrorStart;
     //Remove spell error attribute
     m_xEditEngine->UndoActionStart(SPELLUNDO_MOVE_ERROREND);
-    const EECharAttrib* pErrorAttrib = FindCharAttrib(m_nErrorStart, m_nErrorStart, EE_CHAR_GRABBAG, aAttribList);
+    const EECharAttrib* pErrorAttrib = FindCharAttrib(m_nErrorStart, EE_CHAR_GRABBAG, aAttribList);
     DBG_ASSERT(pErrorAttrib, "no error attribute found");
     bool bSpellErrorDescription = false;
     SpellErrorDescription aSpellErrorDescription;
@@ -1676,7 +1680,7 @@ int SentenceEditWindow_Impl::ChangeMarkedWord(const OUString& rNewWord, Language
         bSpellErrorDescription = true;
     }
 
-    const EECharAttrib* pBackAttrib = FindCharAttrib(m_nErrorStart, m_nErrorStart, EE_CHAR_BKGCOLOR, aAttribList);
+    const EECharAttrib* pBackAttrib = FindCharAttrib(m_nErrorStart, EE_CHAR_BKGCOLOR, aAttribList);
 
     ESelection aSel(0, m_nErrorStart, 0, m_nErrorEnd);
     m_xEditEngine->QuickInsertText(rNewWord, aSel);
@@ -1691,7 +1695,7 @@ int SentenceEditWindow_Impl::ChangeMarkedWord(const OUString& rNewWord, Language
         //attributes following an error at the start of the text are not moved but expanded from the
         //text engine - this is done to keep full-paragraph-attributes
         //in the current case that handling is not desired
-        const EECharAttrib* pLangAttrib = FindCharAttrib(m_nErrorEnd, m_nErrorEnd, EE_CHAR_LANGUAGE, aAttribList);
+        const EECharAttrib* pLangAttrib = FindCharAttrib(m_nErrorEnd, EE_CHAR_LANGUAGE, aAttribList);
 
         if (pLangAttrib && !pLangAttrib->nStart && pLangAttrib->nEnd == nTextLen)
         {
@@ -1746,7 +1750,7 @@ bool SentenceEditWindow_Impl::GetErrorDescription(SpellErrorDescription& rSpellE
     std::vector<EECharAttrib> aAttribList;
     m_xEditEngine->GetCharAttribs(0, aAttribList);
 
-    if (const EECharAttrib* pEECharAttrib = FindCharAttrib(nPosition, nPosition, EE_CHAR_GRABBAG, aAttribList))
+    if (const EECharAttrib* pEECharAttrib = FindCharAttrib(nPosition, EE_CHAR_GRABBAG, aAttribList))
     {
         ExtractErrorDescription(*pEECharAttrib, rSpellErrorDescription);
         return true;
@@ -1870,7 +1874,7 @@ svx::SpellPortions SentenceEditWindow_Impl::CreateSpellPortions() const
         const EECharAttrib* pError = nullptr;
         while (nCursor < nTextLen)
         {
-            const EECharAttrib* pLang = FindCharAttrib(nCursor, nCursor, EE_CHAR_LANGUAGE, aAttribList);
+            const EECharAttrib* pLang = FindCharAttrib(nCursor, EE_CHAR_LANGUAGE, aAttribList);
             if(pLang && pLang != pLastLang)
             {
                 eLang = static_cast<const SvxLanguageItem*>(pLang->pAttr)->GetLanguage();
@@ -1878,7 +1882,7 @@ svx::SpellPortions SentenceEditWindow_Impl::CreateSpellPortions() const
                 lcl_InsertBreakPosition_Impl(aBreakPositions, pLang->nEnd, eLang);
                 pLastLang = pLang;
             }
-            pError = FindCharAttrib(nCursor, nCursor, EE_CHAR_GRABBAG, aAttribList);
+            pError = FindCharAttrib(nCursor, EE_CHAR_GRABBAG, aAttribList);
             if (pError && pLastError != pError)
             {
                 lcl_InsertBreakPosition_Impl(aBreakPositions, pError->nStart, eLang);

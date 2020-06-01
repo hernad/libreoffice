@@ -48,6 +48,7 @@ namespace formula
             virtual bool isHidden() const override { return false; }
             virtual sal_uInt32 getParameterCount() const override { return 0; }
             virtual sal_uInt32 getVarArgsStart() const override { return 0; }
+            virtual sal_uInt32 getVarArgsLimit() const override { return 0; }
             virtual OUString getParameterName(sal_uInt32 ) const override { return OUString(); }
             virtual OUString getParameterDescription(sal_uInt32 ) const override { return OUString(); }
             virtual bool isParameterOptional(sal_uInt32 ) const override { return false; }
@@ -69,6 +70,11 @@ FormulaHelper::FormulaHelper(const IFunctionManager* _pFunctionManager)
     ,arrayClose(_pFunctionManager->getSingleToken(IFunctionManager::eArrayClose))
 {
     m_pCharClass = m_pSysLocale->GetCharClassPtr();
+}
+
+sal_Int32 FormulaHelper::GetCategoryCount() const
+{
+    return m_pFunctionManager->getCount();
 }
 
 bool FormulaHelper::GetNextFunc( const OUString&  rFormula,
@@ -346,7 +352,9 @@ sal_Int32  FormulaHelper::GetFunctionEnd( const OUString& rStr, sal_Int32 nStart
         nStart++; // Set behind found position
     }
 
-    return nStart;
+    // nStart > nStrLen can happen if there was an unclosed quote; instead of
+    // checking that in every loop iteration check it once here.
+    return std::min(nStart, nStrLen);
 }
 
 

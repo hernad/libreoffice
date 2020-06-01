@@ -33,7 +33,7 @@
 #include <sal/types.h>
 #include <sax/fshelper.hxx>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace beans {
         class XPropertySet;
     }
@@ -60,14 +60,14 @@ namespace com { namespace sun { namespace star {
     namespace frame {
         class XModel;
     }
-}}}
+}
 
 namespace oox {
 namespace core {
     class XmlFilterBase;
 }}
 
-namespace oox { namespace drawingml {
+namespace oox::drawingml {
 
 enum AxesType
 {
@@ -79,9 +79,9 @@ enum AxesType
 };
 
 struct AxisIdPair{
-    AxesType const nAxisType;
-    sal_Int32 const nAxisId;
-    sal_Int32 const nCrossAx;
+    AxesType nAxisType;
+    sal_Int32 nAxisId;
+    sal_Int32 nCrossAx;
 
     AxisIdPair(AxesType nType, sal_Int32 nId, sal_Int32 nAx)
         : nAxisType(nType)
@@ -97,7 +97,7 @@ public:
     typedef ::std::vector< AxisIdPair > AxisVector;
 
 private:
-    sal_Int32 const     mnXmlNamespace;
+    sal_Int32           mnXmlNamespace;
     sal_Int32           mnSeriesCount;
     css::uno::Reference< css::frame::XModel > mxChartModel;
     css::uno::Reference< css::chart::XDiagram > mxDiagram;
@@ -106,7 +106,6 @@ private:
 
     // members filled by InitRangeSegmentationProperties (retrieved from DataProvider)
     bool mbHasCategoryLabels; //if the categories are only automatically generated this will be false
-    bool mbIsCategoryPositionShifted; //if the value axis crosses the category axis between tickmarks this will be true
 
     //css::uno::Reference< css::drawing::XShapes > mxAdditionalShapes;
     css::uno::Reference< css::chart2::data::XDataSequence > mxCategoriesValues;
@@ -175,7 +174,7 @@ private:
     void exportSeriesText(
         const css::uno::Reference< css::chart2::data::XDataSequence >& xValueSeq );
     void exportSeriesCategory(
-        const css::uno::Reference< css::chart2::data::XDataSequence >& xValueSeq );
+        const css::uno::Reference< css::chart2::data::XDataSequence >& xValueSeq, sal_Int32 nValueType = XML_cat );
     void exportSeriesValues(
         const css::uno::Reference< css::chart2::data::XDataSequence >& xValueSeq, sal_Int32 nValueType = XML_val );
     void exportShapeProps( const css::uno::Reference< css::beans::XPropertySet >& xPropSet );
@@ -231,7 +230,7 @@ public:
             css::chart2::XChartDocument > & xChartDoc );
 };
 
-}}
+}
 
 #endif // INCLUDED_OOX_EXPORT_CHARTEXPORT_HXX
 

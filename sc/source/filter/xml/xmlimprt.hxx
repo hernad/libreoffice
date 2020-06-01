@@ -35,11 +35,11 @@
 #include <vector>
 #include <list>
 
-namespace com { namespace sun { namespace star { namespace beans { class XPropertySet; } } } }
-namespace com { namespace sun { namespace star { namespace sheet { class XSheetCellRangeContainer; } } } }
-namespace com { namespace sun { namespace star { namespace table { struct CellRangeAddress; } } } }
-namespace com { namespace sun { namespace star { namespace util { class XNumberFormatTypes; } } } }
-namespace com { namespace sun { namespace star { namespace util { class XNumberFormats; } } } }
+namespace com::sun::star::beans { class XPropertySet; }
+namespace com::sun::star::sheet { class XSheetCellRangeContainer; }
+namespace com::sun::star::table { struct CellRangeAddress; }
+namespace com::sun::star::util { class XNumberFormatTypes; }
+namespace com::sun::star::util { class XNumberFormats; }
 namespace sax_fastparser { class FastAttributeList; }
 
 class ScCompiler;
@@ -51,36 +51,10 @@ class ScDocumentImport;
 class ScMyImpDetectiveOpArray;
 
 namespace sc {
-
 struct ImportPostProcessData;
 struct PivotTableSources;
-
 }
 
-enum ScXMLDocTokens
-{
-    XML_TOK_DOC_FONTDECLS,
-    XML_TOK_DOC_STYLES,
-    XML_TOK_DOC_AUTOSTYLES,
-    XML_TOK_DOC_MASTERSTYLES,
-    XML_TOK_DOC_META,
-    XML_TOK_DOC_SCRIPTS,
-    XML_TOK_DOC_BODY,
-    XML_TOK_DOC_SETTINGS
-};
-
-enum ScXMLContentValidationElemTokens
-{
-    XML_TOK_CONTENT_VALIDATION_ELEM_HELP_MESSAGE,
-    XML_TOK_CONTENT_VALIDATION_ELEM_ERROR_MESSAGE,
-    XML_TOK_CONTENT_VALIDATION_ELEM_ERROR_MACRO,
-    XML_TOK_CONTENT_VALIDATION_ELEM_EVENT_LISTENERS
-};
-
-enum ScXMLContentValidationMessageElemTokens
-{
-    XML_TOK_P
-};
 
 enum ScXMLTableTokens
 {
@@ -186,9 +160,9 @@ typedef ::std::list<std::unique_ptr<ScMyNamedExpression>> ScMyNamedExpressions;
 
 struct ScMyLabelRange
 {
-    OUString const   sLabelRangeStr;
-    OUString const   sDataRangeStr;
-    bool const            bColumnOrientation;
+    OUString   sLabelRangeStr;
+    OUString   sDataRangeStr;
+    bool       bColumnOrientation;
 };
 
 typedef std::list< std::unique_ptr<const ScMyLabelRange> > ScMyLabelRanges;
@@ -243,8 +217,6 @@ class ScXMLImport: public SvXMLImport
     rtl::Reference < XMLPropertySetMapper >       xRowStylesPropertySetMapper;
     rtl::Reference < XMLPropertySetMapper >       xTableStylesPropertySetMapper;
 
-    std::unique_ptr<SvXMLTokenMap>           pContentValidationElemTokenMap;
-    std::unique_ptr<SvXMLTokenMap>           pContentValidationMessageElemTokenMap;
     std::unique_ptr<SvXMLTokenMap>           pTableElemTokenMap;
     std::unique_ptr<SvXMLTokenMap>           pTableRowsElemTokenMap;
     std::unique_ptr<SvXMLTokenMap>           pTableRowElemTokenMap;
@@ -336,8 +308,6 @@ public:
     const rtl::Reference < XMLPropertySetMapper >& GetRowStylesPropertySetMapper() const { return xRowStylesPropertySetMapper; }
     const rtl::Reference < XMLPropertySetMapper >& GetTableStylesPropertySetMapper() const { return xTableStylesPropertySetMapper; }
 
-    const SvXMLTokenMap& GetContentValidationElemTokenMap();
-    const SvXMLTokenMap& GetContentValidationMessageElemTokenMap();
     const SvXMLTokenMap& GetTableElemTokenMap();
     const SvXMLTokenMap& GetTableRowsElemTokenMap();
     const SvXMLTokenMap& GetTableRowElemTokenMap();

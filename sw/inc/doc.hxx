@@ -136,9 +136,7 @@ enum class SvMacroItemId : sal_uInt16;
 enum class SvxFrameDirection;
 enum class RndStdIds;
 
-namespace sw { namespace mark {
-    class MarkManager;
-}}
+namespace sw::mark { class MarkManager; }
 namespace sw {
     enum class RedlineMode;
     class MetaFieldManager;
@@ -163,16 +161,16 @@ namespace sw {
     class DocumentExternalDataManager;
 }
 
-namespace com { namespace sun { namespace star {
-namespace container {
-    class XNameContainer; //< for getXForms()/isXForms()/initXForms() methods
+namespace com::sun::star {
+    namespace container {
+        class XNameContainer; //< for getXForms()/isXForms()/initXForms() methods
+    }
+    namespace embed { class XStorage; }
+    namespace linguistic2 { class XHyphenatedWord; }
+    namespace linguistic2 { class XProofreadingIterator; }
+    namespace linguistic2 { class XSpellChecker1; }
+    namespace script::vba { class XVBAEventProcessor; }
 }
-namespace embed { class XStorage; }
-namespace linguistic2 { class XHyphenatedWord; }
-namespace linguistic2 { class XProofreadingIterator; }
-namespace linguistic2 { class XSpellChecker1; }
-namespace script { namespace vba { class XVBAEventProcessor; } }
-}}}
 
 namespace sfx2 {
     class IXmlIdRegistry;
@@ -303,6 +301,7 @@ private:
     bool mbInWriting : 1; //< TRUE: Document is in the process of being written.
     bool mbInMailMerge           : 1;    //< TRUE: Document is in the process of being written by mail merge.
     bool mbInXMLImport           : 1;    //< TRUE: During xml import, attribute portion building is not necessary.
+    bool mbInWriterfilterImport  : 1;    //< TRUE: writerfilter import (DOCX,RTF)
     bool mbUpdateTOX             : 1;    //< TRUE: After loading document, update TOX.
     bool mbInLoadAsynchron       : 1;    //< TRUE: Document is in the process of being loaded asynchronously.
     bool mbIsAutoFormatRedline   : 1;    //< TRUE: Redlines are recorded by Autoformat.
@@ -680,6 +679,7 @@ public:
     OUString GetUniqueOLEName() const;
     OUString GetUniqueFrameName() const;
     OUString GetUniqueShapeName() const;
+    OUString GetUniqueDrawObjectName() const;
 
     o3tl::sorted_vector<SwRootFrame*> GetAllLayouts();
 
@@ -759,8 +759,7 @@ public:
     SwFrameFormat  *MakeFrameFormat(const OUString &rFormatName, SwFrameFormat *pDerivedFrom,
                           bool bBroadcast = false, bool bAuto = true);
     void       DelFrameFormat( SwFrameFormat *pFormat, bool bBroadcast = false );
-    SwFrameFormat* FindFrameFormatByName( const OUString& rName ) const
-        {   return static_cast<SwFrameFormat*>(FindFormatByName( static_cast<SwFormatsBase&>(*mpFrameFormatTable), rName )); }
+    SwFrameFormat* FindFrameFormatByName( const OUString& rName ) const;
 
     SwCharFormat *MakeCharFormat(const OUString &rFormatName, SwCharFormat *pDerivedFrom,
                            bool bBroadcast = false );
@@ -967,6 +966,8 @@ public:
 
     bool IsInXMLImport() const { return mbInXMLImport; }
     void SetInXMLImport( bool bNew ) { mbInXMLImport = bNew; }
+    bool IsInWriterfilterImport() const { return mbInWriterfilterImport; }
+    void SetInWriterfilterImport(bool const b) { mbInWriterfilterImport = b; }
 
     // Manage types of tables/indices
     sal_uInt16 GetTOXTypeCount( TOXTypes eTyp ) const;
@@ -1481,7 +1482,7 @@ public:
     ///   Call again without bOptimize to ensure equal height in case some row's content didn't fit.
     bool BalanceRowHeight( const SwCursor& rCursor, bool bTstOnly, const bool bOptimize );
     void SetRowBackground( const SwCursor& rCursor, const SvxBrushItem &rNew );
-    static bool GetRowBackground( const SwCursor& rCursor, std::shared_ptr<SvxBrushItem>& rToFill );
+    static bool GetRowBackground( const SwCursor& rCursor, std::unique_ptr<SvxBrushItem>& rToFill );
     void SetTabBorders( const SwCursor& rCursor, const SfxItemSet& rSet );
     void SetTabLineStyle( const SwCursor& rCursor,
                           const Color* pColor, bool bSetLine,
@@ -1498,7 +1499,7 @@ public:
     the values of the same property over any other boxes in the selection; if any value is different from
     that of the first box, the property is unset (and false is returned).
     */
-    static bool GetBoxAttr( const SwCursor& rCursor, std::shared_ptr<SfxPoolItem>& rToFill );
+    static bool GetBoxAttr( const SwCursor& rCursor, std::unique_ptr<SfxPoolItem>& rToFill );
     void SetBoxAlign( const SwCursor& rCursor, sal_uInt16 nAlign );
     static sal_uInt16 GetBoxAlign( const SwCursor& rCursor );
     /// Adjusts selected cell widths in such a way, that their content does not need to be wrapped (if possible).

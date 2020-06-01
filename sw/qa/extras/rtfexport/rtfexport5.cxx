@@ -29,6 +29,7 @@
 #include <com/sun/star/text/XTextViewCursorSupplier.hpp>
 #include <com/sun/star/text/WritingMode2.hpp>
 #include <com/sun/star/graphic/XGraphic.hpp>
+#include <com/sun/star/text/XTextContentAppend.hpp>
 
 #include <rtl/ustring.hxx>
 #include <vcl/svapp.hxx>
@@ -112,8 +113,9 @@ DECLARE_RTFEXPORT_TEST(testFdo64671, "fdo64671.rtf")
     getRun(getParagraph(1), 1, OUString(u"\u017D"));
 }
 
-DECLARE_RTFEXPORT_TEST(testFdo62044, "fdo62044.rtf")
+CPPUNIT_TEST_FIXTURE(Test, testFdo62044)
 {
+    load(mpTestDocumentPath, "fdo62044.rtf");
     // The problem was that RTF import during copy&paste did not ignore existing paragraph styles.
     uno::Reference<text::XTextDocument> xTextDocument(mxComponent, uno::UNO_QUERY);
     uno::Reference<text::XTextRange> xText = xTextDocument->getText();
@@ -211,13 +213,11 @@ CPPUNIT_TEST_FIXTURE(Test, testParaStyleBottomMargin2)
 
 DECLARE_RTFEXPORT_TEST(testFdo66040, "fdo66040.rtf")
 {
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDraws = xDrawPageSupplier->getDrawPage();
     // This was 0 (no shapes were imported), we want two textframes.
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(2), xDraws->getCount());
+    CPPUNIT_ASSERT_EQUAL(2, getShapes());
 
     // The second paragraph of the first shape should be actually a table, with "A" in its A1 cell.
-    uno::Reference<text::XTextRange> xTextRange(xDraws->getByIndex(0), uno::UNO_QUERY);
+    uno::Reference<text::XTextRange> xTextRange(getShape(1), uno::UNO_QUERY);
     uno::Reference<text::XText> xText = xTextRange->getText();
     uno::Reference<text::XTextTable> xTable(getParagraphOrTable(2, xText), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(OUString("A"), uno::Reference<text::XTextRange>(
@@ -225,7 +225,7 @@ DECLARE_RTFEXPORT_TEST(testFdo66040, "fdo66040.rtf")
                                             ->getString());
 
     // Make sure the second shape has the correct position and size.
-    uno::Reference<drawing::XShape> xShape(xDraws->getByIndex(1), uno::UNO_QUERY);
+    uno::Reference<drawing::XShape> xShape(getShape(2), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(14420), getProperty<sal_Int32>(xShape, "HoriOrientPosition"));
     CPPUNIT_ASSERT_EQUAL(sal_Int32(-1032), getProperty<sal_Int32>(xShape, "VertOrientPosition"));
     CPPUNIT_ASSERT_EQUAL(sal_Int32(14000), xShape->getSize().Width);
@@ -260,10 +260,8 @@ DECLARE_RTFEXPORT_TEST(testFdo77996, "fdo77996.rtf")
 
 DECLARE_RTFEXPORT_TEST(testFdo47802, "fdo47802.rtf")
 {
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDraws = xDrawPageSupplier->getDrawPage();
     // Shape inside table was ignored.
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(1), xDraws->getCount());
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
 }
 
 DECLARE_RTFEXPORT_TEST(testFdo39001, "fdo39001.rtf")
@@ -329,10 +327,8 @@ DECLARE_RTFEXPORT_TEST(testFdo68076, "fdo68076.rtf")
 
 DECLARE_RTFEXPORT_TEST(testFdo70221, "fdo70221.rtf")
 {
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDraws = xDrawPageSupplier->getDrawPage();
     // The picture was imported twice.
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(1), xDraws->getCount());
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
 }
 
 DECLARE_RTFEXPORT_TEST(testCp1000018, "cp1000018.rtf")
@@ -351,10 +347,8 @@ DECLARE_RTFEXPORT_TEST(testCp1000018, "cp1000018.rtf")
 
 DECLARE_RTFEXPORT_TEST(testFdo94835, "fdo94835.rtf")
 {
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDraws = xDrawPageSupplier->getDrawPage();
     // The picture was imported twice.
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(19), xDraws->getCount());
+    CPPUNIT_ASSERT_EQUAL(19, getShapes());
 }
 DECLARE_RTFEXPORT_TEST(testNestedTable, "rhbz1065629.rtf")
 {
@@ -768,9 +762,7 @@ DECLARE_RTFEXPORT_TEST(testFdo86750, "fdo86750.rtf")
 DECLARE_RTFEXPORT_TEST(testTdf88811, "tdf88811.rtf")
 {
     // The problem was that shapes anchored to the paragraph that is moved into a textframe were lost, so this was 2.
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<drawing::XDrawPage> xDrawPage = xDrawPageSupplier->getDrawPage();
-    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(4), xDrawPage->getCount());
+    CPPUNIT_ASSERT_EQUAL(4, getShapes());
 }
 
 DECLARE_RTFEXPORT_TEST(testFdo49893_2, "fdo49893-2.rtf")
@@ -815,8 +807,9 @@ DECLARE_RTFEXPORT_TEST(testTdf91074, "tdf91074.rtf")
                          getProperty<table::BorderLine2>(xShape, "TopBorder").Color);
 }
 
-DECLARE_RTFEXPORT_TEST(testTdf90260Nopar, "hello.rtf")
+CPPUNIT_TEST_FIXTURE(Test, testTdf90260Nopar)
 {
+    load(mpTestDocumentPath, "hello.rtf");
     uno::Reference<text::XTextDocument> xTextDocument(mxComponent, uno::UNO_QUERY);
     uno::Reference<text::XTextRange> xText = xTextDocument->getText();
     uno::Reference<text::XTextRange> xEnd = xText->getEnd();
@@ -956,8 +949,9 @@ DECLARE_RTFEXPORT_TEST(testTdf87034, "tdf87034.rtf")
     CPPUNIT_ASSERT_EQUAL(OUString("A1B3C4D"), getParagraph(1)->getString());
 }
 
-DECLARE_RTFEXPORT_TEST(testClassificatonPasteLevels, "classification-confidential.rtf")
+CPPUNIT_TEST_FIXTURE(Test, testClassificatonPasteLevels)
 {
+    load(mpTestDocumentPath, "classification-confidential.rtf");
     uno::Reference<text::XTextDocument> xTextDocument(mxComponent, uno::UNO_QUERY);
     uno::Reference<text::XTextRange> xText = xTextDocument->getText();
     uno::Reference<text::XTextRange> xEnd = xText->getEnd();
@@ -1055,9 +1049,7 @@ DECLARE_RTFEXPORT_TEST(testTdf90697, "tdf90697.rtf")
 DECLARE_RTFEXPORT_TEST(testTdf104317, "tdf104317.rtf")
 {
     // This failed to load, we tried to set CustomShapeGeometry on a line shape.
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<drawing::XDrawPage> xDrawPage = xDrawPageSupplier->getDrawPage();
-    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(1), xDrawPage->getCount());
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
 }
 
 DECLARE_RTFEXPORT_TEST(testTdf104744, "tdf104744.rtf")
@@ -1067,6 +1059,37 @@ DECLARE_RTFEXPORT_TEST(testTdf104744, "tdf104744.rtf")
     comphelper::SequenceAsHashMap aRule(xRules->getByIndex(0));
     // This was 0.
     CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(1270), aRule["IndentAt"].get<sal_Int32>());
+}
+
+CPPUNIT_TEST_FIXTURE(SwModelTestBase, testChicagoNumberingFootnote)
+{
+    // Create a document, set footnote numbering type to SYMBOL_CHICAGO.
+    loadURL("private:factory/swriter", nullptr);
+    uno::Reference<text::XFootnotesSupplier> xFootnotesSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<beans::XPropertySet> xFootnoteSettings
+        = xFootnotesSupplier->getFootnoteSettings();
+    sal_uInt16 nNumberingType = style::NumberingType::SYMBOL_CHICAGO;
+    xFootnoteSettings->setPropertyValue("NumberingType", uno::makeAny(nNumberingType));
+
+    // Insert a footnote.
+    uno::Reference<lang::XMultiServiceFactory> xFactory(mxComponent, uno::UNO_QUERY);
+    uno::Reference<text::XTextContent> xFootnote(
+        xFactory->createInstance("com.sun.star.text.Footnote"), uno::UNO_QUERY);
+    uno::Reference<text::XTextDocument> xTextDocument(mxComponent, uno::UNO_QUERY);
+    uno::Reference<text::XTextContentAppend> xTextContentAppend(xTextDocument->getText(),
+                                                                uno::UNO_QUERY);
+    xTextContentAppend->appendTextContent(xFootnote, {});
+
+    reload("Rich Text Format", "");
+    xFootnotesSupplier.set(mxComponent, uno::UNO_QUERY);
+    sal_uInt16 nExpected = style::NumberingType::SYMBOL_CHICAGO;
+    auto nActual
+        = getProperty<sal_uInt16>(xFootnotesSupplier->getFootnoteSettings(), "NumberingType");
+    // Without the accompanying fix in place, this test would have failed with:
+    // - Expected: 63
+    // - Actual  : 4
+    // i.e. the numbering type was ARABIC, not SYMBOL_CHICAGO.
+    CPPUNIT_ASSERT_EQUAL(nExpected, nActual);
 }
 
 DECLARE_RTFEXPORT_TEST(testTdf105852, "tdf105852.rtf")
@@ -1132,6 +1155,8 @@ DECLARE_RTFEXPORT_TEST(testTdf106950, "tdf106950.rtf")
 
 DECLARE_RTFEXPORT_TEST(testTdf116371, "tdf116371.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     auto xShape(getShape(1));
     // Without the accompanying fix in place, this test would have failed with
     // 'Unknown property: RotateAngle', i.e. export lost the rotation, and then
@@ -1141,6 +1166,8 @@ DECLARE_RTFEXPORT_TEST(testTdf116371, "tdf116371.odt")
 
 DECLARE_RTFEXPORT_TEST(testTdf128320, "tdf128320.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // Shape does exist in RTF output
     auto xShape(getShape(1));
     CPPUNIT_ASSERT(xShape.is());

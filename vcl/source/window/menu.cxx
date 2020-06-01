@@ -30,7 +30,7 @@
 #include <vcl/decoview.hxx>
 #include <vcl/menu.hxx>
 #include <vcl/taskpanelist.hxx>
-#include <vcl/controllayout.hxx>
+#include <vcl/toolkit/controllayout.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/commandinfoprovider.hxx>
 
@@ -49,6 +49,7 @@
 #include <com/sun/star/lang/XComponent.hpp>
 #include <com/sun/star/accessibility/XAccessible.hpp>
 #include <vcl/toolkit/unowrap.hxx>
+#include <rtl/ustrbuf.hxx>
 
 #include <configsettings.hxx>
 
@@ -1487,7 +1488,7 @@ Size Menu::ImplCalcSize( vcl::Window* pWin )
             {
                 nCheckWidth = aMaxSize.Width();
                 // checks / images take the same place
-                if( ! ( ( pData->eType == MenuItemType::IMAGE ) || ( pData->eType == MenuItemType::STRINGIMAGE ) ) )
+                if( ( pData->eType != MenuItemType::IMAGE ) && ( pData->eType != MenuItemType::STRINGIMAGE ) )
                     nWidth += nCheckWidth + nExtra * 2;
             }
 
@@ -1848,7 +1849,7 @@ void Menu::ImplPaint(vcl::RenderContext& rRenderContext, Size const & rSize,
                     // however do not do this if native checks will be painted since
                     // the selection color too often does not fit the theme's check and/or radio
 
-                    if( !((pData->eType == MenuItemType::IMAGE) || (pData->eType == MenuItemType::STRINGIMAGE)))
+                    if( (pData->eType != MenuItemType::IMAGE) && (pData->eType != MenuItemType::STRINGIMAGE))
                     {
                         if (rRenderContext.IsNativeControlSupported(ControlType::MenuPopup,
                                                                     (pData->nBits & MenuItemBits::RADIOCHECK)
@@ -2931,6 +2932,13 @@ sal_uInt16 PopupMenu::ImplExecute( const VclPtr<vcl::Window>& pW, const tools::R
         long nHeightBelow = aDesktopRect.Bottom() - devRect.Bottom();
         nMaxHeight = std::min(nMaxHeight, std::max(nHeightAbove, nHeightBelow));
     }
+
+    // In certain cases this might be misdetected with a height of 0, leading to menus not being displayed.
+    // So assume that the available screen size matches at least the system requirements
+    SAL_WARN_IF(nMaxHeight < 768, "vcl",
+                "Available height misdetected as " << nMaxHeight
+                                                   << "px. Setting to 768px instead.");
+    nMaxHeight = std::max(nMaxHeight, 768l);
 
     if (pStartedFrom && pStartedFrom->IsMenuBar())
         nMaxHeight -= pW->GetSizePixel().Height();

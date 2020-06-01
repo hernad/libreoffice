@@ -22,14 +22,12 @@
 
 #include <drawingml/table/tablerow.hxx>
 #include <drawingml/table/tablestyle.hxx>
-#include <oox/helper/propertymap.hxx>
 #include <oox/drawingml/color.hxx>
 
-#include <map>
 #include <memory>
 #include <vector>
 
-namespace oox { namespace drawingml { namespace table {
+namespace oox::drawingml::table {
 
 class TableProperties
 {
@@ -81,7 +79,7 @@ private:
     bool                                mbBandCol;
 };
 
-} } }
+}
 
 #endif // INCLUDED_OOX_DRAWINGML_TABLE_TABLEPROPERTIES_HXX
 

@@ -32,6 +32,7 @@
 #include "target.hxx"
 #include <shellids.hxx>
 #include <tabprotection.hxx>
+#include <com/sun/star/ui/dialogs/XDialogClosedListener.hpp>
 
 #include <memory>
 #include <map>
@@ -64,9 +65,7 @@ struct ScHeaderFieldData;
 
 namespace editeng { class SvxBorderLine; }
 
-namespace com { namespace sun { namespace star { namespace frame {
-    class XDispatchProviderInterceptor;
-} } } }
+namespace com::sun::star::frame { class XDispatchProviderInterceptor; }
 
 namespace svx {
     class ExtrusionBar;
@@ -180,6 +179,7 @@ private:
     DECL_LINK( SimpleRefAborted, const OUString&, void );
     DECL_LINK( SimpleRefChange, const OUString&, void );
     DECL_LINK( FormControlActivated, LinkParamNone*, void );
+    DECL_LINK( DialogClosedHdl, css::ui::dialogs::DialogClosedEvent*, void );
 
 protected:
     virtual void    Activate(bool bMDI) override;
@@ -327,7 +327,7 @@ public:
 
     static ScTabViewShell* GetActiveViewShell();
 
-    std::unique_ptr<SfxModelessDialogController> CreateRefDialogController(SfxBindings* pB, SfxChildWindow* pCW,
+    std::shared_ptr<SfxModelessDialogController> CreateRefDialogController(SfxBindings* pB, SfxChildWindow* pCW,
                                                     const SfxChildWinInfo* pInfo,
                                                     weld::Window* pParent, sal_uInt16 nSlotId);
 

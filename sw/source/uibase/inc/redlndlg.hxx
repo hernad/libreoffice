@@ -21,7 +21,7 @@
 #include <swdllapi.h>
 #include "chldwrap.hxx"
 #include <redline.hxx>
-#include <svx/sidebar/PanelLayout.hxx>
+#include <sfx2/sidebar/PanelLayout.hxx>
 #include <sfx2/basedlgs.hxx>
 #include <svl/lstner.hxx>
 #include <svx/ctredlin.hxx>
@@ -52,24 +52,23 @@ struct SwRedlineDataParent
 
 class SwRedlineDataParentSortArr : public o3tl::sorted_vector<SwRedlineDataParent*, o3tl::less_ptr_to<SwRedlineDataParent> > {};
 
-typedef std::vector<std::unique_ptr<SwRedlineDataChild>> SwRedlineDataChildArr;
-
 class SW_DLLPUBLIC SwRedlineAcceptDlg final
 {
     std::shared_ptr<weld::Window> m_xParentDlg;
     std::vector<std::unique_ptr<SwRedlineDataParent>> m_RedlineParents;
-    SwRedlineDataChildArr   m_RedlineChildren;
+    std::vector<std::unique_ptr<SwRedlineDataChild>>
+                            m_RedlineChildren;
     SwRedlineDataParentSortArr m_aUsedSeqNo;
     Timer                   m_aSelectTimer;
-    OUString const          m_sInserted;
-    OUString const          m_sDeleted;
-    OUString const          m_sFormated;
-    OUString const          m_sTableChgd;
-    OUString const          m_sFormatCollSet;
+    OUString                m_sInserted;
+    OUString                m_sDeleted;
+    OUString                m_sFormated;
+    OUString                m_sTableChgd;
+    OUString                m_sFormatCollSet;
     OUString                m_sFilterAction;
-    OUString const          m_sAutoFormat;
+    OUString                m_sAutoFormat;
     bool                    m_bOnlyFormatedRedlines;
-    bool const              m_bRedlnAutoFormat;
+    bool                    m_bRedlnAutoFormat;
 
     // prevent update dialog data during longer operations (cf #102657#)
     bool                    m_bInhibitActivate;

@@ -46,7 +46,7 @@ class RtfExport : public MSWordExportBase
     MSWordSections* m_pSections;
 
     std::unique_ptr<RtfSdrExport> m_pSdrExport;
-    bool const m_bOutOutlineOnly;
+    bool m_bOutOutlineOnly;
 
 public:
     /// Access to the attribute output class.
@@ -57,8 +57,6 @@ public:
 
     /// Access to the Rtf Sdr exporter.
     RtfSdrExport& SdrExporter() const;
-
-    bool SupportsOneColumnBreak() const override { return false; }
 
     bool FieldsQuoted() const override { return true; }
 
@@ -226,7 +224,7 @@ private:
     RtfColorTable m_aColTable;
     std::map<sal_uInt16, OString> m_aStyTable;
     std::map<OUString, sal_uInt16> m_aRedlineTable;
-    /// If set, then Strm() returns this tream, instead of m_pWriter's stream.
+    /// If set, then Strm() returns this stream, instead of m_pWriter's stream.
     std::unique_ptr<SvMemoryStream> m_pStream;
     /// Item set of the first page during export of a follow page format.
     const SfxItemSet* m_pFirstPageItemSet = nullptr;

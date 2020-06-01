@@ -18,6 +18,7 @@
  */
 
 #include <cstdlib>
+#include <dtoa.h>
 #include <float.h>
 #include <comphelper/string.hxx>
 #include <sal/log.hxx>
@@ -35,6 +36,8 @@
 #include <svl/zforlist.hxx>
 #include "zforscan.hxx"
 #include <svl/zformat.hxx>
+
+#include <memory>
 
 #include "zforfind.hxx"
 
@@ -151,35 +154,30 @@ static void TransformInput( SvNumberFormatter const * pFormatter, OUString& rStr
  */
 double ImpSvNumberInputScan::StringToDouble( const OUString& rStr, bool bForceFraction )
 {
-    double fNum = 0.0;
-    double fFrac = 0.0;
-    int nExp = 0;
-    sal_Int32 nPos = 0;
-    sal_Int32 nLen = rStr.getLength();
-    bool bPreSep = !bForceFraction;
-
-    while (nPos < nLen)
+    std::unique_ptr<char[]> bufInHeap;
+    constexpr int bufOnStackSize = 256;
+    char bufOnStack[bufOnStackSize];
+    char* buf = bufOnStack;
+    const sal_Int32 bufsize = rStr.getLength() + (bForceFraction ? 2 : 1);
+    if (bufsize > bufOnStackSize)
     {
-        if (rStr[nPos] == '.')
-        {
-            bPreSep = false;
-        }
-        else if (bPreSep)
-        {
-            fNum = fNum * 10.0 + static_cast<double>(rStr[nPos] - '0');
-        }
+        bufInHeap = std::make_unique<char[]>(bufsize);
+        buf = bufInHeap.get();
+    }
+    char* p = buf;
+    if (bForceFraction)
+        *p++ = '.';
+    for (sal_Int32 nPos = 0; nPos < rStr.getLength(); ++nPos)
+    {
+        sal_Unicode c = rStr[nPos];
+        if (c == '.' || (c >= '0' && c <= '9'))
+            *p++ = static_cast<char>(c);
         else
-        {
-            fFrac = fFrac * 10.0 + static_cast<double>(rStr[nPos] - '0');
-            --nExp;
-        }
-        nPos++;
+            break;
     }
-    if ( fFrac )
-    {
-        return fNum + ::rtl::math::pow10Exp( fFrac, nExp );
-    }
-    return fNum;
+    *p = '\0';
+
+    return strtod_nolocale(buf, nullptr);
 }
 
 namespace {
@@ -221,8 +219,11 @@ bool ImpSvNumberInputScan::NextNumberStringSymbol( const sal_Unicode*& pStr,
     const sal_Unicode* pHere = pStr;
     sal_Int32 nChars = 0;
 
-    while ( ((cToken = *pHere) != 0) && eState != SsStop)
+    for (;;)
     {
+        cToken = *pHere;
+        if (cToken == 0 || eState == SsStop)
+            break;
         pHere++;
         switch (eState)
         {
@@ -294,8 +295,11 @@ bool ImpSvNumberInputScan::SkipThousands( const sal_Unicode*& pStr,
     ScanState eState = SsStart;
     sal_Int32 nCounter = 0; // counts 3 digits
 
-    while ( ((cToken = *pHere) != 0) && eState != SsStop)
+    for (;;)
     {
+        cToken = *pHere;
+        if (cToken == 0 || eState == SsStop)
+            break;
         pHere++;
         switch (eState)
         {
@@ -1137,13 +1141,15 @@ bool ImpSvNumberInputScan::CanForceToIso8601( DateOrder eDateOrder )
     switch (eDateOrder)
     {
         case DateOrder::DMY:               // "day" value out of range => ISO 8601 year
-            if ((n = sStrArray[nNums[0]].toInt32()) < 1 || n > 31)
+            n = sStrArray[nNums[0]].toInt32();
+            if (n < 1 || n > 31)
             {
                 nCanForceToIso8601 = 2;
             }
         break;
         case DateOrder::MDY:               // "month" value out of range => ISO 8601 year
-            if ((n = sStrArray[nNums[0]].toInt32()) < 1 || n > 12)
+            n = sStrArray[nNums[0]].toInt32();
+            if (n < 1 || n > 12)
             {
                 nCanForceToIso8601 = 2;
             }
@@ -1428,7 +1434,8 @@ bool ImpSvNumberInputScan::IsAcceptedDatePattern( sal_uInt16 nStartPatternAt )
                                 do
                                 {
                                     ++nPos;
-                                } while ((c = rPat[--nPatCheck]) != 'Y' && c != 'M' && c != 'D');
+                                    c = rPat[--nPatCheck];
+                                } while (c != 'Y' && c != 'M' && c != 'D');
                             }
                     }
                 }

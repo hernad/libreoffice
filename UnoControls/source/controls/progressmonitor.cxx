@@ -25,6 +25,7 @@
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <cppuhelper/typeprovider.hxx>
 #include <cppuhelper/queryinterface.hxx>
+#include <rtl/ustrbuf.hxx>
 #include <tools/debug.hxx>
 #include <algorithm>
 
@@ -37,7 +38,6 @@ using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::awt;
 
 using ::std::vector;
-using ::std::find;
 
 #define FIXEDTEXT_SERVICENAME                   "com.sun.star.awt.UnoControlFixedText"
 #define FIXEDTEXT_MODELNAME                     "com.sun.star.awt.UnoControlFixedTextModel"

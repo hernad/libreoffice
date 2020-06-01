@@ -64,8 +64,11 @@
 #include "GraphicHelpers.hxx"
 #include "GraphicImport.hxx"
 #include "PropertyMap.hxx"
+#include "TagLogger.hxx"
 #include "WrapPolygonHandler.hxx"
 #include "util.hxx"
+
+#include <comphelper/propertysequence.hxx>
 
 using namespace css;
 
@@ -187,7 +190,7 @@ private:
     bool      bYSizeValid;
 
 public:
-    GraphicImportType const eGraphicImportType;
+    GraphicImportType eGraphicImportType;
     DomainMapper&   rDomainMapper;
 
     sal_Int32 nLeftPosition;
@@ -198,6 +201,7 @@ public:
 
     sal_Int16 nHoriOrient;
     sal_Int16 nHoriRelation;
+    bool bPageToggle = false;
     sal_Int16 nVertOrient;
     sal_Int16 nVertRelation;
     text::WrapTextMode nWrap;
@@ -246,10 +250,10 @@ public:
     std::queue<OUString>& m_rPositivePercentages;
     OUString sAnchorId;
     comphelper::SequenceAsHashMap m_aInteropGrabBag;
-    o3tl::optional<sal_Int32> m_oEffectExtentLeft;
-    o3tl::optional<sal_Int32> m_oEffectExtentTop;
-    o3tl::optional<sal_Int32> m_oEffectExtentRight;
-    o3tl::optional<sal_Int32> m_oEffectExtentBottom;
+    std::optional<sal_Int32> m_oEffectExtentLeft;
+    std::optional<sal_Int32> m_oEffectExtentTop;
+    std::optional<sal_Int32> m_oEffectExtentRight;
+    std::optional<sal_Int32> m_oEffectExtentBottom;
 
     GraphicImport_Impl(GraphicImportType eImportType, DomainMapper& rDMapper, std::pair<OUString, OUString>& rPositionOffsets, std::pair<OUString, OUString>& rAligns, std::queue<OUString>& rPositivePercentages) :
         nXSize(0)
@@ -267,7 +271,7 @@ public:
         ,nVertOrient(  text::VertOrientation::NONE )
         ,nVertRelation( text::RelOrientation::FRAME )
         ,nWrap(text::WrapTextMode_NONE)
-        ,bLayoutInCell(false)
+        ,bLayoutInCell(true)
         ,bOpaque( !rDMapper.IsInHeaderFooter() )
         ,bContour(false)
         ,bContourOutside(true)
@@ -291,7 +295,13 @@ public:
         ,m_rPositionOffsets(rPositionOffsets)
         ,m_rAligns(rAligns)
         ,m_rPositivePercentages(rPositivePercentages)
-    {}
+    {
+        if (eGraphicImportType == GraphicImportType::IMPORT_AS_DETECTED_INLINE
+            && !rDMapper.IsInShape())
+        {
+            zOrder = 0;
+        }
+    }
 
     void setXSize(sal_Int32 _nXSize)
     {
@@ -348,8 +358,8 @@ public:
                                                        uno::makeAny(nLeftPosition));
         xGraphicObjectProperties->setPropertyValue(getPropertyName( PROP_HORI_ORIENT_RELATION ),
                 uno::makeAny(nHoriRelation));
-        xGraphicObjectProperties->setPropertyValue(getPropertyName( PROP_PAGE_TOGGLE ),
-                uno::makeAny(false));
+        xGraphicObjectProperties->setPropertyValue(getPropertyName(PROP_PAGE_TOGGLE),
+                                                   uno::makeAny(bPageToggle));
         if (!bRelativeOnly)
             xGraphicObjectProperties->setPropertyValue(getPropertyName( PROP_VERT_ORIENT_POSITION),
                                                        uno::makeAny(nTopPosition));
@@ -362,7 +372,8 @@ public:
         if (zOrder >= 0)
         {
             GraphicZOrderHelper* pZOrderHelper = rDomainMapper.graphicZOrderHelper();
-            xGraphicObjectProperties->setPropertyValue(getPropertyName(PROP_Z_ORDER), uno::makeAny(pZOrderHelper->findZOrder(zOrder)));
+            bool bOldStyle = eGraphicImportType == GraphicImportType::IMPORT_AS_DETECTED_INLINE;
+            xGraphicObjectProperties->setPropertyValue(getPropertyName(PROP_Z_ORDER), uno::makeAny(pZOrderHelper->findZOrder(zOrder, bOldStyle)));
             pZOrderHelper->addItem(xGraphicObjectProperties, zOrder);
         }
     }
@@ -499,7 +510,7 @@ void GraphicImport::lcl_attribute(Id nName, Value& rValue)
         case NS_ooxml::LN_blip: //the binary graphic data in a shape
             {
             writerfilter::Reference<Properties>::Pointer_t pProperties = rValue.getProperties();
-            if( pProperties.get())
+            if( pProperties )
             {
                 pProperties->resolve(*this);
             }
@@ -508,7 +519,7 @@ void GraphicImport::lcl_attribute(Id nName, Value& rValue)
         case NS_ooxml::LN_payload :
         {
             writerfilter::Reference<BinaryObj>::Pointer_t pPictureData = rValue.getBinary();
-            if( pPictureData.get())
+            if( pPictureData )
                 pPictureData->resolve(*this);
         }
         break;
@@ -652,7 +663,6 @@ void GraphicImport::lcl_attribute(Id nName, Value& rValue)
             {
                 uno::Reference< drawing::XShape> xShape;
                 rValue.getAny( ) >>= xShape;
-
                 if ( xShape.is( ) )
                 {
                     // Is it a graphic image
@@ -837,7 +847,12 @@ void GraphicImport::lcl_attribute(Id nName, Value& rValue)
                             eAnchorType = text::TextContentAnchorType_AT_CHARACTER;
 
                         xShapeProps->setPropertyValue("AnchorType", uno::makeAny(eAnchorType));
-
+                        if (m_pImpl->bLayoutInCell && bTextBox && m_pImpl->rDomainMapper.IsInTable()
+                            && m_pImpl->nHoriRelation == text::RelOrientation::PAGE_FRAME)
+                            m_pImpl->nHoriRelation = text::RelOrientation::FRAME;
+                        if(m_pImpl->rDomainMapper.IsInTable())
+                            xShapeProps->setPropertyValue(getPropertyName(PROP_FOLLOW_TEXT_FLOW),
+                                uno::makeAny(m_pImpl->bLayoutInCell));
                         //only the position orientation is handled in applyPosition()
                         m_pImpl->applyPosition(xShapeProps);
 
@@ -874,13 +889,6 @@ void GraphicImport::lcl_attribute(Id nName, Value& rValue)
                                 xShapeProps->setPropertyValue("RotateAngle", uno::makeAny(nRotation));
                         }
 
-                        //tdf#109411 If anchored object is in table, Word calculates its position from cell border
-                        //instead of page (what is set in the sample document)
-                        if (m_pImpl->rDomainMapper.IsInTable() && m_pImpl->bLayoutInCell &&
-                            m_pImpl->nHoriRelation == text::RelOrientation::PAGE_FRAME && IsGraphic())
-                        {
-                            m_pImpl->nHoriRelation = text::RelOrientation::FRAME;
-                        }
 
                         m_pImpl->applyRelativePosition(xShapeProps, /*bRelativeOnly=*/true);
 
@@ -901,6 +909,8 @@ void GraphicImport::lcl_attribute(Id nName, Value& rValue)
                     else if (bUseShape && m_pImpl->eGraphicImportType == IMPORT_AS_DETECTED_INLINE)
                     {
                         uno::Reference< beans::XPropertySet > xShapeProps(m_xShape, uno::UNO_QUERY_THROW);
+                        m_pImpl->applyMargins(xShapeProps);
+                        m_pImpl->applyZOrder(xShapeProps);
                         comphelper::SequenceAsHashMap aInteropGrabBag(xShapeProps->getPropertyValue("InteropGrabBag"));
                         aInteropGrabBag.update(m_pImpl->getInteropGrabBag());
                         xShapeProps->setPropertyValue("InteropGrabBag", uno::makeAny(aInteropGrabBag.getAsConstPropertyValueList()));
@@ -1025,7 +1035,6 @@ void GraphicImport::ProcessShapeOptions(Value const & rValue)
 void GraphicImport::lcl_sprm(Sprm& rSprm)
 {
     sal_uInt32 nSprmId = rSprm.getId();
-    Value::Pointer_t pValue = rSprm.getValue();
 
     switch(nSprmId)
     {
@@ -1058,7 +1067,7 @@ void GraphicImport::lcl_sprm(Sprm& rSprm)
         case NS_ooxml::LN_hlinkClick_hlinkClick:
         {
             writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-            if( pProperties.get())
+            if( pProperties )
             {
                 pProperties->resolve(*this);
             }
@@ -1088,12 +1097,13 @@ void GraphicImport::lcl_sprm(Sprm& rSprm)
             // Use a special handler for the positioning
             auto pHandler = std::make_shared<PositionHandler>( m_pImpl->m_rPositionOffsets, m_pImpl->m_rAligns );
             writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-            if( pProperties.get( ) )
+            if( pProperties )
             {
                 pProperties->resolve( *pHandler );
                 if( !m_pImpl->bUseSimplePos )
                 {
                     m_pImpl->nHoriRelation = pHandler->relation();
+                    m_pImpl->bPageToggle = pHandler->GetPageToggle();
                     m_pImpl->nHoriOrient = pHandler->orientation();
                     m_pImpl->nLeftPosition = pHandler->position();
 
@@ -1115,7 +1125,7 @@ void GraphicImport::lcl_sprm(Sprm& rSprm)
             // Use a special handler for the positioning
             auto pHandler = std::make_shared<PositionHandler>( m_pImpl->m_rPositionOffsets, m_pImpl->m_rAligns);
             writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-            if( pProperties.get( ) )
+            if( pProperties )
             {
                 pProperties->resolve( *pHandler );
                 if( !m_pImpl->bUseSimplePos )
@@ -1185,14 +1195,14 @@ void GraphicImport::lcl_sprm(Sprm& rSprm)
                 m_pImpl->bIsGraphic = true;
 
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                if( pProperties.get())
+                if( pProperties )
                     pProperties->resolve(*this);
             }
         break;
         case NS_ooxml::LN_CT_NonVisualDrawingProps_a_hlinkClick: // 90689;
             {
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                if( pProperties.get( ) )
+                if( pProperties )
                     pProperties->resolve( *this );
             }
         break;
@@ -1347,9 +1357,9 @@ uno::Reference<text::XTextContent> GraphicImport::createGraphicObject(uno::Refer
                 }
                 xGraphicObjectProperties->setPropertyValue(getPropertyName( PROP_SURROUND ),
                     uno::makeAny(static_cast<sal_Int32>(m_pImpl->nWrap)));
-                if( m_pImpl->rDomainMapper.IsInTable() && m_pImpl->bLayoutInCell )
+                if( m_pImpl->rDomainMapper.IsInTable())
                     xGraphicObjectProperties->setPropertyValue(getPropertyName( PROP_FOLLOW_TEXT_FLOW ),
-                        uno::makeAny(true));
+                        uno::makeAny(m_pImpl->bLayoutInCell));
 
                 xGraphicObjectProperties->setPropertyValue(getPropertyName( PROP_SURROUND_CONTOUR ),
                     uno::makeAny(m_pImpl->bContour));
@@ -1394,6 +1404,17 @@ uno::Reference<text::XTextContent> GraphicImport::createGraphicObject(uno::Refer
                         pCorrected = m_pImpl->mpWrapPolygon->correctWordWrapPolygonPixel(aGraphicSize);
                     }
                 }
+
+                text::GraphicCrop aGraphicCrop;
+                xShapeProps->getPropertyValue("GraphicCrop") >>= aGraphicCrop;
+                if (aGraphicCrop.Top != 0 || aGraphicCrop.Bottom != 0 || aGraphicCrop.Left != 0
+                    || aGraphicCrop.Right != 0)
+                {
+                    // Word's wrap polygon deals with a canvas which has the size of the already
+                    // cropped graphic, correct our polygon to have the same render result.
+                    pCorrected = pCorrected->correctCrop(aGraphicSize, aGraphicCrop);
+                }
+
                 if (pCorrected)
                 {
                     aContourPolyPolygon <<= pCorrected->getPointSequenceSequence();

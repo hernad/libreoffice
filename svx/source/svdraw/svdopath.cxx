@@ -19,26 +19,19 @@
 
 #include <tools/bigint.hxx>
 #include <tools/helpers.hxx>
+#include <rtl/ustrbuf.hxx>
 #include <svx/svdopath.hxx>
 #include <math.h>
-#include <svx/xpool.hxx>
 #include <svx/xpoly.hxx>
 #include <svx/svdtrans.hxx>
-#include <svx/svdetc.hxx>
 #include <svx/svddrag.hxx>
 #include <svx/svdmodel.hxx>
-#include <svx/svdpage.hxx>
 #include <svx/svdhdl.hxx>
 #include <svx/svdview.hxx>
 #include <svx/dialmgr.hxx>
 #include <svx/strings.hrc>
 
-#include <svx/xlnwtit.hxx>
-#include <svx/xlnclit.hxx>
-#include <svx/xflclit.hxx>
-#include <svx/svdogrp.hxx>
 #include <svx/polypolygoneditor.hxx>
-#include <svx/xlntrit.hxx>
 #include <sdr/contact/viewcontactofsdrpathobj.hxx>
 #include <basegfx/matrix/b2dhommatrix.hxx>
 #include <basegfx/point/b2dpoint.hxx>
@@ -46,10 +39,10 @@
 #include <basegfx/range/b2drange.hxx>
 #include <basegfx/curve/b2dcubicbezier.hxx>
 #include <basegfx/polygon/b2dpolygontools.hxx>
-#include <svx/sdr/attribute/sdrtextattribute.hxx>
-#include <svx/sdr/primitive2d/sdrattributecreator.hxx>
+#include <sdr/attribute/sdrtextattribute.hxx>
+#include <sdr/primitive2d/sdrattributecreator.hxx>
 #include <basegfx/matrix/b2dhommatrixtools.hxx>
-#include <svx/sdr/attribute/sdrformtextattribute.hxx>
+#include <sdr/attribute/sdrformtextattribute.hxx>
 #include <vcl/ptrstyle.hxx>
 #include <memory>
 #include <sal/log.hxx>
@@ -103,7 +96,7 @@ struct ImpSdrPathDragData  : public SdrDragStatUserData
     sal_uInt16                  nNextNextPnt0;
     bool                        bEliminate;     // delete point? (is set by MovDrag)
 
-    bool const                  mbMultiPointDrag;
+    bool                        mbMultiPointDrag;
     const XPolyPolygon          maOrig;
     XPolyPolygon                maMove;
     std::vector<SdrHdl*>        maHandles;
@@ -503,7 +496,7 @@ class ImpPathForDragAndCreate
 {
     SdrPathObj&                 mrSdrPathObject;
     XPolyPolygon                aPathPolygon;
-    SdrObjKind const            meObjectKind;
+    SdrObjKind                  meObjectKind;
     std::unique_ptr<ImpSdrPathDragData>
                                 mpSdrPathDragData;
     bool                        mbCreating;
@@ -1682,8 +1675,7 @@ void SdrPathObj::ImpForceLineAngle()
     aGeo.RecalcTan();
 
     // for SdrTextObj, keep aRect up to date
-    maRect = tools::Rectangle(aPoint0, aPoint1);
-    maRect.Justify();
+    maRect = tools::Rectangle::Justify(aPoint0, aPoint1);
 }
 
 void SdrPathObj::ImpForceKind()

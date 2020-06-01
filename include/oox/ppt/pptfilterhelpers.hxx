@@ -26,11 +26,11 @@
 #include <rtl/ustring.hxx>
 #include <com/sun/star/uno/Any.hxx>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace animations { class XAnimationNode; }
-} } }
+}
 
-namespace oox { namespace ppt {
+namespace oox::ppt {
 
     // conversion of MS to OOo attributes.
     enum class AnimationAttributeEnum
@@ -43,7 +43,7 @@ namespace oox { namespace ppt {
 
     struct ImplAttributeNameConversion
     {
-        AnimationAttributeEnum const meAttribute;
+        AnimationAttributeEnum meAttribute;
         const char* mpMSName;
         const char* mpAPIName;
     };
@@ -53,9 +53,9 @@ namespace oox { namespace ppt {
     struct OOX_DLLPUBLIC transition
     {
         const char* mpName;
-        sal_Int16 const mnType;
-        sal_Int16 const mnSubType;
-        bool const mbDirection; // true: default geometric direction
+        sal_Int16 mnType;
+        sal_Int16 mnSubType;
+        bool mbDirection; // true: default geometric direction
 
         static const transition* getList();
         static const transition* find( const OUString& rName );
@@ -63,7 +63,7 @@ namespace oox { namespace ppt {
 
     struct OOX_DLLPUBLIC convert_subtype
     {
-        sal_Int32 const mnID;
+        sal_Int32   mnID;
         const char* mpStrSubType;
 
         static const convert_subtype* getList();
@@ -92,7 +92,7 @@ namespace oox { namespace ppt {
      * i.e. convert occurrence of #{0,1}ppt_[xywh] to x,y, width, height.
      */
     OOX_DLLPUBLIC bool convertMeasure(OUString& rString);
-} }
+}
 
 #endif
 

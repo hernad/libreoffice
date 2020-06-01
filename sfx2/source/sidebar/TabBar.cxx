@@ -18,11 +18,11 @@
  */
 
 #include <sfx2/sidebar/TabBar.hxx>
-#include <sfx2/sidebar/ControlFactory.hxx>
-#include <sfx2/sidebar/DeckDescriptor.hxx>
-#include <sfx2/sidebar/Paint.hxx>
+#include <sidebar/ControlFactory.hxx>
+#include <sidebar/DeckDescriptor.hxx>
+#include <sidebar/Paint.hxx>
 #include <sfx2/sidebar/Theme.hxx>
-#include <sfx2/sidebar/Tools.hxx>
+#include <sidebar/Tools.hxx>
 #include <sfx2/sidebar/FocusManager.hxx>
 #include <sfx2/sidebar/SidebarController.hxx>
 #include <sfx2/strings.hrc>
@@ -31,6 +31,7 @@
 
 #include <comphelper/processfactory.hxx>
 #include <o3tl/safeint.hxx>
+#include <vcl/button.hxx>
 #include <vcl/commandevent.hxx>
 #include <vcl/event.hxx>
 #include <vcl/image.hxx>

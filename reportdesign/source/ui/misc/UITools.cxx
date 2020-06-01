@@ -41,8 +41,6 @@
 #include <svx/svdpool.hxx>
 
 #include <editeng/charscaleitem.hxx>
-#include <svx/algitem.hxx>
-#include <svx/svdpagv.hxx>
 #include <editeng/brushitem.hxx>
 #include <editeng/fontitem.hxx>
 #include <editeng/emphasismarkitem.hxx>
@@ -72,14 +70,12 @@
 #include <svx/xgrscit.hxx>
 #include <svx/svditer.hxx>
 #include <svx/xtable.hxx>
-#include <svx/dialogs.hrc>
 #include <svx/svdview.hxx>
 #include <svx/svdpage.hxx>
 #include <svx/svxdlg.hxx>
-#include <svx/unomid.hxx>
 #include <svx/unoprov.hxx>
+#include <svx/svxids.hrc>
 
-#include <unotools/pathoptions.hxx>
 #include <unotools/charclass.hxx>
 #include <svtools/ctrltool.hxx>
 #include <svl/itempool.hxx>
@@ -90,17 +86,14 @@
 #include <comphelper/namedvaluecollection.hxx>
 
 #include <connectivity/dbexception.hxx>
-#include <connectivity/dbconversion.hxx>
 #include <connectivity/dbtools.hxx>
 
-#include <com/sun/star/awt/TextAlign.hpp>
 #include <com/sun/star/style/VerticalAlignment.hpp>
 #include <com/sun/star/report/XShape.hpp>
 #include <com/sun/star/sdb/XParametersSupplier.hpp>
 #include <com/sun/star/sdb/SQLContext.hpp>
 #include <i18nlangtag/languagetag.hxx>
 #include <dlgpage.hxx>
-#include <rptui_slotid.hrc>
 #include <strings.hxx>
 #include <core_resource.hxx>
 #include <RptObject.hxx>
@@ -546,8 +539,8 @@ namespace
             lcl_pushBack( _out_rProperties, PROPERTY_CHARCASEMAP, uno::makeAny( pFontItem->GetEnumValue() ) );
         }
         struct Items {
-                sal_uInt16 const nWhich;
-                OUString const sPropertyName;
+                sal_uInt16 nWhich;
+                OUString sPropertyName;
         };
         const Items pItems[] = { {ITEMID_LANGUAGE,OUString(PROPERTY_CHARLOCALE)}
                                 ,{ITEMID_LANGUAGE_ASIAN,OUString(PROPERTY_CHARLOCALEASIAN)}
@@ -903,10 +896,12 @@ SdrObject* isOver(const tools::Rectangle& _rRect, SdrPage const & _rPage, SdrVie
 {
     SdrObject* pOverlappedObj = nullptr;
     SdrObjListIter aIter(&_rPage,SdrIterMode::DeepNoGroups);
-    SdrObject* pObjIter = nullptr;
 
-    while( !pOverlappedObj && (pObjIter = aIter.Next()) != nullptr )
+    while( !pOverlappedObj )
     {
+        SdrObject* pObjIter = aIter.Next();
+        if( !pObjIter )
+            break;
         if ( _pIgnore != pObjIter
             && (_bAllObjects || !_rView.IsObjMarked(pObjIter))
             && (dynamic_cast<OUnoObject*>(pObjIter) != nullptr || dynamic_cast<OOle2Obj*>(pObjIter) != nullptr))
@@ -944,10 +939,12 @@ SdrObject* isOver(const tools::Rectangle& _rRect,SdrPage const & _rPage,SdrView 
 {
     SdrObject* pOverlappedObj = nullptr;
     SdrObjListIter aIter(&_rPage,SdrIterMode::DeepNoGroups);
-    SdrObject* pObjIter = nullptr;
 
-    while( !pOverlappedObj && (pObjIter = aIter.Next()) != nullptr )
+    while( !pOverlappedObj )
     {
+        SdrObject* pObjIter = aIter.Next();
+        if( !pObjIter )
+            break;
         if (checkArrayForOccurrence(pObjIter, _pIgnoreList, _nIgnoreListLength))
         {
             continue;

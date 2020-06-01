@@ -20,6 +20,7 @@
 #include <com/sun/star/form/FormSubmitEncoding.hpp>
 #include <com/sun/star/form/FormSubmitMethod.hpp>
 #include <com/sun/star/form/FormButtonType.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/script/XEventAttacherManager.hpp>
 #include <com/sun/star/drawing/XDrawPageSupplier.hpp>
 #include <com/sun/star/form/XFormsSupplier.hpp>
@@ -29,6 +30,7 @@
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <hintids.hxx>
 #include <o3tl/any.hxx>
+#include <rtl/math.hxx>
 #include <vcl/svapp.hxx>
 #include <svl/macitem.hxx>
 #include <svtools/htmlout.hxx>
@@ -56,6 +58,7 @@
 #include "htmlfly.hxx"
 #include "htmlform.hxx"
 #include <frmfmt.hxx>
+#include <frameformats.hxx>
 #include <memory>
 
 using namespace ::com::sun::star;
@@ -103,8 +106,7 @@ static void lcl_html_outEvents( SvStream& rStrm,
         }
         else if( auto x2 = o3tl::tryAccess<uno::Reference<form::XForm>>(aTmp) )
         {
-            uno::Reference< form::XFormComponent > xFC( *x2, uno::UNO_QUERY );
-            if( rFormComp == xFC )
+            if( rFormComp == *x2 )
                 break;
         }
         else

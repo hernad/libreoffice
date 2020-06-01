@@ -20,16 +20,15 @@
 #include "xmlDatabase.hxx"
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
-#include <xmloff/xmlnmspe.hxx>
 #include <xmloff/ProgressBarHelper.hxx>
 #include "xmlDataSource.hxx"
 #include "xmlDocuments.hxx"
 #include "xmlEnums.hxx"
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/sdb/XReportDocumentsSupplier.hpp>
 #include <com/sun/star/sdb/XFormDocumentsSupplier.hpp>
 #include <com/sun/star/sdbcx/XTablesSupplier.hpp>
 #include <com/sun/star/sdb/XQueryDefinitionsSupplier.hpp>
-#include <stringconstants.hxx>
 #include <strings.hxx>
 #include <connectivity/dbtools.hxx>
 

@@ -121,8 +121,8 @@ class SwNumberPortion : public SwFieldPortion
 {
 protected:
     sal_uInt16  nFixWidth;      // See Glues
-    sal_uInt16 const  nMinDist;       // Minimal distance to the text
-    bool const    mbLabelAlignmentPosAndSpaceModeActive;
+    sal_uInt16  nMinDist;       // Minimal distance to the text
+    bool    mbLabelAlignmentPosAndSpaceModeActive;
 
 public:
     SwNumberPortion( const OUString &rExpand,
@@ -211,9 +211,7 @@ public:
     virtual sal_uInt16 GetViewWidth( const SwTextSizeInfo &rInf ) const override;
 };
 
-namespace sw { namespace mark {
-    class IFieldmark;
-} }
+namespace sw::mark { class IFieldmark; }
 
 class SwFieldFormDropDownPortion : public SwFieldPortion
 {

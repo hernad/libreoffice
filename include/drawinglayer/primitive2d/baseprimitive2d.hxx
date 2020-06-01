@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_DRAWINGLAYER_PRIMITIVE2D_BASEPRIMITIVE2D_HXX
-#define INCLUDED_DRAWINGLAYER_PRIMITIVE2D_BASEPRIMITIVE2D_HXX
+#pragma once
 
 #include <drawinglayer/drawinglayerdllapi.h>
 
@@ -29,13 +28,11 @@
 #include <cppuhelper/basemutex.hxx>
 #include <basegfx/range/b2drange.hxx>
 
-/** defines for DeclPrimitive2DIDBlock and ImplPrimitive2DIDBlock
+/** defines ImplPrimitive2DIDBlock
     Added to be able to simply change identification stuff later, e.g. add
     an identification string and/or ID to the interface and to the implementation
     ATM used to delclare implement getPrimitive2DID()
 */
-
-#define DeclPrimitive2DIDBlock() virtual sal_uInt32 getPrimitive2DID() const override;
 
 #define ImplPrimitive2DIDBlock(TheClass, TheID)                                                    \
     sal_uInt32 TheClass::getPrimitive2DID() const { return TheID; }
@@ -148,7 +145,6 @@ public:
 
     /** provide unique ID for fast identifying of known primitive implementations in renderers. These use
         the defines from drawinglayer_primitivetypes2d.hxx to define unique IDs.
-        This method is normally defined using DeclPrimitive2DIDBlock()
      */
     virtual sal_uInt32 getPrimitive2DID() const = 0;
 
@@ -245,7 +241,5 @@ public:
 };
 
 } // end of namespace drawinglayer::primitive2d
-
-#endif //INCLUDED_DRAWINGLAYER_PRIMITIVE2D_BASEPRIMITIVE2D_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

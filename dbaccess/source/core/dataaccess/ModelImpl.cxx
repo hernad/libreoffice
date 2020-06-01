@@ -17,12 +17,10 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include "commandcontainer.hxx"
-#include "connection.hxx"
 #include <databasecontext.hxx>
 #include "databasedocument.hxx"
 #include "datasource.hxx"
-#include <stringconstants.hxx>
+#include <definitioncontainer.hxx>
 #include <ModelImpl.hxx>
 #include <sdbcoretools.hxx>
 
@@ -32,33 +30,37 @@
 #include <com/sun/star/embed/XTransactedObject.hpp>
 #include <com/sun/star/embed/XTransactionBroadcaster.hpp>
 #include <com/sun/star/embed/StorageFactory.hpp>
-#include <com/sun/star/form/XLoadable.hpp>
 #include <com/sun/star/frame/theGlobalEventBroadcaster.hpp>
+#include <com/sun/star/io/IOException.hpp>
 #include <com/sun/star/lang/WrappedTargetRuntimeException.hpp>
 #include <com/sun/star/sdb/BooleanComparisonMode.hpp>
 #include <com/sun/star/script/DocumentScriptLibraryContainer.hpp>
 #include <com/sun/star/script/DocumentDialogLibraryContainer.hpp>
 #include <com/sun/star/util/NumberFormatsSupplier.hpp>
+#include <com/sun/star/security/DocumentDigitalSignatures.hpp>
+#include <com/sun/star/security/XDocumentDigitalSignatures.hpp>
+#include <com/sun/star/task/DocumentMacroConfirmationRequest.hpp>
 
-#include <connectivity/dbexception.hxx>
 #include <cppuhelper/exc_hlp.hxx>
 #include <cppuhelper/implbase.hxx>
-#include <cppuhelper/typeprovider.hxx>
+#include <comphelper/documentinfo.hxx>
+#include <comphelper/storagehelper.hxx>
 #include <comphelper/types.hxx>
-#include <rtl/digest.h>
+#include <comphelper/processfactory.hxx>
+#include <sfx2/docfile.hxx>
 #include <sfx2/signaturestate.hxx>
-#include <tools/debug.hxx>
 #include <tools/diagnose_ex.h>
+#include <osl/file.hxx>
 #include <osl/diagnose.h>
 #include <sal/log.hxx>
-#include <vcl/errcode.hxx>
 #include <tools/urlobj.hxx>
-#include <unotools/sharedunocomponent.hxx>
 #include <unotools/configmgr.hxx>
+#include <unotools/tempfile.hxx>
 #include <i18nlangtag/languagetag.hxx>
 
 #include <algorithm>
 
+using namespace css;
 using namespace ::com::sun::star::document;
 using namespace ::com::sun::star::sdbc;
 using namespace ::com::sun::star::sdbcx;
@@ -77,7 +79,6 @@ using namespace ::com::sun::star::task;
 using namespace ::com::sun::star::script;
 using namespace ::cppu;
 using namespace ::osl;
-using namespace ::dbtools;
 using namespace ::comphelper;
 
 namespace dbaccess
@@ -288,11 +289,11 @@ Sequence< OUString > SAL_CALL DocumentStorageAccess::getDocumentSubStoragesNames
 
     std::vector< OUString > aNames;
 
-    Sequence< OUString > aElementNames( xRootStor->getElementNames() );
-    for ( sal_Int32 i=0; i<aElementNames.getLength(); ++i )
+    const Sequence< OUString > aElementNames( xRootStor->getElementNames() );
+    for ( OUString const & name : aElementNames )
     {
-        if ( xRootStor->isStorageElement( aElementNames[i] ) )
-            aNames.push_back( aElementNames[i] );
+        if ( xRootStor->isStorageElement( name ) )
+            aNames.push_back( name );
     }
     return aNames.empty()
         ?  Sequence< OUString >()
@@ -311,19 +312,19 @@ void SAL_CALL DocumentStorageAccess::commited( const css::lang::EventObject& aEv
     if ( m_pModelImplementation )
         m_pModelImplementation->setModified( true );
 
-    if ( m_pModelImplementation && m_bPropagateCommitToRoot )
-    {
-        Reference< XStorage > xStorage( aEvent.Source, UNO_QUERY );
+    if ( !(m_pModelImplementation && m_bPropagateCommitToRoot) )
+        return;
 
-        // check if this is the dedicated "database" sub storage
-        NamedStorages::const_iterator pos = m_aExposedStorages.find( "database" );
-        if  (   ( pos != m_aExposedStorages.end() )
-            &&  ( pos->second == xStorage )
-            )
-        {
-            // if so, also commit the root storage
-            m_pModelImplementation->commitRootStorage();
-        }
+    Reference< XStorage > xStorage( aEvent.Source, UNO_QUERY );
+
+    // check if this is the dedicated "database" sub storage
+    NamedStorages::const_iterator pos = m_aExposedStorages.find( "database" );
+    if  (   ( pos != m_aExposedStorages.end() )
+        &&  ( pos->second == xStorage )
+        )
+    {
+        // if so, also commit the root storage
+        m_pModelImplementation->commitRootStorage();
     }
 }
 
@@ -363,6 +364,7 @@ ODatabaseModelImpl::ODatabaseModelImpl( const Reference< XComponentContext >& _r
             ,m_aEmbeddedMacros()
             ,m_bModificationLock( false )
             ,m_bDocumentInitialized( false )
+            ,m_nScriptingSignatureState(SignatureState::UNKNOWN)
             ,m_aContext( _rxContext )
             ,m_nLoginTimeout(0)
             ,m_bReadOnly(false)
@@ -396,6 +398,7 @@ ODatabaseModelImpl::ODatabaseModelImpl(
             ,m_aEmbeddedMacros()
             ,m_bModificationLock( false )
             ,m_bDocumentInitialized( false )
+            ,m_nScriptingSignatureState(SignatureState::UNKNOWN)
             ,m_aContext( _rxContext )
             ,m_sName(_rRegistrationName)
             ,m_nLoginTimeout(0)
@@ -652,7 +655,7 @@ void ODatabaseModelImpl::dispose()
 
     for (auto const& elem : m_aContainer)
     {
-        if ( elem.get() )
+        if ( elem )
             elem->m_pDataSource = nullptr;
     }
     m_aContainer.clear();
@@ -840,6 +843,23 @@ bool ODatabaseModelImpl::commitEmbeddedStorage( bool _bPreventRootCommits )
 
 bool ODatabaseModelImpl::commitStorageIfWriteable_ignoreErrors( const Reference< XStorage >& _rxStorage )
 {
+    bool bTryToPreserveScriptSignature = false;
+    utl::TempFile aTempFile;
+    aTempFile.EnableKillingFile();
+    OUString m_sTmpFileUrl = aTempFile.GetURL();
+    SignatureState aSignatureState = getScriptingSignatureState();
+    if (aSignatureState == SignatureState::OK
+        || aSignatureState == SignatureState::NOTVALIDATED
+        || aSignatureState == SignatureState::INVALID)
+    {
+        bTryToPreserveScriptSignature = true;
+        // We need to first save the file (which removes the macro signature), then add the macro signature again.
+        // For that, we need a temporary copy of the original file.
+        osl::File::RC rc = osl::File::copy(getDocFileLocation(), m_sTmpFileUrl);
+        if (rc != osl::FileBase::E_None)
+            throw uno::RuntimeException("Could not create temp file");
+    }
+
     bool bSuccess = false;
     try
     {
@@ -849,6 +869,69 @@ bool ODatabaseModelImpl::commitStorageIfWriteable_ignoreErrors( const Reference<
     {
         DBG_UNHANDLED_EXCEPTION("dbaccess");
     }
+
+    // Preserve script signature if the script has not changed
+    if (bTryToPreserveScriptSignature)
+    {
+        OUString aODFVersion(comphelper::OStorageHelper::GetODFVersionFromStorage(_rxStorage));
+        uno::Reference<security::XDocumentDigitalSignatures> xDDSigns;
+        try
+        {
+            xDDSigns = security::DocumentDigitalSignatures::createWithVersion(
+                comphelper::getProcessComponentContext(), aODFVersion);
+
+            const OUString aScriptSignName
+                = xDDSigns->getScriptingContentSignatureDefaultStreamName();
+
+            if (!aScriptSignName.isEmpty())
+            {
+                Reference<XStorage> xReadOrig
+                    = comphelper::OStorageHelper::GetStorageOfFormatFromURL(
+                        ZIP_STORAGE_FORMAT_STRING, m_sTmpFileUrl, ElementModes::READ);
+                if (!xReadOrig.is())
+                    throw uno::RuntimeException("Could not read " + m_sTmpFileUrl);
+                uno::Reference<embed::XStorage> xMetaInf
+                    = xReadOrig->openStorageElement("META-INF", embed::ElementModes::READ);
+
+                uno::Reference<embed::XStorage> xTargetMetaInf
+                    = _rxStorage->openStorageElement("META-INF", embed::ElementModes::READWRITE);
+                if (xMetaInf.is() && xTargetMetaInf.is())
+                {
+                    xMetaInf->copyElementTo(aScriptSignName, xTargetMetaInf, aScriptSignName);
+
+                    uno::Reference<embed::XTransactedObject> xTransact(xTargetMetaInf,
+                                                                        uno::UNO_QUERY);
+                    if (xTransact.is())
+                        xTransact->commit();
+
+                    xTargetMetaInf->dispose();
+
+                    // now check the copied signature
+                    uno::Sequence<security::DocumentSignatureInformation> aInfos
+                        = xDDSigns->verifyScriptingContentSignatures(
+                            _rxStorage, uno::Reference<io::XInputStream>());
+                    SignatureState nState = DocumentSignatures::getSignatureState(aInfos);
+                    if (nState == SignatureState::OK || nState == SignatureState::NOTVALIDATED
+                        || nState == SignatureState::PARTIAL_OK)
+                    {
+                        // commit the ZipStorage from target medium
+                        xTransact.set(_rxStorage, uno::UNO_QUERY);
+                        if (xTransact.is())
+                            xTransact->commit();
+                    }
+                    else
+                    {
+                        SAL_WARN("dbaccess", "An invalid signature was copied!");
+                    }
+                }
+            }
+        }
+        catch (uno::Exception&)
+        {
+            TOOLS_WARN_EXCEPTION("dbaccess", "");
+        }
+    }
+
     return bSuccess;
 }
 
@@ -1030,7 +1113,7 @@ TContentPtr& ODatabaseModelImpl::getObjectContainer( ObjectType _eType )
     OSL_PRECOND( _eType >= E_FORM && _eType <= E_TABLE, "ODatabaseModelImpl::getObjectContainer: illegal index!" );
     TContentPtr& rContentPtr = m_aContainer[ _eType ];
 
-    if ( !rContentPtr.get() )
+    if ( !rContentPtr )
     {
         rContentPtr = std::make_shared<ODefinitionContainer_Impl>();
         rContentPtr->m_pDataSource = this;
@@ -1280,14 +1363,62 @@ Reference< XEmbeddedScripts > ODatabaseModelImpl::getEmbeddedDocumentScripts() c
 
 SignatureState ODatabaseModelImpl::getScriptingSignatureState()
 {
-    // no support for signatures at the moment
-    return SignatureState::NOSIGNATURES;
+    return m_nScriptingSignatureState;
 }
 
-bool ODatabaseModelImpl::hasTrustedScriptingSignature( bool /*bAllowUIToAddAuthor*/ )
+bool ODatabaseModelImpl::hasTrustedScriptingSignature(bool bAllowUIToAddAuthor)
 {
-    // no support for signatures at the moment
-    return false;
+    bool bResult = false;
+
+    try
+    {
+        // Don't use m_xDocumentStorage, that somehow has an incomplete storage representation
+        // which leads to signatures not being found
+        Reference<XStorage> xStorage = comphelper::OStorageHelper::GetStorageOfFormatFromURL(
+            ZIP_STORAGE_FORMAT_STRING, m_sDocFileLocation, ElementModes::READ);
+
+        OUString aODFVersion(comphelper::OStorageHelper::GetODFVersionFromStorage(getOrCreateRootStorage()));
+        uno::Reference<security::XDocumentDigitalSignatures> xSigner(
+            security::DocumentDigitalSignatures::createWithVersion(
+                comphelper::getProcessComponentContext(), aODFVersion));
+        uno::Sequence<security::DocumentSignatureInformation> aInfo
+            = xSigner->verifyScriptingContentSignatures(xStorage,
+                                                        uno::Reference<io::XInputStream>());
+
+        if (!aInfo.hasElements())
+            return false;
+
+        m_nScriptingSignatureState = DocumentSignatures::getSignatureState(aInfo);
+        if (m_nScriptingSignatureState == SignatureState::OK
+            || m_nScriptingSignatureState == SignatureState::NOTVALIDATED)
+        {
+            bResult = std::any_of(aInfo.begin(), aInfo.end(),
+                                  [&xSigner](const security::DocumentSignatureInformation& rInfo) {
+                                      return xSigner->isAuthorTrusted(rInfo.Signer);
+                                  });
+        }
+
+        if (!bResult && bAllowUIToAddAuthor)
+        {
+            Reference<XInteractionHandler> xInteraction;
+            xInteraction = m_aMediaDescriptor.getOrDefault("InteractionHandler", xInteraction);
+            if (xInteraction.is())
+            {
+                task::DocumentMacroConfirmationRequest aRequest;
+                aRequest.DocumentURL = m_sDocFileLocation;
+                aRequest.DocumentStorage = xStorage;
+                aRequest.DocumentSignatureInformation = aInfo;
+                aRequest.DocumentVersion = aODFVersion;
+                aRequest.Classification = task::InteractionClassification_QUERY;
+                bResult = SfxMedium::CallApproveHandler(xInteraction, uno::makeAny(aRequest), true);
+            }
+        }
+    }
+    catch (uno::Exception&)
+    {
+    }
+
+    return bResult;
 }
 
 void ODatabaseModelImpl::storageIsModified()

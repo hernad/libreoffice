@@ -20,13 +20,11 @@
 #ifndef INCLUDED_OOX_DRAWINGML_TEXTBODYCONTEXT_HXX
 #define INCLUDED_OOX_DRAWINGML_TEXTBODYCONTEXT_HXX
 
-#include <com/sun/star/text/XText.hpp>
-
 #include <drawingml/textbody.hxx>
 #include <drawingml/textrun.hxx>
 #include <oox/core/contexthandler2.hxx>
 
-namespace oox { namespace drawingml {
+namespace oox::drawingml {
 
 class TextBodyContext final : public ::oox::core::ContextHandler2
 {
@@ -56,7 +54,7 @@ private:
     bool                mbIsInText;
 };
 
-} }
+}
 
 #endif // INCLUDED_OOX_DRAWINGML_TEXTBODYCONTEXT_HXX
 

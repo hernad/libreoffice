@@ -48,14 +48,14 @@ void SAL_CALL MeanValueRegressionCurveCalculator::recalculateRegression(
 
     for( sal_Int32 i = 0; i < nDataLength; ++i )
     {
-        if( ::rtl::math::isNan( pY[i] ) ||
-            ::rtl::math::isInf( pY[i] ))
+        if( std::isnan( pY[i] ) ||
+            std::isinf( pY[i] ))
             --nMax;
         else
             fSumY += pY[i];
     }
 
-    m_fCorrelationCoeffitient = 0.0;
+    m_fCorrelationCoefficient = 0.0;
 
     if( nMax == 0 )
     {
@@ -71,15 +71,15 @@ void SAL_CALL MeanValueRegressionCurveCalculator::recalculateRegression(
             double fErrorSum = 0.0;
             for( sal_Int32 i = 0; i < nDataLength; ++i )
             {
-                if( !::rtl::math::isNan( pY[i] ) &&
-                    !::rtl::math::isInf( pY[i] ))
+                if( !std::isnan( pY[i] ) &&
+                    !std::isinf( pY[i] ))
                 {
                     double v = m_fMeanValue - pY[i];
                     fErrorSum += (v*v);
                 }
             }
             OSL_ASSERT( fErrorSum >= 0.0 );
-            m_fCorrelationCoeffitient = sqrt( fErrorSum / (nMax - 1 ));
+            m_fCorrelationCoefficient = sqrt( fErrorSum / (nMax - 1 ));
         }
     }
 }

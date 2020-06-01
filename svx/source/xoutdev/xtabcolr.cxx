@@ -18,14 +18,13 @@
  */
 
 #include <memory>
-#include <svx/XPropertyTable.hxx>
+#include <XPropertyTable.hxx>
 #include <unotools/configmgr.hxx>
 #include <unotools/pathoptions.hxx>
 
 #include <svx/strings.hrc>
 #include <svx/dialmgr.hxx>
 #include <svx/xtable.hxx>
-#include <svx/xpool.hxx>
 
 using namespace com::sun::star;
 

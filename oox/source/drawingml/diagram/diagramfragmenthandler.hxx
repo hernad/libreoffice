@@ -21,9 +21,10 @@
 #define INCLUDED_OOX_SOURCE_DRAWINGML_DIAGRAM_DIAGRAMFRAGMENTHANDLER_HXX
 
 #include <oox/core/fragmenthandler2.hxx>
-#include <oox/drawingml/diagram/diagram.hxx>
 
-namespace oox { namespace drawingml {
+#include "diagram.hxx"
+
+namespace oox::drawingml {
 
 class DiagramDataFragmentHandler : public ::oox::core::FragmentHandler2
 {
@@ -36,7 +37,7 @@ public:
 
 private:
 
-    DiagramDataPtr const mpDataPtr;
+    DiagramDataPtr  mpDataPtr;
 };
 
 class DiagramLayoutFragmentHandler : public ::oox::core::FragmentHandler2
@@ -50,7 +51,7 @@ public:
 
 private:
 
-    DiagramLayoutPtr const mpDataPtr;
+    DiagramLayoutPtr    mpDataPtr;
 };
 
 class DiagramQStylesFragmentHandler : public ::oox::core::FragmentHandler2
@@ -95,7 +96,7 @@ private:
     DiagramColorMap&  mrColorsMap;
 };
 
-} }
+}
 
 #endif
 

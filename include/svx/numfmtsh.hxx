@@ -176,7 +176,7 @@ public:
 private:
     SvNumberFormatter*      pFormatter;
     SvNumberFormatTable*    pCurFmtTable;
-    SvxNumberValueType const eValType;
+    SvxNumberValueType      eValType;
     OUString                aValStr;
     double                  nValNum;
     bool                    bUndoAddList;
@@ -203,6 +203,9 @@ private:
                                                        bool bSuppressDuplicates );
     SVX_DLLPRIVATE short FillEListWithDateTime_Impl( std::vector<OUString>& rList,short nSelPos,
                                                      bool bSuppressDuplicates );
+    SVX_DLLPRIVATE void  FillEListWithOneFormat_Impl( std::vector<OUString>& rList, short & nSelPos,
+                                                      bool bSuppressDuplicates, NfIndexTableOffset nOffset,
+                                                      bool bSuppressIsoDateTime );
     SVX_DLLPRIVATE short FillEListWithCurrency_Impl( std::vector<OUString>& rList,short nSelPos);
     SVX_DLLPRIVATE short FillEListWithSysCurrencys( std::vector<OUString>& rList,short nSelPos);
     SVX_DLLPRIVATE short FillEListWithUserCurrencys( std::vector<OUString>& rList,short nSelPos);

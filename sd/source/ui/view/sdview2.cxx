@@ -21,6 +21,7 @@
 
 #include <vector>
 #include <com/sun/star/embed/XEmbedPersist.hpp>
+#include <com/sun/star/embed/XEmbeddedObject.hpp>
 #include <comphelper/sequenceashashmap.hxx>
 #include <tools/urlobj.hxx>
 #include <svx/svdoole2.hxx>
@@ -273,7 +274,7 @@ void View::DoPaste (::sd::Window* pWindow)
 
         if( pOutliner)
         {
-            if( pObj && pPage && pPage->GetPresObjKind(pObj) == PRESOBJ_TITLE )
+            if( pObj && pPage && pPage->GetPresObjKind(pObj) == PresObjKind::Title )
             {
                 // remove all hard linebreaks from the title
                 if (pOutliner->GetParagraphCount() > 1)
@@ -581,7 +582,7 @@ sal_Int8 View::AcceptDrop( const AcceptDropEvent& rEvt, DropTargetHelper& rTarge
                     // For entries from the navigator, change action copy.
                     if (bBookmark
                         && rTargetHelper.IsDropFormatSupported(
-                            SdPageObjsTLB::SdPageObjsTransferable::GetListBoxDropFormatId())
+                            SdPageObjsTLV::SdPageObjsTransferable::GetListBoxDropFormatId())
                         && (nDropAction & DND_ACTION_MOVE)!=0)
                     {
                         nRet = DND_ACTION_COPY;
@@ -697,7 +698,7 @@ sal_Int8 View::ExecuteDrop( const ExecuteDropEvent& rEvt,
                 if( aDataHelper.HasFormat( SotClipboardFormatId::NETSCAPE_BOOKMARK ) &&
                     aDataHelper.GetINetBookmark( SotClipboardFormatId::NETSCAPE_BOOKMARK, aINetBookmark ) )
                 {
-                    SdPageObjsTLB::SdPageObjsTransferable* pPageObjsTransferable = SdPageObjsTLB::SdPageObjsTransferable::getImplementation( aDataHelper.GetXTransferable() );
+                    SdPageObjsTLV::SdPageObjsTransferable* pPageObjsTransferable = SdPageObjsTLV::SdPageObjsTransferable::getImplementation( aDataHelper.GetXTransferable() );
 
                     if( pPageObjsTransferable &&
                         ( NAVIGATOR_DRAGTYPE_LINK == pPageObjsTransferable->GetDragType() ||
@@ -793,7 +794,7 @@ IMPL_LINK( View, ExecuteNavigatorDrop, void*, p, void )
 {
     SdNavigatorDropEvent*                   pSdNavigatorDropEvent = static_cast<SdNavigatorDropEvent*>(p);
     TransferableDataHelper                  aDataHelper( pSdNavigatorDropEvent->maDropEvent.Transferable );
-    SdPageObjsTLB::SdPageObjsTransferable*  pPageObjsTransferable = SdPageObjsTLB::SdPageObjsTransferable::getImplementation( aDataHelper.GetXTransferable() );
+    SdPageObjsTLV::SdPageObjsTransferable*  pPageObjsTransferable = SdPageObjsTLV::SdPageObjsTransferable::getImplementation( aDataHelper.GetXTransferable() );
     INetBookmark                            aINetBookmark;
 
     if( pPageObjsTransferable && aDataHelper.GetINetBookmark( SotClipboardFormatId::NETSCAPE_BOOKMARK, aINetBookmark ) )

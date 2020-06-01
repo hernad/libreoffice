@@ -27,6 +27,7 @@
 #include <sax/tools/converter.hxx>
 
 #include <com/sun/star/beans/XPropertySet.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 
 using namespace com::sun::star;
 using namespace xmloff::token;
@@ -97,7 +98,7 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL ScXMLCalculationSetting
 {
     SvXMLImportContext *pContext = nullptr;
     sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
+        &sax_fastparser::castToFastAttributeList( xAttrList );
 
     if (nElement == XML_ELEMENT( TABLE, XML_NULL_DATE ))
         pContext = new ScXMLNullDateContext(GetScImport(), pAttribList, this);

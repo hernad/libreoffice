@@ -10,7 +10,7 @@
 #ifndef INCLUDED_SFX2_RECENTDOCSVIEWITEM_HXX
 #define INCLUDED_SFX2_RECENTDOCSVIEWITEM_HXX
 
-#include <sfx2/thumbnailviewitem.hxx>
+#include <thumbnailviewitem.hxx>
 
 class ThumbnailView;
 
@@ -50,16 +50,16 @@ private:
     /// Return area where is the icon to remove document from the recent documents.
     tools::Rectangle getRemoveIconArea() const;
 
-    OUString const maURL;
+    OUString maURL;
 
     OUString m_sHelpText;
 
     /// Is the icon that the user can click to remove the document from the recent documents highlighted?
     bool m_bRemoveIconHighlighted;
 
-    BitmapEx const m_aRemoveRecentBitmap;
+    BitmapEx m_aRemoveRecentBitmap;
 
-    BitmapEx const m_aRemoveRecentBitmapHighlighted;
+    BitmapEx m_aRemoveRecentBitmapHighlighted;
 };
 
 #endif // INCLUDED_SFX2_RECENTDOCSVIEWITEM_HXX

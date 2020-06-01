@@ -34,12 +34,12 @@
 #include <libxml/parser.h>
 #include <libxml/xpath.h>
 #include <libxml/xpathInternals.h>
-#include <o3tl/optional.hxx>
+#include <optional>
 #include <string.h>
 
-// For backwards compatibility, the nFeatures and nRequirements flag words are
-// read/written as potentially signed hexadecimal numbers (though that has no
-// practical relevance given that each has only one flag with value 0x01
+// For backwards compatibility, the nRequirements flag word is
+// read/written as potentially signed hexadecimal number (though that has no
+// practical relevance given that it has only one flag with value 0x01
 // defined).
 
 using namespace osl;
@@ -236,9 +236,9 @@ void NodeJava::load()
                 CXmlCharPtr sEnabled( xmlNodeListGetString(
                     docUser, cur->children, 1));
                 if (xmlStrcmp(sEnabled, reinterpret_cast<xmlChar const *>("true")) == 0)
-                    m_enabled = o3tl::optional<sal_Bool>(true);
+                    m_enabled = std::optional<sal_Bool>(true);
                 else if (xmlStrcmp(sEnabled, reinterpret_cast<xmlChar const *>("false")) == 0)
-                    m_enabled = o3tl::optional<sal_Bool>(false);
+                    m_enabled = std::optional<sal_Bool>(false);
             }
         }
         else if (xmlStrcmp(cur->name, reinterpret_cast<xmlChar const *>("userClassPath")) == 0)
@@ -251,7 +251,7 @@ void NodeJava::load()
             {
                 CXmlCharPtr sUser(xmlNodeListGetString(
                     docUser, cur->children, 1));
-                m_userClassPath = o3tl::optional<OUString>(OUString(sUser));
+                m_userClassPath = std::optional<OUString>(OUString(sUser));
             }
         }
         else if (xmlStrcmp(cur->name, reinterpret_cast<xmlChar const *>("javaInfo")) == 0)
@@ -264,7 +264,7 @@ void NodeJava::load()
             if (xmlStrcmp(sNil, reinterpret_cast<xmlChar const *>("false")) == 0)
             {
                 if (! m_javaInfo)
-                    m_javaInfo = o3tl::optional<CNodeJavaInfo>(CNodeJavaInfo());
+                    m_javaInfo = std::optional<CNodeJavaInfo>(CNodeJavaInfo());
                 m_javaInfo->loadFromNode(docUser, cur);
             }
         }
@@ -277,7 +277,7 @@ void NodeJava::load()
             if (xmlStrcmp(sNil, reinterpret_cast<xmlChar const *>("false")) == 0)
             {
                 if ( ! m_vmParameters)
-                    m_vmParameters = o3tl::optional<std::vector<OUString> >(
+                    m_vmParameters = std::optional<std::vector<OUString> >(
                         std::vector<OUString> ());
 
                 xmlNode * pOpt = cur->children;
@@ -302,7 +302,7 @@ void NodeJava::load()
             if (xmlStrcmp(sNil, reinterpret_cast<xmlChar const *>("false")) == 0)
             {
                 if (! m_JRELocations)
-                    m_JRELocations = o3tl::optional<std::vector<OUString> >(
+                    m_JRELocations = std::optional<std::vector<OUString> >(
                         std::vector<OUString>());
 
                 xmlNode * pLoc = cur->children;
@@ -418,7 +418,7 @@ void NodeJava::write() const
                      reinterpret_cast<xmlChar const *>("nil"),
                      reinterpret_cast<xmlChar const *>("false"));
 
-        if (m_enabled == o3tl::optional<sal_Bool>(true))
+        if (m_enabled == std::optional<sal_Bool>(true))
             xmlNodeSetContent(nodeEnabled,reinterpret_cast<xmlChar const *>("true"));
         else
             xmlNodeSetContent(nodeEnabled,reinterpret_cast<xmlChar const *>("false"));
@@ -531,19 +531,19 @@ void NodeJava::write() const
 
 void NodeJava::setEnabled(bool bEnabled)
 {
-    m_enabled =  o3tl::optional<sal_Bool>(bEnabled);
+    m_enabled =  std::optional<sal_Bool>(bEnabled);
 }
 
 
 void NodeJava::setUserClassPath(const OUString & sClassPath)
 {
-    m_userClassPath = o3tl::optional<OUString>(sClassPath);
+    m_userClassPath = std::optional<OUString>(sClassPath);
 }
 
 void NodeJava::setJavaInfo(const JavaInfo * pInfo, bool bAutoSelect)
 {
     if (!m_javaInfo)
-        m_javaInfo = o3tl::optional<CNodeJavaInfo>(CNodeJavaInfo());
+        m_javaInfo = std::optional<CNodeJavaInfo>(CNodeJavaInfo());
     m_javaInfo->bAutoSelect = bAutoSelect;
     m_javaInfo->bNil = false;
 
@@ -553,7 +553,6 @@ void NodeJava::setJavaInfo(const JavaInfo * pInfo, bool bAutoSelect)
         m_javaInfo->sVendor = pInfo->sVendor;
         m_javaInfo->sLocation = pInfo->sLocation;
         m_javaInfo->sVersion = pInfo->sVersion;
-        m_javaInfo->nFeatures = pInfo->nFeatures;
         m_javaInfo->nRequirements = pInfo->nRequirements;
         m_javaInfo->arVendorData = pInfo->arVendorData;
     }
@@ -563,7 +562,6 @@ void NodeJava::setJavaInfo(const JavaInfo * pInfo, bool bAutoSelect)
         m_javaInfo->sVendor.clear();
         m_javaInfo->sLocation.clear();
         m_javaInfo->sVersion.clear();
-        m_javaInfo->nFeatures = 0;
         m_javaInfo->nRequirements = 0;
         m_javaInfo->arVendorData = rtl::ByteSequence();
     }
@@ -571,13 +569,13 @@ void NodeJava::setJavaInfo(const JavaInfo * pInfo, bool bAutoSelect)
 
 void NodeJava::setVmParameters(std::vector<OUString> const & arOptions)
 {
-    m_vmParameters = o3tl::optional<std::vector<OUString> >(arOptions);
+    m_vmParameters = std::optional<std::vector<OUString> >(arOptions);
 }
 
 void NodeJava::addJRELocation(OUString const & sLocation)
 {
     if (!m_JRELocations)
-        m_JRELocations = o3tl::optional<std::vector<OUString> >(
+        m_JRELocations = std::optional<std::vector<OUString> >(
             std::vector<OUString> ());
      //only add the path if not already present
     std::vector<OUString>::const_iterator it =
@@ -676,7 +674,7 @@ bool NodeJava::createSettingsDocument() const
 
 CNodeJavaInfo::CNodeJavaInfo() :
     m_bEmptyNode(false), bNil(true), bAutoSelect(true),
-    nFeatures(0), nRequirements(0)
+    nRequirements(0)
 {
 }
 
@@ -739,13 +737,6 @@ void CNodeJavaInfo::loadFromNode(xmlDoc * pDoc, xmlNode * pJavaInfo)
             CXmlCharPtr xmlVersion = xmlNodeListGetString(
                 pDoc, cur->children, 1);
             sVersion = xmlVersion;
-        }
-        else if (xmlStrcmp(cur->name, reinterpret_cast<xmlChar const *>("features"))== 0)
-        {
-            CXmlCharPtr xmlFeatures = xmlNodeListGetString(
-                    pDoc, cur->children, 1);
-            OUString sFeatures = xmlFeatures;
-            nFeatures = sFeatures.toInt64(16);
         }
         else if (xmlStrcmp(cur->name, reinterpret_cast<xmlChar const *>("requirements")) == 0)
         {
@@ -858,11 +849,10 @@ void CNodeJavaInfo::writeToNode(xmlDoc* pDoc,
     nodeCrLf = xmlNewText(reinterpret_cast<xmlChar const *>("\n"));
     xmlAddChild(pJavaInfoNode, nodeCrLf);
 
-    //Create the features element
-    OUString sFeatures = OUString::number(
-        nFeatures, 16);
+    //Create the features element, for backwards compatibility (it used to support one flag
+    // JFW_FEATURE_ACCESSBRIDGE = 0x01, but is ignored and always written as zero now)
     xmlNewTextChild(pJavaInfoNode, nullptr, reinterpret_cast<xmlChar const *>("features"),
-                    CXmlCharPtr(sFeatures));
+                    reinterpret_cast<xmlChar const *>("0"));
     //add a new line for better readability
     nodeCrLf = xmlNewText(reinterpret_cast<xmlChar const *>("\n"));
     xmlAddChild(pJavaInfoNode, nodeCrLf);
@@ -878,7 +868,7 @@ void CNodeJavaInfo::writeToNode(xmlDoc* pDoc,
     xmlAddChild(pJavaInfoNode, nodeCrLf);
 
 
-    //Create the features element
+    //Create the vendorData element
     rtl::ByteSequence data = encodeBase16(arVendorData);
     xmlNode* dataNode = xmlNewChild(pJavaInfoNode, nullptr,
                                     reinterpret_cast<xmlChar const *>("vendorData"),
@@ -896,7 +886,7 @@ std::unique_ptr<JavaInfo> CNodeJavaInfo::makeJavaInfo() const
         return std::unique_ptr<JavaInfo>();
     return std::unique_ptr<JavaInfo>(
         new JavaInfo{
-            sVendor, sLocation, sVersion, nFeatures, nRequirements,
+            sVendor, sLocation, sVersion, nRequirements,
             arVendorData});
 }
 

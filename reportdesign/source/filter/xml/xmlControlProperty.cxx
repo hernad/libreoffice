@@ -30,13 +30,14 @@
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
 #include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
 #include <xmloff/ProgressBarHelper.hxx>
 #include "xmlEnums.hxx"
-#include <tools/datetime.hxx>
+#include <tools/date.hxx>
 #include <unotools/datetime.hxx>
 #include <com/sun/star/util/DateTime.hpp>
 #include <rtl/math.hxx>
+#include <sal/log.hxx>
+#include <osl/diagnose.h>
 
 #define TYPE_DATE       1
 #define TYPE_TIME       2
@@ -61,9 +62,7 @@ OXMLControlProperty::OXMLControlProperty( ORptFilter& rImport
 
     OSL_ENSURE(m_xControl.is(),"Control is NULL!");
 
-    sax_fastparser::FastAttributeList *pAttribList =
-                    sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-    for (auto &aIter : *pAttribList)
+    for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
     {
         OUString sValue = aIter.toString();
 
@@ -99,6 +98,7 @@ OXMLControlProperty::OXMLControlProperty( ORptFilter& rImport
                 m_aSetting.Name = sValue;
                 break;
             default:
+                SAL_WARN("reportdesign", "unknown attribute " << SvXMLImport::getPrefixAndNameFromToken(aIter.getToken()) << " = " << sValue);
                 break;
         }
     }
@@ -136,25 +136,26 @@ css::uno::Reference< css::xml::sax::XFastContextHandler > OXMLControlProperty::c
 
 void OXMLControlProperty::endFastElement(sal_Int32 )
 {
-    if ( !m_aSetting.Name.isEmpty() && m_xControl.is() )
+    if ( m_pContainer )
+        m_pContainer->addValue(m_aCharBuffer.makeStringAndClear());
+    if ( !(!m_aSetting.Name.isEmpty() && m_xControl.is()) )
+        return;
+
+    if ( m_bIsList && !m_aSequence.hasElements() )
+        m_aSetting.Value <<= m_aSequence;
+    try
     {
-        if ( m_bIsList && !m_aSequence.hasElements() )
-            m_aSetting.Value <<= m_aSequence;
-        try
-        {
-            m_xControl->setPropertyValue(m_aSetting.Name,m_aSetting.Value);
-        }
-        catch(const Exception&)
-        {
-            OSL_FAIL("Unknown property found!");
-        }
+        m_xControl->setPropertyValue(m_aSetting.Name,m_aSetting.Value);
+    }
+    catch(const Exception&)
+    {
+        OSL_FAIL("Unknown property found!");
     }
 }
 
 void OXMLControlProperty::characters( const OUString& rChars )
 {
-    if ( m_pContainer )
-        m_pContainer->addValue(rChars);
+    m_aCharBuffer.append(rChars);
 }
 
 void OXMLControlProperty::addValue(const OUString& _sValue)

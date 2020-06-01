@@ -26,9 +26,9 @@
 #include <cppuhelper/implbase.hxx>
 #include <rtl/ref.hxx>
 
-namespace com { namespace sun { namespace star { namespace task {
+namespace com::sun::star::task {
     class XInteractionContinuation;
-} } } }
+}
 
 namespace stoc_javavm {
 
@@ -54,7 +54,7 @@ private:
 
     virtual ~InteractionRequest() override;
 
-    css::uno::Any const m_aRequest;
+    css::uno::Any m_aRequest;
     css::uno::Sequence< css::uno::Reference<
         css::task::XInteractionContinuation > > m_aContinuations;
     rtl::Reference< RetryContinuation > m_xRetryContinuation;

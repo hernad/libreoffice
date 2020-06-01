@@ -63,30 +63,7 @@
 
 namespace pq_sdbc_driver
 {
-#ifdef POSTGRE_TRACE
-#define POSTGRE_TRACE( x ) printf( "%s\n" , x )
-#else
-#define POSTGRE_TRACE(x) ((void)0)
-#endif
-
 struct ConnectionSettings;
-
-
-// Logging API
-
-enum class LogLevel
-{
-    NONE    = 0,
-    Error,
-    Sql,
-    Info,
-    LAST = Info
-};
-bool isLog(ConnectionSettings const *settings, LogLevel nLevel);
-void log(ConnectionSettings *settings, LogLevel nLevel, const OUString &logString);
-void log(ConnectionSettings *settings, LogLevel nLevel, const char *str);
-
-
 class Tables;
 class Views;
 struct ConnectionSettings
@@ -96,9 +73,7 @@ struct ConnectionSettings
         maxNameLen(0),
         maxIndexKeys(0),
         pTablesImpl(nullptr),
-        pViewsImpl(nullptr),
-        logFile( nullptr ),
-        m_nLogLevel(LogLevel::Info)
+        pViewsImpl(nullptr)
     {}
     static const rtl_TextEncoding encoding = RTL_TEXTENCODING_UTF8;
     PGconn *pConnection;
@@ -112,8 +87,6 @@ struct ConnectionSettings
     Views *pViewsImpl;   // needed to implement renaming of tables / views
     OUString user;
     OUString catalog;
-    FILE *logFile;
-    LogLevel m_nLogLevel;
 };
 
 

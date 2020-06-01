@@ -20,9 +20,7 @@
 #ifndef INCLUDED_DBACCESS_SOURCE_CORE_INC_DATASETTINGS_HXX
 #define INCLUDED_DBACCESS_SOURCE_CORE_INC_DATASETTINGS_HXX
 
-#include <com/sun/star/beans/Property.hpp>
 #include <com/sun/star/awt/FontDescriptor.hpp>
-#include <com/sun/star/lang/IllegalArgumentException.hpp>
 #include <rtl/ustring.hxx>
 #include <comphelper/propertystatecontainer.hxx>
 
@@ -68,7 +66,7 @@ protected:
     ODataSettings(::cppu::OBroadcastHelper& _rBHelper,bool _bQuery = false);
     virtual void getPropertyDefaultByHandle( sal_Int32 _nHandle, css::uno::Any& _rDefault ) const override;
 
-    /** register the properties from the param given. The parameter instance must be alive as long as tis object live.
+    /** register the properties from the param given. The parameter instance must be alive as long as its object lives.
         @param  _pItem
             The database settings, can be <br>this</br>
     */

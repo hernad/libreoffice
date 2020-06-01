@@ -20,6 +20,7 @@
 #ifndef INCLUDED_SC_SOURCE_FILTER_INC_XICHART_HXX
 #define INCLUDED_SC_SOURCE_FILTER_INC_XICHART_HXX
 
+#include <salhelper/simplereferenceobject.hxx>
 #include <set>
 #include <map>
 #include <memory>
@@ -31,7 +32,7 @@
 #include "xiescher.hxx"
 #include "xistring.hxx"
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace awt
     {
         struct Rectangle;
@@ -64,7 +65,7 @@ namespace com { namespace sun { namespace star {
             class XLabeledDataSequence;
         }
     }
-} } }
+}
 
 struct XclObjLineData;
 struct XclObjFillData;
@@ -220,13 +221,23 @@ private:
 typedef std::shared_ptr< XclImpChFramePos > XclImpChFramePosRef;
 
 /** The CHLINEFORMAT record containing line formatting data. */
-class XclImpChLineFormat
+class XclImpChLineFormat : public salhelper::SimpleReferenceObject
 {
 public:
     /** Creates a new line format object with automatic formatting. */
     explicit     XclImpChLineFormat() {}
     /** Creates a new line format object with the passed formatting. */
     explicit     XclImpChLineFormat( const XclChLineFormat& rLineFmt ) : maData( rLineFmt ) {}
+
+    // this class is stored both ref-counted and by value
+    XclImpChLineFormat(XclImpChLineFormat const & rOther)
+        : salhelper::SimpleReferenceObject(), maData(rOther.maData) {}
+    XclImpChLineFormat(XclImpChLineFormat && rOther)
+        : salhelper::SimpleReferenceObject(), maData(std::move(rOther.maData)) {}
+    XclImpChLineFormat& operator=(XclImpChLineFormat const & rOther)
+        { maData = rOther.maData; return *this; }
+    XclImpChLineFormat& operator=(XclImpChLineFormat && rOther) noexcept
+        { maData = std::move(rOther.maData); return *this; }
 
     /** Reads the CHLINEFORMAT record (basic line properties). */
     void                ReadChLineFormat( XclImpStream& rStrm );
@@ -249,7 +260,7 @@ private:
     XclChLineFormat     maData;             /// Contents of the CHLINEFORMAT record.
 };
 
-typedef std::shared_ptr< XclImpChLineFormat > XclImpChLineFormatRef;
+typedef rtl::Reference< XclImpChLineFormat > XclImpChLineFormatRef;
 
 /** The CHAREAFORMAT record containing simple area formatting data (solid or patterns). */
 class XclImpChAreaFormat
@@ -1053,7 +1064,6 @@ private:
     typedef ::std::vector< XclImpChSeriesRef >               XclImpChSeriesVec;
     typedef ::std::map<sal_uInt16, std::unique_ptr<XclImpChDropBar>> XclImpChDropBarMap;
     typedef ::std::map<sal_uInt16, XclImpChLineFormat> XclImpChLineFormatMap;
-    typedef ::std::set< sal_uInt16 >                         UInt16Set;
 
     XclChTypeGroup      maData;             /// Contents of the CHTYPEGROUP record.
     XclImpChType        maType;             /// Chart type (e.g. CHBAR, CHLINE, ...).
@@ -1065,7 +1075,8 @@ private:
     XclImpChDropBarMap  m_DropBars;         /// Dropbars (CHDROPBAR group).
     XclImpChLineFormatMap m_ChartLines;     /// Global line formats (CHCHARTLINE group).
     XclImpChDataFormatRef mxGroupFmt;       /// Default format for all series (CHDATAFORMAT group).
-    UInt16Set           maUnusedFormats;    /// Contains unused format indexes for automatic colors.
+    std::set< sal_uInt16 >
+                        maUnusedFormats;    /// Contains unused format indexes for automatic colors.
 };
 
 typedef std::shared_ptr< XclImpChTypeGroup > XclImpChTypeGroupRef;

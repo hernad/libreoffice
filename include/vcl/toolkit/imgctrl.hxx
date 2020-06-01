@@ -20,14 +20,15 @@
 #ifndef INCLUDED_VCL_IMGCTRL_HXX
 #define INCLUDED_VCL_IMGCTRL_HXX
 
-#if !defined(VCL_DLLIMPLEMENTATION) && !defined(TOOLKIT_DLLIMPLEMENTATION)
+#if !defined(VCL_DLLIMPLEMENTATION) && !defined(TOOLKIT_DLLIMPLEMENTATION) && !defined(VCL_INTERNALS)
 #error "don't use this in new code"
 #endif
 
+#include <config_options.h>
 #include <vcl/dllapi.h>
 #include <vcl/fixed.hxx>
 
-class VCL_DLLPUBLIC ImageControl : public FixedImage
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) ImageControl : public FixedImage
 {
 private:
     ::sal_Int16     mnScaleMode;
@@ -40,7 +41,7 @@ public:
     ::sal_Int16     GetScaleMode() const { return mnScaleMode; }
 
     virtual void    Resize() override;
-    virtual void    Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawFlags nFlags ) override;
+    virtual void    Draw( OutputDevice* pDev, const Point& rPos, DrawFlags nFlags ) override;
     virtual void    Paint( vcl::RenderContext& rRenderContext, const tools::Rectangle& rRect ) override;
     virtual void    GetFocus() override;
     virtual void    LoseFocus() override;

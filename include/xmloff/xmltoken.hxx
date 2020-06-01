@@ -38,8 +38,10 @@
  * methods and the SvXMLElementExport constructor.
  */
 
-namespace xmloff { namespace token {
+namespace xmloff::token {
 
+    // IMPORTANT! XMLTokenEnum order MUST be in synch with aTokenList in
+    // xmloff/source/core/xmltoken.cxx, and with xmloff/source/token/tokens.txt.
 
     /**
      * The enumeration of all XML tokens.
@@ -158,16 +160,16 @@ namespace xmloff { namespace token {
         XML_NP_LO_EXT,
         XML_N_LO_EXT,
 
+        // enhanced fields
+        XML_N_FIELD,
+        XML_NP_FIELD,
+
         // units
-        XML_UNIT_MM,
         XML_UNIT_M,
-        XML_UNIT_KM,
         XML_UNIT_CM,
         XML_UNIT_PT,
         XML_UNIT_PC,
         XML_UNIT_FOOT,
-        XML_UNIT_MILES,
-        XML_UNIT_INCH,
 
         // any other
         XML_1,
@@ -293,8 +295,6 @@ namespace xmloff { namespace token {
         XML_BACKGROUND_COLOR,
         XML_BACKGROUND_IMAGE,
         XML_BACKGROUND_NO_REPEAT,
-        XML_BACKGROUND_REPEAT,
-        XML_BACKGROUND_STRETCH,
         XML_BAR,
         XML_BASE64BINARY,
         XML_BASE_CELL_ADDRESS,
@@ -379,7 +379,6 @@ namespace xmloff { namespace token {
         XML_CASE_SENSITIVE,
         XML_CASEMAP_CAPITALIZE,
         XML_CASEMAP_LOWERCASE,
-        XML_CASEMAP_NORMAL,
         XML_CASEMAP_SMALL_CAPS,
         XML_CASEMAP_UPPERCASE,
         XML_CATEGORIES,
@@ -426,7 +425,6 @@ namespace xmloff { namespace token {
         XML_CLOSE,
         XML_CLOSE_HORIZONTAL,
         XML_CLOSE_VERTICAL,
-        XML_CM,
         XML_CN,
         XML_CODE,
         XML_CODEBASE,
@@ -445,7 +443,6 @@ namespace xmloff { namespace token {
         XML_COLUMN_WIDTH,
         XML_COLUMNALIGN,
         XML_COLUMNS,
-        XML_COLUMNSPLIT_AUTO,
         XML_COLUMNSPLIT_AVOID,
         XML_COMBINE_ENTRIES,
         XML_COMBINE_ENTRIES_WITH_DASH,
@@ -539,6 +536,8 @@ namespace xmloff { namespace token {
         XML_CUSTOM_ICONSET_INDEX,
         XML_CUSTOM_ICONSET_NAME,
         XML_CUSTOM_LABEL_FIELD,
+        XML_CUSTOM_LABEL_POS_X,
+        XML_CUSTOM_LABEL_POS_Y,
         XML_CUT,
         XML_CUT_OFFS,
         XML_CUT_OFFS2,
@@ -928,16 +927,17 @@ namespace xmloff { namespace token {
         XML_GCD,
         XML_GENERATOR,
         XML_GEQ,
+        XML_GLOW_RADIUS,
+        XML_GLOW_COLOR,
+        XML_GLOW_TRANSPARENCY,
         XML_GOURAUD,
         XML_GRADIENT,
         XML_GRADIENT_ANGLE,
-        XML_GRADIENT_BORDER,
         XML_GRADIENT_STEP_COUNT,
         XML_GRADIENT_STYLE,
         XML_GRADIENT_TABLE,
         XML_GRADIENTSTYLE_AXIAL,
         XML_GRADIENTSTYLE_ELLIPSOID,
-        XML_GRADIENTSTYLE_LINEAR,
         XML_GRADIENTSTYLE_RADIAL,
         XML_GRADIENTSTYLE_RECTANGULAR,
         XML_GRADIENTSTYLE_SQUARE,
@@ -959,11 +959,7 @@ namespace xmloff { namespace token {
         XML_HANGING,
         XML_HAS_PERSISTENT_DATA,
         XML_HATCH,
-        XML_HATCH_DISTANCE,
-        XML_HATCH_STYLE,
         XML_HATCH_TABLE,
-        XML_HATCHSTYLE_DOUBLE,
-        XML_HATCHSTYLE_SINGLE,
         XML_HATCHSTYLE_TRIPLE,
         XML_HEADER,
         XML_HEADER_FIRST,
@@ -1087,7 +1083,6 @@ namespace xmloff { namespace token {
         XML_JUSTIFY,
         XML_JUSTIFY_SINGLE_WORD,
         XML_KEEP_WITH_NEXT,
-        XML_KERNING_NORMAL,
         XML_KEY,
         XML_KEY1,
         XML_KEY2,
@@ -1099,6 +1094,8 @@ namespace xmloff { namespace token {
         XML_LABEL_ARRANGEMENT,
         XML_LABEL_CELL_ADDRESS,
         XML_LABEL_CELL_RANGE_ADDRESS,
+        XML_LABEL_FILL,
+        XML_LABEL_FILL_COLOR,
         XML_LABEL_RANGE,
         XML_LABEL_RANGES,
         XML_LABEL_STRING,
@@ -1187,6 +1184,7 @@ namespace xmloff { namespace token {
         XML_MACTION,
         XML_MAIN_ENTRY_STYLE_NAME,
         XML_MAJOR,
+        XML_MAJOR_ORIGIN,
         XML_MALIGNGROUP,
         XML_MALIGNMARK,
         XML_MANUAL,
@@ -1322,8 +1320,8 @@ namespace xmloff { namespace token {
         XML_NOEMPTY,
         XML_NOHREF,
         XML_NOMATCH,
+        XML_NON_WHITESPACE_CHARACTER_COUNT,
         XML_NONE,
-        XML_NOPRTSUBSET,
         XML_NORMAL,
         XML_NORMALS_DIRECTION,
         XML_NORMALS_KIND,
@@ -1333,6 +1331,7 @@ namespace xmloff { namespace token {
         XML_NOTE,
         XML_NOTES,
         XML_NOTIN,
+        XML_NOTPRSUBSET,
         XML_NOTSUBSET,
         XML_NULL_DATE,
         XML_NULL_YEAR,
@@ -1371,8 +1370,6 @@ namespace xmloff { namespace token {
         XML_ON_UPDATE_KEEP_STYLES,
         XML_ONLINE,
         XML_ONLINE_TEXT,
-        XML_OPAQUE_BACKGROUND,
-        XML_OPAQUE_FOREGROUND,
         XML_OPEN,
         XML_OPEN_HORIZONTAL,
         XML_OPEN_VERTICAL,
@@ -1395,6 +1392,7 @@ namespace xmloff { namespace token {
         XML_OUTSET,
         XML_OUTSIDE,
         XML_OVERLAP,
+        XML_OVERLAY,
         XML_P,
         XML_PACKAGE_NAME,
         XML_PADDING,
@@ -1469,25 +1467,15 @@ namespace xmloff { namespace token {
         XML_POSITION_RIGHT,
         XML_POSITION_TOP,
         XML_POSITIVE_COLOR,
-        XML_POSTURE_ITALIC,
-        XML_POSTURE_NORMAL,
         XML_POSTURE_OBLIQUE,
         XML_POWER,
         XML_PRECISION_AS_SHOWN,
         XML_PREFIX,
         XML_PRESENTATION,
-        XML_PRESENTATION_CHART,
-        XML_PRESENTATION_GRAPHIC,
-        XML_PRESENTATION_NOTES,
-        XML_PRESENTATION_OBJECT,
         XML_PRESENTATION_ORGCHART,
         XML_PRESENTATION_OUTLINE,
-        XML_PRESENTATION_PAGE,
         XML_PRESENTATION_PAGE_LAYOUT,
         XML_PRESENTATION_PAGE_LAYOUT_NAME,
-        XML_PRESENTATION_SUBTITLE,
-        XML_PRESENTATION_TABLE,
-        XML_PRESENTATION_TITLE,
         XML_PREVIOUS,
         XML_PREVIOUS_PAGE,
         XML_PRINT,
@@ -1505,9 +1493,6 @@ namespace xmloff { namespace token {
         XML_PROJECTION,
         XML_PROPERTIES,
         XML_PROTECT,
-        XML_PROTECT_CONTENT,
-        XML_PROTECT_POSITION,
-        XML_PROTECT_SIZE,
         XML_PROTECTED,
         XML_PROTECTION_KEY,
         XML_PROTECTION_KEY_DIGEST_ALGORITHM,
@@ -1710,6 +1695,7 @@ namespace xmloff { namespace token {
         XML_SLANT_Y,
         XML_SLIDE,
         XML_SLOW,
+        XML_SOFTEDGE_RADIUS,
         XML_SOLID,
         XML_SOLID_TYPE,
         XML_SORT,
@@ -1894,6 +1880,7 @@ namespace xmloff { namespace token {
         XML_TEXT_INPUT,
         XML_TEXT_JUSTIFY,
         XML_TEXT_OUTLINE,
+        XML_TEXT_ONLY,
         XML_TEXT_POSITION,
         XML_TEXT_ROTATION_ANGLE,
         XML_TEXT_ROTATION_SCALE,
@@ -2069,8 +2056,6 @@ namespace xmloff { namespace token {
         XML_WAVYLINE_FROM_RIGHT,
         XML_WAVYLINE_FROM_TOP,
         XML_WEEK_OF_YEAR,
-        XML_WEIGHT_BOLD,
-        XML_WEIGHT_NORMAL,
         XML_WHITE,
         XML_WHOLE_PAGE,
         XML_WIDOWS,
@@ -2524,6 +2509,7 @@ namespace xmloff { namespace token {
         XML_N_DRAW_OOO,
         XML_N_DR3D_OOO,
         XML_N_PRESENTATION_OOO,
+        XML_N_PRESENTATION_OASIS,
         XML_N_CHART_OOO,
         XML_N_CONFIG_OOO,
         XML_N_FORM_OOO,
@@ -2815,6 +2801,7 @@ namespace xmloff { namespace token {
 
         XML_NP_ANIMATION,
         XML_N_ANIMATION,
+        XML_N_ANIMATION_OOO,
 
         XML_PAR,
         XML_SEQ,
@@ -2993,6 +2980,7 @@ namespace xmloff { namespace token {
         XML_PRESET_ID,
         XML_PRESET_SUB_TYPE,
         XML_PRESET_CLASS,
+        XML_PRESET_PROPERTY,
         XML_CUSTOM,
         XML_ENTRANCE,
         XML_EXIT,
@@ -3231,8 +3219,6 @@ namespace xmloff { namespace token {
         XML_FIELDMARK,
         XML_FIELDMARK_START,
         XML_FIELDMARK_END,
-        XML_N_FIELD,
-        XML_NP_FIELD,
 
         XML_IMAGE_SCALE,
         XML_ISOTROPIC,
@@ -3374,6 +3360,8 @@ namespace xmloff { namespace token {
 
         XML_RESOLVED,
 
+        XML_PAGE_CONTENT_BOTTOM,
+
         XML_TOKEN_END
     };
 
@@ -3390,7 +3378,7 @@ namespace xmloff { namespace token {
     XMLOFF_DLLPUBLIC bool IsXMLToken(
         const sax_fastparser::FastAttributeList::FastAttributeIter& aIter,
         enum XMLTokenEnum eToken );
-} }
+}
 
 #endif
 

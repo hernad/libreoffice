@@ -1494,8 +1494,8 @@ namespace {
 class ImplRenderPaintProc : public sdr::contact::ViewObjectContactRedirector
 {
     const SdrLayerAdmin&    rLayerAdmin;
-    SdrPageView* const            pSdrPageView;
-    vcl::PDFExtOutDevData* const  pPDFExtOutDevData;
+    SdrPageView*            pSdrPageView;
+    vcl::PDFExtOutDevData*  pPDFExtOutDevData;
 
     vcl::PDFWriter::StructElement ImplBegStructureTag( SdrObject& rObject );
 
@@ -1892,6 +1892,14 @@ void SAL_CALL SdXImpressDocument::render( sal_Int32 nRenderer, const uno::Any& r
     if ( !(!( mpDoc->GetSdPage(static_cast<sal_Int16>(nPageNumber)-1, PageKind::Standard)->IsExcluded() ) ||
         (pPDFExtOutDevData && pPDFExtOutDevData->GetIsExportHiddenSlides())) )
         return;
+
+    if (pPDFExtOutDevData)
+    {
+        // Calculate the page number in the PDF output, which may be smaller than the page number in
+        // case of hidden slides.
+        sal_Int32 nOutputPageNum = CalcOutputPageNum(pPDFExtOutDevData, mpDoc, nPageNumber);
+        pPDFExtOutDevData->SetCurrentPageNumber(nOutputPageNum);
+    }
 
     std::unique_ptr<::sd::ClientView> pView( new ::sd::ClientView( mpDocShell, pOut ) );
     ::tools::Rectangle aVisArea( Point(), mpDoc->GetSdPage( static_cast<sal_uInt16>(nPageNumber) - 1, ePageKind )->GetSize() );

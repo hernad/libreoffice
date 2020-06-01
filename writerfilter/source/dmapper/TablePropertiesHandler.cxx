@@ -24,15 +24,14 @@
 #include "MeasureHandler.hxx"
 #include "TrackChangesHandler.hxx"
 #include "TablePropertiesHandler.hxx"
+#include "TagLogger.hxx"
 #include "TDefTableHandler.hxx"
 #include "DomainMapperTableManager.hxx"
 
 #include <ooxml/resourceids.hxx>
 
-#include <com/sun/star/text/SizeType.hpp>
 #include <com/sun/star/text/VertOrientation.hpp>
 #include <oox/token/tokens.hxx>
-#include "DomainMapper.hxx"
 
 using namespace com::sun::star;
 using namespace oox;
@@ -71,7 +70,7 @@ namespace writerfilter::dmapper {
             {
                 //contains unit and value
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                if( pProperties.get())
+                if( pProperties )
                 {   //contains attributes x2902 (LN_unit) and x17e2 (LN_trleft)
                     MeasureHandlerPtr pMeasureHandler( new MeasureHandler );
                     pProperties->resolve(*pMeasureHandler);
@@ -88,7 +87,7 @@ namespace writerfilter::dmapper {
             case NS_ooxml::LN_CT_TrPr_del:
             {
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                if( pProperties.get())
+                if( pProperties )
                 {
                     sal_Int32 nToken = sal_Int32();
                     switch( nSprmId )
@@ -116,7 +115,7 @@ namespace writerfilter::dmapper {
             case NS_ooxml::LN_CT_TcPrBase_cellDel:
             {
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                if( pProperties.get())
+                if( pProperties )
                 {
                     sal_Int32 nToken;
                     switch( nSprmId )
@@ -187,7 +186,7 @@ namespace writerfilter::dmapper {
             case NS_ooxml::LN_CT_TblPrBase_tblBorders: //table borders, might be defined in table style
             {
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                if( pProperties.get())
+                if( pProperties )
                 {
                     auto pBorderHandler = std::make_shared<BorderHandler>(true);
                     if (m_pCurrentInteropGrabBag)
@@ -215,7 +214,7 @@ namespace writerfilter::dmapper {
             case NS_ooxml::LN_CT_TblPrEx_tblBorders:
             {
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                if( pProperties.get())
+                if( pProperties)
                 {
                     auto pBorderHandler = std::make_shared<BorderHandler>(true);
                     pProperties->resolve(*pBorderHandler);
@@ -235,7 +234,7 @@ namespace writerfilter::dmapper {
             //contains CT_TcBorders_left, right, top, bottom
             {
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                if( pProperties.get())
+                if( pProperties )
                 {
                     //in OOXML there's one set of borders at each cell (if there is any)
                     tools::SvRef< TDefTableHandler > pTDefTableHandler( new TDefTableHandler());
@@ -254,7 +253,7 @@ namespace writerfilter::dmapper {
 
                 {
                     writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                    if (pProperties.get())
+                    if (pProperties)
                     {
                         auto pCellMarginHandler = std::make_shared<CellMarginHandler>();
                         if (m_pCurrentInteropGrabBag)
@@ -294,7 +293,7 @@ namespace writerfilter::dmapper {
                 // each color sprm contains as much colors as cells are in a row
                 //LN_CT_TcPrBase_shd: cell shading contains: LN_CT_Shd_val, LN_CT_Shd_fill, LN_CT_Shd_color
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                if( pProperties.get())
+                if( pProperties )
                 {
                     auto pCellColorHandler = std::make_shared<CellColorHandler>();
                     pCellColorHandler->enableInteropGrabBag("shd"); //enable to store shd unsupported props in grab bag
@@ -314,7 +313,7 @@ namespace writerfilter::dmapper {
                 //contains LN_CT_TblCellMar_top, LN_CT_TblCellMar_left, LN_CT_TblCellMar_bottom, LN_CT_TblCellMar_right
                 // LN_CT_TblCellMar_start, LN_CT_TblCellMar_end
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                if( pProperties.get())
+                if( pProperties )
                 {
                     auto pCellMarginHandler = std::make_shared<CellMarginHandler>();
                     if (m_pCurrentInteropGrabBag)
@@ -338,7 +337,7 @@ namespace writerfilter::dmapper {
            case NS_ooxml::LN_CT_TblPrBase_tblInd:
            {
                writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-               if (pProperties.get())
+               if (pProperties)
                {
                    MeasureHandlerPtr pHandler(new MeasureHandler);
                    if (m_pCurrentInteropGrabBag)

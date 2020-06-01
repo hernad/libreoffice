@@ -78,7 +78,6 @@
 #include <memory>
 
 using namespace ::com::sun::star::beans;
-using namespace ::com::sun::star::frame;
 using namespace ::com::sun::star::ui::dialogs;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::lang;
@@ -163,55 +162,55 @@ namespace
     void lcl_autoUpdateFileExtension( SvtFileDialog* _pDialog, const OUString& _rLastFilterExt )
     {
         // if auto extension is enabled...
-        if ( _pDialog->isAutoExtensionEnabled() )
+        if ( !_pDialog->isAutoExtensionEnabled() )
+            return;
+
+        // automatically switch to the extension of the (maybe just newly selected) extension
+        OUString aNewFile = _pDialog->getCurrentFileText( );
+        OUString aExt = GetFsysExtension_Impl( aNewFile, _rLastFilterExt );
+
+        // but only if there already is an extension
+        if ( aExt.isEmpty() )
+            return;
+
+        // check if it is a real file extension, and not only the "post-dot" part in
+        // a directory name
+        bool bRealExtensions = true;
+        if ( -1 != aExt.indexOf( '/' ) )
+            bRealExtensions = false;
+        else if ( -1 != aExt.indexOf( '\\' ) )
+            bRealExtensions = false;
+        else
         {
-            // automatically switch to the extension of the (maybe just newly selected) extension
-            OUString aNewFile = _pDialog->getCurrentFileText( );
-            OUString aExt = GetFsysExtension_Impl( aNewFile, _rLastFilterExt );
-
-            // but only if there already is an extension
-            if ( !aExt.isEmpty() )
+            // no easy way to tell, because the part containing the dot already is the last
+            // segment of the complete file name
+            // So we have to check if the file name denotes a folder or a file.
+            // For performance reasons, we do this for file urls only
+            INetURLObject aURL( aNewFile );
+            if ( INetProtocol::NotValid == aURL.GetProtocol() )
             {
-                // check if it is a real file extension, and not only the "post-dot" part in
-                // a directory name
-                bool bRealExtensions = true;
-                if ( -1 != aExt.indexOf( '/' ) )
-                    bRealExtensions = false;
-                else if ( -1 != aExt.indexOf( '\\' ) )
-                    bRealExtensions = false;
-                else
+                OUString sURL;
+                if ( osl::FileBase::getFileURLFromSystemPath( aNewFile, sURL )
+                     == osl::FileBase::E_None )
+                    aURL = INetURLObject( sURL );
+            }
+            if ( INetProtocol::File == aURL.GetProtocol() )
+            {
+                try
                 {
-                    // no easy way to tell, because the part containing the dot already is the last
-                    // segment of the complete file name
-                    // So we have to check if the file name denotes a folder or a file.
-                    // For performance reasons, we do this for file urls only
-                    INetURLObject aURL( aNewFile );
-                    if ( INetProtocol::NotValid == aURL.GetProtocol() )
-                    {
-                        OUString sURL;
-                        if ( osl::FileBase::getFileURLFromSystemPath( aNewFile, sURL )
-                             == osl::FileBase::E_None )
-                            aURL = INetURLObject( sURL );
-                    }
-                    if ( INetProtocol::File == aURL.GetProtocol() )
-                    {
-                        try
-                        {
-                            bRealExtensions = !_pDialog->ContentIsFolder( aURL.GetMainURL( INetURLObject::DecodeMechanism::NONE ) );
-                        }
-                        catch( const css::uno::Exception& )
-                        {
-                            SAL_INFO( "fpicker.office", "Exception in lcl_autoUpdateFileExtension" );
-                        }
-                    }
+                    bRealExtensions = !_pDialog->ContentIsFolder( aURL.GetMainURL( INetURLObject::DecodeMechanism::NONE ) );
                 }
-
-                if ( bRealExtensions )
+                catch( const css::uno::Exception& )
                 {
-                    SetFsysExtension_Impl( aNewFile, _pDialog->GetDefaultExt() );
-                    _pDialog->setCurrentFileText( aNewFile );
+                    SAL_INFO( "fpicker.office", "Exception in lcl_autoUpdateFileExtension" );
                 }
             }
+        }
+
+        if ( bRealExtensions )
+        {
+            SetFsysExtension_Impl( aNewFile, _pDialog->GetDefaultExt() );
+            _pDialog->setCurrentFileText( aNewFile );
         }
     }
 
@@ -292,10 +291,10 @@ SvtFileDialog::SvtFileDialog(weld::Window* pParent, PickerFlags nStyle)
 {
     m_xImpl->m_xCbOptions = m_xBuilder->weld_check_button("options");
     m_xImpl->m_xFtFileName = m_xBuilder->weld_label("file_name_label");
-    m_xImpl->m_xEdFileName.reset(new URLBox(m_xBuilder->weld_combo_box("file_name")));
+    m_xImpl->m_xEdFileName.reset(new SvtURLBox(m_xBuilder->weld_combo_box("file_name")));
     m_xImpl->m_xFtFileType = m_xBuilder->weld_label("file_type_label");
     m_xImpl->m_xLbFilter = m_xBuilder->weld_combo_box("file_type");
-    m_xImpl->m_xEdCurrentPath.reset(new URLBox(m_xBuilder->weld_combo_box("current_path")));
+    m_xImpl->m_xEdCurrentPath.reset(new SvtURLBox(m_xBuilder->weld_combo_box("current_path")));
     m_xImpl->m_xBtnFileOpen = m_xBuilder->weld_button("open");
     m_xImpl->m_xBtnCancel = m_xBuilder->weld_button("cancel");
     m_xImpl->m_xBtnHelp = m_xBuilder->weld_button("help");
@@ -304,19 +303,13 @@ SvtFileDialog::SvtFileDialog(weld::Window* pParent, PickerFlags nStyle)
     m_xImpl->m_xCbPassword = m_xBuilder->weld_check_button("password");
     m_xImpl->m_xCbGPGEncrypt = m_xBuilder->weld_check_button("gpgencrypt");
     m_xImpl->m_xCbAutoExtension = m_xBuilder->weld_check_button("extension");
-    m_xImpl->m_xFtFileVersion = m_xBuilder->weld_label("shared_label");
-    m_xImpl->m_xLbFileVersion = m_xBuilder->weld_combo_box("shared");
-    m_xImpl->m_xFtTemplates = m_xBuilder->weld_label("shared_label");
-    m_xImpl->m_xLbTemplates = m_xBuilder->weld_combo_box("shared");
-    m_xImpl->m_xFtImageTemplates = m_xBuilder->weld_label("shared_label");
-    m_xImpl->m_xLbImageTemplates = m_xBuilder->weld_combo_box("shared");
-    m_xImpl->m_xFtImageAnchor = m_xBuilder->weld_label("shared_label");
-    m_xImpl->m_xLbImageAnchor = m_xBuilder->weld_combo_box("shared");
+    m_xImpl->m_xSharedLabel = m_xBuilder->weld_label("shared_label");
+    m_xImpl->m_xSharedListBox = m_xBuilder->weld_combo_box("shared");
 
     // because the "<All Formats> (*.bmp,*...)" entry is too wide,
     // we need to disable the auto width feature of the filter box
     int nWidth = m_xImpl->m_xLbFilter->get_approximate_digit_width() * 60;
-    m_xImpl->m_xLbImageTemplates->set_size_request(nWidth, -1);
+    m_xImpl->m_xSharedListBox->set_size_request(nWidth, -1);
     m_xImpl->m_xLbFilter->set_size_request(nWidth, -1);
 
     m_xImpl->m_xBtnUp.reset(new SvtUpButton_Impl(m_xBuilder->weld_toolbar("up_bar"),
@@ -446,12 +439,8 @@ SvtFileDialog::SvtFileDialog(weld::Window* pParent, PickerFlags nStyle)
         // for the extra use cases, and separated _pLbFileVersion
         // I did not find out in which cases the help ID is really needed HID_FILESAVE_TEMPLATE - all
         // tests I made lead to a dialog where _no_ of the three list boxes was present.
-        if ( m_xImpl->m_xLbFileVersion )
-            m_xImpl->m_xLbFileVersion->set_help_id( HID_FILESAVE_TEMPLATE );
-        if ( m_xImpl->m_xLbTemplates )
-            m_xImpl->m_xLbTemplates->set_help_id( HID_FILESAVE_TEMPLATE );
-        if ( m_xImpl->m_xLbImageTemplates )
-            m_xImpl->m_xLbImageTemplates->set_help_id( HID_FILESAVE_TEMPLATE );
+        if (m_xImpl->m_xSharedListBox)
+            m_xImpl->m_xSharedListBox->set_help_id( HID_FILESAVE_TEMPLATE );
 
         if ( m_xImpl->m_xCbPassword ) m_xImpl->m_xCbPassword->set_help_id( HID_FILESAVE_SAVEWITHPASSWORD );
         if ( m_xImpl->m_xCbAutoExtension ) m_xImpl->m_xCbAutoExtension->set_help_id( HID_FILESAVE_AUTOEXTENSION );
@@ -467,6 +456,8 @@ SvtFileDialog::SvtFileDialog(weld::Window* pParent, PickerFlags nStyle)
 
     m_xDialog->connect_size_allocate(LINK(this, SvtFileDialog, SizeAllocHdl));
     SizeAllocHdl(Size());
+
+    m_xImpl->m_xEdFileName->grab_focus();
 }
 
 SvtFileDialog::~SvtFileDialog()
@@ -484,25 +475,26 @@ SvtFileDialog::~SvtFileDialog()
     m_xFileView->SetSelectHdl(Link<SvtFileView*,void>());
 
     // Save bookmarked places
-    if (m_xImpl->m_xPlaces->IsUpdated()) {
-        const std::vector<PlacePtr> aPlaces = m_xImpl->m_xPlaces->GetPlaces();
-        Sequence< OUString > placesUrlsList(m_xImpl->m_xPlaces->GetNbEditablePlaces());
-        Sequence< OUString > placesNamesList(m_xImpl->m_xPlaces->GetNbEditablePlaces());
-        int i(0);
-        for (auto const& place : aPlaces)
-        {
-            if(place->IsEditable()) {
-                placesUrlsList[i] = place->GetUrl();
-                placesNamesList[i] = place->GetName();
-                ++i;
-            }
-        }
+    if (!m_xImpl->m_xPlaces->IsUpdated())
+        return;
 
-        std::shared_ptr<comphelper::ConfigurationChanges> batch(comphelper::ConfigurationChanges::create(m_xContext));
-        officecfg::Office::Common::Misc::FilePickerPlacesUrls::set(placesUrlsList, batch);
-        officecfg::Office::Common::Misc::FilePickerPlacesNames::set(placesNamesList, batch);
-        batch->commit();
+    const std::vector<PlacePtr> aPlaces = m_xImpl->m_xPlaces->GetPlaces();
+    Sequence< OUString > placesUrlsList(m_xImpl->m_xPlaces->GetNbEditablePlaces());
+    Sequence< OUString > placesNamesList(m_xImpl->m_xPlaces->GetNbEditablePlaces());
+    int i(0);
+    for (auto const& place : aPlaces)
+    {
+        if(place->IsEditable()) {
+            placesUrlsList[i] = place->GetUrl();
+            placesNamesList[i] = place->GetName();
+            ++i;
+        }
     }
+
+    std::shared_ptr<comphelper::ConfigurationChanges> batch(comphelper::ConfigurationChanges::create(m_xContext));
+    officecfg::Office::Common::Misc::FilePickerPlacesUrls::set(placesUrlsList, batch);
+    officecfg::Office::Common::Misc::FilePickerPlacesNames::set(placesNamesList, batch);
+    batch->commit();
 }
 
 IMPL_LINK_NOARG(SvtFileDialog, NewFolderHdl_Impl, weld::Button&, void)
@@ -1962,42 +1954,42 @@ weld::Widget* SvtFileDialog::getControl( sal_Int16 nControlId, bool bLabelContro
 
         case LISTBOX_VERSION:
             pReturn =   bLabelControl
-                    ? static_cast<weld::Widget*>(m_xImpl->m_xFtFileVersion.get())
-                    : static_cast<weld::Widget*>(m_xImpl->m_xLbFileVersion.get());
+                    ? static_cast<weld::Widget*>(m_xImpl->m_xSharedLabel.get())
+                    : static_cast<weld::Widget*>(m_xImpl->m_xSharedListBox.get());
             break;
 
         case LISTBOX_TEMPLATE:
             pReturn =   bLabelControl
-                    ? static_cast<weld::Widget*>(m_xImpl->m_xFtTemplates.get())
-                    : static_cast<weld::Widget*>(m_xImpl->m_xLbTemplates.get());
+                    ? static_cast<weld::Widget*>(m_xImpl->m_xSharedLabel.get())
+                    : static_cast<weld::Widget*>(m_xImpl->m_xSharedListBox.get());
             break;
 
         case LISTBOX_IMAGE_TEMPLATE:
             pReturn =   bLabelControl
-                    ? static_cast<weld::Widget*>(m_xImpl->m_xFtImageTemplates.get())
-                    : static_cast<weld::Widget*>(m_xImpl->m_xLbImageTemplates.get());
+                    ? static_cast<weld::Widget*>(m_xImpl->m_xSharedLabel.get())
+                    : static_cast<weld::Widget*>(m_xImpl->m_xSharedListBox.get());
             break;
 
         case LISTBOX_IMAGE_ANCHOR:
             pReturn =   bLabelControl
-                    ? static_cast<weld::Widget*>(m_xImpl->m_xFtImageAnchor.get())
-                    : static_cast<weld::Widget*>(m_xImpl->m_xLbImageAnchor.get());
+                    ? static_cast<weld::Widget*>(m_xImpl->m_xSharedLabel.get())
+                    : static_cast<weld::Widget*>(m_xImpl->m_xSharedListBox.get());
             break;
 
         case LISTBOX_VERSION_LABEL:
-            pReturn = m_xImpl->m_xFtFileVersion.get();
+            pReturn = m_xImpl->m_xSharedLabel.get();
             break;
 
         case LISTBOX_TEMPLATE_LABEL:
-            pReturn = m_xImpl->m_xFtTemplates.get();
+            pReturn = m_xImpl->m_xSharedLabel.get();
             break;
 
         case LISTBOX_IMAGE_TEMPLATE_LABEL:
-            pReturn = m_xImpl->m_xFtImageTemplates.get();
+            pReturn = m_xImpl->m_xSharedLabel.get();
             break;
 
         case LISTBOX_IMAGE_ANCHOR_LABEL:
-            pReturn = m_xImpl->m_xFtImageAnchor.get();
+            pReturn = m_xImpl->m_xSharedLabel.get();
             break;
 
         case PUSHBUTTON_OK:
@@ -2106,38 +2098,38 @@ void SvtFileDialog::AddControls_Impl( )
 
     if ( m_nPickerFlags & PickerFlags::ShowVersions )
     {
-        m_xImpl->m_xFtFileVersion->set_label( FpsResId( STR_SVT_FILEPICKER_VERSION ) );
-        m_xImpl->m_xFtFileVersion->show();
+        m_xImpl->m_xSharedLabel->set_label( FpsResId( STR_SVT_FILEPICKER_VERSION ) );
+        m_xImpl->m_xSharedLabel->show();
 
-        m_xImpl->m_xLbFileVersion->set_help_id( HID_FILEOPEN_VERSION );
-        m_xImpl->m_xLbFileVersion->show();
+        m_xImpl->m_xSharedListBox->set_help_id( HID_FILEOPEN_VERSION );
+        m_xImpl->m_xSharedListBox->show();
     }
     else if ( m_nPickerFlags & PickerFlags::Templates )
     {
-        m_xImpl->m_xFtTemplates->set_label( FpsResId( STR_SVT_FILEPICKER_TEMPLATES ) );
-        m_xImpl->m_xFtTemplates->show();
+        m_xImpl->m_xSharedLabel->set_label( FpsResId( STR_SVT_FILEPICKER_TEMPLATES ) );
+        m_xImpl->m_xSharedLabel->show();
 
-        m_xImpl->m_xLbTemplates->set_help_id( HID_FILEOPEN_VERSION );
-        m_xImpl->m_xLbTemplates->show();
+        m_xImpl->m_xSharedListBox->set_help_id( HID_FILEOPEN_VERSION );
+        m_xImpl->m_xSharedListBox->show();
         // This is strange. During the re-factoring during 96930, I discovered that this help id
         // is set in the "Templates mode". This was hidden in the previous implementation.
         // Shouldn't this be a more meaningful help id.
     }
     else if ( m_nPickerFlags & PickerFlags::ImageTemplate )
     {
-        m_xImpl->m_xFtImageTemplates->set_label( FpsResId( STR_SVT_FILEPICKER_IMAGE_TEMPLATE ) );
-        m_xImpl->m_xFtImageTemplates->show();
+        m_xImpl->m_xSharedLabel->set_label( FpsResId( STR_SVT_FILEPICKER_IMAGE_TEMPLATE ) );
+        m_xImpl->m_xSharedLabel->show();
 
-        m_xImpl->m_xLbImageTemplates->set_help_id( HID_FILEOPEN_IMAGE_TEMPLATE );
-        m_xImpl->m_xLbImageTemplates->show();
+        m_xImpl->m_xSharedListBox->set_help_id( HID_FILEOPEN_IMAGE_TEMPLATE );
+        m_xImpl->m_xSharedListBox->show();
     }
     else if ( m_nPickerFlags & PickerFlags::ImageAnchor )
     {
-        m_xImpl->m_xFtImageAnchor->set_label( FpsResId( STR_SVT_FILEPICKER_IMAGE_ANCHOR ) );
-        m_xImpl->m_xFtImageAnchor->show();
+        m_xImpl->m_xSharedLabel->set_label( FpsResId( STR_SVT_FILEPICKER_IMAGE_ANCHOR ) );
+        m_xImpl->m_xSharedLabel->show();
 
-        m_xImpl->m_xLbImageAnchor->set_help_id( HID_FILEOPEN_IMAGE_ANCHOR );
-        m_xImpl->m_xLbImageAnchor->show();
+        m_xImpl->m_xSharedListBox->set_help_id( HID_FILEOPEN_IMAGE_ANCHOR );
+        m_xImpl->m_xSharedListBox->show();
     }
 
     m_xImpl->m_xPlaces.reset(new PlacesListBox(m_xBuilder->weld_tree_view("places"),
@@ -2266,25 +2258,25 @@ void SvtFileDialog::appendDefaultExtension(OUString& rFileName,
 {
     const OUString aType(rFilterExtensions.toAsciiLowerCase());
 
-    if ( aType != FILEDIALOG_FILTER_ALL )
+    if ( aType == FILEDIALOG_FILTER_ALL )
+        return;
+
+    const OUString aTemp(rFileName.toAsciiLowerCase());
+    sal_Int32 nPos = 0;
+
+    do
     {
-        const OUString aTemp(rFileName.toAsciiLowerCase());
-        sal_Int32 nPos = 0;
-
-        do
-        {
-            if (nPos+1<aType.getLength() && aType[nPos]=='*') // take care of a leading *
-                ++nPos;
-            const OUString aExt(aType.getToken( 0, FILEDIALOG_DEF_EXTSEP, nPos ));
-            if (aExt.isEmpty())
-                continue;
-            if (aTemp.endsWith(aExt))
-                return;
-        }
-        while (nPos>=0);
-
-        rFileName += "." + rFilterDefaultExtension;
+        if (nPos+1<aType.getLength() && aType[nPos]=='*') // take care of a leading *
+            ++nPos;
+        const OUString aExt(aType.getToken( 0, FILEDIALOG_DEF_EXTSEP, nPos ));
+        if (aExt.isEmpty())
+            continue;
+        if (aTemp.endsWith(aExt))
+            return;
     }
+    while (nPos>=0);
+
+    rFileName += "." + rFilterDefaultExtension;
 }
 
 void SvtFileDialog::initDefaultPlaces( )

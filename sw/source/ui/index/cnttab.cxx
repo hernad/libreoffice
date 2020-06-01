@@ -22,6 +22,7 @@
 #include <o3tl/safeint.hxx>
 #include <sal/log.hxx>
 #include <svl/style.hxx>
+#include <vcl/button.hxx>
 #include <vcl/weld.hxx>
 #include <svl/stritem.hxx>
 #include <unotools/pathoptions.hxx>
@@ -134,13 +135,6 @@ class SwEntryBrowseBox : public SwEntryBrowseBox_Base
     VclPtr<Edit>                    m_aCellEdit;
     VclPtr< ::svt::CheckBoxControl>  m_aCellCheckBox;
 
-    OUString  m_sSearch;
-    OUString  m_sAlternative;
-    OUString  m_sPrimKey;
-    OUString  m_sSecKey;
-    OUString  m_sComment;
-    OUString  m_sCaseSensitive;
-    OUString  m_sWordOnly;
     OUString  m_sYes;
     OUString  m_sNo;
 
@@ -484,8 +478,7 @@ class SwAddStylesDlg_Impl : public SfxDialogController
     DECL_LINK(LeftRightHdl, weld::Button&, void);
     DECL_LINK(KeyInput, const KeyEvent&, bool);
     DECL_LINK(TreeSizeAllocHdl, const Size&, void);
-    typedef std::pair<int, int> row_col;
-    DECL_LINK(RadioToggleOnHdl, const row_col&, void);
+    DECL_LINK(RadioToggleOnHdl, const weld::TreeView::iter_col&, void);
 
 public:
     SwAddStylesDlg_Impl(weld::Window* pParent, SwWrtShell const & rWrtSh, OUString rStringArr[]);
@@ -602,7 +595,7 @@ IMPL_LINK(SwAddStylesDlg_Impl, TreeSizeAllocHdl, const Size&, rSize, void)
     m_xHeaderTree->set_column_fixed_widths(aWidths);
 }
 
-IMPL_LINK(SwAddStylesDlg_Impl, RadioToggleOnHdl, const row_col&, rRowCol, void)
+IMPL_LINK(SwAddStylesDlg_Impl, RadioToggleOnHdl, const weld::TreeView::iter_col&, rRowCol, void)
 {
     for (sal_uInt16 i = 0; i <= MAXLEVEL; ++i)
     {
@@ -3565,13 +3558,13 @@ SwEntryBrowseBox::SwEntryBrowseBox(const css::uno::Reference<css::awt::XWindow> 
     , m_nCurrentRow(0)
     , m_bModified(false)
 {
-    m_sSearch = SwResId(STR_AUTOMARK_SEARCHTERM);
-    m_sAlternative = SwResId(STR_AUTOMARK_ALTERNATIVE);
-    m_sPrimKey = SwResId(STR_AUTOMARK_KEY1);
-    m_sSecKey = SwResId(STR_AUTOMARK_KEY2);
-    m_sComment = SwResId(STR_AUTOMARK_COMMENT);
-    m_sCaseSensitive = SwResId(STR_AUTOMARK_CASESENSITIVE);
-    m_sWordOnly = SwResId(STR_AUTOMARK_WORDONLY);
+    OUString sSearch = SwResId(STR_AUTOMARK_SEARCHTERM);
+    OUString sAlternative = SwResId(STR_AUTOMARK_ALTERNATIVE);
+    OUString sPrimKey = SwResId(STR_AUTOMARK_KEY1);
+    OUString sSecKey = SwResId(STR_AUTOMARK_KEY2);
+    OUString sComment = SwResId(STR_AUTOMARK_COMMENT);
+    OUString sCaseSensitive = SwResId(STR_AUTOMARK_CASESENSITIVE);
+    OUString sWordOnly = SwResId(STR_AUTOMARK_WORDONLY);
     m_sYes = SwResId(STR_AUTOMARK_YES);
     m_sNo = SwResId(STR_AUTOMARK_NO);
 
@@ -3591,13 +3584,13 @@ SwEntryBrowseBox::SwEntryBrowseBox(const css::uno::Reference<css::awt::XWindow> 
 
     const OUString* aTitles[7] =
     {
-        &m_sSearch,
-        &m_sAlternative,
-        &m_sPrimKey,
-        &m_sSecKey,
-        &m_sComment,
-        &m_sCaseSensitive,
-        &m_sWordOnly
+        &sSearch,
+        &sAlternative,
+        &sPrimKey,
+        &sSecKey,
+        &sComment,
+        &sCaseSensitive,
+        &sWordOnly
     };
 
     long nWidth = GetSizePixel().Width();

@@ -17,13 +17,9 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <comphelper/anytostring.hxx>
-#include <cppuhelper/exc_hlp.hxx>
-
-#include <com/sun/star/beans/XMultiPropertySet.hpp>
+#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/container/XNamed.hpp>
-#include <osl/diagnose.h>
-#include <sal/log.hxx>
+#include <com/sun/star/drawing/XDrawPage.hpp>
 #include <tools/diagnose_ex.h>
 
 #include <oox/helper/attributelist.hxx>
@@ -40,7 +36,7 @@
 #include <oox/vml/vmldrawing.hxx>
 #include <oox/vml/vmldrawingfragment.hxx>
 #include <drawingml/clrschemecontext.hxx>
-#include <drawingml/textliststyle.hxx>
+#include <drawingml/fillproperties.hxx>
 #include <oox/ppt/pptimport.hxx>
 #include <oox/token/namespaces.hxx>
 #include <oox/token/properties.hxx>
@@ -169,7 +165,10 @@ SlideFragmentHandler::~SlideFragmentHandler()
             const FillProperties *pFillProperties = nullptr;
             if( mpSlidePersistPtr->getTheme() )
                 pFillProperties = mpSlidePersistPtr->getTheme()->getFillStyle( rAttribs.getInteger( XML_idx, -1 ) );
-            FillPropertiesPtr pFillPropertiesPtr( pFillProperties ? new FillProperties( *pFillProperties ) : new FillProperties );
+            FillPropertiesPtr pFillPropertiesPtr =
+                pFillProperties
+                ? std::make_shared<FillProperties>( *pFillProperties )
+                : std::make_shared<FillProperties>();
             mpSlidePersistPtr->setBackgroundProperties( pFillPropertiesPtr );
             ContextHandlerRef ret = new ColorContext( *this, mpSlidePersistPtr->getBackgroundColor() );
             return ret;
@@ -179,7 +178,10 @@ SlideFragmentHandler::~SlideFragmentHandler()
     case A_TOKEN( overrideClrMapping ):
     case PPT_TOKEN( clrMap ):           // CT_ColorMapping
         {
-            oox::drawingml::ClrMapPtr pClrMapPtr( ( aElementToken == PPT_TOKEN( clrMap ) || !mpSlidePersistPtr.get() || !mpSlidePersistPtr->getClrMap().get() ) ? new oox::drawingml::ClrMap : new oox::drawingml::ClrMap( *mpSlidePersistPtr->getClrMap() ) );
+            oox::drawingml::ClrMapPtr pClrMapPtr =
+                ( aElementToken == PPT_TOKEN( clrMap ) || !mpSlidePersistPtr || !mpSlidePersistPtr->getClrMap() )
+                ? std::make_shared<oox::drawingml::ClrMap>()
+                : std::make_shared<oox::drawingml::ClrMap>( *mpSlidePersistPtr->getClrMap() );
             ContextHandlerRef ret = new oox::drawingml::clrMapContext( *this, rAttribs, *pClrMapPtr );
             mpSlidePersistPtr->setClrMap( pClrMapPtr );
             return ret;

@@ -18,28 +18,16 @@
  */
 
 #include "tablespage.hxx"
-#include <dbu_dlg.hxx>
 #include <dsitems.hxx>
-#include <browserids.hxx>
 #include <datasourceconnector.hxx>
 #include <comphelper/types.hxx>
 #include <connectivity/dbtools.hxx>
 #include <connectivity/dbexception.hxx>
-#include <i18nlangtag/languagetag.hxx>
 #include <stringlistitem.hxx>
-#include <svl/eitem.hxx>
 #include <svl/stritem.hxx>
-#include <stringconstants.hxx>
 #include <strings.hxx>
-#include <vcl/svapp.hxx>
-#include <vcl/settings.hxx>
-#include <com/sun/star/i18n/Collator.hpp>
-#include <com/sun/star/sdb/SQLContext.hpp>
-#include <com/sun/star/sdbcx/XTablesSupplier.hpp>
-#include <com/sun/star/sdbcx/XAppend.hpp>
+#include <com/sun/star/sdbc/SQLException.hpp>
 #include <com/sun/star/util/XModifiable.hpp>
-#include <com/sun/star/sdbcx/XDrop.hpp>
-#include <com/sun/star/sdbcx/XDataDefinitionSupplier.hpp>
 #include <sqlmessage.hxx>
 #include <UITools.hxx>
 #include <osl/diagnose.h>
@@ -56,7 +44,6 @@ namespace dbaui
     using namespace ::com::sun::star::sdb;
     using namespace ::com::sun::star::beans;
     using namespace ::com::sun::star::lang;
-    using namespace ::com::sun::star::i18n;
     using namespace ::com::sun::star::container;
     using namespace ::com::sun::star::util;
     using namespace ::dbtools;
@@ -202,10 +189,6 @@ namespace dbaui
 
             // fill the table list with this connection information
             SQLExceptionInfo aErrorInfo;
-            // the current DSN
-            OUString sURL;
-            if ( m_pTablesDlg )
-                sURL = m_pTablesDlg->getConnectionURL();
 
             try
             {
@@ -343,12 +326,9 @@ namespace dbaui
         return nResult;
     }
 
-    IMPL_LINK_NOARG(OTableSubscriptionPage, OnTreeEntryChecked, const row_col&, void)
+    IMPL_LINK(OTableSubscriptionPage, OnTreeEntryChecked, const weld::TreeView::iter_col&, rRowCol, void)
     {
-        weld::TreeView& rTreeView = m_xTablesList->GetWidget();
-        std::unique_ptr<weld::TreeIter> xEntry(rTreeView.make_iterator());
-        if (rTreeView.get_cursor(xEntry.get()))
-            m_xTablesList->checkedButton_noBroadcast(*xEntry);
+        m_xTablesList->checkedButton_noBroadcast(rRowCol.first);
         callModifiedHdl();
     }
 

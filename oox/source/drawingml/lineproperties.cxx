@@ -18,16 +18,13 @@
  */
 
 #include <drawingml/lineproperties.hxx>
-#include <vector>
 #include <rtl/ustrbuf.hxx>
 #include <osl/diagnose.h>
 #include <com/sun/star/beans/NamedValue.hpp>
-#include <com/sun/star/drawing/FlagSequence.hpp>
 #include <com/sun/star/drawing/LineCap.hpp>
 #include <com/sun/star/drawing/LineDash.hpp>
 #include <com/sun/star/drawing/LineJoint.hpp>
 #include <com/sun/star/drawing/LineStyle.hpp>
-#include <com/sun/star/drawing/PointSequence.hpp>
 #include <com/sun/star/drawing/PolyPolygonBezierCoords.hpp>
 #include <oox/drawingml/drawingmltypes.hxx>
 #include <oox/drawingml/shapepropertymap.hxx>
@@ -392,20 +389,20 @@ void lclPushMarkerProperties( ShapePropertyMap& rPropMap,
     }
 
     // push the properties (filled aNamedMarker.Name indicates valid marker)
-    if( !aNamedMarker.Name.isEmpty() )
+    if( aNamedMarker.Name.isEmpty() )
+        return;
+
+    if( bLineEnd )
     {
-        if( bLineEnd )
-        {
-            rPropMap.setProperty( ShapeProperty::LineEnd, aNamedMarker );
-            rPropMap.setProperty( ShapeProperty::LineEndWidth, nMarkerWidth );
-            rPropMap.setProperty( ShapeProperty::LineEndCenter, bMarkerCenter );
-        }
-        else
-        {
-            rPropMap.setProperty( ShapeProperty::LineStart, aNamedMarker );
-            rPropMap.setProperty( ShapeProperty::LineStartWidth, nMarkerWidth );
-            rPropMap.setProperty( ShapeProperty::LineStartCenter, bMarkerCenter );
-        }
+        rPropMap.setProperty( ShapeProperty::LineEnd, aNamedMarker );
+        rPropMap.setProperty( ShapeProperty::LineEndWidth, nMarkerWidth );
+        rPropMap.setProperty( ShapeProperty::LineEndCenter, bMarkerCenter );
+    }
+    else
+    {
+        rPropMap.setProperty( ShapeProperty::LineStart, aNamedMarker );
+        rPropMap.setProperty( ShapeProperty::LineStartWidth, nMarkerWidth );
+        rPropMap.setProperty( ShapeProperty::LineStartCenter, bMarkerCenter );
     }
 }
 
@@ -436,55 +433,55 @@ void LineProperties::pushToPropMap( ShapePropertyMap& rPropMap,
         const GraphicHelper& rGraphicHelper, ::Color nPhClr ) const
 {
     // line fill type must exist, otherwise ignore other properties
-    if( maLineFill.moFillType.has() )
+    if( !maLineFill.moFillType.has() )
+        return;
+
+    // line style (our core only supports none and solid)
+    drawing::LineStyle eLineStyle = (maLineFill.moFillType.get() == XML_noFill) ? drawing::LineStyle_NONE : drawing::LineStyle_SOLID;
+
+    // line width in 1/100mm
+    sal_Int32 nLineWidth = getLineWidth(); // includes conversion from EMUs to 1/100mm
+    rPropMap.setProperty( ShapeProperty::LineWidth, nLineWidth );
+
+    // create line dash from preset dash token or dash stop vector (not for invisible line)
+    if( (eLineStyle != drawing::LineStyle_NONE) && (moPresetDash.differsFrom( XML_solid ) || !maCustomDash.empty()) )
     {
-        // line style (our core only supports none and solid)
-        drawing::LineStyle eLineStyle = (maLineFill.moFillType.get() == XML_noFill) ? drawing::LineStyle_NONE : drawing::LineStyle_SOLID;
+        LineDash aLineDash;
+        aLineDash.Style = lclGetDashStyle( moLineCap.get( XML_flat ) );
 
-        // line width in 1/100mm
-        sal_Int32 nLineWidth = getLineWidth(); // includes conversion from EMUs to 1/100mm
-        rPropMap.setProperty( ShapeProperty::LineWidth, nLineWidth );
-
-        // create line dash from preset dash token or dash stop vector (not for invisible line)
-        if( (eLineStyle != drawing::LineStyle_NONE) && (moPresetDash.differsFrom( XML_solid ) || !maCustomDash.empty()) )
+        if(moPresetDash.differsFrom(XML_solid))
+            lclConvertPresetDash(aLineDash, moPresetDash.get(XML_dash));
+        else // !maCustomDash.empty()
         {
-            LineDash aLineDash;
-            aLineDash.Style = lclGetDashStyle( moLineCap.get( XML_flat ) );
-
-            if(moPresetDash.differsFrom(XML_solid))
-                lclConvertPresetDash(aLineDash, moPresetDash.get(XML_dash));
-            else // !maCustomDash.empty()
-            {
-                lclConvertCustomDash(aLineDash, maCustomDash);
-                lclRecoverStandardDashStyles(aLineDash, nLineWidth);
-            }
-            if( rPropMap.setProperty( ShapeProperty::LineDash, aLineDash ) )
-                eLineStyle = drawing::LineStyle_DASH;
+            lclConvertCustomDash(aLineDash, maCustomDash);
+            lclRecoverStandardDashStyles(aLineDash, nLineWidth);
         }
-        // line cap type
-        if( moLineCap.has() )
-            rPropMap.setProperty( ShapeProperty::LineCap, lclGetLineCap( moLineCap.get() ) );
-
-        // set final line style property
-        rPropMap.setProperty( ShapeProperty::LineStyle, eLineStyle );
-
-        // line joint type
-        if( moLineJoint.has() )
-            rPropMap.setProperty( ShapeProperty::LineJoint, lclGetLineJoint( moLineJoint.get() ) );
-
-        // line color and transparence
-        Color aLineColor = maLineFill.getBestSolidColor();
-        if( aLineColor.isUsed() )
-        {
-            rPropMap.setProperty( ShapeProperty::LineColor, aLineColor.getColor( rGraphicHelper, nPhClr ) );
-            if( aLineColor.hasTransparency() )
-                rPropMap.setProperty( ShapeProperty::LineTransparency, aLineColor.getTransparency() );
-        }
-
-        // line markers
-        lclPushMarkerProperties( rPropMap, maStartArrow, nLineWidth, false );
-        lclPushMarkerProperties( rPropMap, maEndArrow,   nLineWidth, true );
+        if( rPropMap.setProperty( ShapeProperty::LineDash, aLineDash ) )
+            eLineStyle = drawing::LineStyle_DASH;
     }
+    // line cap type
+    if( moLineCap.has() )
+        rPropMap.setProperty( ShapeProperty::LineCap, lclGetLineCap( moLineCap.get() ) );
+
+    // set final line style property
+    rPropMap.setProperty( ShapeProperty::LineStyle, eLineStyle );
+
+    // line joint type
+    if( moLineJoint.has() )
+        rPropMap.setProperty( ShapeProperty::LineJoint, lclGetLineJoint( moLineJoint.get() ) );
+
+    // line color and transparence
+    Color aLineColor = maLineFill.getBestSolidColor();
+    if( aLineColor.isUsed() )
+    {
+        rPropMap.setProperty( ShapeProperty::LineColor, aLineColor.getColor( rGraphicHelper, nPhClr ) );
+        if( aLineColor.hasTransparency() )
+            rPropMap.setProperty( ShapeProperty::LineTransparency, aLineColor.getTransparency() );
+    }
+
+    // line markers
+    lclPushMarkerProperties( rPropMap, maStartArrow, nLineWidth, false );
+    lclPushMarkerProperties( rPropMap, maEndArrow,   nLineWidth, true );
 }
 
 drawing::LineStyle LineProperties::getLineStyle() const

@@ -38,7 +38,7 @@
 #include <tools/diagnose_ex.h>
 
 #include <canvas/canvastools.hxx>
-#include <canvas/verifyinput.hxx>
+#include <verifyinput.hxx>
 
 #include "dx_canvas.hxx"
 #include "dx_canvasbitmap.hxx"
@@ -408,10 +408,9 @@ namespace dxcanvas
             GraphicsPathSharedPtr pRes = std::make_shared<Gdiplus::GraphicsPath>();
             std::vector< Gdiplus::PointF > aPoints;
 
-            sal_Int32 nCurrPoly;
-            for( nCurrPoly=0; nCurrPoly<points.getLength(); ++nCurrPoly )
+            for( uno::Sequence< geometry::RealPoint2D > const & seqPoints : points )
             {
-                const sal_Int32 nCurrSize( points[nCurrPoly].getLength() );
+                const sal_Int32 nCurrSize( seqPoints.getLength() );
                 if( nCurrSize )
                 {
                     aPoints.resize( nCurrSize );
@@ -419,8 +418,8 @@ namespace dxcanvas
                     // TODO(F1): Closed/open polygons
 
                     // convert from RealPoint2D array to Gdiplus::PointF array
-                    std::transform( points[nCurrPoly].getConstArray(),
-                                      points[nCurrPoly].getConstArray()+nCurrSize,
+                    std::transform( seqPoints.getConstArray(),
+                                      seqPoints.getConstArray()+nCurrSize,
                                       aPoints.begin(),
                                       implGdiPlusPointFromRealPoint2D );
 

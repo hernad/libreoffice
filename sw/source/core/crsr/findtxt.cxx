@@ -23,6 +23,7 @@
 #include <com/sun/star/util/SearchResult.hpp>
 #include <comphelper/lok.hxx>
 #include <o3tl/safeint.hxx>
+#include <rtl/ustrbuf.hxx>
 #include <svx/svdview.hxx>
 #include <svl/srchitem.hxx>
 #include <sfx2/sfxsids.hrc>
@@ -140,7 +141,7 @@ public:
 
 class MaybeMergedIter
 {
-    o3tl::optional<sw::MergedAttrIter> m_oMergedIter;
+    std::optional<sw::MergedAttrIter> m_oMergedIter;
     SwTextNode const*const m_pNode;
     size_t m_HintIndex;
 
@@ -905,8 +906,8 @@ struct SwFindParaText : public SwFindParas
     SwCursor& m_rCursor;
     SwRootFrame const* m_pLayout;
     utl::TextSearch m_aSText;
-    bool const m_bReplace;
-    bool const m_bSearchInNotes;
+    bool m_bReplace;
+    bool m_bSearchInNotes;
 
     SwFindParaText(const i18nutil::SearchOptions2& rOpt, bool bSearchInNotes,
             bool bRepl, SwCursor& rCursor, SwRootFrame const*const pLayout)
@@ -951,7 +952,7 @@ int SwFindParaText::DoFind(SwPaM & rCursor, SwMoveFnCollection const & fnMove,
             const_cast<SwPaM&>(rRegion).GetRingContainer().merge( m_rCursor.GetRingContainer() );
         }
 
-        o3tl::optional<OUString> xRepl;
+        std::optional<OUString> xRepl;
         if (bRegExp)
             xRepl = sw::ReplaceBackReferences(m_rSearchOpt, &rCursor, m_pLayout);
         bool const bReplaced = sw::ReplaceImpl(rCursor,
@@ -1094,15 +1095,17 @@ bool ReplaceImpl(
     return bReplaced;
 }
 
-o3tl::optional<OUString> ReplaceBackReferences(const i18nutil::SearchOptions2& rSearchOpt,
+std::optional<OUString> ReplaceBackReferences(const i18nutil::SearchOptions2& rSearchOpt,
         SwPaM *const pPam, SwRootFrame const*const pLayout)
 {
-    o3tl::optional<OUString> xRet;
+    std::optional<OUString> xRet;
     if( pPam && pPam->HasMark() &&
         SearchAlgorithms2::REGEXP == rSearchOpt.AlgorithmType2 )
     {
-        const SwContentNode* pTextNode = pPam->GetContentNode();
-        if (!pTextNode || !pTextNode->IsTextNode())
+        SwContentNode const*const pTextNode = pPam->GetContentNode();
+        SwContentNode const*const pMarkTextNode = pPam->GetContentNode(false);
+        if (!pTextNode || !pTextNode->IsTextNode()
+            || !pMarkTextNode || !pMarkTextNode->IsTextNode())
         {
             return xRet;
         }
@@ -1112,40 +1115,44 @@ o3tl::optional<OUString> ReplaceBackReferences(const i18nutil::SearchOptions2& r
         const bool bParaEnd = rSearchOpt.searchString == "$" || rSearchOpt.searchString == "^$" || rSearchOpt.searchString == "$^";
         if (bParaEnd || (pLayout
                 ? sw::FrameContainsNode(*pFrame, pPam->GetMark()->nNode.GetIndex())
-                : pTextNode == pPam->GetContentNode(false)))
+                : pTextNode == pMarkTextNode))
         {
             utl::TextSearch aSText( utl::TextSearch::UpgradeToSearchOptions2( rSearchOpt) );
-            OUString rStr = pLayout
-                ? pFrame->GetText()
-                : pTextNode->GetTextNode()->GetText();
-            AmbiguousIndex nStart;
-            AmbiguousIndex nEnd;
-            if (pLayout)
+            SearchResult aResult;
+            OUString aReplaceStr( rSearchOpt.replaceString );
+            if (bParaEnd)
             {
-                nStart.SetFrameIndex(pFrame->MapModelToViewPos(*pPam->Start()));
-                nEnd.SetFrameIndex(pFrame->MapModelToViewPos(*pPam->End()));
+                OUString const aStr("\\n");
+                aResult.subRegExpressions = 1;
+                aResult.startOffset.realloc(1);
+                aResult.endOffset.realloc(1);
+                aResult.startOffset[0] = 0;
+                aResult.endOffset[0] = aStr.getLength();
+                aSText.ReplaceBackReferences( aReplaceStr, aStr, aResult );
+                xRet = aReplaceStr;
             }
             else
             {
-                nStart.SetModelIndex(pPam->Start()->nContent.GetIndex());
-                nEnd.SetModelIndex(pPam->End()->nContent.GetIndex());
-            }
-            SearchResult aResult;
-            if (bParaEnd ||
-                aSText.SearchForward(rStr, &nStart.GetAnyIndex(), &nEnd.GetAnyIndex(), &aResult))
-            {
-                if ( bParaEnd )
+                OUString const aStr(pLayout
+                    ? pFrame->GetText()
+                    : pTextNode->GetTextNode()->GetText());
+                AmbiguousIndex nStart;
+                AmbiguousIndex nEnd;
+                if (pLayout)
                 {
-                    rStr = "\\n";
-                    aResult.subRegExpressions = 1;
-                    aResult.startOffset.realloc(1);
-                    aResult.endOffset.realloc(1);
-                    aResult.startOffset[0] = 0;
-                    aResult.endOffset[0] = rStr.getLength();
+                    nStart.SetFrameIndex(pFrame->MapModelToViewPos(*pPam->Start()));
+                    nEnd.SetFrameIndex(pFrame->MapModelToViewPos(*pPam->End()));
                 }
-                OUString aReplaceStr( rSearchOpt.replaceString );
-                aSText.ReplaceBackReferences( aReplaceStr, rStr, aResult );
-                xRet = aReplaceStr;
+                else
+                {
+                    nStart.SetModelIndex(pPam->Start()->nContent.GetIndex());
+                    nEnd.SetModelIndex(pPam->End()->nContent.GetIndex());
+                }
+                if (aSText.SearchForward(aStr, &nStart.GetAnyIndex(), &nEnd.GetAnyIndex(), &aResult))
+                {
+                    aSText.ReplaceBackReferences( aReplaceStr, aStr, aResult );
+                    xRet = aReplaceStr;
+                }
             }
         }
     }

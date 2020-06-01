@@ -25,20 +25,13 @@
 #include <connectivity/dbtools.hxx>
 #include <comphelper/genericpropertyset.hxx>
 #include <comphelper/propertysetinfo.hxx>
-#include <com/sun/star/style/ParagraphAdjust.hpp>
-#include <com/sun/star/awt/TextAlign.hpp>
 #include <com/sun/star/beans/PropertyAttribute.hpp>
 #include <com/sun/star/awt/FontDescriptor.hpp>
-#include <com/sun/star/awt/ImagePosition.hpp>
 #include <com/sun/star/awt/ImageScaleMode.hpp>
 #include <xmloff/prstylei.hxx>
 #include <strings.hxx>
 #include "xmlEnums.hxx"
-#include <xmloff/contextid.hxx>
-#include <xmloff/txtprmap.hxx>
-#include <com/sun/star/sdb/XOfficeDatabaseDocument.hpp>
 #include <com/sun/star/table/BorderLine2.hpp>
-#include <xmloff/XMLConstantsPropertyHandler.hxx>
 #include <com/sun/star/report/ForceNewPage.hpp>
 #include <com/sun/star/report/ReportPrintOption.hpp>
 #include <com/sun/star/report/KeepTogether.hpp>
@@ -104,11 +97,11 @@ const XMLPropertyHandler* OPropertyHandlerFactory::GetPropertyHandler(sal_Int32 
     return pHandler;
 }
 
-#define MAP_CONST_T_ASCII( name, prefix, token, type, context ) { name, sizeof(name)-1, XML_NAMESPACE_##prefix, XML_##token, type|XML_TYPE_PROP_TABLE,      context, SvtSaveOptions::ODFVER_010, false }
-#define MAP_CONST_P_ASCII( name, prefix, token, type, context ) { name, sizeof(name)-1, XML_NAMESPACE_##prefix, XML_##token, type|XML_TYPE_PROP_PARAGRAPH,  context, SvtSaveOptions::ODFVER_010, false }
-#define MAP_CONST_S( name, prefix, token, type, context )  { name, sizeof(name)-1,      XML_NAMESPACE_##prefix, XML_##token, type|XML_TYPE_PROP_SECTION,    context, SvtSaveOptions::ODFVER_010, false }
-#define MAP_CONST_C_ASCII( name, prefix, token, type, context ) { name, sizeof(name)-1, XML_NAMESPACE_##prefix, XML_##token, type|XML_TYPE_PROP_TABLE_CELL, context, SvtSaveOptions::ODFVER_010, false }
-#define MAP_END() { nullptr, 0, 0, XML_TOKEN_INVALID, 0 ,0, SvtSaveOptions::ODFVER_010, false}
+#define MAP_CONST_T_ASCII( name, prefix, token, type, context ) { name, sizeof(name)-1, XML_NAMESPACE_##prefix, XML_##token, type|XML_TYPE_PROP_TABLE,      context, SvtSaveOptions::ODFSVER_010, false }
+#define MAP_CONST_P_ASCII( name, prefix, token, type, context ) { name, sizeof(name)-1, XML_NAMESPACE_##prefix, XML_##token, type|XML_TYPE_PROP_PARAGRAPH,  context, SvtSaveOptions::ODFSVER_010, false }
+#define MAP_CONST_S( name, prefix, token, type, context )  { name, sizeof(name)-1,      XML_NAMESPACE_##prefix, XML_##token, type|XML_TYPE_PROP_SECTION,    context, SvtSaveOptions::ODFSVER_010, false }
+#define MAP_CONST_C_ASCII( name, prefix, token, type, context ) { name, sizeof(name)-1, XML_NAMESPACE_##prefix, XML_##token, type|XML_TYPE_PROP_TABLE_CELL, context, SvtSaveOptions::ODFSVER_010, false }
+#define MAP_END() { nullptr, 0, 0, XML_TOKEN_INVALID, 0 ,0, SvtSaveOptions::ODFSVER_010, false}
 
 rtl::Reference < XMLPropertySetMapper > OXMLHelper::GetCellStylePropertyMap(bool _bOldFormat, bool bForExport)
 {
@@ -255,68 +248,68 @@ void OXMLHelper::copyStyleElements(const bool _bOld,const OUString& _sStyleName,
 {
     if ( !_xProp.is() || _sStyleName.isEmpty() || !_pAutoStyles )
         return;
-    XMLPropStyleContext* pAutoStyle = const_cast<XMLPropStyleContext*>(dynamic_cast< const XMLPropStyleContext *>(_pAutoStyles->FindStyleChildContext(XML_STYLE_FAMILY_TABLE_CELL,_sStyleName)));
-    if ( pAutoStyle )
-    {
-        css::awt::FontDescriptor aFont;
-        static comphelper::PropertyMapEntry const pMap[] =
-        {
-            {OUString(PROPERTY_FONTNAME),         PROPERTY_ID_FONTNAME,           cppu::UnoType<decltype(aFont.Name)>::get()         ,PropertyAttribute::BOUND,0},
-            {OUString(PROPERTY_CHARFONTHEIGHT),   PROPERTY_ID_FONTHEIGHT,         cppu::UnoType<decltype(aFont.Height)>::get()       ,PropertyAttribute::BOUND,0},
-            {OUString(PROPERTY_FONTWIDTH),        PROPERTY_ID_FONTWIDTH,          cppu::UnoType<decltype(aFont.Width)>::get()        ,PropertyAttribute::BOUND,0},
-            {OUString(PROPERTY_FONTSTYLENAME),    PROPERTY_ID_FONTSTYLENAME,      cppu::UnoType<decltype(aFont.StyleName)>::get()    ,PropertyAttribute::BOUND,0},
-            {OUString(PROPERTY_FONTFAMILY),       PROPERTY_ID_FONTFAMILY,         cppu::UnoType<decltype(aFont.Family)>::get()       ,PropertyAttribute::BOUND,0},
-            {OUString(PROPERTY_FONTCHARSET),      PROPERTY_ID_FONTCHARSET,        cppu::UnoType<decltype(aFont.CharSet)>::get()      ,PropertyAttribute::BOUND,0},
-            {OUString(PROPERTY_FONTPITCH),        PROPERTY_ID_FONTPITCH,          cppu::UnoType<decltype(aFont.Pitch)>::get()        ,PropertyAttribute::BOUND,0},
-            {OUString(PROPERTY_FONTCHARWIDTH),    PROPERTY_ID_FONTCHARWIDTH,      cppu::UnoType<decltype(aFont.CharacterWidth)>::get(),PropertyAttribute::BOUND,0},
-            {OUString(PROPERTY_FONTWEIGHT),       PROPERTY_ID_FONTWEIGHT,         cppu::UnoType<decltype(aFont.Weight)>::get()       ,PropertyAttribute::BOUND,0},
-            {OUString(PROPERTY_CHARPOSTURE),      PROPERTY_ID_FONTSLANT,          cppu::UnoType<decltype(aFont.Slant)>::get()        ,PropertyAttribute::BOUND,0},
-            {OUString(PROPERTY_FONTUNDERLINE),    PROPERTY_ID_FONTUNDERLINE,      cppu::UnoType<decltype(aFont.Underline)>::get()    ,PropertyAttribute::BOUND,0},
-            {OUString(PROPERTY_CHARSTRIKEOUT),    PROPERTY_ID_FONTSTRIKEOUT,      cppu::UnoType<decltype(aFont.Strikeout)>::get()    ,PropertyAttribute::BOUND,0},
-            {OUString(PROPERTY_FONTORIENTATION),  PROPERTY_ID_FONTORIENTATION,    cppu::UnoType<decltype(aFont.Orientation)>::get()  ,PropertyAttribute::BOUND,0},
-            {OUString(PROPERTY_FONTKERNING),      PROPERTY_ID_FONTKERNING,        cppu::UnoType<decltype(aFont.Kerning)>::get()      ,PropertyAttribute::BOUND,0},
-            {OUString(PROPERTY_CHARWORDMODE),     PROPERTY_ID_FONTWORDLINEMODE,   cppu::UnoType<decltype(aFont.WordLineMode)>::get() ,PropertyAttribute::BOUND,0},
-            {OUString(PROPERTY_FONTTYPE),         PROPERTY_ID_FONTTYPE,           cppu::UnoType<decltype(aFont.Type)>::get()         ,PropertyAttribute::BOUND,0},
-            { OUString(), 0, css::uno::Type(), 0, 0 }
-        };
-        try
-        {
-            pAutoStyle->FillPropertySet(_xProp);
-            if ( _bOld && _xProp->getPropertySetInfo()->hasPropertyByName(PROPERTY_CHARHIDDEN) )
-                _xProp->setPropertyValue(PROPERTY_CHARHIDDEN,uno::makeAny(false));
+    XMLPropStyleContext* pAutoStyle = const_cast<XMLPropStyleContext*>(dynamic_cast< const XMLPropStyleContext *>(_pAutoStyles->FindStyleChildContext(XmlStyleFamily::TABLE_CELL,_sStyleName)));
+    if ( !pAutoStyle )
+        return;
 
-            uno::Reference<beans::XPropertySet> xProp = comphelper::GenericPropertySet_CreateInstance(new comphelper::PropertySetInfo(pMap));
-            pAutoStyle->FillPropertySet(xProp);
-            xProp->getPropertyValue(PROPERTY_FONTNAME) >>=          aFont.Name;
-            xProp->getPropertyValue(PROPERTY_CHARFONTHEIGHT) >>=        aFont.Height;
-            xProp->getPropertyValue(PROPERTY_FONTWIDTH) >>=             aFont.Width;
-            xProp->getPropertyValue(PROPERTY_FONTSTYLENAME) >>=         aFont.StyleName;
-            xProp->getPropertyValue(PROPERTY_FONTFAMILY) >>=        aFont.Family;
-            xProp->getPropertyValue(PROPERTY_FONTCHARSET) >>=       aFont.CharSet;
-            xProp->getPropertyValue(PROPERTY_FONTPITCH) >>=             aFont.Pitch;
-            xProp->getPropertyValue(PROPERTY_FONTCHARWIDTH) >>=         aFont.CharacterWidth;
-            xProp->getPropertyValue(PROPERTY_FONTWEIGHT) >>=        aFont.Weight;
-            xProp->getPropertyValue(PROPERTY_CHARPOSTURE) >>=           aFont.Slant;
-            xProp->getPropertyValue(PROPERTY_FONTUNDERLINE) >>=         aFont.Underline;
-            xProp->getPropertyValue(PROPERTY_CHARSTRIKEOUT) >>=         aFont.Strikeout;
-            xProp->getPropertyValue(PROPERTY_FONTORIENTATION) >>=   aFont.Orientation;
-            xProp->getPropertyValue(PROPERTY_FONTKERNING) >>=       aFont.Kerning;
-            xProp->getPropertyValue(PROPERTY_CHARWORDMODE) >>=  aFont.WordLineMode;
-            xProp->getPropertyValue(PROPERTY_FONTTYPE) >>=          aFont.Type;
-            uno::Reference<report::XReportControlFormat> xReportControlModel(_xProp,uno::UNO_QUERY);
-            if ( xReportControlModel.is() && !aFont.Name.isEmpty() )
-            {
-                try
-                {
-                    xReportControlModel->setFontDescriptor(aFont);
-                }
-                catch(const beans::UnknownPropertyException &){}
-            }
-           }
-        catch(uno::Exception&)
+    css::awt::FontDescriptor aFont;
+    static comphelper::PropertyMapEntry const pMap[] =
+    {
+        {OUString(PROPERTY_FONTNAME),         PROPERTY_ID_FONTNAME,           cppu::UnoType<decltype(aFont.Name)>::get()         ,PropertyAttribute::BOUND,0},
+        {OUString(PROPERTY_CHARFONTHEIGHT),   PROPERTY_ID_FONTHEIGHT,         cppu::UnoType<decltype(aFont.Height)>::get()       ,PropertyAttribute::BOUND,0},
+        {OUString(PROPERTY_FONTWIDTH),        PROPERTY_ID_FONTWIDTH,          cppu::UnoType<decltype(aFont.Width)>::get()        ,PropertyAttribute::BOUND,0},
+        {OUString(PROPERTY_FONTSTYLENAME),    PROPERTY_ID_FONTSTYLENAME,      cppu::UnoType<decltype(aFont.StyleName)>::get()    ,PropertyAttribute::BOUND,0},
+        {OUString(PROPERTY_FONTFAMILY),       PROPERTY_ID_FONTFAMILY,         cppu::UnoType<decltype(aFont.Family)>::get()       ,PropertyAttribute::BOUND,0},
+        {OUString(PROPERTY_FONTCHARSET),      PROPERTY_ID_FONTCHARSET,        cppu::UnoType<decltype(aFont.CharSet)>::get()      ,PropertyAttribute::BOUND,0},
+        {OUString(PROPERTY_FONTPITCH),        PROPERTY_ID_FONTPITCH,          cppu::UnoType<decltype(aFont.Pitch)>::get()        ,PropertyAttribute::BOUND,0},
+        {OUString(PROPERTY_FONTCHARWIDTH),    PROPERTY_ID_FONTCHARWIDTH,      cppu::UnoType<decltype(aFont.CharacterWidth)>::get(),PropertyAttribute::BOUND,0},
+        {OUString(PROPERTY_FONTWEIGHT),       PROPERTY_ID_FONTWEIGHT,         cppu::UnoType<decltype(aFont.Weight)>::get()       ,PropertyAttribute::BOUND,0},
+        {OUString(PROPERTY_CHARPOSTURE),      PROPERTY_ID_FONTSLANT,          cppu::UnoType<decltype(aFont.Slant)>::get()        ,PropertyAttribute::BOUND,0},
+        {OUString(PROPERTY_FONTUNDERLINE),    PROPERTY_ID_FONTUNDERLINE,      cppu::UnoType<decltype(aFont.Underline)>::get()    ,PropertyAttribute::BOUND,0},
+        {OUString(PROPERTY_CHARSTRIKEOUT),    PROPERTY_ID_FONTSTRIKEOUT,      cppu::UnoType<decltype(aFont.Strikeout)>::get()    ,PropertyAttribute::BOUND,0},
+        {OUString(PROPERTY_FONTORIENTATION),  PROPERTY_ID_FONTORIENTATION,    cppu::UnoType<decltype(aFont.Orientation)>::get()  ,PropertyAttribute::BOUND,0},
+        {OUString(PROPERTY_FONTKERNING),      PROPERTY_ID_FONTKERNING,        cppu::UnoType<decltype(aFont.Kerning)>::get()      ,PropertyAttribute::BOUND,0},
+        {OUString(PROPERTY_CHARWORDMODE),     PROPERTY_ID_FONTWORDLINEMODE,   cppu::UnoType<decltype(aFont.WordLineMode)>::get() ,PropertyAttribute::BOUND,0},
+        {OUString(PROPERTY_FONTTYPE),         PROPERTY_ID_FONTTYPE,           cppu::UnoType<decltype(aFont.Type)>::get()         ,PropertyAttribute::BOUND,0},
+        { OUString(), 0, css::uno::Type(), 0, 0 }
+    };
+    try
+    {
+        pAutoStyle->FillPropertySet(_xProp);
+        if ( _bOld && _xProp->getPropertySetInfo()->hasPropertyByName(PROPERTY_CHARHIDDEN) )
+            _xProp->setPropertyValue(PROPERTY_CHARHIDDEN,uno::makeAny(false));
+
+        uno::Reference<beans::XPropertySet> xProp = comphelper::GenericPropertySet_CreateInstance(new comphelper::PropertySetInfo(pMap));
+        pAutoStyle->FillPropertySet(xProp);
+        xProp->getPropertyValue(PROPERTY_FONTNAME) >>=          aFont.Name;
+        xProp->getPropertyValue(PROPERTY_CHARFONTHEIGHT) >>=        aFont.Height;
+        xProp->getPropertyValue(PROPERTY_FONTWIDTH) >>=             aFont.Width;
+        xProp->getPropertyValue(PROPERTY_FONTSTYLENAME) >>=         aFont.StyleName;
+        xProp->getPropertyValue(PROPERTY_FONTFAMILY) >>=        aFont.Family;
+        xProp->getPropertyValue(PROPERTY_FONTCHARSET) >>=       aFont.CharSet;
+        xProp->getPropertyValue(PROPERTY_FONTPITCH) >>=             aFont.Pitch;
+        xProp->getPropertyValue(PROPERTY_FONTCHARWIDTH) >>=         aFont.CharacterWidth;
+        xProp->getPropertyValue(PROPERTY_FONTWEIGHT) >>=        aFont.Weight;
+        xProp->getPropertyValue(PROPERTY_CHARPOSTURE) >>=           aFont.Slant;
+        xProp->getPropertyValue(PROPERTY_FONTUNDERLINE) >>=         aFont.Underline;
+        xProp->getPropertyValue(PROPERTY_CHARSTRIKEOUT) >>=         aFont.Strikeout;
+        xProp->getPropertyValue(PROPERTY_FONTORIENTATION) >>=   aFont.Orientation;
+        xProp->getPropertyValue(PROPERTY_FONTKERNING) >>=       aFont.Kerning;
+        xProp->getPropertyValue(PROPERTY_CHARWORDMODE) >>=  aFont.WordLineMode;
+        xProp->getPropertyValue(PROPERTY_FONTTYPE) >>=          aFont.Type;
+        uno::Reference<report::XReportControlFormat> xReportControlModel(_xProp,uno::UNO_QUERY);
+        if ( xReportControlModel.is() && !aFont.Name.isEmpty() )
         {
-            OSL_FAIL("OXMLHelper::copyStyleElements -> exception caught");
+            try
+            {
+                xReportControlModel->setFontDescriptor(aFont);
+            }
+            catch(const beans::UnknownPropertyException &){}
         }
+       }
+    catch(uno::Exception&)
+    {
+        OSL_FAIL("OXMLHelper::copyStyleElements -> exception caught");
     }
 }
 

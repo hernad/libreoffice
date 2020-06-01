@@ -33,7 +33,7 @@ void Test::testCopyPasteSkipEmptyConditionalFormatting()
     ScRange aDestRange(0,0,0,1,2,0);
     ScRange aSrcRange(3,3,0,5,4,0);
 
-    ScMarkData aMark(MAXROW, MAXCOL);
+    ScMarkData aMark(m_pDoc->GetSheetLimits());
     aMark.SetMarkArea(aDestRange);
 
     m_pDoc->SetValue(0,0,0,1);
@@ -591,8 +591,8 @@ namespace {
 
 struct ScDataBarLengthData
 {
-    double const nVal;
-    double const nLength;
+    double nVal;
+    double nLength;
 };
 
 void testDataBarLengthImpl(ScDocument* pDoc, const ScDataBarLengthData* pData, const ScRange& rRange,

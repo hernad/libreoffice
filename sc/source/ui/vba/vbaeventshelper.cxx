@@ -176,7 +176,7 @@ private:
     ::osl::Mutex        maMutex;
     ScVbaEventsHelper&  mrVbaEvents;
     uno::Reference< frame::XModel > mxModel;
-    ScDocShell* const   mpDocShell;
+    ScDocShell*         mpDocShell;
     WindowControllerMap maControllers;          /// Maps VCL top windows to their controllers.
     std::multiset< VclPtr<vcl::Window> > m_PostedWindows; /// Keeps processWindowResizeEvent windows from being deleted between postWindowResizeEvent and processWindowResizeEvent
     VclPtr<vcl::Window>            mpActiveWindow; /// Currently activated window, to prevent multiple (de)activation.
@@ -620,7 +620,7 @@ void SAL_CALL ScVbaEventsHelper::notifyEvent( const css::document::EventObject& 
     else if( rEvent.EventName == GlobalEventConfig::GetEventName( GlobalEventId::VIEWCREATED ) )
     {
         uno::Reference< frame::XController > xController( mxModel->getCurrentController() );
-        if( mxListener.get() && xController.is() )
+        if( mxListener && xController.is() )
             mxListener->startControllerListening( xController );
     }
     VbaEventsHelperBase::notifyEvent( rEvent );

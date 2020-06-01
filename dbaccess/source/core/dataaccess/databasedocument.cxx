@@ -19,41 +19,34 @@
 
 #include <core_resource.hxx>
 #include <strings.hrc>
-#include "datasource.hxx"
 #include "databasedocument.hxx"
-#include <stringconstants.hxx>
 #include "documenteventexecutor.hxx"
 #include <databasecontext.hxx>
 #include "documentcontainer.hxx"
 #include <sdbcoretools.hxx>
 #include <recovery/dbdocrecovery.hxx>
 
-#include <com/sun/star/beans/Optional.hpp>
 #include <com/sun/star/document/XExporter.hpp>
 #include <com/sun/star/document/XFilter.hpp>
 #include <com/sun/star/document/XImporter.hpp>
 #include <com/sun/star/document/XGraphicStorageHandler.hpp>
 #include <com/sun/star/document/GraphicStorageHandler.hpp>
-#include <com/sun/star/embed/EntryInitModes.hpp>
-#include <com/sun/star/embed/XEmbedPersist.hpp>
-#include <com/sun/star/embed/XTransactedObject.hpp>
-#include <com/sun/star/embed/XTransactionBroadcaster.hpp>
 #include <com/sun/star/frame/Desktop.hpp>
 #include <com/sun/star/frame/ModuleManager.hpp>
-#include <com/sun/star/io/XActiveDataSource.hpp>
+#include <com/sun/star/io/IOException.hpp>
 #include <com/sun/star/io/XSeekable.hpp>
 #include <com/sun/star/io/XOutputStream.hpp>
 #include <com/sun/star/io/XTruncate.hpp>
 #include <com/sun/star/lang/NoSupportException.hpp>
 #include <com/sun/star/lang/WrappedTargetRuntimeException.hpp>
 #include <com/sun/star/script/provider/theMasterScriptProviderFactory.hpp>
+#include <com/sun/star/security/DocumentDigitalSignatures.hpp>
+#include <com/sun/star/security/XDocumentDigitalSignatures.hpp>
 #include <com/sun/star/sdb/DatabaseContext.hpp>
 #include <com/sun/star/sdb/application/XDatabaseDocumentUI.hpp>
 #include <com/sun/star/task/XStatusIndicator.hpp>
-#include <com/sun/star/task/XStatusIndicatorFactory.hpp>
 #include <com/sun/star/ucb/SimpleFileAccess.hpp>
 #include <com/sun/star/ui/UIConfigurationManager.hpp>
-#include <com/sun/star/ui/XUIConfigurationStorage.hpp>
 #include <com/sun/star/util/CloseVetoException.hpp>
 #include <com/sun/star/view/XSelectionSupplier.hpp>
 #include <com/sun/star/xml/sax/XDocumentHandler.hpp>
@@ -69,6 +62,7 @@
 #include <comphelper/namedvaluecollection.hxx>
 #include <comphelper/numberedcollection.hxx>
 #include <comphelper/storagehelper.hxx>
+#include <comphelper/processfactory.hxx>
 #include <comphelper/propertysetinfo.hxx>
 #include <comphelper/types.hxx>
 
@@ -78,13 +72,10 @@
 #include <cppuhelper/supportsservice.hxx>
 #include <framework/titlehelper.hxx>
 #include <unotools/saveopt.hxx>
-#include <tools/debug.hxx>
+#include <unotools/tempfile.hxx>
 #include <tools/diagnose_ex.h>
+#include <osl/file.hxx>
 #include <osl/diagnose.h>
-#include <vcl/errcode.hxx>
-#include <sal/log.hxx>
-
-#include <list>
 
 #include <vcl/GraphicObject.hxx>
 #include <tools/urlobj.hxx>
@@ -169,20 +160,20 @@ ODatabaseDocument::ODatabaseDocument(const ::rtl::Reference<ODatabaseModelImpl>&
     // if there previously was a document instance for the same Impl which was already initialized,
     // then consider ourself initialized, too.
     // #i94840#
-    if ( m_pImpl->hadInitializedDocument() )
-    {
-        // Note we set our init-state to "Initializing", not "Initialized". We're created from inside the ModelImpl,
-        // which is expected to call attachResource in case there was a previous incarnation of the document,
-        // so we can properly finish our initialization then.
-        impl_setInitializing();
+    if ( !m_pImpl->hadInitializedDocument() )
+        return;
 
-        if ( !m_pImpl->getURL().isEmpty() )
-        {
-            // if the previous incarnation of the DatabaseDocument already had a URL, then creating this incarnation
-            // here is effectively loading the document.
-            // #i105505#
-            m_aViewMonitor.onLoadedDocument();
-        }
+    // Note we set our init-state to "Initializing", not "Initialized". We're created from inside the ModelImpl,
+    // which is expected to call attachResource in case there was a previous incarnation of the document,
+    // so we can properly finish our initialization then.
+    impl_setInitializing();
+
+    if ( !m_pImpl->getURL().isEmpty() )
+    {
+        // if the previous incarnation of the DatabaseDocument already had a URL, then creating this incarnation
+        // here is effectively loading the document.
+        // #i105505#
+        m_aViewMonitor.onLoadedDocument();
     }
 }
 
@@ -353,13 +344,12 @@ static const char sPictures[] = "Pictures";
 /// @throws RuntimeException
 static void lcl_uglyHackToStoreDialogeEmbedImages( const Reference< XStorageBasedLibraryContainer >& xDlgCont, const Reference< XStorage >& xStorage, const Reference< XModel >& rxModel, const Reference<XComponentContext >& rxContext )
 {
-    Sequence< OUString > sLibraries = xDlgCont->getElementNames();
+    const Sequence< OUString > sLibraries = xDlgCont->getElementNames();
     Reference< XStorage > xTmpPic = xStorage->openStorageElement( "tempPictures", ElementModes::READWRITE  );
 
     std::vector<uno::Reference<graphic::XGraphic>> vxGraphicList;
-    for ( sal_Int32 i=0; i < sLibraries.getLength(); ++i )
+    for ( OUString const & sLibrary : sLibraries )
     {
-        OUString sLibrary( sLibraries[ i ] );
         xDlgCont->loadLibrary( sLibrary );
         Reference< XNameContainer > xLib;
         xDlgCont->getByName( sLibrary ) >>= xLib;
@@ -371,7 +361,7 @@ static void lcl_uglyHackToStoreDialogeEmbedImages( const Reference< XStorageBase
             {
                 Reference < awt::XDialogProvider > xDlgPrv = awt::DialogProvider::createWithModel(rxContext, rxModel);
                 OUString sDialogUrl =
-                    "vnd.sun.star.script:" + sLibraries[i] + "." + sDialogs[j] + "?location=document";
+                    "vnd.sun.star.script:" + sLibrary + "." + sDialogs[j] + "?location=document";
 
                 Reference< css::awt::XControl > xDialog( xDlgPrv->createDialog( sDialogUrl ), UNO_QUERY );
                 Reference< XInterface > xModel( xDialog->getModel() );
@@ -865,18 +855,18 @@ void SAL_CALL ODatabaseDocument::disconnectController( const Reference< XControl
     if ( bNotifyViewClosed )
         m_aEventNotifier.notifyDocumentEvent( "OnViewClosed", Reference< XController2 >( _xController, UNO_QUERY ) );
 
-    if ( bLastControllerGone && !bIsClosing )
+    if ( !(bLastControllerGone && !bIsClosing) )
+        return;
+
+    // if this was the last view, close the document as a whole
+    // #i51157#
+    try
     {
-        // if this was the last view, close the document as a whole
-        // #i51157#
-        try
-        {
-            close( true );
-        }
-        catch( const CloseVetoException& )
-        {
-            // okay, somebody vetoed and took ownership
-        }
+        close( true );
+    }
+    catch( const CloseVetoException& )
+    {
+        // okay, somebody vetoed and took ownership
     }
 }
 
@@ -1238,7 +1228,7 @@ void ODatabaseDocument::impl_storeToStorage_throw( const Reference< XStorage >& 
         lcl_triggerStatusIndicator_throw( aWriteArgs, _rDocGuard, false );
 
         // commit target storage
-        OSL_VERIFY( tools::stor::commitStorageIfWriteable( _rxTargetStorage ) );
+        m_pImpl->commitStorageIfWriteable_ignoreErrors(_rxTargetStorage);
     }
     catch( const IOException& ) { throw; }
     catch( const RuntimeException& ) { throw; }
@@ -1667,12 +1657,18 @@ void ODatabaseDocument::impl_writeStorage_throw( const Reference< XStorage >& _r
     xProp->setPropertyValue( INFO_MEDIATYPE, makeAny( OUString(MIMETYPE_OASIS_OPENDOCUMENT_DATABASE_ASCII) ) );
 
     OUString aVersion;
-    SvtSaveOptions::ODFDefaultVersion const nDefVersion =
-        aSaveOpt.GetODFDefaultVersion();
+    SvtSaveOptions::ODFSaneDefaultVersion const nDefVersion =
+        aSaveOpt.GetODFSaneDefaultVersion();
     // older versions can not have this property set,
     // it exists only starting from ODF1.2
-    if (nDefVersion >= SvtSaveOptions::ODFVER_012)
+    if (nDefVersion >= SvtSaveOptions::ODFSVER_013)
+    {
+        aVersion = ODFVER_013_TEXT;
+    }
+    else if (nDefVersion >= SvtSaveOptions::ODFSVER_012)
+    {
         aVersion = ODFVER_012_TEXT;
+    }
 
     if (!aVersion.isEmpty())
     {

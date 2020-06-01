@@ -16,12 +16,11 @@
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
-#ifndef INCLUDED_SVX_SOURCE_SIDEBAR_PARAGRAPH_PARAPROPERTYPANEL_HXX
-#define INCLUDED_SVX_SOURCE_SIDEBAR_PARAGRAPH_PARAPROPERTYPANEL_HXX
+#pragma once
 
 #include <sfx2/sidebar/ControllerItem.hxx>
 #include <sfx2/sidebar/IContextChangeReceiver.hxx>
-#include <svx/sidebar/PanelLayout.hxx>
+#include <sfx2/sidebar/PanelLayout.hxx>
 #include <svx/relfld.hxx>
 
 #include <com/sun/star/frame/XFrame.hpp>
@@ -29,10 +28,11 @@
 
 #include <svl/poolitem.hxx>
 #include <tools/fldunit.hxx>
+#include <vcl/EnumContext.hxx>
 
 class ToolbarUnoDispatcher;
 
-namespace svx { namespace sidebar {
+namespace svx::sidebar {
 
 class ParaPropertyPanel
     : public PanelLayout,
@@ -59,6 +59,10 @@ public:
         const sal_uInt16 nSId,
         const SfxItemState eState,
         const SfxPoolItem* pState) override;
+
+    virtual void GetControlState(
+        const sal_uInt16 /*nSId*/,
+        boost::property_tree::ptree& /*rState*/) override {};
 
     static FieldUnit GetCurrentUnit( SfxItemState eState, const SfxPoolItem* pState );
 
@@ -112,7 +116,7 @@ private:
     ::sfx2::sidebar::ControllerItem  m_aMetricCtl;
 
     vcl::EnumContext maContext;
-    SfxBindings* const mpBindings;
+    SfxBindings* mpBindings;
     css::uno::Reference<css::ui::XSidebar> mxSidebar;
 
     DECL_LINK(ModifyIndentHdl_Impl, weld::MetricSpinButton&, void);
@@ -128,8 +132,6 @@ private:
     void limitMetricWidths();
 };
 
-} } // end of namespace svx::sidebar
-
-#endif
+} // end of namespace svx::sidebar
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

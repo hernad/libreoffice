@@ -32,7 +32,7 @@
 #include <rtl/ustring.hxx>
 #include <sfx2/sfxmodelfactory.hxx>
 
-namespace com { namespace sun { namespace star { namespace lang { class XMultiServiceFactory; } } } }
+namespace com::sun::star::lang { class XMultiServiceFactory; }
 
 css::uno::Reference<css::uno::XInterface>
     ScSpreadsheetSettings_CreateInstance(
@@ -84,7 +84,7 @@ class ScSpreadsheetSettings final : public cppu::WeakImplHelper<
                                         css::lang::XServiceInfo>
 {
 private:
-    SfxItemPropertySet const      aPropSet;
+    SfxItemPropertySet      aPropSet;
 
     /// @throws css::uno::RuntimeException
     bool getPropertyBool(const OUString& aPropertyName);

@@ -19,8 +19,9 @@
 #include <sfx2/sidebar/SidebarDockingWindow.hxx>
 #include <sfx2/sidebar/SidebarChildWindow.hxx>
 #include <sfx2/sidebar/SidebarController.hxx>
-#include <sfx2/sidebar/PanelDescriptor.hxx>
+#include <sidebar/PanelDescriptor.hxx>
 
+#include <comphelper/dispatchcommand.hxx>
 #include <comphelper/processfactory.hxx>
 #include <sfx2/lokhelper.hxx>
 #include <sfx2/bindings.hxx>
@@ -64,9 +65,9 @@ public:
 
         try
         {
-            if (pMobileNotifier && comphelper::LibreOfficeKit::isMobile(SfxLokHelper::getView()))
+            if (pMobileNotifier && pMobileNotifier->isLOKMobilePhone())
             {
-                // Mobile.
+                // Mobile phone.
                 std::stringstream aStream;
                 boost::property_tree::ptree aTree = m_rSidebarDockingWin.DumpAsPropertyTree();
                 aTree.put("id", m_rSidebarDockingWin.GetLOKWindowId());
@@ -80,7 +81,7 @@ public:
             }
 
             // Notify the sidebar is created, and its LOKWindowId, which
-            // is needed on both Mobile and Desktop.
+            // is needed on mobile phones, tablets, and desktop.
             const Point pos(m_rSidebarDockingWin.GetOutOffXPixel(),
                             m_rSidebarDockingWin.GetOutOffYPixel());
             const OString posMessage = pos.toString();
@@ -274,6 +275,11 @@ bool SidebarDockingWindow::EventNotify(NotifyEvent& rEvent)
                     mpSidebarController->GetResourceManager()->GetPanelDescriptor( "StyleListPanel" );
             if ( xPanelDescriptor && mpSidebarController->IsDeckVisible( xPanelDescriptor->msDeckId ) )
                 Close();
+            return true;
+        }
+        if (".uno:Undo" == aCommand || ".uno:Redo" == aCommand)
+        {
+            comphelper::dispatchCommand(aCommand, {});
             return true;
         }
     }

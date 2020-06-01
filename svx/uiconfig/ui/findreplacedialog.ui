@@ -5,7 +5,7 @@
   <object class="GtkDialog" id="FindReplaceDialog">
     <property name="can_focus">False</property>
     <property name="border_width">6</property>
-    <property name="title" translatable="yes" context="findreplacedialog|FindReplaceDialog">Find &amp; Replace</property>
+    <property name="title" translatable="yes" context="findreplacedialog|FindReplaceDialog">Find and Replace</property>
     <property name="resizable">False</property>
     <property name="default_width">0</property>
     <property name="default_height">0</property>
@@ -688,7 +688,7 @@
                                   </object>
                                   <packing>
                                     <property name="left_attach">0</property>
-                                    <property name="top_attach">1</property>
+                                    <property name="top_attach">2</property>
                                   </packing>
                                 </child>
                                 <child>
@@ -847,7 +847,7 @@
                                   </object>
                                   <packing>
                                     <property name="left_attach">0</property>
-                                    <property name="top_attach">2</property>
+                                    <property name="top_attach">3</property>
                                   </packing>
                                 </child>
                                 <child>
@@ -889,7 +889,7 @@
                                     </child>
                                   </object>
                                   <packing>
-                                    <property name="left_attach">0</property>
+                                    <property name="left_attach">1</property>
                                     <property name="top_attach">3</property>
                                   </packing>
                                 </child>
@@ -931,8 +931,8 @@
                                     </child>
                                   </object>
                                   <packing>
-                                    <property name="left_attach">1</property>
-                                    <property name="top_attach">3</property>
+                                    <property name="left_attach">0</property>
+                                    <property name="top_attach">1</property>
                                   </packing>
                                 </child>
                                 <child>
@@ -990,7 +990,7 @@
                                         <items>
                                           <item translatable="yes" context="findreplacedialog|calcsearchin">Formulas</item>
                                           <item translatable="yes" context="findreplacedialog|calcsearchin">Values</item>
-                                          <item translatable="yes" context="findreplacedialog|calcsearchin">Notes</item>
+                                          <item translatable="yes" context="findreplacedialog|calcsearchin">Comments</item>
                                         </items>
                                       </object>
                                       <packing>

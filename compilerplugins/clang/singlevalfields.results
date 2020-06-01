@@ -1,10 +1,13 @@
-avmedia/inc/mediacontrol.hxx:74
+avmedia/inc/mediacontrol.hxx:64
     avmedia::MediaControl maIdle
     avmedia MediaControl Idle
-avmedia/source/framework/soundhandler.hxx:118
+avmedia/inc/mediacontrol.hxx:65
+    avmedia::MediaControl maChangeTimeIdle
+    avmedia MediaControl Change Time Idle
+avmedia/source/framework/soundhandler.hxx:114
     avmedia::SoundHandler m_aUpdateIdle
     avmedia SoundHandler Update
-basctl/source/basicide/baside2.hxx:86
+basctl/source/basicide/baside2.hxx:81
     basctl::EditorWindow aHighlighter
     0
 basctl/source/inc/dlged.hxx:132
@@ -37,10 +40,22 @@ bridges/source/jni_uno/jni_bridge.h:53
 bridges/source/jni_uno/jni_uno2java.cxx:391
     jni_uno::(anonymous namespace)::UNO_proxy m_ref
     1
+canvas/inc/rendering/irendermodule.hxx:35
+    canvas::Vertex g
+    1
+canvas/inc/rendering/irendermodule.hxx:35
+    canvas::Vertex r
+    1
+canvas/inc/rendering/irendermodule.hxx:35
+    canvas::Vertex b
+    1
+canvas/inc/rendering/irendermodule.hxx:37
+    canvas::Vertex z
+    0
 chart2/source/controller/dialogs/DataBrowser.cxx:209
     chart::impl::SeriesHeader m_aUpdateDataTimer
     UpdateDataTimer
-chart2/source/controller/inc/ChartController.hxx:382
+chart2/source/controller/inc/ChartController.hxx:378
     chart::ChartController m_aLifeTimeManager
     0
 chart2/source/controller/inc/TitleDialogData.hxx:34
@@ -55,7 +70,7 @@ chart2/source/controller/inc/TitleDialogData.hxx:36
 chart2/source/model/main/DataPoint.hxx:108
     chart::DataPoint m_bNoParentPropAllowed
     0
-comphelper/source/misc/threadpool.cxx:39
+comphelper/source/misc/threadpool.cxx:40
     comphelper gbIsWorkerThread
     1
 connectivity/source/inc/dbase/DIndexIter.hxx:36
@@ -94,10 +109,10 @@ connectivity/source/inc/writer/WTable.hxx:65
 cppu/source/uno/copy.hxx:39
     cppu::(anonymous namespace)::SequencePrefix nRefCount
     1
-cui/source/inc/acccfg.hxx:97
+cui/source/inc/acccfg.hxx:99
     SfxAcceleratorConfigPage m_aUpdateDataTimer
     UpdateDataTimer
-cui/source/inc/cfg.hxx:374
+cui/source/inc/cfg.hxx:375
     SvxConfigPage m_aUpdateDataTimer
     UpdateDataTimer
 cui/source/inc/linkdlg.hxx:46
@@ -106,16 +121,16 @@ cui/source/inc/linkdlg.hxx:46
 cui/source/inc/thesdlg.hxx:32
     SvxThesaurusDialog m_aModifyIdle
     cui SvxThesaurusDialog LookUp Modify
-cui/source/options/optgdlg.cxx:1237
+cui/source/options/optgdlg.cxx:1259
     LanguageConfig_Impl aLanguageOptions
     0
 cui/source/options/optjava.hxx:60
     SvxJavaOptionsPage m_aResetIdle
     cui options SvxJavaOptionsPage Reset
-dbaccess/source/ui/inc/directsql.hxx:64
+dbaccess/source/ui/inc/directsql.hxx:66
     dbaui::DirectSQLDialog m_aHighlighter
     1
-desktop/source/app/app.cxx:490
+desktop/source/app/app.cxx:491
     desktop::Desktop::Init bTryHardOfficeconfigBroken
     0
 desktop/source/app/cmdlineargs.hxx:137
@@ -151,7 +166,7 @@ editeng/source/editeng/impedit.hxx:470
 emfio/source/reader/emfreader.cxx:1495
     emfio::EmfReader::ReadEnhWMF bDoSaveForVisualControl
     0
-extensions/source/bibliography/bibcont.hxx:69
+extensions/source/bibliography/bibcont.hxx:68
     BibBookContainer aIdle
     extensions BibBookContainer Split Idle
 filter/source/msfilter/msdffimp.cxx:2690
@@ -160,7 +175,7 @@ filter/source/msfilter/msdffimp.cxx:2690
 filter/source/msfilter/viscache.hxx:30
     Impl_OlePres nFormat
     3
-framework/source/services/autorecovery.cxx:397
+framework/source/services/autorecovery.cxx:398
     (anonymous namespace)::AutoRecovery m_aTimer
     Auto save timer
 framework/source/uiconfiguration/imagemanagerimpl.hxx:173
@@ -170,19 +185,19 @@ helpcompiler/inc/BasCodeTagger.hxx:29
     BasicCodeTagger m_Highlighter
     0
 i18npool/source/localedata/localedata.cxx:52
-    /media/disk2/libo7/i18npool/source/localedata/localedata.cxx lcl_DATA_EN
+    /media/disk2/libo4/i18npool/source/localedata/localedata.cxx lcl_DATA_EN
     localedata_en
 i18npool/source/localedata/localedata.cxx:53
-    /media/disk2/libo7/i18npool/source/localedata/localedata.cxx lcl_DATA_ES
+    /media/disk2/libo4/i18npool/source/localedata/localedata.cxx lcl_DATA_ES
     localedata_es
 i18npool/source/localedata/localedata.cxx:54
-    /media/disk2/libo7/i18npool/source/localedata/localedata.cxx lcl_DATA_EURO
+    /media/disk2/libo4/i18npool/source/localedata/localedata.cxx lcl_DATA_EURO
     localedata_euro
 i18npool/source/localedata/localedata.cxx:55
-    /media/disk2/libo7/i18npool/source/localedata/localedata.cxx lcl_DATA_OTHERS
+    /media/disk2/libo4/i18npool/source/localedata/localedata.cxx lcl_DATA_OTHERS
     localedata_others
 idlc/source/idlccompile.cxx:51
-    /media/disk2/libo7/idlc/source/idlccompile.cxx yydebug
+    /media/disk2/libo4/idlc/source/idlccompile.cxx yydebug
     0
 include/basegfx/pixel/bpixel.hxx:42
     basegfx::BPixel::(anonymous union)::(anonymous) mnValue
@@ -192,18 +207,6 @@ include/basegfx/pixel/bpixel.hxx:43
     0
 include/basic/sbxvar.hxx:73
     SbxValues::(anonymous) pData
-    0
-include/canvas/rendering/irendermodule.hxx:36
-    canvas::Vertex g
-    1
-include/canvas/rendering/irendermodule.hxx:36
-    canvas::Vertex r
-    1
-include/canvas/rendering/irendermodule.hxx:36
-    canvas::Vertex b
-    1
-include/canvas/rendering/irendermodule.hxx:38
-    canvas::Vertex z
     0
 include/comphelper/parallelsort.hxx:89
     comphelper::(anonymous namespace)::ProfileZone mbDummy
@@ -220,7 +223,7 @@ include/filter/msfilter/dffpropset.hxx:34
 include/filter/msfilter/dffpropset.hxx:35
     DffPropFlags bBlip
     1
-include/i18nutil/casefolding.hxx:57
+include/i18nutil/casefolding.hxx:58
     i18nutil::Mapping nmap
     0
 include/o3tl/cow_wrapper.hxx:204
@@ -235,6 +238,12 @@ include/oox/core/contexthandler2.hxx:217
 include/oox/dump/dumperbase.hxx:1680
     oox::dump::RecordObjectBase mbBinaryOnly
     0
+include/oox/ole/axcontrol.hxx:427
+    oox::ole::ComCtlModelBase mbCommonPart
+    1
+include/oox/ole/axcontrol.hxx:428
+    oox::ole::ComCtlModelBase mbComplexPart
+    1
 include/sfx2/msg.hxx:187
     SfxSlot nGroupId
     0
@@ -253,7 +262,7 @@ include/sfx2/msg.hxx:201
 include/sfx2/templatedlg.hxx:123
     SfxTemplateManagerDlg m_aUpdateDataTimer
     UpdateDataTimer
-include/svtools/filechangedchecker.hxx:31
+include/svtools/filechangedchecker.hxx:32
     FileChangedChecker mIdle
     SVTools FileChangedChecker Idle
 include/svtools/svparser.hxx:55
@@ -268,41 +277,32 @@ include/svtools/svparser.hxx:74
 include/svtools/tabbar.hxx:323
     TabBar mnOffY
     0
-include/svtools/valueset.hxx:227
-    ValueSet mbSelection
-    0
-include/svtools/valueset.hxx:233
-    ValueSet mbFullMode
-    1
 include/svx/ctredlin.hxx:91
     SvxRedlinTable aDaTiFirst
     0
 include/svx/ctredlin.hxx:92
     SvxRedlinTable aDaTiLast
     0
-include/svx/deflt3d.hxx:39
+include/svx/deflt3d.hxx:40
     E3dDefaultAttributes bDefaultCubePosIsCenter
     0
-include/svx/deflt3d.hxx:46
+include/svx/deflt3d.hxx:47
     E3dDefaultAttributes bDefaultLatheSmoothed
     1
-include/svx/deflt3d.hxx:47
+include/svx/deflt3d.hxx:48
     E3dDefaultAttributes bDefaultLatheSmoothFrontBack
     0
-include/svx/deflt3d.hxx:49
+include/svx/deflt3d.hxx:50
     E3dDefaultAttributes bDefaultLatheCloseFront
     1
-include/svx/deflt3d.hxx:50
+include/svx/deflt3d.hxx:51
     E3dDefaultAttributes bDefaultLatheCloseBack
     1
-include/svx/deflt3d.hxx:53
+include/svx/deflt3d.hxx:54
     E3dDefaultAttributes bDefaultExtrudeSmoothed
     1
-include/svx/deflt3d.hxx:54
+include/svx/deflt3d.hxx:55
     E3dDefaultAttributes bDefaultExtrudeSmoothFrontBack
-    0
-include/svx/fillctrl.hxx:53
-    SvxFillToolBoxControl mpFillControl
     0
 include/svx/fontwork.hxx:77
     SvxFontWorkDialog aInputIdle
@@ -319,10 +319,10 @@ include/svx/svdcrtv.hxx:50
 include/svx/svdcrtv.hxx:51
     SdrCreateView nFreeHandMinDistPix
     10
-include/svx/svdmark.hxx:143
+include/svx/svdmark.hxx:144
     SdrMarkList mbPointNameOk
     0
-include/svx/svdmark.hxx:144
+include/svx/svdmark.hxx:145
     SdrMarkList mbGluePointNameOk
     0
 include/svx/svdmrkv.hxx:110
@@ -340,18 +340,18 @@ include/vcl/settings.hxx:146
 include/vcl/settings.hxx:147
     DialogStyle action_area_border
     5
-include/vcl/slider.hxx:39
-    Slider mnChannelPixOffset
-    0
-include/vcl/toolbox.hxx:128
-    ToolBox mbSelection
-    0
 io/qa/textinputstream.cxx:97
     (anonymous namespace)::Input open_
     1
 libreofficekit/source/gtk/lokdocview.cxx:86
     (anonymous namespace)::LOKDocViewPrivateImpl m_bIsLoading
     0
+odk/source/unoapploader/unx/unoapploader.c:39
+    /media/disk2/libo4/odk/source/unoapploader/unx/unoapploader.c PATHSEPARATOR
+    :
+odk/source/unoapploader/unx/unoapploader.c:81
+    main ENVVARNAME
+    LD_LIBRARY_PATH
 oox/source/core/contexthandler2.cxx:36
     oox::core::ElementInfo maChars
     0
@@ -377,7 +377,7 @@ sal/osl/unx/sockimpl.hxx:39
     oslSocketImpl m_bIsInShutdown
     1
 sal/qa/osl/condition/osl_Condition_Const.h:41
-    /media/disk2/libo7/sal/qa/osl/condition/osl_Condition.cxx aTestCon
+    /media/disk2/libo4/sal/qa/osl/condition/osl_Condition.cxx aTestCon
     testcondition
 sal/qa/osl/file/osl_File_Const.h:128
     extern aCanURL3
@@ -443,7 +443,7 @@ sal/qa/rtl/process/rtl_Process_Const.h:33
     extern suParam3
     -process
 sal/qa/rtl/strings/test_ostring_stringliterals.cxx:22
-    /media/disk2/libo7/sal/qa/rtl/strings/test_ostring_stringliterals.cxx rtl_string_unittest_non_const_literal_function
+    /media/disk2/libo4/sal/qa/rtl/strings/test_ostring_stringliterals.cxx rtl_string_unittest_non_const_literal_function
     0
 sax/source/tools/fastserializer.hxx:231
     sax_fastparser::FastSaxSerializer mbXescape
@@ -452,19 +452,16 @@ sc/inc/compiler.hxx:113
     ScRawToken::(anonymous union)::(anonymous) eInForceArray
     0
 sc/inc/drwlayer.hxx:219
-    /media/disk2/libo7/sc/source/core/data/drwlayer.cxx bDrawIsInUndo
+    /media/disk2/libo4/sc/source/core/data/drwlayer.cxx bDrawIsInUndo
     0
-sc/inc/global.hxx:917
-    /media/disk2/libo7/sc/source/core/data/global.cxx pScActiveViewShell
+sc/inc/global.hxx:914
+    /media/disk2/libo4/sc/source/core/data/global.cxx pScActiveViewShell
     0
-sc/inc/global.hxx:918
-    /media/disk2/libo7/sc/source/core/data/global.cxx nScClickMouseModifier
+sc/inc/global.hxx:915
+    /media/disk2/libo4/sc/source/core/data/global.cxx nScClickMouseModifier
     0
-sc/inc/global.hxx:919
-    /media/disk2/libo7/sc/source/core/data/global.cxx nScFillModeMouseModifier
-    0
-sc/inc/listenercontext.hxx:46
-    sc::EndListeningContext maSet
+sc/inc/global.hxx:916
+    /media/disk2/libo4/sc/source/core/data/global.cxx nScFillModeMouseModifier
     0
 sc/inc/markmulti.hxx:81
     ScMultiSelIter aMarkArrayIter
@@ -484,9 +481,6 @@ sc/inc/table.hxx:180
 sc/qa/extras/check_data_pilot_field.cxx:62
     sc_apitest::CheckDataPilotField mMaxFieldIndex
     6
-sc/qa/extras/check_data_pilot_table.cxx:67
-    sc_apitest::CheckDataPilotTable mMaxFieldIndex
-    6
 sc/qa/unit/screenshots/screenshots.cxx:40
     ScScreenshotTest mCsv
     some, strings, here, separated, by, commas
@@ -500,10 +494,10 @@ sc/source/core/inc/parclass.hxx:94
     ScParameterClassification::RunData bHasForceArray
     1
 sc/source/core/tool/scmatrix.cxx:350
-    /media/disk2/libo7/sc/source/core/tool/scmatrix.cxx bElementsMaxFetched
+    /media/disk2/libo4/sc/source/core/tool/scmatrix.cxx bElementsMaxFetched
     1
 sc/source/filter/inc/extlstcontext.hxx:20
-    /media/disk2/libo7/sc/source/filter/oox/condformatbuffer.cxx rStyleIdx
+    /media/disk2/libo4/sc/source/filter/oox/condformatbuffer.cxx rStyleIdx
     0
 sc/source/filter/inc/orcusinterface.hxx:179
     ScOrcusConditionalFormat meEntryType
@@ -536,10 +530,13 @@ sc/source/ui/inc/viewdata.hxx:290
     ScViewData aLogicMode
     0
 sc/source/ui/inc/viewfunc.hxx:376
-    /media/disk2/libo7/sc/source/ui/view/viewfun4.cxx bPasteIsDrop
+    /media/disk2/libo4/sc/source/ui/view/viewfun4.cxx bPasteIsDrop
     0
 sc/source/ui/inc/viewfunc.hxx:377
-    /media/disk2/libo7/sc/source/ui/view/viewfun7.cxx bPasteIsMove
+    /media/disk2/libo4/sc/source/ui/view/viewfun7.cxx bPasteIsMove
+    0
+sccomp/source/solver/SwarmSolver.cxx:124
+    (anonymous namespace)::SwarmSolver mfResultValue
     0
 sd/inc/sdpptwrp.hxx:44
     SdPPTFilter pBas
@@ -608,7 +605,7 @@ slideshow/source/engine/slideshowimpl.cxx:462
     (anonymous namespace)::SlideShowImpl maFrameSynchronization
     0.02
 soltools/cpp/_cpp.c:31
-    /media/disk2/libo7/soltools/cpp/_cpp.c nerrs
+    /media/disk2/libo4/soltools/cpp/_cpp.c nerrs
     1
 soltools/cpp/_eval.c:734
     tokval cvlen
@@ -626,13 +623,13 @@ soltools/mkdepend/def.h:118
     inclist i_searched
     1
 soltools/mkdepend/def.h:185
-    /media/disk2/libo7/soltools/mkdepend/main.c printed
-    0
-soltools/mkdepend/def.h:185
-    /media/disk2/libo7/soltools/mkdepend/pr.c printed
+    /media/disk2/libo4/soltools/mkdepend/pr.c printed
     1
+soltools/mkdepend/def.h:185
+    /media/disk2/libo4/soltools/mkdepend/main.c printed
+    0
 soltools/mkdepend/def.h:189
-    /media/disk2/libo7/soltools/mkdepend/main.c show_where_not
+    /media/disk2/libo4/soltools/mkdepend/main.c show_where_not
     0
 starmath/inc/edit.hxx:54
     SmEditWindow aModifyIdle
@@ -670,19 +667,13 @@ svx/source/dialog/contimp.hxx:70
 svx/source/dialog/contimp.hxx:71
     SvxSuperContourDlg aCreateIdle
     SvxSuperContourDlg CreateIdle
-svx/source/sdr/contact/viewcontactofsdrpage.cxx:105
+svx/source/sdr/contact/viewcontactofsdrpage.cxx:103
     sdr::contact::ViewContactOfPageShadow::createViewIndependentPrimitive2DSequence bUseOldPageShadow
     0
-svx/source/sidebar/media/MediaPlaybackPanel.hxx:64
+svx/source/sidebar/media/MediaPlaybackPanel.hxx:62
     svx::sidebar::MediaPlaybackPanel maIdle
     MediaPlaybackPanel
-svx/source/sidebar/text/TextCharacterSpacingControl.hxx:43
-    svx::TextCharacterSpacingControl mnId
-    10018
-svx/source/tbxctrls/layctrl.cxx:404
-    (anonymous namespace)::ColumnsWidget nWidth
-    5
-svx/source/unodraw/recoveryui.cxx:68
+svx/source/unodraw/recoveryui.cxx:63
     (anonymous namespace)::RecoveryUI m_pParentWindow
     0
 sw/inc/authfld.hxx:151
@@ -692,13 +683,13 @@ sw/inc/authfld.hxx:152
     SwAuthorityField m_nTempSequencePosRLHidden
     -1
 sw/inc/checkit.hxx:35
-    /media/disk2/libo7/sw/source/core/bastyp/init.cxx pCheckIt
+    /media/disk2/libo4/sw/source/core/bastyp/init.cxx pCheckIt
     0
 sw/inc/dbgoutsw.hxx:50
-    /media/disk2/libo7/sw/source/core/doc/dbgoutsw.cxx bDbgOutStdErr
+    /media/disk2/libo4/sw/source/core/doc/dbgoutsw.cxx bDbgOutStdErr
     0
 sw/inc/dbgoutsw.hxx:51
-    /media/disk2/libo7/sw/source/core/doc/dbgoutsw.cxx bDbgOutPrintAttrSet
+    /media/disk2/libo4/sw/source/core/doc/dbgoutsw.cxx bDbgOutPrintAttrSet
     0
 sw/inc/ftninfo.hxx:46
     SwEndNoteInfo m_aFormat
@@ -713,16 +704,16 @@ sw/inc/modcfg.hxx:211
     SwModuleOptions m_aWebTableConfig
     1
 sw/inc/swmodule.hxx:266
-    /media/disk2/libo7/sw/source/uibase/docvw/edtdd.cxx g_bNoInterrupt
+    /media/disk2/libo4/sw/source/uibase/app/swmodule.cxx g_bNoInterrupt
     0
 sw/inc/swmodule.hxx:266
-    /media/disk2/libo7/sw/source/uibase/ribbar/conform.cxx g_bNoInterrupt
+    /media/disk2/libo4/sw/source/core/frmedt/feshview.cxx g_bNoInterrupt
+    0
+sw/inc/swmodule.hxx:266
+    /media/disk2/libo4/sw/source/uibase/ribbar/conform.cxx g_bNoInterrupt
     1
 sw/inc/swmodule.hxx:266
-    /media/disk2/libo7/sw/source/core/frmedt/feshview.cxx g_bNoInterrupt
-    0
-sw/inc/swmodule.hxx:266
-    /media/disk2/libo7/sw/source/uibase/app/swmodule.cxx g_bNoInterrupt
+    /media/disk2/libo4/sw/source/uibase/docvw/edtdd.cxx g_bNoInterrupt
     0
 sw/inc/view.hxx:191
     SwView m_pHScrollbar
@@ -731,12 +722,12 @@ sw/inc/view.hxx:192
     SwView m_pVScrollbar
     0
 sw/inc/view.hxx:698
-    /media/disk2/libo7/sw/source/uibase/uiview/view.cxx bDocSzUpdated
+    /media/disk2/libo4/sw/source/uibase/uiview/view.cxx bDocSzUpdated
     1
 sw/inc/view.hxx:698
-    /media/disk2/libo7/sw/source/uibase/uiview/viewport.cxx bDocSzUpdated
+    /media/disk2/libo4/sw/source/uibase/uiview/viewport.cxx bDocSzUpdated
     0
-sw/inc/viewopt.hxx:188
+sw/inc/viewopt.hxx:189
     SwViewOption m_bTest10
     0
 sw/source/core/bastyp/calc.cxx:94
@@ -749,31 +740,31 @@ sw/source/core/docnode/threadmanager.hxx:125
     ThreadManager maStartNewThreadIdle
     SW ThreadManager StartNewThreadIdle
 sw/source/core/inc/blink.hxx:89
-    /media/disk2/libo7/sw/source/core/text/blink.cxx pBlink
+    /media/disk2/libo4/sw/source/core/text/blink.cxx pBlink
     0
 sw/source/core/inc/DocumentTimerManager.hxx:76
     sw::DocumentTimerManager m_aFireIdleJobsTimer
     sw::DocumentTimerManager m_aFireIdleJobsTimer
 sw/source/core/inc/fntcache.hxx:60
-    /media/disk2/libo7/sw/source/core/txtnode/fntcache.cxx pFntCache
+    /media/disk2/libo4/sw/source/core/txtnode/fntcache.cxx pFntCache
     0
 sw/source/core/inc/fntcache.hxx:61
-    /media/disk2/libo7/sw/source/core/txtnode/fntcache.cxx pLastFont
+    /media/disk2/libo4/sw/source/core/txtnode/fntcache.cxx pLastFont
     0
-sw/source/core/inc/frmtool.hxx:144
-    /media/disk2/libo7/sw/source/core/layout/frmtool.cxx bDontCreateObjects
+sw/source/core/inc/frmtool.hxx:153
+    /media/disk2/libo4/sw/source/core/layout/frmtool.cxx bDontCreateObjects
     0
-sw/source/core/inc/frmtool.hxx:147
-    /media/disk2/libo7/sw/source/core/layout/frmtool.cxx bSetCompletePaintOnInvalidate
+sw/source/core/inc/frmtool.hxx:156
+    /media/disk2/libo4/sw/source/core/layout/frmtool.cxx bSetCompletePaintOnInvalidate
     0
 sw/source/core/inc/noteurl.hxx:28
-    /media/disk2/libo7/sw/source/core/text/noteurl.cxx pNoteURL
+    /media/disk2/libo4/sw/source/core/text/noteurl.cxx pNoteURL
     0
 sw/source/core/inc/swfntcch.hxx:43
-    /media/disk2/libo7/sw/source/core/txtnode/swfntcch.cxx pSwFontCache
+    /media/disk2/libo4/sw/source/core/txtnode/swfntcch.cxx pSwFontCache
     0
 sw/source/core/inc/txtfly.hxx:44
-    /media/disk2/libo7/sw/source/core/text/txtinit.cxx pContourCache
+    /media/disk2/libo4/sw/source/core/text/txtinit.cxx pContourCache
     0
 sw/source/core/inc/UndoSort.hxx:38
     SwSortUndoElement::(anonymous union)::(anonymous) nID
@@ -788,7 +779,7 @@ sw/source/core/ole/ndole.cxx:1086
     SwOLEObj::tryToGetChartContentAsPrimitive2DSequence bAsynchronousLoadingAllowed
     0
 sw/source/core/text/pordrop.hxx:30
-    /media/disk2/libo7/sw/source/core/text/txtinit.cxx pDropCapCache
+    /media/disk2/libo4/sw/source/core/text/txtinit.cxx pDropCapCache
     0
 sw/source/filter/inc/rtf.hxx:30
     RTFSurround::(anonymous union)::(anonymous) nJunk
@@ -808,88 +799,88 @@ sw/source/filter/ww8/ww8par3.cxx:376
 sw/source/filter/ww8/ww8par3.cxx:377
     (anonymous namespace)::WW8LVL bV6
     1
-sw/source/filter/ww8/ww8par5.cxx:1568
+sw/source/filter/ww8/ww8par5.cxx:1566
     SwWW8ImplReader::Read_F_DocInfo aName10
     
-sw/source/filter/ww8/ww8par5.cxx:1569
+sw/source/filter/ww8/ww8par5.cxx:1567
     SwWW8ImplReader::Read_F_DocInfo aName11
     TITEL
-sw/source/filter/ww8/ww8par5.cxx:1571
+sw/source/filter/ww8/ww8par5.cxx:1569
     SwWW8ImplReader::Read_F_DocInfo aName12
     TITRE
-sw/source/filter/ww8/ww8par5.cxx:1573
+sw/source/filter/ww8/ww8par5.cxx:1571
     SwWW8ImplReader::Read_F_DocInfo aName13
     TITLE
-sw/source/filter/ww8/ww8par5.cxx:1575
+sw/source/filter/ww8/ww8par5.cxx:1573
     SwWW8ImplReader::Read_F_DocInfo aName14
     TITRO
-sw/source/filter/ww8/ww8par5.cxx:1577
+sw/source/filter/ww8/ww8par5.cxx:1575
     SwWW8ImplReader::Read_F_DocInfo aName20
     
-sw/source/filter/ww8/ww8par5.cxx:1578
+sw/source/filter/ww8/ww8par5.cxx:1576
     SwWW8ImplReader::Read_F_DocInfo aName21
     ERSTELLDATUM
-sw/source/filter/ww8/ww8par5.cxx:1580
+sw/source/filter/ww8/ww8par5.cxx:1578
     SwWW8ImplReader::Read_F_DocInfo aName22
     CR……
-sw/source/filter/ww8/ww8par5.cxx:1582
+sw/source/filter/ww8/ww8par5.cxx:1580
     SwWW8ImplReader::Read_F_DocInfo aName23
     CREATED
-sw/source/filter/ww8/ww8par5.cxx:1584
+sw/source/filter/ww8/ww8par5.cxx:1582
     SwWW8ImplReader::Read_F_DocInfo aName24
     CREADO
-sw/source/filter/ww8/ww8par5.cxx:1586
+sw/source/filter/ww8/ww8par5.cxx:1584
     SwWW8ImplReader::Read_F_DocInfo aName30
     
-sw/source/filter/ww8/ww8par5.cxx:1587
+sw/source/filter/ww8/ww8par5.cxx:1585
     SwWW8ImplReader::Read_F_DocInfo aName31
     ZULETZTGESPEICHERTZEIT
-sw/source/filter/ww8/ww8par5.cxx:1589
+sw/source/filter/ww8/ww8par5.cxx:1587
     SwWW8ImplReader::Read_F_DocInfo aName32
     DERNIERENREGISTREMENT
-sw/source/filter/ww8/ww8par5.cxx:1591
+sw/source/filter/ww8/ww8par5.cxx:1589
     SwWW8ImplReader::Read_F_DocInfo aName33
     SAVED
-sw/source/filter/ww8/ww8par5.cxx:1593
+sw/source/filter/ww8/ww8par5.cxx:1591
     SwWW8ImplReader::Read_F_DocInfo aName34
     MODIFICADO
-sw/source/filter/ww8/ww8par5.cxx:1595
+sw/source/filter/ww8/ww8par5.cxx:1593
     SwWW8ImplReader::Read_F_DocInfo aName40
     
-sw/source/filter/ww8/ww8par5.cxx:1596
+sw/source/filter/ww8/ww8par5.cxx:1594
     SwWW8ImplReader::Read_F_DocInfo aName41
     ZULETZTGEDRUCKT
-sw/source/filter/ww8/ww8par5.cxx:1598
+sw/source/filter/ww8/ww8par5.cxx:1596
     SwWW8ImplReader::Read_F_DocInfo aName42
     DERNI»REIMPRESSION
-sw/source/filter/ww8/ww8par5.cxx:1600
+sw/source/filter/ww8/ww8par5.cxx:1598
     SwWW8ImplReader::Read_F_DocInfo aName43
     LASTPRINTED
-sw/source/filter/ww8/ww8par5.cxx:1602
+sw/source/filter/ww8/ww8par5.cxx:1600
     SwWW8ImplReader::Read_F_DocInfo aName44
     HUPS PUPS
-sw/source/filter/ww8/ww8par5.cxx:1604
+sw/source/filter/ww8/ww8par5.cxx:1602
     SwWW8ImplReader::Read_F_DocInfo aName50
     
-sw/source/filter/ww8/ww8par5.cxx:1605
+sw/source/filter/ww8/ww8par5.cxx:1603
     SwWW8ImplReader::Read_F_DocInfo aName51
     ‹BERARBEITUNGSNUMMER
-sw/source/filter/ww8/ww8par5.cxx:1607
+sw/source/filter/ww8/ww8par5.cxx:1605
     SwWW8ImplReader::Read_F_DocInfo aName52
     NUM…RODEREVISION
-sw/source/filter/ww8/ww8par5.cxx:1609
+sw/source/filter/ww8/ww8par5.cxx:1607
     SwWW8ImplReader::Read_F_DocInfo aName53
     REVISIONNUMBER
-sw/source/filter/ww8/ww8par5.cxx:1611
+sw/source/filter/ww8/ww8par5.cxx:1609
     SwWW8ImplReader::Read_F_DocInfo aName54
     SNUBBEL BUBBEL
-sw/source/filter/ww8/ww8par.hxx:663
+sw/source/filter/ww8/ww8par.hxx:666
     WW8FormulaControl mfUnknown
     0
-sw/source/filter/ww8/ww8par.hxx:670
+sw/source/filter/ww8/ww8par.hxx:673
     WW8FormulaControl mhpsCheckBox
     20
-sw/source/filter/ww8/ww8par.hxx:1027
+sw/source/filter/ww8/ww8par.hxx:1030
     WW8TabBandDesc bCantSplit90
     0
 sw/source/filter/ww8/ww8scan.hxx:1158
@@ -914,19 +905,19 @@ sw/source/ui/envelp/labfmt.hxx:69
     SwLabFormatPage aPreviewIdle
     SwLabFormatPage Preview
 sw/source/uibase/inc/edtdd.hxx:15
-    /media/disk2/libo7/sw/source/uibase/docvw/edtwin.cxx g_bExecuteDrag
+    /media/disk2/libo4/sw/source/uibase/docvw/edtwin.cxx g_bExecuteDrag
     0
 sw/source/uibase/inc/edtwin.hxx:294
-    /media/disk2/libo7/sw/source/uibase/docvw/edtdd.cxx g_bFrameDrag
+    /media/disk2/libo4/sw/source/uibase/docvw/edtdd.cxx g_bFrameDrag
     0
 sw/source/uibase/inc/edtwin.hxx:295
-    /media/disk2/libo7/sw/source/uibase/docvw/edtwin.cxx g_bDDTimerStarted
+    /media/disk2/libo4/sw/source/uibase/docvw/edtwin.cxx g_bDDTimerStarted
     0
 sw/source/uibase/inc/edtwin.hxx:297
-    /media/disk2/libo7/sw/source/uibase/docvw/edtwin.cxx g_bDDINetAttr
+    /media/disk2/libo4/sw/source/uibase/docvw/edtwin.cxx g_bDDINetAttr
     0
 sw/source/uibase/inc/edtwin.hxx:297
-    /media/disk2/libo7/sw/source/uibase/dochdl/swdtflvr.cxx g_bDDINetAttr
+    /media/disk2/libo4/sw/source/uibase/dochdl/swdtflvr.cxx g_bDDINetAttr
     1
 sw/source/uibase/inc/instable.hxx:44
     SwInsTableDlg minTableIndexInLb
@@ -946,6 +937,15 @@ sw/source/uibase/inc/unotools.hxx:45
 unotools/source/config/saveopt.cxx:82
     (anonymous namespace)::SvtSaveOptions_Impl bROUserAutoSave
     0
+vcl/headless/svpgdi.cxx:352
+    (anonymous namespace)::SurfaceHelper::isTrivial nMinimalSquareSizeToBuffer
+    4096
+vcl/headless/svpgdi.cxx:597
+    (anonymous) nMinimalSquareSizeToBuffer
+    4096
+vcl/headless/svpgdi.cxx:1632
+    SvpSalGraphics::drawPolyLine bDoDirectCairoStroke
+    1
 vcl/inc/canvasbitmap.hxx:55
     vcl::unotools::VclCanvasBitmap m_nEndianness
     0
@@ -955,6 +955,9 @@ vcl/inc/graphic/Manager.hxx:41
 vcl/inc/impfontcache.hxx:77
     ImplFontCache m_aBoundRectCache
     3000
+vcl/inc/listbox.hxx:203
+    ImplListBoxWindow meProminentType
+    0
 vcl/inc/qt5/Qt5Instance.hxx:64
     Qt5Instance m_aUpdateStyleTimer
     vcl::qt5 m_aUpdateStyleTimer
@@ -967,19 +970,13 @@ vcl/inc/salprn.hxx:44
 vcl/inc/salwtype.hxx:157
     SalWheelMouseEvent mbDeltaIsPixel
     0
-vcl/inc/svdata.hxx:278
+vcl/inc/svdata.hxx:316
     ImplSVNWFData mbMenuBarDockingAreaCommonBG
     0
-vcl/inc/svimpbox.hxx:134
-    SvImpLBox m_nCurTabPos
-    1
-vcl/inc/wizdlg.hxx:77
-    vcl::RoadmapWizard meViewAlign
-    0
-vcl/source/bitmap/BitmapTools.cxx:1053
+vcl/source/bitmap/BitmapTools.cxx:1050
     vcl::bitmap::get_unpremultiply_table inited
     1
-vcl/source/bitmap/BitmapTools.cxx:1069
+vcl/source/bitmap/BitmapTools.cxx:1066
     vcl::bitmap::get_premultiply_table inited
     1
 vcl/source/control/imivctl.hxx:120
@@ -994,9 +991,6 @@ vcl/source/control/imivctl.hxx:122
 vcl/source/control/imivctl.hxx:123
     SvxIconChoiceCtrl_Impl aCallSelectHdlIdle
     svtools contnr SvxIconChoiceCtrl_Impl CallSelectHdl
-vcl/source/control/imivctl.hxx:145
-    SvxIconChoiceCtrl_Impl pDDBufDev
-    0
 vcl/source/control/roadmapwizard.cxx:59
     vcl::RoadmapWizardImpl pRoadmap
     0
@@ -1017,6 +1011,9 @@ vcl/source/filter/jpeg/transupp.h:147
     0
 vcl/source/filter/jpeg/transupp.h:149
     (anonymous) crop_yoffset
+    0
+vcl/source/filter/png/pngread.cxx:113
+    vcl::PNGReaderImpl mnPreviewShift
     0
 vcl/source/font/font.cxx:540
     (anonymous namespace)::WeightSearchEntry weight
@@ -1066,28 +1063,34 @@ vcl/source/gdi/dibtools.cxx:120
 vcl/source/gdi/pdfwriter_impl.hxx:735
     vcl::PDFWriterImpl m_DocDigest
     0
+vcl/source/outdev/bitmap.cxx:1221
+    OutputDevice::DrawTransformedBitmapEx bAllowPreferDirectPaint
+    1
 vcl/unx/gtk3/a11y/gtk3atkutil.cxx:700
     ooo_atk_util_ensure_event_listener bInited
     1
-vcl/unx/gtk3/gtk3gtkinst.cxx:12901
+vcl/unx/gtk3/gtk3gtkinst.cxx:13513
     (anonymous namespace)::ensure_intercept_drawing_area_accessibility bDone
     1
+vcl/unx/gtk3/gtk3gtkinst.cxx:13541
+    (anonymous namespace)::ensure_disable_ctrl_page_up_down_bindings bDone
+    1
 workdir/LexTarget/l10ntools/source/xrmlex.cxx:706
-    /media/disk2/libo7/workdir/LexTarget/l10ntools/source/xrmlex.cxx bText
+    /media/disk2/libo4/workdir/LexTarget/l10ntools/source/xrmlex.cxx bText
     0
-writerfilter/source/dmapper/DomainMapper_Impl.hxx:155
+writerfilter/source/dmapper/DomainMapper_Impl.hxx:148
     writerfilter::dmapper::FieldParagraph m_bRemove
     0
-writerfilter/source/dmapper/SettingsTable.cxx:263
+writerfilter/source/dmapper/SettingsTable.cxx:267
     writerfilter::dmapper::SettingsTable_Impl m_pThemeFontLangProps
     3
-writerfilter/source/rtftok/rtfdocumentimpl.hxx:871
+writerfilter/source/rtftok/rtfdocumentimpl.hxx:881
     writerfilter::rtftok::RTFDocumentImpl m_nNestedTRLeft
     0
-writerfilter/source/rtftok/rtfdocumentimpl.hxx:872
+writerfilter/source/rtftok/rtfdocumentimpl.hxx:882
     writerfilter::rtftok::RTFDocumentImpl m_nTopLevelTRLeft
     0
-writerfilter/source/rtftok/rtfdocumentimpl.hxx:875
+writerfilter/source/rtftok/rtfdocumentimpl.hxx:885
     writerfilter::rtftok::RTFDocumentImpl m_nNestedCurrentCellX
     0
 writerfilter/source/rtftok/rtftokenizer.hxx:72
@@ -1097,5 +1100,5 @@ writerfilter/source/rtftok/rtftokenizer.hxx:75
     writerfilter::rtftok::RTFTokenizer s_bMathControlWordsSorted
     1
 xmloff/source/text/XMLIndexTemplateContext.hxx:57
-    /media/disk2/libo7/xmloff/source/text/XMLIndexTemplateContext.cxx aLevelNameTableMap
+    /media/disk2/libo4/xmloff/source/text/XMLIndexTemplateContext.cxx aLevelNameTableMap
     0

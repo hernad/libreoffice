@@ -17,7 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <sfx2/sidebar/Tools.hxx>
+#include <sidebar/Tools.hxx>
 
 #include <sfx2/sidebar/Theme.hxx>
 
@@ -26,6 +26,7 @@
 #include <vcl/gradient.hxx>
 
 #include <com/sun/star/frame/XDispatchProvider.hpp>
+#include <com/sun/star/frame/XFrame.hpp>
 #include <com/sun/star/util/URLTransformer.hpp>
 #include <com/sun/star/frame/ModuleManager.hpp>
 
@@ -51,12 +52,10 @@ Image Tools::GetImage (
 {
     if (rsURL.getLength() > 0)
     {
-        OUString sPath;
-
         if (rsURL.startsWith(".uno:"))
             return vcl::CommandInfoProvider::GetImageForCommand(rsURL, rxFrame);
 
-        else if (rsURL.startsWith("private:graphicrepository/", &sPath))
+        else
             return Image(rsURL);
     }
     return Image();

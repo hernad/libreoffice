@@ -20,6 +20,7 @@
 #include <bitmapwriteaccess.hxx>
 #include <vcl/graph.hxx>
 #include <tools/stream.hxx>
+#include <graphic/GraphicReader.hxx>
 #include "rgbtable.hxx"
 #include "xpmread.hxx"
 #include <cstring>
@@ -67,7 +68,7 @@ private:
     BitmapScopedWriteAccess     mpAcc;
     Bitmap                      maMaskBmp;
     BitmapScopedWriteAccess     mpMaskAcc;
-    long const                  mnLastPos;
+    long                        mnLastPos;
 
     sal_uLong               mnWidth;
     sal_uLong               mnHeight;
@@ -668,8 +669,8 @@ bool XPMReader::ImplGetString()
 
 VCL_DLLPUBLIC bool ImportXPM( SvStream& rStm, Graphic& rGraphic )
 {
-    std::shared_ptr<GraphicReader> pContext = rGraphic.GetContext();
-    rGraphic.SetContext(nullptr);
+    std::shared_ptr<GraphicReader> pContext = rGraphic.GetReaderContext();
+    rGraphic.SetReaderContext(nullptr);
     XPMReader* pXPMReader = dynamic_cast<XPMReader*>( pContext.get() );
     if (!pXPMReader)
     {
@@ -686,7 +687,7 @@ VCL_DLLPUBLIC bool ImportXPM( SvStream& rStm, Graphic& rGraphic )
         bRet = false;
     }
     else if( eReadState == XPMREAD_NEED_MORE )
-        rGraphic.SetContext( pContext );
+        rGraphic.SetReaderContext( pContext );
 
     return bRet;
 }

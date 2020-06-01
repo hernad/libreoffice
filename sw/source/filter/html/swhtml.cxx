@@ -123,6 +123,7 @@
 #include <ndole.hxx>
 #include <unoframe.hxx>
 #include "css1atr.hxx"
+#include <frameformats.hxx>
 
 #define FONTSIZE_MASK           7
 
@@ -358,7 +359,7 @@ SwHTMLParser::SwHTMLParser( SwDoc* pD, SwPaM& rCursor, SvStream& rIn,
     m_bOldIsHTMLMode = m_xDoc->getIDocumentSettingAccess().get(DocumentSettingId::HTML_MODE);
     m_xDoc->getIDocumentSettingAccess().set(DocumentSettingId::HTML_MODE, true);
 
-    m_pCSS1Parser.reset( new SwCSS1Parser( m_xDoc.get(), m_aFontHeights, m_sBaseURL, IsNewDoc() ) );
+    m_pCSS1Parser.reset(new SwCSS1Parser(m_xDoc.get(), *this, m_aFontHeights, m_sBaseURL, IsNewDoc()));
     m_pCSS1Parser->SetIgnoreFontFamily( rHtmlOptions.IsIgnoreFontFamily() );
 
     if( bReadUTF8 )
@@ -504,7 +505,7 @@ SwHTMLParser::~SwHTMLParser()
     DeleteFormImpl();
     m_pFootEndNoteImpl.reset();
 
-    OSL_ENSURE(!m_xTable.get(), "It exists still an open table");
+    OSL_ENSURE(!m_xTable, "It exists still an open table");
     m_pImageMaps.reset();
 
     OSL_ENSURE( m_vPendingStack.empty(),
@@ -1752,7 +1753,7 @@ void SwHTMLParser::NextToken( HtmlTokenId nToken )
         {
             if( m_nOpenParaToken != HtmlTokenId::NONE )
                 EndPara();
-            OSL_ENSURE(!m_xTable.get(), "table in table not allowed here");
+            OSL_ENSURE(!m_xTable, "table in table not allowed here");
             if( !m_xTable && (IsNewDoc() || !m_pPam->GetNode().FindTableNode()) &&
                 (m_pPam->GetPoint()->nNode.GetIndex() >
                             m_xDoc->GetNodes().GetEndOfExtras().GetIndex() ||

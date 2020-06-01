@@ -19,7 +19,6 @@
 
 
 #include <memory>
-#include <sal/macros.h>
 #include <sal/log.hxx>
 #include <fmprop.hxx>
 #include <svx/strings.hrc>
@@ -33,19 +32,15 @@
 #include <com/sun/star/awt/VisualEffect.hpp>
 #include <com/sun/star/container/XChild.hpp>
 #include <com/sun/star/container/XIndexAccess.hpp>
-#include <com/sun/star/container/XNamed.hpp>
 #include <com/sun/star/form/FormComponentType.hpp>
 #include <com/sun/star/form/XBoundComponent.hpp>
 #include <com/sun/star/script/XEventAttacherManager.hpp>
-#include <com/sun/star/sdb/XSQLQueryComposerFactory.hpp>
 #include <com/sun/star/sdbcx/XTablesSupplier.hpp>
 #include <com/sun/star/sdbcx/XColumnsSupplier.hpp>
-#include <com/sun/star/sdbc/ColumnValue.hpp>
 #include <com/sun/star/sdbc/DataType.hpp>
 #include <com/sun/star/sdbc/SQLException.hpp>
 #include <com/sun/star/sdbc/XRowSet.hpp>
 #include <com/sun/star/sdbc/XStatement.hpp>
-#include <com/sun/star/util/NumberFormat.hpp>
 #include <com/sun/star/util/XNumberFormatsSupplier.hpp>
 #include <com/sun/star/util/XNumberFormatter.hpp>
 #include <com/sun/star/util/Time.hpp>
@@ -57,11 +52,11 @@
 #include <comphelper/string.hxx>
 #include <comphelper/types.hxx>
 #include <connectivity/formattedcolumnvalue.hxx>
-#include <cppuhelper/typeprovider.hxx>
 #include <i18nlangtag/lang.h>
 
 #include <rtl/math.hxx>
 #include <svtools/calendar.hxx>
+#include <vcl/button.hxx>
 #include <vcl/fmtfield.hxx>
 #include <svl/numuno.hxx>
 #include <svl/zforlist.hxx>
@@ -75,8 +70,6 @@
 #include <connectivity/dbtools.hxx>
 #include <connectivity/dbconversion.hxx>
 #include <connectivity/sqlnode.hxx>
-
-#include <math.h>
 
 using namespace ::connectivity;
 using namespace ::svxform;
@@ -953,7 +946,6 @@ void DbCellControl::AlignControl(sal_Int16 nAlignment)
         lcl_implAlign( m_pPainter, nAlignmentBit );
 }
 
-
 void DbCellControl::PaintCell( OutputDevice& _rDev, const tools::Rectangle& _rRect )
 {
     if ( m_pPainter->GetParent() == &_rDev )
@@ -971,15 +963,17 @@ void DbCellControl::PaintCell( OutputDevice& _rDev, const tools::Rectangle& _rRe
 
         m_pPainter->SetPosSizePixel( _rRect.TopLeft(), _rRect.GetSize() );
         m_pPainter->Show();
-        m_pPainter->Update();
+        m_pPainter->PaintImmediately();
         m_pPainter->SetParentUpdateMode( false );
         m_pPainter->Hide();
         m_pPainter->SetParentUpdateMode( true );
     }
     else
-        m_pPainter->Draw( &_rDev, _rRect.TopLeft(), _rRect.GetSize(), DrawFlags::NONE );
+    {
+        m_pPainter->SetSizePixel( _rRect.GetSize() );
+        m_pPainter->Draw( &_rDev, _rRect.TopLeft(), DrawFlags::NONE );
+    }
 }
-
 
 void DbCellControl::PaintFieldToCell( OutputDevice& _rDev, const tools::Rectangle& _rRect, const Reference< XColumn >& _rxField, const Reference< XNumberFormatter >& _rxFormatter )
 {
@@ -2247,13 +2241,13 @@ namespace
 
 OUString DbDateField::GetFormatText(const Reference< css::sdb::XColumn >& _rxField, const Reference< css::util::XNumberFormatter >& /*xFormatter*/, Color** /*ppColor*/)
 {
-     return lcl_setFormattedDate_nothrow(dynamic_cast<DateField&>(*m_pPainter.get()), _rxField);
+     return lcl_setFormattedDate_nothrow(dynamic_cast<DateField&>(*m_pPainter), _rxField);
 }
 
 
 void DbDateField::UpdateFromField(const Reference< css::sdb::XColumn >& _rxField, const Reference< XNumberFormatter >& /*xFormatter*/)
 {
-    lcl_setFormattedDate_nothrow(dynamic_cast<DateField&>(*m_pWindow.get()), _rxField);
+    lcl_setFormattedDate_nothrow(dynamic_cast<DateField&>(*m_pWindow), _rxField);
 }
 
 
@@ -2399,7 +2393,6 @@ DbComboBox::DbComboBox(DbGridColumn& _rColumn)
     doPropertyListening( FM_PROP_LINECOUNT );
 }
 
-
 void DbComboBox::_propertyChanged( const PropertyChangeEvent& _rEvent )
 {
     if ( _rEvent.PropertyName == FM_PROP_STRINGITEMLIST )
@@ -2412,35 +2405,27 @@ void DbComboBox::_propertyChanged( const PropertyChangeEvent& _rEvent )
     }
 }
 
-
 void DbComboBox::SetList(const Any& rItems)
 {
     ComboBoxControl* pField = static_cast<ComboBoxControl*>(m_pWindow.get());
-    pField->Clear();
+    weld::ComboBox& rComboBox = pField->get_widget();
+    rComboBox.clear();
 
     css::uno::Sequence<OUString> aTest;
     if (rItems >>= aTest)
     {
         for (const OUString& rString : std::as_const(aTest))
-             pField->InsertEntry(rString);
+             rComboBox.append_text(rString);
 
         // tell the grid control that this controller is invalid and has to be re-initialized
         invalidatedController();
     }
 }
 
-
-void DbComboBox::implAdjustGenericFieldSetting( const Reference< XPropertySet >& _rxModel )
+void DbComboBox::implAdjustGenericFieldSetting(const Reference<XPropertySet>&)
 {
-    DBG_ASSERT( m_pWindow, "DbComboBox::implAdjustGenericFieldSetting: not to be called without window!" );
-    DBG_ASSERT( _rxModel.is(), "DbComboBox::implAdjustGenericFieldSetting: invalid model!" );
-    if ( m_pWindow && _rxModel.is() )
-    {
-        sal_Int16  nLines = getINT16( _rxModel->getPropertyValue( FM_PROP_LINECOUNT ) );
-        static_cast< ComboBoxControl* >( m_pWindow.get() )->SetDropDownLineCount( nLines );
-    }
+    // we no longer pay attention to FM_PROP_LINECOUNT
 }
-
 
 void DbComboBox::Init( vcl::Window& rParent, const Reference< XRowSet >& xCursor )
 {
@@ -2479,12 +2464,11 @@ OUString DbComboBox::GetFormatText(const Reference< css::sdb::XColumn >& _rxFiel
     return fmter.getFormattedValue();
 }
 
-
 void DbComboBox::UpdateFromField(const Reference< css::sdb::XColumn >& _rxField, const Reference< XNumberFormatter >& xFormatter)
 {
-    m_pWindow->SetText(GetFormatText(_rxField, xFormatter));
+    ComboBoxControl* pControl = static_cast<ComboBoxControl*>(m_pWindow.get());
+    pControl->get_widget().set_entry_text(GetFormatText(_rxField, xFormatter));
 }
-
 
 void DbComboBox::updateFromModel( Reference< XPropertySet > _rxModel )
 {
@@ -2493,14 +2477,17 @@ void DbComboBox::updateFromModel( Reference< XPropertySet > _rxModel )
     OUString sText;
     _rxModel->getPropertyValue( FM_PROP_TEXT ) >>= sText;
 
-    static_cast< ComboBox* >( m_pWindow.get() )->SetText( sText );
-    static_cast< ComboBox* >( m_pWindow.get() )->SetSelection( Selection( SELECTION_MAX, SELECTION_MIN ) );
+    ComboBoxControl* pControl = static_cast<ComboBoxControl*>(m_pWindow.get());
+    weld::ComboBox& rComboBox = pControl->get_widget();
+    rComboBox.set_entry_text(sText);
+    rComboBox.select_entry_region(0, -1);
 }
-
 
 bool DbComboBox::commitControl()
 {
-    OUString aText( m_pWindow->GetText());
+    ComboBoxControl* pControl = static_cast<ComboBoxControl*>(m_pWindow.get());
+    weld::ComboBox& rComboBox = pControl->get_widget();
+    OUString aText(rComboBox.get_active_text());
     m_rColumn.getModel()->setPropertyValue(FM_PROP_TEXT, makeAny(aText));
     return true;
 }
@@ -2516,7 +2503,6 @@ DbListBox::DbListBox(DbGridColumn& _rColumn)
     doPropertyListening( FM_PROP_LINECOUNT );
 }
 
-
 void DbListBox::_propertyChanged( const css::beans::PropertyChangeEvent& _rEvent )
 {
     if ( _rEvent.PropertyName == FM_PROP_STRINGITEMLIST )
@@ -2529,12 +2515,13 @@ void DbListBox::_propertyChanged( const css::beans::PropertyChangeEvent& _rEvent
     }
 }
 
-
 void DbListBox::SetList(const Any& rItems)
 {
     ListBoxControl* pField = static_cast<ListBoxControl*>(m_pWindow.get());
 
-    pField->Clear();
+    weld::ComboBox& rFieldList = pField->get_widget();
+
+    rFieldList.clear();
     m_bBound = false;
 
     css::uno::Sequence<OUString> aTest;
@@ -2543,7 +2530,7 @@ void DbListBox::SetList(const Any& rItems)
         if (aTest.hasElements())
         {
             for (const OUString& rString : std::as_const(aTest))
-                 pField->InsertEntry(rString);
+                 rFieldList.append_text(rString);
 
             m_rColumn.getModel()->getPropertyValue(FM_PROP_VALUE_SEQ) >>= m_aValueList;
             m_bBound = m_aValueList.hasElements();
@@ -2553,7 +2540,6 @@ void DbListBox::SetList(const Any& rItems)
         }
     }
 }
-
 
 void DbListBox::Init( vcl::Window& rParent, const Reference< XRowSet >& xCursor)
 {
@@ -2569,24 +2555,15 @@ void DbListBox::Init( vcl::Window& rParent, const Reference< XRowSet >& xCursor)
     DbCellControl::Init( rParent, xCursor );
 }
 
-
-void DbListBox::implAdjustGenericFieldSetting( const Reference< XPropertySet >& _rxModel )
+void DbListBox::implAdjustGenericFieldSetting( const Reference< XPropertySet >& /*rxModel*/ )
 {
-    DBG_ASSERT( m_pWindow, "DbListBox::implAdjustGenericFieldSetting: not to be called without window!" );
-    DBG_ASSERT( _rxModel.is(), "DbListBox::implAdjustGenericFieldSetting: invalid model!" );
-    if ( m_pWindow && _rxModel.is() )
-    {
-        sal_Int16  nLines   = getINT16( _rxModel->getPropertyValue( FM_PROP_LINECOUNT ) );
-        static_cast< ListBoxControl* >( m_pWindow.get() )->SetDropDownLineCount( nLines );
-    }
+    // ignore FM_PROP_LINECOUNT
 }
-
 
 CellControllerRef DbListBox::CreateController() const
 {
     return new ListBoxCellController(static_cast<ListBoxControl*>(m_pWindow.get()));
 }
-
 
 OUString DbListBox::GetFormatText(const Reference< css::sdb::XColumn >& _rxField, const Reference< XNumberFormatter >& /*xFormatter*/, Color** /*ppColor*/)
 {
@@ -2600,7 +2577,7 @@ OUString DbListBox::GetFormatText(const Reference< css::sdb::XColumn >& _rxField
             {
                 sal_Int32 nPos = ::comphelper::findValue( m_aValueList, sText );
                 if ( nPos != -1 )
-                    sText = static_cast<ListBox*>(m_pWindow.get())->GetEntry(nPos);
+                    sText = static_cast<svt::ListBoxControl*>(m_pWindow.get())->get_widget().get_text(nPos);
                 else
                     sText.clear();
             }
@@ -2613,16 +2590,15 @@ OUString DbListBox::GetFormatText(const Reference< css::sdb::XColumn >& _rxField
     return sText;
 }
 
-
 void DbListBox::UpdateFromField(const Reference< css::sdb::XColumn >& _rxField, const Reference< XNumberFormatter >& xFormatter)
 {
     OUString sFormattedText( GetFormatText( _rxField, xFormatter ) );
+    weld::ComboBox& rComboBox = static_cast<ListBoxControl*>(m_pWindow.get())->get_widget();
     if (!sFormattedText.isEmpty())
-        static_cast< ListBox* >( m_pWindow.get() )->SelectEntry( sFormattedText );
+        rComboBox.set_active_text(sFormattedText);
     else
-        static_cast< ListBox* >( m_pWindow.get() )->SetNoSelection();
+        rComboBox.set_active(-1);
 }
-
 
 void DbListBox::updateFromModel( Reference< XPropertySet > _rxModel )
 {
@@ -2635,23 +2611,24 @@ void DbListBox::updateFromModel( Reference< XPropertySet > _rxModel )
     if ( aSelection.hasElements() )
         nSelection = aSelection[ 0 ];
 
-    ListBox* pListBox = static_cast< ListBox* >( m_pWindow.get() );
+    weld::ComboBox& rComboBox = static_cast<ListBoxControl*>(m_pWindow.get())->get_widget();
 
-    if ( ( nSelection >= 0 ) && ( nSelection < pListBox->GetEntryCount() ) )
-        pListBox->SelectEntryPos( nSelection );
+    if (nSelection >= 0 && nSelection < rComboBox.get_count())
+        rComboBox.set_active(nSelection);
     else
-        pListBox->SetNoSelection( );
+        rComboBox.set_active(-1);
 }
-
 
 bool DbListBox::commitControl()
 {
     Any aVal;
     Sequence<sal_Int16> aSelectSeq;
-    if (static_cast<ListBox*>(m_pWindow.get())->GetSelectedEntryCount())
+    weld::ComboBox& rComboBox = static_cast<ListBoxControl*>(m_pWindow.get())->get_widget();
+    auto nActive = rComboBox.get_active();
+    if (nActive != -1)
     {
         aSelectSeq.realloc(1);
-        *aSelectSeq.getArray() = static_cast<sal_Int16>(static_cast<ListBox*>(m_pWindow.get())->GetSelectedEntryPos());
+        *aSelectSeq.getArray() = static_cast<sal_Int16>(nActive);
     }
     aVal <<= aSelectSeq;
     m_rColumn.getModel()->setPropertyValue(FM_PROP_SELECT_SEQ, aVal);
@@ -2669,14 +2646,12 @@ DbFilterField::DbFilterField(const Reference< XComponentContext >& rxContext,DbG
     setAlignedController( false );
 }
 
-
 DbFilterField::~DbFilterField()
 {
     if (m_nControlClass == css::form::FormComponentType::CHECKBOX)
         static_cast<CheckBoxControl*>(m_pWindow.get())->SetClickHdl( Link<VclPtr<CheckBox>,void>() );
 
 }
-
 
 void DbFilterField::PaintCell(OutputDevice& rDev, const tools::Rectangle& rRect)
 {
@@ -2687,13 +2662,12 @@ void DbFilterField::PaintCell(OutputDevice& rDev, const tools::Rectangle& rRect)
             DbCellControl::PaintCell( rDev, rRect );
             break;
         case FormComponentType::LISTBOX:
-            rDev.DrawText(rRect, static_cast<ListBox*>(m_pWindow.get())->GetSelectedEntry(), nStyle);
+            rDev.DrawText(rRect, static_cast<ListBoxControl*>(m_pWindow.get())->get_widget().get_active_text(), nStyle);
             break;
         default:
             rDev.DrawText(rRect, m_aText, nStyle);
     }
 }
-
 
 void DbFilterField::SetList(const Any& rItems, bool bComboBox)
 {
@@ -2703,21 +2677,22 @@ void DbFilterField::SetList(const Any& rItems, bool bComboBox)
     {
         if (bComboBox)
         {
-            ComboBox* pField = static_cast<ComboBox*>(m_pWindow.get());
+            ComboBoxControl* pField = static_cast<ComboBoxControl*>(m_pWindow.get());
+            weld::ComboBox& rComboBox = pField->get_widget();
             for (const OUString& rString : std::as_const(aTest))
-                pField->InsertEntry(rString);
+                rComboBox.append_text(rString);
         }
         else
         {
-            ListBox* pField = static_cast<ListBox*>(m_pWindow.get());
+            ListBoxControl* pField = static_cast<ListBoxControl*>(m_pWindow.get());
+            weld::ComboBox& rFieldBox = pField->get_widget();
             for (const OUString& rString : std::as_const(aTest))
-                pField->InsertEntry(rString);
+                rFieldBox.append_text(rString);
 
             m_rColumn.getModel()->getPropertyValue(FM_PROP_VALUE_SEQ) >>= m_aValueList;
         }
     }
 }
-
 
 void DbFilterField::CreateControl(vcl::Window* pParent, const Reference< css::beans::XPropertySet >& xModel)
 {
@@ -2735,10 +2710,8 @@ void DbFilterField::CreateControl(vcl::Window* pParent, const Reference< css::be
         case css::form::FormComponentType::LISTBOX:
         {
             m_pWindow = VclPtr<ListBoxControl>::Create(pParent);
-            sal_Int16  nLines       = ::comphelper::getINT16(xModel->getPropertyValue(FM_PROP_LINECOUNT));
-            Any  aItems      = xModel->getPropertyValue(FM_PROP_STRINGITEMLIST);
-            SetList(aItems, m_nControlClass == css::form::FormComponentType::COMBOBOX);
-            static_cast<ListBox*>(m_pWindow.get())->SetDropDownLineCount(nLines);
+            Any  aItems = xModel->getPropertyValue(FM_PROP_STRINGITEMLIST);
+            SetList(aItems, false);
         }   break;
         case css::form::FormComponentType::COMBOBOX:
         {
@@ -2753,13 +2726,9 @@ void DbFilterField::CreateControl(vcl::Window* pParent, const Reference< css::be
 
             if (!m_bFilterList)
             {
-                sal_Int16  nLines       = ::comphelper::getINT16(xModel->getPropertyValue(FM_PROP_LINECOUNT));
-                Any  aItems      = xModel->getPropertyValue(FM_PROP_STRINGITEMLIST);
-                SetList(aItems, m_nControlClass == css::form::FormComponentType::COMBOBOX);
-                static_cast<ComboBox*>(m_pWindow.get())->SetDropDownLineCount(nLines);
+                Any aItems = xModel->getPropertyValue(FM_PROP_STRINGITEMLIST);
+                SetList(aItems, true);
             }
-            else
-                static_cast<ComboBox*>(m_pWindow.get())->SetDropDownLineCount(5);
 
         }   break;
         default:
@@ -2814,7 +2783,6 @@ void DbFilterField::Init( vcl::Window& rParent, const Reference< XRowSet >& xCur
         pAsEdit->SetReadOnly( false );
 }
 
-
 CellControllerRef DbFilterField::CreateController() const
 {
     CellControllerRef xController;
@@ -2838,7 +2806,6 @@ CellControllerRef DbFilterField::CreateController() const
     return xController;
 }
 
-
 void DbFilterField::updateFromModel( Reference< XPropertySet > _rxModel )
 {
     OSL_ENSURE( _rxModel.is() && m_pWindow, "DbFilterField::updateFromModel: invalid call!" );
@@ -2848,7 +2815,6 @@ void DbFilterField::updateFromModel( Reference< XPropertySet > _rxModel )
     // remember: updateFromModel should be some kind of opposite of commitControl
 }
 
-
 bool DbFilterField::commitControl()
 {
     OUString aText(m_aText);
@@ -2857,10 +2823,13 @@ bool DbFilterField::commitControl()
         case css::form::FormComponentType::CHECKBOX:
             return true;
         case css::form::FormComponentType::LISTBOX:
+        {
             aText.clear();
-            if (static_cast<ListBox*>(m_pWindow.get())->GetSelectedEntryCount())
+            weld::ComboBox& rComboBox = static_cast<svt::ListBoxControl*>(m_pWindow.get())->get_widget();
+            auto nActive = rComboBox.get_active();
+            if (nActive != -1)
             {
-                sal_Int16 nPos = static_cast<sal_Int16>(static_cast<ListBox*>(m_pWindow.get())->GetSelectedEntryPos());
+                sal_Int16 nPos = static_cast<sal_Int16>(nActive);
                 if ( ( nPos >= 0 ) && ( nPos < m_aValueList.getLength() ) )
                     aText = m_aValueList.getConstArray()[nPos];
             }
@@ -2871,6 +2840,7 @@ bool DbFilterField::commitControl()
                 m_aCommitLink.Call(*this);
             }
             return true;
+        }
         default:
             aText = m_pWindow->GetText();
     }
@@ -2947,10 +2917,7 @@ void DbFilterField::SetText(const OUString& rText)
         case css::form::FormComponentType::LISTBOX:
         {
             sal_Int32 nPos = ::comphelper::findValue(m_aValueList, m_aText);
-            if (nPos != -1)
-                static_cast<ListBox*>(m_pWindow.get())->SelectEntryPos(nPos);
-            else
-                static_cast<ListBox*>(m_pWindow.get())->SetNoSelection();
+            static_cast<ListBoxControl*>(m_pWindow.get())->get_widget().set_active(nPos);
         }   break;
         default:
             m_pWindow->SetText(m_aText);
@@ -3073,11 +3040,12 @@ void DbFilterField::Update()
         (void)xListCursor->next();
     }
 
+    ComboBoxControl* pField = static_cast<ComboBoxControl*>(m_pWindow.get());
+    weld::ComboBox& rComboBox = pField->get_widget();
     // filling the entries for the combobox
     for (const auto& rString : aStringList)
-        static_cast<ComboBox*>(m_pWindow.get())->InsertEntry(rString);
+        rComboBox.append_text(rString);
 }
-
 
 OUString DbFilterField::GetFormatText(const Reference< XColumn >& /*_rxField*/, const Reference< XNumberFormatter >& /*xFormatter*/, Color** /*ppColor*/)
 {
@@ -3996,15 +3964,13 @@ void FmXCheckBoxCell::onWindowEvent( const VclEventId _nEventId, const vcl::Wind
 }
 
 FmXListBoxCell::FmXListBoxCell(DbGridColumn* pColumn, std::unique_ptr<DbCellControl> pControl)
-               :FmXTextCell( pColumn, std::move(pControl) )
-               ,m_aItemListeners(m_aMutex)
-               ,m_aActionListeners(m_aMutex)
-               ,m_pBox( &static_cast< ListBox& >( m_pCellControl->GetWindow() ) )
+  : FmXTextCell(pColumn, std::move(pControl))
+  , m_aItemListeners(m_aMutex)
+  , m_aActionListeners(m_aMutex)
+  , m_pBox(&static_cast<svt::ListBoxControl&>(m_pCellControl->GetWindow()).get_widget())
 {
-
-    m_pBox->SetDoubleClickHdl( LINK( this, FmXListBoxCell, OnDoubleClick ) );
+    m_pBox->connect_changed(LINK(this, FmXListBoxCell, ChangedHdl));
 }
-
 
 FmXListBoxCell::~FmXListBoxCell()
 {
@@ -4013,331 +3979,63 @@ FmXListBoxCell::~FmXListBoxCell()
         acquire();
         dispose();
     }
-
 }
 
 // OComponentHelper
-
 void FmXListBoxCell::disposing()
 {
     css::lang::EventObject aEvt(*this);
     m_aItemListeners.disposeAndClear(aEvt);
     m_aActionListeners.disposeAndClear(aEvt);
 
-    m_pBox->SetSelectHdl( Link<ListBox&,void>() );
-    m_pBox->SetDoubleClickHdl( Link<ListBox&,void>() );
+    m_pBox->connect_changed( Link<weld::ComboBox&,void>() );
     m_pBox = nullptr;
 
     FmXTextCell::disposing();
 }
 
-
-Any SAL_CALL FmXListBoxCell::queryAggregation( const css::uno::Type& _rType )
-{
-    Any aReturn = FmXTextCell::queryAggregation(_rType);
-
-    if ( !aReturn.hasValue() )
-        aReturn = FmXListBoxCell_Base::queryInterface( _rType );
-
-    return aReturn;
-}
-
-
-Sequence< css::uno::Type > SAL_CALL FmXListBoxCell::getTypes(  )
-{
-    return ::comphelper::concatSequences(
-        FmXTextCell::getTypes(),
-        FmXListBoxCell_Base::getTypes()
-    );
-}
-
-
 IMPLEMENT_GET_IMPLEMENTATION_ID( FmXListBoxCell )
 
-
-void SAL_CALL FmXListBoxCell::addItemListener(const Reference< css::awt::XItemListener >& l)
+IMPL_LINK_NOARG(FmXListBoxCell, ChangedHdl, weld::ComboBox&, void)
 {
-    m_aItemListeners.addInterface( l );
-}
-
-
-void SAL_CALL FmXListBoxCell::removeItemListener(const Reference< css::awt::XItemListener >& l)
-{
-    m_aItemListeners.removeInterface( l );
-}
-
-
-void SAL_CALL FmXListBoxCell::addActionListener(const Reference< css::awt::XActionListener >& l)
-{
-    m_aActionListeners.addInterface( l );
-}
-
-
-void SAL_CALL FmXListBoxCell::removeActionListener(const Reference< css::awt::XActionListener >& l)
-{
-    m_aActionListeners.removeInterface( l );
-}
-
-
-void SAL_CALL FmXListBoxCell::addItem(const OUString& aItem, sal_Int16 nPos)
-{
-    ::osl::MutexGuard aGuard( m_aMutex );
-    if (m_pBox)
-        m_pBox->InsertEntry( aItem, nPos );
-}
-
-
-void SAL_CALL FmXListBoxCell::addItems(const css::uno::Sequence<OUString>& aItems, sal_Int16 nPos)
-{
-    ::osl::MutexGuard aGuard( m_aMutex );
-    if (m_pBox)
-    {
-        sal_uInt16 nP = nPos;
-        for ( const auto& rItem : aItems )
-        {
-            m_pBox->InsertEntry( rItem, nP );
-            if ( nPos != -1 )    // Not if 0xFFFF, because LIST_APPEND
-                nP++;
-        }
-    }
-}
-
-
-void SAL_CALL FmXListBoxCell::removeItems(sal_Int16 nPos, sal_Int16 nCount)
-{
-    ::osl::MutexGuard aGuard( m_aMutex );
-    if ( m_pBox )
-    {
-        for ( sal_uInt16 n = nCount; n; )
-            m_pBox->RemoveEntry( nPos + (--n) );
-    }
-}
-
-
-sal_Int16 SAL_CALL FmXListBoxCell::getItemCount()
-{
-    ::osl::MutexGuard aGuard( m_aMutex );
-    return m_pBox ? m_pBox->GetEntryCount() : 0;
-}
-
-
-OUString SAL_CALL FmXListBoxCell::getItem(sal_Int16 nPos)
-{
-    ::osl::MutexGuard aGuard( m_aMutex );
-    return m_pBox ? m_pBox->GetEntry(nPos) : OUString();
-}
-
-css::uno::Sequence<OUString> SAL_CALL FmXListBoxCell::getItems()
-{
-    ::osl::MutexGuard aGuard( m_aMutex );
-
-    css::uno::Sequence<OUString> aSeq;
-    if (m_pBox)
-    {
-        const sal_Int32 nEntries = m_pBox ->GetEntryCount();
-        aSeq = css::uno::Sequence<OUString>( nEntries );
-        for ( sal_Int32 n = nEntries; n; )
-        {
-            --n;
-            aSeq.getArray()[n] = m_pBox ->GetEntry( n );
-        }
-    }
-    return aSeq;
-}
-
-
-sal_Int16 SAL_CALL FmXListBoxCell::getSelectedItemPos()
-{
-    ::osl::MutexGuard aGuard( m_aMutex );
-    if (m_pBox)
-    {
-        UpdateFromColumn();
-        sal_Int32 nPos = m_pBox->GetSelectedEntryPos();
-        if (nPos > SHRT_MAX || nPos < SHRT_MIN)
-            throw std::out_of_range("awt::XListBox::getSelectedItemPos can only return a short");
-        return nPos;
-    }
-    return 0;
-}
-
-
-Sequence< sal_Int16 > SAL_CALL FmXListBoxCell::getSelectedItemsPos()
-{
-    ::osl::MutexGuard aGuard( m_aMutex );
-    Sequence<sal_Int16> aSeq;
-
-    if (m_pBox)
-    {
-        UpdateFromColumn();
-        const sal_Int32 nSelEntries = m_pBox->GetSelectedEntryCount();
-        aSeq = Sequence<sal_Int16>( nSelEntries );
-        for ( sal_Int32 n = 0; n < nSelEntries; ++n )
-            aSeq.getArray()[n] = m_pBox->GetSelectedEntryPos( n );
-    }
-    return aSeq;
-}
-
-OUString SAL_CALL FmXListBoxCell::getSelectedItem()
-{
-    ::osl::MutexGuard aGuard( m_aMutex );
-
-    OUString aItem;
-
-    if (m_pBox)
-    {
-        UpdateFromColumn();
-        aItem = m_pBox->GetSelectedEntry();
-    }
-
-    return aItem;
-}
-
-
-css::uno::Sequence<OUString> SAL_CALL FmXListBoxCell::getSelectedItems()
-{
-    ::osl::MutexGuard aGuard( m_aMutex );
-
-    css::uno::Sequence<OUString> aSeq;
-
-    if (m_pBox)
-    {
-        UpdateFromColumn();
-        const sal_Int32 nSelEntries = m_pBox->GetSelectedEntryCount();
-        aSeq = css::uno::Sequence<OUString>( nSelEntries );
-        for ( sal_Int32 n = 0; n < nSelEntries; ++n )
-            aSeq.getArray()[n] = m_pBox->GetSelectedEntry( n );
-    }
-    return aSeq;
-}
-
-
-void SAL_CALL FmXListBoxCell::selectItemPos(sal_Int16 nPos, sal_Bool bSelect)
-{
-    ::osl::MutexGuard aGuard( m_aMutex );
-
-    if (m_pBox)
-        m_pBox->SelectEntryPos( nPos, bSelect );
-}
-
-
-void SAL_CALL FmXListBoxCell::selectItemsPos(const Sequence< sal_Int16 >& aPositions, sal_Bool bSelect)
-{
-    ::osl::MutexGuard aGuard( m_aMutex );
-
-    if (m_pBox)
-    {
-        for ( sal_uInt16 n = static_cast<sal_uInt16>(aPositions.getLength()); n; )
-            m_pBox->SelectEntryPos( static_cast<sal_uInt16>(aPositions.getConstArray()[--n]), bSelect );
-    }
-}
-
-
-void SAL_CALL FmXListBoxCell::selectItem(const OUString& aItem, sal_Bool bSelect)
-{
-    ::osl::MutexGuard aGuard( m_aMutex );
-
-    if (m_pBox)
-        m_pBox->SelectEntry( aItem, bSelect );
-}
-
-
-sal_Bool SAL_CALL FmXListBoxCell::isMutipleMode()
-{
-    ::osl::MutexGuard aGuard( m_aMutex );
-
-    bool bMulti = false;
-    if (m_pBox)
-        bMulti = m_pBox->IsMultiSelectionEnabled();
-    return bMulti;
-}
-
-
-void SAL_CALL FmXListBoxCell::setMultipleMode(sal_Bool bMulti)
-{
-    ::osl::MutexGuard aGuard( m_aMutex );
-
-    if (m_pBox)
-        m_pBox->EnableMultiSelection( bMulti );
-}
-
-
-sal_Int16 SAL_CALL FmXListBoxCell::getDropDownLineCount()
-{
-    ::osl::MutexGuard aGuard( m_aMutex );
-
-    sal_Int16 nLines = 0;
-    if (m_pBox)
-        nLines = m_pBox->GetDropDownLineCount();
-
-    return nLines;
-}
-
-
-void SAL_CALL FmXListBoxCell::setDropDownLineCount(sal_Int16 nLines)
-{
-    ::osl::MutexGuard aGuard( m_aMutex );
-
-    if (m_pBox)
-        m_pBox->SetDropDownLineCount( nLines );
-}
-
-
-void SAL_CALL FmXListBoxCell::makeVisible(sal_Int16 nEntry)
-{
-    ::osl::MutexGuard aGuard( m_aMutex );
-
-    if (m_pBox)
-        m_pBox->SetTopEntry( nEntry );
-}
-
-
-void FmXListBoxCell::onWindowEvent( const VclEventId _nEventId, const vcl::Window& _rWindow, const void* _pEventData )
-{
-    if  (   ( &_rWindow == m_pBox )
-        &&  ( _nEventId == VclEventId::ListboxSelect )
-        )
-    {
-        OnDoubleClick( *m_pBox );
-
-        css::awt::ItemEvent aEvent;
-        aEvent.Source = *this;
-        aEvent.Highlighted = 0;
-
-        // with multiple selection 0xFFFF, otherwise the ID
-        aEvent.Selected = (m_pBox->GetSelectedEntryCount() == 1 )
-            ? m_pBox->GetSelectedEntryPos() : 0xFFFF;
-
-        m_aItemListeners.notifyEach( &awt::XItemListener::itemStateChanged, aEvent );
+    if (!m_pBox || !m_pBox->changed_by_direct_pick())
         return;
-    }
 
-    FmXTextCell::onWindowEvent( _nEventId, _rWindow, _pEventData );
+    OnDoubleClick();
+
+    css::awt::ItemEvent aEvent;
+    aEvent.Source = *this;
+    aEvent.Highlighted = 0;
+
+    // with multiple selection 0xFFFF, otherwise the ID
+    aEvent.Selected = (m_pBox->get_active() != -1 )
+                    ? m_pBox->get_active() : 0xFFFF;
+
+    m_aItemListeners.notifyEach( &awt::XItemListener::itemStateChanged, aEvent );
+    return;
 }
 
-
-IMPL_LINK_NOARG(FmXListBoxCell, OnDoubleClick, ListBox&, void)
+void FmXListBoxCell::OnDoubleClick()
 {
-    if (m_pBox)
-    {
-        ::comphelper::OInterfaceIteratorHelper2 aIt( m_aActionListeners );
+    ::comphelper::OInterfaceIteratorHelper2 aIt( m_aActionListeners );
 
-        css::awt::ActionEvent aEvent;
-        aEvent.Source = *this;
-        aEvent.ActionCommand = m_pBox->GetSelectedEntry();
+    css::awt::ActionEvent aEvent;
+    aEvent.Source = *this;
+    aEvent.ActionCommand = m_pBox->get_active_text();
 
-        while( aIt.hasMoreElements() )
-            static_cast< css::awt::XActionListener *>(aIt.next())->actionPerformed( aEvent );
-    }
+    while( aIt.hasMoreElements() )
+        static_cast< css::awt::XActionListener *>(aIt.next())->actionPerformed( aEvent );
 }
 
 FmXComboBoxCell::FmXComboBoxCell( DbGridColumn* pColumn, std::unique_ptr<DbCellControl> pControl )
     :FmXTextCell( pColumn, std::move(pControl) )
     ,m_aItemListeners( m_aMutex )
     ,m_aActionListeners( m_aMutex )
-    ,m_pComboBox( &static_cast< ComboBox& >( m_pCellControl->GetWindow() ) )
+    ,m_pComboBox(&static_cast<ComboBoxControl&>(m_pCellControl->GetWindow()).get_widget())
+    ,m_nLines(Application::GetSettings().GetStyleSettings().GetListBoxMaximumLineCount())
 {
+    m_pComboBox->connect_changed(LINK(this, FmXComboBoxCell, ChangedHdl));
 }
-
 
 FmXComboBoxCell::~FmXComboBoxCell()
 {
@@ -4349,16 +4047,17 @@ FmXComboBoxCell::~FmXComboBoxCell()
 
 }
 
-
 void FmXComboBoxCell::disposing()
 {
     css::lang::EventObject aEvt(*this);
     m_aItemListeners.disposeAndClear(aEvt);
     m_aActionListeners.disposeAndClear(aEvt);
 
+    m_pComboBox->connect_changed( Link<weld::ComboBox&,void>() );
+    m_pComboBox = nullptr;
+
     FmXTextCell::disposing();
 }
-
 
 Any SAL_CALL FmXComboBoxCell::queryAggregation( const css::uno::Type& _rType )
 {
@@ -4370,7 +4069,6 @@ Any SAL_CALL FmXComboBoxCell::queryAggregation( const css::uno::Type& _rType )
     return aReturn;
 }
 
-
 Sequence< Type > SAL_CALL FmXComboBoxCell::getTypes(  )
 {
     return ::comphelper::concatSequences(
@@ -4379,21 +4077,17 @@ Sequence< Type > SAL_CALL FmXComboBoxCell::getTypes(  )
     );
 }
 
-
 IMPLEMENT_GET_IMPLEMENTATION_ID( FmXComboBoxCell )
-
 
 void SAL_CALL FmXComboBoxCell::addItemListener(const Reference< awt::XItemListener >& l)
 {
     m_aItemListeners.addInterface( l );
 }
 
-
 void SAL_CALL FmXComboBoxCell::removeItemListener(const Reference< awt::XItemListener >& l)
 {
     m_aItemListeners.removeInterface( l );
 }
-
 
 void SAL_CALL FmXComboBoxCell::addActionListener(const Reference< awt::XActionListener >& l)
 {
@@ -4406,53 +4100,51 @@ void SAL_CALL FmXComboBoxCell::removeActionListener(const Reference< awt::XActio
     m_aActionListeners.removeInterface( l );
 }
 
-
 void SAL_CALL FmXComboBoxCell::addItem( const OUString& Item, sal_Int16 Pos )
 {
     ::osl::MutexGuard aGuard( m_aMutex );
-    if ( m_pComboBox )
-        m_pComboBox->InsertEntry( Item, Pos );
+    if (!m_pComboBox)
+        return;
+    m_pComboBox->insert_text(Pos, Item);
 }
-
 
 void SAL_CALL FmXComboBoxCell::addItems( const Sequence< OUString >& Items, sal_Int16 Pos )
 {
     ::osl::MutexGuard aGuard( m_aMutex );
-    if ( m_pComboBox )
+    if (!m_pComboBox)
+        return;
+    sal_uInt16 nP = Pos;
+    for ( const auto& rItem : Items )
     {
-        sal_uInt16 nP = Pos;
-        for ( const auto& rItem : Items )
-        {
-            m_pComboBox->InsertEntry( rItem, nP );
-            if ( Pos != -1 )
-                nP++;
-        }
+        m_pComboBox->insert_text(nP, rItem);
+        if ( Pos != -1 )
+            nP++;
     }
 }
-
 
 void SAL_CALL FmXComboBoxCell::removeItems( sal_Int16 Pos, sal_Int16 Count )
 {
     ::osl::MutexGuard aGuard( m_aMutex );
-    if ( m_pComboBox )
-    {
-        for ( sal_uInt16 n = Count; n; )
-            m_pComboBox->RemoveEntryAt( Pos + (--n) );
-    }
+    if (!m_pComboBox)
+        return;
+    for ( sal_uInt16 n = Count; n; )
+        m_pComboBox->remove( Pos + (--n) );
 }
-
 
 sal_Int16 SAL_CALL FmXComboBoxCell::getItemCount()
 {
     ::osl::MutexGuard aGuard( m_aMutex );
-    return m_pComboBox ? m_pComboBox->GetEntryCount() : 0;
+    if (!m_pComboBox)
+        return 0;
+    return m_pComboBox->get_count();
 }
-
 
 OUString SAL_CALL FmXComboBoxCell::getItem( sal_Int16 Pos )
 {
     ::osl::MutexGuard aGuard( m_aMutex );
-    return m_pComboBox ? m_pComboBox->GetEntry(Pos) : OUString();
+    if (!m_pComboBox)
+        return OUString();
+    return m_pComboBox->get_text(Pos);
 }
 
 Sequence< OUString > SAL_CALL FmXComboBoxCell::getItems()
@@ -4460,63 +4152,44 @@ Sequence< OUString > SAL_CALL FmXComboBoxCell::getItems()
     ::osl::MutexGuard aGuard( m_aMutex );
 
     Sequence< OUString > aItems;
-    if ( m_pComboBox )
+    if (m_pComboBox)
     {
-        const sal_Int32 nEntries = m_pComboBox->GetEntryCount();
+        const sal_Int32 nEntries = m_pComboBox->get_count();
         aItems.realloc( nEntries );
         OUString* pItem = aItems.getArray();
         for ( sal_Int32 n=0; n<nEntries; ++n, ++pItem )
-            *pItem = m_pComboBox->GetEntry( n );
+            *pItem = m_pComboBox->get_text(n);
     }
     return aItems;
 }
 
-
 sal_Int16 SAL_CALL FmXComboBoxCell::getDropDownLineCount()
 {
     ::osl::MutexGuard aGuard( m_aMutex );
-
-    sal_Int16 nLines = 0;
-    if ( m_pComboBox )
-        nLines = m_pComboBox->GetDropDownLineCount();
-
-    return nLines;
+    return m_nLines;
 }
-
 
 void SAL_CALL FmXComboBoxCell::setDropDownLineCount(sal_Int16 nLines)
 {
     ::osl::MutexGuard aGuard( m_aMutex );
-    if ( m_pComboBox )
-        m_pComboBox->SetDropDownLineCount( nLines );
+    m_nLines = nLines; // just store it to return it
 }
 
-
-void FmXComboBoxCell::onWindowEvent( const VclEventId _nEventId, const vcl::Window& _rWindow, const void* _pEventData )
+IMPL_LINK_NOARG(FmXComboBoxCell, ChangedHdl, weld::ComboBox&, void)
 {
+    if (!m_pComboBox || !m_pComboBox->changed_by_direct_pick())
+        return;
 
-    switch ( _nEventId )
-    {
-    case VclEventId::ComboboxSelect:
-    {
-        awt::ItemEvent aEvent;
-        aEvent.Source = *this;
-        aEvent.Highlighted = 0;
+    awt::ItemEvent aEvent;
+    aEvent.Source = *this;
+    aEvent.Highlighted = 0;
 
-        // with multiple selection 0xFFFF, otherwise the ID
-        aEvent.Selected =   ( m_pComboBox->GetSelectedEntryCount() == 1 )
-                        ?   m_pComboBox->GetSelectedEntryPos()
-                        :   0xFFFF;
-        m_aItemListeners.notifyEach( &awt::XItemListener::itemStateChanged, aEvent );
-    }
-    break;
-
-    default:
-        FmXTextCell::onWindowEvent( _nEventId, _rWindow, _pEventData );
-        break;
-    }
+    // with invalid selection 0xFFFF, otherwise the position
+    aEvent.Selected =   ( m_pComboBox->get_active() != -1 )
+                    ?   m_pComboBox->get_active()
+                    :   0xFFFF;
+    m_aItemListeners.notifyEach( &awt::XItemListener::itemStateChanged, aEvent );
 }
-
 
 FmXFilterCell::FmXFilterCell(DbGridColumn* pColumn, std::unique_ptr<DbFilterField> pControl )
               :FmXGridCell( pColumn, std::move(pControl) )
@@ -4524,7 +4197,6 @@ FmXFilterCell::FmXFilterCell(DbGridColumn* pColumn, std::unique_ptr<DbFilterFiel
 {
     static_cast<DbFilterField*>(m_pCellControl.get())->SetCommitHdl( LINK( this, FmXFilterCell, OnCommit ) );
 }
-
 
 FmXFilterCell::~FmXFilterCell()
 {
@@ -4537,7 +4209,6 @@ FmXFilterCell::~FmXFilterCell()
 }
 
 // XUnoTunnel
-
 sal_Int64 SAL_CALL FmXFilterCell::getSomething( const Sequence< sal_Int8 >& _rIdentifier )
 {
     sal_Int64 nReturn(0);

@@ -22,6 +22,7 @@
 
 #include <vcl/commandevent.hxx>
 #include <vcl/event.hxx>
+#include <vcl/scrbar.hxx>
 #include <vcl/settings.hxx>
 
 #include <editeng/editview.hxx>
@@ -520,7 +521,7 @@ void SmEditWindow::CreateEditView()
     ESelection eSelection;
 
     pEditView->SetSelection(eSelection);
-    Update();
+    PaintImmediately();
     pEditView->ShowCursor();
 
     pEditEngine->SetStatusEventHdl( LINK(this, SmEditWindow, EditStatusHdl) );

@@ -59,12 +59,8 @@ class SwTextField;
 namespace i18nutil {
     struct SearchOptions2;
 }
-namespace com { namespace sun { namespace star { namespace text {
-    class XTextRange;
-}}}}
-namespace com { namespace sun { namespace star { namespace container {
-    class XStringKeyMap;
-}}}}
+namespace com::sun::star::text { class XTextRange; }
+namespace com::sun::star::container { class XStringKeyMap; }
 
 // enum and struct to get information via the Doc-Position
 
@@ -129,7 +125,7 @@ bool ReplaceImpl(SwPaM & rCursor, OUString const& rReplacement,
         bool const bRegExp, SwDoc & rDoc, SwRootFrame const*const pLayout);
 
 /// Helperfunction to resolve backward references in regular expressions
-o3tl::optional<OUString> ReplaceBackReferences(const i18nutil::SearchOptions2& rSearchOpt,
+std::optional<OUString> ReplaceBackReferences(const i18nutil::SearchOptions2& rSearchOpt,
         SwPaM* pPam, SwRootFrame const* pLayout );
 
 bool GetRanges(std::vector<std::shared_ptr<SwUnoCursor>> & rRanges,

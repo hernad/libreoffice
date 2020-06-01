@@ -17,7 +17,6 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <sal/macros.h>
 #include <sal/log.hxx>
 #include <helpids.h>
 #include <svx/gridctrl.hxx>
@@ -35,11 +34,10 @@
 #include <com/sun/star/sdb/XRowsChangeBroadcaster.hpp>
 #include <com/sun/star/sdbc/SQLException.hpp>
 #include <com/sun/star/sdbc/XResultSetUpdate.hpp>
+#include <com/sun/star/sdbc/XRowSet.hpp>
 #include <com/sun/star/sdbcx/Privilege.hpp>
-#include <com/sun/star/container/XChild.hpp>
 #include <com/sun/star/util/NumberFormatter.hpp>
 #include <com/sun/star/util/XNumberFormatsSupplier.hpp>
-#include <com/sun/star/util/XCloneable.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/beans/PropertyChangeEvent.hpp>
 #include <com/sun/star/container/XIndexAccess.hpp>
@@ -47,6 +45,8 @@
 #include <tools/debug.hxx>
 #include <tools/fract.hxx>
 #include <vcl/builder.hxx>
+#include <vcl/button.hxx>
+#include <vcl/fixed.hxx>
 #include <vcl/menu.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/commandevent.hxx>
@@ -54,9 +54,7 @@
 
 #include <svx/strings.hrc>
 
-#include <svx/svxids.hrc>
 #include <svx/dialmgr.hxx>
-#include <fmservs.hxx>
 #include <sdbdatacolumn.hxx>
 
 #include <comphelper/property.hxx>
@@ -134,7 +132,7 @@ class GridFieldValueListener : protected ::comphelper::OPropertyChangeListener
     osl::Mutex                          m_aMutex;
     DbGridControl&                      m_rParent;
     rtl::Reference<::comphelper::OPropertyChangeMultiplexer> m_pRealListener;
-    sal_uInt16 const                    m_nId;
+    sal_uInt16                          m_nId;
     sal_Int16                           m_nSuspended;
     bool                                m_bDisposed : 1;
 
@@ -475,11 +473,11 @@ sal_uInt16 DbGridControl::NavigationBar::ArrangeControls()
 
     Point aButtonPos(nX,nY);
     const Size  aButtonSize(nH,nH);
-    SetPosAndSize(*m_aFirstBtn.get(), aButtonPos, aButtonSize);
-    SetPosAndSize(*m_aPrevBtn.get(), aButtonPos, aButtonSize);
-    SetPosAndSize(*m_aNextBtn.get(), aButtonPos, aButtonSize);
-    SetPosAndSize(*m_aLastBtn.get(), aButtonPos, aButtonSize);
-    SetPosAndSize(*m_aNewBtn.get(), aButtonPos, aButtonSize);
+    SetPosAndSize(*m_aFirstBtn, aButtonPos, aButtonSize);
+    SetPosAndSize(*m_aPrevBtn, aButtonPos, aButtonSize);
+    SetPosAndSize(*m_aNextBtn, aButtonPos, aButtonSize);
+    SetPosAndSize(*m_aLastBtn, aButtonPos, aButtonSize);
+    SetPosAndSize(*m_aNewBtn, aButtonPos, aButtonSize);
 
     nX = sal::static_int_cast< sal_uInt16 >(aButtonPos.X() + 1);
 
@@ -1637,9 +1635,9 @@ void DbGridControl::RemoveColumns()
     EditBrowseBox::RemoveColumns();
 }
 
-std::unique_ptr<DbGridColumn> DbGridControl::CreateColumn(sal_uInt16 nId) const
+std::unique_ptr<DbGridColumn> DbGridControl::CreateColumn(sal_uInt16 nId)
 {
-    return std::unique_ptr<DbGridColumn>(new DbGridColumn(nId, *const_cast<DbGridControl*>(this)));
+    return std::unique_ptr<DbGridColumn>(new DbGridColumn(nId, *this));
 }
 
 sal_uInt16 DbGridControl::AppendColumn(const OUString& rName, sal_uInt16 nWidth, sal_uInt16 nModelPos, sal_uInt16 nId)

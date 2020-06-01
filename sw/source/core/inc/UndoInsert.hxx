@@ -27,7 +27,7 @@
 #include <rtl/ustring.hxx>
 #include <swtypes.hxx>
 #include <IDocumentContentOperations.hxx>
-#include <o3tl/optional.hxx>
+#include <optional>
 
 class Graphic;
 class SwGrfNode;
@@ -41,13 +41,13 @@ class SwUndoInsert: public SwUndo, private SwUndoSaveContent
 {
     /// start of Content in UndoNodes for Redo
     std::unique_ptr<SwNodeIndex> m_pUndoNodeIndex;
-    o3tl::optional<OUString> maText;
-    o3tl::optional<OUString> maUndoText;
+    std::optional<OUString> maText;
+    std::optional<OUString> maUndoText;
     std::unique_ptr<SwRedlineData> m_pRedlData;
     sal_uLong m_nNode;
     sal_Int32 m_nContent, m_nLen;
-    bool const m_bIsWordDelim : 1;
-    bool const m_bIsAppend : 1;
+    bool m_bIsWordDelim : 1;
+    bool m_bIsAppend : 1;
     bool m_bWithRsid : 1;
 
     const SwInsertFlags m_nInsertFlags;
@@ -59,7 +59,7 @@ class SwUndoInsert: public SwUndo, private SwUndoSaveContent
     SwDoc * m_pDoc;
 
     void Init(const SwNodeIndex & rNode);
-    o3tl::optional<OUString> GetTextFromDoc() const;
+    std::optional<OUString> GetTextFromDoc() const;
 
 public:
     SwUndoInsert( const SwNodeIndex& rNode, sal_Int32 nContent, sal_Int32 nLen,
@@ -135,8 +135,8 @@ private:
 class SwUndoReRead : public SwUndo
 {
     std::unique_ptr<Graphic> mpGraphic;
-    o3tl::optional<OUString> maNm;
-    o3tl::optional<OUString> maFltr;
+    std::optional<OUString> maNm;
+    std::optional<OUString> maFltr;
     sal_uLong mnPosition;
     MirrorGraph mnMirror;
 
@@ -167,18 +167,18 @@ class SwUndoInsertLabel : public SwUndo
         } NODE;
     };
 
-    OUString const m_sText;
+    OUString m_sText;
     // #i39983# the separator is drawn with a character style
-    OUString const m_sSeparator;
-    OUString const m_sNumberSeparator;
-    OUString const m_sCharacterStyle;
+    OUString m_sSeparator;
+    OUString m_sNumberSeparator;
+    OUString m_sCharacterStyle;
     // #i26791# - re-store of drawing object position no longer needed
-    sal_uInt16 const m_nFieldId;
-    SwLabelType const m_eType;
+    sal_uInt16 m_nFieldId;
+    SwLabelType m_eType;
     SdrLayerID m_nLayerId;              // for character objects
-    bool const m_bBefore        :1;
+    bool m_bBefore        :1;
     bool m_bUndoKeep      :1;
-    bool const m_bCopyBorder        :1;
+    bool m_bCopyBorder        :1;
 
 public:
     SwUndoInsertLabel( const SwLabelType eTyp, const OUString &rText,

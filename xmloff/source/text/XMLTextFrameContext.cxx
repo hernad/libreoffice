@@ -21,6 +21,7 @@
 #include <sal/log.hxx>
 #include <tools/diagnose_ex.h>
 #include <comphelper/base64.hxx>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/text/TextContentAnchorType.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
@@ -85,10 +86,10 @@ typedef ::std::map < const OUString, OUString > ParamMap;
 
 class XMLTextFrameContextHyperlink_Impl
 {
-    OUString const sHRef;
-    OUString const sName;
-    OUString const sTargetFrameName;
-    bool const bMap;
+    OUString sHRef;
+    OUString sName;
+    OUString sTargetFrameName;
+    bool bMap;
 
 public:
 
@@ -360,6 +361,7 @@ class XMLTextFrameContext_Impl : public SvXMLImportContext
     OUString sFilterService;
     OUString sBase64CharsLeft;
     OUString sTblName;
+    OUStringBuffer maUrlBuffer;
 
     ParamMap aParamMap;
 
@@ -373,7 +375,7 @@ class XMLTextFrameContext_Impl : public SvXMLImportContext
     sal_Int16   nRelWidth;
     sal_Int16   nRelHeight;
 
-    sal_uInt16 const nType;
+    sal_uInt16 nType;
     css::text::TextContentAnchorType   eAnchorType;
 
     bool    bMayScript : 1;
@@ -586,7 +588,7 @@ void XMLTextFrameContext_Impl::Create()
     if( !sStyleName.isEmpty() )
     {
         OUString sDisplayStyleName( GetImport().GetStyleDisplayName(
-                            XML_STYLE_FAMILY_SD_GRAPHICS_ID, sStyleName ) );
+                            XmlStyleFamily::SD_GRAPHICS_ID, sStyleName ) );
         const Reference < XNameContainer > & rStyles =
             xTextImportHelper->GetFrameStyles();
         if( rStyles.is() &&
@@ -670,8 +672,6 @@ void XMLTextFrameContext_Impl::Create()
         // URL
         OSL_ENSURE( !sHRef.isEmpty() || xBase64Stream.is(),
                     "neither URL nor base64 image data given" );
-        rtl::Reference < XMLTextImportHelper > xTxtImport =
-            GetImport().GetTextImport();
         uno::Reference<graphic::XGraphic> xGraphic;
         if (!sHRef.isEmpty())
         {
@@ -1110,6 +1110,50 @@ XMLTextFrameContext_Impl::XMLTextFrameContext_Impl(
 
 void XMLTextFrameContext_Impl::EndElement()
 {
+    if( ( XML_TEXT_FRAME_OBJECT_OLE == nType ||
+          XML_TEXT_FRAME_GRAPHIC == nType) &&
+        !xPropSet.is() && !bCreateFailed )
+    {
+        OUString sTrimmedChars = maUrlBuffer.makeStringAndClear().trim();
+        if( !sTrimmedChars.isEmpty() )
+        {
+            if( !xBase64Stream.is() )
+            {
+                if( XML_TEXT_FRAME_GRAPHIC == nType )
+                {
+                    xBase64Stream =
+                        GetImport().GetStreamForGraphicObjectURLFromBase64();
+                }
+                else
+                {
+                    xBase64Stream =
+                        GetImport().GetStreamForEmbeddedObjectURLFromBase64();
+                }
+                if( xBase64Stream.is() )
+                    bOwnBase64Stream = true;
+            }
+            if( bOwnBase64Stream && xBase64Stream.is() )
+            {
+                OUString sChars;
+                if( !sBase64CharsLeft.isEmpty() )
+                {
+                    sChars = sBase64CharsLeft + sTrimmedChars;
+                    sBase64CharsLeft.clear();
+                }
+                else
+                {
+                    sChars = sTrimmedChars;
+                }
+                Sequence< sal_Int8 > aBuffer( (sChars.getLength() / 4) * 3 );
+                sal_Int32 nCharsDecoded =
+                    ::comphelper::Base64::decodeSomeChars( aBuffer, sChars );
+                xBase64Stream->writeBytes( aBuffer );
+                if( nCharsDecoded != sChars.getLength() )
+                    sBase64CharsLeft = sChars.copy( nCharsDecoded );
+            }
+        }
+    }
+
     CreateIfNotThere();
 
     if( xOldTextCursor.is() )
@@ -1209,49 +1253,7 @@ SvXMLImportContextRef XMLTextFrameContext_Impl::CreateChildContext(
 
 void XMLTextFrameContext_Impl::Characters( const OUString& rChars )
 {
-    if( ( XML_TEXT_FRAME_OBJECT_OLE == nType ||
-          XML_TEXT_FRAME_GRAPHIC == nType) &&
-        !xPropSet.is() && !bCreateFailed )
-    {
-        OUString sTrimmedChars( rChars. trim() );
-        if( !sTrimmedChars.isEmpty() )
-        {
-            if( !xBase64Stream.is() )
-            {
-                if( XML_TEXT_FRAME_GRAPHIC == nType )
-                {
-                    xBase64Stream =
-                        GetImport().GetStreamForGraphicObjectURLFromBase64();
-                }
-                else
-                {
-                    xBase64Stream =
-                        GetImport().GetStreamForEmbeddedObjectURLFromBase64();
-                }
-                if( xBase64Stream.is() )
-                    bOwnBase64Stream = true;
-            }
-            if( bOwnBase64Stream && xBase64Stream.is() )
-            {
-                OUString sChars;
-                if( !sBase64CharsLeft.isEmpty() )
-                {
-                    sChars = sBase64CharsLeft + sTrimmedChars;
-                    sBase64CharsLeft.clear();
-                }
-                else
-                {
-                    sChars = sTrimmedChars;
-                }
-                Sequence< sal_Int8 > aBuffer( (sChars.getLength() / 4) * 3 );
-                sal_Int32 nCharsDecoded =
-                    ::comphelper::Base64::decodeSomeChars( aBuffer, sChars );
-                xBase64Stream->writeBytes( aBuffer );
-                if( nCharsDecoded != sChars.getLength() )
-                    sBase64CharsLeft = sChars.copy( nCharsDecoded );
-            }
-        }
-    }
+    maUrlBuffer.append(rChars);
 }
 
 void XMLTextFrameContext_Impl::SetHyperlink( const OUString& rHRef,
@@ -1266,7 +1268,6 @@ void XMLTextFrameContext_Impl::SetHyperlink( const OUString& rHRef,
     if( !xPropSet.is() )
         return;
 
-    rtl::Reference< XMLTextImportHelper > xTxtImp = GetImport().GetTextImport();
     Reference < XPropertySetInfo > xPropSetInfo =
         xPropSet->getPropertySetInfo();
     if( !xPropSetInfo.is() ||

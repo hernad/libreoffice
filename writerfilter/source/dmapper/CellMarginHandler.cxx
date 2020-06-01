@@ -17,7 +17,6 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 #include "CellMarginHandler.hxx"
-#include "PropertyMap.hxx"
 #include "ConversionHelper.hxx"
 #include <ooxml/resourceids.hxx>
 #include <comphelper/propertysequence.hxx>
@@ -95,7 +94,7 @@ void CellMarginHandler::createGrabBag(const OUString& aName)
 void CellMarginHandler::lcl_sprm(Sprm & rSprm)
 {
     writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-    if( pProperties.get())
+    if( pProperties)
     {
         pProperties->resolve( *this );
         const bool rtl = false; // TODO

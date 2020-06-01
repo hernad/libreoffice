@@ -18,18 +18,19 @@
  */
 #include "xmlCell.hxx"
 #include "xmlHelper.hxx"
-#include <xmloff/xmluconv.hxx>
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
 #include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
+#include <xmloff/prstylei.hxx>
+#include <xmloff/xmlstyle.hxx>
 #include <xmloff/ProgressBarHelper.hxx>
 #include "xmlEnums.hxx"
-#include "xmlStyleImport.hxx"
-#include <com/sun/star/beans/PropertyAttribute.hpp>
+#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/report/XShape.hpp>
 #include <com/sun/star/report/XFixedLine.hpp>
 #include <com/sun/star/table/BorderLine2.hpp>
+#include <sal/log.hxx>
+#include <osl/diagnose.h>
 #include <strings.hxx>
 #include "xmlTable.hxx"
 #include "xmlFormattedField.hxx"
@@ -58,9 +59,7 @@ OXMLCell::OXMLCell( ORptFilter& rImport
     if ( !m_pCell )
         m_pCell = this;
 
-    sax_fastparser::FastAttributeList *pAttribList =
-                    sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-    for (auto &aIter : *pAttribList)
+    for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
     {
         OUString sValue = aIter.toString();
 
@@ -76,6 +75,7 @@ OXMLCell::OXMLCell( ORptFilter& rImport
                 m_pContainer->setRowSpanned(sValue.toInt32());
                 break;
             default:
+                SAL_WARN("reportdesign", "unknown attribute " << SvXMLImport::getPrefixAndNameFromToken(aIter.getToken()) << "=" << sValue);
                 break;
         }
     }
@@ -216,7 +216,7 @@ void OXMLCell::endFastElement(sal_Int32)
         m_xComponent = xFixedLine.get();
         m_pContainer->getSection()->add(m_xComponent.get());
         m_pContainer->addCell(m_xComponent);
-        XMLPropStyleContext* pAutoStyle = const_cast<XMLPropStyleContext*>(dynamic_cast< const XMLPropStyleContext* >(GetImport().GetAutoStyles()->FindStyleChildContext(XML_STYLE_FAMILY_TABLE_CELL,m_sStyleName)));
+        XMLPropStyleContext* pAutoStyle = const_cast<XMLPropStyleContext*>(dynamic_cast< const XMLPropStyleContext* >(GetImport().GetAutoStyles()->FindStyleChildContext(XmlStyleFamily::TABLE_CELL,m_sStyleName)));
         if ( pAutoStyle )
         {
             uno::Reference<beans::XPropertySet> xBorderProp = OXMLHelper::createBorderPropertySet();

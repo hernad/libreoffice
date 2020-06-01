@@ -97,7 +97,7 @@ struct TransitionEffect
     {
         mfDuration = 2.0;
         mfTime = 0.0;
-        mePresChange = PRESCHANGE_MANUAL;
+        mePresChange = PresChange::Manual;
         mbSoundOn = false;
         mbLoopSound = false;
         mbStopSound = false;
@@ -272,7 +272,7 @@ struct lcl_EqualsSoundFileName
     }
 
 private:
-    OUString const maStr;
+    OUString maStr;
 };
 
 // returns -1 if no object was found
@@ -362,11 +362,11 @@ size_t getPresetOffset( const sd::impl::TransitionEffect &rEffect )
 namespace sd
 {
 
-class TransitionPane : public SvtValueSet
+class TransitionPane : public ValueSet
 {
 public:
     explicit TransitionPane(std::unique_ptr<weld::ScrolledWindow> pScrolledWindow)
-        : SvtValueSet(std::move(pScrolledWindow))
+        : ValueSet(std::move(pScrolledWindow))
     {
     }
 
@@ -380,7 +380,7 @@ public:
     {
         Size aSize = pDrawingArea->get_ref_device().LogicToPixel(Size(70, 88), MapMode(MapUnit::MapAppFont));
         pDrawingArea->set_size_request(aSize.Width(), aSize.Height());
-        SvtValueSet::SetDrawingArea(pDrawingArea);
+        ValueSet::SetDrawingArea(pDrawingArea);
         SetOutputSizePixel(aSize);
 
         SetStyle(GetStyle() | WB_ITEMBORDER | WB_FLATVALUESET | WB_VSCROLL);
@@ -395,7 +395,7 @@ SlideTransitionPane::SlideTransitionPane(
     ViewShellBase & rBase,
     SdDrawDocument* pDoc,
     const css::uno::Reference<css::frame::XFrame>& rxFrame ) :
-        PanelLayout( pParent, "SlideTransitionsPanel", "modules/simpress/ui/slidetransitionspanel.ui", rxFrame, true ),
+        PanelLayout( pParent, "SlideTransitionsPanel", "modules/simpress/ui/slidetransitionspanel.ui", rxFrame ),
 
         mrBase( rBase ),
         mpDrawDoc( pDoc ),
@@ -646,8 +646,8 @@ void SlideTransitionPane::updateControls()
     }
     else
     {
-        mxRB_ADVANCE_ON_MOUSE->set_active( aEffect.mePresChange == PRESCHANGE_MANUAL );
-        mxRB_ADVANCE_AUTO->set_active( aEffect.mePresChange == PRESCHANGE_AUTO );
+        mxRB_ADVANCE_ON_MOUSE->set_active( aEffect.mePresChange == PresChange::Manual );
+        mxRB_ADVANCE_AUTO->set_active( aEffect.mePresChange == PresChange::Auto );
         mxMF_ADVANCE_AUTO_AFTER->set_value(aEffect.mfTime * 100.0, FieldUnit::SECOND);
     }
 
@@ -656,6 +656,9 @@ void SlideTransitionPane::updateControls()
         mxPB_PLAY->hide();
         mxCB_AUTO_PREVIEW->set_active(false);
         mxCB_AUTO_PREVIEW->hide();
+        mxFT_SOUND->hide();
+        mxLB_SOUND->hide();
+        mxCB_LOOP_SOUND->hide();
     }
     else
     {
@@ -830,10 +833,10 @@ impl::TransitionEffect SlideTransitionPane::getTransitionEffectFromControls() co
         (mxRB_ADVANCE_ON_MOUSE->get_active() || mxRB_ADVANCE_AUTO->get_active()))
     {
         if( mxRB_ADVANCE_ON_MOUSE->get_active())
-            aResult.mePresChange = PRESCHANGE_MANUAL;
+            aResult.mePresChange = PresChange::Manual;
         else
         {
-            aResult.mePresChange = PRESCHANGE_AUTO;
+            aResult.mePresChange = PresChange::Auto;
             if( mxMF_ADVANCE_AUTO_AFTER->get_sensitive())
             {
                 aResult.mfTime = static_cast<double>(mxMF_ADVANCE_AUTO_AFTER->get_value(FieldUnit::SECOND) ) / 100.0 ;
@@ -1008,7 +1011,7 @@ IMPL_LINK_NOARG(SlideTransitionPane, PlayButtonClicked, weld::Button&, void)
     playCurrentEffect();
 }
 
-IMPL_LINK_NOARG(SlideTransitionPane, TransitionSelected, SvtValueSet*, void)
+IMPL_LINK_NOARG(SlideTransitionPane, TransitionSelected, ValueSet*, void)
 {
     updateVariants( mxVS_TRANSITION_ICONS->GetSelectedItemId() - 1 );
     applyToSelectedPages();

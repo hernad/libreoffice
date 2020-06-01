@@ -23,7 +23,8 @@
 
 #include <svgstyleattributes.hxx>
 #include <drawinglayer/primitive2d/transformprimitive2d.hxx>
-#include <drawinglayer/primitive2d/polypolygonprimitive2d.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonColorPrimitive2D.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonStrokePrimitive2D.hxx>
 #include <svgnode.hxx>
 #include <svgdocument.hxx>
 #include <drawinglayer/primitive2d/svggradientprimitive2d.hxx>
@@ -516,7 +517,7 @@ namespace svgio::svgreader
             double fTargetWidth(rGeoRange.getWidth());
             double fTargetHeight(rGeoRange.getHeight());
 
-            if(!(fTargetWidth > 0.0 && fTargetHeight > 0.0))
+            if(fTargetWidth <= 0.0 || fTargetHeight <= 0.0)
                 return;
 
             // get relative values from pattern
@@ -527,7 +528,7 @@ namespace svgio::svgreader
 
             rFillPattern.getValuesRelative(fX, fY, fW, fH, rGeoRange, mrOwner);
 
-            if(!(fW > 0.0 && fH > 0.0))
+            if(fW <= 0.0 || fH <= 0.0)
                 return;
 
             // build the reference range relative to the rGeoRange

@@ -22,11 +22,8 @@
 #include <svx/svdomedia.hxx>
 
 #include <rtl/ustring.hxx>
-#include <osl/file.hxx>
+#include <rtl/ustrbuf.hxx>
 #include <sal/log.hxx>
-
-#include <com/sun/star/document/XStorageBasedDocument.hpp>
-#include <com/sun/star/embed/XStorage.hpp>
 
 #include <ucbhelper/content.hxx>
 #include <comphelper/processfactory.hxx>
@@ -170,7 +167,7 @@ void SdrMediaObj::AdjustToMaxRect( const tools::Rectangle& rMaxRect, bool bShrin
                     MapMode(MapUnit::Map100thMM)) );
     Size aMaxSize( rMaxRect.GetSize() );
 
-    if( aSize.Height() != 0 && aSize.Width() != 0 )
+    if( !aSize.IsEmpty() )
     {
         Point aPos( rMaxRect.TopLeft() );
 

@@ -522,21 +522,21 @@ void ChartController::executeDispatch_InsertTrendlineEquation( bool bInsertR2 )
             ObjectIdentifier::getDataSeriesForCID( m_aSelection.getSelectedCID(), getModel() ), uno::UNO_QUERY );
         xRegCurve.set( RegressionCurveHelper::getFirstCurveNotMeanValueLine( xRegCurveCnt ) );
     }
-    if( xRegCurve.is())
+    if( !xRegCurve.is())
+        return;
+
+    uno::Reference< beans::XPropertySet > xEqProp( xRegCurve->getEquationProperties());
+    if( xEqProp.is())
     {
-        uno::Reference< beans::XPropertySet > xEqProp( xRegCurve->getEquationProperties());
-        if( xEqProp.is())
-        {
-            UndoGuard aUndoGuard(
-                ActionDescriptionProvider::createDescription(
-                    ActionDescriptionProvider::ActionType::Insert, SchResId( STR_OBJECT_CURVE_EQUATION )),
-                m_xUndoManager );
-            xEqProp->setPropertyValue( "ShowEquation", uno::Any( true ));
-            xEqProp->setPropertyValue( "XName", uno::Any( OUString("x") ));
-            xEqProp->setPropertyValue( "YName", uno::Any( OUString("f(x)") ));
-            xEqProp->setPropertyValue( "ShowCorrelationCoefficient", uno::Any( bInsertR2 ));
-            aUndoGuard.commit();
-        }
+        UndoGuard aUndoGuard(
+            ActionDescriptionProvider::createDescription(
+                ActionDescriptionProvider::ActionType::Insert, SchResId( STR_OBJECT_CURVE_EQUATION )),
+            m_xUndoManager );
+        xEqProp->setPropertyValue( "ShowEquation", uno::Any( true ));
+        xEqProp->setPropertyValue( "XName", uno::Any( OUString("x") ));
+        xEqProp->setPropertyValue( "YName", uno::Any( OUString("f(x)") ));
+        xEqProp->setPropertyValue( "ShowCorrelationCoefficient", uno::Any( bInsertR2 ));
+        aUndoGuard.commit();
     }
 }
 
@@ -836,9 +836,9 @@ void ChartController::executeDispatch_InsertMinorGrid()
         Reference< XAxis > xAxis = ObjectIdentifier::getAxisForCID( m_aSelection.getSelectedCID(), getModel() );
         if( xAxis.is() )
         {
-            Sequence< Reference< beans::XPropertySet > > aSubGrids( xAxis->getSubGridProperties() );
-            for( sal_Int32 nN=0; nN<aSubGrids.getLength(); nN++)
-                AxisHelper::makeGridVisible( aSubGrids[nN] );
+            const Sequence< Reference< beans::XPropertySet > > aSubGrids( xAxis->getSubGridProperties() );
+            for( Reference< beans::XPropertySet > const & props : aSubGrids)
+                AxisHelper::makeGridVisible( props );
             aUndoGuard.commit();
         }
     }
@@ -860,9 +860,9 @@ void ChartController::executeDispatch_DeleteMinorGrid()
         Reference< XAxis > xAxis = ObjectIdentifier::getAxisForCID( m_aSelection.getSelectedCID(), getModel() );
         if( xAxis.is() )
         {
-            Sequence< Reference< beans::XPropertySet > > aSubGrids( xAxis->getSubGridProperties() );
-            for( sal_Int32 nN=0; nN<aSubGrids.getLength(); nN++)
-                AxisHelper::makeGridInvisible( aSubGrids[nN] );
+            const Sequence< Reference< beans::XPropertySet > > aSubGrids( xAxis->getSubGridProperties() );
+            for( Reference< beans::XPropertySet > const & props : aSubGrids)
+                AxisHelper::makeGridInvisible( props );
             aUndoGuard.commit();
         }
     }

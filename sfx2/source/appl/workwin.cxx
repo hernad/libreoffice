@@ -17,6 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <config_features.h>
 #include <config_feature_desktop.h>
 #include <comphelper/lok.hxx>
 #include <comphelper/processfactory.hxx>
@@ -60,7 +61,7 @@ namespace {
 
 struct ResIdToResName
 {
-    ToolbarId const   eId;
+    ToolbarId   eId;
     const char* pName;
 };
 
@@ -459,7 +460,11 @@ SfxWorkWindow::SfxWorkWindow( vcl::Window *pWin, SfxFrame *pFrm, SfxFrame* pMast
     bDockingAllowed(true),
     bInternalDockingAllowed(true),
     bAllChildrenVisible(true),
+#if !defined(ANDROID) || HAVE_FEATURE_ANDROID_LOK
     bIsFullScreen( false ),
+#else // Fennec-based Android Viewer
+    bIsFullScreen( true ),
+#endif
 #if HAVE_FEATURE_DESKTOP
     bShowStatusBar( true ),
 #else
@@ -2443,19 +2448,6 @@ void SfxWorkWindow::SetActiveChild_Impl( vcl::Window *pChild )
 
 void SfxWorkWindow::DataChanged_Impl()
 {
-    sal_uInt16 n;
-    sal_uInt16 nCount = aChildWins.size();
-    for (n=0; n<nCount; n++)
-    {
-        SfxChildWin_Impl*pCW = aChildWins[n].get();
-        if (pCW && pCW->pWin)
-        {
-            // TODO does this really have any meaning ?
-            if (pCW->pWin->GetWindow())
-                pCW->pWin->GetWindow()->UpdateSettings(Application::GetSettings());
-        }
-    }
-
     ArrangeChildren_Impl();
 }
 

@@ -35,8 +35,8 @@
 #include <comphelper/servicehelper.hxx>
 #include <cppuhelper/implbase.hxx>
 
-namespace com { namespace sun { namespace star { namespace container { class XIndexReplace; } } } }
-namespace com { namespace sun { namespace star { namespace lang { class XComponent; } } } }
+namespace com::sun::star::container { class XIndexReplace; }
+namespace com::sun::star::lang { class XComponent; }
 
 class ScDocShell;
 class SfxItemPropertySet;
@@ -108,7 +108,7 @@ class ScStyleFamilyObj : public ::cppu::WeakImplHelper<
 {
 private:
     ScDocShell*             pDocShell;
-    SfxStyleFamily const    eFamily;        // Family
+    SfxStyleFamily          eFamily;        // Family
 
     ScStyleObj*             GetObjectByIndex_Impl(sal_uInt32 nIndex);
     ScStyleObj*             GetObjectByName_Impl(const OUString& Name);
@@ -169,7 +169,7 @@ class ScStyleObj : public ::cppu::WeakImplHelper<
 private:
     const SfxItemPropertySet* pPropSet;
     ScDocShell*             pDocShell;
-    SfxStyleFamily const    eFamily;        // Family
+    SfxStyleFamily          eFamily;        // Family
     OUString                aStyleName;
     SfxStyleSheetBase*      pStyle_cached;
 

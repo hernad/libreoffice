@@ -30,6 +30,7 @@
 #include <oox/vml/vmltextboxcontext.hxx>
 
 #include <osl/diagnose.h>
+#include <filter/msfilter/escherex.hxx>
 
 namespace oox::vml {
 
@@ -353,6 +354,10 @@ ContextHandlerRef ShapeTypeContext::onCreateContext( sal_Int32 nElement, const A
             mrTypeModel.maStrokeModel.moJoinStyle = rAttribs.getToken( XML_joinstyle );
         break;
         case VML_TOKEN( fill ):
+        {
+            // in DOCX shapes use r:id for the relationship id
+            // in XLSX they use o:relid
+            bool bHasORelId = rAttribs.hasAttribute( O_TOKEN(relid) );
             mrTypeModel.maFillModel.moFilled.assignIfUsed( lclDecodeBool( rAttribs, XML_on ) );
             mrTypeModel.maFillModel.moColor.assignIfUsed( rAttribs.getString( XML_color ) );
             mrTypeModel.maFillModel.moOpacity = lclDecodeOpacity( rAttribs, XML_opacity, 1.0 );
@@ -363,9 +368,10 @@ ContextHandlerRef ShapeTypeContext::onCreateContext( sal_Int32 nElement, const A
             mrTypeModel.maFillModel.moFocus = lclDecodePercent( rAttribs, XML_focus, 0.0 );
             mrTypeModel.maFillModel.moFocusPos = lclDecodePercentPair( rAttribs, XML_focusposition );
             mrTypeModel.maFillModel.moFocusSize = lclDecodePercentPair( rAttribs, XML_focussize );
-            mrTypeModel.maFillModel.moBitmapPath = decodeFragmentPath( rAttribs, O_TOKEN( relid ) );
+            mrTypeModel.maFillModel.moBitmapPath = decodeFragmentPath( rAttribs, bHasORelId ? O_TOKEN(relid) : R_TOKEN(id) );
             mrTypeModel.maFillModel.moRotate = lclDecodeBool( rAttribs, XML_rotate );
-        break;
+            break;
+        }
         case VML_TOKEN( imagedata ):
         {
             // shapes in docx use r:id for the relationship id
@@ -477,17 +483,35 @@ ContextHandlerRef ShapeContext::onCreateContext( sal_Int32 nElement, const Attri
     if( isRootElement() ) switch( nElement )
     {
         case VML_TOKEN( textbox ):
+        {
+            // Calculate the shape type: map both <rect> and <v:shape> with a textbox shape type to
+            // a TextShape.
+            sal_Int32 nShapeType = 0;
+            if (ShapeContainer* pShapeContainer = mrShape.getContainer())
+            {
+                OUString aType = mrShapeModel.maType;
+                if (!aType.isEmpty() && aType[0] == '#')
+                {
+                    aType = aType.copy(1);
+                }
+                if (const ShapeType* pShapeType = pShapeContainer->getShapeTypeById(aType))
+                {
+                    nShapeType = pShapeType->getTypeModel().moShapeType.get();
+                }
+            }
+
             if (getParentElement() != VML_TOKEN( group ))
             {
                 // Custom shape in Writer with a textbox are transformed into a frame
                 dynamic_cast<SimpleShape&>( mrShape ).setService(
                         "com.sun.star.text.TextFrame");
             }
-            else if (getCurrentElement() == VML_TOKEN(rect))
+            else if (getCurrentElement() == VML_TOKEN(rect) || nShapeType == ESCHER_ShpInst_TextBox)
                 // Transform only rectangles into a TextShape inside a groupshape.
                 dynamic_cast<SimpleShape&>(mrShape).setService("com.sun.star.drawing.TextShape");
             return new TextBoxContext( *this, mrShapeModel.createTextBox(mrShape.getTypeModel()), rAttribs,
                 mrShape.getDrawing().getFilter().getGraphicHelper());
+        }
         case VMLX_TOKEN( ClientData ):
             return new ClientDataContext( *this, mrShapeModel.createClientData(), rAttribs );
         case VMLPPT_TOKEN( textdata ):
@@ -576,7 +600,7 @@ ContextHandlerRef GroupShapeContext::onCreateContext( sal_Int32 nElement, const 
     // try to create a context of an embedded shape
     ContextHandlerRef xContext = createShapeContext( *this, mrShapes, nElement, rAttribs );
     // handle remaining stuff of this shape in base class
-    return xContext.get() ? xContext : ShapeContext::onCreateContext( nElement, rAttribs );
+    return xContext ? xContext : ShapeContext::onCreateContext( nElement, rAttribs );
 }
 
 RectangleShapeContext::RectangleShapeContext(ContextHandler2Helper const& rParent,

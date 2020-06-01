@@ -25,6 +25,7 @@
 #include <proofreadingiterator.hxx>
 #include <com/sun/star/text/XFlatParagraphIteratorProvider.hpp>
 #include <com/sun/star/linguistic2/XProofreadingIterator.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 
 #include <comphelper/processfactory.hxx>
 #include <comphelper/random.hxx>
@@ -91,6 +92,7 @@
 #include <wrtsh.hxx>
 #include <unocrsr.hxx>
 #include <fmthdft.hxx>
+#include <frameformats.hxx>
 
 #include <numrule.hxx>
 
@@ -146,7 +148,7 @@ bool SwDoc::StartGrammarChecking( bool bSkipStart )
         uno::Reference< linguistic2::XProofreadingIterator > xGCIterator( GetGCIterator() );
         if ( xGCIterator.is() )
         {
-            uno::Reference< lang::XComponent >  xDoc( GetDocShell()->GetBaseModel(), uno::UNO_QUERY );
+            uno::Reference< lang::XComponent >  xDoc = GetDocShell()->GetBaseModel();
             uno::Reference< text::XFlatParagraphIteratorProvider >  xFPIP( xDoc, uno::UNO_QUERY );
 
             // start automatic background checking if not active already
@@ -243,6 +245,7 @@ SwDoc::SwDoc()
     mbInWriting(false),
     mbInMailMerge(false),
     mbInXMLImport(false),
+    mbInWriterfilterImport(false),
     mbUpdateTOX(false),
     mbInLoadAsynchron(false),
     mbIsAutoFormatRedline(false),
@@ -1143,7 +1146,7 @@ SwNodeIndex SwDoc::AppendDoc(const SwDoc& rSource, sal_uInt16 const nStartPageNu
 #ifdef DBG_UTIL
             SAL_INFO( "sw.docappend", "CopyRange In: " << CNTNT_DOC( this ) );
 #endif
-            rSource.getIDocumentContentOperations().CopyRange( aCpyPam, rInsPos, /*bCopyAll=*/true, /*bCheckPos=*/true, /*bCopyText=*/false );
+            rSource.getIDocumentContentOperations().CopyRange(aCpyPam, rInsPos, SwCopyFlags::CopyAll|SwCopyFlags::CheckPosInFly);
             // Note: aCpyPam is invalid now
 #ifdef DBG_UTIL
             SAL_INFO( "sw.docappend", "CopyRange Out: " << CNTNT_DOC( this ) );

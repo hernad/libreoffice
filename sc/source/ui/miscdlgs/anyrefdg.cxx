@@ -177,7 +177,7 @@ void ScFormulaReferenceHelper::ShowFormulaReference(const OUString& rStr)
     {
         m_bHighlightRef=true;
         ScViewData* pViewData=ScDocShell::GetViewData();
-        if ( pViewData && m_pRefComp.get() )
+        if ( pViewData && m_pRefComp )
         {
             ScTabViewShell* pTabViewShell=pViewData->GetViewShell();
             SCCOL nCol = pViewData->GetCurX();
@@ -612,7 +612,8 @@ bool ScRefHandler::EnterRefMode()
 
     m_aHelper.SetDispatcherLock( true );
 
-    return m_bInRefMode = true;
+    m_bInRefMode = true;
+    return m_bInRefMode;
 }
 
 ScRefHandler::~ScRefHandler() COVERITY_NOEXCEPT_FALSE

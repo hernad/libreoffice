@@ -24,7 +24,6 @@
 #include "gtv-lok-dialog.hxx"
 
 #include <boost/property_tree/json_parser.hpp>
-#include <o3tl/optional.hxx>
 
 namespace {
 

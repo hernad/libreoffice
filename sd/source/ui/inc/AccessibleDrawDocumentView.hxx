@@ -126,7 +126,7 @@ private:
     virtual void
         implSelect( sal_Int32 nAccessibleChildIndex, bool bSelect ) override;
 
-    ::sd::ViewShell* const mpSdViewSh;
+    ::sd::ViewShell* mpSdViewSh;
 
     /** This object manages the shapes of the represented draw page.  It is
         responsible to determine the visible shapes and create on demand the
@@ -157,12 +157,6 @@ private:
     virtual void Deactivated() override;
 
     virtual void impl_dispose() override;
-
-    //=====  XAccessibleGetAccFromXShape  ============================================
-    css::uno::Sequence< css::uno::Any >
-        SAL_CALL getAccFlowTo(const css::uno::Any& rAny, sal_Int32 nType) override;
-    css::uno::Reference< css::accessibility::XAccessible >
-        GetSelAccContextInTable();
 
     void UpdateAccessibleName();
 };

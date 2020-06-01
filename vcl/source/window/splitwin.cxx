@@ -845,22 +845,6 @@ static void ImplCalcLogSize( std::vector< ImplSplitItem > & rItems, size_t nItem
     }
 }
 
-void SplitWindow::ImplDrawBack(vcl::RenderContext& rRenderContext, ImplSplitSet* pSet)
-{
-    std::vector< ImplSplitItem >& rItems = pSet->mvItems;
-
-    for ( const auto& rItem : rItems )
-    {
-        pSet = rItem.mpSet.get();
-    }
-
-    for ( auto& rItem : rItems )
-    {
-        if (rItem.mpSet)
-            ImplDrawBack(rRenderContext, rItem.mpSet.get());
-    }
-}
-
 static void ImplDrawSplit(vcl::RenderContext& rRenderContext, ImplSplitSet* pSet, bool bRows, bool bDown)
 {
     if (pSet->mvItems.empty())
@@ -2055,7 +2039,7 @@ void SplitWindow::Tracking( const TrackingEvent& rTEvt )
 
             if ( mbDragFull )
             {
-                Update();
+                PaintImmediately();
                 mnMStartPos = mnMSplitPos;
             }
         }
@@ -2077,11 +2061,10 @@ void SplitWindow::Tracking( const TrackingEvent& rTEvt )
 
 bool SplitWindow::PreNotify( NotifyEvent& rNEvt )
 {
-    const MouseEvent* pMouseEvt = nullptr;
-
-    if( (rNEvt.GetType() == MouseNotifyEvent::MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) != nullptr )
+    if( rNEvt.GetType() == MouseNotifyEvent::MOUSEMOVE )
     {
-        if( !pMouseEvt->GetButtons() && !pMouseEvt->IsSynthetic() && !pMouseEvt->IsModifierChanged() )
+        const MouseEvent* pMouseEvt = rNEvt.GetMouseEvent();
+        if( pMouseEvt && !pMouseEvt->GetButtons() && !pMouseEvt->IsSynthetic() && !pMouseEvt->IsModifierChanged() )
         {
             // trigger redraw if mouse over state has changed
             tools::Rectangle aFadeInRect;
@@ -2112,9 +2095,6 @@ void SplitWindow::Paint(vcl::RenderContext& rRenderContext, const tools::Rectang
     ImplDrawBorderLine(rRenderContext);
     ImplDrawFadeOut(rRenderContext);
     ImplDrawFadeIn(rRenderContext);
-
-    // draw FrameSet-backgrounds
-    ImplDrawBack(rRenderContext, mpMainSet.get());
 
     // draw splitter
     if (!(mnWinStyle & WB_NOSPLITDRAW))
@@ -2317,18 +2297,6 @@ void SplitWindow::RemoveItem( sal_uInt16 nId )
     // Clear and delete
     pWindow.clear();
     pOrgParent.clear();
-}
-
-void SplitWindow::Clear()
-{
-    // create Main-Set again
-    mpMainSet.reset(new ImplSplitSet());
-    if ( mnWinStyle & WB_NOSPLITDRAW )
-        mpMainSet->mnSplitSize -= 2;
-    mpBaseSet = mpMainSet.get();
-
-    // and invalidate again
-    ImplUpdate();
 }
 
 void SplitWindow::SplitItem( sal_uInt16 nId, long nNewSize,

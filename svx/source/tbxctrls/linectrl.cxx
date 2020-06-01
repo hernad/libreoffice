@@ -17,13 +17,10 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <string>
-
+#include <tools/debug.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/toolbox.hxx>
-#include <sfx2/app.hxx>
-#include <sfx2/dispatch.hxx>
 #include <sfx2/objsh.hxx>
 
 #include <svtools/toolbarmenu.hxx>
@@ -36,7 +33,6 @@
 
 #include <svx/drawitem.hxx>
 #include <svx/xlineit0.hxx>
-#include <svx/xlnwtit.hxx>
 #include <svx/xlndsit.hxx>
 #include <svx/xlnstit.hxx>
 #include <svx/xlnedit.hxx>
@@ -45,8 +41,10 @@
 #include <svx/itemwin.hxx>
 #include <svx/dialmgr.hxx>
 #include <svx/tbxcolorupdate.hxx>
-#include <svx/unoapi.hxx>
+
 #include <memory>
+
+#include <comphelper/lok.hxx>
 
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::beans;
@@ -241,12 +239,12 @@ class SvxLineEndWindow final : public WeldToolbarPopup
 private:
     XLineEndListRef mpLineEndList;
     rtl::Reference<SvxLineEndToolBoxControl> mxControl;
-    std::unique_ptr<SvtValueSet> mxLineEndSet;
+    std::unique_ptr<ValueSet> mxLineEndSet;
     std::unique_ptr<weld::CustomWeld> mxLineEndSetWin;
     sal_uInt16 mnLines;
     Size maBmpSize;
 
-    DECL_LINK( SelectHdl, SvtValueSet*, void );
+    DECL_LINK( SelectHdl, ValueSet*, void );
     void FillValueSet();
     void SetSize();
 
@@ -267,7 +265,7 @@ static constexpr sal_uInt16 gnCols = 2;
 SvxLineEndWindow::SvxLineEndWindow(SvxLineEndToolBoxControl* pControl, weld::Widget* pParent)
     : WeldToolbarPopup(pControl->getFrameInterface(), pParent, "svx/ui/floatinglineend.ui", "FloatingLineEnd")
     , mxControl(pControl)
-    , mxLineEndSet(new SvtValueSet(m_xBuilder->weld_scrolled_window("valuesetwin")))
+    , mxLineEndSet(new ValueSet(m_xBuilder->weld_scrolled_window("valuesetwin")))
     , mxLineEndSetWin(new weld::CustomWeld(*m_xBuilder, "valueset", *mxLineEndSet))
     , mnLines(12)
 {
@@ -293,7 +291,7 @@ SvxLineEndWindow::SvxLineEndWindow(SvxLineEndToolBoxControl* pControl, weld::Wid
     AddStatusListener( ".uno:LineEndListState");
 }
 
-IMPL_LINK_NOARG(SvxLineEndWindow, SelectHdl, SvtValueSet*, void)
+IMPL_LINK_NOARG(SvxLineEndWindow, SelectHdl, ValueSet*, void)
 {
     std::unique_ptr<XLineEndItem> pLineEndItem;
     std::unique_ptr<XLineStartItem> pLineStartItem;
@@ -356,7 +354,9 @@ void SvxLineEndWindow::FillValueSet()
     // First entry: no line end.
     // An entry is temporarily added to get the UI bitmap
     basegfx::B2DPolyPolygon aNothing;
-    mpLineEndList->Insert(std::make_unique<XLineEndEntry>(aNothing, SvxResId(RID_SVXSTR_NONE)));
+    mpLineEndList->Insert(std::make_unique<XLineEndEntry>(aNothing,
+        comphelper::LibreOfficeKit::isActive() ? SvxResId(RID_SVXSTR_INVISIBLE)
+            : SvxResId(RID_SVXSTR_NONE)));
     const XLineEndEntry* pEntry = mpLineEndList->GetLineEnd(nCount);
     BitmapEx aBmp = mpLineEndList->GetUiBitmap( nCount );
     OSL_ENSURE( !aBmp.IsEmpty(), "UI bitmap was not created" );
@@ -503,7 +503,7 @@ com_sun_star_comp_svx_LineEndToolBoxControl_get_implementation(
 SvxLineBox::SvxLineBox(SvxLineStyleToolBoxControl* pControl, weld::Widget* pParent, int nInitialIndex)
     : WeldToolbarPopup(pControl->getFrameInterface(), pParent, "svx/ui/floatinglinestyle.ui", "FloatingLineStyle")
     , mxControl(pControl)
-    , mxLineStyleSet(new SvtValueSet(m_xBuilder->weld_scrolled_window("valuesetwin")))
+    , mxLineStyleSet(new ValueSet(m_xBuilder->weld_scrolled_window("valuesetwin")))
     , mxLineStyleSetWin(new weld::CustomWeld(*m_xBuilder, "valueset", *mxLineStyleSet))
 {
     mxLineStyleSet->SetStyle(WB_FLATVALUESET | WB_ITEMBORDER | WB_3DLOOK | WB_NO_DIRECTSELECT);
@@ -569,7 +569,7 @@ void SvxLineBox::Fill( const XDashListRef &pList )
     mxLineStyleSet->SetOutputSizePixel(aSize);
 }
 
-IMPL_LINK_NOARG(SvxLineBox, SelectHdl, SvtValueSet*, void)
+IMPL_LINK_NOARG(SvxLineBox, SelectHdl, ValueSet*, void)
 {
     drawing::LineStyle eXLS;
     sal_Int32 nPos = mxLineStyleSet->GetSelectedItemId();

@@ -134,7 +134,7 @@ private:
     bool                mbIDATComplete : 1; // true if finished with enough IDAT chunks
     bool                mbpHYs : 1;         // true if physical size of pixel available
     bool                mbIgnoreGammaChunk : 1;
-    bool const          mbIgnoreCRC : 1; // skip checking CRCs while fuzzing
+    bool                mbIgnoreCRC : 1; // skip checking CRCs while fuzzing
 
 #if OSL_DEBUG_LEVEL > 0
     // do some checks in debug mode
@@ -162,7 +162,7 @@ private:
     void                ImplGetGamma();
     void                ImplGetBackground();
     sal_uInt8           ImplScaleColor();
-    bool                ImplReadHeader( const Size& rPreviewSizeHint );
+    bool                ImplReadHeader();
     bool                ImplReadPalette();
     void                ImplGetGrayPalette( sal_uInt16 );
     sal_uInt32          ImplReadsal_uInt32();
@@ -172,7 +172,7 @@ public:
     explicit PNGReaderImpl( SvStream& );
     ~PNGReaderImpl();
 
-    BitmapEx            GetBitmapEx( const Size& rPreviewSizeHint );
+    BitmapEx            GetBitmapEx();
     const std::vector<vcl::PNGReader::ChunkData>& GetAllChunks();
     void                SetIgnoreGammaChunk( bool bIgnore ){ mbIgnoreGammaChunk = bIgnore; };
 };
@@ -325,7 +325,7 @@ const std::vector< vcl::PNGReader::ChunkData >& PNGReaderImpl::GetAllChunks()
     return maChunkSeq;
 }
 
-BitmapEx PNGReaderImpl::GetBitmapEx( const Size& rPreviewSizeHint )
+BitmapEx PNGReaderImpl::GetBitmapEx()
 {
     // reset to the first chunk
     maChunkIter = maChunkSeq.begin();
@@ -334,7 +334,7 @@ BitmapEx PNGReaderImpl::GetBitmapEx( const Size& rPreviewSizeHint )
     if( mbStatus && ReadNextChunk() )
     {
         if (mnChunkType == PNGCHUNK_IHDR)
-            mbStatus = ImplReadHeader( rPreviewSizeHint );
+            mbStatus = ImplReadHeader();
         else
             mbStatus = false;
     }
@@ -442,7 +442,7 @@ BitmapEx PNGReaderImpl::GetBitmapEx( const Size& rPreviewSizeHint )
     return aRet;
 }
 
-bool PNGReaderImpl::ImplReadHeader( const Size& rPreviewSizeHint )
+bool PNGReaderImpl::ImplReadHeader()
 {
     if( mnChunkLen < 13 )
         return false;
@@ -450,7 +450,7 @@ bool PNGReaderImpl::ImplReadHeader( const Size& rPreviewSizeHint )
     maOrigSize.setWidth( ImplReadsal_uInt32() );
     maOrigSize.setHeight( ImplReadsal_uInt32() );
 
-    if (maOrigSize.Width() <= 0 || maOrigSize.Height() <= 0)
+    if (maOrigSize.IsEmpty())
         return false;
 
     mnPngDepth = *(maDataIter++);
@@ -602,38 +602,6 @@ bool PNGReaderImpl::ImplReadHeader( const Size& rPreviewSizeHint )
     }
 
     mnScansize = static_cast< sal_uInt32 >( nScansize64 );
-
-    // calculate target size from original size and the preview hint
-    if( rPreviewSizeHint.Width() || rPreviewSizeHint.Height() )
-    {
-        Size aPreviewSize( rPreviewSizeHint.Width(), rPreviewSizeHint.Height() );
-        maTargetSize = maOrigSize;
-
-        if( aPreviewSize.Width() == 0 ) {
-            aPreviewSize.setWidth( ( maOrigSize.Width()*aPreviewSize.Height() )/maOrigSize.Height() );
-            if( aPreviewSize.Width() <= 0 )
-                aPreviewSize.setWidth( 1 );
-        } else if( aPreviewSize.Height() == 0 ) {
-            aPreviewSize.setHeight( ( maOrigSize.Height()*aPreviewSize.Width() )/maOrigSize.Width() );
-            if( aPreviewSize.Height() <= 0 )
-                aPreviewSize.setHeight( 1 );
-        }
-
-        if( aPreviewSize.Width() < maOrigSize.Width() && aPreviewSize.Height() < maOrigSize.Height() ) {
-            SAL_INFO( "vcl.gdi", "preview size " << aPreviewSize.Width() << " " << aPreviewSize.Height() );
-
-            for( int i = 1; i < 5; ++i )
-            {
-                if( (maTargetSize.Width() >> i) < aPreviewSize.Width() )
-                    break;
-                if( (maTargetSize.Height() >> i) < aPreviewSize.Height() )
-                    break;
-                mnPreviewShift = i;
-            }
-
-            mnPreviewMask = (1 << mnPreviewShift) - 1;
-        }
-    }
 
     maTargetSize.setWidth( (maOrigSize.Width() + mnPreviewMask) >> mnPreviewShift );
     maTargetSize.setHeight( (maOrigSize.Height() + mnPreviewMask) >> mnPreviewShift );
@@ -1727,9 +1695,9 @@ PNGReader::~PNGReader()
 {
 }
 
-BitmapEx PNGReader::Read( const Size& i_rPreviewSizeHint )
+BitmapEx PNGReader::Read()
 {
-    return mpImpl->GetBitmapEx( i_rPreviewSizeHint );
+    return mpImpl->GetBitmapEx();
 }
 
 const std::vector< vcl::PNGReader::ChunkData >& PNGReader::GetChunks() const

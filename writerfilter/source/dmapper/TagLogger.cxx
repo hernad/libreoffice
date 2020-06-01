@@ -19,8 +19,6 @@
 
 #include <string.h>
 #include "TagLogger.hxx"
-#include <ooxml/QNameToString.hxx>
-#include <unordered_map>
 #ifdef DBG_UTIL
 #include <unotools/pathoptions.hxx>
 #endif
@@ -117,14 +115,14 @@ struct TheTagLogger:
     void TagLogger::unoPropertySet(const uno::Reference<beans::XPropertySet>& rPropSet)
     {
         uno::Reference<beans::XPropertySetInfo> xPropSetInfo(rPropSet->getPropertySetInfo());
-        uno::Sequence<beans::Property> aProps(xPropSetInfo->getProperties());
+        const uno::Sequence<beans::Property> aProps(xPropSetInfo->getProperties());
 
         startElement( "unoPropertySet" );
 
-        for (int i = 0; i < aProps.getLength(); ++i)
+        for (beans::Property const & prop : aProps)
         {
             startElement( "property" );
-            OUString sName(aProps[i].Name);
+            OUString sName(prop.Name);
 
             attribute( "name", sName );
             try

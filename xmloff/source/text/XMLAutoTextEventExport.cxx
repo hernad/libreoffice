@@ -41,8 +41,6 @@
 using namespace ::com::sun::star;
 using namespace ::xmloff::token;
 
-using ::std::set;
-using ::com::sun::star::container::XNameAccess;
 using ::com::sun::star::container::XNameReplace;
 using ::com::sun::star::document::XEventsSupplier;
 using ::com::sun::star::lang::XMultiServiceFactory;
@@ -201,22 +199,13 @@ void XMLAutoTextEventExport::ExportContent_() {}
 
 // methods to support the component registration
 
-Sequence< OUString > XMLAutoTextEventExport_getSupportedServiceNames()
-    throw()
+extern "C" SAL_DLLPUBLIC_EXPORT css::uno::XInterface*
+com_sun_star_comp_Writer_XMLOasisAutotextEventsExporter_get_implementation(
+    css::uno::XComponentContext* context, css::uno::Sequence<css::uno::Any> const&)
 {
-    Sequence<OUString> aSeq { XMLAutoTextEventExport_getImplementationName() };
-    return aSeq;
-}
-
-OUString XMLAutoTextEventExport_getImplementationName() throw()
-{
-    return "com.sun.star.comp.Writer.XMLOasisAutotextEventsExporter";
-}
-
-Reference< XInterface > XMLAutoTextEventExport_createInstance(
-        const Reference< XMultiServiceFactory > & rSMgr)
-{
-    return static_cast<cppu::OWeakObject*>(new XMLAutoTextEventExport( comphelper::getComponentContext(rSMgr), XMLAutoTextEventExport_getImplementationName(), SvXMLExportFlags::ALL|SvXMLExportFlags::OASIS));
+    return cppu::acquire(new XMLAutoTextEventExport(
+        context, "com.sun.star.comp.Writer.XMLOasisAutotextEventsExporter",
+        SvXMLExportFlags::ALL | SvXMLExportFlags::OASIS));
 }
 
 // methods to support the component registration

@@ -20,20 +20,16 @@
 #include "xmlTable.hxx"
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
-#include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
 #include <xmloff/ProgressBarHelper.hxx>
 #include "xmlEnums.hxx"
 #include "xmlStyleImport.hxx"
 #include "xmlHierarchyCollection.hxx"
-#include <stringconstants.hxx>
 #include <strings.hxx>
-#include <ucbhelper/content.hxx>
-#include <com/sun/star/ucb/XCommandEnvironment.hpp>
 #include <com/sun/star/sdbcx/XColumnsSupplier.hpp>
 #include <com/sun/star/container/XNameContainer.hpp>
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <comphelper/propertysequence.hxx>
+#include <osl/diagnose.h>
 #include <sal/log.hxx>
 
 namespace dbaxml
@@ -53,9 +49,7 @@ OXMLTable::OXMLTable( ODBFilter& _rImport
     ,m_bApplyFilter(false)
     ,m_bApplyOrder(false)
 {
-    sax_fastparser::FastAttributeList *pAttribList =
-                    sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-    for (auto &aIter : *pAttribList)
+    for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
     {
         OUString sValue = aIter.toString();
 
@@ -80,7 +74,7 @@ OXMLTable::OXMLTable( ODBFilter& _rImport
                 m_bApplyOrder = sValue == "true";
                 break;
             default:
-                SAL_WARN("dbaccess", "unknown attribute " << SvXMLImport::getNameFromToken(aIter.getToken()) << " value=" << aIter.toString());
+                SAL_WARN("dbaccess", "unknown attribute " << SvXMLImport::getPrefixAndNameFromToken(aIter.getToken()) << "=" << aIter.toString());
         }
     }
     uno::Sequence<uno::Any> aArguments(comphelper::InitAnyPropertySequence(
@@ -165,34 +159,34 @@ void OXMLTable::setProperties(uno::Reference< XPropertySet > & _xProp )
 void OXMLTable::endFastElement(sal_Int32 )
 {
     uno::Reference<XNameContainer> xNameContainer(m_xParentContainer,UNO_QUERY);
-    if ( xNameContainer.is() )
-    {
-        try
-        {
-            if ( m_xTable.is() )
-            {
-                setProperties(m_xTable);
+    if ( !xNameContainer.is() )
+        return;
 
-                if ( !m_sStyleName.isEmpty() )
+    try
+    {
+        if ( m_xTable.is() )
+        {
+            setProperties(m_xTable);
+
+            if ( !m_sStyleName.isEmpty() )
+            {
+                const SvXMLStylesContext* pAutoStyles = GetOwnImport().GetAutoStyles();
+                if ( pAutoStyles )
                 {
-                    const SvXMLStylesContext* pAutoStyles = GetOwnImport().GetAutoStyles();
-                    if ( pAutoStyles )
+                    OTableStyleContext* pAutoStyle = const_cast<OTableStyleContext*>(dynamic_cast< const OTableStyleContext* >(pAutoStyles->FindStyleChildContext(XmlStyleFamily::TABLE_TABLE,m_sStyleName)));
+                    if ( pAutoStyle )
                     {
-                        OTableStyleContext* pAutoStyle = const_cast<OTableStyleContext*>(dynamic_cast< const OTableStyleContext* >(pAutoStyles->FindStyleChildContext(XML_STYLE_FAMILY_TABLE_TABLE,m_sStyleName)));
-                        if ( pAutoStyle )
-                        {
-                            pAutoStyle->FillPropertySet(m_xTable);
-                        }
+                        pAutoStyle->FillPropertySet(m_xTable);
                     }
                 }
-
-                xNameContainer->insertByName(m_sName,makeAny(m_xTable));
             }
+
+            xNameContainer->insertByName(m_sName,makeAny(m_xTable));
         }
-        catch(Exception&)
-        {
-            OSL_FAIL("OXMLQuery::EndElement -> exception caught");
-        }
+    }
+    catch(Exception&)
+    {
+        OSL_FAIL("OXMLQuery::EndElement -> exception caught");
     }
 
 }
@@ -204,9 +198,7 @@ void OXMLTable::fillAttributes(const uno::Reference< XFastAttributeList > & _xAt
                                 ,OUString& _rsTableCatalog
                                 )
 {
-    sax_fastparser::FastAttributeList *pAttribList =
-                    sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-    for (auto &aIter : *pAttribList)
+    for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
     {
         OUString sValue = aIter.toString();
 
@@ -225,7 +217,7 @@ void OXMLTable::fillAttributes(const uno::Reference< XFastAttributeList > & _xAt
                 _rsTableName = sValue;
                 break;
             default:
-                SAL_WARN("dbaccess", "unknown attribute " << SvXMLImport::getNameFromToken(aIter.getToken()) << " value=" << aIter.toString());
+                SAL_WARN("dbaccess", "unknown attribute " << SvXMLImport::getPrefixAndNameFromToken(aIter.getToken()) << "=" << aIter.toString());
         }
     }
 }

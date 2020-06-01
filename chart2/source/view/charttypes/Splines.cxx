@@ -149,7 +149,7 @@ void lcl_SplineCalculation::Calculate()
     std::vector< double > u( n );
     m_aSecDerivY.resize( n + 1, 0.0 );
 
-    if( ::rtl::math::isInf( m_fYp1 ) )
+    if( std::isinf( m_fYp1 ) )
     {
         // natural spline
         m_aSecDerivY[ 0 ] = 0.0;
@@ -190,7 +190,7 @@ void lcl_SplineCalculation::Calculate()
     double qn = 0.0;
     double un = 0.0;
 
-    if( ! ::rtl::math::isInf( m_fYpN ) )
+    if( ! std::isinf( m_fYpN ) )
     {
         qn = 0.5;
         double xDiff = m_aPoints[ n ].first - m_aPoints[ n - 1 ].first;
@@ -744,7 +744,7 @@ void SplineCalculater::CalculateBSplines(
             // find the one interval with u_i <= t_k < u_(i+1)
             // remember u_0 = ... = u_p = 0.0 and u_(m-p) = ... u_m = 1.0 and 0<t_k<1
             lcl_tSizeType i = p;
-            while (!(u[i] <= t[k] && t[k] < u[i+1]))
+            while (u[i] > t[k] || t[k] >= u[i+1])
             {
                 ++i;
             }
@@ -872,7 +872,7 @@ void SplineCalculater::CalculateBSplines(
             for ( lcl_tSizeType nTIndex = 0; nTIndex <= n-1; ++nTIndex)
             {
                 for (sal_uInt32 nResolutionStep = 1;
-                     nResolutionStep <= nResolution && !( nTIndex == n-1 && nResolutionStep == nResolution);
+                     nResolutionStep <= nResolution && ( nTIndex != n-1 || nResolutionStep != nResolution);
                      ++nResolutionStep)
                 {
                     lcl_tSizeType nNewIndex = nTIndex * nResolution + nResolutionStep;

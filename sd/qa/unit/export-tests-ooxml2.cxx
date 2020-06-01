@@ -18,6 +18,7 @@
 
 #include <svx/svdotext.hxx>
 #include <svx/svdomedia.hxx>
+#include <svx/svdotable.hxx>
 #include <svx/xlineit0.hxx>
 #include <svx/xlndsit.hxx>
 #include <rtl/ustring.hxx>
@@ -88,6 +89,9 @@ public:
     void testBnc822341();
     void testMathObject();
     void testMathObjectPPT2010();
+    void testTdf119015();
+    void testTdf123090();
+    void testTdf126324();
     void testTdf80224();
     void testExportTransitionsPPTX();
     void testPresetShapesExport();
@@ -119,6 +123,8 @@ public:
     void testTdf112333();
     void testTdf112552();
     void testTdf112557();
+    void testTdf128049();
+    void testTdf106026();
     void testTdf112334();
     void testTdf112089();
     void testTdf112086();
@@ -135,6 +141,7 @@ public:
     void testTdf114848();
     void testTdf68759();
     void testTdf127901();
+    void testTdf48735();
     void testTdf90626();
     void testTdf107608();
     void testTdf111786();
@@ -182,6 +189,14 @@ public:
     void testTdf127372();
     void testTdf127379();
     void testTdf98603();
+    void testTdf79082();
+    void testTdf129372();
+    void testShapeGlowEffect();
+    void testTdf119087();
+    void testTdf131554();
+    void testTdf132282();
+    void testTdf132201EffectOrder();
+    void testShapeSoftEdgeEffect();
 
     CPPUNIT_TEST_SUITE(SdOOXMLExportTest2);
 
@@ -190,6 +205,9 @@ public:
     CPPUNIT_TEST(testBnc822341);
     CPPUNIT_TEST(testMathObject);
     CPPUNIT_TEST(testMathObjectPPT2010);
+    CPPUNIT_TEST(testTdf119015);
+    CPPUNIT_TEST(testTdf123090);
+    CPPUNIT_TEST(testTdf126324);
     CPPUNIT_TEST(testTdf80224);
     CPPUNIT_TEST(testExportTransitionsPPTX);
     CPPUNIT_TEST(testPresetShapesExport);
@@ -221,6 +239,8 @@ public:
     CPPUNIT_TEST(testTdf112333);
     CPPUNIT_TEST(testTdf112552);
     CPPUNIT_TEST(testTdf112557);
+    CPPUNIT_TEST(testTdf128049);
+    CPPUNIT_TEST(testTdf106026);
     CPPUNIT_TEST(testTdf112334);
     CPPUNIT_TEST(testTdf112089);
     CPPUNIT_TEST(testTdf112086);
@@ -237,6 +257,7 @@ public:
     CPPUNIT_TEST(testTdf114848);
     CPPUNIT_TEST(testTdf68759);
     CPPUNIT_TEST(testTdf127901);
+    CPPUNIT_TEST(testTdf48735);
     CPPUNIT_TEST(testTdf90626);
     CPPUNIT_TEST(testTdf107608);
     CPPUNIT_TEST(testTdf111786);
@@ -282,6 +303,14 @@ public:
     CPPUNIT_TEST(testTdf127372);
     CPPUNIT_TEST(testTdf127379);
     CPPUNIT_TEST(testTdf98603);
+    CPPUNIT_TEST(testTdf79082);
+    CPPUNIT_TEST(testTdf129372);
+    CPPUNIT_TEST(testShapeGlowEffect);
+    CPPUNIT_TEST(testTdf119087);
+    CPPUNIT_TEST(testTdf131554);
+    CPPUNIT_TEST(testTdf132282);
+    CPPUNIT_TEST(testTdf132201EffectOrder);
+    CPPUNIT_TEST(testShapeSoftEdgeEffect);
 
     CPPUNIT_TEST_SUITE_END();
 
@@ -337,19 +366,19 @@ void SdOOXMLExportTest2::testBnc822341()
 
     // Export an LO specific ole object (imported from an ODP document)
     {
-        xmlDocPtr pXmlDocCT = parseExport(tempFile1, "[Content_Types].xml");
+        xmlDocUniquePtr pXmlDocCT = parseExport(tempFile1, "[Content_Types].xml");
         assertXPath(pXmlDocCT,
                     "/ContentType:Types/ContentType:Override[@ContentType='application/vnd.openxmlformats-officedocument.wordprocessingml.document']",
                     "PartName",
                     "/ppt/embeddings/oleObject1.docx");
 
-        xmlDocPtr pXmlDocRels = parseExport(tempFile1, "ppt/slides/_rels/slide1.xml.rels");
+        xmlDocUniquePtr pXmlDocRels = parseExport(tempFile1, "ppt/slides/_rels/slide1.xml.rels");
         assertXPath(pXmlDocRels,
             "/rels:Relationships/rels:Relationship[@Target='../embeddings/oleObject1.docx']",
             "Type",
             "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package");
 
-        xmlDocPtr pXmlDocContent = parseExport(tempFile1, "ppt/slides/slide1.xml");
+        xmlDocUniquePtr pXmlDocContent = parseExport(tempFile1, "ppt/slides/slide1.xml");
         assertXPath(pXmlDocContent,
             "/p:sld/p:cSld/p:spTree/p:graphicFrame/a:graphic/a:graphicData/p:oleObj",
             "progId",
@@ -367,19 +396,19 @@ void SdOOXMLExportTest2::testBnc822341()
 
     // Export an MS specific ole object (imported from a PPTX document)
     {
-        xmlDocPtr pXmlDocCT = parseExport(tempFile2, "[Content_Types].xml");
+        xmlDocUniquePtr pXmlDocCT = parseExport(tempFile2, "[Content_Types].xml");
         assertXPath(pXmlDocCT,
                     "/ContentType:Types/ContentType:Override[@ContentType='application/vnd.openxmlformats-officedocument.wordprocessingml.document']",
                     "PartName",
                     "/ppt/embeddings/oleObject1.docx");
 
-        xmlDocPtr pXmlDocRels = parseExport(tempFile2, "ppt/slides/_rels/slide1.xml.rels");
+        xmlDocUniquePtr pXmlDocRels = parseExport(tempFile2, "ppt/slides/_rels/slide1.xml.rels");
         assertXPath(pXmlDocRels,
             "/rels:Relationships/rels:Relationship[@Target='../embeddings/oleObject1.docx']",
             "Type",
             "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package");
 
-        xmlDocPtr pXmlDocContent = parseExport(tempFile2, "ppt/slides/slide1.xml");
+        xmlDocUniquePtr pXmlDocContent = parseExport(tempFile2, "ppt/slides/slide1.xml");
         assertXPath(pXmlDocContent,
             "/p:sld/p:cSld/p:spTree/p:graphicFrame/a:graphic/a:graphicData/p:oleObj",
             "progId",
@@ -407,7 +436,7 @@ void SdOOXMLExportTest2::testMathObject()
 
     // Export an LO specific ole object (imported from an ODP document)
     {
-        xmlDocPtr pXmlDocContent = parseExport(tempFile1, "ppt/slides/slide1.xml");
+        xmlDocUniquePtr pXmlDocContent = parseExport(tempFile1, "ppt/slides/slide1.xml");
         assertXPath(pXmlDocContent,
             "/p:sld/p:cSld/p:spTree/mc:AlternateContent/mc:Choice",
             "Requires",
@@ -427,7 +456,7 @@ void SdOOXMLExportTest2::testMathObject()
 
     // Export an MS specific ole object (imported from a PPTX document)
     {
-        xmlDocPtr pXmlDocContent = parseExport(tempFile1, "ppt/slides/slide1.xml");
+        xmlDocUniquePtr pXmlDocContent = parseExport(tempFile1, "ppt/slides/slide1.xml");
         assertXPath(pXmlDocContent,
             "/p:sld/p:cSld/p:spTree/mc:AlternateContent/mc:Choice",
             "Requires",
@@ -454,7 +483,7 @@ void SdOOXMLExportTest2::testMathObjectPPT2010()
 
     // Export an MS specific ole object (imported from a PPTX document)
     {
-        xmlDocPtr pXmlDocContent = parseExport(tempFile1, "ppt/slides/slide1.xml");
+        xmlDocUniquePtr pXmlDocContent = parseExport(tempFile1, "ppt/slides/slide1.xml");
         assertXPath(pXmlDocContent,
             "/p:sld/p:cSld/p:spTree/mc:AlternateContent/mc:Choice",
             "Requires",
@@ -468,6 +497,75 @@ void SdOOXMLExportTest2::testMathObjectPPT2010()
         CPPUNIT_ASSERT_MESSAGE("no object", pObj != nullptr);
         CPPUNIT_ASSERT_EQUAL(static_cast<sal_uInt16>(OBJ_OLE2), pObj->GetObjIdentifier());
     }
+
+    xDocShRef->DoClose();
+}
+
+void SdOOXMLExportTest2::testTdf119015()
+{
+    ::sd::DrawDocShellRef xDocShRef
+        = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/tdf119015.pptx"), PPTX);
+    xDocShRef = saveAndReload( xDocShRef.get(), PPTX );
+
+    const SdrPage* pPage = GetPage(1, xDocShRef);
+
+    sdr::table::SdrTableObj* pTableObj = dynamic_cast<sdr::table::SdrTableObj*>(pPage->GetObj(0));
+    CPPUNIT_ASSERT(pTableObj);
+    // The position was previously not properly initialized: (0, 0, 100, 100)
+    CPPUNIT_ASSERT_EQUAL(tools::Rectangle(Point(6991, 6902), Size(14099, 1999)),
+                         pTableObj->GetLogicRect());
+    uno::Reference<table::XTable> xTable(pTableObj->getTable());
+
+    // Test that we actually have three cells: this threw css.lang.IndexOutOfBoundsException
+    uno::Reference<text::XTextRange> xTextRange(xTable->getCellByPosition(1, 0),
+                                                uno::UNO_QUERY_THROW);
+    CPPUNIT_ASSERT_EQUAL(OUString("A3"), xTextRange->getString());
+
+    xDocShRef->DoClose();
+}
+
+void SdOOXMLExportTest2::testTdf123090()
+{
+    ::sd::DrawDocShellRef xDocShRef
+        = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/tdf123090.pptx"), PPTX);
+    xDocShRef = saveAndReload( xDocShRef.get(), PPTX );
+
+    const SdrPage* pPage = GetPage(1, xDocShRef);
+
+    sdr::table::SdrTableObj* pTableObj = dynamic_cast<sdr::table::SdrTableObj*>(pPage->GetObj(0));
+    CPPUNIT_ASSERT(pTableObj);
+
+    uno::Reference<table::XTable> xTable(pTableObj->getTable());
+
+    // Test that we actually have two cells: this threw css.lang.IndexOutOfBoundsException
+    uno::Reference<text::XTextRange> xTextRange(xTable->getCellByPosition(1, 0),
+                                                uno::UNO_QUERY_THROW);
+    CPPUNIT_ASSERT_EQUAL(OUString("aaa"), xTextRange->getString());
+
+    sal_Int32 nWidth;
+    const OUString sWidth("Width");
+    uno::Reference< css::table::XTableColumns > xColumns( xTable->getColumns(), uno::UNO_SET_THROW);
+    uno::Reference< beans::XPropertySet > xRefColumn( xColumns->getByIndex(1), uno::UNO_QUERY_THROW );
+    xRefColumn->getPropertyValue( sWidth ) >>= nWidth;
+    CPPUNIT_ASSERT_EQUAL( sal_Int32(9136), nWidth);
+
+    xDocShRef->DoClose();
+}
+
+void SdOOXMLExportTest2::testTdf126324()
+{
+    sd::DrawDocShellRef xDocShRef
+        = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/tdf126324.pptx"), PPTX);
+    xDocShRef = saveAndReload( xDocShRef.get(), PPTX );
+    uno::Reference<drawing::XDrawPagesSupplier> xDoc(xDocShRef->GetDoc()->getUnoModel(),
+                                                     uno::UNO_QUERY);
+    CPPUNIT_ASSERT(xDoc.is());
+    uno::Reference<drawing::XDrawPage> xPage(xDoc->getDrawPages()->getByIndex(0), uno::UNO_QUERY);
+    CPPUNIT_ASSERT(xPage.is());
+    uno::Reference<beans::XPropertySet> xShape(getShape(0, xPage));
+    CPPUNIT_ASSERT(xShape.is());
+    uno::Reference< text::XText > xText = uno::Reference< text::XTextRange>( xShape, uno::UNO_QUERY_THROW )->getText();
+    CPPUNIT_ASSERT_EQUAL(OUString("17"), xText->getString());
 
     xDocShRef->DoClose();
 }
@@ -660,7 +758,7 @@ void SdOOXMLExportTest2::testPresetShapesExport()
     utl::TempFile tempFile;
     xDocShRef = saveAndReload( xDocShRef.get(), PPTX, &tempFile );
 
-    xmlDocPtr pXmlDocCT = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocCT = parseExport(tempFile, "ppt/slides/slide1.xml");
     const OString sPattern( "/p:sld/p:cSld/p:spTree/p:sp/p:spPr/a:prstGeom[@prst='_T_']/a:avLst/a:gd[_N_]" );
     const OString sT( "_T_" );
     const OString sN( "_N_" );
@@ -707,16 +805,14 @@ void SdOOXMLExportTest2::testTdf92527()
     uno::Sequence<beans::PropertyValue> aProps;
     xPropertySet2->getPropertyValue("CustomShapeGeometry") >>= aProps;
     uno::Sequence<beans::PropertyValue> aPathProps;
-    for (int i = 0; i < aProps.getLength(); ++i)
+    for (beans::PropertyValue const & rProp : std::as_const(aProps))
     {
-        const beans::PropertyValue& rProp = aProps[i];
         if (rProp.Name == "Path")
             aPathProps = rProp.Value.get< uno::Sequence<beans::PropertyValue> >();
     }
     uno::Sequence<drawing::EnhancedCustomShapeParameterPair> aCoordinates;
-    for (int i = 0; i < aPathProps.getLength(); ++i)
+    for (beans::PropertyValue const & rProp : std::as_const(aPathProps))
     {
-        const beans::PropertyValue& rProp = aPathProps[i];
         if (rProp.Name == "Coordinates")
             aCoordinates = rProp.Value.get< uno::Sequence<drawing::EnhancedCustomShapeParameterPair> >();
     }
@@ -906,7 +1002,7 @@ void SdOOXMLExportTest2::testTdf59046()
     utl::TempFile tempFile;
     xShell = saveAndReload(xShell.get(), PPTX, &tempFile);
     xShell->DoClose();
-    xmlDocPtr pXmlDocRels = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocRels = parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPath(pXmlDocRels, "/p:sld/p:cSld/p:spTree/p:sp/p:spPr/a:custGeom/a:pathLst/a:path", 1);
 }
 
@@ -973,7 +1069,7 @@ void SdOOXMLExportTest2::testPptmContentType()
     xDocShRef = saveAndReload(xDocShRef.get(), PPTM, &tempFile);
 
     // Assert that the content type is the one of PPTM
-    xmlDocPtr pXmlContentType = parseExport(tempFile, "[Content_Types].xml");
+    xmlDocUniquePtr pXmlContentType = parseExport(tempFile, "[Content_Types].xml");
     assertXPath(pXmlContentType,
                 "/ContentType:Types/ContentType:Override[@PartName='/ppt/presentation.xml']",
                 "ContentType",
@@ -988,7 +1084,7 @@ void SdOOXMLExportTest2::testTdf111798()
     utl::TempFile tempFile;
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
     xDocShRef->DoClose();
-    xmlDocPtr pXmlDoc = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport(tempFile, "ppt/slides/slide1.xml");
 
     const OUString data[][29] =
     {
@@ -1060,7 +1156,7 @@ void SdOOXMLExportTest2::testTdf111863()
     xDocShRef->DoClose();
 
     // check that transition attribute didn't change from 'out' to 'in'
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPath(pXmlDocContent, "/p:sld/p:timing/p:tnLst/p:par/p:cTn/p:childTnLst/p:seq/p:cTn/p:childTnLst/p:par/p:cTn/p:childTnLst/p:par/p:cTn/p:childTnLst/p:par/p:cTn/p:childTnLst/p:animEffect",
         "transition", "out");
 }
@@ -1073,7 +1169,7 @@ void SdOOXMLExportTest2::testTdf111518()
     xShell = saveAndReload(xShell.get(), PPTX, &tempFile);
     xShell->DoClose();
 
-    xmlDocPtr pXmlDocRels = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocRels = parseExport(tempFile, "ppt/slides/slide1.xml");
     OUString sExpect = "M -3.54167E-6 -4.81481E-6 L 0.39037 -0.00069 E";
     OUString sActual = getXPath(pXmlDocRels,
             "/p:sld/p:timing/p:tnLst/p:par/p:cTn/p:childTnLst/p:seq/p:cTn/p:childTnLst/p:par/p:cTn/p:childTnLst/p:par/p:cTn/p:childTnLst/p:par/p:cTn/p:childTnLst/p:animMotion",
@@ -1088,7 +1184,7 @@ void SdOOXMLExportTest2::testTdf100387()
     utl::TempFile tempFile;
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
     xDocShRef->DoClose();
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
 
     assertXPath(pXmlDocContent, "/p:sld/p:timing/p:tnLst/p:par/p:cTn/p:childTnLst/p:seq/p:cTn", "dur", "indefinite");
     assertXPath(pXmlDocContent, "/p:sld/p:timing/p:tnLst/p:par/p:cTn/p:childTnLst/p:seq/p:cTn/p:childTnLst/p:par[1]/p:cTn", "fill", "hold");
@@ -1117,7 +1213,7 @@ void SdOOXMLExportTest2::testClosingShapesAndLineCaps()
     utl::TempFile tempFile;
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
     xDocShRef->DoClose();
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:sp[1]/p:spPr/a:custGeom/a:pathLst/a:path/a:moveTo/a:pt", 1);
     assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:sp[1]/p:spPr/a:custGeom/a:pathLst/a:path/a:lnTo[1]/a:pt", 1);
     assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:sp[1]/p:spPr/a:custGeom/a:pathLst/a:path/a:lnTo[2]/a:pt", 1);
@@ -1152,7 +1248,7 @@ void SdOOXMLExportTest2::testRotateFlip()
     utl::TempFile tempFile;
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
     xDocShRef->DoClose();
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
 
     const OUString data[][4] =
     {// flipH flipV     x          y
@@ -1213,7 +1309,7 @@ void SdOOXMLExportTest2::testTdf106867()
     CPPUNIT_ASSERT(xNameAccess->hasByName("ppt/media/media1.avi"));
 
     // both the ooxml and the extended markup
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:pic/p:nvPicPr/p:nvPr/a:videoFile");
     assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:pic/p:nvPicPr/p:nvPr/p:extLst/p:ext/p14:media");
 
@@ -1230,7 +1326,7 @@ void SdOOXMLExportTest2::testTdf112280()
     xDocShRef->DoClose();
 
     // check the animRot value
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPath(pXmlDocContent, "/p:sld/p:timing/p:tnLst/p:par/p:cTn/p:childTnLst/p:seq/p:cTn/p:childTnLst/p:par/p:cTn/p:childTnLst/p:par/p:cTn/p:childTnLst/p:par/p:cTn/p:childTnLst/p:animRot",
             "by", "21600000");
 }
@@ -1243,7 +1339,7 @@ void SdOOXMLExportTest2::testTdf112088()
     xDocShRef->DoClose();
 
     // check gradient stops
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPathChildren(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:sp[3]/p:spPr/a:gradFill/a:gsLst", 2);
 }
 
@@ -1254,7 +1350,7 @@ void SdOOXMLExportTest2::testTdf112333()
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
     xDocShRef->DoClose();
 
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
 
     OUString sTo = getXPath(pXmlDocContent, "/p:sld/p:timing/p:tnLst/p:par/p:cTn/p:childTnLst/p:seq/p:cTn/p:childTnLst/p:par/p:cTn/p:childTnLst/p:par/p:cTn/p:childTnLst/p:par/p:cTn/p:childTnLst/p:set[1]/p:to/p:strVal", "val");
     CPPUNIT_ASSERT_EQUAL(OUString("solid"), sTo);
@@ -1282,7 +1378,7 @@ void SdOOXMLExportTest2::testTdf112552()
     utl::TempFile tempFile;
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
 
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:sp/p:spPr/a:custGeom/a:pathLst/a:path", "w", "21600");
     assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:sp/p:spPr/a:custGeom/a:pathLst/a:path", "h", "21600");
     assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:sp/p:spPr/a:custGeom/a:pathLst/a:path/a:lnTo[1]/a:pt", "x", "21600");
@@ -1297,8 +1393,47 @@ void SdOOXMLExportTest2::testTdf112557()
     utl::TempFile tempFile;
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
 
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slideMasters/slideMaster1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slideMasters/slideMaster1.xml");
     assertXPath(pXmlDocContent, "/p:sldMaster/p:cSld/p:spTree/p:sp", 2); // title and object
+    xDocShRef->DoClose();
+}
+
+void SdOOXMLExportTest2::testTdf128049()
+{
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/odp/tdf128049.odp"), ODP);
+    utl::TempFile tempFile;
+    xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
+
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:sp[1]/p:spPr/a:custGeom", 0);
+    assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:sp[1]/p:spPr/a:prstGeom", "prst", "noSmoking");
+    assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:sp[1]/p:spPr/a:prstGeom/a:avLst/a:gd", "name", "adj");
+    assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:sp[1]/p:spPr/a:prstGeom/a:avLst/a:gd", "fmla", "val 12500");
+    xDocShRef->DoClose();
+}
+
+void SdOOXMLExportTest2::testTdf106026()
+{
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/odp/tdf106026.odp"), ODP);
+    utl::TempFile tempFile;
+    xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
+
+    xmlDocUniquePtr pXmlMasterContent = parseExport(tempFile, "ppt/slideMasters/slideMaster1.xml");
+    assertXPath(pXmlMasterContent, "/p:sldMaster/p:cSld/p:spTree/p:sp/p:txBody/a:p[1]/a:pPr/a:spcBef/a:spcPts", "val", "1417");
+    assertXPath(pXmlMasterContent, "/p:sldMaster/p:cSld/p:spTree/p:sp/p:txBody/a:p[2]/a:pPr/a:spcBef/a:spcPts", "val", "1134");
+    assertXPath(pXmlMasterContent, "/p:sldMaster/p:cSld/p:spTree/p:sp/p:txBody/a:p[3]/a:pPr/a:spcBef/a:spcPts", "val", "850");
+    assertXPath(pXmlMasterContent, "/p:sldMaster/p:cSld/p:spTree/p:sp/p:txBody/a:p[4]/a:pPr/a:spcBef/a:spcPts", "val", "567");
+    assertXPath(pXmlMasterContent, "/p:sldMaster/p:cSld/p:spTree/p:sp/p:txBody/a:p[5]/a:pPr/a:spcBef/a:spcPts", "val", "283");
+    assertXPath(pXmlMasterContent, "/p:sldMaster/p:cSld/p:spTree/p:sp/p:txBody/a:p[6]/a:pPr/a:spcBef/a:spcPts", "val", "283");
+    assertXPath(pXmlMasterContent, "/p:sldMaster/p:cSld/p:spTree/p:sp/p:txBody/a:p[7]/a:pPr/a:spcBef/a:spcPts", "val", "283");
+
+    xmlDocUniquePtr pXmlSlideContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    assertXPath(pXmlSlideContent,
+                       "/p:sld/p:cSld/p:spTree/p:sp[2]/p:txBody/a:p[1]/a:pPr/a:spcAft/a:spcPts", "val", "11339");
+    assertXPath(pXmlSlideContent,
+                       "/p:sld/p:cSld/p:spTree/p:sp[2]/p:txBody/a:p[2]/a:pPr/a:spcAft/a:spcPts", "val", "11339");
+    assertXPath(pXmlSlideContent,
+                       "/p:sld/p:cSld/p:spTree/p:sp[2]/p:txBody/a:p[3]/a:pPr/a:spcAft/a:spcPts", "val", "11339");
     xDocShRef->DoClose();
 }
 
@@ -1309,7 +1444,7 @@ void SdOOXMLExportTest2::testTdf112334()
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
     xDocShRef->DoClose();
 
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
 
     OUString sAttributeName = getXPathContent(pXmlDocContent, "/p:sld/p:timing/p:tnLst/p:par/p:cTn/p:childTnLst/p:seq/p:cTn/p:childTnLst/p:par/p:cTn/p:childTnLst/p:par/p:cTn/p:childTnLst/p:par/p:cTn/p:childTnLst/p:animClr[1]/p:cBhvr/p:attrNameLst/p:attrName");
     CPPUNIT_ASSERT_EQUAL(OUString("style.color"), sAttributeName);
@@ -1322,7 +1457,7 @@ void SdOOXMLExportTest2::testTdf112089()
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
     xDocShRef->DoClose();
 
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
 
     OUString sID = getXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:graphicFrame/p:nvGraphicFramePr/p:cNvPr", "id");
     OUString sTarget = getXPath(pXmlDocContent, "/p:sld/p:timing/p:tnLst/p:par/p:cTn/p:childTnLst/p:seq/p:cTn/p:childTnLst/p:par/p:cTn/p:childTnLst/p:par/p:cTn/p:childTnLst/p:par/p:cTn/p:childTnLst/p:set/p:cBhvr/p:tgtEl/p:spTgt", "spid");
@@ -1336,7 +1471,7 @@ void SdOOXMLExportTest2::testTdf112086()
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
     xDocShRef->DoClose();
 
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
 
     OUString sVal = getXPath(pXmlDocContent, "/p:sld/p:timing/p:tnLst/p:par/p:cTn/p:childTnLst/p:seq/p:cTn/p:childTnLst/p:par/p:cTn/p:childTnLst/p:par/p:cTn/p:childTnLst/p:par/p:cTn/p:childTnLst/p:anim[2]/p:tavLst/p:tav/p:val/p:fltVal", "val");
     CPPUNIT_ASSERT_EQUAL(OUString("0"), sVal);
@@ -1374,7 +1509,7 @@ void SdOOXMLExportTest2::testGroupRotation()
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
     xDocShRef->DoClose();
 
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPathNoAttribute(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:grpSp/p:grpSpPr/a:xfrm", "rot");
     assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:grpSp/p:sp[1]/p:spPr/a:xfrm", "rot", "20400000");
     assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:grpSp/p:sp[2]/p:spPr/a:xfrm", "rot", "20400000");
@@ -1387,7 +1522,7 @@ void SdOOXMLExportTest2::testTdf104788()
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
     xDocShRef->DoClose();
 
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide6.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide6.xml");
 
     OUString sVal = getXPath(pXmlDocContent, "/p:sld/p:timing/p:tnLst/p:par/p:cTn/p:childTnLst/p:seq/p:cTn/p:childTnLst/p:par[2]/p:cTn/p:childTnLst/p:par/p:cTn/p:childTnLst/p:par/p:cTn/p:childTnLst/p:anim[2]", "to");
     CPPUNIT_ASSERT_EQUAL(-1.0, sVal.toDouble());
@@ -1410,7 +1545,7 @@ void SdOOXMLExportTest2::testSmartartRotation2()
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
     xDocShRef->DoClose();
 
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPathContent(pXmlDocContent,
                        "/p:sld/p:cSld/p:spTree/p:grpSp/p:sp[4]/p:txBody/a:p/a:r/a:t", "Text");
     assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:grpSp/p:sp[4]/p:txBody/a:bodyPr", "rot", "10800000");
@@ -1427,7 +1562,7 @@ void SdOOXMLExportTest2::testTdf91999_rotateShape()
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
     xDocShRef->DoClose();
 
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:sp[2]/p:nvSpPr/p:cNvPr", "name", "CustomShape 2");
     assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:sp[2]/p:spPr/a:xfrm", "rot", "10800000");
     double dX = getXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:sp[2]/p:spPr/a:xfrm/a:off", "x").toDouble();
@@ -1443,7 +1578,7 @@ void SdOOXMLExportTest2::testTdf114845_rotateShape()
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
     xDocShRef->DoClose();
 
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:sp[5]/p:nvSpPr/p:cNvPr", "name", "CustomShape 5");
     assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:sp[5]/p:spPr/a:xfrm", "flipV", "1");
     double dX = getXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:sp[5]/p:spPr/a:xfrm/a:off", "x").toDouble();
@@ -1459,7 +1594,7 @@ void SdOOXMLExportTest2::testGroupsPosition()
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
     xDocShRef->DoClose();
 
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:grpSp[1]/p:sp[1]/p:spPr/a:xfrm/a:off", "x", "5004000");
     assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:grpSp[1]/p:sp[1]/p:spPr/a:xfrm/a:off", "y", "3310560");
     assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:grpSp[1]/p:sp[3]/p:spPr/a:xfrm/a:off", "x", "7760160");
@@ -1473,7 +1608,7 @@ void SdOOXMLExportTest2::testGroupsRotatedPosition()
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
     xDocShRef->DoClose();
 
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:grpSp/p:sp[3]/p:spPr/a:xfrm/a:off", "x", "2857320");
     assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:grpSp/p:sp[3]/p:spPr/a:xfrm/a:off", "y", "4026960");
 }
@@ -1485,13 +1620,13 @@ void SdOOXMLExportTest2::testAccentColor()
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
     xDocShRef->DoClose();
 
-    xmlDocPtr pXmlDocContent1 = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent1 = parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPath(pXmlDocContent1, "/p:sld/p:cSld/p:spTree/p:sp/p:style/a:fillRef/a:schemeClr", "val", "accent6");
-    xmlDocPtr pXmlDocContent2 = parseExport(tempFile, "ppt/slides/slide2.xml");
+    xmlDocUniquePtr pXmlDocContent2 = parseExport(tempFile, "ppt/slides/slide2.xml");
     assertXPath(pXmlDocContent2, "/p:sld/p:cSld/p:spTree/p:sp/p:style/a:fillRef/a:schemeClr", "val", "accent6");
-    xmlDocPtr pXmlDocTheme1 = parseExport(tempFile, "ppt/theme/theme1.xml");
+    xmlDocUniquePtr pXmlDocTheme1 = parseExport(tempFile, "ppt/theme/theme1.xml");
     assertXPath(pXmlDocTheme1, "/a:theme/a:themeElements/a:clrScheme/a:accent6/a:srgbClr", "val", "70ad47");
-    xmlDocPtr pXmlDocTheme2 = parseExport(tempFile, "ppt/theme/theme2.xml");
+    xmlDocUniquePtr pXmlDocTheme2 = parseExport(tempFile, "ppt/theme/theme2.xml");
     assertXPath(pXmlDocTheme2, "/a:theme/a:themeElements/a:clrScheme/a:accent6/a:srgbClr", "val", "deb340");
 }
 
@@ -1502,7 +1637,7 @@ void SdOOXMLExportTest2::testThemeColors()
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
     xDocShRef->DoClose();
 
-    xmlDocPtr pXmlDocTheme2 = parseExport(tempFile, "ppt/theme/theme2.xml");
+    xmlDocUniquePtr pXmlDocTheme2 = parseExport(tempFile, "ppt/theme/theme2.xml");
     assertXPath(pXmlDocTheme2, "/a:theme/a:themeElements/a:clrScheme/a:dk2/a:srgbClr", "val", "44546a");
     assertXPath(pXmlDocTheme2, "/a:theme/a:themeElements/a:clrScheme/a:accent3/a:srgbClr", "val", "a5a5a5");
 }
@@ -1514,9 +1649,9 @@ void SdOOXMLExportTest2::testTdf114848()
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
     xDocShRef->DoClose();
 
-    xmlDocPtr pXmlDocTheme1 = parseExport(tempFile, "ppt/theme/theme1.xml");
+    xmlDocUniquePtr pXmlDocTheme1 = parseExport(tempFile, "ppt/theme/theme1.xml");
     assertXPath(pXmlDocTheme1, "/a:theme/a:themeElements/a:clrScheme/a:dk2/a:srgbClr", "val", "1f497d");
-    xmlDocPtr pXmlDocTheme2 = parseExport(tempFile, "ppt/theme/theme2.xml");
+    xmlDocUniquePtr pXmlDocTheme2 = parseExport(tempFile, "ppt/theme/theme2.xml");
     assertXPath(pXmlDocTheme2, "/a:theme/a:themeElements/a:clrScheme/a:dk2/a:srgbClr", "val", "1f497d");
 }
 
@@ -1527,7 +1662,7 @@ void SdOOXMLExportTest2::testTdf68759()
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
     xDocShRef->DoClose();
 
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:pic[1]/p:spPr/a:xfrm/a:off", "x", "1687320");
     assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:pic[1]/p:spPr/a:xfrm/a:off", "y", "1615320");
     assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:pic[2]/p:spPr/a:xfrm", "flipH", "1");
@@ -1547,16 +1682,30 @@ void SdOOXMLExportTest2::testTdf127901()
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
     xDocShRef->DoClose();
 
-    xmlDocPtr pXmlDocContent1 = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent1 = parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPath(pXmlDocContent1, "/p:sld/p:cSld/p:spTree/p:pic/p:blipFill/a:blip/a:lum", "bright", "70000");
     assertXPath(pXmlDocContent1, "/p:sld/p:cSld/p:spTree/p:pic/p:blipFill/a:blip/a:lum", "contrast", "-70000");
 
-    xmlDocPtr pXmlDocContent2 = parseExport(tempFile, "ppt/slides/slide2.xml");
+    xmlDocUniquePtr pXmlDocContent2 = parseExport(tempFile, "ppt/slides/slide2.xml");
     assertXPath(pXmlDocContent2, "/p:sld/p:cSld/p:spTree/p:pic/p:blipFill/a:blip/a:grayscl", 1);
 
-    xmlDocPtr pXmlDocContent3 = parseExport(tempFile, "ppt/slides/slide3.xml");
+    xmlDocUniquePtr pXmlDocContent3 = parseExport(tempFile, "ppt/slides/slide3.xml");
     assertXPath(pXmlDocContent3, "/p:sld/p:cSld/p:spTree/p:pic/p:blipFill/a:blip/a:biLevel", "thresh", "50000");
 
+}
+
+void SdOOXMLExportTest2::testTdf48735()
+{
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("sd/qa/unit/data/odp/tdf48735.odp"), ODP);
+    utl::TempFile tempFile;
+    xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
+    xDocShRef->DoClose();
+
+    xmlDocUniquePtr pXmlDocContent1 = parseExport(tempFile, "ppt/slides/slide1.xml");
+    assertXPath(pXmlDocContent1, "/p:sld/p:cSld/p:spTree/p:pic/p:blipFill/a:srcRect", "b", "23627");
+    assertXPath(pXmlDocContent1, "/p:sld/p:cSld/p:spTree/p:pic/p:blipFill/a:srcRect", "l", "23627");
+    assertXPath(pXmlDocContent1, "/p:sld/p:cSld/p:spTree/p:pic/p:blipFill/a:srcRect", "r", "23627");
+    assertXPath(pXmlDocContent1, "/p:sld/p:cSld/p:spTree/p:pic/p:blipFill/a:srcRect", "t", "18842");
 }
 
 void SdOOXMLExportTest2::testTdf90626()
@@ -1566,7 +1715,7 @@ void SdOOXMLExportTest2::testTdf90626()
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
     xDocShRef->DoClose();
 
-    xmlDocPtr pXmlDocContent =  parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent =  parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:sp[2]/p:txBody/a:p[1]/a:pPr/a:buSzPct", "val", "100000");
     assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:sp[2]/p:txBody/a:p[2]/a:pPr/a:buSzPct", "val", "150568");
     assertXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:sp[2]/p:txBody/a:p[3]/a:pPr/a:buSzPct", "val", "100000");
@@ -1623,7 +1772,7 @@ void SdOOXMLExportTest2::testFontScale()
     sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/font-scale.pptx"), PPTX);
     utl::TempFile tempFile;
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
 
     // Rounding errors possible, approximate value
     OUString sScale = getXPath(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:sp/p:txBody/a:bodyPr/a:normAutofit", "fontScale");
@@ -1638,7 +1787,7 @@ void SdOOXMLExportTest2::testShapeAutofitPPTX()
     sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/testShapeAutofit.pptx"), PPTX);
     utl::TempFile tempFile;
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     CPPUNIT_ASSERT(pXmlDocContent);
 
     // TextAutoGrowHeight --> "Resize shape to fit text" --> true
@@ -1652,7 +1801,7 @@ void SdOOXMLExportTest2::testLegacyShapeAutofitPPTX()
     sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/odp/testLegacyShapeAutofit.odp"), ODP);
     utl::TempFile tempFile;
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     CPPUNIT_ASSERT(pXmlDocContent);
 
     // Text in a legacy rectangle
@@ -1723,9 +1872,9 @@ void SdOOXMLExportTest2::testTdf115005()
     // check that the document contains original vector images
     const uno::Sequence<OUString> names = xNameAccess->getElementNames();
     int nSVMFiles = 0;
-    for (int i=0; i<names.getLength(); i++)
+    for (OUString const & s : names)
     {
-        if(names[i].endsWith(".svm"))
+        if(s.endsWith(".svm"))
             nSVMFiles++;
     }
     CPPUNIT_ASSERT_EQUAL(3, nSVMFiles);
@@ -1755,11 +1904,11 @@ int SdOOXMLExportTest2::testTdf115005_FallBack_Images(bool bAddReplacementImages
     const uno::Sequence<OUString> names = xNameAccess->getElementNames();
     int nSVMFiles = 0;
     int nPNGFiles = 0;
-    for (int i=0; i<names.getLength(); i++)
+    for (OUString const & n :names)
     {
-        if(names[i].endsWith(".svm"))
+        if(n.endsWith(".svm"))
             nSVMFiles++;
-        if(names[i].endsWith(".png"))
+        if(n.endsWith(".png"))
             nPNGFiles++;
     }
 
@@ -1786,7 +1935,7 @@ void SdOOXMLExportTest2::testTdf118806()
     utl::TempFile tempFile;
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
 
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPath(pXmlDocContent, "//p:animMotion", "origin", "layout");
 
     xDocShRef->DoClose();
@@ -1836,7 +1985,7 @@ void SdOOXMLExportTest2::testTdf104792()
     utl::TempFile tempFile;
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
 
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPath(pXmlDocContent, "/p:sld/p:timing/p:tnLst/p:par/p:cTn/p:childTnLst[1]/p:seq/p:cTn/p:childTnLst[1]/p:par[1]/p:cTn/p:childTnLst[1]/p:par/p:cTn/p:childTnLst[1]/p:par/p:cTn/p:childTnLst[1]/p:set/p:cBhvr/p:tgtEl/p:spTgt", 1);
 
     xDocShRef->DoClose();
@@ -1848,7 +1997,7 @@ void SdOOXMLExportTest2::testTdf90627()
     utl::TempFile tempFile;
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
 
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     // Don't export empty endCondLst without cond.
     assertXPath(pXmlDocContent, "/p:sld/p:timing/p:tnLst/p:par/p:cTn/p:childTnLst[1]/p:seq/p:cTn/p:childTnLst[1]/p:par[2]/p:cTn/p:childTnLst[1]/p:par/p:cTn/p:childTnLst[1]/p:par/p:cTn/p:endCondLst[not(*)]", 0);
 
@@ -1861,7 +2010,7 @@ void SdOOXMLExportTest2::testTdf104786()
     utl::TempFile tempFile;
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
 
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide2.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide2.xml");
     // Don't export empty 'to'
     assertXPath(pXmlDocContent, "/p:sld/p:timing/p:tnLst/p:par/p:cTn/p:childTnLst[1]/p:seq/p:cTn/p:childTnLst[1]/p:par[2]/p:cTn/p:childTnLst[1]/p:par/p:cTn/p:childTnLst[1]/p:par/p:cTn/p:childTnLst/p:set[2]/p:to", 0);
 
@@ -1875,7 +2024,7 @@ void SdOOXMLExportTest2::testTdf118783()
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
     xDocShRef->DoClose();
 
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     OUString sAttributeName = getXPathContent(pXmlDocContent, "//p:animRot/p:cBhvr/p:attrNameLst/p:attrName");
     CPPUNIT_ASSERT_EQUAL(OUString("r"), sAttributeName);
     xDocShRef->DoClose();
@@ -1887,7 +2036,7 @@ void SdOOXMLExportTest2::testTdf104789()
     utl::TempFile tempFile;
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
 
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     OUString sAttributeName = getXPathContent(pXmlDocContent, "/p:sld/p:timing/p:tnLst/p:par/p:cTn/p:childTnLst/p:seq/p:cTn/p:childTnLst/p:par/p:cTn/p:childTnLst/p:par/p:cTn/p:childTnLst/p:par/p:cTn/p:childTnLst/p:set/p:cBhvr/p:attrNameLst/p:attrName");
     CPPUNIT_ASSERT_EQUAL(OUString("style.opacity"), sAttributeName);
 
@@ -1910,7 +2059,7 @@ void SdOOXMLExportTest2::testTdf118835()
     utl::TempFile tempFile;
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
 
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPath(pXmlDocContent, "(//p:animClr)[1]", "clrSpc", "rgb");
     assertXPathContent(pXmlDocContent, "(//p:animClr)[1]//p:attrName", "style.color");
     assertXPath(pXmlDocContent, "(//p:animClr)[1]//p:to/a:srgbClr", "val", "ed1c24");
@@ -1938,7 +2087,7 @@ void SdOOXMLExportTest2::testTdf118768()
     utl::TempFile tempFile;
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
 
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPath(pXmlDocContent, "//p:anim[1]", "from", "(-#ppt_w/2)");
     assertXPath(pXmlDocContent, "//p:anim[1]", "to", "(#ppt_x)");
     assertXPath(pXmlDocContent, "//p:anim[2]", "from", "0");
@@ -1957,7 +2106,7 @@ void SdOOXMLExportTest2::testTdf118836()
     utl::TempFile tempFile;
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
 
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPath(pXmlDocContent, "//p:animScale/p:by", "x", "250000");
     assertXPath(pXmlDocContent, "//p:animScale/p:by", "y", "250000");
     xDocShRef->DoClose();
@@ -2053,7 +2202,7 @@ void SdOOXMLExportTest2::testTdf116350TextEffects()
     utl::TempFile tempFile;
     xDocShRef = saveAndReload( xDocShRef.get(), PPTX, &tempFile );
 
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPath(pXmlDocContent, "//p:sp[1]/p:txBody/a:bodyPr/a:prstTxWarp", "prst", "textArchUp");
     assertXPath(pXmlDocContent, "//p:sp[14]/p:txBody/a:bodyPr/a:prstTxWarp", "prst", "textCircle");
     assertXPath(pXmlDocContent, "//p:sp[14]/p:spPr/a:solidFill/a:srgbClr", 0);
@@ -2068,11 +2217,11 @@ void SdOOXMLExportTest2::testTdf128096()
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
     xDocShRef->DoClose();
 
-    xmlDocPtr pXmlDocContent1 = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent1 = parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPath(pXmlDocContent1, "//p:sld/p:cSld/p:spTree/p:sp/p:txBody/a:p/a:r/a:rPr/a:highlight/a:srgbClr", "val", "ffff00");
 
     // Check that underlined content is also highlighted
-    xmlDocPtr pXmlDocContent2 = parseExport(tempFile, "ppt/slides/slide2.xml");
+    xmlDocUniquePtr pXmlDocContent2 = parseExport(tempFile, "ppt/slides/slide2.xml");
     assertXPath(pXmlDocContent2, "//p:sld/p:cSld/p:spTree/p:sp/p:txBody/a:p/a:r/a:rPr/a:highlight/a:srgbClr", "val", "ffff00");
 }
 void SdOOXMLExportTest2::testTdf120573()
@@ -2081,17 +2230,17 @@ void SdOOXMLExportTest2::testTdf120573()
     utl::TempFile tempFile;
     xDocShRef = saveAndReload( xDocShRef.get(), PPTX, &tempFile );
 
-    xmlDocPtr pXmlDoc = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPath(pXmlDoc, "//p:sld/p:cSld/p:spTree/p:pic/p:nvPicPr/p:nvPr/a:audioFile", 1);
     assertXPath(pXmlDoc, "//p:sld/p:cSld/p:spTree/p:pic/p:nvPicPr/p:nvPr/a:videoFile", 0);
 
-    xmlDocPtr pXmlDocRels = parseExport(tempFile, "ppt/slides/_rels/slide1.xml.rels");
+    xmlDocUniquePtr pXmlDocRels = parseExport(tempFile, "ppt/slides/_rels/slide1.xml.rels");
     assertXPath(pXmlDocRels,
         "(/rels:Relationships/rels:Relationship[@Target='../media/media1.wav'])[1]",
         "Type",
         "http://schemas.openxmlformats.org/officeDocument/2006/relationships/audio");
 
-    xmlDocPtr pXmlContentType = parseExport(tempFile, "[Content_Types].xml");
+    xmlDocUniquePtr pXmlContentType = parseExport(tempFile, "[Content_Types].xml");
     assertXPath(pXmlContentType,
                 "/ContentType:Types/ContentType:Override[@PartName='/ppt/media/media1.wav']",
                 "ContentType",
@@ -2104,14 +2253,14 @@ void SdOOXMLExportTest2::testTdf118825()
 
     const OUString sPath2 = "M 0.025 0.0571428571428571 L 0.0821428571428571 0.184126984126984 L -0.175 0.234920634920635 L -0.246428571428571 -0.0190476190476191 L -0.0821428571428573 -0.133333333333333 E";
 
-    const OUString sPath3 = "M -0.0107142857142857 0.00634920634920635 C -0.110714285714286 0.501587301587301 -0.153571428571429 -0.00634920634920635 -0.246428571428572 0.184126984126984 C -0.339285714285715 0.374603174603175 -0.296428571428572 0.514285714285714 -0.267857142857143 0.603174603174603 C -0.239285714285715 0.692063492063493 0.0607142857142858 0.590476190476191 0.0607142857142858 0.590476190476191 E";
+    const OUString sPath3 = "M -0.0107142857142857 0.00634920634920635 C -0.110714285714286 0.501587301587301 -0.153571428571429 -0.00634920634920635 -0.246428571428572 0.184126984126984 C -0.339285714285715 0.374603174603175 -0.296428571428572 0.514285714285714 -0.267857142857143 0.603174603174603 C -0.239285714285715 0.692063492063492 0.0607142857142858 0.590476190476191 0.0607142857142858 0.590476190476191 E";
 
     const OUString sPath4 = "M 0.0535714285714286 -0.0444444444444444 L 0.132142857142857 -0.0444444444444444 L 0.132142857142857 -0.146031746031746 L 0.0964285714285715 -0.146031746031746 E";
 
     ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("sd/qa/unit/data/odp/tdf118825-motionpath.odp"), ODP);
     utl::TempFile tempFile;
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
 
 
     CPPUNIT_ASSERT_MOTIONPATH(sPath1, getXPath(pXmlDocContent, "(//p:animMotion)[1]", "path"));
@@ -2126,7 +2275,7 @@ void SdOOXMLExportTest2::testTdf119118()
     ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc( "sd/qa/unit/data/pptx/tdf119118.pptx" ), PPTX);
     utl::TempFile tempFile;
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPath(pXmlDocContent, "//p:iterate", "type", "lt");
     assertXPath(pXmlDocContent, "//p:tmAbs", "val", "200");
     xDocShRef->DoClose();
@@ -2137,7 +2286,7 @@ void SdOOXMLExportTest2::testTdf99213()
     ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc( "sd/qa/unit/data/odp/tdf99213-target-missing.odp" ), ODP);
     utl::TempFile tempFile;
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     // Number of nodes with p:attrNameLst was 3, including one that missed tgtEl
     assertXPath(pXmlDocContent, "//p:attrNameLst", 2);
     // Timenode that miss its target element should be filtered.
@@ -2160,7 +2309,7 @@ void SdOOXMLExportTest2::testPotxExport()
     xDocShRef->DoClose();
 
     // Load and check content type
-    xmlDocPtr pContentTypes = parseExport(tempFile, "[Content_Types].xml");
+    xmlDocUniquePtr pContentTypes = parseExport(tempFile, "[Content_Types].xml");
     CPPUNIT_ASSERT(pContentTypes);
     assertXPath(pContentTypes, "/ContentType:Types/ContentType:Override[@PartName='/ppt/presentation.xml']",
         "ContentType", "application/vnd.openxmlformats-officedocument.presentationml.template.main+xml");
@@ -2173,13 +2322,13 @@ void SdOOXMLExportTest2::testTdf44223()
         = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/tdf44223.pptx"), PPTX);
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
 
-    std::shared_ptr<SvStream> const pStream1(parseExportStream(tempFile, "ppt/media/audio1.wav"));
+    std::unique_ptr<SvStream> const pStream1(parseExportStream(tempFile, "ppt/media/audio1.wav"));
     CPPUNIT_ASSERT_EQUAL(sal_uInt64(11140), pStream1->remainingSize());
 
-    std::shared_ptr<SvStream> const pStream2(parseExportStream(tempFile, "ppt/media/audio2.wav"));
+    std::unique_ptr<SvStream> const pStream2(parseExportStream(tempFile, "ppt/media/audio2.wav"));
     CPPUNIT_ASSERT_EQUAL(sal_uInt64(28074), pStream2->remainingSize());
 
-    xmlDocPtr pXmlContentType = parseExport(tempFile, "[Content_Types].xml");
+    xmlDocUniquePtr pXmlContentType = parseExport(tempFile, "[Content_Types].xml");
     assertXPath(pXmlContentType,
                 "/ContentType:Types/ContentType:Override[@PartName='/ppt/media/audio1.wav']",
                 "ContentType",
@@ -2190,17 +2339,17 @@ void SdOOXMLExportTest2::testTdf44223()
                 "ContentType",
                 "audio/x-wav");
 
-    xmlDocPtr pDoc1 = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pDoc1 = parseExport(tempFile, "ppt/slides/slide1.xml");
 
     // Start condition: 0s after timenode id 5 begins.
     assertXPath(pDoc1 , "//p:audio/p:cMediaNode/p:cTn/p:stCondLst/p:cond", "evt", "begin");
     assertXPath(pDoc1 , "//p:audio/p:cMediaNode/p:cTn/p:stCondLst/p:cond", "delay", "0");
     assertXPath(pDoc1 , "//p:audio/p:cMediaNode/p:cTn/p:stCondLst/p:cond/p:tn", "val", "5");
 
-    xmlDocPtr pDoc2 = parseExport(tempFile, "ppt/slides/slide2.xml");
+    xmlDocUniquePtr pDoc2 = parseExport(tempFile, "ppt/slides/slide2.xml");
     assertXPath(pDoc2 , "//p:transition/p:sndAc/p:stSnd/p:snd[@r:embed]", 2);
 
-    xmlDocPtr pRels1 = parseExport(tempFile, "ppt/slides/_rels/slide1.xml.rels");
+    xmlDocUniquePtr pRels1 = parseExport(tempFile, "ppt/slides/_rels/slide1.xml.rels");
     assertXPath(pRels1, "//rels:Relationship[@Id='rId1']", "Type",
             "http://schemas.openxmlformats.org/officeDocument/2006/relationships/audio");
     assertXPath(pRels1, "//rels:Relationship[@Id='rId1']", "Target", "../media/audio1.wav");
@@ -2215,14 +2364,14 @@ void SdOOXMLExportTest2::testSmartArtPreserve()
     utl::TempFile tempFile;
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
 
-    xmlDocPtr pXmlDoc = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport(tempFile, "ppt/slides/slide1.xml");
     assertXPath(pXmlDoc, "//p:sld/p:cSld/p:spTree/p:graphicFrame/p:nvGraphicFramePr/p:cNvPr");
     assertXPath(pXmlDoc, "//p:sld/p:cSld/p:spTree/p:graphicFrame/a:graphic/a:graphicData/dgm:relIds");
     assertXPath(pXmlDoc, "//p:sld/p:cSld/p:spTree/p:graphicFrame/p:nvGraphicFramePr/p:nvPr/p:extLst/p:ext",
                 "uri", "{D42A27DB-BD31-4B8C-83A1-F6EECF244321}");
     assertXPath(pXmlDoc, "//p:sld/p:cSld/p:spTree/p:graphicFrame/p:nvGraphicFramePr/p:nvPr/p:extLst/p:ext/p14:modId");
 
-    xmlDocPtr pXmlDocRels = parseExport(tempFile, "ppt/slides/_rels/slide1.xml.rels");
+    xmlDocUniquePtr pXmlDocRels = parseExport(tempFile, "ppt/slides/_rels/slide1.xml.rels");
     assertXPath(pXmlDocRels,
                 "(/rels:Relationships/rels:Relationship[@Target='../diagrams/layout1.xml'])[1]", "Type",
                 "http://schemas.openxmlformats.org/officeDocument/2006/relationships/diagramLayout");
@@ -2236,7 +2385,7 @@ void SdOOXMLExportTest2::testSmartArtPreserve()
                 "(/rels:Relationships/rels:Relationship[@Target='../diagrams/quickStyle1.xml'])[1]", "Type",
                 "http://schemas.openxmlformats.org/officeDocument/2006/relationships/diagramQuickStyle");
 
-    xmlDocPtr pXmlContentType = parseExport(tempFile, "[Content_Types].xml");
+    xmlDocUniquePtr pXmlContentType = parseExport(tempFile, "[Content_Types].xml");
     assertXPath(pXmlContentType,
                 "/ContentType:Types/ContentType:Override[@PartName='/ppt/diagrams/layout1.xml']",
                 "ContentType", "application/vnd.openxmlformats-officedocument.drawingml.diagramLayout+xml");
@@ -2417,7 +2566,7 @@ void SdOOXMLExportTest2::testTdf100348_convert_Fontwork2TextWarp()
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
 
     // Resulting pptx has to contain the TextWarp shape
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     const OString sPathStart("/p:sld/p:cSld/p:spTree/p:sp[1]/p:txBody/a:bodyPr/a:prstTxWarp");
     assertXPath(pXmlDocContent, sPathStart + "[@prst='textWave1']");
     const OString sPathAdj(sPathStart + "/a:avLst/a:gd");
@@ -2474,7 +2623,7 @@ void SdOOXMLExportTest2::testTdf1225573_FontWorkScaleX()
 
     // Error was, that attribute 'fromWordArt' was ignored
     // ensure, resulting pptx has fromWordArt="1" on textArchDown shape
-    xmlDocPtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
     const OString sPathStart("/p:sld/p:cSld/p:spTree/p:sp[1]/p:txBody/a:bodyPr");
     assertXPath(pXmlDocContent, sPathStart + "[@fromWordArt='1']");
 
@@ -2555,7 +2704,7 @@ void SdOOXMLExportTest2::testTdf99497_keepAppearanceOfCircleKind()
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
 
     // slide 1 45° -> adj1 = 20493903, 270° -> adj2 = 5400000, <a:noFill/> exists
-    xmlDocPtr pXmlDocContent1 = parseExport(tempFile, "ppt/slides/slide1.xml");
+    xmlDocUniquePtr pXmlDocContent1 = parseExport(tempFile, "ppt/slides/slide1.xml");
     const OString sPathStart1("/p:sld/p:cSld/p:spTree/p:sp/p:spPr/a:prstGeom");
     assertXPath(pXmlDocContent1, sPathStart1 + "[@prst='arc']");
     const OString sPathAdj1(sPathStart1 + "/a:avLst/a:gd");
@@ -2564,7 +2713,7 @@ void SdOOXMLExportTest2::testTdf99497_keepAppearanceOfCircleKind()
     assertXPath(pXmlDocContent1, "/p:sld/p:cSld/p:spTree/p:sp/p:spPr/a:noFill");
 
     // slide 2 270° -> adj1 = 5400000, 180° -> adj2 = 10800000
-    xmlDocPtr pXmlDocContent2 = parseExport(tempFile, "ppt/slides/slide2.xml");
+    xmlDocUniquePtr pXmlDocContent2 = parseExport(tempFile, "ppt/slides/slide2.xml");
     const OString sPathStart2("/p:sld/p:cSld/p:spTree/p:sp/p:spPr/a:prstGeom");
     assertXPath(pXmlDocContent2, sPathStart2 + "[@prst='chord']");
     const OString sPathAdj2(sPathStart2 + "/a:avLst/a:gd");
@@ -2572,7 +2721,7 @@ void SdOOXMLExportTest2::testTdf99497_keepAppearanceOfCircleKind()
     assertXPath(pXmlDocContent2, sPathAdj2 + "[@name='adj2' and  @fmla='val 10800000']");
 
     // slide 3 120° -> adj1 = 12600000, 30° -> adj2 = 20946396
-    xmlDocPtr pXmlDocContent3 = parseExport(tempFile, "ppt/slides/slide3.xml");
+    xmlDocUniquePtr pXmlDocContent3 = parseExport(tempFile, "ppt/slides/slide3.xml");
     const OString sPathStart3("/p:sld/p:cSld/p:spTree/p:sp/p:spPr/a:prstGeom");
     assertXPath(pXmlDocContent3, sPathStart3 + "[@prst='pie']");
     const OString sPathAdj3(sPathStart3 + "/a:avLst/a:gd");
@@ -2631,6 +2780,147 @@ void SdOOXMLExportTest2::testTdf98603()
     xPropSet->getPropertyValue("CharLocaleComplex") >>= aLocale;
     CPPUNIT_ASSERT_EQUAL(OUString("he"), aLocale.Language);
     CPPUNIT_ASSERT_EQUAL(OUString("IL"), aLocale.Country);
+}
+
+void SdOOXMLExportTest2::testTdf79082()
+{
+    ::sd::DrawDocShellRef xDocShRef = loadURL( m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/tdf79082.pptx"), PPTX);
+    utl::TempFile tempFile;
+    xDocShRef = saveAndReload( xDocShRef.get(), PPTX, &tempFile );
+
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    assertXPath(pXmlDocContent,
+        "/p:sld/p:cSld/p:spTree/p:sp[2]/p:txBody/a:p/a:pPr/a:tabLst/a:tab[1]",
+        "pos",
+        "360000");
+    assertXPath(pXmlDocContent,
+        "/p:sld/p:cSld/p:spTree/p:sp[2]/p:txBody/a:p/a:pPr/a:tabLst/a:tab[1]",
+        "algn",
+        "l");
+
+    assertXPath(pXmlDocContent,
+        "/p:sld/p:cSld/p:spTree/p:sp[2]/p:txBody/a:p/a:pPr/a:tabLst/a:tab[2]",
+        "pos",
+        "756000");
+    assertXPath(pXmlDocContent,
+        "/p:sld/p:cSld/p:spTree/p:sp[2]/p:txBody/a:p/a:pPr/a:tabLst/a:tab[2]",
+        "algn",
+        "l");
+
+    assertXPath(pXmlDocContent,
+        "/p:sld/p:cSld/p:spTree/p:sp[2]/p:txBody/a:p/a:pPr/a:tabLst/a:tab[3]",
+        "pos",
+        "1440000");
+    assertXPath(pXmlDocContent,
+        "/p:sld/p:cSld/p:spTree/p:sp[2]/p:txBody/a:p/a:pPr/a:tabLst/a:tab[3]",
+        "algn",
+        "ctr");
+
+    assertXPath(pXmlDocContent,
+        "/p:sld/p:cSld/p:spTree/p:sp[2]/p:txBody/a:p/a:pPr/a:tabLst/a:tab[4]",
+        "pos",
+        "1800000");
+    assertXPath(pXmlDocContent,
+        "/p:sld/p:cSld/p:spTree/p:sp[2]/p:txBody/a:p/a:pPr/a:tabLst/a:tab[4]",
+        "algn",
+        "r");
+
+    assertXPath(pXmlDocContent,
+        "/p:sld/p:cSld/p:spTree/p:sp[2]/p:txBody/a:p/a:pPr/a:tabLst/a:tab[5]",
+        "pos",
+        "3240000");
+    assertXPath(pXmlDocContent,
+        "/p:sld/p:cSld/p:spTree/p:sp[2]/p:txBody/a:p/a:pPr/a:tabLst/a:tab[5]",
+        "algn",
+        "dec");
+
+    xDocShRef->DoClose();
+}
+
+void SdOOXMLExportTest2::testTdf129372()
+{
+    //Without the fix in place, it would crash at import time
+    ::sd::DrawDocShellRef xDocShRef = loadURL( m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/tdf129372.pptx"), PPTX);
+    xDocShRef = saveAndReload( xDocShRef.get(), PPTX );
+    const SdrPage *pPage = GetPage( 1, xDocShRef.get() );
+
+    const SdrObject* pObj = pPage->GetObj(0);
+    CPPUNIT_ASSERT_MESSAGE( "no object", pObj != nullptr);
+    CPPUNIT_ASSERT_EQUAL( static_cast<sal_uInt16>(OBJ_OLE2), pObj->GetObjIdentifier() );
+}
+
+void SdOOXMLExportTest2::testShapeGlowEffect()
+{
+    ::sd::DrawDocShellRef xDocShRef = loadURL( m_directories.getURLFromSrc("sd/qa/unit/data/pptx/shape-glow-effect.pptx"), PPTX);
+    xDocShRef = saveAndReload( xDocShRef.get(), PPTX );
+    uno::Reference<beans::XPropertySet> xShape(getShapeFromPage(0, 0, xDocShRef));
+    sal_Int32 nRadius = -1;
+    xShape->getPropertyValue("GlowEffectRad") >>= nRadius;
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(388), nRadius); // 139700 EMU = 388.0556 mm/100
+    Color nColor;
+    xShape->getPropertyValue("GlowEffectColor") >>= nColor;
+    CPPUNIT_ASSERT_EQUAL(Color(0xFFC000), nColor);
+    sal_Int16 nTransparency;
+    xShape->getPropertyValue("GlowEffectTransparency") >>= nTransparency;
+    CPPUNIT_ASSERT_EQUAL(sal_Int16(60), nTransparency);
+}
+
+void SdOOXMLExportTest2::testTdf119087()
+{
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("sd/qa/unit/data/pptx/tdf119087.pptx"), PPTX);
+    xDocShRef = saveAndReload( xDocShRef.get(), PPTX );
+    // This would fail both on export validation, and reloading the saved pptx file.
+}
+
+void SdOOXMLExportTest2::testTdf131554()
+{
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("sd/qa/unit/data/pptx/tdf131554.pptx"), PPTX);
+    xDocShRef = saveAndReload( xDocShRef.get(), PPTX );
+    uno::Reference<drawing::XShape> xShape(getShapeFromPage(1, 0, xDocShRef), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(5622), xShape->getPosition().X);
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(13251), xShape->getPosition().Y);
+}
+
+void SdOOXMLExportTest2::testTdf132282()
+{
+    ::sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("sd/qa/unit/data/pptx/tdf132282.pptx"), PPTX);
+    xDocShRef = saveAndReload( xDocShRef.get(), PPTX );
+    uno::Reference<drawing::XShape> xShape(getShapeFromPage(0, 0, xDocShRef), uno::UNO_QUERY);
+    // Without the fix in place, the position would be 0,0, height = 1 and width = 1
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(1736), xShape->getPosition().X);
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(763), xShape->getPosition().Y);
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(30523), xShape->getSize().Width);
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(2604), xShape->getSize().Height);
+}
+
+void SdOOXMLExportTest2::testTdf132201EffectOrder()
+{
+    auto xDocShRef = loadURL(m_directories.getURLFromSrc("sd/qa/unit/data/pptx/effectOrder.pptx"),
+                             PPTX);
+    utl::TempFile tempFile;
+    xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
+    xmlDocUniquePtr pXmlDocContent = parseExport(tempFile, "ppt/slides/slide1.xml");
+    assertXPathChildren(pXmlDocContent, "/p:sld/p:cSld/p:spTree/p:sp[3]/p:spPr/a:effectLst", 2);
+    // The relative order of effects is important: glow must be before shadow
+    CPPUNIT_ASSERT_EQUAL(0, getXPathPosition(pXmlDocContent,
+                                             "/p:sld/p:cSld/p:spTree/p:sp[3]/p:spPr/a:effectLst",
+                                             "glow"));
+    CPPUNIT_ASSERT_EQUAL(1, getXPathPosition(pXmlDocContent,
+                                             "/p:sld/p:cSld/p:spTree/p:sp[3]/p:spPr/a:effectLst",
+                                             "outerShdw"));
+
+    xDocShRef->DoClose();
+}
+
+void SdOOXMLExportTest2::testShapeSoftEdgeEffect()
+{
+    auto xDocShRef
+        = loadURL(m_directories.getURLFromSrc("sd/qa/unit/data/pptx/shape-soft-edges.pptx"), PPTX);
+    xDocShRef = saveAndReload(xDocShRef.get(), PPTX);
+    auto xShapeProps(getShapeFromPage(0, 0, xDocShRef));
+    sal_Int32 nRadius = -1;
+    xShapeProps->getPropertyValue("SoftEdgeRad") >>= nRadius;
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(635), nRadius); // 18 pt
 }
 
 CPPUNIT_TEST_SUITE_REGISTRATION(SdOOXMLExportTest2);

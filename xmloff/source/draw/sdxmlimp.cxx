@@ -33,6 +33,7 @@
 #include <xmloff/DocumentSettingsContext.hxx>
 #include <com/sun/star/awt/Rectangle.hpp>
 #include <com/sun/star/form/XFormsSupplier.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/style/XStyleFamiliesSupplier.hpp>
 #include <com/sun/star/drawing/XMasterPagesSupplier.hpp>
@@ -348,11 +349,6 @@ SdXMLImport::SdXMLImport(
         GetXMLToken(XML_NP_SMIL),
         GetXMLToken(XML_N_SMIL_COMPAT),
         XML_NAMESPACE_SMIL);
-
-    GetNamespaceMap().Add(
-        GetXMLToken(XML_NP_ANIMATION),
-        GetXMLToken(XML_N_ANIMATION),
-        XML_NAMESPACE_ANIMATION);
 }
 
 // XImporter
@@ -490,29 +486,6 @@ const SvXMLTokenMap& SdXMLImport::GetMasterPageElemTokenMap()
     return *mpMasterPageElemTokenMap;
 }
 
-const SvXMLTokenMap& SdXMLImport::GetMasterPageAttrTokenMap()
-{
-    if(!mpMasterPageAttrTokenMap)
-    {
-        static const SvXMLTokenMapEntry aMasterPageAttrTokenMap[] =
-        {
-            { XML_NAMESPACE_STYLE,  XML_NAME,                       XML_TOK_MASTERPAGE_NAME },
-            { XML_NAMESPACE_STYLE,  XML_DISPLAY_NAME,               XML_TOK_MASTERPAGE_DISPLAY_NAME },
-            { XML_NAMESPACE_STYLE,  XML_PAGE_LAYOUT_NAME,           XML_TOK_MASTERPAGE_PAGE_MASTER_NAME },
-            { XML_NAMESPACE_DRAW,   XML_STYLE_NAME,                 XML_TOK_MASTERPAGE_STYLE_NAME       },
-            { XML_NAMESPACE_PRESENTATION,   XML_PRESENTATION_PAGE_LAYOUT_NAME,  XML_TOK_MASTERPAGE_PAGE_LAYOUT_NAME },
-            { XML_NAMESPACE_PRESENTATION,   XML_USE_HEADER_NAME,                XML_TOK_MASTERPAGE_USE_HEADER_NAME  },
-            { XML_NAMESPACE_PRESENTATION,   XML_USE_FOOTER_NAME,                XML_TOK_MASTERPAGE_USE_FOOTER_NAME  },
-            { XML_NAMESPACE_PRESENTATION,   XML_USE_DATE_TIME_NAME,             XML_TOK_MASTERPAGE_USE_DATE_TIME_NAME   },
-            XML_TOKEN_MAP_END
-        };
-
-        mpMasterPageAttrTokenMap = std::make_unique<SvXMLTokenMap>(aMasterPageAttrTokenMap);
-    }
-
-    return *mpMasterPageAttrTokenMap;
-}
-
 const SvXMLTokenMap& SdXMLImport::GetPageMasterAttrTokenMap()
 {
     if(!mpPageMasterAttrTokenMap)
@@ -549,51 +522,6 @@ const SvXMLTokenMap& SdXMLImport::GetPageMasterStyleAttrTokenMap()
     }
 
     return *mpPageMasterStyleAttrTokenMap;
-}
-
-const SvXMLTokenMap& SdXMLImport::GetDrawPageAttrTokenMap()
-{
-    if(!mpDrawPageAttrTokenMap)
-    {
-        static const SvXMLTokenMapEntry aDrawPageAttrTokenMap[] =
-        {
-            { XML_NAMESPACE_DRAW,           XML_NAME,                           XML_TOK_DRAWPAGE_NAME               },
-            { XML_NAMESPACE_DRAW,           XML_STYLE_NAME,                     XML_TOK_DRAWPAGE_STYLE_NAME         },
-            { XML_NAMESPACE_DRAW,           XML_MASTER_PAGE_NAME,               XML_TOK_DRAWPAGE_MASTER_PAGE_NAME   },
-            { XML_NAMESPACE_PRESENTATION,   XML_PRESENTATION_PAGE_LAYOUT_NAME,  XML_TOK_DRAWPAGE_PAGE_LAYOUT_NAME   },
-            { XML_NAMESPACE_DRAW,           XML_ID,                             XML_TOK_DRAWPAGE_DRAWID                 },
-            { XML_NAMESPACE_XML,            XML_ID,                             XML_TOK_DRAWPAGE_XMLID                  },
-            { XML_NAMESPACE_XLINK,          XML_HREF,                           XML_TOK_DRAWPAGE_HREF               },
-            { XML_NAMESPACE_PRESENTATION,   XML_USE_HEADER_NAME,                XML_TOK_DRAWPAGE_USE_HEADER_NAME    },
-            { XML_NAMESPACE_PRESENTATION,   XML_USE_FOOTER_NAME,                XML_TOK_DRAWPAGE_USE_FOOTER_NAME    },
-            { XML_NAMESPACE_PRESENTATION,   XML_USE_DATE_TIME_NAME,             XML_TOK_DRAWPAGE_USE_DATE_TIME_NAME },
-
-            XML_TOKEN_MAP_END
-        };
-
-        mpDrawPageAttrTokenMap = std::make_unique<SvXMLTokenMap>(aDrawPageAttrTokenMap);
-    }
-
-    return *mpDrawPageAttrTokenMap;
-}
-
-const SvXMLTokenMap& SdXMLImport::GetDrawPageElemTokenMap()
-{
-    if(!mpDrawPageElemTokenMap)
-    {
-        static const SvXMLTokenMapEntry aDrawPageElemTokenMap[] =
-        {
-            { XML_NAMESPACE_PRESENTATION,   XML_NOTES,              XML_TOK_DRAWPAGE_NOTES      },
-            { XML_NAMESPACE_ANIMATION,      XML_PAR,                XML_TOK_DRAWPAGE_PAR        },
-            { XML_NAMESPACE_ANIMATION,      XML_SEQ,                XML_TOK_DRAWPAGE_SEQ        },
-            { XML_NAMESPACE_DRAW,           XML_LAYER_SET,          XML_TOK_DRAWPAGE_LAYER_SET  },
-            XML_TOKEN_MAP_END
-        };
-
-        mpDrawPageElemTokenMap = std::make_unique<SvXMLTokenMap>(aDrawPageElemTokenMap);
-    }
-
-    return *mpDrawPageElemTokenMap;
 }
 
 const SvXMLTokenMap& SdXMLImport::GetPresentationPlaceholderAttrTokenMap()

@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_BASEGFX_POLYGON_B2DLINEGEOMETRY_HXX
-#define INCLUDED_BASEGFX_POLYGON_B2DLINEGEOMETRY_HXX
+#pragma once
 
 #include <basegfx/numeric/ftools.hxx>
 #include <basegfx/polygon/b2dpolypolygon.hxx>
@@ -27,10 +26,8 @@
 #include <basegfx/basegfxdllapi.h>
 #include <basegfx/polygon/b2dpolygontriangulator.hxx>
 
-namespace basegfx
+namespace basegfx::utils
 {
-    namespace utils
-    {
         /** Create line start/end geometry element, mostly arrows and things like that.
 
             @param rCandidate
@@ -123,6 +120,13 @@ namespace basegfx
             the usual fallback to bevel is used. Allowed range is cropped
             to [F_PI .. 0.01 * F_PI].
 
+            Commit 51b5b93092d6231615de470c62494c24e54828a1 needs
+            revert, we need the triangulation for X11 fat line drawing
+
+            @param pTriangles
+            If given, the method will additionally add the created geometry as
+            B2DTriangle's
+
             @return
             The tools::PolyPolygon containing the geometry of the extended line by
             it's line width. Contains bezier segments and edge roundings as
@@ -135,11 +139,9 @@ namespace basegfx
             css::drawing::LineCap eCap,
             double fMaxAllowedAngle = basegfx::deg2rad(12.5),
             double fMaxPartOfEdge = 0.4,
-            double fMiterMinimumAngle = basegfx::deg2rad(15.0));
+            double fMiterMinimumAngle = basegfx::deg2rad(15.0),
+            basegfx::triangulator::B2DTriangleVector* pTriangles = nullptr);
 
-    } // end of namespace utils
-} // end of namespace basegfx
-
-#endif // INCLUDED_BASEGFX_POLYGON_B2DLINEGEOMETRY_HXX
+} // end of namespace basegfx::utils
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

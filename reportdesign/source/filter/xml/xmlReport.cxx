@@ -20,7 +20,6 @@
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
 #include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
 #include <xmloff/xmluconv.hxx>
 #include <xmloff/ProgressBarHelper.hxx>
 #include "xmlHelper.hxx"
@@ -53,9 +52,7 @@ OXMLReport::OXMLReport( ORptFilter& rImport,
     static const OUString s_sTRUE = ::xmloff::token::GetXMLToken(XML_TRUE);
     try
     {
-        sax_fastparser::FastAttributeList *pAttribList =
-                        sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-        for (auto &aIter : *pAttribList)
+        for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
         {
             OUString sValue = aIter.toString();
 
@@ -77,6 +74,7 @@ OXMLReport::OXMLReport( ORptFilter& rImport,
                     m_xReportDefinition->setFilter(sValue);
                     break;
                 case XML_ELEMENT(REPORT, XML_CAPTION):
+                case XML_ELEMENT(OFFICE, XML_CAPTION):
                     m_xReportDefinition->setCaption(sValue);
                     break;
                 case XML_ELEMENT(REPORT, XML_ESCAPE_PROCESSING):
@@ -89,6 +87,7 @@ OXMLReport::OXMLReport( ORptFilter& rImport,
                     m_xReportDefinition->setName(sValue);
                     break;
                 default:
+                    SAL_WARN("reportdesign", "unknown attribute " << SvXMLImport::getPrefixAndNameFromToken(aIter.getToken()) << " = " << sValue);
                     break;
             }
         }
@@ -126,7 +125,7 @@ css::uno::Reference< css::xml::sax::XFastContextHandler > OXMLReport::createFast
         sal_Int32 nElement,
         const css::uno::Reference< css::xml::sax::XFastAttributeList >& xAttrList )
 {
-    css::uno::Reference< css::xml::sax::XFastContextHandler > xContext = createFastChildContext_(nElement,xAttrList);
+    css::uno::Reference< css::xml::sax::XFastContextHandler > xContext = OXMLReportElementBase::createFastChildContext(nElement,xAttrList);
     if (xContext)
         return xContext;
 

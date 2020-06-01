@@ -21,8 +21,8 @@
 
 #include <ObjectIdentifier.hxx>
 
-namespace com { namespace sun { namespace star { namespace awt { struct KeyEvent; } } } }
-namespace com { namespace sun { namespace star { namespace chart2 { class XChartDocument; } } } }
+namespace com::sun::star::awt { struct KeyEvent; }
+namespace com::sun::star::chart2 { class XChartDocument; }
 
 #include <memory>
 #include <vector>
@@ -42,13 +42,15 @@ class ObjectHierarchy
 public:
     typedef std::vector< ObjectIdentifier > tChildContainer;
 
-    /** The content of the diagram (data series, wall, floor,
-        etc.) is treated as being at the same level as the diagram. (This is
-        used for keyboard navigation).
+    /** @param bFlattenDiagram
+            If <TRUE/>, the content of the diagram (data series, wall, floor,
+            etc.) is treated as being at the same level as the diagram. (This is
+            used for keyboard navigation).
      */
     explicit ObjectHierarchy(
         const css::uno::Reference< css::chart2::XChartDocument > & xChartDocument,
         ExplicitValueProvider * pExplicitValueProvider,
+        bool bFlattenDiagram = false,
         bool bOrderingForElementSelector = false );
     ~ObjectHierarchy();
 

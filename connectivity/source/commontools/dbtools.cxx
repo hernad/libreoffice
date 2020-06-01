@@ -19,7 +19,7 @@
 
 #include <connectivity/CommonTools.hxx>
 #include <TConnection.hxx>
-#include <connectivity/ParameterCont.hxx>
+#include <ParameterCont.hxx>
 
 #include <com/sun/star/awt/XWindow.hpp>
 #include <com/sun/star/beans/NamedValue.hpp>
@@ -946,11 +946,10 @@ try
     Reference< XPropertySetInfo> xOldInfo( xOldProps->getPropertySetInfo());
     Reference< XPropertySetInfo> xNewInfo( xNewProps->getPropertySetInfo());
 
-    Sequence< Property> aOldProperties = xOldInfo->getProperties();
+    const Sequence< Property> aOldProperties = xOldInfo->getProperties();
     Sequence< Property> aNewProperties = xNewInfo->getProperties();
     int nNewLen = aNewProperties.getLength();
 
-    Property* pOldProps = aOldProperties.getArray();
     Property* pNewProps = aNewProperties.getArray();
 
     OUString sPropFormatsSupplier("FormatsSupplier");
@@ -968,18 +967,18 @@ try
     OUString sPropClassId("ClassId");
     OUString sFormattedServiceName( "com.sun.star.form.component.FormattedField" );
 
-    for (sal_Int32 i=0; i<aOldProperties.getLength(); ++i)
+    for (const Property& rOldProp : aOldProperties)
     {
-        if ( pOldProps[i].Name != "DefaultControl" && pOldProps[i].Name != "LabelControl" )
+        if ( rOldProp.Name != "DefaultControl" && rOldProp.Name != "LabelControl" )
         {
             // binary search
             Property* pResult = std::lower_bound(
-                pNewProps, pNewProps + nNewLen, pOldProps[i], ::comphelper::PropertyCompareByName());
+                pNewProps, pNewProps + nNewLen, rOldProp, ::comphelper::PropertyCompareByName());
 
             if (   ( pResult != aNewProperties.end() )
-                && ( pResult->Name == pOldProps[i].Name )
+                && ( pResult->Name == rOldProp.Name )
                 && ( (pResult->Attributes & PropertyAttribute::READONLY) == 0 )
-                && ( pResult->Type.equals(pOldProps[i].Type)) )
+                && ( pResult->Type.equals(rOldProp.Type)) )
             {   // Attributes match and the property is not read-only
                 try
                 {
@@ -1246,7 +1245,10 @@ static Reference< XSingleSelectQueryComposer > getComposedRowSetStatement( const
             bool bApplyFilter = true;
             _rxRowSet->getPropertyValue("ApplyFilter") >>= bApplyFilter;
             if ( bApplyFilter )
+            {
                 aComposer.setFilter( getString( _rxRowSet->getPropertyValue("Filter") ) );
+                aComposer.setHavingClause( getString( _rxRowSet->getPropertyValue("HavingClause") ) );
+            }
 
             aComposer.getQuery();
 
@@ -1696,76 +1698,76 @@ void askForParameters(const Reference< XSingleSelectQueryComposer >& _xComposer,
     Reference<XIndexAccess>  xParamsAsIndicies = xParameters.is() ? xParameters->getParameters() : Reference<XIndexAccess>();
     sal_Int32 nParamCount = xParamsAsIndicies.is() ? xParamsAsIndicies->getCount() : 0;
     std::vector<bool, std::allocator<bool> > aNewParameterSet( _aParametersSet );
-    if ( nParamCount && std::count(aNewParameterSet.begin(),aNewParameterSet.end(),true) != nParamCount )
+    if ( !(nParamCount && std::count(aNewParameterSet.begin(),aNewParameterSet.end(),true) != nParamCount) )
+        return;
+
+    static const OUString PROPERTY_NAME(OMetaConnection::getPropMap().getNameByIndex(PROPERTY_ID_NAME));
+    aNewParameterSet.resize(nParamCount ,false);
+    typedef std::map< OUString, std::vector<sal_Int32> > TParameterPositions;
+    TParameterPositions aParameterNames;
+    for(sal_Int32 i = 0; i < nParamCount; ++i)
     {
-        static const OUString PROPERTY_NAME(OMetaConnection::getPropMap().getNameByIndex(PROPERTY_ID_NAME));
-        aNewParameterSet.resize(nParamCount ,false);
-        typedef std::map< OUString, std::vector<sal_Int32> > TParameterPositions;
-        TParameterPositions aParameterNames;
-        for(sal_Int32 i = 0; i < nParamCount; ++i)
+        Reference<XPropertySet> xParam(xParamsAsIndicies->getByIndex(i),UNO_QUERY);
+        OUString sName;
+        xParam->getPropertyValue(PROPERTY_NAME) >>= sName;
+
+        TParameterPositions::const_iterator aFind = aParameterNames.find(sName);
+        if ( aFind != aParameterNames.end() )
+            aNewParameterSet[i] = true;
+        aParameterNames[sName].push_back(i+1);
+    }
+    // build an interaction request
+    // two continuations (Ok and Cancel)
+    OInteractionAbort* pAbort = new OInteractionAbort;
+    OParameterContinuation* pParams = new OParameterContinuation;
+    // the request
+    ParametersRequest aRequest;
+    Reference<XIndexAccess> xWrappedParameters = new OParameterWrapper(aNewParameterSet,xParamsAsIndicies);
+    aRequest.Parameters = xWrappedParameters;
+    aRequest.Connection = _xConnection;
+    OInteractionRequest* pRequest = new OInteractionRequest(makeAny(aRequest));
+    Reference< XInteractionRequest > xRequest(pRequest);
+    // some knittings
+    pRequest->addContinuation(pAbort);
+    pRequest->addContinuation(pParams);
+
+    // execute the request
+    _rxHandler->handle(xRequest);
+
+    if (!pParams->wasSelected())
+    {
+        // canceled by the user (i.e. (s)he canceled the dialog)
+        RowSetVetoException e;
+        e.ErrorCode = ParameterInteractionCancelled;
+        throw e;
+    }
+
+    // now transfer the values from the continuation object to the parameter columns
+    Sequence< PropertyValue > aFinalValues = pParams->getValues();
+    const PropertyValue* pFinalValues = aFinalValues.getConstArray();
+    for (sal_Int32 i=0; i<aFinalValues.getLength(); ++i, ++pFinalValues)
+    {
+        Reference< XPropertySet > xParamColumn(xWrappedParameters->getByIndex(i),UNO_QUERY);
+        if (xParamColumn.is())
         {
-            Reference<XPropertySet> xParam(xParamsAsIndicies->getByIndex(i),UNO_QUERY);
             OUString sName;
-            xParam->getPropertyValue(PROPERTY_NAME) >>= sName;
+            xParamColumn->getPropertyValue(PROPERTY_NAME) >>= sName;
+            OSL_ENSURE(sName == pFinalValues->Name, "::dbaui::askForParameters: inconsistent parameter names!");
 
-            TParameterPositions::const_iterator aFind = aParameterNames.find(sName);
-            if ( aFind != aParameterNames.end() )
-                aNewParameterSet[i] = true;
-            aParameterNames[sName].push_back(i+1);
-        }
-        // build an interaction request
-        // two continuations (Ok and Cancel)
-        OInteractionAbort* pAbort = new OInteractionAbort;
-        OParameterContinuation* pParams = new OParameterContinuation;
-        // the request
-        ParametersRequest aRequest;
-        Reference<XIndexAccess> xWrappedParameters = new OParameterWrapper(aNewParameterSet,xParamsAsIndicies);
-        aRequest.Parameters = xWrappedParameters;
-        aRequest.Connection = _xConnection;
-        OInteractionRequest* pRequest = new OInteractionRequest(makeAny(aRequest));
-        Reference< XInteractionRequest > xRequest(pRequest);
-        // some knittings
-        pRequest->addContinuation(pAbort);
-        pRequest->addContinuation(pParams);
-
-        // execute the request
-        _rxHandler->handle(xRequest);
-
-        if (!pParams->wasSelected())
-        {
-            // canceled by the user (i.e. (s)he canceled the dialog)
-            RowSetVetoException e;
-            e.ErrorCode = ParameterInteractionCancelled;
-            throw e;
-        }
-
-        // now transfer the values from the continuation object to the parameter columns
-        Sequence< PropertyValue > aFinalValues = pParams->getValues();
-        const PropertyValue* pFinalValues = aFinalValues.getConstArray();
-        for (sal_Int32 i=0; i<aFinalValues.getLength(); ++i, ++pFinalValues)
-        {
-            Reference< XPropertySet > xParamColumn(xWrappedParameters->getByIndex(i),UNO_QUERY);
-            if (xParamColumn.is())
+            // determine the field type and ...
+            sal_Int32 nParamType = 0;
+            xParamColumn->getPropertyValue(OMetaConnection::getPropMap().getNameByIndex(PROPERTY_ID_TYPE)) >>= nParamType;
+            // ... the scale of the parameter column
+            sal_Int32 nScale = 0;
+            if (hasProperty(OMetaConnection::getPropMap().getNameByIndex(PROPERTY_ID_SCALE), xParamColumn))
+                xParamColumn->getPropertyValue(OMetaConnection::getPropMap().getNameByIndex(PROPERTY_ID_SCALE)) >>= nScale;
+                // (the index of the parameters is one-based)
+            TParameterPositions::const_iterator aFind = aParameterNames.find(pFinalValues->Name);
+            for(const auto& rItem : aFind->second)
             {
-                OUString sName;
-                xParamColumn->getPropertyValue(PROPERTY_NAME) >>= sName;
-                OSL_ENSURE(sName == pFinalValues->Name, "::dbaui::askForParameters: inconsistent parameter names!");
-
-                // determine the field type and ...
-                sal_Int32 nParamType = 0;
-                xParamColumn->getPropertyValue(OMetaConnection::getPropMap().getNameByIndex(PROPERTY_ID_TYPE)) >>= nParamType;
-                // ... the scale of the parameter column
-                sal_Int32 nScale = 0;
-                if (hasProperty(OMetaConnection::getPropMap().getNameByIndex(PROPERTY_ID_SCALE), xParamColumn))
-                    xParamColumn->getPropertyValue(OMetaConnection::getPropMap().getNameByIndex(PROPERTY_ID_SCALE)) >>= nScale;
-                    // (the index of the parameters is one-based)
-                TParameterPositions::const_iterator aFind = aParameterNames.find(pFinalValues->Name);
-                for(const auto& rItem : aFind->second)
+                if ( _aParametersSet.empty() || !_aParametersSet[rItem-1] )
                 {
-                    if ( _aParametersSet.empty() || !_aParametersSet[rItem-1] )
-                    {
-                        _xParameters->setObjectWithInfo(rItem, pFinalValues->Value, nParamType, nScale);
-                    }
+                    _xParameters->setObjectWithInfo(rItem, pFinalValues->Value, nParamType, nScale);
                 }
             }
         }
@@ -1965,8 +1967,8 @@ void checkDisposed(bool _bThrow)
 
 }
 
-OSQLColumns::Vector::const_iterator find(const OSQLColumns::Vector::const_iterator& first,
-                                        const OSQLColumns::Vector::const_iterator& last,
+OSQLColumns::const_iterator find(const OSQLColumns::const_iterator& first,
+                                        const OSQLColumns::const_iterator& last,
                                         const OUString& _rVal,
                                         const ::comphelper::UStringMixEqual& _rCase)
 {
@@ -1974,8 +1976,8 @@ OSQLColumns::Vector::const_iterator find(const OSQLColumns::Vector::const_iterat
     return find(first,last,sName,_rVal,_rCase);
 }
 
-OSQLColumns::Vector::const_iterator findRealName(const OSQLColumns::Vector::const_iterator& first,
-                                        const OSQLColumns::Vector::const_iterator& last,
+OSQLColumns::const_iterator findRealName(const OSQLColumns::const_iterator& first,
+                                        const OSQLColumns::const_iterator& last,
                                         const OUString& _rVal,
                                         const ::comphelper::UStringMixEqual& _rCase)
 {
@@ -1983,8 +1985,8 @@ OSQLColumns::Vector::const_iterator findRealName(const OSQLColumns::Vector::cons
     return find(first,last,sRealName,_rVal,_rCase);
 }
 
-OSQLColumns::Vector::const_iterator find(OSQLColumns::Vector::const_iterator first,
-                                        const OSQLColumns::Vector::const_iterator& last,
+OSQLColumns::const_iterator find(OSQLColumns::const_iterator first,
+                                        const OSQLColumns::const_iterator& last,
                                         const OUString& _rProp,
                                         const OUString& _rVal,
                                         const ::comphelper::UStringMixEqual& _rCase)

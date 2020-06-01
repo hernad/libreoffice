@@ -34,6 +34,7 @@
 #include <basegfx/utils/canvastools.hxx>
 #include <basegfx/vector/b2ivector.hxx>
 #include <com/sun/star/awt/Rectangle.hpp>
+#include <com/sun/star/awt/XWindow2.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/geometry/AffineMatrix2D.hpp>
 #include <com/sun/star/geometry/Matrix2D.hpp>
@@ -911,7 +912,10 @@ namespace canvas::tools
                                                             const ::basegfx::B2DHomMatrix&      i_transformation )
         {
             if( i_srcRect.isEmpty() )
-                return o_transform=i_transformation;
+            {
+                o_transform = i_transformation;
+                return o_transform;
+            }
 
             // transform by given transformation
             ::basegfx::B2DRectangle aTransformedRect;
@@ -1310,10 +1314,10 @@ namespace canvas::tools
         void extractExtraFontProperties(const uno::Sequence<beans::PropertyValue>& rExtraFontProperties,
                         sal_uInt32 &rEmphasisMark)
         {
-            for(sal_Int32 nIdx = 0; nIdx < rExtraFontProperties.getLength(); ++nIdx)
+            for(const beans::PropertyValue& rPropVal : rExtraFontProperties)
             {
-                if (rExtraFontProperties[nIdx].Name == "EmphasisMark")
-                    rExtraFontProperties[0].Value >>= rEmphasisMark;
+                if (rPropVal.Name == "EmphasisMark")
+                    rPropVal.Value >>= rEmphasisMark;
             }
         }
 

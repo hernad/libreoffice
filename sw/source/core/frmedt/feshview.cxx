@@ -1005,14 +1005,6 @@ void SwFEShell::SetLineEnds(SfxItemSet& rAttr, SdrObject const & rObj, sal_uInt1
     // and again, for the still missing ends
     switch (nSlotId)
     {
-        case SID_LINE_ARROW_CIRCLE:
-        {
-            long nValue = aSet.Get( XATTR_LINEWIDTH ).GetValue();
-            if( nValue > 0 )
-                nWidth = nValue * 3;
-        }
-        break;
-
         case SID_LINE_CIRCLE_ARROW:
         {
             // circle start
@@ -1812,7 +1804,7 @@ bool SwFEShell::ImpEndCreate()
     if( dynamic_cast<const SdrUnoObj*>( &rSdrObj) !=  nullptr )
     {
         SwPosition aPos( GetDoc()->GetNodes() );
-        SwCursorMoveState aState( MV_SETONLYTEXT );
+        SwCursorMoveState aState( CursorMoveState::SetOnlyText );
         Point aPoint( aPt.getX(), aPt.getY() + rBound.GetHeight()/2 );
         GetLayout()->GetModelPositionForViewPoint( &aPos, aPoint, &aState );
 
@@ -1857,7 +1849,7 @@ bool SwFEShell::ImpEndCreate()
         bool bBodyOnly = 0xFFFF == nIdent;
         bool bAtPage = false;
         const SwFrame* pPage = nullptr;
-        SwCursorMoveState aState( MV_SETONLYTEXT );
+        SwCursorMoveState aState( CursorMoveState::SetOnlyText );
         Point aPoint( aPt );
         SwPosition aPos( GetDoc()->GetNodes() );
         GetLayout()->GetModelPositionForViewPoint( &aPos, aPoint, &aState );

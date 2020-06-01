@@ -23,19 +23,11 @@
 #include <tools/diagnose_ex.h>
 #include <TableDesignHelpBar.hxx>
 #include <vcl/svapp.hxx>
-#include <vector>
 #include <FieldDescriptions.hxx>
-#include <dlgattr.hxx>
-#include <svx/numfmtsh.hxx>
-#include <svx/svxids.hrc>
-#include <svx/algitem.hxx>
-#include <svl/itempool.hxx>
 #include <svl/zforlist.hxx>
-#include <svl/rngitem.hxx>
-#include <svl/intitem.hxx>
 #include <svl/numuno.hxx>
 #include <vcl/transfer.hxx>
-#include <com/sun/star/lang/XUnoTunnel.hpp>
+#include <com/sun/star/sdbc/ColumnValue.hpp>
 #include <com/sun/star/util/NumberFormat.hpp>
 #include <com/sun/star/util/XNumberFormatPreviewer.hpp>
 #include <com/sun/star/util/XNumberFormatTypes.hpp>
@@ -75,9 +67,6 @@ namespace
 
 OFieldDescControl::OFieldDescControl(weld::Container* pPage, vcl::Window* pParent, OTableDesignHelpBar* pHelpBar)
     :TabPage(pPage ? Application::GetDefDialogParent() : pParent, WB_3DLOOK | WB_DIALOGCONTROL)
-    ,m_xBuilder(pPage ? Application::CreateBuilder(pPage, "dbaccess/ui/fielddescpage.ui")
-                      : Application::CreateInterimBuilder(this, "dbaccess/ui/fielddescpage.ui"))
-    ,m_xContainer(m_xBuilder->weld_container("FieldDescPage"))
     ,pHelp( pHelpBar )
     ,m_pLastFocusWindow(nullptr)
     ,m_pActFocusWindow(nullptr)
@@ -89,6 +78,43 @@ OFieldDescControl::OFieldDescControl(weld::Container* pPage, vcl::Window* pParen
     ,m_bAdded(false)
     ,pActFieldDescr(nullptr)
 {
+    if (pPage)
+        m_xBuilder.reset(Application::CreateBuilder(pPage, "dbaccess/ui/fielddescpage.ui"));
+    else
+    {
+        m_xVclContentArea = VclPtr<VclVBox>::Create(this);
+        m_xVclContentArea->Show();
+        m_xBuilder.reset(Application::CreateInterimBuilder(m_xVclContentArea, "dbaccess/ui/fielddescpage.ui"));
+
+        m_aLayoutIdle.SetPriority(TaskPriority::RESIZE);
+        m_aLayoutIdle.SetInvokeHandler( LINK( this, OFieldDescControl, ImplHandleLayoutTimerHdl ) );
+        m_aLayoutIdle.SetDebugName( "OFieldDescControl m_aLayoutIdle" );
+    }
+
+    m_xContainer = m_xBuilder->weld_container("FieldDescPage");
+}
+
+void OFieldDescControl::queue_resize(StateChangedType eReason)
+{
+    TabPage::queue_resize(eReason);
+    if (!m_xVclContentArea)
+        return;
+    if (m_aLayoutIdle.IsActive())
+        return;
+    m_aLayoutIdle.Start();
+}
+
+void OFieldDescControl::Resize()
+{
+    TabPage::Resize();
+    if (!m_xVclContentArea)
+        return;
+    queue_resize();
+}
+
+IMPL_LINK_NOARG(OFieldDescControl, ImplHandleLayoutTimerHdl, Timer*, void)
+{
+    m_xVclContentArea->SetPosSizePixel(Point(0,0), GetSizePixel());
 }
 
 OFieldDescControl::~OFieldDescControl()
@@ -98,6 +124,8 @@ OFieldDescControl::~OFieldDescControl()
 
 void OFieldDescControl::dispose()
 {
+    m_aLayoutIdle.Stop();
+
     if ( m_bAdded )
         ::dbaui::notifySystemWindow(this,this,::comphelper::mem_fun(&TaskPaneList::RemoveWindow));
 
@@ -144,6 +172,7 @@ void OFieldDescControl::dispose()
     m_xFormat.reset();
     m_xContainer.reset();
     m_xBuilder.reset();
+    m_xVclContentArea.disposeAndClear();
     TabPage::dispose();
 }
 
@@ -300,25 +329,25 @@ IMPL_LINK_NOARG(OFieldDescControl, FormatClickHdl, weld::Button&, void)
         return;
 
     SvNumberFormatter* pFormatter = pSupplierImpl->GetNumberFormatter();
-    if(::dbaui::callColumnFormatDialog(this,pFormatter,pActFieldDescr->GetType(),nOldFormatKey,rOldJustify,true))
-    {
-        bool bModified = false;
-        if(nOldFormatKey != pActFieldDescr->GetFormatKey())
-        {
-            pActFieldDescr->SetFormatKey( nOldFormatKey );
-            bModified = true;
-        }
-        if(rOldJustify != pActFieldDescr->GetHorJustify())
-        {
-            pActFieldDescr->SetHorJustify( rOldJustify );
-            bModified = true;
-        }
+    if(!::dbaui::callColumnFormatDialog(this,pFormatter,pActFieldDescr->GetType(),nOldFormatKey,rOldJustify,true))
+        return;
 
-        if(bModified)
-        {
-            SetModified(true);
-            UpdateFormatSample(pActFieldDescr);
-        }
+    bool bModified = false;
+    if(nOldFormatKey != pActFieldDescr->GetFormatKey())
+    {
+        pActFieldDescr->SetFormatKey( nOldFormatKey );
+        bModified = true;
+    }
+    if(rOldJustify != pActFieldDescr->GetHorJustify())
+    {
+        pActFieldDescr->SetHorJustify( rOldJustify );
+        bModified = true;
+    }
+
+    if(bModified)
+    {
+        SetModified(true);
+        UpdateFormatSample(pActFieldDescr);
     }
 }
 
@@ -597,6 +626,8 @@ void OFieldDescControl::ActivateAggregate( EControlType eType )
         m_xBoolDefault->show();
         break;
     }
+
+    queue_resize();
 }
 
 void OFieldDescControl::InitializeControl(OPropListBoxCtrl* _pControl,const OString& _sHelpId,bool _bAddChangeHandler)
@@ -692,6 +723,8 @@ void OFieldDescControl::DeactivateAggregate( EControlType eType )
         lcl_HideAndDeleteControl(m_nPos,m_xBoolDefault,m_xBoolDefaultText);
         break;
     }
+
+    queue_resize();
 }
 
 void OFieldDescControl::DisplayData(OFieldDescription* pFieldDescr )
@@ -733,7 +766,7 @@ void OFieldDescControl::DisplayData(OFieldDescription* pFieldDescr )
     ActivateAggregate( tpColumnName );
     ActivateAggregate( tpType );
 
-    OSL_ENSURE(pFieldType.get(),"We need a type information here!");
+    OSL_ENSURE(pFieldType,"We need a type information here!");
     // If the type has changed, substitute Controls
     if( m_pPreviousType != pFieldType )
     {
@@ -782,8 +815,8 @@ void OFieldDescControl::DisplayData(OFieldDescription* pFieldDescr )
         if (pFieldType->nMaximumScale)
         {
             ActivateAggregate( tpScale );
-            m_xScale->set_range(std::max<sal_Int32>(pFieldType->nMaximumScale,pFieldDescr->GetScale()),
-                                pFieldType->nMinimumScale);
+            m_xScale->set_range(pFieldType->nMinimumScale,
+                                std::max<sal_Int32>(pFieldType->nMaximumScale,pFieldDescr->GetScale()));
             m_xScale->set_editable(!pFieldType->aCreateParams.isEmpty() && pFieldType->aCreateParams != "PRECISION");
         }
         else
@@ -883,7 +916,7 @@ void OFieldDescControl::DisplayData(OFieldDescription* pFieldDescr )
     {
         DeactivateAggregate(tpRequired);
     }
-    else if (!m_xAutoIncrement && pFieldType.get())
+    else if (!m_xAutoIncrement && pFieldType)
     {
         if (pFieldType->bNullable)
             ActivateAggregate(tpRequired);
@@ -928,7 +961,7 @@ void OFieldDescControl::DisplayData(OFieldDescription* pFieldDescr )
         OUString sDef = BoolStringUI(sValue);
 
         // Make sure that <<none>> is only present if the field can be NULL
-        if ( ( pFieldType.get() && !pFieldType->bNullable ) || !pFieldDescr->IsNullable() )
+        if ( ( pFieldType && !pFieldType->bNullable ) || !pFieldDescr->IsNullable() )
         {
             pFieldDescr->SetIsNullable(ColumnValue::NO_NULLS); // The type says so
 
@@ -982,11 +1015,11 @@ void OFieldDescControl::DisplayData(OFieldDescription* pFieldDescr )
 
     if (m_xType)
     {
-        sal_Int32 nPos = pFieldType.get() ? m_xType->find_text(pFieldDescr->getTypeInfo()->aUIName) : -1;
+        sal_Int32 nPos = pFieldType ? m_xType->find_text(pFieldDescr->getTypeInfo()->aUIName) : -1;
         if (nPos == -1)
         {
             const OTypeInfoMap* pMap = getTypeInfo();
-            OTypeInfoMap::const_iterator aIter = pMap->find(pFieldType.get() ? pFieldDescr->getTypeInfo()->nType : pFieldDescr->GetType());
+            OTypeInfoMap::const_iterator aIter = pMap->find(pFieldType ? pFieldDescr->getTypeInfo()->nType : pFieldDescr->GetType());
             if(aIter == pMap->end() && !pMap->empty())
             {
                 aIter = pMap->begin();

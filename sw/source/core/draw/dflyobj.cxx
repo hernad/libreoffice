@@ -181,7 +181,7 @@ namespace drawinglayer::primitive2d
             const basegfx::B2DRange& getOuterRange() const { return maOuterRange; }
 
             /// provide unique ID
-            DeclPrimitive2DIDBlock()
+            virtual sal_uInt32 getPrimitive2DID() const override;
         };
 
         }
@@ -817,7 +817,7 @@ void SwVirtFlyDrawObj::NbcCrop(const basegfx::B2DPoint& rRef, double fxFact, dou
         aGraphicSize = OutputDevice::LogicToLogic( aGraphicSize, pGraphicObject->GetPrefMapMode(), aMapMode100thmm);
     }
 
-    if( aGraphicSize.Width() == 0 || aGraphicSize.Height() == 0 )
+    if( aGraphicSize.IsEmpty() )
     {
         return ;
     }
@@ -1271,8 +1271,8 @@ SdrObject* SwVirtFlyDrawObj::CheckMacroHit( const SdrObjMacroHitRec& rRec ) cons
         {
             aRect.Pos().setX(aRect.Pos().getX() + rRec.nTol);
             aRect.Pos().setY(aRect.Pos().getY() + rRec.nTol);
-            aRect.SSize().AdjustHeight( -(2 * rRec.nTol) );
-            aRect.SSize().AdjustWidth( -(2 * rRec.nTol) );
+            aRect.AddHeight( -(2 * rRec.nTol) );
+            aRect.AddWidth( -(2 * rRec.nTol) );
 
             if( aRect.IsInside( rRec.aPos ) )
             {

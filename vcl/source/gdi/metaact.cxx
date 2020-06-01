@@ -100,7 +100,7 @@ meta_action_name(MetaActionType nMetaAction)
     default:
         // Yes, return a pointer to a static buffer. This is a very
         // local debugging output function, so no big deal.
-        static char buffer[6];
+        static char buffer[11];
         sprintf(buffer, "%u", static_cast<unsigned int>(nMetaAction));
         return buffer;
     }
@@ -3064,8 +3064,8 @@ void MetaEPSAction::Write( SvStream& rOStm, ImplMetaWriteData* pData )
     MetaAction::Write(rOStm, pData);
     VersionCompat aCompat(rOStm, StreamMode::WRITE, 1);
 
-    WriteGfxLink( rOStm, maGfxLink );
     TypeSerializer aSerializer(rOStm);
+    aSerializer.writeGfxLink(maGfxLink);
     aSerializer.writePoint(maPoint);
     aSerializer.writeSize(maSize);
     maSubst.Write( rOStm );
@@ -3074,8 +3074,8 @@ void MetaEPSAction::Write( SvStream& rOStm, ImplMetaWriteData* pData )
 void MetaEPSAction::Read( SvStream& rIStm, ImplMetaReadData* )
 {
     VersionCompat aCompat(rIStm, StreamMode::READ);
-    ReadGfxLink( rIStm, maGfxLink );
     TypeSerializer aSerializer(rIStm);
+    aSerializer.readGfxLink(maGfxLink);
     aSerializer.readPoint(maPoint);
     aSerializer.readSize(maSize);
     ReadGDIMetaFile( rIStm, maSubst );

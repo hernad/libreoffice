@@ -17,7 +17,7 @@
 #include <sfx2/viewsh.hxx>
 #include <cstddef>
 #include <rtl/string.hxx>
-#include <o3tl/optional.hxx>
+#include <optional>
 
 struct SFX2_DLLPUBLIC LokMouseEventData
 {
@@ -27,7 +27,7 @@ struct SFX2_DLLPUBLIC LokMouseEventData
     MouseEventModifiers meModifiers;
     int mnButtons;
     int mnModifier;
-    o3tl::optional<Point> maLogicPosition;
+    std::optional<Point> maLogicPosition;
 
     LokMouseEventData(int nType, Point aPosition, int nCount, MouseEventModifiers eModifiers, int nButtons, int nModifier)
         : mnType(nType)
@@ -54,8 +54,18 @@ public:
     static std::size_t getViewsCount();
     /// Get viewIds of all existing views.
     static bool getViewIds(int* pArray, size_t nSize);
+    /// Get the default language that should be used for views
+    static LanguageTag getDefaultLanguage();
     /// Set language of the given view.
     static void setViewLanguage(int nId, const OUString& rBcp47LanguageTag);
+    /// Set the default language for views.
+    static void setDefaultLanguage(const OUString& rBcp47LanguageTag);
+    /// Set the locale for the given view.
+    static void setViewLocale(int nId, const OUString& rBcp47LanguageTag);
+    /// Get the device form factor that should be used for a new view.
+    static LOKDeviceFormFactor getDeviceFormFactor();
+    /// Set the device form factor that should be used for a new view.
+    static void setDeviceFormFactor(const OUString& rDeviceFormFactor);
     /// Iterate over any view shell, except pThisViewShell, passing it to the f function.
     template<typename ViewShellType, typename FunctionType>
     static void forEachOtherView(ViewShellType* pThisViewShell, FunctionType f);
@@ -77,7 +87,7 @@ public:
     /// Emits a LOK_CALLBACK_INVALIDATE_TILES, but tweaks it according to setOptionalFeatures() if needed.
     static void notifyInvalidation(SfxViewShell const* pThisView, const OString& rPayload);
     /// Emits a LOK_CALLBACK_INVALIDATE_VISIBLE_CURSOR, but tweaks it according to setOptionalFeatures() if needed.
-    static void notifyVisCursorInvalidation(OutlinerViewShell const* pThisView, const OString& rRectangle, bool bMispelledWord = false);
+    static void notifyVisCursorInvalidation(OutlinerViewShell const* pThisView, const OString& rRectangle, bool bMispelledWord = false, const OString& rHyperlink = "");
     /// Notifies all views with the given type and payload.
     static void notifyAllViews(int nType, const OString& rPayload);
 

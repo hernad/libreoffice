@@ -27,10 +27,10 @@
 #include <memory>
 #include <vector>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace beans { class XPropertySet; }
     namespace uno { template<class A> class Reference; }
-} } }
+}
 
 
 /** This class maintains an OUString->sal_Int16 mapping for cases in
@@ -62,7 +62,7 @@ class XMLPropertyBackpatcher
 {
 
     /// name of property that gets set or backpatched
-     OUString const sPropertyName;
+     OUString sPropertyName;
 
     /// backpatch list type
     typedef ::std::vector<

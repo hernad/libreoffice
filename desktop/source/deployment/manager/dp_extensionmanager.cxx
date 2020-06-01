@@ -239,9 +239,8 @@ void ExtensionManager::addExtensionsToMap(
         ++index;
     }
 
-    for (int i = 0; i < seqExt.getLength(); ++i)
+    for (const Reference<css::deployment::XPackage>& xExtension : seqExt)
     {
-        Reference<css::deployment::XPackage> const & xExtension = seqExt[i];
         OUString id = dp_misc::getIdentifier(xExtension);
         id2extensions::iterator ivec =  mapExt.find(id);
         if (ivec == mapExt.end())
@@ -553,7 +552,7 @@ bool ExtensionManager::doChecksForAddExtension(
         ExtensionProperties props(OUString(), properties, Reference<ucb::XCommandEnvironment>(), m_xContext);
 
         dp_misc::DescriptionInfoset info(dp_misc::getDescriptionInfoset(xTmpExtension->getURL()));
-        const ::o3tl::optional<dp_misc::SimpleLicenseAttributes> licenseAttributes =
+        const ::std::optional<dp_misc::SimpleLicenseAttributes> licenseAttributes =
             info.getSimpleLicenseAttributes();
 
         if (licenseAttributes && licenseAttributes->suppressIfRequired
@@ -931,19 +930,19 @@ void ExtensionManager::enableExtension(
         excOccurred <<= exc;
     }
 
-    if (excOccurred.hasValue())
+    if (!excOccurred.hasValue())
+        return;
+
+    try
     {
-        try
-        {
-            activateExtension(dp_misc::getIdentifier(extension),
-                              extension->getName(), bUserDisabled, false,
-                              xAbortChannel, xCmdEnv);
-        }
-        catch (...)
-        {
-        }
-        ::cppu::throwException(excOccurred);
+        activateExtension(dp_misc::getIdentifier(extension),
+                          extension->getName(), bUserDisabled, false,
+                          xAbortChannel, xCmdEnv);
     }
+    catch (...)
+    {
+    }
+    ::cppu::throwException(excOccurred);
 }
 
 sal_Int32 ExtensionManager::checkPrerequisitesAndEnable(
@@ -1032,19 +1031,19 @@ void ExtensionManager::disableExtension(
         excOccurred <<= exc;
     }
 
-    if (excOccurred.hasValue())
+    if (!excOccurred.hasValue())
+        return;
+
+    try
     {
-        try
-        {
-            activateExtension(dp_misc::getIdentifier(extension),
-                              extension->getName(), bUserDisabled, false,
-                              xAbortChannel, xCmdEnv);
-        }
-        catch (...)
-        {
-        }
-        ::cppu::throwException(excOccurred);
+        activateExtension(dp_misc::getIdentifier(extension),
+                          extension->getName(), bUserDisabled, false,
+                          xAbortChannel, xCmdEnv);
     }
+    catch (...)
+    {
+    }
+    ::cppu::throwException(excOccurred);
 }
 
 uno::Sequence< Reference<css::deployment::XPackage> >
@@ -1142,17 +1141,17 @@ void ExtensionManager::reinstallDeployedExtensions(
         {
             const uno::Sequence< Reference<css::deployment::XPackage> > extensions(
                 xPackageManager->getDeployedPackages(xAbortChannel, xCmdEnv));
-            for ( sal_Int32 pos = 0; pos < extensions.getLength(); ++pos )
+            for ( const Reference<css::deployment::XPackage>& package : extensions )
             {
                 try
                 {
                     beans::Optional< beans::Ambiguous< sal_Bool > > registered(
-                        extensions[pos]->isRegistered(xAbortChannel, xCmdEnv));
+                        package->isRegistered(xAbortChannel, xCmdEnv));
                     if (registered.IsPresent &&
                         !(registered.Value.IsAmbiguous ||
                           registered.Value.Value))
                     {
-                        const OUString id = dp_misc::getIdentifier(extensions[ pos ]);
+                        const OUString id = dp_misc::getIdentifier(package);
                         OSL_ASSERT(!id.isEmpty());
                         disabledExts.insert(id);
                     }
@@ -1172,12 +1171,12 @@ void ExtensionManager::reinstallDeployedExtensions(
         const uno::Sequence< Reference<css::deployment::XPackage> > extensions(
             xPackageManager->getDeployedPackages(xAbortChannel, xCmdEnv));
 
-        for ( sal_Int32 pos = 0; pos < extensions.getLength(); ++pos )
+        for ( const Reference<css::deployment::XPackage>& package : extensions )
         {
             try
             {
-                const OUString id =  dp_misc::getIdentifier(extensions[ pos ]);
-                const OUString fileName = extensions[ pos ]->getName();
+                const OUString id =  dp_misc::getIdentifier(package);
+                const OUString fileName = package->getName();
                 OSL_ASSERT(!id.isEmpty());
                 activateExtension(
                     id, fileName, disabledExts.find(id) != disabledExts.end(),
@@ -1237,10 +1236,8 @@ sal_Bool ExtensionManager::synchronize(
         {
             const uno::Sequence<uno::Sequence<Reference<css::deployment::XPackage> > >
                 seqSeqExt = getAllExtensions(xAbortChannel, xCmdEnv);
-            for (sal_Int32 i = 0; i < seqSeqExt.getLength(); i++)
+            for (uno::Sequence<Reference<css::deployment::XPackage> > const & seqExt : seqSeqExt)
             {
-                uno::Sequence<Reference<css::deployment::XPackage> > const & seqExt =
-                    seqSeqExt[i];
                 activateExtension(seqExt, isUserDisabled(seqExt), true,
                                   xAbortChannel, xCmdEnv);
             }

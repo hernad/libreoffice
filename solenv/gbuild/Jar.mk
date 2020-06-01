@@ -54,7 +54,6 @@ gb_Jar_get_install_target = $(call gb_Jar__get_dir_for_layer,$(call gb_Jar__get_
 # the archive with the main class hierarchy and then updating it from
 # the other one(s), which seems to work .-)
 define gb_Jar__command
-	$(call gb_Output_announce,$(1),$(true),JAR,3)
 	$(call gb_Helper_abbreviate_dirs,\
 	mkdir -p $(call gb_Jar_get_workdir,$(1))/META-INF && \
 	echo Manifest-Version: 1.0 > $(call gb_Jar_get_manifest_target,$(1)) && \
@@ -79,7 +78,10 @@ $(call gb_Jar_get_clean_target,%) : $(call gb_JavaClassSet_get_clean_target,$(ca
 
 # rule for creating the jar file using the command defined above
 $(WORKDIR)/Jar/%.jar :
+	$(call gb_Output_announce,$*,$(true),JAR,3)
+	$(call gb_Trace_StartRange,$*,JAR)
 	$(call gb_Jar__command,$*,$@)
+	$(call gb_Trace_EndRange,$*,JAR)
 
 # call gb_Jar__make_installed_rule,jar
 define gb_Jar__make_installed_rule
@@ -89,9 +91,10 @@ $(call gb_Jar_get_target,$(1)) :
 endef
 
 # resets scoped variables (see explanations where they are set)
-# creates a class set and a dependency to it 
+# creates a class set and a dependency to it
 # registers target and clean target
 # adds jar files to DeliverLogTarget
+# call gb_Jar_Jar,jarname,java9modulename
 define gb_Jar_Jar
 ifeq (,$$(findstring $(1),$$(gb_Jar_KNOWN)))
 $$(eval $$(call gb_Output_info,Currently known jars are: $(sort $(gb_Jar_KNOWN)),ALL))
@@ -104,7 +107,7 @@ $(call gb_Jar_get_target,$(1)) : PACKAGEDIRS :=
 $(call gb_Jar_get_target,$(1)) : PACKAGEFILES :=
 $(call gb_Jar_get_target,$(1)) : \
 	$(call gb_JavaClassSet_get_target,$(call gb_Jar_get_classsetname,$(1)))
-$(call gb_JavaClassSet_JavaClassSet,$(call gb_Jar_get_classsetname,$(1)))
+$(call gb_JavaClassSet_JavaClassSet,$(call gb_Jar_get_classsetname,$(1)),$(2))
 $(eval $(call gb_Module_register_target,$(call gb_Jar_get_target,$(1)),$(call gb_Jar_get_clean_target,$(1))))
 $(call gb_Helper_make_userfriendly_targets,$(1),Jar,$(call gb_Jar_get_target,$(1)))
 
@@ -118,6 +121,12 @@ define gb_Jar_add_sourcefile
 $(call gb_JavaClassSet_add_sourcefile,$(call gb_Jar_get_classsetname,$(1)),$(2))
 
 endef
+
+define gb_Jar_add_sourcefile_java9
+$(call gb_JavaClassSet_add_sourcefile_java9,$(call gb_Jar_get_classsetname,$(1)),$(2))
+
+endef
+
 
 # PACKAGEROOTS is the list of all root folders created by the JavaClassSet to pack into the jar (without META-INF as this is added automatically)
 define gb_Jar_set_packageroot
@@ -157,6 +166,11 @@ $(foreach sourcefile,$(2),$(call gb_Jar_add_sourcefile,$(1),$(sourcefile)))
 
 endef
 
+define gb_Jar_add_sourcefiles_java9
+$(foreach sourcefile,$(2),$(call gb_Jar_add_sourcefile_java9,$(1),$(sourcefile)))
+
+endef
+
 define gb_Jar_add_generated_sourcefile
 $(call gb_JavaClassSet_add_generated_sourcefile,$(call gb_Jar_get_classsetname,$(1)),$(2))
 
@@ -182,9 +196,8 @@ $(call gb_Jar_get_target,$(1)) : $(2)
 
 endef
 
-# URE jars are not added to manifest classpath; and neither is unoil.jar, which
-# is available at runtime via URE_MORE_JAVA_TYPES:
-gb_Jar_default_jars := $(gb_Jar_URE) unoil
+# URE jars are not added to manifest classpath:
+gb_Jar_default_jars := $(gb_Jar_URE)
 
 # remember: classpath is "inherited" to ClassSet
 define gb_Jar_use_jar
@@ -250,7 +263,7 @@ define gb_Jar_use_external_project
 $(call gb_JavaClassSet_use_external_project,$(call gb_Jar_get_classsetname,$(1)),$(2))
 endef
 
-# possible directories for jar files containing UNO services 
+# possible directories for jar files containing UNO services
 gb_Jar_COMPONENTPREFIXES := \
     OOO:vnd.sun.star.expand:\dLO_JAVA_DIR/ \
     URE:vnd.sun.star.expand:\dURE_INTERNAL_JAVA_DIR/ \

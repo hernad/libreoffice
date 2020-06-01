@@ -23,7 +23,7 @@
 #include <undobj.hxx>
 #include <rtl/ustring.hxx>
 #include <memory>
-#include <o3tl/optional.hxx>
+#include <optional>
 
 class SwRedlineSaveDatas;
 class SwTextNode;
@@ -38,7 +38,7 @@ class SwUndoDelete
     , private SwUndoSaveContent
 {
     std::unique_ptr<SwNodeIndex> m_pMvStt;            // Position of Nodes in UndoNodes-Array
-    o3tl::optional<OUString> m_aSttStr, m_aEndStr;
+    std::optional<OUString> m_aSttStr, m_aEndStr;
     std::unique_ptr<SwRedlineSaveDatas> m_pRedlSaveData;
     std::shared_ptr< ::sfx2::MetadatableUndo > m_pMetadataUndoStart;
     std::shared_ptr< ::sfx2::MetadatableUndo > m_pMetadataUndoEnd;
@@ -55,10 +55,10 @@ class SwUndoDelete
     bool m_bBackSp : 1;        // TRUE: if Grouped and preceding content deleted
     bool m_bJoinNext: 1;       // TRUE: if range is selected forwards
     bool m_bTableDelLastNd : 1;  // TRUE: TextNode following Table inserted/deleted
-    bool const m_bDelFullPara : 1;   // TRUE: entire Nodes were deleted
+    bool m_bDelFullPara : 1;   // TRUE: entire Nodes were deleted
     bool m_bResetPgDesc : 1;   // TRUE: reset PgDsc on following node
     bool m_bResetPgBrk : 1;    // TRUE: reset PgBreak on following node
-    bool const m_bFromTableCopy : 1; // TRUE: called by SwUndoTableCpyTable
+    bool m_bFromTableCopy : 1; // TRUE: called by SwUndoTableCpyTable
 
     bool SaveContent( const SwPosition* pStt, const SwPosition* pEnd,
                     SwTextNode* pSttTextNd, SwTextNode* pEndTextNd );

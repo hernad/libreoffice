@@ -22,6 +22,7 @@
 #include <bitmaps.hlst>
 #include "formbrowsertools.hxx"
 #include "formstrings.hxx"
+#include "modulepcr.hxx"
 #include <com/sun/star/form/FormComponentType.hpp>
 #include <com/sun/star/container/XChild.hpp>
 #include <com/sun/star/container/XIndexAccess.hpp>
@@ -32,6 +33,7 @@
 #include <comphelper/types.hxx>
 #include <sal/log.hxx>
 #include <tools/debug.hxx>
+#include <rtl/ustrbuf.hxx>
 
 
 namespace pcr

@@ -46,6 +46,7 @@
 #include <vcl/wall.hxx>
 #include <o3tl/safeint.hxx>
 #include <o3tl/typed_flags_set.hxx>
+#include <o3tl/lru_map.hxx>
 #include <comphelper/hash.hxx>
 #include <tools/stream.hxx>
 
@@ -112,10 +113,15 @@ constexpr sal_Int32 g_nInheritedPageHeight = 842; // default A4 in inch/72
 
 struct PDFPage
 {
-    VclPtr<PDFWriterImpl>             m_pWriter;
-    double const                      m_nPageWidth;           // in inch/72
-    double const                      m_nPageHeight;          // in inch/72
-    PDFWriter::Orientation const      m_eOrientation;
+    VclPtr<PDFWriterImpl>       m_pWriter;
+    double                      m_nPageWidth;           // in inch/72
+    double                      m_nPageHeight;          // in inch/72
+    /**
+     * A positive number that gives the size of default user space units, in multiples of points.
+     * Typically 1, larger if page size is > 508 cm.
+     */
+    sal_Int32 m_nUserUnit;
+    PDFWriter::Orientation      m_eOrientation;
     sal_Int32                   m_nPageObject;
     std::vector<sal_Int32>      m_aStreamObjects;
     sal_Int32                   m_nStreamLengthObject;
@@ -167,7 +173,7 @@ struct PDFPage
 
     void appendMatrix3(Matrix3 const & rMatrix, OStringBuffer& rBuffer);
 
-    double getHeight() const { return m_nPageHeight ? m_nPageHeight : vcl::pdf::g_nInheritedPageHeight; }
+    double getHeight() const;
 };
 
 /// Contains information to emit a reference XObject.
@@ -183,11 +189,13 @@ struct ReferenceXObjectEmit
     Size m_aPixelSize;
     /// PDF data from the graphic object, if not writing a reference XObject.
     std::vector<sal_Int8> m_aPDFData;
+    sal_Int32 m_nPDFPageIndex;
 
     ReferenceXObjectEmit()
         : m_nFormObject(0),
           m_nEmbeddedObject(0),
-          m_nBitmapObject(0)
+          m_nBitmapObject(0),
+          m_nPDFPageIndex(-1)
     {
     }
 
@@ -702,6 +710,10 @@ private:
     sal_Int32                           m_nNextFID;
     PDFFontCache                        m_aFontCache;
 
+    /// Cache some most recent bitmaps we've exported, in case we encounter them again..
+    o3tl::lru_map<BitmapChecksum,
+                  std::shared_ptr<SvMemoryStream>> m_aPDFBmpCache;
+
     sal_Int32                           m_nCurrentPage;
 
     sal_Int32                           m_nCatalogObject;
@@ -975,6 +987,8 @@ i12626
 
     /* PDF/UA support enabled */
     bool m_bIsPDF_UA;
+
+    bool            m_bIsPDF_A3;
 
     PDFWriter&      m_rOuterFace;
 

@@ -22,8 +22,6 @@
 
 #include <sal/config.h>
 
-#include <sal/types.h>
-
 extern "C" {
 
 void createRegistryInfo_ButtonNavigationHandler();
@@ -45,7 +43,6 @@ void createRegistryInfo_ObjectInspectorModel();
 void createRegistryInfo_StringRepresentation();
 void createRegistryInfo_SubmissionPropertyHandler();
 void createRegistryInfo_XSDValidationPropertyHandler();
-
 }
 
 #endif

@@ -23,6 +23,7 @@
 #include "rtfsdrexport.hxx"
 #include "rtfattributeoutput.hxx"
 #include <com/sun/star/document/XDocumentPropertiesSupplier.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/i18n/ScriptType.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/beans/XPropertySetInfo.hpp>
@@ -43,11 +44,9 @@
 #include <editeng/boxitem.hxx>
 #include <editeng/shaditem.hxx>
 #include <lineinfo.hxx>
-#include <poolfmt.hxx>
 #include <redline.hxx>
 #include <swmodule.hxx>
 #include <IDocumentLayoutAccess.hxx>
-#include <IDocumentStylePoolAccess.hxx>
 #include <comphelper/string.hxx>
 #include <svtools/rtfkeywd.hxx>
 #include <filter/msfilter/rtfutil.hxx>
@@ -59,7 +58,6 @@
 #include <iostream>
 #endif
 #include <svx/xflclit.hxx>
-#include <editeng/hyphenzoneitem.hxx>
 #include <fmtmeta.hxx>
 #include <IDocumentSettingAccess.hxx>
 #include <fmtfsize.hxx>
@@ -422,7 +420,7 @@ void RtfExport::WriteMainText()
 {
     SAL_INFO("sw.rtf", OSL_THIS_FUNC << " start");
 
-    if (std::shared_ptr<SvxBrushItem> oBrush = getBackground(); oBrush)
+    if (std::unique_ptr<SvxBrushItem> oBrush = getBackground(); oBrush)
     {
         Strm().WriteCharPtr(LO_STRING_SVTOOLS_RTF_VIEWBKSP).WriteChar('1');
         Strm().WriteCharPtr("{" OOO_STRING_SVTOOLS_RTF_IGNORE OOO_STRING_SVTOOLS_RTF_BACKGROUND);
@@ -711,16 +709,9 @@ ErrCode RtfExport::ExportDocument_Impl()
         .WriteCharPtr(SAL_NEWLINE_STRING);
 
     // Automatic hyphenation: it's a global setting in Word, it's a paragraph setting in Writer.
-    // Use the setting from the default style.
-    SwTextFormatColl* pTextFormatColl = m_pDoc->getIDocumentStylePoolAccess().GetTextCollFromPool(
-        RES_POOLCOLL_STANDARD, /*bRegardLanguage=*/false);
-    const SfxPoolItem* pItem;
-    if (pTextFormatColl
-        && pTextFormatColl->GetItemState(RES_PARATR_HYPHENZONE, false, &pItem) == SfxItemState::SET)
-    {
-        Strm().WriteCharPtr(OOO_STRING_SVTOOLS_RTF_HYPHAUTO);
-        OutULong(int(static_cast<const SvxHyphenZoneItem*>(pItem)->IsHyphen()));
-    }
+    // Set it's value to "auto" and disable on paragraph level, if no hyphenation is used there.
+    Strm().WriteCharPtr(OOO_STRING_SVTOOLS_RTF_HYPHAUTO);
+    OutULong(1);
 
     // Zoom
     SwViewShell* pViewShell(m_pDoc->getIDocumentLayoutAccess().GetCurrentViewShell());
@@ -834,6 +825,7 @@ ErrCode RtfExport::ExportDocument_Impl()
         Strm()
             .WriteCharPtr(OOO_STRING_SVTOOLS_RTF_SECTD)
             .WriteCharPtr(OOO_STRING_SVTOOLS_RTF_SBKNONE);
+        m_pAttrOutput->SectFootnoteEndnotePr();
         // All sections are unlocked by default
         Strm().WriteCharPtr(OOO_STRING_SVTOOLS_RTF_SECTUNLOCKED);
         OutLong(1);
@@ -895,7 +887,7 @@ ErrCode RtfExport::ExportDocument_Impl()
             case SVX_NUM_ROMAN_UPPER:
                 pOut = OOO_STRING_SVTOOLS_RTF_FTNNRUC;
                 break;
-            case SVX_NUM_CHAR_SPECIAL:
+            case SVX_NUM_SYMBOL_CHICAGO:
                 pOut = OOO_STRING_SVTOOLS_RTF_FTNNCHI;
                 break;
             default:
@@ -928,7 +920,7 @@ ErrCode RtfExport::ExportDocument_Impl()
             case SVX_NUM_ROMAN_UPPER:
                 pOut = OOO_STRING_SVTOOLS_RTF_AFTNNRUC;
                 break;
-            case SVX_NUM_CHAR_SPECIAL:
+            case SVX_NUM_SYMBOL_CHICAGO:
                 pOut = OOO_STRING_SVTOOLS_RTF_AFTNNCHI;
                 break;
             default:
@@ -1385,7 +1377,7 @@ void RtfExport::OutPageDescription(const SwPageDesc& rPgDsc, bool bCheckForFirst
 
     // numbering type
     AttrOutput().SectionPageNumbering(m_pCurrentPageDesc->GetNumType().GetNumberingType(),
-                                      o3tl::nullopt);
+                                      std::nullopt);
 
     m_pCurrentPageDesc = pSave;
     SAL_INFO("sw.rtf", OSL_THIS_FUNC << " end");

@@ -29,7 +29,9 @@ Qt5SvpGraphics::Qt5SvpGraphics(Qt5Frame* pFrame)
     , m_pFrame(pFrame)
 {
     if (!Qt5Data::noNativeControls())
-        m_pWidgetDraw.reset(new Qt5Graphics_Controls());
+        m_pWidgetDraw.reset(new Qt5Graphics_Controls(*this));
+    if (m_pFrame)
+        setDevicePixelRatioF(m_pFrame->devicePixelRatioF());
 }
 
 Qt5SvpGraphics::~Qt5SvpGraphics() {}
@@ -81,6 +83,8 @@ void Qt5SvpGraphics::handleDamage(const tools::Rectangle& rDamagedRegion)
 
     QImage* pImage = static_cast<Qt5Graphics_Controls*>(m_pWidgetDraw.get())->getImage();
     assert(pImage);
+    if (pImage->width() == 0 || pImage->height() == 0)
+        return;
 
     BitmapBuffer aBuffer;
     QImage2BitmapBuffer(*pImage, aBuffer);

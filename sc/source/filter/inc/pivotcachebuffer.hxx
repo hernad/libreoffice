@@ -28,11 +28,11 @@
 namespace oox { class AttributeList; }
 namespace oox { class SequenceInputStream; }
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace sheet { class XDataPilotField; }
-} } }
+}
 
-namespace oox { namespace core { class Relations; } }
+namespace oox::core { class Relations; }
 
 class ScDPSaveDimension;
 class ScDPObject;
@@ -190,7 +190,7 @@ struct PCFieldGroupModel
 /** Helper struct for mapping original item names from/to group item names. */
 struct PivotCacheGroupItem
 {
-    OUString const maOrigName;
+    OUString     maOrigName;
     OUString     maGroupName;
 
     explicit     PivotCacheGroupItem( const OUString& rItemName ) :

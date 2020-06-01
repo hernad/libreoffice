@@ -69,6 +69,8 @@ private:
 
 class SVX_DLLPUBLIC SvxLineWidthToolBoxControl final : public SfxToolBoxControl
 {
+    static MapUnit GetCoreMetric();
+
 public:
     SFX_DECL_TOOLBOX_CONTROL();
 
@@ -77,7 +79,7 @@ public:
 
     virtual void        StateChanged( sal_uInt16 nSID, SfxItemState eState,
                                       const SfxPoolItem* pState ) override;
-    virtual VclPtr<vcl::Window> CreateItemWindow( vcl::Window *pParent ) override;
+    virtual VclPtr<InterimItemWindow> CreateItemWindow( vcl::Window *pParent ) override;
 };
 
 #endif

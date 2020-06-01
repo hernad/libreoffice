@@ -22,7 +22,7 @@
 
 #include <sal/config.h>
 
-#include <o3tl/optional.hxx>
+#include <optional>
 
 #include <sax/saxdllapi.h>
 
@@ -31,8 +31,9 @@
 #include <rtl/ustrbuf.hxx>
 #include <com/sun/star/util/MeasureUnit.hpp>
 #include <tools/color.hxx>
+#include <unotools/saveopt.hxx>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace uno {
         class Any;
     }
@@ -41,7 +42,7 @@ namespace com { namespace sun { namespace star {
         struct DateTime;
         struct Duration;
     }
-} } }
+}
 
 namespace sax {
 
@@ -146,10 +147,12 @@ public:
     static bool convertDouble(double& rValue, const OUString& rString);
 
     /** convert number, 10th of degrees with range [0..3600] to SVG angle */
-    static void convertAngle(OUStringBuffer& rBuffer, sal_Int16 nAngle);
+    static void convertAngle(OUStringBuffer& rBuffer, sal_Int16 nAngle,
+            SvtSaveOptions::ODFSaneDefaultVersion nVersion);
 
     /** convert SVG angle to number, 10th of degrees with range [0..3600] */
-    static bool convertAngle(sal_Int16& rAngle, OUString const& rString);
+    static bool convertAngle(sal_Int16& rAngle, OUString const& rString,
+            bool isWrongOOo10thDegAngle);
 
     /** convert double to XMLSchema-2 "duration" string; negative durations allowed */
     static void convertDuration(OUStringBuffer& rBuffer,
@@ -196,7 +199,7 @@ public:
                     css::util::Date * pDate,
                     css::util::DateTime & rDateTime,
                     bool & rbDateTime,
-                    o3tl::optional<sal_Int16> * pTimeZoneOffset,
+                    std::optional<sal_Int16> * pTimeZoneOffset,
                     const OUString & rString );
 
     /** gets the position of the first comma after npos in the string

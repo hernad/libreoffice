@@ -25,7 +25,7 @@ namespace oox {
 }
 
 namespace oox {
-namespace core {
+namespace crypto {
 
 struct OOX_DLLPUBLIC AgileEncryptionInfo
 {
@@ -57,15 +57,15 @@ struct OOX_DLLPUBLIC AgileEncryptionInfo
 
 struct OOX_DLLPUBLIC AgileEncryptionParameters
 {
-    sal_Int32 const spinCount;
-    sal_Int32 const saltSize;
-    sal_Int32 const keyBits;
-    sal_Int32 const hashSize;
-    sal_Int32 const blockSize;
+    sal_Int32 spinCount;
+    sal_Int32 saltSize;
+    sal_Int32 keyBits;
+    sal_Int32 hashSize;
+    sal_Int32 blockSize;
 
-    OUString const cipherAlgorithm;
-    OUString const cipherChaining;
-    OUString const hashAlgorithm;
+    OUString cipherAlgorithm;
+    OUString cipherChaining;
+    OUString hashAlgorithm;
 };
 
 enum class AgileEncryptionPreset
@@ -125,7 +125,7 @@ public:
 
     void writeEncryptionInfo(BinaryXOutputStream& rStream) override;
 
-    void encrypt(css::uno::Reference<css::io::XInputStream>&  rxInputStream,
+    void encrypt(const css::uno::Reference<css::io::XInputStream>&  rxInputStream,
                  css::uno::Reference<css::io::XOutputStream>& rxOutputStream,
                  sal_uInt32 nSize) override;
 
@@ -141,7 +141,7 @@ public:
     bool setupEncryptionKey(OUString const & rPassword);
 };
 
-} // namespace core
+} // namespace crypto
 } // namespace oox
 
 #endif

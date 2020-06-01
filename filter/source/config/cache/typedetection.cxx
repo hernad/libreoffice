@@ -274,7 +274,6 @@ int getFlatTypeRank(const OUString& rType)
 
         // Export only
         "writer_layout_dump_xml",
-        "graphic_SWF",
         "graphic_HTML",
 
         // Internal use only
@@ -947,19 +946,19 @@ void TypeDetection::impl_seekStreamToZero(utl::MediaDescriptor const & rDescript
                                                             utl::MediaDescriptor::PROP_INPUTSTREAM(),
                                                             css::uno::Reference< css::io::XInputStream >());
     css::uno::Reference< css::io::XSeekable > xSeek(xStream, css::uno::UNO_QUERY);
-    if (xSeek.is())
+    if (!xSeek.is())
+        return;
+
+    try
     {
-        try
-        {
-            xSeek->seek(0);
-        }
-        catch(const css::uno::RuntimeException&)
-        {
-            throw;
-        }
-        catch(const css::uno::Exception&)
-        {
-        }
+        xSeek->seek(0);
+    }
+    catch(const css::uno::RuntimeException&)
+    {
+        throw;
+    }
+    catch(const css::uno::Exception&)
+    {
     }
 }
 

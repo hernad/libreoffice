@@ -22,6 +22,7 @@
 
 #include <sal/config.h>
 #include <sal/log.hxx>
+#include <rtl/ustrbuf.hxx>
 
 #include <com/sun/star/lang/XComponent.hpp>
 #include <com/sun/star/text/RelOrientation.hpp>
@@ -36,35 +37,23 @@
 #include <drawinglayer/processor2d/contourextractor2d.hxx>
 #include <drawinglayer/processor2d/linegeometryextractor2d.hxx>
 #include <editeng/editeng.hxx>
-#include <editeng/eeitem.hxx>
 #include <editeng/outlobj.hxx>
 #include <o3tl/deleter.hxx>
 #include <math.h>
-#include <sfx2/objface.hxx>
-#include <sfx2/objsh.hxx>
-#include <svl/whiter.hxx>
 #include <svl/grabbagitem.hxx>
-#include <svtools/colorcfg.hxx>
 #include <tools/bigint.hxx>
 #include <tools/diagnose_ex.h>
 #include <tools/helpers.hxx>
-#include <tools/line.hxx>
 #include <unotools/configmgr.hxx>
 #include <vcl/canvastools.hxx>
-#include <vcl/graphictools.hxx>
-#include <vcl/metaact.hxx>
-#include <vcl/virdev.hxx>
 #include <vcl/ptrstyle.hxx>
 #include <vector>
 
 #include <svx/shapepropertynotifier.hxx>
 #include <svx/svdotable.hxx>
-#include <svx/xlinjoit.hxx>
 
-#include <svx/fmmodel.hxx>
 #include <svx/sdr/contact/displayinfo.hxx>
-#include <svx/sdr/contact/objectcontactofobjlistpainter.hxx>
-#include <sdr/contact/viewcontactofgraphic.hxx>
+#include <sdr/contact/objectcontactofobjlistpainter.hxx>
 #include <svx/sdr/contact/viewcontactofsdrobj.hxx>
 #include <sdr/properties/emptyproperties.hxx>
 #include <svx/sdrhittesthelper.hxx>
@@ -109,36 +98,23 @@
 #include <sxtraitm.hxx>
 #include <svx/unopage.hxx>
 #include <svx/unoshape.hxx>
-#include <svx/xbtmpit.hxx>
-#include <svx/xenum.hxx>
 #include <svx/xfillit0.hxx>
 #include <svx/xflclit.hxx>
-#include <svx/xflftrit.hxx>
-#include <svx/xflhtit.hxx>
 #include <svx/xfltrit.hxx>
-#include <svx/xgrad.hxx>
-#include <svx/xhatch.hxx>
 #include <svx/xlineit0.hxx>
 #include <svx/xlnclit.hxx>
-#include <svx/xlndsit.hxx>
-#include <svx/xlnedcit.hxx>
-#include <svx/xlnedit.hxx>
 #include <svx/xlnedwit.hxx>
-#include <svx/xlnstcit.hxx>
-#include <svx/xlnstit.hxx>
 #include <svx/xlnstwit.hxx>
 #include <svx/xlntrit.hxx>
 #include <svx/xlnwtit.hxx>
-#include <svx/xpoly.hxx>
 #include <svx/svdglue.hxx>
 #include <svx/svdsob.hxx>
-#include <rtl/strbuf.hxx>
 #include <svdobjplusdata.hxx>
 #include <svdobjuserdatalist.hxx>
 
 #include <unordered_set>
 
-#include <o3tl/optional.hxx>
+#include <optional>
 #include <libxml/xmlwriter.h>
 #include <memory>
 
@@ -206,13 +182,11 @@ SdrObjTransformInfoRec::SdrObjTransformInfoRec() :
 struct SdrObject::Impl
 {
     sdr::ObjectUserVector maObjectUsers;
-
-    o3tl::optional<double> mnRelativeWidth;
-    sal_Int16               meRelativeWidthRelation;
-    o3tl::optional<double> mnRelativeHeight;
-    sal_Int16               meRelativeHeightRelation;
-
     std::shared_ptr<DiagramDataInterface> mpDiagramData;
+    std::optional<double> mnRelativeWidth;
+    std::optional<double> mnRelativeHeight;
+    sal_Int16               meRelativeWidthRelation;
+    sal_Int16               meRelativeHeightRelation;
 
     Impl() :
         meRelativeWidthRelation(text::RelOrientation::PAGE_FRAME),
@@ -394,17 +368,16 @@ SdrObject::SdrObject(SdrModel& rSdrModel)
 
 SdrObject::~SdrObject()
 {
-    // tell all the registered ObjectUsers that the page is in destruction
-    sdr::ObjectUserVector aListCopy(mpImpl->maObjectUsers.begin(), mpImpl->maObjectUsers.end());
-    for(sdr::ObjectUser* pObjectUser : aListCopy)
+    // Tell all the registered ObjectUsers that the page is in destruction.
+    // And clear the vector. This means that user do not need to call RemoveObjectUser()
+    // when they get called from ObjectInDestruction().
+    sdr::ObjectUserVector aList;
+    aList.swap(mpImpl->maObjectUsers);
+    for(sdr::ObjectUser* pObjectUser : aList)
     {
         DBG_ASSERT(pObjectUser, "SdrObject::~SdrObject: corrupt ObjectUser list (!)");
         pObjectUser->ObjectInDestruction(*this);
     }
-
-    // Clear the vector. This means that user do not need to call RemoveObjectUser()
-    // when they get called from ObjectInDestruction().
-    mpImpl->maObjectUsers.clear();
 
     // UserCall
     SendUserCall(SdrUserCallType::Delete, GetLastBoundRect());
@@ -3016,6 +2989,12 @@ bool SdrObject::HasText() const
 bool SdrObject::IsTextBox() const
 {
     return false;
+}
+
+void SdrObject::MakeNameUnique()
+{
+    std::unordered_set<OUString> aNameSet;
+    MakeNameUnique(aNameSet);
 }
 
 void SdrObject::MakeNameUnique(std::unordered_set<OUString>& rNameSet)

@@ -16,7 +16,7 @@
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
-#include <sfx2/sidebar/ControlFactory.hxx>
+
 #include "GraphicPropertyPanel.hxx"
 #include <svx/strings.hrc>
 #include <svx/svxids.hrc>
@@ -39,7 +39,7 @@ GraphicPropertyPanel::GraphicPropertyPanel(
     vcl::Window* pParent,
     const css::uno::Reference<css::frame::XFrame>& rxFrame,
     SfxBindings* pBindings)
-:   PanelLayout(pParent, "GraphicPropertyPanel", "svx/ui/sidebargraphic.ui", rxFrame, true),
+:   PanelLayout(pParent, "GraphicPropertyPanel", "svx/ui/sidebargraphic.ui", rxFrame),
     maBrightControl(SID_ATTR_GRAF_LUMINANCE, *pBindings, *this),
     maContrastControl(SID_ATTR_GRAF_CONTRAST, *pBindings, *this),
     maTransparenceControl(SID_ATTR_GRAF_TRANSPARENCE, *pBindings, *this),

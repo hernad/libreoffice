@@ -22,7 +22,7 @@
 #include <svx/deflt3d.hxx>
 #include <svx/dialmgr.hxx>
 #include <svx/globl3d.hxx>
-#include <svx/extrud3d.hxx>
+#include <extrud3d.hxx>
 
 #include <svx/svdopath.hxx>
 #include <svx/svdmodel.hxx>
@@ -34,6 +34,7 @@
 #include <basegfx/polygon/b2dpolypolygontools.hxx>
 #include <basegfx/polygon/b2dpolygontools.hxx>
 #include <basegfx/polygon/b3dpolypolygontools.hxx>
+#include <rtl/ustrbuf.hxx>
 
 
 // DrawContact section

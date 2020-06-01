@@ -13,7 +13,7 @@
  manual changes will be rewritten by the next run of update_pch.sh (which presumably
  also fixes all possible problems, so it's usually better to use it).
 
- Generated on 2020-02-01 11:40:57 using:
+ Generated on 2020-04-25 20:55:50 using:
  ./bin/update_pch sw sw --cutoff=7 --exclude:system --exclude:module --include:local
 
  If after updating build fails, use the following command to locate conflicting headers:
@@ -35,6 +35,7 @@
 #include <map>
 #include <memory>
 #include <new>
+#include <optional>
 #include <ostream>
 #include <set>
 #include <stddef.h>
@@ -68,6 +69,9 @@
 #include <rtl/math.hxx>
 #include <rtl/ref.hxx>
 #include <rtl/strbuf.hxx>
+#include <rtl/string.h>
+#include <rtl/stringconcat.hxx>
+#include <rtl/stringutils.hxx>
 #include <rtl/tencinfo.h>
 #include <rtl/textenc.h>
 #include <rtl/unload.h>
@@ -87,17 +91,12 @@
 #include <vcl/alpha.hxx>
 #include <vcl/bitmapex.hxx>
 #include <vcl/builderpage.hxx>
-#include <vcl/button.hxx>
 #include <vcl/commandevent.hxx>
-#include <vcl/ctrl.hxx>
 #include <vcl/dllapi.h>
-#include <vcl/dndhelp.hxx>
 #include <vcl/dockwin.hxx>
-#include <vcl/edit.hxx>
 #include <vcl/errcode.hxx>
 #include <vcl/errinf.hxx>
 #include <vcl/event.hxx>
-#include <vcl/fixed.hxx>
 #include <vcl/fntstyle.hxx>
 #include <vcl/font.hxx>
 #include <vcl/graph.hxx>
@@ -107,19 +106,14 @@
 #include <vcl/imap.hxx>
 #include <vcl/imapobj.hxx>
 #include <vcl/keycod.hxx>
-#include <vcl/lstbox.hxx>
-#include <vcl/menu.hxx>
 #include <vcl/metric.hxx>
 #include <vcl/outdev.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/svapp.hxx>
-#include <vcl/textfilter.hxx>
 #include <vcl/toolbox.hxx>
 #include <vcl/transfer.hxx>
 #include <vcl/vclenum.hxx>
-#include <vcl/vclevent.hxx>
 #include <vcl/vclptr.hxx>
-#include <vcl/vclreferencebase.hxx>
 #include <vcl/virdev.hxx>
 #include <vcl/weld.hxx>
 #include <vcl/window.hxx>
@@ -225,7 +219,6 @@
 #include <drawinglayer/primitive2d/CommonTypes.hxx>
 #include <drawinglayer/primitive2d/Primitive2DContainer.hxx>
 #include <drawinglayer/primitive2d/baseprimitive2d.hxx>
-#include <drawinglayer/primitive2d/polypolygonprimitive2d.hxx>
 #include <drawinglayer/processor2d/baseprocessor2d.hxx>
 #include <editeng/acorrcfg.hxx>
 #include <editeng/adjustitem.hxx>
@@ -282,7 +275,6 @@
 #include <o3tl/any.hxx>
 #include <o3tl/cow_wrapper.hxx>
 #include <o3tl/deleter.hxx>
-#include <o3tl/optional.hxx>
 #include <o3tl/safeint.hxx>
 #include <o3tl/sorted_vector.hxx>
 #include <o3tl/strong_int.hxx>
@@ -373,6 +365,7 @@
 #include <svx/svdoutl.hxx>
 #include <svx/svdpage.hxx>
 #include <svx/svdpagv.hxx>
+#include <svx/svdtypes.hxx>
 #include <svx/svdview.hxx>
 #include <svx/svxdlg.hxx>
 #include <svx/svxdllapi.h>
@@ -419,6 +412,7 @@
 #include <unotools/unotoolsdllapi.h>
 #include <unotools/useroptions.hxx>
 #include <xmloff/dllapi.h>
+#include <xmloff/families.hxx>
 #include <xmloff/nmspmap.hxx>
 #include <xmloff/odffields.hxx>
 #include <xmloff/xmlictxt.hxx>
@@ -467,7 +461,6 @@
 #include <anchoredobject.hxx>
 #include <authfld.hxx>
 #include <basesh.hxx>
-#include <blink.hxx>
 #include <bodyfrm.hxx>
 #include <bookmrk.hxx>
 #include <breakit.hxx>
@@ -539,6 +532,7 @@
 #include <fmtwrapinfluenceonobjpos.hxx>
 #include <fntcache.hxx>
 #include <frame.hxx>
+#include <frameformats.hxx>
 #include <frmatr.hxx>
 #include <frmfmt.hxx>
 #include <frmmgr.hxx>

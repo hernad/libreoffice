@@ -27,17 +27,17 @@
 namespace chart { class ChartModel; }
 namespace chart { struct ExplicitIncrementData; }
 namespace chart { struct ExplicitScaleData; }
-namespace com { namespace sun { namespace star { namespace beans { class XPropertySet; } } } }
-namespace com { namespace sun { namespace star { namespace chart2 { class XAxis; } } } }
-namespace com { namespace sun { namespace star { namespace chart2 { class XChartDocument; } } } }
-namespace com { namespace sun { namespace star { namespace chart2 { class XCoordinateSystem; } } } }
-namespace com { namespace sun { namespace star { namespace chart2 { class XDataSeries; } } } }
-namespace com { namespace sun { namespace star { namespace chart2 { class XDiagram; } } } }
-namespace com { namespace sun { namespace star { namespace drawing { class XShape; } } } }
-namespace com { namespace sun { namespace star { namespace uno { class XInterface; } } } }
-namespace com { namespace sun { namespace star { namespace uno { template <typename > class Reference; } } } }
-namespace com { namespace sun { namespace star { namespace uno { template <typename > class Sequence; } } } }
-namespace com { namespace sun { namespace star { namespace util { class XNumberFormatsSupplier; } } } }
+namespace com::sun::star::beans { class XPropertySet; }
+namespace com::sun::star::chart2 { class XAxis; }
+namespace com::sun::star::chart2 { class XChartDocument; }
+namespace com::sun::star::chart2 { class XCoordinateSystem; }
+namespace com::sun::star::chart2 { class XDataSeries; }
+namespace com::sun::star::chart2 { class XDiagram; }
+namespace com::sun::star::drawing { class XShape; }
+namespace com::sun::star::uno { class XInterface; }
+namespace com::sun::star::uno { template <typename > class Reference; }
+namespace com::sun::star::uno { template <typename > class Sequence; }
+namespace com::sun::star::util { class XNumberFormatsSupplier; }
 
 namespace chart
 {
@@ -82,10 +82,7 @@ public:
             , const css::uno::Reference< css::chart2::XChartDocument>& xChartDoc);
 
     static sal_Int32 getExplicitNumberFormatKeyForDataLabel(
-            const css::uno::Reference< css::beans::XPropertySet >& xSeriesOrPointProp
-            , const css::uno::Reference< css::chart2::XDataSeries >& xSeries
-            , sal_Int32 nPointIndex /*-1 for whole series*/
-            , const css::uno::Reference< css::chart2::XDiagram >& xDiagram );
+            const css::uno::Reference< css::beans::XPropertySet >& xSeriesOrPointProp );
 
     static sal_Int32 getExplicitPercentageNumberFormatKeyForDataLabel(
             const css::uno::Reference< css::beans::XPropertySet >& xSeriesOrPointProp

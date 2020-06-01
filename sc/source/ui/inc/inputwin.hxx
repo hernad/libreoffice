@@ -23,14 +23,15 @@
 #include <vector>
 #include <memory>
 #include <vcl/toolbox.hxx>
+#include <vcl/InterimItemWindow.hxx>
 #include <sfx2/childwin.hxx>
 #include <svl/lstner.hxx>
 #include <vcl/button.hxx>
-#include <vcl/combobox.hxx>
 #include <vcl/scrbar.hxx>
 #include <vcl/window.hxx>
 #include <vcl/transfer.hxx>
 #include <vcl/menu.hxx>
+#include <formula/opcode.hxx>
 
 class EditView;
 class ScAccessibleEditLineTextData;
@@ -57,6 +58,7 @@ public:
     virtual void            SetFormulaMode( bool bSet ) = 0;
     virtual bool            IsInputActive() = 0;
     virtual void            TextGrabFocus() = 0;
+    virtual long            GetNumLines() const = 0;
 };
 
 class ScTextWnd : public ScTextWndBase, public DragSourceHelper     // edit window
@@ -95,7 +97,7 @@ public:
     long GetPixelHeightForLines(long nLines);
     long GetEditEngTxtHeight() const;
 
-    long GetNumLines() const { return mnLines; }
+    virtual long GetNumLines() const override { return mnLines; }
     void SetNumLines(long nLines);
     long GetLastNumExpandedLines() const { return mnLastExpandedLines; }
 
@@ -149,9 +151,13 @@ private:
     bool mbInvalidate;
 };
 
-class ScPosWnd : public ComboBox, public SfxListener        // Display position
+class ScPosWnd final : public InterimItemWindow, public SfxListener        // Display position
 {
 private:
+    std::unique_ptr<weld::ComboBox> m_xWidget;
+
+    ImplSVEvent* m_nAsyncGetFocusId;
+
     OUString        aPosStr;
     void*           nTipVisible;
     bool            bFormulaMode;
@@ -160,15 +166,18 @@ public:
                     ScPosWnd( vcl::Window* pParent );
     virtual         ~ScPosWnd() override;
     virtual void    dispose() override;
+    virtual void    GetFocus() override;
 
     void            SetPos( const OUString& rPosStr );        // Displayed Text
     void            SetFormulaMode( bool bSet );
 
-protected:
-    virtual void    Select() override;
-    virtual void    Modify() override;
-
-    virtual bool    EventNotify( NotifyEvent& rNEvt ) override;
+private:
+    DECL_LINK(OnAsyncGetFocus, void*, void);
+    DECL_LINK(KeyInputHdl, const KeyEvent&, bool);
+    DECL_LINK(ActivateHdl, weld::ComboBox&, bool);
+    DECL_LINK(ModifyHdl, weld::ComboBox&, void);
+    DECL_LINK(FocusInHdl, weld::Widget&, void);
+    DECL_LINK(FocusOutHdl, weld::Widget&, void);
 
     virtual void    Notify( SfxBroadcaster& rBC, const SfxHint& rHint ) override;
 
@@ -191,7 +200,7 @@ public:
     virtual void            InsertAccessibleTextData(ScAccessibleEditLineTextData& rTextData) override;
     virtual EditView*       GetEditView() override;
     long                    GetLastNumExpandedLines() const;
-    long                    GetNumLines() const;
+    virtual long            GetNumLines() const override;
     long                    GetPixelHeightForLines(long nLines);
     ScrollBar&              GetScrollBar();
     virtual const OUString& GetTextString() const override;
@@ -236,7 +245,7 @@ public:
     bool                    IsInputActive() override;
     void                    IncrementVerticalSize();
     void                    DecrementVerticalSize();
-    long                    GetNumLines() const { return maTextWndGroup->GetNumLines(); }
+    virtual long            GetNumLines() const override { return maTextWndGroup->GetNumLines(); }
     long                    GetVertOffset() const { return  mnVertOffset; }
 
 private:
@@ -257,6 +266,8 @@ public:
     virtual void    dispose() override;
 
     virtual void    Paint( vcl::RenderContext& rRenderContext, const tools::Rectangle& rRect ) override;
+    virtual void    PixelInvalidate(const tools::Rectangle* pRectangle) override;
+    virtual void    SetSizePixel( const Size& rNewSize ) override;
     virtual void    Resize() override;
     virtual void    Select() override;
 
@@ -294,8 +305,12 @@ public:
     virtual void    MouseButtonDown( const MouseEvent& rMEvt ) override;
     virtual void    MouseMove( const MouseEvent& rMEvt ) override;
 
+    void            NotifyLOKClient();
+
     DECL_LINK( MenuHdl, Menu *, bool );
     DECL_LINK( DropdownClickHdl, ToolBox*, void );
+
+    void            AutoSum( bool& bRangeFinder, bool& bSubTotal, OpCode eCode );
 
 private:
     bool IsPointerAtResizePos();
@@ -304,6 +319,7 @@ private:
     VclPtr<ScTextWndBase> pRuntimeWindow;
     ScTextWndBase&  aTextWindow;
     ScInputHandler* pInputHdl;
+    ScTabViewShell* mpViewShell;
     long            mnMaxY;
     bool            bIsOkCancelMode;
     bool            bInResize;

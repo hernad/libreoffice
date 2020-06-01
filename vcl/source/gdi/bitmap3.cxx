@@ -29,6 +29,9 @@
 #if HAVE_FEATURE_OPENGL
 #include <vcl/opengl/OpenGLHelper.hxx>
 #endif
+#if HAVE_FEATURE_SKIA
+#include <vcl/skia/SkiaHelper.hxx>
+#endif
 #include <vcl/BitmapMonochromeFilter.hxx>
 
 #include <BitmapScaleSuperFilter.hxx>
@@ -229,10 +232,20 @@ bool Bitmap::Convert( BmpConversion eConversion )
     if (mxSalBmp)
     {
         // avoid large chunk of obsolete and hopefully rarely used conversions.
-        if (eConversion == BmpConversion::N8BitGreys)
+        if (eConversion == BmpConversion::N8BitNoConversion)
         {
             std::shared_ptr<SalBitmap> xImpBmp(ImplGetSVData()->mpDefInst->CreateSalBitmap());
             // frequently used conversion for creating alpha masks
+            if (xImpBmp->Create(*mxSalBmp) && xImpBmp->InterpretAs8Bit())
+            {
+                ImplSetSalBitmap(xImpBmp);
+                SAL_INFO( "vcl.opengl", "Ref count: " << mxSalBmp.use_count() );
+                return true;
+            }
+        }
+        if (eConversion == BmpConversion::N8BitGreys)
+        {
+            std::shared_ptr<SalBitmap> xImpBmp(ImplGetSVData()->mpDefInst->CreateSalBitmap());
             if (xImpBmp->Create(*mxSalBmp) && xImpBmp->ConvertToGreyscale())
             {
                 ImplSetSalBitmap(xImpBmp);
@@ -271,6 +284,7 @@ bool Bitmap::Convert( BmpConversion eConversion )
         break;
 
         case BmpConversion::N8BitGreys:
+        case BmpConversion::N8BitNoConversion:
             bRet = ImplMakeGreyscales( 256 );
         break;
 
@@ -312,10 +326,6 @@ bool Bitmap::Convert( BmpConversion eConversion )
             else
                 bRet = true;
         }
-        break;
-
-        case BmpConversion::Ghosted:
-            bRet = ImplConvertGhosted();
         break;
 
         default:
@@ -660,80 +670,6 @@ bool Bitmap::ImplConvertDown(sal_uInt16 nBitCount, Color const * pExtColor)
     return bRet;
 }
 
-bool Bitmap::ImplConvertGhosted()
-{
-    Bitmap aNewBmp;
-    ScopedReadAccess pR(*this);
-    bool bRet = false;
-
-    if( pR )
-    {
-        if( pR->HasPalette() )
-        {
-            BitmapPalette aNewPal( pR->GetPaletteEntryCount() );
-
-            for( long i = 0, nCount = aNewPal.GetEntryCount(); i < nCount; i++ )
-            {
-                const BitmapColor& rOld = pR->GetPaletteColor( static_cast<sal_uInt16>(i) );
-                aNewPal[ static_cast<sal_uInt16>(i) ] = BitmapColor( ( rOld.GetRed() >> 1 ) | 0x80,
-                                                     ( rOld.GetGreen() >> 1 ) | 0x80,
-                                                     ( rOld.GetBlue() >> 1 ) | 0x80 );
-            }
-
-            aNewBmp = Bitmap( GetSizePixel(), GetBitCount(), &aNewPal );
-            BitmapScopedWriteAccess pW(aNewBmp);
-
-            if( pW )
-            {
-                pW->CopyBuffer( *pR );
-                bRet = true;
-            }
-        }
-        else
-        {
-            aNewBmp = Bitmap( GetSizePixel(), 24 );
-
-            BitmapScopedWriteAccess pW(aNewBmp);
-
-            if( pW )
-            {
-                const long nWidth = pR->Width(), nHeight = pR->Height();
-
-                for( long nY = 0; nY < nHeight; nY++ )
-                {
-                    Scanline pScanline = pW->GetScanline(nY);
-                    Scanline pScanlineRead = pR->GetScanline(nY);
-                    for( long nX = 0; nX < nWidth; nX++ )
-                    {
-                        const BitmapColor aOld( pR->GetPixelFromData( pScanlineRead, nX ) );
-                        pW->SetPixelOnData( pScanline, nX, BitmapColor( ( aOld.GetRed() >> 1 ) | 0x80,
-                                                                        ( aOld.GetGreen() >> 1 ) | 0x80,
-                                                                        ( aOld.GetBlue() >> 1 ) | 0x80 ) );
-
-                    }
-                }
-
-                bRet = true;
-            }
-        }
-
-        pR.reset();
-    }
-
-    if( bRet )
-    {
-        const MapMode aMap( maPrefMapMode );
-        const Size aSize( maPrefSize );
-
-        *this = aNewBmp;
-
-        maPrefMapMode = aMap;
-        maPrefSize = aSize;
-    }
-
-    return bRet;
-}
-
 bool Bitmap::Scale( const double& rScaleX, const double& rScaleY, BmpScaleFlag nScaleFlag )
 {
     if(basegfx::fTools::equalZero(rScaleX) || basegfx::fTools::equalZero(rScaleY))
@@ -844,12 +780,15 @@ bool Bitmap::Scale( const Size& rNewSize, BmpScaleFlag nScaleFlag )
 
 bool Bitmap::HasFastScale()
 {
-// TODO SKIA
-#if HAVE_FEATURE_OPENGL
-    return OpenGLHelper::isVCLOpenGLEnabled();
-#else
-    return false;
+#if HAVE_FEATURE_SKIA
+    if( SkiaHelper::isVCLSkiaEnabled() && SkiaHelper::renderMethodToUse() != SkiaHelper::RenderRaster)
+        return true;
 #endif
+#if HAVE_FEATURE_OPENGL
+    if( OpenGLHelper::isVCLOpenGLEnabled())
+        return true;
+#endif
+    return false;
 }
 
 void Bitmap::AdaptBitCount(Bitmap& rNew) const

@@ -138,7 +138,8 @@ StringMap SwNavigationPIUIObject::get_state()
 {
     StringMap aMap = WindowUIObject::get_state();
 
-    aMap["selectioncount"] = OUString::number(mxSwNavigationPI->m_aContentTree->GetSelectionCount());
+    aMap["selectioncount"] = OUString::number(mxSwNavigationPI->m_xContentTree->count_selected_rows());
+    aMap["selectedtext"] = mxSwNavigationPI->m_xContentTree->get_selected_text();
 
     return aMap;
 }
@@ -148,7 +149,8 @@ void SwNavigationPIUIObject::execute(const OUString& rAction,
 {
     if (rAction == "ROOT")
     {
-        mxSwNavigationPI->m_aContentToolBox->TriggerItem(mxSwNavigationPI->m_aContentToolBox->GetItemId("root"));
+        mxSwNavigationPI->m_xContentTree->grab_focus();
+        mxSwNavigationPI->ToolBoxSelectHdl("root");
     }
     else
         WindowUIObject::execute(rAction, rParameters);

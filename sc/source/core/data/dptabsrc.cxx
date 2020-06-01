@@ -59,7 +59,6 @@
 
 using namespace com::sun::star;
 using ::std::vector;
-using ::std::set;
 using ::com::sun::star::uno::Sequence;
 using ::com::sun::star::uno::Any;
 using ::com::sun::star::sheet::DataPilotFieldAutoShowInfo;
@@ -69,8 +68,10 @@ using ::com::sun::star::sheet::DataPilotFieldAutoShowInfo;
 SC_SIMPLE_SERVICE_INFO( ScDPSource,      "ScDPSource",      "com.sun.star.sheet.DataPilotSource" )
 SC_SIMPLE_SERVICE_INFO( ScDPDimensions,  "ScDPDimensions",  "com.sun.star.sheet.DataPilotSourceDimensions" )
 SC_SIMPLE_SERVICE_INFO( ScDPDimension,   "ScDPDimension",   "com.sun.star.sheet.DataPilotSourceDimension" )
-SC_SIMPLE_SERVICE_INFO( ScDPHierarchies, "ScDPHierarchies", "com.sun.star.sheet.DataPilotSourceHierarcies" )
-SC_SIMPLE_SERVICE_INFO( ScDPHierarchy,   "ScDPHierarchy",   "com.sun.star.sheet.DataPilotSourceHierarcy" )
+SC_SIMPLE_SERVICE_INFO_COMPAT( ScDPHierarchies, "ScDPHierarchies",
+        "com.sun.star.sheet.DataPilotSourceHierarchies", "com.sun.star.sheet.DataPilotSourceHierarcies" )
+SC_SIMPLE_SERVICE_INFO_COMPAT( ScDPHierarchy,   "ScDPHierarchy",
+        "com.sun.star.sheet.DataPilotSourceHierarchy", "com.sun.star.sheet.DataPilotSourceHierarcy" )
 SC_SIMPLE_SERVICE_INFO( ScDPLevels,      "ScDPLevels",      "com.sun.star.sheet.DataPilotSourceLevels" )
 SC_SIMPLE_SERVICE_INFO( ScDPLevel,       "ScDPLevel",       "com.sun.star.sheet.DataPilotSourceLevel" )
 SC_SIMPLE_SERVICE_INFO( ScDPMembers,     "ScDPMembers",     "com.sun.star.sheet.DataPilotSourceMembers" )
@@ -111,7 +112,7 @@ ScDPSource::~ScDPSource()
     pResData.reset();
 }
 
-const o3tl::optional<OUString> & ScDPSource::GetGrandTotalName() const
+const std::optional<OUString> & ScDPSource::GetGrandTotalName() const
 {
     return mpGrandTotalName;
 }
@@ -403,7 +404,7 @@ uno::Sequence<double> ScDPSource::getFilteredResults(
     {
         // Try to get result from the leaf nodes.
         double fVal = maResFilterSet.getLeafResult(aFilters[0]);
-        if (!rtl::math::isNan(fVal))
+        if (!std::isnan(fVal))
         {
             uno::Sequence<double> aRet(1);
             aRet[0] = fVal;
@@ -1289,12 +1290,12 @@ ScDPHierarchies* ScDPDimension::GetHierarchiesObject()
     return mxHierarchies.get();
 }
 
-const o3tl::optional<OUString> & ScDPDimension::GetLayoutName() const
+const std::optional<OUString> & ScDPDimension::GetLayoutName() const
 {
     return mpLayoutName;
 }
 
-const o3tl::optional<OUString> & ScDPDimension::GetSubtotalName() const
+const std::optional<OUString> & ScDPDimension::GetSubtotalName() const
 {
     return mpSubtotalName;
 }
@@ -1854,7 +1855,7 @@ namespace {
 class ScDPGlobalMembersOrder
 {
     ScDPLevel&  rLevel;
-    bool const  bAscending;
+    bool        bAscending;
 
 public:
             ScDPGlobalMembersOrder( ScDPLevel& rLev, bool bAsc ) :
@@ -2152,7 +2153,7 @@ uno::Any SAL_CALL ScDPLevel::getPropertyValue( const OUString& aPropertyName )
         if (!pDim)
             return aRet;
 
-        const o3tl::optional<OUString> & pLayoutName = pDim->GetLayoutName();
+        const std::optional<OUString> & pLayoutName = pDim->GetLayoutName();
         if (!pLayoutName)
             return aRet;
 
@@ -2357,7 +2358,7 @@ ScDPMember* ScDPMembers::getByIndex(long nIndex) const
         if (maMembers.empty())
             maMembers.resize(nMbrCount);
 
-        if (!maMembers[nIndex].get())
+        if (!maMembers[nIndex])
         {
             rtl::Reference<ScDPMember> pNew;
             long nSrcDim = pSource->GetSourceDim( nDim );
@@ -2512,7 +2513,7 @@ ScDPItemData ScDPMember::FillItemData() const
     return (pData ? *pData : ScDPItemData());
 }
 
-const o3tl::optional<OUString> & ScDPMember::GetLayoutName() const
+const std::optional<OUString> & ScDPMember::GetLayoutName() const
 {
     return mpLayoutName;
 }

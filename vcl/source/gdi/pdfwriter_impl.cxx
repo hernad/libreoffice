@@ -41,6 +41,7 @@
 #include <cppuhelper/implbase.hxx>
 #include <i18nlangtag/languagetag.hxx>
 #include <o3tl/numeric.hxx>
+#include <officecfg/Office/Common.hxx>
 #include <osl/file.hxx>
 #include <osl/thread.h>
 #include <rtl/digest.h>
@@ -548,6 +549,7 @@ PDFPage::PDFPage( PDFWriterImpl* pWriter, double nPageWidth, double nPageHeight,
         m_pWriter( pWriter ),
         m_nPageWidth( nPageWidth ),
         m_nPageHeight( nPageHeight ),
+        m_nUserUnit( 1 ),
         m_eOrientation( eOrientation ),
         m_nPageObject( 0 ),  // invalid object number
         m_nStreamLengthObject( 0 ),
@@ -557,6 +559,16 @@ PDFPage::PDFPage( PDFWriterImpl* pWriter, double nPageWidth, double nPageHeight,
 {
     // object ref must be only ever updated in emit()
     m_nPageObject = m_pWriter->createObject();
+
+    switch (m_pWriter->m_aContext.Version)
+    {
+        case PDFWriter::PDFVersion::PDF_1_6:
+            m_nUserUnit = std::ceil(std::max(nPageWidth, nPageHeight) / 14400.0);
+            break;
+        default:
+            // 1.2 -> 1.5
+            break;
+    }
 }
 
 void PDFPage::beginStream()
@@ -618,6 +630,7 @@ void PDFPage::endStream()
 
 bool PDFPage::emit(sal_Int32 nParentObject )
 {
+    m_pWriter->MARK("PDFPage::emit");
     // emit page object
     if( ! m_pWriter->updateObject( m_nPageObject ) )
         return false;
@@ -634,10 +647,15 @@ bool PDFPage::emit(sal_Int32 nParentObject )
     if( m_nPageWidth && m_nPageHeight )
     {
         aLine.append( "/MediaBox[0 0 " );
-        aLine.append( m_nPageWidth );
+        aLine.append(m_nPageWidth / m_nUserUnit);
         aLine.append( ' ' );
-        aLine.append( m_nPageHeight );
+        aLine.append(m_nPageHeight / m_nUserUnit);
         aLine.append( "]" );
+        if (m_nUserUnit > 1)
+        {
+            aLine.append("\n/UserUnit ");
+            aLine.append(m_nUserUnit);
+        }
     }
     switch( m_eOrientation )
     {
@@ -1115,6 +1133,18 @@ void PDFPage::appendMatrix3(Matrix3 const & rMatrix, OStringBuffer& rBuffer)
     appendPoint(Point(long(rMatrix.get(4)), long(rMatrix.get(5))), rBuffer);
 }
 
+double PDFPage::getHeight() const
+{
+    double fRet = m_nPageHeight ? m_nPageHeight : vcl::pdf::g_nInheritedPageHeight;
+
+    if (m_nUserUnit > 1)
+    {
+        fRet /= m_nUserUnit;
+    }
+
+    return fRet;
+}
+
 PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext,
                                const css::uno::Reference< css::beans::XMaterialHolder >& xEnc,
                                PDFWriter& i_rOuterFace)
@@ -1123,6 +1153,8 @@ PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext,
         m_nCurrentStructElement( 0 ),
         m_bEmitStructure( true ),
         m_nNextFID( 1 ),
+        m_aPDFBmpCache(
+            officecfg::Office::Common::VCL::PDFExportImageCacheSize::get() ),
         m_nCurrentPage( -1 ),
         m_nCatalogObject(0),
         m_nSignatureObject( -1 ),
@@ -1142,6 +1174,7 @@ PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext,
         m_bIsPDF_A1( false ),
         m_bIsPDF_A2( false ),
         m_bIsPDF_UA( false ),
+        m_bIsPDF_A3( false ),
         m_rOuterFace( i_rOuterFace )
 {
     m_aStructure.emplace_back( );
@@ -1208,8 +1241,8 @@ PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext,
         case PDFWriter::PDFVersion::PDF_1_3: aBuffer.append( "1.3" );break;
         case PDFWriter::PDFVersion::PDF_A_1:
         case PDFWriter::PDFVersion::PDF_1_4: aBuffer.append( "1.4" );break;
-        default:
         case PDFWriter::PDFVersion::PDF_1_5: aBuffer.append( "1.5" );break;
+        default:
         case PDFWriter::PDFVersion::PDF_1_6: aBuffer.append( "1.6" );break;
     }
     // append something binary as comment (suggested in PDF Reference)
@@ -1230,6 +1263,10 @@ PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext,
 
     m_bIsPDF_A2 = (m_aContext.Version == PDFWriter::PDFVersion::PDF_A_2);
     if( m_bIsPDF_A2 )
+        m_aContext.Version = PDFWriter::PDFVersion::PDF_1_6; //we could even use 1.7 features
+
+    m_bIsPDF_A3 = (m_aContext.Version == PDFWriter::PDFVersion::PDF_A_3);
+    if( m_bIsPDF_A3 )
         m_aContext.Version = PDFWriter::PDFVersion::PDF_1_6; //we could even use 1.7 features
 
     if (m_aContext.UniversalAccessibilityCompliance)
@@ -1606,6 +1643,14 @@ void PDFWriterImpl::newPage( double nPageWidth, double nPageHeight, PDFWriter::O
     endPage();
     m_nCurrentPage = m_aPages.size();
     m_aPages.emplace_back(this, nPageWidth, nPageHeight, eOrientation );
+
+    sal_Int32 nUserUnit = m_aPages.back().m_nUserUnit;
+    if (nUserUnit > 1)
+    {
+        m_aMapMode = MapMode(MapUnit::MapPoint, Point(), Fraction(nUserUnit, pointToPixel(1)),
+                             Fraction(nUserUnit, pointToPixel(1)));
+    }
+
     m_aPages.back().beginStream();
 
     // setup global graphics state
@@ -3154,6 +3199,7 @@ bool PDFWriterImpl::emitScreenAnnotations()
 
 bool PDFWriterImpl::emitLinkAnnotations()
 {
+    MARK("PDFWriterImpl::emitLinkAnnotations");
     int nAnnots = m_aLinks.size();
     for( int i = 0; i < nAnnots; i++ )
     {
@@ -3167,7 +3213,7 @@ bool PDFWriterImpl::emitLinkAnnotations()
 // i59651: key /F set bits Print to 1 rest to 0. We don't set NoZoom NoRotate to 1, since it's a 'should'
 // see PDF 8.4.2 and ISO 19005-1:2005 6.5.3
         aLine.append( "<</Type/Annot" );
-        if( m_bIsPDF_A1 || m_bIsPDF_A2 )
+        if( m_bIsPDF_A1 || m_bIsPDF_A2 || m_bIsPDF_A3)
             aLine.append( "/F 4" );
         aLine.append( "/Subtype/Link/Border[0 0 0]/Rect[" );
 
@@ -3389,7 +3435,7 @@ bool PDFWriterImpl::emitNoteAnnotations()
 // i59651: key /F set bits Print to 1 rest to 0. We don't set NoZoom NoRotate to 1, since it's a 'should'
 // see PDF 8.4.2 and ISO 19005-1:2005 6.5.3
         aLine.append( "<</Type/Annot" );
-        if( m_bIsPDF_A1 || m_bIsPDF_A2 )
+        if( m_bIsPDF_A1 || m_bIsPDF_A2 || m_bIsPDF_A3 )
             aLine.append( "/F 4" );
         aLine.append( "/Subtype/Text/Rect[" );
 
@@ -3939,7 +3985,7 @@ bool PDFWriterImpl::emitAppearances( PDFWidget& rWidget, OStringBuffer& rAnnotDi
 
             // PDF/A requires sub-dicts for /FT/Btn objects (clause
             // 6.3.3)
-            if( m_bIsPDF_A1 || m_bIsPDF_A2 )
+            if( m_bIsPDF_A1 || m_bIsPDF_A2 || m_bIsPDF_A3)
             {
                 if( rWidget.m_eType == PDFWriter::RadioButton ||
                     rWidget.m_eType == PDFWriter::CheckBox ||
@@ -4221,7 +4267,7 @@ bool PDFWriterImpl::emitWidgetAnnotations()
                 }
                 else if( rWidget.m_aListEntries.empty() )
                 {
-                    if( !m_bIsPDF_A2 )
+                    if( !m_bIsPDF_A2 && !m_bIsPDF_A3 )
                     {
                         // create a reset form action
                         aLine.append( "/AA<</D<</Type/Action/S/ResetForm>>>>\n" );
@@ -4402,6 +4448,7 @@ bool PDFWriterImpl::emitCatalog()
 
     sal_Int32 nMediaBoxWidth = 0;
     sal_Int32 nMediaBoxHeight = 0;
+    sal_Int32 nUserUnit = 1;
     if( m_aPages.empty() ) // sanity check, this should not happen
     {
         nMediaBoxWidth = g_nInheritedPageWidth;
@@ -4412,17 +4459,29 @@ bool PDFWriterImpl::emitCatalog()
         for (auto const& page : m_aPages)
         {
             if( page.m_nPageWidth > nMediaBoxWidth )
+            {
                 nMediaBoxWidth = page.m_nPageWidth;
+                nUserUnit = page.m_nUserUnit;
+            }
             if( page.m_nPageHeight > nMediaBoxHeight )
+            {
                 nMediaBoxHeight = page.m_nPageHeight;
+                nUserUnit = page.m_nUserUnit;
+            }
         }
     }
     aLine.append( "/MediaBox[ 0 0 " );
-    aLine.append( nMediaBoxWidth );
+    aLine.append(nMediaBoxWidth / nUserUnit);
     aLine.append( ' ' );
-    aLine.append( nMediaBoxHeight );
-    aLine.append( " ]\n"
-                  "/Kids[ " );
+    aLine.append(nMediaBoxHeight / nUserUnit);
+    aLine.append(" ]\n");
+    if (nUserUnit > 1)
+    {
+        aLine.append("/UserUnit ");
+        aLine.append(nUserUnit);
+        aLine.append("\n");
+    }
+    aLine.append("/Kids[ ");
     unsigned int i = 0;
     for (const auto & page : m_aPages)
     {
@@ -4644,7 +4703,7 @@ bool PDFWriterImpl::emitCatalog()
         aLine.append( getResourceDictObj() );
         aLine.append( " 0 R" );
         // NeedAppearances must not be used if PDF is signed
-        if( m_bIsPDF_A1 || m_bIsPDF_A2
+        if( m_bIsPDF_A1 || m_bIsPDF_A2 || m_bIsPDF_A3
 #if HAVE_FEATURE_NSS
             || ( m_nSignatureObject != -1 )
 #endif
@@ -4956,7 +5015,7 @@ sal_Int32 PDFWriterImpl::emitNamedDestinations()
 // emits the output intent dictionary
 sal_Int32 PDFWriterImpl::emitOutputIntent()
 {
-    if( !m_bIsPDF_A1 && !m_bIsPDF_A2 )
+    if( !m_bIsPDF_A1 && !m_bIsPDF_A2 && !m_bIsPDF_A3 )
         return 0;
 
     //emit the sRGB standard profile, in ICC format, in a stream, per IEC61966-2.1
@@ -5066,7 +5125,7 @@ static void escapeStringXML( const OUString& rStr, OUString &rValue)
 // emits the document metadata
 sal_Int32 PDFWriterImpl::emitDocumentMetadata()
 {
-    if (!m_bIsPDF_A1 && !m_bIsPDF_A2 && !m_bIsPDF_UA)
+    if( !m_bIsPDF_A1 && !m_bIsPDF_A2 && !m_bIsPDF_A3 )
         return 0;
 
     //get the object number for all the destinations
@@ -5080,6 +5139,8 @@ sal_Int32 PDFWriterImpl::emitDocumentMetadata()
             aMetadata.mnPDF_A = 1;
         else if (m_bIsPDF_A2)
             aMetadata.mnPDF_A = 2;
+        else if (m_bIsPDF_A3)
+            aMetadata.mnPDF_A = 3;
 
         aMetadata.mbPDF_UA = m_bIsPDF_UA;
 
@@ -5900,8 +5961,8 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const OUString& rText, bool 
     // perform artificial italics if necessary
     if( ( m_aCurrentPDFState.m_aFont.GetItalic() == ITALIC_NORMAL ||
           m_aCurrentPDFState.m_aFont.GetItalic() == ITALIC_OBLIQUE ) &&
-        !( GetFontInstance()->GetFontFace()->GetItalic() == ITALIC_NORMAL ||
-           GetFontInstance()->GetFontFace()->GetItalic() == ITALIC_OBLIQUE )
+        ( GetFontInstance()->GetFontFace()->GetItalic() != ITALIC_NORMAL &&
+           GetFontInstance()->GetFontFace()->GetItalic() != ITALIC_OBLIQUE )
         )
     {
         fSkew = M_PI/12.0;
@@ -8555,7 +8616,9 @@ void PDFWriterImpl::writeReferenceXObject(ReferenceXObjectEmit& rEmit)
             return;
         }
 
-        filter::PDFObjectElement* pPage = aPages[0];
+        size_t nPageIndex = rEmit.m_nPDFPageIndex >= 0 ? rEmit.m_nPDFPageIndex : 0;
+
+        filter::PDFObjectElement* pPage = aPages[nPageIndex];
         if (!pPage)
         {
             SAL_WARN("vcl.pdfwriter", "PDFWriterImpl::writeReferenceXObject: no page");
@@ -9130,20 +9193,27 @@ void PDFWriterImpl::createEmbeddedFile(const Graphic& rGraphic, ReferenceXObject
     // no pdf data.
     rEmit.m_nBitmapObject = nBitmapObject;
 
-    if (!rGraphic.hasPdfData())
+    if (!rGraphic.getVectorGraphicData() || rGraphic.getVectorGraphicData()->getVectorGraphicDataType() != VectorGraphicDataType::Pdf)
         return;
+
+    sal_uInt32 nLength = rGraphic.getVectorGraphicData()->getVectorGraphicDataArrayLength();
+    auto const & rArray = rGraphic.getVectorGraphicData()->getVectorGraphicDataArray();
+
+    auto pPDFData = std::make_shared<std::vector<sal_Int8>>(rArray.getConstArray(), rArray.getConstArray() + nLength);
 
     if (m_aContext.UseReferenceXObject)
     {
         // Store the original PDF data as an embedded file.
         m_aEmbeddedFiles.emplace_back();
         m_aEmbeddedFiles.back().m_nObject = createObject();
-        m_aEmbeddedFiles.back().m_pData = rGraphic.getPdfData();
-
+        m_aEmbeddedFiles.back().m_pData = pPDFData;
         rEmit.m_nEmbeddedObject = m_aEmbeddedFiles.back().m_nObject;
     }
     else
-        rEmit.m_aPDFData = *rGraphic.getPdfData();
+    {
+        rEmit.m_nPDFPageIndex = rGraphic.getVectorGraphicData()->getPageIndex();
+        rEmit.m_aPDFData = *pPDFData;
+    }
 
     rEmit.m_nFormObject = createObject();
     rEmit.m_aPixelSize = rGraphic.GetPrefSize();
@@ -9198,7 +9268,7 @@ void PDFWriterImpl::drawJPGBitmap( SvStream& rDCTData, bool bIsTrueColor, const 
     {
         m_aJPGs.emplace( m_aJPGs.begin() );
         JPGEmit& rEmit = m_aJPGs.front();
-        if (!rGraphic.hasPdfData() || m_aContext.UseReferenceXObject)
+        if (!rGraphic.getVectorGraphicData() || rGraphic.getVectorGraphicData()->getVectorGraphicDataType() != VectorGraphicDataType::Pdf || m_aContext.UseReferenceXObject)
             rEmit.m_nObject = createObject();
         rEmit.m_aID         = aID;
         rEmit.m_pStream = std::move( pStream );
@@ -9302,7 +9372,7 @@ const BitmapEmit& PDFWriterImpl::createBitmapEmit( const BitmapEx& i_rBitmap, co
         m_aBitmaps.push_front( BitmapEmit() );
         m_aBitmaps.front().m_aID        = aID;
         m_aBitmaps.front().m_aBitmap    = aBitmap;
-        if (!rGraphic.hasPdfData() || m_aContext.UseReferenceXObject)
+        if (!rGraphic.getVectorGraphicData() || rGraphic.getVectorGraphicData()->getVectorGraphicDataType() != VectorGraphicDataType::Pdf || m_aContext.UseReferenceXObject)
             m_aBitmaps.front().m_nObject = createObject();
         createEmbeddedFile(rGraphic, m_aBitmaps.front().m_aReferenceXObject, m_aBitmaps.front().m_nObject);
         it = m_aBitmaps.begin();
@@ -9634,8 +9704,15 @@ void PDFWriterImpl::updateGraphicsState(Mode const mode)
                 if ( rNewState.m_aClipRegion.count() )
                 {
                     m_aPages.back().appendPolyPolygon( rNewState.m_aClipRegion, aLine );
-                    aLine.append( "W* n\n" );
                 }
+                else
+                {
+                    // tdf#130150 Need to revert tdf#99680, that breaks the
+                    // rule that an set but empty clip-region clips everything
+                    // aka draws nothing -> nothing is in an empty clip-region
+                    aLine.append( "0 0 m h " ); // NULL clip, i.e. nothing visible
+                }
+                aLine.append( "W* n\n" );
 
                 rNewState.m_aMapMode = aNewMapMode;
                 SetMapMode( rNewState.m_aMapMode );
@@ -9780,8 +9857,12 @@ void PDFWriterImpl::setMapMode( const MapMode& rMapMode )
 
 void PDFWriterImpl::setClipRegion( const basegfx::B2DPolyPolygon& rRegion )
 {
-    basegfx::B2DPolyPolygon aRegion = LogicToPixel( rRegion, m_aGraphicsStack.front().m_aMapMode );
-    aRegion = PixelToLogic( aRegion, m_aMapMode );
+    // tdf#130150 improve coordinate manipulations to double precision transformations
+    const basegfx::B2DHomMatrix aCurrentTransform(
+        GetInverseViewTransformation(m_aMapMode) * GetViewTransformation(m_aGraphicsStack.front().m_aMapMode));
+    basegfx::B2DPolyPolygon aRegion(rRegion);
+
+    aRegion.transform(aCurrentTransform);
     m_aGraphicsStack.front().m_aClipRegion = aRegion;
     m_aGraphicsStack.front().m_bClipRegion = true;
     m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsStateUpdateFlags::ClipRegion;
@@ -9791,16 +9872,26 @@ void PDFWriterImpl::moveClipRegion( sal_Int32 nX, sal_Int32 nY )
 {
     if( m_aGraphicsStack.front().m_bClipRegion && m_aGraphicsStack.front().m_aClipRegion.count() )
     {
-        Point aPoint( lcl_convert( m_aGraphicsStack.front().m_aMapMode,
-                                   m_aMapMode,
-                                   this,
-                                   Point( nX, nY ) ) );
-        aPoint -= lcl_convert( m_aGraphicsStack.front().m_aMapMode,
-                               m_aMapMode,
-                               this,
-                               Point() );
+        // tdf#130150 improve coordinate manipulations to double precision transformations
+        basegfx::B2DHomMatrix aConvertA;
+
+        if(MapUnit::MapPixel == m_aGraphicsStack.front().m_aMapMode.GetMapUnit())
+        {
+            aConvertA = GetInverseViewTransformation(m_aMapMode);
+        }
+        else
+        {
+            aConvertA = LogicToLogic(m_aGraphicsStack.front().m_aMapMode, m_aMapMode);
+        }
+
+        basegfx::B2DPoint aB2DPointA(nX, nY);
+        basegfx::B2DPoint aB2DPointB(0.0, 0.0);
+        aB2DPointA *= aConvertA;
+        aB2DPointB *= aConvertA;
+        aB2DPointA -= aB2DPointB;
         basegfx::B2DHomMatrix aMat;
-        aMat.translate( aPoint.X(), aPoint.Y() );
+
+        aMat.translate(aB2DPointA.getX(), aB2DPointA.getY());
         m_aGraphicsStack.front().m_aClipRegion.transform( aMat );
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsStateUpdateFlags::ClipRegion;
     }
@@ -9815,9 +9906,14 @@ void PDFWriterImpl::intersectClipRegion( const tools::Rectangle& rRect )
 
 void PDFWriterImpl::intersectClipRegion( const basegfx::B2DPolyPolygon& rRegion )
 {
-    basegfx::B2DPolyPolygon aRegion( LogicToPixel( rRegion, m_aGraphicsStack.front().m_aMapMode ) );
-    aRegion = PixelToLogic( aRegion, m_aMapMode );
+    // tdf#130150 improve coordinate manipulations to double precision transformations
+    const basegfx::B2DHomMatrix aCurrentTransform(
+        GetInverseViewTransformation(m_aMapMode) * GetViewTransformation(m_aGraphicsStack.front().m_aMapMode));
+    basegfx::B2DPolyPolygon aRegion(rRegion);
+
+    aRegion.transform(aCurrentTransform);
     m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsStateUpdateFlags::ClipRegion;
+
     if( m_aGraphicsStack.front().m_bClipRegion )
     {
         basegfx::B2DPolyPolygon aOld( basegfx::utils::prepareForPolygonOperation( m_aGraphicsStack.front().m_aClipRegion ) );
@@ -9939,7 +10035,8 @@ sal_Int32 PDFWriterImpl::createDest( const tools::Rectangle& rRect, sal_Int32 nP
 
 sal_Int32 PDFWriterImpl::registerDestReference( sal_Int32 nDestId, const tools::Rectangle& rRect, sal_Int32 nPageNr, PDFWriter::DestAreaType eType )
 {
-    return m_aDestinationIdTranslation[ nDestId ] = createDest( rRect, nPageNr, eType );
+    m_aDestinationIdTranslation[ nDestId ] = createDest( rRect, nPageNr, eType );
+    return m_aDestinationIdTranslation[ nDestId ];
 }
 
 void PDFWriterImpl::setLinkDest( sal_Int32 nLinkId, sal_Int32 nDestId )

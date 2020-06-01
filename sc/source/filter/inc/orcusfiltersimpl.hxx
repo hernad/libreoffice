@@ -25,13 +25,14 @@ public:
 
     virtual bool importODS_Styles(ScDocument& rDoc, OUString& aFileName) const override;
 
-    virtual std::unique_ptr<ScOrcusXMLContext> createXMLContext(ScDocument& rDoc, const OUString& rPath) const override;
+    virtual std::unique_ptr<ScOrcusXMLContext>
+    createXMLContext(ScDocument& rDoc, const OUString& rPath) const override;
 };
 
 class ScOrcusXMLContextImpl : public ScOrcusXMLContext
 {
     ScDocument& mrDoc;
-    OUString const maPath;
+    OUString maPath;
 
     orcus::xmlns_repository maNsRepo; /// XML namespace repository for this context.
 

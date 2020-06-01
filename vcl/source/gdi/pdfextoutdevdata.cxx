@@ -389,8 +389,8 @@ bool PageSyncData::PlaySyncPageAct( PDFWriter& rWriter, sal_uInt32& rCurGDIMtfAc
             case PDFExtOutDevDataSync::CreateControl:
             {
                 std::shared_ptr< PDFWriter::AnyWidget > pControl( mControls.front() );
-                SAL_WARN_IF( !pControl.get(), "vcl", "PageSyncData::PlaySyncPageAct: invalid widget!" );
-                if ( pControl.get() )
+                SAL_WARN_IF( !pControl, "vcl", "PageSyncData::PlaySyncPageAct: invalid widget!" );
+                if ( pControl )
                     rWriter.CreateControl( *pControl );
                 mControls.pop_front();
             }
@@ -865,8 +865,8 @@ bool PDFExtOutDevData::HasAdequateCompression( const Graphic &rGraphic,
                                rGraphic.GetGfxLink().GetDataSize();
 
     static const struct {
-        sal_Int32 const mnQuality;
-        sal_Int32 const mnRatio;
+        sal_Int32 mnQuality;
+        sal_Int32 mnRatio;
     } aRatios[] = { // minimum tolerable compression ratios
         { 100, 400 }, { 95, 700 }, { 90, 1000 }, { 85, 1200 },
         { 80, 1500 }, { 75, 1700 }

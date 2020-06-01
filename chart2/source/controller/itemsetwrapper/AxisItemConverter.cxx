@@ -37,6 +37,7 @@
 #include <com/sun/star/chart/ChartAxisPosition.hpp>
 #include <com/sun/star/chart/TimeInterval.hpp>
 #include <com/sun/star/chart2/XAxis.hpp>
+#include <com/sun/star/chart2/XChartDocument.hpp>
 #include <com/sun/star/chart2/AxisOrientation.hpp>
 #include <com/sun/star/chart2/AxisType.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
@@ -361,6 +362,10 @@ void AxisItemConverter::FillSpecialItem( sal_uInt16 nWhichId, SfxItemSet & rOutI
 
             rOutItemSet.Put( SfxUInt32Item( nWhichId, nFormatKey ));
         }
+        break;
+
+        case SCHATTR_AXIS_SHIFTED_CATEGORY_POSITION:
+            rOutItemSet.Put(SfxBoolItem(nWhichId, rScale.ShiftedCategoryPosition));
         break;
 
         case SCHATTR_AXIS_LABEL_POSITION:
@@ -801,6 +806,18 @@ bool AxisItemConverter::ApplySpecialItem( sal_uInt16 nWhichId, const SfxItemSet 
                         }
                     }
                 }
+            }
+        }
+        break;
+
+        case SCHATTR_AXIS_SHIFTED_CATEGORY_POSITION:
+        {
+            bool bNewValue = static_cast<const SfxBoolItem &> (rItemSet.Get(nWhichId)).GetValue();
+            bool bOldValue = aScale.ShiftedCategoryPosition;
+            if (bOldValue != bNewValue)
+            {
+                aScale.ShiftedCategoryPosition = bNewValue;
+                bSetScale = true;
             }
         }
         break;

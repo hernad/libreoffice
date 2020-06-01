@@ -21,17 +21,11 @@ import uno
 import unohelper
 import sys
 import os
-import imp
+import types
 import time
 import ast
 import platform
 from com.sun.star.uri.RelativeUriExcessParentSegments import RETAIN
-
-try:
-    unicode
-except NameError:
-    # Python 3 compatibility
-    unicode = str
 
 class LogLevel:
     NONE = 0   # production level
@@ -347,7 +341,7 @@ class ScriptContext(unohelper.Base):
 #        code = readTextFromStream( sfa.openFileRead( url ) )
 
         # execute the module
-#        entry = ModuleEntry( lastRead, imp.new_module("ooo_script_framework") )
+#        entry = ModuleEntry( lastRead, types.ModuleType("ooo_script_framework") )
 #        entry.module.__dict__[GLOBAL_SCRIPTCONTEXT_NAME] = g_scriptContext
 #        entry.module.__file__ = url
 #        exec code in entry.module.__dict__
@@ -489,7 +483,7 @@ class ProviderContext:
             src = ensureSourceState( src )
 
             # execute the module
-            entry = ModuleEntry( lastRead, imp.new_module("ooo_script_framework") )
+            entry = ModuleEntry( lastRead, types.ModuleType("ooo_script_framework") )
             entry.module.__dict__[GLOBAL_SCRIPTCONTEXT_NAME] = self.scriptContext
 
             code = None
@@ -583,7 +577,7 @@ class ScriptBrowseNode( unohelper.Base, XBrowseNode , XPropertySet, XInvocation,
             if event.ActionCommand == "Run":
                 code = self.editor.getControl("EditorTextField").getText()
                 code = ensureSourceState( code )
-                mod = imp.new_module("ooo_script_framework")
+                mod = types.ModuleType("ooo_script_framework")
                 mod.__dict__[GLOBAL_SCRIPTCONTEXT_NAME] = self.provCtx.scriptContext
                 exec(code, mod.__dict__)
                 values = mod.__dict__.get( CALLABLE_CONTAINER_NAME , None )
@@ -967,7 +961,7 @@ class PythonScriptProvider( unohelper.Base, XBrowseNode, XScriptProvider, XNameC
         inv = None
         storageType = ""
 
-        if isinstance(args[0],unicode ):
+        if isinstance(args[0], str):
             storageType = args[0]
             if storageType.startswith( "vnd.sun.star.tdoc" ):
                 doc = getModelFromDocUrl(ctx, storageType)

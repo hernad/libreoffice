@@ -31,7 +31,7 @@
 #include <svtools/openfiledroptargetlistener.hxx>
 #include <svtools/colorcfg.hxx>
 #include <svtools/langhelp.hxx>
-#include <sfx2/templateviewitem.hxx>
+#include <templateviewitem.hxx>
 
 #include <vcl/menubtn.hxx>
 
@@ -703,8 +703,8 @@ namespace {
 struct ImplDelayedDispatch
 {
     Reference< XDispatch >      xDispatch;
-    css::util::URL const   aDispatchURL;
-    Sequence< PropertyValue > const   aArgs;
+    css::util::URL   aDispatchURL;
+    Sequence< PropertyValue >   aArgs;
 
     ImplDelayedDispatch( const Reference< XDispatch >& i_xDispatch,
                          const css::util::URL& i_rURL,

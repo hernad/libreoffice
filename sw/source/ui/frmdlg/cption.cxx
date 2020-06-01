@@ -30,6 +30,7 @@
 #include <doc.hxx>
 #include <modcfg.hxx>
 #include <swmodule.hxx>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/text/XTextGraphicObjectsSupplier.hpp>
 #include <com/sun/star/text/XTextTablesSupplier.hpp>
 #include <com/sun/star/text/XTextEmbeddedObjectsSupplier.hpp>
@@ -46,7 +47,7 @@ namespace {
 class SwSequenceOptionDialog : public weld::GenericDialogController
 {
     SwView&         m_rView;
-    OUString const  m_aFieldTypeName;
+    OUString        m_aFieldTypeName;
 
     std::unique_ptr<weld::ComboBox> m_xLbLevel;
     std::unique_ptr<weld::Entry> m_xEdDelim;
@@ -93,12 +94,6 @@ OUString TextFilterAutoConvert::filter(const OUString &rText)
     return rText;
 }
 
-IMPL_LINK(SwCaptionDialog, TextFilterHdl, OUString&, rTest, bool)
-{
-    rTest = m_aTextFilter.filter(rTest);
-    return true;
-}
-
 SwCaptionDialog::SwCaptionDialog(weld::Window *pParent, SwView &rV)
     : SfxDialogController(pParent, "modules/swriter/ui/insertcaption.ui", "InsertCaptionDialog")
     , m_sNone(SwResId(SW_STR_NONE))
@@ -122,8 +117,6 @@ SwCaptionDialog::SwCaptionDialog(weld::Window *pParent, SwView &rV)
     , m_xOptionButton(m_xBuilder->weld_button("options"))
     , m_xPreview(new weld::CustomWeld(*m_xBuilder, "preview", m_aPreview))
 {
-    m_xCategoryBox->connect_entry_insert_text(LINK(this, SwCaptionDialog, TextFilterHdl));
-
     //#i61007# order of captions
     ApplyCaptionOrder();
     SwWrtShell &rSh = rView.GetWrtShell();
@@ -362,6 +355,13 @@ IMPL_LINK_NOARG(SwCaptionDialog, ModifyEntryHdl, weld::Entry&, void)
 
 IMPL_LINK_NOARG(SwCaptionDialog, ModifyComboHdl, weld::ComboBox&, void)
 {
+    OUString sText = m_xCategoryBox->get_active_text();
+    OUString sAllowedText = m_aTextFilter.filter(sText);
+    if (sText != sAllowedText)
+    {
+        m_xCategoryBox->set_entry_text(sAllowedText);
+        m_xCategoryBox->select_entry_region(sAllowedText.getLength(), sAllowedText.getLength());
+    }
     ModifyHdl();
 }
 

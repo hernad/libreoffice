@@ -27,12 +27,14 @@
 #include <oox/core/xmlfilterbase.hxx>
 #include <sax/fshelper.hxx>
 #include <tools/stream.hxx>
+#include <formula/errorcodes.hxx>
 #include "ftools.hxx"
+#include <types.hxx>
 
 #include <filter/msfilter/mscodec.hxx>
 #include <vector>
 
-namespace com { namespace sun { namespace star { namespace beans { struct NamedValue; } } } }
+namespace com::sun::star::beans { struct NamedValue; }
 
 /* ============================================================================
 Output stream class for Excel export
@@ -262,7 +264,8 @@ public:
 
     static OUString ToOUString( const char* s );
     static OUString ToOUString( const ScfUInt16Vec& rBuffer, sal_Int32 nStart = 0, sal_Int32 nLength = -1 );
-    static OUString ToOUString( sc::CompileFormulaContext& rCtx, const ScAddress& rAddress, const ScTokenArray* pTokenArray );
+    static OUString ToOUString( sc::CompileFormulaContext& rCtx, const ScAddress& rAddress,
+            const ScTokenArray* pTokenArray, FormulaError nErrCode = FormulaError::NONE );
     static OUString ToOUString( const XclExpString& s );
 
     template <class T>
@@ -336,6 +339,10 @@ private:
             WriteAttribute(nAttr, OUString(sVal, strlen(sVal), RTL_TEXTENCODING_UTF8));
     }
 
+    void validateTabNames(std::vector<OUString>& aOriginalTabNames);
+    void restoreTabNames(const std::vector<OUString>& aOriginalTabNames);
+    void renameTab(SCTAB aTab, OUString aNewName);
+
     typedef std::map< OUString,
         std::pair< OUString,
             sax_fastparser::FSHelperPtr > >     XclExpXmlPathToStateMap;
@@ -344,8 +351,8 @@ private:
     std::stack< sax_fastparser::FSHelperPtr >   maStreams;
     XclExpXmlPathToStateMap                     maOpenedStreamMap;
 
-    bool const mbExportVBA;
-    bool const mbExportTemplate;
+    bool mbExportVBA;
+    bool mbExportTemplate;
 };
 
 #endif

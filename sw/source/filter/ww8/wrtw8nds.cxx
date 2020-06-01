@@ -39,6 +39,7 @@
 #include <editeng/formatbreakitem.hxx>
 #include <editeng/frmdiritem.hxx>
 #include <editeng/tstpitem.hxx>
+#include <editeng/wghtitem.hxx>
 #include <svl/grabbagitem.hxx>
 #include <svl/urihelper.hxx>
 #include <svl/whiter.hxx>
@@ -466,6 +467,12 @@ void SwWW8AttrIter::OutAttr( sal_Int32 nSwPos, bool bWriteCombChars)
     if ( pCharFormatItem )
         ClearOverridesFromSet( *pCharFormatItem, aExportSet );
 
+    // check toggle properties in DOCX output
+    {
+        SvxWeightItem aBoldProperty(WEIGHT_BOLD, RES_CHRATR_WEIGHT);
+        handleToggleProperty(aExportSet, pCharFormatItem, RES_CHRATR_WEIGHT, &aBoldProperty);
+    }
+
     // tdf#113790: AutoFormat style overwrites char style, so remove all
     // elements from CHARFMT grab bag which are set in AUTOFMT grab bag
     if (const SfxGrabBagItem *pAutoFmtGrabBag = dynamic_cast<const SfxGrabBagItem*>(pGrabBag))
@@ -526,6 +533,64 @@ void SwWW8AttrIter::OutAttr( sal_Int32 nSwPos, bool bWriteCombChars)
     // Output grab bag attributes
     if (pGrabBag)
         m_rExport.AttrOutput().OutputItem( *pGrabBag );
+}
+
+// Toggle Properties
+//
+// If the value of the toggle property appears at multiple levels of the style hierarchy (17.7.2), their
+// effective values shall be combined as follows:
+//
+//     value_{effective} = val_{table} XOR val_{paragraph} XOR val_{character}
+//
+// If the value specified by the document defaults is true, the effective value is true.
+// Otherwise, the values are combined by a Boolean XOR as follows:
+// i.e., the effective value to be applied to the content shall be true if its effective value is true for
+// an odd number of levels of the style hierarchy.
+//
+// To prevent such logic inside output, it is required to write inline w:b token on content level.
+void SwWW8AttrIter::handleToggleProperty(SfxItemSet& rExportSet, const SwFormatCharFormat* pCharFormatItem,
+    sal_uInt16 nWhich, const SfxPoolItem* pValue)
+{
+    if (!rExportSet.HasItem(nWhich) && pValue)
+    {
+        bool hasPropertyInCharStyle = false;
+        bool hasPropertyInParaStyle = false;
+
+        // get bold flag from specified character style
+        if (pCharFormatItem)
+        {
+            if (const SwCharFormat* pCharFormat = pCharFormatItem->GetCharFormat())
+            {
+                const SfxPoolItem* pItem = nullptr;
+                if (pCharFormat->GetAttrSet().HasItem(nWhich, &pItem))
+                {
+                    hasPropertyInCharStyle = (*pItem == *pValue);
+                }
+            }
+        }
+
+        // get bold flag from specified paragraph style
+        {
+            SwTextFormatColl& rTextColl = static_cast<SwTextFormatColl&>( rNd.GetAnyFormatColl() );
+            sal_uInt16 nStyle = m_rExport.m_pStyles->GetSlot( &rTextColl );
+            nStyle = ( nStyle != 0xfff ) ? nStyle : 0;
+            const SwFormat* pFormat = m_rExport.m_pStyles->GetSwFormat(nStyle);
+            if (pFormat)
+            {
+                const SfxPoolItem* pItem = nullptr;
+                if (pFormat->GetAttrSet().HasItem(nWhich, &pItem))
+                {
+                    hasPropertyInParaStyle = (*pItem == *pValue);
+                }
+            }
+        }
+
+        // add inline property
+        if (hasPropertyInCharStyle && hasPropertyInParaStyle)
+        {
+            rExportSet.Put(*pValue);
+        }
+    }
 }
 
 bool SwWW8AttrIter::IsWatermarkFrame()
@@ -1152,7 +1217,7 @@ OUString BookmarkToWriter(const OUString &rBookmark)
 
 void SwWW8AttrIter::OutSwFormatRefMark(const SwFormatRefMark& rAttr)
 {
-    if ( m_rExport.HasRefToObject( REF_SETREFATTR, &rAttr.GetRefName(), 0 ) )
+    if(m_rExport.HasRefToAttr(rAttr.GetRefName()))
         m_rExport.AppendBookmark( MSWordExportBase::GetBookmarkName( REF_SETREFATTR,
                                             &rAttr.GetRefName(), 0 ));
 }
@@ -2748,9 +2813,13 @@ void MSWordExportBase::OutputTextNode( SwTextNode& rNode )
                                             SvxNumberFormat::LABEL_WIDTH_AND_POSITION )
                     {
                         if (bParaRTL)
-                            aLR.SetTextFirstLineOffsetValue(pFormat->GetAbsLSpace() - pFormat->GetFirstLineOffset()); //TODO: overflow
+                        {
+                            aLR.SetTextFirstLineOffsetValue(aLR.GetTextFirstLineOffset() + pFormat->GetAbsLSpace() - pFormat->GetFirstLineOffset()); //TODO: overflow
+                        }
                         else
-                            aLR.SetTextFirstLineOffset(GetWordFirstLineOffset(*pFormat));
+                        {
+                            aLR.SetTextFirstLineOffset(aLR.GetTextFirstLineOffset() + GetWordFirstLineOffset(*pFormat));
+                        }
                     }
 
                     // correct fix for issue i94187
@@ -3490,12 +3559,6 @@ WW8Ruby::WW8Ruby(const SwTextNode& rNode, const SwFormatRuby& rRuby, const MSWor
             *pPool, GetWhichOfScript(RES_CHRATR_FONTSIZE, nRubyScript));
         m_nRubyHeight = rHeight.GetHeight();
     }
-
-    if (pRubyText)
-        nRubyScript
-            = g_pBreakIt->GetBreakIter()->getScriptType(rNode.GetText(), pRubyText->GetStart());
-    else
-        nRubyScript = i18n::ScriptType::ASIAN;
 
     const OUString &rText = rNode.GetText();
     sal_uInt16 nScript = i18n::ScriptType::LATIN;

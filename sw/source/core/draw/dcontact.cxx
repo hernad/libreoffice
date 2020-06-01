@@ -53,6 +53,7 @@
 #include <doc.hxx>
 #include <hints.hxx>
 #include <txtfrm.hxx>
+#include <frameformats.hxx>
 #include <docary.hxx>
 #include <sortedobjs.hxx>
 #include <basegfx/matrix/b2dhommatrix.hxx>
@@ -995,8 +996,8 @@ class NestedUserCallHdl
 {
     private:
         SwDrawContact* mpDrawContact;
-        bool const mbParentUserCallActive;
-        SdrUserCallType const meParentUserCallEventType;
+        bool mbParentUserCallActive;
+        SdrUserCallType meParentUserCallEventType;
 
     public:
         NestedUserCallHdl( SwDrawContact* _pDrawContact,

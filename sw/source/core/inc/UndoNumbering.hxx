@@ -28,11 +28,11 @@
 
 class SwUndoInsNum : public SwUndo, private SwUndRng
 {
-    SwNumRule const aNumRule;
-    std::unique_ptr<SwHistory> pHistory;
-    std::unique_ptr<SwNumRule> pOldNumRule;
-    OUString const sReplaceRule;
-    sal_uInt16 nLRSavePos;
+    SwNumRule m_aNumRule;
+    std::unique_ptr<SwHistory> m_pHistory;
+    std::unique_ptr<SwNumRule> m_pOldNumRule;
+    OUString m_sReplaceRule;
+    sal_uInt16 m_nLRSavePos;
 
 public:
     SwUndoInsNum( const SwPaM& rPam, const SwNumRule& rRule );
@@ -61,11 +61,11 @@ class SwUndoDelNum : public SwUndo, private SwUndRng
     struct NodeLevel
     {
         sal_uLong index;
-        int const level;
+        int level;
         NodeLevel(sal_uLong idx, int lvl) : index(idx), level(lvl) {};
     };
-    std::vector<NodeLevel>     aNodes;
-    std::unique_ptr<SwHistory> pHistory;
+    std::vector<NodeLevel>     m_aNodes;
+    std::unique_ptr<SwHistory> m_pHistory;
 
 public:
     SwUndoDelNum( const SwPaM& rPam );
@@ -77,13 +77,13 @@ public:
     virtual void RepeatImpl( ::sw::RepeatContext & ) override;
 
     void AddNode( const SwTextNode& rNd );
-    SwHistory* GetHistory() { return pHistory.get(); }
+    SwHistory* GetHistory() { return m_pHistory.get(); }
 };
 
 class SwUndoMoveNum : public SwUndo, private SwUndRng
 {
     sal_uLong nNewStt;
-    long const nOffset;
+    long nOffset;
 
 public:
     SwUndoMoveNum( const SwPaM& rPam, long nOffset, bool bIsOutlMv );
@@ -97,7 +97,7 @@ public:
 
 class SwUndoNumUpDown : public SwUndo, private SwUndRng
 {
-    short const nOffset;
+    short nOffset;
 
 public:
     SwUndoNumUpDown( const SwPaM& rPam, short nOffset );
@@ -109,7 +109,7 @@ public:
 
 class SwUndoNumOrNoNum : public SwUndo
 {
-    sal_uLong const nIdx;
+    sal_uLong nIdx;
     bool mbNewNum, mbOldNum;
 
 public:
@@ -123,10 +123,10 @@ public:
 
 class SwUndoNumRuleStart : public SwUndo
 {
-    sal_uLong const nIdx;
+    sal_uLong nIdx;
     sal_uInt16 nOldStt, nNewStt;
-    bool const bSetSttValue : 1;
-    bool const bFlag : 1;
+    bool bSetSttValue : 1;
+    bool bFlag : 1;
 
 public:
     SwUndoNumRuleStart( const SwPosition& rPos, bool bDelete );

@@ -194,12 +194,18 @@ SwPaM* SwCursorShell::GetCursor( bool bMakeTableCursor ) const
             //don't re-create 'parked' cursors
             const SwContentNode* pCNd;
             if( m_pTableCursor->GetPoint()->nNode.GetIndex() &&
-                m_pTableCursor->GetMark()->nNode.GetIndex() &&
-                nullptr != ( pCNd = m_pTableCursor->GetContentNode() ) && pCNd->getLayoutFrame( GetLayout() ) &&
-                nullptr != ( pCNd = m_pTableCursor->GetContentNode(false) ) && pCNd->getLayoutFrame( GetLayout() ) )
+                m_pTableCursor->GetMark()->nNode.GetIndex() )
             {
-                SwShellTableCursor* pTC = m_pTableCursor;
-                GetLayout()->MakeTableCursors( *pTC );
+                pCNd = m_pTableCursor->GetContentNode();
+                if( pCNd && pCNd->getLayoutFrame( GetLayout() ) )
+                {
+                    pCNd = m_pTableCursor->GetContentNode(false);
+                    if( pCNd && pCNd->getLayoutFrame( GetLayout() ) )
+                    {
+                        SwShellTableCursor* pTC = m_pTableCursor;
+                        GetLayout()->MakeTableCursors( *pTC );
+                    }
+                }
             }
         }
 
@@ -509,7 +515,7 @@ bool SwCursorShell::UpDown( bool bUp, sal_uInt16 nCnt )
 
     if( bRet )
     {
-        m_eMvState = MV_UPDOWN; // status for Cursor travelling - GetModelPositionForViewPoint
+        m_eMvState = CursorMoveState::UpDown; // status for Cursor travelling - GetModelPositionForViewPoint
         if( !ActionPend() )
         {
             CursorFlag eUpdateMode = SwCursorShell::SCROLLWIN;
@@ -526,7 +532,7 @@ bool SwCursorShell::LRMargin( bool bLeft, bool bAPI)
 {
     SwCallLink aLk( *this ); // watch Cursor-Moves; call Link if needed
     SET_CURR_SHELL( this );
-    m_eMvState = MV_LEFTMARGIN; // status for Cursor travelling - GetModelPositionForViewPoint
+    m_eMvState = CursorMoveState::LeftMargin; // status for Cursor travelling - GetModelPositionForViewPoint
 
     const bool bTableMode = IsTableMode();
     SwShellCursor* pTmpCursor = getShellCursor( true );
@@ -637,13 +643,13 @@ bool SwCursorShell::MovePage( SwWhichPage fnWhichPage, SwPosPage fnPosPage )
         std::pair<Point, bool> tmp(rPt, false);
         SwContentFrame * pFrame = m_pCurrentCursor->GetContentNode()->
             getLayoutFrame(GetLayout(), m_pCurrentCursor->GetPoint(), &tmp);
-        if( pFrame && ( bRet = GetFrameInPage( pFrame, fnWhichPage,
-                                           fnPosPage, m_pCurrentCursor )  ) &&
+        if( pFrame && GetFrameInPage( pFrame, fnWhichPage, fnPosPage, m_pCurrentCursor ) &&
             !m_pCurrentCursor->IsSelOvr( SwCursorSelOverFlags::Toggle |
                                  SwCursorSelOverFlags::ChangePos ))
+        {
             UpdateCursor();
-        else
-            bRet = false;
+            bRet = true;
+        }
     }
     return bRet;
 }
@@ -757,8 +763,8 @@ int SwCursorShell::SetCursor( const Point &rLPt, bool bOnlyText, bool bBlock )
     SwPosition aPos( *pCursor->GetPoint() );
     Point aPt( rLPt );
     Point & rCurrentCursorPt = pCursor->GetPtPos();
-    SwCursorMoveState aTmpState( IsTableMode() ? MV_TBLSEL :
-                                    bOnlyText ?  MV_SETONLYTEXT : MV_NONE );
+    SwCursorMoveState aTmpState( IsTableMode() ? CursorMoveState::TableSel :
+                                    bOnlyText ?  CursorMoveState::SetOnlyText : CursorMoveState::NONE );
     aTmpState.m_bSetInReadOnly = IsReadOnlyAvailable();
 
     SwTextNode const*const pTextNd = sw::GetParaPropsNode(*GetLayout(), pCursor->GetPoint()->nNode);
@@ -784,8 +790,8 @@ int SwCursorShell::SetCursor( const Point &rLPt, bool bOnlyText, bool bBlock )
 
     pCursor->SetCursorBidiLevel( aTmpState.m_nCursorBidiLevel );
 
-    if( MV_RIGHTMARGIN == aTmpState.m_eState )
-        m_eMvState = MV_RIGHTMARGIN;
+    if( CursorMoveState::RightMargin == aTmpState.m_eState )
+        m_eMvState = CursorMoveState::RightMargin;
     // is the new position in header or footer?
     SwFrame* pFrame = lcl_IsInHeaderFooter( aPos.nNode, aPt );
     if( IsTableMode() && !pFrame && aPos.nNode.GetNode().StartOfSectionNode() ==
@@ -872,7 +878,7 @@ int SwCursorShell::SetCursor( const Point &rLPt, bool bOnlyText, bool bBlock )
         {
             // there is no valid content -> hide cursor
             m_pVisibleCursor->Hide(); // always hide visible cursor
-            m_eMvState = MV_NONE; // status for Cursor travelling
+            m_eMvState = CursorMoveState::NONE; // status for Cursor travelling
             m_bAllProtect = true;
             if( GetDoc()->GetDocShell() )
             {
@@ -994,7 +1000,7 @@ bool SwCursorShell::TestCurrPam(
     SwPosition aPtPos( *m_pCurrentCursor->GetPoint() );
     Point aPt( rPt );
 
-    SwCursorMoveState aTmpState( MV_NONE );
+    SwCursorMoveState aTmpState( CursorMoveState::NONE );
     aTmpState.m_bSetInReadOnly = IsReadOnlyAvailable();
     if ( !GetLayout()->GetModelPositionForViewPoint( &aPtPos, aPt, &aTmpState ) && bTstHit )
         return false;
@@ -1224,7 +1230,7 @@ sal_uInt16 SwCursorShell::GetPageNumSeqNonEmpty()
     const SwContentFrame* pCFrame = GetCurrFrame(/*bCalcFrame*/true);
     const SwPageFrame* pPg = nullptr;
 
-    if (!pCFrame || nullptr == (pPg = pCFrame->FindPageFrame()))
+    if (pCFrame == nullptr || nullptr == (pPg = pCFrame->FindPageFrame()))
     {
         pPg = Imp()->GetFirstVisPage(GetOut());
         while (pPg && pPg->IsEmptyPage())
@@ -1485,7 +1491,7 @@ void SwCursorShell::UpdateCursorPos()
 
     if( isInHiddenTextFrame(pShellCursor) )
     {
-        SwCursorMoveState aTmpState( MV_NONE );
+        SwCursorMoveState aTmpState( CursorMoveState::NONE );
         aTmpState.m_bSetInReadOnly = IsReadOnlyAvailable();
         GetLayout()->GetModelPositionForViewPoint( pShellCursor->GetPoint(), pShellCursor->GetPtPos(),
                                      &aTmpState );
@@ -1688,7 +1694,7 @@ void SwCursorShell::UpdateCursor( sal_uInt16 eFlags, bool bIdleEnd )
                 }
             }
 
-            SwCursorMoveState aTmpState( MV_NONE );
+            SwCursorMoveState aTmpState( CursorMoveState::NONE );
             aTmpState.m_bRealHeight = true;
             {
                 DisableCallbackAction a(*GetLayout());
@@ -1735,7 +1741,7 @@ void SwCursorShell::UpdateCursor( sal_uInt16 eFlags, bool bIdleEnd )
                                   -m_aCharRect.Width() : m_aCharRect.Height());
                 m_pVisibleCursor->Show(); // show again
             }
-            m_eMvState = MV_NONE;  // state for cursor travelling - GetModelPositionForViewPoint
+            m_eMvState = CursorMoveState::NONE;  // state for cursor travelling - GetModelPositionForViewPoint
             if (Imp()->IsAccessible())
                 Imp()->InvalidateAccessibleCursorPosition( pTableFrame );
             return;
@@ -1776,7 +1782,7 @@ void SwCursorShell::UpdateCursor( sal_uInt16 eFlags, bool bIdleEnd )
                     bChgState = false;
                 else
                 {
-                    m_eMvState = MV_NONE;     // state for cursor travelling
+                    m_eMvState = CursorMoveState::NONE;     // state for cursor travelling
                     m_bAllProtect = true;
                     if( GetDoc()->GetDocShell() )
                     {
@@ -1876,7 +1882,7 @@ void SwCursorShell::UpdateCursor( sal_uInt16 eFlags, bool bIdleEnd )
                         bChgState = false;
                     else
                     {
-                        m_eMvState = MV_NONE;     // state for cursor travelling
+                        m_eMvState = CursorMoveState::NONE;     // state for cursor travelling
                         m_bAllProtect = true;
                         if( GetDoc()->GetDocShell() )
                         {
@@ -2006,7 +2012,7 @@ void SwCursorShell::UpdateCursor( sal_uInt16 eFlags, bool bIdleEnd )
         }
     }
 
-    m_eMvState = MV_NONE; // state for cursor travelling - GetModelPositionForViewPoint
+    m_eMvState = CursorMoveState::NONE; // state for cursor travelling - GetModelPositionForViewPoint
 
     if (Imp()->IsAccessible())
         Imp()->InvalidateAccessibleCursorPosition( pFrame );
@@ -2634,7 +2640,7 @@ bool SwCursorShell::SetVisibleCursor( const Point &rPt )
     SET_CURR_SHELL( this );
     Point aPt( rPt );
     SwPosition aPos( *m_pCurrentCursor->GetPoint() );
-    SwCursorMoveState aTmpState( MV_SETONLYTEXT );
+    SwCursorMoveState aTmpState( CursorMoveState::SetOnlyText );
     aTmpState.m_bSetInReadOnly = IsReadOnlyAvailable();
     aTmpState.m_bRealHeight = true;
 
@@ -2850,7 +2856,8 @@ void SwCursorShell::ParkCursor( const SwNodeIndex &rIdx )
     std::unique_ptr<SwPaM> pNew( new SwPaM( *GetCursor()->GetPoint() ) );
     if( pNode->GetStartNode() )
     {
-        if( ( pNode = pNode->StartOfSectionNode())->IsTableNode() )
+        pNode = pNode->StartOfSectionNode();
+        if( pNode->IsTableNode() )
         {
             // the given node is in a table, thus park cursor to table node
             // (outside of the table)
@@ -2914,7 +2921,7 @@ SwCursorShell::SwCursorShell( SwCursorShell& rShell, vcl::Window *pInitWin )
     , m_nCurrentContent(0)
     , m_nCurrentNdTyp(SwNodeType::NONE)
     , m_nCursorMove( 0 )
-    , m_eMvState( MV_NONE )
+    , m_eMvState( CursorMoveState::NONE )
     , m_eEnhancedTableSel(SwTable::SEARCH_NONE)
     , m_sMarkedListId()
     , m_nMarkedListLevel( 0 )
@@ -2951,7 +2958,7 @@ SwCursorShell::SwCursorShell( SwDoc& rDoc, vcl::Window *pInitWin,
     , m_nCurrentContent(0)
     , m_nCurrentNdTyp(SwNodeType::NONE)
     , m_nCursorMove( 0 )
-    , m_eMvState( MV_NONE ) // state for crsr-travelling - GetModelPositionForViewPoint
+    , m_eMvState( CursorMoveState::NONE ) // state for crsr-travelling - GetModelPositionForViewPoint
     , m_eEnhancedTableSel(SwTable::SEARCH_NONE)
     , m_sMarkedListId()
     , m_nMarkedListLevel( 0 )
@@ -3063,8 +3070,8 @@ void SwCursorShell::MakeSelVisible()
         }
         if( !aTmp.HasArea() )
         {
-            aTmp.SSize().AdjustHeight(1 );
-            aTmp.SSize().AdjustWidth(1 );
+            aTmp.AddHeight(1 );
+            aTmp.AddWidth(1 );
         }
         MakeVisible( aTmp );
     }
@@ -3075,7 +3082,8 @@ void SwCursorShell::MakeSelVisible()
         else
         {
             SwRect aTmp( m_aCharRect );
-            aTmp.SSize().AdjustHeight(1 ); aTmp.SSize().AdjustWidth(1 );
+            aTmp.AddHeight(1 );
+            aTmp.AddWidth(1 );
             MakeVisible( aTmp );
         }
     }
@@ -3255,7 +3263,7 @@ bool SwCursorShell::FindValidContentNode( bool bOnlyText )
         // if cursor in hidden frame, always move it
         if (!pCNd || !pCNd->getLayoutFrame(GetLayout(), nullptr, nullptr))
         {
-            SwCursorMoveState aTmpState( MV_NONE );
+            SwCursorMoveState aTmpState( CursorMoveState::NONE );
             aTmpState.m_bSetInReadOnly = IsReadOnlyAvailable();
             GetLayout()->GetModelPositionForViewPoint( m_pCurrentCursor->GetPoint(), m_pCurrentCursor->GetPtPos(),
                                         &aTmpState );
@@ -3372,7 +3380,7 @@ SvxFrameDirection SwCursorShell::GetTextDirection( const Point* pPt ) const
     Point aPt( pPt ? *pPt : m_pCurrentCursor->GetPtPos() );
     if( pPt )
     {
-        SwCursorMoveState aTmpState( MV_NONE );
+        SwCursorMoveState aTmpState( CursorMoveState::NONE );
         aTmpState.m_bSetInReadOnly = IsReadOnlyAvailable();
 
         GetLayout()->GetModelPositionForViewPoint( &aPos, aPt, &aTmpState );
@@ -3722,16 +3730,21 @@ void SwCursorShell::GetSmartTagRect( const Point& rPt, SwRect& rSelectRect )
     SwPaM* pCursor = GetCursor();
     SwPosition aPos( *pCursor->GetPoint() );
     Point aPt( rPt );
-    SwCursorMoveState eTmpState( MV_SETONLYTEXT );
+    SwCursorMoveState eTmpState( CursorMoveState::SetOnlyText );
     SwSpecialPos aSpecialPos;
     eTmpState.m_pSpecialPos = &aSpecialPos;
     SwTextNode *pNode;
     const SwWrongList *pSmartTagList;
 
-    if( GetLayout()->GetModelPositionForViewPoint( &aPos, aPt, &eTmpState ) &&
-        nullptr != (pNode = aPos.nNode.GetNode().GetTextNode()) &&
-        nullptr != (pSmartTagList = pNode->GetSmartTags()) &&
-        !pNode->IsInProtectSect() )
+    if( !GetLayout()->GetModelPositionForViewPoint( &aPos, aPt, &eTmpState ) )
+        return;
+    pNode = aPos.nNode.GetNode().GetTextNode();
+    if( !pNode )
+        return;
+    pSmartTagList = pNode->GetSmartTags();
+    if( !pSmartTagList )
+        return;
+    if( !pNode->IsInProtectSect() )
     {
         sal_Int32 nBegin = aPos.nContent.GetIndex();
         sal_Int32 nLen = 1;

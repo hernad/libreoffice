@@ -19,22 +19,17 @@
 
 #include <RelationDlg.hxx>
 
-#include <vcl/svapp.hxx>
-#include <dbu_dlg.hxx>
 #include <com/sun/star/sdbc/KeyRule.hpp>
 #include <com/sun/star/sdbc/SQLException.hpp>
 
-#include <tools/debug.hxx>
 #include <tools/diagnose_ex.h>
-#include <UITools.hxx>
 #include <JoinDesignView.hxx>
 #include <JoinController.hxx>
 #include <connectivity/dbexception.hxx>
+#include <connectivity/dbtools.hxx>
 #include <RTableConnectionData.hxx>
 #include <RelationControl.hxx>
 #include <cppuhelper/exc_hlp.hxx>
-
-#include <algorithm>
 
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::sdbc;
@@ -62,7 +57,7 @@ ORelationDialog::ORelationDialog( OJoinTableView* pParent,
     , m_xPB_OK(m_xBuilder->weld_button("ok"))
 {
     // Copy connection
-    m_pConnData.reset( pConnectionData->NewInstance() );
+    m_pConnData = pConnectionData->NewInstance();
     m_pConnData->CopyFrom( *pConnectionData );
 
     Init(m_pConnData);

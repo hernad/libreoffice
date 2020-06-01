@@ -20,7 +20,6 @@
 #define INCLUDED_DBACCESS_SOURCE_FILTER_XML_XMLHIERARCHYCOLLECTION_HXX
 
 #include <xmloff/xmlictxt.hxx>
-#include "xmlEnums.hxx"
 #include <com/sun/star/container/XNameAccess.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 
@@ -31,7 +30,6 @@ namespace dbaxml
     {
         css::uno::Reference< css::container::XNameAccess > m_xContainer;
         css::uno::Reference< css::beans::XPropertySet >    m_xTable;
-        OUString     m_sName;
         OUString     m_sCollectionServiceName;
         OUString     m_sComponentServiceName;
 

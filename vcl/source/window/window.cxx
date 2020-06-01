@@ -26,6 +26,7 @@
 #include <vcl/help.hxx>
 #include <vcl/cursor.hxx>
 #include <vcl/svapp.hxx>
+#include <vcl/transfer.hxx>
 #include <vcl/vclevent.hxx>
 #include <vcl/window.hxx>
 #include <vcl/syswin.hxx>
@@ -55,6 +56,8 @@
 #include <helpwin.hxx>
 
 #include <com/sun/star/accessibility/AccessibleRelation.hpp>
+#include <com/sun/star/accessibility/XAccessible.hpp>
+#include <com/sun/star/awt/XWindowPeer.hpp>
 #include <com/sun/star/datatransfer/clipboard/XClipboard.hpp>
 #include <com/sun/star/datatransfer/dnd/XDragGestureRecognizer.hpp>
 #include <com/sun/star/datatransfer/dnd/XDropTarget.hpp>
@@ -1244,6 +1247,26 @@ void Window::CopyDeviceArea( SalTwoRect& aPosAry, bool bWindowInvalidate )
     OutputDevice::CopyDeviceArea(aPosAry, bWindowInvalidate);
 }
 
+const OutputDevice* Window::DrawOutDevDirectCheck(const OutputDevice* pSrcDev) const
+{
+    const OutputDevice* pSrcDevChecked;
+    if ( this == pSrcDev )
+        pSrcDevChecked = nullptr;
+    else if (GetOutDevType() != pSrcDev->GetOutDevType())
+        pSrcDevChecked = pSrcDev;
+    else if (this->mpWindowImpl->mpFrameWindow == static_cast<const vcl::Window*>(pSrcDev)->mpWindowImpl->mpFrameWindow)
+        pSrcDevChecked = nullptr;
+    else
+        pSrcDevChecked = pSrcDev;
+
+    return pSrcDevChecked;
+}
+
+void Window::DrawOutDevDirectProcess( const OutputDevice* pSrcDev, SalTwoRect& rPosAry, SalGraphics* pSrcGraphics )
+{
+    mpGraphics->CopyBits( rPosAry, pSrcGraphics, this, pSrcDev );
+}
+
 SalGraphics* Window::ImplGetFrameGraphics() const
 {
     if ( mpWindowImpl->mpFrameWindow->mpGraphics )
@@ -1708,7 +1731,7 @@ void Window::ImplNewInputContext()
 {
     ImplSVData* pSVData = ImplGetSVData();
     vcl::Window* pFocusWin = pSVData->mpWinData->mpFocusWin;
-    if ( !pFocusWin )
+    if ( !pFocusWin || pFocusWin->IsDisposed() )
         return;
 
     // Is InputContext changed?
@@ -1745,6 +1768,14 @@ void Window::ImplNewInputContext()
     pFocusWin->ImplGetFrame()->SetInputContext( &aNewContext );
 }
 
+void Window::SetDumpAsPropertyTreeHdl(const Link<boost::property_tree::ptree&, void>& rLink)
+{
+    if (mpWindowImpl) // may be called after dispose
+    {
+        mpWindowImpl->maDumpAsPropertyTreeHdl = rLink;
+    }
+}
+
 void Window::SetModalHierarchyHdl(const Link<bool, void>& rLink)
 {
     ImplGetFrame()->SetModalHierarchyHdl(rLink);
@@ -1771,10 +1802,10 @@ void Window::KeyInput( const KeyEvent& rKEvt )
     KeyCode cod = rKEvt.GetKeyCode ();
     bool autoacc = ImplGetSVData()->maNWFData.mbAutoAccel;
 
-    // do not respond to accelerators unless Alt is held */
+    // do not respond to accelerators unless Alt or Ctrl is held */
     if (cod.GetCode () >= 0x200 && cod.GetCode () <= 0x219)
     {
-        if (autoacc && cod.GetModifier () != KEY_MOD2)
+        if (autoacc && cod.GetModifier () != KEY_MOD2 && !(cod.GetModifier() & KEY_MOD1))
             return;
     }
 
@@ -1790,7 +1821,7 @@ void Window::KeyUp( const KeyEvent& rKEvt )
         mpWindowImpl->mbKeyUp = true;
 }
 
-void Window::Draw( OutputDevice*, const Point&, const Size&, DrawFlags )
+void Window::Draw( OutputDevice*, const Point&, DrawFlags )
 {
 }
 
@@ -2786,6 +2817,10 @@ void Window::setPosSizePixel( long nX, long nY,
 
         pWindow->mpWindowImpl->mpFrame->SetPosSize( nX, nY, nWidth, nHeight, nSysFlags );
 
+        // Adjust resize with the hack of different client size and frame geometries to fix
+        // native menu bars. Eventually this should be replaced by proper mnTopBorder usage.
+        pWindow->mpWindowImpl->mpFrame->GetClientSize(nWidth, nHeight);
+
         // Resize should be called directly. If we haven't
         // set the correct size, we get a second resize from
         // the system with the correct size. This can be happened
@@ -2901,28 +2936,22 @@ tools::Rectangle Window::ImplOutputToUnmirroredAbsoluteScreenPixel( const tools:
 tools::Rectangle Window::GetWindowExtentsRelative( vcl::Window *pRelativeWindow ) const
 {
     // with decoration
-    return ImplGetWindowExtentsRelative( pRelativeWindow, false );
+    return ImplGetWindowExtentsRelative( pRelativeWindow );
 }
 
-tools::Rectangle Window::GetClientWindowExtentsRelative() const
-{
-    // without decoration
-    return ImplGetWindowExtentsRelative( nullptr, true );
-}
-
-tools::Rectangle Window::ImplGetWindowExtentsRelative( vcl::Window *pRelativeWindow, bool bClientOnly ) const
+tools::Rectangle Window::ImplGetWindowExtentsRelative( vcl::Window *pRelativeWindow ) const
 {
     SalFrameGeometry g = mpWindowImpl->mpFrame->GetGeometry();
     // make sure we use the extent of our border window,
     // otherwise we miss a few pixels
-    const vcl::Window *pWin = (!bClientOnly && mpWindowImpl->mpBorderWindow) ? mpWindowImpl->mpBorderWindow : this;
+    const vcl::Window *pWin = mpWindowImpl->mpBorderWindow ? mpWindowImpl->mpBorderWindow : this;
 
     Point aPos( pWin->OutputToScreenPixel( Point(0,0) ) );
     aPos.AdjustX(g.nX );
     aPos.AdjustY(g.nY );
     Size aSize ( pWin->GetSizePixel() );
     // #104088# do not add decoration to the workwindow to be compatible to java accessibility api
-    if( !bClientOnly && (mpWindowImpl->mbFrame || (mpWindowImpl->mpBorderWindow && mpWindowImpl->mpBorderWindow->mpWindowImpl->mbFrame && GetType() != WindowType::WORKWINDOW)) )
+    if( mpWindowImpl->mbFrame || (mpWindowImpl->mpBorderWindow && mpWindowImpl->mpBorderWindow->mpWindowImpl->mbFrame && GetType() != WindowType::WORKWINDOW) )
     {
         aPos.AdjustX( -sal_Int32(g.nLeftDecoration) );
         aPos.AdjustY( -sal_Int32(g.nTopDecoration) );
@@ -2932,7 +2961,7 @@ tools::Rectangle Window::ImplGetWindowExtentsRelative( vcl::Window *pRelativeWin
     if( pRelativeWindow )
     {
         // #106399# express coordinates relative to borderwindow
-        vcl::Window *pRelWin = (!bClientOnly && pRelativeWindow->mpWindowImpl->mpBorderWindow) ? pRelativeWindow->mpWindowImpl->mpBorderWindow.get() : pRelativeWindow;
+        vcl::Window *pRelWin = pRelativeWindow->mpWindowImpl->mpBorderWindow ? pRelativeWindow->mpWindowImpl->mpBorderWindow.get() : pRelativeWindow;
         aPos = pRelWin->AbsoluteScreenToOutputPixel( aPos );
     }
     return tools::Rectangle( aPos, aSize );
@@ -3183,7 +3212,7 @@ void Window::SetLOKNotifier(const vcl::ILibreOfficeKitNotifier* pNotifier, bool 
         // assign the LOK window id
         assert(mpWindowImpl->mnLOKWindowId == 0);
         mpWindowImpl->mnLOKWindowId = sLastLOKWindowId++;
-        GetLOKWindowsMap().insert(std::map<vcl::LOKWindowId, VclPtr<vcl::Window>>::value_type(mpWindowImpl->mnLOKWindowId, this));
+        GetLOKWindowsMap().emplace(mpWindowImpl->mnLOKWindowId, this);
     }
     else
         mpWindowImpl->mbLOKParentNotifier = true;
@@ -3307,6 +3336,7 @@ const char* windowTypeName(WindowType nWindowType)
         case WindowType::PATTERNFIELD:              return "patternfield";
         case WindowType::NUMERICFIELD:              return "numericfield";
         case WindowType::METRICFIELD:               return "metricfield";
+        case WindowType::FORMATTEDFIELD:            return "formattedfield";
         case WindowType::CURRENCYFIELD:             return "currencyfield";
         case WindowType::DATEFIELD:                 return "datefield";
         case WindowType::TIMEFIELD:                 return "timefield";
@@ -3380,6 +3410,8 @@ boost::property_tree::ptree Window::DumpAsPropertyTree()
         }
         aTree.add_child("children", aChildren);
     }
+
+    mpWindowImpl->maDumpAsPropertyTreeHdl.Call(aTree);
 
     return aTree;
 }
@@ -3828,7 +3860,7 @@ void Window::RequestDoubleBuffering(bool bRequest)
 }
 
 /*
- * The rational here is that we moved destructors to
+ * The rationale here is that we moved destructors to
  * dispose and this altered a lot of code paths, that
  * are better left unchanged for now.
  */

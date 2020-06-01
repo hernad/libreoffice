@@ -31,14 +31,8 @@
 
 #include <set>
 
-namespace com { namespace sun { namespace star { namespace container {
-    class XStringKeyMap;
-} } } }
-
-namespace com { namespace sun { namespace star { namespace text {
-    class XTextRange;
-} } } }
-
+namespace com::sun::star::container { class XStringKeyMap; }
+namespace com::sun::star::text { class XTextRange; }
 class SwTextNode;
 class SwDoc;
 class ModelToViewHelper;
@@ -109,7 +103,7 @@ private:
     SwXFlatParagraph( const SwXFlatParagraph & ) = delete;
     SwXFlatParagraph & operator = ( const SwXFlatParagraph & ) = delete;
 
-    OUString const maExpandText;
+    OUString maExpandText;
 };
 
 class SwXFlatParagraphIterator:

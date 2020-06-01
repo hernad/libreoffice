@@ -24,6 +24,7 @@
 #include <i18nlangtag/languagetag.hxx>
 #include <tools/color.hxx>
 #include <osl/diagnose.h>
+#include <rtl/math.hxx>
 #include <rtl/ustrbuf.hxx>
 #include <sal/log.hxx>
 
@@ -51,8 +52,8 @@ namespace {
 
 struct SvXMLNumFmtEntry
 {
-    OUString const    aName;
-    sal_uInt32 const  nKey;
+    OUString   aName;
+    sal_uInt32  nKey;
     bool        bRemoveAfterUse;
 
     SvXMLNumFmtEntry( const OUString& rN, sal_uInt32 nK, bool bR ) :
@@ -118,7 +119,7 @@ namespace {
 class SvXMLNumFmtElementContext : public SvXMLImportContext
 {
     SvXMLNumFormatContext&  rParent;
-    sal_uInt16 const        nType;
+    sal_uInt16              nType;
     OUStringBuffer          aContent;
     SvXMLNumberInfo         aNumInfo;
     LanguageType            nElementLang;
@@ -309,15 +310,15 @@ namespace {
 
 struct SvXMLDefaultDateFormat
 {
-    NfIndexTableOffset const          eFormat;
-    SvXMLDateElementAttributes const  eDOW;
-    SvXMLDateElementAttributes const  eDay;
-    SvXMLDateElementAttributes const  eMonth;
-    SvXMLDateElementAttributes const  eYear;
-    SvXMLDateElementAttributes const  eHours;
-    SvXMLDateElementAttributes const  eMins;
-    SvXMLDateElementAttributes const  eSecs;
-    bool const                        bSystem;
+    NfIndexTableOffset          eFormat;
+    SvXMLDateElementAttributes  eDOW;
+    SvXMLDateElementAttributes  eDay;
+    SvXMLDateElementAttributes  eMonth;
+    SvXMLDateElementAttributes  eYear;
+    SvXMLDateElementAttributes  eHours;
+    SvXMLDateElementAttributes  eMins;
+    SvXMLDateElementAttributes  eSecs;
+    bool                        bSystem;
 };
 
 }
@@ -338,6 +339,7 @@ static const SvXMLDefaultDateFormat aDefaultDateFormats[] =
     { NF_DATE_SYS_NNDMMMYY,             XML_DEA_SHORT,  XML_DEA_SHORT,  XML_DEA_TEXTSHORT,  XML_DEA_SHORT,  XML_DEA_NONE,   XML_DEA_NONE,   XML_DEA_NONE,   false },
     { NF_DATE_SYS_NNDMMMMYYYY,          XML_DEA_SHORT,  XML_DEA_SHORT,  XML_DEA_TEXTLONG,   XML_DEA_LONG,   XML_DEA_NONE,   XML_DEA_NONE,   XML_DEA_NONE,   false },
     { NF_DATE_SYS_NNNNDMMMMYYYY,        XML_DEA_LONG,   XML_DEA_SHORT,  XML_DEA_TEXTLONG,   XML_DEA_LONG,   XML_DEA_NONE,   XML_DEA_NONE,   XML_DEA_NONE,   false },
+    { NF_DATETIME_SYS_DDMMYYYY_HHMM,    XML_DEA_NONE,   XML_DEA_ANY,    XML_DEA_ANY,        XML_DEA_LONG,   XML_DEA_ANY,    XML_DEA_ANY,    XML_DEA_NONE,   false },
     { NF_DATETIME_SYSTEM_SHORT_HHMM,    XML_DEA_NONE,   XML_DEA_ANY,    XML_DEA_ANY,        XML_DEA_ANY,    XML_DEA_ANY,    XML_DEA_ANY,    XML_DEA_NONE,   true },
     { NF_DATETIME_SYS_DDMMYYYY_HHMMSS,  XML_DEA_NONE,   XML_DEA_ANY,    XML_DEA_ANY,        XML_DEA_ANY,    XML_DEA_ANY,    XML_DEA_ANY,    XML_DEA_ANY,    false }
 };
@@ -1470,7 +1472,7 @@ SvXMLNumFormatContext::SvXMLNumFormatContext( SvXMLImport& rImport,
                                     const uno::Reference<xml::sax::XAttributeList>& xAttrList,
                                     const sal_Int32 nTempKey,
                                     SvXMLStylesContext& rStyles ) :
-    SvXMLStyleContext( rImport, nPrfx, rLName, xAttrList, XML_STYLE_FAMILY_DATA_STYLE ),
+    SvXMLStyleContext( rImport, nPrfx, rLName, xAttrList, XmlStyleFamily::DATA_STYLE ),
     pData( nullptr ),
     pStyles( &rStyles ),
     aMyConditions(),
@@ -1636,7 +1638,7 @@ sal_Int32 SvXMLNumFormatContext::CreateAndInsert(SvNumberFormatter* pFormatter)
     for (size_t i = 0; i < aMyConditions.size(); i++)
     {
         SvXMLNumFormatContext* pStyle = const_cast<SvXMLNumFormatContext*>( static_cast<const SvXMLNumFormatContext *>(pStyles->FindStyleChildContext(
-            XML_STYLE_FAMILY_DATA_STYLE, aMyConditions[i].sMapName)));
+            XmlStyleFamily::DATA_STYLE, aMyConditions[i].sMapName)));
         if (this == pStyle)
         {
             SAL_INFO("xmloff.style", "invalid style:map references containing style");
@@ -1690,7 +1692,7 @@ sal_Int32 SvXMLNumFormatContext::CreateAndInsert(SvNumberFormatter* pFormatter)
         NfIndexTableOffset eFormat = static_cast<NfIndexTableOffset>(SvXMLNumFmtDefaults::GetDefaultDateFormat(
             eDateDOW, eDateDay, eDateMonth, eDateYear,
             eDateHours, eDateMins, eDateSecs, bFromSystem ));
-        if ( eFormat < NF_INDEX_TABLE_LOCALE_DATA_DEFAULTS )
+        if ( eFormat < NF_INDEX_TABLE_RESERVED_START )
         {
             //  #109651# if a date format has the automatic-order attribute and
             //  contains exactly the elements of one of the default date formats,

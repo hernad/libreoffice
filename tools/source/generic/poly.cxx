@@ -332,10 +332,12 @@ ImplPolygon::ImplPolygon( const Point& rBezPt1, const Point& rCtrlPt1,
         Point& rPt = mxPointAry[i];
 
         fK_2 = fK_1;
-        fK_3 = ( fK_2 *= fK_1 );
+        fK_2 *= fK_1;
+        fK_3 = fK_2;
         fK_3 *= fK_1;
         fK1_2 = fK1_1;
-        fK1_3 = ( fK1_2 *= fK1_1 );
+        fK1_2 *= fK1_1;
+        fK1_3 = fK1_2;
         fK1_3 *= fK1_1;
         double fK12 = fK_1 * fK1_2;
         double fK21 = fK_2 * fK1_1;
@@ -1026,7 +1028,7 @@ double Polygon::CalcDistance( sal_uInt16 nP1, sal_uInt16 nP2 ) const
 
 void Polygon::Optimize( PolyOptimizeFlags nOptimizeFlags )
 {
-    DBG_ASSERT( !mpImplPolygon->mxFlagAry.get(), "Optimizing could fail with beziers!" );
+    DBG_ASSERT( !mpImplPolygon->mxFlagAry, "Optimizing could fail with beziers!" );
 
     sal_uInt16 nSize = mpImplPolygon->mnPoints;
 
@@ -1250,10 +1252,14 @@ Vector2D& Vector2D::Normalize()
 {
     double fLen = Scalar( *this );
 
-    if( ( fLen != 0.0 ) && ( fLen != 1.0 ) && ( ( fLen = sqrt( fLen ) ) != 0.0 ) )
+    if( ( fLen != 0.0 ) && ( fLen != 1.0 ) )
     {
-        mfX /= fLen;
-        mfY /= fLen;
+        fLen = sqrt( fLen );
+        if( fLen != 0.0 )
+        {
+            mfX /= fLen;
+            mfY /= fLen;
+        }
     }
 
     return *this;
@@ -1484,7 +1490,7 @@ tools::Rectangle Polygon::GetBoundRect() const
 
 bool Polygon::IsInside( const Point& rPoint ) const
 {
-    DBG_ASSERT( !mpImplPolygon->mxFlagAry.get(), "IsInside could fail with beziers!" );
+    DBG_ASSERT( !mpImplPolygon->mxFlagAry, "IsInside could fail with beziers!" );
 
     const tools::Rectangle aBound( GetBoundRect() );
     const Line      aLine( rPoint, Point( aBound.Right() + 100, rPoint.Y() ) );

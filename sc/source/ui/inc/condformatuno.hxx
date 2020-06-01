@@ -37,15 +37,7 @@ class ScCondDateFormatEntry;
 
 using namespace com::sun::star;
 
-namespace com { namespace sun { namespace star {
-
-namespace sheet {
-
-class XSheetCellRanges;
-
-}
-
-} } }
+namespace com::sun::star::sheet { class XSheetCellRanges; }
 
 class ScCondFormatsObj : public cppu::WeakImplHelper<css::sheet::XConditionalFormats>,
                             public SfxListener
@@ -69,7 +61,7 @@ public:
     ScConditionalFormatList* getCoreObject();
 
 private:
-    SCTAB const mnTab;
+    SCTAB mnTab;
     ScDocShell* mpDocShell;
 };
 
@@ -119,8 +111,8 @@ public:
 private:
     rtl::Reference<ScCondFormatsObj> mxCondFormatList;
     ScDocShell* mpDocShell;
-    SfxItemPropertySet const maPropSet;
-    sal_Int32 const mnKey;
+    SfxItemPropertySet maPropSet;
+    sal_Int32 mnKey;
 };
 
 class ScConditionEntryObj : public cppu::WeakImplHelper<css::beans::XPropertySet,
@@ -156,7 +148,7 @@ public:
 private:
     ScDocShell* mpDocShell;
     rtl::Reference<ScCondFormatObj> mxParent;
-    SfxItemPropertySet const maPropSet;
+    SfxItemPropertySet maPropSet;
     const ScCondFormatEntry* mpFormat;
 };
 
@@ -192,7 +184,7 @@ public:
 
 private:
     rtl::Reference<ScCondFormatObj> mxParent;
-    SfxItemPropertySet const maPropSet;
+    SfxItemPropertySet maPropSet;
     const ScColorScaleFormat* mpFormat;
 };
 
@@ -219,7 +211,7 @@ private:
     ScColorScaleEntry* getCoreObject();
 
     rtl::Reference<ScColorScaleFormatObj> mxParent;
-    size_t const mnPos;
+    size_t mnPos;
 };
 
 class ScDataBarFormatObj : public cppu::WeakImplHelper<css::beans::XPropertySet,
@@ -253,7 +245,7 @@ public:
 
 private:
     rtl::Reference<ScCondFormatObj> mxParent;
-    SfxItemPropertySet const maPropSet;
+    SfxItemPropertySet maPropSet;
     const ScDataBarFormat* mpFormat;
 };
 
@@ -276,7 +268,7 @@ private:
     ScColorScaleEntry* getCoreObject();
 
     rtl::Reference<ScDataBarFormatObj> mxParent;
-    size_t const mnPos;
+    size_t mnPos;
 };
 
 class ScIconSetFormatObj : public cppu::WeakImplHelper<css::beans::XPropertySet,
@@ -310,7 +302,7 @@ public:
 
 private:
     rtl::Reference<ScCondFormatObj> mxParent;
-    SfxItemPropertySet const maPropSet;
+    SfxItemPropertySet maPropSet;
     const ScIconSetFormat* mpFormat;
 };
 
@@ -333,7 +325,7 @@ private:
     ScColorScaleEntry* getCoreObject();
 
     rtl::Reference<ScIconSetFormatObj> mxParent;
-    size_t const mnPos;
+    size_t mnPos;
 };
 
 class ScCondDateFormatObj : public cppu::WeakImplHelper<css::beans::XPropertySet,
@@ -368,7 +360,7 @@ public:
 
 private:
     rtl::Reference<ScCondFormatObj> mxParent;
-    SfxItemPropertySet const maPropSet;
+    SfxItemPropertySet maPropSet;
     const ScCondDateFormatEntry* mpFormat;
 };
 

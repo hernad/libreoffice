@@ -58,7 +58,7 @@ public:
 private:
     std::unique_ptr<weld::ComboBox> m_xControl;
     Link<weld::ComboBox&, void> m_aChangeHdl;
-    OUString const m_aAllString;
+    OUString m_aAllString;
     std::unique_ptr<css::uno::Sequence<sal_Int16>> m_xSpellUsedLang;
     LanguageType m_eSavedLanguage;
     EditedAndValid  m_eEditedAndValid;
@@ -77,9 +77,10 @@ public:
     SvxLanguageBox(std::unique_ptr<weld::ComboBox> pControl);
     void            SetLanguageList( SvxLanguageListFlags nLangList,
                             bool bHasLangNone, bool bLangNoneIsLangAll = false,
-                            bool bCheckSpellAvail = false );
+                            bool bCheckSpellAvail = false, bool bDefaultLangExist = false,
+                            LanguageType eDefaultLangType = LANGUAGE_NONE,
+                            sal_Int16 nDefaultType = 0 );
     void            InsertLanguage(const LanguageType nLangType);
-    void            InsertDefaultLanguage(sal_Int16 nType);
 
     EditedAndValid      GetEditedAndValid() const { return m_eEditedAndValid;}
     sal_Int32           SaveEditedAsEntry();

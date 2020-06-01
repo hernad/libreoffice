@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_DRAWINGLAYER_PRIMITIVE2D_TEXTPRIMITIVE2D_HXX
-#define INCLUDED_DRAWINGLAYER_PRIMITIVE2D_TEXTPRIMITIVE2D_HXX
+#pragma once
 
 #include <drawinglayer/drawinglayerdllapi.h>
 
@@ -33,10 +32,8 @@
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 
 
-namespace drawinglayer
+namespace drawinglayer::primitive2d
 {
-    namespace primitive2d
-    {
         /** TextSimplePortionPrimitive2D class
 
             This is the basic primitive for representing a text portion. It contains
@@ -44,7 +41,7 @@ namespace drawinglayer
             will provide the text tools::PolyPolygon outlines as filled polygons, correctly
             transformed.
 
-            To get better text quality, it is suggested to handle tis primitive directly
+            To get better text quality, it is suggested to handle this primitive directly
             in a renderer. In that case, e.g. hintings on the system can be supported.
 
             @param maTextTransform
@@ -182,10 +179,7 @@ namespace drawinglayer
         /// small helper to have a compare operator for Locale
         bool DRAWINGLAYER_DLLPUBLIC LocalesAreEqual(const css::lang::Locale& rA, const css::lang::Locale& rB);
 
-    } // end of namespace primitive2d
-} // end of namespace drawinglayer
+} // end of namespace drawinglayer::primitive2d
 
-
-#endif //INCLUDED_DRAWINGLAYER_PRIMITIVE2D_TEXTPRIMITIVE2D_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

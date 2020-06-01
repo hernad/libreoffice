@@ -22,7 +22,6 @@
 #include <com/sun/star/beans/NamedValue.hpp>
 #include "extension.hxx"
 #include "xpathlib.hxx"
-#include <services.hxx>
 
 namespace com::sun::star::uno {
     class XComponentContext;
@@ -54,9 +53,9 @@ void SAL_CALL CLibxml2XFormsExtension::initialize(const Sequence< Any >& aSequen
     }
 
     NamedValue aValue;
-    for (sal_Int32 i = 0; i < aSequence.getLength(); i++)
+    for (const Any& rArg : aSequence)
     {
-        if (! (aSequence[i] >>= aValue))
+        if (! (rArg >>= aValue))
             throw RuntimeException();
         if ( aValue.Name == "Model" )
             aValue.Value >>= m_aModel;

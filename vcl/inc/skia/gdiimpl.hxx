@@ -26,12 +26,15 @@
 #include <salgeom.hxx>
 
 #include <SkSurface.h>
+#include <SkRegion.h>
 
 #include <prewin.h>
 #include <tools/sk_app/WindowContext.h>
 #include <postwin.h>
 
 class SkiaFlushIdle;
+class GenericSalLayout;
+class SkFont;
 
 class VCL_DLLPUBLIC SkiaSalGraphicsImpl : public SalGraphicsImpl
 {
@@ -100,8 +103,8 @@ public:
                                  const basegfx::B2DPolyPolygon&, double fTransparency) override;
 
     virtual bool drawPolyLine(const basegfx::B2DHomMatrix& rObjectToDevice,
-                              const basegfx::B2DPolygon&, double fTransparency,
-                              const basegfx::B2DVector& rLineWidths, basegfx::B2DLineJoin,
+                              const basegfx::B2DPolygon&, double fTransparency, double fLineWidth,
+                              const std::vector<double>* pStroke, basegfx::B2DLineJoin,
                               css::drawing::LineCap, double fMiterMinimumAngle,
                               bool bPixelSnapHairline) override;
 
@@ -198,16 +201,24 @@ public:
     // Default blend mode for SkPaint is SkBlendMode::kSrcOver
     void drawImage(const SalTwoRect& rPosAry, const sk_sp<SkImage>& aImage,
                    SkBlendMode eBlendMode = SkBlendMode::kSrcOver);
-    void drawBitmap(const SalTwoRect& rPosAry, const SkBitmap& aBitmap,
-                    SkBlendMode eBlendMode = SkBlendMode::kSrcOver);
+
+    enum class GlyphOrientation
+    {
+        Apply,
+        Ignore
+    };
+    void drawGenericLayout(const GenericSalLayout& layout, Color textColor, const SkFont& font,
+                           GlyphOrientation glyphOrientation);
 
 protected:
     // To be called before any drawing.
     void preDraw();
     // To be called after any drawing.
     void postDraw();
-    // The canvas to drawn to. Will be diverted to a temporary for Xor mode.
+    // The canvas to draw to. Will be diverted to a temporary for Xor mode.
     SkCanvas* getDrawCanvas() { return mXorMode ? getXorCanvas() : mSurface->getCanvas(); }
+    // Call before makeImageSnapshot(), ensures the content is up to date.
+    void flushDrawing();
 
     virtual void createSurface();
     // Call to ensure that mSurface is valid. If mSurface is going to be modified,
@@ -243,6 +254,15 @@ protected:
     void drawMask(const SalTwoRect& rPosAry, const sk_sp<SkImage>& rImage, Color nMaskColor);
 
     SkCanvas* getXorCanvas();
+    void applyXor();
+    void addXorRegion(const SkRect& rect)
+    {
+        if (mXorMode)
+        {
+            // Make slightly larger, just in case (rounding, antialiasing,...).
+            mXorRegion.op(rect.makeOutset(2, 2).round(), SkRegion::kUnion_Op);
+        }
+    }
     static void setCanvasClipRegion(SkCanvas* canvas, const vcl::Region& region);
 
     // When drawing using GPU, rounding errors may result in off-by-one errors,
@@ -258,7 +278,7 @@ protected:
     { // O - offscreen, G - GPU-based, R - raster
         return stream << static_cast<const void*>(graphics) << " "
                       << Size(graphics->GetWidth(), graphics->GetHeight())
-                      << (graphics->isOffscreen() ? "O" : "") << (graphics->isGPU() ? "G" : "R");
+                      << (graphics->isGPU() ? "G" : "R") << (graphics->isOffscreen() ? "O" : "");
     }
 
     SalGraphics& mParent;
@@ -275,9 +295,8 @@ protected:
     bool mXorMode;
     SkBitmap mXorBitmap;
     std::unique_ptr<SkCanvas> mXorCanvas;
-    SkRect mXorExtents; // the area that needs updating for the xor operation (or empty for all)
+    SkRegion mXorRegion; // the area that needs updating for the xor operation
     std::unique_ptr<SkiaFlushIdle> mFlush;
-    int mPendingPixelsToFlush;
 };
 
 #endif

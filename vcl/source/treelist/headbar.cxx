@@ -18,6 +18,7 @@
  */
 
 #include <vcl/headbar.hxx>
+#include <rtl/ustrbuf.hxx>
 #include <tools/debug.hxx>
 
 #include <vcl/svapp.hxx>
@@ -37,8 +38,8 @@ public:
     sal_uInt16          mnId;
     HeaderBarItemBits   mnBits;
     long                mnSize;
-    OString const       maHelpId;
-    Image const         maImage;
+    OString             maHelpId;
+    Image               maImage;
     OUString            maOutText;
     OUString            maText;
     OUString            maHelpText;
@@ -873,11 +874,11 @@ void HeaderBar::Paint(vcl::RenderContext& rRenderContext, const tools::Rectangle
         ImplDrawItem(rRenderContext, i, (i == nCurItemPos), &rRect);
 }
 
-void HeaderBar::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize,
+void HeaderBar::Draw( OutputDevice* pDev, const Point& rPos,
                       DrawFlags nFlags )
 {
     Point       aPos  = pDev->LogicToPixel( rPos );
-    Size        aSize = pDev->LogicToPixel( rSize );
+    Size        aSize = GetSizePixel();
     tools::Rectangle   aRect( aPos, aSize );
     vcl::Font   aFont = GetDrawPixelFont( pDev );
 

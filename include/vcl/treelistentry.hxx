@@ -27,7 +27,7 @@
 #include <vcl/treelistentries.hxx>
 #include <o3tl/typed_flags_set.hxx>
 
-#include <o3tl/optional.hxx>
+#include <optional>
 #include <vector>
 #include <memory>
 
@@ -60,11 +60,12 @@ class VCL_DLLPUBLIC SvTreeListEntry
     SvTreeListEntries   m_Children;
     sal_uLong           nAbsPos;
     sal_uLong           nListPos;
+    sal_uInt32          mnExtraIndent;
     ItemsType           m_Items;
     void*               pUserData;
     SvTLEntryFlags      nEntryFlags;
     Color               maBackColor;
-    o3tl::optional<Color> mxTextColor;
+    std::optional<Color> mxTextColor;
 
 private:
     void ClearChildren();
@@ -112,8 +113,11 @@ public:
     void SetBackColor( const Color& rColor ) { maBackColor = rColor; }
     const Color& GetBackColor() const { return maBackColor; }
 
-    void SetTextColor( o3tl::optional<Color> xColor ) { mxTextColor = xColor; }
-    o3tl::optional<Color> const & GetTextColor() const { return mxTextColor; }
+    void SetTextColor( std::optional<Color> xColor ) { mxTextColor = xColor; }
+    std::optional<Color> const & GetTextColor() const { return mxTextColor; }
+
+    void SetExtraIndent(sal_uInt32 nExtraIndent) { mnExtraIndent = nExtraIndent; }
+    sal_uInt32 GetExtraIndent() const { return mnExtraIndent; }
 
     SvTreeListEntry* GetParent() const { return pParent; }
 

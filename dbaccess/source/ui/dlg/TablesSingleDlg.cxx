@@ -20,8 +20,6 @@
 #include <TablesSingleDlg.hxx>
 #include "DbAdminImpl.hxx"
 #include "tablespage.hxx"
-#include <dsitems.hxx>
-#include <dbu_dlg.hxx>
 
 namespace dbaui
 {
@@ -85,11 +83,6 @@ void OTableSubscriptionDialog::successfullyConnected()
 void OTableSubscriptionDialog::clearPassword()
 {
     m_pImpl->clearPassword();
-}
-
-OUString OTableSubscriptionDialog::getConnectionURL() const
-{
-    return m_pImpl->getConnectionURL();
 }
 
 Reference< XPropertySet > const & OTableSubscriptionDialog::getCurrentDataSource()

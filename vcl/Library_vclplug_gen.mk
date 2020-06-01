@@ -60,7 +60,10 @@ $(eval $(call gb_Library_use_externals,vclplug_gen,\
 	icuuc \
 	valgrind \
 	Xrender \
-	$(if $(filter SKIA,$(BUILD_TYPE)),skia) \
+	$(if $(filter SKIA,$(BUILD_TYPE)), \
+	    skia \
+	    fontconfig \
+	) \
 ))
 
 $(eval $(call gb_Library_add_libs,vclplug_gen,\
@@ -109,9 +112,10 @@ $(eval $(call gb_Library_add_exception_objects,vclplug_gen,\
     vcl/opengl/x11/gdiimpl \
     vcl/opengl/x11/salvd \
     $(if $(filter SKIA,$(BUILD_TYPE)), \
-        vcl/skia/x11/cairotextrender \
         vcl/skia/x11/gdiimpl \
-        vcl/skia/x11/salvd) \
+        vcl/skia/x11/salvd \
+        vcl/skia/x11/textrender \
+        ) \
 ))
 
 # ultimately we want to split the x11 dependencies out

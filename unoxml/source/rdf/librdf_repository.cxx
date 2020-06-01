@@ -28,7 +28,7 @@
 #include <algorithm>
 #include <atomic>
 
-#include <o3tl/optional.hxx>
+#include <optional>
 
 #include <libxslt/security.h>
 
@@ -199,9 +199,9 @@ public:
     {
         OString const value;
         OString const language;
-        ::o3tl::optional<OString> const type;
+        ::std::optional<OString> const type;
         Literal(OString const& i_rValue, OString const& i_rLanguage,
-                ::o3tl::optional<OString> const& i_rType)
+                ::std::optional<OString> const& i_rType)
             : value(i_rValue)
             , language(i_rLanguage)
             , type(i_rType)
@@ -412,7 +412,7 @@ private:
     NamedGraphMap_t m_NamedGraphs;
 
     /// type conversion helper - stateless
-    librdf_TypeConverter const m_TypeConverter;
+    librdf_TypeConverter m_TypeConverter;
 
     /// set of xml:ids of elements with xhtml:content
     ::std::set< OUString > m_RDFaXHTMLContentSet;
@@ -480,12 +480,12 @@ sal_Bool SAL_CALL
 librdf_GraphResult::hasMoreElements()
 {
     ::osl::MutexGuard g(m_rMutex);
-    return m_pStream.get() && !librdf_stream_end(m_pStream.get());
+    return m_pStream && !librdf_stream_end(m_pStream.get());
 }
 
 librdf_node* librdf_GraphResult::getContext_Lock() const
 {
-    if (!m_pStream.get() || librdf_stream_end(m_pStream.get()))
+    if (!m_pStream || librdf_stream_end(m_pStream.get()))
         return nullptr;
     librdf_node *pCtxt(
 #if LIBRDF_VERSION >= 10012
@@ -502,7 +502,7 @@ css::uno::Any SAL_CALL
 librdf_GraphResult::nextElement()
 {
     ::osl::MutexGuard g(m_rMutex);
-    if (m_pStream.get() && librdf_stream_end(m_pStream.get())) {
+    if (m_pStream && librdf_stream_end(m_pStream.get())) {
         throw container::NoSuchElementException();
     }
     librdf_node * pCtxt = getContext_Lock();
@@ -2215,7 +2215,7 @@ librdf_TypeConverter::extractNode_NoLock(
         OUStringToOString(xLiteral->getLanguage(),
         RTL_TEXTENCODING_UTF8) );
     const uno::Reference< rdf::XURI > xType(xLiteral->getDatatype());
-    o3tl::optional<OString> type;
+    std::optional<OString> type;
     if (xType.is())
     {
         type =

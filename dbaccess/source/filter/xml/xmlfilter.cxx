@@ -21,6 +21,7 @@
 #include <sal/log.hxx>
 
 #include <vcl/errinf.hxx>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/uri/UriReferenceFactory.hpp>
 #include <com/sun/star/util/MeasureUnit.hpp>
 #include <com/sun/star/util/XNumberFormatsSupplier.hpp>
@@ -36,18 +37,14 @@
 #include <xmloff/xmlnmspe.hxx>
 #include <xmloff/xmlscripti.hxx>
 #include <xmloff/xmltoken.hxx>
-#include <xmloff/txtimp.hxx>
 #include <xmloff/nmspmap.hxx>
 #include <com/sun/star/xml/sax/InputSource.hpp>
-#include <com/sun/star/xml/sax/FastParser.hpp>
 #include <com/sun/star/xml/sax/SAXParseException.hpp>
 #include <xmloff/ProgressBarHelper.hxx>
 #include <sfx2/docfile.hxx>
 #include <com/sun/star/io/XInputStream.hpp>
-#include <com/sun/star/uno/XNamingService.hpp>
 #include "xmlDatabase.hxx"
 #include "xmlEnums.hxx"
-#include <stringconstants.hxx>
 #include <strings.hxx>
 #include <xmloff/DocumentSettingsContext.hxx>
 #include "xmlStyleImport.hxx"
@@ -64,8 +61,6 @@
 #include <comphelper/namedvaluecollection.hxx>
 #include <cppuhelper/exc_hlp.hxx>
 #include <connectivity/DriversConfig.hxx>
-#include <dsntypes.hxx>
-#include <rtl/strbuf.hxx>
 #include <rtl/uri.hxx>
 
 using namespace ::com::sun::star;
@@ -132,7 +127,6 @@ static ErrCode ReadThroughComponent(
     const uno::Reference< embed::XStorage >& xStorage,
     const uno::Reference<XComponent>& xModelComponent,
     const char* pStreamName,
-    const char* pCompatibilityStreamName,
     const uno::Reference<XComponentContext> & rxContext,
     ODBFilter& _rFilter)
 {
@@ -149,17 +143,8 @@ static ErrCode ReadThroughComponent(
             OUString sStreamName = OUString::createFromAscii(pStreamName);
             if ( !xStorage->hasByName( sStreamName ) || !xStorage->isStreamElement( sStreamName ) )
             {
-                // stream name not found! Then try the compatibility name.
-                // if no stream can be opened, return immediately with OK signal
-
-                // do we even have an alternative name?
-                if ( nullptr == pCompatibilityStreamName )
-                    return ERRCODE_NONE;
-
-                // if so, does the stream exist?
-                sStreamName = OUString::createFromAscii(pCompatibilityStreamName);
-                if ( !xStorage->hasByName( sStreamName ) || !xStorage->isStreamElement( sStreamName ) )
-                    return ERRCODE_NONE;
+                // stream name not found! return immediately with OK signal
+                return ERRCODE_NONE;
             }
 
             // get input stream
@@ -285,7 +270,6 @@ bool ODBFilter::implImport( const Sequence< PropertyValue >& rDescriptor )
 
     if ( bRet )
     {
-        uno::Reference<XComponent> xCom(GetModel(),UNO_QUERY);
 
         tools::SvRef<SfxMedium> pMedium;
         if (!xStorage.is())
@@ -351,11 +335,10 @@ bool ODBFilter::implImport( const Sequence< PropertyValue >& rDescriptor )
         uno::Reference< XNumberFormatsSupplier > xNum(m_xDataSource->getPropertyValue(PROPERTY_NUMBERFORMATSSUPPLIER),UNO_QUERY);
         SetNumberFormatsSupplier(xNum);
 
-        uno::Reference<XComponent> xModel(GetModel(),UNO_QUERY);
+        uno::Reference<XComponent> xModel(GetModel());
         ErrCode nRet = ReadThroughComponent( xStorage
                                     ,xModel
                                     ,"settings.xml"
-                                    ,"Settings.xml"
                                     ,GetComponentContext()
                                     ,*this
                                     );
@@ -364,7 +347,6 @@ bool ODBFilter::implImport( const Sequence< PropertyValue >& rDescriptor )
             nRet = ReadThroughComponent( xStorage
                                     ,xModel
                                     ,"content.xml"
-                                    ,"Content.xml"
                                     ,GetComponentContext()
                                     ,*this
                                     );
@@ -425,6 +407,10 @@ public:
         : SvXMLImportContext(rImport)
     {
     }
+
+    virtual void SAL_CALL startFastElement(
+            sal_Int32 /*nElement*/,
+            const css::uno::Reference< css::xml::sax::XFastAttributeList >& /*xAttrList*/ ) override {}
 
     virtual uno::Reference< xml::sax::XFastContextHandler > SAL_CALL createFastChildContext(
         sal_Int32 nElement, const uno::Reference< xml::sax::XFastAttributeList >& /*xAttrList*/ ) override

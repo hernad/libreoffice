@@ -21,18 +21,17 @@
 #define INCLUDED_DBACCESS_SOURCE_UI_INC_USERADMINDLG_HXX
 
 #include <sfx2/tabdlg.hxx>
-#include <dsntypes.hxx>
 #include "IItemSetHelper.hxx"
 #include <memory>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace sdbc {
         class XConnection;
     }
     namespace lang {
         class XMultiServiceFactory;
     }
-}}}
+}
 
 namespace dbaui
 {

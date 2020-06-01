@@ -38,6 +38,7 @@
 #include <svl/rectitem.hxx>
 #include <swpossizetabpage.hxx>
 #include <vcl/canvastools.hxx>
+#include <vcl/fieldvalues.hxx>
 
 // static ----------------------------------------------------------------
 
@@ -167,7 +168,6 @@ void SvxTransformTabDialog::SetValidateFramePosLink(const Link<SvxSwFrameValidat
 \************************************************************************/
 SvxAngleTabPage::SvxAngleTabPage(weld::Container* pPage, weld::DialogController* pController, const SfxItemSet& rInAttrs)
     : SvxTabPage(pPage, pController, "cui/ui/rotationtabpage.ui", "Rotation", rInAttrs)
-    , rOutAttrs(rInAttrs)
     , pView(nullptr)
     , eDlgUnit(FieldUnit::NONE)
     , m_aCtlRect(this)
@@ -181,7 +181,7 @@ SvxAngleTabPage::SvxAngleTabPage(weld::Container* pPage, weld::DialogController*
     , m_xCtlAngleWin(new weld::CustomWeld(*m_xBuilder, "CTL_ANGLE", *m_xCtlAngle))
 {
     // calculate PoolUnit
-    SfxItemPool* pPool = rOutAttrs.GetPool();
+    SfxItemPool* pPool = rInAttrs.GetPool();
     DBG_ASSERT( pPool, "no pool (!)" );
     ePoolUnit = pPool->GetMetric(SID_ATTR_TRANSFORM_POS_X);
 
@@ -328,64 +328,64 @@ DeactivateRC SvxAngleTabPage::DeactivatePage( SfxItemSet* _pSet )
 
 void SvxAngleTabPage::PointChanged(weld::DrawingArea* pDrawingArea, RectPoint eRP)
 {
-    if (pDrawingArea == m_aCtlRect.GetDrawingArea())
+    if (pDrawingArea != m_aCtlRect.GetDrawingArea())
+        return;
+
+    switch(eRP)
     {
-        switch(eRP)
+        case RectPoint::LT:
         {
-            case RectPoint::LT:
-            {
-                m_xMtrPosX->set_value( basegfx::fround64(maRange.getMinX()), FieldUnit::NONE );
-                m_xMtrPosY->set_value( basegfx::fround64(maRange.getMinY()), FieldUnit::NONE );
-                break;
-            }
-            case RectPoint::MT:
-            {
-                m_xMtrPosX->set_value( basegfx::fround64(maRange.getCenter().getX()), FieldUnit::NONE );
-                m_xMtrPosY->set_value( basegfx::fround64(maRange.getMinY()), FieldUnit::NONE );
-                break;
-            }
-            case RectPoint::RT:
-            {
-                m_xMtrPosX->set_value( basegfx::fround64(maRange.getMaxX()), FieldUnit::NONE );
-                m_xMtrPosY->set_value( basegfx::fround64(maRange.getMinY()), FieldUnit::NONE );
-                break;
-            }
-            case RectPoint::LM:
-            {
-                m_xMtrPosX->set_value( basegfx::fround64(maRange.getMinX()), FieldUnit::NONE );
-                m_xMtrPosY->set_value( basegfx::fround64(maRange.getCenter().getY()), FieldUnit::NONE );
-                break;
-            }
-            case RectPoint::MM:
-            {
-                m_xMtrPosX->set_value( basegfx::fround64(maRange.getCenter().getX()), FieldUnit::NONE );
-                m_xMtrPosY->set_value( basegfx::fround64(maRange.getCenter().getY()), FieldUnit::NONE );
-                break;
-            }
-            case RectPoint::RM:
-            {
-                m_xMtrPosX->set_value( basegfx::fround64(maRange.getMaxX()), FieldUnit::NONE );
-                m_xMtrPosY->set_value( basegfx::fround64(maRange.getCenter().getY()), FieldUnit::NONE );
-                break;
-            }
-            case RectPoint::LB:
-            {
-                m_xMtrPosX->set_value( basegfx::fround64(maRange.getMinX()), FieldUnit::NONE );
-                m_xMtrPosY->set_value( basegfx::fround64(maRange.getMaxY()), FieldUnit::NONE );
-                break;
-            }
-            case RectPoint::MB:
-            {
-                m_xMtrPosX->set_value( basegfx::fround64(maRange.getCenter().getX()), FieldUnit::NONE );
-                m_xMtrPosY->set_value( basegfx::fround64(maRange.getMaxY()), FieldUnit::NONE );
-                break;
-            }
-            case RectPoint::RB:
-            {
-                m_xMtrPosX->set_value( basegfx::fround64(maRange.getMaxX()), FieldUnit::NONE );
-                m_xMtrPosY->set_value( basegfx::fround64(maRange.getMaxY()), FieldUnit::NONE );
-                break;
-            }
+            m_xMtrPosX->set_value( basegfx::fround64(maRange.getMinX()), FieldUnit::NONE );
+            m_xMtrPosY->set_value( basegfx::fround64(maRange.getMinY()), FieldUnit::NONE );
+            break;
+        }
+        case RectPoint::MT:
+        {
+            m_xMtrPosX->set_value( basegfx::fround64(maRange.getCenter().getX()), FieldUnit::NONE );
+            m_xMtrPosY->set_value( basegfx::fround64(maRange.getMinY()), FieldUnit::NONE );
+            break;
+        }
+        case RectPoint::RT:
+        {
+            m_xMtrPosX->set_value( basegfx::fround64(maRange.getMaxX()), FieldUnit::NONE );
+            m_xMtrPosY->set_value( basegfx::fround64(maRange.getMinY()), FieldUnit::NONE );
+            break;
+        }
+        case RectPoint::LM:
+        {
+            m_xMtrPosX->set_value( basegfx::fround64(maRange.getMinX()), FieldUnit::NONE );
+            m_xMtrPosY->set_value( basegfx::fround64(maRange.getCenter().getY()), FieldUnit::NONE );
+            break;
+        }
+        case RectPoint::MM:
+        {
+            m_xMtrPosX->set_value( basegfx::fround64(maRange.getCenter().getX()), FieldUnit::NONE );
+            m_xMtrPosY->set_value( basegfx::fround64(maRange.getCenter().getY()), FieldUnit::NONE );
+            break;
+        }
+        case RectPoint::RM:
+        {
+            m_xMtrPosX->set_value( basegfx::fround64(maRange.getMaxX()), FieldUnit::NONE );
+            m_xMtrPosY->set_value( basegfx::fround64(maRange.getCenter().getY()), FieldUnit::NONE );
+            break;
+        }
+        case RectPoint::LB:
+        {
+            m_xMtrPosX->set_value( basegfx::fround64(maRange.getMinX()), FieldUnit::NONE );
+            m_xMtrPosY->set_value( basegfx::fround64(maRange.getMaxY()), FieldUnit::NONE );
+            break;
+        }
+        case RectPoint::MB:
+        {
+            m_xMtrPosX->set_value( basegfx::fround64(maRange.getCenter().getX()), FieldUnit::NONE );
+            m_xMtrPosY->set_value( basegfx::fround64(maRange.getMaxY()), FieldUnit::NONE );
+            break;
+        }
+        case RectPoint::RB:
+        {
+            m_xMtrPosX->set_value( basegfx::fround64(maRange.getMaxX()), FieldUnit::NONE );
+            m_xMtrPosY->set_value( basegfx::fround64(maRange.getMaxY()), FieldUnit::NONE );
+            break;
         }
     }
 }
@@ -397,7 +397,6 @@ void SvxAngleTabPage::PointChanged(weld::DrawingArea* pDrawingArea, RectPoint eR
 \************************************************************************/
 SvxSlantTabPage::SvxSlantTabPage(weld::Container* pPage, weld::DialogController* pController, const SfxItemSet& rInAttrs)
     : SfxTabPage(pPage, pController, "cui/ui/slantcornertabpage.ui", "SlantAndCornerRadius", &rInAttrs)
-    , rOutAttrs(rInAttrs)
     , pView(nullptr)
     , eDlgUnit(FieldUnit::NONE)
     , m_xFlRadius(m_xBuilder->weld_widget("FL_RADIUS"))
@@ -418,7 +417,7 @@ SvxSlantTabPage::SvxSlantTabPage(weld::Container* pPage, weld::DialogController*
     SetExchangeSupport();
 
     // evaluate PoolUnit
-    SfxItemPool* pPool = rOutAttrs.GetPool();
+    SfxItemPool* pPool = rInAttrs.GetPool();
     assert(pPool && "no pool (!)");
     ePoolUnit = pPool->GetMetric( SID_ATTR_TRANSFORM_POS_X );
 }
@@ -1289,7 +1288,7 @@ void SvxPositionSizeTabPage::SetMinMaxPosition()
         }
     }
 
-    const double fMaxLong(static_cast<double>(MetricField::ConvertValue( LONG_MAX, 0, MapUnit::Map100thMM, meDlgUnit ) - 1));
+    const double fMaxLong(static_cast<double>(vcl::ConvertValue( LONG_MAX, 0, MapUnit::Map100thMM, meDlgUnit ) - 1));
     fLeft = std::clamp(fLeft, -fMaxLong, fMaxLong);
     fRight = std::clamp(fRight, -fMaxLong, fMaxLong);
     fTop = std::clamp(fTop, - fMaxLong, fMaxLong);
@@ -1517,47 +1516,47 @@ void SvxPositionSizeTabPage::DisableProtect()
 
 IMPL_LINK_NOARG(SvxPositionSizeTabPage, ChangeWidthHdl, weld::MetricSpinButton&, void)
 {
-    if( m_xCbxScale->get_active() && m_xCbxScale->get_sensitive() )
+    if( !(m_xCbxScale->get_active() && m_xCbxScale->get_sensitive()) )
+        return;
+
+    sal_Int64 nHeight(basegfx::fround64((mfOldHeight * static_cast<double>(m_xMtrWidth->get_value(FieldUnit::NONE))) / mfOldWidth));
+    int nMin, nMax;
+    m_xMtrHeight->get_range(nMin, nMax, FieldUnit::NONE);
+
+    if (nHeight <= nMax)
     {
-        sal_Int64 nHeight(basegfx::fround64((mfOldHeight * static_cast<double>(m_xMtrWidth->get_value(FieldUnit::NONE))) / mfOldWidth));
-        int nMin, nMax;
-        m_xMtrHeight->get_range(nMin, nMax, FieldUnit::NONE);
+        m_xMtrHeight->set_value(nHeight, FieldUnit::NONE);
+    }
+    else
+    {
+        nHeight = nMax;
+        m_xMtrHeight->set_value(nHeight, FieldUnit::NONE);
 
-        if (nHeight <= nMax)
-        {
-            m_xMtrHeight->set_value(nHeight, FieldUnit::NONE);
-        }
-        else
-        {
-            nHeight = nMax;
-            m_xMtrHeight->set_value(nHeight, FieldUnit::NONE);
-
-            const sal_Int64 nWidth(basegfx::fround64((mfOldWidth * static_cast<double>(nHeight)) / mfOldHeight));
-            m_xMtrWidth->set_value(nWidth, FieldUnit::NONE);
-        }
+        const sal_Int64 nWidth(basegfx::fround64((mfOldWidth * static_cast<double>(nHeight)) / mfOldHeight));
+        m_xMtrWidth->set_value(nWidth, FieldUnit::NONE);
     }
 }
 
 IMPL_LINK_NOARG(SvxPositionSizeTabPage, ChangeHeightHdl, weld::MetricSpinButton&, void)
 {
-    if( m_xCbxScale->get_active() && m_xCbxScale->get_sensitive() )
+    if( !(m_xCbxScale->get_active() && m_xCbxScale->get_sensitive()) )
+        return;
+
+    sal_Int64 nWidth(basegfx::fround64((mfOldWidth * static_cast<double>(m_xMtrHeight->get_value(FieldUnit::NONE))) / mfOldHeight));
+    int nMin, nMax;
+    m_xMtrWidth->get_range(nMin, nMax, FieldUnit::NONE);
+
+    if (nWidth <= nMax)
     {
-        sal_Int64 nWidth(basegfx::fround64((mfOldWidth * static_cast<double>(m_xMtrHeight->get_value(FieldUnit::NONE))) / mfOldHeight));
-        int nMin, nMax;
-        m_xMtrWidth->get_range(nMin, nMax, FieldUnit::NONE);
+        m_xMtrWidth->set_value(nWidth, FieldUnit::NONE);
+    }
+    else
+    {
+        nWidth = nMax;
+        m_xMtrWidth->set_value(nWidth, FieldUnit::NONE);
 
-        if (nWidth <= nMax)
-        {
-            m_xMtrWidth->set_value(nWidth, FieldUnit::NONE);
-        }
-        else
-        {
-            nWidth = nMax;
-            m_xMtrWidth->set_value(nWidth, FieldUnit::NONE);
-
-            const sal_Int64 nHeight(basegfx::fround64((mfOldHeight * static_cast<double>(nWidth)) / mfOldWidth));
-            m_xMtrHeight->set_value(nHeight, FieldUnit::NONE);
-        }
+        const sal_Int64 nHeight(basegfx::fround64((mfOldHeight * static_cast<double>(nWidth)) / mfOldWidth));
+        m_xMtrHeight->set_value(nHeight, FieldUnit::NONE);
     }
 }
 

@@ -53,7 +53,10 @@
 #include <vcl/window.hxx>
 #include <vcl/event.hxx>
 #include <vcl/keycodes.hxx>
-
+#include <svx/svdoashp.hxx>
+#include <tools/gen.hxx>
+#include <svx/view3d.hxx>
+#include <svx/scene3d.hxx>
 
 using namespace ::com::sun::star;
 
@@ -76,6 +79,10 @@ public:
     void testTdf67248();
     void testTdf119956();
     void testTdf120527();
+    void testTdf98839_ShearVFlipH();
+    void testTdf130988();
+    void testTdf131033();
+    void testTdf129898LayerDrawnInSlideshow();
 
     CPPUNIT_TEST_SUITE(SdMiscTest);
     CPPUNIT_TEST(testTdf96206);
@@ -93,6 +100,10 @@ public:
     CPPUNIT_TEST(testTdf67248);
     CPPUNIT_TEST(testTdf119956);
     CPPUNIT_TEST(testTdf120527);
+    CPPUNIT_TEST(testTdf98839_ShearVFlipH);
+    CPPUNIT_TEST(testTdf130988);
+    CPPUNIT_TEST(testTdf131033);
+    CPPUNIT_TEST(testTdf129898LayerDrawnInSlideshow);
     CPPUNIT_TEST_SUITE_END();
 
 virtual void registerNamespaces(xmlXPathContextPtr& pXmlXPathCtx) override
@@ -506,7 +517,7 @@ void SdMiscTest::testTdf101242_ODF_add_settings()
     save(xDocShRef.get(), getFormat(ODG), aTempFile );
 
     // Verify, that the saved document still has the ODF attributes
-    xmlDocPtr pXmlDoc = parseExport(aTempFile, "styles.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport(aTempFile, "styles.xml");
     CPPUNIT_ASSERT_MESSAGE("Failed to get 'styles.xml'", pXmlDoc);
     const OString sPathStart("/office:document-styles/office:master-styles/draw:layer-set/draw:layer");
     assertXPath(pXmlDoc, sPathStart + "[@draw:name='backgroundobjects' and @draw:protected='true']");
@@ -514,7 +525,7 @@ void SdMiscTest::testTdf101242_ODF_add_settings()
     assertXPath(pXmlDoc, sPathStart + "[@draw:name='measurelines' and @draw:display='printer']");
 
     // Verify, that the saved document has got the items in settings.xml
-    xmlDocPtr pXmlDoc2 = parseExport(aTempFile, "settings.xml");
+    xmlDocUniquePtr pXmlDoc2 = parseExport(aTempFile, "settings.xml");
     CPPUNIT_ASSERT_MESSAGE("Failed to get 'settings.xml'", pXmlDoc2);
     const OString sPathStart2("/office:document-settings/office:settings/config:config-item-set[@config:name='ooo:view-settings']/config:config-item-map-indexed[@config:name='Views']/config:config-item-map-entry");
     // Value is a bitfield with first Byte in order '* * * measurelines controls backgroundobjects background layout'
@@ -556,7 +567,7 @@ void SdMiscTest::testTdf101242_ODF_no_settings()
     save(xDocShRef.get(), getFormat(ODG), aTempFile );
 
     // Verify, that the saved document still has the ODF attributes
-    xmlDocPtr pXmlDoc = parseExport(aTempFile, "styles.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport(aTempFile, "styles.xml");
     CPPUNIT_ASSERT_MESSAGE("Failed to get 'styles.xml'", pXmlDoc);
     const OString sPathStart("/office:document-styles/office:master-styles/draw:layer-set/draw:layer");
     assertXPath(pXmlDoc, sPathStart + "[@draw:name='backgroundobjects' and @draw:protected='true']");
@@ -564,7 +575,7 @@ void SdMiscTest::testTdf101242_ODF_no_settings()
     assertXPath(pXmlDoc, sPathStart + "[@draw:name='measurelines' and @draw:display='printer']");
 
     // Verify, that the saved document has no layer items in settings.xml
-    xmlDocPtr pXmlDoc2 = parseExport(aTempFile, "settings.xml");
+    xmlDocUniquePtr pXmlDoc2 = parseExport(aTempFile, "settings.xml");
     CPPUNIT_ASSERT_MESSAGE("Failed to get 'settings.xml'", pXmlDoc2);
     const OString sPathStart2("/office:document-settings/office:settings/config:config-item-set[@config:name='ooo:view-settings']/config:config-item-map-indexed[@config:name='Views']/config:config-item-map-entry");
     xmlXPathObjectPtr pXmlObj=getXPathNode(pXmlDoc2, sPathStart2 + "/config:config-item[@config:name='VisibleLayers']");
@@ -598,7 +609,7 @@ void SdMiscTest::testTdf101242_settings_keep()
     save(xDocShRef.get(), getFormat(ODG), aTempFile );
 
     // Verify, that the saved document has the ODF attributes
-    xmlDocPtr pXmlDoc = parseExport(aTempFile, "styles.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport(aTempFile, "styles.xml");
     CPPUNIT_ASSERT_MESSAGE("Failed to get 'styles.xml'", pXmlDoc);
     const OString sPathStart("/office:document-styles/office:master-styles/draw:layer-set/draw:layer");
     assertXPath(pXmlDoc, sPathStart + "[@draw:name='backgroundobjects' and @draw:protected='true']");
@@ -606,7 +617,7 @@ void SdMiscTest::testTdf101242_settings_keep()
     assertXPath(pXmlDoc, sPathStart + "[@draw:name='measurelines' and @draw:display='printer']");
 
     // Verify, that the saved document still has the items in settings.xml
-    xmlDocPtr pXmlDoc2 = parseExport(aTempFile, "settings.xml");
+    xmlDocUniquePtr pXmlDoc2 = parseExport(aTempFile, "settings.xml");
     CPPUNIT_ASSERT_MESSAGE("Failed to get 'settings.xml'", pXmlDoc2);
     const OString sPathStart2("/office:document-settings/office:settings/config:config-item-set[@config:name='ooo:view-settings']/config:config-item-map-indexed[@config:name='Views']/config:config-item-map-entry");
     // Value is a bitfield with first Byte in order '* * * measurelines controls backgroundobjects background layout'
@@ -649,7 +660,7 @@ void SdMiscTest::testTdf101242_settings_remove()
     save(xDocShRef.get(), getFormat(ODG), aTempFile );
 
     // Verify, that the saved document has the ODF attributes
-    xmlDocPtr pXmlDoc = parseExport(aTempFile, "styles.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport(aTempFile, "styles.xml");
     CPPUNIT_ASSERT_MESSAGE("Failed to get 'styles.xml'", pXmlDoc);
     const OString sPathStart("/office:document-styles/office:master-styles/draw:layer-set/draw:layer");
     assertXPath(pXmlDoc, sPathStart + "[@draw:name='backgroundobjects' and @draw:protected='true']");
@@ -657,7 +668,7 @@ void SdMiscTest::testTdf101242_settings_remove()
     assertXPath(pXmlDoc, sPathStart + "[@draw:name='measurelines' and @draw:display='printer']");
 
     // Verify, that the saved document has no layer items in settings.xml
-    xmlDocPtr pXmlDoc2 = parseExport(aTempFile, "settings.xml");
+    xmlDocUniquePtr pXmlDoc2 = parseExport(aTempFile, "settings.xml");
     CPPUNIT_ASSERT_MESSAGE("Failed to get 'settings.xml'", pXmlDoc2);
     const OString sPathStart2("/office:document-settings/office:settings/config:config-item-set[@config:name='ooo:view-settings']/config:config-item-map-indexed[@config:name='Views']/config:config-item-map-entry");
     xmlXPathObjectPtr pXmlObj=getXPathNode(pXmlDoc2, sPathStart2 + "/config:config-item[@config:name='VisibleLayers']");
@@ -696,7 +707,7 @@ void SdMiscTest::testTdf119392()
     save(xDocShRef.get(), getFormat(ODG), aTempFile );
 
     // Verify correct bit order in bitfield in the config items in settings.xml
-    xmlDocPtr pXmlDoc = parseExport(aTempFile, "settings.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport(aTempFile, "settings.xml");
     CPPUNIT_ASSERT_MESSAGE("Failed to get 'settings.xml'", pXmlDoc);
     const OString sPathStart("/office:document-settings/office:settings/config:config-item-set[@config:name='ooo:view-settings']/config:config-item-map-indexed[@config:name='Views']/config:config-item-map-entry");
     // First Byte is in order 'V-L -P- V-- measurelines controls backgroundobjects background layout'
@@ -769,6 +780,101 @@ void SdMiscTest::testTdf119956()
 
     // Make sure, tab 3 is current tab now.
     CPPUNIT_ASSERT_EQUAL(sal_uInt16(3), pLayerTabBar->GetCurPagePos());
+
+    xDocShRef->DoClose();
+}
+
+void SdMiscTest::testTdf98839_ShearVFlipH()
+{
+    // Loads a document with a sheared shape and mirrors it
+    const OUString sURL = "sd/qa/unit/data/tdf98839_ShearVFlipH.odg";
+    sd::DrawDocShellRef xDocShRef = Load(m_directories.getURLFromSrc(sURL), ODG);
+    sd::GraphicViewShell* pViewShell = static_cast<sd::GraphicViewShell*>(xDocShRef->GetViewShell());
+    SdPage* pPage = pViewShell->GetActualPage();
+    SdrObjCustomShape* pShape = static_cast<SdrObjCustomShape*>(pPage->GetObj(0));
+    pShape->Mirror(Point(4000, 2000), Point(4000, 10000));
+
+    // Save and examine attribute draw:transform
+    utl::TempFile aTempFile;
+    aTempFile.EnableKillingFile();
+    save(xDocShRef.get(), getFormat(ODG), aTempFile);
+    xmlDocUniquePtr pXmlDoc = parseExport(aTempFile, "content.xml");
+    CPPUNIT_ASSERT_MESSAGE("Failed to get 'content.xml'", pXmlDoc);
+    const OString sPathStart("/office:document-content/office:body/office:drawing/draw:page");
+    assertXPath(pXmlDoc, sPathStart);
+    const OUString sTransform = getXPath(pXmlDoc, sPathStart + "/draw:custom-shape","transform");
+
+    // Error was, that the shear angle had a wrong sign.
+    CPPUNIT_ASSERT_MESSAGE("expected: draw:transform='skewX (-0.64350...)", sTransform.startsWith("skewX (-"));
+
+    xDocShRef->DoClose();
+}
+
+void SdMiscTest::testTdf130988()
+{
+    const OUString sURL("sd/qa/unit/data/tdf130988_3D_create_lathe.odg");
+    sd::DrawDocShellRef xDocShRef = Load(m_directories.getURLFromSrc(sURL), ODG);
+
+    //emulate command .uno:ConvertInto3DLathe
+    sd::ViewShell* pViewShell = xDocShRef->GetViewShell();
+    E3dView* pView = dynamic_cast<E3dView*>(pViewShell->GetView());
+    pView->MarkNextObj();
+    pView->ConvertMarkedObjTo3D(false, basegfx::B2DPoint(8000.0, -3000.0), basegfx::B2DPoint(3000.0, -8000.0));
+    E3dScene* pObj = dynamic_cast<E3dScene*>(pView->GetMarkedObjectByIndex(0));
+    CPPUNIT_ASSERT(pObj);
+
+    // Error was, that the created 3D object had a wrong path. Instead examining
+    // the path directly, I use the scene distance, because that is easier. The
+    // scene distance is calculated from the object while creating.
+    const double fDistance = pObj->GetDistance();
+    CPPUNIT_ASSERT_DOUBLES_EQUAL_MESSAGE("D3DSceneDistance", 7071.0, fDistance, 0.5);
+
+    xDocShRef->DoClose();
+}
+
+void SdMiscTest::testTdf131033()
+{
+    const OUString sURL("sd/qa/unit/data/tdf131033_3D_SceneSizeIn2d.odg");
+    sd::DrawDocShellRef xDocShRef = Load(m_directories.getURLFromSrc(sURL), ODG);
+
+    // The document contains a polygon, so that emulate command .uno:ConvertInto3DLathe
+    // by direct call of ConvertMarkedObjTo3D works.
+    // It produces a rotation around a vertical axis, which is far away from the
+    // generating shape.
+    sd::ViewShell* pViewShell = xDocShRef->GetViewShell();
+    E3dView* pView = dynamic_cast<E3dView*>(pViewShell->GetView());
+    pView->MarkNextObj();
+    pView->ConvertMarkedObjTo3D(false, basegfx::B2DPoint(11000.0, -5000.0), basegfx::B2DPoint(11000.0, -9000.0));
+    E3dScene* pObj = dynamic_cast<E3dScene*>(pView->GetMarkedObjectByIndex(0));
+    CPPUNIT_ASSERT(pObj);
+
+    // Error was, that the 2D representation of the scene did not contain the default 20°
+    // rotation of the new scene around x-axis and therefore was not high enough.
+    const double fSnapRectHeight = pObj->GetSnapRect().getHeight();
+    CPPUNIT_ASSERT_DOUBLES_EQUAL_MESSAGE("2D height", 7096.0, fSnapRectHeight, 1.0);
+
+    xDocShRef->DoClose();
+}
+
+void SdMiscTest::testTdf129898LayerDrawnInSlideshow()
+{
+    // Versions LO 6.2 to 6.4 have produced files, where the layer DrawnInSlideshow has
+    // got visible=false and printable=false attributes. Those files should be repaired now.
+    const OUString sURL = "sd/qa/unit/data/tdf129898_faulty_DrawnInSlideshow.odp";
+    sd::DrawDocShellRef xDocShRef = Load(m_directories.getURLFromSrc(sURL), ODP);
+    CPPUNIT_ASSERT_MESSAGE("Failed to load file.", xDocShRef.is());
+
+    // Verify model
+    const OUString sName = "DrawnInSlideshow";
+    SdrLayerAdmin& rLayerAdmin = xDocShRef->GetDoc()->GetLayerAdmin();
+    SdrLayer* pLayer = rLayerAdmin.GetLayer(sName);
+    CPPUNIT_ASSERT_MESSAGE("No layer DrawnInSlideshow", pLayer);
+    CPPUNIT_ASSERT(pLayer->IsVisibleODF() && pLayer->IsPrintableODF());
+
+    // Verify view
+    sd::DrawViewShell* pViewShell = static_cast<sd::DrawViewShell*>(xDocShRef->GetViewShell());
+    SdrPageView* pPageView = pViewShell->GetView()->GetSdrPageView();
+    CPPUNIT_ASSERT(pPageView->IsLayerVisible(sName) && pPageView->IsLayerPrintable(sName));
 
     xDocShRef->DoClose();
 }

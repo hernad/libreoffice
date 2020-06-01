@@ -20,7 +20,7 @@
 
 #include <table/tablecontrol.hxx>
 #include <table/defaultinputhandler.hxx>
-#include <svtools/table/tablemodel.hxx>
+#include <table/tablemodel.hxx>
 
 #include "tabledatawindow.hxx"
 #include "tablecontrol_impl.hxx"
@@ -149,45 +149,45 @@ namespace svt::table
         }
         virtual void addTableModelListener( const PTableModelListener& ) override {}
         virtual void removeTableModelListener( const PTableModelListener& ) override {}
-        virtual ::o3tl::optional< ::Color > getLineColor() const override
+        virtual ::std::optional< ::Color > getLineColor() const override
         {
-            return ::o3tl::optional< ::Color >();
+            return ::std::optional< ::Color >();
         }
-        virtual ::o3tl::optional< ::Color > getHeaderBackgroundColor() const override
+        virtual ::std::optional< ::Color > getHeaderBackgroundColor() const override
         {
-            return ::o3tl::optional< ::Color >();
+            return ::std::optional< ::Color >();
         }
-        virtual ::o3tl::optional< ::Color > getHeaderTextColor() const override
+        virtual ::std::optional< ::Color > getHeaderTextColor() const override
         {
-            return ::o3tl::optional< ::Color >();
+            return ::std::optional< ::Color >();
         }
-        virtual ::o3tl::optional< ::Color >    getActiveSelectionBackColor() const override
+        virtual ::std::optional< ::Color >    getActiveSelectionBackColor() const override
         {
-            return ::o3tl::optional< ::Color >();
+            return ::std::optional< ::Color >();
         }
-        virtual ::o3tl::optional< ::Color >    getInactiveSelectionBackColor() const override
+        virtual ::std::optional< ::Color >    getInactiveSelectionBackColor() const override
         {
-            return ::o3tl::optional< ::Color >();
+            return ::std::optional< ::Color >();
         }
-        virtual ::o3tl::optional< ::Color >    getActiveSelectionTextColor() const override
+        virtual ::std::optional< ::Color >    getActiveSelectionTextColor() const override
         {
-            return ::o3tl::optional< ::Color >();
+            return ::std::optional< ::Color >();
         }
-        virtual ::o3tl::optional< ::Color >    getInactiveSelectionTextColor() const override
+        virtual ::std::optional< ::Color >    getInactiveSelectionTextColor() const override
         {
-            return ::o3tl::optional< ::Color >();
+            return ::std::optional< ::Color >();
         }
-        virtual ::o3tl::optional< ::Color > getTextColor() const override
+        virtual ::std::optional< ::Color > getTextColor() const override
         {
-            return ::o3tl::optional< ::Color >();
+            return ::std::optional< ::Color >();
         }
-        virtual ::o3tl::optional< ::Color > getTextLineColor() const override
+        virtual ::std::optional< ::Color > getTextLineColor() const override
         {
-            return ::o3tl::optional< ::Color >();
+            return ::std::optional< ::Color >();
         }
-        virtual ::o3tl::optional< ::std::vector< ::Color > > getRowBackgroundColors() const override
+        virtual ::std::optional< ::std::vector< ::Color > > getRowBackgroundColors() const override
         {
-            return ::o3tl::optional< ::std::vector< ::Color > >();
+            return ::std::optional< ::std::vector< ::Color > >();
         }
         virtual css::style::VerticalAlignment getVerticalAlign() const override
         {
@@ -1402,7 +1402,7 @@ namespace svt::table
         case cursorSelectRow:
         {
             if(m_pSelEngine->GetSelectionMode() == SelectionMode::NONE)
-                return bSuccess = false;
+                return false;
             //pos is the position of the current row in the vector of selected rows, if current row is selected
             int pos = getRowSelectedNumber(m_aSelectedRows, m_nCurRow);
             //if current row is selected, it should be deselected, when ALT+SPACE are pressed
@@ -1423,7 +1423,7 @@ namespace svt::table
         case cursorSelectRowUp:
         {
             if(m_pSelEngine->GetSelectionMode() == SelectionMode::NONE)
-                return bSuccess = false;
+                return false;
             else if(m_pSelEngine->GetSelectionMode() == SelectionMode::Single)
             {
                 //if there are other selected rows, deselect them
@@ -1454,7 +1454,7 @@ namespace svt::table
                             if(m_nCurRow>0)
                                  m_nCurRow--;
                             else
-                                 return bSuccess = true;
+                                 return true;
                              //if nextRow already selected, deselect it, otherwise select it
                             if(nextRow>-1 && m_aSelectedRows[nextRow] == m_nCurRow)
                             {
@@ -1537,7 +1537,7 @@ namespace svt::table
                              if(m_nCurRow<m_nRowCount-1)
                                  m_nCurRow++;
                              else
-                                return bSuccess = true;
+                                return true;
                              //if next row already selected, deselect it, otherwise select it
                              if(nextRow>-1 && m_aSelectedRows[nextRow] == m_nCurRow)
                              {
@@ -1618,9 +1618,9 @@ namespace svt::table
         case cursorSelectRowAreaBottom:
         {
             if(m_pSelEngine->GetSelectionMode() == SelectionMode::NONE)
-                return bSuccess = false;
+                return false;
             else if(m_pSelEngine->GetSelectionMode() == SelectionMode::Single)
-                return bSuccess = false;
+                return false;
             //select the region between the current and the last row
             RowPos iter = m_nCurRow;
             invalidateSelectedRegion( m_nCurRow, m_nRowCount-1 );

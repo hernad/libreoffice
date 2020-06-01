@@ -50,6 +50,7 @@
 #include <biffhelper.hxx>
 
 #include <document.hxx>
+#include <drwlayer.hxx>
 #include <docsh.hxx>
 #include <calcconfig.hxx>
 #include <globstr.hrc>
@@ -140,7 +141,7 @@ ContextHandlerRef WorkbookFragment::onCreateContext( sal_Int32 nElement, const A
 
 void WorkbookFragment::onCharacters( const OUString& rChars )
 {
-    if( isCurrentElement( XLS_TOKEN( definedName ) ) && mxCurrName.get() )
+    if( isCurrentElement( XLS_TOKEN( definedName ) ) && mxCurrName )
         mxCurrName->setFormula( rChars );
 }
 
@@ -343,6 +344,12 @@ void importSheetFragments( WorkbookFragment& rWorkbookHandler, SheetFragmentVect
 
 void WorkbookFragment::finalizeImport()
 {
+    // lock the model to prevent broadcasting, speeds up load a lot
+    getScDocument().InitDrawLayer();
+    auto pModel = getScDocument().GetDrawLayer();
+    bool bWasLocked = pModel->isLocked();
+    pModel->setLock(true);
+
     ISegmentProgressBarRef xGlobalSegment = getProgressBar().createSegment( PROGRESS_LENGTH_GLOBALS );
 
     // read the theme substream
@@ -414,8 +421,8 @@ void WorkbookFragment::finalizeImport()
                 {
                     // create the WorksheetGlobals object
                     WorksheetGlobalsRef xSheetGlob = WorksheetHelper::constructGlobals( *this, xSheetSegment, eSheetType, nCalcSheet );
-                    OSL_ENSURE( xSheetGlob.get(), "WorkbookFragment::finalizeImport - missing sheet in document" );
-                    if( xSheetGlob.get() )
+                    OSL_ENSURE( xSheetGlob, "WorkbookFragment::finalizeImport - missing sheet in document" );
+                    if( xSheetGlob )
                     {
                         // create the sheet fragment handler
                         ::rtl::Reference< WorksheetFragmentBase > xFragment;
@@ -504,6 +511,8 @@ void WorkbookFragment::finalizeImport()
 
     // attach macros to registered objects now that all objects have been created.
     getBaseFilter().getVbaProject().attachMacros();
+
+    pModel->setLock(bWasLocked);
 }
 
 namespace {

@@ -120,6 +120,7 @@ namespace
         OUString   maStyleName;
         sal_Int32  mnRepeat;
         CustomLabelSeq   mCustomLabelText;
+        chart2::RelativePosition mCustomLabelPos;
 
         SchXMLDataPointStruct() : mnRepeat( 1 ) {}
     };
@@ -200,7 +201,7 @@ public:
     void exportAxis( enum XMLTokenEnum eDimension, enum XMLTokenEnum eAxisName,
                     const Reference< beans::XPropertySet >& rAxisProps, const Reference< chart2::XAxis >& rChart2Axis,
                     const OUString& rCategoriesRanges,
-                    bool bHasTitle, bool bHasMajorGrid, bool bHasMinorGrid, bool bExportContent );
+                    bool bHasTitle, bool bHasMajorGrid, bool bHasMinorGrid, bool bExportContent, OUString sChartType );
     void exportGrid( const Reference< beans::XPropertySet >& rGridProperties, bool bMajor, bool bExportContent );
     void exportDateScale( const Reference< beans::XPropertySet >& rAxisProps );
     void exportAxisTitle( const Reference< beans::XPropertySet >& rTitleProps, bool bExportContent );
@@ -228,6 +229,7 @@ public:
         bool bExportContent );
 
     void exportCustomLabel(const CustomLabelSeq & xCustomLabel);
+    void exportCustomLabelPosition(const chart2::RelativePosition & xCustomLabelPosition);
 
     void exportRegressionCurve(
         const css::uno::Reference<css::chart2::XDataSeries>& xSeries,
@@ -263,7 +265,7 @@ public:
     OUString msChartAddress;
     css::uno::Sequence< sal_Int32 > maSequenceMapping;
 
-    OUString const msCLSID;
+    OUString msCLSID;
 
     OUString maSrcShellID;
     OUString maDestShellID;
@@ -283,8 +285,8 @@ CustomLabelSeq lcl_getCustomLabelField(sal_Int32 nDataPointIndex,
     if( !rSeries.is() )
         return CustomLabelSeq();
 
-    const SvtSaveOptions::ODFDefaultVersion nCurrentODFVersion( SvtSaveOptions().GetODFDefaultVersion() );
-    if( nCurrentODFVersion <= SvtSaveOptions::ODFVER_012 )//do not export to ODF 1.2 or older
+    const SvtSaveOptions::ODFSaneDefaultVersion nCurrentODFVersion(SvtSaveOptions().GetODFSaneDefaultVersion());
+    if ((nCurrentODFVersion & SvtSaveOptions::ODFSVER_EXTENDED) == 0) // do not export to ODF 1.3 or older
         return CustomLabelSeq();
 
     if(Reference<beans::XPropertySet> xLabels = rSeries->getDataPointByIndex(nDataPointIndex); xLabels.is())
@@ -297,6 +299,28 @@ CustomLabelSeq lcl_getCustomLabelField(sal_Int32 nDataPointIndex,
         }
     }
     return CustomLabelSeq();
+}
+
+css::chart2::RelativePosition lcl_getCustomLabelPosition(sal_Int32 nDataPointIndex,
+    const uno::Reference< chart2::XDataSeries >& rSeries)
+{
+    if (!rSeries.is())
+        return chart2::RelativePosition();
+
+    const SvtSaveOptions::ODFSaneDefaultVersion nCurrentODFVersion(SvtSaveOptions().GetODFSaneDefaultVersion());
+    if ((nCurrentODFVersion & SvtSaveOptions::ODFSVER_EXTENDED) == 0) // do not export to ODF 1.3 or older
+        return chart2::RelativePosition();
+
+    if (Reference<beans::XPropertySet> xLabels = rSeries->getDataPointByIndex(nDataPointIndex); xLabels.is())
+    {
+        if (Any aAny = xLabels->getPropertyValue("CustomLabelPosition"); aAny.hasValue())
+        {
+            chart2::RelativePosition aCustomLabelPos;
+            aAny >>= aCustomLabelPos;
+            return aCustomLabelPos;
+        }
+    }
+    return chart2::RelativePosition();
 }
 
 class lcl_MatchesRole
@@ -319,7 +343,7 @@ public:
     }
 
 private:
-    OUString const m_aRole;
+    OUString m_aRole;
 };
 
 template< typename T >
@@ -639,7 +663,7 @@ uno::Sequence< OUString > lcl_DataSequenceToStringSequence(
         {
             //lcl_clearIfNoValuesButTextIsContained - replace by indices if the values are not appropriate
             bool bHasValue = std::any_of(aValuesSequence.begin(), aValuesSequence.end(),
-                [](double fValue) { return !::rtl::math::isNan( fValue ); });
+                [](double fValue) { return !std::isnan( fValue ); });
             if(!bHasValue)
             {
                 //no double value is contained
@@ -996,7 +1020,7 @@ void SchXMLExportHelper_Impl::exportAutoStyles()
         mrExport.exportAutoDataStyles();
 
         // export chart auto styles
-        mrAutoStylePool.exportXML( XML_STYLE_FAMILY_SCH_CHART_ID );
+        mrAutoStylePool.exportXML( XmlStyleFamily::SCH_CHART_ID );
 
         // export auto styles for additional shapes
         mrExport.GetShapeExport()->exportAutoStyles();
@@ -1012,7 +1036,7 @@ SchXMLExportHelper_Impl::SchXMLExportHelper_Impl(
     SvXMLAutoStylePoolP& rASPool ) :
         mrExport( rExport ),
         mrAutoStylePool( rASPool ),
-        mxPropertySetMapper( new XMLChartPropertySetMapper( true ) ),
+        mxPropertySetMapper( new XMLChartPropertySetMapper(&rExport) ),
         mxExpPropMapper( new XMLChartExportPropertyMapper( mxPropertySetMapper, rExport ) ),
         mbHasCategoryLabels( false ),
         mbRowSourceColumns( true ),
@@ -1020,26 +1044,26 @@ SchXMLExportHelper_Impl::SchXMLExportHelper_Impl(
 {
     // register chart auto-style family
     mrAutoStylePool.AddFamily(
-        XML_STYLE_FAMILY_SCH_CHART_ID,
+        XmlStyleFamily::SCH_CHART_ID,
         OUString( XML_STYLE_FAMILY_SCH_CHART_NAME ),
         mxExpPropMapper.get(),
         OUString( XML_STYLE_FAMILY_SCH_CHART_PREFIX ));
 
     // register shape family
     mrAutoStylePool.AddFamily(
-        XML_STYLE_FAMILY_SD_GRAPHICS_ID,
+        XmlStyleFamily::SD_GRAPHICS_ID,
         OUString( XML_STYLE_FAMILY_SD_GRAPHICS_NAME ),
         mxExpPropMapper.get(),
         OUString( XML_STYLE_FAMILY_SD_GRAPHICS_PREFIX ));
     // register paragraph family also for shapes
     mrAutoStylePool.AddFamily(
-        XML_STYLE_FAMILY_TEXT_PARAGRAPH,
+        XmlStyleFamily::TEXT_PARAGRAPH,
         GetXMLToken( XML_PARAGRAPH ),
         mxExpPropMapper.get(),
         OUString( 'P' ));
     // register text family also for shapes
     mrAutoStylePool.AddFamily(
-        XML_STYLE_FAMILY_TEXT_TEXT,
+        XmlStyleFamily::TEXT_TEXT,
         GetXMLToken( XML_TEXT ),
         mxExpPropMapper.get(),
         OUString( 'T' ));
@@ -1173,8 +1197,8 @@ void SchXMLExportHelper_Impl::parseDocument( Reference< chart::XChartDocument > 
     if( bExportContent )
     {
         //export data provider in xlink:href attribute
-        const SvtSaveOptions::ODFDefaultVersion nCurrentODFVersion( SvtSaveOptions().GetODFDefaultVersion() );
-        if( nCurrentODFVersion >= SvtSaveOptions::ODFVER_012 )
+        const SvtSaveOptions::ODFSaneDefaultVersion nCurrentODFVersion(SvtSaveOptions().GetODFSaneDefaultVersion());
+        if (nCurrentODFVersion >= SvtSaveOptions::ODFSVER_012)
         {
             OUString aDataProviderURL(  ".."  );
             if( xNewDoc->hasInternalDataProvider() )
@@ -1190,7 +1214,7 @@ void SchXMLExportHelper_Impl::parseDocument( Reference< chart::XChartDocument > 
         }
 
         Reference<chart2::data::XPivotTableDataProvider> xPivotTableDataProvider(xNewDoc->getDataProvider(), uno::UNO_QUERY);
-        if (xPivotTableDataProvider.is() && nCurrentODFVersion > SvtSaveOptions::ODFVER_012)
+        if (xPivotTableDataProvider.is() && nCurrentODFVersion & SvtSaveOptions::ODFSVER_EXTENDED)
         {
             OUString sPivotTableName = xPivotTableDataProvider->getPivotTableName();
             mrExport.AddAttribute(XML_NAMESPACE_LO_EXT, XML_DATA_PILOT_SOURCE, sPivotTableName);
@@ -1346,6 +1370,8 @@ void SchXMLExportHelper_Impl::parseDocument( Reference< chart::XChartDocument > 
             Reference< beans::XPropertySet > xProp( rChartDoc->getLegend(), uno::UNO_QUERY );
             if( xProp.is())
             {
+                const SvtSaveOptions::ODFSaneDefaultVersion nCurrentODFVersion(SvtSaveOptions().GetODFSaneDefaultVersion());
+
                 // export legend anchor position
                 try
                 {
@@ -1358,13 +1384,27 @@ void SchXMLExportHelper_Impl::parseDocument( Reference< chart::XChartDocument > 
                     SAL_WARN("xmloff.chart", "Property Align not found in ChartLegend" );
                 }
 
+                // export legend overlay
+                try
+                {
+                    if (nCurrentODFVersion & SvtSaveOptions::ODFSVER_EXTENDED)
+                    {
+                        Any aAny( xProp->getPropertyValue("Overlay"));
+                        if(aAny.get<bool>())
+                            mrExport.AddAttribute(XML_NAMESPACE_LO_EXT, XML_OVERLAY, OUString::boolean(true));
+                    }
+                }
+                catch( const beans::UnknownPropertyException & )
+                {
+                    SAL_WARN("xmloff.chart", "Property Overlay not found in ChartLegend" );
+                }
+
                 // export absolute legend position
                 Reference< drawing::XShape > xLegendShape( xProp, uno::UNO_QUERY );
                 addPosition( xLegendShape );
 
                 // export legend size
-                const SvtSaveOptions::ODFDefaultVersion nCurrentODFVersion( SvtSaveOptions().GetODFDefaultVersion() );
-                if( xLegendShape.is() && nCurrentODFVersion >= SvtSaveOptions::ODFVER_012 )
+                if (xLegendShape.is() && nCurrentODFVersion >= SvtSaveOptions::ODFSVER_012)
                 {
                     try
                     {
@@ -1378,7 +1418,15 @@ void SchXMLExportHelper_Impl::parseDocument( Reference< chart::XChartDocument > 
                             if( nLegendExpansion == chart::ChartLegendExpansion_CUSTOM)
                             {
                                 awt::Size aSize( xLegendShape->getSize() );
-                                addSize( aSize, true );
+                                // tdf#131966: chart legend attributes width and height shouldn't be exported to ODF 1.2 (strict)
+                                if (nCurrentODFVersion >= SvtSaveOptions::ODFSVER_013)
+                                {   // ODF 1.3 OFFICE-3883
+                                    addSize( aSize, false );
+                                }
+                                else if (nCurrentODFVersion & SvtSaveOptions::ODFSVER_EXTENDED)
+                                {
+                                    addSize( aSize, true );
+                                }
                                 OUStringBuffer aAspectRatioString;
                                 ::sax::Converter::convertDouble(
                                     aAspectRatioString,
@@ -2063,8 +2111,8 @@ void SchXMLExportHelper_Impl::exportPlotArea(
 
 void SchXMLExportHelper_Impl::exportCoordinateRegion( const uno::Reference< chart::XDiagram >& xDiagram )
 {
-    const SvtSaveOptions::ODFDefaultVersion nCurrentODFVersion( SvtSaveOptions().GetODFDefaultVersion() );
-    if( nCurrentODFVersion <= SvtSaveOptions::ODFVER_012 )//do not export to ODF 1.2 or older
+    const SvtSaveOptions::ODFSaneDefaultVersion nCurrentODFVersion(SvtSaveOptions().GetODFSaneDefaultVersion());
+    if (nCurrentODFVersion <= SvtSaveOptions::ODFSVER_012) //do not export to ODF 1.2 or older
         return;
 
     Reference< chart::XDiagramPositioning > xDiaPos( xDiagram, uno::UNO_QUERY );
@@ -2076,7 +2124,10 @@ void SchXMLExportHelper_Impl::exportCoordinateRegion( const uno::Reference< char
     addPosition( awt::Point(aRect.X,aRect.Y) );
     addSize( awt::Size(aRect.Width,aRect.Height) );
 
-    SvXMLElementExport aCoordinateRegion( mrExport, XML_NAMESPACE_CHART_EXT, XML_COORDINATE_REGION, true, true );//#i100778# todo: change to chart namespace in future - dependent on fileformat
+    // ODF 1.3 OFFICE-3928
+    SvXMLElementExport aCoordinateRegion( mrExport,
+        (SvtSaveOptions::ODFSVER_013 <= nCurrentODFVersion) ? XML_NAMESPACE_CHART : XML_NAMESPACE_CHART_EXT,
+        XML_COORDINATE_REGION, true, true );
 }
 
 namespace
@@ -2183,8 +2234,8 @@ bool lcl_exportAxisType( const Reference< chart2::XAxis >& rChart2Axis, SvXMLExp
     if( !rChart2Axis.is() )
         return bExportDateScale;
 
-    const SvtSaveOptions::ODFDefaultVersion nCurrentODFVersion( SvtSaveOptions().GetODFDefaultVersion() );
-    if( nCurrentODFVersion <= SvtSaveOptions::ODFVER_012 )//do not export to ODF 1.2 or older
+    const SvtSaveOptions::ODFSaneDefaultVersion nCurrentODFVersion(SvtSaveOptions().GetODFSaneDefaultVersion());
+    if ((nCurrentODFVersion & SvtSaveOptions::ODFSVER_EXTENDED) == 0) //do not export to ODF 1.3 or older
         return bExportDateScale;
 
     chart2::ScaleData aScale( rChart2Axis->getScaleData() );
@@ -2248,7 +2299,7 @@ void SchXMLExportHelper_Impl::exportAxis(
     const Reference< chart2::XAxis >& rChart2Axis,
     const OUString& rCategoriesRange,
     bool bHasTitle, bool bHasMajorGrid, bool bHasMinorGrid,
-    bool bExportContent )
+    bool bExportContent, OUString sChartType )
 {
     std::vector< XMLPropertyState > aPropertyStates;
     std::unique_ptr<SvXMLElementExport> pAxis;
@@ -2256,6 +2307,21 @@ void SchXMLExportHelper_Impl::exportAxis(
     // get property states for autostyles
     if( rAxisProps.is() && mxExpPropMapper.is() )
     {
+        const SvtSaveOptions::ODFSaneDefaultVersion nCurrentODFVersion(SvtSaveOptions().GetODFSaneDefaultVersion());
+        if (nCurrentODFVersion & SvtSaveOptions::ODFSVER_EXTENDED
+            && eDimension == XML_X)
+        {
+            chart2::ScaleData aScaleData(rChart2Axis->getScaleData());
+            bool bShiftedCatPos = aScaleData.ShiftedCategoryPosition;
+            if (sChartType == "com.sun.star.chart.BarDiagram" || sChartType == "com.sun.star.chart.StockDiagram")
+            {
+                if (!bShiftedCatPos)
+                    rAxisProps->setPropertyValue("MajorOrigin", uno::makeAny(0.0));
+            }
+            else if (bShiftedCatPos)
+                rAxisProps->setPropertyValue("MajorOrigin", uno::makeAny(0.5));
+        }
+
         lcl_exportNumberFormat( "NumberFormat", rAxisProps, mrExport );
         aPropertyStates = mxExpPropMapper->Filter( rAxisProps );
 
@@ -2377,6 +2443,7 @@ void SchXMLExportHelper_Impl::exportAxes(
 
     OUString aCategoriesRange;
     Reference< chart::XAxisSupplier > xAxisSupp( xDiagram, uno::UNO_QUERY );
+    OUString sChartType = xDiagram->getDiagramType();
 
     // x axis
 
@@ -2398,7 +2465,7 @@ void SchXMLExportHelper_Impl::exportAxes(
                 }
             }
         }
-        exportAxis( XML_X, XML_PRIMARY_X, xAxisProps, xNewAxis, aCategoriesRange, bHasXAxisTitle, bHasXAxisMajorGrid, bHasXAxisMinorGrid, bExportContent );
+        exportAxis( XML_X, XML_PRIMARY_X, xAxisProps, xNewAxis, aCategoriesRange, bHasXAxisTitle, bHasXAxisMajorGrid, bHasXAxisMinorGrid, bExportContent, sChartType );
         aCategoriesRange.clear();
     }
 
@@ -2408,7 +2475,7 @@ void SchXMLExportHelper_Impl::exportAxes(
     if( xNewAxis.is() )
     {
         Reference< beans::XPropertySet > xAxisProps( xAxisSupp.is() ? xAxisSupp->getSecondaryAxis(0) : nullptr, uno::UNO_QUERY );
-        exportAxis( XML_X, XML_SECONDARY_X, xAxisProps, xNewAxis, aCategoriesRange, bHasSecondaryXAxisTitle, false, false, bExportContent );
+        exportAxis( XML_X, XML_SECONDARY_X, xAxisProps, xNewAxis, aCategoriesRange, bHasSecondaryXAxisTitle, false, false, bExportContent, sChartType );
     }
 
     // y axis
@@ -2417,7 +2484,7 @@ void SchXMLExportHelper_Impl::exportAxes(
     if( xNewAxis.is() )
     {
         Reference< beans::XPropertySet > xAxisProps( xAxisSupp.is() ? xAxisSupp->getAxis(1) : nullptr, uno::UNO_QUERY );
-        exportAxis( XML_Y, XML_PRIMARY_Y, xAxisProps, xNewAxis, aCategoriesRange, bHasYAxisTitle, bHasYAxisMajorGrid, bHasYAxisMinorGrid, bExportContent );
+        exportAxis( XML_Y, XML_PRIMARY_Y, xAxisProps, xNewAxis, aCategoriesRange, bHasYAxisTitle, bHasYAxisMajorGrid, bHasYAxisMinorGrid, bExportContent, sChartType );
     }
 
     // secondary y axis
@@ -2426,7 +2493,7 @@ void SchXMLExportHelper_Impl::exportAxes(
     if( xNewAxis.is() )
     {
         Reference< beans::XPropertySet > xAxisProps( xAxisSupp.is() ? xAxisSupp->getSecondaryAxis(1) : nullptr, uno::UNO_QUERY );
-        exportAxis( XML_Y, XML_SECONDARY_Y, xAxisProps, xNewAxis, aCategoriesRange, bHasSecondaryYAxisTitle, false, false, bExportContent );
+        exportAxis( XML_Y, XML_SECONDARY_Y, xAxisProps, xNewAxis, aCategoriesRange, bHasSecondaryYAxisTitle, false, false, bExportContent, sChartType );
     }
 
     // z axis
@@ -2435,7 +2502,7 @@ void SchXMLExportHelper_Impl::exportAxes(
     if( xNewAxis.is() )
     {
         Reference< beans::XPropertySet > xAxisProps( xAxisSupp.is() ? xAxisSupp->getAxis(2) : nullptr, uno::UNO_QUERY );
-        exportAxis( XML_Z, XML_PRIMARY_Z, xAxisProps, xNewAxis, aCategoriesRange, bHasZAxisTitle, bHasZAxisMajorGrid, bHasZAxisMinorGrid, bExportContent );
+        exportAxis( XML_Z, XML_PRIMARY_Z, xAxisProps, xNewAxis, aCategoriesRange, bHasZAxisTitle, bHasZAxisMajorGrid, bHasZAxisMinorGrid, bExportContent, sChartType );
     }
 }
 
@@ -2451,7 +2518,7 @@ namespace
         if( xNumericalDataSequence.is() )
         {
             Sequence< double >  aDoubles( xNumericalDataSequence->getNumericalData() );
-            if (std::any_of(aDoubles.begin(), aDoubles.end(), [](double fDouble) { return !::rtl::math::isNan( fDouble ); }))
+            if (std::any_of(aDoubles.begin(), aDoubles.end(), [](double fDouble) { return !std::isnan( fDouble ); }))
                 return false;//have double value
         }
         else
@@ -2459,7 +2526,7 @@ namespace
             aData = xDataSequence->getData();
             double fDouble = 0.0;
             bool bHaveDouble = std::any_of(aData.begin(), aData.end(),
-                [&fDouble](const uno::Any& rData) { return (rData >>= fDouble) && !::rtl::math::isNan( fDouble ); });
+                [&fDouble](const uno::Any& rData) { return (rData >>= fDouble) && !std::isnan( fDouble ); });
             if (bHaveDouble)
                 return false;//have double value
         }
@@ -2607,8 +2674,8 @@ void SchXMLExportHelper_Impl::exportSeries(
                                     TOOLS_INFO_EXCEPTION("xmloff.chart", "Required property not found in DataRowProperties" );
                                 }
 
-                                const SvtSaveOptions::ODFDefaultVersion nCurrentODFVersion( SvtSaveOptions().GetODFDefaultVersion() );
-                                if( nCurrentODFVersion >= SvtSaveOptions::ODFVER_012 )
+                                const SvtSaveOptions::ODFSaneDefaultVersion nCurrentODFVersion(SvtSaveOptions().GetODFSaneDefaultVersion());
+                                if (nCurrentODFVersion >= SvtSaveOptions::ODFSVER_012)
                                 {
                                     lcl_exportNumberFormat( "NumberFormat", xPropSet, mrExport );
                                     lcl_exportNumberFormat( "PercentageNumberFormat", xPropSet, mrExport );
@@ -2640,8 +2707,8 @@ void SchXMLExportHelper_Impl::exportSeries(
                                     // #i75297# allow empty series, export empty range to have all ranges on import
                                     mrExport.AddAttribute( XML_NAMESPACE_CHART, XML_VALUES_CELL_RANGE_ADDRESS, OUString());
 
-                                const SvtSaveOptions::ODFDefaultVersion nCurrentODFVersion( SvtSaveOptions().GetODFDefaultVersion() );
-                                if( nCurrentODFVersion >= SvtSaveOptions::ODFVER_012 )
+                                const SvtSaveOptions::ODFSaneDefaultVersion nCurrentODFVersion(SvtSaveOptions().GetODFSaneDefaultVersion());
+                                if (nCurrentODFVersion & SvtSaveOptions::ODFSVER_EXTENDED) // do not export to ODF 1.3 or older
                                 {
                                     if (xPropSet.is())
                                     {
@@ -2811,8 +2878,8 @@ void SchXMLExportHelper_Impl::exportSeries(
                         uno::Reference< beans::XPropertySet >( aSeriesSeq[nSeriesIdx], uno::UNO_QUERY ),
                         nSeriesLength, xNewDiagram, bExportContent );
 
-                    const SvtSaveOptions::ODFDefaultVersion nCurrentODFVersion( SvtSaveOptions().GetODFDefaultVersion() );
-                    if( bExportContent && nCurrentODFVersion > SvtSaveOptions::ODFVER_012 )//do not export to ODF 1.2 or older
+                    const SvtSaveOptions::ODFSaneDefaultVersion nCurrentODFVersion(SvtSaveOptions().GetODFSaneDefaultVersion());
+                    if (bExportContent && nCurrentODFVersion & SvtSaveOptions::ODFSVER_EXTENDED) // do not export to ODF 1.3 or older
                     {
                         Sequence< OUString > aSupportedMappings = rChartType->getSupportedPropertyRoles();
                         exportPropertyMapping( xSource, aSupportedMappings );
@@ -2904,8 +2971,8 @@ void SchXMLExportHelper_Impl::exportRegressionCurve(
                 xEquationProperties->getPropertyValue( "ShowCorrelationCoefficient") >>= bShowRSquared;
 
                 bExportEquation = ( bShowEquation || bShowRSquared );
-                const SvtSaveOptions::ODFDefaultVersion nCurrentVersion( SvtSaveOptions().GetODFDefaultVersion() );
-                if( nCurrentVersion < SvtSaveOptions::ODFVER_012 )
+                const SvtSaveOptions::ODFSaneDefaultVersion nCurrentVersion(SvtSaveOptions().GetODFSaneDefaultVersion());
+                if (nCurrentVersion < SvtSaveOptions::ODFSVER_012)
                 {
                     bExportEquation=false;
                 }
@@ -2980,10 +3047,10 @@ void SchXMLExportHelper_Impl::exportErrorBar( const Reference<beans::XPropertySe
 {
     assert(mxExpPropMapper.is());
 
-    const SvtSaveOptions::ODFDefaultVersion nCurrentVersion( SvtSaveOptions().GetODFDefaultVersion() );
+    const SvtSaveOptions::ODFSaneDefaultVersion nCurrentVersion(SvtSaveOptions().GetODFSaneDefaultVersion());
 
     /// Don't export X ErrorBars for older ODF versions.
-    if ( !bYError && nCurrentVersion < SvtSaveOptions::ODFVER_012 )
+    if (!bYError && nCurrentVersion < SvtSaveOptions::ODFSVER_012)
         return;
 
     if (xSeriesProp.is())
@@ -3038,7 +3105,7 @@ void SchXMLExportHelper_Impl::exportErrorBar( const Reference<beans::XPropertySe
                     // add style name attribute
                     AddAutoStyleAttribute( aPropertyStates );
 
-                    if( nCurrentVersion >= SvtSaveOptions::ODFVER_012 )
+                    if (nCurrentVersion >= SvtSaveOptions::ODFSVER_012)
                         mrExport.AddAttribute( XML_NAMESPACE_CHART, XML_DIMENSION, bYError ? XML_Y : XML_X );//#i114149#
                     SvXMLElementExport( mrExport, XML_NAMESPACE_CHART, XML_ERROR_INDICATOR, true, true );
                 }
@@ -3188,10 +3255,15 @@ void SchXMLExportHelper_Impl::exportDataPoints(
 
     bool bVaryColorsByPoint = false;
     Sequence< sal_Int32 > aDataPointSeq;
+    Sequence<sal_Int32> deletedLegendEntriesSeq;
     if( xSeriesProperties.is())
     {
         xSeriesProperties->getPropertyValue("AttributedDataPoints") >>= aDataPointSeq;
         xSeriesProperties->getPropertyValue("VaryColorsByPoint") >>= bVaryColorsByPoint;
+
+        const SvtSaveOptions::ODFSaneDefaultVersion nCurrentODFVersion(SvtSaveOptions().GetODFSaneDefaultVersion());
+        if (nCurrentODFVersion & SvtSaveOptions::ODFSVER_EXTENDED) // do not export to ODF 1.3 or older
+            xSeriesProperties->getPropertyValue("DeletedLegendEntries") >>= deletedLegendEntriesSeq;
     }
 
     sal_Int32 nSize = aDataPointSeq.getLength();
@@ -3242,8 +3314,8 @@ void SchXMLExportHelper_Impl::exportDataPoints(
             SAL_WARN_IF( !xPropSet.is(), "xmloff.chart", "Pie Segments should have properties" );
             if( xPropSet.is())
             {
-                const SvtSaveOptions::ODFDefaultVersion nCurrentODFVersion( SvtSaveOptions().GetODFDefaultVersion() );
-                if( nCurrentODFVersion >= SvtSaveOptions::ODFVER_012 && bExportNumFmt )
+                const SvtSaveOptions::ODFSaneDefaultVersion nCurrentODFVersion(SvtSaveOptions().GetODFSaneDefaultVersion());
+                if (nCurrentODFVersion >= SvtSaveOptions::ODFSVER_012 && bExportNumFmt)
                 {
                     lcl_exportNumberFormat( "NumberFormat", xPropSet, mrExport );
                     lcl_exportNumberFormat( "PercentageNumberFormat", xPropSet, mrExport );
@@ -3288,7 +3360,6 @@ void SchXMLExportHelper_Impl::exportDataPoints(
             {
                 SchXMLDataPointStruct aPoint;
                 aPoint.mnRepeat = nCurrIndex - nLastIndex - 1;
-                aPoint.mCustomLabelText = lcl_getCustomLabelField(nCurrIndex, xSeries);
                 aDataPointVector.push_back( aPoint );
             }
 
@@ -3305,8 +3376,8 @@ void SchXMLExportHelper_Impl::exportDataPoints(
             }
             if( xPropSet.is())
             {
-                const SvtSaveOptions::ODFDefaultVersion nCurrentODFVersion( SvtSaveOptions().GetODFDefaultVersion() );
-                if( nCurrentODFVersion >= SvtSaveOptions::ODFVER_012 )
+                const SvtSaveOptions::ODFSaneDefaultVersion nCurrentODFVersion(SvtSaveOptions().GetODFSaneDefaultVersion());
+                if (nCurrentODFVersion >= SvtSaveOptions::ODFSVER_012)
                 {
                     lcl_exportNumberFormat( "NumberFormat", xPropSet, mrExport );
                     lcl_exportNumberFormat( "PercentageNumberFormat", xPropSet, mrExport );
@@ -3322,6 +3393,7 @@ void SchXMLExportHelper_Impl::exportDataPoints(
                         SchXMLDataPointStruct aPoint;
                         aPoint.maStyleName = maAutoStyleNameQueue.front();
                         aPoint.mCustomLabelText = lcl_getCustomLabelField(nCurrIndex, xSeries);
+                        aPoint.mCustomLabelPos = lcl_getCustomLabelPosition(nCurrIndex, xSeries);
                         maAutoStyleNameQueue.pop();
 
                         aDataPointVector.push_back( aPoint );
@@ -3337,7 +3409,6 @@ void SchXMLExportHelper_Impl::exportDataPoints(
 
             // if we get here the property states are empty
             SchXMLDataPointStruct aPoint;
-            aPoint.mCustomLabelText = lcl_getCustomLabelField(nCurrIndex, xSeries);
             aDataPointVector.push_back( aPoint );
 
             nLastIndex = nCurrIndex;
@@ -3362,12 +3433,13 @@ void SchXMLExportHelper_Impl::exportDataPoints(
     // initialize so that it doesn't matter if
     // the element is counted in the first iteration
     aLastPoint.mnRepeat = 0;
-
+    sal_Int32 nIndex = 0;
     for( const auto& rPoint : aDataPointVector )
     {
         aPoint = rPoint;
 
-        if( aPoint.maStyleName == aLastPoint.maStyleName && aLastPoint.mCustomLabelText.getLength() < 1 )
+        if( aPoint.maStyleName == aLastPoint.maStyleName && aLastPoint.mCustomLabelText.getLength() < 1 &&
+            aLastPoint.mCustomLabelPos.Primary == 0.0 && aLastPoint.mCustomLabelPos.Secondary == 0.0 )
             aPoint.mnRepeat += aLastPoint.mnRepeat;
         else if( aLastPoint.mnRepeat > 0 )
         {
@@ -3379,6 +3451,16 @@ void SchXMLExportHelper_Impl::exportDataPoints(
                 mrExport.AddAttribute( XML_NAMESPACE_CHART, XML_REPEATED,
                                     OUString::number( ( aLastPoint.mnRepeat ) ));
 
+            for (auto& deletedLegendEntry : deletedLegendEntriesSeq)
+            {
+                if (nIndex == deletedLegendEntry)
+                {
+                    mrExport.AddAttribute(XML_NAMESPACE_LO_EXT, XML_HIDE_LEGEND, OUString::boolean(true));
+                    break;
+                }
+            }
+            nIndex++;
+            exportCustomLabelPosition(aLastPoint.mCustomLabelPos);
             SvXMLElementExport aPointElem( mrExport, XML_NAMESPACE_CHART, XML_DATA_POINT, true, true );
             exportCustomLabel(aLastPoint.mCustomLabelText);
         }
@@ -3394,6 +3476,16 @@ void SchXMLExportHelper_Impl::exportDataPoints(
             mrExport.AddAttribute( XML_NAMESPACE_CHART, XML_REPEATED,
                                 OUString::number( ( aLastPoint.mnRepeat ) ));
 
+        for (auto& deletedLegendEntry : deletedLegendEntriesSeq)
+        {
+            if (nIndex == deletedLegendEntry)
+            {
+                mrExport.AddAttribute(XML_NAMESPACE_LO_EXT, XML_HIDE_LEGEND, OUString::boolean(true));
+                break;
+            }
+        }
+
+        exportCustomLabelPosition(aLastPoint.mCustomLabelPos);
         SvXMLElementExport aPointElem( mrExport, XML_NAMESPACE_CHART, XML_DATA_POINT, true, true );
         exportCustomLabel(aLastPoint.mCustomLabelText);
     }
@@ -3412,6 +3504,19 @@ void SchXMLExportHelper_Impl::exportCustomLabel( const CustomLabelSeq & xCustomL
         SvXMLElementExport aSpan( mrExport, XML_NAMESPACE_TEXT, XML_SPAN, true, false);
         mrExport.GetDocHandler()->characters(label->getString());
     }
+}
+
+void SchXMLExportHelper_Impl::exportCustomLabelPosition( const chart2::RelativePosition & xCustomLabelPosition)
+{
+    if( xCustomLabelPosition.Primary == 0.0 && xCustomLabelPosition.Secondary == 0.0 )
+        return; // nothing to export
+
+    OUStringBuffer aCustomLabelPosString;
+    ::sax::Converter::convertDouble(aCustomLabelPosString, xCustomLabelPosition.Primary);
+    mrExport.AddAttribute(XML_NAMESPACE_LO_EXT, XML_CUSTOM_LABEL_POS_X, aCustomLabelPosString.makeStringAndClear());
+
+    ::sax::Converter::convertDouble(aCustomLabelPosString, xCustomLabelPosition.Secondary);
+    mrExport.AddAttribute(XML_NAMESPACE_LO_EXT, XML_CUSTOM_LABEL_POS_Y, aCustomLabelPosString.makeStringAndClear());
 }
 
 void SchXMLExportHelper_Impl::addPosition( const awt::Point & rPosition )
@@ -3466,7 +3571,7 @@ awt::Size SchXMLExportHelper_Impl::getPageSize( const Reference< chart2::XChartD
 void SchXMLExportHelper_Impl::CollectAutoStyle( const std::vector< XMLPropertyState >& aStates )
 {
     if( !aStates.empty() )
-        maAutoStyleNameQueue.push( mrAutoStylePool.Add( XML_STYLE_FAMILY_SCH_CHART_ID, aStates ));
+        maAutoStyleNameQueue.push( mrAutoStylePool.Add( XmlStyleFamily::SCH_CHART_ID, aStates ));
 }
 
 void SchXMLExportHelper_Impl::AddAutoStyleAttribute( const std::vector< XMLPropertyState >& aStates )
@@ -3493,7 +3598,7 @@ SchXMLExport::SchXMLExport(const Reference<uno::XComponentContext>& xContext,
     , maAutoStylePool(new SchXMLAutoStylePoolP(*this))
     , maExportHelper(new SchXMLExportHelper(*this, *maAutoStylePool))
 {
-    if( getDefaultVersion() > SvtSaveOptions::ODFVER_012 )
+    if (getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
         GetNamespaceMap_().Add( GetXMLToken(XML_NP_CHART_EXT), GetXMLToken(XML_N_CHART_EXT), XML_NAMESPACE_CHART_EXT);
 }
 
@@ -3673,119 +3778,75 @@ void SchXMLExportHelper_Impl::InitRangeSegmentationProperties( const Reference< 
 
 // first version: everything goes in one storage
 
-Sequence< OUString > SchXMLExport_getSupportedServiceNames() throw()
+extern "C" SAL_DLLPUBLIC_EXPORT uno::XInterface*
+com_sun_star_comp_Chart_XMLExporter_get_implementation(uno::XComponentContext* pCtx,
+                                                       uno::Sequence<uno::Any> const& /*rSeq*/)
 {
-    return Sequence< OUString > { "com.sun.star.comp.Chart.XMLExporter" };
-}
-
-OUString SchXMLExport_getImplementationName() throw()
-{
-    return "SchXMLExport.Compact";
-}
-
-Reference< uno::XInterface > SchXMLExport_createInstance(const Reference< lang::XMultiServiceFactory > & rSMgr)
-{
-    // #103997# removed some flags from EXPORT_ALL
-    return static_cast<cppu::OWeakObject*>(new SchXMLExport( comphelper::getComponentContext(rSMgr), SchXMLExport_getImplementationName(), SvXMLExportFlags::ALL ^ ( SvXMLExportFlags::SETTINGS | SvXMLExportFlags::MASTERSTYLES | SvXMLExportFlags::SCRIPTS )));
+    return cppu::acquire(
+        new SchXMLExport(pCtx, "SchXMLExport.Compact",
+                         SvXMLExportFlags::ALL
+                             ^ (SvXMLExportFlags::SETTINGS | SvXMLExportFlags::MASTERSTYLES
+                                | SvXMLExportFlags::SCRIPTS)));
 }
 
 // Oasis format
-Sequence< OUString > SchXMLExport_Oasis_getSupportedServiceNames() throw()
+extern "C" SAL_DLLPUBLIC_EXPORT uno::XInterface*
+com_sun_star_comp_Chart_XMLOasisExporter_get_implementation(uno::XComponentContext* pCtx,
+                                                            uno::Sequence<uno::Any> const& /*rSeq*/)
 {
-    return Sequence< OUString > { "com.sun.star.comp.Chart.XMLOasisExporter" };
-}
-
-OUString SchXMLExport_Oasis_getImplementationName() throw()
-{
-    return "SchXMLExport.Oasis.Compact";
-}
-
-Reference< uno::XInterface > SchXMLExport_Oasis_createInstance(const Reference< lang::XMultiServiceFactory > & rSMgr)
-{
-    // #103997# removed some flags from EXPORT_ALL
-    return static_cast<cppu::OWeakObject*>(new SchXMLExport( comphelper::getComponentContext(rSMgr),
-        SchXMLExport_Oasis_getImplementationName(),
-        (SvXMLExportFlags::ALL ^ ( SvXMLExportFlags::SETTINGS | SvXMLExportFlags::MASTERSTYLES | SvXMLExportFlags::SCRIPTS )) | SvXMLExportFlags::OASIS ));
+    return cppu::acquire(
+        new SchXMLExport(pCtx, "SchXMLExport.Oasis.Compact",
+                         (SvXMLExportFlags::ALL
+                          ^ (SvXMLExportFlags::SETTINGS | SvXMLExportFlags::MASTERSTYLES
+                             | SvXMLExportFlags::SCRIPTS))
+                             | SvXMLExportFlags::OASIS));
 }
 
 // multiple storage version: one for content / styles / meta
 
-Sequence< OUString > SchXMLExport_Styles_getSupportedServiceNames() throw()
+extern "C" SAL_DLLPUBLIC_EXPORT uno::XInterface*
+com_sun_star_comp_Chart_XMLStylesExporter_get_implementation(
+    uno::XComponentContext* pCtx, uno::Sequence<uno::Any> const& /*rSeq*/)
 {
-    return Sequence< OUString > { "com.sun.star.comp.Chart.XMLStylesExporter" };
-}
-
-OUString SchXMLExport_Styles_getImplementationName() throw()
-{
-    return "SchXMLExport.Styles";
-}
-
-Reference< uno::XInterface > SchXMLExport_Styles_createInstance(const Reference< lang::XMultiServiceFactory >& rSMgr)
-{
-    return static_cast<cppu::OWeakObject*>(new SchXMLExport( comphelper::getComponentContext(rSMgr), SchXMLExport_Styles_getImplementationName(), SvXMLExportFlags::STYLES ));
+    return cppu::acquire(new SchXMLExport(pCtx, "SchXMLExport.Styles", SvXMLExportFlags::STYLES));
 }
 
 // Oasis format
-Sequence< OUString > SchXMLExport_Oasis_Styles_getSupportedServiceNames() throw()
+extern "C" SAL_DLLPUBLIC_EXPORT uno::XInterface*
+com_sun_star_comp_Chart_XMLOasisStylesExporter_get_implementation(
+    uno::XComponentContext* pCtx, uno::Sequence<uno::Any> const& /*rSeq*/)
 {
-    return Sequence< OUString > { "com.sun.star.comp.Chart.XMLOasisStylesExporter" };
+    return cppu::acquire(new SchXMLExport(pCtx, "SchXMLExport.Oasis.Styles",
+                                          SvXMLExportFlags::STYLES | SvXMLExportFlags::OASIS));
 }
 
-OUString SchXMLExport_Oasis_Styles_getImplementationName() throw()
+extern "C" SAL_DLLPUBLIC_EXPORT uno::XInterface*
+com_sun_star_comp_Chart_XMLContentExporter_get_implementation(
+    uno::XComponentContext* pCtx, uno::Sequence<uno::Any> const& /*rSeq*/)
 {
-    return "SchXMLExport.Oasis.Styles";
+    return cppu::acquire(new SchXMLExport(pCtx, "SchXMLExport.Content",
+                                          SvXMLExportFlags::AUTOSTYLES | SvXMLExportFlags::CONTENT
+                                              | SvXMLExportFlags::FONTDECLS));
 }
 
-Reference< uno::XInterface > SchXMLExport_Oasis_Styles_createInstance(const Reference< lang::XMultiServiceFactory > & rSMgr)
+extern "C" SAL_DLLPUBLIC_EXPORT uno::XInterface*
+com_sun_star_comp_Chart_XMLOasisContentExporter_get_implementation(
+    uno::XComponentContext* pCtx, uno::Sequence<uno::Any> const& /*rSeq*/)
 {
-    return static_cast<cppu::OWeakObject*>(new SchXMLExport( comphelper::getComponentContext(rSMgr), SchXMLExport_Oasis_Styles_getImplementationName(), SvXMLExportFlags::STYLES | SvXMLExportFlags::OASIS ));
-}
-
-Sequence< OUString > SchXMLExport_Content_getSupportedServiceNames() throw()
-{
-    return Sequence< OUString > { "com.sun.star.comp.Chart.XMLContentExporter" };
-}
-
-OUString SchXMLExport_Content_getImplementationName() throw()
-{
-    return "SchXMLExport.Content";
-}
-
-Reference< uno::XInterface > SchXMLExport_Content_createInstance(const Reference< lang::XMultiServiceFactory > & rSMgr)
-{
-    return static_cast<cppu::OWeakObject*>(new SchXMLExport( comphelper::getComponentContext(rSMgr), SchXMLExport_Content_getImplementationName(), SvXMLExportFlags::AUTOSTYLES | SvXMLExportFlags::CONTENT | SvXMLExportFlags::FONTDECLS ));
+    return cppu::acquire(new SchXMLExport(pCtx, "SchXMLExport.Oasis.Content",
+                                          SvXMLExportFlags::AUTOSTYLES | SvXMLExportFlags::CONTENT
+                                              | SvXMLExportFlags::FONTDECLS
+                                              | SvXMLExportFlags::OASIS));
 }
 
 // Oasis format
-Sequence< OUString > SchXMLExport_Oasis_Content_getSupportedServiceNames() throw()
-{
-    return Sequence< OUString > { "com.sun.star.comp.Chart.XMLOasisContentExporter" };
-}
 
-OUString SchXMLExport_Oasis_Content_getImplementationName() throw()
+extern "C" SAL_DLLPUBLIC_EXPORT uno::XInterface*
+com_sun_star_comp_Chart_XMLOasisMetaExporter_get_implementation(
+    uno::XComponentContext* pCtx, uno::Sequence<uno::Any> const& /*rSeq*/)
 {
-    return "SchXMLExport.Oasis.Content";
-}
-
-Reference< uno::XInterface > SchXMLExport_Oasis_Content_createInstance(const Reference< lang::XMultiServiceFactory > & rSMgr)
-{
-    return static_cast<cppu::OWeakObject*>(new SchXMLExport( comphelper::getComponentContext(rSMgr), SchXMLExport_Oasis_Content_getImplementationName(), SvXMLExportFlags::AUTOSTYLES | SvXMLExportFlags::CONTENT | SvXMLExportFlags::FONTDECLS | SvXMLExportFlags::OASIS ));
-}
-
-// Oasis format
-Sequence< OUString > SchXMLExport_Oasis_Meta_getSupportedServiceNames() throw()
-{
-    return Sequence< OUString > { "com.sun.star.comp.Chart.XMLOasisMetaExporter" };
-}
-
-OUString SchXMLExport_Oasis_Meta_getImplementationName() throw()
-{
-    return "SchXMLExport.Oasis.Meta";
-}
-
-Reference< uno::XInterface > SchXMLExport_Oasis_Meta_createInstance(const Reference< lang::XMultiServiceFactory > & rSMgr)
-{
-    return static_cast<cppu::OWeakObject*>(new SchXMLExport( comphelper::getComponentContext(rSMgr), SchXMLExport_Oasis_Meta_getImplementationName(), SvXMLExportFlags::META | SvXMLExportFlags::OASIS  ));
+    return cppu::acquire(new SchXMLExport(pCtx, "SchXMLExport.Oasis.Meta",
+                                          SvXMLExportFlags::META | SvXMLExportFlags::OASIS));
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -17,29 +17,33 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_DRAWINGLAYER_PRIMITIVE2D_BITMAPPRIMITIVE2D_HXX
-#define INCLUDED_DRAWINGLAYER_PRIMITIVE2D_BITMAPPRIMITIVE2D_HXX
+#pragma once
 
 #include <drawinglayer/drawinglayerdllapi.h>
 
 #include <drawinglayer/primitive2d/baseprimitive2d.hxx>
-#include <vcl/bitmapex.hxx>
 #include <basegfx/matrix/b2dhommatrix.hxx>
+
+namespace com::sun::star::awt
+{
+class XBitmap;
+}
 
 namespace drawinglayer::primitive2d
 {
 /** BitmapPrimitive2D class
 
     This class is the central primitive for Bitmap-based primitives.
-    It provides RGBA-based bitmaps, currently using a BitmapEx from VCL.
-    This may change in the future to any other, maybe more general base
-    class providing 24bit RGBA.
+    To keep it independent of Bitmap implementations, use UNO API
+    XBitmap object as wrapper due to formally used class Bitmap being
+    vcl-dependent and requiring linking against it. Use VCLUnoHelper
+    to convert awt::XBitmap <-> Bitmap
  */
 class DRAWINGLAYER_DLLPUBLIC BitmapPrimitive2D final : public BasePrimitive2D
 {
 private:
-    /// the RGBA Bitmap-data
-    BitmapEx maBitmapEx;
+    /// the Bitmap-data
+    css::uno::Reference<css::awt::XBitmap> maXBitmap;
 
     /** the object transformation from unit coordinates, defining
         size, shear, rotate and position
@@ -48,10 +52,11 @@ private:
 
 public:
     /// constructor
-    BitmapPrimitive2D(const BitmapEx& rBitmapEx, const basegfx::B2DHomMatrix& rTransform);
+    BitmapPrimitive2D(const css::uno::Reference<css::awt::XBitmap>& rXBitmap,
+                      const basegfx::B2DHomMatrix& rTransform);
 
     /// data read access
-    const BitmapEx& getBitmapEx() const { return maBitmapEx; }
+    const css::uno::Reference<css::awt::XBitmap>& getXBitmap() const { return maXBitmap; }
     const basegfx::B2DHomMatrix& getTransform() const { return maTransform; }
 
     /// compare operator
@@ -69,7 +74,5 @@ public:
 };
 
 } // end of namespace drawinglayer::primitive2d
-
-#endif // INCLUDED_DRAWINGLAYER_PRIMITIVE2D_BITMAPPRIMITIVE2D_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

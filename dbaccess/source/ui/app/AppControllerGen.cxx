@@ -23,7 +23,7 @@
 #include <core_resource.hxx>
 #include <dbaccess_slotid.hrc>
 #include <strings.hrc>
-#include <stringconstants.hxx>
+#include <strings.hxx>
 #include <defaultobjectnamecheck.hxx>
 #include <dlgsave.hxx>
 #include <UITools.hxx>
@@ -33,21 +33,13 @@
 #include <com/sun/star/container/XContainer.hpp>
 #include <com/sun/star/container/XHierarchicalNameContainer.hpp>
 #include <com/sun/star/container/XNameAccess.hpp>
-#include <com/sun/star/container/XNameContainer.hpp>
-#include <com/sun/star/lang/XEventListener.hpp>
 #include <com/sun/star/sdb/CommandType.hpp>
-#include <com/sun/star/sdb/SQLContext.hpp>
 #include <com/sun/star/sdb/XQueriesSupplier.hpp>
 #include <com/sun/star/sdbcx/XRename.hpp>
 #include <com/sun/star/sdb/ErrorCondition.hpp>
 #include <com/sun/star/sdb/application/DatabaseObject.hpp>
 #include <com/sun/star/sdbcx/XTablesSupplier.hpp>
-#include <com/sun/star/sdbcx/XViewsSupplier.hpp>
-#include <com/sun/star/ucb/Command.hpp>
-#include <com/sun/star/ucb/XCommandEnvironment.hpp>
-#include <com/sun/star/ucb/XCommandProcessor.hpp>
 #include <com/sun/star/ui/dialogs/XExecutableDialog.hpp>
-#include <com/sun/star/uno/XNamingService.hpp>
 #include <com/sun/star/util/XRefreshable.hpp>
 
 #include <cppuhelper/exc_hlp.hxx>
@@ -60,7 +52,6 @@
 #include <toolkit/helper/vclunohelper.hxx>
 #include <tools/diagnose_ex.h>
 #include <osl/diagnose.h>
-#include <unotools/bootstrap.hxx>
 #include <vcl/weld.hxx>
 #include <vcl/mnemonic.hxx>
 #include <vcl/svapp.hxx>
@@ -134,24 +125,24 @@ void OApplicationController::convertToView(const OUString& _sName)
 
 void OApplicationController::pasteFormat(SotClipboardFormatId _nFormatId)
 {
-    if ( _nFormatId != SotClipboardFormatId::NONE )
-    {
-        try
-        {
-            const TransferableDataHelper& rClipboard = getViewClipboard();
-            ElementType eType = getContainer()->getElementType();
-            if ( eType == E_TABLE )
-            {
-                m_aTableCopyHelper.pasteTable( _nFormatId, rClipboard, getDatabaseName(), ensureConnection() );
-            }
-            else
-                paste( eType, ODataAccessObjectTransferable::extractObjectDescriptor( rClipboard ) );
+    if ( _nFormatId == SotClipboardFormatId::NONE )
+        return;
 
-        }
-        catch( const Exception& )
+    try
+    {
+        const TransferableDataHelper& rClipboard = getViewClipboard();
+        ElementType eType = getContainer()->getElementType();
+        if ( eType == E_TABLE )
         {
-            DBG_UNHANDLED_EXCEPTION("dbaccess");
+            m_aTableCopyHelper.pasteTable( _nFormatId, rClipboard, getDatabaseName(), ensureConnection() );
         }
+        else
+            paste( eType, ODataAccessObjectTransferable::extractObjectDescriptor( rClipboard ) );
+
+    }
+    catch( const Exception& )
+    {
+        DBG_UNHANDLED_EXCEPTION("dbaccess");
     }
 }
 
@@ -217,24 +208,24 @@ void OApplicationController::openDialog( const OUString& _sServiceName )
 
 void OApplicationController::refreshTables()
 {
-    if ( getContainer() && getContainer()->getDetailView() )
-    {
-        weld::WaitObject aWO(getFrameWeld());
-        OSL_ENSURE(getContainer()->getElementType() == E_TABLE,"Only allowed when the tables container is selected!");
-        try
-        {
-            Reference<XRefreshable> xRefresh(getElements(E_TABLE),UNO_QUERY);
-            if ( xRefresh.is() )
-                xRefresh->refresh();
-        }
-        catch(const Exception&)
-        {
-            OSL_FAIL("Could not refresh tables!");
-        }
+    if ( !(getContainer() && getContainer()->getDetailView()) )
+        return;
 
-        getContainer()->getDetailView()->clearPages(false);
-        getContainer()->getDetailView()->createTablesPage( ensureConnection() );
+    weld::WaitObject aWO(getFrameWeld());
+    OSL_ENSURE(getContainer()->getElementType() == E_TABLE,"Only allowed when the tables container is selected!");
+    try
+    {
+        Reference<XRefreshable> xRefresh(getElements(E_TABLE),UNO_QUERY);
+        if ( xRefresh.is() )
+            xRefresh->refresh();
     }
+    catch(const Exception&)
+    {
+        OSL_FAIL("Could not refresh tables!");
+    }
+
+    getContainer()->getDetailView()->clearPages(false);
+    getContainer()->getDetailView()->createTablesPage( ensureConnection() );
 }
 
 void SAL_CALL OApplicationController::propertyChange( const PropertyChangeEvent& evt )
@@ -377,7 +368,7 @@ namespace
     }
 }
 
-void OApplicationController::impl_validateObjectTypeAndName_throw( const sal_Int32 _nObjectType, const ::o3tl::optional< OUString >& i_rObjectName )
+void OApplicationController::impl_validateObjectTypeAndName_throw( const sal_Int32 _nObjectType, const ::std::optional< OUString >& i_rObjectName )
 {
     // ensure we're connected
     if ( !isConnected() )
@@ -459,7 +450,7 @@ Reference< XComponent > SAL_CALL OApplicationController::createComponentWithArgu
     SolarMutexGuard aSolarGuard;
     ::osl::MutexGuard aGuard( getMutex() );
 
-    impl_validateObjectTypeAndName_throw( i_nObjectType, ::o3tl::optional< OUString >() );
+    impl_validateObjectTypeAndName_throw( i_nObjectType, ::std::optional< OUString >() );
 
     Reference< XComponent > xComponent( newElement(
         lcl_objectType2ElementType( i_nObjectType ),
@@ -510,34 +501,34 @@ void OApplicationController::previewChanged( sal_Int32 _nMode )
 
 void OApplicationController::askToReconnect()
 {
-    if ( m_bNeedToReconnect )
+    if ( !m_bNeedToReconnect )
+        return;
+
+    m_bNeedToReconnect = false;
+    bool bClear = true;
+    if ( !m_pSubComponentManager->empty() )
     {
-        m_bNeedToReconnect = false;
-        bool bClear = true;
-        if ( !m_pSubComponentManager->empty() )
+        std::unique_ptr<weld::MessageDialog> xQry(Application::CreateMessageDialog(getFrameWeld(),
+                                                  VclMessageType::Question, VclButtonsType::YesNo,
+                                                  DBA_RES(STR_QUERY_CLOSEDOCUMENTS)));
+        switch (xQry->run())
         {
-            std::unique_ptr<weld::MessageDialog> xQry(Application::CreateMessageDialog(getFrameWeld(),
-                                                      VclMessageType::Question, VclButtonsType::YesNo,
-                                                      DBA_RES(STR_QUERY_CLOSEDOCUMENTS)));
-            switch (xQry->run())
-            {
-                case RET_YES:
-                    closeSubComponents();
-                    break;
-                default:
-                    bClear = false;
-                    break;
-            }
+            case RET_YES:
+                closeSubComponents();
+                break;
+            default:
+                bClear = false;
+                break;
         }
-        if ( bClear )
-        {
-            ElementType eType = getContainer()->getElementType();
-            disconnect();
-            getContainer()->getDetailView()->clearPages(false);
-            getContainer()->selectContainer(E_NONE); // invalidate the old selection
-            m_eCurrentType = E_NONE;
-            getContainer()->selectContainer(eType); // reselect the current one again
-        }
+    }
+    if ( bClear )
+    {
+        ElementType eType = getContainer()->getElementType();
+        disconnect();
+        getContainer()->getDetailView()->clearPages(false);
+        getContainer()->selectContainer(E_NONE); // invalidate the old selection
+        m_eCurrentType = E_NONE;
+        getContainer()->selectContainer(eType); // reselect the current one again
     }
 }
 
@@ -644,34 +635,34 @@ bool OApplicationController::isRenameDeleteAllowed(ElementType _eType, bool _bDe
 void OApplicationController::onLoadedMenu(const Reference< css::frame::XLayoutManager >& _xLayoutManager)
 {
 
-    if ( _xLayoutManager.is() )
+    if ( !_xLayoutManager.is() )
+        return;
+
+    static const char s_sStatusbar[] = "private:resource/statusbar/statusbar";
+    _xLayoutManager->createElement( s_sStatusbar );
+    _xLayoutManager->requestElement( s_sStatusbar );
+
+    if ( getContainer() )
     {
-        static const char s_sStatusbar[] = "private:resource/statusbar/statusbar";
-        _xLayoutManager->createElement( s_sStatusbar );
-        _xLayoutManager->requestElement( s_sStatusbar );
-
-        if ( getContainer() )
+        // we need to share the "mnemonic space":
+        MnemonicGenerator aMnemonicGenerator;
+        // - the menu already has mnemonics
+        SystemWindow* pSystemWindow = getContainer()->GetSystemWindow();
+        MenuBar* pMenu = pSystemWindow ? pSystemWindow->GetMenuBar() : nullptr;
+        if ( pMenu )
         {
-            // we need to share the "mnemonic space":
-            MnemonicGenerator aMnemonicGenerator;
-            // - the menu already has mnemonics
-            SystemWindow* pSystemWindow = getContainer()->GetSystemWindow();
-            MenuBar* pMenu = pSystemWindow ? pSystemWindow->GetMenuBar() : nullptr;
-            if ( pMenu )
-            {
-                sal_uInt16 nMenuItems = pMenu->GetItemCount();
-                for ( sal_uInt16 i = 0; i < nMenuItems; ++i )
-                    aMnemonicGenerator.RegisterMnemonic( pMenu->GetItemText( pMenu->GetItemId( i ) ) );
-            }
-            // - the icons should use automatic ones
-            getContainer()->createIconAutoMnemonics( aMnemonicGenerator );
-            // - as well as the entries in the task pane
-            getContainer()->setTaskExternalMnemonics( aMnemonicGenerator );
+            sal_uInt16 nMenuItems = pMenu->GetItemCount();
+            for ( sal_uInt16 i = 0; i < nMenuItems; ++i )
+                aMnemonicGenerator.RegisterMnemonic( pMenu->GetItemText( pMenu->GetItemId( i ) ) );
         }
-
-        Execute( SID_DB_APP_VIEW_FORMS, Sequence< PropertyValue >() );
-        InvalidateAll();
+        // - the icons should use automatic ones
+        getContainer()->createIconAutoMnemonics( aMnemonicGenerator );
+        // - as well as the entries in the task pane
+        getContainer()->setTaskExternalMnemonics( aMnemonicGenerator );
     }
+
+    Execute( SID_DB_APP_VIEW_FORMS, Sequence< PropertyValue >() );
+    InvalidateAll();
 }
 
 void OApplicationController::doAction(sal_uInt16 _nId, const ElementOpenMode _eOpenMode)
@@ -700,31 +691,31 @@ void OApplicationController::doAction(sal_uInt16 _nId, const ElementOpenMode _eO
     }
 
     // special handling for mail, if more than one document is selected attach them all
-    if ( _eOpenMode == E_OPEN_FOR_MAIL )
+    if ( _eOpenMode != E_OPEN_FOR_MAIL )
+        return;
+
+
+    SfxMailModel aSendMail;
+    SfxMailModel::SendMailResult eResult = SfxMailModel::SEND_MAIL_OK;
+    for (auto const& component : aComponents)
     {
-
-        SfxMailModel aSendMail;
-        SfxMailModel::SendMailResult eResult = SfxMailModel::SEND_MAIL_OK;
-        for (auto const& component : aComponents)
+        try
         {
-            try
-            {
-                Reference< XModel > xModel(component.second,UNO_QUERY);
+            Reference< XModel > xModel = component.second;
 
-                // Send document as e-Mail using stored/default type
-                eResult = aSendMail.AttachDocument(xModel,component.first);
-                ::comphelper::disposeComponent(xModel);
-                if (eResult != SfxMailModel::SEND_MAIL_OK)
-                    break;
-            }
-            catch(const Exception&)
-            {
-                DBG_UNHANDLED_EXCEPTION("dbaccess");
-            }
+            // Send document as e-Mail using stored/default type
+            eResult = aSendMail.AttachDocument(xModel,component.first);
+            ::comphelper::disposeComponent(xModel);
+            if (eResult != SfxMailModel::SEND_MAIL_OK)
+                break;
         }
-        if ( !aSendMail.IsEmpty() )
-            aSendMail.Send( getFrame() );
+        catch(const Exception&)
+        {
+            DBG_UNHANDLED_EXCEPTION("dbaccess");
+        }
     }
+    if ( !aSendMail.IsEmpty() )
+        aSendMail.Send( getFrame() );
 }
 
 ElementType OApplicationController::getElementType(const Reference< XContainer >& _xContainer)

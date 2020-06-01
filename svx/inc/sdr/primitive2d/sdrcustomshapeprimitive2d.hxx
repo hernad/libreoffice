@@ -22,7 +22,7 @@
 
 #include <drawinglayer/primitive2d/baseprimitive2d.hxx>
 #include <basegfx/matrix/b2dhommatrix.hxx>
-#include <svx/sdr/attribute/sdrshadowtextattribute.hxx>
+#include <sdr/attribute/sdreffectstextattribute.hxx>
 
 
 // predefines
@@ -35,17 +35,19 @@ namespace drawinglayer
         class SdrCustomShapePrimitive2D : public BufferedDecompositionPrimitive2D
         {
         private:
-            attribute::SdrShadowTextAttribute const           maSdrSTAttribute;
-            Primitive2DContainer const                        maSubPrimitives;
-            basegfx::B2DHomMatrix const                       maTextBox;
+            attribute::SdrEffectsTextAttribute           maSdrSTAttribute;
+            Primitive2DContainer                         maSubPrimitives;
+            basegfx::B2DHomMatrix                       maTextBox;
 
             // defines if SdrTextWordWrapItem was set at SdrObjCustomShape which means
             // that the text needs to be block formatted
-            bool const                                        mbWordWrap : 1;
+            bool                                        mbWordWrap : 1;
 
             // defines that the object contains/is a 3D AutoShape. Needed for
             // making exceptions with shadow generation
-            bool const                                        mb3DShape : 1;
+            bool                                        mb3DShape : 1;
+
+            basegfx::B2DHomMatrix maTransform;
 
         protected:
             // local decomposition.
@@ -53,14 +55,15 @@ namespace drawinglayer
 
         public:
             SdrCustomShapePrimitive2D(
-                const attribute::SdrShadowTextAttribute& rSdrSTAttribute,
+                const attribute::SdrEffectsTextAttribute& rSdrSTAttribute,
                 const Primitive2DContainer& rSubPrimitives,
                 const basegfx::B2DHomMatrix& rTextBox,
                 bool bWordWrap,
-                bool b3DShape);
+                bool b3DShape,
+                const basegfx::B2DHomMatrix& rObjectMatrix);
 
             // data access
-            const attribute::SdrShadowTextAttribute& getSdrSTAttribute() const { return maSdrSTAttribute; }
+            const attribute::SdrEffectsTextAttribute& getSdrSTAttribute() const { return maSdrSTAttribute; }
             const Primitive2DContainer& getSubPrimitives() const { return maSubPrimitives; }
             const basegfx::B2DHomMatrix& getTextBox() const { return maTextBox; }
             bool getWordWrap() const { return mbWordWrap; }
@@ -70,7 +73,7 @@ namespace drawinglayer
             virtual bool operator==(const BasePrimitive2D& rPrimitive) const override;
 
             // provide unique ID
-            DeclPrimitive2DIDBlock()
+            virtual sal_uInt32 getPrimitive2DID() const override;
         };
     } // end of namespace primitive2d
 } // end of namespace drawinglayer

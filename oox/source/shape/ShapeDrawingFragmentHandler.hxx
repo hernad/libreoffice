@@ -11,9 +11,9 @@
 #define INCLUDED_OOX_SOURCE_SHAPE_SHAPEDRAWINGFRAGMENTHANDLER_HXX
 
 #include <oox/core/fragmenthandler2.hxx>
-#include <oox/drawingml/shapegroupcontext.hxx>
+#include <oox/drawingml/drawingmltypes.hxx>
 
-namespace oox { namespace shape {
+namespace oox::shape {
 
 /// Generic (i.e. not specific to PPTX) handler for the prerendered diagram parsing.
 class ShapeDrawingFragmentHandler : public oox::core::FragmentHandler2
@@ -25,10 +25,10 @@ public:
     virtual ::oox::core::ContextHandlerRef onCreateContext(sal_Int32 Element, const AttributeList& rAttribs ) override;
 
 private:
-        oox::drawingml::ShapePtr const  mpGroupShapePtr;
+        oox::drawingml::ShapePtr        mpGroupShapePtr;
 };
 
-} }
+}
 
 #endif
 

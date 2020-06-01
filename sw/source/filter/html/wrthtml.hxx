@@ -296,7 +296,7 @@ public:
     css::uno::Reference<css::container::XIndexContainer> mxFormComps; // current form
 
     rtl::Reference<SwDoc> m_xTemplate;               // HTML template
-    o3tl::optional<Color> m_xDfltColor;              // default colour
+    std::optional<Color> m_xDfltColor;              // default colour
     SwNodeIndex *m_pStartNdIdx;       // index of first paragraph
     const SwPageDesc *m_pCurrPageDesc;// current page style
     const SwFormatFootnote *m_pFormatFootnote;
@@ -631,12 +631,12 @@ struct HTMLSaveData
     SwPaM *pOldEnd;
     std::unique_ptr<SwHTMLNumRuleInfo> pOldNumRuleInfo;     // Owner = this
     std::unique_ptr<SwHTMLNumRuleInfo> pOldNextNumRuleInfo;
-    sal_uInt16 const nOldDefListLvl;
-    SvxFrameDirection const nOldDirection;
+    sal_uInt16 nOldDefListLvl;
+    SvxFrameDirection nOldDirection;
     bool bOldWriteAll : 1;
-    bool const bOldOutHeader : 1;
-    bool const bOldOutFooter : 1;
-    bool const bOldOutFlyFrame : 1;
+    bool bOldOutHeader : 1;
+    bool bOldOutFooter : 1;
+    bool bOldOutFlyFrame : 1;
 
     HTMLSaveData( SwHTMLWriter&, sal_uLong nStt, sal_uLong nEnd,
                   bool bSaveNum=true,

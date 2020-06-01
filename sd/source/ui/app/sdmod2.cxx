@@ -335,7 +335,7 @@ IMPL_LINK(SdModule, CalcFieldValueHdl, EditFieldInfo*, pInfo, void)
     }
     else if ( dynamic_cast< const SdrMeasureField* >(pField))
     {
-        pInfo->SetFieldColor(o3tl::optional<Color>()); // clear the field color
+        pInfo->SetFieldColor(std::optional<Color>()); // clear the field color
     }
     else if ((pCustomPropertyField = dynamic_cast<const editeng::CustomPropertyField*>(pField)) != nullptr)
     {
@@ -802,12 +802,12 @@ std::unique_ptr<SfxStyleFamilies> SdModule::CreateStyleFamilies()
 
     pStyleFamilies->emplace_back(SfxStyleFamilyItem(SfxStyleFamily::Para,
                                                     SdResId(STR_GRAPHICS_STYLE_FAMILY),
-                                                    Image(StockImage::Yes, BMP_STYLES_FAMILY_GRAPHICS),
+                                                    BMP_STYLES_FAMILY_GRAPHICS,
                                                     RID_GRAPHICSTYLEFAMILY, SD_MOD()->GetResLocale()));
 
     pStyleFamilies->emplace_back(SfxStyleFamilyItem(SfxStyleFamily::Pseudo,
                                                     SdResId(STR_PRESENTATIONS_STYLE_FAMILY),
-                                                    Image(StockImage::Yes, BMP_STYLES_FAMILY_PRESENTATIONS),
+                                                    BMP_STYLES_FAMILY_PRESENTATIONS,
                                                     RID_PRESENTATIONSTYLEFAMILY, SD_MOD()->GetResLocale()));
 
     return pStyleFamilies;

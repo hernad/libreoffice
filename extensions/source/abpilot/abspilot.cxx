@@ -25,7 +25,6 @@
 #include "typeselectionpage.hxx"
 #include "admininvokationpage.hxx"
 #include "tableselectionpage.hxx"
-#include <vcl/settings.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/weld.hxx>
 #include <osl/diagnose.h>
@@ -344,7 +343,7 @@ namespace abp
                 break;
 
             case AST_OTHER:
-                m_aNewDataSource = aContext.createNewDBase( m_aSettings.sDataSourceName );
+                m_aNewDataSource = aContext.createNewOther( m_aSettings.sDataSourceName );
                 break;
 
             case AST_INVALID:

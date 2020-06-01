@@ -19,26 +19,20 @@
 
 #include <config_features.h>
 
-#include <vcl/svapp.hxx>
 #include <sfx2/viewfrm.hxx>
 #include <sfx2/dispatch.hxx>
 #include <sfx2/sfxsids.hrc>
 #include <avmedia/mediaplayer.hxx>
 #include <helpids.h>
 #include <galbrws2.hxx>
-#include <svx/dialmgr.hxx>
 #include <svx/galtheme.hxx>
 #include <svx/galmisc.hxx>
 #include <svx/galctrl.hxx>
-#include <editeng/AccessibleStringWrap.hxx>
-#include <editeng/svxfont.hxx>
 #include <galobj.hxx>
 #include <avmedia/mediawindow.hxx>
-#include <svx/strings.hrc>
 #include <vcl/event.hxx>
 #include <vcl/commandevent.hxx>
 #include <vcl/graphicfilter.hxx>
-#include <vcl/settings.hxx>
 #include <bitmaps.hlst>
 
 GalleryPreview::GalleryPreview(GalleryBrowser2* pParent, std::unique_ptr<weld::ScrolledWindow> xScrolledWindow)
@@ -289,7 +283,7 @@ void GalleryIconView::drawTransparenceBackground(vcl::RenderContext& rOut, const
 }
 
 GalleryIconView::GalleryIconView(GalleryBrowser2* pParent, std::unique_ptr<weld::ScrolledWindow> xScrolledWindow)
-    : SvtValueSet(std::move(xScrolledWindow))
+    : ValueSet(std::move(xScrolledWindow))
     , mpParent(pParent)
     , mpTheme(nullptr)
 {
@@ -301,7 +295,7 @@ GalleryIconView::~GalleryIconView()
 
 void GalleryIconView::SetDrawingArea(weld::DrawingArea* pDrawingArea)
 {
-    SvtValueSet::SetDrawingArea(pDrawingArea);
+    ValueSet::SetDrawingArea(pDrawingArea);
 
     SetStyle(GetStyle() | WB_TABSTOP | WB_3DLOOK | WB_BORDER | WB_ITEMBORDER | WB_DOUBLEBORDER | WB_VSCROLL | WB_FLATVALUESET);
     EnableFullItemMode( false );
@@ -377,7 +371,7 @@ void GalleryIconView::UserDraw(const UserDrawEvent& rUDEvt)
 
 bool GalleryIconView::MouseButtonDown(const MouseEvent& rMEvt)
 {
-    bool bRet = SvtValueSet::MouseButtonDown(rMEvt);
+    bool bRet = ValueSet::MouseButtonDown(rMEvt);
 
     if (rMEvt.GetClicks() == 2)
         mpParent->TogglePreview();
@@ -387,7 +381,7 @@ bool GalleryIconView::MouseButtonDown(const MouseEvent& rMEvt)
 
 bool GalleryIconView::Command(const CommandEvent& rCEvt)
 {
-    bool bRet = SvtValueSet::Command(rCEvt);
+    bool bRet = ValueSet::Command(rCEvt);
 
     if (rCEvt.GetCommand() == CommandEventId::ContextMenu)
     {
@@ -400,7 +394,7 @@ bool GalleryIconView::Command(const CommandEvent& rCEvt)
 bool GalleryIconView::KeyInput(const KeyEvent& rKEvt)
 {
     if (!mpTheme || !mpParent->KeyInput(rKEvt))
-        return SvtValueSet::KeyInput(rKEvt);
+        return ValueSet::KeyInput(rKEvt);
     return true;
 }
 

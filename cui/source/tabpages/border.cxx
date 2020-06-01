@@ -29,6 +29,7 @@
 #include <svx/dlgutil.hxx>
 #include <dialmgr.hxx>
 #include <sfx2/htmlmode.hxx>
+#include <vcl/fieldvalues.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/svapp.hxx>
 #include <svx/flagsdef.hxx>
@@ -86,7 +87,7 @@ const sal_uInt16 SVX_BORDER_PRESET_COUNT = 5;
 // number of shadow images to show
 const sal_uInt16 SVX_BORDER_SHADOW_COUNT = 5;
 
-ShadowControlsWrapper::ShadowControlsWrapper(SvtValueSet& rVsPos, weld::MetricSpinButton& rMfSize, ColorListBox& rLbColor)
+ShadowControlsWrapper::ShadowControlsWrapper(ValueSet& rVsPos, weld::MetricSpinButton& rMfSize, ColorListBox& rLbColor)
     : mrVsPos(rVsPos)
     , mrMfSize(rMfSize)
     , mrLbColor(rLbColor)
@@ -244,7 +245,7 @@ SvxBorderTabPage::SvxBorderTabPage(weld::Container* pPage, weld::DialogControlle
     , mbSync(true)
     , mbRemoveAdjacentCellBorders(false)
     , bIsCalcDoc(false)
-    , m_xWndPresets(new SvtValueSet(nullptr))
+    , m_xWndPresets(new ValueSet(nullptr))
     , m_xWndPresetsWin(new weld::CustomWeld(*m_xBuilder, "presets", *m_xWndPresets))
     , m_xUserDefFT(m_xBuilder->weld_label("userdefft"))
     , m_xFrameSelWin(new weld::CustomWeld(*m_xBuilder, "framesel", m_aFrameSel))
@@ -262,7 +263,7 @@ SvxBorderTabPage::SvxBorderTabPage(weld::Container* pPage, weld::DialogControlle
     , m_xBottomMF(m_xBuilder->weld_metric_spin_button("bottommf", FieldUnit::MM))
     , m_xSynchronizeCB(m_xBuilder->weld_check_button("sync"))
     , m_xShadowFrame(m_xBuilder->weld_container("shadow"))
-    , m_xWndShadows(new SvtValueSet(nullptr))
+    , m_xWndShadows(new ValueSet(nullptr))
     , m_xWndShadowsWin(new weld::CustomWeld(*m_xBuilder, "shadows", *m_xWndShadows))
     , m_xFtShadowSize(m_xBuilder->weld_label("distanceft"))
     , m_xEdShadowSize(m_xBuilder->weld_metric_spin_button("distancemf", FieldUnit::MM))
@@ -733,7 +734,7 @@ void SvxBorderTabPage::Reset( const SfxItemSet* rSet )
         if( bWidthEq )
         {
             // Determine the width first as some styles can be missing depending on it
-            sal_Int64 nWidthPt =  static_cast<sal_Int64>(MetricField::ConvertDoubleValue(
+            sal_Int64 nWidthPt =  static_cast<sal_Int64>(vcl::ConvertDoubleValue(
                         sal_Int64( nWidth ), m_xLineWidthMF->get_digits(),
                         MapUnit::MapTwip, FieldUnit::POINT ));
             m_xLineWidthMF->set_value(nWidthPt, FieldUnit::POINT);
@@ -1069,7 +1070,7 @@ void SvxBorderTabPage::HideShadowControls()
 #define IID_PRE_TABLE_ALL       20
 #define IID_PRE_TABLE_OUTER2    21
 
-IMPL_LINK_NOARG(SvxBorderTabPage, SelPreHdl_Impl, SvtValueSet*, void)
+IMPL_LINK_NOARG(SvxBorderTabPage, SelPreHdl_Impl, ValueSet*, void)
 {
     const svx::FrameBorderState SHOW = svx::FrameBorderState::Show;
     const svx::FrameBorderState HIDE = svx::FrameBorderState::Hide;
@@ -1139,7 +1140,7 @@ IMPL_LINK_NOARG(SvxBorderTabPage, SelPreHdl_Impl, SvtValueSet*, void)
     UpdateRemoveAdjCellBorderCB( nLine + 1 );
 }
 
-IMPL_LINK_NOARG(SvxBorderTabPage, SelSdwHdl_Impl, SvtValueSet*, void)
+IMPL_LINK_NOARG(SvxBorderTabPage, SelSdwHdl_Impl, ValueSet*, void)
 {
     bool bEnable = m_xWndShadows->GetSelectedItemId() > 1;
     m_xFtShadowSize->set_sensitive(bEnable);
@@ -1157,7 +1158,7 @@ IMPL_LINK(SvxBorderTabPage, SelColHdl_Impl, ColorListBox&, rColorBox, void)
 IMPL_LINK_NOARG(SvxBorderTabPage, ModifyWidthHdl_Impl, weld::MetricSpinButton&, void)
 {
     sal_Int64 nVal = m_xLineWidthMF->get_value(FieldUnit::NONE);
-    nVal = static_cast<sal_Int64>(MetricField::ConvertDoubleValue(
+    nVal = static_cast<sal_Int64>(vcl::ConvertDoubleValue(
                 nVal,
                 m_xLineWidthMF->get_digits(),
                 FieldUnit::POINT, MapUnit::MapTwip ));
@@ -1170,7 +1171,7 @@ IMPL_LINK_NOARG(SvxBorderTabPage, ModifyWidthHdl_Impl, weld::MetricSpinButton&, 
 IMPL_LINK_NOARG(SvxBorderTabPage, SelStyleHdl_Impl, SvtLineListBox&, void)
 {
     sal_Int64 nVal = m_xLineWidthMF->get_value(FieldUnit::NONE);
-    nVal = static_cast<sal_Int64>(MetricField::ConvertDoubleValue(
+    nVal = static_cast<sal_Int64>(vcl::ConvertDoubleValue(
                 nVal,
                 m_xLineWidthMF->get_digits(),
                 FieldUnit::POINT, MapUnit::MapTwip ));
@@ -1351,7 +1352,7 @@ void SvxBorderTabPage::FillLineListBox_Impl()
     }
 
     sal_Int64 nVal = m_xLineWidthMF->get_value(FieldUnit::NONE);
-    nVal = static_cast<sal_Int64>(MetricField::ConvertDoubleValue(nVal, m_xLineWidthMF->get_digits(),
+    nVal = static_cast<sal_Int64>(vcl::ConvertDoubleValue(nVal, m_xLineWidthMF->get_digits(),
                                                                   m_xLineWidthMF->get_unit(), MapUnit::MapTwip));
     m_xLbLineStyle->SetWidth( nVal );
 }

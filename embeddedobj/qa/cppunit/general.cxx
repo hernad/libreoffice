@@ -14,7 +14,6 @@
 #include <com/sun/star/embed/XStorage.hpp>
 
 #include <comphelper/embeddedobjectcontainer.hxx>
-#include <comphelper/processfactory.hxx>
 #include <comphelper/propertyvalue.hxx>
 #include <comphelper/scopeguard.hxx>
 #include <comphelper/storagehelper.hxx>
@@ -26,7 +25,6 @@ using namespace ::com::sun::star;
 class EmbeddedobjGeneralTest : public test::BootstrapFixture, public unotest::MacrosTest
 {
 private:
-    uno::Reference<uno::XComponentContext> mxComponentContext;
     uno::Reference<lang::XComponent> mxComponent;
 
 public:
@@ -39,7 +37,6 @@ void EmbeddedobjGeneralTest::setUp()
 {
     test::BootstrapFixture::setUp();
 
-    mxComponentContext.set(comphelper::getComponentContext(getMultiServiceFactory()));
     mxDesktop.set(frame::Desktop::create(mxComponentContext));
 }
 

@@ -23,6 +23,7 @@
 
 #include <osl/conditn.hxx>
 #include <osl/file.hxx>
+#include <rtl/ustrbuf.hxx>
 #include <sal/log.hxx>
 #include <tools/debug.hxx>
 #include <tools/time.hxx>
@@ -309,7 +310,7 @@ SalData::SalData()
     SetSalData( this );
     initNWF();
 
-    CoInitialize(nullptr); // put main thread in Single Threaded Apartment (STA)
+    CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED); // put main thread in Single Threaded Apartment (STA)
     static Gdiplus::GdiplusStartupInput gdiplusStartupInput;
     Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, nullptr);
 }
@@ -402,6 +403,9 @@ WinSalInstance::WinSalInstance()
 {
     ImplSVData* pSVData = ImplGetSVData();
     pSVData->maAppData.mxToolkitName = OUString("win");
+#if HAVE_FEATURE_SKIA
+    WinSkiaSalGraphicsImpl::prepareSkia();
+#endif
 }
 
 WinSalInstance::~WinSalInstance()

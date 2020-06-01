@@ -23,9 +23,9 @@
 #include <vcl/weld.hxx>
 #include <com/sun/star/uno/Sequence.hxx>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace beans { struct PropertyValue; }
-} } }
+}
 
 class ScSolverOptionsString
 {
@@ -58,7 +58,6 @@ class ScSolverValueDialog;
 class ScSolverOptionsDialog : public weld::GenericDialogController
 {
     css::uno::Sequence<OUString> maImplNames;
-    css::uno::Sequence<OUString> maDescriptions;
     OUString maEngine;
     css::uno::Sequence<css::beans::PropertyValue> maProperties;
 

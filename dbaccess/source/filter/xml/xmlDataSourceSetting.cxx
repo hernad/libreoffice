@@ -23,16 +23,12 @@
 #include <map>
 
 #include "xmlDataSourceSetting.hxx"
-#include "xmlDataSource.hxx"
 #include <sax/tools/converter.hxx>
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
-#include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
 #include <xmloff/ProgressBarHelper.hxx>
 #include "xmlEnums.hxx"
-#include <stringconstants.hxx>
-#include <rtl/strbuf.hxx>
+#include <osl/diagnose.h>
 
 namespace dbaxml
 {
@@ -49,9 +45,7 @@ OXMLDataSourceSetting::OXMLDataSourceSetting( ODBFilter& rImport
 
     m_aPropType = cppu::UnoType<void>::get();
 
-    sax_fastparser::FastAttributeList *pAttribList =
-                    sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-    for (auto &aIter : *pAttribList)
+    for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
     {
         OUString sValue = aIter.toString();
 
@@ -87,7 +81,7 @@ OXMLDataSourceSetting::OXMLDataSourceSetting( ODBFilter& rImport
                 m_aSetting.Name = sValue;
                 break;
             default:
-                SAL_WARN("dbaccess", "unknown attribute " << SvXMLImport::getNameFromToken(aIter.getToken()) << " value=" << aIter.toString());
+                SAL_WARN("dbaccess", "unknown attribute " << SvXMLImport::getPrefixAndNameFromToken(aIter.getToken()) << "=" << aIter.toString());
         }
     }
 

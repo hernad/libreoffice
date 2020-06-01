@@ -1295,14 +1295,14 @@ bool SwLayAction::FormatLayout( OutputDevice *pRenderContext, SwLayoutFrame *pLa
                     SwRect aSpaceToPrevPage( aPageRect );
                     aSpaceToPrevPage.Top( aSpaceToPrevPage.Top() - nHalfDocBorder );
                     aSpaceToPrevPage.Bottom( pLay->getFrameArea().Top() );
-                    if(aSpaceToPrevPage.Height() > 0 && aSpaceToPrevPage.Width() > 0)
+                    if(!aSpaceToPrevPage.IsEmpty())
                         m_pImp->GetShell()->AddPaintRect( aSpaceToPrevPage );
 
                     // left
                     aSpaceToPrevPage = aPageRect;
                     aSpaceToPrevPage.Left( aSpaceToPrevPage.Left() - nHalfDocBorder );
                     aSpaceToPrevPage.Right( pLay->getFrameArea().Left() );
-                    if(aSpaceToPrevPage.Height() > 0 && aSpaceToPrevPage.Width() > 0)
+                    if(!aSpaceToPrevPage.IsEmpty())
                         m_pImp->GetShell()->AddPaintRect( aSpaceToPrevPage );
                 }
                 if ( bNext )
@@ -1311,14 +1311,14 @@ bool SwLayAction::FormatLayout( OutputDevice *pRenderContext, SwLayoutFrame *pLa
                     SwRect aSpaceToNextPage( aPageRect );
                     aSpaceToNextPage.Bottom( aSpaceToNextPage.Bottom() + nHalfDocBorder );
                     aSpaceToNextPage.Top( pLay->getFrameArea().Bottom() );
-                    if(aSpaceToNextPage.Height() > 0 && aSpaceToNextPage.Width() > 0)
+                    if(!aSpaceToNextPage.IsEmpty())
                         m_pImp->GetShell()->AddPaintRect( aSpaceToNextPage );
 
                     // right
                     aSpaceToNextPage = aPageRect;
                     aSpaceToNextPage.Right( aSpaceToNextPage.Right() + nHalfDocBorder );
                     aSpaceToNextPage.Left( pLay->getFrameArea().Right() );
-                    if(aSpaceToNextPage.Height() > 0 && aSpaceToNextPage.Width() > 0)
+                    if(!aSpaceToNextPage.IsEmpty())
                         m_pImp->GetShell()->AddPaintRect( aSpaceToNextPage );
                 }
             }
@@ -1354,6 +1354,7 @@ bool SwLayAction::FormatLayout( OutputDevice *pRenderContext, SwLayoutFrame *pLa
     bool bTabChanged = false;
     while ( pLow && pLow->GetUpper() == pLay )
     {
+        SwFrame* pNext = nullptr;
         if ( pLow->IsLayoutFrame() )
         {
             if ( pLow->IsTabFrame() )
@@ -1364,6 +1365,22 @@ bool SwLayAction::FormatLayout( OutputDevice *pRenderContext, SwLayoutFrame *pLa
                 }
 
                 ++m_nTabLevel;
+
+                // Remember what was the next of the lower. Formatting may move it to the previous
+                // page, in which case it looses its next.
+                pNext = pLow->GetNext();
+
+                if (pNext && pNext->IsTabFrame())
+                {
+                    auto pTab = static_cast<SwTabFrame*>(pNext);
+                    if (pTab->IsFollow())
+                    {
+                        // The next frame is a follow of the previous frame, SwTabFrame::Join() will
+                        // delete this one as part of formatting, so forget about it.
+                        pNext = nullptr;
+                    }
+                }
+
                 bTabChanged |= FormatLayoutTab( static_cast<SwTabFrame*>(pLow), bAddRect );
                 --m_nTabLevel;
             }
@@ -1378,7 +1395,11 @@ bool SwLayAction::FormatLayout( OutputDevice *pRenderContext, SwLayoutFrame *pLa
 
         if ( IsAgain() )
             return false;
-        pLow = pLow->GetNext();
+        if (!pNext)
+        {
+            pNext = pLow->GetNext();
+        }
+        pLow = pNext;
     }
     // add complete frame area as paint area, if frame
     // area has been already added and after formatting its lowers the frame area

@@ -21,32 +21,22 @@
 #include <com/sun/star/frame/XDispatchProvider.hpp>
 #include <com/sun/star/frame/XFrame.hpp>
 
-#include <sfx2/dispatch.hxx>
-#include <sfx2/objsh.hxx>
+#include <sfx2/tbxctrl.hxx>
 #include <sfx2/viewsh.hxx>
 #include <sfx2/module.hxx>
-#include <tools/urlobj.hxx>
 
 #include <vcl/event.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
 
-#include <svx/svxids.hrc>
+#include <svx/dialmgr.hxx>
+#include <svx/strings.hrc>
 
-#include <svx/xlnclit.hxx>
 #include <svx/xlnwtit.hxx>
-#include <svx/xlineit0.hxx>
-#include <svx/xlndsit.hxx>
 #include <svx/xtable.hxx>
-#include <svx/drawitem.hxx>
-#include <svx/dlgutil.hxx>
 #include <svx/itemwin.hxx>
-#include <svx/linectrl.hxx>
-#include <svtools/colorcfg.hxx>
 #include <svtools/unitconv.hxx>
-#include <svtools/valueset.hxx>
-
-#include <boost/property_tree/json_parser.hpp>
+#include "linemetricbox.hxx"
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -56,41 +46,58 @@ using namespace ::com::sun::star::beans;
 
 SvxMetricField::SvxMetricField(
     vcl::Window* pParent, const Reference< XFrame >& rFrame )
-    : MetricField(pParent, WB_BORDER | WB_SPIN | WB_REPEAT)
-    , aCurTxt()
-    , ePoolUnit(MapUnit::MapCM)
+    : InterimItemWindow(pParent, "svx/ui/metricfieldbox.ui", "MetricFieldBox")
+    , m_xWidget(m_xBuilder->weld_metric_spin_button("metricfield", FieldUnit::MM))
+    , nCurValue(0)
+    , eDestPoolUnit(MapUnit::Map100thMM)
+    , eDlgUnit(SfxModule::GetModuleFieldUnit(rFrame))
     , mxFrame(rFrame)
 {
-    Size aSize( CalcMinimumSize() );
-    SetSizePixel( aSize );
-    aLogicalSize = PixelToLogic(aSize, MapMode(MapUnit::MapAppFont));
-    SetUnit( FieldUnit::MM );
-    SetDecimalDigits( 2 );
-    SetMax( 5000 );
-    SetMin( 0 );
-    SetLast( 5000 );
-    SetFirst( 0 );
+    m_xWidget->set_range(0, 5000, FieldUnit::NONE);
+    m_xWidget->connect_value_changed(LINK(this, SvxMetricField, ModifyHdl));
+    m_xWidget->connect_focus_in(LINK(this, SvxMetricField, FocusInHdl));
+    m_xWidget->get_widget().connect_key_press(LINK(this, SvxMetricField, KeyInputHdl));
 
-    eDlgUnit = SfxModule::GetModuleFieldUnit( mxFrame );
-    SetFieldUnit( *this, eDlgUnit );
-    Show();
+    SetFieldUnit(*m_xWidget, eDlgUnit);
+
+    SetSizePixel(m_xWidget->get_preferred_size());
+}
+
+void SvxMetricField::dispose()
+{
+    m_xWidget.reset();
+    InterimItemWindow::dispose();
+}
+
+SvxMetricField::~SvxMetricField()
+{
+    disposeOnce();
+}
+
+void SvxMetricField::set_sensitive(bool bSensitive)
+{
+    Enable(bSensitive);
+    m_xWidget->set_sensitive(bSensitive);
+    if (!bSensitive)
+        m_xWidget->set_text("");
 }
 
 void SvxMetricField::Update( const XLineWidthItem* pItem )
 {
     if ( pItem )
     {
-        if ( pItem->GetValue() != GetCoreValue( *this, ePoolUnit ) )
-            SetMetricValue( *this, pItem->GetValue(), ePoolUnit );
+        // tdf#132169 we always get the value in MapUnit::Map100thMM but have
+        // to set it in the core metric of the target application
+        if (pItem->GetValue() != GetCoreValue(*m_xWidget, MapUnit::Map100thMM))
+            SetMetricValue(*m_xWidget, pItem->GetValue(), MapUnit::Map100thMM);
     }
     else
-        SetText( "" );
+        m_xWidget->set_text("");
 }
 
-void SvxMetricField::Modify()
+IMPL_LINK_NOARG(SvxMetricField, ModifyHdl, weld::MetricSpinButton&, void)
 {
-    MetricField::Modify();
-    long nTmp = GetCoreValue( *this, ePoolUnit );
+    auto nTmp = GetCoreValue(*m_xWidget, eDestPoolUnit);
     XLineWidthItem aLineWidthItem( nTmp );
 
     Any a;
@@ -113,9 +120,9 @@ void SvxMetricField::ReleaseFocus_Impl()
     }
 }
 
-void SvxMetricField::SetCoreUnit( MapUnit eUnit )
+void SvxMetricField::SetDestCoreUnit( MapUnit eUnit )
 {
-    ePoolUnit = eUnit;
+    eDestPoolUnit = eUnit;
 }
 
 void SvxMetricField::RefreshDlgUnit()
@@ -124,59 +131,30 @@ void SvxMetricField::RefreshDlgUnit()
     if ( eDlgUnit != eTmpUnit )
     {
         eDlgUnit = eTmpUnit;
-        SetFieldUnit( *this, eDlgUnit );
+        SetFieldUnit(*m_xWidget, eDlgUnit);
     }
 }
 
-bool SvxMetricField::PreNotify( NotifyEvent& rNEvt )
+IMPL_LINK_NOARG(SvxMetricField, FocusInHdl, weld::Widget&, void)
 {
-    MouseNotifyEvent nType = rNEvt.GetType();
-
-    if ( MouseNotifyEvent::MOUSEBUTTONDOWN == nType || MouseNotifyEvent::GETFOCUS == nType )
-        aCurTxt = GetText();
-
-    return MetricField::PreNotify( rNEvt );
+    nCurValue = m_xWidget->get_value(FieldUnit::NONE);
 }
 
-
-bool SvxMetricField::EventNotify( NotifyEvent& rNEvt )
+IMPL_LINK(SvxMetricField, KeyInputHdl, const KeyEvent&, rKEvt, bool)
 {
-    bool bHandled = MetricField::EventNotify( rNEvt );
+    bool bHandled = false;
 
-    if ( rNEvt.GetType() == MouseNotifyEvent::KEYINPUT )
+    sal_uInt16 nCode = rKEvt.GetKeyCode().GetCode();
+
+    if (nCode == KEY_ESCAPE)
     {
-        const KeyEvent* pKEvt = rNEvt.GetKeyEvent();
-        const vcl::KeyCode& rKey = pKEvt->GetKeyCode();
-        SfxViewShell* pSh = SfxViewShell::Current();
-
-        if ( rKey.GetModifier() && rKey.GetGroup() != KEYGROUP_CURSOR && pSh )
-            (void)pSh->KeyInput( *pKEvt );
-        else
-        {
-            bool bHandledInside = false;
-
-            switch ( rKey.GetCode() )
-            {
-                case KEY_RETURN:
-                    Reformat();
-                    bHandledInside = true;
-                    break;
-
-                case KEY_ESCAPE:
-                    SetText( aCurTxt );
-                    bHandled = true;
-                    break;
-            }
-
-            if ( bHandledInside )
-            {
-                bHandled = true;
-                Modify();
-                ReleaseFocus_Impl();
-            }
-        }
+        m_xWidget->set_value(nCurValue, FieldUnit::NONE);
+        ModifyHdl(*m_xWidget);
+        ReleaseFocus_Impl();
+        bHandled = true;
     }
-    return bHandled;
+
+    return bHandled || ChildKeyInput(rKEvt);
 }
 
 void SvxMetricField::DataChanged( const DataChangedEvent& rDCEvt )
@@ -184,202 +162,40 @@ void SvxMetricField::DataChanged( const DataChangedEvent& rDCEvt )
     if ( (rDCEvt.GetType() == DataChangedEventType::SETTINGS) &&
          (rDCEvt.GetFlags() & AllSettingsFlags::STYLE) )
     {
-        SetSizePixel(LogicToPixel(aLogicalSize, MapMode(MapUnit::MapAppFont)));
+        SetSizePixel(m_xWidget->get_preferred_size());
     }
 
-    MetricField::DataChanged( rDCEvt );
+    InterimItemWindow::DataChanged( rDCEvt );
 }
 
-SvxFillTypeBox::SvxFillTypeBox( vcl::Window* pParent ) :
-    FillTypeLB( pParent, WB_BORDER | WB_DROPDOWN | WB_AUTOHSCROLL | WB_TABSTOP ),
-    nCurPos ( 0 ),
-    bSelect ( false )
+void SvxMetricField::GetFocus()
 {
-    Fill();
-    SetSizePixel(get_preferred_size());
-    SelectEntryPos( sal_Int32(drawing::FillStyle_SOLID) );
-    Show();
+    if (m_xWidget)
+        m_xWidget->grab_focus();
+    InterimItemWindow::GetFocus();
 }
 
-bool SvxFillTypeBox::PreNotify( NotifyEvent& rNEvt )
+void SvxFillTypeBox::Fill(weld::ComboBox& rListBox)
 {
-    MouseNotifyEvent nType = rNEvt.GetType();
+    rListBox.freeze();
 
-    if (!isDisposed())
-    {
-        if ( MouseNotifyEvent::MOUSEBUTTONDOWN == nType || MouseNotifyEvent::GETFOCUS == nType )
-            nCurPos = GetSelectedEntryPos();
-        else if ( MouseNotifyEvent::LOSEFOCUS == nType
-                  && Application::GetFocusWindow()
-                  && !IsWindowOrChild( Application::GetFocusWindow(), true ) )
-        {
-            if ( !bSelect )
-                SelectEntryPos( nCurPos );
-            else
-                bSelect = false;
-        }
-    }
+    rListBox.append_text(SvxResId(RID_SVXSTR_INVISIBLE));
+    rListBox.append_text(SvxResId(RID_SVXSTR_COLOR));
+    rListBox.append_text(SvxResId(RID_SVXSTR_GRADIENT));
+    rListBox.append_text(SvxResId(RID_SVXSTR_HATCH));
+    rListBox.append_text(SvxResId(RID_SVXSTR_BITMAP));
+    rListBox.append_text(SvxResId(RID_SVXSTR_PATTERN));
 
-    return FillTypeLB::PreNotify( rNEvt );
-}
+    rListBox.thaw();
 
-
-bool SvxFillTypeBox::EventNotify( NotifyEvent& rNEvt )
-{
-    bool bHandled = FillTypeLB::EventNotify( rNEvt );
-
-    if (isDisposed())
-        return false;
-
-    if ( !bHandled && rNEvt.GetType() == MouseNotifyEvent::KEYINPUT )
-    {
-        const KeyEvent* pKEvt = rNEvt.GetKeyEvent();
-        switch ( pKEvt->GetKeyCode().GetCode() )
-        {
-            case KEY_RETURN:
-                bHandled = true;
-                GetSelectHdl().Call( *this );
-            break;
-
-            case KEY_TAB:
-                GetSelectHdl().Call( *this );
-                break;
-
-            case KEY_ESCAPE:
-                SelectEntryPos( nCurPos );
-                ReleaseFocus_Impl();
-                bHandled = true;
-                break;
-        }
-    }
-    return bHandled;
-}
-
-
-void SvxFillTypeBox::ReleaseFocus_Impl()
-{
-    if( SfxViewShell::Current() )
-    {
-        vcl::Window* pShellWnd = SfxViewShell::Current()->GetWindow();
-
-        if ( pShellWnd )
-            pShellWnd->GrabFocus();
-    }
-}
-
-boost::property_tree::ptree SvxFillTypeBox::DumpAsPropertyTree()
-{
-    boost::property_tree::ptree aTree = FillTypeLB::DumpAsPropertyTree();
-    aTree.put("command", ".uno:FillStyle");
-    return aTree;
-}
-
-SvxFillAttrBox::SvxFillAttrBox( vcl::Window* pParent ) :
-    ListBox(pParent, WB_BORDER | WB_DROPDOWN | WB_AUTOHSCROLL | WB_TABSTOP),
-    nCurPos( 0 )
-{
-    SetPosPixel( Point( 90, 0 ) );
-    SetSizePixel(LogicToPixel(Size(50, 80), MapMode(MapUnit::MapAppFont)));
-    Show();
-}
-
-bool SvxFillAttrBox::PreNotify( NotifyEvent& rNEvt )
-{
-    MouseNotifyEvent nType = rNEvt.GetType();
-
-    if ( MouseNotifyEvent::MOUSEBUTTONDOWN == nType || MouseNotifyEvent::GETFOCUS == nType )
-        nCurPos = GetSelectedEntryPos();
-
-    return ListBox::PreNotify( rNEvt );
-}
-
-
-bool SvxFillAttrBox::EventNotify( NotifyEvent& rNEvt )
-{
-    bool bHandled = ListBox::EventNotify( rNEvt );
-
-    if ( !bHandled && rNEvt.GetType() == MouseNotifyEvent::KEYINPUT )
-    {
-        const KeyEvent* pKEvt = rNEvt.GetKeyEvent();
-
-        switch ( pKEvt->GetKeyCode().GetCode() )
-        {
-            case KEY_RETURN:
-                GetSelectHdl().Call( *this );
-                bHandled = true;
-            break;
-            case KEY_TAB:
-                GetSelectHdl().Call( *this );
-            break;
-            case KEY_ESCAPE:
-                SelectEntryPos( nCurPos );
-                ReleaseFocus_Impl();
-                bHandled = true;
-                break;
-        }
-    }
-    return bHandled;
-}
-
-
-void SvxFillAttrBox::ReleaseFocus_Impl()
-{
-    if( SfxViewShell::Current() )
-    {
-        vcl::Window* pShellWnd = SfxViewShell::Current()->GetWindow();
-
-        if ( pShellWnd )
-            pShellWnd->GrabFocus();
-    }
-}
-
-// Fills the listbox (provisional) with strings
-
-void SvxFillAttrBox::Fill( const XHatchListRef &pList )
-{
-    long nCount = pList->Count();
-    ListBox::SetUpdateMode( false );
-
-    for( long i = 0; i < nCount; i++ )
-    {
-        const XHatchEntry* pEntry = pList->GetHatch(i);
-        const BitmapEx aBitmap = pList->GetUiBitmap( i );
-        if( !aBitmap.IsEmpty() )
-            ListBox::InsertEntry(pEntry->GetName(), Image(aBitmap));
-        else
-            InsertEntry( pEntry->GetName() );
-    }
-
-    AdaptDropDownLineCountToMaximum();
-    ListBox::SetUpdateMode( true );
-}
-
-// Fills the listbox (provisional) with strings
-
-void SvxFillAttrBox::Fill( const XGradientListRef &pList )
-{
-    long nCount = pList->Count();
-    ListBox::SetUpdateMode( false );
-
-    for( long i = 0; i < nCount; i++ )
-    {
-        const XGradientEntry* pEntry = pList->GetGradient(i);
-        const BitmapEx aBitmap = pList->GetUiBitmap( i );
-        if( !aBitmap.IsEmpty() )
-            ListBox::InsertEntry(pEntry->GetName(), Image(aBitmap));
-        else
-            InsertEntry( pEntry->GetName() );
-    }
-
-    AdaptDropDownLineCountToMaximum();
-    ListBox::SetUpdateMode( true );
+    rListBox.set_active(1); // solid color
 }
 
 namespace
 {
     void formatBitmapExToSize(BitmapEx& rBitmapEx, const Size& rSize)
     {
-        if(!rBitmapEx.IsEmpty() && rSize.Width() > 0 && rSize.Height() > 0)
+        if(!rBitmapEx.IsEmpty() && !rSize.IsEmpty())
         {
             ScopedVclPtrInstance< VirtualDevice > pVirtualDevice;
             pVirtualDevice->SetOutputSizePixel(rSize);
@@ -428,48 +244,6 @@ namespace
         }
     }
 } // end of anonymous namespace
-
-void SvxFillAttrBox::Fill( const XBitmapListRef &pList )
-{
-    const long nCount(pList->Count());
-    const XBitmapEntry* pEntry;
-    const StyleSettings& rStyleSettings = Application::GetSettings().GetStyleSettings();
-    const Size aSize(rStyleSettings.GetListBoxPreviewDefaultPixelSize());
-
-    ListBox::SetUpdateMode(false);
-
-    for(long i(0); i < nCount; i++)
-    {
-        pEntry = pList->GetBitmap( i );
-        maBitmapEx = pEntry->GetGraphicObject().GetGraphic().GetBitmapEx();
-        formatBitmapExToSize(maBitmapEx, aSize);
-        ListBox::InsertEntry(pEntry->GetName(), Image(maBitmapEx));
-    }
-
-    AdaptDropDownLineCountToMaximum();
-    ListBox::SetUpdateMode(true);
-}
-
-void SvxFillAttrBox::Fill( const XPatternListRef &pList )
-{
-    const long nCount(pList->Count());
-    const XBitmapEntry* pEntry;
-    const StyleSettings& rStyleSettings = Application::GetSettings().GetStyleSettings();
-    const Size aSize(rStyleSettings.GetListBoxPreviewDefaultPixelSize());
-
-    ListBox::SetUpdateMode(false);
-
-    for(long i(0); i < nCount; i++)
-    {
-        pEntry = pList->GetBitmap( i );
-        maBitmapEx = pEntry->GetGraphicObject().GetGraphic().GetBitmapEx();
-        formatBitmapExToSize(maBitmapEx, aSize);
-        ListBox::InsertEntry(pEntry->GetName(), Image(maBitmapEx));
-    }
-
-    AdaptDropDownLineCountToMaximum();
-    ListBox::SetUpdateMode(true);
-}
 
 void SvxFillAttrBox::Fill(weld::ComboBox& rBox, const XHatchListRef &pList)
 {

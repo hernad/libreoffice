@@ -57,6 +57,8 @@
 #include <drawview.hxx>
 #include <ChartRangeSelectionListener.hxx>
 #include <gridwin.hxx>
+#include <com/sun/star/ui/dialogs/ExecutableDialogResults.hpp>
+#include <svx/svdpagv.hxx>
 
 #include <comphelper/lok.hxx>
 
@@ -74,7 +76,7 @@ void ScTabViewShell::ConnectObject( const SdrOle2Obj* pObj )
     SfxInPlaceClient* pClient = FindIPClient( xObj, pWin );
     if ( !pClient )
     {
-        pClient = new ScClient( this, pWin, GetSdrView()->GetModel(), pObj );
+        pClient = new ScClient( this, pWin, GetScDrawView()->GetModel(), pObj );
         tools::Rectangle aRect = pObj->GetLogicRect();
         Size aDrawSize = aRect.GetSize();
 
@@ -98,7 +100,7 @@ namespace {
 class PopupCallback : public cppu::WeakImplHelper<css::awt::XCallback>
 {
     ScTabViewShell* m_pViewShell;
-    SdrOle2Obj* const m_pObject;
+    SdrOle2Obj* m_pObject;
 
 public:
     explicit PopupCallback(ScTabViewShell* pViewShell, SdrOle2Obj* pObject)
@@ -151,7 +153,7 @@ void ScTabViewShell::ActivateObject( SdrOle2Obj* pObj, long nVerb )
     {
         SfxInPlaceClient* pClient = FindIPClient( xObj, pWin );
         if ( !pClient )
-            pClient = new ScClient( this, pWin, GetSdrView()->GetModel(), pObj );
+            pClient = new ScClient( this, pWin, GetScDrawView()->GetModel(), pObj );
 
         if ( (sal_uInt32(nErr) & ERRCODE_ERROR_MASK) == 0 && xObj.is() )
         {
@@ -247,9 +249,9 @@ void ScTabViewShell::ActivateObject( SdrOle2Obj* pObj, long nVerb )
         ErrorHandler::HandleError(nErr);
 
     // #i118524# refresh handles to suppress for activated OLE
-    if(GetSdrView())
+    if(GetScDrawView())
     {
-        GetSdrView()->AdjustMarkHdl();
+        GetScDrawView()->AdjustMarkHdl();
     }
     //! SetDocumentName should already happen in Sfx ???
     //TODO/LATER: how "SetDocumentName"?
@@ -258,7 +260,7 @@ void ScTabViewShell::ActivateObject( SdrOle2Obj* pObj, long nVerb )
 
 ErrCode ScTabViewShell::DoVerb(long nVerb)
 {
-    SdrView* pView = GetSdrView();
+    SdrView* pView = GetScDrawView();
     if (!pView)
         return ERRCODE_SO_NOTIMPL;          // should not be
 
@@ -294,6 +296,37 @@ void ScTabViewShell::DeactivateOle()
     ScClient* pClient = static_cast<ScClient*>(GetIPClient());
     if ( pClient && pClient->IsObjectInPlaceActive() && !bUnoRefDialog )
         pClient->DeactivateObject();
+}
+
+IMPL_LINK( ScTabViewShell, DialogClosedHdl, css::ui::dialogs::DialogClosedEvent*, pEvent, void )
+{
+    if( pEvent->DialogResult == ui::dialogs::ExecutableDialogResults::CANCEL )
+    {
+        ScTabView* pTabView = GetViewData().GetView();
+        ScDrawView* pView = pTabView->GetScDrawView();
+        ScViewData& rData = GetViewData();
+        ScDocShell* pScDocSh = rData.GetDocShell();
+        ScDocument& rScDoc = pScDocSh->GetDocument();
+        // leave OLE inplace mode and unmark
+        OSL_ASSERT( pView );
+        DeactivateOle();
+        pView->UnMarkAll();
+
+        rScDoc.GetUndoManager()->Undo();
+        rScDoc.GetUndoManager()->ClearRedo();
+
+        // leave the draw shell
+        SetDrawShell( false );
+
+        // reset marked cell area
+        ScMarkData aMark = GetViewData().GetMarkData();
+        GetViewData().GetViewShell()->SetMarkData(aMark);
+    }
+    else
+    {
+        OSL_ASSERT( pEvent->DialogResult == ui::dialogs::ExecutableDialogResults::OK );
+        //@todo maybe move chart to different table
+    }
 }
 
 void ScTabViewShell::ExecDrawIns(SfxRequest& rReq)
@@ -333,7 +366,9 @@ void ScTabViewShell::ExecDrawIns(SfxRequest& rReq)
             break;
 
         case SID_INSERT_DIAGRAM:
-            FuInsertChart(*this, pWin, pView, pDrModel, rReq);
+            FuInsertChart(*this, pWin, pView, pDrModel, rReq, LINK( this, ScTabViewShell, DialogClosedHdl ));
+            if (comphelper::LibreOfficeKit::isActive())
+                pDocSh->SetModified();
             break;
 
         case SID_INSERT_OBJECT:
@@ -491,7 +526,7 @@ void ScTabViewShell::GetDrawInsState(SfxItemSet &rSet)
     bool bTabProt = GetViewData().GetDocument()->IsTabProtected(GetViewData().GetTabNo());
     ScDocShell* pDocShell = GetViewData().GetDocShell();
     bool bShared = pDocShell && pDocShell->IsDocShared();
-    SdrView* pSdrView = GetSdrView();
+    SdrView* pSdrView = GetScDrawView();
 
     SfxWhichIter aIter(rSet);
     sal_uInt16 nWhich = aIter.FirstWhich();
@@ -576,7 +611,7 @@ void ScTabViewShell::GetDrawInsState(SfxItemSet &rSet)
 
 bool ScTabViewShell::IsSignatureLineSelected()
 {
-    SdrView* pSdrView = GetSdrView();
+    SdrView* pSdrView = GetScDrawView();
     if (!pSdrView)
         return false;
 
@@ -596,7 +631,7 @@ bool ScTabViewShell::IsSignatureLineSelected()
 
 bool ScTabViewShell::IsQRCodeSelected()
 {
-    SdrView* pSdrView = GetSdrView();
+    SdrView* pSdrView = GetScDrawView();
     if (!pSdrView)
         return false;
 
@@ -622,7 +657,7 @@ bool ScTabViewShell::IsQRCodeSelected()
 
 bool ScTabViewShell::IsSignatureLineSigned()
 {
-    SdrView* pSdrView = GetSdrView();
+    SdrView* pSdrView = GetScDrawView();
     if (!pSdrView)
         return false;
 

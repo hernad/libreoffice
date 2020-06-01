@@ -46,14 +46,14 @@
 #include <vbahelper/vbahelper.hxx>
 #include <vbahelper/vbahelperinterface.hxx>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace container { class XEnumerationAccess; }
     namespace uno { class XComponentContext; }
-} } }
+}
 
-namespace ooo { namespace vba {
+namespace ooo::vba {
     class XHelperInterface;
-} }
+}
 
 typedef ::cppu::WeakImplHelper< css::container::XEnumeration > EnumerationHelper_BASE;
 
@@ -238,7 +238,7 @@ typedef InheritedHelperInterfaceImpl< Ifc... > BaseColBase;
 protected:
     css::uno::Reference< css::container::XIndexAccess > m_xIndexAccess;
     css::uno::Reference< css::container::XNameAccess > m_xNameAccess;
-    bool const mbIgnoreCase;
+    bool mbIgnoreCase;
 
     /// @throws css::uno::RuntimeException
     virtual css::uno::Any getItemByStringIndex( const OUString& sIndex )
@@ -248,13 +248,12 @@ protected:
 
         if( mbIgnoreCase )
         {
-            css::uno::Sequence< OUString > sElementNames = m_xNameAccess->getElementNames();
-            for( sal_Int32 i = 0; i < sElementNames.getLength(); i++ )
+            const css::uno::Sequence< OUString > sElementNames = m_xNameAccess->getElementNames();
+            for( const OUString& rName : sElementNames )
             {
-                OUString aName = sElementNames[i];
-                if( aName.equalsIgnoreAsciiCase( sIndex ) )
+                if( rName.equalsIgnoreAsciiCase( sIndex ) )
                 {
-                    return createCollectionObject( m_xNameAccess->getByName( aName ) );
+                    return createCollectionObject( m_xNameAccess->getByName( rName ) );
                 }
             }
         }

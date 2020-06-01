@@ -169,7 +169,7 @@ private:
     tools::Rectangle m_aSelectionRect;
     tools::Rectangle m_aPaintRect;
     vcl::Region m_aPaintRegion;
-    ImplPaintFlags const m_nPaintFlags;
+    ImplPaintFlags m_nPaintFlags;
     bool m_bPop : 1;
     bool m_bRestoreCursor : 1;
     bool m_bStartedBufferedPaint : 1; ///< This PaintHelper started a buffered paint, and should paint it on the screen when being destructed.
@@ -302,9 +302,11 @@ void PaintHelper::DoPaint(const vcl::Region* pRegion)
             // direct painting
             Wallpaper aBackground = m_pWindow->GetBackground();
             m_pWindow->ApplySettings(*m_pWindow);
-            // Restore lost bitmap background.
-            if (aBackground.IsBitmap())
+            // Restore bitmap background if it was lost.
+            if (aBackground.IsBitmap() && !m_pWindow->GetBackground().IsBitmap())
+            {
                 m_pWindow->SetBackground(aBackground);
+            }
             m_pWindow->PushPaintHelper(this, *m_pWindow);
             m_pWindow->Paint(*m_pWindow, m_aPaintRect);
         }
@@ -848,7 +850,7 @@ void Window::ImplInvalidate( const vcl::Region* pRegion, InvalidateFlags nFlags 
     }
 
     if ( nFlags & InvalidateFlags::Update )
-        pOpaqueWindow->Update();        // start painting at the opaque parent
+        pOpaqueWindow->PaintImmediately();        // start painting at the opaque parent
 }
 
 void Window::ImplMoveInvalidateRegion( const tools::Rectangle& rRect,
@@ -1221,7 +1223,7 @@ void Window::PixelInvalidate(const tools::Rectangle* pRectangle)
         return;
 
     Size aSize = GetSizePixel();
-    if (aSize.getWidth() <= 0 || aSize.getHeight() <= 0)
+    if (aSize.IsEmpty())
         return;
 
     if (const vcl::ILibreOfficeKitNotifier* pNotifier = GetLOKNotifier())
@@ -1281,11 +1283,11 @@ bool Window::HasPaintEvent() const
     return false;
 }
 
-void Window::Update()
+void Window::PaintImmediately()
 {
     if ( mpWindowImpl->mpBorderWindow )
     {
-        mpWindowImpl->mpBorderWindow->Update();
+        mpWindowImpl->mpBorderWindow->PaintImmediately();
         return;
     }
 
@@ -1337,7 +1339,7 @@ void Window::Update()
         vcl::Window* pUpdateOverlapWindow = ImplGetFirstOverlapWindow()->mpWindowImpl->mpFirstOverlap;
         while ( pUpdateOverlapWindow )
         {
-             pUpdateOverlapWindow->Update();
+             pUpdateOverlapWindow->PaintImmediately();
              pUpdateOverlapWindow = pUpdateOverlapWindow->mpWindowImpl->mpNext;
         }
 
@@ -1595,7 +1597,7 @@ void Window::ImplPaintToDevice( OutputDevice* i_pTargetOutDev, const Point& i_rP
     mnDPIY = nOldDPIY;
 }
 
-void Window::PaintToDevice( OutputDevice* pDev, const Point& rPos, const Size& /*rSize*/ )
+void Window::PaintToDevice(OutputDevice* pDev, const Point& rPos)
 {
     SAL_WARN_IF(  pDev->HasMirroredGraphics(), "vcl.window", "PaintToDevice to mirroring graphics" );
     SAL_WARN_IF(  pDev->IsRTLEnabled(), "vcl.window", "PaintToDevice to mirroring device" );
@@ -1824,7 +1826,7 @@ void Window::ImplScroll( const tools::Rectangle& rRect,
     }
 
     if ( nFlags & ScrollFlags::Update )
-        Update();
+        PaintImmediately();
 
     if ( mpWindowImpl->mpCursor )
         mpWindowImpl->mpCursor->ImplResume();

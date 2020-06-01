@@ -20,6 +20,7 @@
 #ifndef INCLUDED_EMFIO_INC_MTFTOOLS_HXX
 #define INCLUDED_EMFIO_INC_MTFTOOLS_HXX
 
+#include <config_options.h>
 #include <basegfx/utils/b2dclipstate.hxx>
 #include <tools/poly.hxx>
 #include <vcl/font.hxx>
@@ -314,7 +315,7 @@ namespace emfio
         virtual ~GDIObj() = default; // Polymorphic base class
     };
 
-    struct EMFIO_DLLPUBLIC WinMtfFontStyle final : GDIObj
+    struct UNLESS_MERGELIBS(EMFIO_DLLPUBLIC) WinMtfFontStyle final : GDIObj
     {
         vcl::Font    aFont;
 
@@ -351,7 +352,7 @@ namespace emfio
             , aBmp(rBmp)
         {}
 
-        bool operator==(const WinMtfFillStyle& rStyle)
+        bool operator==(const WinMtfFillStyle& rStyle) const
         {
             return aFillColor == rStyle.aFillColor
                 && bTransparent == rStyle.bTransparent
@@ -381,7 +382,7 @@ namespace emfio
             , bTransparent(bTrans)
         {}
 
-        bool operator==(const WinMtfLineStyle& rStyle)
+        bool operator==(const WinMtfLineStyle& rStyle) const
         {
             return aLineColor == rStyle.aLineColor
                 && bTransparent == rStyle.bTransparent

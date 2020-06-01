@@ -239,7 +239,7 @@ SwDrawContact* SwDoc::GroupSelection( SdrView& rDrawView )
             pObj->NbcMove( Size( aAnchorPos.getX(), aAnchorPos.getY() ) );
         }
 
-        pFormat = MakeDrawFrameFormat( "DrawObject",
+        pFormat = MakeDrawFrameFormat( GetUniqueDrawObjectName(),
                                 GetDfltFrameFormat() );
         pFormat->SetFormatAttr( aAnch );
         // #i36010# - set layout direction of the position
@@ -250,6 +250,7 @@ SwDrawContact* SwDoc::GroupSelection( SdrView& rDrawView )
         OSL_ENSURE( rMrkList.GetMarkCount() == 1, "GroupMarked more or none groups." );
 
         SdrObject* pNewGroupObj = rMrkList.GetMark( 0 )->GetMarkedSdrObj();
+        pNewGroupObj->SetName(pFormat->GetName());
         pNewContact = new SwDrawContact( pFormat, pNewGroupObj );
         // #i35635#
         pNewContact->MoveObjToVisibleLayer( pNewGroupObj );
@@ -322,7 +323,7 @@ void SwDoc::UnGroupSelection( SdrView& rDrawView )
                     for ( size_t i2 = 0; i2 < pLst->GetObjCount(); ++i2 )
                     {
                         SdrObject* pSubObj = pLst->GetObj( i2 );
-                        SwDrawFrameFormat *pFormat = MakeDrawFrameFormat( "DrawObject",
+                        SwDrawFrameFormat *pFormat = MakeDrawFrameFormat( GetUniqueShapeName(),
                                                             GetDfltFrameFormat() );
                         pFormat->SetFormatAttr( aAnch );
                         // #i36010# - set layout direction of the position
@@ -525,7 +526,7 @@ IMPL_LINK(SwDoc, CalcFieldValueHdl, EditFieldInfo*, pInfo, void)
     else if (dynamic_cast<const SdrMeasureField*>( pField))
     {
         // Clear measure field
-        pInfo->SetFieldColor(o3tl::optional<Color>());
+        pInfo->SetFieldColor(std::optional<Color>());
     }
     else if ( auto pTimeField = dynamic_cast<const SvxExtTimeField*>( pField) )
     {

@@ -27,7 +27,7 @@
 #include <memory>
 #include <vector>
 
-#include <o3tl/optional.hxx>
+#include <optional>
 
 #include <com/sun/star/awt/XUserInputInterception.hpp>
 #include <com/sun/star/frame/CommandGroup.hpp>
@@ -62,7 +62,7 @@
 #include <tools/link.hxx>
 #include <vcl/vclptr.hxx>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace awt { class XKeyHandler; }
     namespace awt { class XMouseClickHandler; }
     namespace awt { class XWindow; }
@@ -83,7 +83,7 @@ namespace com { namespace sun { namespace star {
     namespace ui { class XSidebarProvider; }
     namespace uno { class XComponentContext; }
     namespace util { class XURLTransformer; }
-} } }
+}
 
 namespace vcl { class Window; }
 namespace weld { class Window; }
@@ -94,7 +94,7 @@ namespace dbaui
     class ODataView;
 
     template< typename T >
-    inline bool SAL_CALL operator >>= (const css::uno::Any& _any, o3tl::optional< T >& _value)
+    inline bool SAL_CALL operator >>= (const css::uno::Any& _any, std::optional< T >& _value)
     {
         _value.reset();  // de-init the optional value
 
@@ -118,10 +118,10 @@ namespace dbaui
     {
         bool                        bEnabled;
 
-        o3tl::optional<bool> bChecked;
-        o3tl::optional<bool> bInvisible;
+        std::optional<bool> bChecked;
+        std::optional<bool> bInvisible;
         css::uno::Any               aValue;
-        o3tl::optional<OUString> sTitle;
+        std::optional<OUString> sTitle;
 
         FeatureState() : bEnabled(false) { }
     };

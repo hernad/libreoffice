@@ -10,8 +10,6 @@
       <column type="gchararray"/>
       <!-- column-name text2 -->
       <column type="gchararray"/>
-      <!-- column-name text3 -->
-      <column type="gchararray"/>
       <!-- column-name id -->
       <column type="gchararray"/>
       <!-- column-name checkvis1 -->
@@ -196,7 +194,7 @@
                                                 <property name="radio">True</property>
                                               </object>
                                               <attributes>
-                                                <attribute name="visible">5</attribute>
+                                                <attribute name="visible">4</attribute>
                                                 <attribute name="active">0</attribute>
                                               </attributes>
                                             </child>
@@ -224,19 +222,6 @@
                                               <object class="GtkCellRendererText" id="cellrenderer1"/>
                                               <attributes>
                                                 <attribute name="text">2</attribute>
-                                              </attributes>
-                                            </child>
-                                          </object>
-                                        </child>
-                                        <child>
-                                          <object class="GtkTreeViewColumn" id="treeviewcolumn2">
-                                            <property name="resizable">True</property>
-                                            <property name="spacing">6</property>
-                                            <property name="title" translatable="yes" context="optadvancedpage|features">Features</property>
-                                            <child>
-                                              <object class="GtkCellRendererText" id="cellrenderer2"/>
-                                              <attributes>
-                                                <attribute name="text">3</attribute>
                                               </attributes>
                                             </child>
                                           </object>
@@ -279,17 +264,6 @@
                             <property name="can_focus">False</property>
                             <property name="no_show_all">True</property>
                             <property name="column_spacing">6</property>
-                            <child>
-                              <object class="GtkLabel" id="a11y">
-                                <property name="visible">True</property>
-                                <property name="can_focus">False</property>
-                                <property name="label" translatable="yes" context="optadvancedpage|a11y">with accessibility support</property>
-                              </object>
-                              <packing>
-                                <property name="left_attach">0</property>
-                                <property name="top_attach">0</property>
-                              </packing>
-                            </child>
                             <child>
                               <object class="GtkLabel" id="selectruntime">
                                 <property name="visible">True</property>

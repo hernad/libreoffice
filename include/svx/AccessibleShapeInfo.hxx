@@ -23,10 +23,10 @@
 #include <com/sun/star/uno/Reference.hxx>
 #include <svx/svxdllapi.h>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace accessibility { class XAccessible; }
     namespace drawing { class XShape; }
-} } }
+}
 
 namespace accessibility {
 
@@ -63,7 +63,7 @@ public:
         parent/child relationships with the shape as initiator.
         Note that NULL is a valid value for this member.
     */
-    IAccessibleParent* const mpChildrenManager;
+    IAccessibleParent* mpChildrenManager;
 
     /** Copy the given values into the members described above.
     */

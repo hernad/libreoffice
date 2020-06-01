@@ -70,9 +70,8 @@ using namespace com::sun::star::lang;
 SdActionDlg::SdActionDlg(weld::Window* pParent, const SfxItemSet* pAttr, ::sd::View const * pView)
     : SfxSingleTabDialogController(pParent, pAttr, "modules/simpress/ui/interactiondialog.ui",
                                    "InteractionDialog")
-    , rOutAttrs(*pAttr)
 {
-    std::unique_ptr<SfxTabPage> xNewPage = SdTPAction::Create(get_content_area(), this, rOutAttrs);
+    std::unique_ptr<SfxTabPage> xNewPage = SdTPAction::Create(get_content_area(), this, *pAttr);
 
     // formerly in PageCreated
     static_cast<SdTPAction*>( xNewPage.get() )->SetView( pView );
@@ -350,7 +349,7 @@ void SdTPAction::UpdateTree()
 {
     if( !bTreeUpdated && mpDoc && mpDoc->GetDocSh() && mpDoc->GetDocSh()->GetMedium() )
     {
-        m_xLbTree->Fill( mpDoc, mpDoc->GetDocSh()->GetMedium()->GetName() );
+        m_xLbTree->Fill( mpDoc, true, mpDoc->GetDocSh()->GetMedium()->GetName() );
         bTreeUpdated = true;
     }
 }
@@ -637,15 +636,14 @@ IMPL_LINK_NOARG(SdTPAction, CheckFileHdl, weld::Widget&, void)
             {
                 try
                 {
-                    if (xStorage->hasByName(pStarDrawXMLContent) ||
-                        xStorage->hasByName(pStarDrawOldXMLContent))
+                    if (xStorage->hasByName(pStarDrawXMLContent))
                     {
                         if (SdDrawDocument* pBookmarkDoc = mpDoc->OpenBookmarkDoc(aFile))
                         {
                             aLastFile = aFile;
 
                             m_xLbTreeDocument->clear();
-                            m_xLbTreeDocument->Fill(pBookmarkDoc, aFile);
+                            m_xLbTreeDocument->Fill(pBookmarkDoc, true, aFile);
                             mpDoc->CloseBookmarkDoc();
                             m_xLbTreeDocument->show();
                             bHideTreeDocument = false;

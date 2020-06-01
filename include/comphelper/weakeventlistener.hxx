@@ -20,6 +20,7 @@
 #ifndef INCLUDED_COMPHELPER_WEAKEVENTLISTENER_HXX
 #define INCLUDED_COMPHELPER_WEAKEVENTLISTENER_HXX
 
+#include <config_options.h>
 #include <cppuhelper/compbase.hxx>
 #include <cppuhelper/basemutex.hxx>
 #include <cppuhelper/weakref.hxx>
@@ -27,7 +28,7 @@
 #include <com/sun/star/lang/XEventListener.hpp>
 #include <com/sun/star/lang/XComponent.hpp>
 
-namespace com { namespace sun { namespace star { namespace uno { class XWeak; } } } }
+namespace com::sun::star::uno { class XWeak; }
 
 namespace comphelper
 {
@@ -132,7 +133,7 @@ namespace comphelper
                                     >   OWeakEventListenerAdapter_Base;
     /** the most simple listener adapter: for XEventListeners at XComponents
     */
-    class COMPHELPER_DLLPUBLIC OWeakEventListenerAdapter final : public OWeakEventListenerAdapter_Base
+    class UNLESS_MERGELIBS(COMPHELPER_DLLPUBLIC) OWeakEventListenerAdapter final : public OWeakEventListenerAdapter_Base
     {
     public:
         OWeakEventListenerAdapter(

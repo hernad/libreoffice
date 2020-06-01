@@ -43,7 +43,7 @@ namespace chart::sidebar
 ChartTypePanel::ChartTypePanel(vcl::Window* pParent,
                                const css::uno::Reference<css::frame::XFrame>& rxFrame,
                                ::chart::ChartController* pController)
-    : PanelLayout(pParent, "ChartTypePanel", "modules/schart/ui/sidebartype.ui", rxFrame, true)
+    : PanelLayout(pParent, "ChartTypePanel", "modules/schart/ui/sidebartype.ui", rxFrame)
     , maContext()
     , mxModel(pController->getModel())
     , mxListener(new ChartSidebarModifyListener(this))
@@ -60,7 +60,7 @@ ChartTypePanel::ChartTypePanel(vcl::Window* pParent,
     , m_nChangingCalls(0)
     , m_aTimerTriggeredControllerLock(m_xChartModel)
     , m_xMainTypeList(m_xBuilder->weld_combo_box("cmb_chartType"))
-    , m_xSubTypeList(new SvtValueSet(m_xBuilder->weld_scrolled_window("subtypewin")))
+    , m_xSubTypeList(new ValueSet(m_xBuilder->weld_scrolled_window("subtypewin")))
     , m_xSubTypeListWin(new weld::CustomWeld(*m_xBuilder, "subtype", *m_xSubTypeList))
 {
     Size aSize(m_xSubTypeList->GetDrawingArea()->get_ref_device().LogicToPixel(
@@ -151,7 +151,7 @@ void ChartTypePanel::dispose()
 
 IMPL_LINK_NOARG(ChartTypePanel, SelectMainTypeHdl, weld::ComboBox&, void) { selectMainType(); }
 
-IMPL_LINK_NOARG(ChartTypePanel, SelectSubTypeHdl, SvtValueSet*, void)
+IMPL_LINK_NOARG(ChartTypePanel, SelectSubTypeHdl, ValueSet*, void)
 {
     if (m_pCurrentMainType)
     {
@@ -405,34 +405,33 @@ void ChartTypePanel::selectMainType()
     }
 
     m_pCurrentMainType = getSelectedMainType();
-    if (m_pCurrentMainType)
+    if (!m_pCurrentMainType)
+        return;
+
+    showAllControls(*m_pCurrentMainType);
+
+    m_pCurrentMainType->adjustParameterToMainType(aParameter);
+    commitToModel(aParameter);
+    //detect the new ThreeDLookScheme
+    aParameter.eThreeDLookScheme
+        = ThreeDHelper::detectScheme(ChartModelHelper::findDiagram(m_xChartModel));
+    if (!aParameter.b3DLook && aParameter.eThreeDLookScheme != ThreeDLookScheme_Realistic)
+        aParameter.eThreeDLookScheme = ThreeDLookScheme_Realistic;
+
+    uno::Reference<css::chart2::XDiagram> xDiagram = ChartModelHelper::findDiagram(m_xChartModel);
+    try
     {
-        showAllControls(*m_pCurrentMainType);
-
-        m_pCurrentMainType->adjustParameterToMainType(aParameter);
-        commitToModel(aParameter);
-        //detect the new ThreeDLookScheme
-        aParameter.eThreeDLookScheme
-            = ThreeDHelper::detectScheme(ChartModelHelper::findDiagram(m_xChartModel));
-        if (!aParameter.b3DLook && aParameter.eThreeDLookScheme != ThreeDLookScheme_Realistic)
-            aParameter.eThreeDLookScheme = ThreeDLookScheme_Realistic;
-
-        uno::Reference<css::chart2::XDiagram> xDiagram
-            = ChartModelHelper::findDiagram(m_xChartModel);
-        try
-        {
-            uno::Reference<beans::XPropertySet> xPropSet(xDiagram, uno::UNO_QUERY_THROW);
-            xPropSet->getPropertyValue(CHART_UNONAME_SORT_BY_XVALUES) >>= aParameter.bSortByXValues;
-        }
-        catch (const uno::Exception&)
-        {
-            DBG_UNHANDLED_EXCEPTION("chart2");
-        }
-
-        fillAllControls(aParameter);
-        uno::Reference<beans::XPropertySet> xTemplateProps(getCurrentTemplate(), uno::UNO_QUERY);
-        m_pCurrentMainType->fillExtraControls(m_xChartModel, xTemplateProps);
+        uno::Reference<beans::XPropertySet> xPropSet(xDiagram, uno::UNO_QUERY_THROW);
+        xPropSet->getPropertyValue(CHART_UNONAME_SORT_BY_XVALUES) >>= aParameter.bSortByXValues;
     }
+    catch (const uno::Exception&)
+    {
+        DBG_UNHANDLED_EXCEPTION("chart2");
+    }
+
+    fillAllControls(aParameter);
+    uno::Reference<beans::XPropertySet> xTemplateProps(getCurrentTemplate(), uno::UNO_QUERY);
+    m_pCurrentMainType->fillExtraControls(m_xChartModel, xTemplateProps);
 }
 } // end of namespace ::chart::sidebar
 

@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+﻿/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /*
  * This file is part of the LibreOffice project.
  *
@@ -43,6 +43,7 @@
 #include <editeng/unolingu.hxx>
 #include <editeng/langitem.hxx>
 #include <comphelper/processfactory.hxx>
+#include <comphelper/string.hxx>
 #include <rtl/ustrbuf.hxx>
 #include <editeng/editids.hrc>
 #include <svx/svxids.hrc>
@@ -103,91 +104,12 @@ using namespace ::utl;
 
 namespace svt {
 
-class OpenGLCfg
-{
-private:
-    bool mbUseOpenGL;
-    bool mbForceOpenGL;
-    bool mbModified;
-
-public:
-    OpenGLCfg();
-    ~OpenGLCfg();
-
-    bool useOpenGL() const;
-    bool forceOpenGL() const;
-
-    void setUseOpenGL(bool bOpenGL);
-    void setForceOpenGL(bool bOpenGL);
-
-    void reset();
-};
-
-OpenGLCfg::OpenGLCfg():
-    mbModified(false)
-{
-    reset();
-}
-
-void OpenGLCfg::reset()
-{
-    mbUseOpenGL = officecfg::Office::Common::VCL::UseOpenGL::get();
-    mbForceOpenGL = officecfg::Office::Common::VCL::ForceOpenGL::get();
-    mbModified = false;
-}
-
-OpenGLCfg::~OpenGLCfg()
-{
-    if (mbModified)
-    {
-        try
-        {
-            std::shared_ptr<comphelper::ConfigurationChanges> batch(comphelper::ConfigurationChanges::create());
-            if (!officecfg::Office::Common::VCL::UseOpenGL::isReadOnly())
-                officecfg::Office::Common::VCL::UseOpenGL::set(mbUseOpenGL, batch);
-            if (!officecfg::Office::Common::VCL::ForceOpenGL::isReadOnly())
-                officecfg::Office::Common::VCL::ForceOpenGL::set(mbForceOpenGL, batch);
-            batch->commit();
-        }
-        catch (...)
-        {
-        }
-    }
-}
-
-bool OpenGLCfg::useOpenGL() const
-{
-    return mbUseOpenGL;
-}
-
-bool OpenGLCfg::forceOpenGL() const
-{
-    return mbForceOpenGL;
-}
-
-void OpenGLCfg::setUseOpenGL(bool bOpenGL)
-{
-    if (bOpenGL != mbUseOpenGL)
-    {
-        mbUseOpenGL = bOpenGL;
-        mbModified = true;
-    }
-}
-
-void OpenGLCfg::setForceOpenGL(bool bOpenGL)
-{
-    if (mbForceOpenGL != bOpenGL)
-    {
-        mbForceOpenGL = bOpenGL;
-        mbModified = true;
-    }
-}
-
 class SkiaCfg
 {
 private:
     bool mbUseSkia;
     bool mbForceSkia;
+    bool mbForceSkiaRaster;
     bool mbModified;
 
 public:
@@ -196,9 +118,11 @@ public:
 
     bool useSkia() const;
     bool forceSkia() const;
+    bool forceSkiaRaster() const;
 
     void setUseSkia(bool bSkia);
     void setForceSkia(bool bSkia);
+    void setForceSkiaRaster(bool bSkia);
 
     void reset();
 };
@@ -213,25 +137,28 @@ void SkiaCfg::reset()
 {
     mbUseSkia = officecfg::Office::Common::VCL::UseSkia::get();
     mbForceSkia = officecfg::Office::Common::VCL::ForceSkia::get();
+    mbForceSkiaRaster = officecfg::Office::Common::VCL::ForceSkiaRaster::get();
     mbModified = false;
 }
 
 SkiaCfg::~SkiaCfg()
 {
-    if (mbModified)
+    if (!mbModified)
+        return;
+
+    try
     {
-        try
-        {
-            std::shared_ptr<comphelper::ConfigurationChanges> batch(comphelper::ConfigurationChanges::create());
-            if (!officecfg::Office::Common::VCL::UseSkia::isReadOnly())
-                officecfg::Office::Common::VCL::UseSkia::set(mbUseSkia, batch);
-            if (!officecfg::Office::Common::VCL::ForceSkia::isReadOnly())
-                officecfg::Office::Common::VCL::ForceSkia::set(mbForceSkia, batch);
-            batch->commit();
-        }
-        catch (...)
-        {
-        }
+        std::shared_ptr<comphelper::ConfigurationChanges> batch(comphelper::ConfigurationChanges::create());
+        if (!officecfg::Office::Common::VCL::UseSkia::isReadOnly())
+            officecfg::Office::Common::VCL::UseSkia::set(mbUseSkia, batch);
+        if (!officecfg::Office::Common::VCL::ForceSkia::isReadOnly())
+            officecfg::Office::Common::VCL::ForceSkia::set(mbForceSkia, batch);
+        if (!officecfg::Office::Common::VCL::ForceSkiaRaster::isReadOnly())
+            officecfg::Office::Common::VCL::ForceSkiaRaster::set(mbForceSkiaRaster, batch);
+        batch->commit();
+    }
+    catch (...)
+    {
     }
 }
 
@@ -243,6 +170,11 @@ bool SkiaCfg::useSkia() const
 bool SkiaCfg::forceSkia() const
 {
     return mbForceSkia;
+}
+
+bool SkiaCfg::forceSkiaRaster() const
+{
+    return mbForceSkiaRaster;
 }
 
 void SkiaCfg::setUseSkia(bool bSkia)
@@ -259,6 +191,15 @@ void SkiaCfg::setForceSkia(bool bSkia)
     if (mbForceSkia != bSkia)
     {
         mbForceSkia = bSkia;
+        mbModified = true;
+    }
+}
+
+void SkiaCfg::setForceSkiaRaster(bool bSkia)
+{
+    if (mbForceSkiaRaster != bSkia)
+    {
+        mbForceSkiaRaster = bSkia;
         mbModified = true;
     }
 }
@@ -532,7 +473,7 @@ IMPL_LINK_NOARG( OfaMiscTabPage, TwoFigureHdl, weld::SpinButton&, void )
 #if defined(_WIN32)
 IMPL_STATIC_LINK_NOARG(OfaMiscTabPage, FileAssocClick, weld::Button&, void)
 {
-    const bool bUninit = SUCCEEDED(CoInitialize(nullptr));
+    const bool bUninit = SUCCEEDED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED));
     IApplicationAssociationRegistrationUI* pIf = nullptr;
     HRESULT res = CoCreateInstance(CLSID_ApplicationAssociationRegistrationUI, nullptr,
                                    CLSCTX_INPROC_SERVER, IID_IApplicationAssociationRegistrationUI,
@@ -740,7 +681,6 @@ OfaViewTabPage::OfaViewTabPage(weld::Container* pPage, weld::DialogController* p
     , pAppearanceCfg(new SvtTabAppearanceCfg)
     , pCanvasSettings(new CanvasSettings)
     , mpDrawinglayerOpt(new SvtOptionsDrawinglayer)
-    , mpOpenGLConfig(new svt::OpenGLCfg)
     , mpSkiaConfig(new svt::SkiaCfg)
     , m_xIconSizeLB(m_xBuilder->weld_combo_box("iconsize"))
     , m_xSidebarIconSizeLB(m_xBuilder->weld_combo_box("sidebariconsize"))
@@ -755,12 +695,9 @@ OfaViewTabPage::OfaViewTabPage(weld::Container* pPage, weld::DialogController* p
     , m_xFontShowCB(m_xBuilder->weld_check_button("showfontpreview"))
     , m_xUseHardwareAccell(m_xBuilder->weld_check_button("useaccel"))
     , m_xUseAntiAliase(m_xBuilder->weld_check_button("useaa"))
-    , m_xUseOpenGL(m_xBuilder->weld_check_button("useopengl"))
-    , m_xForceOpenGL(m_xBuilder->weld_check_button("forceopengl"))
     , m_xUseSkia(m_xBuilder->weld_check_button("useskia"))
     , m_xForceSkia(m_xBuilder->weld_check_button("forceskia"))
-    , m_xOpenGLStatusEnabled(m_xBuilder->weld_label("openglenabled"))
-    , m_xOpenGLStatusDisabled(m_xBuilder->weld_label("opengldisabled"))
+    , m_xForceSkiaRaster(m_xBuilder->weld_check_button("forceskiaraster"))
     , m_xSkiaStatusEnabled(m_xBuilder->weld_label("skiaenabled"))
     , m_xSkiaStatusDisabled(m_xBuilder->weld_label("skiadisabled"))
     , m_xMousePosLB(m_xBuilder->weld_combo_box("mousepos"))
@@ -768,29 +705,29 @@ OfaViewTabPage::OfaViewTabPage(weld::Container* pPage, weld::DialogController* p
 {
     if (Application::GetToolkitName() == "gtk3")
     {
-        m_xUseOpenGL->hide();
-        m_xForceOpenGL->hide();
-        m_xOpenGLStatusEnabled->hide();
-        m_xOpenGLStatusDisabled->hide();
         m_xUseSkia->hide();
         m_xForceSkia->hide();
+        m_xForceSkiaRaster->hide();
         m_xSkiaStatusEnabled->hide();
         m_xSkiaStatusDisabled->hide();
         m_xMenuIconBox->hide();
     }
 
-#if defined( UNX )
-    m_xFontAntiAliasing->connect_toggled( LINK( this, OfaViewTabPage, OnAntialiasingToggled ) );
-#else
-    // on this platform, we do not have the anti aliasing options
-    m_xFontAntiAliasing->hide();
-    m_xAAPointLimitLabel->hide();
-    m_xAAPointLimit->hide();
-
+#if !HAVE_FEATURE_SKIA || !defined(_WIN32)
+    // Duplicated also in UpdateSkiaStatus().
+    // For now Skia is used mainly on Windows, hide the controls everywhere else.
+    // It can also be used on Linux, but only with the rarely used 'gen' backend.
+    m_xUseSkia->hide();
+    m_xForceSkia->hide();
+    m_xForceSkiaRaster->hide();
+    m_xSkiaStatusEnabled->hide();
+    m_xSkiaStatusDisabled->hide();
 #endif
 
-    m_xForceOpenGL->connect_toggled(LINK(this, OfaViewTabPage, OnForceOpenGLToggled));
+    m_xFontAntiAliasing->connect_toggled( LINK( this, OfaViewTabPage, OnAntialiasingToggled ) );
+
     m_xForceSkia->connect_toggled(LINK(this, OfaViewTabPage, OnForceSkiaToggled));
+    m_xForceSkiaRaster->connect_toggled(LINK(this, OfaViewTabPage, OnForceSkiaRasterToggled));
 
     // Set known icon themes
     OUString sAutoStr( m_xIconStyleLB->get_text( 0 ) );
@@ -817,16 +754,13 @@ OfaViewTabPage::OfaViewTabPage(weld::Container* pPage, weld::DialogController* p
     m_xIconStyleLB->set_active(0);
 
     // FIXME: should really add code to show a 'lock' icon here.
-    if (officecfg::Office::Common::VCL::UseOpenGL::isReadOnly())
-        m_xUseOpenGL->set_sensitive(false);
-    if (officecfg::Office::Common::VCL::ForceOpenGL::isReadOnly())
-        m_xForceOpenGL->set_sensitive(false);
     if (officecfg::Office::Common::VCL::UseSkia::isReadOnly())
         m_xUseSkia->set_sensitive(false);
     if (officecfg::Office::Common::VCL::ForceSkia::isReadOnly())
         m_xForceSkia->set_sensitive(false);
+    if (officecfg::Office::Common::VCL::ForceSkiaRaster::isReadOnly())
+        m_xForceSkiaRaster->set_sensitive(false);
 
-    UpdateOGLStatus();
     UpdateSkiaStatus();
 }
 
@@ -834,7 +768,6 @@ OfaViewTabPage::~OfaViewTabPage()
 {
 }
 
-#if defined( UNX )
 IMPL_LINK_NOARG( OfaViewTabPage, OnAntialiasingToggled, weld::ToggleButton&, void )
 {
     bool bAAEnabled = m_xFontAntiAliasing->get_active();
@@ -842,22 +775,21 @@ IMPL_LINK_NOARG( OfaViewTabPage, OnAntialiasingToggled, weld::ToggleButton&, voi
     m_xAAPointLimitLabel->set_sensitive(bAAEnabled);
     m_xAAPointLimit->set_sensitive(bAAEnabled);
 }
-#endif
-
-IMPL_LINK_NOARG(OfaViewTabPage, OnForceOpenGLToggled, weld::ToggleButton&, void)
-{
-    if (m_xForceOpenGL->get_active())
-    {
-        // Ignoring the opengl blacklist implies that opengl is on.
-        m_xUseOpenGL->set_active(true);
-    }
-}
 
 IMPL_LINK_NOARG(OfaViewTabPage, OnForceSkiaToggled, weld::ToggleButton&, void)
 {
     if (m_xForceSkia->get_active())
     {
         // Ignoring the Skia blacklist implies that Skia is on.
+        m_xUseSkia->set_active(true);
+    }
+}
+
+IMPL_LINK_NOARG(OfaViewTabPage, OnForceSkiaRasterToggled, weld::ToggleButton&, void)
+{
+    if (m_xForceSkiaRaster->get_active())
+    {
+        // Forcing Skia raster implies that Skia is on.
         m_xUseSkia->set_active(true);
     }
 }
@@ -959,7 +891,6 @@ bool OfaViewTabPage::FillItemSet( SfxItemSet* )
         bAppearanceChanged = true;
     }
 
-#if defined( UNX )
     if (m_xFontAntiAliasing->get_state_changed_from_saved())
     {
         pAppearanceCfg->SetFontAntiAliasing(m_xFontAntiAliasing->get_active());
@@ -971,7 +902,6 @@ bool OfaViewTabPage::FillItemSet( SfxItemSet* )
         pAppearanceCfg->SetFontAntialiasingMinPixelHeight(m_xAAPointLimit->get_value(FieldUnit::PIXEL));
         bAppearanceChanged = true;
     }
-#endif
 
     if (m_xFontShowCB->get_state_changed_from_saved())
     {
@@ -1020,19 +950,13 @@ bool OfaViewTabPage::FillItemSet( SfxItemSet* )
         }
     }
 
-    if (m_xUseOpenGL->get_state_changed_from_saved() ||
-        m_xForceOpenGL->get_state_changed_from_saved())
-    {
-        mpOpenGLConfig->setUseOpenGL(m_xUseOpenGL->get_active());
-        mpOpenGLConfig->setForceOpenGL(m_xForceOpenGL->get_active());
-        bModified = true;
-    }
-
     if (m_xUseSkia->get_state_changed_from_saved() ||
-        m_xForceSkia->get_state_changed_from_saved())
+        m_xForceSkia->get_state_changed_from_saved() ||
+        m_xForceSkiaRaster->get_state_changed_from_saved())
     {
         mpSkiaConfig->setUseSkia(m_xUseSkia->get_active());
         mpSkiaConfig->setForceSkia(m_xForceSkia->get_active());
+        mpSkiaConfig->setForceSkiaRaster(m_xForceSkiaRaster->get_active());
         bModified = true;
     }
 
@@ -1063,18 +987,9 @@ bool OfaViewTabPage::FillItemSet( SfxItemSet* )
         }
     }
 
-    if (m_xUseOpenGL->get_state_changed_from_saved() ||
-        m_xForceOpenGL->get_state_changed_from_saved())
-    {
-        SolarMutexGuard aGuard;
-        if( svtools::executeRestartDialog(
-                comphelper::getProcessComponentContext(), nullptr,
-                svtools::RESTART_REASON_OPENGL))
-            GetDialogController()->response(RET_OK);
-    }
-
     if (m_xUseSkia->get_state_changed_from_saved() ||
-        m_xForceSkia->get_state_changed_from_saved())
+        m_xForceSkia->get_state_changed_from_saved() ||
+        m_xForceSkiaRaster->get_state_changed_from_saved())
     {
         SolarMutexGuard aGuard;
         if( svtools::executeRestartDialog(
@@ -1089,7 +1004,6 @@ bool OfaViewTabPage::FillItemSet( SfxItemSet* )
 void OfaViewTabPage::Reset( const SfxItemSet* )
 {
     SvtMiscOptions aMiscOptions;
-    mpOpenGLConfig->reset();
     mpSkiaConfig->reset();
 
     if (aMiscOptions.GetSymbolsSize() != SFX_SYMBOLS_SIZE_AUTO)
@@ -1142,10 +1056,8 @@ void OfaViewTabPage::Reset( const SfxItemSet* )
     m_xMouseMiddleLB->set_active(static_cast<short>(pAppearanceCfg->GetMiddleMouseButton()));
     m_xMouseMiddleLB->save_value();
 
-#if defined( UNX )
     m_xFontAntiAliasing->set_active( pAppearanceCfg->IsFontAntiAliasing() );
     m_xAAPointLimit->set_value(pAppearanceCfg->GetFontAntialiasingMinPixelHeight(), FieldUnit::PIXEL);
-#endif
 
     // WorkingSet
     SvtFontOptions aFontOpt;
@@ -1187,49 +1099,31 @@ void OfaViewTabPage::Reset( const SfxItemSet* )
 
         m_xUseAntiAliase->save_state();
     }
-    m_xUseOpenGL->set_active(mpOpenGLConfig->useOpenGL());
-    m_xForceOpenGL->set_active(mpOpenGLConfig->forceOpenGL());
     m_xUseSkia->set_active(mpSkiaConfig->useSkia());
     m_xForceSkia->set_active(mpSkiaConfig->forceSkia());
+    m_xForceSkiaRaster->set_active(mpSkiaConfig->forceSkiaRaster());
 
-#if defined( UNX )
     m_xFontAntiAliasing->save_state();
     m_xAAPointLimit->save_value();
-#endif
     m_xFontShowCB->save_state();
 
-    m_xUseOpenGL->save_state();
-    m_xForceOpenGL->save_state();
     m_xUseSkia->save_state();
     m_xForceSkia->save_state();
+    m_xForceSkiaRaster->save_state();
 
-#if defined( UNX )
     OnAntialiasingToggled(*m_xFontAntiAliasing);
-#endif
-}
-
-void OfaViewTabPage::UpdateOGLStatus()
-{
-    if (Application::GetToolkitName() == "gtk3")
-        return;
-    // Easier than a custom translation string.
-#if HAVE_FEATURE_OPENGL
-    bool bEnabled = OpenGLWrapper::isVCLOpenGLEnabled();
-#else
-    bool bEnabled = false;
-#endif
-    m_xOpenGLStatusEnabled->set_visible(bEnabled);
-    m_xOpenGLStatusDisabled->set_visible(!bEnabled);
 }
 
 void OfaViewTabPage::UpdateSkiaStatus()
 {
     if (Application::GetToolkitName() == "gtk3")
         return;
+#if HAVE_FEATURE_SKIA && defined(_WIN32)
     // Easier than a custom translation string.
     bool bEnabled = SkiaHelper::isVCLSkiaEnabled();
     m_xSkiaStatusEnabled->set_visible(bEnabled);
     m_xSkiaStatusDisabled->set_visible(!bEnabled);
+#endif
 }
 
 struct LanguageConfig_Impl
@@ -1296,9 +1190,6 @@ OfaLanguagesTabPage::OfaLanguagesTabPage(weld::Container* pPage, weld::DialogCon
     , m_xCTLSupportCB(m_xBuilder->weld_check_button("ctlsupport"))
     , m_xIgnoreLanguageChangeCB(m_xBuilder->weld_check_button("ignorelanguagechange"))
 {
-    m_xUserInterfaceLB->make_sorted();
-    m_xCurrencyLB->make_sorted();
-
     // tdf#125483 save original default label
     m_sDecimalSeparatorLabel = m_xDecimalSeparatorCB->get_label();
 
@@ -1310,7 +1201,7 @@ OfaLanguagesTabPage::OfaLanguagesTabPage(weld::Container* pPage, weld::DialogCon
                        SvtLanguageTable::GetLanguageString(GetInstalledLocaleForSystemUILanguage().getLanguageType());
 
     m_xUserInterfaceLB->append("0", aUILang);
-    m_xUserInterfaceLB->set_active(0);
+    m_xUserInterfaceLB->append_separator("");
     try
     {
         Reference< XMultiServiceFactory > theConfigProvider(
@@ -1325,15 +1216,31 @@ OfaLanguagesTabPage::OfaLanguagesTabPage(weld::Container* pPage, weld::DialogCon
             theConfigProvider->createInstanceWithArguments(sAccessSrvc, theArgs ), UNO_QUERY_THROW );
         seqInstalledLanguages = theNameAccess->getElementNames();
         LanguageType aLang = LANGUAGE_DONTKNOW;
-        for (sal_IntPtr i=0; i<seqInstalledLanguages.getLength(); i++)
+        std::vector< std::pair<sal_Int32, OUString> > aUILanguages;
+        for (sal_Int32 i=0; i<seqInstalledLanguages.getLength(); i++)
         {
             aLang = LanguageTag::convertToLanguageTypeWithFallback(seqInstalledLanguages[i]);
             if (aLang != LANGUAGE_DONTKNOW)
             {
                 OUString aLangStr( SvtLanguageTable::GetLanguageString( aLang ) );
-                m_xUserInterfaceLB->append(OUString::number(i+1), aLangStr);
+                aUILanguages.emplace_back(i+1, aLangStr);
             }
         }
+
+        std::sort(aUILanguages.begin(), aUILanguages.end(), [](const auto& l1, const auto& l2) {
+            static const auto aSorter = comphelper::string::NaturalStringSorter(
+                comphelper::getProcessComponentContext(),
+                Application::GetSettings().GetLanguageTag().getLocale());
+            return aSorter.compare(l1.second, l2.second) < 0;
+        });
+
+        // tdf#114694: append the sorted list after the default entry and separator.
+        for (const auto & [ nGroupID, sGroupName ] : aUILanguages)
+        {
+            m_xUserInterfaceLB->append(OUString::number(nGroupID), sGroupName);
+        }
+
+        m_xUserInterfaceLB->set_active(0);
 
         // find out whether the user has a specific locale specified
         Sequence< Any > theArgs2(1);
@@ -1361,37 +1268,56 @@ OfaLanguagesTabPage::OfaLanguagesTabPage(weld::Container* pPage, weld::DialogCon
         TOOLS_WARN_EXCEPTION("cui.options", "ignoring" );
     }
 
-    m_xWesternLanguageLB->SetLanguageList( SvxLanguageListFlags::WESTERN | SvxLanguageListFlags::ONLY_KNOWN, true, false, true );
-    m_xWesternLanguageLB->InsertDefaultLanguage( css::i18n::ScriptType::LATIN );
-    m_xAsianLanguageLB->SetLanguageList( SvxLanguageListFlags::CJK     | SvxLanguageListFlags::ONLY_KNOWN, true, false, true );
-    m_xAsianLanguageLB->InsertDefaultLanguage( css::i18n::ScriptType::ASIAN );
-    m_xComplexLanguageLB->SetLanguageList( SvxLanguageListFlags::CTL     | SvxLanguageListFlags::ONLY_KNOWN, true, false, true );
-    m_xComplexLanguageLB->InsertDefaultLanguage( css::i18n::ScriptType::COMPLEX );
+    m_xWesternLanguageLB->SetLanguageList(
+        SvxLanguageListFlags::WESTERN | SvxLanguageListFlags::ONLY_KNOWN, true, false, true, true,
+        LANGUAGE_SYSTEM, css::i18n::ScriptType::LATIN);
 
-    m_xLocaleSettingLB->SetLanguageList( SvxLanguageListFlags::ALL     | SvxLanguageListFlags::ONLY_KNOWN, false, false, false );
-    m_xLocaleSettingLB->InsertLanguage(LANGUAGE_USER_SYSTEM_CONFIG);
+    m_xAsianLanguageLB->SetLanguageList(
+        SvxLanguageListFlags::CJK | SvxLanguageListFlags::ONLY_KNOWN, true, false, true, true,
+        LANGUAGE_SYSTEM, css::i18n::ScriptType::ASIAN);
+
+    m_xComplexLanguageLB->SetLanguageList(
+        SvxLanguageListFlags::CTL | SvxLanguageListFlags::ONLY_KNOWN, true, false, true, true,
+        LANGUAGE_SYSTEM, css::i18n::ScriptType::COMPLEX);
+
+    m_xLocaleSettingLB->SetLanguageList(
+        SvxLanguageListFlags::ALL | SvxLanguageListFlags::ONLY_KNOWN, false, false, false, true,
+        LANGUAGE_USER_SYSTEM_CONFIG, css::i18n::ScriptType::WEAK);
 
     const NfCurrencyTable& rCurrTab = SvNumberFormatter::GetTheCurrencyTable();
     const NfCurrencyEntry& rCurr = SvNumberFormatter::GetCurrencyEntry( LANGUAGE_SYSTEM );
     // insert SYSTEM entry
     OUString aDefaultCurr = m_sSystemDefaultString + " - " + rCurr.GetBankSymbol();
     m_xCurrencyLB->append("default", aDefaultCurr);
+    m_xCurrencyLB->append_separator("");
+
     assert(m_xCurrencyLB->find_id("default") != -1);
     // all currencies
     OUString aTwoSpace( "  " );
     sal_uInt16 nCurrCount = rCurrTab.size();
+    std::vector< const NfCurrencyEntry* > aCurrencies;
     // first entry is SYSTEM, skip it
     for ( sal_uInt16 j=1; j < nCurrCount; ++j )
     {
-        const NfCurrencyEntry* pCurr = &rCurrTab[j];
-        OUString aStr_ = pCurr->GetBankSymbol() +
+        aCurrencies.push_back(&rCurrTab[j]);
+    }
+    std::sort(aCurrencies.begin(), aCurrencies.end(),
+              [](const NfCurrencyEntry* c1, const NfCurrencyEntry* c2) {
+                  return c1->GetBankSymbol().compareTo(c2->GetBankSymbol()) < 0;
+              });
+
+    for (auto &v : aCurrencies)
+    {
+        OUString aStr_ = v->GetBankSymbol() +
                          aTwoSpace +
-                         pCurr->GetSymbol();
+                         v->GetSymbol();
         aStr_ = ApplyLreOrRleEmbedding( aStr_ ) +
                 aTwoSpace +
-                ApplyLreOrRleEmbedding( SvtLanguageTable::GetLanguageString( pCurr->GetLanguage() ) );
-        m_xCurrencyLB->append(OUString::number(reinterpret_cast<sal_Int64>(pCurr)), aStr_);
+                ApplyLreOrRleEmbedding( SvtLanguageTable::GetLanguageString( v->GetLanguage() ) );
+        m_xCurrencyLB->append(OUString::number(reinterpret_cast<sal_Int64>(v)), aStr_);
     }
+
+    m_xCurrencyLB->set_active(0);
 
     m_xLocaleSettingLB->connect_changed( LINK( this, OfaLanguagesTabPage, LocaleSettingHdl ) );
     m_xDatePatternsED->connect_changed( LINK( this, OfaLanguagesTabPage, DatePatternsHdl ) );
@@ -1891,11 +1817,12 @@ IMPL_LINK_NOARG(OfaLanguagesTabPage, LocaleSettingHdl, weld::ComboBox&, void)
 
     const NfCurrencyEntry& rCurr = SvNumberFormatter::GetCurrencyEntry(
             (eLang == LANGUAGE_USER_SYSTEM_CONFIG) ? MsLangId::getSystemLanguage() : eLang);
+    const OUString aDefaultID = "default";
     // Update the "Default ..." currency.
-    m_xCurrencyLB->remove_id("default");
+    m_xCurrencyLB->remove_id(aDefaultID);
     OUString aDefaultCurr = m_sSystemDefaultString + " - " + rCurr.GetBankSymbol();
-    m_xCurrencyLB->append("default", aDefaultCurr);
-    assert(m_xCurrencyLB->find_id("default") != -1);
+    m_xCurrencyLB->insert(0, aDefaultCurr, &aDefaultID, nullptr, nullptr);
+    assert(m_xCurrencyLB->find_id(aDefaultID) != -1);
     m_xCurrencyLB->set_active_text(aDefaultCurr);
 
     // obtain corresponding locale data

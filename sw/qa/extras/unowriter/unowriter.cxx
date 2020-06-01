@@ -16,6 +16,7 @@
 #include <com/sun/star/text/XAutoTextGroup.hpp>
 #include <com/sun/star/text/XTextPortionAppend.hpp>
 #include <com/sun/star/text/XTextContentAppend.hpp>
+#include <com/sun/star/text/XTextRangeCompare.hpp>
 #include <com/sun/star/rdf/URI.hpp>
 #include <com/sun/star/rdf/URIs.hpp>
 #include <com/sun/star/awt/XDevice.hpp>
@@ -338,7 +339,7 @@ CPPUNIT_TEST_FIXTURE(SwUnoWriter, testXAutoTextGroup)
 
     // Rename not existing should throw an exception
     CPPUNIT_ASSERT_THROW_MESSAGE(
-        "We expect an exception on renaming not-exising AutoText",
+        "We expect an exception on renaming not-existing AutoText",
         xAutoTextGroup->renameByName(sTextName, sTextNameNew, sTextTitleNew),
         container::ElementExistException);
 
@@ -452,6 +453,54 @@ CPPUNIT_TEST_FIXTURE(SwUnoWriter, testSetPagePrintSettings)
 
     CPPUNIT_ASSERT_EQUAL(sal_Int16(2), aMap.getValue("PageColumns").get<short>());
     CPPUNIT_ASSERT_EQUAL(true, aMap.getValue("IsLandscape").get<bool>());
+}
+
+CPPUNIT_TEST_FIXTURE(SwUnoWriter, testDeleteFlyAtCharAtStart)
+{
+    loadURL("private:factory/swriter", nullptr);
+    SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
+    CPPUNIT_ASSERT(pTextDoc);
+    SwWrtShell* const pWrtShell(pTextDoc->GetDocShell()->GetWrtShell());
+    SwDoc* const pDoc(pWrtShell->GetDoc());
+
+    // insert some text
+    IDocumentContentOperations& rIDCO(pDoc->getIDocumentContentOperations());
+    rIDCO.InsertString(*pWrtShell->GetCursor(), "foo bar baz");
+
+    // insert fly anchored at start of body text
+    pWrtShell->ClearMark();
+    pWrtShell->SttEndDoc(true);
+    SfxItemSet frameSet(pDoc->GetAttrPool(), svl::Items<RES_FRMATR_BEGIN, RES_FRMATR_END - 1>{});
+    SfxItemSet grfSet(pDoc->GetAttrPool(), svl::Items<RES_GRFATR_BEGIN, RES_GRFATR_END - 1>{});
+    SwFormatAnchor anchor(RndStdIds::FLY_AT_CHAR);
+    frameSet.Put(anchor);
+    GraphicObject grf;
+    CPPUNIT_ASSERT(rIDCO.InsertGraphicObject(*pWrtShell->GetCursor(), grf, &frameSet, &grfSet));
+
+    // check fly
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    uno::Reference<text::XTextContent> const xShape(getShape(1), uno::UNO_QUERY);
+    // anchored at start of body text?
+    uno::Reference<text::XText> const xText(pTextDoc->getText());
+    uno::Reference<text::XTextRangeCompare> const xTextRC(xText, uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL(sal_Int16(0),
+                         xTextRC->compareRegionStarts(xText->getStart(), xShape->getAnchor()));
+
+    // delete 1st character
+    uno::Reference<text::XTextCursor> const xCursor(xText->createTextCursor());
+    xCursor->goRight(1, true);
+    xCursor->setString("");
+
+    // there is exactly one fly
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+
+    // select entire body text
+    xCursor->gotoStart(true);
+    xCursor->gotoEnd(true);
+    xCursor->setString("");
+
+    // there is no fly
+    CPPUNIT_ASSERT_EQUAL(0, getShapes());
 }
 
 CPPUNIT_TEST_FIXTURE(SwUnoWriter, testSelectionInTableEnum)

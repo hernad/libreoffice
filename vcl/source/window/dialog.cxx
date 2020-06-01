@@ -41,15 +41,17 @@
 #include <sal/log.hxx>
 
 #include <vcl/abstdlg.hxx>
+#include <vcl/accel.hxx>
 #include <vcl/builder.hxx>
 #include <vcl/layout.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/event.hxx>
 #include <vcl/waitobj.hxx>
 #include <vcl/wrkwin.hxx>
-#include <vcl/button.hxx>
+#include <vcl/toolkit/button.hxx>
 #include <vcl/mnemonic.hxx>
-#include <vcl/dialog.hxx>
+#include <vcl/toolkit/dialog.hxx>
+#include <vcl/dialoghelper.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/virdev.hxx>
 #include <vcl/weld.hxx>
@@ -740,17 +742,25 @@ void Dialog::StateChanged( StateChangedType nType )
         const bool bKitActive = comphelper::LibreOfficeKit::isActive();
         if (bKitActive)
         {
-            if (!GetLOKNotifier())
-                SetLOKNotifier(mpDialogImpl->m_aInstallLOKNotifierHdl.Call(nullptr));
+            std::vector<vcl::LOKPayloadItem> aItems;
+            aItems.emplace_back("type", "dialog");
+            aItems.emplace_back("size", GetSizePixel().toString());
+            if (!GetText().isEmpty())
+                aItems.emplace_back("title", GetText().toUtf8());
 
             if (const vcl::ILibreOfficeKitNotifier* pNotifier = GetLOKNotifier())
             {
-                std::vector<vcl::LOKPayloadItem> aItems;
-                aItems.emplace_back("type", "dialog");
-                aItems.emplace_back("size", GetSizePixel().toString());
-                if (!GetText().isEmpty())
-                    aItems.emplace_back("title", GetText().toUtf8());
                 pNotifier->notifyWindow(GetLOKWindowId(), "created", aItems);
+                pNotifier->notifyWindow(GetLOKWindowId(), "created", aItems);
+            }
+            else
+            {
+                vcl::ILibreOfficeKitNotifier* pViewShell = mpDialogImpl->m_aInstallLOKNotifierHdl.Call(nullptr);
+                if (pViewShell)
+                {
+                    SetLOKNotifier(pViewShell);
+                    pViewShell->notifyWindow(GetLOKWindowId(), "created", aItems);
+                }
             }
         }
 
@@ -1076,13 +1086,22 @@ void Dialog::EndDialog( long nResult )
 
     Hide();
 
+    if (comphelper::LibreOfficeKit::isActive())
+    {
+        if(const vcl::ILibreOfficeKitNotifier* pNotifier = GetLOKNotifier())
+        {
+            pNotifier->notifyWindow(GetLOKWindowId(), "close");
+            ReleaseLOKNotifier();
+        }
+    }
+
     if (bModal)
     {
         SetModalInputMode(false);
 
         RemoveFromDlgList();
 
-        // set focus to previous modal dialogue if it is modal for
+        // set focus to previous modal dialog if it is modal for
         // the same frame parent (or NULL)
         ImplSVData* pSVData = ImplGetSVData();
         if (!pSVData->mpWinData->mpExecuteDialogs.empty())
@@ -1135,28 +1154,40 @@ void Dialog::EndDialog( long nResult )
     }
 }
 
-void Dialog::EndAllDialogs( vcl::Window const * pParent )
+namespace vcl
 {
-    ImplSVData* pSVData = ImplGetSVData();
-    auto& rExecuteDialogs = pSVData->mpWinData->mpExecuteDialogs;
-
-    for (auto it = rExecuteDialogs.rbegin(); it != rExecuteDialogs.rend(); ++it)
+    void EndAllDialogs( vcl::Window const * pParent )
     {
-        if (!pParent || pParent->IsWindowOrChild(*it, true))
+        ImplSVData* pSVData = ImplGetSVData();
+        auto& rExecuteDialogs = pSVData->mpWinData->mpExecuteDialogs;
+
+        for (auto it = rExecuteDialogs.rbegin(); it != rExecuteDialogs.rend(); ++it)
         {
-            (*it)->EndDialog();
-            (*it)->PostUserEvent(Link<void*, void>());
+            if (!pParent || pParent->IsWindowOrChild(*it, true))
+            {
+                (*it)->EndDialog();
+                (*it)->PostUserEvent(Link<void*, void>());
+            }
         }
     }
-}
 
-VclPtr<Dialog> Dialog::GetMostRecentExecutingDialog()
-{
-    ImplSVData* pSVData = ImplGetSVData();
-    auto& rExecuteDialogs = pSVData->mpWinData->mpExecuteDialogs;
-    if (!rExecuteDialogs.empty())
-        return rExecuteDialogs.back();
-    return nullptr;
+    void EnableDialogInput(vcl::Window* pWindow)
+    {
+        if (Dialog* pDialog = dynamic_cast<Dialog*>(pWindow))
+        {
+            pDialog->EnableInput();
+        }
+    }
+
+    bool CloseDialog(vcl::Window* pWindow)
+    {
+        if (Dialog* pDialog = dynamic_cast<Dialog*>(pWindow))
+        {
+            pDialog->Close();
+            return true;
+        }
+        return false;
+    }
 }
 
 void Dialog::SetModalInputMode( bool bModal )
@@ -1270,10 +1301,10 @@ void Dialog::GetDrawWindowBorder( sal_Int32& rLeftBorder, sal_Int32& rTopBorder,
     aImplWin->GetBorder( rLeftBorder, rTopBorder, rRightBorder, rBottomBorder );
 }
 
-void Dialog::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawFlags )
+void Dialog::Draw( OutputDevice* pDev, const Point& rPos, DrawFlags )
 {
     Point aPos = pDev->LogicToPixel( rPos );
-    Size aSize = pDev->LogicToPixel( rSize );
+    Size aSize = GetSizePixel();
 
     Wallpaper aWallpaper = GetBackground();
     if ( !aWallpaper.IsBitmap() )

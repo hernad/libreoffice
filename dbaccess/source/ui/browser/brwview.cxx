@@ -17,18 +17,19 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <brwctrlr.hxx>
 #include <brwview.hxx>
 #include <sbagrid.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
 #include <comphelper/types.hxx>
+#include <vcl/fixed.hxx>
 #include <vcl/split.hxx>
 #include "dbtreeview.hxx"
-#include <stringconstants.hxx>
 #include <strings.hxx>
 #include <com/sun/star/form/XLoadable.hpp>
 #include <com/sun/star/awt/XControlContainer.hpp>
-#include <UITools.hxx>
+#include <com/sun/star/awt/PosSize.hpp>
+#include <com/sun/star/beans/XPropertySet.hpp>
+#include <com/sun/star/container/XChild.hpp>
 #include <osl/diagnose.h>
 
 using namespace dbaui;
@@ -172,7 +173,7 @@ void UnoDataBrowserView::showStatus( const OUString& _rStatus )
         m_pStatus->SetText(_rStatus);
         m_pStatus->Show();
         Resize();
-        Update();
+        PaintImmediately();
     }
 }
 
@@ -183,7 +184,7 @@ void UnoDataBrowserView::hideStatus()
         return;
     m_pStatus->Hide();
     Resize();
-    Update();
+    PaintImmediately();
 }
 
 void UnoDataBrowserView::resizeDocumentView(tools::Rectangle& _rPlayground)

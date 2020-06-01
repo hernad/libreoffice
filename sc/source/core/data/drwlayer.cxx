@@ -21,6 +21,7 @@
 #include <com/sun/star/chart/XChartDocument.hpp>
 #include <com/sun/star/chart2/XChartDocument.hpp>
 #include <com/sun/star/embed/XClassifiedObject.hpp>
+#include <com/sun/star/embed/XEmbeddedObject.hpp>
 
 #include <scitems.hxx>
 #include <editeng/eeitem.hxx>
@@ -67,7 +68,7 @@
 #include <table.hxx>
 #include <basegfx/matrix/b2dhommatrix.hxx>
 
-#include <vcl/field.hxx>
+#include <vcl/fieldvalues.hxx>
 #include <memory>
 
 namespace com::sun::star::embed { class XEmbeddedObject; }
@@ -200,13 +201,13 @@ ScTabSizeChangedHint::~ScTabSizeChangedHint()
 
 static long TwipsToHmm (long nVal)
 {
-    return static_cast< long >( MetricField::ConvertDoubleValue (static_cast<sal_Int64>(nVal), 0, 0,
+    return static_cast< long >( vcl::ConvertDoubleValue (static_cast<sal_Int64>(nVal), 0, 0,
             FieldUnit::TWIP, FieldUnit::MM_100TH) );
 }
 
 static long HmmToTwips (long nVal)
 {
-    return static_cast< long > ( MetricField::ConvertDoubleValue (static_cast<sal_Int64>(nVal), 0, 0,
+    return static_cast< long > ( vcl::ConvertDoubleValue (static_cast<sal_Int64>(nVal), 0, 0,
             FieldUnit::MM_100TH, FieldUnit::TWIP) );
 }
 
@@ -722,11 +723,11 @@ void ScDrawLayer::ResizeLastRectFromAnchor(const SdrObject* pObj, ScDrawObjData&
                 if(bIsGrowing) // cell is growing larger
                 {
                     // To actually grow the image, we need to take the max
-                    fWidthFactor = fHeightFactor = std::max(fWidthFactor, fHeightFactor);
+                    fWidthFactor = std::max(fWidthFactor, fHeightFactor);
                 }
                 else if(bIsShrinking) // cell is growing smaller, take the min
                 {
-                    fWidthFactor = fHeightFactor = std::min(fWidthFactor, fHeightFactor);
+                    fWidthFactor = std::min(fWidthFactor, fHeightFactor);
                 }
 
                 // We don't want the image to become larger than the current cell
@@ -1731,7 +1732,7 @@ void ScDrawLayer::CopyFromClip( ScDrawLayer* pClipModel, SCTAB nSourceTab, const
             if ( pNewObject->GetObjIdentifier() == OBJ_OLE2 )
             {
                 uno::Reference< embed::XEmbeddedObject > xIPObj = static_cast<SdrOle2Obj*>(pNewObject)->GetObjRef();
-                uno::Reference< embed::XClassifiedObject > xClassified( xIPObj, uno::UNO_QUERY );
+                uno::Reference< embed::XClassifiedObject > xClassified = xIPObj;
                 SvGlobalName aObjectClassName;
                 if ( xClassified.is() )
                 {

@@ -149,7 +149,7 @@ public:
         SwXNumberingRules::SetPropertiesToNumFormat(
             aNumberFormat,
             charStyleName,
-            nullptr, nullptr, nullptr, nullptr, nullptr,
+            nullptr, nullptr, nullptr, nullptr,
             props);
         SwNumRulesWithName *const pRules(GetOrCreateRules());
         pRules->SetNumFormat(nIndex, aNumberFormat, charStyleName);
@@ -275,23 +275,24 @@ public:
     {
         OUString name;
         OUString displayName;
-        sal_uInt16 nFamily(0);
+        XmlStyleFamily nFamily(XmlStyleFamily::DATA_STYLE);
 
-        sax_fastparser::FastAttributeList *pAttribList =
-            sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
-
-        for (auto &aIter : *pAttribList)
+        for (auto &aIter : sax_fastparser::castToFastAttributeList( xAttrList ))
             if (aIter.getToken() == (XML_NAMESPACE_STYLE | XML_FAMILY))
             {
-                if (IsXMLToken(aIter.toString(), XML_TEXT))
-                    nFamily = XML_STYLE_FAMILY_TEXT_TEXT;
-                else if (IsXMLToken(aIter.toString(), XML_NAME))
+                if (IsXMLToken(aIter, XML_TEXT))
+                    nFamily = XmlStyleFamily::TEXT_TEXT;
+                else if (IsXMLToken(aIter, XML_NAME))
                     name = aIter.toString();
-                else if (IsXMLToken(aIter.toString(), XML_DISPLAY_NAME))
+                else if (IsXMLToken(aIter, XML_DISPLAY_NAME))
                     displayName = aIter.toString();
+                else
+                    SAL_WARN("xmloff", "unknown value for style:family=" << aIter.toString());
             }
+            else
+                SAL_WARN("xmloff", "unknown attribute " << SvXMLImport::getPrefixAndNameFromToken(aIter.getToken()) << "=" << aIter.toString());
 
-        if (nFamily && !name.isEmpty() && !displayName.isEmpty())
+        if (nFamily != XmlStyleFamily::DATA_STYLE && !name.isEmpty() && !displayName.isEmpty())
         {
             rImport.AddStyleDisplayName(nFamily, name, displayName);
         }
@@ -317,6 +318,10 @@ public:
     {
     }
 
+    virtual void SAL_CALL startFastElement(
+            sal_Int32 /*nElement*/,
+            const css::uno::Reference< css::xml::sax::XFastAttributeList >& /*xAttrList*/ ) override {}
+
     virtual void SAL_CALL endFastElement(sal_Int32 /*Element*/) override
     {
         assert(m_Contexts.size() < SwChapterNumRules::nMaxRules);
@@ -332,27 +337,40 @@ public:
         }
     }
 
+    virtual SvXMLImportContextRef CreateChildContext(
+            sal_uInt16 nPrefix,
+            const OUString& rLocalName,
+            const css::uno::Reference< css::xml::sax::XAttributeList >& xAttrList ) override
+    {
+        if (XML_NAMESPACE_TEXT == nPrefix && IsXMLToken(rLocalName, XML_OUTLINE_STYLE))
+        {
+            ++m_nCounter;
+            if (m_nCounter <= SwChapterNumRules::nMaxRules)
+            {
+                SvxXMLListStyleContext *const pContext(
+                    new SvxXMLListStyleContext(GetImport(),
+                                nPrefix, rLocalName, xAttrList, true));
+                m_Contexts.emplace_back(pContext);
+                return pContext;
+            }
+        }
+        return nullptr;
+    }
+
     virtual css::uno::Reference<XFastContextHandler> SAL_CALL createFastChildContext(
                 sal_Int32 Element,
                 const css::uno::Reference< css::xml::sax::XFastAttributeList > & xAttrList ) override
     {
         if (Element == XML_ELEMENT(TEXT, XML_OUTLINE_STYLE))
         {
-            ++m_nCounter;
-            if (m_nCounter <= SwChapterNumRules::nMaxRules)
-            {
-                SvxXMLListStyleContext *const pContext(
-                    new SvxXMLListStyleContext(GetImport(), Element, xAttrList, true));
-                m_Contexts.emplace_back(pContext);
-                return pContext;
-            }
+            // handled in CreateChildContext
         }
         else if (Element == XML_ELEMENT(STYLE, XML_STYLE))
         {
             return new StoredChapterNumberingDummyStyleContext(GetImport(), xAttrList);
         }
 
-        return SvXMLImportContext::createFastChildContext(Element, xAttrList);
+        return nullptr;
     }
 };
 

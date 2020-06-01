@@ -552,6 +552,30 @@ bool should_ignore( const OUString& s )
         return s == " " || (!s.isEmpty() && s[0]==0);
 }
 
+/**
+ * Turn nNumber into a string and pad the result to nLimit by inserting zero characters at the
+ * start.
+ */
+static OUString lcl_formatArabicZero(sal_Int32 nNumber, sal_Int32 nLimit)
+{
+    OUString aRet = OUString::number(nNumber);
+    sal_Int32 nDiff = nLimit - aRet.getLength();
+
+    if (nDiff <= 0)
+    {
+        return aRet;
+    }
+
+    OUStringBuffer aBuffer;
+    aBuffer.setLength(nDiff);
+    for (sal_Int32 i = 0; i < nDiff; ++i)
+    {
+        aBuffer[i] = '0';
+    }
+    aBuffer.append(aRet);
+    return aBuffer.makeStringAndClear();
+}
+
 static
 Any getPropertyByName( const Sequence<beans::PropertyValue>& aProperties,
                                                 const char* name, bool bRequired )
@@ -913,6 +937,22 @@ DefaultNumberingProvider::makeNumberingString( const Sequence<beans::PropertyVal
              lcl_formatChars1( table_Chicago, 4, number-1, result );  // *, +, |, S, **, ++, ...
              break;
 
+          case ARABIC_ZERO:
+               result += lcl_formatArabicZero(number, 2);
+               break;
+
+          case ARABIC_ZERO3:
+               result += lcl_formatArabicZero(number, 3);
+               break;
+
+          case ARABIC_ZERO4:
+               result += lcl_formatArabicZero(number, 4);
+               break;
+
+          case ARABIC_ZERO5:
+               result += lcl_formatArabicZero(number, 5);
+               break;
+
           default:
                OSL_ASSERT(false);
                throw IllegalArgumentException();
@@ -1011,6 +1051,10 @@ static const Supported_NumberingType aSupportedTypes[] =
         {style::NumberingType::CHARS_PERSIAN_WORD,   nullptr, LANG_CTL},
         {style::NumberingType::CHARS_GREEK_UPPER_LETTER,   C_GR_A ", " C_GR_B ", ... (gr)", LANG_ALL},
         {style::NumberingType::CHARS_GREEK_LOWER_LETTER,   S_GR_A ", " S_GR_B ", ... (gr)", LANG_ALL},
+        {style::NumberingType::ARABIC_ZERO, "01, 02, 03, ...", LANG_ALL},
+        {style::NumberingType::ARABIC_ZERO3, "001, 002, 003, ...", LANG_ALL},
+        {style::NumberingType::ARABIC_ZERO4, "0001, 0002, 0003, ...", LANG_ALL},
+        {style::NumberingType::ARABIC_ZERO5, "00001, 00002, 00003, ...", LANG_ALL},
 };
 static const sal_Int32 nSupported_NumberingTypes = SAL_N_ELEMENTS(aSupportedTypes);
 

@@ -16,6 +16,7 @@
 #include <wrtsh.hxx>
 #include <ndgrf.hxx>
 #include <fmtsrnd.hxx>
+#include <frameformats.hxx>
 #include <editeng/boxitem.hxx>
 #include <editeng/lrspitem.hxx>
 #include <editeng/ulspitem.hxx>
@@ -78,14 +79,6 @@ DECLARE_WW8IMPORT_TEST(testFloatingTableSectionColumns, "floating-table-section-
     CPPUNIT_ASSERT( tableWidth.toInt32() > 10000 );
 }
 
-DECLARE_WW8IMPORT_TEST(testTdf107773, "tdf107773.doc")
-{
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<drawing::XDrawPage> xDrawPage = xDrawPageSupplier->getDrawPage();
-    // This was 1, multi-page table was imported as a floating one.
-    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(0), xDrawPage->getCount());
-}
-
 DECLARE_WW8IMPORT_TEST(testTdf124601, "tdf124601.doc")
 {
     // Without the accompanying fix in place, this test would have failed, as the importer lost the
@@ -131,6 +124,18 @@ DECLARE_WW8IMPORT_TEST(testTdf106291, "tdf106291.doc")
     OUString cellHeight = parseDump("/root/page[1]/body/tab/row/cell[1]/infos/bounds", "height");
     CPPUNIT_ASSERT_EQUAL(sal_Int32(8660), cellWidth.toInt32());
     CPPUNIT_ASSERT(cellHeight.toInt32() > 200); // height might depend on font size
+}
+
+DECLARE_WW8IMPORT_TEST(testTransparentText, "transparent-text.doc")
+{
+    uno::Reference<text::XText> xHeaderText = getProperty<uno::Reference<text::XText>>(
+        getStyles("PageStyles")->getByName("Standard"), "HeaderText");
+    uno::Reference<text::XTextRange> xParagraph = getParagraphOfText(3, xHeaderText);
+    // Without the accompanying fix in place, this test would have failed: transparency was set to
+    // 100%, so the text was not readable.
+    sal_Int32 nExpected(COL_BLACK);
+    sal_Int32 nActual(getProperty<sal_Int16>(xParagraph, "CharTransparence"));
+    CPPUNIT_ASSERT_EQUAL(nExpected, nActual);
 }
 
 DECLARE_WW8IMPORT_TEST( testTdf105570, "tdf105570.doc" )
@@ -206,10 +211,8 @@ DECLARE_WW8IMPORT_TEST(testTdf106799, "tdf106799.doc")
 
 DECLARE_WW8IMPORT_TEST(testTdf112346, "tdf112346.doc")
 {
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<drawing::XDrawPage> xDrawPage = xDrawPageSupplier->getDrawPage();
     // This was 1, multi-page table was imported as a floating one.
-    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(0), xDrawPage->getCount());
+    CPPUNIT_ASSERT_EQUAL(0, getShapes());
 }
 
 DECLARE_WW8IMPORT_TEST(testTdf121734, "tdf121734.doc")
@@ -321,13 +324,11 @@ DECLARE_WW8IMPORT_TEST(testTdf122425_1, "tdf122425_1.doc")
 
 DECLARE_WW8IMPORT_TEST(testTdf79639, "tdf79639.doc")
 {
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<drawing::XDrawPage> xDrawPage = xDrawPageSupplier->getDrawPage();
     // Without the accompanying fix in place, this test would have failed with:
     // - Expected: 1
     // - Actual  : 0
     // as the floating table in the header wasn't converted to a TextFrame.
-    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(1), xDrawPage->getCount());
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
 }
 
 DECLARE_WW8IMPORT_TEST(testTdf122425_2, "tdf122425_2.doc")
@@ -363,6 +364,11 @@ DECLARE_WW8IMPORT_TEST(testTdf110987, "tdf110987")
     CPPUNIT_ASSERT(pTextDoc);
     OUString sFilterName = pTextDoc->GetDocShell()->GetMedium()->GetFilter()->GetFilterName();
     CPPUNIT_ASSERT(sFilterName != "MS Word 97 Vorlage");
+}
+
+DECLARE_WW8IMPORT_TEST(testTdf130262, "tdf130262.doc")
+{
+    // We had an infinite layout loop
 }
 
 // tests should only be added to ww8IMPORT *if* they fail round-tripping in ww8EXPORT

@@ -366,10 +366,9 @@ void ProgressCmdEnv::handle( uno::Reference< task::XInteractionRequest > const &
     {
         std::vector< OUString > deps;
         deps.reserve(depExc.UnsatisfiedDependencies.getLength());
-        for (sal_Int32 i = 0; i < depExc.UnsatisfiedDependencies.getLength(); ++i)
+        for (auto const & i : std::as_const(depExc.UnsatisfiedDependencies))
         {
-            deps.push_back(
-                dp_misc::Dependencies::getErrorText( depExc.UnsatisfiedDependencies[i]) );
+            deps.push_back( dp_misc::Dependencies::getErrorText(i) );
         }
         {
             SolarMutexGuard guard;
@@ -782,7 +781,7 @@ void ExtensionCmdQueue::Thread::execute()
                 //This exception is thrown when a user clicked cancel in the messagebox which was
                 //started by the interaction handler. For example the user will be asked if he/she
                 //really wants to install the extension.
-                //These interaction are run for exactly one extension at a time. Therefore we continue
+                //These interactions run for exactly one extension at a time. Therefore we continue
                 //with installing the remaining extensions.
                 continue;
             }

@@ -23,6 +23,7 @@
 
 #include <rtl/character.hxx>
 #include <bitmapwriteaccess.hxx>
+#include <graphic/GraphicReader.hxx>
 
 #include "xbmread.hxx"
 
@@ -50,7 +51,7 @@ class XBMReader : public GraphicReader
                         pHexTable;
     BitmapColor         aWhite;
     BitmapColor         aBlack;
-    long const          nLastPos;
+    long                nLastPos;
     long                nWidth;
     long                nHeight;
     bool                bStatus;
@@ -140,8 +141,8 @@ OString XBMReader::FindTokenLine( SvStream* pInStm, const char* pTok1,
                 {
                     bStatus = false;
 
-                    if( ( ( nPos2 = aRet.indexOf( pTok2 ) ) != -1 ) &&
-                         ( nPos2 > nPos1 ) )
+                    nPos2 = aRet.indexOf( pTok2 );
+                    if( ( nPos2 != -1 ) && ( nPos2 > nPos1 ) )
                     {
                         bStatus = true;
                     }
@@ -207,7 +208,9 @@ void XBMReader::ParseData( SvStream* pInStm, const OString& aLastLine, XBMFormat
             sal_Int32 nPos;
 
             // delete opening curly bracket
-            if( (nPos = ( aLine = aLastLine ).indexOf('{') ) != -1 )
+            aLine = aLastLine;
+            nPos = aLine.indexOf('{');
+            if( nPos != -1 )
                 aLine = aLine.copy(nPos + 1);
 
             bFirstLine = false;
@@ -366,8 +369,8 @@ ReadState XBMReader::ReadXBM( Graphic& rGraphic )
 
 VCL_DLLPUBLIC bool ImportXBM( SvStream& rStm, Graphic& rGraphic )
 {
-    std::shared_ptr<GraphicReader> pContext = rGraphic.GetContext();
-    rGraphic.SetContext(nullptr);
+    std::shared_ptr<GraphicReader> pContext = rGraphic.GetReaderContext();
+    rGraphic.SetReaderContext(nullptr);
     XBMReader* pXBMReader = dynamic_cast<XBMReader*>( pContext.get() );
     if (!pXBMReader)
     {
@@ -384,7 +387,7 @@ VCL_DLLPUBLIC bool ImportXBM( SvStream& rStm, Graphic& rGraphic )
         bRet = false;
     }
     else if( eReadState == XBMREAD_NEED_MORE )
-        rGraphic.SetContext( pContext );
+        rGraphic.SetReaderContext( pContext );
 
     return bRet;
 }

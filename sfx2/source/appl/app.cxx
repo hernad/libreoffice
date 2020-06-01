@@ -19,7 +19,6 @@
 
 #include <config_feature_desktop.h>
 #include <sal/log.hxx>
-#include <osl/module.hxx>
 #include <tools/debug.hxx>
 
 #include <sfx2/app.hxx>
@@ -59,6 +58,8 @@
 #include <memory>
 #include <framework/sfxhelperfunctions.hxx>
 #include <fwkhelper.hxx>
+
+#include "getbasctlfunction.hxx"
 
 using namespace ::com::sun::star;
 
@@ -371,8 +372,6 @@ void SfxApplication::Invalidate( sal_uInt16 nId )
 typedef long (*basicide_handle_basic_error)(void const *);
 typedef void (*basicide_macro_organizer)(void *, sal_Int16);
 
-extern "C" { static void thisModule() {} }
-
 #else
 
 extern "C" long basicide_handle_basic_error(void const*);
@@ -390,17 +389,10 @@ IMPL_STATIC_LINK( SfxApplication, GlobalBasicErrorHdl_Impl, StarBASIC*, pStarBas
 #else
 
 #ifndef DISABLE_DYNLOADING
-    // load basctl module
-    osl::Module aMod;
-    aMod.loadRelative(&thisModule, SVLIBRARY("basctl"));
-
-    // get symbol
-    basicide_handle_basic_error pSymbol = reinterpret_cast<basicide_handle_basic_error>(aMod.getFunctionSymbol("basicide_handle_basic_error"));
-
-    aMod.release();
+    basicide_handle_basic_error pSymbol = reinterpret_cast<basicide_handle_basic_error>(sfx2::getBasctlFunction("basicide_handle_basic_error"));
 
     // call basicide_handle_basic_error in basctl
-    bool bRet = pSymbol && pSymbol( pStarBasic );
+    bool bRet = pSymbol( pStarBasic );
 
 #else
 
@@ -483,18 +475,7 @@ void SfxApplication::MacroOrganizer(weld::Window* pParent, sal_Int16 nTabId)
 #else
 
 #ifndef DISABLE_DYNLOADING
-    // load basctl module
-    osl::Module aMod;
-    aMod.loadRelative(&thisModule, SVLIBRARY("basctl"));
-
-    // get symbol
-    basicide_macro_organizer pSymbol = reinterpret_cast<basicide_macro_organizer>(aMod.getFunctionSymbol("basicide_macro_organizer"));
-
-    aMod.release();
-
-    SAL_WARN_IF(!pSymbol, "sfx.appl", "SfxApplication::MacroOrganizer, no symbol!");
-    if (!pSymbol)
-        return;
+    basicide_macro_organizer pSymbol = reinterpret_cast<basicide_macro_organizer>(sfx2::getBasctlFunction("basicide_macro_organizer"));
 
     // call basicide_macro_organizer in basctl
     pSymbol(pParent, nTabId);

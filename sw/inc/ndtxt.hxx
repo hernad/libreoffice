@@ -21,7 +21,6 @@
 
 #include <cppuhelper/weakref.hxx>
 
-#include "doc.hxx"
 #include "swdllapi.h"
 #include "node.hxx"
 #include "hintids.hxx"
@@ -63,15 +62,17 @@ class SwGrammarMarkUp;
 struct SwDocStat;
 struct SwParaIdleData_Impl;
 enum class ExpandMode;
+enum class SwFieldIds : sal_uInt16;
+class SwField;
 
-namespace sw { namespace mark { enum class RestoreMode; } }
+namespace sw::mark { enum class RestoreMode; }
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace uno {
         template < class > class Sequence;
     }
     namespace text { class XTextContent; }
-} } }
+}
 
 typedef std::set< sal_Int32 > SwSoftPageBreakList;
 
@@ -707,13 +708,6 @@ public:
     /// is the paragraph visible?
     bool IsHiddenByParaField() const
         { return m_pSwpHints && m_pSwpHints->IsHiddenByParaField(); }
-
-    int FieldCanHideParaWeight(SwFieldIds eFieldId) const
-        {
-            return GetDoc()->FieldCanHideParaWeight(eFieldId);
-        }
-    bool FieldHidesPara(const SwField& rField) const
-        { return GetDoc()->FieldHidesPara(rField); }
 
     /// Hidden Paragraph Field:
 

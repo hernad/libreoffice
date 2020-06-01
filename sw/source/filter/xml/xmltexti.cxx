@@ -24,6 +24,7 @@
 #include <com/sun/star/embed/OOoEmbeddedObjectFactory.hpp>
 #include <com/sun/star/embed/XEmbeddedObject.hpp>
 #include <com/sun/star/embed/Aspects.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/task/XInteractionHandler.hpp>
 #include <o3tl/any.hxx>
 #include <rtl/ustrbuf.hxx>
@@ -73,9 +74,9 @@ namespace {
 struct XMLServiceMapEntry_Impl
 {
     const char *sFilterService;
-    sal_Int32 const nFilterServiceLen;
+    sal_Int32   nFilterServiceLen;
 
-    sal_uInt32 const n1;
+    sal_uInt32  n1;
     sal_uInt16  n2, n3;
     sal_uInt8   n4, n5, n6, n7, n8, n9, n10, n11;
 };

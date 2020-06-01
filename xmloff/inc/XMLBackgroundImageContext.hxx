@@ -23,14 +23,14 @@
 #include <com/sun/star/style/GraphicLocation.hpp>
 #include "XMLElementPropertyContext.hxx"
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace io { class XOutputStream; }
-} } }
+}
 
 class XMLBackgroundImageContext final : public XMLElementPropertyContext
 {
     XMLPropertyState aPosProp;
-    sal_Int32 const m_nBitmapModeIdx;
+    sal_Int32 m_nBitmapModeIdx;
     XMLPropertyState aFilterProp;
     XMLPropertyState aTransparencyProp;
 

@@ -52,6 +52,7 @@
 #include <section.hxx>
 #include <charfmt.hxx>
 #include <calbck.hxx>
+#include <frameformats.hxx>
 
 SwUndoFormatAttrHelper::SwUndoFormatAttrHelper( SwFormat& rFormat, bool bSvDrwPt )
     : SwClient( &rFormat )
@@ -772,7 +773,7 @@ void SwUndoAttr::RedoImpl(::sw::UndoRedoContext & rContext)
         }
     }
 
-    if ( m_pRedlineData.get() &&
+    if ( m_pRedlineData &&
          IDocumentRedlineAccess::IsRedlineOn( GetRedlineFlags() ) ) {
         RedlineFlags eOld = rDoc.getIDocumentRedlineAccess().GetRedlineFlags();
         rDoc.getIDocumentRedlineAccess().SetRedlineFlags_intern( eOld & ~RedlineFlags::Ignore );

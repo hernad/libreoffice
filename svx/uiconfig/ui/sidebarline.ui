@@ -25,7 +25,7 @@
             <property name="orientation">vertical</property>
             <property name="spacing">6</property>
             <child>
-              <object class="GtkBox" id="box1">
+              <object class="GtkBox" id="box3">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="spacing">3</property>
@@ -35,7 +35,6 @@
                     <property name="can_focus">False</property>
                     <property name="label" translatable="yes" context="sidebarline|widthlabel">_Line:</property>
                     <property name="use_underline">True</property>
-                    <property name="mnemonic_widget">linestyle</property>
                     <property name="xalign">0</property>
                   </object>
                   <packing>
@@ -47,22 +46,12 @@
                 <child>
                   <object class="GtkToolbar" id="linestyle">
                     <property name="visible">True</property>
-                    <property name="can_focus">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="halign">end</property>
+                    <property name="hexpand">True</property>
                     <property name="toolbar_style">icons</property>
                     <property name="show_arrow">False</property>
                     <property name="icon_size">2</property>
-                    <child>
-                      <object class="GtkMenuToolButton" id=".uno:XLineStyle">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="tooltip_text" translatable="yes" context="sidebarline|linestyle|tooltip_text">Select the style of the line.</property>
-                        <property name="use_underline">True</property>
-                      </object>
-                      <packing>
-                        <property name="expand">False</property>
-                        <property name="homogeneous">False</property>
-                      </packing>
-                    </child>
                     <child>
                       <object class="GtkMenuToolButton" id=".uno:LineEndStyle">
                         <property name="visible">True</property>
@@ -72,6 +61,18 @@
                       </object>
                       <packing>
                         <property name="expand">False</property>
+                        <property name="homogeneous">False</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkMenuToolButton" id=".uno:XLineStyle">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="tooltip_text" translatable="yes" context="sidebarline|linestyle|tooltip_text">Select the style of the line.</property>
+                        <property name="use_underline">True</property>
+                      </object>
+                      <packing>
+                        <property name="expand">True</property>
                         <property name="homogeneous">False</property>
                       </packing>
                     </child>
@@ -93,9 +94,9 @@
               <object class="GtkGrid" id="lineproperties">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="halign">start</property>
-                <property name="row_spacing">6</property>
+                <property name="row_spacing">3</property>
                 <property name="column_spacing">6</property>
+                <property name="column_homogeneous">True</property>
                 <child>
                   <object class="GtkLabel" id="widthlabel">
                     <property name="visible">True</property>
@@ -115,6 +116,7 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="tooltip_text" translatable="yes" context="sidebarline|width|tooltip_text">Select the width of the line.</property>
+                    <property name="halign">end</property>
                     <property name="hexpand">True</property>
                     <property name="toolbar_style">icons</property>
                     <property name="show_arrow">False</property>
@@ -123,6 +125,7 @@
                       <object class="GtkMenuToolButton" id="SelectWidth">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
+                        <property name="halign">end</property>
                         <property name="hexpand">True</property>
                         <property name="use_underline">True</property>
                       </object>
@@ -156,6 +159,7 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="tooltip_text" translatable="yes" context="sidebarline|color|tooltip_text">Select the color of the line.</property>
+                    <property name="halign">end</property>
                     <property name="hexpand">True</property>
                     <property name="toolbar_style">icons</property>
                     <property name="show_arrow">False</property>
@@ -165,6 +169,7 @@
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="tooltip_text" translatable="yes" context="sidebarline|setcolor|tooltip_text">Select the color of the line.</property>
+                        <property name="halign">end</property>
                         <property name="hexpand">True</property>
                         <property name="use_underline">True</property>
                       </object>
@@ -198,7 +203,6 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="tooltip_text" translatable="yes" context="sidebarline|linetransparency|tooltip_text">Specify the transparency of the line.</property>
-                    <property name="halign">start</property>
                     <property name="adjustment">adjustment1</property>
                     <child internal-child="accessible">
                       <object class="AtkObject" id="linetransparency-atkobject">
@@ -216,6 +220,17 @@
                 <property name="expand">False</property>
                 <property name="fill">True</property>
                 <property name="position">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkSeparator">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">2</property>
               </packing>
             </child>
             <child>
@@ -312,7 +327,7 @@
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">True</property>
-                <property name="position">2</property>
+                <property name="position">3</property>
               </packing>
             </child>
           </object>

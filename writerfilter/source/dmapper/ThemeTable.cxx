@@ -17,9 +17,12 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include "TagLogger.hxx"
 #include "ThemeTable.hxx"
 #include <i18nlangtag/languagetag.hxx>
 #include <ooxml/resourceids.hxx>
+
+#include <map>
 
 using namespace com::sun::star;
 
@@ -107,7 +110,7 @@ void ThemeTable::lcl_sprm(Sprm& rSprm)
     case NS_ooxml::LN_CT_BaseStyles_fontScheme:
         {
             writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-            if( pProperties.get())
+            if( pProperties )
                 pProperties->resolve(*this);
     }
     break;
@@ -116,7 +119,7 @@ void ThemeTable::lcl_sprm(Sprm& rSprm)
     {
         writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
         m_pImpl->m_currentFontThemeEntry = std::map<sal_uInt32, OUString>();
-        if( pProperties.get())
+        if( pProperties )
                 pProperties->resolve(*this);
         m_pImpl->m_themeFontMap[nSprmId] = m_pImpl->m_currentFontThemeEntry;
     }
@@ -127,14 +130,14 @@ void ThemeTable::lcl_sprm(Sprm& rSprm)
     {
         m_pImpl->m_currentThemeFontId = nSprmId;
         writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-        if( pProperties.get())
+        if( pProperties )
                 pProperties->resolve(*this);
     }
     break;
     case NS_ooxml::LN_CT_FontCollection_font:
     {
         writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-        if (pProperties.get())
+        if (pProperties )
             pProperties->resolve(*this);
     }
     break;

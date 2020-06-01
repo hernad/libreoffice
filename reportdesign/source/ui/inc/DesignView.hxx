@@ -22,19 +22,12 @@
 #include <dbaccess/dataview.hxx>
 #include <com/sun/star/report/XSection.hpp>
 #include <com/sun/star/report/XReportComponent.hpp>
-#include <vcl/split.hxx>
-#include <vcl/scrbar.hxx>
-#include <com/sun/star/container/XNameContainer.hpp>
-#include <com/sun/star/datatransfer/DataFlavor.hpp>
 #include <tools/link.hxx>
 #include <tools/gen.hxx>
 #include <vcl/timer.hxx>
 #include <vcl/idle.hxx>
-#include <svl/hint.hxx>
 #include <svl/SfxBroadcaster.hxx>
 #include "ReportDefines.hxx"
-#include <svtools/colorcfg.hxx>
-#include <svx/svdedtv.hxx>
 #include <vcl/splitwin.hxx>
 #include "MarkedSection.hxx"
 #include "ScrollHelper.hxx"
@@ -69,8 +62,8 @@ namespace rptui
         Idle                                m_aMarkIdle;
         DlgEdMode                           m_eMode;
         sal_uInt16                          m_eActObj;
-        Size const                          m_aGridSizeCoarse;
-        Size const                          m_aGridSizeFine;
+        Size                                m_aGridSizeCoarse;
+        Size                                m_aGridSizeFine;
         bool                                m_bDeleted;
 
 

@@ -35,6 +35,7 @@
 #include <officecfg/Office/Common.hxx>
 #include <officecfg/Setup.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
+#include <vcl/button.hxx>
 #include <vcl/wrkwin.hxx>
 #include <unotools/moduleoptions.hxx>
 #include <svl/intitem.hxx>
@@ -84,7 +85,7 @@
 #include <framework/framelistanalyzer.hxx>
 #include <shellimpl.hxx>
 
-#include <o3tl/optional.hxx>
+#include <optional>
 
 #include <unotools/configmgr.hxx>
 
@@ -124,6 +125,7 @@ using ::com::sun::star::container::XIndexContainer;
 #include <sfx2/minfitem.hxx>
 #include <sfx2/strings.hrc>
 #include "impviewframe.hxx"
+#include <vcl/commandinfoprovider.hxx>
 #include <vcl/svapp.hxx>
 
 #define ShellClass_SfxViewFrame
@@ -168,13 +170,15 @@ private:
 public:
     SfxQueryOpenAsTemplate(weld::Window* pParent, bool bAllowIgnoreLock, LockFileEntry& rLockData)
         : m_xQueryBox(Application::CreateMessageDialog(pParent, VclMessageType::Question,
-                                                       VclButtonsType::NONE,
-                                                       QueryString(bAllowIgnoreLock, rLockData)))
+                                                       VclButtonsType::NONE, ""))
     {
         m_xQueryBox->add_button(SfxResId(STR_QUERY_OPENASTEMPLATE_OPENCOPY_BTN), RET_YES);
+        bAllowIgnoreLock
+            = bAllowIgnoreLock && officecfg::Office::Common::Misc::AllowOverrideLocking::get();
         if (bAllowIgnoreLock)
             m_xQueryBox->add_button(SfxResId(STR_QUERY_OPENASTEMPLATE_OPEN_BTN), RET_IGNORE);
         m_xQueryBox->add_button(GetStandardText( StandardButtonType::Cancel ), RET_CANCEL);
+        m_xQueryBox->set_primary_text(QueryString(bAllowIgnoreLock, rLockData));
         m_xQueryBox->set_default_response(RET_YES);
     }
     short run() { return m_xQueryBox->run(); }
@@ -287,8 +291,7 @@ void SfxViewFrame::ExecReload_Impl( SfxRequest& rReq )
             if( !pSh || !pSh->HasName() || !(pSh->Get_Impl()->nLoadedFlags & SfxLoadedFlags::MAINDOCUMENT ))
                 break;
 
-            SfxViewShell* pViewSh = GetViewShell();
-            if (pViewSh && pViewSh->isEditDocLocked())
+            if (pSh->isEditDocLocked())
                 break;
 
             // Only change read-only UI and remove info bar when we succeed
@@ -449,7 +452,7 @@ void SfxViewFrame::ExecReload_Impl( SfxRequest& rReq )
                 bool bOK = false;
                 bool bRetryIgnoringLock = false;
                 bool bOpenTemplate = false;
-                o3tl::optional<bool> aOrigROVal;
+                std::optional<bool> aOrigROVal;
                 if (!pVersionItem)
                 {
                     auto pRO = pMed->GetItemSet()->GetItem<SfxBoolItem>(SID_DOC_READONLY, false);
@@ -841,6 +844,9 @@ void SfxViewFrame::ExecReload_Impl( SfxRequest& rReq )
 
                     UpdateDocument_Impl();
 
+                    if (vcl::CommandInfoProvider::GetModuleIdentifier(GetFrame().GetFrameInterface()) == "com.sun.star.text.TextDocument")
+                        sfx2::SfxNotebookBar::ReloadNotebookBar("modules/swriter/ui/");
+
                     try
                     {
                         for (auto const& viewFrame : aViewFrames)
@@ -904,7 +910,7 @@ void SfxViewFrame::StateReload_Impl( SfxItemSet& rSet )
                 const SfxShell *pFSh;
                 if ( !pSh->HasName() ||
                      !( pSh->Get_Impl()->nLoadedFlags &  SfxLoadedFlags::MAINDOCUMENT ) ||
-                     (GetViewShell() && GetViewShell()->isEditDocLocked()) ||
+                     (pSh->isEditDocLocked()) ||
                      ( pSh->GetCreateMode() == SfxObjectCreateMode::EMBEDDED &&
                        ( !(pVSh = pSh->GetViewShell())  ||
                          !(pFSh = pVSh->GetFormShell()) ||
@@ -1080,7 +1086,7 @@ void SfxViewFrame::PopShellAndSubShells_Impl( SfxViewShell& i_rViewShell )
     Thus, by invoking ReleaseObjectShell() and  SetObjectShell() the
     SfxObjectShell can be replaced.
 
-    Between RealeaseObjectShell() and SetObjectShell() can the control not
+    Between ReleaseObjectShell() and SetObjectShell() the control cannot
     be handed over to the system.
 
     [Cross-reference]
@@ -1392,7 +1398,7 @@ void SfxViewFrame::Notify( SfxBroadcaster& /*rBC*/, const SfxHint& rHint )
                         }
 
                         bool showEditDocumentButton = true;
-                        if (m_xObjSh->GetViewShell() && m_xObjSh->GetViewShell()->isEditDocLocked())
+                        if (m_xObjSh->isEditDocLocked())
                             showEditDocumentButton = false;
 
                         if (showEditDocumentButton)
@@ -1405,6 +1411,9 @@ void SfxViewFrame::Notify( SfxBroadcaster& /*rBC*/, const SfxHint& rHint )
                         }
                     }
                 }
+
+                if (vcl::CommandInfoProvider::GetModuleIdentifier(GetFrame().GetFrameInterface()) == "com.sun.star.text.TextDocument")
+                    sfx2::SfxNotebookBar::ReloadNotebookBar("modules/swriter/ui/");
 
                 if (SfxClassificationHelper::IsClassified(m_xObjSh->getDocProperties()))
                 {
@@ -2355,7 +2364,7 @@ void SfxViewFrame::ExecView_Impl
 static bool impl_maxOpenDocCountReached()
 {
     css::uno::Reference< css::uno::XComponentContext > xContext = ::comphelper::getProcessComponentContext();
-    o3tl::optional<sal_Int32> x(officecfg::Office::Common::Misc::MaxOpenDocuments::get(xContext));
+    std::optional<sal_Int32> x(officecfg::Office::Common::Misc::MaxOpenDocuments::get(xContext));
     // NIL means: count of allowed documents = infinite !
     if (!x)
         return false;

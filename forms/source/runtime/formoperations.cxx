@@ -23,12 +23,10 @@
 #include <frm_strings.hxx>
 #include <frm_resource.hxx>
 #include <strings.hrc>
-#include <services.hxx>
 
 #include <com/sun/star/ucb/AlreadyInitializedException.hpp>
 #include <com/sun/star/util/XModifyBroadcaster.hpp>
 #include <com/sun/star/form/runtime/FormFeature.hpp>
-#include <com/sun/star/frame/XFrame.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/lang/DisposedException.hpp>
 #include <com/sun/star/awt/XControl.hpp>
@@ -41,8 +39,8 @@
 #include <com/sun/star/sdb/RowChangeAction.hpp>
 #include <com/sun/star/sdb/OrderDialog.hpp>
 #include <com/sun/star/sdb/FilterDialog.hpp>
-#include <com/sun/star/sdbc/DataType.hpp>
 #include <com/sun/star/sdbc/SQLException.hpp>
+#include <com/sun/star/sdbc/XConnection.hpp>
 #include <com/sun/star/form/XReset.hpp>
 #include <com/sun/star/beans/XMultiPropertySet.hpp>
 #include <com/sun/star/ui/dialogs/XExecutableDialog.hpp>
@@ -60,7 +58,6 @@
 #include <cppuhelper/exc_hlp.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <osl/mutex.hxx>
-#include <sal/macros.h>
 #include <sal/log.hxx>
 #include <tools/debug.hxx>
 
@@ -1026,39 +1023,39 @@ namespace frm
             impl_invalidateAllSupportedFeatures_nothrow( aGuard );
         }
 
-        if ( m_xParser.is() && ( m_xCursor == _rEvent.Source ) )
+        if ( !(m_xParser.is() && ( m_xCursor == _rEvent.Source )) )
+            return;
+
+        try
         {
-            try
+            OUString sNewValue;
+            _rEvent.NewValue >>= sNewValue;
+            if ( _rEvent.PropertyName == PROPERTY_ACTIVECOMMAND )
             {
-                OUString sNewValue;
+                m_xParser->setElementaryQuery( sNewValue );
+            }
+            else if ( _rEvent.PropertyName == PROPERTY_FILTER )
+            {
+                if ( m_xParser->getFilter() != sNewValue )
+                    m_xParser->setFilter( sNewValue );
+            }
+            else if ( _rEvent.PropertyName == PROPERTY_HAVINGCLAUSE )
+            {
+                if ( m_xParser->getHavingClause() != sNewValue )
+                    m_xParser->setHavingClause( sNewValue );
+            }
+            else if ( _rEvent.PropertyName == PROPERTY_SORT )
+            {
                 _rEvent.NewValue >>= sNewValue;
-                if ( _rEvent.PropertyName == PROPERTY_ACTIVECOMMAND )
-                {
-                    m_xParser->setElementaryQuery( sNewValue );
-                }
-                else if ( _rEvent.PropertyName == PROPERTY_FILTER )
-                {
-                    if ( m_xParser->getFilter() != sNewValue )
-                        m_xParser->setFilter( sNewValue );
-                }
-                else if ( _rEvent.PropertyName == PROPERTY_HAVINGCLAUSE )
-                {
-                    if ( m_xParser->getHavingClause() != sNewValue )
-                        m_xParser->setHavingClause( sNewValue );
-                }
-                else if ( _rEvent.PropertyName == PROPERTY_SORT )
-                {
-                    _rEvent.NewValue >>= sNewValue;
-                    if ( m_xParser->getOrder() != sNewValue )
-                        m_xParser->setOrder( sNewValue );
-                }
+                if ( m_xParser->getOrder() != sNewValue )
+                    m_xParser->setOrder( sNewValue );
             }
-            catch( const Exception& )
-            {
-                OSL_FAIL( "FormOperations::propertyChange: caught an exception while updating the parser!" );
-            }
-            impl_invalidateAllSupportedFeatures_nothrow( aGuard );
         }
+        catch( const Exception& )
+        {
+            OSL_FAIL( "FormOperations::propertyChange: caught an exception while updating the parser!" );
+        }
+        impl_invalidateAllSupportedFeatures_nothrow( aGuard );
     }
 
 

@@ -31,15 +31,13 @@
 #include <memory>
 #include <vector>
 
-namespace com { namespace sun { namespace star { namespace sheet {
+namespace com::sun::star::sheet {
     struct DataPilotFieldFilter;
     struct DataPilotTablePositionData;
-}}}}
-
-namespace com { namespace sun { namespace star { namespace sheet { class XDimensionsSupplier; } } } }
-namespace com { namespace sun { namespace star { namespace sheet { struct DataResult; } } } }
-namespace com { namespace sun { namespace star { namespace sheet { struct MemberResult; } } } }
-
+    struct DataResult;
+    struct MemberResult;
+    class XDimensionsSupplier;
+}
 namespace tools { class Rectangle; }
 class ScDocument;
 struct ScDPOutLevelData;
@@ -77,7 +75,7 @@ private:
     SCROW                   nDataStartRow;
     SCCOL                   nTabEndCol;
     SCROW                   nTabEndRow;
-    bool const              bDoFilter:1;
+    bool                    bDoFilter:1;
     bool                    bResultsError:1;
     bool                    bSizesValid:1;
     bool                    bSizeOverflow:1;

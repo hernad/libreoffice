@@ -22,7 +22,7 @@
 #include <svtools/optionsdrawinglayer.hxx>
 #include <svx/svdopath.hxx>
 #include <svx/svdpage.hxx>
-#include <svx/sdr/primitive2d/sdrattributecreator.hxx>
+#include <sdr/primitive2d/sdrattributecreator.hxx>
 #include <basegfx/polygon/b2dpolypolygontools.hxx>
 #include <basegfx/polygon/b2dpolygonclipper.hxx>
 #include <sdr/primitive2d/sdrpathprimitive2d.hxx>
@@ -68,8 +68,8 @@ namespace sdr::contact
         drawinglayer::primitive2d::Primitive2DContainer ViewContactOfSdrPathObj::createViewIndependentPrimitive2DSequence() const
         {
             const SfxItemSet& rItemSet = GetPathObj().GetMergedItemSet();
-            const drawinglayer::attribute::SdrLineFillShadowTextAttribute aAttribute(
-                drawinglayer::primitive2d::createNewSdrLineFillShadowTextAttribute(
+            const drawinglayer::attribute::SdrLineFillEffectsTextAttribute aAttribute(
+                drawinglayer::primitive2d::createNewSdrLineFillEffectsTextAttribute(
                     rItemSet,
                     GetPathObj().getText(0),
                     false));

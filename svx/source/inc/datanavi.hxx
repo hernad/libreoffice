@@ -19,6 +19,7 @@
 #ifndef INCLUDED_SVX_SOURCE_INC_DATANAVI_HXX
 #define INCLUDED_SVX_SOURCE_INC_DATANAVI_HXX
 
+#include <config_options.h>
 #include <vcl/builder.hxx>
 #include <vcl/lstbox.hxx>
 #include <vcl/menubtn.hxx>
@@ -210,8 +211,8 @@ namespace svxform
     class XFormsPage : public TabPage
     {
     private:
-        MethodString const                m_aMethodString;
-        ReplaceString const               m_aReplaceString;
+        MethodString                m_aMethodString;
+        ReplaceString               m_aReplaceString;
 
         VclPtr<ToolBox>             m_pToolBox;
         VclPtr<DataTreeListBox>     m_pItemList;
@@ -226,7 +227,7 @@ namespace svxform
 
         VclPtr<DataNavigatorWindow> m_pNaviWin;
         bool                        m_bHasModel;
-        DataGroupType const               m_eGroup;
+        DataGroupType               m_eGroup;
         // these strings are not valid on the Submission and Binding Page
         // mb: furthermore these are properties of an instance, thus
         // it would be much better to get/set them through the UIHelper
@@ -361,14 +362,13 @@ namespace svxform
         virtual ~DataNavigator() override;
         virtual void dispose() override;
 
-        using Window::Update;
         using                       SfxDockingWindow::StateChanged;
 
         void                        StateChanged( sal_uInt16 nSID, SfxItemState eState,
                                                   const SfxPoolItem* pState ) override;
     };
 
-    class SVXCORE_DLLPUBLIC DataNavigatorManager : public SfxChildWindow
+    class UNLESS_MERGELIBS(SVXCORE_DLLPUBLIC) DataNavigatorManager : public SfxChildWindow
     {
     public:
         SVX_DLLPRIVATE DataNavigatorManager( vcl::Window* pParent, sal_uInt16 nId,
@@ -388,10 +388,10 @@ namespace svxform
 
         ItemNode*           m_pItemNode;
         DataItemType        m_eItemType;
-        OUString const            m_sFL_Element;
-        OUString const            m_sFL_Attribute;
-        OUString const            m_sFL_Binding;
-        OUString const            m_sFT_BindingExp;
+        OUString            m_sFL_Element;
+        OUString            m_sFL_Attribute;
+        OUString            m_sFL_Binding;
+        OUString            m_sFT_BindingExp;
 
         std::unique_ptr<weld::Frame> m_xItemFrame;
         std::unique_ptr<weld::Label> m_xNameFT;
@@ -436,7 +436,7 @@ namespace svxform
     {
     private:
         Idle                           m_aResultIdle;
-        OUString const                       m_sPropertyName;
+        OUString                       m_sPropertyName;
 
         css::uno::Reference< css::xforms::XFormsUIHelper1 >
                                        m_xUIHelper;
@@ -521,10 +521,10 @@ namespace svxform
     class AddSubmissionDialog : public weld::GenericDialogController
     {
     private:
-        MethodString const        m_aMethodString;
-        ReplaceString const       m_aReplaceString;
+        MethodString         m_aMethodString;
+        ReplaceString        m_aReplaceString;
 
-        ItemNode* const     m_pItemNode;
+        ItemNode*            m_pItemNode;
 
         css::uno::Reference< css::xforms::XFormsUIHelper1 >
                             m_xUIHelper;
@@ -584,7 +584,7 @@ namespace svxform
 
         std::unique_ptr<weld::Entry> m_xNameED;
         std::unique_ptr<weld::Label> m_xURLFT;
-        std::unique_ptr<URLBox> m_xURLED;
+        std::unique_ptr<SvtURLBox> m_xURLED;
         std::unique_ptr<weld::Button> m_xFilePickerBtn;
         std::unique_ptr<weld::CheckButton> m_xLinkInstanceCB;
         std::unique_ptr<weld::Label> m_xAltTitle;

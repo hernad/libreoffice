@@ -48,14 +48,14 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <o3tl/optional.hxx>
+#include <optional>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace sheet {
         struct DataPilotFieldFilter;
         struct MemberResult;
     }
-}}}
+}
 
 class ScDPResultMember;
 class ScDPResultData;
@@ -109,7 +109,7 @@ private:
     bool                    bResultOverflow;
     bool                    bPageFiltered;      // set if page field filters have been applied to cache table
 
-    o3tl::optional<OUString> mpGrandTotalName;
+    std::optional<OUString> mpGrandTotalName;
 
     void                    CreateRes_Impl();
     void                    FillMemberResults();
@@ -144,7 +144,7 @@ public:
     ScDPTableData*          GetData()       { return pData; }
     const ScDPTableData*    GetData() const { return pData; }
 
-    const o3tl::optional<OUString> &
+    const std::optional<OUString> &
                             GetGrandTotalName() const;
 
     css::sheet::DataPilotFieldOrientation
@@ -264,12 +264,12 @@ class ScDPDimension : public cppu::WeakImplHelper<
                             css::lang::XServiceInfo >
 {
     ScDPSource*         pSource;
-    long const          nDim;               // dimension index (== column ID)
+    long                nDim;               // dimension index (== column ID)
     rtl::Reference<ScDPHierarchies> mxHierarchies;
     ScGeneralFunction   nFunction;
     OUString            aName;              // if empty, take from source
-    o3tl::optional<OUString> mpLayoutName;
-    o3tl::optional<OUString> mpSubtotalName;
+    std::optional<OUString> mpLayoutName;
+    std::optional<OUString> mpSubtotalName;
     long                nSourceDim;         // >=0 if dup'ed
     css::sheet::DataPilotFieldReference
                         aReferenceValue;    // settings for "show data as" / "displayed value"
@@ -291,8 +291,8 @@ public:
     ScDPDimension*          CreateCloneObject();
     ScDPHierarchies*        GetHierarchiesObject();
 
-    const o3tl::optional<OUString> & GetLayoutName() const;
-    const o3tl::optional<OUString> & GetSubtotalName() const;
+    const std::optional<OUString> & GetLayoutName() const;
+    const std::optional<OUString> & GetSubtotalName() const;
 
                             // XNamed
     virtual OUString SAL_CALL getName() override;
@@ -345,8 +345,8 @@ class ScDPHierarchies : public cppu::WeakImplHelper<
                             css::lang::XServiceInfo >
 {
 private:
-    ScDPSource* const   pSource;
-    long const          nDim;
+    ScDPSource*         pSource;
+    long                nDim;
     //  date columns have 3 hierarchies (flat/quarter/week), other columns only one
     // #i52547# don't offer the incomplete date hierarchy implementation
     static const long   nHierCount = 1;
@@ -381,9 +381,9 @@ class ScDPHierarchy : public cppu::WeakImplHelper<
                             css::lang::XServiceInfo >
 {
 private:
-    ScDPSource* const     pSource;
-    long const            nDim;
-    long const            nHier;
+    ScDPSource*     pSource;
+    long            nDim;
+    long            nHier;
     rtl::Reference<ScDPLevels> mxLevels;
 
 public:
@@ -412,8 +412,8 @@ class ScDPLevels : public cppu::WeakImplHelper<
 {
 private:
     ScDPSource*     pSource;
-    long const      nDim;
-    long const      nHier;
+    long            nDim;
+    long            nHier;
     long            nLevCount;
     std::unique_ptr<rtl::Reference<ScDPLevel>[]>
                     ppLevs;
@@ -449,9 +449,9 @@ class ScDPLevel : public cppu::WeakImplHelper<
 {
 private:
     ScDPSource*                 pSource;
-    long const                        nDim;
-    long const                        nHier;
-    long const                        nLev;
+    long                        nDim;
+    long                        nHier;
+    long                        nLev;
     rtl::Reference<ScDPMembers> mxMembers;
     css::uno::Sequence<sal_Int16> aSubTotals;
     css::sheet::DataPilotFieldSortInfo     aSortInfo;      // stored user settings
@@ -553,7 +553,7 @@ private:
     ScDPSource*     pSource;
     long            nDim;
     long            nHier;
-    long const      nLev;
+    long            nLev;
     long            nMbrCount;
     mutable MembersType maMembers;
     mutable ScDPMembersHashMap aHashMap;
@@ -600,11 +600,11 @@ class ScDPMember : public cppu::WeakImplHelper<
 private:
     ScDPSource*     pSource;
     long            nDim;
-    long const      nHier;
-    long const      nLev;
+    long            nHier;
+    long            nLev;
 
-    SCROW const     mnDataId;
-    o3tl::optional<OUString> mpLayoutName;
+    SCROW           mnDataId;
+    std::optional<OUString> mpLayoutName;
 
     sal_Int32       nPosition;          // manual sorting
     bool            bVisible;
@@ -622,7 +622,7 @@ public:
     SCROW GetItemDataId() const { return mnDataId; }
     bool IsNamedItem(SCROW nIndex) const;
 
-    const o3tl::optional<OUString> & GetLayoutName() const;
+    const std::optional<OUString> & GetLayoutName() const;
     long GetDim() const { return nDim;}
 
     sal_Int32               Compare( const ScDPMember& rOther ) const;      // visible order

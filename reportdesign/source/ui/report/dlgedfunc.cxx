@@ -17,7 +17,6 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 #include <vcl/scrbar.hxx>
-#include <vcl/svapp.hxx>
 #include <vcl/seleng.hxx>
 #include <vcl/ptrstyle.hxx>
 #include <com/sun/star/embed/EmbedStates.hpp>
@@ -26,11 +25,7 @@
 
 #include <svx/svdview.hxx>
 #include <svx/svdpagv.hxx>
-#include <editeng/outlobj.hxx>
-#include <editeng/unolingu.hxx>
 #include <svx/svdetc.hxx>
-#include <editeng/editstat.hxx>
-#include <svx/svdoutl.hxx>
 #include <svx/svddrgmt.hxx>
 #include <svx/svdoashp.hxx>
 #include <svx/svxids.hrc>
@@ -227,17 +222,17 @@ void DlgEdFunc::checkTwoCklicks(const MouseEvent& rMEvt)
     deactivateOle();
 
     const sal_uInt16 nClicks = rMEvt.GetClicks();
-    if ( nClicks == 2 && rMEvt.IsLeft() )
+    if ( !(nClicks == 2 && rMEvt.IsLeft()) )
+        return;
+
+    if ( m_rView.AreObjectsMarked() )
     {
-        if ( m_rView.AreObjectsMarked() )
+        const SdrMarkList& rMarkList = m_rView.GetMarkedObjectList();
+        if (rMarkList.GetMarkCount() == 1)
         {
-            const SdrMarkList& rMarkList = m_rView.GetMarkedObjectList();
-            if (rMarkList.GetMarkCount() == 1)
-            {
-                const SdrMark* pMark = rMarkList.GetMark(0);
-                SdrObject* pObj = pMark->GetMarkedSdrObj();
-                activateOle(pObj);
-            }
+            const SdrMark* pMark = rMarkList.GetMark(0);
+            SdrObject* pObj = pMark->GetMarkedSdrObj();
+            activateOle(pObj);
         }
     }
 }
@@ -376,39 +371,39 @@ bool DlgEdFunc::handleKeyEvent(const KeyEvent& _rEvent)
 
 void DlgEdFunc::activateOle(SdrObject* _pObj)
 {
-    if ( _pObj )
+    if ( !_pObj )
+        return;
+
+    const sal_uInt16 nSdrObjKind = _pObj->GetObjIdentifier();
+
+    //  OLE: activate
+
+    if (nSdrObjKind != OBJ_OLE2)
+        return;
+
+    SdrOle2Obj* pOleObj = dynamic_cast<SdrOle2Obj*>(_pObj);
+    if (!(pOleObj && pOleObj->GetObjRef().is()))
+        return;
+
+    if (m_rView.IsTextEdit())
     {
-        const sal_uInt16 nSdrObjKind = _pObj->GetObjIdentifier();
+        m_rView.SdrEndTextEdit();
+    }
 
-        //  OLE: activate
-
-        if (nSdrObjKind == OBJ_OLE2)
-        {
-            SdrOle2Obj* pOleObj = dynamic_cast<SdrOle2Obj*>(_pObj);
-            if (pOleObj && pOleObj->GetObjRef().is())
-            {
-                if (m_rView.IsTextEdit())
-                {
-                    m_rView.SdrEndTextEdit();
-                }
-
-                pOleObj->AddOwnLightClient();
-                pOleObj->SetWindow(VCLUnoHelper::GetInterface(m_pParent));
-                try
-                {
-                    pOleObj->GetObjRef()->changeState( embed::EmbedStates::UI_ACTIVE );
-                    m_bUiActive = true;
-                    OReportController& rController = m_pParent->getSectionWindow()->getViewsWindow()->getView()->getReportView()->getController();
-                    m_bShowPropertyBrowser = rController.isCommandChecked(SID_SHOW_PROPERTYBROWSER);
-                    if ( m_bShowPropertyBrowser )
-                        rController.executeChecked(SID_SHOW_PROPERTYBROWSER,uno::Sequence< beans::PropertyValue >());
-                }
-                catch( uno::Exception& )
-                {
-                    DBG_UNHANDLED_EXCEPTION("reportdesign");
-                }
-            }
-        }
+    pOleObj->AddOwnLightClient();
+    pOleObj->SetWindow(VCLUnoHelper::GetInterface(m_pParent));
+    try
+    {
+        pOleObj->GetObjRef()->changeState( embed::EmbedStates::UI_ACTIVE );
+        m_bUiActive = true;
+        OReportController& rController = m_pParent->getSectionWindow()->getViewsWindow()->getView()->getReportView()->getController();
+        m_bShowPropertyBrowser = rController.isCommandChecked(SID_SHOW_PROPERTYBROWSER);
+        if ( m_bShowPropertyBrowser )
+            rController.executeChecked(SID_SHOW_PROPERTYBROWSER,uno::Sequence< beans::PropertyValue >());
+    }
+    catch( uno::Exception& )
+    {
+        DBG_UNHANDLED_EXCEPTION("reportdesign");
     }
 }
 
@@ -445,21 +440,21 @@ void DlgEdFunc::deactivateOle(bool _bSelect)
 void DlgEdFunc::colorizeOverlappedObject(SdrObject* _pOverlappedObj)
 {
     OObjectBase* pObj = dynamic_cast<OObjectBase*>(_pOverlappedObj);
-    if ( pObj )
+    if ( !pObj )
+        return;
+
+    const uno::Reference<report::XReportComponent>& xComponent = pObj->getReportComponent();
+    if (xComponent.is() && xComponent != m_xOverlappingObj)
     {
-        const uno::Reference<report::XReportComponent>& xComponent = pObj->getReportComponent();
-        if (xComponent.is() && xComponent != m_xOverlappingObj)
-        {
-            OReportModel& rRptModel(static_cast< OReportModel& >(_pOverlappedObj->getSdrModelFromSdrObject()));
-            OXUndoEnvironment::OUndoEnvLock aLock(rRptModel.GetUndoEnv());
+        OReportModel& rRptModel(static_cast< OReportModel& >(_pOverlappedObj->getSdrModelFromSdrObject()));
+        OXUndoEnvironment::OUndoEnvLock aLock(rRptModel.GetUndoEnv());
 
-            // uncolorize an old object, if there is one
-            unColorizeOverlappedObj();
+        // uncolorize an old object, if there is one
+        unColorizeOverlappedObj();
 
-            m_nOldColor = lcl_setColorOfObject(xComponent, m_nOverlappedControlColor);
-            m_xOverlappingObj = xComponent;
-            m_pOverlappingObj = _pOverlappedObj;
-        }
+        m_nOldColor = lcl_setColorOfObject(xComponent, m_nOverlappedControlColor);
+        m_xOverlappingObj = xComponent;
+        m_pOverlappingObj = _pOverlappedObj;
     }
 }
 
@@ -568,10 +563,12 @@ bool DlgEdFunc::isRectangleHit(const MouseEvent& rMEvt)
         if (rDragStat.GetDragMethod() != nullptr)
         {
             SdrObjListIter aIter(m_pParent->getPage(),SdrIterMode::DeepNoGroups);
-            SdrObject* pObjIter = nullptr;
             // loop through all marked objects and check if there new rect overlapps an old one.
-            while( (pObjIter = aIter.Next()) != nullptr && !bIsSetPoint)
+            for (;;)
             {
+                SdrObject* pObjIter = aIter.Next();
+                if( !pObjIter || bIsSetPoint)
+                    break;
                 if ( m_rView.IsObjMarked(pObjIter)
                      && (dynamic_cast<OUnoObject*>(pObjIter) != nullptr || dynamic_cast<OOle2Obj*>(pObjIter) != nullptr) )
                 {

@@ -71,6 +71,7 @@
 #include "lwppagehint.hxx"
 #include "lwpdivinfo.hxx"
 #include "lwpgrfobj.hxx"
+#include <lwpfilehdr.hxx>
 #include <osl/thread.h>
 #include <sal/log.hxx>
 #include <o3tl/sorted_vector.hxx>
@@ -524,7 +525,7 @@ rtl::Reference<LwpVirtualLayout> LwpHeadLayout::FindEnSuperTableLayout()
 {
     rtl::Reference<LwpVirtualLayout> xLayout(dynamic_cast<LwpVirtualLayout*>(GetChildHead().obj().get()));
     o3tl::sorted_vector<LwpVirtualLayout*> aSeen;
-    while (xLayout.get())
+    while (xLayout)
     {
         aSeen.insert(xLayout.get());
         if (xLayout->GetLayoutType() == LWP_ENDNOTE_SUPERTABLE_LAYOUT)

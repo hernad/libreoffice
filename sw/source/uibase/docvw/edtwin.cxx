@@ -151,7 +151,7 @@ static bool g_bInputLanguageSwitched = false;
 // not currently being pulled open. Unfortunately in MouseButtonDown there
 // is being selected at double/triple click. That selection is completely
 // finished in the Handler and thus can't be distinguished in the Up.
-// To resolve this g_bHoldSelection is set in Down at evaluated in Up.
+// To resolve this g_bHoldSelection is set in Down and evaluated in Up.
 static bool g_bHoldSelection      = false;
 
 bool g_bFrameDrag                   = false;
@@ -196,7 +196,7 @@ static bool lcl_goIntoTextBox(SwEditWin& rEditWin, SwWrtShell& rSh)
 class SwAnchorMarker
 {
     SdrHdl* pHdl;
-    Point const aHdlPos;
+    Point aHdlPos;
     Point aLastPos;
     bool bTopRightHandle;
 public:
@@ -2241,7 +2241,9 @@ KEYINPUT_CHECKTABLE_INSDEL:
                 if( !m_aInBuffer.isEmpty() && ( !bNormalChar || bIsDocReadOnly ))
                     FlushInBuffer();
 
-                if (rSh.HasReadonlySel() && rKeyCode.GetFunction() == KeyFuncType::PASTE)
+                if (rSh.HasReadonlySel()
+                    && (   rKeyCode.GetFunction() == KeyFuncType::PASTE
+                        || rKeyCode.GetFunction() == KeyFuncType::CUT))
                 {
                     auto xInfo(std::make_shared<weld::GenericDialogController>(GetFrameWeld(), "modules/swriter/ui/inforeadonlydialog.ui", "InfoReadonlyDialog"));
                     weld::DialogController::runAsync(xInfo, [](int) {});
@@ -2724,7 +2726,7 @@ void SwEditWin::MouseButtonDown(const MouseEvent& _rMEvt)
     // active inplace client. In that case we have to ignore the mouse
     // button down event. Otherwise we would crash (context menu has been
     // opened by inplace client and we would deactivate the inplace client,
-    // the contex menu is closed by VCL asynchronously which in the end
+    // the context menu is closed by VCL asynchronously which in the end
     // would work on deleted objects or the context menu has no parent anymore)
     SfxInPlaceClient* pIPClient = rSh.GetSfxViewShell()->GetIPClient();
     bool bIsOleActive = ( pIPClient && pIPClient->IsObjectInPlaceActive() );
@@ -3052,7 +3054,7 @@ void SwEditWin::MouseButtonDown(const MouseEvent& _rMEvt)
                                                   pHdl->GetKind() != SdrHdlKind::Anchor_TR;
 
                         if ((rSh.IsInsideSelectedObj(aDocPos) || bHitHandle) &&
-                            !(rMEvt.GetModifier() == KEY_SHIFT && !bHitHandle))
+                            (rMEvt.GetModifier() != KEY_SHIFT || bHitHandle))
                         {
                             rSh.EnterSelFrameMode( &aDocPos );
                             if ( !m_pApplyTempl )
@@ -4216,7 +4218,7 @@ void SwEditWin::MouseMove(const MouseEvent& _rMEvt)
                 {
                     SwRect aRect;
                     sal_Int16 eOrient;
-                    SwFillMode eMode = static_cast<SwFillMode>(rSh.GetViewOptions()->GetShdwCursorFillMode());
+                    SwFillMode eMode = rSh.GetViewOptions()->GetShdwCursorFillMode();
                     if( rSh.GetShadowCursorPos( aDocPt, eMode, aRect, eOrient ))
                     {
                         if( !m_pShadCursor )
@@ -4650,6 +4652,12 @@ void SwEditWin::MouseButtonUp(const MouseEvent& rMEvt)
                             }
                             else if ( IsAttrAtPos::InetAttr == aContentAtPos.eContentAtPos )
                             {
+                                if (comphelper::LibreOfficeKit::isActive())
+                                {
+                                    OUString val((*static_cast<const SwFormatINetFormat*>(aContentAtPos.aFnd.pAttr)).GetValue());
+                                    if (val.startsWith("#"))
+                                        bExecHyperlinks = true;
+                                }
                                 if ( bExecHyperlinks && aContentAtPos.aFnd.pAttr )
                                     rSh.ClickToINetAttr( *static_cast<const SwFormatINetFormat*>(aContentAtPos.aFnd.pAttr), nFilter );
                             }
@@ -4704,7 +4712,7 @@ void SwEditWin::MouseButtonUp(const MouseEvent& rMEvt)
                                     rSh.Undo();
                                 }
                             }
-                            SwFillMode eMode = static_cast<SwFillMode>(rSh.GetViewOptions()->GetShdwCursorFillMode());
+                            SwFillMode eMode = rSh.GetViewOptions()->GetShdwCursorFillMode();
                             rSh.SetShadowCursorPos( aDocPt, eMode );
                         }
                     }
@@ -5356,7 +5364,6 @@ void SwEditWin::Command( const CommandEvent& rCEvt )
             if( m_pQuickHlpData->m_bIsDisplayed )
                 m_pQuickHlpData->Stop( rSh );
 
-            OUString sWord;
             if( rSh.HasDrawView() && rSh.GetDrawView()->IsTextEdit() )
             {
                 bCallBase = false;
@@ -5367,7 +5374,6 @@ void SwEditWin::Command( const CommandEvent& rCEvt )
                 const CommandExtTextInputData* pData = rCEvt.GetExtTextInputData();
                 if( pData )
                 {
-                    sWord = pData->GetText();
                     bCallBase = false;
                     rSh.SetExtTextInputData( *pData );
                 }
@@ -6173,7 +6179,7 @@ bool SwEditWin::IsInHeaderFooter( const Point &rDocPt, FrameControlType &rContro
         if ( rSh.IsShowHeaderFooterSeparator( FrameControlType::Header ) )
         {
             SwFrameControlPtr pControl = rMgr.GetControl( FrameControlType::Header, pPageFrame );
-            if ( pControl.get() && pControl->Contains( aPoint ) )
+            if ( pControl && pControl->Contains( aPoint ) )
             {
                 rControl = FrameControlType::Header;
                 return true;
@@ -6183,7 +6189,7 @@ bool SwEditWin::IsInHeaderFooter( const Point &rDocPt, FrameControlType &rContro
         if ( rSh.IsShowHeaderFooterSeparator( FrameControlType::Footer ) )
         {
             SwFrameControlPtr pControl = rMgr.GetControl( FrameControlType::Footer, pPageFrame );
-            if ( pControl.get() && pControl->Contains( aPoint ) )
+            if ( pControl && pControl->Contains( aPoint ) )
             {
                 rControl = FrameControlType::Footer;
                 return true;

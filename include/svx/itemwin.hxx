@@ -19,26 +19,25 @@
 #ifndef INCLUDED_SVX_ITEMWIN_HXX
 #define INCLUDED_SVX_ITEMWIN_HXX
 
-#include <vcl/field.hxx>
+#include <vcl/InterimItemWindow.hxx>
 #include <svtools/toolbarmenu.hxx>
 #include <svx/dlgctrl.hxx>
 #include <svx/svxdllapi.h>
 
-class XLineWidthItem;
 class SfxObjectShell;
-class SvtValueSet;
+class ValueSet;
 class SvxLineStyleToolBoxControl;
 
 class SvxLineBox final : public WeldToolbarPopup
 {
     rtl::Reference<SvxLineStyleToolBoxControl> mxControl;
-    std::unique_ptr<SvtValueSet> mxLineStyleSet;
+    std::unique_ptr<ValueSet> mxLineStyleSet;
     std::unique_ptr<weld::CustomWeld> mxLineStyleSetWin;
 
     void FillControl();
     void Fill(const XDashListRef &pList);
 
-    DECL_LINK(SelectHdl, SvtValueSet*, void);
+    DECL_LINK(SelectHdl, ValueSet*, void);
 
     virtual void GrabFocus() override;
 
@@ -47,76 +46,18 @@ public:
     virtual ~SvxLineBox() override;
 };
 
-class SVX_DLLPUBLIC SvxMetricField : public MetricField
+namespace SvxFillTypeBox
 {
-    using Window::Update;
+    SVX_DLLPUBLIC void Fill(weld::ComboBox& rListBox);
+}
 
-    OUString        aCurTxt;
-    MapUnit         ePoolUnit;
-    FieldUnit       eDlgUnit;
-    Size            aLogicalSize;
-    css::uno::Reference< css::frame::XFrame > mxFrame;
-
-    static void     ReleaseFocus_Impl();
-
-protected:
-    virtual void    Modify() override;
-
-    virtual bool    PreNotify( NotifyEvent& rNEvt ) override;
-    virtual bool    EventNotify( NotifyEvent& rNEvt ) override;
-    virtual void    DataChanged( const DataChangedEvent& rDCEvt ) override;
-
-public:
-    SvxMetricField( vcl::Window* pParent,
-                    const css::uno::Reference< css::frame::XFrame >& rFrame );
-
-    void            Update( const XLineWidthItem* pItem );
-    void            SetCoreUnit( MapUnit eUnit );
-    void            RefreshDlgUnit();
-};
-
-class SVX_DLLPUBLIC SvxFillTypeBox final : public FillTypeLB
+namespace SvxFillAttrBox
 {
-public:
-    SvxFillTypeBox( vcl::Window* pParent );
-
-    void            Selected() { bSelect = true; }
-    virtual boost::property_tree::ptree DumpAsPropertyTree() override;
-
-private:
-    virtual bool    PreNotify( NotifyEvent& rNEvt ) override;
-    virtual bool    EventNotify( NotifyEvent& rNEvt ) override;
-
-    sal_uInt16      nCurPos;
-    bool            bSelect;
-
-    static void     ReleaseFocus_Impl();
-};
-
-class SVX_DLLPUBLIC SvxFillAttrBox final : public ListBox
-{
-public:
-    SvxFillAttrBox( vcl::Window* pParent );
-
-    void Fill( const XHatchListRef    &pList );
-    void Fill( const XGradientListRef &pList );
-    void Fill( const XBitmapListRef   &pList );
-    void Fill( const XPatternListRef  &pList );
-
-    static void Fill(weld::ComboBox&, const XHatchListRef &pList);
-    static void Fill(weld::ComboBox&, const XGradientListRef &pList);
-    static void Fill(weld::ComboBox&, const XBitmapListRef &pList);
-    static void Fill(weld::ComboBox&, const XPatternListRef &pList);
-
-private:
-    virtual bool    PreNotify( NotifyEvent& rNEvt ) override;
-    virtual bool    EventNotify( NotifyEvent& rNEvt ) override;
-
-    sal_uInt16      nCurPos;
-    BitmapEx        maBitmapEx;
-
-    static void     ReleaseFocus_Impl();
-};
+    SVX_DLLPUBLIC void Fill(weld::ComboBox&, const XHatchListRef &pList);
+    SVX_DLLPUBLIC void Fill(weld::ComboBox&, const XGradientListRef &pList);
+    SVX_DLLPUBLIC void Fill(weld::ComboBox&, const XBitmapListRef &pList);
+    SVX_DLLPUBLIC void Fill(weld::ComboBox&, const XPatternListRef &pList);
+}
 
 #endif // INCLUDED_SVX_ITEMWIN_HXX
 

@@ -48,6 +48,7 @@
 #include <o3tl/any.hxx>
 #include <o3tl/sorted_vector.hxx>
 #include <textboxhelper.hxx>
+#include <SwStyleNameMapper.hxx>
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -482,7 +483,7 @@ class SwXMLTableInfo_Impl
     const SwTable *m_pTable;
     Reference<XTextSection> m_xBaseSection;
     bool m_bBaseSectionValid;
-    sal_uInt32 const m_nPrefix;
+    sal_uInt32 m_nPrefix;
 
 public:
 
@@ -1076,28 +1077,43 @@ void lcl_xmltble_ClearName_Line( SwTableLine* pLine )
 
 void SwXMLExport::ExportTable( const SwTableNode& rTableNd )
 {
-    const SwTable& rTable = rTableNd.GetTable();
-    const SwFrameFormat *pTableFormat = rTable.GetFrameFormat();
-    if( pTableFormat && !pTableFormat->GetName().isEmpty() )
-    {
-        AddAttribute( XML_NAMESPACE_TABLE, XML_NAME, pTableFormat->GetName() );
-        AddAttribute( XML_NAMESPACE_TABLE, XML_STYLE_NAME,
-                      EncodeStyleName( pTableFormat->GetName() ) );
-    }
-
-    // table:template-name=
-    if (!rTable.GetTableStyleName().isEmpty())
-        AddAttribute(XML_NAMESPACE_TABLE, XML_TEMPLATE_NAME, rTable.GetTableStyleName());
-
-    sal_uInt16 nPrefix = XML_NAMESPACE_TABLE;
+    ::std::optional<sal_uInt16> oPrefix = XML_NAMESPACE_TABLE;
     if (const SwFrameFormat* pFlyFormat = rTableNd.GetFlyFormat())
     {
         if (SwTextBoxHelper::isTextBox(pFlyFormat, RES_FLYFRMFMT))
-            nPrefix = XML_NAMESPACE_LO_EXT;
+        {
+            // TODO ODF 1.4 OFFICE-3761
+            if (getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
+            {
+                oPrefix = XML_NAMESPACE_LO_EXT;
+            }
+            else
+            {
+                oPrefix.reset(); // no export to OASIS namespace yet
+            }
+        }
     }
 
+    if (oPrefix)
     {
-        SvXMLElementExport aElem( *this, nPrefix, XML_TABLE, true, true );
+        const SwTable& rTable = rTableNd.GetTable();
+        const SwFrameFormat *pTableFormat = rTable.GetFrameFormat();
+        if (pTableFormat && !pTableFormat->GetName().isEmpty())
+        {
+            AddAttribute(XML_NAMESPACE_TABLE, XML_NAME, pTableFormat->GetName());
+            AddAttribute(XML_NAMESPACE_TABLE, XML_STYLE_NAME,
+                         EncodeStyleName(pTableFormat->GetName()));
+        }
+
+        // table:template-name=
+        if (!rTable.GetTableStyleName().isEmpty())
+        {
+            OUString sStyleName;
+            SwStyleNameMapper::FillProgName(rTable.GetTableStyleName(), sStyleName, SwGetPoolIdFromName::TabStyle);
+            AddAttribute(XML_NAMESPACE_TABLE, XML_TEMPLATE_NAME, sStyleName);
+        }
+
+        SvXMLElementExport aElem(*this, *oPrefix, XML_TABLE, true, true);
 
         // export DDE source (if this is a DDE table)
         if ( dynamic_cast<const SwDDETable*>( &rTable) !=  nullptr )
@@ -1132,7 +1148,7 @@ void SwXMLExport::ExportTable( const SwTableNode& rTableNd )
                                        XML_DDE_SOURCE, true, false);
         }
 
-        SwXMLTableInfo_Impl aTableInfo( &rTable, nPrefix );
+        SwXMLTableInfo_Impl aTableInfo(&rTable, *oPrefix);
         ExportTableLines( rTable.GetTabLines(), aTableInfo, rTable.GetRowsToRepeat() );
 
         for( SwTableLine *pLine : const_cast<SwTable &>(rTable).GetTabLines() )

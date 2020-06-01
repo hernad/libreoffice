@@ -29,6 +29,7 @@
 #include <comphelper/processfactory.hxx>
 #include <comphelper/xmlsechelper.hxx>
 #include <unotools/useroptions.hxx>
+#include <svtools/ctrlbox.hxx>
 #include <svtools/imagemgr.hxx>
 #include <sal/log.hxx>
 #include <osl/diagnose.h>
@@ -805,7 +806,7 @@ void SfxDocumentPage::ImplUpdateSignatures()
     {
         const security::DocumentSignatureInformation& rInfo = aInfos[ 0 ];
         s = utl::GetDateTimeString( rInfo.SignatureDate, rInfo.SignatureTime ) + ", " +
-            comphelper::xmlsec::GetContentPart(rInfo.Signer->getSubjectName());
+            comphelper::xmlsec::GetContentPart(rInfo.Signer->getSubjectName(), rInfo.Signer->getCertificateKind());
     }
     m_xSignedValFt->set_label(s);
 }
@@ -1537,6 +1538,21 @@ CustomPropertiesDateField::CustomPropertiesDateField(SvtCalendarBox* pDateField)
 {
     DateTime aDateTime(DateTime::SYSTEM);
     m_xDateField->set_date(aDateTime);
+}
+
+void CustomPropertiesDateField::set_visible(bool bVisible)
+{
+    m_xDateField->set_visible(bVisible);
+}
+
+Date CustomPropertiesDateField::get_date() const
+{
+    return m_xDateField->get_date();
+}
+
+void CustomPropertiesDateField::set_date(const Date& rDate)
+{
+    m_xDateField->set_date(rDate);
 }
 
 CustomPropertiesDateField::~CustomPropertiesDateField()

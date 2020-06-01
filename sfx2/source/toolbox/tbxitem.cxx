@@ -49,6 +49,7 @@
 #include <toolkit/helper/vclunohelper.hxx>
 #include <tools/globname.hxx>
 
+#include <vcl/InterimItemWindow.hxx>
 #include <sfx2/tbxctrl.hxx>
 #include <sfx2/dispatch.hxx>
 #include <sfx2/msg.hxx>
@@ -56,7 +57,7 @@
 #include <sfx2/viewfrm.hxx>
 #include <sfx2/module.hxx>
 #include <sfx2/app.hxx>
-#include <sfx2/unoctitm.hxx>
+#include <unoctitm.hxx>
 #include <ctrlfactoryimpl.hxx>
 
 using namespace ::com::sun::star;
@@ -560,9 +561,9 @@ void SfxToolBoxControl::CreatePopupWindow()
 {
 }
 
-VclPtr<vcl::Window> SfxToolBoxControl::CreateItemWindow( vcl::Window * )
+VclPtr<InterimItemWindow> SfxToolBoxControl::CreateItemWindow(vcl::Window*)
 {
-    return VclPtr<vcl::Window>();
+    return VclPtr<InterimItemWindow>();
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -23,7 +23,6 @@
 #include <string_view>
 
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#include <com/sun/star/io/XActiveDataSource.hpp>
 #include <com/sun/star/io/TextOutputStream.hpp>
 #include <com/sun/star/ucb/SimpleFileAccess.hpp>
 #include <osl/file.hxx>
@@ -870,7 +869,7 @@ void NameListBase::setName( sal_Int64 nKey, const String& rName )
 
 void NameListBase::includeList( const NameListRef& rxList )
 {
-    if( rxList.get() )
+    if( rxList )
     {
         for (auto const& elem : *rxList)
             maMap[ elem.first ] = elem.second;
@@ -1250,7 +1249,9 @@ void UnitConverter::implIncludeList( const NameListBase& /*rList*/ )
 
 NameListRef NameListWrapper::getNameList( const Config& rCfg ) const
 {
-    return mxList.get() ? mxList : (mxList = rCfg.getNameList( maName ));
+    if (!mxList)
+        mxList = rCfg.getNameList( maName );
+    return mxList;
 }
 
 SharedConfigData::SharedConfigData( const OUString& rFileName,
@@ -1302,7 +1303,7 @@ NameListRef SharedConfigData::getNameList( const OUString& rListName ) const
 
 bool SharedConfigData::implIsValid() const
 {
-    return mbLoaded && mxContext.is() && mxRootStrg.get() && !maSysFileName.isEmpty();
+    return mbLoaded && mxContext.is() && mxRootStrg && !maSysFileName.isEmpty();
 }
 
 void SharedConfigData::implProcessConfigItemStr(
@@ -1347,17 +1348,17 @@ void SharedConfigData::createShortList( const OUString& rData )
 {
     OUStringVector aDataVec;
     StringHelper::convertStringToStringList( aDataVec, rData, false );
-    if( aDataVec.size() >= 3 )
+    if( aDataVec.size() < 3 )
+        return;
+
+    sal_Int64 nStartKey;
+    if( StringHelper::convertStringToInt( nStartKey, aDataVec[ 1 ] ) )
     {
-        sal_Int64 nStartKey;
-        if( StringHelper::convertStringToInt( nStartKey, aDataVec[ 1 ] ) )
+        std::shared_ptr< MultiList > xList = createNameList< MultiList >( aDataVec[ 0 ] );
+        if( xList )
         {
-            std::shared_ptr< MultiList > xList = createNameList< MultiList >( aDataVec[ 0 ] );
-            if( xList.get() )
-            {
-                aDataVec.erase( aDataVec.begin(), aDataVec.begin() + 2 );
-                xList->setNamesFromVec( nStartKey, aDataVec );
-            }
+            aDataVec.erase( aDataVec.begin(), aDataVec.begin() + 2 );
+            xList->setNamesFromVec( nStartKey, aDataVec );
         }
     }
 }
@@ -1366,22 +1367,22 @@ void SharedConfigData::createUnitConverter( const OUString& rData )
 {
     OUStringVector aDataVec;
     StringHelper::convertStringToStringList( aDataVec, rData, false );
-    if( aDataVec.size() >= 2 )
+    if( aDataVec.size() < 2 )
+        return;
+
+    OUString aFactor = aDataVec[ 1 ];
+    bool bRecip = aFactor.startsWith("/");
+    if( bRecip )
+        aFactor = aFactor.copy( 1 );
+    double fFactor;
+    if( StringHelper::convertStringToDouble( fFactor, aFactor ) && (fFactor != 0.0) )
     {
-        OUString aFactor = aDataVec[ 1 ];
-        bool bRecip = aFactor.startsWith("/");
-        if( bRecip )
-            aFactor = aFactor.copy( 1 );
-        double fFactor;
-        if( StringHelper::convertStringToDouble( fFactor, aFactor ) && (fFactor != 0.0) )
+        std::shared_ptr< UnitConverter > xList = createNameList< UnitConverter >( aDataVec[ 0 ] );
+        if( xList )
         {
-            std::shared_ptr< UnitConverter > xList = createNameList< UnitConverter >( aDataVec[ 0 ] );
-            if( xList.get() )
-            {
-                xList->setFactor( bRecip ? (1.0 / fFactor) : fFactor );
-                if( aDataVec.size() >= 3 )
-                    xList->setUnitName( aDataVec[ 2 ] );
-            }
+            xList->setFactor( bRecip ? (1.0 / fFactor) : fFactor );
+            if( aDataVec.size() >= 3 )
+                xList->setUnitName( aDataVec[ 2 ] );
         }
     }
 }
@@ -1408,7 +1409,7 @@ void Config::construct( const char* pcEnvVar, const FilterBase& rFilter )
 
 void Config::construct( const char* pcEnvVar, const Reference< XComponentContext >& rxContext, const StorageRef& rxRootStrg, const OUString& rSysFileName )
 {
-    if( pcEnvVar && rxRootStrg.get() && !rSysFileName.isEmpty() )
+    if( pcEnvVar && rxRootStrg && !rSysFileName.isEmpty() )
         if( const char* pcFileName = ::getenv( pcEnvVar ) )
             mxCfgData = std::make_shared<SharedConfigData>( OUString::createFromAscii( pcFileName ), rxContext, rxRootStrg, rSysFileName );
 }
@@ -1687,7 +1688,7 @@ void Output::writeItemName( const String& rItemName )
 StorageIterator::StorageIterator( const StorageRef& rxStrg ) :
     mxStrg( rxStrg )
 {
-    if( mxStrg.get() )
+    if( mxStrg )
         mxStrg->getElementNames( maNames );
     maIt = maNames.begin();
 }
@@ -1721,12 +1722,12 @@ bool StorageIterator::isStorage() const
     if( !isValid() )
         return false;
     StorageRef xStrg = mxStrg->openSubStorage( *maIt, false );
-    return xStrg.get() && xStrg->isStorage();
+    return xStrg && xStrg->isStorage();
 }
 
 bool StorageIterator::implIsValid() const
 {
-    return mxStrg.get() && mxStrg->isStorage() && (maIt != maNames.end());
+    return mxStrg && mxStrg->isStorage() && (maIt != maNames.end());
 }
 
 ObjectBase::~ObjectBase()
@@ -1777,7 +1778,7 @@ void StorageObjectBase::construct( const ObjectBase& rParent )
 
 bool StorageObjectBase::implIsValid() const
 {
-    return mxStrg.get() && !maSysPath.isEmpty() && ObjectBase::implIsValid();
+    return mxStrg && !maSysPath.isEmpty() && ObjectBase::implIsValid();
 }
 
 void StorageObjectBase::implDump()
@@ -1805,7 +1806,7 @@ void StorageObjectBase::implDump()
     }
     else if( xBaseStrm.is() )
     {
-        BinaryInputStreamRef xInStrm( new BinaryXInputStream( xBaseStrm, false ) );
+        BinaryInputStreamRef xInStrm( std::make_shared<BinaryXInputStream>( xBaseStrm, false ) );
         xInStrm->seekToStart();
         implDumpBaseStream( xInStrm, aSysOutPath );
     }
@@ -2014,7 +2015,7 @@ void InputObjectBase::construct( const InputObjectBase& rParent )
 
 bool InputObjectBase::implIsValid() const
 {
-    return mxStrm.get() && OutputObjectBase::implIsValid();
+    return mxStrm && OutputObjectBase::implIsValid();
 }
 
 void InputObjectBase::skipBlock( sal_Int64 nBytes, bool bShowSize )
@@ -2307,7 +2308,7 @@ void TextStreamObjectBase::construct( const OutputObjectBase& rParent,
 
 bool TextStreamObjectBase::implIsValid() const
 {
-    return InputObjectBase::implIsValid() && mxTextStrm.get();
+    return InputObjectBase::implIsValid() && mxTextStrm;
 }
 
 void TextStreamObjectBase::implDump()
@@ -2317,7 +2318,7 @@ void TextStreamObjectBase::implDump()
 
 void TextStreamObjectBase::constructTextStrmObj( rtl_TextEncoding eTextEnc )
 {
-    if( mxStrm.get() )
+    if( mxStrm )
         mxTextStrm = std::make_shared<TextInputStream>( getContext(), *mxStrm, eTextEnc );
 }
 
@@ -2449,7 +2450,7 @@ void RecordObjectBase::construct( const ObjectBase& rParent,
 
 bool RecordObjectBase::implIsValid() const
 {
-    return mxBaseStrm.get() && InputObjectBase::implIsValid();
+    return mxBaseStrm && InputObjectBase::implIsValid();
 }
 
 void RecordObjectBase::implDump()
@@ -2520,7 +2521,7 @@ void SequenceRecordObjectBase::construct( const ObjectBase& rParent,
         const BinaryInputStreamRef& rxBaseStrm, const OUString& rSysFileName,
         const String& rRecNames, const String& rSimpleRecs )
 {
-    BinaryInputStreamRef xRecStrm( new SequenceInputStream( *mxRecData ) );
+    BinaryInputStreamRef xRecStrm( std::make_shared<SequenceInputStream>( *mxRecData ) );
     RecordObjectBase::construct( rParent, rxBaseStrm, rSysFileName, xRecStrm, rRecNames, rSimpleRecs );
 }
 

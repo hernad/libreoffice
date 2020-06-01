@@ -127,7 +127,7 @@ Reference< XFastContextHandler > SAL_CALL ScXMLExternalRefRowsContext::createFas
     const SvXMLTokenMap& rTokenMap = GetScImport().GetTableRowsElemTokenMap();
     sal_uInt16 nToken = rTokenMap.Get( nElement );
     sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
+        &sax_fastparser::castToFastAttributeList( xAttrList );
 
     switch (nToken)
     {
@@ -182,7 +182,7 @@ Reference< XFastContextHandler > SAL_CALL ScXMLExternalRefRowContext::createFast
     const SvXMLTokenMap& rTokenMap = mrScImport.GetTableRowElemTokenMap();
     sal_uInt16 nToken = rTokenMap.Get( nElement );
     sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
+        &sax_fastparser::castToFastAttributeList( xAttrList );
 
     if (nToken == XML_TOK_TABLE_ROW_CELL || nToken == XML_TOK_TABLE_ROW_COVERED_CELL)
         return new ScXMLExternalRefCellContext(mrScImport, pAttribList, mrExternalRefInfo);
@@ -246,7 +246,7 @@ ScXMLExternalRefCellContext::ScXMLExternalRefCellContext(
                 {
                     XMLTableStylesContext* pStyles = static_cast<XMLTableStylesContext*>(mrScImport.GetAutoStyles());
                     const XMLTableStyleContext* pStyle = static_cast<const XMLTableStyleContext*>(
-                        pStyles->FindStyleChildContext(XML_STYLE_FAMILY_TABLE_CELL, it.toString(), true));
+                        pStyles->FindStyleChildContext(XmlStyleFamily::TABLE_CELL, it.toString(), true));
                     if (pStyle)
                         mnNumberFormat = const_cast<XMLTableStyleContext*>(pStyle)->GetNumberFormat();
                 }

@@ -19,7 +19,6 @@
 
 #include <rtl/math.h>
 
-#include <config_global.h>
 #include <o3tl/safeint.hxx>
 #include <osl/diagnose.h>
 #include <rtl/alloc.h>
@@ -38,11 +37,10 @@
 #include <limits>
 #include <limits.h>
 #include <math.h>
+#include <memory>
 #include <stdlib.h>
 
-#if !HAVE_GCC_BUILTIN_FFS && !defined _WIN32
-    #include <strings.h>
-#endif
+#include <dtoa.h>
 
 static int const n10Count = 16;
 static double const n10s[2][n10Count] = {
@@ -169,9 +167,10 @@ bool isRepresentableInteger(double fAbsValue)
         // XXX loplugin:fpcomparison complains about floating-point comparison
         // for static_cast<double>(nInt) == fAbsValue, though we actually want
         // this here.
-        double fInt;
-        return (nInt <= kMaxInt &&
-                (!((fInt = static_cast< double >(nInt)) < fAbsValue) && !(fInt > fAbsValue)));
+        if (nInt > kMaxInt)
+            return false;
+        double fInt = static_cast< double >(nInt);
+        return !(fInt < fAbsValue) && !(fInt > fAbsValue);
     }
     return false;
 }
@@ -179,14 +178,12 @@ bool isRepresentableInteger(double fAbsValue)
 // Returns 1-based index of least significant bit in a number, or zero if number is zero
 int findFirstSetBit(unsigned n)
 {
-#if HAVE_GCC_BUILTIN_FFS
-    return __builtin_ffs(n);
-#elif defined _WIN32
+#if defined _WIN32
     unsigned long pos;
     unsigned char bNonZero = _BitScanForward(&pos, n);
     return (bNonZero == 0) ? 0 : pos + 1;
 #else
-    return ffs(n);
+    return __builtin_ffs(n);
 #endif
 }
 
@@ -195,7 +192,7 @@ int findFirstSetBit(unsigned n)
  */
 int getBitsInFracPart(double fAbsValue)
 {
-    assert(rtl::math::isFinite(fAbsValue) && fAbsValue >= 0.0);
+    assert(std::isfinite(fAbsValue) && fAbsValue >= 0.0);
     if (fAbsValue == 0.0)
         return 0;
     auto pValParts = reinterpret_cast< const sal_math_Double * >(&fAbsValue);
@@ -233,12 +230,12 @@ void doubleToString(typename T::String ** pResult,
 
     // sign adjustment, instead of testing for fValue<0.0 this will also fetch
     // -0.0
-    bool bSign = rtl::math::isSignBitSet(fValue);
+    bool bSign = std::signbit(fValue);
 
     if (bSign)
         fValue = -fValue;
 
-    if (rtl::math::isNan(fValue))
+    if (std::isnan(fValue))
     {
         // #i112652# XMLSchema-2
         sal_Int32 nCapacity = RTL_CONSTASCII_LENGTH("NaN");
@@ -256,7 +253,7 @@ void doubleToString(typename T::String ** pResult,
     }
 
     bool bHuge = fValue == HUGE_VAL; // g++ 3.0.1 requires it this way...
-    if (bHuge || rtl::math::isInf(fValue))
+    if (bHuge || std::isinf(fValue))
     {
         // #i112652# XMLSchema-2
         sal_Int32 nCapacity = RTL_CONSTASCII_LENGTH("-INF");
@@ -444,7 +441,8 @@ void doubleToString(typename T::String ** pResult,
     // Round the number
     if(nDigits >= 0)
     {
-        if ((fValue += nRoundVal[std::min<sal_Int32>(nDigits, 15)] ) >= 10)
+        fValue += nRoundVal[std::min<sal_Int32>(nDigits, 15)];
+        if (fValue >= 10)
         {
             fValue = 1.0;
             nExp++;
@@ -756,18 +754,6 @@ void SAL_CALL rtl_math_doubleToUString(rtl_uString ** pResult,
 
 namespace {
 
-// if nExp * 10 + nAdd would result in overflow
-bool long10Overflow( long& nExp, int nAdd )
-{
-    if ( nExp > (LONG_MAX/10)
-         || (nExp == (LONG_MAX/10) && nAdd > (LONG_MAX%10)) )
-    {
-        nExp = LONG_MAX;
-        return true;
-    }
-    return false;
-}
-
 template< typename CharT >
 double stringToDouble(CharT const * pBegin, CharT const * pEnd,
                              CharT cDecSeparator, CharT cGroupSeparator,
@@ -821,6 +807,37 @@ double stringToDouble(CharT const * pBegin, CharT const * pEnd,
 
     if (!bDone) // do not recognize e.g. NaN1.23
     {
+        std::unique_ptr<char[]> bufInHeap;
+        std::unique_ptr<const CharT * []> bufInHeapMap;
+        constexpr int bufOnStackSize = 256;
+        char bufOnStack[bufOnStackSize];
+        const CharT* bufOnStackMap[bufOnStackSize];
+        char* buf = bufOnStack;
+        const CharT** bufmap = bufOnStackMap;
+        int bufpos = 0;
+        const size_t bufsize = pEnd - p + (bSign ? 2 : 1);
+        if (bufsize > bufOnStackSize)
+        {
+            bufInHeap = std::make_unique<char[]>(bufsize);
+            bufInHeapMap = std::make_unique<const CharT*[]>(bufsize);
+            buf = bufInHeap.get();
+            bufmap = bufInHeapMap.get();
+        }
+
+        if (bSign)
+        {
+            buf[0] = '-';
+            bufmap[0] = p; // yes, this may be the same pointer as for the next mapping
+            bufpos = 1;
+        }
+        // Put first zero to buffer for strings like "-0"
+        if (p != pEnd && *p == CharT('0'))
+        {
+            buf[bufpos] = '0';
+            bufmap[bufpos] = p;
+            ++bufpos;
+            ++p;
+        }
         // Leading zeros and group separators between digits may be safely
         // ignored. p0 < p implies that there was a leading 0 already,
         // consecutive group separators may not happen as *(p+1) is checked for
@@ -831,17 +848,15 @@ double stringToDouble(CharT const * pBegin, CharT const * pEnd,
             ++p;
         }
 
-        CharT const * pFirstSignificant = ((p > pBegin && *(p-1) == CharT('0')) ? p-1 : p);
-        long nValExp = 0;       // carry along exponent of mantissa
-
         // integer part of mantissa
         for (; p != pEnd; ++p)
         {
             CharT c = *p;
             if (rtl::isAsciiDigit(c))
             {
-                fVal = fVal * 10.0 + static_cast< double >( c - CharT('0') );
-                ++nValExp;
+                buf[bufpos] = static_cast<char>(c);
+                bufmap[bufpos] = p;
+                ++bufpos;
             }
             else if (c != cGroupSeparator)
             {
@@ -858,21 +873,11 @@ double stringToDouble(CharT const * pBegin, CharT const * pEnd,
         // fraction part of mantissa
         if (p != pEnd && *p == cDecSeparator)
         {
+            buf[bufpos] = '.';
+            bufmap[bufpos] = p;
+            ++bufpos;
             ++p;
-            double fFrac = 0.0;
-            long nFracExp = 0;
-            while (p != pEnd && *p == CharT('0'))
-            {
-                --nFracExp;
-                ++p;
-            }
 
-            if (nValExp == 0)
-                nValExp = nFracExp - 1; // no integer part => fraction exponent
-
-            // one decimal digit needs ld(10) ~= 3.32 bits
-            static const int nSigs = (DBL_MANT_DIG / 3) + 1;
-            int nDigs = 0;
             for (; p != pEnd; ++p)
             {
                 CharT c = *p;
@@ -880,122 +885,38 @@ double stringToDouble(CharT const * pBegin, CharT const * pEnd,
                 {
                     break;
                 }
-                if ( nDigs < nSigs )
-                {   // further digits (more than nSigs) don't have any
-                    // significance
-                    fFrac = fFrac * 10.0 + static_cast<double>(c - CharT('0'));
-                    --nFracExp;
-                    ++nDigs;
-                }
-            }
-
-            if (fFrac != 0.0)
-            {
-                fVal += rtl::math::pow10Exp( fFrac, nFracExp );
-            }
-            else if (nValExp < 0)
-            {
-                if (pFirstSignificant + 1 == p)
-                {
-                    // No digit at all, only separator(s) without integer or
-                    // fraction part. Bail out. No number. No error.
-                    if (pStatus)
-                        *pStatus = eStatus;
-
-                    if (pParsedEnd)
-                        *pParsedEnd = pBegin;
-
-                    return fVal;
-                }
-                nValExp = 0;    // no digit other than 0 after decimal point
+                buf[bufpos] = static_cast<char>(c);
+                bufmap[bufpos] = p;
+                ++bufpos;
             }
         }
-
-        if (nValExp > 0)
-            --nValExp;  // started with offset +1 at the first mantissa digit
 
         // Exponent
         if (p != p0 && p != pEnd && (*p == CharT('E') || *p == CharT('e')))
         {
-            CharT const * const pExponent = p;
+            buf[bufpos] = 'E';
+            bufmap[bufpos] = p;
+            ++bufpos;
             ++p;
-            bool bExpSign;
             if (p != pEnd && *p == CharT('-'))
             {
-                bExpSign = true;
+                buf[bufpos] = '-';
+                bufmap[bufpos] = p;
+                ++bufpos;
                 ++p;
             }
-            else
+            else if (p != pEnd && *p == CharT('+'))
+                ++p;
+
+            for (; p != pEnd; ++p)
             {
-                bExpSign = false;
-                if (p != pEnd && *p == CharT('+'))
-                    ++p;
-            }
-            CharT const * const pFirstExpDigit = p;
-            if ( fVal == 0.0 )
-            {   // no matter what follows, zero stays zero, but carry on the
-                // offset
-                while (p != pEnd && rtl::isAsciiDigit(*p))
-                {
-                    ++p;
-                }
+                CharT c = *p;
+                if (!rtl::isAsciiDigit(c))
+                    break;
 
-                if (p == pFirstExpDigit)
-                {   // no digits in exponent, reset end of scan
-                    p = pExponent;
-                }
-            }
-            else
-            {
-                bool bOverflow = false;
-                long nExp = 0;
-                for (; p != pEnd; ++p)
-                {
-                    CharT c = *p;
-                    if (!rtl::isAsciiDigit(c))
-                        break;
-
-                    int i = c - CharT('0');
-
-                    if ( long10Overflow( nExp, i ) )
-                        bOverflow = true;
-                    else
-                        nExp = nExp * 10 + i;
-                }
-
-                if ( nExp )
-                {
-                    if ( bExpSign )
-                        nExp = -nExp;
-
-                    long nAllExp(0);
-                    if (!bOverflow)
-                        bOverflow = o3tl::checked_add(nExp, nValExp, nAllExp);
-                    if ( nAllExp > DBL_MAX_10_EXP || (bOverflow && !bExpSign) )
-                    {   // overflow
-                        fVal = HUGE_VAL;
-                        eStatus = rtl_math_ConversionStatus_OutOfRange;
-                    }
-                    else if ((nAllExp < DBL_MIN_10_EXP) ||
-                             (bOverflow && bExpSign) )
-                    {   // underflow
-                        fVal = 0.0;
-                        eStatus = rtl_math_ConversionStatus_OutOfRange;
-                    }
-                    else if ( nExp > DBL_MAX_10_EXP || nExp < DBL_MIN_10_EXP )
-                    {   // compensate exponents
-                        fVal = rtl::math::pow10Exp( fVal, -nValExp );
-                        fVal = rtl::math::pow10Exp( fVal, nAllExp );
-                    }
-                    else
-                    {
-                        fVal = rtl::math::pow10Exp( fVal, nExp );  // normal
-                    }
-                }
-                else if (p == pFirstExpDigit)
-                {   // no digits in exponent, reset end of scan
-                    p = pExponent;
-                }
+                buf[bufpos] = static_cast<char>(c);
+                bufmap[bufpos] = p;
+                ++bufpos;
             }
         }
         else if (p - p0 == 2 && p != pEnd && p[0] == CharT('#')
@@ -1011,6 +932,7 @@ double stringToDouble(CharT const * pBegin, CharT const * pEnd,
                 // Eat any further digits:
                 while (p != pEnd && rtl::isAsciiDigit(*p))
                     ++p;
+                bDone = true;
             }
             else if (pEnd - p >= 4 && p[1] == CharT('N') && p[2] == CharT('A')
                 && p[3] == CharT('N'))
@@ -1036,7 +958,21 @@ double stringToDouble(CharT const * pBegin, CharT const * pEnd,
                 {
                     ++p;
                 }
+                bDone = true;
             }
+        }
+
+        if (!bDone)
+        {
+            buf[bufpos] = '\0';
+            bufmap[bufpos] = p;
+            char* pCharParseEnd;
+            errno = 0;
+            fVal = strtod_nolocale(buf, &pCharParseEnd);
+            if (errno == ERANGE)
+                eStatus = rtl_math_ConversionStatus_OutOfRange;
+            p = bufmap[pCharParseEnd - buf];
+            bSign = false;
         }
     }
 
@@ -1101,7 +1037,7 @@ double SAL_CALL rtl_math_round(double fValue, int nDecPlaces,
         return std::round( fValue );
 
     // sign adjustment
-    bool bSign = rtl::math::isSignBitSet( fValue );
+    bool bSign = std::signbit( fValue );
     if (bSign)
         fValue = -fValue;
 
@@ -1219,7 +1155,7 @@ double SAL_CALL rtl_math_pow10Exp(double fValue, int nExp) SAL_THROW_EXTERN_C()
 double SAL_CALL rtl_math_approxValue( double fValue ) SAL_THROW_EXTERN_C()
 {
     const double fBigInt = 2199023255552.0; // 2^41 -> only 11 bits left for fractional part, fine as decimal
-    if (fValue == 0.0 || fValue == HUGE_VAL || !::rtl::math::isFinite( fValue) || fValue > fBigInt)
+    if (fValue == 0.0 || fValue == HUGE_VAL || !std::isfinite( fValue) || fValue > fBigInt)
     {
         // We don't handle these conditions.  Bail out.
         return fValue;
@@ -1227,7 +1163,7 @@ double SAL_CALL rtl_math_approxValue( double fValue ) SAL_THROW_EXTERN_C()
 
     double fOrigValue = fValue;
 
-    bool bSign = ::rtl::math::isSignBitSet(fValue);
+    bool bSign = std::signbit(fValue);
     if (bSign)
         fValue = -fValue;
 
@@ -1243,7 +1179,7 @@ double SAL_CALL rtl_math_approxValue( double fValue ) SAL_THROW_EXTERN_C()
     fValue *= fExpValue;
     // If the original value was near DBL_MIN we got an overflow. Restore and
     // bail out.
-    if (!rtl::math::isFinite(fValue))
+    if (!std::isfinite(fValue))
         return fOrigValue;
 
     fValue = rtl_math_round(fValue, 0, rtl_math_RoundingMode_Corrected);
@@ -1251,7 +1187,7 @@ double SAL_CALL rtl_math_approxValue( double fValue ) SAL_THROW_EXTERN_C()
 
     // If the original value was near DBL_MAX we got an overflow. Restore and
     // bail out.
-    if (!rtl::math::isFinite(fValue))
+    if (!std::isfinite(fValue))
         return fOrigValue;
 
     return bSign ? -fValue : fValue;
@@ -1269,10 +1205,14 @@ bool SAL_CALL rtl_math_approxEqual(double a, double b) SAL_THROW_EXTERN_C()
         return false;
 
     const double d = fabs(a - b);
-    if (!rtl::math::isFinite(d))
+    if (!std::isfinite(d))
         return false;   // Nan or Inf involved
 
-    if (d > ((a = fabs(a)) * e44) || d > ((b = fabs(b)) * e44))
+    a = fabs(a);
+    if (d > (a * e44))
+        return false;
+    b = fabs(b);
+    if (d > (b * e44))
         return false;
 
     if (isRepresentableInteger(d) && isRepresentableInteger(a) && isRepresentableInteger(b))

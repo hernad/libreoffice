@@ -47,14 +47,14 @@ CellAppearancePropertyPanel::CellAppearancePropertyPanel(
     vcl::Window* pParent,
     const css::uno::Reference<css::frame::XFrame>& rxFrame,
     SfxBindings* pBindings)
-:   PanelLayout(pParent, "CellAppearancePropertyPanel", "modules/scalc/ui/sidebarcellappearance.ui", rxFrame, true),
+:   PanelLayout(pParent, "CellAppearancePropertyPanel", "modules/scalc/ui/sidebarcellappearance.ui", rxFrame),
 
     mxTBCellBorder(m_xBuilder->weld_toolbar("cellbordertype")),
     mxTBCellBackground(m_xBuilder->weld_toolbar("cellbackgroundcolor")),
-    mxBackColorDispatch(new ToolbarUnoDispatcher(*mxTBCellBackground, rxFrame)),
+    mxBackColorDispatch(new ToolbarUnoDispatcher(*mxTBCellBackground, *m_xBuilder, rxFrame)),
     mxTBLineStyle(m_xBuilder->weld_toolbar("borderlinestyle")),
     mxTBLineColor(m_xBuilder->weld_toolbar("borderlinecolor")),
-    mxLineColorDispatch(new ToolbarUnoDispatcher(*mxTBLineColor, rxFrame)),
+    mxLineColorDispatch(new ToolbarUnoDispatcher(*mxTBLineColor, *m_xBuilder, rxFrame)),
 
     mbCellBorderPopoverCreated(false),
     mbLinePopoverCreated(false),

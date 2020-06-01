@@ -29,14 +29,14 @@
 
 #include <celltypes.hxx>
 
-namespace sdr { namespace properties {
+namespace sdr::properties {
     class TextProperties;
-} }
+}
 
 class OutlinerParaObject;
 
 
-namespace sdr { namespace table {
+namespace sdr::table {
 
 class CellUndo : public SdrUndoAction, public sdr::ObjectUser
 {
@@ -98,7 +98,7 @@ public:
 
 private:
     TableModelRef mxTable;
-    sal_Int32 const mnIndex;
+    sal_Int32 mnIndex;
     RowVector maRows;
     bool mbUndo;
 };
@@ -115,7 +115,7 @@ public:
 
 private:
     TableModelRef mxTable;
-    sal_Int32 const mnIndex;
+    sal_Int32 mnIndex;
     RowVector maRows;
     bool mbUndo;
 };
@@ -132,7 +132,7 @@ public:
 
 private:
     TableModelRef mxTable;
-    sal_Int32 const mnIndex;
+    sal_Int32 mnIndex;
     ColumnVector maColumns;
     CellVector maCells;
     bool mbUndo;
@@ -150,7 +150,7 @@ public:
 
 private:
     TableModelRef mxTable;
-    sal_Int32 const mnIndex;
+    sal_Int32 mnIndex;
     ColumnVector maColumns;
     CellVector maCells;
     bool mbUndo;
@@ -252,7 +252,7 @@ private:
     bool mbHasRedoData;
 };
 
-} }
+}
 
 #endif
 

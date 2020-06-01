@@ -26,14 +26,14 @@
 #include <memory>
 #include <unordered_map>
 
-namespace com { namespace sun { namespace star { namespace lang { struct Locale; } } } }
+namespace com::sun::star::lang { struct Locale; }
 
 struct TransItem;
 
 struct ScCellKeyword
 {
     const char* mpName;
-    OpCode const meOpCode;
+    OpCode      meOpCode;
     const css::lang::Locale& mrLocale;
 
     ScCellKeyword(const char* pName, OpCode eOpCode, const css::lang::Locale& rLocale);

@@ -23,7 +23,6 @@
 #include <comphelper/stl_types.hxx>
 #include "TypeInfo.hxx"
 #include <editeng/svxenum.hxx>
-#include <toolkit/helper/vclunohelper.hxx>
 #include <vcl/taskpanelist.hxx>
 #include <connectivity/dbtools.hxx>
 
@@ -32,7 +31,7 @@
 #define RET_ALL     100
 
 // we only need forward decl here
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
 
     namespace beans     { class XPropertySet;}
     namespace container
@@ -61,8 +60,7 @@ namespace com { namespace sun { namespace star {
     }
     namespace ucb { class XContent; }
     namespace uno { class XComponentContext; }
-
-}}}
+}
 
 namespace svt
 {

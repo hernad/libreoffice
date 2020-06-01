@@ -23,8 +23,8 @@
 #include <com/sun/star/drawing/Direction3D.hpp>
 #include "charttoolsdllapi.hxx"
 
-namespace com { namespace sun { namespace star { namespace chart2 { class XChartType; } } } }
-namespace com { namespace sun { namespace star { namespace chart2 { class XDataSeries; } } } }
+namespace com::sun::star::chart2 { class XChartType; }
+namespace com::sun::star::chart2 { class XDataSeries; }
 
 namespace chart
 {
@@ -46,10 +46,10 @@ public:
     static bool isSupportingStartingAngle(       const css::uno::Reference< css::chart2::XChartType >& xChartType );
     //starting value for bars or baseline for areas for example
     static bool isSupportingBaseValue(           const css::uno::Reference< css::chart2::XChartType >& xChartType );
-    static bool shiftCategoryPosAtXAxisPerDefault(     const css::uno::Reference< css::chart2::XChartType >& xChartType );
     static bool isSupportingAxisPositioning(     const css::uno::Reference< css::chart2::XChartType >& xChartType, sal_Int32 nDimensionCount, sal_Int32 nDimensionIndex );
     static bool isSupportingDateAxis( const css::uno::Reference< css::chart2::XChartType >& xChartType, sal_Int32 nDimensionIndex );
     static bool isSupportingComplexCategory( const css::uno::Reference< css::chart2::XChartType >& xChartType );
+    static bool isSupportingCategoryPositioning( const css::uno::Reference< css::chart2::XChartType >& xChartType, sal_Int32 nDimensionCount );
 
     //returns sequence of css::chart::DataLabelPlacement
     static css::uno::Sequence < sal_Int32 > getSupportedLabelPlacements(

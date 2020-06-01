@@ -28,9 +28,9 @@
 #include <functional>
 #include <memory>
 
-namespace com { namespace sun { namespace star { namespace uno { template <class interface_type> class Reference; } } } }
+namespace com::sun::star::uno { template <class interface_type> class Reference; }
 
-namespace com { namespace sun { namespace star { namespace frame { class XModel; } } } }
+namespace com::sun::star::frame { class XModel; }
 
 class Dialog;
 class BitmapEx;
@@ -125,6 +125,12 @@ protected:
     virtual ~AbstractQrCodeGenDialog() override = default;
 };
 
+class VCL_DLLPUBLIC AbstractAboutDialog : public VclAbstractDialog
+{
+protected:
+    virtual ~AbstractAboutDialog() override = default;
+};
+
 class VCL_DLLPUBLIC AbstractTipOfTheDayDialog : public VclAbstractDialog
 {
 protected:
@@ -172,6 +178,10 @@ public:
     // creates instance of ScreenshotAnnotationDlg from cui
     virtual VclPtr<AbstractScreenshotAnnotationDlg> CreateScreenshotAnnotationDlg(
         weld::Dialog& rParentDialog) = 0;
+
+    // create about dialog
+    virtual VclPtr<AbstractAboutDialog>
+    CreateAboutDialog(weld::Window* pParent) = 0;
 
     // create info dialog to show tip-of-the-day
     virtual VclPtr<AbstractTipOfTheDayDialog>

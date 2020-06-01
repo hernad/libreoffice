@@ -35,6 +35,9 @@
 #include <config_features.h>
 #include <vcl/skia/SkiaHelper.hxx>
 #include <config_skia.h>
+#if HAVE_FEATURE_SKIA
+#include <skia/x11/gdiimpl.hxx>
+#endif
 
 // plugin factory function
 extern "C"
@@ -69,6 +72,9 @@ X11SalInstance::X11SalInstance(std::unique_ptr<SalYieldMutex> pMutex)
 {
     ImplSVData* pSVData = ImplGetSVData();
     pSVData->maAppData.mxToolkitName = OUString("x11");
+#if HAVE_FEATURE_SKIA
+    X11SkiaSalGraphicsImpl::prepareSkia();
+#endif
 }
 
 X11SalInstance::~X11SalInstance()
@@ -166,7 +172,10 @@ bool X11SalInstance::AnyInput(VclInputFlags nType)
         bRet = aInput.bRet;
     }
 #if OSL_DEBUG_LEVEL > 1
-    fprintf( stderr, "AnyInput 0x%x = %s\n", static_cast<unsigned int>(nType), bRet ? "true" : "false" );
+    SAL_INFO("vcl.app", "AnyInput "
+            << std::showbase << std::hex
+            << static_cast<unsigned int>(nType)
+            << " = " << (bRet ? "true" : "false"));
 #endif
     return bRet;
 }

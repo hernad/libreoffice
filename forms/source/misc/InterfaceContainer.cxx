@@ -20,15 +20,16 @@
 
 #include <strings.hrc>
 #include <frm_resource.hxx>
+#include <frm_strings.hxx>
 #include <InterfaceContainer.hxx>
 #include <componenttools.hxx>
 #include <services.hxx>
 
 #include <com/sun/star/beans/XPropertySet.hpp>
-#include <com/sun/star/container/XNamed.hpp>
 #include <com/sun/star/io/WrongFormatException.hpp>
 #include <com/sun/star/io/XMarkableStream.hpp>
 #include <com/sun/star/lang/IndexOutOfBoundsException.hpp>
+#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/lang/ServiceNotRegisteredException.hpp>
 #include <com/sun/star/lang/WrappedTargetRuntimeException.hpp>
 #include <com/sun/star/lang/XComponent.hpp>
@@ -42,7 +43,6 @@
 #include <comphelper/sequence.hxx>
 #include <comphelper/types.hxx>
 #include <cppuhelper/exc_hlp.hxx>
-#include <cppuhelper/queryinterface.hxx>
 #include <tools/debug.hxx>
 #include <tools/diagnose_ex.h>
 #include <sal/log.hxx>
@@ -353,20 +353,21 @@ struct TransformEventTo52Format
 {
     void operator()( ScriptEventDescriptor& _rDescriptor )
     {
-        if ( _rDescriptor.ScriptType == "StarBasic" )
-        {   // it's a starbasic macro
-            sal_Int32 nPrefixLength = _rDescriptor.ScriptCode.indexOf( ':' );
-            if ( 0 <= nPrefixLength )
-            {   // the macro name does not already contain a :
+        if ( _rDescriptor.ScriptType != "StarBasic" )
+            return;
+
+        // it's a starbasic macro
+        sal_Int32 nPrefixLength = _rDescriptor.ScriptCode.indexOf( ':' );
+        if ( 0 <= nPrefixLength )
+        {   // the macro name does not already contain a :
 #ifdef DBG_UTIL
-                const OUString sPrefix = _rDescriptor.ScriptCode.copy( 0, nPrefixLength );
-                DBG_ASSERT( sPrefix == "document"
-                        ||  sPrefix == "application",
-                        "TransformEventTo52Format: invalid (unknown) prefix!" );
+            const OUString sPrefix = _rDescriptor.ScriptCode.copy( 0, nPrefixLength );
+            DBG_ASSERT( sPrefix == "document"
+                    ||  sPrefix == "application",
+                    "TransformEventTo52Format: invalid (unknown) prefix!" );
 #endif
-                // cut the prefix
-                _rDescriptor.ScriptCode = _rDescriptor.ScriptCode.copy( nPrefixLength + 1 );
-            }
+            // cut the prefix
+            _rDescriptor.ScriptCode = _rDescriptor.ScriptCode.copy( nPrefixLength + 1 );
         }
     }
 };
@@ -449,26 +450,26 @@ void SAL_CALL OInterfaceContainer::write( const Reference< XObjectOutputStream >
     // Write length
     _rxOutStream->writeLong(nLen);
 
-    if (nLen)
+    if (!nLen)
+        return;
+
+    // 1. Version
+    _rxOutStream->writeShort(0x0001);
+
+    // 2. Objects
+    for (sal_Int32 i = 0; i < nLen; i++)
     {
-        // 1. Version
-        _rxOutStream->writeShort(0x0001);
-
-        // 2. Objects
-        for (sal_Int32 i = 0; i < nLen; i++)
+        Reference<XPersistObject>  xObj(m_aItems[i], UNO_QUERY);
+        if (xObj.is())
+            _rxOutStream->writeObject(xObj);
+        else
         {
-            Reference<XPersistObject>  xObj(m_aItems[i], UNO_QUERY);
-            if (xObj.is())
-                _rxOutStream->writeObject(xObj);
-            else
-            {
-                // Error
-            }
+            // Error
         }
-
-        // 3. Scripts
-        writeEvents(_rxOutStream);
     }
+
+    // 3. Scripts
+    writeEvents(_rxOutStream);
 }
 
 
@@ -619,47 +620,47 @@ void SAL_CALL OInterfaceContainer::disposing(const css::lang::EventObject& _rSou
             break;
     }
 
-    if ( m_aItems.end() != j )
+    if ( m_aItems.end() == j )
+        return;
+
+    m_aItems.erase(j);
+
+    // look up in, and erase from, m_aMap, too
+    OInterfaceMap::iterator i = m_aMap.begin();
+    while ( i != m_aMap.end() )
     {
-        m_aItems.erase(j);
+        DBG_ASSERT( i->second.get() == Reference< XInterface >( i->second, UNO_QUERY ).get(),
+            "OInterfaceContainer::disposing: map element not normalized!" );
 
-        // look up in, and erase from, m_aMap, too
-        OInterfaceMap::iterator i = m_aMap.begin();
-        while ( i != m_aMap.end() )
+        if ( i->second.get() == xSource.get() )
         {
-            DBG_ASSERT( i->second.get() == Reference< XInterface >( i->second, UNO_QUERY ).get(),
-                "OInterfaceContainer::disposing: map element not normalized!" );
-
-            if ( i->second.get() == xSource.get() )
-            {
-                // found it
-                m_aMap.erase(i);
-                break;
-            }
-
-            ++i;
-
-            DBG_ASSERT( i != m_aMap.end(), "OInterfaceContainer::disposing: inconsistency: the element was in m_aItems, but not in m_aMap!" );
+            // found it
+            m_aMap.erase(i);
+            break;
         }
+
+        ++i;
+
+        DBG_ASSERT( i != m_aMap.end(), "OInterfaceContainer::disposing: inconsistency: the element was in m_aItems, but not in m_aMap!" );
     }
 }
 
 // XPropertyChangeListener
 
 void OInterfaceContainer::propertyChange(const PropertyChangeEvent& evt) {
-    if (evt.PropertyName == PROPERTY_NAME)
-    {
-        ::osl::MutexGuard aGuard( m_rMutex );
-        auto range = m_aMap.equal_range(::comphelper::getString(evt.OldValue));
-        for (auto it = range.first; it != range.second; ++it)
-            if (it->second == evt.Source)
-            {
-                css::uno::Reference<css::uno::XInterface>  xCorrectType(it->second);
-                m_aMap.erase(it);
-                m_aMap.insert(::std::pair<const OUString, css::uno::Reference<css::uno::XInterface> >(::comphelper::getString(evt.NewValue),xCorrectType));
-                break;
-            }
-    }
+    if (evt.PropertyName != PROPERTY_NAME)
+        return;
+
+    ::osl::MutexGuard aGuard( m_rMutex );
+    auto range = m_aMap.equal_range(::comphelper::getString(evt.OldValue));
+    for (auto it = range.first; it != range.second; ++it)
+        if (it->second == evt.Source)
+        {
+            css::uno::Reference<css::uno::XInterface>  xCorrectType(it->second);
+            m_aMap.erase(it);
+            m_aMap.insert(::std::pair<const OUString, css::uno::Reference<css::uno::XInterface> >(::comphelper::getString(evt.NewValue),xCorrectType));
+            break;
+        }
 }
 
 // XElementAccess

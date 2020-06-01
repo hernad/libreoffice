@@ -17,17 +17,14 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_BASEGFX_POLYGON_B2DPOLYPOLYGONCUTTER_HXX
-#define INCLUDED_BASEGFX_POLYGON_B2DPOLYPOLYGONCUTTER_HXX
+#pragma once
 
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 #include <basegfx/basegfxdllapi.h>
 
 
-namespace basegfx
+namespace basegfx::utils
 {
-    namespace utils
-    {
         /** Solve all crossovers (aka self-intersections) in a polyPolygon.
 
             This re-layouts all contained polygons so that the result
@@ -141,10 +138,6 @@ namespace basegfx
         */
         BASEGFX_DLLPUBLIC B2DPolyPolygon mergeToSinglePolyPolygon(const B2DPolyPolygonVector& rInput);
 
-    } // end of namespace utils
-} // end of namespace basegfx
-
-
-#endif // INCLUDED_BASEGFX_POLYGON_B2DPOLYPOLYGONCUTTER_HXX
+} // end of namespace basegfx::utils
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

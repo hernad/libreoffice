@@ -961,6 +961,9 @@ void ScModelObj::setClientVisibleArea(const tools::Rectangle& rRectangle)
 
     // set the PgUp/PgDown offset
     pViewData->ForcePageUpDownOffset(rRectangle.GetHeight());
+
+    // Store the visible area so that we can use at places like shape insertion
+    pViewData->setLOKVisibleArea(rRectangle);
 }
 
 void ScModelObj::setOutlineState(bool bColumn, int nLevel, int nIndex, bool bHidden)
@@ -1075,13 +1078,13 @@ OUString ScModelObj::getPostItsPos()
     return OUString::fromUtf8(aStream.str().c_str());
 }
 
-void ScModelObj::completeFunction(int nIndex)
+void ScModelObj::completeFunction(const OUString& rFunctionName)
 {
     ScInputHandler* pHdl = SC_MOD()->GetInputHdl();
     if (pHdl)
     {
-        assert(nIndex >= 0);
-        pHdl->LOKPasteFunctionData(nIndex);
+        assert(!rFunctionName.isEmpty());
+        pHdl->LOKPasteFunctionData(rFunctionName);
     }
 }
 
@@ -1569,7 +1572,7 @@ sal_Int32 SAL_CALL ScModelObj::getRendererCount(const uno::Any& aSelection,
                 static_cast< sheet::XSpreadsheetDocument* >(this) );
     }
 
-    ScMarkData aMark(GetDocument()->MaxRow(), GetDocument()->MaxCol());
+    ScMarkData aMark(GetDocument()->GetSheetLimits());
     ScPrintSelectionStatus aStatus;
     OUString aPagesStr;
     bool bRenderToGraphic = false;
@@ -1659,7 +1662,7 @@ uno::Sequence<beans::PropertyValue> SAL_CALL ScModelObj::getRenderer( sal_Int32 
                 static_cast< sheet::XSpreadsheetDocument* >(this) );
     }
 
-    ScMarkData aMark(pDocShell->GetDocument().MaxRow(), pDocShell->GetDocument().MaxCol());
+    ScMarkData aMark(pDocShell->GetDocument().GetSheetLimits());
     ScPrintSelectionStatus aStatus;
     OUString aPagesStr;
     // #i115266# if FillRenderMarkData fails, keep nTotalPages at 0, but still handle getRenderer(0) below
@@ -1756,7 +1759,6 @@ uno::Sequence<beans::PropertyValue> SAL_CALL ScModelObj::getRenderer( sal_Int32 
 
         aRange.aStart = ScAddress(nStartCol, nStartRow, nTab);
         aRange.aEnd = ScAddress(nEndCol, nEndRow, nTab);
-        pSelRange = &aRange;
 
         table::CellRangeAddress aRangeAddress( nTab,
                         aRange.aStart.Col(), aRange.aStart.Row(),
@@ -1907,7 +1909,7 @@ void SAL_CALL ScModelObj::render( sal_Int32 nSelRenderer, const uno::Any& aSelec
                 static_cast< sheet::XSpreadsheetDocument* >(this) );
     }
 
-    ScMarkData aMark(pDocShell->GetDocument().MaxRow(), pDocShell->GetDocument().MaxCol());
+    ScMarkData aMark(pDocShell->GetDocument().GetSheetLimits());
     ScPrintSelectionStatus aStatus;
     OUString aPagesStr;
     bool bRenderToGraphic = false;
@@ -2852,14 +2854,14 @@ css::uno::Reference<css::uno::XInterface> ScModelObj::create(
             default: break;
         }
 
-        // #i64497# If a chart is in a temporary document during clipoard paste,
+        // #i64497# If a chart is in a temporary document during clipboard paste,
         // there should be no data provider, so that own data is used
         bool bCreate =
-            ! ( nType == ServiceType::CHDATAPROV &&
-                ( pDocShell->GetCreateMode() == SfxObjectCreateMode::INTERNAL ));
+                ( nType != ServiceType::CHDATAPROV ||
+                ( pDocShell->GetCreateMode() != SfxObjectCreateMode::INTERNAL ));
         // this should never happen, i.e. the temporary document should never be
         // loaded, because this unlinks the data
-        OSL_ASSERT( bCreate );
+        assert(bCreate);
 
         if ( !xRet.is() && bCreate )
         {
@@ -3083,7 +3085,7 @@ void ScModelObj::NotifyChanges( const OUString& rOperation, const ScRangeList& r
     //! separate method with ScMarkData? Then change HasChangesListeners back.
     if ( rOperation == "cell-change" && pDocShell )
     {
-        ScMarkData aMarkData(pDocShell->GetDocument().MaxRow(), pDocShell->GetDocument().MaxCol());
+        ScMarkData aMarkData(pDocShell->GetDocument().GetSheetLimits());
         aMarkData.MarkFromRangeList( rRanges, false );
         ScDocument& rDoc = pDocShell->GetDocument();
         SCTAB nTabCount = rDoc.GetTableCount();
@@ -4451,7 +4453,7 @@ void SAL_CALL ScAnnotationsObj::removeByIndex( sal_Int32 nIndex )
         ScAddress aPos;
         if ( GetAddressByIndex_Impl( nIndex, aPos ) )
         {
-            ScMarkData aMarkData(pDocShell->GetDocument().MaxRow(), pDocShell->GetDocument().MaxCol());
+            ScMarkData aMarkData(pDocShell->GetDocument().GetSheetLimits());
             aMarkData.SelectTable( aPos.Tab(), true );
             aMarkData.SetMultiMarkArea( ScRange(aPos) );
 
@@ -4582,7 +4584,7 @@ void SAL_CALL ScScenariosObj::addNewByName( const OUString& aName,
     SolarMutexGuard aGuard;
     if ( pDocShell )
     {
-        ScMarkData aMarkData(pDocShell->GetDocument().MaxRow(), pDocShell->GetDocument().MaxCol());
+        ScMarkData aMarkData(pDocShell->GetDocument().GetSheetLimits());
         aMarkData.SelectTable( nTab, true );
 
         for (const table::CellRangeAddress& rRange : aRanges)

@@ -165,6 +165,8 @@ void SwXMLExport::ExportStyles_( bool bUsed )
     GetTextParagraphExport()->exportTextStyles( bUsed
                                              ,IsShowProgress()
                                               );
+    collectDataStyles(true);
+    exportDataStyles();
     GetShapeExport()->GetShapeTableExport()->exportTableStyles();
     //page defaults
     GetPageExport()->exportDefaultStyle();
@@ -269,7 +271,7 @@ protected:
 
     virtual void exportStyleAttributes(
             SvXMLAttributeList& rAttrList,
-            sal_Int32 nFamily,
+            XmlStyleFamily nFamily,
             const std::vector< XMLPropertyState >& rProperties,
             const SvXMLExportPropertyMapper& rPropExp
             , const SvXMLUnitConverter& rUnitConverter,
@@ -284,7 +286,7 @@ public:
 
 void SwXMLAutoStylePoolP::exportStyleAttributes(
             SvXMLAttributeList& rAttrList,
-            sal_Int32 nFamily,
+            XmlStyleFamily nFamily,
             const std::vector< XMLPropertyState >& rProperties,
             const SvXMLExportPropertyMapper& rPropExp
             , const SvXMLUnitConverter& rUnitConverter,
@@ -293,7 +295,7 @@ void SwXMLAutoStylePoolP::exportStyleAttributes(
 {
     SvXMLAutoStylePoolP::exportStyleAttributes( rAttrList, nFamily, rProperties, rPropExp, rUnitConverter, rNamespaceMap);
 
-    if( XML_STYLE_FAMILY_TEXT_PARAGRAPH == nFamily )
+    if( XmlStyleFamily::TEXT_PARAGRAPH == nFamily )
     {
         for( const auto& rProperty : rProperties )
         {

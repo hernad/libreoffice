@@ -5476,6 +5476,24 @@ SfxBoolItem HideWhitespace FN_VIEW_HIDE_WHITESPACE
     GroupId = SfxGroupId::View;
 ]
 
+SfxBoolItem ShowWhitespace FN_VIEW_SHOW_WHITESPACE
+
+[
+    AutoUpdate = TRUE,
+    FastCall = FALSE,
+    ReadOnlyDoc = TRUE,
+    Toggle = TRUE,
+    Container = FALSE,
+    RecordAbsolute = FALSE,
+    RecordPerSet;
+
+
+    AccelConfig = TRUE,
+    MenuConfig = TRUE,
+    ToolBoxConfig = TRUE,
+    GroupId = SfxGroupId::View;
+]
+
 SfxBoolItem ShowTrackedChanges FN_REDLINE_SHOW
 
 [
@@ -7906,6 +7924,42 @@ SfxVoidItem DatePickerFormField FN_INSERT_DATE_FORMFIELD
     FastCall = FALSE,
     ReadOnlyDoc = FALSE,
     Toggle = FALSE,
+    Container = FALSE,
+    RecordAbsolute = FALSE,
+    RecordPerSet;
+
+
+    AccelConfig = TRUE,
+    MenuConfig = TRUE,
+    ToolBoxConfig = TRUE,
+    GroupId = SfxGroupId::Controls;
+]
+
+SfxBoolItem ProtectFields FN_PROTECT_FIELDS
+
+[
+    AutoUpdate = TRUE,
+    FastCall = FALSE,
+    ReadOnlyDoc = FALSE,
+    Toggle = TRUE,
+    Container = FALSE,
+    RecordAbsolute = FALSE,
+    RecordPerSet;
+
+
+    AccelConfig = TRUE,
+    MenuConfig = TRUE,
+    ToolBoxConfig = TRUE,
+    GroupId = SfxGroupId::Controls;
+]
+
+SfxBoolItem ProtectBookmarks FN_PROTECT_BOOKMARKS
+
+[
+    AutoUpdate = TRUE,
+    FastCall = FALSE,
+    ReadOnlyDoc = FALSE,
+    Toggle = TRUE,
     Container = FALSE,
     RecordAbsolute = FALSE,
     RecordPerSet;

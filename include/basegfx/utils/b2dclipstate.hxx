@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_BASEGFX_UTILS_B2DCLIPSTATE_HXX
-#define INCLUDED_BASEGFX_UTILS_B2DCLIPSTATE_HXX
+#pragma once
 
 #include <o3tl/cow_wrapper.hxx>
 #include <basegfx/basegfxdllapi.h>
@@ -29,9 +28,10 @@ namespace basegfx
     class B2DRange;
     class B2DPolyPolygon;
     class B2DHomMatrix;
+}
 
-    namespace utils
-    {
+namespace basegfx::utils
+{
         class ImplB2DClipState;
 
         /** This class provides an optimized, symbolic clip state for graphical output
@@ -87,9 +87,6 @@ namespace basegfx
 
             B2DPolyPolygon const & getClipPoly() const;
         };
-    }
 }
-
-#endif // INCLUDED_BASEGFX_UTILS_B2DCLIPSTATE_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

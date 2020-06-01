@@ -38,7 +38,7 @@
 #include <cppuhelper/implbase.hxx>
 #include <rtl/ref.hxx>
 
-namespace com { namespace sun { namespace star { namespace container { class XNamed; } } } }
+namespace com::sun::star::container { class XNamed; }
 
 class ScDocShell;
 class ScNamedRangesObj;
@@ -253,7 +253,7 @@ class ScLabelRangeObj final : public ::cppu::WeakImplHelper<
 {
 private:
     ScDocShell*             pDocShell;
-    bool const              bColumn;
+    bool                    bColumn;
     ScRange                 aRange;         ///< criterion to find range
 
 private:
@@ -286,7 +286,7 @@ class ScLabelRangesObj final : public ::cppu::WeakImplHelper<
 {
 private:
     ScDocShell*             pDocShell;
-    bool const              bColumn;
+    bool                    bColumn;
 
     ScLabelRangeObj*        GetObjectByIndex_Impl(size_t nIndex);
 

@@ -10,6 +10,7 @@
 $(eval $(call gb_UIConfig_UIConfig,svx))
 
 $(eval $(call gb_UIConfig_add_uifiles,svx,\
+	svx/uiconfig/ui/absrecbox \
 	svx/uiconfig/ui/acceptrejectchangesdialog \
 	svx/uiconfig/ui/accessibilitycheckdialog \
 	svx/uiconfig/ui/accessibilitycheckentry \
@@ -20,8 +21,10 @@ $(eval $(call gb_UIConfig_add_uifiles,svx,\
 	svx/uiconfig/ui/addnamespacedialog \
 	svx/uiconfig/ui/addsubmissiondialog \
 	svx/uiconfig/ui/asianphoneticguidedialog \
+	svx/uiconfig/ui/applystylebox \
 	svx/uiconfig/ui/cellmenu \
 	svx/uiconfig/ui/charsetmenu \
+	svx/uiconfig/ui/checkbuttonbox \
 	svx/uiconfig/ui/chineseconversiondialog \
 	svx/uiconfig/ui/chinesedictionary \
 	svx/uiconfig/ui/classificationdialog \
@@ -40,13 +43,16 @@ $(eval $(call gb_UIConfig_add_uifiles,svx,\
 	svx/uiconfig/ui/directionwindow \
 	svx/uiconfig/ui/docking3deffects \
 	svx/uiconfig/ui/dockingcolorreplace \
+	svx/uiconfig/ui/dockingcolorwindow \
 	svx/uiconfig/ui/dockingfontwork \
 	svx/uiconfig/ui/docrecoverybrokendialog \
 	svx/uiconfig/ui/docrecoveryprogressdialog \
 	svx/uiconfig/ui/docrecoveryrecoverdialog \
 	svx/uiconfig/ui/docrecoverysavedialog \
 	svx/uiconfig/ui/extrustiondepthdialog \
+	svx/uiconfig/ui/fillctrlbox \
 	svx/uiconfig/ui/filtermenu \
+	svx/uiconfig/ui/findbox \
 	svx/uiconfig/ui/findreplacedialog \
 	svx/uiconfig/ui/floatingareastyle \
 	svx/uiconfig/ui/floatingcontour \
@@ -59,6 +65,8 @@ $(eval $(call gb_UIConfig_add_uifiles,svx,\
 	svx/uiconfig/ui/fontworkcharacterspacingcontrol \
 	svx/uiconfig/ui/fontworkgallerydialog \
 	svx/uiconfig/ui/fontworkspacingdialog \
+	svx/uiconfig/ui/fontsizebox \
+	svx/uiconfig/ui/fontnamebox \
 	svx/uiconfig/ui/formdatamenu \
 	svx/uiconfig/ui/formfielddialog \
 	svx/uiconfig/ui/formlinkwarndialog \
@@ -67,20 +75,24 @@ $(eval $(call gb_UIConfig_add_uifiles,svx,\
 	svx/uiconfig/ui/functionmenu \
 	svx/uiconfig/ui/gallerymenu1 \
 	svx/uiconfig/ui/gallerymenu2 \
+	svx/uiconfig/ui/grafctrlbox \
+	svx/uiconfig/ui/grafmodebox \
 	svx/uiconfig/ui/headfootformatpage \
 	svx/uiconfig/ui/imapdialog \
 	svx/uiconfig/ui/imapmenu \
+	svx/uiconfig/ui/inspectortextpanel \
 	svx/uiconfig/ui/interimdockparent \
 	svx/uiconfig/ui/interimparent \
+	svx/uiconfig/ui/labelbox \
 	svx/uiconfig/ui/lightingwindow \
 	svx/uiconfig/ui/linkwarndialog \
 	svx/uiconfig/ui/measurewidthbar \
 	svx/uiconfig/ui/medialine \
 	svx/uiconfig/ui/mediaplayback \
 	svx/uiconfig/ui/mediawindow \
+	svx/uiconfig/ui/metricfieldbox \
 	svx/uiconfig/ui/namespacedialog \
 	svx/uiconfig/ui/numberingwindow \
-	svx/uiconfig/ui/oldcolorwindow \
 	svx/uiconfig/ui/optgridpage \
 	svx/uiconfig/ui/paralinespacingcontrol \
 	svx/uiconfig/ui/paralrspacing \
@@ -106,7 +118,9 @@ $(eval $(call gb_UIConfig_add_uifiles,svx,\
 	svx/uiconfig/ui/selectionmenu \
 	svx/uiconfig/ui/sidebararea \
 	svx/uiconfig/ui/sidebarempty \
+	svx/uiconfig/ui/sidebarglow \
 	svx/uiconfig/ui/sidebarshadow \
+	svx/uiconfig/ui/sidebarsoftedge \
 	svx/uiconfig/ui/sidebargallery \
 	svx/uiconfig/ui/sidebargraphic \
 	svx/uiconfig/ui/sidebarline \

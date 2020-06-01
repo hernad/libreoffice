@@ -335,17 +335,17 @@ ErrCode XMLFilter::impl_Import(
         uno::Reference<frame::XModel> const xModel(m_xTargetDoc, uno::UNO_QUERY);
         if( xModel.is() )
         {
-            uno::Sequence< beans::PropertyValue > aModProps = xModel->getArgs();
-            for( sal_Int32 nInd = 0; nInd < aModProps.getLength(); nInd++ )
+            const uno::Sequence< beans::PropertyValue > aModProps = xModel->getArgs();
+            for( beans::PropertyValue const & prop : aModProps )
             {
-                if( aModProps[nInd].Name == "HierarchicalDocumentName" )
+                if( prop.Name == "HierarchicalDocumentName" )
                 {
                     // Actually this argument only has meaning for embedded documents
-                    aModProps[nInd].Value >>= aHierarchName;
+                    prop.Value >>= aHierarchName;
                 }
-                else if( aModProps[nInd].Name == "DocumentBaseURL" )
+                else if( prop.Name == "DocumentBaseURL" )
                 {
-                    aModProps[nInd].Value >>= aBaseUri;
+                    prop.Value >>= aBaseUri;
                 }
             }
         }
@@ -382,15 +382,6 @@ ErrCode XMLFilter::impl_Import(
             : OUString("com.sun.star.comp.Chart.XMLContentImporter"),
             xStorage, xFactory, xGraphicStorageHandler, xImportInfo );
         nWarning = nWarning != ERRCODE_NONE ? nWarning : nContentWarning;
-
-        // import of "content.xml" didn't work - try old "Content.xml" stream
-        if( nContentWarning != ERRCODE_NONE )
-        {
-            nWarning = impl_ImportStream(
-                "Content.xml", // old content stream name
-                "com.sun.star.office.sax.importer.Chart",
-                xStorage, xFactory, xGraphicStorageHandler, xImportInfo );
-        }
     }
     catch (const uno::Exception&)
     {

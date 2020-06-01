@@ -130,21 +130,17 @@ DECLARE_RTFEXPORT_TEST(testFdo42465, "fdo42465.rtf") { CPPUNIT_ASSERT_EQUAL(3, g
 
 DECLARE_RTFEXPORT_TEST(testFdo45187, "fdo45187.rtf")
 {
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDraws = xDrawPageSupplier->getDrawPage();
     // There should be two shapes.
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(2), xDraws->getCount());
+    CPPUNIT_ASSERT_EQUAL(2, getShapes());
 
     // They should be anchored to different paragraphs.
     uno::Reference<text::XTextDocument> xTextDocument(mxComponent, uno::UNO_QUERY);
     uno::Reference<text::XTextRangeCompare> xTextRangeCompare(xTextDocument->getText(),
                                                               uno::UNO_QUERY);
     uno::Reference<text::XTextRange> xAnchor0
-        = uno::Reference<text::XTextContent>(xDraws->getByIndex(0), uno::UNO_QUERY_THROW)
-              ->getAnchor();
+        = uno::Reference<text::XTextContent>(getShape(1), uno::UNO_QUERY_THROW)->getAnchor();
     uno::Reference<text::XTextRange> xAnchor1
-        = uno::Reference<text::XTextContent>(xDraws->getByIndex(1), uno::UNO_QUERY_THROW)
-              ->getAnchor();
+        = uno::Reference<text::XTextContent>(getShape(2), uno::UNO_QUERY_THROW)->getAnchor();
     // Was 0 ("starts at the same position"), should be 1 ("starts before")
     CPPUNIT_ASSERT_EQUAL(sal_Int16(1), xTextRangeCompare->compareRegionStarts(xAnchor0, xAnchor1));
 }
@@ -299,11 +295,11 @@ DECLARE_RTFEXPORT_TEST(testFdo44176, "fdo44176.rtf")
 
 DECLARE_RTFEXPORT_TEST(testFdo39053, "fdo39053.rtf")
 {
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDraws = xDrawPageSupplier->getDrawPage();
+    int nShapes = getShapes();
+    CPPUNIT_ASSERT_EQUAL(1, nShapes);
     int nAsCharacter = 0;
-    for (int i = 0; i < xDraws->getCount(); ++i)
-        if (getProperty<text::TextContentAnchorType>(xDraws->getByIndex(i), "AnchorType")
+    for (int i = 0; i < nShapes; ++i)
+        if (getProperty<text::TextContentAnchorType>(getShape(i + 1), "AnchorType")
             == text::TextContentAnchorType_AS_CHARACTER)
             nAsCharacter++;
     // The image in binary format was ignored.
@@ -442,8 +438,8 @@ DECLARE_RTFEXPORT_TEST(testFdo49659, "fdo49659.rtf")
     CPPUNIT_ASSERT_EQUAL(sal_Int32(2), xIndexAccess->getCount());
 
     // The graphic was also empty
-    uno::Reference<beans::XPropertySet> xGraphic(
-        getProperty<uno::Reference<beans::XPropertySet>>(getShape(1), "Graphic"), uno::UNO_QUERY);
+    uno::Reference<beans::XPropertySet> xGraphic
+        = getProperty<uno::Reference<beans::XPropertySet>>(getShape(1), "Graphic");
     CPPUNIT_ASSERT_EQUAL(graphic::GraphicType::PIXEL,
                          getProperty<sal_Int8>(xGraphic, "GraphicType"));
 }
@@ -469,7 +465,7 @@ DECLARE_RTFEXPORT_TEST(testFdo76633, "fdo76633.rtf")
     CPPUNIT_ASSERT(xShape->supportsService("com.sun.star.text.TextGraphicObject"));
     try
     {
-        uno::Reference<drawing::XShape> xShape2 = getShape(2);
+        getShape(2);
         CPPUNIT_FAIL("exception expected");
     }
     catch (lang::IndexOutOfBoundsException const&)
@@ -599,8 +595,9 @@ DECLARE_RTFEXPORT_TEST(testFdo55493, "fdo55493.rtf")
     CPPUNIT_ASSERT_EQUAL(sal_Int32(3969), xShape->getSize().Width);
 }
 
-DECLARE_RTFEXPORT_TEST(testCopyPastePageStyle, "copypaste-pagestyle.rtf")
+CPPUNIT_TEST_FIXTURE(Test, testCopyPastePageStyle)
 {
+    load(mpTestDocumentPath, "copypaste-pagestyle.rtf");
     // The problem was that RTF import during copy&paste did not ignore page styles.
     // Once we have more copy&paste tests, makes sense to refactor this to some helper method.
     uno::Reference<text::XTextDocument> xTextDocument(mxComponent, uno::UNO_QUERY);
@@ -614,8 +611,9 @@ DECLARE_RTFEXPORT_TEST(testCopyPastePageStyle, "copypaste-pagestyle.rtf")
                          getProperty<sal_Int32>(xPropertySet, "Width")); // Was letter, i.e. 21590
 }
 
-DECLARE_RTFEXPORT_TEST(testCopyPasteFootnote, "copypaste-footnote.rtf")
+CPPUNIT_TEST_FIXTURE(Test, testCopyPasteFootnote)
 {
+    load(mpTestDocumentPath, "copypaste-footnote.rtf");
     // The RTF import did not handle the case when the position wasn't the main document XText, but something different, e.g. a footnote.
     uno::Reference<text::XFootnotesSupplier> xFootnotesSupplier(mxComponent, uno::UNO_QUERY);
     uno::Reference<container::XIndexAccess> xFootnotes = xFootnotesSupplier->getFootnotes();
@@ -625,8 +623,9 @@ DECLARE_RTFEXPORT_TEST(testCopyPasteFootnote, "copypaste-footnote.rtf")
     CPPUNIT_ASSERT_EQUAL(OUString("bbb"), xTextRange->getString());
 }
 
-DECLARE_RTFEXPORT_TEST(testFdo63428, "hello.rtf")
+CPPUNIT_TEST_FIXTURE(Test, testFdo63428)
 {
+    load(mpTestDocumentPath, "hello.rtf");
     // Pasting content that contained an annotation caused a crash.
     uno::Reference<text::XTextDocument> xTextDocument(mxComponent, uno::UNO_QUERY);
     uno::Reference<text::XTextRange> xText = xTextDocument->getText();
@@ -650,8 +649,9 @@ DECLARE_RTFEXPORT_TEST(testFdo69384, "fdo69384-paste.rtf")
     CPPUNIT_ASSERT_EQUAL(68.f, getProperty<float>(xPropertySet, "CharHeight"));
 }
 
-DECLARE_RTFEXPORT_TEST(testFdo69384Inserted, "hello.rtf")
+CPPUNIT_TEST_FIXTURE(Test, testFdo69384Inserted)
 {
+    load(mpTestDocumentPath, "hello.rtf");
     uno::Reference<text::XTextDocument> xTextDocument(mxComponent, uno::UNO_QUERY);
     uno::Reference<text::XTextRange> xText = xTextDocument->getText();
     uno::Reference<text::XTextRange> xEnd = xText->getEnd();
@@ -664,8 +664,9 @@ DECLARE_RTFEXPORT_TEST(testFdo69384Inserted, "hello.rtf")
     CPPUNIT_ASSERT_EQUAL(12.f, getProperty<float>(xPropertySet, "CharHeight"));
 }
 
-DECLARE_RTFEXPORT_TEST(testFdo61193, "hello.rtf")
+CPPUNIT_TEST_FIXTURE(Test, testFdo61193)
 {
+    load(mpTestDocumentPath, "hello.rtf");
     // Pasting content that contained a footnote caused a crash.
     uno::Reference<text::XTextDocument> xTextDocument(mxComponent, uno::UNO_QUERY);
     uno::Reference<text::XTextRange> xText = xTextDocument->getText();
@@ -673,8 +674,9 @@ DECLARE_RTFEXPORT_TEST(testFdo61193, "hello.rtf")
     paste("rtfexport/data/fdo61193.rtf", xEnd);
 }
 
-DECLARE_RTFEXPORT_TEST(testTdf108123, "hello.rtf")
+CPPUNIT_TEST_FIXTURE(Test, testTdf108123)
 {
+    load(mpTestDocumentPath, "hello.rtf");
     // This crashed, the shape push/pop and table manager stack went out of
     // sync -> we tried to de-reference an empty stack.
     uno::Reference<text::XTextDocument> xTextDocument(mxComponent, uno::UNO_QUERY);
@@ -692,20 +694,17 @@ DECLARE_RTFEXPORT_TEST(testShptxtPard, "shptxt-pard.rtf")
 
 DECLARE_RTFEXPORT_TEST(testDoDhgt, "do-dhgt.rtf")
 {
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDraws = xDrawPageSupplier->getDrawPage();
-    for (int i = 0; i < xDraws->getCount(); ++i)
+    int nShapes = getShapes();
+    CPPUNIT_ASSERT_EQUAL(3, nShapes);
+    for (int i = 0; i < nShapes; ++i)
     {
-        sal_Int32 nFillColor = getProperty<sal_Int32>(xDraws->getByIndex(i), "FillColor");
+        sal_Int32 nFillColor = getProperty<sal_Int32>(getShape(i + 1), "FillColor");
         if (nFillColor == 0xc0504d) // red
-            CPPUNIT_ASSERT_EQUAL(sal_Int32(0),
-                                 getProperty<sal_Int32>(xDraws->getByIndex(i), "ZOrder"));
+            CPPUNIT_ASSERT_EQUAL(sal_Int32(0), getProperty<sal_Int32>(getShape(i + 1), "ZOrder"));
         else if (nFillColor == 0x9bbb59) // green
-            CPPUNIT_ASSERT_EQUAL(sal_Int32(1),
-                                 getProperty<sal_Int32>(xDraws->getByIndex(i), "ZOrder"));
+            CPPUNIT_ASSERT_EQUAL(sal_Int32(1), getProperty<sal_Int32>(getShape(i + 1), "ZOrder"));
         else if (nFillColor == 0x4f81bd) // blue
-            CPPUNIT_ASSERT_EQUAL(sal_Int32(2),
-                                 getProperty<sal_Int32>(xDraws->getByIndex(i), "ZOrder"));
+            CPPUNIT_ASSERT_EQUAL(sal_Int32(2), getProperty<sal_Int32>(getShape(i + 1), "ZOrder"));
     }
 }
 
@@ -727,9 +726,7 @@ DECLARE_RTFEXPORT_TEST(testLeftmarginDefault, "leftmargin-default.rtf")
 DECLARE_RTFEXPORT_TEST(testDppolyline, "dppolyline.rtf")
 {
     // This was completely ignored, for now, just make sure we have all 4 lines.
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDraws = xDrawPageSupplier->getDrawPage();
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(4), xDraws->getCount());
+    CPPUNIT_ASSERT_EQUAL(4, getShapes());
 }
 
 DECLARE_RTFEXPORT_TEST(testFdo56512, "fdo56512.rtf")
@@ -799,9 +796,7 @@ DECLARE_RTFEXPORT_TEST(testFdo57678, "fdo57678.rtf")
 DECLARE_RTFEXPORT_TEST(testFdo54612, "fdo54612.rtf")
 {
     // \dpptx without a \dppolycount caused a crash.
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDraws = xDrawPageSupplier->getDrawPage();
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(8), xDraws->getCount());
+    CPPUNIT_ASSERT_EQUAL(8, getShapes());
 }
 
 DECLARE_RTFEXPORT_TEST(testFdo58933, "fdo58933.rtf")
@@ -892,10 +887,8 @@ DECLARE_RTFEXPORT_TEST(testFdo59638, "fdo59638.rtf")
     uno::Sequence<beans::PropertyValue> aProps;
     xLevels->getByIndex(0) >>= aProps; // 1st level
 
-    for (int i = 0; i < aProps.getLength(); ++i)
+    for (beans::PropertyValue const& rProp : std::as_const(aProps))
     {
-        const beans::PropertyValue& rProp = aProps[i];
-
         if (rProp.Name == "BulletChar")
         {
             // Was '*', should be 'o'.

@@ -23,6 +23,7 @@
 #include <vcl/graph.hxx>
 #include <vcl/bitmap.hxx>
 #include <bitmapwriteaccess.hxx>
+#include <graphic/GraphicReader.hxx>
 
 enum class GraphicFilterImportFlags;
 
@@ -50,9 +51,9 @@ class JPEGReader : public GraphicReader
     std::unique_ptr<Bitmap> mpBitmap;
     std::unique_ptr<Bitmap> mpIncompleteAlpha;
 
-    long const          mnLastPos;
+    long                mnLastPos;
     long                mnLastLines;
-    bool const          mbSetLogSize;
+    bool                mbSetLogSize;
 
     Graphic CreateIntermediateGraphic(long nLines);
 

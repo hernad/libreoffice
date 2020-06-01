@@ -25,9 +25,9 @@
 #include <vcl/event.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
-#include <vcl/dialog.hxx>
+#include <vcl/toolkit/dialog.hxx>
 #include <vcl/fixed.hxx>
-#include <vcl/button.hxx>
+#include <vcl/toolkit/button.hxx>
 #include <vcl/salnativewidgets.hxx>
 #include <vcl/edit.hxx>
 #include <vcl/layout.hxx>
@@ -733,51 +733,67 @@ DrawTextFlags PushButton::ImplGetTextStyle( DrawFlags nDrawFlags ) const
     return nTextStyle;
 }
 
-void PushButton::ImplDrawPushButtonContent(OutputDevice* pDev, DrawFlags nDrawFlags,
-                                           const tools::Rectangle& rRect, bool bMenuBtnSep,
+void PushButton::ImplDrawPushButtonContent(OutputDevice *pDev, DrawFlags nDrawFlags,
+                                           const tools::Rectangle &rRect, bool bMenuBtnSep,
                                            DrawButtonFlags nButtonFlags)
 {
-    const StyleSettings&    rStyleSettings = GetSettings().GetStyleSettings();
-    tools::Rectangle               aInRect = rRect;
-    Color                   aColor;
-    DrawTextFlags           nTextStyle = ImplGetTextStyle( nDrawFlags );
-    DrawSymbolFlags         nStyle;
+    const StyleSettings &rStyleSettings = GetSettings().GetStyleSettings();
+    tools::Rectangle aInRect = rRect;
+    Color aColor;
+    DrawTextFlags nTextStyle = ImplGetTextStyle(nDrawFlags);
+    DrawSymbolFlags nStyle;
 
-    if( aInRect.Right() < aInRect.Left() || aInRect.Bottom() < aInRect.Top() )
-        return; // nothing to do
+    if (aInRect.Right() < aInRect.Left() || aInRect.Bottom() < aInRect.Top())
+        return;
 
-    pDev->Push( PushFlags::CLIPREGION );
-    pDev->IntersectClipRegion( aInRect );
+    pDev->Push(PushFlags::CLIPREGION);
+    pDev->IntersectClipRegion(aInRect);
 
-    if ( nDrawFlags & DrawFlags::Mono )
+    if (nDrawFlags & DrawFlags::Mono)
         aColor = COL_BLACK;
-    else if( (nButtonFlags & DrawButtonFlags::Highlight) && IsNativeControlSupported(ControlType::Pushbutton, ControlPart::Entire) )
-    {
-        if (nButtonFlags & DrawButtonFlags::Pressed)
-            aColor = rStyleSettings.GetButtonPressedRolloverTextColor();
-        else
-            aColor = isAction() ? rStyleSettings.GetActionButtonRolloverTextColor()
-                                : rStyleSettings.GetButtonRolloverTextColor();
-    }
-    else if ( IsControlForeground() )
-        aColor = GetControlForeground();
-    else if( nButtonFlags & DrawButtonFlags::Highlight )
-    {
-        if (nButtonFlags & DrawButtonFlags::Pressed)
-            aColor = rStyleSettings.GetButtonPressedRolloverTextColor();
-        else
-            aColor = isAction() ? rStyleSettings.GetActionButtonRolloverTextColor()
-                                : rStyleSettings.GetButtonRolloverTextColor();
-    }
-    else
-    {
-        aColor = isAction() ? ((GetButtonState() & DrawButtonFlags::Default)
-                                   ? rStyleSettings.GetDefaultActionButtonTextColor()
-                                   : rStyleSettings.GetActionButtonTextColor())
-                            : rStyleSettings.GetButtonTextColor();
-    }
 
-    pDev->SetTextColor( aColor );
+    // Button types with possibly different text coloring are flat buttons and regular buttons. Regular buttons may be action
+    // buttons and may have an additional default status. Moreover all buttons may have an additional pressed and rollover
+    // (highlight) status. Pressed buttons are always in rollover status.
+
+    else if (GetStyle() & WB_FLATBUTTON)
+        if (nButtonFlags & DrawButtonFlags::Pressed)
+            aColor = rStyleSettings.GetFlatButtonPressedRolloverTextColor();
+        else if (nButtonFlags & DrawButtonFlags::Highlight)
+            aColor = rStyleSettings.GetFlatButtonRolloverTextColor();
+        else
+            aColor = rStyleSettings.GetFlatButtonTextColor();
+    else
+        if (isAction() && (nButtonFlags & DrawButtonFlags::Default))
+            if (nButtonFlags & DrawButtonFlags::Pressed)
+                aColor = rStyleSettings.GetDefaultActionButtonPressedRolloverTextColor();
+            else if (nButtonFlags & DrawButtonFlags::Highlight)
+                aColor = rStyleSettings.GetDefaultActionButtonRolloverTextColor();
+            else
+                aColor = rStyleSettings.GetDefaultActionButtonTextColor();
+        else if (isAction())
+            if (nButtonFlags & DrawButtonFlags::Pressed)
+                aColor = rStyleSettings.GetActionButtonPressedRolloverTextColor();
+            else if (nButtonFlags & DrawButtonFlags::Highlight)
+                aColor = rStyleSettings.GetActionButtonRolloverTextColor();
+            else
+                aColor = rStyleSettings.GetActionButtonTextColor();
+        else if (nButtonFlags & DrawButtonFlags::Default)
+            if (nButtonFlags & DrawButtonFlags::Pressed)
+                aColor = rStyleSettings.GetDefaultButtonPressedRolloverTextColor();
+            else if (nButtonFlags & DrawButtonFlags::Highlight)
+                aColor = rStyleSettings.GetDefaultButtonRolloverTextColor();
+            else
+                aColor = rStyleSettings.GetDefaultButtonTextColor();
+        else
+            if (nButtonFlags & DrawButtonFlags::Pressed)
+                aColor = rStyleSettings.GetButtonPressedRolloverTextColor();
+            else if (nButtonFlags & DrawButtonFlags::Highlight)
+                aColor = rStyleSettings.GetButtonRolloverTextColor();
+            else
+                aColor = rStyleSettings.GetButtonTextColor();
+
+    pDev->SetTextColor(aColor);
 
     if ( IsEnabled() )
         nStyle = DrawSymbolFlags::NONE;
@@ -1272,11 +1288,11 @@ void PushButton::Paint(vcl::RenderContext& rRenderContext, const tools::Rectangl
     ImplDrawPushButton(rRenderContext);
 }
 
-void PushButton::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize,
+void PushButton::Draw( OutputDevice* pDev, const Point& rPos,
                        DrawFlags nFlags )
 {
     Point       aPos  = pDev->LogicToPixel( rPos );
-    Size        aSize = pDev->LogicToPixel( rSize );
+    Size        aSize = GetSizePixel();
     tools::Rectangle   aRect( aPos, aSize );
     vcl::Font   aFont = GetDrawPixelFont( pDev );
 
@@ -1398,11 +1414,10 @@ void PushButton::DataChanged( const DataChangedEvent& rDCEvt )
 
 bool PushButton::PreNotify( NotifyEvent& rNEvt )
 {
-    const MouseEvent* pMouseEvt = nullptr;
-
-    if( (rNEvt.GetType() == MouseNotifyEvent::MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) != nullptr )
+    if( rNEvt.GetType() == MouseNotifyEvent::MOUSEMOVE )
     {
-        if( pMouseEvt->IsEnterWindow() || pMouseEvt->IsLeaveWindow() )
+        const MouseEvent* pMouseEvt = rNEvt.GetMouseEvent();
+        if( pMouseEvt && (pMouseEvt->IsEnterWindow() || pMouseEvt->IsLeaveWindow()) )
         {
             // trigger redraw as mouse over state has changed
 
@@ -1446,7 +1461,6 @@ bool PushButton::PreNotify( NotifyEvent& rNEvt )
                 else
                 {
                     pBorder->Invalidate( InvalidateFlags::NoErase );
-                    pBorder->Update();
                 }
             }
             else if( (GetStyle() & WB_FLATBUTTON) ||
@@ -2136,6 +2150,10 @@ std::vector< VclPtr<RadioButton> > RadioButton::GetRadioButtonGroup(bool bInclud
         return aGroup;
     }
 
+    std::vector<VclPtr<RadioButton>> aGroup;
+    if (mbUsesExplicitGroup)
+        return aGroup;
+
     //old-school
 
     // go back to first in group;
@@ -2148,7 +2166,6 @@ std::vector< VclPtr<RadioButton> > RadioButton::GetRadioButtonGroup(bool bInclud
         else
             break;
     }
-    std::vector< VclPtr<RadioButton> > aGroup;
     // insert radiobuttons up to next group
     do
     {
@@ -2190,7 +2207,6 @@ void RadioButton::ImplCallClick( bool bGrabFocus, GetFocusFlags nFocusFlags )
     mbChecked = true;
     mpWindowImpl->mnStyle |= WB_TABSTOP;
     Invalidate();
-    Update();
     VclPtr<vcl::Window> xWindow = this;
     if ( mbRadioCheck )
         ImplUncheckAllOther();
@@ -2210,8 +2226,9 @@ void RadioButton::ImplCallClick( bool bGrabFocus, GetFocusFlags nFocusFlags )
     mbStateChanged = false;
 }
 
-RadioButton::RadioButton( vcl::Window* pParent, WinBits nStyle ) :
-    Button( WindowType::RADIOBUTTON )
+RadioButton::RadioButton(vcl::Window* pParent, bool bUsesExplicitGroup, WinBits nStyle)
+    : Button(WindowType::RADIOBUTTON)
+    , mbUsesExplicitGroup(bUsesExplicitGroup)
 {
     ImplInitRadioButtonData();
     ImplInit( pParent, nStyle );
@@ -2239,7 +2256,6 @@ void RadioButton::MouseButtonDown( const MouseEvent& rMEvt )
     {
         GetButtonState() |= DrawButtonFlags::Pressed;
         Invalidate();
-        Update();
         StartTracking();
         return;
     }
@@ -2264,7 +2280,6 @@ void RadioButton::Tracking( const TrackingEvent& rTEvt )
             else
             {
                 Invalidate();
-                Update();
             }
         }
     }
@@ -2276,7 +2291,6 @@ void RadioButton::Tracking( const TrackingEvent& rTEvt )
             {
                 GetButtonState() |= DrawButtonFlags::Pressed;
                 Invalidate();
-                Update();
             }
         }
         else
@@ -2285,7 +2299,6 @@ void RadioButton::Tracking( const TrackingEvent& rTEvt )
             {
                 GetButtonState() &= ~DrawButtonFlags::Pressed;
                 Invalidate();
-                Update();
             }
         }
     }
@@ -2301,14 +2314,12 @@ void RadioButton::KeyInput( const KeyEvent& rKEvt )
         {
             GetButtonState() |= DrawButtonFlags::Pressed;
             Invalidate();
-            Update();
         }
     }
     else if ( (GetButtonState() & DrawButtonFlags::Pressed) && (aKeyCode.GetCode() == KEY_ESCAPE) )
     {
         GetButtonState() &= ~DrawButtonFlags::Pressed;
         Invalidate();
-        Update();
     }
     else
         Button::KeyInput( rKEvt );
@@ -2338,14 +2349,14 @@ void RadioButton::Paint( vcl::RenderContext& rRenderContext, const tools::Rectan
     ImplDrawRadioButton(rRenderContext);
 }
 
-void RadioButton::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize,
+void RadioButton::Draw( OutputDevice* pDev, const Point& rPos,
                         DrawFlags nFlags )
 {
     if ( !maImage )
     {
         MapMode     aResMapMode( MapUnit::Map100thMM );
         Point       aPos  = pDev->LogicToPixel( rPos );
-        Size        aSize = pDev->LogicToPixel( rSize );
+        Size        aSize = GetSizePixel();
         Size        aImageSize = pDev->LogicToPixel( Size( 300, 300 ), aResMapMode );
         Size        aBrd1Size = pDev->LogicToPixel( Size( 20, 20 ), aResMapMode );
         Size        aBrd2Size = pDev->LogicToPixel( Size( 60, 60 ), aResMapMode );
@@ -2431,7 +2442,6 @@ void RadioButton::LoseFocus()
     {
         GetButtonState() &= ~DrawButtonFlags::Pressed;
         Invalidate();
-        Update();
     }
 
     HideFocus();
@@ -2500,11 +2510,10 @@ void RadioButton::DataChanged( const DataChangedEvent& rDCEvt )
 
 bool RadioButton::PreNotify( NotifyEvent& rNEvt )
 {
-    const MouseEvent* pMouseEvt = nullptr;
-
-    if( (rNEvt.GetType() == MouseNotifyEvent::MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) != nullptr )
+    if( rNEvt.GetType() == MouseNotifyEvent::MOUSEMOVE )
     {
-        if( !pMouseEvt->GetButtons() && !pMouseEvt->IsSynthetic() && !pMouseEvt->IsModifierChanged() )
+        const MouseEvent* pMouseEvt = rNEvt.GetMouseEvent();
+        if( pMouseEvt && !pMouseEvt->GetButtons() && !pMouseEvt->IsSynthetic() && !pMouseEvt->IsModifierChanged() )
         {
             // trigger redraw if mouse over state has changed
             if( IsNativeControlSupported(ControlType::Radiobutton, ControlPart::Entire) )
@@ -2771,7 +2780,7 @@ void RadioButton::ImplAdjustNWFSizes()
     Pop();
 }
 
-Size RadioButton::CalcMinimumSize() const
+Size RadioButton::CalcMinimumSize(long nMaxWidth) const
 {
     Size aSize;
     if ( !maImage )
@@ -2795,7 +2804,7 @@ Size RadioButton::CalcMinimumSize() const
     {
         bool bTopImage = (GetStyle() & WB_TOP) != 0;
 
-        Size aTextSize = GetTextRect( tools::Rectangle( Point(), Size( 0x7fffffff, 0x7fffffff ) ),
+        Size aTextSize = GetTextRect( tools::Rectangle( Point(), Size( nMaxWidth > 0 ? nMaxWidth : 0x7fffffff, 0x7fffffff ) ),
                                       aText, FixedText::ImplGetTextStyle( GetStyle() ) ).GetSize();
 
         aSize.AdjustWidth(2 );   // for focus rect
@@ -3076,7 +3085,6 @@ void CheckBox::ImplCheck()
 
     VclPtr<vcl::Window> xWindow = this;
     Invalidate();
-    Update();
     Toggle();
     if ( xWindow->IsDisposed() )
         return;
@@ -3096,7 +3104,6 @@ void CheckBox::MouseButtonDown( const MouseEvent& rMEvt )
     {
         GetButtonState() |= DrawButtonFlags::Pressed;
         Invalidate();
-        Update();
         StartTracking();
         return;
     }
@@ -3121,7 +3128,6 @@ void CheckBox::Tracking( const TrackingEvent& rTEvt )
             else
             {
                 Invalidate();
-                Update();
             }
         }
     }
@@ -3133,7 +3139,6 @@ void CheckBox::Tracking( const TrackingEvent& rTEvt )
             {
                 GetButtonState() |= DrawButtonFlags::Pressed;
                 Invalidate();
-                Update();
             }
         }
         else
@@ -3142,7 +3147,6 @@ void CheckBox::Tracking( const TrackingEvent& rTEvt )
             {
                 GetButtonState() &= ~DrawButtonFlags::Pressed;
                 Invalidate();
-                Update();
             }
         }
     }
@@ -3158,14 +3162,12 @@ void CheckBox::KeyInput( const KeyEvent& rKEvt )
         {
             GetButtonState() |= DrawButtonFlags::Pressed;
             Invalidate();
-            Update();
         }
     }
     else if ( (GetButtonState() & DrawButtonFlags::Pressed) && (aKeyCode.GetCode() == KEY_ESCAPE) )
     {
         GetButtonState() &= ~DrawButtonFlags::Pressed;
         Invalidate();
-        Update();
     }
     else
         Button::KeyInput( rKEvt );
@@ -3195,12 +3197,12 @@ void CheckBox::Paint(vcl::RenderContext& rRenderContext, const tools::Rectangle&
     ImplDrawCheckBox(rRenderContext);
 }
 
-void CheckBox::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize,
+void CheckBox::Draw( OutputDevice* pDev, const Point& rPos,
                      DrawFlags nFlags )
 {
     MapMode     aResMapMode( MapUnit::Map100thMM );
     Point       aPos  = pDev->LogicToPixel( rPos );
-    Size        aSize = pDev->LogicToPixel( rSize );
+    Size        aSize = GetSizePixel();
     Size        aImageSize = pDev->LogicToPixel( Size( 300, 300 ), aResMapMode );
     Size        aBrd1Size = pDev->LogicToPixel( Size( 20, 20 ), aResMapMode );
     Size        aBrd2Size = pDev->LogicToPixel( Size( 30, 30 ), aResMapMode );
@@ -3315,7 +3317,7 @@ void CheckBox::GetFocus()
         Invalidate();
         // Trigger drawing to initialize the mouse rectangle, otherwise the mouse button down
         // handler would ignore the mouse event.
-        Update();
+        PaintImmediately();
     }
     else
         ShowFocus( ImplGetFocusRect() );
@@ -3330,7 +3332,6 @@ void CheckBox::LoseFocus()
     {
         GetButtonState() &= ~DrawButtonFlags::Pressed;
         Invalidate();
-        Update();
     }
 
     HideFocus();
@@ -3412,11 +3413,10 @@ void CheckBox::DataChanged( const DataChangedEvent& rDCEvt )
 
 bool CheckBox::PreNotify( NotifyEvent& rNEvt )
 {
-    const MouseEvent* pMouseEvt = nullptr;
-
-    if( (rNEvt.GetType() == MouseNotifyEvent::MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) != nullptr )
+    if( rNEvt.GetType() == MouseNotifyEvent::MOUSEMOVE )
     {
-        if( !pMouseEvt->GetButtons() && !pMouseEvt->IsSynthetic() && !pMouseEvt->IsModifierChanged() )
+        const MouseEvent* pMouseEvt = rNEvt.GetMouseEvent();
+        if( pMouseEvt && !pMouseEvt->GetButtons() && !pMouseEvt->IsSynthetic() && !pMouseEvt->IsModifierChanged() )
         {
             // trigger redraw if mouse over state has changed
             if( IsNativeControlSupported(ControlType::Checkbox, ControlPart::Entire) )
@@ -3694,81 +3694,6 @@ void ImageButton::ImplInitStyle()
         nStyle |= WB_VCENTER;
 
     SetStyle( nStyle );
-}
-
-TriStateBox::TriStateBox( vcl::Window* pParent, WinBits nStyle ) :
-    CheckBox( pParent, nStyle )
-{
-    EnableTriState();
-}
-
-DisclosureButton::DisclosureButton( vcl::Window* pParent ) :
-    CheckBox( pParent, 0 )
-{
-}
-
-void DisclosureButton::ImplDrawCheckBoxState(vcl::RenderContext& rRenderContext)
-{
-    /* HACK: DisclosureButton is currently assuming, that the disclosure sign
-       will fit into the rectangle occupied by a normal checkbox on all themes.
-       If this does not hold true for some theme, ImplGetCheckImageSize
-       would have to be overridden for DisclosureButton; also GetNativeControlRegion
-       for ControlType::ListNode would have to be implemented and taken into account
-    */
-
-    tools::Rectangle aStateRect(GetStateRect());
-
-    ImplControlValue aControlValue(GetState() == TRISTATE_TRUE ? ButtonValue::On : ButtonValue::Off);
-    tools::Rectangle aCtrlRegion(aStateRect);
-    ControlState nState = ControlState::NONE;
-
-    if (HasFocus())
-        nState |= ControlState::FOCUSED;
-    if (GetButtonState() & DrawButtonFlags::Default)
-        nState |= ControlState::DEFAULT;
-    if (Window::IsEnabled())
-        nState |= ControlState::ENABLED;
-    if (IsMouseOver() && GetMouseRect().IsInside(GetPointerPosPixel()))
-        nState |= ControlState::ROLLOVER;
-
-    if (rRenderContext.DrawNativeControl(ControlType::ListNode, ControlPart::Entire, aCtrlRegion,
-                                          nState, aControlValue, OUString()))
-        return;
-
-    ImplSVCtrlData& rCtrlData(ImplGetSVData()->maCtrlData);
-    if (!rCtrlData.mpDisclosurePlus)
-        rCtrlData.mpDisclosurePlus.reset(new Image(StockImage::Yes, SV_DISCLOSURE_PLUS));
-    if (!rCtrlData.mpDisclosureMinus)
-        rCtrlData.mpDisclosureMinus.reset(new Image(StockImage::Yes, SV_DISCLOSURE_MINUS));
-
-    Image* pImg
-        = IsChecked() ? rCtrlData.mpDisclosureMinus.get() : rCtrlData.mpDisclosurePlus.get();
-
-    DrawImageFlags nStyle = DrawImageFlags::NONE;
-    if (!IsEnabled())
-        nStyle |= DrawImageFlags::Disable;
-
-    Size aSize(aStateRect.GetSize());
-    Size aImgSize(pImg->GetSizePixel());
-    Point aOff((aSize.Width() - aImgSize.Width()) / 2,
-               (aSize.Height() - aImgSize.Height()) / 2);
-    aOff += aStateRect.TopLeft();
-    rRenderContext.DrawImage(aOff, *pImg, nStyle);
-}
-
-void DisclosureButton::KeyInput( const KeyEvent& rKEvt )
-{
-    vcl::KeyCode aKeyCode = rKEvt.GetKeyCode();
-
-    if( !aKeyCode.GetModifier()  &&
-        ( ( aKeyCode.GetCode() == KEY_ADD ) ||
-          ( aKeyCode.GetCode() == KEY_SUBTRACT ) )
-        )
-    {
-        Check( aKeyCode.GetCode() == KEY_ADD );
-    }
-    else
-        CheckBox::KeyInput( rKEvt );
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

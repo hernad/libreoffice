@@ -28,6 +28,7 @@
 #include <com/sun/star/text/XTextCopy.hpp>
 #include <tools/debug.hxx>
 #include <svx/svddef.hxx>
+#include <rtl/math.hxx>
 
 #include <Annotation.hxx>
 #include <notifydocumentevent.hxx>
@@ -221,10 +222,10 @@ void SdPage::SetPresentationLayout(const OUString& rLayoutName,
         else if (pObj->GetObjInventor() == SdrInventor::Default &&
                  pObj->GetObjIdentifier() == OBJ_TITLETEXT)
         {
-            // We do net get PresObjKind via GetPresObjKind() since there are
+            // We do not get PresObjKind via GetPresObjKind() since there are
             // only PresObjListe considered. But we want to consider all "Title
             // objects" here (paste from clipboard etc.)
-            SfxStyleSheet* pSheet = GetStyleSheetForPresObj(PRESOBJ_TITLE);
+            SfxStyleSheet* pSheet = GetStyleSheetForPresObj(PresObjKind::Title);
 
             if (pSheet)
                 pObj->SetStyleSheet(pSheet, true);
@@ -247,7 +248,7 @@ void SdPage::SetPresentationLayout(const OUString& rLayoutName,
 
 void SdPage::EndListenOutlineText()
 {
-    SdrObject* pOutlineTextObj = GetPresObj(PRESOBJ_OUTLINE);
+    SdrObject* pOutlineTextObj = GetPresObj(PresObjKind::Outline);
 
     if (!pOutlineTextObj)
         return;
@@ -306,7 +307,7 @@ void SdPage::ConnectLink()
         // No links to document owned pages!
         mpPageLink = new SdPageLink(this, maFileName, maBookmarkName);
         OUString aFilterName(SdResId(STR_IMPRESS));
-        pLinkManager->InsertFileLink(*mpPageLink, OBJECT_CLIENT_FILE,
+        pLinkManager->InsertFileLink(*mpPageLink, sfx2::SvBaseLinkObjectType::ClientFile,
                                      maFileName, &aFilterName, &maBookmarkName);
         mpPageLink->Connect();
     }
@@ -367,9 +368,11 @@ void SdPage::lateInit(const SdPage& rSrcPage)
 
     // use shape list directly to preserve constness of rSrcPage
     const std::list< SdrObject* >& rShapeList = rSrcPage.maPresentationShapeList.getList();
+    const size_t nObjCount = GetObjCount();
     for( SdrObject* pObj : rShapeList )
     {
-        InsertPresObj(GetObj(pObj->GetOrdNum()), rSrcPage.GetPresObjKind(pObj));
+        size_t nOrdNum = pObj->GetOrdNum();
+        InsertPresObj(nOrdNum < nObjCount ? GetObj(nOrdNum) : nullptr, rSrcPage.GetPresObjKind(pObj));
     }
 
     // header footer
@@ -434,7 +437,7 @@ SdrPage* SdPage::CloneSdrPage(SdrModel& rTargetModel) const
 SfxStyleSheet* SdPage::GetTextStyleSheetForObject( SdrObject* pObj ) const
 {
     const PresObjKind eKind = GetPresObjKind(pObj);
-    if( eKind != PRESOBJ_NONE )
+    if( eKind != PresObjKind::NONE )
     {
         return GetStyleSheetForPresObj(eKind);
     }

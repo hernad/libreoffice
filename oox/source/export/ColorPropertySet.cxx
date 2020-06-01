@@ -30,7 +30,6 @@ using namespace ::com::sun::star::beans;
 
 using ::com::sun::star::uno::Reference;
 using ::com::sun::star::uno::Sequence;
-using ::com::sun::star::uno::RuntimeException;
 
 namespace
 {
@@ -47,7 +46,7 @@ protected:
     virtual sal_Bool SAL_CALL hasPropertyByName( const OUString& Name ) override;
 
 private:
-    OUString const m_aColorPropName;
+    OUString m_aColorPropName;
     Property m_aColorProp;
 };
 

@@ -31,8 +31,8 @@
 #include <unordered_set>
 #include <vector>
 
-namespace com { namespace sun { namespace star { namespace chart { class XChartData; } } } }
-namespace com { namespace sun { namespace star { namespace chart { class XChartDataChangeEventListener; } } } }
+namespace com::sun::star::chart { class XChartData; }
+namespace com::sun::star::chart { class XChartDataChangeEventListener; }
 
 class Timer;
 class ScDocument;
@@ -64,7 +64,7 @@ private:
     std::unique_ptr<ExternalRefListener> mpExtRefListener;
     std::unique_ptr<std::vector<ScTokenRef> > mpTokens;
 
-    OUString const maName;
+    OUString maName;
     std::unique_ptr<ScChartUnoData> pUnoData;
     ScDocument*     mpDoc;
     bool            bUsed:1;  // for ScChartListenerCollection::FreeUnused

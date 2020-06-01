@@ -40,6 +40,7 @@
 #include <tools/debug.hxx>
 #include <com/sun/star/ui/dialogs/XFilterManager.hpp>
 #include <com/sun/star/ui/dialogs/XFilePicker.hpp>
+#include <com/sun/star/ui/dialogs/XFilePicker3.hpp>
 #include <com/sun/star/ui/dialogs/TemplateDescription.hpp>
 
 #include <sdresid.hxx>
@@ -132,7 +133,7 @@ void FuInsertFile::DoExecute( SfxRequest& rReq )
         sfx2::FileDialogHelper      aFileDialog(
                 ui::dialogs::TemplateDescription::FILEOPEN_SIMPLE,
                 FileDialogFlags::Insert, mpWindow ? mpWindow->GetFrameWeld() : nullptr);
-        Reference< XFilePicker >    xFilePicker( aFileDialog.GetFilePicker(), UNO_QUERY );
+        Reference< XFilePicker >    xFilePicker( aFileDialog.GetFilePicker() );
         Reference< XFilterManager > xFilterManager( xFilePicker, UNO_QUERY );
         OUString aOwnCont;
         OUString aOtherCont;
@@ -619,7 +620,7 @@ void FuInsertFile::InsTextOrRTFinOlMode(SfxMedium* pMedium)
                                     SdResId(STR_UNDO_INSERT_FILE), OUString(), 0, nViewShellId );
 
         sal_Int32 nSourcePos = 0;
-        SfxStyleSheet* pStyleSheet = pPage->GetStyleSheetForPresObj( PRESOBJ_OUTLINE );
+        SfxStyleSheet* pStyleSheet = pPage->GetStyleSheetForPresObj( PresObjKind::Outline );
         Paragraph* pSourcePara = pOutliner->GetParagraph( 0 );
         while (pSourcePara)
         {

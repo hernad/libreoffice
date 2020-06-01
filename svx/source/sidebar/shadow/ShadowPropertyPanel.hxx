@@ -11,11 +11,11 @@
 
 #include <vcl/vclptr.hxx>
 #include <sfx2/sidebar/ControllerItem.hxx>
-#include <svx/sidebar/PanelLayout.hxx>
+#include <sfx2/sidebar/PanelLayout.hxx>
 
 class ColorListBox;
 
-namespace svx { namespace sidebar {
+namespace svx::sidebar {
 
 class ShadowPropertyPanel
 :   public PanelLayout,
@@ -38,6 +38,10 @@ public:
         const SfxItemState eState,
         const SfxPoolItem* pState) override;
 
+    virtual void GetControlState(
+        const sal_uInt16 /*nSId*/,
+        boost::property_tree::ptree& /*rState*/) override {};
+
     SfxBindings* GetBindings() { return mpBindings;}
 
     void Initialize();
@@ -54,7 +58,7 @@ private:
     ::sfx2::sidebar::ControllerItem maShadowXDistanceController;
     ::sfx2::sidebar::ControllerItem maShadowYDistanceController;
 
-    SfxBindings* const mpBindings;
+    SfxBindings* mpBindings;
     long nX,nY,nXY;
 
     std::unique_ptr<weld::CheckButton> mxShowShadow;
@@ -80,7 +84,7 @@ private:
     DECL_LINK(ModifyShadowDistanceHdl, weld::MetricSpinButton&, void);
     DECL_LINK(ModifyShadowTransSliderHdl, weld::Scale&, void);
 };
-}
+
 }
 
 #endif

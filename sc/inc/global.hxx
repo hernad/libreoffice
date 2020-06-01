@@ -36,7 +36,7 @@
 #include <map>
 #include <memory>
 
-namespace com { namespace sun { namespace star { namespace uno { template <typename > class Reference; } } } }
+namespace com::sun::star::uno { template <typename > class Reference; }
 
 class SfxItemSet;
 class SfxViewShell;
@@ -488,14 +488,14 @@ class CollatorWrapper;
 class IntlWrapper;
 class ScFieldEditEngine;
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace lang {
         struct Locale;
     }
     namespace i18n {
         class XOrdinalSuffix;
     }
-}}}
+}
 namespace utl {
     class TransliterationWrapper;
 }
@@ -537,11 +537,8 @@ class ScGlobal
 
 public:
     static SvtSysLocale*        pSysLocale;
-    // for faster access a pointer to the single instance provided by SvtSysLocale
-    SC_DLLPUBLIC static const CharClass*     pCharClass;
-    // for faster access a pointer to the single instance provided by SvtSysLocale
-    SC_DLLPUBLIC static const LocaleDataWrapper* pLocaleData;
-    SC_DLLPUBLIC static const LocaleDataWrapper* GetpLocaleData();
+    SC_DLLPUBLIC static const LocaleDataWrapper* getLocaleDataPtr();
+    SC_DLLPUBLIC static const CharClass* getCharClassPtr();
 
     static CalendarWrapper*     GetCalendar();
     SC_DLLPUBLIC static CollatorWrapper*        GetCollator();

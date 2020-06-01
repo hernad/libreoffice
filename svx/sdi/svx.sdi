@@ -106,10 +106,10 @@ SfxBoolItem Polygon SID_DRAW_POLYGON
     GroupId = SfxGroupId::Drawing;
 ]
 
-SfxVoidItem AlignCenter SID_OBJECT_ALIGN_CENTER
+SfxBoolItem AlignCenter SID_OBJECT_ALIGN_CENTER
 ()
 [
-    AutoUpdate = FALSE,
+    AutoUpdate = TRUE,
     FastCall = FALSE,
     ReadOnlyDoc = FALSE,
     Toggle = FALSE,
@@ -142,10 +142,10 @@ SfxVoidItem AlignDown SID_OBJECT_ALIGN_DOWN
 ]
 
 
-SfxVoidItem ObjectAlignLeft SID_OBJECT_ALIGN_LEFT
+SfxBoolItem ObjectAlignLeft SID_OBJECT_ALIGN_LEFT
 ()
 [
-    AutoUpdate = FALSE,
+    AutoUpdate = TRUE,
     FastCall = FALSE,
     ReadOnlyDoc = FALSE,
     Toggle = FALSE,
@@ -197,10 +197,10 @@ SfxVoidItem AlignMiddle SID_OBJECT_ALIGN_MIDDLE
 ]
 
 
-SfxVoidItem ObjectAlignRight SID_OBJECT_ALIGN_RIGHT
+SfxBoolItem ObjectAlignRight SID_OBJECT_ALIGN_RIGHT
 ()
 [
-    AutoUpdate = FALSE,
+    AutoUpdate = TRUE,
     FastCall = FALSE,
     ReadOnlyDoc = FALSE,
     Toggle = FALSE,
@@ -2629,7 +2629,7 @@ XFillColorItem FillColor SID_ATTR_FILL_COLOR
 ]
 
 XFillColorItem FillPageColor SID_ATTR_PAGE_COLOR
-
+(SfxStringItem Color SID_ATTR_COLOR_STR)
 [
     /* flags: */
     AutoUpdate = TRUE,
@@ -2648,6 +2648,7 @@ XFillColorItem FillPageColor SID_ATTR_PAGE_COLOR
     GroupId = SfxGroupId::Format;
 ]
 
+// FillGradientJSON is used by online: i.e. loleaflet/src/control/Control.JSDialogBuilder.js
 XFillGradientItem FillGradient SID_ATTR_FILL_GRADIENT
 (SfxStringItem FillGradientJSON SID_FILL_GRADIENT_JSON)
 [
@@ -2666,8 +2667,9 @@ XFillGradientItem FillGradient SID_ATTR_FILL_GRADIENT
     GroupId = SfxGroupId::Format;
 ]
 
+// FillPageGradientJSON is used by online: i.e. loleaflet/src/control/Control.JSDialogBuilder.js
 XFillGradientItem FillPageGradient SID_ATTR_PAGE_GRADIENT
-
+(SfxStringItem FillPageGradientJSON SID_FILL_GRADIENT_JSON)
 [
     /* flags: */
     AutoUpdate = TRUE,
@@ -5483,7 +5485,7 @@ SfxVoidItem ArrowsToolbox SID_DRAWTBX_ARROWS
 ]
 
 SvxColorItem FrameLineColor SID_FRAME_LINECOLOR
-
+(SfxStringItem Color SID_ATTR_COLOR_STR, SvxColorItem FrameLineColor SID_FRAME_LINECOLOR)
 [
     AutoUpdate = TRUE,
     FastCall = FALSE,
@@ -5631,7 +5633,7 @@ SvxLineItem LineStyle SID_FRAME_LINESTYLE
     GroupId = SfxGroupId::Frame;
 ]
 
-
+// SID_ATTR_LINE_WIDTH_ARG is used by online: i.e. loleaflet/src/control/Control.JSDialogBuilder.js
 XLineWidthItem LineWidth SID_ATTR_LINE_WIDTH
 (SvxDoubleItem Width SID_ATTR_LINE_WIDTH_ARG, XLineWidthItem LineWidth SID_ATTR_LINE_WIDTH)
 [
@@ -7201,6 +7203,41 @@ SfxVoidItem RulerChangeState SID_RULER_CHANGE_STATE
     RecordPerSet;
 
 
+    AccelConfig = FALSE,
+    MenuConfig = FALSE,
+    ToolBoxConfig = FALSE,
+    GroupId = ;
+]
+
+SfxVoidItem ChangeTabStop SID_TABSTOP_ADD_OR_CHANGE
+    (SfxInt32Item Index SID_TABSTOP_ATTR_INDEX,
+     SfxInt32Item Position SID_TABSTOP_ATTR_POSITION)
+[
+    AutoUpdate = FALSE,
+    FastCall = TRUE,
+    ReadOnlyDoc = TRUE,
+    Toggle = FALSE,
+    Container = FALSE,
+    RecordAbsolute = FALSE,
+    RecordPerSet;
+
+
+    AccelConfig = FALSE,
+    MenuConfig = FALSE,
+    ToolBoxConfig = FALSE,
+    GroupId = ;
+]
+
+SfxVoidItem ParagraphChangeState SID_PARAGRAPH_CHANGE_STATE
+(SfxStringItem FirstLineIndent SID_PARAGRAPH_FIRST_LINE_INDENT, SfxStringItem LeftParaIndent SID_PARAGRAPH_LEFT_INDENT, SfxStringItem RightParaIndent SID_PARAGRAPH_RIGHT_INDENT)
+[
+    AutoUpdate = FALSE,
+    FastCall = TRUE,
+    ReadOnlyDoc = TRUE,
+    Toggle = FALSE,
+    Container = FALSE,
+    RecordAbsolute = FALSE,
+    RecordPerSet;
     AccelConfig = FALSE,
     MenuConfig = FALSE,
     ToolBoxConfig = FALSE,
@@ -12217,4 +12254,72 @@ SfxVoidItem AccessibilityCheck SID_ACCESSIBILITY_CHECK
     MenuConfig = FALSE,
     ToolBoxConfig = FALSE,
     GroupId = SfxGroupId::Modify;
+]
+
+XColorItem GlowColor SID_ATTR_GLOW_COLOR
+
+[
+    AutoUpdate = TRUE,
+    FastCall = FALSE,
+    ReadOnlyDoc = FALSE,
+    Toggle = FALSE,
+    Container = FALSE,
+    RecordAbsolute = FALSE,
+    RecordPerSet;
+
+    AccelConfig = FALSE,
+    MenuConfig = FALSE,
+    ToolBoxConfig = FALSE,
+    GroupId = SfxGroupId::Document;
+]
+
+SdrMetricItem GlowRadius SID_ATTR_GLOW_RADIUS
+
+[
+    AutoUpdate = TRUE,
+    FastCall = FALSE,
+    ReadOnlyDoc = FALSE,
+    Toggle = FALSE,
+    Container = FALSE,
+    RecordAbsolute = FALSE,
+    RecordPerSet;
+
+    AccelConfig = FALSE,
+    MenuConfig = FALSE,
+    ToolBoxConfig = FALSE,
+    GroupId = SfxGroupId::Document;
+]
+
+SdrPercentItem GlowTransparency SID_ATTR_GLOW_TRANSPARENCY
+
+[
+    AutoUpdate = TRUE,
+    FastCall = FALSE,
+    ReadOnlyDoc = FALSE,
+    Toggle = FALSE,
+    Container = FALSE,
+    RecordAbsolute = FALSE,
+    RecordPerSet;
+
+    AccelConfig = FALSE,
+    MenuConfig = FALSE,
+    ToolBoxConfig = FALSE,
+    GroupId = SfxGroupId::Document;
+]
+
+SdrMetricItem SoftEdgeRad SID_ATTR_SOFTEDGE_RADIUS
+
+[
+    AutoUpdate = TRUE,
+    FastCall = FALSE,
+    ReadOnlyDoc = FALSE,
+    Toggle = FALSE,
+    Container = FALSE,
+    RecordAbsolute = FALSE,
+    RecordPerSet;
+
+    AccelConfig = FALSE,
+    MenuConfig = FALSE,
+    ToolBoxConfig = FALSE,
+    GroupId = SfxGroupId::Document;
 ]

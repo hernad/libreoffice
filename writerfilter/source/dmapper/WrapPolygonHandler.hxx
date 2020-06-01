@@ -20,15 +20,20 @@
 #ifndef INCLUDED_WRITERFILTER_SOURCE_DMAPPER_WRAPPOLYGONHANDLER_HXX
 #define INCLUDED_WRITERFILTER_SOURCE_DMAPPER_WRAPPOLYGONHANDLER_HXX
 
-#include <deque>
 #include <com/sun/star/drawing/PointSequenceSequence.hpp>
 #include "LoggedResources.hxx"
 #include <tools/fract.hxx>
 #include <vector>
 
+namespace com::sun::star::text
+{
+struct GraphicCrop;
+}
+
 namespace writerfilter {
 namespace dmapper {
 
+/// Handles <wp:wrapPolygon> from DOCX and the pWrapPolygonVertices shape property from RTF.
 class WrapPolygon final : public virtual SvRefBase
 {
 public:
@@ -51,6 +56,8 @@ public:
     WrapPolygon::Pointer_t scale(const Fraction & rFractionX, const Fraction & rFractionY);
     WrapPolygon::Pointer_t correctWordWrapPolygon(const css::awt::Size & rSrcSize);
     WrapPolygon::Pointer_t correctWordWrapPolygonPixel(const css::awt::Size & rSrcSize);
+    WrapPolygon::Pointer_t correctCrop(const css::awt::Size& rGraphicSize,
+                                       const css::text::GraphicCrop& rGraphicCrop);
     css::drawing::PointSequenceSequence getPointSequenceSequence() const;
 };
 

@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <sfx2/sidebar/SidebarController.hxx>
-#include <sfx2/sidebar/ControlFactory.hxx>
+#include <osl/diagnose.h>
 #include <svx/sidebar/AreaPropertyPanelBase.hxx>
 #include <svx/drawitem.hxx>
 #include <svx/svxids.hrc>
@@ -26,14 +25,6 @@
 #include <svx/xfltrit.hxx>
 #include <svx/xflftrit.hxx>
 #include <svx/xtable.hxx>
-#include <sfx2/dispatch.hxx>
-#include <sfx2/bindings.hxx>
-#include <svtools/valueset.hxx>
-#include <unotools/pathoptions.hxx>
-#include <svx/svxitems.hrc>
-#include <vcl/toolbox.hxx>
-#include <svtools/toolbarmenu.hxx>
-#include <svx/tbcontrl.hxx>
 #include <sfx2/opengrf.hxx>
 #include <sfx2/weldutils.hxx>
 #include <tools/urlobj.hxx>
@@ -70,7 +61,7 @@ const sal_Int32 AreaPropertyPanelBase::DEFAULT_BORDER = 0;
 AreaPropertyPanelBase::AreaPropertyPanelBase(
     vcl::Window* pParent,
     const css::uno::Reference<css::frame::XFrame>& rxFrame)
-    : PanelLayout(pParent, "AreaPropertyPanel", "svx/ui/sidebararea.ui", rxFrame, true),
+    : PanelLayout(pParent, "AreaPropertyPanel", "svx/ui/sidebararea.ui", rxFrame),
       meLastXFS(static_cast<sal_uInt16>(-1)),
       mnLastPosHatch(0),
       mnLastPosBitmap(0),
@@ -83,12 +74,12 @@ AreaPropertyPanelBase::AreaPropertyPanelBase(
       maGradientSquare(),
       maGradientRect(),
       mxColorTextFT(m_xBuilder->weld_label("filllabel")),
-      mxLbFillType(m_xBuilder->weld_combo_box("fillstyle")),
-      mxLbFillAttr(m_xBuilder->weld_combo_box("fillattr")),
+      mxLbFillType(m_xBuilder->weld_combo_box("fillstylearea")),
+      mxLbFillAttr(m_xBuilder->weld_combo_box("fillattrhb")),
       mxLbFillGradFrom(new ColorListBox(m_xBuilder->weld_menu_button("fillgrad1"), GetFrameWeld())),
       mxLbFillGradTo(new ColorListBox(m_xBuilder->weld_menu_button("fillgrad2"), GetFrameWeld())),
       mxToolBoxColor(m_xBuilder->weld_toolbar("selectcolor")),
-      mxColorDispatch(new ToolbarUnoDispatcher(*mxToolBoxColor, rxFrame)),
+      mxColorDispatch(new ToolbarUnoDispatcher(*mxToolBoxColor, *m_xBuilder, rxFrame)),
       mxTrspTextFT(m_xBuilder->weld_label("transparencylabel")),
       mxLBTransType(m_xBuilder->weld_combo_box("transtype")),
       mxMTRTransparent(m_xBuilder->weld_metric_spin_button("settransparency", FieldUnit::PERCENT)),
@@ -146,7 +137,9 @@ void AreaPropertyPanelBase::dispose()
 
 void AreaPropertyPanelBase::Initialize()
 {
-    FillTypeLB::Fill(*mxLbFillType);
+    SvxFillTypeBox::Fill(*mxLbFillType);
+
+    mxLbFillAttr->set_size_request(42, -1);
 
     maGradientLinear.SetXOffset(DEFAULT_CENTERX);
     maGradientLinear.SetYOffset(DEFAULT_CENTERY);
@@ -519,7 +512,7 @@ void AreaPropertyPanelBase::SelectFillAttrHdl_Impl()
 
                 const XFillGradientItem aXFillGradientItem(mxLbFillAttr->get_active_text(), aGradient);
 
-                    // #i122676# Change FillStyle and Gradinet in one call
+                    // #i122676# Change FillStyle and Gradient in one call
                 XFillStyleItem aXFillStyleItem(drawing::FillStyle_GRADIENT);
                 setFillStyleAndGradient(bFillStyleChange ? &aXFillStyleItem : nullptr, aXFillGradientItem);
             }
@@ -622,7 +615,7 @@ void AreaPropertyPanelBase::SelectFillAttrHdl_Impl()
 
 void AreaPropertyPanelBase::ImpUpdateTransparencies()
 {
-    if(mpTransparanceItem.get() || mpFloatTransparenceItem.get())
+    if(mpTransparanceItem || mpFloatTransparenceItem)
     {
         bool bZeroValue(false);
 
@@ -653,7 +646,7 @@ void AreaPropertyPanelBase::ImpUpdateTransparencies()
             }
         }
 
-        if(bZeroValue && mpFloatTransparenceItem.get())
+        if(bZeroValue && mpFloatTransparenceItem)
         {
             if(mpFloatTransparenceItem->IsEnabled())
             {

@@ -18,18 +18,18 @@
  */
 
 
-#include <toolkit/controls/controlmodelcontainerbase.hxx>
+#include <controls/controlmodelcontainerbase.hxx>
 #include <vcl/svapp.hxx>
 #include <osl/mutex.hxx>
 #include <toolkit/helper/property.hxx>
-#include <toolkit/helper/servicenames.hxx>
-#include <toolkit/controls/geometrycontrolmodel.hxx>
+#include <helper/servicenames.hxx>
+#include <controls/geometrycontrolmodel.hxx>
 #include <toolkit/controls/unocontrols.hxx>
-#include <toolkit/controls/formattedcontrol.hxx>
-#include <toolkit/controls/roadmapcontrol.hxx>
-#include <toolkit/controls/tkscrollbar.hxx>
-#include <toolkit/controls/tabpagemodel.hxx>
-#include <toolkit/controls/stdtabcontroller.hxx>
+#include <controls/formattedcontrol.hxx>
+#include <controls/roadmapcontrol.hxx>
+#include <controls/tkscrollbar.hxx>
+#include <controls/tabpagemodel.hxx>
+#include <controls/stdtabcontroller.hxx>
 #include <com/sun/star/awt/PosSize.hpp>
 #include <com/sun/star/resource/XStringResourceResolver.hpp>
 #include <com/sun/star/lang/XInitialization.hpp>
@@ -43,14 +43,14 @@
 
 #include "tree/treecontrol.hxx"
 #include "grid/gridcontrol.hxx"
-#include <toolkit/controls/tabpagecontainer.hxx>
+#include <controls/tabpagecontainer.hxx>
 
 #include <map>
 #include <algorithm>
 #include <tools/urlobj.hxx>
 #include <osl/file.hxx>
 #include <sal/log.hxx>
-#include <toolkit/controls/dialogcontrol.hxx>
+#include <controls/dialogcontrol.hxx>
 
 #include <helper/unopropertyarrayhelper.hxx>
 #include "controlmodelcontainerbase_internal.hxx"
@@ -93,21 +93,6 @@ struct DisposeControlModel
 };
 
 }
-
-// functor for searching control model by name
-struct FindControlModel
-{
-private:
-    const OUString& m_rName;
-
-public:
-    explicit FindControlModel( const OUString& _rName ) : m_rName( _rName ) { }
-
-    bool operator()( const ControlModelContainerBase::UnoControlModelHolder& _rCompare )
-    {
-        return _rCompare.second == m_rName;
-    }
-};
 
 
 // functor for cloning a control model, and insertion into a target list
@@ -184,9 +169,9 @@ ControlModelContainerBase::ControlModelContainerBase( const Reference< XComponen
     ,maContainerListeners( *this )
     ,maChangeListeners ( GetMutex() )
     ,mbGroupsUpToDate( false )
-    ,m_bEnabled( true )
     ,m_nTabPageId(0)
 {
+    ImplRegisterProperty(BASEPROPERTY_ENABLED);
 }
 
 ControlModelContainerBase::ControlModelContainerBase( const ControlModelContainerBase& rModel )
@@ -194,7 +179,6 @@ ControlModelContainerBase::ControlModelContainerBase( const ControlModelContaine
     , maContainerListeners( *this )
     , maChangeListeners ( GetMutex() )
     , mbGroupsUpToDate( false )
-    , m_bEnabled( rModel.m_bEnabled )
     , m_nTabPageId( rModel.m_nTabPageId )
 {
 }
@@ -289,7 +273,7 @@ rtl::Reference<UnoControlModel> ControlModelContainerBase::Clone() const
 
 ControlModelContainerBase::UnoControlModelHolderVector::iterator ControlModelContainerBase::ImplFindElement( const OUString& rName )
 {
-    return ::std::find_if( maModels.begin(), maModels.end(), FindControlModel( rName ) );
+    return ::std::find_if( maModels.begin(), maModels.end(), [&](const UnoControlModelHolder& elem) { return elem.second == rName; });
 }
 
 // ::XMultiServiceFactory
@@ -750,11 +734,17 @@ void SAL_CALL ControlModelContainerBase::initialize (const Sequence<Any>& rArgum
 }
 sal_Bool SAL_CALL ControlModelContainerBase::getEnabled()
 {
-    return m_bEnabled;
+    SolarMutexGuard aGuard;
+    Reference<XPropertySet> xThis(*this, UNO_QUERY);
+    bool bEnabled = false;
+    xThis->getPropertyValue(GetPropertyName(BASEPROPERTY_ENABLED)) >>= bEnabled;
+    return bEnabled;
 }
 void SAL_CALL ControlModelContainerBase::setEnabled( sal_Bool _enabled )
 {
-    m_bEnabled = _enabled;
+    SolarMutexGuard aGuard;
+    Reference<XPropertySet> xThis(*this, UNO_QUERY);
+    xThis->setPropertyValue(GetPropertyName(BASEPROPERTY_ENABLED), makeAny(_enabled));
 }
 OUString SAL_CALL ControlModelContainerBase::getTitle()
 {
@@ -1266,7 +1256,7 @@ void SAL_CALL ResourceListener::disposing(
 
 
 ControlContainerBase::ControlContainerBase( const Reference< XComponentContext >& rxContext )
-    :ContainerControl_IBase()
+    :ControlContainer_IBase()
     ,m_xContext(rxContext)
     ,mbSizeModified(false)
     ,mbPosModified(false)
@@ -1625,12 +1615,12 @@ void ControlContainerBase::addingControl( const Reference< XControl >& _rxContro
         Reference< XMultiPropertySet > xProps( _rxControl->getModel(), UNO_QUERY );
         if ( xProps.is() )
         {
-            Sequence< OUString > aNames( 4 );
-            OUString* pNames = aNames.getArray();
-            *pNames++ = "PositionX";
-            *pNames++ = "PositionY";
-            *pNames++ = "Width";
-            *pNames++ = "Height";
+            const Sequence< OUString > aNames {
+              "PositionX",
+              "PositionY",
+              "Width",
+              "Height"
+            };
 
             xProps->addPropertiesChangeListener( aNames, this );
         }

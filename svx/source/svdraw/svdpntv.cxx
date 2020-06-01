@@ -18,10 +18,8 @@
  */
 
 #include <memory>
-#include <com/sun/star/awt/XWindow.hpp>
 #include <svx/svdpntv.hxx>
 #include <vcl/weld.hxx>
-#include <vcl/GraphicObject.hxx>
 #include <svx/sdrpaintwindow.hxx>
 #include <svx/svdmodel.hxx>
 
@@ -29,18 +27,9 @@
 #include <svx/svdpagv.hxx>
 #include <svl/hint.hxx>
 
-#include <editeng/editdata.hxx>
-#include <svx/svdmrkv.hxx>
-#include <svx/svdundo.hxx>
 #include <svx/svdview.hxx>
 #include <svx/svdglue.hxx>
 #include <svx/svdobj.hxx>
-#include <svx/svdograf.hxx>
-#include <svx/svditer.hxx>
-#include <svx/svdouno.hxx>
-#include <svx/sdr/overlay/overlayobjectlist.hxx>
-#include <sdr/overlay/overlayrollingrectangle.hxx>
-#include <svx/sdr/overlay/overlaymanager.hxx>
 #include <sxlayitm.hxx>
 #include <svl/itemiter.hxx>
 #include <editeng/eeitem.hxx>
@@ -48,17 +37,12 @@
 #include <svl/style.hxx>
 #include <svx/sdrpagewindow.hxx>
 #include <vcl/svapp.hxx>
-#include <com/sun/star/awt/PosSize.hpp>
-#include <com/sun/star/awt/XControl.hpp>
 #include <svx/sdr/contact/objectcontact.hxx>
 #include <svx/sdr/animation/objectanimator.hxx>
-#include <svx/sdr/contact/viewcontact.hxx>
 #include <drawinglayer/primitive2d/metafileprimitive2d.hxx>
 #include <basegfx/matrix/b2dhommatrixtools.hxx>
 #include <comphelper/lok.hxx>
 #include <svx/svdviter.hxx>
-
-#include <sfx2/lokhelper.hxx>
 
 using namespace ::com::sun::star;
 
@@ -66,10 +50,20 @@ using namespace ::com::sun::star;
 
 SdrPaintWindow* SdrPaintView::FindPaintWindow(const OutputDevice& rOut) const
 {
-    auto a = std::find_if(maPaintWindows.begin(), maPaintWindows.end(),
-        [&rOut](const std::unique_ptr<SdrPaintWindow>& pWindow) { return &(pWindow->GetOutputDevice()) == &rOut; });
-    if (a != maPaintWindows.end())
-        return a->get();
+    // back to loop - there is more to test than a std::find_if and a lambda can do
+    for(auto& candidate : maPaintWindows)
+    {
+        if(&(candidate->GetOutputDevice()) == &rOut)
+        {
+            return candidate.get();
+        }
+
+        // check for patched to allow finding in that state, too
+        if(nullptr != candidate->getPatched() && &(candidate->getPatched()->GetOutputDevice()) == &rOut)
+        {
+            return candidate->getPatched();
+        }
+    }
 
     return nullptr;
 }
@@ -1028,7 +1022,7 @@ void SdrPaintView::MakeVisible(const tools::Rectangle& rRect, vcl::Window& rWin)
     MapMode aMap(rWin.GetMapMode());
     Size aActualSize(rWin.GetOutputSize());
 
-    if( aActualSize.Height() <= 0 || aActualSize.Width() <= 0 )
+    if( aActualSize.IsEmpty() )
         return;
 
     Size aNewSize(rRect.GetSize());
@@ -1064,7 +1058,7 @@ void SdrPaintView::MakeVisible(const tools::Rectangle& rRect, vcl::Window& rWin)
         if (dx!=0 || dy!=0) {
             rWin.Scroll(-dx,-dy);
             rWin.SetMapMode(aMap);
-            rWin.Update();
+            rWin.PaintImmediately();
         }
     } else {
         rWin.SetMapMode(aMap);

@@ -326,10 +326,10 @@ namespace DOM
     namespace {
 
     // IO context functions for libxml2 interaction
-    typedef struct {
+    struct IOContext {
         Reference< XOutputStream > stream;
-        bool const allowClose;
-    } IOContext;
+        bool allowClose;
+    };
 
     }
 
@@ -1008,7 +1008,7 @@ namespace DOM
         }
 
         Context aContext(i_xHandler,
-                         i_xTokenHandler);
+                         dynamic_cast<sax_fastparser::FastTokenHandlerBase*>(i_xTokenHandler.get()));
 
         // register namespace ids
         for (const beans::Pair<OUString,sal_Int32>& rNs : i_rRegisterNamespaces)

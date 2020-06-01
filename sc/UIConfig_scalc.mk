@@ -98,7 +98,6 @@ $(eval $(call gb_UIConfig_add_uifiles,modules/scalc,\
 	sc/uiconfig/scalc/ui/colwidthdialog \
 	sc/uiconfig/scalc/ui/condformatmanager \
 	sc/uiconfig/scalc/ui/conditionalformatdialog \
-	sc/uiconfig/scalc/ui/conditionalformatdialogmobile \
 	sc/uiconfig/scalc/ui/conditionalentry \
 	sc/uiconfig/scalc/ui/conditionaliconset \
 	sc/uiconfig/scalc/ui/conflictsdialog \
@@ -127,6 +126,7 @@ $(eval $(call gb_UIConfig_add_uifiles,modules/scalc,\
 	sc/uiconfig/scalc/ui/externaldata \
 	sc/uiconfig/scalc/ui/exponentialsmoothingdialog \
 	sc/uiconfig/scalc/ui/filldlg \
+	sc/uiconfig/scalc/ui/filterlist \
 	sc/uiconfig/scalc/ui/footerdialog \
 	sc/uiconfig/scalc/ui/formatcellsdialog \
 	sc/uiconfig/scalc/ui/formulacalculationoptions \
@@ -155,6 +155,7 @@ $(eval $(call gb_UIConfig_add_uifiles,modules/scalc,\
 	sc/uiconfig/scalc/ui/notebookbar_groups \
 	sc/uiconfig/scalc/ui/notebookbar_groupedbar_full \
 	sc/uiconfig/scalc/ui/notebookbar_groupedbar_compact \
+	sc/uiconfig/scalc/ui/numberbox \
 	sc/uiconfig/scalc/ui/managenamesdialog \
 	sc/uiconfig/scalc/ui/mergecellsdialog \
 	sc/uiconfig/scalc/ui/mergecolumnentry \
@@ -186,6 +187,7 @@ $(eval $(call gb_UIConfig_add_uifiles,modules/scalc,\
 	sc/uiconfig/scalc/ui/pivotfielddialog \
 	sc/uiconfig/scalc/ui/pivotfilterdialog \
 	sc/uiconfig/scalc/ui/pivottablelayoutdialog \
+	sc/uiconfig/scalc/ui/posbox \
 	sc/uiconfig/scalc/ui/printareasdialog \
 	sc/uiconfig/scalc/ui/printeroptions \
 	sc/uiconfig/scalc/ui/protectsheetdlg \
@@ -243,6 +245,7 @@ $(eval $(call gb_UIConfig_add_uifiles,modules/scalc,\
 	sc/uiconfig/scalc/ui/validationcriteriapage \
 	sc/uiconfig/scalc/ui/validationhelptabpage \
 	sc/uiconfig/scalc/ui/xmlsourcedialog \
+	sc/uiconfig/scalc/ui/zoombox \
 	sc/uiconfig/scalc/ui/ztestdialog \
 ))
 

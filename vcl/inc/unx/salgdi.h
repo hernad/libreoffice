@@ -169,7 +169,8 @@ public:
                                         const basegfx::B2DHomMatrix& rObjectToDevice,
                                         const basegfx::B2DPolygon&,
                                         double fTransparency,
-                                        const basegfx::B2DVector& rLineWidth,
+                                        double fLineWidth,
+                                        const std::vector< double >* pStroke, // MM01
                                         basegfx::B2DLineJoin,
                                         css::drawing::LineCap,
                                         double fMiterMinimumAngle,
@@ -263,7 +264,6 @@ public:
     virtual cairo::SurfaceSharedPtr CreateSurface(const OutputDevice& rRefDevice, int x, int y, int width, int height) const override;
     virtual cairo::SurfaceSharedPtr CreateBitmapSurface(const OutputDevice& rRefDevice, const BitmapSystemData& rData, const Size& rSize) const override;
     virtual css::uno::Any           GetNativeSurfaceHandle(cairo::SurfaceSharedPtr& rSurface, const basegfx::B2ISize& rSize) const override;
-    virtual SystemFontData          GetSysFontData( int nFallbackLevel ) const override;
 
     void clipRegion(cairo_t* cr);
 #endif // ENABLE_CAIRO_CANVAS
@@ -313,8 +313,8 @@ private:
 
     bool                            bWindow_ : 1;       // is Window
     bool                            bVirDev_ : 1;       // is VirDev
-    bool const                      m_bOpenGL : 1;
-    bool const                      m_bSkia  : 1;
+    bool                            m_bOpenGL : 1;
+    bool                            m_bSkia  : 1;
 
 private:
     std::unique_ptr<SalGraphicsImpl> mxImpl;

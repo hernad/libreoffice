@@ -129,7 +129,7 @@ static bool ImplColorSetCmpFnc( const ImplColorSet& lhs, const ImplColorSet& rhs
         const sal_uInt8 cLum2 = rhs.maColor.GetLuminance();
         return cLum1 < cLum2;
     }
-    return lhs.mbSet < rhs.mbSet;
+    return lhs.mbSet > rhs.mbSet;
 }
 
 namespace {
@@ -196,10 +196,10 @@ class ImplVectMap
 {
 private:
 
-    Scanline const        mpBuf;
+    Scanline        mpBuf;
     Scanline*       mpScan;
-    long const            mnWidth;
-    long const            mnHeight;
+    long            mnWidth;
+    long            mnHeight;
 
 public:
 
@@ -564,7 +564,9 @@ void ImplChain::ImplEndAdd( sal_uLong nFlag )
             for( sal_uLong i = 0; i < mnCount; )
             {
                 const ChainMove& rMove = aImplMove[ mpCodes[ i ] ];
-                aArr[ ++i ] = Point( nLastX += rMove.nDX, nLastY += rMove.nDY );
+                nLastX += rMove.nDX;
+                nLastY += rMove.nDY;
+                aArr[ ++i ] = Point( nLastX, nLastY );
             }
 
             aArr.ImplSetRealSize( mnCount + 1 );

@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_BASEGFX_UTILS_TOOLS_HXX
-#define INCLUDED_BASEGFX_UTILS_TOOLS_HXX
+#pragma once
 
 #include <sal/types.h>
 #include <basegfx/basegfxdllapi.h>
@@ -28,9 +27,10 @@ namespace basegfx
     class B2DPoint;
     class B2DRange;
     class B2DPolyPolygon;
+}
 
-    namespace utils
-    {
+namespace basegfx::utils
+{
         /** Expand given parallelogram, such that it extends beyond
             bound rect in a given direction.
 
@@ -119,9 +119,6 @@ namespace basegfx
                                                             sal_Int32 nTotalDigits,
                                                             sal_Int32 nDecPlaces,
                                                             bool      bLitSegments=true);
-    }
 }
-
-#endif // INCLUDED_BASEGFX_UTILS_TOOLS_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -276,32 +276,32 @@ void ConfigurationAccess_FactoryManager::readConfigurationData()
         m_bConfigAccessInitialized = true;
     }
 
-    if ( m_xConfigAccess.is() )
+    if ( !m_xConfigAccess.is() )
+        return;
+
+    const Sequence< OUString > aUIElementFactories = m_xConfigAccess->getElementNames();
+
+    OUString             aType;
+    OUString             aName;
+    OUString             aModule;
+    OUString             aService;
+    OUString             aHashKey;
+    for ( OUString const & factoryName : aUIElementFactories )
     {
-        Sequence< OUString >   aUIElementFactories = m_xConfigAccess->getElementNames();
-
-        OUString             aType;
-        OUString             aName;
-        OUString             aModule;
-        OUString             aService;
-        OUString             aHashKey;
-        for ( sal_Int32 i = 0; i < aUIElementFactories.getLength(); i++ )
+        if ( impl_getElementProps( m_xConfigAccess->getByName( factoryName ), aType, aName, aModule, aService ))
         {
-            if ( impl_getElementProps( m_xConfigAccess->getByName( aUIElementFactories[i] ), aType, aName, aModule, aService ))
-            {
-                // Create hash key from type, name and module as they are together a primary key to
-                // the UNO service that implements the user interface element factory.
-                aHashKey = getHashKeyFromStrings( aType, aName, aModule );
-                m_aFactoryManagerMap.emplace( aHashKey, aService );
-            }
+            // Create hash key from type, name and module as they are together a primary key to
+            // the UNO service that implements the user interface element factory.
+            aHashKey = getHashKeyFromStrings( aType, aName, aModule );
+            m_aFactoryManagerMap.emplace( aHashKey, aService );
         }
+    }
 
-        Reference< XContainer > xContainer( m_xConfigAccess, UNO_QUERY );
-        if ( xContainer.is() )
-        {
-            m_xConfigListener = new WeakContainerListener(this);
-            xContainer->addContainerListener(m_xConfigListener);
-        }
+    Reference< XContainer > xContainer( m_xConfigAccess, UNO_QUERY );
+    if ( xContainer.is() )
+    {
+        m_xConfigListener = new WeakContainerListener(this);
+        xContainer->addContainerListener(m_xConfigListener);
     }
 }
 
@@ -415,12 +415,12 @@ Reference< XUIElement > SAL_CALL UIElementFactoryManager::createUIElement(
     // Retrieve the frame instance from the arguments to determine the module identifier. This must be provided
     // to the search function. An empty module identifier is provided if the frame is missing or the module id cannot
     // retrieve from it.
-    for ( int i = 0; i < Args.getLength(); i++ )
+    for ( auto const & arg : Args )
     {
-        if ( Args[i].Name == "Frame")
-            Args[i].Value >>= xFrame;
-        if (Args[i].Name == "Module")
-            Args[i].Value >>= aModuleId;
+        if ( arg.Name == "Frame")
+            arg.Value >>= xFrame;
+        if (arg.Name == "Module")
+            arg.Value >>= aModuleId;
     }
     } // SAFE
 

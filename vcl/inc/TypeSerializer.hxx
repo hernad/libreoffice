@@ -23,14 +23,28 @@
 #include <vcl/dllapi.h>
 #include <tools/GenericTypeSerializer.hxx>
 #include <vcl/gradient.hxx>
+#include <vcl/gfxlink.hxx>
+#include <vcl/graph.hxx>
 
-class TypeSerializer : public tools::GenericTypeSerializer
+constexpr sal_uInt32 createMagic(char char1, char char2, char char3, char char4)
+{
+    return (static_cast<sal_uInt32>(char1) << 24) | (static_cast<sal_uInt32>(char2) << 16)
+           | (static_cast<sal_uInt32>(char3) << 8) | (static_cast<sal_uInt32>(char4) << 0);
+}
+
+class VCL_DLLPUBLIC TypeSerializer : public tools::GenericTypeSerializer
 {
 public:
     TypeSerializer(SvStream& rStream);
 
     void readGradient(Gradient& rGradient);
     void writeGradient(const Gradient& rGradient);
+
+    void readGfxLink(GfxLink& rGfxLink);
+    void writeGfxLink(const GfxLink& rGfxLink);
+
+    void readGraphic(Graphic& rGraphic);
+    void writeGraphic(const Graphic& rGraphic);
 };
 
 #endif

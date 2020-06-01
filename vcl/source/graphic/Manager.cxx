@@ -82,13 +82,18 @@ void Manager::reduceGraphicMemory()
 
     std::scoped_lock<std::recursive_mutex> aGuard(maMutex);
 
-    for (ImpGraphic* pEachImpGraphic : m_pImpGraphicList)
+    // make a copy of m_pImpGraphicList because if we swap out a svg, the svg
+    // filter may create more temp Graphics which are auto-added to
+    // m_pImpGraphicList invalidating a loop over m_pImpGraphicList, e.g.
+    // reexport of tdf118346-1.odg
+    o3tl::sorted_vector<ImpGraphic*> aImpGraphicList = m_pImpGraphicList;
+    for (ImpGraphic* pEachImpGraphic : aImpGraphicList)
     {
         if (mnUsedSize < mnMemoryLimit * 0.7)
             return;
 
         sal_Int64 nCurrentGraphicSize = getGraphicSizeBytes(pEachImpGraphic);
-        if (!pEachImpGraphic->ImplIsSwapOut() && nCurrentGraphicSize > 1000000)
+        if (!pEachImpGraphic->isSwappedOut() && nCurrentGraphicSize > 1000000)
         {
             if (!pEachImpGraphic->mpContext)
             {
@@ -97,7 +102,7 @@ void Manager::reduceGraphicMemory()
                 auto aSeconds = std::chrono::duration_cast<std::chrono::seconds>(aDeltaTime);
 
                 if (aSeconds > mnAllowedIdleTime)
-                    pEachImpGraphic->ImplSwapOut();
+                    pEachImpGraphic->swapOut();
             }
         }
     }
@@ -136,7 +141,7 @@ void Manager::registerGraphic(const std::shared_ptr<ImpGraphic>& pImpGraphic,
     sal_Int64 calculatedSize = 0;
     for (ImpGraphic* pEachImpGraphic : m_pImpGraphicList)
     {
-        if (!pEachImpGraphic->ImplIsSwapOut())
+        if (!pEachImpGraphic->isSwappedOut())
         {
             calculatedSize += getGraphicSizeBytes(pEachImpGraphic);
         }
@@ -194,7 +199,8 @@ std::shared_ptr<ImpGraphic> Manager::newInstance(const Animation& rAnimation)
     return pReturn;
 }
 
-std::shared_ptr<ImpGraphic> Manager::newInstance(const VectorGraphicDataPtr& rVectorGraphicDataPtr)
+std::shared_ptr<ImpGraphic>
+Manager::newInstance(const std::shared_ptr<VectorGraphicData>& rVectorGraphicDataPtr)
 {
     auto pReturn = std::make_shared<ImpGraphic>(rVectorGraphicDataPtr);
     registerGraphic(pReturn, "VectorGraphic");

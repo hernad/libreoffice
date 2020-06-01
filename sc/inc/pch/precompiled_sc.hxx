@@ -13,7 +13,7 @@
  manual changes will be rewritten by the next run of update_pch.sh (which presumably
  also fixes all possible problems, so it's usually better to use it).
 
- Generated on 2020-02-01 10:58:09 using:
+ Generated on 2020-04-25 20:55:19 using:
  ./bin/update_pch sc sc --cutoff=12 --exclude:system --include:module --include:local
 
  If after updating build fails, use the following command to locate conflicting headers:
@@ -22,7 +22,9 @@
 
 #if PCH_LEVEL >= 1
 #include <algorithm>
+#include <atomic>
 #include <cassert>
+#include <cmath>
 #include <cstddef>
 #include <cstring>
 #include <deque>
@@ -35,15 +37,14 @@
 #include <limits.h>
 #include <limits>
 #include <list>
-#include <locale>
 #include <map>
 #include <math.h>
 #include <memory>
 #include <new>
+#include <optional>
 #include <ostream>
 #include <set>
 #include <sstream>
-#include <stack>
 #include <stddef.h>
 #include <string.h>
 #include <string>
@@ -78,14 +79,13 @@
 #include <rtl/alloc.h>
 #include <rtl/bootstrap.hxx>
 #include <rtl/character.hxx>
-#include <rtl/cipher.h>
 #include <rtl/crc.h>
 #include <rtl/digest.h>
 #include <rtl/instance.hxx>
 #include <rtl/locale.h>
+#include <rtl/math.h>
 #include <rtl/math.hxx>
 #include <rtl/ref.hxx>
-#include <rtl/strbuf.h>
 #include <rtl/strbuf.hxx>
 #include <rtl/string.h>
 #include <rtl/string.hxx>
@@ -124,11 +124,8 @@
 #include <vcl/ctrl.hxx>
 #include <vcl/customweld.hxx>
 #include <vcl/dllapi.h>
-#include <vcl/dndhelp.hxx>
-#include <vcl/dockwin.hxx>
-#include <vcl/edit.hxx>
 #include <vcl/errcode.hxx>
-#include <vcl/errinf.hxx>
+#include <vcl/event.hxx>
 #include <vcl/floatwin.hxx>
 #include <vcl/fntstyle.hxx>
 #include <vcl/font.hxx>
@@ -147,7 +144,6 @@
 #include <vcl/svapp.hxx>
 #include <vcl/syswin.hxx>
 #include <vcl/task.hxx>
-#include <vcl/textfilter.hxx>
 #include <vcl/timer.hxx>
 #include <vcl/transfer.hxx>
 #include <vcl/uitest/factory.hxx>
@@ -175,6 +171,7 @@
 #include <basegfx/tuple/b2dtuple.hxx>
 #include <basegfx/tuple/b2ituple.hxx>
 #include <basegfx/tuple/b3dtuple.hxx>
+#include <basegfx/utils/common.hxx>
 #include <basegfx/vector/b2dsize.hxx>
 #include <basegfx/vector/b2dvector.hxx>
 #include <basegfx/vector/b2enums.hxx>
@@ -214,9 +211,6 @@
 #include <com/sun/star/datatransfer/dnd/XDragGestureListener.hpp>
 #include <com/sun/star/datatransfer/dnd/XDragSourceListener.hpp>
 #include <com/sun/star/datatransfer/dnd/XDropTargetListener.hpp>
-#include <com/sun/star/document/XExporter.hpp>
-#include <com/sun/star/document/XFilter.hpp>
-#include <com/sun/star/document/XImporter.hpp>
 #include <com/sun/star/drawing/DashStyle.hpp>
 #include <com/sun/star/drawing/HatchStyle.hpp>
 #include <com/sun/star/drawing/TextFitToSizeType.hpp>
@@ -262,7 +256,6 @@
 #include <com/sun/star/util/Time.hpp>
 #include <com/sun/star/util/XAccounting.hpp>
 #include <com/sun/star/util/XUpdatable.hpp>
-#include <com/sun/star/xml/sax/XFastAttributeList.hpp>
 #include <com/sun/star/xml/sax/XFastContextHandler.hpp>
 #include <comphelper/broadcasthelper.hxx>
 #include <comphelper/comphelperdllapi.h>
@@ -336,18 +329,14 @@
 #include <o3tl/cow_wrapper.hxx>
 #include <o3tl/deleter.hxx>
 #include <o3tl/enumarray.hxx>
-#include <o3tl/optional.hxx>
 #include <o3tl/safeint.hxx>
 #include <o3tl/sorted_vector.hxx>
 #include <o3tl/strong_int.hxx>
 #include <o3tl/typed_flags_set.hxx>
 #include <o3tl/underlyingenumvalue.hxx>
-#include <oox/dllapi.h>
-#include <oox/helper/refmap.hxx>
 #include <salhelper/salhelperdllapi.h>
 #include <salhelper/simplereferenceobject.hxx>
 #include <salhelper/thread.hxx>
-#include <sax/saxdllapi.h>
 #include <sax/tools/converter.hxx>
 #include <sfx2/app.hxx>
 #include <sfx2/basedlgs.hxx>
@@ -389,10 +378,8 @@
 #include <svl/zforlist.hxx>
 #include <svl/zformat.hxx>
 #include <svtools/colorcfg.hxx>
-#include <svtools/ehdl.hxx>
 #include <svtools/optionsdrawinglayer.hxx>
 #include <svtools/svtdllapi.h>
-#include <svtools/svtresid.hxx>
 #include <svtools/toolboxcontroller.hxx>
 #include <svx/XPropertyEntry.hxx>
 #include <svx/algitem.hxx>
@@ -450,13 +437,11 @@
 #include <tools/gen.hxx>
 #include <tools/globname.hxx>
 #include <tools/helpers.hxx>
-#include <tools/lineend.hxx>
 #include <tools/link.hxx>
 #include <tools/mapunit.hxx>
 #include <tools/poly.hxx>
 #include <tools/ref.hxx>
 #include <tools/solar.h>
-#include <tools/stream.hxx>
 #include <tools/time.hxx>
 #include <tools/toolsdllapi.h>
 #include <tools/urlobj.hxx>
@@ -510,7 +495,6 @@
 #include <dbdata.hxx>
 #include <dbdocfun.hxx>
 #include <dbfunc.hxx>
-#include <decl.h>
 #include <docfunc.hxx>
 #include <dociter.hxx>
 #include <docoptio.hxx>
@@ -530,8 +514,6 @@
 #include <editutil.hxx>
 #include <externalrefmgr.hxx>
 #include <fillinfo.hxx>
-#include <filter.hxx>
-#include <flttypes.hxx>
 #include <formula/IControlReferenceHandler.hxx>
 #include <formula/compiler.hxx>
 #include <formula/errorcodes.hxx>
@@ -541,7 +523,6 @@
 #include <formula/token.hxx>
 #include <formula/vectortoken.hxx>
 #include <formulacell.hxx>
-#include <ftools.hxx>
 #include <funcdesc.hxx>
 #include <global.hxx>
 #include <globalnames.hxx>
@@ -549,16 +530,13 @@
 #include <hints.hxx>
 #include <inputhdl.hxx>
 #include <inputopt.hxx>
+#include <inputwin.hxx>
 #include <interpre.hxx>
 #include <listenercontext.hxx>
-#include <lotattr.hxx>
-#include <lotfntbf.hxx>
-#include <lotrange.hxx>
 #include <markdata.hxx>
 #include <miscuno.hxx>
-#include <namebuff.hxx>
+#include <mtvelements.hxx>
 #include <olinetab.hxx>
-#include <optab.h>
 #include <output.hxx>
 #include <patattr.hxx>
 #include <postit.hxx>

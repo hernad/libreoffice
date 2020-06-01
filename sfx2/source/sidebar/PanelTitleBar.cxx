@@ -17,14 +17,14 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <sfx2/sidebar/PanelTitleBar.hxx>
+#include <sidebar/PanelTitleBar.hxx>
 #include <sfx2/sfxresid.hxx>
 #include <sfx2/strings.hrc>
-#include <sfx2/sidebar/Paint.hxx>
+#include <sidebar/Paint.hxx>
 #include <sfx2/sidebar/Panel.hxx>
 #include <sfx2/sidebar/Theme.hxx>
-#include <sfx2/sidebar/ControllerFactory.hxx>
-#include <sfx2/sidebar/Tools.hxx>
+#include <sidebar/ControllerFactory.hxx>
+#include <sidebar/Tools.hxx>
 #include <vcl/event.hxx>
 #include <vcl/image.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
@@ -93,7 +93,7 @@ void PanelTitleBar::SetMoreOptionsCommand(const OUString& rsCommandName,
             msMoreOptionsCommand,
             rxFrame, rxController,
             VCLUnoHelper::GetInterface(maToolBox.get()),
-            0));
+            0, true));
     maToolBox->SetController(mnMenuItemIndex, xController);
     maToolBox->SetOutStyle(TOOLBOX_STYLE_FLAT);
     maToolBox->SetQuickHelpText(

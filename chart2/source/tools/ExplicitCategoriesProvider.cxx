@@ -29,6 +29,7 @@
 
 #include <com/sun/star/chart2/AxisType.hpp>
 #include <o3tl/safeint.hxx>
+#include <rtl/math.hxx>
 #include <tools/diagnose_ex.h>
 
 namespace chart
@@ -192,7 +193,7 @@ void ExplicitCategoriesProvider::convertCategoryAnysToText( uno::Sequence< OUStr
             double fDouble = 0;
             if( aAny>>=fDouble )
             {
-                if( !::rtl::math::isNan(fDouble) )
+                if( !std::isnan(fDouble) )
                     aText = aNumberFormatterWrapper.getFormattedString(
                         nAxisNumberFormat, fDouble, nLabelColor, bColorChanged );
             }
@@ -438,7 +439,7 @@ static bool lcl_fillDateCategories( const uno::Reference< data::XDataSequence >&
                 bool bContainsNan = false;
                 if( (aAny>>=aTest) && aTest.isEmpty() ) //empty String
                     bContainsEmptyString = true;
-                else if( (aAny>>=fTest) &&  ::rtl::math::isNan(fTest) )
+                else if( (aAny>>=fTest) &&  std::isnan(fTest) )
                     bContainsNan = true;
 
                 if( !bContainsEmptyString && !bContainsNan )
@@ -463,32 +464,32 @@ static bool lcl_fillDateCategories( const uno::Reference< data::XDataSequence >&
 
 void ExplicitCategoriesProvider::init()
 {
-    if( m_bDirty )
-    {
-        m_aComplexCats.clear();//not one per index
-        m_aDateCategories.clear();
+    if( !m_bDirty )
+        return;
 
-        if( m_xOriginalCategories.is() )
+    m_aComplexCats.clear();//not one per index
+    m_aDateCategories.clear();
+
+    if( m_xOriginalCategories.is() )
+    {
+        if( !hasComplexCategories() )
         {
-            if( !hasComplexCategories() )
+            if(m_bIsDateAxis)
             {
-                if(m_bIsDateAxis)
-                {
-                    if( ChartTypeHelper::isSupportingDateAxis( AxisHelper::getChartTypeByIndex( m_xCooSysModel, 0 ), 0 ) )
-                        m_bIsDateAxis = lcl_fillDateCategories( m_xOriginalCategories->getValues(), m_aDateCategories, m_bIsAutoDate, mrModel );
-                    else
-                        m_bIsDateAxis = false;
-                }
-            }
-            else
-            {
-                m_bIsDateAxis = false;
+                if( ChartTypeHelper::isSupportingDateAxis( AxisHelper::getChartTypeByIndex( m_xCooSysModel, 0 ), 0 ) )
+                    m_bIsDateAxis = lcl_fillDateCategories( m_xOriginalCategories->getValues(), m_aDateCategories, m_bIsAutoDate, mrModel );
+                else
+                    m_bIsDateAxis = false;
             }
         }
         else
-            m_bIsDateAxis=false;
-        m_bDirty = false;
+        {
+            m_bIsDateAxis = false;
+        }
     }
+    else
+        m_bIsDateAxis=false;
+    m_bDirty = false;
 }
 
 Sequence< OUString > const & ExplicitCategoriesProvider::getSimpleCategories()

@@ -26,12 +26,54 @@
 
 #include "swdllapi.h"
 #include "calbck.hxx"
+#include "ndindex.hxx"
+#include "reffld.hxx"
 
 class SwField;
 class SwTextField;
 class SwView;
 class SwFieldType;
-namespace com { namespace sun { namespace star { namespace text { class XTextField; } } } }
+class SwFormatField;
+class IDocumentRedlineAccess;
+namespace com::sun::star::text { class XTextField; }
+
+namespace sw {
+    struct FindFormatForFieldHint final : SfxHint {
+        const SwField* m_pField;
+        SwFormatField*& m_rpFormat;
+        FindFormatForFieldHint(const SwField* pField, SwFormatField*& rpFormat) : m_pField(pField), m_rpFormat(rpFormat) {};
+    };
+    struct FindFormatForPostItIdHint final : SfxHint {
+        const sal_uInt32 m_nPostItId;
+        SwFormatField*& m_rpFormat;
+        FindFormatForPostItIdHint(const sal_uInt32 nPostItId, SwFormatField*& rpFormat) : m_nPostItId(nPostItId), m_rpFormat(rpFormat) {};
+    };
+    struct CollectPostItsHint final : SfxHint {
+        std::vector<SwFormatField*>& m_rvFormatFields;
+        IDocumentRedlineAccess const& m_rIDRA;
+        const bool m_bHideRedlines;
+        CollectPostItsHint(std::vector<SwFormatField*>& rvFormatFields, IDocumentRedlineAccess const& rIDRA, bool bHideRedlines) : m_rvFormatFields(rvFormatFields), m_rIDRA(rIDRA), m_bHideRedlines(bHideRedlines) {};
+    };
+    struct HasHiddenInformationNotesHint final : SfxHint {
+        bool& m_rbHasHiddenInformationNotes;
+        HasHiddenInformationNotesHint(bool& rbHasHiddenInformationNotes) : m_rbHasHiddenInformationNotes(rbHasHiddenInformationNotes) {};
+    };
+    struct GatherNodeIndexHint final : SfxHint {
+        std::vector<sal_uLong>& m_rvNodeIndex;
+        GatherNodeIndexHint(std::vector<sal_uLong>& rvNodeIndex) : m_rvNodeIndex(rvNodeIndex) {};
+    };
+    struct GatherRefFieldsHint final : SfxHint {
+        std::vector<SwGetRefField*>& m_rvRFields;
+        const sal_uInt16 m_nType;
+        GatherRefFieldsHint(std::vector<SwGetRefField*>& rvRFields, const sal_uInt16 nType) : m_rvRFields(rvRFields), m_nType(nType) {};
+    };
+    struct GatherFieldsHint final : SfxHint {
+        const bool m_bCollectOnlyInDocNodes;
+        std::vector<SwFormatField*>& m_rvFields;
+        GatherFieldsHint(std::vector<SwFormatField*>& rvFields, bool bCollectOnlyInDocNodes = true) : m_bCollectOnlyInDocNodes(bCollectOnlyInDocNodes), m_rvFields(rvFields) {};
+    };
+}
+
 
 // ATT_FLD
 class SW_DLLPUBLIC SwFormatField final
@@ -47,7 +89,6 @@ class SW_DLLPUBLIC SwFormatField final
     std::unique_ptr<SwField> mpField;
     SwTextField* mpTextField; // the TextAttribute
 
-    virtual void Modify( const SfxPoolItem* pOld, const SfxPoolItem *pNew) override;
     virtual void SwClientNotify( const SwModify& rModify, const SfxHint& rHint ) override;
 
 public:
@@ -105,6 +146,8 @@ public:
     SAL_DLLPRIVATE void SetXTextField(css::uno::Reference<css::text::XTextField> const& xTextField)
             { m_wXTextField = xTextField; }
     void dumpAsXml(xmlTextWriterPtr pWriter) const override;
+
+    void UpdateTextNode(const SfxPoolItem* pOld, const SfxPoolItem* pNew);
 };
 
 enum class SwFormatFieldHintWhich
@@ -120,7 +163,7 @@ enum class SwFormatFieldHintWhich
 class SW_DLLPUBLIC SwFormatFieldHint final : public SfxHint
 {
     const SwFormatField*   m_pField;
-    SwFormatFieldHintWhich const m_nWhich;
+    SwFormatFieldHintWhich m_nWhich;
     const SwView*     m_pView;
 
 public:

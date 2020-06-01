@@ -22,8 +22,8 @@
 
 #include <com/sun/star/uno/Reference.hxx>
 
-namespace com { namespace sun { namespace star { namespace drawing { namespace framework { class XConfiguration; } } } } }
-namespace com { namespace sun { namespace star { namespace drawing { namespace framework { class XConfigurationController; } } } } }
+namespace com::sun::star::drawing::framework { class XConfiguration; }
+namespace com::sun::star::drawing::framework { class XConfigurationController; }
 
 namespace sd {
 
@@ -47,7 +47,6 @@ public:
     ~PaneHider();
 
 private:
-    const ViewShell& mrViewShell;
     /** Remember whether the visibility states of the windows of the  panes
         has been modified and have to be restored.
     */

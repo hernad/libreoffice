@@ -31,17 +31,14 @@
 #include <com/sun/star/beans/XPropertyChangeListener.hpp>
 #include <com/sun/star/container/XContainerListener.hpp>
 #include <com/sun/star/sdb/application/XDatabaseDocumentUI.hpp>
-#include <com/sun/star/util/XModifiable.hpp>
 #include <com/sun/star/ui/XContextMenuInterception.hpp>
 
 #include <comphelper/namedvaluecollection.hxx>
 #include <comphelper/uno3.hxx>
 #include <cppuhelper/implbase5.hxx>
 #include <comphelper/interfacecontainer2.hxx>
-#include <sot/storage.hxx>
 #include <vcl/transfer.hxx>
 #include <svx/dataaccessdescriptor.hxx>
-#include <vcl/timer.hxx>
 
 #include <memory>
 
@@ -50,7 +47,7 @@ class SvTreeListBox;
 class TransferableHelper;
 class TransferableClipboardListener;
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace container {
         class XNameContainer;
         class XContainer;
@@ -58,7 +55,7 @@ namespace com { namespace sun { namespace star {
     namespace ucb {
         class XContent;
     }
-}}}
+}
 
 namespace dbaui
 {
@@ -349,7 +346,7 @@ namespace dbaui
         /** verifies the object type denotes a valid DatabaseObject, and the object name denotes an existing
             object of this type. Throws if not.
         */
-        void    impl_validateObjectTypeAndName_throw( const sal_Int32 _nObjectType, const ::o3tl::optional< OUString >& i_rObjectName );
+        void    impl_validateObjectTypeAndName_throw( const sal_Int32 _nObjectType, const ::std::optional< OUString >& i_rObjectName );
 
     protected:
         // initializing members

@@ -36,8 +36,8 @@
 #include <ucbhelper/ucbhelperdllapi.h>
 #include <memory>
 
-namespace com { namespace sun { namespace star { namespace uno { class XComponentContext; } } } }
-namespace com { namespace sun { namespace star { namespace ucb { class XCommandEnvironment; } } } }
+namespace com::sun::star::uno { class XComponentContext; }
+namespace com::sun::star::ucb { class XCommandEnvironment; }
 
 namespace ucbhelper {
 
@@ -395,7 +395,7 @@ public:
 
     /**
      * This method is called to instruct the supplier to release the (possibly
-     * presnt) property values at the given index.
+     * present) property values at the given index.
      *
      * @param nIndex is the zero-based index within the logical data array
      *               of the supplier.

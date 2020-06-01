@@ -192,6 +192,7 @@ static const struct {
     { "cu_RU",  lcl_DATA_EURO },
     { "vec_IT", lcl_DATA_EURO },
     { "szl_PL", lcl_DATA_EURO },
+    { "lij_IT", lcl_DATA_EURO },
 
     { "ja_JP",  lcl_DATA_OTHERS },
     { "ko_KR",  lcl_DATA_OTHERS },
@@ -327,7 +328,9 @@ static const struct {
     { "ar_SY",  lcl_DATA_OTHERS },
     { "ar_YE",  lcl_DATA_OTHERS },
     { "ilo_PH", lcl_DATA_OTHERS },
-    { "ha_Latn_NG",  lcl_DATA_OTHERS }
+    { "ha_Latn_NG",  lcl_DATA_OTHERS },
+    { "min_ID", lcl_DATA_OTHERS },
+    { "sun_ID", lcl_DATA_OTHERS }
 };
 
 #else
@@ -1257,7 +1260,6 @@ LocaleDataImpl::getContinuousNumberingLevels( const lang::Locale& rLocale )
 
     if ( func )
     {
-        int i;
         // invoke function
         sal_Int16 nStyles;
         sal_Int16 nAttributes;
@@ -1265,12 +1267,12 @@ LocaleDataImpl::getContinuousNumberingLevels( const lang::Locale& rLocale )
 
         // allocate memory for nAttributes attributes for each of the nStyles styles.
         Sequence< Sequence<beans::PropertyValue> > pv( nStyles );
-        for( i=0; i<pv.getLength(); i++ ) {
-            pv[i] = Sequence<beans::PropertyValue>( nAttributes );
+        for( auto& i : pv ) {
+            i = Sequence<beans::PropertyValue>( nAttributes );
         }
 
         sal_Unicode const *** pStyle = p0;
-        for( i=0;  i<nStyles;  i++ ) {
+        for( int i=0;  i<nStyles;  i++ ) {
             sal_Unicode const ** pAttribute = pStyle[i];
             for( int j=0;  j<nAttributes;  j++ ) { // prefix, numberingtype, ...
                 sal_Unicode const * pString = pAttribute[j];
@@ -1431,7 +1433,7 @@ oslGenericFunction LocaleDataImpl::getFunctionSymbol( const Locale& rLocale, con
 {
     lcl_LookupTableHelper & rLookupTable = lcl_LookupTableStatic::get();
 
-    if (cachedItem.get() && cachedItem->equals(rLocale))
+    if (cachedItem && cachedItem->equals(rLocale))
     {
         OString sSymbolName = rtl::OStringView(pFunction) + "_" +
                 cachedItem->localeName;

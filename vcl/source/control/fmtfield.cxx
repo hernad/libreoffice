@@ -18,14 +18,18 @@
  */
 
 #include <tools/debug.hxx>
+#include <boost/property_tree/json_parser.hpp>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/string.hxx>
 #include <unotools/localedatawrapper.hxx>
+#include <vcl/builder.hxx>
 #include <vcl/event.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/commandevent.hxx>
 #include <svl/zformat.hxx>
 #include <vcl/fmtfield.hxx>
+#include <vcl/uitest/uiobject.hxx>
+#include <vcl/uitest/formattedfielduiobject.hxx>
 #include <vcl/weld.hxx>
 #include <i18nlangtag/languagetag.hxx>
 #include <unotools/syslocale.hxx>
@@ -291,14 +295,14 @@ FormattedField::StaticFormatter::~StaticFormatter()
     }
 }
 
-
 FormattedField::FormattedField(vcl::Window* pParent, WinBits nStyle)
-    :SpinField(pParent, nStyle)
+    :SpinField(pParent, nStyle, WindowType::FORMATTEDFIELD)
     ,m_aLastSelection(0,0)
     ,m_dMinValue(0)
     ,m_dMaxValue(0)
     ,m_bHasMin(false)
     ,m_bHasMax(false)
+    ,m_bWrapOnLimits(false)
     ,m_bStrictFormat(true)
     ,m_bEnableEmptyField(true)
     ,m_bAutoColor(false)
@@ -726,7 +730,7 @@ void FormattedField::ReFormat()
         if (TreatingAsNumber())
         {
             double dValue = GetValue();
-            if ( m_bEnableNaN && ::rtl::math::isNan( dValue ) )
+            if ( m_bEnableNaN && std::isnan( dValue ) )
                 return;
             ImplSetValue( dValue, true );
         }
@@ -832,6 +836,29 @@ void FormattedField::SetTextValue(const OUString& rText)
     ReFormat();
 }
 
+// currently used by online
+void FormattedField::SetValueFromString(const OUString& rStr)
+{
+    sal_Int32 nEnd;
+    rtl_math_ConversionStatus eStatus;
+    double fValue = ::rtl::math::stringToDouble(rStr, '.', GetDecimalDigits(), &eStatus, &nEnd );
+
+    if (eStatus == rtl_math_ConversionStatus_Ok &&
+        nEnd == rStr.getLength())
+    {
+        SetValue(fValue);
+        SetModifyFlag();
+        Modify();
+
+        // Notify the value has changed
+        SpinField::Up();
+    }
+    else
+    {
+        SAL_WARN("vcl", "fail to convert the value: " << rStr);
+    }
+}
+
 void FormattedField::EnableEmptyField(bool bEnable)
 {
     if (bEnable == m_bEnableEmptyField)
@@ -844,11 +871,16 @@ void FormattedField::EnableEmptyField(bool bEnable)
 
 void FormattedField::ImplSetValue(double dVal, bool bForce)
 {
-
     if (m_bHasMin && (dVal<m_dMinValue))
-        dVal = m_dMinValue;
+    {
+        dVal = m_bWrapOnLimits ? fmod(dVal + m_dMaxValue + 1 - m_dMinValue, m_dMaxValue + 1) + m_dMinValue
+                               : m_dMinValue;
+    }
     if (m_bHasMax && (dVal>m_dMaxValue))
-        dVal = m_dMaxValue;
+    {
+        dVal = m_bWrapOnLimits ? fmod(dVal - m_dMinValue, m_dMaxValue + 1) + m_dMinValue
+                               : m_dMaxValue;
+    }
     if (!bForce && (dVal == GetValue()))
         return;
 
@@ -983,6 +1015,8 @@ bool FormattedField::set_property(const OString &rKey, const OUString &rValue)
 {
     if (rKey == "digits")
         SetDecimalDigits(rValue.toInt32());
+    else if (rKey == "wrap")
+        m_bWrapOnLimits = toBool(rValue);
     else
         return SpinField::set_property(rKey, rValue);
     return true;
@@ -1055,6 +1089,24 @@ void FormattedField::Last()
 void FormattedField::UseInputStringForFormatting()
 {
     m_bUseInputStringForFormatting = true;
+}
+
+boost::property_tree::ptree FormattedField::DumpAsPropertyTree()
+{
+    boost::property_tree::ptree aTree(SpinField::DumpAsPropertyTree());
+    aTree.put("min", rtl::math::doubleToString(GetMinValue(),
+        rtl_math_StringFormat_F, GetDecimalDigits(), '.').getStr());
+    aTree.put("max", rtl::math::doubleToString(GetMaxValue(),
+        rtl_math_StringFormat_F, GetDecimalDigits(), '.').getStr());
+    aTree.put("value", rtl::math::doubleToString(GetValue(),
+        rtl_math_StringFormat_F, GetDecimalDigits(), '.').getStr());
+
+    return aTree;
+}
+
+FactoryFunction FormattedField::GetUITestFactory() const
+{
+    return FormattedFieldUIObject::create;
 }
 
 DoubleNumericField::DoubleNumericField(vcl::Window* pParent, WinBits nStyle)

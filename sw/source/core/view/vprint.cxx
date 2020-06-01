@@ -54,7 +54,7 @@ class SwQueuedPaint
 {
 public:
     SwQueuedPaint *pNext;
-    SwViewShell* const pSh;
+    SwViewShell      *pSh;
     SwRect          aRect;
 
     SwQueuedPaint( SwViewShell *pNew, const SwRect &rRect ) :
@@ -114,7 +114,6 @@ void SwPaintQueue::Repaint()
                 {
                     // for previewing, since rows/columns are known in PaintHdl (UI)
                     pSh->GetWin()->Invalidate();
-                    pSh->GetWin()->Update();
                 }
             }
             else
@@ -345,7 +344,7 @@ void SwViewShell::FillPrtDoc( SwDoc *pPrtDoc, const SfxPrinter* pPrt)
         if( pContentFrame )
         {
             SwRect aCharRect;
-            SwCursorMoveState aTmpState( MV_NONE );
+            SwCursorMoveState aTmpState( CursorMoveState::NONE );
             pContentFrame->GetCharRect( aCharRect, *pShellTableCursor->Start(), &aTmpState );
             aSelPoint = Point( aCharRect.Left(), aCharRect.Top() );
         }

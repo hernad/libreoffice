@@ -80,6 +80,7 @@
 #include <ftninfo.hxx>
 #include <pagedesc.hxx>
 #include <strings.hrc>
+#include <frameformats.hxx>
 #include <tools/datetimeutils.hxx>
 
 #include <sortedobjs.hxx>
@@ -428,7 +429,7 @@ SwFlyFrameFormat* SwDoc::MakeFlyAndMove( const SwPaM& rPam, const SfxItemSet& rS
                         *rTmp.GetPoint() != *rTmp.GetMark() )
                     {
                         // aPos is the newly created fly section, so definitely outside rPam, it's pointless to check that again.
-                        getIDocumentContentOperations().CopyRange( *const_cast<SwPaM*>(&rTmp), aPos, /*bCopyAll=*/false, /*bCheckPos=*/false, /*bCopyText=*/true);
+                        getIDocumentContentOperations().CopyRange(*const_cast<SwPaM*>(&rTmp), aPos, SwCopyFlags::IsMoveToFly);
                     }
                 }
                 getIDocumentRedlineAccess().SetRedlineMove(bOldRedlineMove);
@@ -491,7 +492,10 @@ static bool lcl_TstFlyRange( const SwPaM* pPam, const SwPosition* pFlyPos,
                      (nPamEndContentIndex > nFlyContentIndex )));
         }
 
-    } while( !bOk && pPam != ( pTmp = pTmp->GetNext() ));
+        if( bOk )
+            break;
+        pTmp = pTmp->GetNext();
+    } while( pPam != pTmp );
     return bOk;
 }
 
@@ -1381,16 +1385,21 @@ OUString SwDoc::GetUniqueShapeName() const
     return lcl_GetUniqueFlyName(this, STR_SHAPE_DEFNAME, RES_DRAWFRMFMT);
 }
 
+OUString SwDoc::GetUniqueDrawObjectName() const
+{
+    return lcl_GetUniqueFlyName(this, "DrawObject", RES_DRAWFRMFMT);
+}
+
 const SwFlyFrameFormat* SwDoc::FindFlyByName( const OUString& rName, SwNodeType nNdTyp ) const
 {
     auto range = GetSpzFrameFormats()->rangeFind( RES_FLYFRMFMT, rName );
     for( auto it = range.first; it != range.second; it++ )
     {
         const SwFrameFormat* pFlyFormat = *it;
-        const SwNodeIndex* pIdx = nullptr;
-        if( RES_FLYFRMFMT == pFlyFormat->Which() && pFlyFormat->GetName() == rName &&
-            nullptr != ( pIdx = pFlyFormat->GetContent().GetContentIdx() ) &&
-            pIdx->GetNode().GetNodes().IsDocNodes() )
+        if( RES_FLYFRMFMT != pFlyFormat->Which() || pFlyFormat->GetName() != rName )
+            continue;
+        const SwNodeIndex* pIdx = pFlyFormat->GetContent().GetContentIdx();
+        if( pIdx && pIdx->GetNode().GetNodes().IsDocNodes() )
         {
             if( nNdTyp != SwNodeType::NONE )
             {
@@ -1451,7 +1460,8 @@ void SwDoc::SetAllUniqueFlyNames()
 
     for( n = GetSpzFrameFormats()->size(); n; )
     {
-        if( RES_FLYFRMFMT == (pFlyFormat = (*GetSpzFrameFormats())[ --n ])->Which() )
+        pFlyFormat = (*GetSpzFrameFormats())[ --n ];
+        if( RES_FLYFRMFMT == pFlyFormat->Which() )
         {
             const OUString& aNm = pFlyFormat->GetName();
             if ( !aNm.isEmpty() )
@@ -1500,10 +1510,9 @@ void SwDoc::SetAllUniqueFlyNames()
 
     for( n = aArr.size(); n; )
     {
-        const SwNodeIndex* pIdx;
-
-        if( nullptr != ( pIdx = ( pFlyFormat = aArr[ --n ])->GetContent().GetContentIdx() )
-            && pIdx->GetNode().GetNodes().IsDocNodes() )
+        pFlyFormat = aArr[ --n ];
+        const SwNodeIndex* pIdx = pFlyFormat->GetContent().GetContentIdx();
+        if( pIdx && pIdx->GetNode().GetNodes().IsDocNodes() )
         {
             switch( GetNodes()[ pIdx->GetIndex() + 1 ]->GetNodeType() )
             {

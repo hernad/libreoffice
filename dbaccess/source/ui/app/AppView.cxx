@@ -19,28 +19,15 @@
 
 #include "AppView.hxx"
 #include <strings.hrc>
-#include <tools/debug.hxx>
 #include <tools/diagnose_ex.h>
-#include <vcl/toolbox.hxx>
 #include <vcl/event.hxx>
-#include <unotools/configmgr.hxx>
-#include <com/sun/star/datatransfer/clipboard/XClipboard.hpp>
-#include <com/sun/star/beans/XPropertySet.hpp>
+#include <vcl/weld.hxx>
 #include <com/sun/star/sdbcx/XTablesSupplier.hpp>
 #include <com/sun/star/sdb/XQueriesSupplier.hpp>
-#include <unotools/syslocale.hxx>
-#include <UITools.hxx>
 #include "AppDetailView.hxx"
-#include <tabletree.hxx>
 #include "AppSwapWindow.hxx"
-#include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
 #include "AppTitleWindow.hxx"
-#include <dsntypes.hxx>
-#include <stringconstants.hxx>
-#include <dbaccess/IController.hxx>
-#include <browserids.hxx>
-#include <unotools/pathoptions.hxx>
 #include "AppController.hxx"
 
 using namespace ::dbaui;
@@ -473,36 +460,36 @@ void OApplicationView::showPreview( const OUString& _sDataSourceName,
                                     bool _bTable)
 {
     OSL_ENSURE(m_pWin && getDetailView(),"Detail view is NULL! -> GPF");
-    if ( isPreviewEnabled() )
+    if ( !isPreviewEnabled() )
+        return;
+
+    stopComponentListening(m_xObject);
+    m_xObject = nullptr;
+    try
     {
-        stopComponentListening(m_xObject);
-        m_xObject = nullptr;
-        try
+        Reference<XNameAccess> xNameAccess;
+        if ( _bTable )
         {
-            Reference<XNameAccess> xNameAccess;
-            if ( _bTable )
-            {
-                Reference<XTablesSupplier> xSup(_xConnection,UNO_QUERY);
-                if ( xSup.is() )
-                    xNameAccess = xSup->getTables();
-            }
-            else
-            {
-                Reference<XQueriesSupplier> xSup(_xConnection,UNO_QUERY);
-                if ( xSup.is() )
-                    xNameAccess = xSup->getQueries();
-            }
-            if ( xNameAccess.is() && xNameAccess->hasByName(_sName) )
-                m_xObject.set(xNameAccess->getByName(_sName),UNO_QUERY);
+            Reference<XTablesSupplier> xSup(_xConnection,UNO_QUERY);
+            if ( xSup.is() )
+                xNameAccess = xSup->getTables();
         }
-        catch( const Exception& )
+        else
         {
-            DBG_UNHANDLED_EXCEPTION("dbaccess");
+            Reference<XQueriesSupplier> xSup(_xConnection,UNO_QUERY);
+            if ( xSup.is() )
+                xNameAccess = xSup->getQueries();
         }
-        if ( m_xObject.is() )
-            startComponentListening(m_xObject);
-        getDetailView()->showPreview(_sDataSourceName,_sName,_bTable);
+        if ( xNameAccess.is() && xNameAccess->hasByName(_sName) )
+            m_xObject.set(xNameAccess->getByName(_sName),UNO_QUERY);
     }
+    catch( const Exception& )
+    {
+        DBG_UNHANDLED_EXCEPTION("dbaccess");
+    }
+    if ( m_xObject.is() )
+        startComponentListening(m_xObject);
+    getDetailView()->showPreview(_sDataSourceName,_sName,_bTable);
 }
 
 void OApplicationView::GetFocus()

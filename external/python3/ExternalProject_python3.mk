@@ -33,6 +33,7 @@ ifeq ($(OS),WNT)
 # at least for MSVC 2008 it is necessary to clear MAKEFLAGS because
 # nmake is invoked
 $(call gb_ExternalProject_get_state_target,python3,build) :
+	$(call gb_Trace_StartRange,python3,EXTERNAL)
 	$(call gb_ExternalProject_run,build,\
 		MAKEFLAGS= MSBuild.exe pcbuild.sln /t:Build \
 			/p:Configuration=$(if $(MSVC_USE_DEBUG_RUNTIME),Debug,Release) \
@@ -41,10 +42,10 @@ $(call gb_ExternalProject_get_state_target,python3,build) :
 			/p:opensslOutDir=$(call gb_UnpackedTarball_get_dir,openssl)/out32dll \
 			/p:zlibDir=$(call gb_UnpackedTarball_get_dir,zlib) \
 			/maxcpucount \
-			$(if $(filter 150,$(VCVER)),/p:PlatformToolset=v141 /p:VisualStudioVersion=15.0 /ToolsVersion:15.0) \
 			$(if $(filter 160,$(VCVER)),/p:PlatformToolset=v142 /p:VisualStudioVersion=16.0 /ToolsVersion:Current) \
 			$(if $(filter 10,$(WINDOWS_SDK_VERSION)),/p:WindowsTargetPlatformVersion=$(UCRTVERSION)) \
 	,PCBuild)
+	$(call gb_Trace_EndRange,python3,EXTERNAL)
 
 else
 
@@ -68,7 +69,14 @@ ifneq (,$(ENABLE_VALGRIND))
     python3_cflags += $(VALGRIND_CFLAGS)
 endif
 
+# This happens to override the -O3 in the default OPT set in
+# workdir/UnpackedTarball/python3/configure.ac while keeping the other content of that OPT intact:
+ifeq ($(ENABLE_OPTIMIZED),)
+python3_cflags += $(gb_COMPILERNOOPTFLAGS)
+endif
+
 $(call gb_ExternalProject_get_state_target,python3,build) :
+	$(call gb_Trace_StartRange,python3,EXTERNAL)
 	$(call gb_ExternalProject_run,build,\
 		$(if $(filter MACOSX,$(OS)), \
 			$(if $(filter 10.8 10.9 10.10 10.11,$(MACOSX_DEPLOYMENT_TARGET)), \
@@ -82,9 +90,7 @@ $(call gb_ExternalProject_get_state_target,python3,build) :
 		--prefix=/python-inst \
 		--with-system-expat \
 		$(if $(filter AIX,$(OS)), \
-			--disable-ipv6 --with-threads OPT="-g0 -fwrapv -O3 -Wall", \
-			$(if $(gb_Module_CURRENTMODULE_DEBUG_ENABLED), \
-				OPT="$(gb_COMPILERNOOPTFLAGS) $(gb_DEBUGINFO_FLAGS)")) \
+			--disable-ipv6 --with-threads OPT="-g0 -fwrapv -O3 -Wall") \
 		$(if $(filter MACOSX,$(OS)), \
 			$(if $(filter INTEL,$(CPUNAME)),--enable-universalsdk=$(MACOSX_SDK_PATH) \
                                 --with-universal-archs=intel \
@@ -117,6 +123,7 @@ $(call gb_ExternalProject_get_state_target,python3,build) :
 			$(if $(SYSTEM_ZLIB),,ZLIB_INCDIR=$(WORKDIR)/UnpackedTarball/zlib) \
 		&& ln -s build/lib.* LO_lib \
 	)
+	$(call gb_Trace_EndRange,python3,EXTERNAL)
 
 endif
 
@@ -170,6 +177,7 @@ $(call gb_ExternalProject_get_state_target,python3,executables) : $(call gb_Exte
 $(call gb_ExternalProject_get_state_target,python3,removeunnecessarystuff) : $(call gb_ExternalProject_get_state_target,python3,build)
 	$(call gb_Output_announce,python3 - remove the stuff we don't need to ship,build,CUS,5)
 	rm -rf $(python3_fw_prefix)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib/python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/test
+	touch $@
 
 endif
 

@@ -65,28 +65,28 @@ public:
                 '.', ',', &status, &end);
         CPPUNIT_ASSERT_EQUAL(rtl_math_ConversionStatus_Ok, status);
         CPPUNIT_ASSERT_EQUAL(sal_Int32(3), end);
-        CPPUNIT_ASSERT_EQUAL(true, rtl::math::isNan(res));
+        CPPUNIT_ASSERT(std::isnan(res));
 
         res = rtl::math::stringToDouble(
                 OUString("NaN1.23"),
                 '.', ',', &status, &end);
         CPPUNIT_ASSERT_EQUAL(rtl_math_ConversionStatus_Ok, status);
         CPPUNIT_ASSERT_EQUAL(sal_Int32(3), end);
-        CPPUNIT_ASSERT_EQUAL(true, rtl::math::isNan(res));
+        CPPUNIT_ASSERT(std::isnan(res));
 
         res = rtl::math::stringToDouble(
                 OUString("INF"),
                 '.', ',', &status, &end);
         CPPUNIT_ASSERT_EQUAL(rtl_math_ConversionStatus_OutOfRange, status);
         CPPUNIT_ASSERT_EQUAL(sal_Int32(3), end);
-        CPPUNIT_ASSERT_EQUAL(true, rtl::math::isInf(res));
+        CPPUNIT_ASSERT(std::isinf(res));
 
         res = rtl::math::stringToDouble(
                 OUString("INF1.23"),
                 '.', ',', &status, &end);
         CPPUNIT_ASSERT_EQUAL(rtl_math_ConversionStatus_OutOfRange, status);
         CPPUNIT_ASSERT_EQUAL(sal_Int32(3), end);
-        CPPUNIT_ASSERT_EQUAL(true, rtl::math::isInf(res));
+        CPPUNIT_ASSERT(std::isinf(res));
 
         res = rtl::math::stringToDouble(
                 OUString(".5"),
@@ -149,6 +149,42 @@ public:
         CPPUNIT_ASSERT_EQUAL(rtl_math_ConversionStatus_Ok, status);
         CPPUNIT_ASSERT_EQUAL(sal_Int32(5), end);
         CPPUNIT_ASSERT_EQUAL(1234.0, res);
+
+        // Check that the value is the nearest double-precision representation of the decimal 0.0042
+        // (it was 0.0042000000000000006 instead of 0.0041999999999999997)
+        res = rtl::math::stringToDouble(OUString("0,0042"), ',', ' ', &status, &end);
+        CPPUNIT_ASSERT_EQUAL(rtl_math_ConversionStatus_Ok, status);
+        CPPUNIT_ASSERT_EQUAL(0.0042, res);
+
+        // "- 1" is nothing
+        res = rtl::math::stringToDouble(OUString("- 1"), '.', ',', &status, &end);
+        CPPUNIT_ASSERT_EQUAL(rtl_math_ConversionStatus_Ok, status);
+        CPPUNIT_ASSERT_EQUAL(sal_Int32(0), end);
+        CPPUNIT_ASSERT_EQUAL(0.0, res);
+
+        // "-1E+E" : no exponent
+        res = rtl::math::stringToDouble(OUString("-1E+E"), '.', ',', &status, &end);
+        CPPUNIT_ASSERT_EQUAL(rtl_math_ConversionStatus_Ok, status);
+        CPPUNIT_ASSERT_EQUAL(sal_Int32(2), end);
+        CPPUNIT_ASSERT_EQUAL(-1.0, res);
+
+        // "-0" is negative zero
+        res = rtl::math::stringToDouble(OUString("-0"), '.', ',', &status, &end);
+        CPPUNIT_ASSERT_EQUAL(rtl_math_ConversionStatus_Ok, status);
+        CPPUNIT_ASSERT_EQUAL(sal_Int32(2), end);
+        CPPUNIT_ASSERT_EQUAL(0.0, res);
+        CPPUNIT_ASSERT(std::signbit(res));
+
+        // Compensating: "0.001E311" is 1E308, not overflow/inf
+        res = rtl::math::stringToDouble(OUString("0.001E311"), '.', ',', &status, &end);
+        CPPUNIT_ASSERT_EQUAL(rtl_math_ConversionStatus_Ok, status);
+        CPPUNIT_ASSERT_EQUAL(sal_Int32(9), end);
+        CPPUNIT_ASSERT_EQUAL(1E308, res);
+
+        res = rtl::math::stringToDouble(OUString("1E8589934590"), '.', ',', &status, &end);
+        CPPUNIT_ASSERT_EQUAL(rtl_math_ConversionStatus_OutOfRange, status);
+        CPPUNIT_ASSERT_EQUAL(sal_Int32(12), end);
+        CPPUNIT_ASSERT_EQUAL(std::numeric_limits<double>::infinity(), res);
     }
 
     void test_stringToDouble_bad() {
@@ -330,7 +366,7 @@ public:
         CPPUNIT_ASSERT_EQUAL(-1.0,res);
         rtl::math::setNan( &x);
         res = rtl::math::erf(x);
-        CPPUNIT_ASSERT_EQUAL(true,rtl::math::isNan(res));
+        CPPUNIT_ASSERT(std::isnan(res));
         x = 3.0;
         res = rtl::math::erf(-x);
         CPPUNIT_ASSERT_DOUBLES_EQUAL( -rtl::math::erf(x), res, 1E-12);
@@ -349,7 +385,7 @@ public:
         CPPUNIT_ASSERT_EQUAL(2.0,res);
         rtl::math::setNan( &x);
         res = rtl::math::erfc(x);
-        CPPUNIT_ASSERT_EQUAL(true,rtl::math::isNan(res));
+        CPPUNIT_ASSERT(std::isnan(res));
         x = 3.0;
         res = rtl::math::erfc(-x);
         CPPUNIT_ASSERT_DOUBLES_EQUAL( 2.0 - rtl::math::erfc(x), res, 1E-12);
@@ -363,16 +399,16 @@ public:
         x = -0.0;
         res = rtl::math::expm1(x);
         CPPUNIT_ASSERT_EQUAL(-0.0,res);
-        CPPUNIT_ASSERT_EQUAL(true, rtl::math::isSignBitSet(res));
+        CPPUNIT_ASSERT(std::signbit(res));
         rtl::math::setInf( &x, false);
         res = rtl::math::expm1(x);
-        CPPUNIT_ASSERT_EQUAL(true, rtl::math::isInf(res) && !rtl::math::isSignBitSet(res));
+        CPPUNIT_ASSERT_EQUAL(true, std::isinf(res) && !std::signbit(res));
         rtl::math::setInf( &x, true);
         res = rtl::math::expm1(x);
         CPPUNIT_ASSERT_EQUAL(-1.0,res);
         rtl::math::setNan( &x);
         res = rtl::math::expm1(x);
-        CPPUNIT_ASSERT_EQUAL(true,rtl::math::isNan(res));
+        CPPUNIT_ASSERT(std::isnan(res));
     }
 
     void test_log1p() {
@@ -383,41 +419,41 @@ public:
         x = -0.0;
         res = rtl::math::log1p(x);
         CPPUNIT_ASSERT_EQUAL(-0.0,res);
-        CPPUNIT_ASSERT_EQUAL(true, rtl::math::isSignBitSet(res));
+        CPPUNIT_ASSERT(std::signbit(res));
         rtl::math::setInf( &x, false);
         res = rtl::math::log1p(x);
-        CPPUNIT_ASSERT_EQUAL(true, rtl::math::isInf(res) && !rtl::math::isSignBitSet(res));
+        CPPUNIT_ASSERT_EQUAL(true, std::isinf(res) && !std::signbit(res));
         x = -1.0;
         res = rtl::math::log1p(x);
-        CPPUNIT_ASSERT_EQUAL(true, rtl::math::isInf(res) && rtl::math::isSignBitSet(res));
+        CPPUNIT_ASSERT_EQUAL(true, std::isinf(res) && std::signbit(res));
         x = -1.1;
         res = rtl::math::log1p(x);
-        CPPUNIT_ASSERT_EQUAL(true, rtl::math::isNan(res));
+        CPPUNIT_ASSERT(std::isnan(res));
         rtl::math::setInf( &x, true);
         res = rtl::math::log1p(x);
-        CPPUNIT_ASSERT_EQUAL(true, rtl::math::isNan(res));
+        CPPUNIT_ASSERT(std::isnan(res));
         rtl::math::setNan( &x);
         res = rtl::math::log1p(x);
-        CPPUNIT_ASSERT_EQUAL(true,rtl::math::isNan(res));
+        CPPUNIT_ASSERT(std::isnan(res));
     }
 
     void test_acosh() {
         double res;
 
         res = rtl::math::acosh(-1.0); // NaN
-        CPPUNIT_ASSERT(rtl::math::isNan(res));
+        CPPUNIT_ASSERT(std::isnan(res));
 
         res = rtl::math::acosh(0.0); // NaN
-        CPPUNIT_ASSERT(rtl::math::isNan(res));
+        CPPUNIT_ASSERT(std::isnan(res));
 
         res = rtl::math::acosh(0.5); // NaN
-        CPPUNIT_ASSERT(rtl::math::isNan(res));
+        CPPUNIT_ASSERT(std::isnan(res));
 
         CPPUNIT_ASSERT_EQUAL(0.0, rtl::math::acosh(1.0));
 
         res = rtl::math::acosh(std::numeric_limits<double>::infinity()); // +Inf
-        CPPUNIT_ASSERT(!rtl::math::isSignBitSet(res));
-        CPPUNIT_ASSERT(rtl::math::isInf(res));
+        CPPUNIT_ASSERT(!std::signbit(res));
+        CPPUNIT_ASSERT(std::isinf(res));
 
         // #i97605
         CPPUNIT_ASSERT_DOUBLES_EQUAL(692.56728736744176, rtl::math::acosh(3e+300), 1e-15);
@@ -428,14 +464,14 @@ public:
         double res;
 
         res = rtl::math::asinh(-std::numeric_limits<double>::infinity()); // -Inf
-        CPPUNIT_ASSERT(rtl::math::isSignBitSet(res));
-        CPPUNIT_ASSERT(rtl::math::isInf(res));
+        CPPUNIT_ASSERT(std::signbit(res));
+        CPPUNIT_ASSERT(std::isinf(res));
 
         CPPUNIT_ASSERT_EQUAL(0.0, rtl::math::asinh(0.0));
 
         res = rtl::math::asinh(std::numeric_limits<double>::infinity()); // +Inf
-        CPPUNIT_ASSERT(!rtl::math::isSignBitSet(res));
-        CPPUNIT_ASSERT(rtl::math::isInf(res));
+        CPPUNIT_ASSERT(!std::signbit(res));
+        CPPUNIT_ASSERT(std::isinf(res));
 
         // #i97605
         CPPUNIT_ASSERT_DOUBLES_EQUAL(691.67568924815798, rtl::math::asinh(1.23e+300), 1e-15);
@@ -452,20 +488,20 @@ public:
         double res;
 
         res = rtl::math::atanh(-2.0); // NaN
-        CPPUNIT_ASSERT(rtl::math::isNan(res));
+        CPPUNIT_ASSERT(std::isnan(res));
 
         res = rtl::math::atanh(-1.0); // -Inf
-        CPPUNIT_ASSERT(rtl::math::isSignBitSet(res));
-        CPPUNIT_ASSERT(rtl::math::isInf(res));
+        CPPUNIT_ASSERT(std::signbit(res));
+        CPPUNIT_ASSERT(std::isinf(res));
 
         CPPUNIT_ASSERT_EQUAL(0.0, rtl::math::atanh(0.0));
 
         res = rtl::math::atanh(1.0); // +Inf
-        CPPUNIT_ASSERT(!rtl::math::isSignBitSet(res));
-        CPPUNIT_ASSERT(rtl::math::isInf(res));
+        CPPUNIT_ASSERT(!std::signbit(res));
+        CPPUNIT_ASSERT(std::isinf(res));
 
         res = rtl::math::atanh(2.0); // NaN
-        CPPUNIT_ASSERT(rtl::math::isNan(res));
+        CPPUNIT_ASSERT(std::isnan(res));
     }
 
     CPPUNIT_TEST_SUITE(Test);

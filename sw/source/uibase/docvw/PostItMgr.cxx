@@ -306,12 +306,14 @@ void SwPostItMgr::RemoveItem( SfxBroadcaster* pBroadcast )
     if (i != mvPostItFields.end())
     {
         std::unique_ptr<SwSidebarItem> p = std::move(*i);
-        if (GetActiveSidebarWin() == p->pPostIt)
-            SetActiveSidebarWin(nullptr);
         // tdf#120487 remove from list before dispose, so comment window
         // won't be recreated due to the entry still in the list if focus
         // transferring from the pPostIt triggers relayout of postits
+        // tdf#133348 remove from list before calling SetActiveSidebarWin
+        // so GetNextPostIt won't deal with mvPostItFields containing empty unique_ptr
         mvPostItFields.erase(i);
+        if (GetActiveSidebarWin() == p->pPostIt)
+            SetActiveSidebarWin(nullptr);
         p->pPostIt.disposeAndClear();
     }
     mbLayout = true;
@@ -963,8 +965,7 @@ void SwPostItMgr::DrawNotesForPage(OutputDevice *pOutDev, sal_uInt32 nPage)
         if (!pPostIt)
             continue;
         Point aPoint(mpEditWin->PixelToLogic(pPostIt->GetPosPixel()));
-        Size aSize(pPostIt->PixelToLogic(pPostIt->GetSizePixel()));
-        pPostIt->Draw(pOutDev, aPoint, aSize, DrawFlags::NONE);
+        pPostIt->Draw(pOutDev, aPoint, DrawFlags::NONE);
     }
 }
 
@@ -1295,27 +1296,15 @@ bool SwPostItMgr::LayoutByPage(std::vector<SwAnnotationWin*> &aVisiblePostItList
     return bScrollbars;
  }
 
-void SwPostItMgr::AddPostIts(bool bCheckExistence, bool bFocus)
+void SwPostItMgr::AddPostIts(const bool bCheckExistence, const bool bFocus)
 {
-    bool bEmpty = mvPostItFields.empty();
+    const bool bEmpty = mvPostItFields.empty();
+    IDocumentRedlineAccess const& rIDRA(mpWrtShell->getIDocumentRedlineAccess());
     SwFieldType* pType = mpView->GetDocShell()->GetDoc()->getIDocumentFieldsAccess().GetFieldType(SwFieldIds::Postit, OUString(),false);
-    SwIterator<SwFormatField,SwFieldType> aIter( *pType );
-    SwFormatField* pSwFormatField = aIter.First();
-    while(pSwFormatField)
-    {
-        if ( pSwFormatField->GetTextField())
-        {
-            IDocumentRedlineAccess const& rIDRA(mpWrtShell->getIDocumentRedlineAccess());
-            if (pSwFormatField->IsFieldInDoc()
-                && (!mpWrtShell->GetLayout()->IsHideRedlines()
-                    || !sw::IsFieldDeletedInModel(rIDRA, *pSwFormatField->GetTextField())))
-            {
-                InsertItem(pSwFormatField,bCheckExistence,bFocus);
-            }
-        }
-        pSwFormatField = aIter.Next();
-    }
-
+    std::vector<SwFormatField*> vFormatFields;
+    pType->CollectPostIts(vFormatFields, rIDRA, mpWrtShell->GetLayout()->IsHideRedlines());
+    for(auto pFormatField : vFormatFields)
+        InsertItem(pFormatField, bCheckExistence, bFocus);
     // if we just added the first one we have to update the view for centering
     if (bEmpty && !mvPostItFields.empty())
         PrepareView(true);
@@ -1355,7 +1344,7 @@ public:
 
 class IsPostitFieldWithAuthorOf : public FilterFunctor
 {
-    OUString const m_sAuthor;
+    OUString m_sAuthor;
 public:
     explicit IsPostitFieldWithAuthorOf(const OUString &rAuthor)
         : m_sAuthor(rAuthor)
@@ -1371,7 +1360,7 @@ public:
 
 class IsPostitFieldWithPostitId : public FilterFunctor
 {
-    sal_uInt32 const m_nPostItId;
+    sal_uInt32 m_nPostItId;
 public:
     explicit IsPostitFieldWithPostitId(sal_uInt32 nPostItId)
         : m_nPostItId(nPostItId)
@@ -1636,7 +1625,7 @@ void SwPostItMgr::ExecuteFormatAllDialog(SwView& rView)
     OutlinerView* pOLV = pWin->GetOutlinerView();
     SfxItemSet aEditAttr(pOLV->GetAttribs());
     SfxItemPool* pPool(SwAnnotationShell::GetAnnotationPool(rView));
-    SfxItemSet aDlgAttr(*pPool, svl::Items<EE_ITEMS_START, EE_ITEMS_END>{});
+    SfxItemSet aDlgAttr(*pPool, svl::Items<XATTR_FILLSTYLE, XATTR_FILLCOLOR, EE_ITEMS_START, EE_ITEMS_END>{});
     aDlgAttr.Put(aEditAttr);
     SwAbstractDialogFactory* pFact = SwAbstractDialogFactory::Create();
     ScopedVclPtr<SfxAbstractTabDialog> pDlg(pFact->CreateSwCharDlg(rView.GetFrameWeld(), rView, aDlgAttr, SwCharDlgMode::Ann));

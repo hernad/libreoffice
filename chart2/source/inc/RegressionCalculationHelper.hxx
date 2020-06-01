@@ -64,10 +64,10 @@ class isValid
 {
 public:
     bool operator()( double x, double y )
-    { return ! ( ::rtl::math::isNan( x ) ||
-                 ::rtl::math::isNan( y ) ||
-                 ::rtl::math::isInf( x ) ||
-                 ::rtl::math::isInf( y ) );
+    { return ! ( std::isnan( x ) ||
+                 std::isnan( y ) ||
+                 std::isinf( x ) ||
+                 std::isinf( y ) );
     }
 };
 
@@ -75,10 +75,10 @@ class isValidAndXPositive
 {
 public:
     bool operator()( double x, double y )
-    { return ! ( ::rtl::math::isNan( x ) ||
-                 ::rtl::math::isNan( y ) ||
-                 ::rtl::math::isInf( x ) ||
-                 ::rtl::math::isInf( y ) ||
+    { return ! ( std::isnan( x ) ||
+                 std::isnan( y ) ||
+                 std::isinf( x ) ||
+                 std::isinf( y ) ||
                  x <= 0.0 );
     }
 };
@@ -87,10 +87,10 @@ class isValidAndYPositive
 {
 public:
     bool operator()( double x, double y )
-    { return ! ( ::rtl::math::isNan( x ) ||
-                 ::rtl::math::isNan( y ) ||
-                 ::rtl::math::isInf( x ) ||
-                 ::rtl::math::isInf( y ) ||
+    { return ! ( std::isnan( x ) ||
+                 std::isnan( y ) ||
+                 std::isinf( x ) ||
+                 std::isinf( y ) ||
                  y <= 0.0 );
     }
 };
@@ -99,10 +99,10 @@ class isValidAndYNegative
 {
 public:
     bool operator()( double x, double y )
-    { return ! ( ::rtl::math::isNan( x ) ||
-                 ::rtl::math::isNan( y ) ||
-                 ::rtl::math::isInf( x ) ||
-                 ::rtl::math::isInf( y ) ||
+    { return ! ( std::isnan( x ) ||
+                 std::isnan( y ) ||
+                 std::isinf( x ) ||
+                 std::isinf( y ) ||
                  y >= 0.0 );
     }
 };
@@ -111,10 +111,10 @@ class isValidAndBothPositive
 {
 public:
     bool operator()( double x, double y )
-    { return ! ( ::rtl::math::isNan( x ) ||
-                 ::rtl::math::isNan( y ) ||
-                 ::rtl::math::isInf( x ) ||
-                 ::rtl::math::isInf( y ) ||
+    { return ! ( std::isnan( x ) ||
+                 std::isnan( y ) ||
+                 std::isinf( x ) ||
+                 std::isinf( y ) ||
                  x <= 0.0 ||
                  y <= 0.0 );
     }
@@ -124,10 +124,10 @@ class isValidAndXPositiveAndYNegative
 {
 public:
     bool operator()( double x, double y )
-    { return ! ( ::rtl::math::isNan( x ) ||
-                 ::rtl::math::isNan( y ) ||
-                 ::rtl::math::isInf( x ) ||
-                 ::rtl::math::isInf( y ) ||
+    { return ! ( std::isnan( x ) ||
+                 std::isnan( y ) ||
+                 std::isinf( x ) ||
+                 std::isinf( y ) ||
                  x <= 0.0 ||
                  y >= 0.0 );
     }

@@ -21,9 +21,7 @@
 #include <com/sun/star/frame/XModel.hpp>
 #include <dbaccess/dataview.hxx>
 #include <comphelper/namedvaluecollection.hxx>
-#include <sfx2/app.hxx>
 #include <dbaccess/IController.hxx>
-#include <UITools.hxx>
 #include <svtools/acceleratorexecute.hxx>
 #include <tools/diagnose_ex.h>
 #include <vcl/event.hxx>
@@ -114,7 +112,7 @@ namespace dbaui
             {
                 const KeyEvent* pKeyEvent = _rNEvt.GetKeyEvent();
                 const vcl::KeyCode& aKeyCode = pKeyEvent->GetKeyCode();
-                if ( m_pAccel.get() && m_pAccel->execute( aKeyCode ) )
+                if ( m_pAccel && m_pAccel->execute( aKeyCode ) )
                     // the accelerator consumed the event
                     return true;
                 [[fallthrough]];
@@ -139,25 +137,25 @@ namespace dbaui
             m_xController->notifyHiContrastChanged();
         }
 
-        if ( nType == StateChangedType::InitShow )
+        if ( nType != StateChangedType::InitShow )
+            return;
+
+        // now that there's a view which is finally visible, remove the "Hidden" value from the
+        // model's arguments.
+        try
         {
-            // now that there's a view which is finally visible, remove the "Hidden" value from the
-            // model's arguments.
-            try
+            Reference< XController > xController( m_xController->getXController(), UNO_SET_THROW );
+            Reference< XModel > xModel = xController->getModel();
+            if ( xModel.is() )
             {
-                Reference< XController > xController( m_xController->getXController(), UNO_SET_THROW );
-                Reference< XModel > xModel = xController->getModel();
-                if ( xModel.is() )
-                {
-                    ::comphelper::NamedValueCollection aArgs( xModel->getArgs() );
-                    aArgs.remove( "Hidden" );
-                    xModel->attachResource( xModel->getURL(), aArgs.getPropertyValues() );
-                }
+                ::comphelper::NamedValueCollection aArgs( xModel->getArgs() );
+                aArgs.remove( "Hidden" );
+                xModel->attachResource( xModel->getURL(), aArgs.getPropertyValues() );
             }
-            catch( const Exception& )
-            {
-                DBG_UNHANDLED_EXCEPTION("dbaccess");
-            }
+        }
+        catch( const Exception& )
+        {
+            DBG_UNHANDLED_EXCEPTION("dbaccess");
         }
     }
     void ODataView::DataChanged( const DataChangedEvent& rDCEvt )

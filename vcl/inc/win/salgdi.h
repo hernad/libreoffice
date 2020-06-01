@@ -141,9 +141,6 @@ public:
 
     /// Obtain the texture in format for WinSalGraphicsImplBase::DrawTextMask().
     virtual std::unique_ptr<Texture> getAsMaskTexture() const { abort(); };
-
-    /// Return true if text glyphs should be drawn as white instead of black.
-    virtual bool wantsTextColorWhite() const { return false; }
 };
 
 struct CompatibleDC::Texture
@@ -244,7 +241,8 @@ protected:
         const basegfx::B2DHomMatrix& rObjectToDevice,
         const basegfx::B2DPolygon&,
         double fTransparency,
-        const basegfx::B2DVector& rLineWidth,
+        double fLineWidth,
+        const std::vector< double >* pStroke, // MM01
         basegfx::B2DLineJoin,
         css::drawing::LineCap,
         double fMiterMinimumAngle,

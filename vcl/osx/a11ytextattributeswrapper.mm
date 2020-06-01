@@ -192,7 +192,7 @@ using namespace ::com::sun::star::uno;
     }
 }
 
-+(void)applyAttributesFrom:(Sequence < PropertyValue >)attributes toString:(NSMutableAttributedString *)string forRange:(NSRange)range fontDescriptor:(AquaA11yFontDescriptor*)fontDescriptor {
++(void)applyAttributesFrom:(Sequence < PropertyValue > const &)attributes toString:(NSMutableAttributedString *)string forRange:(NSRange)range fontDescriptor:(AquaA11yFontDescriptor*)fontDescriptor {
     NSAutoreleasePool * pool = [ [ NSAutoreleasePool alloc ] init ];
     // constants
     static const OUString attrUnderline("CharUnderline");
@@ -212,8 +212,7 @@ using namespace ::com::sun::star::uno;
     sal_Int32 underlineColor = 0;
     bool underlineHasColor = false;
     // add attributes to string
-    for ( int attrIndex = 0; attrIndex < attributes.getLength(); attrIndex++ ) {
-        PropertyValue property = attributes [ attrIndex ];
+    for ( const PropertyValue& property : attributes ) {
         // TODO: NSAccessibilityMisspelledTextAttribute, NSAccessibilityAttachmentTextAttribute, NSAccessibilityLinkTextAttribute
         // NSAccessibilityStrikethroughColorTextAttribute is unsupported by UNP-API
         if ( property.Value.hasValue() ) {

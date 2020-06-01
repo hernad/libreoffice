@@ -33,14 +33,14 @@ class SwTransferable;
 class SfxRequest;
 
 namespace sfx2 { class DocumentInserter; }
-namespace com{ namespace sun{ namespace star {
+namespace com::sun::star {
     namespace frame {
         class XDispatchProviderInterceptor;
     }
     namespace lang {
         class XUnoTunnel;
     }
-}}}
+}
 
 class SwScannerEventListener : public ::cppu::WeakImplHelper<
     css::lang::XEventListener >
@@ -90,7 +90,7 @@ class SwView_Impl
 
     // temporary document for printing text of selection / multi selection
     // in PDF export.
-    SfxObjectShellLock const    xTmpSelDocSh;
+    SfxObjectShellLock          xTmpSelDocSh;
 
     SwView*                     pView;
     rtl::Reference<SwScannerEventListener>

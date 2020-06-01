@@ -19,37 +19,17 @@
 
 #include <vcl/dllapi.h>
 
-namespace com
-{
-namespace sun
-{
-namespace star
-{
-namespace security
+namespace com::sun::star::security
 {
 class XCertificate;
 }
-}
-}
-}
 
-namespace com
-{
-namespace sun
-{
-namespace star
-{
-namespace uno
+namespace com::sun::star::uno
 {
 template <class interface_type> class Reference;
 }
-}
-}
-}
 
-namespace vcl
-{
-namespace filter
+namespace vcl::filter
 {
 class PDFTrailerElement;
 class PDFReferenceElement;
@@ -148,7 +128,7 @@ class VCL_DLLPUBLIC PDFArrayElement : public PDFElement
 {
     std::vector<PDFElement*> m_aElements;
     /// The object that contains this array.
-    PDFObjectElement* const m_pObject;
+    PDFObjectElement* m_pObject;
 
 public:
     PDFArrayElement(PDFObjectElement* pObject);
@@ -185,7 +165,7 @@ public:
 /// Stream object: a byte array with a known length.
 class VCL_DLLPUBLIC PDFStreamElement : public PDFElement
 {
-    size_t const m_nLength;
+    size_t m_nLength;
     sal_uInt64 m_nOffset;
     /// The byte array itself.
     SvMemoryStream m_aMemory;
@@ -429,8 +409,7 @@ public:
     //@}
 };
 
-} // namespace pdfio
-} // namespace xmlsecurity
+} // namespace vcl::filter
 
 #endif // INCLUDED_VCL_FILTER_PDFDOCUMENT_HXX
 

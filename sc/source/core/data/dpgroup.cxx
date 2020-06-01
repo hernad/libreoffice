@@ -53,8 +53,8 @@ public:
     virtual bool match(const ScDPItemData &rCellData) const override;
     virtual std::vector<ScDPItemData> getMatchValues() const override;
 private:
-    std::vector<ScDPItemData> const maValues;
-    ScDPNumGroupInfo const maNumInfo;
+    std::vector<ScDPItemData> maValues;
+    ScDPNumGroupInfo maNumInfo;
 };
 
 }
@@ -70,9 +70,9 @@ bool ScDPGroupNumFilter::match(const ScDPItemData& rCellData) const
     for (const auto& rValue : maValues)
     {
         double fVal = rValue.GetValue();
-        if (rtl::math::isInf(fVal))
+        if (std::isinf(fVal))
         {
-            if (rtl::math::isSignBitSet(fVal))
+            if (std::signbit(fVal))
             {
                 // Less than the min value.
                 if (rCellData.GetValue() < maNumInfo.mfStart)
@@ -115,9 +115,9 @@ public:
     virtual std::vector<ScDPItemData> getMatchValues() const override;
 
 private:
-    std::vector<ScDPItemData> const maValues;
-    Date const             maNullDate;
-    ScDPNumGroupInfo const maNumInfo;
+    std::vector<ScDPItemData> maValues;
+    Date             maNullDate;
+    ScDPNumGroupInfo maNumInfo;
 };
 
 }
@@ -624,7 +624,7 @@ namespace {
 
 class FindCaseInsensitive
 {
-    ScDPItemData const maValue;
+    ScDPItemData maValue;
 public:
     explicit FindCaseInsensitive(const ScDPItemData& rVal) : maValue(rVal) {}
 

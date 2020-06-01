@@ -36,11 +36,9 @@
 
 #include <com/sun/star/ldap/LdapGenericException.hpp>
 
-#include <com/sun/star/ldap/LdapConnectionException.hpp>
 #include <com/sun/star/lang/IllegalArgumentException.hpp>
-#include <osl/module.h>
 
-namespace extensions { namespace config { namespace ldap {
+namespace extensions::config::ldap {
 
 namespace uno = css::uno ;
 namespace lang = css::lang ;
@@ -130,7 +128,7 @@ private:
 } ;
 
 
-}} }
+}
 
 #endif // EXTENSIONS_CONFIG_LDAP_LDAPUSERPROFILE_HXX_
 

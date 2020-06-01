@@ -16,8 +16,9 @@
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
-#include "ConversionHelper.hxx"
+
 #include "GraphicHelpers.hxx"
+#include "TagLogger.hxx"
 #include <dmapper/GraphicZOrderHelper.hxx>
 #include "PropertyIds.hxx"
 
@@ -29,14 +30,10 @@
 
 #include <oox/drawingml/drawingmltypes.hxx>
 #include <sal/log.hxx>
-#include <unotools/resmgr.hxx>
-#include <vcl/settings.hxx>
-#include <vcl/svapp.hxx>
 #include <svx/dialmgr.hxx>
 #include <svx/strings.hrc>
 
 #include <iostream>
-#include <memory>
 
 namespace writerfilter::dmapper {
 
@@ -74,6 +71,10 @@ void PositionHandler::lcl_attribute( Id aName, Value& rVal )
                         m_nRelation =  text::RelOrientation::PAGE_FRAME;
                         break;
 
+                    case NS_ooxml::LN_Value_wordprocessingDrawing_ST_RelFromV_bottomMargin:
+                        m_nRelation = text::RelOrientation::PAGE_PRINT_AREA_BOTTOM;
+                        break;
+
                     case NS_ooxml::LN_Value_wordprocessingDrawing_ST_RelFromV_paragraph:
                         m_nRelation = text::RelOrientation::FRAME;
                         break;
@@ -99,6 +100,11 @@ void PositionHandler::lcl_attribute( Id aName, Value& rVal )
 
                     case NS_ooxml::LN_Value_wordprocessingDrawing_ST_RelFromH_page:
                         m_nRelation =  text::RelOrientation::PAGE_FRAME;
+                        break;
+
+                    case NS_ooxml::LN_Value_wordprocessingDrawing_ST_RelFromH_insideMargin:
+                        m_nRelation = text::RelOrientation::PAGE_FRAME;
+                        m_bPageToggle = true;
                         break;
 
                     case NS_ooxml::LN_Value_wordprocessingDrawing_ST_RelFromH_column:

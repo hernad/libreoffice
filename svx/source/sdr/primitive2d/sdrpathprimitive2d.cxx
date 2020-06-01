@@ -18,9 +18,7 @@
  */
 
 #include <sdr/primitive2d/sdrpathprimitive2d.hxx>
-#include <svx/sdr/primitive2d/sdrdecompositiontools.hxx>
-#include <basegfx/polygon/b2dpolypolygontools.hxx>
-#include <drawinglayer/primitive2d/groupprimitive2d.hxx>
+#include <sdr/primitive2d/sdrdecompositiontools.hxx>
 #include <svx/sdr/primitive2d/svx_primitivetypes2d.hxx>
 #include <drawinglayer/primitive2d/sdrdecompositiontools2d.hxx>
 
@@ -122,7 +120,7 @@ namespace drawinglayer::primitive2d
 
         SdrPathPrimitive2D::SdrPathPrimitive2D(
             const basegfx::B2DHomMatrix& rTransform,
-            const attribute::SdrLineFillShadowTextAttribute& rSdrLFSTAttribute,
+            const attribute::SdrLineFillEffectsTextAttribute& rSdrLFSTAttribute,
             const basegfx::B2DPolyPolygon& rUnitPolyPolygon,
             const basegfx::B2DPolyPolygon& rUnitDefinitionPolyPolygon)
         :   BufferedDecompositionPrimitive2D(),

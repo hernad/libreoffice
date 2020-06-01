@@ -36,7 +36,7 @@ class XFillColorItem;
 class XFillHatchItem;
 class XFillBitmapItem;
 
-namespace svx { namespace sidebar {
+namespace svx::sidebar {
 
 class AreaTransparencyGradientControl;
 
@@ -81,11 +81,11 @@ private:
     ::sfx2::sidebar::ControllerItem maFillTransparenceController;
     ::sfx2::sidebar::ControllerItem maFillFloatTransparenceController;
 
-    SfxBindings* const mpBindings;
+    SfxBindings* mpBindings;
 };
 
 
-} } // end of namespace svx::sidebar
+} // end of namespace svx::sidebar
 
 
 #endif // INCLUDED_SVX_SOURCE_SIDEBAR_AREA_AREAPROPERTYPANEL_HXX

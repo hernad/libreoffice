@@ -19,19 +19,16 @@
 
 #include <exsrcbrw.hxx>
 #include <uiservices.hxx>
-#include <com/sun/star/form/FormComponentType.hpp>
 #include <com/sun/star/util/XURLTransformer.hpp>
 #include <com/sun/star/form/XGridColumnFactory.hpp>
 #include <com/sun/star/form/XLoadable.hpp>
 #include <com/sun/star/frame/FrameSearchFlag.hpp>
 #include <formadapter.hxx>
 #include <comphelper/processfactory.hxx>
-#include <stringconstants.hxx>
 #include <strings.hxx>
 #include <dbu_reghelper.hxx>
 #include <o3tl/any.hxx>
 #include <tools/diagnose_ex.h>
-#include <rtl/strbuf.hxx>
 #include <sal/log.hxx>
 
 using namespace ::com::sun::star::uno;
@@ -362,37 +359,36 @@ void SbaExternalSourceBrowser::Attach(const Reference< XRowSet > & xMaster)
     m_pDataSourceImpl->AttachForm(xMaster);
     startListening();
 
-    if (xMaster.is())
-    {
-        // at this point we have to reset the formatter for the new form
-        initFormatter();
-        // assume that the master form is already loaded
+    if (!xMaster.is())
+        return;
+
+    // at this point we have to reset the formatter for the new form
+    initFormatter();
+    // assume that the master form is already loaded
 #if OSL_DEBUG_LEVEL > 0
-        {
-            Reference< XLoadable > xLoadable( xMaster, UNO_QUERY );
-            OSL_ENSURE( xLoadable.is() && xLoadable->isLoaded(), "SbaExternalSourceBrowser::Attach: master is not loaded!" );
-        }
+    {
+        Reference< XLoadable > xLoadable( xMaster, UNO_QUERY );
+        OSL_ENSURE( xLoadable.is() && xLoadable->isLoaded(), "SbaExternalSourceBrowser::Attach: master is not loaded!" );
+    }
 #endif
 
-        LoadFinished(true);
+    LoadFinished(true);
 
-        Reference< XResultSetUpdate >  xUpdate(xMaster, UNO_QUERY);
-        try
-        {
-            if (bWasInsertRow && xUpdate.is())
-                xUpdate->moveToInsertRow();
-            else if (xCursor.is() && aOldPos.hasValue())
-                xCursor->moveToBookmark(aOldPos);
-            else if(bBeforeFirst && xMaster.is())
-                xMaster->beforeFirst();
-            else if(bAfterLast && xMaster.is())
-                xMaster->afterLast();
-        }
-        catch(Exception&)
-        {
-            SAL_WARN("dbaccess.ui", "SbaExternalSourceBrowser::Attach : couldn't restore the cursor position !");
-        }
-
+    Reference< XResultSetUpdate >  xUpdate(xMaster, UNO_QUERY);
+    try
+    {
+        if (bWasInsertRow && xUpdate.is())
+            xUpdate->moveToInsertRow();
+        else if (xCursor.is() && aOldPos.hasValue())
+            xCursor->moveToBookmark(aOldPos);
+        else if(bBeforeFirst && xMaster.is())
+            xMaster->beforeFirst();
+        else if(bAfterLast && xMaster.is())
+            xMaster->afterLast();
+    }
+    catch(Exception&)
+    {
+        SAL_WARN("dbaccess.ui", "SbaExternalSourceBrowser::Attach : couldn't restore the cursor position !");
     }
 }
 

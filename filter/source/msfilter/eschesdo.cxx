@@ -166,12 +166,12 @@ sal_uInt32 ImplEESdrWriter::ImplWriteShape( ImplEESdrObject& rObj,
                 if ( xPropInfo.is() && xPropInfo->hasPropertyByName( "InteropGrabBag" ) )
                 {
                     xPropertySet->getPropertyValue( "InteropGrabBag" ) >>= aGrabBag;
-                    for (int i=0; i< aGrabBag.getLength();  i++)
+                    for (const beans::PropertyValue& rProp : std::as_const(aGrabBag))
                     {
-                        if (aGrabBag[i].Name == "mso-edit-as")
+                        if (rProp.Name == "mso-edit-as")
                         {
                             OUString rEditAs;
-                            aGrabBag[i].Value >>= rEditAs;
+                            rProp.Value >>= rEditAs;
                             mpEscherEx->SetEditAs(rEditAs);
                             break;
                         }
@@ -401,11 +401,16 @@ sal_uInt32 ImplEESdrWriter::ImplWriteShape( ImplEESdrObject& rObj,
             const Reference< XPropertySet > xPropSet = rObj.mXPropSet;
             const Reference<XPropertySetInfo> xPropInfo = xPropSet.is() ? xPropSet->getPropertySetInfo() : Reference<XPropertySetInfo>();
             // This code is expected to be called only for DOCX format.
-            if (xPropInfo.is() && xPropInfo->hasPropertyByName("AnchorType") && bOOxmlExport)
+            if (xPropInfo.is())
             {
-                text::TextContentAnchorType eAnchorType;
-                xPropSet->getPropertyValue("AnchorType") >>= eAnchorType;
-                bool bInline = eAnchorType == text::TextContentAnchorType_AS_CHARACTER;
+                bool bInline = false;
+                if (xPropInfo->hasPropertyByName("AnchorType"))
+                {
+                    text::TextContentAnchorType eAnchorType;
+                    xPropSet->getPropertyValue("AnchorType") >>= eAnchorType;
+                    bInline = eAnchorType == text::TextContentAnchorType_AS_CHARACTER;
+                }
+
                 mpEscherEx->OpenContainer( ESCHER_SpContainer );
                 if(bInline)
                 {
@@ -812,20 +817,14 @@ void ImplEESdrWriter::ImplWritePage(
 {
     ImplInitPageValues();
 
-    sal_uInt32 nLastPer = 0, nShapes = mXShapes->getCount();
+    const sal_uInt32 nShapes = mXShapes->getCount();
     for( sal_uInt32 n = 0; n < nShapes; ++n )
     {
-        sal_uInt32 nPer = ( 5 * n ) / nShapes;
-        if( nPer != nLastPer )
-        {
-            nLastPer = nPer;
-        }
-
         ImplEESdrObject aObj( *this, *o3tl::doAccess<Reference<XShape>>(
                                     mXShapes->getByIndex( n )) );
         if( aObj.IsValid() )
         {
-            ImplWriteShape( aObj, rSolverContainer );
+            ImplWriteShape( aObj, rSolverContainer, true );
         }
     }
 }
@@ -1129,39 +1128,39 @@ static basegfx::B2DRange getUnrotatedGroupBoundRange(const Reference< XShape >& 
 void ImplEESdrObject::Init( ImplEESdrWriter& rEx )
 {
     mXPropSet.set( mXShape, UNO_QUERY );
-    if( mXPropSet.is() )
+    if( !mXPropSet.is() )
+        return;
+
+    // detect name first to make below test (is group) work
+    mType = mXShape->getShapeType();
+    (void)mType.startsWith( "com.sun.star.", &mType );  // strip "com.sun.star."
+    (void)mType.endsWith( "Shape", &mType );  // strip "Shape"
+
+    if(GetType() == "drawing.Group")
     {
-        // detect name first to make below test (is group) work
-        mType = mXShape->getShapeType();
-        (void)mType.startsWith( "com.sun.star.", &mType );  // strip "com.sun.star."
-        (void)mType.endsWith( "Shape", &mType );  // strip "Shape"
+        // if it's a group, the unrotated range is needed for that group
+        const basegfx::B2DRange aUnroatedRange(getUnrotatedGroupBoundRange(mXShape));
+        const Point aNewP(basegfx::fround(aUnroatedRange.getMinX()), basegfx::fround(aUnroatedRange.getMinY()));
+        const Size aNewS(basegfx::fround(aUnroatedRange.getWidth()), basegfx::fround(aUnroatedRange.getHeight()));
 
-        if(GetType() == "drawing.Group")
-        {
-            // if it's a group, the unrotated range is needed for that group
-            const basegfx::B2DRange aUnroatedRange(getUnrotatedGroupBoundRange(mXShape));
-            const Point aNewP(basegfx::fround(aUnroatedRange.getMinX()), basegfx::fround(aUnroatedRange.getMinY()));
-            const Size aNewS(basegfx::fround(aUnroatedRange.getWidth()), basegfx::fround(aUnroatedRange.getHeight()));
-
-            SetRect(rEx.ImplMapPoint(aNewP), rEx.ImplMapSize(aNewS));
-        }
-        else
-        {
-            // if it's no group, use position and size directly, rotated/sheared or not
-            const Point aOldP(mXShape->getPosition().X, mXShape->getPosition().Y);
-            const Size aOldS(mXShape->getSize().Width, mXShape->getSize().Height);
-
-            SetRect(rEx.ImplMapPoint(aOldP), rEx.ImplMapSize(aOldS));
-        }
-
-        if( ImplGetPropertyValue( "IsPresentationObject" ) )
-            mbPresObj = ::cppu::any2bool( mAny );
-
-        if( mbPresObj && ImplGetPropertyValue( "IsEmptyPresentationObject" ) )
-            mbEmptyPresObj = ::cppu::any2bool( mAny );
-
-        mbValid = true;
+        SetRect(rEx.ImplMapPoint(aNewP), rEx.ImplMapSize(aNewS));
     }
+    else
+    {
+        // if it's no group, use position and size directly, rotated/sheared or not
+        const Point aOldP(mXShape->getPosition().X, mXShape->getPosition().Y);
+        const Size aOldS(mXShape->getSize().Width, mXShape->getSize().Height);
+
+        SetRect(rEx.ImplMapPoint(aOldP), rEx.ImplMapSize(aOldS));
+    }
+
+    if( ImplGetPropertyValue( "IsPresentationObject" ) )
+        mbPresObj = ::cppu::any2bool( mAny );
+
+    if( mbPresObj && ImplGetPropertyValue( "IsEmptyPresentationObject" ) )
+        mbEmptyPresObj = ::cppu::any2bool( mAny );
+
+    mbValid = true;
 }
 
 bool ImplEESdrObject::ImplGetPropertyValue( const OUString& rString )

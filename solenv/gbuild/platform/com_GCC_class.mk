@@ -52,20 +52,33 @@ endef
 
 # CObject class
 
-# $(call gb_CObject__command_pattern,object,flags,source,dep-file,compiler-plugins,symbols)
+# $(call gb_CObject__compiler,source,compiler)
+define gb_CObject__compiler
+	$(if $(filter %.c %.m,$(1)), \
+		$(if $(2), $(2), $(gb_CC)), \
+		$(if $(2), $(2), $(gb_CXX)))
+endef
+
+# When gb_LinkTarget_use_clang is used, filter out GCC flags that Clang doesn't know.
+# $(call gb_CObject__filter_out_clang_cflags,cflags)
+define gb_CObject__filter_out_clang_cflags
+    $(filter-out $(gb_FilterOutClangCFLAGS),$(1))
+endef
+
+# $(call gb_CObject__command_pattern,object,flags,source,dep-file,compiler-plugins,symbols,compiler)
 define gb_CObject__command_pattern
 $(call gb_Helper_abbreviate_dirs,\
 	mkdir -p $(dir $(1)) $(dir $(4)) && cd $(SRCDIR) && \
 	$(gb_COMPILER_SETUP) \
 	$(if $(5),$(gb_COMPILER_PLUGINS_SETUP)) \
-	$(if $(filter %.c %.m,$(3)), $(gb_CC), $(gb_CXX)) \
+	$(call gb_CObject__compiler,$(3),$(7)) \
 		$(DEFS) \
 		$(gb_LTOFLAGS) \
 		$(if $(VISIBILITY),,$(gb_VISIBILITY_FLAGS)) \
 		$(if $(WARNINGS_NOT_ERRORS),$(if $(ENABLE_WERROR),$(if $(PLUGIN_WARNINGS_AS_ERRORS),$(gb_COMPILER_PLUGINS_WARNINGS_AS_ERRORS))),$(gb_CFLAGS_WERROR)) \
 		$(if $(5),$(gb_COMPILER_PLUGINS)) \
 		$(if $(COMPILER_TEST),-fsyntax-only -ferror-limit=0 -Xclang -verify) \
-		$(2) \
+		$(if $(7), $(call gb_CObject__filter_out_clang_cflags,$(2)),$(2)) \
 		$(if $(WARNINGS_DISABLED),$(gb_CXXFLAGS_DISABLE_WARNINGS)) \
 		$(if $(EXTERNAL_CODE),$(gb_CXXFLAGS_Wundef),$(gb_DEFS_INTERNAL)) \
 		-c $(3) \
@@ -111,13 +124,15 @@ gb_PrecompiledHeader_get_objectfile =
 
 define gb_PrecompiledHeader__command
 $(call gb_Output_announce,$(2),$(true),PCH,1)
+	$(call gb_Trace_StartRange,$(2),PCH)
 $(call gb_Helper_abbreviate_dirs,\
 	mkdir -p $(dir $(1)) $(dir $(call gb_PrecompiledHeader_get_dep_target,$(2),$(7))) && \
 	cd $(BUILDDIR)/ && \
 	CCACHE_DISABLE=1 $(gb_COMPILER_SETUP) \
-	$(gb_CXX) \
+	$(if $(8),$(8),$(gb_CXX)) \
 		-x c++-header \
-		$(4) $(5) \
+		$(4) \
+		$(if $(7), $(call gb_CObject__filter_out_clang_cflags,$(5)),$(5)) \
 		$(if $(WARNINGS_DISABLED),$(gb_CXXFLAGS_DISABLE_WARNINGS)) \
 		$(gb_COMPILERDEPFLAGS) \
 		$(if $(VISIBILITY),,$(gb_VISIBILITY_FLAGS)) \
@@ -130,6 +145,7 @@ $(call gb_Helper_abbreviate_dirs,\
 		-o$(1) \
 		$(call gb_cxx_dep_copy,$(call gb_PrecompiledHeader_get_dep_target_tmp,$(2),$(7))) \
 		)
+	$(call gb_Trace_EndRange,$(2),PCH)
 endef
 
 ifeq ($(COM_IS_CLANG),TRUE)
@@ -213,7 +229,7 @@ endef
 
 define gb_UIConfig__gla11y_command
 $(call gb_Helper_abbreviate_dirs,\
-	$(gb_UIConfig_LXML_PATH) $(gb_Helper_set_ld_path) \
+	$(gb_UIConfig_LXML_PATH) $(if $(SYSTEM_LIBXML)$(SYSTEM_LIBXSLT),,$(gb_Helper_set_ld_path)) \
 	$(call gb_ExternalExecutable_get_command,python) \
 	$(gb_UIConfig_gla11y_SCRIPT) $(gb_UIConfig_gla11y_PARAMETERS) -o $@ $(UIFILES)
 )

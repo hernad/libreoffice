@@ -145,8 +145,11 @@ void ScDBFunc::TestRemoveOutline( bool& rCol, bool& rRow )
             {
                 ScOutlineArray& rArray = pTable->GetColArray();
                 ScSubOutlineIterator aColIter( &rArray );
-                while ((pEntry=aColIter.GetNext()) != nullptr && !bColFound)
+                while (!bColFound)
                 {
+                    pEntry=aColIter.GetNext();
+                    if (!pEntry)
+                        break;
                     nStart = pEntry->GetStart();
                     nEnd   = pEntry->GetEnd();
                     if ( nStartCol<=static_cast<SCCOL>(nEnd) && nEndCol>=static_cast<SCCOL>(nStart) )
@@ -160,8 +163,11 @@ void ScDBFunc::TestRemoveOutline( bool& rCol, bool& rRow )
             {
                 ScOutlineArray& rArray = pTable->GetRowArray();
                 ScSubOutlineIterator aRowIter( &rArray );
-                while ((pEntry=aRowIter.GetNext()) != nullptr && !bRowFound)
+                while (!bRowFound)
                 {
+                    pEntry=aRowIter.GetNext();
+                    if (!pEntry)
+                        break;
                     nStart = pEntry->GetStart();
                     nEnd   = pEntry->GetEnd();
                     if ( nStartRow<=nEnd && nEndRow>=nStart )
@@ -284,7 +290,6 @@ bool ScDBFunc::OutlinePossible(bool bHide)
         ScOutlineTable* pTable = pDoc->GetOutlineTable( nTab );
         if (pTable)
         {
-            ScOutlineEntry* pEntry;
             SCCOLROW nStart;
             SCCOLROW nEnd;
 
@@ -292,8 +297,11 @@ bool ScDBFunc::OutlinePossible(bool bHide)
 
             ScOutlineArray& rColArray = pTable->GetColArray();
             ScSubOutlineIterator aColIter( &rColArray );
-            while ((pEntry=aColIter.GetNext()) != nullptr && !bEnable)
+            while (!bEnable)
             {
+                ScOutlineEntry* pEntry = aColIter.GetNext();
+                if (!pEntry)
+                    break;
                 nStart = pEntry->GetStart();
                 nEnd   = pEntry->GetEnd();
                 if ( bHide )
@@ -314,8 +322,11 @@ bool ScDBFunc::OutlinePossible(bool bHide)
 
             ScOutlineArray& rRowArray = pTable->GetRowArray();
             ScSubOutlineIterator aRowIter( &rRowArray );
-            while ((pEntry=aRowIter.GetNext()) != nullptr)
+            for (;;)
             {
+                ScOutlineEntry* pEntry = aRowIter.GetNext();
+                if (!pEntry)
+                    break;
                 nStart = pEntry->GetStart();
                 nEnd   = pEntry->GetEnd();
                 if ( bHide )
@@ -1541,7 +1552,7 @@ void ScDBFunc::DataPilotInput( const ScAddress& rPos, const OUString& rString )
                             if (pDim->GetSubTotalFunc(0) != ScGeneralFunction::AUTO)
                                 break;
 
-                            const o3tl::optional<OUString> & pLayoutName = pMem->GetLayoutName();
+                            const std::optional<OUString> & pLayoutName = pMem->GetLayoutName();
                             OUString aMemberName;
                             if (pLayoutName)
                                 aMemberName = *pLayoutName;
@@ -1623,7 +1634,7 @@ namespace {
 
 struct ScOUStringCollate
 {
-    CollatorWrapper* const mpCollator;
+    CollatorWrapper* mpCollator;
 
     explicit ScOUStringCollate(CollatorWrapper* pColl) : mpCollator(pColl) {}
 

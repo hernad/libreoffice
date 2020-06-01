@@ -30,6 +30,7 @@
 #include <svtools/valueset.hxx>
 
 #include <vcl/weld.hxx>
+#include <vcl/outdev.hxx>
 #include <tools/diagnose_ex.h>
 
 namespace chart
@@ -52,7 +53,7 @@ ChartTypeTabPage::ChartTypeTabPage(weld::Container* pPage, weld::DialogControlle
     , m_aTimerTriggeredControllerLock( m_xChartModel )
     , m_xFT_ChooseType(m_xBuilder->weld_label("FT_CAPTION_FOR_WIZARD"))
     , m_xMainTypeList(m_xBuilder->weld_tree_view("charttype"))
-    , m_xSubTypeList(new SvtValueSet(m_xBuilder->weld_scrolled_window("subtypewin")))
+    , m_xSubTypeList(new ValueSet(m_xBuilder->weld_scrolled_window("subtypewin")))
     , m_xSubTypeListWin(new weld::CustomWeld(*m_xBuilder, "subtype", *m_xSubTypeList))
 {
     Size aSize(m_xSubTypeList->GetDrawingArea()->get_ref_device().LogicToPixel(Size(150, 50), MapMode(MapUnit::MapAppFont)));
@@ -203,7 +204,7 @@ ChartTypeDialogController* ChartTypeTabPage::getSelectedMainType()
     return pTypeController;
 }
 
-IMPL_LINK_NOARG(ChartTypeTabPage, SelectSubTypeHdl, SvtValueSet*, void)
+IMPL_LINK_NOARG(ChartTypeTabPage, SelectSubTypeHdl, ValueSet*, void)
 {
     if( m_pCurrentMainType )
     {
@@ -230,32 +231,32 @@ void ChartTypeTabPage::selectMainType()
     }
 
     m_pCurrentMainType = getSelectedMainType();
-    if( m_pCurrentMainType )
+    if( !m_pCurrentMainType )
+        return;
+
+    showAllControls(*m_pCurrentMainType);
+
+    m_pCurrentMainType->adjustParameterToMainType( aParameter );
+    commitToModel( aParameter );
+    //detect the new ThreeDLookScheme
+    aParameter.eThreeDLookScheme = ThreeDHelper::detectScheme( ChartModelHelper::findDiagram( m_xChartModel ) );
+    if(!aParameter.b3DLook && aParameter.eThreeDLookScheme!=ThreeDLookScheme_Realistic )
+        aParameter.eThreeDLookScheme=ThreeDLookScheme_Realistic;
+
+    uno::Reference<XDiagram> xDiagram = ChartModelHelper::findDiagram(m_xChartModel);
+    try
     {
-        showAllControls(*m_pCurrentMainType);
-
-        m_pCurrentMainType->adjustParameterToMainType( aParameter );
-        commitToModel( aParameter );
-        //detect the new ThreeDLookScheme
-        aParameter.eThreeDLookScheme = ThreeDHelper::detectScheme( ChartModelHelper::findDiagram( m_xChartModel ) );
-        if(!aParameter.b3DLook && aParameter.eThreeDLookScheme!=ThreeDLookScheme_Realistic )
-            aParameter.eThreeDLookScheme=ThreeDLookScheme_Realistic;
-
-        uno::Reference<XDiagram> xDiagram = ChartModelHelper::findDiagram(m_xChartModel);
-        try
-        {
-            uno::Reference<beans::XPropertySet> xPropSet(xDiagram, uno::UNO_QUERY_THROW);
-            xPropSet->getPropertyValue(CHART_UNONAME_SORT_BY_XVALUES) >>= aParameter.bSortByXValues;
-        }
-        catch ( const uno::Exception& )
-        {
-            DBG_UNHANDLED_EXCEPTION("chart2");
-        }
-
-        fillAllControls( aParameter );
-        uno::Reference< beans::XPropertySet > xTemplateProps( getCurrentTemplate(), uno::UNO_QUERY );
-        m_pCurrentMainType->fillExtraControls(m_xChartModel,xTemplateProps);
+        uno::Reference<beans::XPropertySet> xPropSet(xDiagram, uno::UNO_QUERY_THROW);
+        xPropSet->getPropertyValue(CHART_UNONAME_SORT_BY_XVALUES) >>= aParameter.bSortByXValues;
     }
+    catch ( const uno::Exception& )
+    {
+        DBG_UNHANDLED_EXCEPTION("chart2");
+    }
+
+    fillAllControls( aParameter );
+    uno::Reference< beans::XPropertySet > xTemplateProps( getCurrentTemplate(), uno::UNO_QUERY );
+    m_pCurrentMainType->fillExtraControls(m_xChartModel,xTemplateProps);
 }
 
 void ChartTypeTabPage::showAllControls( ChartTypeDialogController& rTypeController )

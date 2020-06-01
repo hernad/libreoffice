@@ -17,15 +17,12 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 #include "ParaPropertyPanel.hxx"
-#include <sfx2/sidebar/Tools.hxx>
 #include <sfx2/dispatch.hxx>
 #include <sfx2/module.hxx>
 #include <sfx2/viewfrm.hxx>
 #include <sfx2/weldutils.hxx>
 #include <editeng/lrspitem.hxx>
 #include <editeng/ulspitem.hxx>
-#include <vcl/svapp.hxx>
-#include <vcl/settings.hxx>
 #include <svx/dlgctrl.hxx>
 #include <svx/svxids.hrc>
 #include <svl/intitem.hxx>
@@ -406,25 +403,25 @@ ParaPropertyPanel::ParaPropertyPanel(vcl::Window* pParent,
     const css::uno::Reference<css::frame::XFrame>& rxFrame,
     SfxBindings* pBindings,
     const css::uno::Reference<css::ui::XSidebar>& rxSidebar)
-    : PanelLayout(pParent, "ParaPropertyPanel", "svx/ui/sidebarparagraph.ui", rxFrame, true),
+    : PanelLayout(pParent, "ParaPropertyPanel", "svx/ui/sidebarparagraph.ui", rxFrame),
       //Alignment
       mxTBxHorzAlign(m_xBuilder->weld_toolbar("horizontalalignment")),
-      mxHorzAlignDispatch(new ToolbarUnoDispatcher(*mxTBxHorzAlign, rxFrame)),
+      mxHorzAlignDispatch(new ToolbarUnoDispatcher(*mxTBxHorzAlign, *m_xBuilder, rxFrame)),
       mxTBxVertAlign(m_xBuilder->weld_toolbar("verticalalignment")),
-      mxVertAlignDispatch(new ToolbarUnoDispatcher(*mxTBxVertAlign, rxFrame)),
+      mxVertAlignDispatch(new ToolbarUnoDispatcher(*mxTBxVertAlign, *m_xBuilder, rxFrame)),
       //NumBullet&Backcolor
       mxTBxNumBullet(m_xBuilder->weld_toolbar("numberbullet")),
-      mxNumBulletDispatch(new ToolbarUnoDispatcher(*mxTBxNumBullet, rxFrame)),
+      mxNumBulletDispatch(new ToolbarUnoDispatcher(*mxTBxNumBullet, *m_xBuilder, rxFrame)),
       mxTBxBackColor(m_xBuilder->weld_toolbar("backgroundcolor")),
-      mxBackColorDispatch(new ToolbarUnoDispatcher(*mxTBxBackColor, rxFrame)),
+      mxBackColorDispatch(new ToolbarUnoDispatcher(*mxTBxBackColor, *m_xBuilder, rxFrame)),
       mxTBxWriteDirection(m_xBuilder->weld_toolbar("writedirection")),
-      mxWriteDirectionDispatch(new ToolbarUnoDispatcher(*mxTBxWriteDirection, rxFrame)),
+      mxWriteDirectionDispatch(new ToolbarUnoDispatcher(*mxTBxWriteDirection, *m_xBuilder, rxFrame)),
       mxTBxParaSpacing(m_xBuilder->weld_toolbar("paraspacing")),
-      mxParaSpacingDispatch(new ToolbarUnoDispatcher(*mxTBxParaSpacing, rxFrame)),
+      mxParaSpacingDispatch(new ToolbarUnoDispatcher(*mxTBxParaSpacing, *m_xBuilder, rxFrame)),
       mxTBxLineSpacing(m_xBuilder->weld_toolbar("linespacing")),
-      mxLineSpacingDispatch(new ToolbarUnoDispatcher(*mxTBxLineSpacing, rxFrame)),
+      mxLineSpacingDispatch(new ToolbarUnoDispatcher(*mxTBxLineSpacing, *m_xBuilder, rxFrame)),
       mxTBxIndent(m_xBuilder->weld_toolbar("indent")),
-      mxIndentDispatch(new ToolbarUnoDispatcher(*mxTBxIndent, rxFrame)),
+      mxIndentDispatch(new ToolbarUnoDispatcher(*mxTBxIndent, *m_xBuilder, rxFrame)),
       //Paragraph spacing
       mxTopDist(new SvxRelativeField(m_xBuilder->weld_metric_spin_button("aboveparaspacing", FieldUnit::CM))),
       mxBottomDist(new SvxRelativeField(m_xBuilder->weld_metric_spin_button("belowparaspacing", FieldUnit::CM))),

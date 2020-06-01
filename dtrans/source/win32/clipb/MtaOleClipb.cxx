@@ -179,14 +179,14 @@ class CAutoComInit
 {
 public:
    /*
-       to be safe we call CoInitialize
+       to be safe we call CoInitializeEx
        although it is not necessary if
        the calling thread was created
        using osl_CreateThread because
-       this function calls CoInitialize
+       this function calls CoInitializeEx
        for every thread it creates
     */
-    CAutoComInit( ) : m_hResult( CoInitialize( nullptr ) )
+    CAutoComInit( ) : m_hResult( CoInitializeEx( nullptr, COINIT_APARTMENTTHREADED ) )
     {
         if ( S_OK == m_hResult )
             OSL_FAIL(
@@ -200,10 +200,10 @@ public:
     {
         /*
             we only call CoUninitialize when
-            CoInitialize returned S_FALSE, what
+            CoInitializeEx returned S_FALSE, what
             means that com was already initialize
             for that thread so we keep the balance
-            if CoInitialize returned S_OK what means
+            if CoInitializeEx returned S_OK what means
             com was not yet initialized we better
             let com initialized or we may run into
             the realm of undefined behaviour
@@ -678,14 +678,20 @@ unsigned int WINAPI CMtaOleClipboard::clipboardChangedNotifierThreadProc( LPVOID
     CMtaOleClipboard* pInst = static_cast< CMtaOleClipboard* >( pParam );
     OSL_ASSERT( nullptr != pInst );
 
-    CoInitialize( nullptr );
+    CoInitializeEx( nullptr, COINIT_APARTMENTTHREADED );
 
     // assuming we don't need a lock for
     // a boolean variable like m_bRun...
     while ( pInst->m_bRunClipboardNotifierThread )
     {
+        // process window messages because of CoInitialize
+        MSG Msg;
+        while (PeekMessageW(&Msg, nullptr, 0, 0, PM_REMOVE))
+            DispatchMessageW(&Msg);
+
         // wait for clipboard changed or terminate event
-        WaitForMultipleObjects( 2, pInst->m_hClipboardChangedNotifierEvents, false, INFINITE );
+        MsgWaitForMultipleObjects(2, pInst->m_hClipboardChangedNotifierEvents, false, INFINITE,
+                                  QS_ALLINPUT | QS_ALLPOSTMESSAGE);
 
         ClearableMutexGuard aGuard( pInst->m_ClipboardChangedEventCountMutex );
 

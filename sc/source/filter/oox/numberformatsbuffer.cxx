@@ -21,6 +21,7 @@
 #include <biffhelper.hxx>
 
 #include <com/sun/star/i18n/NumberFormatIndex.hpp>
+#include <com/sun/star/sheet/XSpreadsheetDocument.hpp>
 #include <com/sun/star/util/XNumberFormatTypes.hpp>
 #include <com/sun/star/util/XNumberFormats.hpp>
 #include <com/sun/star/util/XNumberFormatsSupplier.hpp>
@@ -52,9 +53,9 @@ namespace {
 struct BuiltinFormat
 {
     sal_Int32           mnNumFmtId;         /// Built-in number format index.
-    const char*     mpcFmtCode;         /// Format string, UTF-8, may be 0 (mnPredefId is used then).
-    sal_Int16 const     mnPredefId;         /// Predefined format index, if mpcFmtCode is 0.
-    sal_Int32 const     mnReuseId;          /// Use this format, if mpcFmtCode is 0 and mnPredefId is -1.
+    const char*         mpcFmtCode;         /// Format string, UTF-8, may be 0 (mnPredefId is used then).
+    sal_Int16           mnPredefId;         /// Predefined format index, if mpcFmtCode is 0.
+    sal_Int32           mnReuseId;          /// Use this format, if mpcFmtCode is 0 and mnPredefId is -1.
 };
 
 /** Defines a literal built-in number format. */
@@ -1853,7 +1854,7 @@ public:
 
 private:
     Reference< XNumberFormats > mxNumFmts;
-    Locale const              maEnUsLocale;
+    Locale              maEnUsLocale;
 };
 
 NumberFormatFinalizer::NumberFormatFinalizer( const WorkbookHelper& rHelper ) :
@@ -2053,7 +2054,7 @@ void NumberFormatsBuffer::insertBuiltinFormats()
     {
         // do not put the current system locale for default table
         Locale aLocale;
-        if( (*aVIt)->mpcParent[ 0 ] != '\0' )
+        if( (*aVIt)->mpcParent[ 0 ] != '\0' && OUString::createFromAscii((*aVIt)->mpcLocale) != maLocaleStr )
             aLocale = aSysLocale;
         for( const BuiltinFormat* pBuiltin = (*aVIt)->mpFormats; pBuiltin && (pBuiltin->mnNumFmtId >= 0); ++pBuiltin )
         {

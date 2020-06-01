@@ -63,6 +63,7 @@
 #include <calbck.hxx>
 #include <ToxTextGenerator.hxx>
 #include <ToxTabStopTokenHandler.hxx>
+#include <frameformats.hxx>
 #include <tools/datetimeutils.hxx>
 #include <tools/globname.hxx>
 #include <com/sun/star/embed/XEmbeddedObject.hpp>
@@ -134,8 +135,8 @@ sal_uInt16 SwDoc::GetCurTOXMark( const SwPosition& rPos,
         if( ( nSttIdx = pHt->GetStart() ) < nCurrentPos )
         {
             // also check the end
-            if( nullptr == ( pEndIdx = pHt->End() ) ||
-                *pEndIdx <= nCurrentPos )
+            pEndIdx = pHt->End();
+            if( nullptr == pEndIdx || *pEndIdx <= nCurrentPos )
                 continue;       // keep searching
         }
         else if( nSttIdx > nCurrentPos )
@@ -281,10 +282,10 @@ const SwTOXMark& SwDoc::GotoTOXMark( const SwTOXMark& rCurTOXMark,
             case TOX_PRV:
                 if ( (aAbsNew < aAbsIdx && aAbsNew > aPrevPos) ||
                      (aAbsIdx == aAbsNew &&
-                      (sal_uLong(&rCurTOXMark) > sal_uLong(pTOXMark) &&
-                       (!pNew || aPrevPos < aAbsIdx || sal_uLong(pNew) < sal_uLong(pTOXMark) ) )) ||
+                      (reinterpret_cast<sal_uLong>(&rCurTOXMark) > reinterpret_cast<sal_uLong>(pTOXMark) &&
+                       (!pNew || aPrevPos < aAbsIdx || reinterpret_cast<sal_uLong>(pNew) < reinterpret_cast<sal_uLong>(pTOXMark) ) )) ||
                      (aPrevPos == aAbsNew && aAbsIdx != aAbsNew &&
-                      sal_uLong(pTOXMark) > sal_uLong(pNew)) )
+                      reinterpret_cast<sal_uLong>(pTOXMark) > reinterpret_cast<sal_uLong>(pNew)) )
                 {
                     pNew = pTOXMark;
                     aPrevPos = aAbsNew;
@@ -303,10 +304,10 @@ const SwTOXMark& SwDoc::GotoTOXMark( const SwTOXMark& rCurTOXMark,
             case TOX_NXT:
                 if ( (aAbsNew > aAbsIdx && aAbsNew < aNextPos) ||
                      (aAbsIdx == aAbsNew &&
-                      (sal_uLong(&rCurTOXMark) < sal_uLong(pTOXMark) &&
-                       (!pNew || aNextPos > aAbsIdx || sal_uLong(pNew) > sal_uLong(pTOXMark)) )) ||
+                      (reinterpret_cast<sal_uLong>(&rCurTOXMark) < reinterpret_cast<sal_uLong>(pTOXMark) &&
+                       (!pNew || aNextPos > aAbsIdx || reinterpret_cast<sal_uLong>(pNew) > reinterpret_cast<sal_uLong>(pTOXMark)) )) ||
                      (aNextPos == aAbsNew && aAbsIdx != aAbsNew &&
-                      sal_uLong(pTOXMark) < sal_uLong(pNew)) )
+                      reinterpret_cast<sal_uLong>(pTOXMark) < reinterpret_cast<sal_uLong>(pNew)) )
                 {
                     pNew = pTOXMark;
                     aNextPos = aAbsNew;
@@ -824,9 +825,7 @@ void SwTOXBaseSection::Update(const SfxItemSet* pAttr,
             const SwContentNode* pNdAfterTOX = pSectNd->GetNodes().GoNext( &aIdx );
             const SwAttrSet& aNdAttrSet = pNdAfterTOX->GetSwAttrSet();
             const SvxBreak eBreak = aNdAttrSet.GetBreak().GetBreak();
-            if ( !( eBreak == SvxBreak::PageBefore ||
-                    eBreak == SvxBreak::PageBoth )
-               )
+            if ( eBreak != SvxBreak::PageBefore && eBreak != SvxBreak::PageBoth )
             {
                 pDefaultPageDesc = pNdAfterTOX->FindPageDesc();
             }
@@ -1016,12 +1015,16 @@ void SwTOXBaseSection::Update(const SfxItemSet* pAttr,
             const OUString& sPrimKey = rMark.GetPrimaryKey();
             const OUString& sSecKey = rMark.GetSecondaryKey();
             const SwTOXMark* pNextMark = nullptr;
-            while(m_aSortArr.size() > (nCnt + nRange)&&
-                    m_aSortArr[nCnt + nRange]->GetType() == TOX_SORT_INDEX &&
-                    nullptr != (pNextMark = &(m_aSortArr[nCnt + nRange]->pTextMark->GetTOXMark())) &&
-                    pNextMark->GetPrimaryKey() == sPrimKey &&
-                    pNextMark->GetSecondaryKey() == sSecKey)
+            while(m_aSortArr.size() > (nCnt + nRange) &&
+                    m_aSortArr[nCnt + nRange]->GetType() == TOX_SORT_INDEX )
+            {
+                pNextMark = &(m_aSortArr[nCnt + nRange]->pTextMark->GetTOXMark());
+                if( !pNextMark ||
+                    pNextMark->GetPrimaryKey() != sPrimKey ||
+                    pNextMark->GetSecondaryKey() != sSecKey)
+                    break;
                 nRange++;
+            }
         }
         // pass node index of table-of-content section and default page description
         // to method <GenerateText(..)>.
@@ -1315,18 +1318,16 @@ void SwTOXBaseSection::UpdateSequence(const SwTextNode* pOwnChapterNode,
     if(!pSeqField)
         return;
 
-    SwIterator<SwFormatField,SwFieldType> aIter( *pSeqField );
-    for( SwFormatField* pFormatField = aIter.First(); pFormatField; pFormatField = aIter.Next() )
+    std::vector<SwFormatField*> vFields;
+    pSeqField->GatherFields(vFields);
+    for(auto pFormatField: vFields)
     {
         const SwTextField* pTextField = pFormatField->GetTextField();
-        if(!pTextField)
-            continue;
         SwTextNode& rTextNode = pTextField->GetTextNode();
         ::SetProgressState( 0, pDoc->GetDocShell() );
 
         if (rTextNode.GetText().getLength() &&
             rTextNode.getLayoutFrame(pLayout) &&
-            rTextNode.GetNodes().IsDocNodes() &&
             ( !IsFromChapter() ||
                 ::lcl_FindChapterNode(rTextNode, pLayout) == pOwnChapterNode)
             && (!pLayout || !pLayout->IsHideRedlines()
@@ -1361,20 +1362,17 @@ void SwTOXBaseSection::UpdateAuthorities(const SwTOXInternational& rIntl,
     if(!pAuthField)
         return;
 
-    SwIterator<SwFormatField,SwFieldType> aIter( *pAuthField );
-    for( SwFormatField* pFormatField = aIter.First(); pFormatField; pFormatField = aIter.Next() )
+    std::vector<SwFormatField*> vFields;
+    pAuthField->GatherFields(vFields);
+    for(auto pFormatField: vFields)
     {
-        const SwTextField* pTextField = pFormatField->GetTextField();
-        // undo
-        if(!pTextField)
-            continue;
-        const SwTextNode& rTextNode = pTextField->GetTextNode();
+        const auto pTextField = pFormatField->GetTextField();
+        const SwTextNode& rTextNode = pFormatField->GetTextField()->GetTextNode();
         ::SetProgressState( 0, pDoc->GetDocShell() );
 
         if (rTextNode.GetText().getLength() &&
             rTextNode.getLayoutFrame(pLayout) &&
-            rTextNode.GetNodes().IsDocNodes()
-            && (!pLayout || !pLayout->IsHideRedlines()
+            (!pLayout || !pLayout->IsHideRedlines()
                 || !sw::IsFieldDeletedInModel(pDoc->getIDocumentRedlineAccess(), *pTextField)))
         {
             //#106485# the body node has to be used!
@@ -1394,7 +1392,7 @@ void SwTOXBaseSection::UpdateAuthorities(const SwTOXInternational& rIntl,
 static SwTOOElements lcl_IsSOObject( const SvGlobalName& rFactoryNm )
 {
     static const struct SoObjType {
-        SwTOOElements const nFlag;
+        SwTOOElements nFlag;
         // GlobalNameId
         struct {
             sal_uInt32 n1;
@@ -1657,9 +1655,13 @@ void SwTOXBaseSection::UpdatePageNum()
                         TextFrameIndex const nPos(static_cast<SwTextFrame*>(pFrame)
                             ->MapModelToView(static_cast<SwTextNode const*>(rTOXSource.pNd),
                                 rTOXSource.nPos));
-                        while( nullptr != ( pNext = static_cast<SwTextFrame*>(pFrame->GetFollow()) )
-                                && nPos >= pNext->GetOffset())
+                        for (;;)
+                        {
+                            pNext = static_cast<SwTextFrame*>(pFrame->GetFollow());
+                            if (!pNext || nPos < pNext->GetOffset())
+                                break;
                             pFrame = pNext;
+                        }
                     }
 
                     SwPageFrame*  pTmpPage = pFrame->FindPageFrame();

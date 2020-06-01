@@ -23,7 +23,7 @@
 #include <bitmaps.hlst>
 
 #include <vcl/commandevent.hxx>
-#include <vcl/lstbox.hxx>
+#include <vcl/naturalsort.hxx>
 #include <vcl/print.hxx>
 #include <vcl/wall.hxx>
 #include <vcl/decoview.hxx>
@@ -37,6 +37,7 @@
 
 #include <sal/log.hxx>
 #include <osl/diagnose.h>
+#include <rtl/ustrbuf.hxx>
 
 #include <com/sun/star/beans/PropertyValue.hpp>
 
@@ -57,7 +58,7 @@ enum
 namespace {
    bool lcl_ListBoxCompare( const OUString& rStr1, const OUString& rStr2 )
    {
-       return ListBox::NaturalSortCompare( rStr1, rStr2 ) < 0;
+       return vcl::NaturalSortCompare( rStr1, rStr2 ) < 0;
    }
 }
 
@@ -147,8 +148,8 @@ void PrintDialog::PrintPreviewWindow::Resize()
 
 void PrintDialog::PrintPreviewWindow::SetDrawingArea(weld::DrawingArea* pDrawingArea)
 {
-    pDrawingArea->set_size_request(pDrawingArea->get_approximate_digit_width() * 55,
-                                   pDrawingArea->get_text_height() * 40);
+    pDrawingArea->set_size_request(pDrawingArea->get_approximate_digit_width() * 45,
+                                   pDrawingArea->get_text_height() * 30);
     CustomWidgetController::SetDrawingArea(pDrawingArea);
 }
 
@@ -171,15 +172,13 @@ void PrintDialog::PrintPreviewWindow::Paint(vcl::RenderContext& rRenderContext, 
 
     // horizontal line
     {
-        auto nTop = aOffset.Y() - nTextHeight;
-
         auto nWidth = rRenderContext.GetTextWidth(maHorzText);
 
         auto nStart = aOffset.X() + (maPreviewSize.Width() - nWidth) / 2;
         rRenderContext.DrawText(Point(nStart, aOffset.Y() - nTextHeight), maHorzText, 0, maHorzText.getLength());
 
         DecorationView aDecoView(&rRenderContext);
-        nTop = aOffset.Y() - (nTextHeight / 2);
+        auto nTop = aOffset.Y() - (nTextHeight / 2);
         aDecoView.DrawSeparator(Point(aOffset.X(), nTop), Point(nStart - 2, nTop), false);
         aDecoView.DrawSeparator(Point(nStart + nWidth + 2, nTop), Point(aOffset.X() + maPreviewSize.Width(), nTop), false);
     }
@@ -305,7 +304,7 @@ void PrintDialog::PrintPreviewWindow::setPreview( const GDIMetaFile& i_rNewPrevi
 
 void PrintDialog::PrintPreviewWindow::preparePreviewBitmap()
 {
-    if(maPreviewSize.getWidth() < 0 || maPreviewSize.getHeight() < 0)
+    if(maPreviewSize.IsEmpty())
     {
         // not yet fully initialized, no need to prepare anything
         return;
@@ -504,7 +503,7 @@ void PrintDialog::ShowNupOrderWindow::Paint(vcl::RenderContext& rRenderContext, 
 
 Size const & PrintDialog::getJobPageSize()
 {
-    if( maFirstPageSize.Width() == 0 && maFirstPageSize.Height() == 0)
+    if( maFirstPageSize.IsEmpty() )
     {
         maFirstPageSize = maNupPortraitSize;
         GDIMetaFile aMtf;
@@ -544,7 +543,7 @@ PrintDialog::PrintDialog(weld::Window* i_pWindow, const std::shared_ptr<PrinterC
     , mxNumPagesText(m_xBuilder->weld_label("totalnumpages"))
     , mxPreview(new PrintPreviewWindow(this))
     , mxPreviewWindow(new weld::CustomWeld(*m_xBuilder, "preview", *mxPreview))
-    , mxPageEdit(m_xBuilder->weld_entry("pageedit-nospin"))
+    , mxPageEdit(m_xBuilder->weld_entry("pageedit"))
     , mxPagesBtn(m_xBuilder->weld_radio_button("pagespersheetbtn"))
     , mxBrochureBtn(m_xBuilder->weld_radio_button("brochure"))
     , mxPagesBoxTitleTxt(m_xBuilder->weld_label("pagespersheettxt"))
@@ -1918,7 +1917,7 @@ IMPL_LINK( PrintDialog, SelectHdl, weld::ComboBox&, rBox, void )
             mxOKButton->set_label(maPrintText);
             updatePrinterText();
             setPaperSizes();
-            preparePreview(false);
+            preparePreview(true);
         }
         else // print to file
         {
@@ -1973,7 +1972,7 @@ IMPL_LINK( PrintDialog, SelectHdl, weld::ComboBox&, rBox, void )
         checkPaperSize( aPaperSize );
         maPController->setPaperSizeFromUser( aPaperSize );
 
-        preparePreview(false);
+        preparePreview(true);
     }
 }
 
@@ -2058,10 +2057,6 @@ IMPL_LINK( PrintDialog, UIOption_RadioHdl, weld::ToggleButton&, i_rBtn, void )
 
             sal_Int32 nVal = it->second;
             pVal->Value <<= nVal;
-
-            // tdf#63905 use paper size set in printer properties
-            if (pVal->Name == "PageOptions")
-                maPController->resetPaperToLastConfigured();
 
             updateOrientationBox();
 

@@ -19,10 +19,8 @@
 
 
 #include <sal/log.hxx>
-#include <cppuhelper/bootstrap.hxx>
-#include <com/sun/star/bridge/XUnoUrlResolver.hpp>
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <vcl/window.hxx>
+#include <toolkit/awt/vclxaccessiblecomponent.hxx>
 #include <toolkit/awt/vclxwindow.hxx>
 
 #include <vcl/sysdata.hxx>
@@ -31,19 +29,9 @@
 #include <AccTopWindowListener.hxx>
 #include <unomsaaevent.hxx>
 
-#include <com/sun/star/awt/XExtendedToolkit.hpp>
-#include <com/sun/star/uno/XInterface.hpp>
-#include <com/sun/star/accessibility/XAccessibleEventBroadcaster.hpp>
-#include <com/sun/star/accessibility/XAccessibleEventListener.hpp>
-#include <com/sun/star/accessibility/XAccessibleComponent.hpp>
 #include <com/sun/star/accessibility/AccessibleRole.hpp>
-#include <com/sun/star/accessibility/AccessibleStateType.hpp>
 
 using namespace com::sun::star::uno;
-using namespace com::sun::star::lang;
-using namespace com::sun::star::bridge;
-using namespace com::sun::star::awt;
-using namespace cppu;
 
 /**
  *  For the new opened window, generate all the UNO accessible's object, COM object and add
@@ -53,8 +41,12 @@ using namespace cppu;
 void AccTopWindowListener::HandleWindowOpened( css::accessibility::XAccessible* pAccessible )
 {
     //get SystemData from window
-    VCLXWindow* pvclwindow = static_cast<VCLXWindow*>(pAccessible);
-    auto window = pvclwindow->GetWindow();
+    VclPtr<vcl::Window> window;
+    if (auto pvclwindow = dynamic_cast<VCLXWindow*>(pAccessible))
+        window = pvclwindow->GetWindow();
+    else if (auto pvclxcomponent = dynamic_cast<VCLXAccessibleComponent*>(pAccessible))
+        window = pvclxcomponent->GetWindow();
+    assert(window);
     // The SalFrame of window may be destructed at this time
     const SystemEnvData* systemdata = nullptr;
     try

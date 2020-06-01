@@ -105,7 +105,7 @@ class ScHeaderFooterTextData
 private:
     std::unique_ptr<EditTextObject> mpTextObj;
     css::uno::WeakReference<css::sheet::XHeaderFooterContent> xContentObj;
-    ScHeaderFooterPart const          nPart;
+    ScHeaderFooterPart          nPart;
     std::unique_ptr<ScEditEngineDefaulter>  pEditEngine;
     std::unique_ptr<SvxEditEngineForwarder> pForwarder;
     bool                        bDataValid;
@@ -328,7 +328,7 @@ class ScCellTextData : public SfxListener
 {
 protected:
     ScDocShell*             pDocShell;
-    ScAddress const               aCellPos;
+    ScAddress               aCellPos;
     std::unique_ptr<ScFieldEditEngine> pEditEngine;
     std::unique_ptr<SvxEditEngineForwarder> pForwarder;
     std::unique_ptr<ScCellEditSource> pOriginalSource;
@@ -362,7 +362,7 @@ class ScCellTextObj final : public ScCellTextData, public SvxUnoText
 {
 public:
                  ScCellTextObj(ScDocShell* pDocSh, const ScAddress& rP);
-        virtual  ~ScCellTextObj() throw() override;
+        virtual  ~ScCellTextObj() COVERITY_NOEXCEPT_FALSE override;
 };
 
 #endif

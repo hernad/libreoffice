@@ -359,17 +359,17 @@ OUString NativeToAscii(const OUString& inStr,
             } else {
                 if ((index = numberChar.indexOf(str[i])) >= 0)
                     newStr[count] = sal::static_int_cast<sal_Unicode>( (index % 10) + NUMBER_ZERO );
-                else if ((index = separatorChar.indexOf(str[i])) >= 0 &&
+                else if (separatorChar.indexOf(str[i]) >= 0 &&
                         (i < nCount-1 && (numberChar.indexOf(str[i+1]) >= 0 ||
                                           multiplierChar.indexOf(str[i+1]) >= 0)))
                     newStr[count] = SeparatorChar[NumberChar_HalfWidth];
-                else if ((index = decimalChar.indexOf(str[i])) >= 0 &&
+                else if (decimalChar.indexOf(str[i]) >= 0 &&
                         (i < nCount-1 && (numberChar.indexOf(str[i+1]) >= 0 ||
                                           multiplierChar.indexOf(str[i+1]) >= 0)))
                     // Only when decimal point is followed by numbers,
                     // it will be convert to ASCII decimal point
                     newStr[count] = DecimalChar[NumberChar_HalfWidth];
-                else if ((index = minusChar.indexOf(str[i])) >= 0 &&
+                else if (minusChar.indexOf(str[i]) >= 0 &&
                         (i < nCount-1 && (numberChar.indexOf(str[i+1]) >= 0 ||
                                           multiplierChar.indexOf(str[i+1]) >= 0)))
                     // Only when minus is followed by numbers,
@@ -409,7 +409,7 @@ const Number natnum5[4] = {
                 ExponentCount_6_CJK, MultiplierExponent_6_CJK },
         { NumberChar_Traditional_ja, MultiplierChar_7_CJK[Multiplier_Traditional_ja], NUMBER_OMIT_ZERO_ONE_67,
                 ExponentCount_7_CJK, MultiplierExponent_7_CJK },
-        { NumberChar_Upper_ko, MultiplierChar_6_CJK[Multiplier_Upper_zh_TW], NUMBER_OMIT_ZERO,
+        { NumberChar_Upper_ko, MultiplierChar_6_CJK[Multiplier_Upper_ko], 0,
                 ExponentCount_6_CJK, MultiplierExponent_6_CJK },
 };
 
@@ -442,7 +442,7 @@ const Number natnum8[4] = {
                 ExponentCount_6_CJK, MultiplierExponent_6_CJK },
         { NumberChar_Traditional_ja, MultiplierChar_2_CJK[Multiplier_Traditional_ja], NUMBER_OMIT_ZERO_ONE,
                 ExponentCount_2_CJK, MultiplierExponent_2_CJK },
-        { NumberChar_Upper_ko, MultiplierChar_6_CJK[Multiplier_Upper_zh_TW], NUMBER_OMIT_ALL,
+        { NumberChar_Upper_ko, MultiplierChar_6_CJK[Multiplier_Upper_ko], NUMBER_OMIT_ALL,
                 ExponentCount_6_CJK, MultiplierExponent_6_CJK },
 };
 
@@ -1168,21 +1168,22 @@ static void makeCyrillicNumber(sal_Int64 value, OUStringBuffer& output, bool add
         }
     }
 
-    if (addTitlo) {
-        if (output.getLength() == 1) {
+    if (!addTitlo)
+        return;
+
+    if (output.getLength() == 1) {
+        output.append(cyrillicTitlo);
+    } else if (output.getLength() == 2) {
+        if (value > 800 && value < 900) {
             output.append(cyrillicTitlo);
-        } else if (output.getLength() == 2) {
-            if (value > 800 && value < 900) {
-                output.append(cyrillicTitlo);
-            } else {
-                output.insert(1, cyrillicTitlo);
-            }
-        } else if (output.getLength() > 2) {
-            if (output.indexOf(" ") == output.getLength() - 2) {
-                output.append(cyrillicTitlo);
-            } else {
-                output.insert(output.getLength() - 1, cyrillicTitlo);
-            }
+        } else {
+            output.insert(1, cyrillicTitlo);
+        }
+    } else if (output.getLength() > 2) {
+        if (output.indexOf(" ") == output.getLength() - 2) {
+            output.append(cyrillicTitlo);
+        } else {
+            output.insert(output.getLength() - 1, cyrillicTitlo);
         }
     }
 }

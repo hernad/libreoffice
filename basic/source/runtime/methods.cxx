@@ -98,6 +98,9 @@ using namespace com::sun::star::uno;
 #include <unistd.h>
 #endif
 
+#include <com/sun/star/i18n/XCharacterClassification.hpp>
+#include <vcl/unohelp.hxx>
+
 #if HAVE_FEATURE_SCRIPTING
 
 static void FilterWhiteSpace( OUString& rStr )
@@ -330,8 +333,15 @@ static void implChr( SbxArray& rPar, bool bChrW )
         }
         else
         {
-            sal_Unicode aCh = static_cast<sal_Unicode>(pArg->GetUShort());
-            aStr = OUString(aCh);
+            // Map negative 16-bit values to large positive ones, so that code like Chr(&H8000)
+            // still works after the fix for tdf#62326 changed those four-digit hex notations to
+            // produce negative values:
+            sal_Int32 aCh = pArg->GetLong();
+            if (aCh < -0x8000 || aCh > 0xFFFF) {
+                StarBASIC::Error(ERRCODE_BASIC_MATH_OVERFLOW);
+                aCh = 0;
+            }
+            aStr = OUString(static_cast<sal_Unicode>(aCh));
         }
         rPar.Get32(0)->PutString( aStr );
     }
@@ -471,31 +481,31 @@ void SbRtl_ChDrive(StarBASIC *, SbxArray & rPar, bool)
 void implStepRenameUCB( const OUString& aSource, const OUString& aDest )
 {
     const uno::Reference< ucb::XSimpleFileAccess3 >& xSFI = getFileAccess();
-    if( xSFI.is() )
-    {
-        try
-        {
-            OUString aSourceFullPath = getFullPath( aSource );
-            if( !xSFI->exists( aSourceFullPath ) )
-            {
-                StarBASIC::Error( ERRCODE_BASIC_FILE_NOT_FOUND );
-                return;
-            }
+    if( !xSFI.is() )
+        return;
 
-            OUString aDestFullPath = getFullPath( aDest );
-            if( xSFI->exists( aDestFullPath ) )
-            {
-                StarBASIC::Error( ERRCODE_BASIC_FILE_EXISTS );
-            }
-            else
-            {
-                xSFI->move( aSourceFullPath, aDestFullPath );
-            }
-        }
-        catch(const Exception & )
+    try
+    {
+        OUString aSourceFullPath = getFullPath( aSource );
+        if( !xSFI->exists( aSourceFullPath ) )
         {
             StarBASIC::Error( ERRCODE_BASIC_FILE_NOT_FOUND );
+            return;
         }
+
+        OUString aDestFullPath = getFullPath( aDest );
+        if( xSFI->exists( aDestFullPath ) )
+        {
+            StarBASIC::Error( ERRCODE_BASIC_FILE_EXISTS );
+        }
+        else
+        {
+            xSFI->move( aSourceFullPath, aDestFullPath );
+        }
+    }
+    catch(const Exception & )
+    {
+        StarBASIC::Error( ERRCODE_BASIC_FILE_NOT_FOUND );
     }
 }
 
@@ -1212,88 +1222,93 @@ void SbRtl_Replace(StarBASIC *, SbxArray & rPar, bool)
     if ( nArgCount < 3 || nArgCount > 6 )
     {
         StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
+        return;
+    }
+
+    sal_Int32 lStartPos = 1;
+    if (nArgCount >= 4)
+    {
+        if (rPar.Get32(4)->GetType() != SbxEMPTY)
+        {
+            lStartPos = rPar.Get32(4)->GetLong();
+        }
+        if (lStartPos < 1)
+        {
+            StarBASIC::Error(ERRCODE_BASIC_BAD_ARGUMENT);
+            return;
+        }
+    }
+
+    sal_Int32 lCount = -1;
+    if (nArgCount >= 5)
+    {
+        if (rPar.Get32(5)->GetType() != SbxEMPTY)
+        {
+            lCount = rPar.Get32(5)->GetLong();
+        }
+        if (lCount < -1)
+        {
+            StarBASIC::Error(ERRCODE_BASIC_BAD_ARGUMENT);
+            return;
+        }
+    }
+
+    bool bCaseInsensitive;
+    if (nArgCount == 6)
+    {
+        bCaseInsensitive = rPar.Get32(6)->GetInteger();
     }
     else
     {
-        OUString aExpStr = rPar.Get32(1)->GetOUString();
-        OUString aFindStr = rPar.Get32(2)->GetOUString();
-        OUString aReplaceStr = rPar.Get32(3)->GetOUString();
-
-        sal_Int32 lStartPos = 1;
-        if ( nArgCount >= 4 )
-        {
-            if( rPar.Get32(4)->GetType() != SbxEMPTY )
-            {
-                lStartPos = rPar.Get32(4)->GetLong();
-            }
-            if( lStartPos < 1)
-            {
-                StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
-                lStartPos = 1;
-            }
-        }
-
-        sal_Int32 lCount = -1;
-        if( nArgCount >=5 )
-        {
-            if( rPar.Get32(5)->GetType() != SbxEMPTY )
-            {
-                lCount = rPar.Get32(5)->GetLong();
-            }
-            if( lCount < -1)
-            {
-                StarBASIC::Error( ERRCODE_BASIC_BAD_ARGUMENT );
-                lCount = -1;
-            }
-        }
-
         SbiInstance* pInst = GetSbData()->pInst;
-        bool bTextMode;
-        bool bCompatibility = ( pInst && pInst->IsCompatibility() );
-        if( bCompatibility )
+        if (pInst && pInst->IsCompatibility())
         {
             SbiRuntime* pRT = pInst->pRun;
-            bTextMode = pRT && pRT->IsImageFlag( SbiImageFlags::COMPARETEXT );
+            bCaseInsensitive = pRT && pRT->IsImageFlag(SbiImageFlags::COMPARETEXT);
         }
         else
         {
-            bTextMode = true;
+            bCaseInsensitive = true;
         }
-        if ( nArgCount == 6 )
-        {
-            bTextMode = rPar.Get32(6)->GetInteger();
-        }
-        sal_Int32 nExpStrLen = aExpStr.getLength();
-        sal_Int32 nFindStrLen = aFindStr.getLength();
-        sal_Int32 nReplaceStrLen = aReplaceStr.getLength();
-
-        if( lStartPos <= nExpStrLen )
-        {
-            sal_Int32 nPos = lStartPos - 1;
-            sal_Int32 nCounts = 0;
-            while( lCount == -1 || lCount > nCounts )
-            {
-                OUString aSrcStr( aExpStr );
-                if( bTextMode )
-                {
-                    aSrcStr = aSrcStr.toAsciiUpperCase();
-                    aFindStr = aFindStr.toAsciiUpperCase();
-                }
-                nPos = aSrcStr.indexOf( aFindStr, nPos );
-                if( nPos >= 0 )
-                {
-                    aExpStr = aExpStr.replaceAt( nPos, nFindStrLen, aReplaceStr );
-                    nPos = nPos + nReplaceStrLen;
-                    nCounts++;
-                }
-                else
-                {
-                    break;
-                }
-            }
-        }
-        rPar.Get32(0)->PutString( aExpStr.copy( lStartPos - 1 )  );
     }
+
+    const OUString aExpStr = rPar.Get32(1)->GetOUString();
+    OUString aFindStr = rPar.Get32(2)->GetOUString();
+    const OUString aReplaceStr = rPar.Get32(3)->GetOUString();
+    const sal_Int32 nExpStrLen = aExpStr.getLength();
+    const sal_Int32 nFindStrLen = aFindStr.getLength();
+
+    OUString aSrcStr(aExpStr);
+    if (bCaseInsensitive)
+    {
+        // tdf#132389 - case-insensitive operation for non-ASCII characters
+        const css::lang::Locale& rLocale = Application::GetSettings().GetUILanguageTag().getLocale();
+        css::uno::Reference < i18n::XCharacterClassification > xCharClass = vcl::unohelper::CreateCharacterClassification();
+        aSrcStr = xCharClass->toUpper(aSrcStr, 0, aSrcStr.getLength(), rLocale);
+        aFindStr = xCharClass->toUpper(aFindStr, 0, aSrcStr.getLength(), rLocale);
+    }
+
+    // Note: the result starts from lStartPos, removing everything to the left. See i#94895.
+    sal_Int32 nPrevPos = std::min(lStartPos - 1, nExpStrLen);
+    OUStringBuffer sResult(nExpStrLen - nPrevPos);
+    sal_Int32 nCounts = 0;
+    while (lCount == -1 || lCount > nCounts)
+    {
+        sal_Int32 nPos = aSrcStr.indexOf(aFindStr, nPrevPos);
+        if (nPos >= 0)
+        {
+            sResult.append(aExpStr.getStr() + nPrevPos, nPos - nPrevPos);
+            sResult.append(aReplaceStr);
+            nPrevPos = nPos + nFindStrLen;
+            nCounts++;
+        }
+        else
+        {
+            break;
+        }
+    }
+    sResult.append(aExpStr.getStr() + nPrevPos, nExpStrLen - nPrevPos);
+    rPar.Get32(0)->PutString(sResult.makeStringAndClear());
 }
 
 void SbRtl_Right(StarBASIC *, SbxArray & rPar, bool)
@@ -3389,7 +3404,7 @@ void SbRtl_FormatNumber(StarBASIC*, SbxArray& rPar, bool)
 
     if (nNumDigitsAfterDecimal > 0)
     {
-        sal_Int32 nActualDigits = nNumDigitsAfterDecimal;
+        sal_Int32 nActualDigits;
         const sal_Int32 nSepPos = aResult.indexOf(decSep);
         if (nSepPos == -1)
             nActualDigits = 0;
@@ -4234,19 +4249,19 @@ void SbRtl_Load(StarBASIC *, SbxArray & rPar, bool)
 
 
     SbxBase* pObj = rPar.Get32(1)->GetObject();
-    if ( pObj )
+    if ( !pObj )
+        return;
+
+    if (SbUserFormModule* pModule = dynamic_cast<SbUserFormModule*>(pObj))
     {
-        if (SbUserFormModule* pModule = dynamic_cast<SbUserFormModule*>(pObj))
+        pModule->Load();
+    }
+    else if (SbxObject* pSbxObj = dynamic_cast<SbxObject*>(pObj))
+    {
+        SbxVariable* pVar = pSbxObj->Find("Load", SbxClassType::Method);
+        if( pVar )
         {
-            pModule->Load();
-        }
-        else if (SbxObject* pSbxObj = dynamic_cast<SbxObject*>(pObj))
-        {
-            SbxVariable* pVar = pSbxObj->Find("Load", SbxClassType::Method);
-            if( pVar )
-            {
-                pVar->GetInteger();
-            }
+            pVar->GetInteger();
         }
     }
 }
@@ -4262,19 +4277,19 @@ void SbRtl_Unload(StarBASIC *, SbxArray & rPar, bool)
 
 
     SbxBase* pObj = rPar.Get32(1)->GetObject();
-    if ( pObj )
+    if ( !pObj )
+        return;
+
+    if (SbUserFormModule* pFormModule = dynamic_cast<SbUserFormModule*>(pObj))
     {
-        if (SbUserFormModule* pFormModule = dynamic_cast<SbUserFormModule*>(pObj))
+        pFormModule->Unload();
+    }
+    else if (SbxObject *pSbxObj = dynamic_cast<SbxObject*>(pObj))
+    {
+        SbxVariable* pVar = pSbxObj->Find("Unload", SbxClassType::Method);
+        if( pVar )
         {
-            pFormModule->Unload();
-        }
-        else if (SbxObject *pSbxObj = dynamic_cast<SbxObject*>(pObj))
-        {
-            SbxVariable* pVar = pSbxObj->Find("Unload", SbxClassType::Method);
-            if( pVar )
-            {
-                pVar->GetInteger();
-            }
+            pVar->GetInteger();
         }
     }
 }

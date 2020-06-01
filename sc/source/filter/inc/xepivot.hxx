@@ -153,7 +153,7 @@ private:
     sal_uInt16          mnTypeFlags;        /// Collected item data type flags.
 };
 
-class XclExpPivotCache : protected XclExpRoot
+class XclExpPivotCache : public salhelper::SimpleReferenceObject, protected XclExpRoot
 {
 public:
     explicit            XclExpPivotCache( const XclExpRoot& rRoot,
@@ -215,9 +215,11 @@ private:
     ScRange             maOrigSrcRange;     /// The original sheet source range.
     ScRange             maExpSrcRange;      /// The exported sheet source range.
     ScRange             maDocSrcRange;      /// The range used to build the cache fields and items.
-    sal_uInt16 const    mnListIdx;          /// List index in pivot cache buffer.
+    sal_uInt16          mnListIdx;          /// List index in pivot cache buffer.
     bool                mbValid;            /// true = The cache is valid for export.
 };
+
+typedef rtl::Reference<XclExpPivotCache>       XclExpPivotCacheRef;
 
 // Pivot table
 
@@ -301,16 +303,16 @@ private:
     void                WriteSxvdex( XclExpStream& rStrm ) const;
 
 private:
-    typedef ::std::vector< XclPTDataFieldInfo > XclPTDataFieldInfoVec;
-    typedef XclExpRecordList< XclExpPTItem >    XclExpPTItemList;
 
     const XclExpPivotTable& mrPTable;       /// Parent pivot table containing this field.
     const XclExpPCField* mpCacheField;      /// The referred pivot cache field.
     XclPTFieldInfo      maFieldInfo;        /// General field info (SXVD record).
     XclPTFieldExtInfo   maFieldExtInfo;     /// Extended field info (SXVDEX record).
     XclPTPageFieldInfo  maPageInfo;         /// Page field info (entry in SXPI record).
-    XclPTDataFieldInfoVec maDataInfoVec;    /// List of extended data field info (SXDI records).
-    XclExpPTItemList    maItemList;         /// List of all items of this field.
+    std::vector< XclPTDataFieldInfo >
+                        maDataInfoVec;    /// List of extended data field info (SXDI records).
+    XclExpRecordList< XclExpPTItem >
+                        maItemList;         /// List of all items of this field.
 };
 
 class XclExpPivotTable : public XclExpRecordBase, protected XclExpRoot
@@ -377,7 +379,6 @@ private:
 private:
     typedef XclExpRecordList< XclExpPTField >   XclExpPTFieldList;
     typedef XclExpPTFieldList::RecordRefType    XclExpPTFieldRef;
-    typedef ::std::vector< XclPTDataFieldPos >  XclPTDataFieldPosVec;
 
     const XclExpPivotCache& mrPCache;       /// The pivot cache this pivot table bases on.
     XclPTInfo           maPTInfo;           /// Info about the pivot table (SXVIEW record).
@@ -387,7 +388,8 @@ private:
     ScfUInt16Vec        maRowFields;        /// Row field indexes.
     ScfUInt16Vec        maColFields;        /// Column field indexes.
     ScfUInt16Vec        maPageFields;       /// Page field indexes.
-    XclPTDataFieldPosVec maDataFields;      /// Data field indexes.
+    std::vector< XclPTDataFieldPos >
+                        maDataFields;      /// Data field indexes.
     XclExpPTField       maDataOrientField;  /// Special data field orientation field.
     SCTAB               mnOutScTab;         /// Sheet index of the output range.
     bool                mbValid;            /// true = The pivot table is valid for export.
@@ -425,13 +427,11 @@ private:
     const XclExpPivotCache* CreatePivotCache( const ScDPObject& rDPObj );
 
 private:
-    typedef XclExpRecordList< XclExpPivotCache >    XclExpPivotCacheList;
-    typedef XclExpPivotCacheList::RecordRefType     XclExpPivotCacheRef;
     typedef XclExpRecordList< XclExpPivotTable >    XclExpPivotTableList;
     typedef XclExpPivotTableList::RecordRefType     XclExpPivotTableRef;
 
-    XclExpPivotCacheList maPCacheList;      /// List of all pivot caches.
-    XclExpPivotTableList maPTableList;      /// List of all pivot tables.
+    XclExpRecordList< XclExpPivotCache > maPCacheList;      /// List of all pivot caches.
+    XclExpPivotTableList                 maPTableList;      /// List of all pivot tables.
 };
 
 #endif

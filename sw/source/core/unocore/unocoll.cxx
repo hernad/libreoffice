@@ -56,6 +56,7 @@
 #include <unometa.hxx>
 #include <docsh.hxx>
 #include <hints.hxx>
+#include <frameformats.hxx>
 #include <com/sun/star/document/XCodeNameQuery.hpp>
 #include <com/sun/star/drawing/XDrawPageSupplier.hpp>
 #include <com/sun/star/form/XFormsSupplier.hpp>
@@ -83,7 +84,7 @@ namespace {
 
 class SwVbaCodeNameProvider : public ::cppu::WeakImplHelper< document::XCodeNameQuery >
 {
-    SwDocShell* const mpDocShell;
+    SwDocShell* mpDocShell;
     OUString msThisDocumentCodeName;
 public:
     explicit SwVbaCodeNameProvider( SwDocShell* pDocShell ) : mpDocShell( pDocShell ) {}
@@ -222,7 +223,7 @@ public:
 
 class SwVbaObjectForCodeNameProvider : public ::cppu::WeakImplHelper< container::XNameAccess >
 {
-    SwDocShell* const mpDocShell;
+    SwDocShell* mpDocShell;
 public:
     explicit SwVbaObjectForCodeNameProvider( SwDocShell* pDocShell ) : mpDocShell( pDocShell )
     {
@@ -270,7 +271,7 @@ namespace {
 struct  ProvNamesId_Type
 {
     const char *    pName;
-    SwServiceType const   nType;
+    SwServiceType   nType;
 };
 
 }
@@ -809,7 +810,7 @@ SwXServiceProvider::MakeInstance(SwServiceType nObjectType, SwDoc & rDoc)
             xRet = SvUnoImageMapPolygonObject_createInstance( sw_GetSupportedMacroItems() );
         break;
         case SwServiceType::Chart2DataProvider:
-            // #i64497# If a chart is in a temporary document during clipoard
+            // #i64497# If a chart is in a temporary document during clipboard
             // paste, there should be no data provider, so that own data is used
             // This should not happen during copy/paste, as this will unlink
             // charts using table data.
@@ -1411,7 +1412,7 @@ uno::Any SwXTextSections::getByIndex(sal_Int32 nIndex)
         if(static_cast<size_t>(nIndex) == i)
             break;
     }
-    if(!(nIndex >= 0 && o3tl::make_unsigned(nIndex) < rFormats.size()))
+    if(nIndex < 0 || o3tl::make_unsigned(nIndex) >= rFormats.size())
         throw IndexOutOfBoundsException();
 
     SwSectionFormat* pFormat = rFormats[nIndex];

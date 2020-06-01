@@ -23,6 +23,7 @@
 #include <tools/debug.hxx>
 #include <vcl/window.hxx>
 
+#include <vcl/button.hxx>
 #include <vcl/edit.hxx>
 #include <vcl/settings.hxx>
 
@@ -334,7 +335,7 @@ namespace svt
         if ( bActiveBeforeTracking )
         {
             DeactivateCell();
-            Update();
+            PaintImmediately();
         }
 
         BrowseBox::ImplStartTracking();
@@ -946,7 +947,7 @@ namespace svt
             return;
         }
 
-        if (!(nEditRow >= 0 && nEditCol > HandleColumnId))
+        if (nEditRow < 0 || nEditCol <= HandleColumnId)
             return;
 
         aController = GetController(nRow, nCol);
@@ -1007,7 +1008,7 @@ namespace svt
 
         // update if requested
         if (bUpdate)
-            Update();
+            PaintImmediately();
 
         // release the controller (asynchronously)
         if (nEndEvent)
@@ -1129,12 +1130,20 @@ namespace svt
         return nullptr;
     }
 
-
     void EditBrowseBox::ResizeController(CellControllerRef const & rController, const tools::Rectangle& rRect)
     {
-        rController->GetWindow().SetPosSizePixel(rRect.TopLeft(), rRect.GetSize());
+        Point aPoint(rRect.TopLeft());
+        Size aSize(rRect.GetSize());
+        Control& rControl = rController->GetWindow();
+        auto nMinHeight = rControl.get_preferred_size().Height();
+        if (nMinHeight > aSize.Height())
+        {
+            auto nOffset = (nMinHeight - aSize.Height()) / 2;
+            aPoint.AdjustY(-nOffset);
+            aSize.setHeight(nMinHeight);
+        }
+        rControl.SetPosSizePixel(aPoint, aSize);
     }
-
 
     void EditBrowseBox::InitController(CellControllerRef&, long, sal_uInt16)
     {
@@ -1206,7 +1215,7 @@ namespace svt
         pCheckBoxPaint->GetBox().Enable(_bEnabled);
         pCheckBoxPaint->Show();
         pCheckBoxPaint->SetParentUpdateMode( false );
-        pCheckBoxPaint->Update();
+        pCheckBoxPaint->PaintImmediately();
         pCheckBoxPaint->Hide();
         pCheckBoxPaint->SetParentUpdateMode( true );
     }

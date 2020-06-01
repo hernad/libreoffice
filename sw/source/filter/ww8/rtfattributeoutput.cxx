@@ -1291,8 +1291,8 @@ void RtfAttributeOutput::SectionBiDi(bool bBiDi)
                                         : OOO_STRING_SVTOOLS_RTF_LTRSECT);
 }
 
-void RtfAttributeOutput::SectionPageNumbering(
-    sal_uInt16 nNumType, const ::o3tl::optional<sal_uInt16>& oPageRestartNumber)
+void RtfAttributeOutput::SectionPageNumbering(sal_uInt16 nNumType,
+                                              const ::std::optional<sal_uInt16>& oPageRestartNumber)
 {
     if (oPageRestartNumber)
     {
@@ -1357,6 +1357,77 @@ void RtfAttributeOutput::SectionType(sal_uInt8 nBreakCode)
     m_aSectionBreaks.append(sType);
     if (!m_bBufferSectionBreaks)
         m_rExport.Strm().WriteOString(m_aSectionBreaks.makeStringAndClear());
+}
+
+void RtfAttributeOutput::SectFootnoteEndnotePr()
+{
+    WriteFootnoteEndnotePr(true, m_rExport.m_pDoc->GetFootnoteInfo());
+    WriteFootnoteEndnotePr(false, m_rExport.m_pDoc->GetEndNoteInfo());
+}
+
+void RtfAttributeOutput::WriteFootnoteEndnotePr(bool bFootnote, const SwEndNoteInfo& rInfo)
+{
+    const char* pOut = nullptr;
+
+    if (bFootnote)
+    {
+        switch (rInfo.m_aFormat.GetNumberingType())
+        {
+            default:
+                pOut = OOO_STRING_SVTOOLS_RTF_SFTNNAR;
+                break;
+            case SVX_NUM_CHARS_LOWER_LETTER:
+            case SVX_NUM_CHARS_LOWER_LETTER_N:
+                pOut = OOO_STRING_SVTOOLS_RTF_SFTNNALC;
+                break;
+            case SVX_NUM_CHARS_UPPER_LETTER:
+            case SVX_NUM_CHARS_UPPER_LETTER_N:
+                pOut = OOO_STRING_SVTOOLS_RTF_SFTNNAUC;
+                break;
+            case SVX_NUM_ROMAN_LOWER:
+                pOut = OOO_STRING_SVTOOLS_RTF_SFTNNRLC;
+                break;
+            case SVX_NUM_ROMAN_UPPER:
+                pOut = OOO_STRING_SVTOOLS_RTF_SFTNNRUC;
+                break;
+            case SVX_NUM_SYMBOL_CHICAGO:
+                pOut = OOO_STRING_SVTOOLS_RTF_SFTNNCHI;
+                break;
+        }
+    }
+    else
+    {
+        switch (rInfo.m_aFormat.GetNumberingType())
+        {
+            default:
+                pOut = OOO_STRING_SVTOOLS_RTF_SAFTNNAR;
+                break;
+            case SVX_NUM_CHARS_LOWER_LETTER:
+            case SVX_NUM_CHARS_LOWER_LETTER_N:
+                pOut = OOO_STRING_SVTOOLS_RTF_SAFTNNALC;
+                break;
+            case SVX_NUM_CHARS_UPPER_LETTER:
+            case SVX_NUM_CHARS_UPPER_LETTER_N:
+                pOut = OOO_STRING_SVTOOLS_RTF_SAFTNNAUC;
+                break;
+            case SVX_NUM_ROMAN_LOWER:
+                pOut = OOO_STRING_SVTOOLS_RTF_SAFTNNRLC;
+                break;
+            case SVX_NUM_ROMAN_UPPER:
+                pOut = OOO_STRING_SVTOOLS_RTF_SAFTNNRUC;
+                break;
+            case SVX_NUM_SYMBOL_CHICAGO:
+                pOut = OOO_STRING_SVTOOLS_RTF_SAFTNNCHI;
+                break;
+        }
+    }
+
+    m_aSectionBreaks.append(pOut);
+
+    if (!m_bBufferSectionBreaks)
+    {
+        m_rExport.Strm().WriteOString(m_aSectionBreaks.makeStringAndClear());
+    }
 }
 
 void RtfAttributeOutput::NumberingDefinition(sal_uInt16 nId, const SwNumRule& /*rRule*/)
@@ -1487,6 +1558,9 @@ void RtfAttributeOutput::NumberingLevel(sal_uInt8 nLevel, sal_uInt16 nStart,
             break;
         case SVX_NUM_NUMBER_NONE:
             nVal = 255;
+            break;
+        case SVX_NUM_ARABIC_ZERO:
+            nVal = 22;
             break;
     }
     m_rExport.Strm().WriteCharPtr(OOO_STRING_SVTOOLS_RTF_LEVELNFC);
@@ -3214,7 +3288,7 @@ void RtfAttributeOutput::FormatSurround(const SwFormatSurround& rSurround)
     {
         // See DocxSdrExport::startDMLAnchorInline() for SwFormatSurround -> WR / WRK mappings.
         sal_Int32 nWr = -1;
-        o3tl::optional<sal_Int32> oWrk;
+        std::optional<sal_Int32> oWrk;
         switch (rSurround.GetValue())
         {
             case css::text::WrapTextMode_NONE:
@@ -4152,8 +4226,8 @@ void RtfAttributeOutput::FlyFrameGraphic(const SwFlyFrameFormat* pFlyFrameFormat
                 const tools::PolyPolygon* pPolyPoly = pNd->HasContour();
                 if (pPolyPoly && pPolyPoly->Count())
                 {
-                    tools::Polygon aPoly
-                        = sw::util::CorrectWordWrapPolygonForExport(*pPolyPoly, pNd);
+                    tools::Polygon aPoly = sw::util::CorrectWordWrapPolygonForExport(
+                        *pPolyPoly, pNd, /*bCorrectCrop=*/true);
                     OStringBuffer aVerticies;
                     for (sal_uInt16 i = 0; i < aPoly.GetSize(); ++i)
                         aVerticies.append(";(")

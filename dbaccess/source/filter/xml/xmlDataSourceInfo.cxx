@@ -18,16 +18,10 @@
  */
 
 #include "xmlDataSourceInfo.hxx"
-#include "xmlDataSource.hxx"
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
-#include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
-#include "xmlEnums.hxx"
-#include <stringconstants.hxx>
 #include <strings.hxx>
 #include <com/sun/star/beans/PropertyValue.hpp>
-#include <vector>
 #include <sal/log.hxx>
 
 namespace dbaxml
@@ -43,9 +37,7 @@ OXMLDataSourceInfo::OXMLDataSourceInfo( ODBFilter& rImport
     PropertyValue aProperty;
     bool bAutoEnabled = false;
     bool bFoundField = false,bFoundThousand = false, bFoundCharset = false;
-    sax_fastparser::FastAttributeList *pAttribList =
-                sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-    for (auto &aIter : *pAttribList)
+    for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
     {
         OUString sValue = aIter.toString();
 
@@ -80,7 +72,7 @@ OXMLDataSourceInfo::OXMLDataSourceInfo( ODBFilter& rImport
                 bFoundCharset = true;
                 break;
             default:
-                SAL_WARN("dbaccess", "unknown attribute " << SvXMLImport::getNameFromToken(aIter.getToken()) << " value=" << aIter.toString());
+                SAL_WARN("dbaccess", "unknown attribute " << SvXMLImport::getPrefixAndNameFromToken(aIter.getToken()) << "=" << aIter.toString());
         }
         if ( !aProperty.Name.isEmpty() )
         {
@@ -94,29 +86,29 @@ OXMLDataSourceInfo::OXMLDataSourceInfo( ODBFilter& rImport
         aProperty.Value <<= true;
         rImport.addInfo(aProperty);
     }
-    if ( rImport.isNewFormat() )
+    if ( !rImport.isNewFormat() )
+        return;
+
+    if ( (nElement & TOKEN_MASK) == XML_DELIMITER )
     {
-        if ( (nElement & TOKEN_MASK) == XML_DELIMITER )
+        if ( !bFoundField )
         {
-            if ( !bFoundField )
-            {
-                aProperty.Name = INFO_FIELDDELIMITER;
-                aProperty.Value <<= OUString(";");
-                rImport.addInfo(aProperty);
-            }
-            if ( !bFoundThousand )
-            {
-                aProperty.Name = INFO_THOUSANDSDELIMITER;
-                aProperty.Value <<= OUString(",");
-                rImport.addInfo(aProperty);
-            }
-        }
-        if ( (nElement & TOKEN_MASK) == XML_FONT_CHARSET && !bFoundCharset )
-        {
-            aProperty.Name = INFO_CHARSET;
-            aProperty.Value <<= OUString("utf8");
+            aProperty.Name = INFO_FIELDDELIMITER;
+            aProperty.Value <<= OUString(";");
             rImport.addInfo(aProperty);
         }
+        if ( !bFoundThousand )
+        {
+            aProperty.Name = INFO_THOUSANDSDELIMITER;
+            aProperty.Value <<= OUString(",");
+            rImport.addInfo(aProperty);
+        }
+    }
+    if ( (nElement & TOKEN_MASK) == XML_FONT_CHARSET && !bFoundCharset )
+    {
+        aProperty.Name = INFO_CHARSET;
+        aProperty.Value <<= OUString("utf8");
+        rImport.addInfo(aProperty);
     }
 }
 

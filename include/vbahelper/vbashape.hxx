@@ -37,21 +37,21 @@
 #include <vbahelper/vbahelper.hxx>
 #include <vbahelper/vbahelperinterface.hxx>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace beans { class XPropertySet; }
     namespace drawing { class XShape; }
     namespace drawing { class XShapes; }
     namespace frame { class XModel; }
     namespace uno { class XComponentContext; }
-} } }
+}
 
-namespace ooo { namespace vba {
+namespace ooo::vba {
     class ShapeHelper;
     class XHelperInterface;
     namespace msforms { class XFillFormat; }
     namespace msforms { class XLineFormat; }
     namespace msforms { class XPictureFormat; }
-} }
+}
 
 typedef  ::cppu::WeakImplHelper< ov::msforms::XShape, css::lang::XEventListener > ListeningShape;
 
@@ -64,7 +64,7 @@ protected:
     css::uno::Reference< css::drawing::XShape > m_xShape;
     css::uno::Reference< css::drawing::XShapes > m_xShapes;
     css::uno::Reference< css::beans::XPropertySet > m_xPropertySet;
-    sal_Int32 const m_nType;
+    sal_Int32 m_nType;
     css::uno::Reference< css::frame::XModel > m_xModel;
     void addListeners();
     /// @throws css::uno::RuntimeException

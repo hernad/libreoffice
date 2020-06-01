@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_CANVAS_SOURCE_CAIRO_CAIRO_CANVAS_HXX
-#define INCLUDED_CANVAS_SOURCE_CAIRO_CAIRO_CANVAS_HXX
+#pragma once
 
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
@@ -31,10 +30,10 @@
 #include <cppuhelper/compbase.hxx>
 #include <comphelper/uno3.hxx>
 
-#include <canvas/base/basemutexhelper.hxx>
-#include <canvas/base/bitmapcanvasbase.hxx>
-#include <canvas/base/graphicdevicebase.hxx>
-#include <canvas/base/integerbitmapbase.hxx>
+#include <base/basemutexhelper.hxx>
+#include <base/bitmapcanvasbase.hxx>
+#include <base/graphicdevicebase.hxx>
+#include <base/integerbitmapbase.hxx>
 
 #include "cairo_canvashelper.hxx"
 #include "cairo_devicehelper.hxx"
@@ -135,7 +134,5 @@ namespace cairocanvas
         css::uno::Sequence< css::uno::Any >                maArguments;
     };
 }
-
-#endif
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

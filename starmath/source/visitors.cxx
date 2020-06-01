@@ -7,6 +7,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+#include <rtl/math.hxx>
 #include <sal/log.hxx>
 #include <tools/gen.hxx>
 #include <vcl/lineinfo.hxx>
@@ -462,8 +463,7 @@ void SmDrawingVisitor::Visit( SmRectangleNode* pNode )
     aTmp.AdjustTop(nTmpBorderWidth );
     aTmp.AdjustBottom( -sal_Int32(nTmpBorderWidth) );
 
-    SAL_WARN_IF( aTmp.GetHeight() == 0 || aTmp.GetWidth() == 0,
-                "starmath", "Empty rectangle" );
+    SAL_WARN_IF( aTmp.IsEmpty(), "starmath", "Empty rectangle" );
 
     //! avoid GROWING AND SHRINKING of drawn rectangle when constantly
     //! increasing zoomfactor.

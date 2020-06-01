@@ -24,12 +24,11 @@
 #include <editeng/editdata.hxx>
 #include <editeng/outliner.hxx>
 #include <editeng/outlobj.hxx>
-#include <editeng/overflowingtxt.hxx>
 #include <editeng/editstat.hxx>
 #include <svl/itemset.hxx>
 #include <editeng/eeitem.hxx>
 #include <svx/sdtfchim.hxx>
-#include <svx/textchain.hxx>
+#include <textchain.hxx>
 
 
 bool SdrTextObj::HasTextEdit() const

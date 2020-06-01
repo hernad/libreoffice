@@ -23,10 +23,10 @@
 #include "pivotcachebuffer.hxx"
 #include "stylesbuffer.hxx"
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace sheet { class XDataPilotDescriptor; }
     namespace sheet { class XDataPilotField; }
-} } }
+}
 
 class ScDPObject;
 
@@ -177,7 +177,7 @@ private:
     ItemModelVector     maItems;            /// All items of this field.
     PTFieldModel        maModel;            /// Pivot field settings.
     OUString            maDPFieldName;      /// Name of the field in DataPilot field collection.
-    sal_Int32 const     mnFieldIndex;       /// Zero-based index of this field.
+    sal_Int32           mnFieldIndex;       /// Zero-based index of this field.
 };
 
 struct PTFilterModel

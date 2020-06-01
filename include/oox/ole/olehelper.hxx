@@ -30,14 +30,14 @@
 #include <tools/ref.hxx>
 #include <memory>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace awt { class XControlModel; }
     namespace awt { struct Size; }
     namespace form { class XFormComponent; }
     namespace frame { class XModel; }
     namespace io { class XOutputStream; }
     namespace uno { class XComponentContext; }
-} } }
+}
 
 class SotStorage;
 class SotStorageStream;
@@ -137,7 +137,7 @@ class OOX_DLLPUBLIC OleFormCtrlExportHelper final
 {
     std::unique_ptr<::oox::ole::EmbeddedControl> mpControl;
     ::oox::ole::ControlModelBase* mpModel;
-    ::oox::GraphicHelper const maGrfHelper;
+    ::oox::GraphicHelper maGrfHelper;
     css::uno::Reference< css::frame::XModel > mxDocModel;
     css::uno::Reference< css::awt::XControlModel > mxControlModel;
 
@@ -174,7 +174,7 @@ class OOX_DLLPUBLIC MSConvertOCXControls : public SvxMSConvertOCXControls
 {
 protected:
     css::uno::Reference< css::uno::XComponentContext > mxCtx;
-    ::oox::GraphicHelper const maGrfHelper;
+    ::oox::GraphicHelper maGrfHelper;
 
     bool importControlFromStream( ::oox::BinaryInputStream& rInStrm,
                                   css::uno::Reference< css::form::XFormComponent > & rxFormComp,

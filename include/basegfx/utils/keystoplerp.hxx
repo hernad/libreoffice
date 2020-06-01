@@ -17,20 +17,17 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_BASEGFX_UTILS_KEYSTOPLERP_HXX
-#define INCLUDED_BASEGFX_UTILS_KEYSTOPLERP_HXX
+#pragma once
 
 #include <vector>
 #include <basegfx/basegfxdllapi.h>
 
-namespace com{ namespace sun{ namespace star{ namespace uno {
+namespace com::sun::star::uno {
     template<typename T> class Sequence;
-}}}}
+}
 
-namespace basegfx
+namespace basegfx::utils
 {
-    namespace utils
-    {
         /** Lerp in a vector of key stops
 
             This class holds a key stop vector and provides the
@@ -83,9 +80,6 @@ namespace basegfx
             std::vector<double>    maKeyStops;
             mutable std::ptrdiff_t mnLastIndex;
         };
-    }
 }
-
-#endif
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

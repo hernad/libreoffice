@@ -19,21 +19,15 @@
 
 #include "richtextvclcontrol.hxx"
 #include "richtextimplcontrol.hxx"
-#include <svl/itempool.hxx>
 #include <svl/itemset.hxx>
-#include <svl/languageoptions.hxx>
 #if OSL_DEBUG_LEVEL > 0
     #include <unotools/ucbstreamhelper.hxx>
     #include <sfx2/filedlghelper.hxx>
     #include <tools/urlobj.hxx>
     #include <com/sun/star/ui/dialogs/TemplateDescription.hpp>
 #endif
-#include <editeng/scripttypeitem.hxx>
 #include <editeng/editeng.hxx>
 #include <editeng/editview.hxx>
-#include <editeng/eeitem.hxx>
-#include <editeng/fontitem.hxx>
-#include <editeng/fhgtitem.hxx>
 #include <editeng/editids.hrc>
 #include <svx/svxids.hrc>
 #include <osl/diagnose.h>
@@ -294,12 +288,10 @@ namespace frm
         return bDone || Control::EventNotify(_rNEvt);
     }
 
-
-    void RichTextControl::Draw( OutputDevice* _pDev, const Point& _rPos, const Size& _rSize, DrawFlags /*_nFlags*/ )
+    void RichTextControl::Draw( OutputDevice* _pDev, const Point& _rPos, DrawFlags /*_nFlags*/ )
     {
-        m_pImpl->Draw( _pDev, _rPos, _rSize );
+        m_pImpl->Draw( _pDev, _rPos, _pDev->PixelToLogic(GetSizePixel()) );
     }
-
 
     EditView& RichTextControl::getView()
     {

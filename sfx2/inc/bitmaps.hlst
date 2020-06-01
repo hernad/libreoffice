@@ -75,7 +75,6 @@
 #define SFX_FILE_THUMBNAIL_MATH             "res/math128.png"
 #define SFX_FILE_THUMBNAIL_DEFAULT          "res/main128.png"
 
-#define BMP_WELCOME                         "sfx2/res/logo.png"
 #define BMP_RECENTDOC_REMOVE                "res/recentdoc_remove.png"
 #define BMP_RECENTDOC_REMOVE_HIGHLIGHTED    "res/recentdoc_remove_highlighted.png"
 #define BMP_DEFAULT                         "res/templatestar.png"
@@ -88,10 +87,6 @@
 #define BMP_128X128_WRITER_DOC              "sfx2/res/128x128_writer_doc-p.png"
 
 #define SFX_BMP_CLOSE_DOC                   "sfx2/res/closedoc.png"
-
-#define RID_SFXBMP_WATERCAN                 "res/sc05554.png"
-#define RID_SFXBMP_NEW_BY_EXAMPLE           "res/sc05555.png"
-#define RID_SFXBMP_UPDATE_BY_EXAMPLE        "res/sc05556.png"
 
 #endif
 

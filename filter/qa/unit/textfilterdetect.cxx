@@ -9,7 +9,6 @@
 
 #include <com/sun/star/document/XExtendedFilterDetection.hpp>
 
-#include <comphelper/processfactory.hxx>
 #include <comphelper/propertyvalue.hxx>
 #include <test/bootstrapfixture.hxx>
 #include <unotools/mediadescriptor.hxx>
@@ -34,8 +33,6 @@ char const DATA_DIRECTORY[] = "/filter/qa/unit/data/";
 
 CPPUNIT_TEST_FIXTURE(TextFilterDetectTest, testTdf114428)
 {
-    uno::Reference<uno::XComponentContext> xComponentContext
-        = comphelper::getComponentContext(getMultiServiceFactory());
     uno::Reference<document::XExtendedFilterDetection> xDetect(
         getMultiServiceFactory()->createInstance("com.sun.star.comp.filters.PlainTextFilterDetect"),
         uno::UNO_QUERY);

@@ -17,9 +17,8 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <svx/textchain.hxx>
+#include <textchain.hxx>
 #include <svx/svdotext.hxx>
-#include <svx/svdpage.hxx>
 
 /*
  * Definition of Properties Interface

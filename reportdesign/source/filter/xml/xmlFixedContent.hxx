@@ -20,7 +20,6 @@
 #define INCLUDED_REPORTDESIGN_SOURCE_FILTER_XML_XMLFIXEDCONTENT_HXX
 
 #include "xmlReportElementBase.hxx"
-#include <com/sun/star/drawing/XShapes.hpp>
 
 
 namespace rptxml
@@ -35,10 +34,6 @@ namespace rptxml
         OXMLFixedContent*   m_pInP; // if set then we are in text-p element
         bool                m_bFormattedField;
 
-    protected:
-        virtual css::uno::Reference< css::xml::sax::XFastContextHandler > createFastChildContext_( sal_Int32 nElement,
-                    const css::uno::Reference< css::xml::sax::XFastAttributeList > & xAttrList ) override;
-    private:
         OXMLFixedContent(const OXMLFixedContent&) = delete;
         OXMLFixedContent& operator =(const OXMLFixedContent&) = delete;
     public:
@@ -48,6 +43,10 @@ namespace rptxml
                     ,OXMLTable* _pContainer
                     ,OXMLFixedContent* _pInP = nullptr);
         virtual ~OXMLFixedContent() override;
+
+        virtual css::uno::Reference< css::xml::sax::XFastContextHandler > SAL_CALL createFastChildContext(
+                    sal_Int32 nElement,
+                    const css::uno::Reference< css::xml::sax::XFastAttributeList > & xAttrList ) override;
 
         // This method is called for all characters that are contained in the
         // current element. The default is to ignore them.

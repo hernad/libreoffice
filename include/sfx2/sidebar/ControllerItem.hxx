@@ -24,7 +24,7 @@
 namespace com::sun::star::lang { class XComponent; }
 
 
-namespace sfx2 { namespace sidebar {
+namespace sfx2::sidebar {
 
 /** The sfx2::sidebar::ControllerItem is a wrapper around the
     SfxControllerItem that becomes necessary to allow objects (think
@@ -45,6 +45,9 @@ public:
             const sal_uInt16 nSId,
             const SfxItemState eState,
             const SfxPoolItem* pState) = 0;
+        virtual void GetControlState(
+            const sal_uInt16 nSId,
+            boost::property_tree::ptree& rState) = 0;
         virtual ~ItemUpdateReceiverInterface();
     };
 
@@ -67,11 +70,12 @@ public:
 private:
 
     virtual void StateChanged (sal_uInt16 nSId, SfxItemState eState, const SfxPoolItem* pState) override;
+    virtual void GetControlState (sal_uInt16 nSId, boost::property_tree::ptree& rState) override;
 
     ItemUpdateReceiverInterface& mrItemUpdateReceiver;
 };
 
-} } // end of namespace sfx2::sidebar
+} // end of namespace sfx2::sidebar
 
 #endif
 

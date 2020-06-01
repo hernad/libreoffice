@@ -25,9 +25,9 @@
 
 #include <set>
 
-namespace com { namespace sun { namespace star { namespace linguistic2 { class XHyphenatedWord; } } } }
+namespace com::sun::star::linguistic2 { class XHyphenatedWord; }
 
-namespace sw { namespace mark { class IMark; } }
+namespace sw::mark { class IMark; }
 class SwCharRange;
 class SwTextNode;
 class SwTextAttrEnd;
@@ -142,6 +142,8 @@ bool IsMarkHidden(SwRootFrame const& rLayout, ::sw::mark::IMark const& rMark);
 bool IsMarkHintHidden(SwRootFrame const& rLayout,
         SwTextNode const& rNode, SwTextAttrEnd const& rHint);
 
+void RecreateStartTextFrames(SwTextNode & rNode);
+
 } // namespace sw
 
 /// Represents the visualization of a paragraph. Typical upper is an
@@ -218,7 +220,6 @@ class SW_DLLPUBLIC SwTextFrame: public SwContentFrame
     bool mbInFootnoteConnect  : 1;        // Is in Connect at the moment
     bool mbFootnote           : 1;        // Has at least one footnote
     bool mbRepaint       : 1;        // TextFrame: Repaint is ready to be fetched
-    bool mbHasBlinkPortions      : 1;        // Contains Blink Portions
     /// Contains rotated portions.
     bool mbHasRotatedPortions : 1;
     bool mbFieldFollow   : 1;        // Start with Field rest of the Master
@@ -426,8 +427,8 @@ public:
     void            SplitFrame(TextFrameIndex nTextPos);
     SwContentFrame *JoinFrame();
     TextFrameIndex GetOffset() const { return mnOffset; }
-           void        SetOfst_(TextFrameIndex nNewOfst);
-    inline void        SetOfst (TextFrameIndex nNewOfst);
+           void        SetOffset_(TextFrameIndex nNewOfst);
+    inline void        SetOffset (TextFrameIndex nNewOfst);
     void ManipOfst(TextFrameIndex const nNewOfst) { mnOffset = nNewOfst; }
            SwTextFrame   *GetFrameAtPos ( const SwPosition &rPos);
     inline const SwTextFrame *GetFrameAtPos ( const SwPosition &rPos) const;
@@ -516,9 +517,6 @@ public:
     inline void SetRepaint() const;
     inline void ResetRepaint() const;
     bool HasRepaint() const { return mbRepaint; }
-    inline void SetBlinkPor() const;
-    inline void ResetBlinkPor() const;
-    bool HasBlinkPor() const { return mbHasBlinkPortions; }
     void SetHasRotatedPortions(bool bHasRotatedPortions);
     bool GetHasRotatedPortions() const { return mbHasRotatedPortions; }
     void SetAnimation() const
@@ -748,7 +746,7 @@ public:
         mbFollowFormatAllowed = false;
     }
 
-    SwTwips GetBaseOfstForFly( bool bIgnoreFlysAnchoredAtThisFrame ) const
+    SwTwips GetBaseOffsetForFly( bool bIgnoreFlysAnchoredAtThisFrame ) const
     {
         return ( bIgnoreFlysAnchoredAtThisFrame ?
                  mnFlyAnchorOfst :
@@ -855,10 +853,10 @@ inline const SwTextFrame *SwTextFrame::GetFrameAtPos( const SwPosition &rPos) co
     return const_cast<SwTextFrame*>(this)->GetFrameAtPos( rPos );
 }
 
-inline void SwTextFrame::SetOfst(TextFrameIndex const nNewOfst)
+inline void SwTextFrame::SetOffset(TextFrameIndex const nNewOfst)
 {
     if ( mnOffset != nNewOfst )
-        SetOfst_( nNewOfst );
+        SetOffset_( nNewOfst );
 }
 
 inline void SwTextFrame::SetRepaint() const
@@ -868,15 +866,6 @@ inline void SwTextFrame::SetRepaint() const
 inline void SwTextFrame::ResetRepaint() const
 {
     const_cast<SwTextFrame*>(this)->mbRepaint = false;
-}
-
-inline void SwTextFrame::SetBlinkPor() const
-{
-    const_cast<SwTextFrame*>(this)->mbHasBlinkPortions = true;
-}
-inline void SwTextFrame::ResetBlinkPor() const
-{
-    const_cast<SwTextFrame*>(this)->mbHasBlinkPortions = false;
 }
 
 class TemporarySwap {
@@ -932,7 +921,7 @@ public:
 class SwLayoutModeModifier
 {
     const OutputDevice& m_rOut;
-    ComplexTextLayoutFlags const m_nOldLayoutMode;
+    ComplexTextLayoutFlags m_nOldLayoutMode;
 public:
     SwLayoutModeModifier( const OutputDevice& rOutp );
     ~SwLayoutModeModifier();
@@ -943,7 +932,7 @@ public:
 class SwDigitModeModifier
 {
     const OutputDevice& rOut;
-    LanguageType const nOldLanguageType;
+    LanguageType nOldLanguageType;
 public:
     SwDigitModeModifier( const OutputDevice& rOutp, LanguageType eCurLang );
     ~SwDigitModeModifier();

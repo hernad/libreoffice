@@ -18,8 +18,6 @@
  */
 
 #include <drawingml/textbody.hxx>
-#include <com/sun/star/text/XText.hpp>
-#include <com/sun/star/text/XTextCursor.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <drawingml/textparagraph.hxx>
 #include <oox/helper/propertyset.hxx>
@@ -37,7 +35,7 @@ TextBody::TextBody()
 
 TextBody::TextBody( const TextBodyPtr& pBody )
 {
-    if( pBody.get() ) {
+    if( pBody ) {
         maTextProperties = pBody->maTextProperties;
         maTextListStyle = pBody->maTextListStyle;
     }
@@ -122,7 +120,7 @@ void TextBody::ApplyStyleEmpty(
 
     // Apply paragraph properties
     TextParagraphPropertiesPtr pTextParagraphStyle = maParagraphs[0]->getParagraphStyle(aCombinedTextStyle);
-    if (pTextParagraphStyle.get())
+    if (pTextParagraphStyle)
     {
         Reference< XPropertySet > xProps(xText, UNO_QUERY);
         PropertyMap aioBulletList;

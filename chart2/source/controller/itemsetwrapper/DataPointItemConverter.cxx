@@ -37,7 +37,7 @@
 #include <com/sun/star/chart2/Symbol.hpp>
 #include <com/sun/star/chart2/RelativePosition.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
-
+#include <com/sun/star/frame/XModel.hpp>
 #include <svx/xflclit.hxx>
 #include <svl/eitem.hxx>
 #include <svl/intitem.hxx>
@@ -47,6 +47,8 @@
 #include <svl/ilstitem.hxx>
 #include <tools/diagnose_ex.h>
 #include <vcl/graph.hxx>
+#include <oox/helper/containerhelper.hxx>
+#include <rtl/math.hxx>
 
 #include <svx/tabline.hxx>
 
@@ -207,7 +209,8 @@ DataPointItemConverter::DataPointItemConverter(
     sal_Int32 nSpecialFillColor,
     bool bOverwriteLabelsForAttributedDataPointsAlso,
     sal_Int32 nNumberFormat,
-    sal_Int32 nPercentNumberFormat ) :
+    sal_Int32 nPercentNumberFormat,
+    sal_Int32 nPointIndex ) :
         ItemConverter( rPropertySet, rItemPool ),
         m_bDataSeries( bDataSeries ),
         m_bOverwriteLabelsForAttributedDataPointsAlso(m_bDataSeries && bOverwriteLabelsForAttributedDataPointsAlso),
@@ -216,7 +219,10 @@ DataPointItemConverter::DataPointItemConverter(
         m_nNumberFormat(nNumberFormat),
         m_nPercentNumberFormat(nPercentNumberFormat),
         m_aAvailableLabelPlacements(),
-        m_bForbidPercentValue(true)
+        m_bForbidPercentValue(true),
+        m_bHideLegendEntry(false),
+        m_nPointIndex(nPointIndex),
+        m_xSeries(xSeries)
 {
     m_aConverters.emplace_back( new GraphicPropertyItemConverter(
                                  rPropertySet, rItemPool, rDrawModel, xNamedPropertyContainerFactory, eMapTo ));
@@ -235,6 +241,21 @@ DataPointItemConverter::DataPointItemConverter(
     m_aAvailableLabelPlacements = ChartTypeHelper::getSupportedLabelPlacements( xChartType, bSwapXAndY, xSeries );
 
     m_bForbidPercentValue = ChartTypeHelper::getAxisType( xChartType, 0 ) != AxisType::CATEGORY;
+
+    if (bDataSeries)
+        return;
+
+    uno::Reference<beans::XPropertySet> xSeriesProp(xSeries, uno::UNO_QUERY);
+    uno::Sequence<sal_Int32> deletedLegendEntriesSeq;
+    xSeriesProp->getPropertyValue("DeletedLegendEntries") >>= deletedLegendEntriesSeq;
+    for (auto& deletedLegendEntry : deletedLegendEntriesSeq)
+    {
+        if (nPointIndex == deletedLegendEntry)
+        {
+            m_bHideLegendEntry = true;
+            break;
+        }
+    }
 }
 
 DataPointItemConverter::~DataPointItemConverter()
@@ -410,13 +431,9 @@ bool DataPointItemConverter::ApplySpecialItem(
             try
             {
                 sal_Int32 nNew = static_cast< const SfxInt32Item & >( rItemSet.Get( nWhichId )).GetValue();
-                sal_Int32 nOld =0;
+                sal_Int32 nOld = -1;
                 RelativePosition aCustomLabelPosition;
-                if( !(GetPropertySet()->getPropertyValue( "LabelPlacement" ) >>= nOld) )
-                {
-                    if( m_aAvailableLabelPlacements.hasElements() )
-                        nOld = m_aAvailableLabelPlacements[0];
-                }
+                GetPropertySet()->getPropertyValue("LabelPlacement") >>= nOld;
                 if( m_bOverwriteLabelsForAttributedDataPointsAlso )
                 {
                     Reference< chart2::XDataSeries > xSeries( GetPropertySet(), uno::UNO_QUERY);
@@ -543,6 +560,27 @@ bool DataPointItemConverter::ApplySpecialItem(
             }
         }
         break;
+
+        case SCHATTR_HIDE_DATA_POINT_LEGEND_ENTRY:
+        {
+            bool bHideLegendEntry = static_cast<const SfxBoolItem &>(rItemSet.Get(nWhichId)).GetValue();
+            if (bHideLegendEntry != m_bHideLegendEntry)
+            {
+                uno::Sequence<sal_Int32> deletedLegendEntriesSeq;
+                Reference<beans::XPropertySet> xSeriesProp(m_xSeries, uno::UNO_QUERY);
+                xSeriesProp->getPropertyValue("DeletedLegendEntries") >>= deletedLegendEntriesSeq;
+                std::vector<sal_Int32> deletedLegendEntries;
+                for (auto& deletedLegendEntry : deletedLegendEntriesSeq)
+                {
+                    if (bHideLegendEntry || m_nPointIndex != deletedLegendEntry)
+                        deletedLegendEntries.push_back(deletedLegendEntry);
+                }
+                if (bHideLegendEntry)
+                    deletedLegendEntries.push_back(m_nPointIndex);
+                xSeriesProp->setPropertyValue("DeletedLegendEntries", uno::makeAny(oox::ContainerHelper::vectorToSequence(deletedLegendEntries)));
+            }
+        }
+        break;
     }
 
     return bChanged;
@@ -599,13 +637,31 @@ void DataPointItemConverter::FillSpecialItem(
 
         case SID_ATTR_NUMBERFORMAT_SOURCE:
         {
-            bool bNumberFormatIsSet = GetPropertySet()->getPropertyValue(CHART_UNONAME_NUMFMT).hasValue();
+            bool bUseSourceFormat = false;
+            try
+            {
+                GetPropertySet()->getPropertyValue(CHART_UNONAME_LINK_TO_SRC_NUMFMT) >>= bUseSourceFormat;
+            }
+            catch (const uno::Exception&)
+            {
+                TOOLS_WARN_EXCEPTION("chart2", "");
+            }
+            bool bNumberFormatIsSet = GetPropertySet()->getPropertyValue(CHART_UNONAME_NUMFMT).hasValue() && !bUseSourceFormat;
             rOutItemSet.Put( SfxBoolItem( nWhichId, ! bNumberFormatIsSet ));
         }
         break;
         case SCHATTR_PERCENT_NUMBERFORMAT_SOURCE:
         {
-            bool bNumberFormatIsSet = GetPropertySet()->getPropertyValue( "PercentageNumberFormat" ).hasValue();
+            bool bUseSourceFormat = false;
+            try
+            {
+                GetPropertySet()->getPropertyValue(CHART_UNONAME_LINK_TO_SRC_NUMFMT) >>= bUseSourceFormat;
+            }
+            catch (const uno::Exception&)
+            {
+                TOOLS_WARN_EXCEPTION("chart2", "");
+            }
+            bool bNumberFormatIsSet = GetPropertySet()->getPropertyValue( "PercentageNumberFormat" ).hasValue() && !bUseSourceFormat;
             rOutItemSet.Put( SfxBoolItem( nWhichId, ! bNumberFormatIsSet ));
         }
         break;
@@ -709,6 +765,13 @@ void DataPointItemConverter::FillSpecialItem(
                 rOutItemSet.Put( SfxInt32Item( nWhichId, static_cast< sal_Int32 >(
                                                    ::rtl::math::round( fValue * 100.0 ) ) ));
             }
+        }
+        break;
+
+        case SCHATTR_HIDE_DATA_POINT_LEGEND_ENTRY:
+        {
+            rOutItemSet.Put(SfxBoolItem(nWhichId, m_bHideLegendEntry));
+            break;
         }
         break;
    }

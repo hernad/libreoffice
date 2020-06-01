@@ -40,12 +40,12 @@ class SwOutlineTabDialog final : public SfxTabDialogController
     std::unique_ptr<SwNumRule>  xNumRule;
     SwChapterNumRules*  pChapterNumRules;
 
-    bool const          bModified : 1;
+    bool                bModified : 1;
 
     std::unique_ptr<weld::MenuButton> m_xMenuButton;
 
     DECL_LINK(CancelHdl, weld::Button&, void);
-    DECL_LINK(FormHdl, weld::Button&, void);
+    DECL_LINK(FormHdl, weld::ToggleButton&, void);
     DECL_LINK(MenuSelectHdl, const OString&, void);
 
     virtual void    PageCreated(const OString& rPageId, SfxTabPage& rPage) override;
@@ -65,7 +65,7 @@ public:
 
 class SwOutlineSettingsTabPage : public SfxTabPage
 {
-    OUString const      aNoFormatName;
+    OUString            aNoFormatName;
     OUString            aSaveCollNames[MAXLEVEL];
     SwWrtShell*         pSh;
     SwNumRule*          pNumRule;

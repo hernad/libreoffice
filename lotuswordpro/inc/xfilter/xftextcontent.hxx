@@ -57,7 +57,6 @@
 #ifndef INCLUDED_LOTUSWORDPRO_INC_XFILTER_XFTEXTCONTENT_HXX
 #define INCLUDED_LOTUSWORDPRO_INC_XFILTER_XFTEXTCONTENT_HXX
 
-#include <xfilter/xfglobal.hxx>
 #include <xfilter/xfcontent.hxx>
 
 class IXFStream;
@@ -69,7 +68,7 @@ class IXFStream;
 class XFTextContent : public XFContent
 {
 public:
-    XFTextContent(){}
+    XFTextContent() {}
 
     explicit XFTextContent(const OUString& text);
 
@@ -79,14 +78,14 @@ public:
     /**
      * @descr   Set the text.
      */
-    void                SetText(const OUString& text);
+    void SetText(const OUString& text);
 
     virtual enumXFContent GetContentType() override;
 
-    virtual void        ToXml(IXFStream *pStrm) override;
+    virtual void ToXml(IXFStream* pStrm) override;
 
 private:
-    OUString       m_strText;
+    OUString m_strText;
 };
 
 #endif

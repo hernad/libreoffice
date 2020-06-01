@@ -71,7 +71,7 @@ namespace emfplushelper
     #define EmfPlusRecordTypeSetCompositingQuality 0x4024
     #define EmfPlusRecordTypeSave 0x4025
     #define EmfPlusRecordTypeRestore 0x4026
-    //TODO EmfPlusRecordTypeBeginContainer 0x4027
+    #define EmfPlusRecordTypeBeginContainer 0x4027
     #define EmfPlusRecordTypeBeginContainerNoParams 0x4028
     #define EmfPlusRecordTypeEndContainer 0x4029
     #define EmfPlusRecordTypeSetWorldTransform 0x402A
@@ -254,7 +254,7 @@ namespace emfplushelper
         static bool readXForm(SvStream& rIn, basegfx::B2DHomMatrix& rTarget);
         static ::basegfx::B2DPolyPolygon combineClip(::basegfx::B2DPolyPolygon const & leftPolygon, int combineMode, ::basegfx::B2DPolyPolygon const & rightPolygon);
 
-        static float getUnitToPixelMultiplier(const UnitType aUnitType);
+        static float getUnitToPixelMultiplier(const UnitType aUnitType, const sal_uInt32 aDPI);
     };
 }
 

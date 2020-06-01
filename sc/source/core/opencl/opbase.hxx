@@ -21,7 +21,7 @@ namespace formula { class DoubleVectorRefToken; }
 namespace formula { class FormulaToken; }
 struct ScCalcConfig;
 
-namespace sc { namespace opencl {
+namespace sc::opencl {
 
 class FormulaTreeNode;
 
@@ -35,7 +35,7 @@ public:
 
     std::string mMessage;
     std::string mFile;
-    int const mLineNumber;
+    int mLineNumber;
 };
 
 /// Failed in marshaling
@@ -47,7 +47,7 @@ public:
     std::string mFunction;
     cl_int mError;
     std::string mFile;
-    int const mLineNumber;
+    int mLineNumber;
 };
 
 /// Inconsistent state
@@ -57,7 +57,7 @@ public:
     Unhandled( const std::string& fn, int ln );
 
     std::string mFile;
-    int const mLineNumber;
+    int mLineNumber;
 };
 
 class InvalidParameterCount
@@ -95,7 +95,7 @@ public:
     }
 
 private:
-    formula::FormulaConstTokenRef const mpCurrentFormula;
+    formula::FormulaConstTokenRef mpCurrentFormula;
 };
 
 /// (Partially) abstract base class for an operand
@@ -146,7 +146,7 @@ public:
 protected:
     const ScCalcConfig& mCalcConfig;
     std::string mSymName;
-    FormulaTreeNodeRef const mFormulaTree;
+    FormulaTreeNodeRef mFormulaTree;
 };
 
 typedef std::shared_ptr<DynamicKernelArgument> DynamicKernelArgumentRef;
@@ -242,7 +242,7 @@ public:
         int nCurWindowSize );
 };
 
-}}
+}
 
 #endif
 

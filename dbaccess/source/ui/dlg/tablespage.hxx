@@ -21,7 +21,6 @@
 #define INCLUDED_DBACCESS_SOURCE_UI_DLG_TABLESPAGE_HXX
 
 #include "adminpages.hxx"
-#include <com/sun/star/i18n/XCollator.hpp>
 #include <tabletree.hxx>
 #include <com/sun/star/sdbc/XConnection.hpp>
 
@@ -55,8 +54,7 @@ namespace dbaui
         virtual void fillControls(std::vector< std::unique_ptr<ISaveValueWrapper> >& _rControlList) override;
         virtual void fillWindows(std::vector< std::unique_ptr<ISaveValueWrapper> >& _rControlList) override;
 
-        typedef std::pair<int, int> row_col;
-        DECL_LINK(OnTreeEntryChecked, const row_col&, void);
+        DECL_LINK(OnTreeEntryChecked, const weld::TreeView::iter_col&, void);
 
         /** check the tables in <member>m_aTablesList</member> according to <arg>_rTables</arg>
         */

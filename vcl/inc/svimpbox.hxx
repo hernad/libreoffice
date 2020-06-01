@@ -125,18 +125,13 @@ private:
                         m_aNodeAndEntryImages;
 
     ImpLBSelEng         m_aFctSet;
-    Idle                m_aAsyncBeginDragIdle;
-    Point               m_aAsyncBeginDragPos;
 
     long                m_nNodeBmpWidth;
     long                m_nMostRight;
     short               m_nHorSBarHeight, m_nVerSBarWidth;
 
     bool                m_bUpdateMode : 1;
-    bool                m_bAsyncBeginDrag : 1;
-    bool                m_bSubLstOpRet : 1;   // open/close sublist with return/enter, defaulted with false
     bool                m_bSubLstOpLR : 1;    // open/close sublist with cursor left/right, defaulted with false
-    bool                m_bSubLstOpDblClick : 1; // open/close sublist with mouse double click, defaulted with true
     bool                m_bContextMenuHandling : 1;
     bool                mbForceMakeVisible;
 
@@ -148,8 +143,6 @@ private:
     std::vector< short > m_aContextBmpWidthVector;
 
     DECL_LINK(EditTimerCall, Timer *, void);
-
-    DECL_LINK( BeginDragHdl, Timer*, void );
 
     void                InvalidateEntriesFrom( long nY ) const;
     bool                IsLineVisible( long nY ) const;
@@ -218,7 +211,7 @@ protected:
     long                    m_nNextVerVisSize;
     long                    m_nNodeBmpTabDistance; // typical smaller than 0
 
-    virtual long        GetEntryLine( SvTreeListEntry* pEntry ) const;
+    virtual long        GetEntryLine(const SvTreeListEntry* pEntry) const;
     virtual void        CursorDown();
     virtual void        CursorUp();
     virtual void        PageDown( sal_uInt16 nDelta );
@@ -278,14 +271,13 @@ public:
     void                SetDragDropMode( DragDropMode eDDMode );
     void                SetSelectionMode( SelectionMode eSelMode  );
 
-    SvTreeListEntry*    GetCurrentEntry() const { return m_pCursor; }
     virtual bool        IsEntryInView( SvTreeListEntry* pEntry ) const;
     virtual SvTreeListEntry*    GetEntry( const Point& rPos ) const;
     // returns last entry, if Pos below last entry
     virtual SvTreeListEntry*    GetClickedEntry( const Point& ) const;
     SvTreeListEntry*    GetCurEntry() const { return m_pCursor; }
     void                SetCurEntry( SvTreeListEntry* );
-    virtual Point       GetEntryPosition( SvTreeListEntry* ) const;
+    virtual Point       GetEntryPosition(const SvTreeListEntry*) const;
     void                MakeVisible( SvTreeListEntry* pEntry, bool bMoveToTop = false );
     void                ScrollToAbsPos( long nPos );
 
@@ -322,7 +314,6 @@ public:
     bool                RequestHelp( const HelpEvent& rHEvt );
     void                EndSelection();
     bool                IsNodeButton( const Point& rPosPixel, SvTreeListEntry* pEntry ) const;
-    void                EnableAsyncDrag( bool b ) { m_bAsyncBeginDrag = b; }
     void                SetUpdateMode( bool bMode );
     bool                GetUpdateMode() const { return m_bUpdateMode; }
     tools::Rectangle    GetClipRegionRect() const;
@@ -386,9 +377,9 @@ inline const Image& SvImpLBox::GetDefaultEntryColBmp( )
     return implGetImageLocation( ImageType::EntryDefCollapsed );
 }
 
-inline Point SvImpLBox::GetEntryPosition( SvTreeListEntry* pEntry ) const
+inline Point SvImpLBox::GetEntryPosition(const SvTreeListEntry* pEntry) const
 {
-    return Point( 0, GetEntryLine( pEntry ) );
+    return Point(0, GetEntryLine(pEntry));
 }
 
 inline bool SvImpLBox::IsLineVisible( long nY ) const

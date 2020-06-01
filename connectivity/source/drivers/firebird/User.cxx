@@ -16,14 +16,33 @@ using namespace ::connectivity::sdbcx;
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::sdbc;
 
-User::User():
+User::User(const css::uno::Reference< css::sdbc::XConnection >& rConnection):
     OUser(true) // Case Sensitive
+    , m_xConnection(rConnection)
 {}
 
-User::User(const OUString& rName):
+User::User(const css::uno::Reference< css::sdbc::XConnection >& rConnection, const OUString& rName):
     OUser(rName,
           true) // Case Sensitive
+    , m_xConnection(rConnection)
 {}
+
+void User::changePassword(const OUString&, const OUString& newPassword)
+{
+    m_xConnection->createStatement()->execute("ALTER USER " + m_Name + " PASSWORD '" + newPassword + "'");
+}
+
+sal_Int32 User::getPrivileges(const OUString& , sal_Int32 )
+{
+    // TODO: implement.
+    return 0;
+}
+
+sal_Int32 User::getGrantablePrivileges(const OUString& , sal_Int32 )
+{
+    // TODO: implement.
+    return 0;
+}
 
 //----- IRefreshableGroups ----------------------------------------------------
 void User::refreshGroups()

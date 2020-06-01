@@ -23,7 +23,6 @@
 #include <svx/svxdllapi.h>
 #include <svx/rectenum.hxx>
 #include <vcl/customweld.hxx>
-#include <vcl/lstbox.hxx>
 #include <vcl/weld.hxx>
 #include <vcl/virdev.hxx>
 #include <svx/xtable.hxx>
@@ -32,9 +31,9 @@
 #include <memory>
 #include <array>
 
-namespace com { namespace sun { namespace star { namespace awt {
+namespace com::sun::star::awt {
     struct Point;
-} } } }
+}
 
 /*************************************************************************
 |* Derived from SfxTabPage for being able to get notified through the
@@ -209,18 +208,6 @@ public:
     virtual bool        KeyInput( const KeyEvent& rKEvt ) override;
     virtual void        GetFocus() override;
     virtual void        LoseFocus() override;
-};
-
-/************************************************************************/
-
-class SAL_WARN_UNUSED SVX_DLLPUBLIC FillTypeLB : public ListBox
-{
-public:
-    FillTypeLB( vcl::Window* pParent, WinBits aWB ) : ListBox( pParent, aWB ) {}
-
-    void Fill();
-
-    static void Fill(weld::ComboBox& rListBox);
 };
 
 /************************************************************************/
@@ -415,7 +402,7 @@ public:
 
 class SvxRelativeField;
 
-SVX_DLLPUBLIC void limitWidthForSidebar(weld::SpinButton& rSpinButton);
+void limitWidthForSidebar(weld::SpinButton& rSpinButton);
 SVX_DLLPUBLIC void limitWidthForSidebar(SvxRelativeField& rMetricSpinButton);
 //tdf#130197 Give this toolbar a width as if it had 5 standard toolbutton entries
 SVX_DLLPUBLIC void padWidthForSidebar(weld::Toolbar& rToolbar, const css::uno::Reference<css::frame::XFrame>& rFrame);

@@ -102,17 +102,19 @@ public:
 
     SdXMLMasterPageContext(
         SdXMLImport& rImport,
-        sal_uInt16 nPrfx,
-        const OUString& rLName,
-        const css::uno::Reference< css::xml::sax::XAttributeList >& xAttrList,
+        sal_Int32 nElement,
+        const css::uno::Reference< css::xml::sax::XFastAttributeList >& xAttrList,
         css::uno::Reference< css::drawing::XShapes > const & rShapes);
     virtual ~SdXMLMasterPageContext() override;
 
+    virtual css::uno::Reference< css::xml::sax::XFastContextHandler > SAL_CALL createFastChildContext(
+        sal_Int32 nElement,
+        const css::uno::Reference< css::xml::sax::XFastAttributeList >& AttrList ) override;
     virtual SvXMLImportContextRef CreateChildContext(
         sal_uInt16 nPrefix, const OUString& rLocalName,
         const css::uno::Reference< css::xml::sax::XAttributeList >& xAttrList ) override;
 
-    virtual void EndElement() override;
+    virtual void SAL_CALL endFastElement(sal_Int32 nElement) override;
 
     const OUString& GetDisplayName() const { return msDisplayName; }
 
@@ -172,7 +174,7 @@ public:
 class SdXMLStylesContext : public SvXMLStylesContext
 {
     rtl::Reference< SvXMLImportPropertyMapper > xPresImpPropMapper;
-    bool const                         mbIsAutoStyle;
+    bool                    mbIsAutoStyle;
     std::unique_ptr<SvXMLNumFmtHelper> mpNumFmtHelper;
     std::unique_ptr<SvNumberFormatter> mpNumFormatter;
 
@@ -182,7 +184,7 @@ class SdXMLStylesContext : public SvXMLStylesContext
     void ImpSetGraphicStyles() const;
     void ImpSetCellStyles() const;
     void ImpSetGraphicStyles( css::uno::Reference< css::container::XNameAccess > const & xPageStyles,
-        sal_uInt16 nFamily, const OUString& rPrefix) const;
+        XmlStyleFamily nFamily, const OUString& rPrefix) const;
 
 protected:
     virtual SvXMLStyleContext* CreateStyleChildContext(
@@ -191,13 +193,13 @@ protected:
         const css::uno::Reference< css::xml::sax::XAttributeList >& xAttrList) override;
 
     virtual SvXMLStyleContext *CreateStyleStyleChildContext(
-        sal_uInt16 nFamily,
+        XmlStyleFamily nFamily,
         sal_uInt16 nPrefix,
         const OUString& rLocalName,
         const css::uno::Reference< css::xml::sax::XAttributeList >& xAttrList) override;
 
     virtual SvXMLStyleContext *CreateDefaultStyleStyleChildContext(
-        sal_uInt16 nFamily, sal_uInt16 nPrefix,
+        XmlStyleFamily nFamily, sal_uInt16 nPrefix,
         const OUString& rLocalName,
         const css::uno::Reference<
             css::xml::sax::XAttributeList > & xAttrList ) override;
@@ -208,7 +210,7 @@ public:
         bool bIsAutoStyle);
 
     virtual void EndElement() override;
-    virtual rtl::Reference< SvXMLImportPropertyMapper > GetImportPropertyMapper(sal_uInt16 nFamily) const override;
+    virtual rtl::Reference< SvXMLImportPropertyMapper > GetImportPropertyMapper(XmlStyleFamily nFamily) const override;
 
     void SetMasterPageStyles(SdXMLMasterPageContext const & rMaster) const;
 

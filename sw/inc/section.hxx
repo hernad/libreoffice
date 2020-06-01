@@ -30,10 +30,9 @@
 #include "frmfmt.hxx"
 #include <vector>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace text { class XTextSection; }
-} } }
-
+}
 class SwSectionFormat;
 class SwDoc;
 class SwSection;
@@ -46,8 +45,8 @@ typedef std::vector<SwSection*> SwSections;
 enum class SectionType { Content,
                     ToxHeader,
                     ToxContent,
-                    DdeLink    = OBJECT_CLIENT_DDE,
-                    FileLink   = OBJECT_CLIENT_FILE
+                    DdeLink    = static_cast<int>(sfx2::SvBaseLinkObjectType::ClientDde),
+                    FileLink   = static_cast<int>(sfx2::SvBaseLinkObjectType::ClientFile)
                     };
 
 enum class LinkCreateType

@@ -31,10 +31,13 @@
 #include <tools/fract.hxx>
 #include <svx/svxids.hrc>
 #include <strings.hrc>
-#include <vcl/field.hxx>
+#include <vcl/fieldvalues.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/svapp.hxx>
 #include <svtools/unitconv.hxx>
+#include <svtools/optionsdrawinglayer.hxx>
+#include <basegfx/matrix/b2dhommatrix.hxx>
+#include <basegfx/polygon/b2dpolygontools.hxx>
 
 #define CM_1_TO_TWIP        567
 #define TWIP_TO_INCH        1440
@@ -590,7 +593,7 @@ void SvxGrfCropPage::GraphicHasChanged( bool bFound )
                                                     SID_ATTR_GRAF_CROP ) ));
 
         sal_Int64 nSpin = m_xLeftMF->normalize(aOrigSize.Width()) / 20;
-        nSpin = MetricField::ConvertValue( nSpin, aOrigSize.Width(), 0,
+        nSpin = vcl::ConvertValue( nSpin, aOrigSize.Width(), 0,
                                                eUnit, m_xLeftMF->get_unit());
 
         // if the margin is too big, it is set to 1/3 on both pages
@@ -618,7 +621,7 @@ void SvxGrfCropPage::GraphicHasChanged( bool bFound )
         m_xLeftMF->set_increments(nSpin, nSpin * 10, FieldUnit::NONE);
         m_xRightMF->set_increments(nSpin, nSpin * 10, FieldUnit::NONE);
         nSpin = m_xTopMF->normalize(aOrigSize.Height()) / 20;
-        nSpin = MetricField::ConvertValue( nSpin, aOrigSize.Width(), 0,
+        nSpin = vcl::ConvertValue( nSpin, aOrigSize.Width(), 0,
                                                eUnit, m_xLeftMF->get_unit() );
         m_xTopMF->set_increments(nSpin, nSpin * 10, FieldUnit::NONE);
         m_xBottomMF->set_increments(nSpin, nSpin * 10, FieldUnit::NONE);
@@ -626,16 +629,20 @@ void SvxGrfCropPage::GraphicHasChanged( bool bFound )
         // display original size
         const FieldUnit eMetric = GetModuleFieldUnit( GetItemSet() );
 
-        ScopedVclPtrInstance< MetricField > aFld(Application::GetDefDialogParent(), WB_HIDE);
-        SetFieldUnit( *aFld, eMetric );
-        aFld->SetDecimalDigits(m_xWidthMF->get_digits());
-        aFld->SetMax( LONG_MAX - 1 );
+        OUString sTemp;
+        {
+            std::unique_ptr<weld::Builder> xBuilder(Application::CreateBuilder(GetFrameWeld(), "cui/ui/spinbox.ui"));
+            std::unique_ptr<weld::MetricSpinButton> xFld(xBuilder->weld_metric_spin_button("spin", FieldUnit::CM));
+            SetFieldUnit( *xFld, eMetric );
+            xFld->set_digits(m_xWidthMF->get_digits());
+            xFld->set_max(INT_MAX - 1, FieldUnit::NONE);
 
-        aFld->SetValue( aFld->Normalize( aOrigSize.Width() ), eUnit );
-        OUString sTemp = aFld->GetText();
-        aFld->SetValue( aFld->Normalize( aOrigSize.Height() ), eUnit );
-        // multiplication sign (U+00D7)
-        sTemp += u"\u00D7" + aFld->GetText();
+            xFld->set_value(xFld->normalize(aOrigSize.Width()), eUnit);
+            sTemp = xFld->get_text();
+            xFld->set_value(xFld->normalize(aOrigSize.Height()), eUnit);
+            // multiplication sign (U+00D7)
+            sTemp += u"\u00D7" + xFld->get_text();
+        }
 
         if ( aOrigPixelSize.Width() && aOrigPixelSize.Height() ) {
              sal_Int32 ax = sal_Int32(floor(static_cast<float>(aOrigPixelSize.Width()) /
@@ -694,27 +701,58 @@ void SvxCropExample::SetDrawingArea(weld::DrawingArea* pDrawingArea)
 
 void SvxCropExample::Paint(vcl::RenderContext& rRenderContext, const ::tools::Rectangle&)
 {
-    rRenderContext.Push(PushFlags::MAPMODE | PushFlags::RASTEROP);
+    rRenderContext.Push(PushFlags::MAPMODE);
     rRenderContext.SetMapMode(m_aMapMode);
 
-    Size aWinSize(rRenderContext.PixelToLogic(GetOutputSizePixel()));
+    // Win BG
+    const Size aWinSize(rRenderContext.PixelToLogic(GetOutputSizePixel()));
     rRenderContext.SetLineColor();
     rRenderContext.SetFillColor(rRenderContext.GetSettings().GetStyleSettings().GetWindowColor());
     rRenderContext.DrawRect(::tools::Rectangle(Point(), aWinSize));
 
-    rRenderContext.SetLineColor(COL_WHITE);
-    ::tools::Rectangle aRect(Point((aWinSize.Width() - m_aFrameSize.Width())/2,
-                          (aWinSize.Height() - m_aFrameSize.Height())/2),
-                          m_aFrameSize);
+    // use AA, the Graphic may be a metafile/svg and would then look ugly
+    rRenderContext.SetAntialiasing(AntialiasingFlags::EnableB2dDraw);
+
+    // draw Graphic
+    ::tools::Rectangle aRect(
+        Point((aWinSize.Width() - m_aFrameSize.Width())/2, (aWinSize.Height() - m_aFrameSize.Height())/2),
+        m_aFrameSize);
     m_aGrf.Draw(&rRenderContext, aRect.TopLeft(), aRect.GetSize());
 
-    rRenderContext.SetFillColor(COL_TRANSPARENT);
-    rRenderContext.SetRasterOp(RasterOp::Invert);
-    aRect.AdjustLeft(m_aTopLeft.Y() );
-    aRect.AdjustTop(m_aTopLeft.X() );
+    // Remove one more case that uses XOR paint (RasterOp::Invert).
+    // Get colors and logic DashLength from settings, use equal to
+    // PolygonMarkerPrimitive2D, may be changed to that primitive later.
+    // Use this to guarantee good visibility - that was the purpose of
+    // the former used XOR paint.
+    const SvtOptionsDrawinglayer aSvtOptionsDrawinglayer;
+    const Color aColA(aSvtOptionsDrawinglayer.GetStripeColorA().getBColor());
+    const Color aColB(aSvtOptionsDrawinglayer.GetStripeColorB().getBColor());
+    const double fStripeLength(aSvtOptionsDrawinglayer.GetStripeLength());
+    const basegfx::B2DVector aDashVector(rRenderContext.GetInverseViewTransformation() * basegfx::B2DVector(fStripeLength, 0.0));
+    const double fLogicDashLength(aDashVector.getX());
+
+    // apply current crop settings
+    aRect.AdjustLeft(m_aTopLeft.Y());
+    aRect.AdjustTop(m_aTopLeft.X());
     aRect.AdjustRight(-m_aBottomRight.Y());
     aRect.AdjustBottom(-m_aBottomRight.X());
-    rRenderContext.DrawRect(aRect);
+
+    // apply dash with direct paint callbacks
+    basegfx::utils::applyLineDashing(
+        basegfx::utils::createPolygonFromRect(
+            basegfx::B2DRange(aRect.Left(), aRect.Top(), aRect.Right(), aRect.Bottom())),
+        std::vector< double >(2, fLogicDashLength),
+        [&aColA,&rRenderContext](const basegfx::B2DPolygon& rSnippet)
+        {
+            rRenderContext.SetLineColor(aColA);
+            rRenderContext.DrawPolyLine(rSnippet);
+        },
+        [&aColB,&rRenderContext](const basegfx::B2DPolygon& rSnippet)
+        {
+            rRenderContext.SetLineColor(aColB);
+            rRenderContext.DrawPolyLine(rSnippet);
+        },
+        2.0 * fLogicDashLength);
 
     rRenderContext.Pop();
 }

@@ -27,15 +27,15 @@
 #include <oox/helper/refvector.hxx>
 #include "workbookhelper.hxx"
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace lang { class XMultiServiceFactory; }
     namespace sheet { class XFormulaParser; }
-} } }
+}
 
 namespace oox { template< typename Type > class Matrix; }
-namespace com { namespace sun { namespace star { namespace sheet { struct FormulaOpCodeMapEntry; } } } }
+namespace com::sun::star::sheet { struct FormulaOpCodeMapEntry; }
 namespace oox { class SequenceInputStream; }
-namespace oox { namespace xls { struct BinAddress; } }
+namespace oox::xls { struct BinAddress; }
 class ScRangeList;
 
 namespace oox {
@@ -523,7 +523,7 @@ public:
 private:
     const FunctionParamInfo* mpParamInfo;
     const FunctionParamInfo* mpParamInfoEnd;
-    bool const                mbParamPairs;
+    bool                mbParamPairs;
 };
 
 // Base function provider =====================================================
@@ -563,7 +563,7 @@ protected:
 
 private:
     typedef std::shared_ptr< FunctionProviderImpl > FunctionProviderImplRef;
-    FunctionProviderImplRef const mxFuncImpl;     /// Shared implementation between all copies of the provider.
+    FunctionProviderImplRef mxFuncImpl;     /// Shared implementation between all copies of the provider.
 };
 
 // Op-code and function provider ==============================================
@@ -598,7 +598,7 @@ public:
 
 private:
     typedef std::shared_ptr< OpCodeProviderImpl > OpCodeProviderImplRef;
-    OpCodeProviderImplRef const mxOpCodeImpl;     /// Shared implementation between all copies of the provider.
+    OpCodeProviderImplRef mxOpCodeImpl;     /// Shared implementation between all copies of the provider.
 };
 
 // API formula parser wrapper =================================================

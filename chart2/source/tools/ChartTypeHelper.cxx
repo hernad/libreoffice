@@ -447,14 +447,17 @@ bool ChartTypeHelper::isSupportingComplexCategory( const uno::Reference< chart2:
     return true;
 }
 
-bool ChartTypeHelper::shiftCategoryPosAtXAxisPerDefault( const uno::Reference< chart2::XChartType >& xChartType )
+bool ChartTypeHelper::isSupportingCategoryPositioning( const uno::Reference< chart2::XChartType >& xChartType, sal_Int32 nDimensionCount )
 {
-    if(xChartType.is())
+    if( xChartType.is() )
     {
         OUString aChartTypeName = xChartType->getChartType();
-        if( aChartTypeName.match(CHART2_SERVICE_NAME_CHARTTYPE_COLUMN)
-            || aChartTypeName.match(CHART2_SERVICE_NAME_CHARTTYPE_BAR)
-            || aChartTypeName.match(CHART2_SERVICE_NAME_CHARTTYPE_CANDLESTICK) )
+        if (aChartTypeName.match(CHART2_SERVICE_NAME_CHARTTYPE_AREA) ||
+            aChartTypeName.match(CHART2_SERVICE_NAME_CHARTTYPE_LINE) ||
+            aChartTypeName.match(CHART2_SERVICE_NAME_CHARTTYPE_CANDLESTICK))
+            return true;
+        else if (nDimensionCount == 2 &&
+                (aChartTypeName.match(CHART2_SERVICE_NAME_CHARTTYPE_COLUMN) || aChartTypeName.match(CHART2_SERVICE_NAME_CHARTTYPE_BAR)))
             return true;
     }
     return false;

@@ -20,10 +20,10 @@
 
 #include <sdr/contact/viewcontactofsdrcircobj.hxx>
 #include <svx/svdocirc.hxx>
-#include <svx/sdr/primitive2d/sdrattributecreator.hxx>
+#include <svx/sdangitm.hxx>
+#include <sdr/primitive2d/sdrattributecreator.hxx>
 #include <sdr/primitive2d/sdrellipseprimitive2d.hxx>
 #include <svl/itemset.hxx>
-#include <svx/sxciaitm.hxx>
 #include <basegfx/matrix/b2dhommatrixtools.hxx>
 #include <vcl/canvastools.hxx>
 
@@ -42,8 +42,8 @@ namespace sdr::contact
         drawinglayer::primitive2d::Primitive2DContainer ViewContactOfSdrCircObj::createViewIndependentPrimitive2DSequence() const
         {
             const SfxItemSet& rItemSet = GetCircObj().GetMergedItemSet();
-            const drawinglayer::attribute::SdrLineFillShadowTextAttribute aAttribute(
-                drawinglayer::primitive2d::createNewSdrLineFillShadowTextAttribute(
+            const drawinglayer::attribute::SdrLineFillEffectsTextAttribute aAttribute(
+                drawinglayer::primitive2d::createNewSdrLineFillEffectsTextAttribute(
                     rItemSet,
                     GetCircObj().getText(0),
                     false));

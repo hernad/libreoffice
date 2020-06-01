@@ -146,14 +146,53 @@ void SwFieldType::PutValue( const uno::Any& , sal_uInt16 )
 
 void SwFieldType::dumpAsXml(xmlTextWriterPtr pWriter) const
 {
-    SwIterator<SwFormatField, SwFieldType> aIter(*this);
-    if (!aIter.First())
+    std::vector<SwFormatField*> vFields;
+    GatherFields(vFields);
+    if(!vFields.size())
         return;
     xmlTextWriterStartElement(pWriter, BAD_CAST("SwFieldType"));
-    for (const SwFormatField* pFormatField = aIter.First(); pFormatField;
-         pFormatField = aIter.Next())
+    for(const auto pFormatField: vFields)
         pFormatField->dumpAsXml(pWriter);
     xmlTextWriterEndElement(pWriter);
+}
+
+SwFormatField* SwFieldType::FindFormatForField(const SwField* pField) const {
+    SwFormatField* pFormat = nullptr;
+    CallSwClientNotify(sw::FindFormatForFieldHint(pField, pFormat));
+    return pFormat;
+}
+
+SwFormatField* SwFieldType::FindFormatForPostItId(sal_uInt32 nPostItId) const {
+    SwFormatField* pFormat = nullptr;
+    CallSwClientNotify(sw::FindFormatForPostItIdHint(nPostItId, pFormat));
+    return pFormat;
+}
+
+void SwFieldType::CollectPostIts(std::vector<SwFormatField*>& rvFormatFields, IDocumentRedlineAccess const& rIDRA, const bool bHideRedlines)
+{
+    CallSwClientNotify(sw::CollectPostItsHint(rvFormatFields, rIDRA, bHideRedlines));
+}
+
+bool SwFieldType::HasHiddenInformationNotes()
+{
+    bool bHasHiddenInformationNotes = false;
+    CallSwClientNotify(sw::HasHiddenInformationNotesHint(bHasHiddenInformationNotes));
+    return bHasHiddenInformationNotes;
+}
+
+void SwFieldType::GatherNodeIndex(std::vector<sal_uLong>& rvNodeIndex)
+{
+    CallSwClientNotify(sw::GatherNodeIndexHint(rvNodeIndex));
+}
+
+void SwFieldType::GatherRefFields(std::vector<SwGetRefField*>& rvRFields, const sal_uInt16 nTyp)
+{
+    CallSwClientNotify(sw::GatherRefFieldsHint(rvRFields, nTyp));
+}
+
+void SwFieldType::GatherFields(std::vector<SwFormatField*>& rvFields, bool bCollectOnlyInDocNodes) const
+{
+    CallSwClientNotify(sw::GatherFieldsHint(rvFields, bCollectOnlyInDocNodes));
 }
 
 void SwFieldTypes::dumpAsXml(xmlTextWriterPtr pWriter) const
@@ -173,11 +212,11 @@ SwField::SwField(
         LanguageType nLang,
         bool bUseFieldValueCache)
     : m_Cache()
-    , m_bUseFieldValueCache( bUseFieldValueCache )
-    , m_nLang( nLang )
-    , m_bIsAutomaticLanguage( true )
-    , m_nFormat( nFormat )
     , m_pType( pType )
+    , m_nFormat( nFormat )
+    , m_nLang( nLang )
+    , m_bUseFieldValueCache( bUseFieldValueCache )
+    , m_bIsAutomaticLanguage( true )
 {
     assert(m_pType);
 }

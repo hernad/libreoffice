@@ -13,7 +13,7 @@
  manual changes will be rewritten by the next run of update_pch.sh (which presumably
  also fixes all possible problems, so it's usually better to use it).
 
- Generated on 2020-01-22 15:57:40 using:
+ Generated on 2020-04-25 20:54:57 using:
  ./bin/update_pch dbaccess dbaxml --cutoff=2 --exclude:system --exclude:module --exclude:local
 
  If after updating build fails, use the following command to locate conflicting headers:
@@ -23,44 +23,41 @@
 #if PCH_LEVEL >= 1
 #include <cassert>
 #include <cstddef>
+#include <cstring>
 #include <functional>
+#include <limits>
 #include <memory>
+#include <new>
+#include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
 #include <boost/property_tree/ptree_fwd.hpp>
 #endif // PCH_LEVEL >= 1
 #if PCH_LEVEL >= 2
 #include <osl/diagnose.h>
-#include <osl/file.hxx>
 #include <rtl/instance.hxx>
 #include <rtl/ref.hxx>
 #include <rtl/strbuf.hxx>
+#include <rtl/stringconcat.hxx>
+#include <rtl/stringutils.hxx>
 #include <rtl/unload.h>
 #include <rtl/uri.hxx>
+#include <rtl/ustrbuf.h>
 #include <rtl/ustrbuf.hxx>
 #include <rtl/ustring.hxx>
 #include <sal/config.h>
 #include <sal/log.hxx>
 #include <sal/types.h>
-#include <vcl/IDialogRenderable.hxx>
 #include <vcl/dllapi.h>
-#include <vcl/keycodes.hxx>
-#include <vcl/outdev.hxx>
-#include <vcl/region.hxx>
 #include <vcl/svapp.hxx>
-#include <vcl/uitest/factory.hxx>
-#include <vcl/vclenum.hxx>
-#include <vcl/window.hxx>
 #endif // PCH_LEVEL >= 2
 #if PCH_LEVEL >= 3
 #include <com/sun/star/awt/TextAlign.hpp>
-#include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/container/XNameContainer.hpp>
-#include <com/sun/star/document/XFilter.hpp>
 #include <com/sun/star/embed/ElementModes.hpp>
 #include <com/sun/star/io/XInputStream.hpp>
-#include <com/sun/star/lang/XInitialization.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/lang/XTypeProvider.hpp>
 #include <com/sun/star/sdb/XFormDocumentsSupplier.hpp>
@@ -69,9 +66,7 @@
 #include <com/sun/star/sdb/XReportDocumentsSupplier.hpp>
 #include <com/sun/star/sdbcx/XDataDescriptorFactory.hpp>
 #include <com/sun/star/sdbcx/XTablesSupplier.hpp>
-#include <com/sun/star/ucb/XCommandEnvironment.hpp>
 #include <com/sun/star/uno/Any.h>
-#include <com/sun/star/uno/Any.hxx>
 #include <com/sun/star/uno/Reference.hxx>
 #include <com/sun/star/uno/Sequence.h>
 #include <com/sun/star/uno/Sequence.hxx>
@@ -94,27 +89,20 @@
 #include <sax/tools/converter.hxx>
 #include <sfx2/docfile.hxx>
 #include <svl/filenotation.hxx>
-#include <tools/debug.hxx>
 #include <tools/diagnose_ex.h>
-#include <tools/link.hxx>
-#include <tools/solar.h>
-#include <tools/wintypes.hxx>
-#include <ucbhelper/content.hxx>
 #include <unotools/pathoptions.hxx>
 #include <xmloff/ProgressBarHelper.hxx>
 #include <xmloff/dllapi.h>
 #include <xmloff/families.hxx>
+#include <xmloff/maptype.hxx>
 #include <xmloff/nmspmap.hxx>
-#include <xmloff/txtimp.hxx>
 #include <xmloff/xmlictxt.hxx>
 #include <xmloff/xmlnmspe.hxx>
 #include <xmloff/xmltoken.hxx>
 #include <xmloff/xmluconv.hxx>
 #endif // PCH_LEVEL >= 3
 #if PCH_LEVEL >= 4
-#include <dsntypes.hxx>
 #include <flt_reghelper.hxx>
-#include <stringconstants.hxx>
 #endif // PCH_LEVEL >= 4
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

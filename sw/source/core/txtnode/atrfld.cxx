@@ -223,28 +223,71 @@ void SwFormatField::InvalidateField()
 void SwFormatField::SwClientNotify( const SwModify& rModify, const SfxHint& rHint )
 {
     SwClient::SwClientNotify(rModify, rHint);
-    if( !mpTextField )
-        return;
-
-    const SwFieldHint* pHint = dynamic_cast<const SwFieldHint*>( &rHint );
-    if ( pHint )
+    if (const auto pFieldHint = dynamic_cast<const SwFieldHint*>( &rHint ))
     {
+        if( !mpTextField )
+            return;
+
         // replace field content by text
-        SwPaM* pPaM = pHint->m_pPaM;
+        SwPaM* pPaM = pFieldHint->m_pPaM;
         SwDoc* pDoc = pPaM->GetDoc();
         const SwTextNode& rTextNode = mpTextField->GetTextNode();
         pPaM->GetPoint()->nNode = rTextNode;
         pPaM->GetPoint()->nContent.Assign( const_cast<SwTextNode*>(&rTextNode), mpTextField->GetStart() );
 
-        OUString const aEntry(mpField->ExpandField(pDoc->IsClipBoard(), pHint->m_pLayout));
+        OUString const aEntry(mpField->ExpandField(pDoc->IsClipBoard(), pFieldHint->m_pLayout));
         pPaM->SetMark();
         pPaM->Move( fnMoveForward );
         pDoc->getIDocumentContentOperations().DeleteRange( *pPaM );
         pDoc->getIDocumentContentOperations().InsertString( *pPaM, aEntry );
+    } else if (const auto pLegacyHint = dynamic_cast<const sw::LegacyModifyHint*>( &rHint ))
+    {
+        if( !mpTextField )
+            return;
+        UpdateTextNode(pLegacyHint->m_pOld, pLegacyHint->m_pNew);
+    } else if (const auto pFindForFieldHint = dynamic_cast<const sw::FindFormatForFieldHint*>( &rHint ))
+    {
+        if(pFindForFieldHint->m_rpFormat == nullptr && pFindForFieldHint->m_pField == GetField())
+            pFindForFieldHint->m_rpFormat = this;
+    } else if (const auto pFindForPostItIdHint = dynamic_cast<const sw::FindFormatForPostItIdHint*>( &rHint ))
+    {
+        auto pPostItField = dynamic_cast<SwPostItField*>(mpField.get());
+        if(pPostItField && pFindForPostItIdHint->m_rpFormat == nullptr && pFindForPostItIdHint->m_nPostItId == pPostItField->GetPostItId())
+            pFindForPostItIdHint->m_rpFormat = this;
+    } else if (const auto pCollectPostItsHint = dynamic_cast<const sw::CollectPostItsHint*>( &rHint ))
+    {
+        if(GetTextField() && IsFieldInDoc() && (!pCollectPostItsHint->m_bHideRedlines || !sw::IsFieldDeletedInModel(pCollectPostItsHint->m_rIDRA, *GetTextField())))
+            pCollectPostItsHint->m_rvFormatFields.push_back(this);
+    } else if (const auto pHasHiddenInfoHint = dynamic_cast<const sw::HasHiddenInformationNotesHint*>( &rHint ))
+    {
+        if(!pHasHiddenInfoHint->m_rbHasHiddenInformationNotes && GetTextField() && IsFieldInDoc())
+            pHasHiddenInfoHint->m_rbHasHiddenInformationNotes = true;
+    } else if (const auto pGatherNodeIndexHint = dynamic_cast<const sw::GatherNodeIndexHint*>( &rHint ))
+    {
+        if(auto pTextField = GetTextField())
+            pGatherNodeIndexHint->m_rvNodeIndex.push_back(pTextField->GetTextNode().GetIndex());
+    } else if (const auto pGatherRefFieldsHint = dynamic_cast<const sw::GatherRefFieldsHint*>( &rHint ))
+    {
+        if(!GetTextField() || pGatherRefFieldsHint->m_nType != GetField()->GetSubType())
+            return;
+        SwTextNode* pNd = GetTextField()->GetpTextNode();
+        if(pNd && pNd->GetNodes().IsDocNodes())
+            pGatherRefFieldsHint->m_rvRFields.push_back(static_cast<SwGetRefField*>(GetField()));
+    } else if (const auto pGatherFieldsHint = dynamic_cast<const sw::GatherFieldsHint*>( &rHint ))
+    {
+        if(pGatherFieldsHint->m_bCollectOnlyInDocNodes)
+        {
+            if(!GetTextField())
+                return;
+            SwTextNode* pNd = GetTextField()->GetpTextNode();
+            if(!pNd || !pNd->GetNodes().IsDocNodes())
+                return;
+        }
+        pGatherFieldsHint->m_rvFields.push_back(this);
     }
 }
 
-void SwFormatField::Modify( const SfxPoolItem* pOld, const SfxPoolItem* pNew )
+void SwFormatField::UpdateTextNode(const SfxPoolItem* pOld, const SfxPoolItem* pNew)
 {
     if (pOld && (RES_REMOVE_UNO_OBJECT == pOld->Which()))
     {   // invalidate cached UNO object
@@ -263,59 +306,80 @@ void SwFormatField::Modify( const SfxPoolItem* pOld, const SfxPoolItem* pNew )
 
     SwTextNode* pTextNd = &mpTextField->GetTextNode();
     OSL_ENSURE( pTextNd, "Where is my Node?" );
-    if( pNew )
+
+    bool bTriggerNode = false;
+    bool bExpand = false;
+    const SfxPoolItem* pNodeOld = nullptr;
+    const SfxPoolItem* pNodeNew = nullptr;
+    if(pNew)
     {
-        switch( pNew->Which() )
+        switch(pNew->Which())
         {
         case RES_REFMARKFLD_UPDATE:
-                // update GetRef fields
-                if( SwFieldIds::GetRef == mpField->GetTyp()->Which() )
-                {
-                    // #i81002#
-                    static_cast<SwGetRefField*>(mpField.get())->UpdateField( mpTextField );
-                }
-                break;
+            // update GetRef fields
+            if( SwFieldIds::GetRef == mpField->GetTyp()->Which() )
+            {
+                // #i81002#
+                static_cast<SwGetRefField*>(mpField.get())->UpdateField( mpTextField );
+            }
+            break;
         case RES_DOCPOS_UPDATE:
-                // handled in SwTextFrame::Modify()
-                pTextNd->ModifyNotification( pNew, this );
-                return;
-
+            // handled in SwTextFrame::Modify()
+            bTriggerNode = true;
+            pNodeOld = pNew;
+            pNodeNew = this;
+            break;
         case RES_ATTRSET_CHG:
         case RES_FMT_CHG:
-                pTextNd->ModifyNotification( pOld, pNew );
-                return;
+            bTriggerNode = true;
+            pNodeOld = pOld;
+            pNodeNew = pNew;
+            break;
         default:
-                break;
+            break;
         }
     }
-
-    switch (mpField->GetTyp()->Which())
+    if(!bTriggerNode)
     {
-        case SwFieldIds::HiddenPara:
-            if( !pOld || RES_HIDDENPARA_PRINT != pOld->Which() )
-                break;
-            [[fallthrough]];
-        case SwFieldIds::DbSetNumber:
-        case SwFieldIds::DbNumSet:
-        case SwFieldIds::DbNextSet:
-        case SwFieldIds::DatabaseName:
-            pTextNd->ModifyNotification( nullptr, pNew);
-            return;
-        default: break;
-    }
-
-    if( SwFieldIds::User == mpField->GetTyp()->Which() )
-    {
-        SwUserFieldType* pType = static_cast<SwUserFieldType*>(mpField->GetTyp());
-        if(!pType->IsValid())
+        switch (mpField->GetTyp()->Which())
         {
-            SwCalc aCalc( *pTextNd->GetDoc() );
-            pType->GetValue( aCalc );
+            case SwFieldIds::HiddenPara:
+                if( !pOld || pOld->Which() != RES_HIDDENPARA_PRINT ) {
+                    bExpand =true;
+                    break;
+                }
+                [[fallthrough]];
+            case SwFieldIds::DbSetNumber:
+            case SwFieldIds::DbNumSet:
+            case SwFieldIds::DbNextSet:
+            case SwFieldIds::DatabaseName:
+                bTriggerNode = true;
+                pNodeNew = pNew;
+                break;
+            case SwFieldIds::User:
+            {
+                SwUserFieldType* pType = static_cast<SwUserFieldType*>(mpField->GetTyp());
+                if(!pType->IsValid())
+                {
+                    SwCalc aCalc( *pTextNd->GetDoc() );
+                    pType->GetValue( aCalc );
+                }
+                bExpand = true;
+            }
+            break;
+            default:
+                bExpand = true;
+                break;
         }
     }
-
-    const bool bForceNotify = (pOld == nullptr) && (pNew == nullptr);
-    mpTextField->ExpandTextField( bForceNotify );
+    if(bTriggerNode)
+    {
+        pTextNd->ModifyNotification(pNodeOld, pNodeNew);
+    }
+    if(bExpand)
+    {
+        mpTextField->ExpandTextField( pOld == nullptr && pNew == nullptr );
+    }
 }
 
 bool SwFormatField::GetInfo( SfxPoolItem& rInfo ) const

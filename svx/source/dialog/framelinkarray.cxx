@@ -189,8 +189,8 @@ struct ArrayImpl
     std::vector<long>   maHeights;
     mutable std::vector<long>     maXCoords;
     mutable std::vector<long>     maYCoords;
-    size_t const        mnWidth;
-    size_t const        mnHeight;
+    size_t              mnWidth;
+    size_t              mnHeight;
     size_t              mnFirstClipCol;
     size_t              mnFirstClipRow;
     size_t              mnLastClipCol;
@@ -1257,7 +1257,6 @@ drawinglayer::primitive2d::Primitive2DContainer Array::CreateB2DPrimitiveRange(
             drawinglayer::primitive2d::Primitive2DReference(
                 new drawinglayer::primitive2d::SdrFrameBorderPrimitive2D(
                     aData,
-                    true,       // try to merge results to have less primitivbes
                     true)));    // force visualization to minimal one discrete unit (pixel)
     }
 

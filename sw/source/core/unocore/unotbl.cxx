@@ -105,6 +105,8 @@
 #include <docsh.hxx>
 #include <fesh.hxx>
 #include <itabenum.hxx>
+#include <poolfmt.hxx>
+#include <frameformats.hxx>
 
 using namespace ::com::sun::star;
 using ::editeng::SvxBorderLine;
@@ -971,67 +973,6 @@ uno::Reference< beans::XPropertySetInfo >  SwXCell::getPropertySetInfo()
     return xRef;
 }
 
-// If the current property matches the previous parent's property (i.e. no reason for it to be set),
-// then it may be a ::DEFAULT value, even if it is marked as ::SET
-static bool lcl_mayBeDefault( const sal_uInt16 nWhich, sal_uInt8 nMemberId,
-                       const SfxPoolItem* pPrevItem, const SfxPoolItem& rCurrItem,
-                       const bool bDirect )
-{
-    bool bMayBeDefault = false;
-    // These are the paragraph/character pairs that I found running unit tests.
-    // UNFORTUNATELY there is no way to see if a property has multiple members.
-    // Since valid members can be nMemberId == 0, we can't do something like "if (nMemberId & ~CONVERT_TWIPS) != 0"
-    // Perhaps the full list can be found in editeng/memberids.h???
-    switch ( nWhich )
-    {
-        case RES_BOX:
-        case RES_UL_SPACE:
-        case RES_LR_SPACE:
-        case RES_CHRATR_ESCAPEMENT:
-        case RES_CHRATR_FONT:
-        case RES_CHRATR_CJK_FONT:
-        case RES_CHRATR_CTL_FONT:
-        case RES_CHRATR_FONTSIZE:
-        case RES_CHRATR_CJK_FONTSIZE:
-        case RES_CHRATR_CTL_FONTSIZE:
-        case RES_CHRATR_WEIGHT:
-        case RES_CHRATR_CJK_WEIGHT:
-        case RES_CHRATR_CTL_WEIGHT:
-        case RES_CHRATR_LANGUAGE:
-        case RES_CHRATR_CJK_LANGUAGE:
-        case RES_CHRATR_CTL_LANGUAGE:
-        case RES_CHRATR_POSTURE:
-        case RES_CHRATR_CJK_POSTURE:
-        case RES_CHRATR_CTL_POSTURE:
-        case RES_PARATR_ADJUST:
-        {
-            // These properties are paired up, containing multiple properties in one nWhich.
-            // If one is ::SET, they all report ::SET, even if only initialized with the default value.
-            // Assume created automatically by another MemberId.
-            bMayBeDefault = true;
-            if ( pPrevItem )
-            {
-                uno::Any aPrev;
-                uno::Any aCurr;
-                (*pPrevItem).QueryValue(aPrev, nMemberId);
-                rCurrItem.QueryValue(aCurr, nMemberId);
-                // If different, it overrides a parent value, so can't be considered a default.
-                bMayBeDefault = aPrev == aCurr;
-            }
-            break;
-        }
-        default:
-        {
-            // Since DocDefaults are copied into root-level stylesheets (tdf#103961),
-            // identify the duplicated properties as DocDefault values.
-            // Assume any style information could have been inherited/copied.
-            if ( !bDirect )
-                bMayBeDefault = !pPrevItem || *pPrevItem == rCurrItem;
-        }
-    }
-    return bMayBeDefault;
-}
-
 void SwXCell::setPropertyValue(const OUString& rPropertyName, const uno::Any& aValue)
 {
     SolarMutexGuard aGuard;
@@ -1063,74 +1004,12 @@ void SwXCell::setPropertyValue(const OUString& rPropertyName, const uno::Any& aV
         auto pEntry(m_pPropSet->getPropertyMap().getByName(rPropertyName));
         if ( !pEntry )
         {
-            // not a table property: if it is a paragraph/character property, consider applying it to the underlying text.
+            // not a table property: ignore it, if it is a paragraph/character property
             const SfxItemPropertySet& rParaPropSet = *aSwMapProvider.GetPropertySet(PROPERTY_MAP_PARAGRAPH);
             pEntry = rParaPropSet.getPropertyMap().getByName(rPropertyName);
 
             if ( pEntry )
-            {
-                SwNodeIndex aIdx( *GetStartNode(), 1 );
-                const SwNode* pEndNd = aIdx.GetNode().EndOfSectionNode();
-                while ( &aIdx.GetNode() != pEndNd )
-                {
-                    const SwTextNode* pNd = aIdx.GetNode().GetTextNode();
-                    ++aIdx;
-                    if ( !pNd )
-                        continue;
-
-                    const SfxPoolItem* pPrevItem = nullptr;
-                    const SfxPoolItem* pCurrItem = nullptr;
-                    // Table-styles don't override direct formatting
-                    if ( pNd->HasSwAttrSet() && SfxItemState::SET == pNd->GetSwAttrSet().GetItemState(pEntry->nWID, false, &pCurrItem) )
-                    {
-                        // Some WIDs have several MIDs, so perhaps ::SET refers to another MID and this property was copied from parents?
-                        if ( lcl_mayBeDefault(pEntry->nWID, pEntry->nMemberId, pPrevItem, *pCurrItem, /*bDirect=*/true) )
-                            pPrevItem = pCurrItem;
-                        else
-                            continue; //don't override direct formatting
-                    }
-
-                    bool bSet = false;
-                    SwFormat* pFormatColl = pNd->GetFormatColl();
-                    // Manually walk through the parent properties in order to avoid the default properties.
-                    // Table-styles don't override paragraph-style formatting.
-                    //    TODO: ?except for fontsize/justification if compat:overrideTableStyleFontSizeAndJustification?
-                    while ( pFormatColl )
-                    {
-                        if ( SfxItemState::SET == pFormatColl->GetItemState(pEntry->nWID, /*bSrchInParent=*/false, &pCurrItem) )
-                        {
-                            if ( lcl_mayBeDefault(pEntry->nWID, pEntry->nMemberId, pPrevItem, *pCurrItem, false) )
-                            {
-                                // if the property matches DocDefaults, then table-style needs to override it
-                                pPrevItem = pFormatColl->IsDefault() ? nullptr : pCurrItem;
-                            }
-                            else
-                            {
-                                bSet = true; //don't override style formatting
-                                break;
-                            }
-                        }
-                        pFormatColl = pFormatColl->DerivedFrom();
-                    }
-                    if ( bSet )
-                        continue;
-
-                    // Check if previous ::SET came from the pool defaults.
-                    if ( pPrevItem && pNd->GetSwAttrSet().GetPool() )
-                    {
-                        pCurrItem = &pNd->GetSwAttrSet().GetPool()->GetDefaultItem(pEntry->nWID);
-                        if ( !lcl_mayBeDefault(pEntry->nWID, pEntry->nMemberId, pPrevItem, *pCurrItem, false) )
-                            continue;
-                    }
-
-                    // Apply table-style property
-                    // point and mark selecting the whole paragraph
-                    SwPaM aPaM(*pNd, 0, *pNd, pNd->GetText().getLength());
-                    // for isCHRATR: change the base/auto SwAttr property, but don't remove the DIRECT hints
-                    SwUnoCursorHelper::SetPropertyValue(aPaM, rParaPropSet, rPropertyName, aValue, SetAttrMode::DONTREPLACE);
-                }
                 return;
-            }
         }
 
         if(!pEntry)
@@ -1787,7 +1666,7 @@ void SwXTextTableCursor::setPropertyValue(const OUString& rPropertyName, const u
     {
         case FN_UNO_TABLE_CELL_BACKGROUND:
         {
-            std::shared_ptr<SfxPoolItem> aBrush(std::make_shared<SvxBrushItem>(RES_BACKGROUND));
+            std::unique_ptr<SfxPoolItem> aBrush(std::make_unique<SvxBrushItem>(RES_BACKGROUND));
             SwDoc::GetBoxAttr(rUnoCursor, aBrush);
             aBrush->PutValue(aValue, pEntry->nMemberId);
             pDoc->SetBoxAttr(rUnoCursor, *aBrush);
@@ -1840,7 +1719,7 @@ uno::Any SwXTextTableCursor::getPropertyValue(const OUString& rPropertyName)
     {
         case FN_UNO_TABLE_CELL_BACKGROUND:
         {
-            std::shared_ptr<SfxPoolItem> aBrush(std::make_shared<SvxBrushItem>(RES_BACKGROUND));
+            std::unique_ptr<SfxPoolItem> aBrush(std::make_unique<SvxBrushItem>(RES_BACKGROUND));
             if (SwDoc::GetBoxAttr(rUnoCursor, aBrush))
                 aBrush->QueryValue(aResult, pEntry->nMemberId);
         }
@@ -1899,9 +1778,8 @@ public:
 
     void SetProperty(sal_uInt16 nWhichId, sal_uInt16 nMemberId, const uno::Any& aVal);
     bool GetProperty(sal_uInt16 nWhichId, sal_uInt16 nMemberId, const uno::Any*& rpAny);
-    template<typename Tpoolitem>
-    inline void AddItemToSet(SfxItemSet& rSet, std::function<Tpoolitem()> aItemFactory, sal_uInt16 nWhich, std::initializer_list<sal_uInt16> vMember, bool bAddTwips = false);
-
+    void AddItemToSet(SfxItemSet& rSet, std::function<std::unique_ptr<SfxPoolItem>()> aItemFactory,
+                        sal_uInt16 nWhich, std::initializer_list<sal_uInt16> vMember, bool bAddTwips = false);
     void ApplyTableAttr(const SwTable& rTable, SwDoc& rDoc);
 };
 
@@ -1916,8 +1794,9 @@ void SwTableProperties_Impl::SetProperty(sal_uInt16 nWhichId, sal_uInt16 nMember
 bool SwTableProperties_Impl::GetProperty(sal_uInt16 nWhichId, sal_uInt16 nMemberId, const uno::Any*& rpAny )
     { return aAnyMap.FillValue( nWhichId, nMemberId, rpAny ); }
 
-template<typename Tpoolitem>
-void SwTableProperties_Impl::AddItemToSet(SfxItemSet& rSet, std::function<Tpoolitem()> aItemFactory, sal_uInt16 nWhich, std::initializer_list<sal_uInt16> vMember, bool bAddTwips)
+void SwTableProperties_Impl::AddItemToSet(SfxItemSet& rSet,
+        std::function<std::unique_ptr<SfxPoolItem>()> aItemFactory,
+        sal_uInt16 nWhich, std::initializer_list<sal_uInt16> vMember, bool bAddTwips)
 {
     std::vector< std::pair<sal_uInt16, const uno::Any* > > vMemberAndAny;
     for(sal_uInt16 nMember : vMember)
@@ -1929,7 +1808,7 @@ void SwTableProperties_Impl::AddItemToSet(SfxItemSet& rSet, std::function<Tpooli
     }
     if(!vMemberAndAny.empty())
     {
-        Tpoolitem aItem = aItemFactory();
+        std::unique_ptr<SfxPoolItem> aItem(aItemFactory());
         for(const auto& aMemberAndAny : vMemberAndAny)
             aItem->PutValue(*aMemberAndAny.second, aMemberAndAny.first | (bAddTwips ? CONVERT_TWIPS : 0) );
         rSet.Put(*aItem);
@@ -1954,7 +1833,7 @@ void SwTableProperties_Impl::ApplyTableAttr(const SwTable& rTable, SwDoc& rDoc)
         const_cast<SwTable&>(rTable).SetRowsToRepeat( bVal ? 1 : 0 );  // TODO: MULTIHEADER
     }
 
-    AddItemToSet<std::shared_ptr<SvxBrushItem>>(aSet, [&rFrameFormat]() { return rFrameFormat.makeBackgroundBrushItem(); }, RES_BACKGROUND, {
+    AddItemToSet(aSet, [&rFrameFormat]() { return rFrameFormat.makeBackgroundBrushItem(); }, RES_BACKGROUND, {
         MID_BACK_COLOR,
         MID_GRAPHIC_TRANSPARENT,
         MID_GRAPHIC_POSITION,
@@ -1986,10 +1865,10 @@ void SwTableProperties_Impl::ApplyTableAttr(const SwTable& rTable, SwDoc& rDoc)
     }
 
     if(bPutBreak)
-        AddItemToSet<std::shared_ptr<SvxFormatBreakItem>>(aSet, [&rFrameFormat]() { return std::shared_ptr<SvxFormatBreakItem>(rFrameFormat.GetBreak().Clone()); }, RES_BREAK, {0});
-    AddItemToSet<std::shared_ptr<SvxShadowItem>>(aSet, [&rFrameFormat]() { return std::shared_ptr<SvxShadowItem>(rFrameFormat.GetShadow().Clone()); }, RES_SHADOW, {0}, true);
-    AddItemToSet<std::shared_ptr<SvxFormatKeepItem>>(aSet, [&rFrameFormat]() { return std::shared_ptr<SvxFormatKeepItem>(rFrameFormat.GetKeep().Clone()); }, RES_KEEP, {0});
-    AddItemToSet<std::shared_ptr<SwFormatHoriOrient>>(aSet, [&rFrameFormat]() { return std::shared_ptr<SwFormatHoriOrient>(rFrameFormat.GetHoriOrient().Clone()); }, RES_HORI_ORIENT, {MID_HORIORIENT_ORIENT}, true);
+        AddItemToSet(aSet, [&rFrameFormat]() { return std::unique_ptr<SfxPoolItem>(rFrameFormat.GetBreak().Clone()); }, RES_BREAK, {0});
+    AddItemToSet(aSet, [&rFrameFormat]() { return std::unique_ptr<SfxPoolItem>(rFrameFormat.GetShadow().Clone()); }, RES_SHADOW, {0}, true);
+    AddItemToSet(aSet, [&rFrameFormat]() { return std::unique_ptr<SfxPoolItem>(rFrameFormat.GetKeep().Clone()); }, RES_KEEP, {0});
+    AddItemToSet(aSet, [&rFrameFormat]() { return std::unique_ptr<SfxPoolItem>(rFrameFormat.GetHoriOrient().Clone()); }, RES_HORI_ORIENT, {MID_HORIORIENT_ORIENT}, true);
 
     const uno::Any* pSzRel(nullptr);
     GetProperty(FN_TABLE_IS_RELATIVE_WIDTH, 0xff, pSzRel);
@@ -2016,10 +1895,10 @@ void SwTableProperties_Impl::ApplyTableAttr(const SwTable& rTable, SwDoc& rDoc)
             aSz.SetWidth(MINLAY);
         aSet.Put(aSz);
     }
-    AddItemToSet<std::shared_ptr<SvxLRSpaceItem>>(aSet, [&rFrameFormat]() { return std::shared_ptr<SvxLRSpaceItem>(rFrameFormat.GetLRSpace().Clone()); }, RES_LR_SPACE, {
+    AddItemToSet(aSet, [&rFrameFormat]() { return std::unique_ptr<SfxPoolItem>(rFrameFormat.GetLRSpace().Clone()); }, RES_LR_SPACE, {
         MID_L_MARGIN|CONVERT_TWIPS,
         MID_R_MARGIN|CONVERT_TWIPS });
-    AddItemToSet<std::shared_ptr<SvxULSpaceItem>>(aSet, [&rFrameFormat]() { return std::shared_ptr<SvxULSpaceItem>(rFrameFormat.GetULSpace().Clone()); }, RES_UL_SPACE, {
+    AddItemToSet(aSet, [&rFrameFormat]() { return std::unique_ptr<SfxPoolItem>(rFrameFormat.GetULSpace().Clone()); }, RES_UL_SPACE, {
         MID_UP_MARGIN|CONVERT_TWIPS,
         MID_LO_MARGIN|CONVERT_TWIPS });
     const::uno::Any* pSplit(nullptr);
@@ -2841,6 +2720,7 @@ void SwXTextTable::setPropertyValue(const OUString& rPropertyName, const uno::An
                     OUString sName;
                     if (!(aValue >>= sName))
                         break;
+                    SwStyleNameMapper::FillUIName(sName, sName, SwGetPoolIdFromName::TabStyle);
                     pTable->SetTableStyleName(sName);
                     SwDoc* pDoc = pFormat->GetDoc();
                     pDoc->GetDocShell()->GetFEShell()->UpdateTableStyleFormatting(pTable->GetTableNode());
@@ -3083,7 +2963,9 @@ uno::Any SwXTextTable::getPropertyValue(const OUString& rPropertyName)
                 case FN_UNO_TABLE_TEMPLATE_NAME:
                 {
                     SwTable* pTable = SwTable::FindTable(pFormat);
-                    aRet <<= pTable->GetTableStyleName();
+                    OUString sName;
+                    SwStyleNameMapper::FillProgName(pTable->GetTableStyleName(), sName, SwGetPoolIdFromName::TabStyle);
+                    aRet <<= sName;
                 }
                 break;
 
@@ -3511,7 +3393,7 @@ SwXCellRange::setPropertyValue(const OUString& rPropertyName, const uno::Any& aV
         {
             case FN_UNO_TABLE_CELL_BACKGROUND:
             {
-                std::shared_ptr<SfxPoolItem> aBrush(std::make_shared<SvxBrushItem>(RES_BACKGROUND));
+                std::unique_ptr<SfxPoolItem> aBrush(std::make_unique<SvxBrushItem>(RES_BACKGROUND));
                 SwDoc::GetBoxAttr(*m_pImpl->m_pTableCursor, aBrush);
                 aBrush->PutValue(aValue, pEntry->nMemberId);
                 pDoc->SetBoxAttr(*m_pImpl->m_pTableCursor, *aBrush);
@@ -3621,7 +3503,7 @@ uno::Any SAL_CALL SwXCellRange::getPropertyValue(const OUString& rPropertyName)
         {
             case FN_UNO_TABLE_CELL_BACKGROUND:
             {
-                std::shared_ptr<SfxPoolItem> aBrush(std::make_shared<SvxBrushItem>(RES_BACKGROUND));
+                std::unique_ptr<SfxPoolItem> aBrush(std::make_unique<SvxBrushItem>(RES_BACKGROUND));
                 if (SwDoc::GetBoxAttr(*m_pImpl->m_pTableCursor, aBrush))
                     aBrush->QueryValue(aRet, pEntry->nMemberId);
 
@@ -3660,8 +3542,8 @@ uno::Any SAL_CALL SwXCellRange::getPropertyValue(const OUString& rPropertyName)
             break;
             case RES_VERT_ORIENT:
             {
-                std::shared_ptr<SfxPoolItem> aVertOrient(
-                    std::make_shared<SwFormatVertOrient>(RES_VERT_ORIENT));
+                std::unique_ptr<SfxPoolItem> aVertOrient(
+                    std::make_unique<SwFormatVertOrient>(RES_VERT_ORIENT));
                 if (SwDoc::GetBoxAttr(*m_pImpl->m_pTableCursor, aVertOrient))
                 {
                     aVertOrient->QueryValue( aRet, pEntry->nMemberId );
@@ -4072,7 +3954,7 @@ void SwXTableRows::insertByIndex(sal_Int32 nIndex, sal_Int32 nCount)
     SwFrameFormat* pFrameFormat(lcl_EnsureCoreConnected(GetFrameFormat(), static_cast<cppu::OWeakObject*>(this)));
     SwTable* pTable = lcl_EnsureTableNotComplex(SwTable::FindTable(pFrameFormat), static_cast<cppu::OWeakObject*>(this));
     const size_t nRowCount = pTable->GetTabLines().size();
-    if (nCount <= 0 || !(0 <= nIndex && o3tl::make_unsigned(nIndex) <= nRowCount))
+    if (nCount <= 0 || 0 > nIndex || o3tl::make_unsigned(nIndex) > nRowCount)
         throw uno::RuntimeException("Illegal arguments", static_cast<cppu::OWeakObject*>(this));
     const OUString sTLName = sw_GetCellName(0, nIndex);
     const SwTableBox* pTLBox = pTable->GetTableBox(sTLName);
@@ -4231,7 +4113,7 @@ void SwXTableColumns::insertByIndex(sal_Int32 nIndex, sal_Int32 nCount)
     SwTableLines& rLines = pTable->GetTabLines();
     SwTableLine* pLine = rLines.front();
     const size_t nColCount = pLine->GetTabBoxes().size();
-    if (nCount <= 0 || !(0 <= nIndex && o3tl::make_unsigned(nIndex) <= nColCount))
+    if (nCount <= 0 || 0 > nIndex || o3tl::make_unsigned(nIndex) > nColCount)
         throw uno::RuntimeException("Illegal arguments", static_cast<cppu::OWeakObject*>(this));
     const OUString sTLName = sw_GetCellName(nIndex, 0);
     const SwTableBox* pTLBox = pTable->GetTableBox( sTLName );

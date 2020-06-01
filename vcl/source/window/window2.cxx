@@ -22,7 +22,7 @@
 #include <o3tl/float_int_conversion.hxx>
 #include <sal/log.hxx>
 
-#include <vcl/dialog.hxx>
+#include <vcl/toolkit/dialog.hxx>
 #include <vcl/event.hxx>
 #include <vcl/fixed.hxx>
 #include <vcl/layout.hxx>
@@ -879,6 +879,11 @@ vcl::Window* Window::ImplGetBorderWindow() const
 
 vcl::Window* Window::ImplGetFirstOverlapWindow()
 {
+    if (!mpWindowImpl)
+    {
+        return nullptr;
+    }
+
     if ( mpWindowImpl->mbOverlapWin )
         return this;
     else
@@ -1341,8 +1346,7 @@ void Window::queue_resize(StateChangedType eReason)
     if (VclPtr<vcl::Window> pParent = GetParentWithLOKNotifier())
     {
         Size aSize = GetSizePixel();
-        if (aSize.getWidth() > 0 && aSize.getHeight() > 0 &&
-            !pParent->IsInInitShow())
+        if (!aSize.IsEmpty() && GetParentDialog() && !pParent->IsInInitShow())
             LogicInvalidate(nullptr);
     }
 }
@@ -1964,21 +1968,6 @@ void Window::remove_mnemonic_label(FixedText *pLabel)
 const std::vector<VclPtr<FixedText> >& Window::list_mnemonic_labels() const
 {
     return mpWindowImpl->m_aMnemonicLabels;
-}
-
-void Window::AddExtraAccessibleRelation(const css::accessibility::AccessibleRelation &rRelation)
-{
-    mpWindowImpl->m_aExtraAccessibleRelations.push_back(rRelation);
-}
-
-const std::vector<css::accessibility::AccessibleRelation>& Window::GetExtraAccessibleRelations() const
-{
-    return mpWindowImpl->m_aExtraAccessibleRelations;
-}
-
-void Window::ClearExtraAccessibleRelations()
-{
-    mpWindowImpl->m_aExtraAccessibleRelations.clear();
 }
 
 } /* namespace vcl */

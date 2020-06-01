@@ -14,11 +14,18 @@
 #include <tools/XmlWriter.hxx>
 
 #include <memory>
+#include <sal/log.hxx>
 
 #include <drawinglayer/primitive2d/drawinglayer_primitivetypes2d.hxx>
 #include <drawinglayer/primitive2d/Tools.hxx>
 #include <drawinglayer/primitive2d/transformprimitive2d.hxx>
-#include <drawinglayer/primitive2d/polypolygonprimitive2d.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonHairlinePrimitive2D.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonMarkerPrimitive2D.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonStrokePrimitive2D.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonColorPrimitive2D.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonGradientPrimitive2D.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonHatchPrimitive2D.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonGraphicPrimitive2D.hxx>
 #include <drawinglayer/primitive2d/hiddengeometryprimitive2d.hxx>
 #include <drawinglayer/primitive2d/polygonprimitive2d.hxx>
 #include <drawinglayer/primitive2d/textprimitive2d.hxx>
@@ -112,7 +119,7 @@ void Primitive2dXmlDump::dump(
     pStream->Seek(STREAM_SEEK_TO_BEGIN);
 }
 
-xmlDocPtr Primitive2dXmlDump::dumpAndParse(
+xmlDocUniquePtr Primitive2dXmlDump::dumpAndParse(
     const drawinglayer::primitive2d::Primitive2DContainer& rPrimitive2DSequence,
     const OUString& rStreamName)
 {
@@ -138,10 +145,9 @@ xmlDocPtr Primitive2dXmlDump::dumpAndParse(
     std::unique_ptr<sal_uInt8[]> pBuffer(new sal_uInt8[nSize + 1]);
     pStream->ReadBytes(pBuffer.get(), nSize);
     pBuffer[nSize] = 0;
+    SAL_INFO("drawinglayer", "Parsed XML: " << pBuffer.get());
 
-    xmlDocPtr pDoc = xmlParseDoc(reinterpret_cast<xmlChar*>(pBuffer.get()));
-
-    return pDoc;
+    return xmlDocUniquePtr(xmlParseDoc(reinterpret_cast<xmlChar*>(pBuffer.get())));
 }
 
 void Primitive2dXmlDump::decomposeAndWrite(
@@ -252,6 +258,7 @@ void Primitive2dXmlDump::decomposeAndWrite(
                 double fRotate, fShearX;
                 if(rTextSimplePortionPrimitive2D.getTextTransform().decompose(aScale, aTranslate, fRotate, fShearX))
                 {
+                    rWriter.attribute("width", aScale.getX());
                     rWriter.attribute("height", aScale.getY());
                 }
                 rWriter.attribute("x", aTranslate.getX());
@@ -314,10 +321,30 @@ void Primitive2dXmlDump::decomposeAndWrite(
             {
                 const SvgLinearGradientPrimitive2D& rSvgLinearGradientPrimitive2D = dynamic_cast<const SvgLinearGradientPrimitive2D&>(*pBasePrimitive);
                 rWriter.startElement("svglineargradient");
+                basegfx::B2DPoint aStartAttribute = rSvgLinearGradientPrimitive2D.getStart();
                 basegfx::B2DPoint aEndAttribute = rSvgLinearGradientPrimitive2D.getEnd();
 
+                rWriter.attribute("startx", aStartAttribute.getX());
+                rWriter.attribute("starty", aStartAttribute.getY());
                 rWriter.attribute("endx", aEndAttribute.getX());
                 rWriter.attribute("endy", aEndAttribute.getY());
+                //rWriter.attribute("spreadmethod", (int)rSvgLinearGradientPrimitive2D.getSpreadMethod());
+                rWriter.attributeDouble("opacity", rSvgLinearGradientPrimitive2D.getGradientEntries().front().getOpacity());
+
+                rWriter.startElement("transform");
+                basegfx::B2DHomMatrix const & rMatrix = rSvgLinearGradientPrimitive2D.getGradientTransform();
+                rWriter.attributeDouble("xy11", rMatrix.get(0,0));
+                rWriter.attributeDouble("xy12", rMatrix.get(0,1));
+                rWriter.attributeDouble("xy13", rMatrix.get(0,2));
+                rWriter.attributeDouble("xy21", rMatrix.get(1,0));
+                rWriter.attributeDouble("xy22", rMatrix.get(1,1));
+                rWriter.attributeDouble("xy23", rMatrix.get(1,2));
+                rWriter.attributeDouble("xy31", rMatrix.get(2,0));
+                rWriter.attributeDouble("xy32", rMatrix.get(2,1));
+                rWriter.attributeDouble("xy33", rMatrix.get(2,2));
+                rWriter.endElement();
+
+                writePolyPolygon(rWriter, rSvgLinearGradientPrimitive2D.getPolyPolygon());
 
                 rWriter.endElement();
             }
@@ -396,9 +423,27 @@ void Primitive2dXmlDump::decomposeAndWrite(
                 break;
             }
 
+            case PRIMITIVE2D_ID_SHADOWPRIMITIVE2D:
+            {
+                // ShadowPrimitive2D.
+                rWriter.startElement("shadow");
+                drawinglayer::primitive2d::Primitive2DContainer aPrimitiveContainer;
+                pBasePrimitive->get2DDecomposition(aPrimitiveContainer,
+                                                   drawinglayer::geometry::ViewInformation2D());
+                decomposeAndWrite(aPrimitiveContainer, rWriter);
+                rWriter.endElement();
+                break;
+            }
+
             default:
             {
-                rWriter.element(OUStringToOString(sCurrentElementTag, RTL_TEXTENCODING_UTF8));
+                rWriter.startElement("unhandled");
+                rWriter.attribute("id", OUStringToOString(sCurrentElementTag, RTL_TEXTENCODING_UTF8));
+                drawinglayer::primitive2d::Primitive2DContainer aPrimitiveContainer;
+                pBasePrimitive->get2DDecomposition(aPrimitiveContainer,
+                                                   drawinglayer::geometry::ViewInformation2D());
+                decomposeAndWrite(aPrimitiveContainer, rWriter);
+                rWriter.endElement();
             }
             break;
         }

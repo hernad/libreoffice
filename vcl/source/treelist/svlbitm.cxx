@@ -22,7 +22,7 @@
 #include <vcl/treelistentry.hxx>
 #include <vcl/viewdataentry.hxx>
 #include <vcl/svapp.hxx>
-#include <vcl/button.hxx>
+#include <vcl/toolkit/button.hxx>
 #include <vcl/decoview.hxx>
 #include <vcl/salnativewidgets.hxx>
 
@@ -174,12 +174,16 @@ bool SvLBoxButtonData::IsRadio() const {
 
 SvLBoxString::SvLBoxString(const OUString& rStr)
     : mbEmphasized(false)
+    , mbCustom(false)
+    , mfAlign(0.0)
     , maText(rStr)
 {
 }
 
 SvLBoxString::SvLBoxString()
     : mbEmphasized(false)
+    , mbCustom(false)
+    , mfAlign(0.0)
 {
 }
 
@@ -206,7 +210,23 @@ void SvLBoxString::Paint(
         aSize.setWidth( rDev.GetEntryWidth() );
     }
     else
-        aSize.setWidth(GetWidth(&rDev, &rEntry));
+    {
+        if (mfAlign < 0.5 )
+        {
+            nStyle |= DrawTextFlags::Left;
+            aSize.setWidth(GetWidth(&rDev, &rEntry));
+        }
+        else if (mfAlign == 0.5)
+        {
+            nStyle |= DrawTextFlags::Center;
+            aSize.setWidth(rDev.GetBoundingRect(&rEntry).getWidth());
+        }
+        else if (mfAlign > 0.5)
+        {
+            nStyle |= DrawTextFlags::Right;
+            aSize.setWidth(rDev.GetBoundingRect(&rEntry).getWidth());
+        }
+    }
     aSize.setHeight(GetHeight(&rDev, &rEntry));
 
     if (mbEmphasized)
@@ -217,7 +237,12 @@ void SvLBoxString::Paint(
         rRenderContext.SetFont(aFont);
     }
 
-    rRenderContext.DrawText(tools::Rectangle(rPos, aSize), maText, nStyle);
+    tools::Rectangle aRect(rPos, aSize);
+
+    if (mbCustom)
+        rDev.DrawCustomEntry(rRenderContext, aRect, rEntry);
+    else
+        rRenderContext.DrawText(aRect, maText, nStyle);
 
     if (mbEmphasized)
         rRenderContext.Pop();
@@ -226,7 +251,13 @@ void SvLBoxString::Paint(
 std::unique_ptr<SvLBoxItem> SvLBoxString::Clone(SvLBoxItem const * pSource) const
 {
     std::unique_ptr<SvLBoxString> pNew(new SvLBoxString);
-    pNew->maText = static_cast<SvLBoxString const *>(pSource)->maText;
+
+    const SvLBoxString* pOther = static_cast<const SvLBoxString*>(pSource);
+    pNew->maText = pOther->maText;
+    pNew->mbEmphasized = pOther->mbEmphasized;
+    pNew->mbCustom = pOther->mbCustom;
+    pNew->mfAlign = pOther->mfAlign;
+
     return std::unique_ptr<SvLBoxItem>(pNew.release());
 }
 
@@ -244,8 +275,17 @@ void SvLBoxString::InitViewData(
         pView->Control::SetFont( aFont );
     }
 
-    pViewData->mnWidth = -1; // calc on demand
-    pViewData->mnHeight = pView->GetTextHeight();
+    if (mbCustom)
+    {
+        Size aSize = pView->MeasureCustomEntry(*pView, *pEntry);
+        pViewData->mnWidth = aSize.Width();
+        pViewData->mnHeight = aSize.Height();
+    }
+    else
+    {
+        pViewData->mnWidth = -1; // calc on demand
+        pViewData->mnHeight = pView->GetTextHeight();
+    }
 
     if (mbEmphasized)
         pView->Pop();

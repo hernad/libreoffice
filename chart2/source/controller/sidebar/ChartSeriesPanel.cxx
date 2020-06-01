@@ -264,7 +264,7 @@ OUString getCID(const css::uno::Reference<css::frame::XModel>& xModel)
 
 #if defined DBG_UTIL && !defined NDEBUG
     ObjectType eType = ObjectIdentifier::getObjectType(aCID);
-    assert(eType == OBJECTTYPE_DATA_SERIES);
+    assert(eType == OBJECTTYPE_DATA_SERIES || eType == OBJECTTYPE_DATA_POINT);
 #endif
 
     return aCID;
@@ -276,7 +276,7 @@ ChartSeriesPanel::ChartSeriesPanel(
     vcl::Window* pParent,
     const css::uno::Reference<css::frame::XFrame>& rxFrame,
     ChartController* pController)
-    : PanelLayout(pParent, "ChartSeriesPanel", "modules/schart/ui/sidebarseries.ui", rxFrame, true)
+    : PanelLayout(pParent, "ChartSeriesPanel", "modules/schart/ui/sidebarseries.ui", rxFrame)
     , mxCBLabel(m_xBuilder->weld_check_button("checkbutton_label"))
     , mxCBTrendline(m_xBuilder->weld_check_button("checkbutton_trendline"))
     , mxCBXError(m_xBuilder->weld_check_button("checkbutton_x_error"))
@@ -418,6 +418,12 @@ void ChartSeriesPanel::updateModel(
     {
         css::uno::Reference<css::util::XModifyBroadcaster> xBroadcaster(mxModel, css::uno::UNO_QUERY_THROW);
         xBroadcaster->removeModifyListener(mxListener);
+    }
+
+    css::uno::Reference<css::view::XSelectionSupplier> oldSelectionSupplier(
+        mxModel->getCurrentController(), css::uno::UNO_QUERY);
+    if (oldSelectionSupplier.is()) {
+        oldSelectionSupplier->removeSelectionChangeListener(mxSelectionListener.get());
     }
 
     mxModel = xModel;

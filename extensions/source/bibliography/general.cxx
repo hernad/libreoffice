@@ -18,7 +18,6 @@
  */
 
 #include <comphelper/processfactory.hxx>
-#include <com/sun/star/awt/PosSize.hpp>
 #include <com/sun/star/sdbc/XRowSet.hpp>
 #include <com/sun/star/sdb/XColumn.hpp>
 #include <com/sun/star/sdb/CommandType.hpp>
@@ -28,25 +27,21 @@
 #include <toolkit/helper/vclunohelper.hxx>
 #include <cppuhelper/implbase.hxx>
 #include <vcl/builder.hxx>
+#include <vcl/scrbar.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/fixed.hxx>
 #include "general.hxx"
 #include "bibresid.hxx"
 #include "datman.hxx"
 #include "bibconfig.hxx"
-#include "bibprop.hxx"
 #include <strings.hrc>
 #include "bibmod.hxx"
-#include "bibview.hxx"
-#include "bibtools.hxx"
 #include <helpids.h>
 #include <tools/debug.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/i18nhelp.hxx>
 #include <vcl/mnemonic.hxx>
 #include <algorithm>
-#include <functional>
-#include <vector>
 #include <tools/urlobj.hxx>
 
 using namespace ::com::sun::star;
@@ -428,8 +423,8 @@ void BibGeneralPage::AddControlWithError( const OUString& rColumnName, FixedText
     // adds also the XControl and creates a map entry in nFT2CtrlMap[] for mapping between control and FT
 
     sal_Int16                                   nIndex = -1;
-    uno::Reference< awt::XControlModel >    xTmp = AddXControl(rColumnName, rLabel, sHelpId, nIndex, rChildren);
-    if( xTmp.is() )
+    bool bSuccess = AddXControl(rColumnName, rLabel, sHelpId, nIndex, rChildren);
+    if (bSuccess)
     {
         DBG_ASSERT( nIndexInFTArray < FIELD_COUNT, "*BibGeneralPage::AddControlWithError(): wrong array index!" );
         DBG_ASSERT( nFT2CtrlMap[ nIndexInFTArray ] < 0, "+BibGeneralPage::AddControlWithError(): index already in use!" );
@@ -445,7 +440,7 @@ void BibGeneralPage::AddControlWithError( const OUString& rColumnName, FixedText
     }
 }
 
-uno::Reference< awt::XControlModel >  BibGeneralPage::AddXControl(
+bool  BibGeneralPage::AddXControl(
         const OUString& rName,
         FixedText& rLabel, const OString& sHelpId, sal_Int16& rIndex,
         std::vector<vcl::Window*>& rChildren)
@@ -525,7 +520,7 @@ uno::Reference< awt::XControlModel >  BibGeneralPage::AddXControl(
     {
         OSL_FAIL("BibGeneralPage::AddXControl: something went wrong!");
     }
-    return xCtrModel;
+    return xCtrModel.is();
 }
 
 void BibGeneralPage::InitFixedTexts()
@@ -589,22 +584,22 @@ void BibGeneralPage::InitFixedTexts()
 void BibGeneralPage::focusGained(const awt::FocusEvent& rEvent)
 {
     Reference<awt::XWindow> xCtrWin(rEvent.Source, UNO_QUERY );
-    if(xCtrWin.is())
-    {
-        ::Size aOutSize = pScrolledWindow->getVisibleChildSize();
-        awt::Rectangle aRect = xCtrWin->getPosSize();
-        Point aOffset(pGrid->GetPosPixel());
-        long nX = aRect.X + aOffset.X();
-        if (nX < 0 || nX > aOutSize.Width())
-        {
-            pScrolledWindow->getHorzScrollBar().DoScroll(aRect.X);
-        }
+    if(!xCtrWin.is())
+        return;
 
-        long nY = aRect.Y + aOffset.Y();
-        if (nY < 0 || nY > aOutSize.Height())
-        {
-            pScrolledWindow->getVertScrollBar().DoScroll(aRect.Y);
-        }
+    ::Size aOutSize = pScrolledWindow->getVisibleChildSize();
+    awt::Rectangle aRect = xCtrWin->getPosSize();
+    Point aOffset(pGrid->GetPosPixel());
+    long nX = aRect.X + aOffset.X();
+    if (nX < 0 || nX > aOutSize.Width())
+    {
+        pScrolledWindow->getHorzScrollBar().DoScroll(aRect.X);
+    }
+
+    long nY = aRect.Y + aOffset.Y();
+    if (nY < 0 || nY > aOutSize.Height())
+    {
+        pScrolledWindow->getVertScrollBar().DoScroll(aRect.Y);
     }
 }
 

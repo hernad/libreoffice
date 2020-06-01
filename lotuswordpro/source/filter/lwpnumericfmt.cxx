@@ -59,6 +59,7 @@
  */
 
 #include <memory>
+#include <lwpfilehdr.hxx>
 #include "lwpnumericfmt.hxx"
 
 LwpCurrencyPool  LwpNumericFormat::m_aCurrencyInfo;
@@ -232,22 +233,22 @@ void LwpNumericFormat::GetCurrencyStr(LwpNumericFormatSubset aNumber, OUString& 
             }
         }
     }
-    if ( aNumber.IsDefaultSuffix())
+    if ( !aNumber.IsDefaultSuffix())
+        return;
+
+    if (bPost)
     {
-        if (bPost)
+        aSuffix = aSymbol;
+        if (bShowSpace)
         {
-            aSuffix = aSymbol;
-            if (bShowSpace)
-            {
-                aSuffix = " " + aSuffix;
-            }
-
+            aSuffix = " " + aSuffix;
         }
 
-        if (bNegtive)
-        {
-            aSuffix += ")";
-        }
+    }
+
+    if (bNegtive)
+    {
+        aSuffix += ")";
     }
 }
 void LwpNumericFormat::SetNumberType(XFNumberStyle* pStyle)

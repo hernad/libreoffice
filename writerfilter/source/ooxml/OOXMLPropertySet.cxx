@@ -22,7 +22,6 @@
 #include <iostream>
 #include <ooxml/QNameToString.hxx>
 #include <com/sun/star/drawing/XShape.hpp>
-#include <oox/token/tokens.hxx>
 #include <sax/tools/converter.hxx>
 #include <tools/color.hxx>
 
@@ -71,7 +70,7 @@ writerfilter::Reference<Properties>::Pointer_t OOXMLProperty::getProps()
 #ifdef DBG_UTIL
 string OOXMLProperty::getName() const
 {
-    string sResult((*QNameToString::Instance())(mId));
+    string sResult(QNameToString(mId));
 
     if (sResult.length() == 0)
         sResult = fastTokenToId(mId);

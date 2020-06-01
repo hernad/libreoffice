@@ -23,14 +23,14 @@
 #include <memory>
 #include <svl/intitem.hxx>
 #include <svx/dlgutil.hxx>
-#include <svx/sidebar/PanelLayout.hxx>
+#include <sfx2/sidebar/PanelLayout.hxx>
 #include <svx/itemwin.hxx>
 #include <sfx2/sidebar/ControllerItem.hxx>
 #include <svx/papersizelistbox.hxx>
 #include <sfx2/sidebar/IContextChangeReceiver.hxx>
 
 namespace sd { class ViewShellBase; }
-namespace sd { namespace tools { class EventMultiplexerEvent; } }
+namespace sd::tools { class EventMultiplexerEvent; }
 
 class ColorListBox;
 class SvxPageItem;
@@ -44,7 +44,7 @@ class XFillHatchItem;
 
 static const long MINBODY = 284;
 
-namespace sd { namespace sidebar {
+namespace sd::sidebar {
 
 class SlideBackground :
     public PanelLayout,
@@ -66,6 +66,11 @@ public:
         const sal_uInt16 nSID,
         const SfxItemState eState,
         const SfxPoolItem* pState) override;
+
+    virtual void GetControlState(
+        const sal_uInt16 /*nSId*/,
+        boost::property_tree::ptree& /*rState*/) override {};
+
     virtual void HandleContextChange(
         const vcl::EnumContext& rContext) override;
     virtual boost::property_tree::ptree DumpAsPropertyTree() override;
@@ -81,7 +86,8 @@ private:
     std::unique_ptr<weld::ComboBox> mxFillStyle;
     std::unique_ptr<ColorListBox> mxFillLB;
     std::unique_ptr<weld::ComboBox> mxFillAttr;
-    std::unique_ptr<ColorListBox> mxFillGrad;
+    std::unique_ptr<ColorListBox> mxFillGrad1;
+    std::unique_ptr<ColorListBox> mxFillGrad2;
     std::unique_ptr<weld::Button> mxInsertImage;
     std::unique_ptr<weld::CheckButton> mxDspMasterBackground;
     std::unique_ptr<weld::CheckButton> mxDspMasterObjects;
@@ -118,12 +124,12 @@ private:
 
     css::uno::Reference<css::frame::XFrame> mxFrame;
     vcl::EnumContext maContext;
-    vcl::EnumContext const maDrawOtherContext;
-    vcl::EnumContext const maDrawMasterContext;
-    vcl::EnumContext const maImpressOtherContext;
-    vcl::EnumContext const maImpressMasterContext;
-    vcl::EnumContext const maImpressHandoutContext;
-    vcl::EnumContext const maImpressNotesContext;
+    vcl::EnumContext maDrawOtherContext;
+    vcl::EnumContext maDrawMasterContext;
+    vcl::EnumContext maImpressOtherContext;
+    vcl::EnumContext maImpressMasterContext;
+    vcl::EnumContext maImpressHandoutContext;
+    vcl::EnumContext maImpressNotesContext;
     bool         mbTitle;
     std::unique_ptr<SvxLongLRSpaceItem> mpPageLRMarginItem;
     std::unique_ptr<SvxLongULSpaceItem> mpPageULMarginItem;
@@ -134,7 +140,7 @@ private:
     FieldUnit meFUnit;
     OUString maCustomEntry;
 
-    SfxBindings* const mpBindings;
+    SfxBindings* mpBindings;
 
     MapUnit meUnit;
 
@@ -174,7 +180,7 @@ private:
     static FieldUnit GetCurrentUnit(SfxItemState eState, const SfxPoolItem* pState);
 };
 
-}}
+}
 
 #endif
 

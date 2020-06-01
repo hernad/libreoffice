@@ -507,7 +507,7 @@ void ScEditShell::Execute( SfxRequest& rReq )
                 ScAbstractDialogFactory* pFact = ScAbstractDialogFactory::Create();
 
                 ScopedVclPtr<SfxAbstractTabDialog> pDlg(pFact->CreateScCharDlg(
-                    pViewData->GetDialogParent(), &aAttrs, pObjSh));
+                    pViewData->GetDialogParent(), &aAttrs, pObjSh, false));
                 if (nSlot == SID_CHAR_DLG_EFFECT)
                 {
                     pDlg->SetCurPageId("fonteffects");
@@ -813,7 +813,7 @@ void ScEditShell::GetState( SfxItemSet& rSet )
             break;
             case SID_COPY:
             case SID_CUT:
-                if (pViewData->GetViewShell()->isContentExtractionLocked())
+                if (GetObjectShell() && GetObjectShell()->isContentExtractionLocked())
                 {
                     rSet.DisableItem(SID_COPY);
                     rSet.DisableItem(SID_CUT);

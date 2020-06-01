@@ -28,7 +28,7 @@
 #include <swtypes.hxx>
 #include "drawfont.hxx"
 #include <editeng/borderline.hxx>
-#include <o3tl/optional.hxx>
+#include <optional>
 #include <o3tl/enumarray.hxx>
 
 class SfxItemSet;
@@ -140,10 +140,10 @@ class SwFont
     Color       m_aOverColor;     // color of the overlining
 
     // character borders
-    o3tl::optional<editeng::SvxBorderLine>     m_aTopBorder;
-    o3tl::optional<editeng::SvxBorderLine>     m_aBottomBorder;
-    o3tl::optional<editeng::SvxBorderLine>     m_aRightBorder;
-    o3tl::optional<editeng::SvxBorderLine>     m_aLeftBorder;
+    std::optional<editeng::SvxBorderLine>     m_aTopBorder;
+    std::optional<editeng::SvxBorderLine>     m_aBottomBorder;
+    std::optional<editeng::SvxBorderLine>     m_aRightBorder;
+    std::optional<editeng::SvxBorderLine>     m_aLeftBorder;
 
     // border distance
     sal_uInt16 m_nTopBorderDist;
@@ -163,7 +163,6 @@ class SwFont
     SwFontScript m_nActual;        // actual font (Latin, CJK or CTL)
 
     // switch for the font-extensions
-    bool m_bBlink         :1;  // blinking font
     bool m_bPaintBlank    :1;  // blanks not with DrawRect
     bool m_bFontChg       :1;
     bool m_bOrgChg        :1;  // nOrgHeight/Ascent are invalid
@@ -245,8 +244,6 @@ public:
     inline void SetRelief( const FontRelief eNew );
 
     // Get/Set-methods for the current setting
-    inline void SetBlink( const bool bBlink );
-    bool IsBlink() const { return m_bBlink; }
     sal_uInt8 &GetTox() { return m_nToxCount; }
     bool IsTox() const { return ( 0 != m_nToxCount ); }
     sal_uInt8 &GetRef() { return m_nRefCount; }
@@ -336,19 +333,19 @@ public:
     void SetRightBorder( const editeng::SvxBorderLine* pRightBorder );
     void SetLeftBorder( const editeng::SvxBorderLine* pLeftBorder );
 
-    const o3tl::optional<editeng::SvxBorderLine>& GetTopBorder() const { return m_aTopBorder; }
-    const o3tl::optional<editeng::SvxBorderLine>& GetBottomBorder() const { return m_aBottomBorder; }
-    const o3tl::optional<editeng::SvxBorderLine>& GetRightBorder() const { return m_aRightBorder; }
-    const o3tl::optional<editeng::SvxBorderLine>& GetLeftBorder() const { return m_aLeftBorder; }
+    const std::optional<editeng::SvxBorderLine>& GetTopBorder() const { return m_aTopBorder; }
+    const std::optional<editeng::SvxBorderLine>& GetBottomBorder() const { return m_aBottomBorder; }
+    const std::optional<editeng::SvxBorderLine>& GetRightBorder() const { return m_aRightBorder; }
+    const std::optional<editeng::SvxBorderLine>& GetLeftBorder() const { return m_aLeftBorder; }
 
     // Get absolute border correspond to the layout verticality and orientation.
-    const o3tl::optional<editeng::SvxBorderLine>&
+    const std::optional<editeng::SvxBorderLine>&
     GetAbsTopBorder(const bool bVertLayout, const bool bVertLayoutLRBT) const;
-    const o3tl::optional<editeng::SvxBorderLine>&
+    const std::optional<editeng::SvxBorderLine>&
     GetAbsBottomBorder(const bool bVertLayout, const bool bVertLayoutLRBT) const;
-    const o3tl::optional<editeng::SvxBorderLine>&
+    const std::optional<editeng::SvxBorderLine>&
     GetAbsRightBorder(const bool bVertLayout, const bool bVertLayoutLRBT) const;
-    const o3tl::optional<editeng::SvxBorderLine>&
+    const std::optional<editeng::SvxBorderLine>&
     GetAbsLeftBorder(const bool bVertLayout, const bool bVertLayoutLRBT) const;
 
     void SetTopBorderDist( const sal_uInt16 nTopDist );
@@ -815,11 +812,6 @@ inline void SwFont::SetLanguage( const LanguageType eNewLang, const SwFontScript
     }
 }
 
-inline void SwFont::SetBlink( const bool bNew )
-{
-    m_bBlink = bNew;
-}
-
 inline void SwFont::SetGreyWave( const bool bNew )
 {
     m_bGreyWave = bNew;
@@ -957,7 +949,7 @@ inline void SwFont::SetHighlightColor( const Color& aNewColor )
 class SwUnderlineFont
 {
     Point m_aPos;
-    TextFrameIndex const m_nEnd;
+    TextFrameIndex m_nEnd;
     std::unique_ptr<SwFont> m_pFont;
 
 public:

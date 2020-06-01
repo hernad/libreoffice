@@ -72,6 +72,7 @@
 #include <strings.hrc>
 #include <globstr.hrc>
 
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/uno/Reference.h>
 #include <com/sun/star/document/XDocumentProperties.hpp>
 #include <com/sun/star/document/XDocumentPropertiesSupplier.hpp>
@@ -325,7 +326,7 @@ void ScHTMLExport::WriteHeader()
             OUT_COMMENT( GLOBSTR( STR_DOC_INFO ) );
             OUString aStrOut = GLOBSTR( STR_DOC_PRINTED ) + ": ";
             lcl_AddStamp( aStrOut, xDocProps->getPrintedBy(),
-                xDocProps->getPrintDate(), *ScGlobal::pLocaleData );
+                xDocProps->getPrintDate(), *ScGlobal::getLocaleDataPtr() );
             OUT_COMMENT( aStrOut );
         }
 
@@ -437,13 +438,12 @@ const SfxItemSet& ScHTMLExport::PageDefaults( SCTAB nTab )
     // remember defaults for compare in WriteCell
     if ( !aHTMLStyle.bInitialized )
     {
-        pStylePool->SetSearchMask( SfxStyleFamily::Para );
         pStyleSheet = pStylePool->Find(
                 ScResId(STR_STYLENAME_STANDARD),
                 SfxStyleFamily::Para );
         OSL_ENSURE( pStyleSheet, "ParaStyle not found! :-(" );
         if (!pStyleSheet)
-            pStyleSheet = pStylePool->First();
+            pStyleSheet = pStylePool->First(SfxStyleFamily::Para);
         const SfxItemSet& rSetPara = pStyleSheet->GetItemSet();
 
         aHTMLStyle.nDefaultScriptType = ScGlobal::GetDefaultScriptType();
@@ -460,11 +460,10 @@ const SfxItemSet& ScHTMLExport::PageDefaults( SCTAB nTab )
 
     // Page style sheet printer settings, e.g. for background graphics.
     // There's only one background graphic in HTML!
-    pStylePool->SetSearchMask( SfxStyleFamily::Page );
     pStyleSheet = pStylePool->Find( pDoc->GetPageStyle( nTab ), SfxStyleFamily::Page );
     OSL_ENSURE( pStyleSheet, "PageStyle not found! :-(" );
     if (!pStyleSheet)
-        pStyleSheet = pStylePool->First();
+        pStyleSheet = pStylePool->First(SfxStyleFamily::Page);
     const SfxItemSet& rSet = pStyleSheet->GetItemSet();
     if ( !aHTMLStyle.bInitialized )
     {

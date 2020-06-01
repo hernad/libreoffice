@@ -19,7 +19,6 @@
 #ifndef INCLUDED_WRITERFILTER_SOURCE_DMAPPER_DOMAINMAPPERTABLEHANDLER_HXX
 #define INCLUDED_WRITERFILTER_SOURCE_DMAPPER_DOMAINMAPPERTABLEHANDLER_HXX
 
-#include "TableManager.hxx"
 #include "PropertyMap.hxx"
 #include <vector>
 
@@ -43,8 +42,8 @@ struct TableInfo;
 /// A horizontally merged cell is in fact a range of cells till its merge is performed.
 struct HorizontallyMergedCell
 {
-    sal_Int32 const m_nFirstRow;
-    sal_Int32 const m_nFirstCol;
+    sal_Int32 m_nFirstRow;
+    sal_Int32 m_nFirstCol;
     sal_Int32 m_nLastRow;
     sal_Int32 m_nLastCol;
     HorizontallyMergedCell(sal_Int32 nFirstRow, sal_Int32 nFirstCol)
@@ -90,6 +89,8 @@ public:
        @param pProps  properties of the table
      */
     void startTable(const TablePropertyMapPtr& pProps);
+
+    void ApplyParagraphPropertiesFromTableStyle(TableParagraph rParaProp, std::vector< PropertyIds > aAllTableProperties, css::beans::PropertyValues rCellProperties);
 
     /// Handle end of table.
     void endTable(unsigned int nestedTableLevel, bool bTableStartsAtCellStart);

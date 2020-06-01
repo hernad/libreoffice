@@ -22,12 +22,12 @@
 
 #include <vcl/ctrl.hxx>
 #include <vcl/floatwin.hxx>
-#include <svtools/svmedit.hxx>
+#include <vcl/vclmedit.hxx>
 #include <vcl/scrbar.hxx>
 
 #include <basegfx/polygon/b2dpolygon.hxx>
 
-namespace com { namespace sun { namespace star { namespace office { class XAnnotation; } } } }
+namespace com::sun::star::office { class XAnnotation; }
 
 class OutlinerView;
 class Outliner;
@@ -77,11 +77,11 @@ class AnnotationWindow : public FloatingWindow
         std::unique_ptr<::Outliner>   mpOutliner;
         VclPtr<ScrollBar>       mpVScrollbar;
         css::uno::Reference< css::office::XAnnotation > mxAnnotation;
-        bool const              mbReadonly;
+        bool                    mbReadonly;
         bool                    mbProtected;
         bool                    mbMouseOverButton;
         VclPtr<AnnotationTextWindow>   mpTextWindow;
-        VclPtr<MultiLineEdit>   mpMeta;
+        VclPtr<VclMultiLineEdit> mpMeta;
         ::tools::Rectangle               maRectMetaButton;
         basegfx::B2DPolygon     maPopupTriangle;
 

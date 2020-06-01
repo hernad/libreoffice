@@ -33,6 +33,7 @@
 #include <com/sun/star/awt/MouseButton.hpp>
 #include <com/sun/star/awt/MouseEvent.hpp>
 #include <com/sun/star/rendering/XBitmap.hpp>
+#include <com/sun/star/rendering/XCanvas.hpp>
 
 #include <eventqueue.hxx>
 #include <screenupdater.hxx>
@@ -100,7 +101,7 @@ public:
 private:
     ::canvas::tools::ElapsedTime    maTimer;
     double                          mnNextTime;
-    std::weak_ptr<Activity> const   mpActivity;
+    std::weak_ptr<Activity>         mpActivity;
     ActivitiesQueue&                mrActivityQueue;
 };
 

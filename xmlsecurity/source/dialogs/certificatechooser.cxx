@@ -182,8 +182,7 @@ void CertificateChooser::ImplInitialize()
         {
         }
 
-        sal_Int32 nCertificates = xCerts.getLength();
-        for( sal_Int32 nCert = nCertificates; nCert; )
+        for( sal_Int32 nCert = xCerts.getLength(); nCert; )
         {
             uno::Reference< security::XCertificate > xCert = xCerts[ --nCert ];
             // Check if we have a private key for this...
@@ -192,7 +191,6 @@ void CertificateChooser::ImplInitialize()
             if (!(nCertificateCharacters & security::CertificateCharacters::HAS_PRIVATE_KEY))
             {
                 ::comphelper::removeElementAt( xCerts, nCert );
-                nCertificates = xCerts.getLength();
             }
         }
 
@@ -206,11 +204,11 @@ void CertificateChooser::ImplInitialize()
             userData->xSecurityEnvironment = secEnvironment;
             mvUserData.push_back(userData);
 
-            OUString sIssuer = xmlsec::GetContentPart( xCert->getIssuerName() );
+            OUString sIssuer = xmlsec::GetContentPart( xCert->getIssuerName(), xCert->getCertificateKind());
 
             m_xCertLB->append();
             int nRow = m_xCertLB->n_children() - 1;
-            m_xCertLB->set_text(nRow, xmlsec::GetContentPart(xCert->getSubjectName()), 0);
+            m_xCertLB->set_text(nRow, xmlsec::GetContentPart(xCert->getSubjectName(), xCert->getCertificateKind()), 0);
             m_xCertLB->set_text(nRow, sIssuer, 1);
             m_xCertLB->set_text(nRow, xmlsec::GetCertificateKind(xCert->getCertificateKind()), 2);
             m_xCertLB->set_text(nRow, utl::GetDateString(xCert->getNotValidAfter()), 3);

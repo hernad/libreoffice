@@ -41,8 +41,6 @@
 #include <dialmgr.hxx>
 
 
-#define FILEOBJECT ( OBJECT_CLIENT_FILE & ~OBJECT_CLIENT_SO )
-
 using namespace sfx2;
 using namespace ::com::sun::star;
 
@@ -149,8 +147,8 @@ void SvBaseLinksDlg::LinksSelectHdl(weld::TreeView* pSvTabListBox)
         // possibly deselect old entries in case of multi-selection
         int nSelEntry = pSvTabListBox->get_selected_index();
         SvBaseLink* pLink = reinterpret_cast<SvBaseLink*>(pSvTabListBox->get_id(nSelEntry).toInt64());
-        sal_uInt16 nObjectType = pLink->GetObjType();
-        if((OBJECT_CLIENT_FILE & nObjectType) != OBJECT_CLIENT_FILE)
+        SvBaseLinkObjectType nObjectType = pLink->GetObjType();
+        if(!isClientFileType(nObjectType))
         {
             pSvTabListBox->unselect_all();
             pSvTabListBox->select(nSelEntry);
@@ -164,7 +162,7 @@ void SvBaseLinksDlg::LinksSelectHdl(weld::TreeView* pSvTabListBox)
                 DBG_ASSERT(pLink, "Where is the Link?");
                 if (!pLink)
                     continue;
-                if( (OBJECT_CLIENT_FILE & pLink->GetObjType()) != OBJECT_CLIENT_FILE )
+                if( !isClientFileType(pLink->GetObjType()) )
                     pSvTabListBox->unselect(nEntry);
             }
         }
@@ -186,12 +184,12 @@ void SvBaseLinksDlg::LinksSelectHdl(weld::TreeView* pSvTabListBox)
         OUString sType, sLink;
         OUString *pLinkNm = &sLink, *pFilter = nullptr;
 
-        if( FILEOBJECT & pLink->GetObjType() )
+        if( isClientFileType(pLink->GetObjType()) )
         {
             m_xRbAutomatic->set_sensitive(false);
             m_xRbManual->set_active(true);
             m_xRbManual->set_sensitive(false);
-            if( OBJECT_CLIENT_GRF == pLink->GetObjType() )
+            if( SvBaseLinkObjectType::ClientGraphic == pLink->GetObjType() )
             {
                 pLinkNm = nullptr;
                 pFilter = &sLink;
@@ -228,7 +226,7 @@ IMPL_LINK_NOARG( SvBaseLinksDlg, AutomaticClickHdl, weld::Button&, void )
 {
     int nPos;
     SvBaseLink* pLink = GetSelEntry( &nPos );
-    if( pLink && !( FILEOBJECT & pLink->GetObjType() ) &&
+    if( pLink && !isClientFileType( pLink->GetObjType() ) &&
         SfxLinkUpdateMode::ALWAYS != pLink->GetUpdateMode() )
         SetType( *pLink, nPos, SfxLinkUpdateMode::ALWAYS );
 }
@@ -237,7 +235,7 @@ IMPL_LINK_NOARG( SvBaseLinksDlg, ManualClickHdl, weld::Button&, void )
 {
     int nPos;
     SvBaseLink* pLink = GetSelEntry( &nPos );
-    if( pLink && !( FILEOBJECT & pLink->GetObjType() ) &&
+    if( pLink && !isClientFileType( pLink->GetObjType() ) &&
         SfxLinkUpdateMode::ONCALL != pLink->GetUpdateMode())
         SetType( *pLink, nPos, SfxLinkUpdateMode::ONCALL );
 }
@@ -254,39 +252,39 @@ IMPL_LINK_NOARG(SvBaseLinksDlg, UpdateNowClickHdl, weld::Button&, void)
         aPosArr.push_back( nFndPos );
     }
 
-    if( !aLnkArr.empty() )
+    if( aLnkArr.empty() )
+        return;
+
+    for( size_t n = 0; n < aLnkArr.size(); ++n )
     {
-        for( size_t n = 0; n < aLnkArr.size(); ++n )
-        {
-            tools::SvRef<SvBaseLink> xLink = aLnkArr[ n ];
+        tools::SvRef<SvBaseLink> xLink = aLnkArr[ n ];
 
-            // first look for the entry in the array
-            for(const auto & i : pLinkMgr->GetLinks())
-                if( xLink == i )
-                {
-                    SetType( *xLink, aPosArr[ n ], xLink->GetUpdateMode() );
-                    break;
-                }
-        }
-
-        // if somebody is of the opinion to swap his links (SD)
-        LinkManager* pNewMgr = pLinkMgr;
-        pLinkMgr = nullptr;
-        SetManager( pNewMgr );
-
-
-        OUString sId = OUString::number(reinterpret_cast<sal_Int64>(aLnkArr[0]));
-        int nE = m_xTbLinks->find_id(sId);
-        if (nE == -1)
-            nE = m_xTbLinks->get_selected_index();
-        int nSelEntry = m_xTbLinks->get_selected_index();
-        if (nE != nSelEntry)
-            m_xTbLinks->unselect(nSelEntry);
-        m_xTbLinks->select(nE);
-        m_xTbLinks->scroll_to_row(nE);
-
-        pNewMgr->CloseCachedComps();
+        // first look for the entry in the array
+        for(const auto & i : pLinkMgr->GetLinks())
+            if( xLink == i )
+            {
+                SetType( *xLink, aPosArr[ n ], xLink->GetUpdateMode() );
+                break;
+            }
     }
+
+    // if somebody is of the opinion to swap his links (SD)
+    LinkManager* pNewMgr = pLinkMgr;
+    pLinkMgr = nullptr;
+    SetManager( pNewMgr );
+
+
+    OUString sId = OUString::number(reinterpret_cast<sal_Int64>(aLnkArr[0]));
+    int nE = m_xTbLinks->find_id(sId);
+    if (nE == -1)
+        nE = m_xTbLinks->get_selected_index();
+    int nSelEntry = m_xTbLinks->get_selected_index();
+    if (nE != nSelEntry)
+        m_xTbLinks->unselect(nSelEntry);
+    m_xTbLinks->select(nE);
+    m_xTbLinks->scroll_to_row(nE);
+
+    pNewMgr->CloseCachedComps();
 }
 
 IMPL_LINK_NOARG(SvBaseLinksDlg, ChangeSourceClickHdl, weld::Button&, void)
@@ -371,7 +369,7 @@ IMPL_LINK_NOARG( SvBaseLinksDlg, BreakLinkClickHdl, weld::Button&, void )
             m_xTbLinks->remove(nPos);
 
             // close object, if it's still existing
-            bool bNewLnkMgr = OBJECT_CLIENT_FILE == xLink->GetObjType();
+            bool bNewLnkMgr = SvBaseLinkObjectType::ClientFile == xLink->GetObjType();
 
             // tell the link that it will be resolved!
             xLink->Closed();
@@ -423,22 +421,22 @@ IMPL_LINK_NOARG( SvBaseLinksDlg, BreakLinkClickHdl, weld::Button&, void )
             // then remove all selected entries
         }
     }
-    if(bModified)
-    {
-        if (!m_xTbLinks->n_children())
-        {
-            m_xRbAutomatic->set_sensitive(false);
-            m_xRbManual->set_sensitive(false);
-            m_xPbUpdateNow->set_sensitive(false);
-            m_xPbChangeSource->set_sensitive(false);
-            m_xPbBreakLink->set_sensitive(false);
+    if(!bModified)
+        return;
 
-            m_xFtFullSourceName->set_label( "" );
-            m_xFtFullTypeName->set_label( "" );
-        }
-        if( pLinkMgr && pLinkMgr->GetPersist() )
-            pLinkMgr->GetPersist()->SetModified();
+    if (!m_xTbLinks->n_children())
+    {
+        m_xRbAutomatic->set_sensitive(false);
+        m_xRbManual->set_sensitive(false);
+        m_xPbUpdateNow->set_sensitive(false);
+        m_xPbChangeSource->set_sensitive(false);
+        m_xPbBreakLink->set_sensitive(false);
+
+        m_xFtFullSourceName->set_label( "" );
+        m_xFtFullTypeName->set_label( "" );
     }
+    if( pLinkMgr && pLinkMgr->GetPersist() )
+        pLinkMgr->GetPersist()->SetModified();
 }
 
 IMPL_LINK_NOARG( SvBaseLinksDlg, UpdateWaitingHdl, Timer*, void )
@@ -463,37 +461,37 @@ IMPL_LINK( SvBaseLinksDlg, EndEditHdl, sfx2::SvBaseLink&, _rLink, void )
     int nPos;
     GetSelEntry( &nPos );
 
-    if( _rLink.WasLastEditOK() )
-    {
-        // StarImpress/Draw swap the LinkObjects themselves!
-        // So search for the link in the manager; if it does not exist
-        // anymore, fill the list completely new. Otherwise only the
-        // edited link needs to be refreshed.
-        bool bLinkFnd = false;
-        for( size_t n = pLinkMgr->GetLinks().size(); n;  )
-            if( &_rLink == &(*pLinkMgr->GetLinks()[ --n ]) )
-            {
-                bLinkFnd = true;
-                break;
-            }
+    if( !_rLink.WasLastEditOK() )
+        return;
 
-        if( bLinkFnd )
+    // StarImpress/Draw swap the LinkObjects themselves!
+    // So search for the link in the manager; if it does not exist
+    // anymore, fill the list completely new. Otherwise only the
+    // edited link needs to be refreshed.
+    bool bLinkFnd = false;
+    for( size_t n = pLinkMgr->GetLinks().size(); n;  )
+        if( &_rLink == &(*pLinkMgr->GetLinks()[ --n ]) )
         {
-            m_xTbLinks->remove(nPos);
-            int nToUnselect = m_xTbLinks->get_selected_index();
-            InsertEntry(_rLink, nPos, true);
-            if (nToUnselect != -1)
-                m_xTbLinks->unselect(nToUnselect);
+            bLinkFnd = true;
+            break;
         }
-        else
-        {
-            LinkManager* pNewMgr = pLinkMgr;
-            pLinkMgr = nullptr;
-            SetManager( pNewMgr );
-        }
-        if (pLinkMgr && pLinkMgr->GetPersist())
-            pLinkMgr->GetPersist()->SetModified();
+
+    if( bLinkFnd )
+    {
+        m_xTbLinks->remove(nPos);
+        int nToUnselect = m_xTbLinks->get_selected_index();
+        InsertEntry(_rLink, nPos, true);
+        if (nToUnselect != -1)
+            m_xTbLinks->unselect(nToUnselect);
     }
+    else
+    {
+        LinkManager* pNewMgr = pLinkMgr;
+        pLinkMgr = nullptr;
+        SetManager( pNewMgr );
+    }
+    if (pLinkMgr && pLinkMgr->GetPersist())
+        pLinkMgr->GetPersist()->SetModified();
 }
 
 OUString SvBaseLinksDlg::ImplGetStateStr( const SvBaseLink& rLnk )
@@ -528,30 +526,30 @@ void SvBaseLinksDlg::SetManager( LinkManager* pNewMgr )
     m_xTbLinks->clear();
     pLinkMgr = pNewMgr;
 
-    if( pLinkMgr )
+    if( !pLinkMgr )
+        return;
+
+    SvBaseLinks& rLnks = const_cast<SvBaseLinks&>(pLinkMgr->GetLinks());
+    for( size_t n = 0; n < rLnks.size(); ++n )
     {
-        SvBaseLinks& rLnks = const_cast<SvBaseLinks&>(pLinkMgr->GetLinks());
-        for( size_t n = 0; n < rLnks.size(); ++n )
+        tools::SvRef<SvBaseLink>& rLinkRef = rLnks[ n ];
+        if( !rLinkRef.is() )
         {
-            tools::SvRef<SvBaseLink>& rLinkRef = rLnks[ n ];
-            if( !rLinkRef.is() )
-            {
-                rLnks.erase( rLnks.begin() + n );
-                --n;
-                continue;
-            }
-            if( rLinkRef->IsVisible() )
-                InsertEntry( *rLinkRef );
+            rLnks.erase( rLnks.begin() + n );
+            --n;
+            continue;
         }
+        if( rLinkRef->IsVisible() )
+            InsertEntry( *rLinkRef );
+    }
 
-        m_xTbLinks->thaw();
+    m_xTbLinks->thaw();
 
-        if( !rLnks.empty() )
-        {
-            m_xTbLinks->set_cursor(0);
-            m_xTbLinks->select(0);
-            LinksSelectHdl( nullptr );
-        }
+    if( !rLnks.empty() )
+    {
+        m_xTbLinks->set_cursor(0);
+        m_xTbLinks->select(0);
+        LinksSelectHdl( nullptr );
     }
 }
 
@@ -578,7 +576,7 @@ void SvBaseLinksDlg::InsertEntry(const SvBaseLink& rLink, int nPos, bool bSelect
     m_xTbLinks->insert(nPos);
     m_xTbLinks->set_text(nPos, aTxt, 0);
     m_xTbLinks->set_id(nPos, OUString::number(reinterpret_cast<sal_Int64>(&rLink)));
-    if( OBJECT_CLIENT_GRF == rLink.GetObjType() )
+    if( SvBaseLinkObjectType::ClientGraphic == rLink.GetObjType() )
         m_xTbLinks->set_text(nPos, sFilter, 1);
     else
         m_xTbLinks->set_text(nPos, sLinkNm, 1);
@@ -613,24 +611,24 @@ void SvBaseLinksDlg::SetType(SvBaseLink& rLink,
 
 void SvBaseLinksDlg::SetActLink( SvBaseLink const * pLink )
 {
-    if( pLinkMgr )
+    if( !pLinkMgr )
+        return;
+
+    const SvBaseLinks& rLnks = pLinkMgr->GetLinks();
+    int nSelect = 0;
+    for(const auto & rLinkRef : rLnks)
     {
-        const SvBaseLinks& rLnks = pLinkMgr->GetLinks();
-        int nSelect = 0;
-        for(const auto & rLinkRef : rLnks)
+        // #109573# only visible links have been inserted into the TreeListBox,
+        // invisible ones have to be skipped here
+        if( rLinkRef->IsVisible() )
         {
-            // #109573# only visible links have been inserted into the TreeListBox,
-            // invisible ones have to be skipped here
-            if( rLinkRef->IsVisible() )
+            if( pLink == rLinkRef.get() )
             {
-                if( pLink == rLinkRef.get() )
-                {
-                    m_xTbLinks->select(nSelect);
-                    LinksSelectHdl( nullptr );
-                    return ;
-                }
-                ++nSelect;
+                m_xTbLinks->select(nSelect);
+                LinksSelectHdl( nullptr );
+                return ;
             }
+            ++nSelect;
         }
     }
 }

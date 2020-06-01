@@ -25,13 +25,14 @@
 #include <com/sun/star/table/BorderLine2.hpp>
 #include <com/sun/star/text/RubyAdjust.hpp>
 
-namespace com{ namespace sun{ namespace star{
+namespace com::sun::star{
     namespace lang{
         struct Locale;
     }
     namespace table{
         struct BorderLine2;
-}}}}
+    }
+}
 
 namespace writerfilter {
 namespace dmapper{
@@ -52,6 +53,7 @@ namespace ConversionHelper{
     sal_Int16 convertTableJustification( sal_Int32 nIntValue );
     css::text::RubyAdjust convertRubyAlign( sal_Int32 nIntValue );
     sal_Int16 ConvertNumberingType(sal_Int32 nFmt);
+    sal_Int16 ConvertCustomNumberFormat(const OUString& rFormat);
 
     css::util::DateTime ConvertDateStringToDateTime(const OUString& rDateTime);
 } // namespace ConversionHelper

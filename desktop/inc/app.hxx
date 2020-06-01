@@ -20,7 +20,7 @@
 #ifndef INCLUDED_DESKTOP_INC_APP_HXX
 #define INCLUDED_DESKTOP_INC_APP_HXX
 
-#include <o3tl/optional.hxx>
+#include <optional>
 #include <sal/log.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/timer.hxx>
@@ -32,9 +32,7 @@
 #include <memory>
 #include <thread>
 
-namespace com { namespace sun { namespace star { namespace uno {
-    class XComponentContext;
-} } } }
+namespace com::sun::star::uno { class XComponentContext; }
 
 namespace desktop
 {
@@ -75,6 +73,7 @@ class Desktop final : public Application
         virtual void            InitFinished() override;
         virtual void            DeInit() override;
         virtual bool            QueryExit() override;
+        virtual void            Shutdown() override;
         virtual void            Exception(ExceptionCategory nCategory) override;
         virtual void            OverrideSystemSettings( AllSettings& rSettings ) override;
         virtual void            AppEvent( const ApplicationEvent& rAppEvent ) override;
@@ -173,7 +172,7 @@ class Desktop final : public Application
 };
 
 OUString GetURL_Impl(
-    const OUString& rName, o3tl::optional< OUString > const & cwdUrl );
+    const OUString& rName, std::optional< OUString > const & cwdUrl );
 
 OUString ReplaceStringHookProc(const OUString& rStr);
 

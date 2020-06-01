@@ -115,12 +115,12 @@ enum class EventMultiplexerEventId
     EditModeMaster,
 };
 
-namespace sd { namespace tools {
+namespace sd::tools {
 
 class EventMultiplexerEvent
 {
 public:
-    EventMultiplexerEventId const meEventId;
+    EventMultiplexerEventId meEventId;
     const void* mpUserData;
 
     EventMultiplexerEvent (
@@ -172,7 +172,7 @@ private:
     rtl::Reference<Implementation> mpImpl;
 };
 
-} } // end of namespace ::sd::tools
+} // end of namespace ::sd::tools
 
 #endif
 

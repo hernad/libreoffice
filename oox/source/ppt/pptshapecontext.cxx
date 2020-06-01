@@ -19,22 +19,13 @@
 
 #include <sal/log.hxx>
 
-#include <com/sun/star/xml/sax/FastToken.hpp>
-#include <com/sun/star/drawing/LineStyle.hpp>
-#include <com/sun/star/beans/XMultiPropertySet.hpp>
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#include <com/sun/star/container/XNamed.hpp>
-
 #include <oox/helper/attributelist.hxx>
 #include <oox/ppt/pptshape.hxx>
 #include <oox/ppt/pptshapecontext.hxx>
 #include <oox/ppt/pptshapepropertiescontext.hxx>
 #include <oox/ppt/slidepersist.hxx>
 #include <drawingml/shapestylecontext.hxx>
-#include <drawingml/misccontexts.hxx>
-#include <drawingml/lineproperties.hxx>
 #include <oox/drawingml/drawingmltypes.hxx>
-#include <drawingml/customshapegeometry.hxx>
 #include <drawingml/textbodycontext.hxx>
 #include <drawingml/transform2dcontext.hxx>
 #include <oox/token/namespaces.hxx>
@@ -44,10 +35,7 @@
 using namespace oox::core;
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
-using namespace ::com::sun::star::drawing;
-using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::text;
-using namespace ::com::sun::star::xml::sax;
 
 namespace oox::ppt {
 
@@ -138,13 +126,13 @@ ContextHandlerRef PPTShapeContext::onCreateContext( sal_Int32 aElementToken, con
                               else if ( eShapeLocation == Slide )   // normal slide shapes have to search within the corresponding master tree for referenced objects
                               {
                                   SlidePersistPtr pMasterPersist( mpSlidePersistPtr->getMasterPersist() );
-                                  if ( pMasterPersist.get() )
+                                  if ( pMasterPersist )
                                   {
                                       pPlaceholder = PPTShape::findPlaceholder( nFirstPlaceholder, nSecondPlaceholder,
                                               pPPTShapePtr->getSubTypeIndex(), pMasterPersist->getShapes()->getChildren() );
                                   }
                               }
-                              if ( pPlaceholder.get() )
+                              if ( pPlaceholder )
                               {
                                   SAL_INFO("oox.ppt","shape " << mpShapePtr->getId() <<
                                           " will get shape reference " << pPlaceholder->getId() << " applied");

@@ -13,7 +13,7 @@
  manual changes will be rewritten by the next run of update_pch.sh (which presumably
  also fixes all possible problems, so it's usually better to use it).
 
- Generated on 2020-02-03 10:51:07 using:
+ Generated on 2020-05-21 16:43:16 using:
  ./bin/update_pch sfx2 sfx --cutoff=3 --exclude:system --exclude:module --exclude:local
 
  If after updating build fails, use the following command to locate conflicting headers:
@@ -25,13 +25,12 @@
 #include <assert.h>
 #include <cassert>
 #include <cstddef>
-#include <cstring>
-#include <deque>
 #include <functional>
 #include <initializer_list>
 #include <map>
 #include <memory>
 #include <new>
+#include <optional>
 #include <ostream>
 #include <set>
 #include <stddef.h>
@@ -52,6 +51,7 @@
 #include <osl/endian.h>
 #include <osl/file.hxx>
 #include <osl/interlck.h>
+#include <osl/module.h>
 #include <osl/module.hxx>
 #include <osl/mutex.hxx>
 #include <osl/process.h>
@@ -67,7 +67,6 @@
 #include <rtl/malformeduriexception.hxx>
 #include <rtl/math.hxx>
 #include <rtl/ref.hxx>
-#include <rtl/strbuf.h>
 #include <rtl/strbuf.hxx>
 #include <rtl/string.h>
 #include <rtl/string.hxx>
@@ -78,6 +77,7 @@
 #include <rtl/textenc.h>
 #include <rtl/uri.hxx>
 #include <rtl/ustrbuf.hxx>
+#include <rtl/ustring.h>
 #include <rtl/ustring.hxx>
 #include <rtl/uuid.h>
 #include <sal/config.h>
@@ -86,6 +86,7 @@
 #include <sal/saldllapi.h>
 #include <sal/types.h>
 #include <vcl/EnumContext.hxx>
+#include <vcl/InterimItemWindow.hxx>
 #include <vcl/Scanline.hxx>
 #include <vcl/alpha.hxx>
 #include <vcl/bitmapex.hxx>
@@ -95,7 +96,6 @@
 #include <vcl/commandevent.hxx>
 #include <vcl/commandinfoprovider.hxx>
 #include <vcl/ctrl.hxx>
-#include <vcl/customweld.hxx>
 #include <vcl/dibtools.hxx>
 #include <vcl/dllapi.h>
 #include <vcl/errcode.hxx>
@@ -121,7 +121,6 @@
 #include <vcl/taskpanelist.hxx>
 #include <vcl/timer.hxx>
 #include <vcl/toolbox.hxx>
-#include <vcl/treelistbox.hxx>
 #include <vcl/vclenum.hxx>
 #include <vcl/vclptr.hxx>
 #include <vcl/virdev.hxx>
@@ -133,6 +132,7 @@
 #include <basegfx/matrix/b2dhommatrix.hxx>
 #include <basegfx/matrix/b2dhommatrixtools.hxx>
 #include <basegfx/polygon/b2dpolygon.hxx>
+#include <basegfx/polygon/b2dpolypolygon.hxx>
 #include <basic/basicdllapi.h>
 #include <basic/basicmanagerrepository.hxx>
 #include <basic/basmgr.hxx>
@@ -141,6 +141,7 @@
 #include <basic/sbstar.hxx>
 #include <basic/sbxdef.hxx>
 #include <com/sun/star/awt/XWindow.hpp>
+#include <com/sun/star/awt/XWindowPeer.hpp>
 #include <com/sun/star/beans/NamedValue.hpp>
 #include <com/sun/star/beans/PropertyAttribute.hpp>
 #include <com/sun/star/beans/PropertyExistException.hpp>
@@ -154,6 +155,8 @@
 #include <com/sun/star/container/XContainerQuery.hpp>
 #include <com/sun/star/container/XIndexAccess.hpp>
 #include <com/sun/star/container/XNameAccess.hpp>
+#include <com/sun/star/datatransfer/clipboard/XClipboard.hpp>
+#include <com/sun/star/datatransfer/dnd/XDropTargetListener.hpp>
 #include <com/sun/star/document/DocumentProperties.hpp>
 #include <com/sun/star/document/MacroExecMode.hpp>
 #include <com/sun/star/document/UpdateDocMode.hpp>
@@ -166,6 +169,7 @@
 #include <com/sun/star/document/XScriptInvocationContext.hpp>
 #include <com/sun/star/document/XTypeDetection.hpp>
 #include <com/sun/star/document/XViewDataSupplier.hpp>
+#include <com/sun/star/embed/Aspects.hpp>
 #include <com/sun/star/embed/ElementModes.hpp>
 #include <com/sun/star/embed/EmbedStates.hpp>
 #include <com/sun/star/embed/XEmbeddedObject.hpp>
@@ -190,6 +194,7 @@
 #include <com/sun/star/frame/XStatusListener.hpp>
 #include <com/sun/star/frame/XStorable.hpp>
 #include <com/sun/star/frame/XSynchronousFrameLoader.hpp>
+#include <com/sun/star/frame/XTerminateListener.hpp>
 #include <com/sun/star/frame/XTitle.hpp>
 #include <com/sun/star/frame/XToolbarController.hpp>
 #include <com/sun/star/frame/status/ItemStatus.hpp>
@@ -217,6 +222,7 @@
 #include <com/sun/star/sdbc/XResultSet.hpp>
 #include <com/sun/star/sdbc/XRow.hpp>
 #include <com/sun/star/security/DocumentDigitalSignatures.hpp>
+#include <com/sun/star/security/DocumentSignatureInformation.hpp>
 #include <com/sun/star/style/XStyleFamiliesSupplier.hpp>
 #include <com/sun/star/system/SystemShellExecute.hpp>
 #include <com/sun/star/system/SystemShellExecuteFlags.hpp>
@@ -233,12 +239,14 @@
 #include <com/sun/star/ucb/XContent.hpp>
 #include <com/sun/star/ucb/XContentAccess.hpp>
 #include <com/sun/star/ui/ContextChangeEventMultiplexer.hpp>
+#include <com/sun/star/ui/XSidebarPanel.hpp>
 #include <com/sun/star/ui/XUIElement.hpp>
 #include <com/sun/star/ui/dialogs/CommonFilePickerElementIds.hpp>
 #include <com/sun/star/ui/dialogs/ControlActions.hpp>
 #include <com/sun/star/ui/dialogs/ExtendedFilePickerElementIds.hpp>
 #include <com/sun/star/ui/dialogs/TemplateDescription.hpp>
 #include <com/sun/star/ui/dialogs/XExecutableDialog.hpp>
+#include <com/sun/star/ui/dialogs/XFilePicker3.hpp>
 #include <com/sun/star/ui/dialogs/XFilePickerControlAccess.hpp>
 #include <com/sun/star/uno/Any.h>
 #include <com/sun/star/uno/Any.hxx>
@@ -292,9 +300,12 @@
 #include <cppuhelper/supportsservice.hxx>
 #include <cppuhelper/weak.hxx>
 #include <cppuhelper/weakref.hxx>
+#include <drawinglayer/attribute/fillgraphicattribute.hxx>
 #include <drawinglayer/drawinglayerdllapi.h>
+#include <drawinglayer/primitive2d/PolyPolygonColorPrimitive2D.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonSelectionPrimitive2D.hxx>
+#include <drawinglayer/primitive2d/baseprimitive2d.hxx>
 #include <drawinglayer/primitive2d/polygonprimitive2d.hxx>
-#include <drawinglayer/primitive2d/polypolygonprimitive2d.hxx>
 #include <drawinglayer/primitive2d/textlayoutdevice.hxx>
 #include <drawinglayer/processor2d/baseprocessor2d.hxx>
 #include <framework/fwedllapi.h>
@@ -302,7 +313,6 @@
 #include <i18nlangtag/lang.h>
 #include <i18nlangtag/languagetag.hxx>
 #include <o3tl/cow_wrapper.hxx>
-#include <o3tl/optional.hxx>
 #include <o3tl/safeint.hxx>
 #include <o3tl/typed_flags_set.hxx>
 #include <officecfg/Office/Common.hxx>
@@ -439,36 +449,24 @@
 #include <sfx2/sfxresid.hxx>
 #include <sfx2/sfxuno.hxx>
 #include <sfx2/sidebar/Context.hxx>
-#include <sfx2/sidebar/ControllerFactory.hxx>
 #include <sfx2/sidebar/Deck.hxx>
-#include <sfx2/sidebar/DeckDescriptor.hxx>
-#include <sfx2/sidebar/DeckTitleBar.hxx>
-#include <sfx2/sidebar/DrawHelper.hxx>
-#include <sfx2/sidebar/Paint.hxx>
 #include <sfx2/sidebar/Panel.hxx>
-#include <sfx2/sidebar/PanelDescriptor.hxx>
-#include <sfx2/sidebar/PanelTitleBar.hxx>
+#include <sfx2/sidebar/PanelLayout.hxx>
 #include <sfx2/sidebar/ResourceManager.hxx>
 #include <sfx2/sidebar/SidebarChildWindow.hxx>
 #include <sfx2/sidebar/SidebarController.hxx>
 #include <sfx2/sidebar/SidebarDockingWindow.hxx>
 #include <sfx2/sidebar/TabBar.hxx>
 #include <sfx2/sidebar/Theme.hxx>
-#include <sfx2/sidebar/TitleBar.hxx>
-#include <sfx2/sidebar/Tools.hxx>
 #include <sfx2/signaturestate.hxx>
 #include <sfx2/stbitem.hxx>
 #include <sfx2/styfitem.hxx>
 #include <sfx2/tabdlg.hxx>
 #include <sfx2/tbxctrl.hxx>
-#include <sfx2/templatecontaineritem.hxx>
 #include <sfx2/templatedlg.hxx>
 #include <sfx2/templatelocalview.hxx>
-#include <sfx2/templateviewitem.hxx>
 #include <sfx2/thumbnailview.hxx>
-#include <sfx2/thumbnailviewitem.hxx>
 #include <sfx2/tplpitem.hxx>
-#include <sfx2/unoctitm.hxx>
 #include <sfx2/viewfac.hxx>
 #include <sfx2/viewfrm.hxx>
 #include <sfx2/viewsh.hxx>

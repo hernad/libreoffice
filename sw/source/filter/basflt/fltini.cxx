@@ -269,21 +269,6 @@ void StgReader::SetFltName( const OUString& rFltNm )
         m_aFltName = rFltNm;
 }
 
-SwRelNumRuleSpaces::SwRelNumRuleSpaces( SwDoc const & rDoc, bool bNDoc )
-{
-    pNumRuleTable.reset(new SwNumRuleTable);
-    pNumRuleTable->reserve(8);
-    if( !bNDoc )
-        pNumRuleTable->insert( pNumRuleTable->begin(),
-            rDoc.GetNumRuleTable().begin(), rDoc.GetNumRuleTable().end() );
-}
-
-SwRelNumRuleSpaces::~SwRelNumRuleSpaces()
-{
-    if( pNumRuleTable )
-        pNumRuleTable->clear();
-}
-
 void CalculateFlySize(SfxItemSet& rFlySet, const SwNodeIndex& rAnchor,
         SwTwips nPageWidth)
 {
@@ -291,7 +276,7 @@ void CalculateFlySize(SfxItemSet& rFlySet, const SwNodeIndex& rAnchor,
     if( SfxItemState::SET != rFlySet.GetItemState( RES_FRM_SIZE, true, &pItem ) ||
             MINFLY > static_cast<const SwFormatFrameSize*>(pItem)->GetWidth() )
     {
-        std::shared_ptr<SwFormatFrameSize> aSz(rFlySet.Get(RES_FRM_SIZE).Clone());
+        std::unique_ptr<SwFormatFrameSize> aSz(rFlySet.Get(RES_FRM_SIZE).Clone());
         if (pItem)
             aSz.reset(static_cast<SwFormatFrameSize*>(pItem->Clone()));
 
@@ -398,7 +383,7 @@ namespace
 
 struct CharSetNameMap
 {
-    rtl_TextEncoding const eCode;
+    rtl_TextEncoding eCode;
     const char* pName;
 };
 

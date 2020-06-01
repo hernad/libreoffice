@@ -32,6 +32,7 @@
 #include <com/sun/star/frame/XController.hpp>
 #include <cppuhelper/compbase.hxx>
 #include <svl/lstner.hxx>
+#include <rtl/ustrbuf.hxx>
 
 #include <sfx2/request.hxx>
 
@@ -97,10 +98,10 @@ public:
     virtual void SAL_CALL notifyConfigurationChange (const ConfigurationChangeEvent& rEvent) override;
 
 private:
-    OUString const msEventType;
+    OUString msEventType;
     Reference<XConfigurationController> mxConfigurationController;
-    ::sd::framework::FrameworkHelper::ConfigurationChangeEventFilter const maFilter;
-    ::sd::framework::FrameworkHelper::Callback const maCallback;
+    ::sd::framework::FrameworkHelper::ConfigurationChangeEventFilter maFilter;
+    ::sd::framework::FrameworkHelper::Callback maCallback;
 };
 
 //----- LifetimeController ----------------------------------------------------

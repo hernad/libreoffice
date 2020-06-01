@@ -61,19 +61,23 @@
 #ifndef INCLUDED_LOTUSWORDPRO_INC_LWPBOOKMARKMGR_HXX
 #define INCLUDED_LOTUSWORDPRO_INC_LWPBOOKMARKMGR_HXX
 
-#include "lwpfilehdr.hxx"
+#include <config_lgpl.h>
+
 #include <map>
+
+#include <rtl/ref.hxx>
 
 #include "xfilter/xfbookmark.hxx"
 
 class LwpBookmarkMgr
 {
 public:
-    void AddXFBookmarkEnd(const OUString& sName,XFBookmarkEnd* pMark);
-    void AddXFBookmarkStart(const OUString& sName,XFBookmarkStart* pMark);
+    void AddXFBookmarkEnd(const OUString& sName, XFBookmarkEnd* pMark);
+    void AddXFBookmarkStart(const OUString& sName, XFBookmarkStart* pMark);
     bool FindBookmark(const OUString& sName);
     ~LwpBookmarkMgr();
     LwpBookmarkMgr();
+
 private:
     std::map<OUString, rtl::Reference<XFBookmarkStart>> m_MapStart;
     std::map<OUString, rtl::Reference<XFBookmarkEnd>> m_MapEnd;

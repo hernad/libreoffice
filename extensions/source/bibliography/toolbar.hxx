@@ -23,11 +23,8 @@
 #include <com/sun/star/frame/XController.hpp>
 #include <com/sun/star/frame/XStatusListener.hpp>
 
-
+#include <vcl/InterimItemWindow.hxx>
 #include <vcl/toolbox.hxx>
-#include <vcl/lstbox.hxx>
-#include <vcl/edit.hxx>
-#include <vcl/fixed.hxx>
 #include <vcl/timer.hxx>
 #include <cppuhelper/implbase.hxx>
 #include <vector>
@@ -98,6 +95,48 @@ public:
 
 typedef std::vector< css::uno::Reference< css::frame::XStatusListener> > BibToolBarListenerArr;
 
+class ComboBoxControl final : public InterimItemWindow
+{
+public:
+    ComboBoxControl(vcl::Window* pParent);
+    virtual ~ComboBoxControl() override;
+    virtual void dispose() override;
+
+    weld::ComboBox* get_widget() { return m_xLBSource.get(); }
+
+    void set_sensitive(bool bSensitive)
+    {
+        m_xFtSource->set_sensitive(bSensitive);
+        m_xLBSource->set_sensitive(bSensitive);
+        Enable(bSensitive);
+    }
+
+private:
+    std::unique_ptr<weld::Label> m_xFtSource;
+    std::unique_ptr<weld::ComboBox> m_xLBSource;
+};
+
+class EditControl final : public InterimItemWindow
+{
+public:
+    EditControl(vcl::Window* pParent);
+    virtual ~EditControl() override;
+    virtual void dispose() override;
+
+    weld::Entry* get_widget() { return m_xEdQuery.get(); }
+
+    void set_sensitive(bool bSensitive)
+    {
+        m_xFtQuery->set_sensitive(bSensitive);
+        m_xEdQuery->set_sensitive(bSensitive);
+        Enable(bSensitive);
+    }
+
+private:
+    std::unique_ptr<weld::Label> m_xFtQuery;
+    std::unique_ptr<weld::Entry> m_xEdQuery;
+};
+
 class BibToolBar:   public ToolBox
 {
     private:
@@ -105,10 +144,10 @@ class BibToolBar:   public ToolBox
         BibToolBarListenerArr   aListenerArr;
         css::uno::Reference< css::frame::XController >  xController;
         Idle                    aIdle;
-        VclPtr<FixedText>       aFtSource;
-        VclPtr<ListBox>         aLBSource;
-        VclPtr<FixedText>       aFtQuery;
-        VclPtr<Edit>            aEdQuery;
+        VclPtr<ComboBoxControl> xSource;
+        weld::ComboBox*         pLbSource;
+        VclPtr<EditControl>     xQuery;
+        weld::Entry*            pEdQuery;
         ScopedVclPtr<PopupMenu> pPopupMenu;
         sal_uInt16              nMenuId;
         sal_uInt16              nSelMenuItem;
@@ -117,10 +156,8 @@ class BibToolBar:   public ToolBox
         sal_Int16               nSymbolsSize;
         sal_Int16               nOutStyle;
 
-        sal_uInt16              nTBC_FT_SOURCE;
-        sal_uInt16              nTBC_LB_SOURCE;
-        sal_uInt16              nTBC_FT_QUERY;
-        sal_uInt16              nTBC_ED_QUERY;
+        sal_uInt16              nTBC_SOURCE;
+        sal_uInt16              nTBC_QUERY;
         sal_uInt16              nTBC_BT_AUTOFILTER;
         sal_uInt16              nTBC_BT_COL_ASSIGN;
         sal_uInt16              nTBC_BT_CHANGESOURCE;
@@ -128,7 +165,7 @@ class BibToolBar:   public ToolBox
         sal_uInt16              nTBC_BT_REMOVEFILTER;
 
         BibDataManager*         pDatMan;
-        DECL_LINK( SelHdl, ListBox&, void );
+        DECL_LINK( SelHdl, weld::ComboBox&, void );
         DECL_LINK( SendSelHdl, Timer*, void );
         DECL_LINK( MenuHdl, ToolBox*, void );
         DECL_LINK( OptionsChanged_Impl, LinkParamNone*, void );

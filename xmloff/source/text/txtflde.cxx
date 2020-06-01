@@ -35,7 +35,7 @@
 
 #include "XMLTextCharStyleNamesElementExport.hxx"
 #include <sax/tools/converter.hxx>
-
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/util/DateTime.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/text/UserDataPart.hpp>
@@ -792,7 +792,7 @@ void XMLTextFieldExport::ExportFieldAutoStyle(
     if (FIELD_ID_COMBINED_CHARACTERS != nToken)
     {
         GetExport().GetTextParagraphExport()->Add(
-            XML_STYLE_FAMILY_TEXT_TEXT, xRangePropSet);
+            XmlStyleFamily::TEXT_TEXT, xRangePropSet);
     }
 
     // process special styles for each field (e.g. data styles)
@@ -898,7 +898,7 @@ void XMLTextFieldExport::ExportFieldAutoStyle(
                    "need proper PropertyState for combined characters");
         const XMLPropertyState *aStates[] = { pCombinedCharactersPropertyState.get(), nullptr };
         GetExport().GetTextParagraphExport()->Add(
-            XML_STYLE_FAMILY_TEXT_TEXT, xRangePropSet,
+            XmlStyleFamily::TEXT_TEXT, xRangePropSet,
             aStates);
         break;
     }
@@ -1125,14 +1125,12 @@ void XMLTextFieldExport::ExportFieldHelper(
                       GetStringProperty(gsPropertyContent, rPropSet));
         bool bCmd = GetBoolProperty(gsPropertyIsShowFormula, rPropSet);
         ProcessDisplay(true, bCmd);
-        // #i81766# for older versions export of the value-type
-        bool bExportValueType = !bCmd && ( GetExport().getExportFlags() & SvXMLExportFlags::SAVEBACKWARDCOMPATIBLE );
         // show style, unless name will be shown
         ProcessValueAndType(IsStringField(nToken, rPropSet),
                             GetIntProperty(gsPropertyNumberFormat, rPropSet),
                             "", "", 0.0, // values not used
                             false,
-                            bExportValueType,
+                            false,
                             !bCmd,
                             ! GetOptionalBoolProperty(
                                  gsPropertyIsFixedLanguage,
@@ -1360,10 +1358,7 @@ void XMLTextFieldExport::ExportFieldHelper(
                       sPresentation);
         sal_Int32 nDummy = 0; // MapPageNumberName need int
         ProcessString(XML_SELECT_PAGE, MapPageNumberName(rPropSet, nDummy));
-        if( !( GetExport().getExportFlags() & SvXMLExportFlags::SAVEBACKWARDCOMPATIBLE ) )
-            ExportElement(XML_PAGE_CONTINUATION, sPresentation);
-        else
-            ExportElement(XML_PAGE_CONTINUATION_STRING, sPresentation);
+        ExportElement(XML_PAGE_CONTINUATION, sPresentation);
         break;
     }
 
@@ -1619,7 +1614,7 @@ void XMLTextFieldExport::ExportFieldHelper(
                           GetInt16Property(gsPropertySequenceNumber, rPropSet),
                           GetStringProperty(gsPropertySourceName, rPropSet) ) );
         if (xPropSetInfo->hasPropertyByName(gsPropertyReferenceFieldLanguage) &&
-            SvtSaveOptions().GetODFDefaultVersion() > SvtSaveOptions::ODFVER_012)
+            GetExport().getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
         {
             // export text:reference-language attribute, if not empty
             ProcessString(XML_REFERENCE_LANGUAGE,
@@ -1641,7 +1636,7 @@ void XMLTextFieldExport::ExportFieldHelper(
         ProcessString(XML_REF_NAME,
                       GetStringProperty(gsPropertySourceName, rPropSet));
         if (xPropSetInfo->hasPropertyByName(gsPropertyReferenceFieldLanguage) &&
-            SvtSaveOptions().GetODFDefaultVersion() > SvtSaveOptions::ODFVER_012)
+            GetExport().getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
         {
             // export text:reference-language attribute, if not empty
             ProcessString(XML_REFERENCE_LANGUAGE,
@@ -1666,7 +1661,7 @@ void XMLTextFieldExport::ExportFieldHelper(
                       MakeFootnoteRefName(GetInt16Property(
                           gsPropertySequenceNumber, rPropSet)));
         if (xPropSetInfo->hasPropertyByName(gsPropertyReferenceFieldLanguage) &&
-            SvtSaveOptions().GetODFDefaultVersion() > SvtSaveOptions::ODFVER_012)
+            GetExport().getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
         {
             // export text:reference-language attribute, if not empty
             ProcessString(XML_REFERENCE_LANGUAGE,
@@ -1694,7 +1689,7 @@ void XMLTextFieldExport::ExportFieldHelper(
 
     case FIELD_ID_PAGENAME:
     {
-        if (SvtSaveOptions().GetODFDefaultVersion() > SvtSaveOptions::ODFVER_012)
+        if (GetExport().getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
         {
             SvXMLElementExport aElem( GetExport(), XML_NAMESPACE_LO_EXT, XML_PAGE_NAME, false, false );
             GetExport().Characters( sPresentation );
@@ -1758,7 +1753,7 @@ void XMLTextFieldExport::ExportFieldHelper(
         {
             GetExport().AddAttribute(XML_NAMESPACE_OFFICE, XML_NAME, aName);
             SvtSaveOptions::ODFSaneDefaultVersion eVersion = rExport.getSaneDefaultVersion();
-            if(eVersion > SvtSaveOptions::ODFSVER_012)
+            if (eVersion & SvtSaveOptions::ODFSVER_EXTENDED)
             {
                 bool b = GetBoolProperty("Resolved", rPropSet);
                 OUString aResolvedText;
@@ -1794,16 +1789,22 @@ void XMLTextFieldExport::ExportFieldHelper(
             GetExport().Characters(aBuffer.makeStringAndClear());
         }
 
-        if (SvtSaveOptions().GetODFDefaultVersion() > SvtSaveOptions::ODFVER_012)
+        if (GetExport().getSaneDefaultVersion() > SvtSaveOptions::ODFSVER_012)
         {
             // initials
             OUString aInitials( GetStringProperty(gsPropertyInitials, rPropSet) );
             if( !aInitials.isEmpty() )
             {
-                // TODO: see OFFICE-3776 export meta:creator-initials for ODF 1.3
-                SvXMLElementExport aCreatorElem( GetExport(), XML_NAMESPACE_LO_EXT,
-                        XML_SENDER_INITIALS, true,
-                        false );
+                // ODF 1.3 OFFICE-3776 export meta:creator-initials for ODF 1.3
+                SvXMLElementExport aCreatorElem( GetExport(),
+                        (SvtSaveOptions::ODFSVER_013 <= GetExport().getSaneDefaultVersion())
+                            ? XML_NAMESPACE_META
+                            : XML_NAMESPACE_LO_EXT,
+
+                        (SvtSaveOptions::ODFSVER_013 <= GetExport().getSaneDefaultVersion())
+                            ? XML_CREATOR_INITIALS
+                            : XML_SENDER_INITIALS,
+                        true, false );
                 GetExport().Characters(aInitials);
             }
         }
@@ -2312,9 +2313,9 @@ void XMLTextFieldExport::ExportMetaField(
 {
     bool doExport(!i_bAutoStyles); // do not export element if autostyles
     // check version >= 1.2
-    switch (GetExport().getDefaultVersion()) {
-        case SvtSaveOptions::ODFVER_011: // fall through
-        case SvtSaveOptions::ODFVER_010: doExport = false; break;
+    switch (GetExport().getSaneDefaultVersion()) {
+        case SvtSaveOptions::ODFSVER_011: // fall through
+        case SvtSaveOptions::ODFSVER_010: doExport = false; break;
         default: break;
     }
 
@@ -2355,7 +2356,7 @@ void XMLTextFieldExport::ProcessValueAndType(
     double fValue,          /// float content; possibly invalid
     bool bExportValue,  /// export value attribute?
     bool bExportValueType,  /// export value-type attribute?
-    bool bExportStyle,  /// export style-sttribute?
+    bool bExportStyle,  /// export style-attribute?
     bool bForceSystemLanguage, /// export language attributes?
     bool bTimeStyle)    // exporting a time style?
 {

@@ -24,7 +24,7 @@
 #include <vcl/timer.hxx>
 #include <memory>
 
-namespace sd { namespace slidesorter { namespace cache {
+namespace sd::slidesorter::cache {
 
 class BitmapCache;
 
@@ -63,7 +63,7 @@ public:
 
 protected:
     BitmapCache& mrCache;
-    sal_Int32 const mnMaximalCacheSize;
+    sal_Int32 mnMaximalCacheSize;
 
     CacheCompactor(
         BitmapCache& rCache,
@@ -83,7 +83,7 @@ private:
     DECL_LINK(CompactionCallback, Timer *, void);
 };
 
-} } } // end of namespace ::sd::slidesorter::cache
+} // end of namespace ::sd::slidesorter::cache
 
 #endif
 

@@ -21,14 +21,10 @@
 #define INCLUDED_DESKTOP_SOURCE_DEPLOYMENT_REGISTRY_HELP_DP_HELPBACKENDDB_HXX
 
 #include <rtl/ustring.hxx>
-#include <o3tl/optional.hxx>
+#include <optional>
 #include <dp_backenddb.hxx>
 
-namespace com { namespace sun { namespace star {
-        namespace uno {
-        class XComponentContext;
-        }
-}}}
+namespace com::sun::star::uno { class XComponentContext; }
 
 namespace dp_registry {
 namespace backend {
@@ -64,7 +60,7 @@ public:
 
     void addEntry(OUString const & url, Data const & data);
 
-    ::o3tl::optional<Data> getEntry(OUString const & url);
+    ::std::optional<Data> getEntry(OUString const & url);
     //must also return the data urls for entries with @active="false". That is,
     //those are currently revoked.
     std::vector< OUString> getAllDataUrls();

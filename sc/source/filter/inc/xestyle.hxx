@@ -254,9 +254,9 @@ private:
 /** Stores a core number format index with corresponding Excel format index. */
 struct XclExpNumFmt
 {
-    sal_uInt32 const   mnScNumFmt;     /// Core index of the number format.
-    sal_uInt16 const   mnXclNumFmt;    /// Resulting Excel format index.
-    OUString const     maNumFmtString; /// format string
+    sal_uInt32          mnScNumFmt;     /// Core index of the number format.
+    sal_uInt16          mnXclNumFmt;    /// Resulting Excel format index.
+    OUString            maNumFmtString; /// format string
 
     explicit     XclExpNumFmt( sal_uInt32 nScNumFmt, sal_uInt16 nXclNumFmt, const OUString& rFrmt ) :
                             mnScNumFmt( nScNumFmt ), mnXclNumFmt( nXclNumFmt ), maNumFmtString( rFrmt ) {}
@@ -299,7 +299,7 @@ private:
     SvNumberFormatterPtr mxFormatter;   /// Special number formatter for conversion.
     XclExpNumFmtVec     maFormatMap;    /// Maps core formats to Excel indexes.
     std::unique_ptr<NfKeywordTable>   mpKeywordTable; /// Replacement table.
-    sal_uInt32 const    mnStdFmt;       /// Key for standard number format.
+    sal_uInt32          mnStdFmt;       /// Key for standard number format.
     sal_uInt16          mnXclOffset;    /// Offset to first user defined format.
 };
 
@@ -549,10 +549,10 @@ private:
     virtual void        WriteBody( XclExpStream& rStrm ) override;
 
 private:
-    OUString const      maName;         /// Name of the cell style.
+    OUString            maName;         /// Name of the cell style.
     XclExpXFId          maXFId;         /// XF identifier for style formatting.
     sal_uInt8           mnStyleId;      /// Built-in style identifier.
-    sal_uInt8 const     mnLevel;        /// Outline level for RowLevel and ColLevel styles.
+    sal_uInt8           mnLevel;        /// Outline level for RowLevel and ColLevel styles.
 };
 
 /** Stores all XF records (cell formats and cell styles) in the document.
@@ -629,7 +629,6 @@ public:
 private:
     typedef XclExpRecordList< XclExpXF >    XclExpXFList;
     typedef XclExpXFList::RecordRefType     XclExpXFRef;
-    typedef XclExpRecordList< XclExpStyle > XclExpStyleList;
 
 private:
     /** Returns the XF ID of the cell XF containing the passed format. */
@@ -709,7 +708,8 @@ private:
     XclExpXFList        maXFList;           /// List of all XF records.
     std::map<FindKey, std::vector<sal_uInt32>>
                         maXFFindMap;        /// map of itemset to vector of positions, to speed up find
-    XclExpStyleList     maStyleList;        /// List of all STYLE records.
+    XclExpRecordList< XclExpStyle >
+                        maStyleList;        /// List of all STYLE records.
     XclExpBuiltInMap    maBuiltInMap;       /// Contained elements describe built-in XFs.
     ScfUInt16Vec        maXFIndexVec;       /// Maps XF IDs to XF indexes.
     ScfUInt16Vec        maStyleIndexes;     /// Maps XF IDs to OOXML Style indexes

@@ -28,10 +28,10 @@
 #include <tools/link.hxx>
 #include <memory>
 
-namespace com { namespace sun { namespace star { namespace uno
+namespace com::sun::star::uno
 {
     class Any;
-}}}}
+}
 
 namespace com::sun::star::io { class XInputStream; }
 
@@ -49,19 +49,25 @@ struct ImplBaseLinkData;
 class LinkManager;
 class FileDialogHelper;
 
-#ifndef OBJECT_DDE_EXTERN
-#define OBJECT_INTERN       0x00
-//#define   OBJECT_SO_EXTERN    0x01
-#define OBJECT_DDE_EXTERN   0x02
-#endif
+enum class SvBaseLinkObjectType {
+    Internal      = 0x00,
+    DdeExternal   = 0x02,
+    ClientSo      = 0x80, // a Link
+    ClientDde     = 0x81,
+    ClientFile    = 0x90,
+    ClientGraphic = 0x91,
+    ClientOle     = 0x92 // embedded link
+};
 
-#define OBJECT_CLIENT_SO              0x80 // a Link
-#define OBJECT_CLIENT_DDE           0x81
-//#define   OBJECT_CLIENT_OLE         0x82 // an Ole-Link
-//#define   OBJECT_CLIENT_OLE_CACHE   0x83 // an Ole-Link with SvEmbeddedObject
-#define OBJECT_CLIENT_FILE          0x90
-#define OBJECT_CLIENT_GRF           0x91
-#define OBJECT_CLIENT_OLE           0x92 // embedded link
+constexpr bool isClientType(SvBaseLinkObjectType t)
+{
+    return static_cast<int>(t) & static_cast<int>(SvBaseLinkObjectType::ClientSo);
+}
+constexpr bool isClientFileType(SvBaseLinkObjectType t)
+{
+    auto check = static_cast<int>(SvBaseLinkObjectType::ClientFile);
+    return (static_cast<int>(t) & check) == check;
+}
 
 struct BaseLink_Impl;
 
@@ -74,7 +80,7 @@ private:
     SvLinkSourceRef         xObj;
     OUString                aLinkName;
     std::unique_ptr<BaseLink_Impl>  pImpl;
-    sal_uInt16              nObjType;
+    SvBaseLinkObjectType    mnObjType;
     bool                    bVisible : 1;
     bool                    bSynchron : 1;
     bool                    bWasLastEditOK : 1;
@@ -84,7 +90,7 @@ private:
     bool                    ExecuteEdit( const OUString& _rNewName );
 
 protected:
-    void            SetObjType( sal_uInt16 );
+    void            SetObjType( SvBaseLinkObjectType );
 
     // Set LinkSourceName without action
     void            SetName( const OUString & rLn );
@@ -113,11 +119,11 @@ public:
     virtual void    Closed();
 
 #if defined(_WIN32)
-                    SvBaseLink( const OUString& rNm, sal_uInt16 nObjectType,
+                    SvBaseLink( const OUString& rNm, SvBaseLinkObjectType nObjectType,
                                  SvLinkSource* );
 #endif
 
-    sal_uInt16          GetObjType() const { return nObjType; }
+    SvBaseLinkObjectType GetObjType() const { return mnObjType; }
 
     void            SetObj( SvLinkSource * pObj );
     SvLinkSource*   GetObj() const  { return xObj.get(); }

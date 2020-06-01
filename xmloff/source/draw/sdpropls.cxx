@@ -67,7 +67,7 @@ using ::com::sun::star::uno::Any;
 using namespace ::com::sun::star;
 using namespace ::xmloff::token;
 
-#define MAP_(name,prefix,token,type,context)  { name, sizeof(name)-1, prefix, token, type, context, SvtSaveOptions::ODFVER_010, false }
+#define MAP_(name,prefix,token,type,context)  { name, sizeof(name)-1, prefix, token, type, context, SvtSaveOptions::ODFSVER_010, false }
 #define MAPV_(name,prefix,token,type,context,version)  { name, sizeof(name)-1, prefix, token, type, context, version, false }
 #define GMAP(name,prefix,token,type,context) MAP_(name,prefix,token,type|XML_TYPE_PROP_GRAPHIC,context)
 #define GMAP_D(name,prefix,token,type,context) MAP_(name,prefix,token,type|XML_TYPE_PROP_GRAPHIC|MID_FLAG_DEFAULT_ITEM_EXPORT,context)
@@ -75,7 +75,7 @@ using namespace ::xmloff::token;
 #define DPMAP(name,prefix,token,type,context) MAP_(name,prefix,token,type|XML_TYPE_PROP_DRAWING_PAGE,context)
 #define TMAP(name,prefix,token,type,context) MAP_(name,prefix,token,type|XML_TYPE_PROP_TEXT,context)
 #define PMAP(name,prefix,token,type,context) MAP_(name,prefix,token,type|XML_TYPE_PROP_PARAGRAPH,context)
-#define MAP_END() { nullptr, 0, 0, XML_EMPTY, 0 ,0, SvtSaveOptions::ODFVER_010, false }
+#define MAP_END() { nullptr, 0, 0, XML_EMPTY, 0 ,0, SvtSaveOptions::ODFSVER_010, false }
 
 // entry list for graphic properties
 
@@ -129,7 +129,7 @@ const XMLPropertyMapEntry aXMLSDProperties[] =
     GMAP( "TextAutoGrowHeight",             XML_NAMESPACE_DRAW, XML_AUTO_GROW_HEIGHT,       XML_TYPE_BOOL, 0 ),
     GMAP( "TextAutoGrowWidth",              XML_NAMESPACE_DRAW, XML_AUTO_GROW_WIDTH,        XML_TYPE_BOOL, 0 ),
     GMAP( "TextFitToSize",                  XML_NAMESPACE_DRAW, XML_FIT_TO_SIZE,            XML_SD_TYPE_FITTOSIZE|MID_FLAG_MERGE_PROPERTY, 0),
-    GMAPV( "TextFitToSize",                 XML_NAMESPACE_STYLE, XML_SHRINK_TO_FIT,         XML_SD_TYPE_FITTOSIZE_AUTOFIT|MID_FLAG_MERGE_PROPERTY, 0, SvtSaveOptions::ODFVER_012 ),
+    GMAPV( "TextFitToSize",                 XML_NAMESPACE_STYLE, XML_SHRINK_TO_FIT,         XML_SD_TYPE_FITTOSIZE_AUTOFIT|MID_FLAG_MERGE_PROPERTY, 0, SvtSaveOptions::ODFSVER_012 ),
     GMAP( "TextContourFrame",               XML_NAMESPACE_DRAW, XML_FIT_TO_CONTOUR,         XML_TYPE_BOOL, 0 ),
     GMAP( "TextMaximumFrameHeight",         XML_NAMESPACE_FO,   XML_MAX_HEIGHT,             XML_TYPE_MEASURE, 0 ),
     GMAP( "TextMaximumFrameWidth",          XML_NAMESPACE_FO,   XML_MAX_WIDTH,              XML_TYPE_MEASURE, 0 ),
@@ -146,11 +146,19 @@ const XMLPropertyMapEntry aXMLSDProperties[] =
     GMAP( "TextChainNextName",              XML_NAMESPACE_DRAW,   XML_CHAIN_NEXT_NAME,      XML_TYPE_STRING, 0 ),
 
     // shadow attributes
-    GMAP( "Shadow",                         XML_NAMESPACE_DRAW, XML_SHADOW,                 XML_SD_TYPE_SHADOW, 0 ),
+    GMAP( "Shadow",                         XML_NAMESPACE_DRAW, XML_SHADOW,                 XML_SD_TYPE_VISIBLE_HIDDEN, 0 ),
     GMAP( "ShadowXDistance",                    XML_NAMESPACE_DRAW, XML_SHADOW_OFFSET_X,        XML_TYPE_MEASURE, 0 ),
     GMAP( "ShadowYDistance",                    XML_NAMESPACE_DRAW, XML_SHADOW_OFFSET_Y,        XML_TYPE_MEASURE, 0 ),
     GMAP( "ShadowColor",                        XML_NAMESPACE_DRAW, XML_SHADOW_COLOR,           XML_TYPE_COLOR, 0 ),
     GMAP( "ShadowTransparence",             XML_NAMESPACE_DRAW, XML_SHADOW_OPACITY, XML_TYPE_NEG_PERCENT, 0 ),
+
+    // glow attributes
+    GMAPV( "GlowEffectRad",                    XML_NAMESPACE_LO_EXT, XML_GLOW_RADIUS,          XML_TYPE_MEASURE  , 0, SvtSaveOptions::ODFSVER_FUTURE_EXTENDED),
+    GMAPV( "GlowEffectColor",                  XML_NAMESPACE_LO_EXT, XML_GLOW_COLOR,           XML_TYPE_COLOR    , 0, SvtSaveOptions::ODFSVER_FUTURE_EXTENDED),
+    GMAPV( "GlowEffectTransparency",           XML_NAMESPACE_LO_EXT, XML_GLOW_TRANSPARENCY,    XML_TYPE_PERCENT16, 0, SvtSaveOptions::ODFSVER_FUTURE_EXTENDED),
+
+    // soft edge attributes
+    GMAPV( "SoftEdgeRad",                   XML_NAMESPACE_LO_EXT, XML_SOFTEDGE_RADIUS,      XML_TYPE_MEASURE          , 0, SvtSaveOptions::ODFSVER_FUTURE_EXTENDED),
 
     // graphic attributes
     GMAP( "GraphicColorMode",               XML_NAMESPACE_DRAW, XML_COLOR_MODE,             XML_TYPE_COLOR_MODE, 0 ), // exists in SW, too, with same property name
@@ -160,7 +168,7 @@ const XMLPropertyMapEntry aXMLSDProperties[] =
     GMAP( "AdjustRed",                      XML_NAMESPACE_DRAW, XML_RED,                    XML_TYPE_PERCENT16, 0 ), // signed? exists in SW, too, with same property name
     GMAP( "AdjustGreen",                    XML_NAMESPACE_DRAW, XML_GREEN,                  XML_TYPE_PERCENT16, 0 ), // signed? exists in SW, too, with same property name
     GMAP( "AdjustBlue",                     XML_NAMESPACE_DRAW, XML_BLUE,                   XML_TYPE_PERCENT16, 0 ), // signed? exists in SW, too, with same property name
-    GMAPV( "GraphicCrop",                   XML_NAMESPACE_FO,   XML_CLIP,                   XML_TYPE_TEXT_CLIP, CTF_TEXT_CLIP, SvtSaveOptions::ODFVER_012 ), // exists in SW, too, with same property name
+    GMAPV( "GraphicCrop",                   XML_NAMESPACE_FO,   XML_CLIP,                   XML_TYPE_TEXT_CLIP, CTF_TEXT_CLIP, SvtSaveOptions::ODFSVER_012), // exists in SW, too, with same property name
     GMAP( "GraphicCrop",                    XML_NAMESPACE_FO,   XML_CLIP,                   XML_TYPE_TEXT_CLIP11, CTF_TEXT_CLIP11 ), // exists in SW, too, with same property name
     GMAP( "Transparency",                   XML_NAMESPACE_DRAW, XML_IMAGE_OPACITY,          XML_TYPE_NEG_PERCENT16|MID_FLAG_MULTI_PROPERTY, 0 ), // exists in SW, too, with same property name // #i25616#
     GMAP( "IsMirrored",                     XML_NAMESPACE_STYLE,    XML_MIRROR,             XML_TYPE_SD_MIRROR|MID_FLAG_MULTI_PROPERTY, 0 ),  // exists in SW, too // #i40214#
@@ -226,37 +234,37 @@ const XMLPropertyMapEntry aXMLSDProperties[] =
     GMAP( "D3DMaterialSpecularIntensity",   XML_NAMESPACE_DR3D, XML_SHININESS,              XML_TYPE_PERCENT, 0 ),
 
     // 3D shadow attributes
-    GMAP( "D3DShadow3D",                        XML_NAMESPACE_DR3D, XML_SHADOW,                 XML_SD_TYPE_SHADOW, 0 ),
+    GMAP( "D3DShadow3D",                        XML_NAMESPACE_DR3D, XML_SHADOW,                 XML_SD_TYPE_VISIBLE_HIDDEN, 0 ),
 
     // #FontWork# attributes
-    GMAP( "FontWorkStyle",                  XML_NAMESPACE_DRAW, XML_FONTWORK_STYLE,             XML_SD_TYPE_FONTWORK_STYLE, CTF_FONTWORK_STYLE  ),
-    GMAP( "FontWorkAdjust",                 XML_NAMESPACE_DRAW, XML_FONTWORK_ADJUST,                XML_SD_TYPE_FONTWORK_ADJUST,CTF_FONTWORK_ADJUST ),
-    GMAP( "FontWorkDistance",               XML_NAMESPACE_DRAW, XML_FONTWORK_DISTANCE,              XML_TYPE_MEASURE,           CTF_FONTWORK_DISTANCE   ),
-    GMAP( "FontWorkStart",                  XML_NAMESPACE_DRAW, XML_FONTWORK_START,                 XML_TYPE_MEASURE,           CTF_FONTWORK_START  ),
-    GMAP( "FontWorkMirror",                 XML_NAMESPACE_DRAW, XML_FONTWORK_MIRROR,                XML_TYPE_BOOL,              CTF_FONTWORK_MIRROR ),
-    GMAP( "FontWorkOutline",                    XML_NAMESPACE_DRAW, XML_FONTWORK_OUTLINE,               XML_TYPE_BOOL,              CTF_FONTWORK_OUTLINE    ),
-    GMAP( "FontWorkShadow",                 XML_NAMESPACE_DRAW, XML_FONTWORK_SHADOW,                XML_SD_TYPE_FONTWORK_SHADOW,CTF_FONTWORK_SHADOW ),
-    GMAP( "FontWorkShadowColor",                XML_NAMESPACE_DRAW, XML_FONTWORK_SHADOW_COLOR,          XML_TYPE_COLOR,             CTF_FONTWORK_SHADOWCOLOR    ),
-    GMAP( "FontWorkShadowOffsetX",          XML_NAMESPACE_DRAW, XML_FONTWORK_SHADOW_OFFSET_X,       XML_TYPE_MEASURE,           CTF_FONTWORK_SHADOWOFFSETX  ),
-    GMAP( "FontWorkShadowOffsetY",          XML_NAMESPACE_DRAW, XML_FONTWORK_SHADOW_OFFSET_Y,       XML_TYPE_MEASURE,           CTF_FONTWORK_SHADOWOFFSETY  ),
-    GMAP( "FontWorkForm",                   XML_NAMESPACE_DRAW, XML_FONTWORK_FORM,                  XML_SD_TYPE_FONTWORK_FORM,  CTF_FONTWORK_FORM   ),
-    GMAP( "FontWorkHideForm",               XML_NAMESPACE_DRAW, XML_FONTWORK_HIDE_FORM,             XML_TYPE_BOOL,              CTF_FONTWORK_HIDEFORM   ),
-    GMAP( "FontWorkShadowTransparence",     XML_NAMESPACE_DRAW, XML_FONTWORK_SHADOW_TRANSPARENCE,   XML_TYPE_PERCENT,           CTF_FONTWORK_SHADOWTRANSPARENCE ),
+    GMAP( "FontWorkStyle",                  XML_NAMESPACE_DRAW, XML_FONTWORK_STYLE,                 XML_SD_TYPE_FONTWORK_STYLE| MID_FLAG_ELEMENT_ITEM_EXPORT, CTF_FONTWORK_STYLE  ),
+    GMAP( "FontWorkAdjust",                 XML_NAMESPACE_DRAW, XML_FONTWORK_ADJUST,                XML_SD_TYPE_FONTWORK_ADJUST | MID_FLAG_ELEMENT_ITEM_EXPORT,CTF_FONTWORK_ADJUST ),
+    GMAP( "FontWorkDistance",               XML_NAMESPACE_DRAW, XML_FONTWORK_DISTANCE,              XML_TYPE_MEASURE | MID_FLAG_ELEMENT_ITEM_EXPORT,           CTF_FONTWORK_DISTANCE   ),
+    GMAP( "FontWorkStart",                  XML_NAMESPACE_DRAW, XML_FONTWORK_START,                 XML_TYPE_MEASURE | MID_FLAG_ELEMENT_ITEM_EXPORT,           CTF_FONTWORK_START  ),
+    GMAP( "FontWorkMirror",                 XML_NAMESPACE_DRAW, XML_FONTWORK_MIRROR,                XML_TYPE_BOOL | MID_FLAG_ELEMENT_ITEM_EXPORT,              CTF_FONTWORK_MIRROR ),
+    GMAP( "FontWorkOutline",                XML_NAMESPACE_DRAW, XML_FONTWORK_OUTLINE,               XML_TYPE_BOOL | MID_FLAG_ELEMENT_ITEM_EXPORT,              CTF_FONTWORK_OUTLINE    ),
+    GMAP( "FontWorkShadow",                 XML_NAMESPACE_DRAW, XML_FONTWORK_SHADOW,                XML_SD_TYPE_FONTWORK_SHADOW | MID_FLAG_ELEMENT_ITEM_EXPORT,CTF_FONTWORK_SHADOW ),
+    GMAP( "FontWorkShadowColor",            XML_NAMESPACE_DRAW, XML_FONTWORK_SHADOW_COLOR,          XML_TYPE_COLOR | MID_FLAG_ELEMENT_ITEM_EXPORT,             CTF_FONTWORK_SHADOWCOLOR    ),
+    GMAP( "FontWorkShadowOffsetX",          XML_NAMESPACE_DRAW, XML_FONTWORK_SHADOW_OFFSET_X,       XML_TYPE_MEASURE | MID_FLAG_ELEMENT_ITEM_EXPORT,           CTF_FONTWORK_SHADOWOFFSETX  ),
+    GMAP( "FontWorkShadowOffsetY",          XML_NAMESPACE_DRAW, XML_FONTWORK_SHADOW_OFFSET_Y,       XML_TYPE_MEASURE | MID_FLAG_ELEMENT_ITEM_EXPORT,           CTF_FONTWORK_SHADOWOFFSETY  ),
+    GMAP( "FontWorkForm",                   XML_NAMESPACE_DRAW, XML_FONTWORK_FORM,                  XML_SD_TYPE_FONTWORK_FORM | MID_FLAG_ELEMENT_ITEM_EXPORT,  CTF_FONTWORK_FORM   ),
+    GMAP( "FontWorkHideForm",               XML_NAMESPACE_DRAW, XML_FONTWORK_HIDE_FORM,             XML_TYPE_BOOL | MID_FLAG_ELEMENT_ITEM_EXPORT,              CTF_FONTWORK_HIDEFORM   ),
+    GMAP( "FontWorkShadowTransparence",     XML_NAMESPACE_DRAW, XML_FONTWORK_SHADOW_TRANSPARENCE,   XML_TYPE_PERCENT | MID_FLAG_ELEMENT_ITEM_EXPORT,           CTF_FONTWORK_SHADOWTRANSPARENCE ),
 
     // #FontWork# attributes
-    GMAP( "FontWorkStyle",                  XML_NAMESPACE_DRAW_EXT, XML_FONTWORK_STYLE,                 XML_SD_TYPE_FONTWORK_STYLE | MID_FLAG_ELEMENT_ITEM_EXPORT, CTF_FONTWORK_STYLE  ),
-    GMAP( "FontWorkAdjust",                 XML_NAMESPACE_DRAW_EXT, XML_FONTWORK_ADJUST,                XML_SD_TYPE_FONTWORK_ADJUST | MID_FLAG_ELEMENT_ITEM_EXPORT,CTF_FONTWORK_ADJUST ),
-    GMAP( "FontWorkDistance",               XML_NAMESPACE_DRAW_EXT, XML_FONTWORK_DISTANCE,              XML_TYPE_MEASURE | MID_FLAG_ELEMENT_ITEM_EXPORT,           CTF_FONTWORK_DISTANCE   ),
-    GMAP( "FontWorkStart",                  XML_NAMESPACE_DRAW_EXT, XML_FONTWORK_START,                 XML_TYPE_MEASURE | MID_FLAG_ELEMENT_ITEM_EXPORT,           CTF_FONTWORK_START  ),
-    GMAP( "FontWorkMirror",                 XML_NAMESPACE_DRAW_EXT, XML_FONTWORK_MIRROR,                XML_TYPE_BOOL | MID_FLAG_ELEMENT_ITEM_EXPORT,              CTF_FONTWORK_MIRROR ),
-    GMAP( "FontWorkOutline",                XML_NAMESPACE_DRAW_EXT, XML_FONTWORK_OUTLINE,               XML_TYPE_BOOL | MID_FLAG_ELEMENT_ITEM_EXPORT,              CTF_FONTWORK_OUTLINE    ),
-    GMAP( "FontWorkShadow",                 XML_NAMESPACE_DRAW_EXT, XML_FONTWORK_SHADOW,                XML_SD_TYPE_FONTWORK_SHADOW | MID_FLAG_ELEMENT_ITEM_EXPORT,CTF_FONTWORK_SHADOW ),
-    GMAP( "FontWorkShadowColor",            XML_NAMESPACE_DRAW_EXT, XML_FONTWORK_SHADOW_COLOR,          XML_TYPE_COLOR | MID_FLAG_ELEMENT_ITEM_EXPORT,             CTF_FONTWORK_SHADOWCOLOR    ),
-    GMAP( "FontWorkShadowOffsetX",          XML_NAMESPACE_DRAW_EXT, XML_FONTWORK_SHADOW_OFFSET_X,       XML_TYPE_MEASURE | MID_FLAG_ELEMENT_ITEM_EXPORT,           CTF_FONTWORK_SHADOWOFFSETX  ),
-    GMAP( "FontWorkShadowOffsetY",          XML_NAMESPACE_DRAW_EXT, XML_FONTWORK_SHADOW_OFFSET_Y,       XML_TYPE_MEASURE | MID_FLAG_ELEMENT_ITEM_EXPORT,           CTF_FONTWORK_SHADOWOFFSETY  ),
-    GMAP( "FontWorkForm",                   XML_NAMESPACE_DRAW_EXT, XML_FONTWORK_FORM,                  XML_SD_TYPE_FONTWORK_FORM | MID_FLAG_ELEMENT_ITEM_EXPORT,  CTF_FONTWORK_FORM   ),
-    GMAP( "FontWorkHideForm",               XML_NAMESPACE_DRAW_EXT, XML_FONTWORK_HIDE_FORM,             XML_TYPE_BOOL | MID_FLAG_ELEMENT_ITEM_EXPORT,              CTF_FONTWORK_HIDEFORM   ),
-    GMAP( "FontWorkShadowTransparence",     XML_NAMESPACE_DRAW_EXT, XML_FONTWORK_SHADOW_TRANSPARENCE,   XML_TYPE_PERCENT | MID_FLAG_ELEMENT_ITEM_EXPORT,           CTF_FONTWORK_SHADOWTRANSPARENCE ),
+    GMAPV("FontWorkStyle",              XML_NAMESPACE_DRAW_EXT, XML_FONTWORK_STYLE,                 XML_SD_TYPE_FONTWORK_STYLE, CTF_FONTWORK_STYLE,         SvtSaveOptions::ODFSVER_FUTURE_EXTENDED),
+    GMAPV("FontWorkAdjust",             XML_NAMESPACE_DRAW_EXT, XML_FONTWORK_ADJUST,                XML_SD_TYPE_FONTWORK_ADJUST,CTF_FONTWORK_ADJUST,        SvtSaveOptions::ODFSVER_FUTURE_EXTENDED),
+    GMAPV("FontWorkDistance",           XML_NAMESPACE_DRAW_EXT, XML_FONTWORK_DISTANCE,              XML_TYPE_MEASURE,           CTF_FONTWORK_DISTANCE,      SvtSaveOptions::ODFSVER_FUTURE_EXTENDED),
+    GMAPV("FontWorkStart",              XML_NAMESPACE_DRAW_EXT, XML_FONTWORK_START,                 XML_TYPE_MEASURE,           CTF_FONTWORK_START,         SvtSaveOptions::ODFSVER_FUTURE_EXTENDED),
+    GMAPV("FontWorkMirror",             XML_NAMESPACE_DRAW_EXT, XML_FONTWORK_MIRROR,                XML_TYPE_BOOL,              CTF_FONTWORK_MIRROR,        SvtSaveOptions::ODFSVER_FUTURE_EXTENDED),
+    GMAPV("FontWorkOutline",            XML_NAMESPACE_DRAW_EXT, XML_FONTWORK_OUTLINE,               XML_TYPE_BOOL,              CTF_FONTWORK_OUTLINE,       SvtSaveOptions::ODFSVER_FUTURE_EXTENDED),
+    GMAPV("FontWorkShadow",             XML_NAMESPACE_DRAW_EXT, XML_FONTWORK_SHADOW,                XML_SD_TYPE_FONTWORK_SHADOW,CTF_FONTWORK_SHADOW,        SvtSaveOptions::ODFSVER_FUTURE_EXTENDED),
+    GMAPV("FontWorkShadowColor",        XML_NAMESPACE_DRAW_EXT, XML_FONTWORK_SHADOW_COLOR,          XML_TYPE_COLOR,             CTF_FONTWORK_SHADOWCOLOR,   SvtSaveOptions::ODFSVER_FUTURE_EXTENDED),
+    GMAPV("FontWorkShadowOffsetX",      XML_NAMESPACE_DRAW_EXT, XML_FONTWORK_SHADOW_OFFSET_X,       XML_TYPE_MEASURE,           CTF_FONTWORK_SHADOWOFFSETX, SvtSaveOptions::ODFSVER_FUTURE_EXTENDED),
+    GMAPV("FontWorkShadowOffsetY",      XML_NAMESPACE_DRAW_EXT, XML_FONTWORK_SHADOW_OFFSET_Y,       XML_TYPE_MEASURE,           CTF_FONTWORK_SHADOWOFFSETY, SvtSaveOptions::ODFSVER_FUTURE_EXTENDED),
+    GMAPV("FontWorkForm",               XML_NAMESPACE_DRAW_EXT, XML_FONTWORK_FORM,                  XML_SD_TYPE_FONTWORK_FORM,  CTF_FONTWORK_FORM,          SvtSaveOptions::ODFSVER_FUTURE_EXTENDED),
+    GMAPV("FontWorkHideForm",           XML_NAMESPACE_DRAW_EXT, XML_FONTWORK_HIDE_FORM,             XML_TYPE_BOOL,              CTF_FONTWORK_HIDEFORM,      SvtSaveOptions::ODFSVER_FUTURE_EXTENDED),
+    GMAPV("FontWorkShadowTransparence", XML_NAMESPACE_DRAW_EXT, XML_FONTWORK_SHADOW_TRANSPARENCE,   XML_TYPE_PERCENT,           CTF_FONTWORK_SHADOWTRANSPARENCE, SvtSaveOptions::ODFSVER_FUTURE_EXTENDED),
 
     // control attributes (border exists one more time for the text additions of shapes)
     GMAP( "ControlSymbolColor",             XML_NAMESPACE_DRAW, XML_SYMBOL_COLOR,           XML_TYPE_COLOR, 0 ),
@@ -660,15 +668,15 @@ static SvXMLEnumMapEntry<drawing::TextFitToSizeType> const pXML_ShrinkToFit_Enum
 static SvXMLEnumMapEntry<sal_Int32> const pXML_MeasureUnit_Enum[] =
 {
     { XML_AUTOMATIC,    0 },
-    { XML_UNIT_MM,      1 },
+    { XML_MM,           1 },
     { XML_UNIT_CM,      2 },
     { XML_UNIT_M,       3 },
-    { XML_UNIT_KM,      4 },
+    { XML_KM,           4 },
     { XML_UNIT_PT,      6 },
     { XML_UNIT_PC,      7 },
-    { XML_UNIT_INCH,    8 },
+    { XML_IN,           8 },
     { XML_UNIT_FOOT,    9 },
-    { XML_UNIT_MILES,   10 },
+    { XML_MI,           10 },
     { XML_TOKEN_INVALID,0 }
 };
 
@@ -1014,7 +1022,7 @@ const XMLPropertyHandler* XMLSdPropHdlFactory::GetPropertyHandler( sal_Int32 nTy
                 pHdl = new XMLEnumPropertyHdl( aXML_PresChange_EnumMap );
                 break;
             }
-            case XML_SD_TYPE_SHADOW :
+            case XML_SD_TYPE_VISIBLE_HIDDEN:
             {
                 pHdl = new XMLNamedBoolPropertyHdl( GetXMLToken(XML_VISIBLE), GetXMLToken(XML_HIDDEN) );
                 break;
@@ -1163,12 +1171,8 @@ const XMLPropertyHandler* XMLSdPropHdlFactory::GetPropertyHandler( sal_Int32 nTy
             case XML_SD_TYPE_FITTOSIZE:
                 {
                     if (mpExport
-#if 1
-// TODO: remove in a couple releases, when users have the import of style:shrink-to-fit
-                            && (mpExport->getDefaultVersion()
-                                        <= SvtSaveOptions::ODFVER_012)
-#endif
-                        )
+                        && (mpExport->getSaneDefaultVersion() // tdf#97630
+                                != SvtSaveOptions::ODFSVER_012_EXT_COMPAT))
                     {
                         pHdl = new XMLFitToSizeEnumPropertyHdl(pXML_FitToSize_Enum_Odf12);
                     }

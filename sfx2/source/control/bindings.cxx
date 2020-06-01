@@ -44,7 +44,7 @@
 #include <sfx2/module.hxx>
 #include <sfx2/request.hxx>
 #include <workwin.hxx>
-#include <sfx2/unoctitm.hxx>
+#include <unoctitm.hxx>
 #include <sfx2/viewfrm.hxx>
 #include <sfx2/objsh.hxx>
 #include <sfx2/msgpool.hxx>
@@ -66,9 +66,9 @@ typedef std::unordered_map< sal_uInt16, bool > InvalidateSlotMap;
 
 struct SfxFoundCache_Impl
 {
-    sal_uInt16 const nWhichId;  // If available: Which-Id, else: nSlotId
-    const SfxSlot*   pSlot;     // Pointer to <Master-Slot>
-    SfxStateCache&   rCache;    // Pointer to StatusCache
+    sal_uInt16      nWhichId;  // If available: Which-Id, else: nSlotId
+    const SfxSlot*  pSlot;     // Pointer to <Master-Slot>
+    SfxStateCache&  rCache;    // Pointer to StatusCache
 
     SfxFoundCache_Impl(sal_uInt16 nW, const SfxSlot *pS, SfxStateCache& rC)
         : nWhichId(nW)
@@ -1371,7 +1371,7 @@ void SfxBindings::LeaveRegistrations( const char *pFile, int nLine )
     pImpl->nOwnRegLevel--;
 
     // check if this is the outer most level
-    if ( --nRegLevel == 0 && !SfxGetpApp()->IsDowning() )
+    if ( --nRegLevel == 0 && SfxGetpApp() && !SfxGetpApp()->IsDowning() )
     {
         if ( pImpl->bContextChanged )
         {
@@ -1615,6 +1615,33 @@ SfxItemState SfxBindings::QueryState( sal_uInt16 nSlot, std::unique_ptr<SfxPoolI
     }
 
     return eState;
+}
+
+void SfxBindings::QueryControlState( sal_uInt16 nSlot, boost::property_tree::ptree& rState )
+{
+    if ( SfxGetpApp()->IsDowning() )
+        return;
+
+    if ( pDispatcher )
+        pDispatcher->Flush();
+
+    if ( pImpl->pSubBindings )
+        pImpl->pSubBindings->QueryControlState( nSlot, rState );
+
+    SfxStateCache* pCache = GetStateCache( nSlot );
+    if ( pCache )
+    {
+        if ( pImpl->bMsgDirty )
+        {
+            UpdateSlotServer_Impl();
+            pCache = GetStateCache( nSlot );
+        }
+
+        if (pCache && pCache->GetItemLink() )
+        {
+            pCache->GetState(rState);
+        }
+    }
 }
 
 void SfxBindings::SetSubBindings_Impl( SfxBindings *pSub )

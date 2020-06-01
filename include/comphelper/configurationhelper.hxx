@@ -26,8 +26,8 @@
 #include <comphelper/comphelperdllapi.h>
 #include <o3tl/typed_flags_set.hxx>
 
-namespace com { namespace sun { namespace star { namespace uno { class XComponentContext; } } } }
-namespace com { namespace sun { namespace star { namespace uno { class XInterface; } } } }
+namespace com::sun::star::uno { class XComponentContext; }
+namespace com::sun::star::uno { class XInterface; }
 
 namespace comphelper
 {
@@ -52,7 +52,7 @@ namespace comphelper
 
 namespace o3tl
 {
-    template<> struct typed_flags<comphelper::EConfigurationModes> : is_typed_flags<comphelper::EConfigurationModes, 0x7> {};
+    template<> struct typed_flags<comphelper::EConfigurationModes> : is_typed_flags<comphelper::EConfigurationModes, 0x3> {};
 }
 
 namespace comphelper

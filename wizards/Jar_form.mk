@@ -20,10 +20,7 @@
 $(eval $(call gb_Jar_Jar,form))
 
 $(eval $(call gb_Jar_use_jars,form,\
-	ridl \
-	unoil \
-	jurt \
-	juh \
+	libreoffice \
 	java_uno \
 	commonwizards \
 ))

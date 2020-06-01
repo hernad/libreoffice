@@ -25,7 +25,7 @@
 
 #include <cppuhelper/implbase.hxx>
 
-#include <toolkit/controls/unocontrolcontainer.hxx>
+#include <controls/unocontrolcontainer.hxx>
 #include <comphelper/sequence.hxx>
 
 #include <tools/debug.hxx>
@@ -44,7 +44,7 @@ namespace {
 struct UnoControlHolder
 {
     uno::Reference< awt::XControl > mxControl;
-    OUString const                  msName;
+    OUString                        msName;
 
 public:
     UnoControlHolder( const OUString& rName, const uno::Reference< awt::XControl > & rControl )

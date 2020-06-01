@@ -58,15 +58,9 @@ class ScSheetSaveData;
 class ScFlatBoolRowSegments;
 struct ScColWidthParam;
 class ScFormulaOptions;
-
-namespace com { namespace sun { namespace star { namespace script { namespace vba {
-    class XVBAScriptListener;
-} } } } }
-
-namespace ooo { namespace vba { namespace excel { class XWorkbook; } } }
-
-namespace com { namespace sun { namespace star { namespace datatransfer { class XTransferable2; } } } }
-
+namespace com::sun::star::script::vba { class XVBAScriptListener; }
+namespace ooo::vba::excel { class XWorkbook; }
+namespace com::sun::star::datatransfer { class XTransferable2; }
 namespace sfx2 { class FileDialogHelper; }
 struct DocShell_Impl;
 
@@ -99,6 +93,7 @@ class SC_DLLPUBLIC ScDocShell final: public SfxObjectShell, public SfxListener
     bool                m_bDocumentModifiedPending:1;
     bool                m_bUpdateEnabled:1;
     bool                m_bUcalcTest:1; // avoid loading the styles in the ucalc test
+    bool                m_bAreasChangedNeedBroadcast:1;
     sal_uInt16          m_nDocumentLock;
     sal_Int16           m_nCanUpdate;  // stores the UpdateDocMode from loading a document till update links
 
@@ -214,7 +209,7 @@ public:
 
     void            SetVisAreaOrSize( const tools::Rectangle& rVisArea );
 
-    virtual std::unique_ptr<SfxDocumentInfoDialog> CreateDocumentInfoDialog(weld::Window* pParent, const SfxItemSet &rSet) override;
+    virtual std::shared_ptr<SfxDocumentInfoDialog> CreateDocumentInfoDialog(weld::Window* pParent, const SfxItemSet &rSet) override;
 
     void    GetDocStat( ScDocStat& rDocStat );
 
@@ -384,6 +379,9 @@ public:
                         { return m_bUpdateEnabled; }
     void            SetUpdateEnabled(bool bValue)
                         { m_bUpdateEnabled = bValue; }
+
+    void            SetAreasChangedNeedBroadcast()
+                        { m_bAreasChangedNeedBroadcast = true; }
 
     OutputDevice*   GetRefDevice(); // WYSIWYG: Printer, otherwise VirtualDevice...
 

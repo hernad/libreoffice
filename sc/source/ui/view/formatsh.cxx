@@ -157,7 +157,7 @@ void ScFormatShell::GetStyleState( SfxItemSet& rSet )
 
     bool bProtected = false;
     SCTAB nTabCount = pDoc->GetTableCount();
-    for (SCTAB i=0; i<nTabCount; i++)
+    for (SCTAB i=0; i<nTabCount && !bProtected; i++)
         if (pDoc->IsTabProtected(i))                // look after protected table
             bProtected = true;
 
@@ -369,8 +369,6 @@ void ScFormatShell::ExecuteStyle( SfxRequest& rReq )
         OUString                aStyleName;
         sal_uInt16              nRetMask = 0xffff;
 
-        pStylePool->SetSearchMask( eFamily );
-
         switch ( nSlotId )
         {
             case SID_STYLE_NEW:
@@ -433,7 +431,7 @@ void ScFormatShell::ExecuteStyle( SfxRequest& rReq )
                         weld::Window* pDialogParent = rReq.GetFrameWeld();
                         if (!pDialogParent)
                             pDialogParent = pTabViewShell->GetFrameWeld();
-                        SfxNewStyleDlg aDlg(pDialogParent, *pStylePool);
+                        SfxNewStyleDlg aDlg(pDialogParent, *pStylePool, eFamily);
                         if (aDlg.run() != RET_OK)
                             return;
                         aStyleName = aDlg.GetName();
@@ -1169,19 +1167,17 @@ void ScFormatShell::ExecuteNumFormat( SfxRequest& rReq )
 
                 //Just use eType to judge whether the command is fired for NUMBER/PERCENT/CURRENCY/SCIENTIFIC/FRACTION
                 //In sidebar, users can fire SID_NUMBER_FORMAT command by operating the related UI controls before they are disable
-                if(eType == SvNumFormatType::ALL
-                    || eType == SvNumFormatType::NUMBER
-                    || eType == (SvNumFormatType::NUMBER | SvNumFormatType::DEFINED)
-                    || eType == SvNumFormatType::PERCENT
-                    || eType == (SvNumFormatType::PERCENT | SvNumFormatType::DEFINED)
-                    || eType == SvNumFormatType::CURRENCY
-                    || eType == (SvNumFormatType::CURRENCY | SvNumFormatType::DEFINED)
-                    || eType == SvNumFormatType::SCIENTIFIC
-                    || eType == (SvNumFormatType::SCIENTIFIC | SvNumFormatType::DEFINED)
-                    || eType == SvNumFormatType::FRACTION
-                    || eType == (SvNumFormatType::FRACTION | SvNumFormatType::DEFINED))
-                    eType = SvNumFormatType::ALL;
-                else
+                if(!(eType == SvNumFormatType::ALL
+                     || eType == SvNumFormatType::NUMBER
+                     || eType == (SvNumFormatType::NUMBER | SvNumFormatType::DEFINED)
+                     || eType == SvNumFormatType::PERCENT
+                     || eType == (SvNumFormatType::PERCENT | SvNumFormatType::DEFINED)
+                     || eType == SvNumFormatType::CURRENCY
+                     || eType == (SvNumFormatType::CURRENCY | SvNumFormatType::DEFINED)
+                     || eType == SvNumFormatType::SCIENTIFIC
+                     || eType == (SvNumFormatType::SCIENTIFIC | SvNumFormatType::DEFINED)
+                     || eType == SvNumFormatType::FRACTION
+                     || eType == (SvNumFormatType::FRACTION | SvNumFormatType::DEFINED)))
                     pEntry = nullptr;
 
                 if(SfxItemState::SET == pReqArgs->GetItemState(nSlot, true, &pItem) && pEntry)
@@ -1642,6 +1638,27 @@ void ScFormatShell::ExecuteTextAttr( SfxRequest& rReq )
 
 }
 
+namespace
+{
+    bool lcl_getColorFromStr(const SfxItemSet *pArgs, Color &rColor)
+    {
+        const SfxPoolItem* pColorStringItem = nullptr;
+
+        if (pArgs && SfxItemState::SET == pArgs->GetItemState(SID_ATTR_COLOR_STR, false, &pColorStringItem) && pColorStringItem)
+        {
+            OUString sColor;
+            sColor = static_cast<const SfxStringItem*>(pColorStringItem)->GetValue();
+
+            if (sColor == "transparent")
+                rColor = COL_TRANSPARENT;
+            else
+                rColor = Color(sColor.toInt32(16));
+            return true;
+        }
+        return false;
+    }
+}
+
 void ScFormatShell::ExecuteAttr( SfxRequest& rReq )
 {
     ScTabViewShell*     pTabViewShell = GetViewData()->GetViewShell();
@@ -1784,10 +1801,25 @@ void ScFormatShell::ExecuteAttr( SfxRequest& rReq )
                 break;
             case SID_ATTR_CHAR_COLOR:
             case SID_SCATTR_PROTECTION :
-                pTabViewShell->ApplyAttr( pNewAttrs->Get( pNewAttrs->GetPool()->GetWhich( nSlot) ), false);
+            {
+                Color aColor;
+                if (lcl_getColorFromStr(pNewAttrs, aColor))
+                {
+                    SvxColorItem aColorItem(pTabViewShell->GetSelectionPattern()->
+                                                GetItem( ATTR_FONT_COLOR ) );
+                    aColorItem.SetValue(aColor);
+                    pTabViewShell->ApplyAttr(aColorItem, false);
+                }
+                else
+                {
+                    pTabViewShell->ApplyAttr( pNewAttrs->Get( pNewAttrs->GetPool()->GetWhich( nSlot) ), false);
+                }
+
                 rBindings.Invalidate( nSlot );
                 rBindings.Update( nSlot );
-                break;
+            }
+
+            break;
 
             case SID_ATTR_CHAR_FONT:
             case SID_ATTR_CHAR_FONTHEIGHT:
@@ -1848,18 +1880,20 @@ void ScFormatShell::ExecuteAttr( SfxRequest& rReq )
             case SID_FRAME_LINECOLOR:
                 {
                     ::editeng::SvxBorderLine*  pDefLine = pTabViewShell->GetDefaultFrameLine();
-                    const Color&    rColor = pNewAttrs->Get( SID_FRAME_LINECOLOR ).GetValue();
+
+                    Color aColor;
+                    if (!lcl_getColorFromStr(pNewAttrs, aColor))
+                        aColor = pNewAttrs->Get( SID_FRAME_LINECOLOR ).GetValue();
 
                     // Update default line
                     if ( pDefLine )
                     {
-                        pDefLine->SetColor( rColor );
+                        pDefLine->SetColor( aColor );
                         pTabViewShell->SetSelectionFrameLines( pDefLine, true );
                     }
                     else
                     {
-                        ::editeng::SvxBorderLine aDefLine( &rColor, 20,
-                                SvxBorderLineStyle::SOLID );
+                        ::editeng::SvxBorderLine aDefLine( &aColor, 20, SvxBorderLineStyle::SOLID );
                         pTabViewShell->SetDefaultFrameLine( &aDefLine );
                         pTabViewShell->SetSelectionFrameLines( &aDefLine, false );
                     }
@@ -1971,27 +2005,16 @@ void ScFormatShell::ExecuteAttr( SfxRequest& rReq )
             // ATTR_BACKGROUND (=SID_ATTR_BRUSH) has to be set to two IDs:
             case SID_BACKGROUND_COLOR:
                 {
-                    const SfxPoolItem* pColorStringItem = nullptr;
                     Color aColor;
 
-                    if ( SfxItemState::SET == pNewAttrs->GetItemState( SID_ATTR_COLOR_STR, false, &pColorStringItem ) )
-                    {
-                        OUString sColor = static_cast<const SfxStringItem*>(pColorStringItem)->GetValue();
-                        if ( sColor == "transparent" )
-                            aColor = COL_TRANSPARENT;
-                        else
-                            aColor = Color( sColor.toInt32( 16 ) );
-                    }
-                    else
+                    if (!lcl_getColorFromStr(pNewAttrs, aColor))
                     {
                         const SvxColorItem&  rNewColorItem = pNewAttrs->Get( SID_BACKGROUND_COLOR );
                         aColor = rNewColorItem.GetValue();
                     }
 
-                    SvxBrushItem        aBrushItem(
-                                            pTabViewShell->GetSelectionPattern()->
-                                                GetItem( ATTR_BACKGROUND ) );
-
+                    SvxBrushItem aBrushItem(
+                        pTabViewShell->GetSelectionPattern()->GetItem( ATTR_BACKGROUND ) );
                     aBrushItem.SetColor( aColor );
 
                     pTabViewShell->ApplyAttr( aBrushItem, false );

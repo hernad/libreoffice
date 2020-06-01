@@ -23,7 +23,7 @@
 #include <svx/svdhdl.hxx>
 
 
-namespace sdr { namespace table {
+namespace sdr::table {
 
 enum TableEdgeState { Empty, Invisible, Visible };
 
@@ -35,8 +35,6 @@ struct TableEdge
 
     TableEdge() : mnStart(0), mnEnd(0), meState(Empty) {}
 };
-
-typedef std::vector< TableEdge > TableEdgeVector;
 
 class TableEdgeHdl : public SdrHdl
 {
@@ -59,9 +57,9 @@ protected:
     virtual void CreateB2dIAObject() override;
 
 private:
-    bool const mbHorizontal;
+    bool mbHorizontal;
     sal_Int32 mnMin, mnMax;
-    TableEdgeVector maEdges;
+    std::vector< TableEdge > maEdges;
 };
 
 class TableBorderHdl : public SdrHdl
@@ -78,13 +76,13 @@ protected:
     virtual void CreateB2dIAObject() override;
 
 private:
-    tools::Rectangle const maRectangle;
+    tools::Rectangle maRectangle;
 
-    bool const            mbAnimate : 1;
+    bool            mbAnimate : 1;
 };
 
-} // end of namespace table
-} // end of namespace sdr
+} // end of namespace sdr::table
+
 
 #endif
 

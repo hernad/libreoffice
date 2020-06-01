@@ -24,6 +24,7 @@
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/accessibility/AccessibleEventId.hpp>
 #include <com/sun/star/lang/IndexOutOfBoundsException.hpp>
+#include <rtl/ustrbuf.hxx>
 #include <sfx2/viewfrm.hxx>
 #include <com/sun/star/accessibility/AccessibleStateType.hpp>
 #include <com/sun/star/accessibility/AccessibleRole.hpp>
@@ -381,7 +382,6 @@ uno::Any SAL_CALL
             static_cast<awt::XWindowListener*>(this),
             static_cast<awt::XFocusListener*>(this)
            ,static_cast<XAccessibleExtendedAttributes*>(this)
-           ,static_cast<XAccessibleGetAccFlowTo*>(this)
             );
     return aReturn;
 }
@@ -716,7 +716,7 @@ uno::Any SAL_CALL AccessibleDocumentViewBase::getExtendedAttributes()
         SdPage* pNotesPge = pDoc->GetSdPage((pCurrPge->GetPageNum()-1)>>1, PageKind::Notes);
         if (pNotesPge)
         {
-            SdrObject* pNotesObj = pNotesPge->GetPresObj(PRESOBJ_NOTES);
+            SdrObject* pNotesObj = pNotesPge->GetPresObj(PresObjKind::Notes);
             if (pNotesObj)
             {
                 OutlinerParaObject* pPara = pNotesObj->GetOutlinerParaObject();
@@ -762,14 +762,6 @@ uno::Any SAL_CALL AccessibleDocumentViewBase::getExtendedAttributes()
     if (sValue.getLength())
         anyAtrribute <<= sValue.makeStringAndClear();
     return anyAtrribute;
-}
-
-css::uno::Sequence< css::uno::Any >
-        SAL_CALL AccessibleDocumentViewBase::getAccFlowTo(const css::uno::Any&, sal_Int32 )
-{
-    css::uno::Sequence< uno::Any> aRet;
-
-    return aRet;
 }
 
 sal_Int32 SAL_CALL AccessibleDocumentViewBase::getForeground(  )

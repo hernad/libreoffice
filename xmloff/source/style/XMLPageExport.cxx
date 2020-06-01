@@ -22,15 +22,16 @@
 #include <sal/log.hxx>
 #include <xmloff/xmlnmspe.hxx>
 #include <xmloff/xmltoken.hxx>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/style/XStyleFamiliesSupplier.hpp>
 #include <com/sun/star/style/XStyle.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <xmloff/families.hxx>
 #include <xmloff/xmlexp.hxx>
-#include "PageMasterPropHdlFactory.hxx"
+#include <PageMasterPropHdlFactory.hxx>
 #include <PageMasterStyleMap.hxx>
-#include "PageMasterPropMapper.hxx"
+#include <PageMasterPropMapper.hxx>
 #include "PageMasterExportPropMapper.hxx"
 
 using namespace ::com::sun::star;
@@ -43,23 +44,29 @@ using namespace ::xmloff::token;
 static const OUStringLiteral gsIsPhysical( "IsPhysical" );
 static const OUStringLiteral gsFollowStyle( "FollowStyle" );
 
-bool XMLPageExport::findPageMasterName( const OUString& rStyleName, OUString& rPMName ) const
+namespace {
+
+bool findPageMasterNameEntry(
+        ::std::vector<XMLPageExportNameEntry> const& aNameVector,
+        const OUString& rStyleName, XMLPageExportNameEntry & o_rEntry)
 {
     auto pEntry = std::find_if(aNameVector.cbegin(), aNameVector.cend(),
         [&rStyleName](const XMLPageExportNameEntry& rEntry) { return rEntry.sStyleName == rStyleName; });
 
     if( pEntry != aNameVector.cend() )
     {
-        rPMName = pEntry->sPageMasterName;
+        o_rEntry = *pEntry;
         return true;
     }
 
     return false;
 }
 
+} // namespace
+
 void XMLPageExport::collectPageMasterAutoStyle(
         const Reference < XPropertySet > & rPropSet,
-        OUString& rPageMasterName )
+        XMLPageExportNameEntry & rEntry)
 {
     SAL_WARN_IF( !xPageMasterPropSetMapper.is(), "xmloff", "page master family/XMLPageMasterPropSetMapper not found" );
     if( xPageMasterPropSetMapper.is() )
@@ -68,9 +75,23 @@ void XMLPageExport::collectPageMasterAutoStyle(
         if( !aPropStates.empty())
         {
             OUString sParent;
-            rPageMasterName = rExport.GetAutoStylePool()->Find( XML_STYLE_FAMILY_PAGE_MASTER, sParent, aPropStates );
-            if (rPageMasterName.isEmpty())
-                rPageMasterName = rExport.GetAutoStylePool()->Add(XML_STYLE_FAMILY_PAGE_MASTER, sParent, aPropStates);
+            rEntry.sPageMasterName = rExport.GetAutoStylePool()->Find( XmlStyleFamily::PAGE_MASTER, sParent, aPropStates );
+            if (rEntry.sPageMasterName.isEmpty())
+            {
+                rEntry.sPageMasterName = rExport.GetAutoStylePool()->Add(XmlStyleFamily::PAGE_MASTER, sParent, aPropStates);
+            }
+        }
+    }
+    assert(m_xPageMasterDrawingPageExportPropMapper.is());
+    ::std::vector<XMLPropertyState> const aPropStates(
+            m_xPageMasterDrawingPageExportPropMapper->Filter(rPropSet));
+    if (!aPropStates.empty())
+    {
+        OUString sParent;
+        rEntry.sDrawingPageStyleName = rExport.GetAutoStylePool()->Find(XmlStyleFamily::SD_DRAWINGPAGE_ID, sParent, aPropStates);
+        if (rEntry.sDrawingPageStyleName.isEmpty())
+        {
+            rEntry.sDrawingPageStyleName = rExport.GetAutoStylePool()->Add(XmlStyleFamily::SD_DRAWINGPAGE_ID, sParent, aPropStates);
         }
     }
 }
@@ -101,7 +122,7 @@ bool XMLPageExport::exportStyle(
     if( bAutoStyles )
     {
         XMLPageExportNameEntry aEntry;
-        collectPageMasterAutoStyle( xPropSet, aEntry.sPageMasterName );
+        collectPageMasterAutoStyle(xPropSet, aEntry);
         aEntry.sStyleName = rStyle->getName();
         aNameVector.push_back( aEntry );
 
@@ -118,17 +139,27 @@ bool XMLPageExport::exportStyle(
         {
             uno::Any aValue = xPropSet->getPropertyValue( "Hidden" );
             bool bHidden = false;
-            if ( ( aValue >>= bHidden ) && bHidden && GetExport( ).getDefaultVersion( ) == SvtSaveOptions::ODFVER_LATEST )
-                GetExport( ).AddAttribute( XML_NAMESPACE_STYLE, XML_HIDDEN, "true" );
+            if ((aValue >>= bHidden) && bHidden
+                && GetExport().getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
+            {
+                GetExport().AddAttribute(XML_NAMESPACE_LO_EXT, XML_HIDDEN, "true");
+                GetExport().AddAttribute(XML_NAMESPACE_STYLE, XML_HIDDEN, "true"); // FIXME for compatibility
+            }
         }
 
         if( bEncoded )
             GetExport().AddAttribute( XML_NAMESPACE_STYLE, XML_DISPLAY_NAME,
                                    sName);
 
-        OUString sPMName;
-        if( findPageMasterName( sName, sPMName ) )
-            GetExport().AddAttribute( XML_NAMESPACE_STYLE, XML_PAGE_LAYOUT_NAME, GetExport().EncodeStyleName( sPMName ) );
+        XMLPageExportNameEntry entry;
+        if (findPageMasterNameEntry(aNameVector, sName, entry))
+        {
+            GetExport().AddAttribute(XML_NAMESPACE_STYLE, XML_PAGE_LAYOUT_NAME, GetExport().EncodeStyleName(entry.sPageMasterName));
+            if (!entry.sDrawingPageStyleName.isEmpty())
+            {
+                GetExport().AddAttribute(XML_NAMESPACE_DRAW, XML_STYLE_NAME, GetExport().EncodeStyleName(entry.sDrawingPageStyleName));
+            }
+        }
 
         Reference<XPropertySetInfo> xInfo = xPropSet->getPropertySetInfo();
         if ( xInfo.is() && xInfo->hasPropertyByName(gsFollowStyle) )
@@ -152,18 +183,25 @@ bool XMLPageExport::exportStyle(
     return true;
 }
 
-XMLPageExport::XMLPageExport( SvXMLExport& rExp ) :
-    rExport( rExp )
-{
-    xPageMasterPropHdlFactory = new XMLPageMasterPropHdlFactory;
-    xPageMasterPropSetMapper = new XMLPageMasterPropSetMapper(
+XMLPageExport::XMLPageExport(SvXMLExport & rExp)
+    : rExport(rExp)
+    , xPageMasterPropHdlFactory(new XMLPageMasterPropHdlFactory)
+    , xPageMasterPropSetMapper(new XMLPageMasterPropSetMapper(
                                 aXMLPageMasterStyleMap,
-                                xPageMasterPropHdlFactory );
-    xPageMasterExportPropMapper = new XMLPageMasterExportPropMapper(
-                                    xPageMasterPropSetMapper, rExp);
-
-    rExport.GetAutoStylePool()->AddFamily( XML_STYLE_FAMILY_PAGE_MASTER, XML_STYLE_FAMILY_PAGE_MASTER_NAME,
+                                xPageMasterPropHdlFactory))
+    , xPageMasterExportPropMapper(new XMLPageMasterExportPropMapper(
+                                    xPageMasterPropSetMapper, rExp))
+    , m_xPageMasterDrawingPagePropSetMapper(new XMLPageMasterPropSetMapper(
+                                g_XMLPageMasterDrawingPageStyleMap,
+                                xPageMasterPropHdlFactory))
+      // use same class but with different map, need its ContextFilter()
+    , m_xPageMasterDrawingPageExportPropMapper(new XMLPageMasterExportPropMapper(
+                m_xPageMasterDrawingPagePropSetMapper, rExp))
+{
+    rExport.GetAutoStylePool()->AddFamily( XmlStyleFamily::PAGE_MASTER, XML_STYLE_FAMILY_PAGE_MASTER_NAME,
         xPageMasterExportPropMapper, XML_STYLE_FAMILY_PAGE_MASTER_PREFIX, false );
+    rExport.GetAutoStylePool()->AddFamily(XmlStyleFamily::SD_DRAWINGPAGE_ID, XML_STYLE_FAMILY_SD_DRAWINGPAGE_NAME,
+        m_xPageMasterDrawingPageExportPropMapper, XML_STYLE_FAMILY_SD_DRAWINGPAGE_PREFIX);
 
     Reference< XStyleFamiliesSupplier > xFamiliesSupp( GetExport().GetModel(),
                                                        UNO_QUERY );
@@ -209,7 +247,10 @@ void XMLPageExport::exportStyles( bool bUsed, bool bAutoStyles )
 
 void XMLPageExport::exportAutoStyles()
 {
-    rExport.GetAutoStylePool()->exportXML(XML_STYLE_FAMILY_PAGE_MASTER);
+    rExport.GetAutoStylePool()->exportXML(XmlStyleFamily::PAGE_MASTER);
+    // tdf#103602 this is called by both Writer and Calc but Calc doesn't
+    // have fill properties yet
+    rExport.GetAutoStylePool()->exportXML(XmlStyleFamily::SD_DRAWINGPAGE_ID);
 }
 
 void XMLPageExport::exportDefaultStyle()
@@ -240,8 +281,8 @@ void XMLPageExport::exportDefaultStyle()
 
             if( bExport )
             {
-                assert(GetExport().getDefaultVersion()
-                        >= SvtSaveOptions::ODFVER_012);
+                assert(GetExport().getSaneDefaultVersion()
+                        >= SvtSaveOptions::ODFSVER_012);
 
                 //<style:default-page-layout>
                 SvXMLElementExport aElem( GetExport(), XML_NAMESPACE_STYLE,

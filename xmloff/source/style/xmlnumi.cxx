@@ -20,6 +20,8 @@
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/awt/Size.hpp>
+#include <com/sun/star/frame/XModel.hpp>
+#include <com/sun/star/graphic/XGraphic.hpp>
 #include <com/sun/star/awt/FontDescriptor.hpp>
 #include <com/sun/star/text/HoriOrientation.hpp>
 #include <com/sun/star/text/VertOrientation.hpp>
@@ -485,7 +487,7 @@ Sequence<beans::PropertyValue> SvxXMLListLevelStyleContext_Impl::GetProperties()
         pProps[nPos++].Value <<= nIndentAt;
 
         OUString sDisplayTextStyleName = GetImport().GetStyleDisplayName(
-                                XML_STYLE_FAMILY_TEXT_TEXT, sTextStyleName  );
+                                XmlStyleFamily::TEXT_TEXT, sTextStyleName  );
         pProps[nPos].Name = "CharStyleName";
         pProps[nPos++].Value <<= sDisplayTextStyleName;
 
@@ -1021,7 +1023,7 @@ SvxXMLListStyleContext::SvxXMLListStyleContext( SvXMLImport& rImport,
         const OUString& rLName,
         const Reference< xml::sax::XAttributeList > & xAttrList,
         bool bOutl )
-:   SvXMLStyleContext( rImport, nPrfx, rLName, xAttrList, bOutl ? XML_STYLE_FAMILY_TEXT_OUTLINE : XML_STYLE_FAMILY_TEXT_LIST )
+:   SvXMLStyleContext( rImport, nPrfx, rLName, xAttrList, bOutl ? XmlStyleFamily::TEXT_OUTLINE : XmlStyleFamily::TEXT_LIST )
 ,   bConsecutive( false )
 ,   bOutline( bOutl )
 {
@@ -1031,7 +1033,7 @@ SvxXMLListStyleContext::SvxXMLListStyleContext( SvXMLImport& rImport,
         sal_Int32 nElement,
         const css::uno::Reference< css::xml::sax::XFastAttributeList > & xAttrList,
         bool bOutl )
-:   SvXMLStyleContext( rImport, nElement, xAttrList, bOutl ? XML_STYLE_FAMILY_TEXT_OUTLINE : XML_STYLE_FAMILY_TEXT_LIST )
+:   SvXMLStyleContext( rImport, nElement, xAttrList, bOutl ? XmlStyleFamily::TEXT_OUTLINE : XmlStyleFamily::TEXT_LIST )
 ,   bConsecutive( false )
 ,   bOutline( bOutl )
 {
@@ -1173,7 +1175,7 @@ void SvxXMLListStyleContext::CreateAndInsertLate( bool bOverwrite )
             xPropSet->setPropertyValue( "Hidden", uno::makeAny( IsHidden( ) ) );
 
         if( rName != GetName() )
-            GetImport().AddStyleDisplayName( XML_STYLE_FAMILY_TEXT_LIST,
+            GetImport().AddStyleDisplayName( XmlStyleFamily::TEXT_LIST,
                                              GetName(), rName );
 
         Any aAny = xPropSet->getPropertyValue( sNumberingRules );

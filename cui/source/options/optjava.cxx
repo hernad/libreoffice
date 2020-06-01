@@ -79,12 +79,10 @@ SvxJavaOptionsPage::SvxJavaOptionsPage(weld::Container* pPage, weld::DialogContr
     , m_xExpertConfigBtn(m_xBuilder->weld_button("expertconfig"))
     , m_xExperimentalCB(m_xBuilder->weld_check_button("experimental"))
     , m_xMacroCB(m_xBuilder->weld_check_button("macrorecording"))
-    , m_xAccessibilityText(m_xBuilder->weld_label("a11y"))
     , m_xAddDialogText(m_xBuilder->weld_label("selectruntime"))
     , m_xJavaFrame(m_xBuilder->weld_widget("javaframe"))
 {
     m_sInstallText = m_xJavaPathText->get_label();
-    m_sAccessibilityText = m_xAccessibilityText->get_label();
     m_sAddDialogText = m_xAddDialogText->get_label();
 
     m_xJavaList->set_size_request(m_xJavaList->get_approximate_digit_width() * 30,
@@ -93,7 +91,6 @@ SvxJavaOptionsPage::SvxJavaOptionsPage(weld::Container* pPage, weld::DialogContr
     std::vector<int> aWidths;
     aWidths.push_back(m_xJavaList->get_checkbox_column_width());
     aWidths.push_back(m_xJavaList->get_pixel_size("Sun Microsystems Inc.").Width());
-    aWidths.push_back(m_xJavaList->get_pixel_size("0.0.0_00-icedtea").Width());
     m_xJavaList->set_column_fixed_widths(aWidths);
 
     std::vector<int> aRadioColumns;
@@ -144,9 +141,9 @@ IMPL_LINK_NOARG(SvxJavaOptionsPage, EnableHdl_Impl, weld::Button&, void)
     m_xJavaList->set_sensitive(bEnable);
 }
 
-IMPL_LINK(SvxJavaOptionsPage, CheckHdl_Impl, const row_col&, rRowCol, void)
+IMPL_LINK(SvxJavaOptionsPage, CheckHdl_Impl, const weld::TreeView::iter_col&, rRowCol, void)
 {
-    HandleCheckEntry(rRowCol.first);
+    HandleCheckEntry(m_xJavaList->get_iter_index_in_parent(rRowCol.first));
 }
 
 IMPL_LINK_NOARG(SvxJavaOptionsPage, SelectHdl_Impl, weld::TreeView&, void)
@@ -334,18 +331,18 @@ void SvxJavaOptionsPage::LoadJREs()
 
     std::unique_ptr<JavaInfo> pSelectedJava;
     eErr = jfw_getSelectedJRE( &pSelectedJava );
-    if ( JFW_E_NONE == eErr && pSelectedJava )
+    if ( !(JFW_E_NONE == eErr && pSelectedJava) )
+        return;
+
+    sal_Int32 i = 0;
+    for (auto const & pCmpInfo: m_parJavaInfo)
     {
-        sal_Int32 i = 0;
-        for (auto const & pCmpInfo: m_parJavaInfo)
+        if ( jfw_areEqualJavaInfo( pCmpInfo.get(), pSelectedJava.get() ) )
         {
-            if ( jfw_areEqualJavaInfo( pCmpInfo.get(), pSelectedJava.get() ) )
-            {
-                HandleCheckEntry(i);
-                break;
-            }
-            ++i;
+            HandleCheckEntry(i);
+            break;
         }
+        ++i;
     }
 #else
     (void) this;
@@ -361,10 +358,6 @@ void SvxJavaOptionsPage::AddJRE( JavaInfo const * _pInfo )
     m_xJavaList->set_toggle(nPos, TRISTATE_FALSE, 0);
     m_xJavaList->set_text(nPos, _pInfo->sVendor, 1);
     m_xJavaList->set_text(nPos, _pInfo->sVersion, 2);
-    OUString sFeature;
-    if ((_pInfo->nFeatures & JFW_FEATURE_ACCESSBRIDGE) == JFW_FEATURE_ACCESSBRIDGE)
-        sFeature = m_sAccessibilityText;
-    m_xJavaList->set_text(nPos, sFeature, 3);
 
     INetURLObject aLocObj(_pInfo->sLocation);
     OUString sLocation = aLocObj.getFSysPath(FSysStyle::Detect);
@@ -626,21 +619,21 @@ IMPL_LINK_NOARG(SvxJavaParameterDlg, ModifyHdl_Impl, weld::Entry&, void)
 IMPL_LINK_NOARG(SvxJavaParameterDlg, AssignHdl_Impl, weld::Button&, void)
 {
     OUString sParam = comphelper::string::strip(m_xParameterEdit->get_text(), ' ');
-    if (!sParam.isEmpty())
+    if (sParam.isEmpty())
+        return;
+
+    int nPos = m_xAssignedList->find_text(sParam);
+    if (nPos == -1)
     {
-        int nPos = m_xAssignedList->find_text(sParam);
-        if (nPos == -1)
-        {
-            m_xAssignedList->append_text(sParam);
-            m_xAssignedList->select(m_xAssignedList->n_children() - 1);
-        }
-        else
-            m_xAssignedList->select(nPos);
-        m_xParameterEdit->set_text(OUString());
-        ModifyHdl_Impl(*m_xParameterEdit);
-        EnableEditButton();
-        EnableRemoveButton();
+        m_xAssignedList->append_text(sParam);
+        m_xAssignedList->select(m_xAssignedList->n_children() - 1);
     }
+    else
+        m_xAssignedList->select(nPos);
+    m_xParameterEdit->set_text(OUString());
+    ModifyHdl_Impl(*m_xParameterEdit);
+    EnableEditButton();
+    EnableRemoveButton();
 }
 
 IMPL_LINK_NOARG(SvxJavaParameterDlg, EditHdl_Impl, weld::Button&, void)
@@ -686,23 +679,23 @@ void SvxJavaParameterDlg::EditParameter()
     int nPos = m_xAssignedList->get_selected_index();
     m_xParameterEdit->set_text(OUString());
 
-    if (nPos != -1)
+    if (nPos == -1)
+        return;
+
+    InputDialog aParamEditDlg(m_xDialog.get(), CuiResId(RID_SVXSTR_JAVA_START_PARAM));
+    OUString editableClassPath = m_xAssignedList->get_selected_text();
+    aParamEditDlg.SetEntryText(editableClassPath);
+    aParamEditDlg.HideHelpBtn();
+
+    if (!aParamEditDlg.run())
+        return;
+    OUString editedClassPath = comphelper::string::strip(aParamEditDlg.GetEntryText(), ' ');
+
+    if ( !editedClassPath.isEmpty() && editableClassPath != editedClassPath )
     {
-        InputDialog aParamEditDlg(m_xDialog.get(), CuiResId(RID_SVXSTR_JAVA_START_PARAM));
-        OUString editableClassPath = m_xAssignedList->get_selected_text();
-        aParamEditDlg.SetEntryText(editableClassPath);
-        aParamEditDlg.HideHelpBtn();
-
-        if (!aParamEditDlg.run())
-            return;
-        OUString editedClassPath = comphelper::string::strip(aParamEditDlg.GetEntryText(), ' ');
-
-        if ( !editedClassPath.isEmpty() && editableClassPath != editedClassPath )
-        {
-            m_xAssignedList->remove(nPos);
-            m_xAssignedList->insert_text(nPos, editedClassPath);
-            m_xAssignedList->select(nPos);
-        }
+        m_xAssignedList->remove(nPos);
+        m_xAssignedList->insert_text(nPos, editedClassPath);
+        m_xAssignedList->select(nPos);
     }
 }
 

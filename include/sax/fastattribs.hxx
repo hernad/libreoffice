@@ -21,24 +21,25 @@
 #define INCLUDED_SAX_FASTATTRIBS_HXX
 
 #include <com/sun/star/xml/sax/XFastAttributeList.hpp>
+#include <com/sun/star/xml/sax/XFastTokenHandler.hpp>
 
 #include <cppuhelper/implbase.hxx>
 #include <sax/saxdllapi.h>
 
 #include <vector>
 
-namespace com { namespace sun { namespace star { namespace xml { namespace sax { class XFastTokenHandler; } } } } }
-namespace com { namespace sun { namespace star { namespace xml { struct Attribute; } } } }
-namespace com { namespace sun { namespace star { namespace xml { struct FastAttribute; } } } }
+namespace com::sun::star::xml::sax { class XFastTokenHandler; }
+namespace com::sun::star::xml { struct Attribute; }
+namespace com::sun::star::xml { struct FastAttribute; }
 
 namespace sax_fastparser
 {
 
 struct UnknownAttribute
 {
-    OUString const maNamespaceURL;
-    OString const maName;
-    OString const maValue;
+    OUString maNamespaceURL;
+    OString maName;
+    OString maValue;
 
     UnknownAttribute( const OUString& rNamespaceURL, const OString& rName, const OString& value );
     UnknownAttribute( const OString& rName, const OString& value );
@@ -46,10 +47,9 @@ struct UnknownAttribute
     void FillAttribute( css::xml::Attribute* pAttrib ) const;
 };
 
-typedef std::vector< UnknownAttribute > UnknownAttributeList;
-
 /// A native C++ interface to tokenisation
-class SAX_DLLPUBLIC FastTokenHandlerBase
+class SAX_DLLPUBLIC FastTokenHandlerBase :
+        public cppu::WeakImplHelper< css::xml::sax::XFastTokenHandler >
 {
  public:
     virtual ~FastTokenHandlerBase();
@@ -57,24 +57,22 @@ class SAX_DLLPUBLIC FastTokenHandlerBase
 
     /**
      * Client method to attempt the use of this interface if possible.
-     * @xTokenHandler - the UNO handle for the token lookup interface
-     * @pTokenHandler - a dynamic_cast version of @xTokenHandler to this interface
+     * @xTokenHandler - the token lookup interface
      * @pStr - string buffer to lookup
      * @nLength - optional length of chars in that buffer
      *
      * @return Tokenized form of pStr
      */
     static sal_Int32 getTokenFromChars(
-                         const css::uno::Reference<css::xml::sax::XFastTokenHandler > &xTokenHandler,
-                         const FastTokenHandlerBase *pTokenHandler /* can be NULL */,
+                         const FastTokenHandlerBase *pTokenHandler,
                          const char *pStr, size_t nLength );
 };
+
 
 class SAX_DLLPUBLIC FastAttributeList final : public cppu::WeakImplHelper< css::xml::sax::XFastAttributeList >
 {
 public:
-    FastAttributeList( const css::uno::Reference< css::xml::sax::XFastTokenHandler >& xTokenHandler,
-                       FastTokenHandlerBase *pOptHandlerBase = nullptr );
+    FastAttributeList( FastTokenHandlerBase *pTokenHandler );
     virtual ~FastAttributeList() override;
 
     void clear();
@@ -117,13 +115,6 @@ public:
             if (maAttributeTokens[i] == Token)
                 return i;
         return -1;
-    }
-
-    static FastAttributeList* castToFastAttributeList(
-                        const css::uno::Reference< css::xml::sax::XFastAttributeList >& xAttrList )
-    {
-        assert( dynamic_cast <FastAttributeList *> ( xAttrList.get() ) != nullptr );
-        return static_cast <FastAttributeList *> ( xAttrList.get() );
     }
 
     /// Use for fast iteration and conversion of attributes
@@ -207,10 +198,16 @@ private:
     // maAttributeValues[0] == 0
     std::vector< sal_Int32 > maAttributeValues;
     std::vector< sal_Int32 > maAttributeTokens;
-    UnknownAttributeList maUnknownAttributes;
-    css::uno::Reference< css::xml::sax::XFastTokenHandler > mxTokenHandler;
-    FastTokenHandlerBase * const mpTokenHandler;
+    std::vector< UnknownAttribute > maUnknownAttributes;
+    FastTokenHandlerBase * mpTokenHandler;
 };
+
+inline FastAttributeList& castToFastAttributeList(
+                    const css::uno::Reference< css::xml::sax::XFastAttributeList >& xAttrList )
+{
+    assert( dynamic_cast <FastAttributeList *> ( xAttrList.get() ) != nullptr );
+    return *static_cast <FastAttributeList *> ( xAttrList.get() );
+}
 
 }
 

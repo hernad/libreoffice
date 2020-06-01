@@ -18,33 +18,12 @@
  */
 
 #include <memory>
-#include <osl/diagnose.h>
-#include <sfx2/sidebar/ControlFactory.hxx>
 #include <svx/sidebar/LinePropertyPanelBase.hxx>
-#include <sfx2/sidebar/SidebarToolBox.hxx>
-#include <svx/strings.hrc>
-#include <svx/svxids.hrc>
-#include <svx/dialmgr.hxx>
-#include <sfx2/objsh.hxx>
-#include <sfx2/bindings.hxx>
-#include <sfx2/dispatch.hxx>
+#include <com/sun/star/drawing/LineStyle.hpp>
 #include <sfx2/weldutils.hxx>
-#include <svx/xtable.hxx>
-#include <svx/xdash.hxx>
-#include <svx/drawitem.hxx>
 #include <svx/linectrl.hxx>
-#include <svx/svxitems.hrc>
-#include <svtools/valueset.hxx>
-#include <unotools/pathoptions.hxx>
-#include <unotools/viewoptions.hxx>
-#include <i18nlangtag/mslangid.hxx>
-#include <svx/xlineit0.hxx>
-#include <svx/xlndsit.hxx>
-#include <vcl/svapp.hxx>
 #include <svx/xlnwtit.hxx>
 #include <svx/xlntrit.hxx>
-#include <svx/xlnstit.hxx>
-#include <svx/xlnedit.hxx>
 #include <svx/xlncapit.hxx>
 #include <svx/xlinjoit.hxx>
 #include <bitmaps.hlst>
@@ -94,11 +73,11 @@ namespace
 LinePropertyPanelBase::LinePropertyPanelBase(
     vcl::Window* pParent,
     const uno::Reference<css::frame::XFrame>& rxFrame)
-:   PanelLayout(pParent, "LinePropertyPanel", "svx/ui/sidebarline.ui", rxFrame, true),
+:   PanelLayout(pParent, "LinePropertyPanel", "svx/ui/sidebarline.ui", rxFrame),
     mxTBColor(m_xBuilder->weld_toolbar("color")),
-    mxColorDispatch(new ToolbarUnoDispatcher(*mxTBColor, rxFrame)),
+    mxColorDispatch(new ToolbarUnoDispatcher(*mxTBColor, *m_xBuilder, rxFrame)),
     mxLineStyleTB(m_xBuilder->weld_toolbar("linestyle")),
-    mxLineStyleDispatch(new ToolbarUnoDispatcher(*mxLineStyleTB, rxFrame)),
+    mxLineStyleDispatch(new ToolbarUnoDispatcher(*mxLineStyleTB, *m_xBuilder, rxFrame)),
     mxFTWidth(m_xBuilder->weld_label("widthlabel")),
     mxTBWidth(m_xBuilder->weld_toolbar("width")),
     mxFTTransparency(m_xBuilder->weld_label("translabel")),

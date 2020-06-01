@@ -83,11 +83,11 @@
 #include <com/sun/star/document/XDocumentProperties.hpp>
 #include <com/sun/star/document/XDocumentPropertiesSupplier.hpp>
 #include <com/sun/star/drawing/LineStyle.hpp>
-
+#include <com/sun/star/frame/XModel.hpp>
 #include <comphelper/string.hxx>
 #include <oox/ole/olehelper.hxx>
 
-#include <o3tl/optional.hxx>
+#include <optional>
 
 #include <cassert>
 #include <memory>
@@ -165,7 +165,7 @@ ImplSdPPTImport::ImplSdPPTImport( SdDrawDocument* pDocument, SotStorage& rStorag
     , mbDocumentFound(false)
     , mnFilterOptions(0)
     , mpDoc(pDocument)
-    , mePresChange(PRESCHANGE_MANUAL)
+    , mePresChange(PresChange::Manual)
     , mnBackgroundObjectsLayerID(0)
 {
     if ( !m_bOk )
@@ -583,7 +583,7 @@ bool ImplSdPPTImport::Import()
                     pPage->SetAutoLayout( AUTOLAYOUT_NOTES, true );
                 if ( nMasterNum )
                 {
-                    o3tl::optional< sal_Int16 > oStartNumbering;
+                    std::optional< sal_Int16 > oStartNumbering;
                     SfxStyleSheet* pSheet;
                     if ( nMasterNum == 1 )
                     {
@@ -645,7 +645,7 @@ bool ImplSdPPTImport::Import()
                         }
 
                         // titlestylesheet
-                        pSheet = pPage->GetStyleSheetForPresObj( PRESOBJ_TITLE );
+                        pSheet = pPage->GetStyleSheetForPresObj( PresObjKind::Title );
                         if ( pSheet )
                         {
                             SfxItemSet& rItemSet = pSheet->GetItemSet();
@@ -681,7 +681,7 @@ bool ImplSdPPTImport::Import()
                         for ( nLevel = 0; nLevel < 9; delete pParagraphs[ nLevel++ ] ) ;
 
                         // subtitle stylesheet
-                        pSheet = pPage->GetStyleSheetForPresObj( PRESOBJ_TEXT );
+                        pSheet = pPage->GetStyleSheetForPresObj( PresObjKind::Text );
                         if ( pSheet )
                         {
                             SfxItemSet& rItemSet = pSheet->GetItemSet();
@@ -694,7 +694,7 @@ bool ImplSdPPTImport::Import()
                     }
                     else if ( ePgKind == PageKind::Notes )
                     {
-                        pSheet = pPage->GetStyleSheetForPresObj( PRESOBJ_NOTES );
+                        pSheet = pPage->GetStyleSheetForPresObj( PresObjKind::Notes );
                         if ( pSheet )
                         {
                             SfxItemSet& rItemSet = pSheet->GetItemSet();
@@ -902,7 +902,7 @@ bool ImplSdPPTImport::Import()
         {
             for ( sal_uInt16 nPage = 0; nPage < nPageCnt; nPage++ )
             {
-                mePresChange = PRESCHANGE_SEMIAUTO;
+                mePresChange = PresChange::SemiAuto;
                 SetPageNum( nPage );
                 SdPage* pPage = static_cast<SdPage*>(MakeBlancPage( false ));
                 PptSlidePersistEntry* pMasterPersist = nullptr;
@@ -1013,7 +1013,7 @@ bool ImplSdPPTImport::Import()
                     pNotesPage->TRG_SetMasterPage(*pSdrModel->GetMasterPage(nNotesMasterNum));
                     pNotesPage->SetAutoLayout( AUTOLAYOUT_NOTES, true );
                     pSdrModel->InsertPage( pNotesPage );
-                    SdrObject* pPageObj = pNotesPage->GetPresObj( PRESOBJ_PAGE );
+                    SdrObject* pPageObj = pNotesPage->GetPresObj( PresObjKind::Page );
                     if ( pPageObj )
                         static_cast<SdrPageObj*>(pPageObj)->SetReferencedPage(pSdrModel->GetPage(( nPage << 1 ) + 1));
                 }
@@ -1487,7 +1487,7 @@ struct Ppt97AnimationStlSortHelper
 
 bool Ppt97AnimationStlSortHelper::operator()( const std::pair< SdrObject*, Ppt97AnimationPtr >& p1, const std::pair< SdrObject*, Ppt97AnimationPtr >& p2 )
 {
-    if( !p1.second.get() || !p2.second.get() )
+    if( !p1.second || !p2.second )
         return p1.second.get() < p2.second.get();
     if( *p1.second < *p2.second )
         return true;
@@ -1779,7 +1779,7 @@ void ImplSdPPTImport::ImportPageEffect( SdPage* pPage, const bool bNewAnimations
 
                                 if ( nBuildFlags & 0x400 )                      // slidechange by time
                                 {   // time to show (in Ticks)
-                                    pPage->SetPresChange( PRESCHANGE_AUTO );
+                                    pPage->SetPresChange( PresChange::Auto );
                                     pPage->SetTime( nSlideTime / 1000.0 );
                                 }
                                 else
@@ -1833,7 +1833,7 @@ void ImplSdPPTImport::ImportPageEffect( SdPage* pPage, const bool bNewAnimations
 
     if ( !bNewAnimationsUsed )
     {
-        tAnimationVector aAnimationsOnThisPage;
+        std::vector< std::pair< SdrObject*, Ppt97AnimationPtr > > aAnimationsOnThisPage;
 
         // add effects from page in correct order
         SdrObjListIter aSdrIter( pPage, SdrIterMode::Flat );
@@ -1853,7 +1853,7 @@ void ImplSdPPTImport::ImportPageEffect( SdPage* pPage, const bool bNewAnimations
         for( auto& rEntry : aAnimationsOnThisPage )
         {
             Ppt97AnimationPtr pPpt97Animation = rEntry.second;
-            if( pPpt97Animation.get() )
+            if( pPpt97Animation )
                 pPpt97Animation->createAndSetCustomAnimationEffect( rEntry.first );
         }
     }
@@ -2168,7 +2168,7 @@ SdrObject* ImplSdPPTImport::ApplyTextObj( PPTTextObj* pTextObj, SdrTextObj* pObj
 
     ppStyleSheetAry = nullptr;
 
-    PresObjKind ePresKind = PRESOBJ_NONE;
+    PresObjKind ePresKind = PresObjKind::NONE;
     PptOEPlaceholderAtom* pPlaceHolder = pTextObj->GetOEPlaceHolderAtom();
     OUString aPresentationText;
     if ( pPlaceHolder )
@@ -2179,32 +2179,32 @@ SdrObject* ImplSdPPTImport::ApplyTextObj( PPTTextObj* pTextObj, SdrTextObj* pObj
             case PptPlaceholder::MASTERCENTEREDTITLE :
             case PptPlaceholder::MASTERTITLE :
             {
-                ePresKind = PRESOBJ_TITLE;
+                ePresKind = PresObjKind::Title;
                 aPresentationText = pPage->GetPresObjText( ePresKind );
             }
             break;
             case PptPlaceholder::MASTERBODY :
             {
-                ePresKind = PRESOBJ_OUTLINE;
+                ePresKind = PresObjKind::Outline;
                 aPresentationText = pPage->GetPresObjText( ePresKind );
             }
             break;
             case PptPlaceholder::MASTERSUBTITLE :
             {
-                ePresKind = PRESOBJ_TEXT;
+                ePresKind = PresObjKind::Text;
                 aPresentationText = pPage->GetPresObjText( ePresKind );
             }
             break;
             case PptPlaceholder::MASTERNOTESBODYIMAGE :
             {
-                ePresKind = PRESOBJ_NOTES;
+                ePresKind = PresObjKind::Notes;
                 aPresentationText = pPage->GetPresObjText( ePresKind );
             }
             break;
-            case PptPlaceholder::MASTERDATE :           ePresKind = PRESOBJ_DATETIME;   break;
-            case PptPlaceholder::MASTERSLIDENUMBER :    ePresKind = PRESOBJ_SLIDENUMBER;break;
-            case PptPlaceholder::MASTERFOOTER :         ePresKind = PRESOBJ_FOOTER;     break;
-            case PptPlaceholder::MASTERHEADER :         ePresKind = PRESOBJ_HEADER;     break;
+            case PptPlaceholder::MASTERDATE :           ePresKind = PresObjKind::DateTime;   break;
+            case PptPlaceholder::MASTERSLIDENUMBER :    ePresKind = PresObjKind::SlideNumber;break;
+            case PptPlaceholder::MASTERFOOTER :         ePresKind = PresObjKind::Footer;     break;
+            case PptPlaceholder::MASTERHEADER :         ePresKind = PresObjKind::Header;     break;
             default: break;
         }
     }
@@ -2213,7 +2213,7 @@ SdrObject* ImplSdPPTImport::ApplyTextObj( PPTTextObj* pTextObj, SdrTextObj* pObj
         case TSS_Type::PageTitle :
         case TSS_Type::Title :
         {
-            pSheet = pPage->GetStyleSheetForPresObj( PRESOBJ_TITLE );
+            pSheet = pPage->GetStyleSheetForPresObj( PresObjKind::Title );
             if ( pSheet )
                 static_cast<SdrAttrObj*>(pText)->SdrAttrObj::NbcSetStyleSheet( pSheet, true );
             DBG_ASSERT( pSheet, "ImplSdPPTImport::ApplyTextObj -> could not get stylesheet for titleobject (SJ)" );
@@ -2221,7 +2221,7 @@ SdrObject* ImplSdPPTImport::ApplyTextObj( PPTTextObj* pTextObj, SdrTextObj* pObj
         break;
         case TSS_Type::Subtitle :
         {
-            pSheet = pPage->GetStyleSheetForPresObj( PRESOBJ_TEXT );
+            pSheet = pPage->GetStyleSheetForPresObj( PresObjKind::Text );
             if ( pSheet )
                 static_cast<SdrAttrObj*>(pText)->SdrAttrObj::NbcSetStyleSheet( pSheet, true );
             DBG_ASSERT( pSheet, "ImplSdPPTImport::ApplyTextObj -> could not get stylesheet for subtitleobject (SJ)" );
@@ -2250,14 +2250,14 @@ SdrObject* ImplSdPPTImport::ApplyTextObj( PPTTextObj* pTextObj, SdrTextObj* pObj
             if ( pPlaceHolder && ( ( pPlaceHolder->nPlaceholderId == PptPlaceholder::NOTESSLIDEIMAGE )
                 || ( pPlaceHolder->nPlaceholderId == PptPlaceholder::MASTERNOTESSLIDEIMAGE ) ) )
             {
-                pSheet = pPage->GetStyleSheetForPresObj( PRESOBJ_TITLE );
+                pSheet = pPage->GetStyleSheetForPresObj( PresObjKind::Title );
                 if ( pSheet )
                     static_cast<SdrAttrObj*>(pText)->SdrAttrObj::NbcSetStyleSheet( pSheet, true );
                 DBG_ASSERT( pSheet, "ImplSdPPTImport::ApplyTextObj -> could not get stylesheet for titleobject (SJ)" );
             }
             else
             {
-                pSheet = pPage->GetStyleSheetForPresObj( PRESOBJ_NOTES );
+                pSheet = pPage->GetStyleSheetForPresObj( PresObjKind::Notes );
                 DBG_ASSERT( pSheet, "ImplSdPPTImport::ApplyTextObj -> could not get stylesheet for notesobj (SJ)" );
                 if ( pSheet )
                     static_cast<SdrAttrObj*>(pText)->SdrAttrObj::NbcSetStyleSheet( pSheet, true );
@@ -2269,10 +2269,10 @@ SdrObject* ImplSdPPTImport::ApplyTextObj( PPTTextObj* pTextObj, SdrTextObj* pObj
         {
             switch( ePresKind )
             {
-                case PRESOBJ_DATETIME :
-                case PRESOBJ_SLIDENUMBER :
-                case PRESOBJ_FOOTER :
-                case PRESOBJ_HEADER :
+                case PresObjKind::DateTime :
+                case PresObjKind::SlideNumber :
+                case PresObjKind::Footer :
+                case PresObjKind::Header :
                     pSheet = static_cast<SfxStyleSheet*>(mpDoc->GetStyleSheetPool()->Find(SdResId(STR_PSEUDOSHEET_BACKGROUNDOBJECTS), SfxStyleFamily::Pseudo ));
                 break;
                 default :
@@ -2290,8 +2290,8 @@ SdrObject* ImplSdPPTImport::ApplyTextObj( PPTTextObj* pTextObj, SdrTextObj* pObj
         if ( m_eCurrentPageKind == PPT_MASTERPAGE )
         {
             bool bCreatePlaceHolder = ( pTextObj->GetInstance() != TSS_Type::Unused );
-            bool bIsHeaderFooter = ( ePresKind == PRESOBJ_HEADER) || (ePresKind == PRESOBJ_FOOTER)
-                                        || (ePresKind == PRESOBJ_DATETIME) || (ePresKind == PRESOBJ_SLIDENUMBER);
+            bool bIsHeaderFooter = ( ePresKind == PresObjKind::Header) || (ePresKind == PresObjKind::Footer)
+                                        || (ePresKind == PresObjKind::DateTime) || (ePresKind == PresObjKind::SlideNumber);
             if ( bCreatePlaceHolder && ( pTextObj->GetInstance() == TSS_Type::TextInShape ) )
                 bCreatePlaceHolder = bIsHeaderFooter;
             if ( bCreatePlaceHolder )
@@ -2348,7 +2348,7 @@ SdrObject* ImplSdPPTImport::ApplyTextObj( PPTTextObj* pTextObj, SdrTextObj* pObj
             {
                 sal_uInt32 nPlacementId = pPlaceHolder->nPlacementId;
                 PptPlaceholder nPlaceholderId = pPlaceHolder->nPlaceholderId;
-                PresObjKind ePresObjKind = PRESOBJ_NONE;
+                PresObjKind ePresObjKind = PresObjKind::NONE;
                 bool    bEmptyPresObj = true;
                 bool    bVertical = false;
                 if ( ( pTextObj->GetShapeType() == mso_sptRectangle ) || ( pTextObj->GetShapeType() == mso_sptTextBox ) )
@@ -2358,17 +2358,17 @@ SdrObject* ImplSdPPTImport::ApplyTextObj( PPTTextObj* pTextObj, SdrTextObj* pObj
                     bEmptyPresObj = ( pTextObj->Count() == 0 ) || ( pTextObj->Count() == 1 && pTextObj->First()->GetTextSize() == 0 );
                     switch ( nPlaceholderId )
                     {
-                        case PptPlaceholder::NOTESBODY :            ePresObjKind = PRESOBJ_NOTES;   break;
+                        case PptPlaceholder::NOTESBODY :            ePresObjKind = PresObjKind::Notes;   break;
                         case PptPlaceholder::VERTICALTEXTTITLE :
                             bVertical = true;
                             [[fallthrough]];
-                        case PptPlaceholder::TITLE :                ePresObjKind = PRESOBJ_TITLE;   break;
+                        case PptPlaceholder::TITLE :                ePresObjKind = PresObjKind::Title;   break;
                         case PptPlaceholder::VERTICALTEXTBODY :
                             bVertical = true;
                             [[fallthrough]];
-                        case PptPlaceholder::BODY :                 ePresObjKind = PRESOBJ_OUTLINE; break;
-                        case PptPlaceholder::CENTEREDTITLE :        ePresObjKind = PRESOBJ_TITLE;   break;
-                        case PptPlaceholder::SUBTITLE :             ePresObjKind = PRESOBJ_TEXT;    break;      // PRESOBJ_OUTLINE
+                        case PptPlaceholder::BODY :                 ePresObjKind = PresObjKind::Outline; break;
+                        case PptPlaceholder::CENTEREDTITLE :        ePresObjKind = PresObjKind::Title;   break;
+                        case PptPlaceholder::SUBTITLE :             ePresObjKind = PresObjKind::Text;    break;      // PresObjKind::Outline
 
                         default :
                         {
@@ -2377,11 +2377,11 @@ SdrObject* ImplSdPPTImport::ApplyTextObj( PPTTextObj* pTextObj, SdrTextObj* pObj
                                 switch ( nPlaceholderId )
                                 {
                                     case PptPlaceholder::MEDIACLIP :
-                                    case PptPlaceholder::OBJECT : ePresObjKind = PRESOBJ_OBJECT; break;
-                                    case PptPlaceholder::GRAPH : ePresObjKind = PRESOBJ_CHART; break;
-                                    case PptPlaceholder::TABLE : ePresObjKind = PRESOBJ_TABLE; break;
-                                    case PptPlaceholder::CLIPART : ePresObjKind = PRESOBJ_GRAPHIC; break;
-                                    case PptPlaceholder::ORGANISZATIONCHART : ePresObjKind = PRESOBJ_ORGCHART; break;
+                                    case PptPlaceholder::OBJECT : ePresObjKind = PresObjKind::Object; break;
+                                    case PptPlaceholder::GRAPH : ePresObjKind = PresObjKind::Chart; break;
+                                    case PptPlaceholder::TABLE : ePresObjKind = PresObjKind::Table; break;
+                                    case PptPlaceholder::CLIPART : ePresObjKind = PresObjKind::Graphic; break;
+                                    case PptPlaceholder::ORGANISZATIONCHART : ePresObjKind = PresObjKind::OrgChart; break;
                                     default: break;
                                 }
                             }
@@ -2396,16 +2396,16 @@ SdrObject* ImplSdPPTImport::ApplyTextObj( PPTTextObj* pTextObj, SdrTextObj* pObj
                         switch ( nPlaceholderId )
                         {
                             case PptPlaceholder::MEDIACLIP :
-                            case PptPlaceholder::OBJECT : ePresObjKind = PRESOBJ_OBJECT; break;
-                            case PptPlaceholder::GRAPH : ePresObjKind = PRESOBJ_CHART; break;
-                            case PptPlaceholder::TABLE : ePresObjKind = PRESOBJ_CALC; break;
-                            case PptPlaceholder::CLIPART : ePresObjKind = PRESOBJ_GRAPHIC; break;
-                            case PptPlaceholder::ORGANISZATIONCHART : ePresObjKind = PRESOBJ_ORGCHART; break;
+                            case PptPlaceholder::OBJECT : ePresObjKind = PresObjKind::Object; break;
+                            case PptPlaceholder::GRAPH : ePresObjKind = PresObjKind::Chart; break;
+                            case PptPlaceholder::TABLE : ePresObjKind = PresObjKind::Calc; break;
+                            case PptPlaceholder::CLIPART : ePresObjKind = PresObjKind::Graphic; break;
+                            case PptPlaceholder::ORGANISZATIONCHART : ePresObjKind = PresObjKind::OrgChart; break;
                             default: break;
                         }
                     }
                 }
-                if ( ePresObjKind != PRESOBJ_NONE )
+                if ( ePresObjKind != PresObjKind::NONE )
                 {
                     if ( !bEmptyPresObj )
                     {
@@ -2436,8 +2436,8 @@ SdrObject* ImplSdPPTImport::ApplyTextObj( PPTTextObj* pTextObj, SdrTextObj* pObj
 
                         if ((m_eCurrentPageKind != PPT_NOTEPAGE) && (nPlacementId != 0xffffffff) && pPage->TRG_HasMasterPage())
                         {
-                            SdrObject* pTitleObj = static_cast<SdPage&>(pPage->TRG_GetMasterPage()).GetPresObj( PRESOBJ_TITLE );
-                            SdrObject* pOutlineObj = static_cast<SdPage&>(pPage->TRG_GetMasterPage()).GetPresObj( PRESOBJ_OUTLINE );
+                            SdrObject* pTitleObj = static_cast<SdPage&>(pPage->TRG_GetMasterPage()).GetPresObj( PresObjKind::Title );
+                            SdrObject* pOutlineObj = static_cast<SdPage&>(pPage->TRG_GetMasterPage()).GetPresObj( PresObjKind::Outline );
 
                             ::tools::Rectangle aTitleRect;
                             ::tools::Rectangle aOutlineRect;
@@ -2579,7 +2579,7 @@ SdrObject* ImplSdPPTImport::ProcessObj( SvStream& rSt, DffObjData& rData, SvxMSD
             const ProcessData& rProcessData=static_cast<const ProcessData&>(rClientData);
             if(rProcessData.pPage.page)
                 static_cast<SdPage *>(rProcessData.pPage.page)->InsertPresObj(
-                    pObj, PRESOBJ_PAGE );
+                    pObj, PresObjKind::Page );
         }
 
         DffRecordHeader aMasterShapeHd;

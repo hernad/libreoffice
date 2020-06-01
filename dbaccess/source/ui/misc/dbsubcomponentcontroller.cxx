@@ -23,13 +23,10 @@
 #include <dbaccess/dataview.hxx>
 #include <strings.hrc>
 #include <strings.hxx>
-#include <stringconstants.hxx>
 #include <dbaccess/dbsubcomponentcontroller.hxx>
 
 #include <com/sun/star/frame/XUntitledNumbers.hpp>
-#include <com/sun/star/beans/PropertyAttribute.hpp>
 #include <com/sun/star/container/XChild.hpp>
-#include <com/sun/star/container/XNameAccess.hpp>
 #include <com/sun/star/sdb/XDocumentDataSource.hpp>
 #include <com/sun/star/sdb/XOfficeDatabaseDocument.hpp>
 #include <com/sun/star/sdbc/XDataSource.hpp>
@@ -40,7 +37,6 @@
 #include <connectivity/dbexception.hxx>
 #include <connectivity/dbmetadata.hxx>
 #include <connectivity/dbtools.hxx>
-#include <cppuhelper/typeprovider.hxx>
 #include <comphelper/interfacecontainer2.hxx>
 #include <rtl/ustrbuf.hxx>
 #include <sal/log.hxx>
@@ -123,7 +119,7 @@ namespace dbaui
     struct DBSubComponentController_Impl
     {
     private:
-        ::o3tl::optional< bool >       m_aDocScriptSupport;
+        ::std::optional< bool >       m_aDocScriptSupport;
 
     public:
         ::dbtools::SQLExceptionInfo     m_aCurrentError;
@@ -166,7 +162,7 @@ namespace dbaui
         {
             OSL_PRECOND( !m_aDocScriptSupport,
                 "DBSubComponentController_Impl::setDocumentScriptSupport: already initialized!" );
-            m_aDocScriptSupport = ::o3tl::optional< bool >( _bSupport );
+            m_aDocScriptSupport = ::std::optional< bool >( _bSupport );
         }
     };
 

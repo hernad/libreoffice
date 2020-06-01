@@ -45,14 +45,14 @@ struct SfxItemPropertyMapEntry;
 class VclSimpleEvent;
 namespace svtools { class ColorConfig; }
 
-namespace com { namespace sun { namespace star { namespace frame {
+namespace com::sun::star::frame {
     class XFrame;
-} } } }
+}
 
-enum SdOptionStreamMode
+enum class SdOptionStreamMode
 {
-    SD_OPTION_LOAD = 0,
-    SD_OPTION_STORE = 1
+    Load = 0,
+    Store = 1
 };
 
 typedef std::map< SfxItemPropertyMapEntry const * , css::uno::Reference<css::beans::XPropertySetInfo> > SdExtPropertySetInfoCache;

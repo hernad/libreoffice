@@ -34,9 +34,6 @@
 #include <svl/cjkoptions.hxx>
 #include <svl/ctloptions.hxx>
 #include <com/sun/star/awt/XWindow.hpp>
-#include <com/sun/star/accessibility/AccessibleRelation.hpp>
-#include <com/sun/star/accessibility/AccessibleRelationType.hpp>
-#include <com/sun/star/accessibility/XAccessibleGetAccFlowTo.hpp>
 #include <com/sun/star/container/XNameAccess.hpp>
 #include <com/sun/star/frame/XDispatch.hpp>
 #include <com/sun/star/frame/XDispatchProvider.hpp>
@@ -46,7 +43,6 @@
 #include <com/sun/star/configuration/theDefaultProvider.hpp>
 #include <com/sun/star/frame/ModuleManager.hpp>
 #include <com/sun/star/ui/XUIElement.hpp>
-#include <comphelper/accflowenum.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/scopeguard.hxx>
 #include <svl/itempool.hxx>
@@ -69,11 +65,13 @@
 #include <svx/svxdlg.hxx>
 #include <vcl/toolbox.hxx>
 #include <o3tl/typed_flags_set.hxx>
-#include <vcl/combobox.hxx>
 
 #include <cstdlib>
 #include <memory>
 
+#include <findtextfield.hxx>
+
+#include <svx/labelitemwindow.hxx>
 #include <svx/xdef.hxx>
 #include <officecfg/Office/Common.hxx>
 
@@ -256,7 +254,6 @@ void SearchAttrItemList::Remove(size_t nPos)
 SvxSearchDialog::SvxSearchDialog(weld::Window* pParent, SfxChildWindow* pChildWin, SfxBindings& rBind)
     : SfxModelessDialogController(&rBind, pChildWin, pParent,
                                   "svx/ui/findreplacedialog.ui", "FindReplaceDialog")
-    , mbSuccess(false)
     , rBindings(rBind)
     , bWriter(false)
     , bSearch(true)
@@ -436,15 +433,14 @@ void SvxSearchDialog::Construct_Impl()
 
     bool bSearchComponent1 = false;
     bool bSearchComponent2 = false;
-    if(xDispatchProv.is() &&
-            (pImpl->xCommand1Dispatch = xDispatchProv->queryDispatch(pImpl->aCommand1URL, sTarget, 0)).is())
+    if(xDispatchProv.is())
     {
-        bSearchComponent1 = true;
-    }
-    if(xDispatchProv.is() &&
-            (pImpl->xCommand2Dispatch = xDispatchProv->queryDispatch(pImpl->aCommand2URL, sTarget, 0)).is())
-    {
-        bSearchComponent2 = true;
+        pImpl->xCommand1Dispatch = xDispatchProv->queryDispatch(pImpl->aCommand1URL, sTarget, 0);
+        if (pImpl->xCommand1Dispatch.is())
+            bSearchComponent1 = true;
+        pImpl->xCommand2Dispatch = xDispatchProv->queryDispatch(pImpl->aCommand2URL, sTarget, 0);
+        if (pImpl->xCommand2Dispatch.is())
+            bSearchComponent2 = true;
     }
 
     if( bSearchComponent1 || bSearchComponent2 )
@@ -734,7 +730,7 @@ public:
     }
 private:
     SvxSearchDialog& mrDialog;
-    bool const mbValue;
+    bool mbValue;
 };
 
 }
@@ -905,8 +901,7 @@ void SvxSearchDialog::Init_Impl( bool bSearchPattern )
             m_xSearchTmplLB->clear();
             m_xReplaceTmplLB->clear();
             SfxStyleSheetBasePool* pStylePool = pShell->GetStyleSheetPool();
-            pStylePool->SetSearchMask( pSearchItem->GetFamily() );
-            SfxStyleSheetBase* pBase = pStylePool->First();
+            SfxStyleSheetBase* pBase = pStylePool->First(pSearchItem->GetFamily());
 
             while ( pBase )
             {
@@ -1595,10 +1590,9 @@ void SvxSearchDialog::TemplatesChanged_Impl( SfxStyleSheetBasePool& rPool )
     OUString aOldRepl( m_xReplaceTmplLB->get_active_text() );
     m_xSearchTmplLB->clear();
     m_xReplaceTmplLB->clear();
-    rPool.SetSearchMask( pSearchItem->GetFamily() );
     m_xSearchTmplLB->freeze();
     m_xReplaceTmplLB->freeze();
-    SfxStyleSheetBase* pBase = rPool.First();
+    SfxStyleSheetBase* pBase = rPool.First(pSearchItem->GetFamily());
 
     while ( pBase )
     {
@@ -1974,8 +1968,8 @@ IMPL_LINK_NOARG(SvxSearchDialog, FormatHdl_Impl, weld::Button&, void)
         const SfxPoolItem* pItem;
         for( sal_uInt16 n = 0; n < pList->Count(); ++n )
         {
-            SearchAttrItem* pAItem;
-            if( !IsInvalidItem( (pAItem = &pList->GetObject(n))->pItem ) &&
+            SearchAttrItem* pAItem = &pList->GetObject(n);
+            if( !IsInvalidItem( pAItem->pItem ) &&
                 SfxItemState::SET == aOutSet.GetItemState(
                     pAItem->pItem->Which(), false, &pItem ) )
             {
@@ -2285,58 +2279,6 @@ void SvxSearchDialog::SaveToModule_Impl()
     rBindings.GetDispatcher()->Execute( SID_SEARCH_ITEM, SfxCallMode::SLOT, ppArgs );
 }
 
-void SvxSearchDialog::SetDocWin(vcl::Window* pDocWin, SvxSearchCmd eCommand)
-{
-    m_xDialog->clear_extra_accessible_relations();
-
-    if (!pDocWin)
-        return;
-
-    Reference<css::accessibility::XAccessible> xDocAcc = pDocWin->GetAccessible();
-    if (!xDocAcc.is())
-    {
-        return;
-    }
-    Reference<css::accessibility::XAccessibleGetAccFlowTo> xGetAccFlowTo(xDocAcc, UNO_QUERY);
-    if (!xGetAccFlowTo.is())
-    {
-        return;
-    }
-
-    /* tdf#128313 FlowTo tries to set an a11y relation between the search dialog
-       and its results. But for "find/replace" within a calc column we don't
-       want to return the entire column as the result, we want the current cell.
-
-       But with search/all we do want the new multi-cellselection as the result.
-    */
-    AccessibilityFlowTo eFlowTo(AccessibilityFlowTo::ForFindReplaceItem);
-    switch (eCommand)
-    {
-        case SvxSearchCmd::FIND:
-        case SvxSearchCmd::REPLACE:
-            eFlowTo = AccessibilityFlowTo::ForFindReplaceItem;
-            break;
-        case SvxSearchCmd::FIND_ALL:
-        case SvxSearchCmd::REPLACE_ALL:
-            eFlowTo = AccessibilityFlowTo::ForFindReplaceRange;
-            break;
-    }
-    uno::Sequence<uno::Any> aAnySeq = xGetAccFlowTo->getAccFlowTo(Any(GetSrchFlag()), static_cast<sal_Int32>(eFlowTo));
-
-    sal_Int32 nLen = aAnySeq.getLength();
-    if (nLen)
-    {
-        uno::Sequence<uno::Reference<uno::XInterface>> aSequence(nLen);
-        std::transform(aAnySeq.begin(), aAnySeq.end(), aSequence.begin(),
-            [](const uno::Any& rAny) -> uno::Reference < css::accessibility::XAccessible > {
-                uno::Reference < css::accessibility::XAccessible > xAcc;
-                rAny >>= xAcc;
-                return xAcc;
-            });
-        m_xDialog->add_extra_accessible_relation(css::accessibility::AccessibleRelation(css::accessibility::AccessibleRelationType::CONTENT_FLOWS_TO, aSequence));
-    }
-}
-
 short SvxSearchDialog::executeSubDialog(VclAbstractDialog * dialog) {
     assert(!m_executingSubDialog);
     comphelper::ScopeGuard g([this] { m_executingSubDialog = false; });
@@ -2399,24 +2341,23 @@ static void lcl_SetSearchLabelWindow(const OUString& rStr)
         sal_uInt16 id = pToolBox->GetItemId(i);
         if (pToolBox->GetItemCommand(id) == ".uno:SearchLabel")
         {
-            vcl::Window* pSearchLabel = pToolBox->GetItemWindow(id);
+            LabelItemWindow* pSearchLabel = dynamic_cast<LabelItemWindow*>(pToolBox->GetItemWindow(id));
             assert(pSearchLabel);
-            pSearchLabel->SetText(rStr);
+            pSearchLabel->set_label(rStr);
             if (rStr.isEmpty())
-                pSearchLabel->SetSizePixel(Size(16, pSearchLabel->get_preferred_size().Height()));
+                pSearchLabel->SetSizePixel(Size(16, pSearchLabel->GetSizePixel().Height()));
             else
-                pSearchLabel->SetSizePixel(pSearchLabel->get_preferred_size());
+                pSearchLabel->SetOptimalSize();
         }
 
         if (pToolBox->GetItemCommand(id) == ".uno:FindText")
         {
-            ComboBox* pFindText = dynamic_cast<ComboBox*>(pToolBox->GetItemWindow(id));
+            FindTextFieldControl* pFindText = dynamic_cast<FindTextFieldControl*>(pToolBox->GetItemWindow(id));
             assert(pFindText);
-            Edit* pEdit = pFindText->GetSubEdit();
             if (bNotFound)
-                pEdit->SetControlForeground(COL_LIGHTRED);
+                pFindText->set_entry_message_type(weld::EntryMessageType::Error);
             else
-                pEdit->SetControlForeground();
+                pFindText->set_entry_message_type(weld::EntryMessageType::Normal);
         }
     }
     xLayoutManager->doLayout();
@@ -2433,6 +2374,8 @@ OUString SvxSearchDialogWrapper::GetSearchLabel()
             pViewFrame->GetFrame().GetFrameInterface(), css::uno::UNO_QUERY_THROW);
     css::uno::Reference< css::frame::XLayoutManager > xLayoutManager;
     xPropSet->getPropertyValue("LayoutManager") >>= xLayoutManager;
+    if (!xLayoutManager.is())
+        return OUString();
     css::uno::Reference< css::ui::XUIElement > xUIElement =
         xLayoutManager->getElement("private:resource/toolbar/findbar");
     if (!xUIElement.is())
@@ -2445,8 +2388,8 @@ OUString SvxSearchDialogWrapper::GetSearchLabel()
         sal_uInt16 id = pToolBox->GetItemId(i);
         if (pToolBox->GetItemCommand(id) == ".uno:SearchLabel")
         {
-            vcl::Window* pSearchLabel = pToolBox->GetItemWindow(id);
-            return pSearchLabel ? pSearchLabel->GetText() : OUString();
+            LabelItemWindow* pSearchLabel = dynamic_cast<LabelItemWindow*>(pToolBox->GetItemWindow(id));
+            return pSearchLabel ? pSearchLabel->get_label() : OUString();
         }
     }
     return OUString();

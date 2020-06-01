@@ -29,7 +29,7 @@
 
 /// @HTML
 
-namespace rtl { namespace textenc {
+namespace rtl::textenc {
 
 /**
    Maps a range of BMP Unicode code points to individual bytes.
@@ -40,7 +40,7 @@ struct BmpUnicodeToSingleByteRange {
     /**
        The start of the range of BMP Unicode code points.
      */
-    sal_Unicode const unicode;
+    sal_Unicode unicode;
 
     /**
        The extend of the range of BMP Unicode code points.
@@ -49,7 +49,7 @@ struct BmpUnicodeToSingleByteRange {
        inclusive.  It is an error if <code>unicode + range</code> is greater
        than <code>0xFFFF</code>.</p>
      */
-    sal_uInt8 const range;
+    sal_uInt8 range;
 
     /**
        The start of the corresponding range of individual bytes.
@@ -57,7 +57,7 @@ struct BmpUnicodeToSingleByteRange {
        <p>It is an error if <code>byte + range</code> is greater than
        <code>0xFF</code>.</p>
      */
-    sal_uInt8 const byte;
+    sal_uInt8 byte;
 };
 
 /**
@@ -77,12 +77,12 @@ struct BmpUnicodeToSingleByteConverterData {
        <p>Illegal units from the single-byte character set are mapped to
        <code>0xFFFF</code>.</p>
      */
-    sal_Unicode const byteToUnicode[256];
+    sal_Unicode byteToUnicode[256];
 
     /**
        The number of Unicode-to-byte conversion ranges.
      */
-    std::size_t const unicodeToByteEntries;
+    std::size_t unicodeToByteEntries;
 
     /**
        The array of Unicode-to-byte conversion ranges, sorted by increasing
@@ -93,7 +93,7 @@ struct BmpUnicodeToSingleByteConverterData {
     BmpUnicodeToSingleByteRange const * unicodeToByte;
 };
 
-} }
+}
 
 /**
    Function to convert from a single-byte character set to BMP Unicode.

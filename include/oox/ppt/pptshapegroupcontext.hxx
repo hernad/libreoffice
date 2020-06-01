@@ -32,12 +32,12 @@ namespace oox {
     namespace drawingml { class Color; }
 }
 
-namespace oox { namespace ppt {
+namespace oox::ppt {
 
 class PPTShapeGroupContext final : public ::oox::drawingml::ShapeGroupContext
 {
-    SlidePersistPtr const mpSlidePersistPtr;
-    ShapeLocation const meShapeLocation;
+    SlidePersistPtr     mpSlidePersistPtr;
+    ShapeLocation       meShapeLocation;
     oox::drawingml::ShapePtr    pGraphicShape;
 
     void                applyFontRefColor(const oox::drawingml::ShapePtr& pShape, const oox::drawingml::Color& rFontRefColor);
@@ -59,7 +59,7 @@ protected:
 
 };
 
-} }
+}
 
 #endif // INCLUDED_OOX_PPT_PPTSHAPEGROUPCONTEXT_HXX
 

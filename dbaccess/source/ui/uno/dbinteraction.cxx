@@ -18,6 +18,7 @@
  */
 
 #include "dbinteraction.hxx"
+#include <apitools.hxx>
 #include <dbu_reghelper.hxx>
 #include <uiservices.hxx>
 #include <tools/diagnose_ex.h>
@@ -35,10 +36,8 @@
 #include <paramdialog.hxx>
 #include <vcl/svapp.hxx>
 #include <CollectionView.hxx>
-#include <UITools.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/sequenceashashmap.hxx>
-#include <toolkit/helper/vclunohelper.hxx>
 
 extern "C" void createRegistryInfo_OInteractionHandler()
 {

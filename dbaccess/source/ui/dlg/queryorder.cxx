@@ -21,18 +21,13 @@
 #include <strings.hxx>
 #include <core_resource.hxx>
 #include <queryorder.hxx>
-#include <stringconstants.hxx>
 #include <com/sun/star/sdb/XSingleSelectQueryComposer.hpp>
 #include <com/sun/star/sdbc/ColumnSearch.hpp>
 #include <com/sun/star/sdbc/XConnection.hpp>
 #include <com/sun/star/container/XNameAccess.hpp>
-#include <tools/debug.hxx>
-#include <connectivity/sqliterator.hxx>
 #include <connectivity/dbtools.hxx>
 #include <com/sun/star/sdbcx/XColumnsSupplier.hpp>
 #include <tools/diagnose_ex.h>
-#include <vcl/settings.hxx>
-#include <algorithm>
 
 using namespace dbaui;
 using namespace connectivity;
@@ -195,8 +190,6 @@ OUString DlgOrderCrit::GetOrderList( ) const
 {
     Reference<XDatabaseMetaData> xMetaData = m_xConnection->getMetaData();
     OUString sQuote  = xMetaData.is() ? xMetaData->getIdentifierQuoteString() : OUString();
-
-    Reference< XNameAccess> xColumns = Reference< XColumnsSupplier >(m_xQueryComposer,UNO_QUERY_THROW)->getColumns();
 
     OUStringBuffer sOrder;
     for( sal_uInt16 i=0 ; i<DOG_ROWS; i++ )

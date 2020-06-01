@@ -21,16 +21,15 @@
 #define INCLUDED_OOX_SOURCE_PPT_ANIMATIONTYPES_HXX
 
 #include <com/sun/star/uno/Any.hxx>
-#include <com/sun/star/xml/sax/XFastAttributeList.hpp>
 
-namespace oox { namespace ppt {
+namespace oox::ppt {
 
 // ST_TLTime
 css::uno::Any GetTime( const OUString & val );
 // ST_TLTimeAnimateValueTime
 css::uno::Any GetTimeAnimateValueTime( const OUString & val );
 
-} }
+}
 
 #endif
 

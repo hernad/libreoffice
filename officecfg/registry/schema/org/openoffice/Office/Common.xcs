@@ -880,6 +880,14 @@
         </info>
         <value>false</value>
       </prop>
+      <prop oor:name="ForceSkiaRaster" oor:type="xs:boolean" oor:nillable="false">
+        <info>
+           <desc>Specifies if Skia rendering should be used in VCL backends
+               supporting it. This one forces the use of Skia software rendering
+               instead of trying to use the graphics driver.</desc>
+        </info>
+        <value>false</value>
+      </prop>
       <prop oor:name="AnimationsEnabled" oor:type="xs:boolean" oor:nillable="false">
         <info>
           <desc>Defines if the user interface animations (like "walking ant"
@@ -899,6 +907,14 @@
            is counted in percents of the printable area.</desc>
         </info>
         <value>25</value>
+      </prop>
+      <prop oor:name="PDFExportImageCacheSize" oor:type="xs:int" oor:nillable="false">
+        <info>
+           <desc>Specifies number of PDF image instances to cache on
+           export - can save potentially huge amount of CPU time on
+           re-compressing the same JPEG image over and over again.</desc>
+        </info>
+        <value>15</value>
       </prop>
     </group>
     <group oor:name="InternalMSExport">
@@ -2358,14 +2374,6 @@
           </info>
           <value>false</value>
         </prop>
-        <prop oor:name="SaveBackwardCompatibleODF" oor:type="xs:boolean" oor:nillable="false">
-          <info>
-            <desc>If the  value is "true", then the ODF that is saved by
-            OpenOffice.org will be backward compatible to previous minor
-            versions.</desc>
-          </info>
-          <value>true</value>
-        </prop>
         <prop oor:name="LoadPrinter" oor:type="xs:boolean" oor:nillable="false">
           <!-- UIHints: Tools - Options - Load/Save - General - Load - Load
                printer settings with the document -->
@@ -2481,6 +2489,16 @@
             <enumeration oor:value="8">
               <info>
                 <desc>ODFVER_012_EXT_COMPAT</desc>
+              </info>
+            </enumeration>
+            <enumeration oor:value="9">
+              <info>
+                <desc>ODFVER_012_EXTENDED</desc>
+              </info>
+            </enumeration>
+            <enumeration oor:value="10">
+              <info>
+                <desc>ODFVER_013</desc>
               </info>
             </enumeration>
             <enumeration oor:value="3">
@@ -2727,6 +2745,12 @@
             security.</desc>
           </info>
           <value>false</value>
+        </prop>
+        <prop oor:name="CheckDocumentEvents" oor:type="xs:boolean" oor:nillable="false">
+          <info>
+            <desc>Warn on load when a document binds an event to a macro</desc>
+          </info>
+          <value>true</value>
         </prop>
         <set oor:name="TrustedAuthors" oor:node-type="TrustedAuthor">
           <info>
@@ -3959,7 +3983,7 @@
               <desc>Specifies if character background is exported as highlighting
               (and not as shading) when saving to Word document</desc>
             </info>
-            <value>true</value>
+            <value>false</value>
           </prop>
         </group>
       </group>
@@ -5314,7 +5338,12 @@
             <constraints>
               <enumeration oor:value="0">
                 <info>
-                  <desc>PDF 1.5 (default selection).</desc>
+                  <desc>PDF 1.6 (default selection).</desc>
+                </info>
+              </enumeration>
+              <enumeration oor:value="15">
+                <info>
+                  <desc>PDF 1.5</desc>
                 </info>
               </enumeration>
               <enumeration oor:value="16">
@@ -5485,6 +5514,12 @@
         </info>
         <value>true</value>
       </prop>
+      <prop oor:name="AllowOverrideLocking" oor:type="xs:boolean" oor:nillable="false">
+        <info>
+          <desc>Whether the user can open a file for editing although it has been locked by another user.</desc>
+        </info>
+        <value>true</value>
+      </prop>
       <prop oor:name="ShowLinkWarningDialog" oor:type="xs:boolean" oor:nillable="false">
         <info>
           <desc>Determines if a warning dialog should be
@@ -5576,7 +5611,7 @@
         <info>
           <desc>Combinations of (OS, OS version, OpenCL platform vendor, OpenCL device name, OpenCL driver version) that are known to be bad. Each entry is a string consisting of five parts separated by slashes. An empty part matches anything. In case a slash, percent or semicolon occurs inside a part, it is replaced by a percent followed by the corresponding number as two hex digits. The parts except OS can contain regular expressions. Inside these regular expressions the usual characters .*()[]\ are special and should be quoted with a backslash to be interpreted literally. OS should be just one of "Linux", "OS X" (including the space) or "Windows" (without quotes). Has higher priority than OpenCLWhiteList.</desc>
         </info>
-  <value oor:separator=";">Windows//Intel\(R\) Corporation//9\.17\.10\.2884;Windows//Intel\(R\) Corporation//4\.2\.0\.99;Windows//Intel\(R\) Corporation//5\.2\.0\.10049;Windows//Intel\(R\) Corporation//3\.0\.1\.10891</value>
+        <value oor:separator=";">Windows//Intel\(R\) Corporation//9\.17\.10\.2884;Windows//Intel\(R\) Corporation//4\.2\.0\.99;Windows//Intel\(R\) Corporation//5\.2\.0\.10049;Windows//Intel\(R\) Corporation//3\.0\.1\.10891</value>
       </prop>
       <prop oor:name="OpenCLWhiteList" oor:type="oor:string-list" oor:nillable="false">
         <!-- UIHints: Tools - Options General OpenCL  -->
@@ -5786,6 +5821,12 @@
           <desc>Number of saved searches in the Find and Replace dialog.</desc>
         </info>
       </prop>
+      <prop oor:name="AllowEditReadonlyDocs" oor:type="xs:boolean" oor:nillable="false">
+        <info>
+          <desc>Allow the user to edit read-only docs (via menu or Infobar)</desc>
+        </info>
+        <value>true</value>
+      </prop>
     </group>
     <group oor:name="Forms">
       <info>
@@ -5913,7 +5954,7 @@
       <prop oor:name="IsWholeWordsOnly" oor:type="xs:boolean" oor:nillable="false">
         <!-- OldPath: -->
         <!-- OldLocation: -->
-        <!-- UIHints: Edit/Find & Replace -->
+        <!-- UIHints: Edit/Find and Replace -->
         <info>
           <desc>Specifies search for whole words only.</desc>
         </info>
@@ -5922,7 +5963,7 @@
       <prop oor:name="IsBackwards" oor:type="xs:boolean" oor:nillable="false">
         <!-- OldPath: -->
         <!-- OldLocation: -->
-        <!-- UIHints: Edit/Find & Replace -->
+        <!-- UIHints: Edit/Find and Replace -->
         <info>
           <desc>Specifies search backwards.</desc>
         </info>
@@ -5931,7 +5972,7 @@
       <prop oor:name="IsUseWildcard" oor:type="xs:boolean" oor:nillable="false">
         <!-- OldPath: -->
         <!-- OldLocation: -->
-        <!-- UIHints: Edit/Find & Replace -->
+        <!-- UIHints: Edit/Find and Replace -->
         <info>
           <desc>Specifies search with the use of wildcards.</desc>
         </info>
@@ -5940,7 +5981,7 @@
       <prop oor:name="IsUseRegularExpression" oor:type="xs:boolean" oor:nillable="false">
         <!-- OldPath: -->
         <!-- OldLocation: -->
-        <!-- UIHints: Edit/Find & Replace -->
+        <!-- UIHints: Edit/Find and Replace -->
         <info>
           <desc>Specifies search with the use of regular expressions.</desc>
         </info>
@@ -5949,7 +5990,7 @@
       <prop oor:name="IsSearchForStyles" oor:type="xs:boolean" oor:nillable="false">
         <!-- OldPath: -->
         <!-- OldLocation: -->
-        <!-- UIHints: Edit/Find & Replace -->
+        <!-- UIHints: Edit/Find and Replace -->
         <info>
           <desc>Specifies search for styles only.</desc>
         </info>
@@ -5958,7 +5999,7 @@
       <prop oor:name="IsSimilaritySearch" oor:type="xs:boolean" oor:nillable="false">
         <!-- OldPath: -->
         <!-- OldLocation: -->
-        <!-- UIHints: Edit/Find & Replace -->
+        <!-- UIHints: Edit/Find and Replace -->
         <info>
           <desc>Specifies search with similarity.</desc>
         </info>
@@ -5967,7 +6008,7 @@
       <prop oor:name="IsMatchCase" oor:type="xs:boolean" oor:nillable="false">
         <!-- OldPath: -->
         <!-- OldLocation: -->
-        <!-- UIHints: Edit/Find & Replace -->
+        <!-- UIHints: Edit/Find and Replace -->
         <info>
           <desc>Specifies search as case sensitive.</desc>
         </info>
@@ -5976,7 +6017,7 @@
       <prop oor:name="IsIgnoreDiacritics_CTL" oor:type="xs:boolean" oor:nillable="false">
         <!-- OldPath: -->
         <!-- OldLocation: -->
-        <!-- UIHints: Edit/Find & Replace -->
+        <!-- UIHints: Edit/Find and Replace -->
         <info>
           <desc>Specifies search ignores diacritics, not only CTL though.</desc>
         </info>
@@ -5985,7 +6026,7 @@
       <prop oor:name="IsIgnoreKashida_CTL" oor:type="xs:boolean" oor:nillable="false">
         <!-- OldPath: -->
         <!-- OldLocation: -->
-        <!-- UIHints: Edit/Find & Replace -->
+        <!-- UIHints: Edit/Find and Replace -->
         <info>
           <desc>Specifies search with the use of CTL option.</desc>
         </info>
@@ -5994,28 +6035,28 @@
       <prop oor:name="IsUseAsianOptions" oor:type="xs:boolean" oor:nillable="false">
         <!-- OldPath: -->
         <!-- OldLocation: -->
-        <!-- UIHints: Edit/Find & Replace -->
+        <!-- UIHints: Edit/Find and Replace -->
         <info>
           <desc>Specifies search with the use of Asian options.</desc>
         </info>
         <value>false</value>
       </prop>
       <prop oor:name="ComponentSearchGroupLabel" oor:type="xs:string" oor:localized="true">
-        <!-- UIHints: Edit/Find & Replace -->
+        <!-- UIHints: Edit/Find and Replace -->
         <info>
           <desc>Specifies the divider label in case of a component-based search
           extension.</desc>
         </info>
       </prop>
       <prop oor:name="ComponentSearchCommandLabel1" oor:type="xs:string" oor:localized="true">
-        <!-- UIHints: Edit/Find & Replace -->
+        <!-- UIHints: Edit/Find and Replace -->
         <info>
           <desc>Specifies the label of the first component-based search
           command.</desc>
         </info>
       </prop>
       <prop oor:name="ComponentSearchCommandLabel2" oor:type="xs:string" oor:localized="true">
-        <!-- UIHints: Edit/Find & Replace -->
+        <!-- UIHints: Edit/Find and Replace -->
         <info>
           <desc>Specifies the label of the second component-based search
           command.</desc>
@@ -6029,7 +6070,7 @@
         <value>false</value>
       </prop>
       <prop oor:name="IsSearchFormatted" oor:type="xs:boolean" oor:nillable="false">
-        <!-- UIHints: Edit / Find & Replace  -->
+        <!-- UIHints: Edit / Find and Replace  -->
         <info>
           <desc>Specifies if formatted display strings are searched instead of cell content (Calc).</desc>
         </info>
@@ -6604,6 +6645,12 @@
       <prop oor:name="EnableLangpackInstallation" oor:type="xs:boolean" oor:nillable="false">
         <info>
            <desc>Specifies if missing langpack installation should be triggered.</desc>
+        </info>
+        <value>true</value>
+      </prop>
+      <prop oor:name="EnableBaseInstallation" oor:type="xs:boolean" oor:nillable="false">
+        <info>
+           <desc>Specifies if missing LibreOffice Base installation should be triggered.</desc>
         </info>
         <value>true</value>
       </prop>

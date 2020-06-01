@@ -361,7 +361,7 @@ DECLARE_OOXMLIMPORT_TEST(testN758883, "n758883.docx")
      * The problem was that direct formatting of the paragraph was not applied
      * to the numbering. This is easier to test using a layout dump.
      */
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     assertXPath(pXmlDoc, "/root/page/body/txt/Special[1]", "nHeight", "220");
 
     // check the bookmark portions are of the expected height
@@ -495,17 +495,15 @@ DECLARE_OOXMLIMPORT_TEST(testN779627, "n779627.docx")
     uno::Any aValue = xTableProperties->getPropertyValue("LeftMargin");
     sal_Int32 nLeftMargin;
     aValue >>= nLeftMargin;
+    // only border width considered.
     CPPUNIT_ASSERT_EQUAL_MESSAGE( "Left margin shouldn't take tableCellMar into account in nested tables",
-            sal_Int32(0), nLeftMargin);
+            sal_Int32(9), nLeftMargin);
 
     /*
      * Another problem tested with this document is the unnecessary loading of the shapes
      * anchored to a discarded header or footer
      */
-    uno::Reference<text::XTextDocument> textDocument(mxComponent, uno::UNO_QUERY);
-    uno::Reference<drawing::XDrawPageSupplier> drawPageSupplier(textDocument, uno::UNO_QUERY);
-    uno::Reference<drawing::XDrawPage> drawPage = drawPageSupplier->getDrawPage();
-    CPPUNIT_ASSERT_EQUAL( sal_Int32( 0 ), drawPage->getCount());
+    CPPUNIT_ASSERT_EQUAL(0, getShapes());
 }
 
 DECLARE_OOXMLIMPORT_TEST(testN779627b, "n779627b.docx")
@@ -565,12 +563,9 @@ DECLARE_OOXMLIMPORT_TEST(testWordArtResizing, "WordArt.docx")
     /* The Word-Arts and watermarks were getting resized automatically, It was as if they were
        getting glued to the fallback geometry(the sdrObj) and were getting bound to the font size.
        The test-case ensures the original height and width of the word-art is not changed while importing*/
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
 
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDrawPage = xDrawPageSupplier->getDrawPage();
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(1), xDrawPage->getCount());
-
-    uno::Reference<drawing::XShape> xShape(xDrawPage->getByIndex(0), uno::UNO_QUERY);
+    uno::Reference<drawing::XShape> xShape(getShape(1), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(10105), xShape->getSize().Width);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(4755), xShape->getSize().Height);
 }
@@ -588,17 +583,15 @@ DECLARE_OOXMLIMPORT_TEST(testGroupshapeLine, "groupshape-line.docx")
      * xray ThisComponent.DrawPage(1).getByIndex(0).Position 'x: 1272, y: 2286
      * xray ThisComponent.DrawPage(1).getByIndex(0).Size 'width: 10160, height: 0
      */
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDrawPage = xDrawPageSupplier->getDrawPage();
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(2), xDrawPage->getCount());
+    CPPUNIT_ASSERT_EQUAL(2, getShapes());
 
-    uno::Reference<drawing::XShape> xShape(xDrawPage->getByIndex(0), uno::UNO_QUERY);
+    uno::Reference<drawing::XShape> xShape(getShape(1), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(2656), xShape->getPosition().X);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(339), xShape->getPosition().Y);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(3270), xShape->getSize().Width);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(1392), xShape->getSize().Height);
 
-    uno::Reference<drawing::XShapes> xGroupShape(xDrawPage->getByIndex(1), uno::UNO_QUERY);
+    uno::Reference<drawing::XShapes> xGroupShape(getShape(2), uno::UNO_QUERY);
     xShape.set(xGroupShape->getByIndex(0), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(1272), xShape->getPosition().X);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(2286), xShape->getPosition().Y);
@@ -810,9 +803,7 @@ DECLARE_OOXMLIMPORT_TEST(testTdf75573_lostTable, "tdf75573_lostTable.docx")
     uno::Reference<container::XIndexAccess> xTables(xTablesSupplier->getTextTables(), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL_MESSAGE("# of tables", sal_Int32(1), xTables->getCount() );
 
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDraws = xDrawPageSupplier->getDrawPage();
-    CPPUNIT_ASSERT_EQUAL_MESSAGE("# of frames/shapes", sal_Int32(0), xDraws->getCount() );
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("# of frames/shapes", 0, getShapes() );
 
     CPPUNIT_ASSERT_EQUAL_MESSAGE("# of pages", 3, getPages() );
 }
@@ -964,7 +955,7 @@ DECLARE_OOXMLIMPORT_TEST(testFdo75722dml, "fdo75722-dml.docx")
     CPPUNIT_ASSERT_EQUAL(sal_Int64(3128), nRot);
 }
 
-DECLARE_OOXMLIMPORT_TEST(testFdo76803, "fdo76803.docx")
+DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testFdo76803, "fdo76803.docx")
 {
     // The ContourPolyPolygon was wrong
     uno::Reference<beans::XPropertySet> xPropertySet(getShape(1), uno::UNO_QUERY);
@@ -980,17 +971,21 @@ DECLARE_OOXMLIMPORT_TEST(testFdo76803, "fdo76803.docx")
 
     CPPUNIT_ASSERT_EQUAL(sal_uInt32(4), aPolygon.count());
 
-    CPPUNIT_ASSERT_EQUAL(double(-163), aPolygon.getB2DPoint(0).getX());
-    CPPUNIT_ASSERT_EQUAL(double(0), aPolygon.getB2DPoint(0).getY());
+    CPPUNIT_ASSERT_EQUAL(double(-149), aPolygon.getB2DPoint(0).getX());
+    // Without the accompanying fix in place, this test would have failed with:
+    // - Expected: -35
+    // - Actual  : -67
+    // i.e. the cropping did not influence the wrap polygon during export.
+    CPPUNIT_ASSERT_EQUAL(double(-35), aPolygon.getB2DPoint(0).getY());
 
-    CPPUNIT_ASSERT_EQUAL(double(-163), aPolygon.getB2DPoint(1).getX());
-    CPPUNIT_ASSERT_EQUAL(double(3661), aPolygon.getB2DPoint(1).getY());
+    CPPUNIT_ASSERT_EQUAL(double(-149), aPolygon.getB2DPoint(1).getX());
+    CPPUNIT_ASSERT_EQUAL(double(3511), aPolygon.getB2DPoint(1).getY());
 
-    CPPUNIT_ASSERT_EQUAL(double(16987), aPolygon.getB2DPoint(2).getX());
-    CPPUNIT_ASSERT_EQUAL(double(3661), aPolygon.getB2DPoint(2).getY());
+    CPPUNIT_ASSERT_EQUAL(double(16889), aPolygon.getB2DPoint(2).getX());
+    CPPUNIT_ASSERT_EQUAL(double(3511), aPolygon.getB2DPoint(2).getY());
 
-    CPPUNIT_ASSERT_EQUAL(double(16987), aPolygon.getB2DPoint(3).getX());
-    CPPUNIT_ASSERT_EQUAL(double(0), aPolygon.getB2DPoint(3).getY());
+    CPPUNIT_ASSERT_EQUAL(double(16889), aPolygon.getB2DPoint(3).getX());
+    CPPUNIT_ASSERT_EQUAL(double(-35), aPolygon.getB2DPoint(3).getY());
 }
 
 DECLARE_OOXMLIMPORT_TEST(testUnbalancedColumnsCompat, "unbalanced-columns-compat.docx")
@@ -1308,10 +1303,8 @@ DECLARE_OOXMLIMPORT_TEST(testTdf101626, "tdf101626.docx")
     uno::Sequence<beans::PropertyValue> aProps;
     xLevels->getByIndex(0) >>= aProps; // 1st level
 
-    for (int i = 0; i < aProps.getLength(); ++i)
+    for (beans::PropertyValue const & rProp : std::as_const(aProps))
     {
-        const beans::PropertyValue& rProp = aProps[i];
-
         if (rProp.Name == "BulletChar")
         {
             // the bulletChar has to be 0x2d!
@@ -1330,10 +1323,8 @@ DECLARE_OOXMLIMPORT_TEST( testTdf106606, "tdf106606.docx" )
         uno::Sequence<beans::PropertyValue>     aProps;
         xLevels->getByIndex( 0 ) >>= aProps; // 1st level
 
-        for ( int i = 0; i < aProps.getLength(); ++i )
+        for ( beans::PropertyValue const & rProp : std::as_const(aProps))
         {
-            const beans::PropertyValue& rProp = aProps[i];
-
             // If the image was prematurely removed from cache when processed for previous numbering list, then the sequence hasn't the property.
             if ( rProp.Name == "GraphicBitmap" )
                 return true;
@@ -1383,7 +1374,7 @@ DECLARE_OOXMLIMPORT_TEST(testTdf100072, "tdf100072.docx")
     ReadGraphic(aStream, aGraphic);
     const GDIMetaFile& rMetaFile = aGraphic.GetGDIMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, rMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, rMetaFile);
 
     // Get first polyline rightside x coordinate
     sal_Int32 nFirstEnd = getXPath(pXmlDoc, "(//polyline)[1]/point[2]", "x").toInt32();
@@ -1548,6 +1539,45 @@ DECLARE_OOXMLIMPORT_TEST(testTdf108995, "xml_space.docx")
     CPPUNIT_ASSERT_EQUAL(OUString("\tA\t\tline  with\txml:space=\"preserve\" \n"
                                   "A  line  without xml:space"),
                          paragraph->getString());
+}
+
+DECLARE_OOXMLIMPORT_TEST(testGroupShapeTextHighlight, "tdf131841_HighlightColorGroupedShape.docx")
+{
+    // tdf#131841 Highlight color of text in grouped shapes was not imported.
+
+    // These are the possible highlight colors in MSO Word. Check that we import them properly.
+    const std::vector<sal_uInt32> xColors {
+        0xFFFF00UL, // yellow
+        0x00FF00UL, // green
+        0x00FFFFUL, // cyan
+        0xFF00FFUL, // magenta
+        0x0000FFUL, // blue
+        0xFF0000UL, // red
+        0x00008BUL, // dark blue
+        0x008B8BUL, // dark cyan
+        0x006400UL, // dark green
+        0x800080UL, // dark magenta
+        0x8B0000UL, // dark red
+        0x808000UL, // dark yellow
+        0xA9A9A9UL, // dark grey
+        0xD3D3D3UL, // light grey
+        0x000000UL  // black
+    };
+
+    // The grouped shape, consists of 15 rectangles.
+    uno::Reference<drawing::XShapes> xGroupShape(getShape(1), uno::UNO_QUERY);
+
+    // Iterate through all of the rectangles and check the colors of the texts.
+    // They should correspond to the list above.
+    for (size_t idx = 0; idx < xColors.size(); ++idx)
+    {
+        uno::Reference<text::XTextRange> xTextRange(xGroupShape->getByIndex(idx), uno::UNO_QUERY);
+        uno::Reference<text::XTextRange> firstParagraph = getParagraphOfText(1, xTextRange->getText());
+        uno::Reference<text::XTextRange> firstRun = getRun(firstParagraph, 1);
+        uno::Reference<beans::XPropertySet> props(firstRun, uno::UNO_QUERY_THROW);
+
+        CPPUNIT_ASSERT_EQUAL(xColors[idx], props->getPropertyValue("CharBackColor").get<sal_uInt32>());
+    }
 }
 
 // tests should only be added to ooxmlIMPORT *if* they fail round-tripping in ooxmlEXPORT

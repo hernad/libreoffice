@@ -44,6 +44,7 @@
 
 #include <com/sun/star/document/XDocumentPropertiesSupplier.hpp>
 #include <com/sun/star/document/XDocumentProperties.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <fmthdft.hxx>
 #include <fmtfld.hxx>
 #include <fmtpdsc.hxx>
@@ -163,6 +164,11 @@ SwHTMLWriter::SwHTMLWriter( const OUString& rBaseURL, const OUString& rFilterOpt
     }
 
     SetupFilterOptions(rFilterOptions);
+
+    if (mbXHTML)
+    {
+        m_bNoAlign = true;
+    }
 }
 
 SwHTMLWriter::~SwHTMLWriter()
@@ -1083,7 +1089,7 @@ const SwPageDesc *SwHTMLWriter::MakeHeader( sal_uInt16 &rHeaderAttrs )
         const SfxItemSet& rItemSet = pPageDesc->GetMaster().GetAttrSet();
 
         // fdo#86857 page styles now contain the XATTR_*, not RES_BACKGROUND
-        std::shared_ptr<SvxBrushItem> const aBrushItem(getSvxBrushItemFromSourceSet(rItemSet, RES_BACKGROUND));
+        std::unique_ptr<SvxBrushItem> const aBrushItem(getSvxBrushItemFromSourceSet(rItemSet, RES_BACKGROUND));
         OutBackground(aBrushItem.get(), true);
 
         m_nDirection = GetHTMLDirection( rItemSet );

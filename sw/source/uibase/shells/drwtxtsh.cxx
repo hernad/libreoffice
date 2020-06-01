@@ -20,6 +20,7 @@
 #include <hintids.hxx>
 #include <i18nlangtag/lang.h>
 #include <i18nutil/transliteration.hxx>
+#include <rtl/ustrbuf.hxx>
 #include <svl/slstitm.hxx>
 #include <svl/stritem.hxx>
 #include <editeng/fontitem.hxx>
@@ -120,9 +121,9 @@ SwDrawTextShell::SwDrawTextShell(SwView &rV) :
     SwWrtShell &rSh = GetShell();
     SetPool(rSh.GetAttrPool().GetSecondaryPool());
 
+    // Initialize and show cursor to start editing.
     Init();
 
-    rSh.NoEdit();
     SetName("ObjectText");
     SfxShell::SetContextName(vcl::EnumContext::GetContextName(vcl::EnumContext::Context::DrawText));
 }

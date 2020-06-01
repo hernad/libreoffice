@@ -23,7 +23,9 @@
 #include <vcl/skia/SkiaHelper.hxx>
 
 #include <tools/gen.hxx>
+#include <driverblocklist.hxx>
 
+#include <SkRegion.h>
 #include <tools/sk_app/VulkanWindowContext.h>
 
 namespace SkiaHelper
@@ -42,6 +44,19 @@ inline sk_sp<SkSurface> createSkSurface(const Size& size, SkColorType type = kN3
     return createSkSurface(size.Width(), size.Height(), type);
 }
 
+// Create SkImage, GPU-backed if possible.
+VCL_DLLPUBLIC sk_sp<SkImage> createSkImage(const SkBitmap& bitmap);
+
+// Must be called in any VCL backend before any Skia functionality is used.
+// If not set, Skia will be disabled.
+VCL_DLLPUBLIC void
+    prepareSkia(std::unique_ptr<sk_app::WindowContext> (*createVulkanWindowContext)(bool));
+
+// Shared cache of images.
+void addCachedImage(const OString& key, sk_sp<SkImage> image);
+sk_sp<SkImage> findCachedImage(const OString& key);
+void removeCachedImage(sk_sp<SkImage> image);
+
 #ifdef DBG_UTIL
 void prefillSurface(sk_sp<SkSurface>& surface);
 VCL_DLLPUBLIC void dump(const SkBitmap& bitmap, const char* file);
@@ -49,7 +64,66 @@ VCL_DLLPUBLIC void dump(const sk_sp<SkImage>& image, const char* file);
 VCL_DLLPUBLIC void dump(const sk_sp<SkSurface>& surface, const char* file);
 #endif
 
+extern uint32_t vendorId;
+
+inline DriverBlocklist::DeviceVendor getVendor()
+{
+    return DriverBlocklist::GetVendorFromId(vendorId);
+}
+
 } // namespace
+
+template <typename charT, typename traits>
+inline std::basic_ostream<charT, traits>& operator<<(std::basic_ostream<charT, traits>& stream,
+                                                     const SkRect& rectangle)
+{
+    if (rectangle.isEmpty())
+        return stream << "EMPTY";
+    else
+        return stream << rectangle.width() << 'x' << rectangle.height() << "@(" << rectangle.x()
+                      << ',' << rectangle.y() << ")";
+}
+
+template <typename charT, typename traits>
+inline std::basic_ostream<charT, traits>& operator<<(std::basic_ostream<charT, traits>& stream,
+                                                     const SkIRect& rectangle)
+{
+    if (rectangle.isEmpty())
+        return stream << "EMPTY";
+    else
+        return stream << rectangle.width() << 'x' << rectangle.height() << "@(" << rectangle.x()
+                      << ',' << rectangle.y() << ")";
+}
+
+template <typename charT, typename traits>
+inline std::basic_ostream<charT, traits>& operator<<(std::basic_ostream<charT, traits>& stream,
+                                                     const SkRegion& region)
+{
+    if (region.isEmpty())
+        return stream << "EMPTY";
+    stream << "(";
+    SkRegion::Iterator it(region);
+    for (int i = 0; !it.done(); it.next(), ++i)
+        stream << "[" << i << "] " << it.rect();
+    stream << ")";
+    return stream;
+}
+
+template <typename charT, typename traits>
+inline std::basic_ostream<charT, traits>& operator<<(std::basic_ostream<charT, traits>& stream,
+                                                     const SkImage& image)
+{
+    // G - on GPU
+    return stream << static_cast<const void*>(&image) << " " << Size(image.width(), image.height())
+                  << "/" << (SkColorTypeBytesPerPixel(image.imageInfo().colorType()) * 8)
+                  << (image.isTextureBacked() ? "G" : "");
+}
+template <typename charT, typename traits>
+inline std::basic_ostream<charT, traits>& operator<<(std::basic_ostream<charT, traits>& stream,
+                                                     const sk_sp<SkImage>& image)
+{
+    return stream << *image;
+}
 
 #endif // INCLUDED_VCL_INC_SKIA_UTILS_H
 

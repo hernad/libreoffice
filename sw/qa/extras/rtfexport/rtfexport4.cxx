@@ -20,6 +20,7 @@
 #include <unotxdoc.hxx>
 #include <pam.hxx>
 #include <fmtanchr.hxx>
+#include <frameformats.hxx>
 
 /**
   Split these tests into their own file because they are really really slow
@@ -236,6 +237,8 @@ DECLARE_RTFEXPORT_TEST(testBtlrCell, "btlr-cell.rtf")
 
 DECLARE_RTFEXPORT_TEST(testTbrlFrame, "tbrl-frame.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<beans::XPropertySet> xShape(getShape(1), uno::UNO_QUERY);
     auto nActual = getProperty<sal_Int16>(xShape, "WritingMode");
     // Without the accompanying fix in place, this test would have failed with:
@@ -247,6 +250,8 @@ DECLARE_RTFEXPORT_TEST(testTbrlFrame, "tbrl-frame.odt")
 
 DECLARE_RTFEXPORT_TEST(testBtlrFrame, "btlr-frame.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<beans::XPropertySet> xShape(getShape(1), uno::UNO_QUERY);
     auto nActual = getProperty<sal_Int16>(xShape, "WritingMode");
     // Without the accompanying fix in place, this test would have failed with:
@@ -276,6 +281,7 @@ DECLARE_RTFEXPORT_TEST(testTdf129631_lostBorders, "tdf129631_lostBorders.rtf")
 
 DECLARE_RTFEXPORT_TEST(testTdf129522_removeShadowStyle, "tdf129522_removeShadowStyle.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<container::XNameAccess> paragraphStyles = getStyles("ParagraphStyles");
     uno::Reference<beans::XPropertySet> xStyleProps(paragraphStyles->getByName("Shadow"),
                                                     uno::UNO_QUERY_THROW);

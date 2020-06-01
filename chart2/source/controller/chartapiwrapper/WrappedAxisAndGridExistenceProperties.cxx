@@ -19,6 +19,8 @@
 
 #include "WrappedAxisAndGridExistenceProperties.hxx"
 #include <com/sun/star/beans/XPropertySet.hpp>
+#include <com/sun/star/chart2/XAxis.hpp>
+#include <com/sun/star/chart2/XDiagram.hpp>
 #include <AxisHelper.hxx>
 #include <WrappedProperty.hxx>
 #include "Chart2ModelContact.hxx"
@@ -340,14 +342,14 @@ WrappedAxisLabelExistenceProperty::WrappedAxisLabelExistenceProperty(bool bMain,
     switch( m_nDimensionIndex )
     {
         case 0:
-            m_bMain ? m_aOuterName = "HasXAxisDescription" : m_aOuterName = "HasSecondaryXAxisDescription";
+            m_aOuterName = m_bMain ? OUStringLiteral("HasXAxisDescription") : OUStringLiteral("HasSecondaryXAxisDescription");
             break;
         case 2:
             OSL_ENSURE(m_bMain,"there is no description available for a secondary z axis");
             m_aOuterName = "HasZAxisDescription";
             break;
         default:
-            m_bMain ? m_aOuterName = "HasYAxisDescription" : m_aOuterName = "HasSecondaryYAxisDescription";
+            m_aOuterName = m_bMain ? OUStringLiteral("HasYAxisDescription") : OUStringLiteral("HasSecondaryYAxisDescription");
             break;
     }
 }

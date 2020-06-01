@@ -28,12 +28,8 @@
 class SwMailMergeWizard;
 class SfxPrinter;
 class SwSendMailDialog;
+namespace com::sun::star::mail { class XMailMessage; }
 
-namespace com{ namespace sun{ namespace star{
-    namespace mail{
-        class XMailMessage;
-    }
-}}}
 
 /// Dialog implementing the saving as of the result document.
 class SwMMResultSaveDialog : public SfxDialogController
@@ -86,7 +82,7 @@ public:
 /// Dialog implementing the sending as email of the result document.
 class SwMMResultEmailDialog : public SfxDialogController
 {
-    OUString const  m_sConfigureMail;
+    OUString        m_sConfigureMail;
     OUString        m_sCC;
     OUString        m_sBCC;
     OUString        m_sBody;
@@ -150,7 +146,7 @@ class SwSendMailDialog : public weld::GenericDialogController
     bool                    m_bDestructionEnabled;
 
     std::unique_ptr<SwSendMailDialog_Impl> m_pImpl;
-    SwMailMergeConfigItem* const  m_pConfigItem;
+    SwMailMergeConfigItem*  m_pConfigItem;
     sal_Int32               m_nExpectedCount;
     sal_Int32               m_nSendCount;
     sal_Int32               m_nErrorCount;

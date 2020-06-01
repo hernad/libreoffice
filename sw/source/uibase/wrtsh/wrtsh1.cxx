@@ -867,7 +867,7 @@ void SwWrtShell::ConnectObj( svt::EmbeddedObjectRef& xObj, const SwRect &rPrt,
 
 // Insert hard page break;
 // Selections will be overwritten
-void SwWrtShell::InsertPageBreak(const OUString *pPageDesc, const ::o3tl::optional<sal_uInt16>& oPgNum )
+void SwWrtShell::InsertPageBreak(const OUString *pPageDesc, const ::std::optional<sal_uInt16>& oPgNum )
 {
     ResetCursorStack();
     if( CanInsert() )
@@ -1978,17 +1978,8 @@ void SwWrtShell::InsertPostIt(SwFieldMgr& rFieldMgr, const SfxRequest& rReq)
     if (pPostIt)
     {
         SwFieldType* pType = GetDoc()->getIDocumentFieldsAccess().GetFieldType(SwFieldIds::Postit, OUString(), false);
-        SwIterator<SwFormatField,SwFieldType> aIter( *pType );
-        SwFormatField* pSwFormatField = aIter.First();
-        while( pSwFormatField )
-        {
-            if ( pSwFormatField->GetField() == pPostIt )
-            {
-                pSwFormatField->Broadcast( SwFormatFieldHint( nullptr, SwFormatFieldHintWhich::FOCUS, &GetView() ) );
-                break;
-            }
-            pSwFormatField = aIter.Next();
-        }
+        if(auto pFormat = pType->FindFormatForField(pPostIt))
+            pFormat->Broadcast( SwFormatFieldHint( nullptr, SwFormatFieldHintWhich::FOCUS, &GetView() ) );
     }
 }
 

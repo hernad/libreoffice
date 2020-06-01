@@ -26,7 +26,7 @@
 #include "xeroot.hxx"
 #include <unotools/tempfile.hxx>
 
-namespace com { namespace sun { namespace star { namespace awt { class XControlModel; } } } }
+namespace com::sun::star::awt { class XControlModel; }
 
 class XclEscherExGlobal : public EscherExGlobal, protected XclExpRoot
 {
@@ -125,7 +125,7 @@ private:
     XclEscherClientTextbox* pAdditionalText;
     sal_uInt16              nAdditionalText;
     sal_uInt32              mnNextKey;
-    bool const              mbIsRootDff;
+    bool                    mbIsRootDff;
 };
 
 // --- class XclEscherHostAppData ------------------------------------

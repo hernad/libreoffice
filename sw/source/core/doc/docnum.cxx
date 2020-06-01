@@ -622,7 +622,7 @@ static SwTextNode* lcl_FindOutlineNum(const SwOutlineNodes& rOutlNds,
 {
     // Valid numbers are (always just offsets!):
     //  ([Number]+\.)+  (as a regular expression!)
-    //  (Number follwed by a period, with 5 repetitions)
+    //  (Number followed by a period, with 5 repetitions)
     //  i.e.: "1.1.", "1.", "1.1.1."
     sal_Int32 nPos = 0;
     OUString sNum = rName.getToken( 0, '.', nPos );
@@ -734,14 +734,14 @@ bool SwDoc::GotoOutline(SwPosition& rPos, const OUString& rName, SwRootFrame con
             //#i4533# leading numbers followed by a dot have been remove while
             //searching for the outline position
             //to compensate this they must be removed from the paragraphs text content, too
-            sal_Int32 nPos = 0;
-            OUString sTempNum;
-            while(!sExpandedText.isEmpty() && !(sTempNum = sExpandedText.getToken(0, '.', nPos)).isEmpty() &&
-                    -1 != nPos &&
-                    comphelper::string::isdigitAsciiString(sTempNum))
+            while(!sExpandedText.isEmpty())
             {
+                sal_Int32 nPos = 0;
+                OUString sTempNum = sExpandedText.getToken(0, '.', nPos);
+                if( sTempNum.isEmpty() || -1 == nPos ||
+                    !comphelper::string::isdigitAsciiString(sTempNum))
+                    break;
                 sExpandedText = sExpandedText.copy(nPos);
-                nPos = 0;
             }
 
             if( sExpandedText != sName )
@@ -1529,8 +1529,7 @@ static bool lcl_GotoNextPrevNum( SwPosition& rPos, bool bNext,
                 if( pRule  )
                 {
                     nTmpNum = static_cast<sal_uInt8>(pNd->GetActualListLevel());
-                    if( !( ! pNd->IsCountedInList() &&
-                         (nTmpNum >= nSrchNum )) )
+                    if( pNd->IsCountedInList() || (nTmpNum < nSrchNum ) )
                         break;      // found it!
                 }
                 else
@@ -1696,8 +1695,8 @@ const SwNumRule *  SwDoc::SearchNumRule(const SwPosition & rPos,
 
             pNode = &aIdx.GetNode();
         }
-        while (!(pNode == GetNodes().DocumentSectionStartNode(pStartFromNode) ||
-                 pNode == GetNodes().DocumentSectionEndNode(pStartFromNode)));
+        while (pNode != GetNodes().DocumentSectionStartNode(pStartFromNode) &&
+                 pNode != GetNodes().DocumentSectionEndNode(pStartFromNode));
     }
 
     return pResult;
@@ -2171,7 +2170,7 @@ bool SwDoc::MoveParagraphImpl(SwPaM& rPam, long const nOffset,
 
             --aIdx; // move before insertion
 
-            getIDocumentContentOperations().CopyRange( aPam, aInsPos, /*bCopyAll=*/false, /*bCheckPos=*/true, /*bCopyText=*/false );
+            getIDocumentContentOperations().CopyRange(aPam, aInsPos, SwCopyFlags::CheckPosInFly);
 
             // now delete all the delete redlines that were copied
 #ifndef NDEBUG
@@ -2222,13 +2221,14 @@ bool SwDoc::MoveParagraphImpl(SwPaM& rPam, long const nOffset,
                 // moved to the next Node
                 for(SwRangeRedline* pTmp : getIDocumentRedlineAccess().GetRedlineTable())
                 {
-                    SwPosition* pPos;
-                    if( ( pPos = &pTmp->GetBound())->nNode == aIdx )
+                    SwPosition* pPos = &pTmp->GetBound();
+                    if( pPos->nNode == aIdx )
                     {
                         ++pPos->nNode;
                         pPos->nContent.Assign( pPos->nNode.GetNode().GetContentNode(),0);
                     }
-                    if( ( pPos = &pTmp->GetBound(false))->nNode == aIdx )
+                    pPos = &pTmp->GetBound(false);
+                    if( pPos->nNode == aIdx )
                     {
                         ++pPos->nNode;
                         pPos->nContent.Assign( pPos->nNode.GetNode().GetContentNode(),0);

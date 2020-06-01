@@ -22,13 +22,13 @@
 #include <fmdocumentclassification.hxx>
 #include <fmcontrollayout.hxx>
 
+#include <com/sun/star/form/XForms.hpp>
 #include <svx/fmmodel.hxx>
 #include <svx/fmpage.hxx>
-#include <svx/svdobj.hxx>
 
 #include <sfx2/objsh.hxx>
 
-#include <o3tl/optional.hxx>
+#include <optional>
 
 using ::com::sun::star::uno::Reference;
 using ::com::sun::star::container::XNameContainer;
@@ -39,7 +39,7 @@ struct FmFormModelImplData
 {
     rtl::Reference<FmXUndoEnvironment>  mxUndoEnv;
     bool                bOpenInDesignIsDefaulted;
-    o3tl::optional<bool> aControlsUseRefDevice;
+    std::optional<bool> aControlsUseRefDevice;
 
     FmFormModelImplData()
         :bOpenInDesignIsDefaulted( true )
@@ -92,7 +92,7 @@ SdrPage* FmFormModel::RemovePage(sal_uInt16 nPgNum)
 
     if ( pToBeRemovedPage )
     {
-        Reference< XNameContainer > xForms( pToBeRemovedPage->GetForms( false ), css::uno::UNO_QUERY );
+        Reference< XNameContainer > xForms( pToBeRemovedPage->GetForms( false ) );
         if ( xForms.is() )
             m_pImpl->mxUndoEnv->RemoveForms( xForms );
     }
@@ -117,7 +117,7 @@ SdrPage* FmFormModel::RemoveMasterPage(sal_uInt16 nPgNum)
 
     if ( pPage )
     {
-        Reference< XNameContainer > xForms( pPage->GetForms( false ), css::uno::UNO_QUERY );
+        Reference< XNameContainer > xForms( pPage->GetForms( false ) );
         if ( xForms.is() )
             m_pImpl->mxUndoEnv->RemoveForms( xForms );
     }

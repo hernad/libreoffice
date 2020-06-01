@@ -18,6 +18,7 @@
 #include <comphelper/graphicmimetype.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/xmlsechelper.hxx>
+#include <comphelper/storagehelper.hxx>
 #include <sfx2/docfile.hxx>
 #include <sfx2/docfilt.hxx>
 #include <sfx2/objsh.hxx>
@@ -132,24 +133,24 @@ IMPL_LINK_NOARG(SignSignatureLineDialog, loadImage, weld::Button&, void)
     Reference<XComponentContext> xContext = comphelper::getProcessComponentContext();
     Reference<XFilePicker3> xFilePicker
         = FilePicker::createWithMode(xContext, TemplateDescription::FILEOPEN_PREVIEW);
-    if (xFilePicker->execute())
-    {
-        Sequence<OUString> aSelectedFiles = xFilePicker->getSelectedFiles();
-        if (!aSelectedFiles.hasElements())
-            return;
+    if (!xFilePicker->execute())
+        return;
 
-        Reference<XGraphicProvider> xProvider = GraphicProvider::create(xContext);
-        Sequence<PropertyValue> aMediaProperties(1);
-        aMediaProperties[0].Name = "URL";
-        aMediaProperties[0].Value <<= aSelectedFiles[0];
-        m_xSignatureImage = xProvider->queryGraphic(aMediaProperties);
-        m_sOriginalImageBtnLabel = m_xBtnLoadImage->get_label();
+    Sequence<OUString> aSelectedFiles = xFilePicker->getSelectedFiles();
+    if (!aSelectedFiles.hasElements())
+        return;
 
-        INetURLObject aObj(aSelectedFiles[0]);
-        m_xBtnLoadImage->set_label(aObj.GetLastName());
+    Reference<XGraphicProvider> xProvider = GraphicProvider::create(xContext);
+    Sequence<PropertyValue> aMediaProperties(1);
+    aMediaProperties[0].Name = "URL";
+    aMediaProperties[0].Value <<= aSelectedFiles[0];
+    m_xSignatureImage = xProvider->queryGraphic(aMediaProperties);
+    m_sOriginalImageBtnLabel = m_xBtnLoadImage->get_label();
 
-        ValidateFields();
-    }
+    INetURLObject aObj(aSelectedFiles[0]);
+    m_xBtnLoadImage->set_label(aObj.GetLastName());
+
+    ValidateFields();
 }
 
 IMPL_LINK_NOARG(SignSignatureLineDialog, clearImage, weld::Button&, void)
@@ -166,8 +167,19 @@ IMPL_LINK_NOARG(SignSignatureLineDialog, chooseCertificate, weld::Button&, void)
     if (!pShell->PrepareForSigning(m_xDialog.get()))
         return;
 
-    Reference<XDocumentDigitalSignatures> xSigner(DocumentDigitalSignatures::createWithVersion(
-        comphelper::getProcessComponentContext(), "1.2"));
+    Reference<XDocumentDigitalSignatures> xSigner;
+    if (pShell->GetMedium()->GetFilter()->IsAlienFormat())
+    {
+        xSigner
+            = DocumentDigitalSignatures::createDefault(comphelper::getProcessComponentContext());
+    }
+    else
+    {
+        OUString const aODFVersion(
+            comphelper::OStorageHelper::GetODFVersionFromStorage(pShell->GetStorage()));
+        xSigner = DocumentDigitalSignatures::createWithVersion(
+            comphelper::getProcessComponentContext(), aODFVersion);
+    }
     xSigner->setParentWindow(m_xDialog->GetXWindow());
     OUString aDescription;
     CertificateKind certificateKind = CertificateKind_NONE;
@@ -180,8 +192,8 @@ IMPL_LINK_NOARG(SignSignatureLineDialog, chooseCertificate, weld::Button&, void)
     if (xSignCertificate.is())
     {
         m_xSelectedCertifate = xSignCertificate;
-        m_xBtnChooseCertificate->set_label(
-            xmlsec::GetContentPart(xSignCertificate->getSubjectName()));
+        m_xBtnChooseCertificate->set_label(xmlsec::GetContentPart(
+            xSignCertificate->getSubjectName(), xSignCertificate->getCertificateKind()));
     }
     ValidateFields();
 }
@@ -223,7 +235,9 @@ css::uno::Reference<css::graphic::XGraphic> SignSignatureLineDialog::getSignedGr
 
     OUString aIssuerLine
         = CuiResId(RID_SVXSTR_SIGNATURELINE_SIGNED_BY)
-              .replaceFirst("%1", xmlsec::GetContentPart(m_xSelectedCertifate->getSubjectName()));
+              .replaceFirst("%1",
+                            xmlsec::GetContentPart(m_xSelectedCertifate->getSubjectName(),
+                                                   m_xSelectedCertifate->getCertificateKind()));
     aSvgImage = aSvgImage.replaceAll("[SIGNED_BY]", getCDataString(aIssuerLine));
     if (bValid)
         aSvgImage = aSvgImage.replaceAll("[INVALID_SIGNATURE]", "");

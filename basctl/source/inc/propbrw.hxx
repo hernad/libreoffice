@@ -29,7 +29,6 @@
 #include <svl/lstner.hxx>
 #include <svl/SfxBroadcaster.hxx>
 #include <svx/svdmark.hxx>
-#include <vcl/layout.hxx>
 #include "bastypes.hxx"
 
 class SfxBindings;
@@ -44,7 +43,7 @@ class DialogWindowLayout;
 class PropBrw final : public DockingWindow, public SfxListener, public SfxBroadcaster
 {
 private:
-    VclPtr<VclBox> m_xContentArea;
+    VclPtr<vcl::Window> m_xContentArea;
     bool        m_bInitialStateChange;
 
     css::uno::Reference< css::frame::XFrame2 >
@@ -72,7 +71,6 @@ public:
     explicit PropBrw (DialogWindowLayout&);
     virtual ~PropBrw() override;
     virtual void dispose() override;
-    using Window::Update;
     // note: changing the Context document to an instance other than the one given in the ctor is not supported
     // currently
     void    Update( const SfxViewShell* pShell );

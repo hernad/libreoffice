@@ -23,6 +23,7 @@
 
 #include <hintids.hxx>
 #include <com/sun/star/container/XNameAccess.hpp>
+#include <com/sun/star/sdbc/XDataSource.hpp>
 #include <com/sun/star/sdbc/XRow.hpp>
 #include <com/sun/star/sdbcx/XColumnsSupplier.hpp>
 #include <com/sun/star/sdbcx/XRowLocate.hpp>
@@ -96,9 +97,9 @@ struct DB_Column
     const enum class Type { FILLTEXT, COL_FIELD, COL_TEXT, SPLITPARA } eColType;
 
     union {
-        OUString* const pText;
+        OUString* pText;
         SwField* pField;
-        sal_uInt32 const nFormat;
+        sal_uInt32 nFormat;
     };
     const SwInsDBColumn* pColInfo;
 
@@ -306,10 +307,9 @@ SwInsertDBColAutoPilot::SwInsertDBColAutoPilot( SwView& rView,
     // fill paragraph templates-ListBox
     {
         SfxStyleSheetBasePool* pPool = pView->GetDocShell()->GetStyleSheetPool();
-        pPool->SetSearchMask( SfxStyleFamily::Para );
         m_xLbDbParaColl->append_text( sNoTmpl );
 
-        const SfxStyleSheetBase* pBase = pPool->First();
+        const SfxStyleSheetBase* pBase = pPool->First(SfxStyleFamily::Para);
         while( pBase )
         {
             m_xLbDbParaColl->append_text( pBase->GetName() );

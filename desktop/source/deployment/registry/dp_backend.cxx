@@ -43,7 +43,7 @@
 #include <com/sun/star/sdbc/XRow.hpp>
 #include <tools/diagnose_ex.h>
 #include <unotools/tempfile.hxx>
-#include <o3tl/optional.hxx>
+#include <optional>
 
 using namespace ::dp_misc;
 using namespace ::com::sun::star;
@@ -79,8 +79,8 @@ PackageRegistryBackend::PackageRegistryBackend(
       m_eContext( Context::Unknown )
 {
     assert(xContext.is());
-    o3tl::optional<OUString> cachePath;
-    o3tl::optional<bool> readOnly;
+    std::optional<OUString> cachePath;
+    std::optional<bool> readOnly;
     comphelper::unwrapArgs( args, m_context, cachePath, readOnly );
     if (cachePath)
         m_cachePath = *cachePath;
@@ -553,17 +553,17 @@ void Package::fireModified()
 {
     ::cppu::OInterfaceContainerHelper * container = rBHelper.getContainer(
         cppu::UnoType<util::XModifyListener>::get() );
-    if (container != nullptr) {
-        Sequence< Reference<XInterface> > elements(
-            container->getElements() );
-        lang::EventObject evt( static_cast<OWeakObject *>(this) );
-        for ( sal_Int32 pos = 0; pos < elements.getLength(); ++pos )
-        {
-            Reference<util::XModifyListener> xListener(
-                elements[ pos ], UNO_QUERY );
-            if (xListener.is())
-                xListener->modified( evt );
-        }
+    if (container == nullptr)
+        return;
+
+    const Sequence< Reference<XInterface> > elements(
+        container->getElements() );
+    lang::EventObject evt( static_cast<OWeakObject *>(this) );
+    for ( const Reference<XInterface>& x : elements )
+    {
+        Reference<util::XModifyListener> xListener( x, UNO_QUERY );
+        if (xListener.is())
+            xListener->modified( evt );
     }
 }
 

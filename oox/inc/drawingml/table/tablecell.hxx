@@ -20,19 +20,14 @@
 #ifndef INCLUDED_OOX_DRAWINGML_TABLE_TABLECELL_HXX
 #define INCLUDED_OOX_DRAWINGML_TABLE_TABLECELL_HXX
 
-#include <oox/helper/propertymap.hxx>
-#include <oox/drawingml/color.hxx>
 #include <oox/drawingml/drawingmltypes.hxx>
-#include <drawingml/textliststyle.hxx>
+#include <drawingml/textfont.hxx>
 #include <com/sun/star/table/XCell.hpp>
 
 #include <drawingml/fillproperties.hxx>
 #include <drawingml/lineproperties.hxx>
 
-#include <vector>
-#include <map>
-
-namespace oox { namespace drawingml { namespace table {
+namespace oox::drawingml::table {
 
 class TableCellContext;
 class TableProperties;
@@ -107,7 +102,7 @@ private:
     sal_Int32 mnHorzOverflowToken;
 };
 
-} } }
+}
 
 #endif // INCLUDED_OOX_DRAWINGML_TABLE_TABLECELL_HXX
 

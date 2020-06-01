@@ -19,6 +19,7 @@
 
 #include <memory>
 
+#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/document/XExporter.hpp>
 #include <com/sun/star/document/XFilter.hpp>
 #include <com/sun/star/document/XImporter.hpp>
@@ -30,11 +31,11 @@
 #include <cppuhelper/exc_hlp.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <osl/file.hxx>
-#include <sal/log.hxx>
 #include <tools/diagnose_ex.h>
 #include <unotools/mediadescriptor.hxx>
 #include <unotools/streamwrap.hxx>
 #include <unotools/ucbstreamhelper.hxx>
+#include <comphelper/scopeguard.hxx>
 
 #include <dmapper/DomainMapperFactory.hxx>
 #include <rtftok/RTFDocument.hxx>
@@ -81,7 +82,6 @@ RtfFilter::RtfFilter(uno::Reference<uno::XComponentContext> xContext)
 
 sal_Bool RtfFilter::filter(const uno::Sequence<beans::PropertyValue>& rDescriptor)
 {
-    sal_uInt32 nStartTime = osl_getGlobalTimer();
     if (m_xSrcDoc.is())
     {
         uno::Reference<lang::XMultiServiceFactory> xMSF(m_xContext->getServiceManager(),
@@ -96,6 +96,20 @@ sal_Bool RtfFilter::filter(const uno::Sequence<beans::PropertyValue>& rDescripto
 
     bool bResult(false);
     uno::Reference<task::XStatusIndicator> xStatusIndicator;
+
+    uno::Reference<beans::XPropertySet> xDocProps;
+    if (m_xDstDoc.is()) // not in cppunittest?
+    {
+        xDocProps.set(m_xDstDoc, uno::UNO_QUERY);
+        xDocProps->setPropertyValue("UndocumentedWriterfilterHack", uno::makeAny(true));
+    }
+    comphelper::ScopeGuard g([xDocProps] {
+        if (xDocProps.is()) // not in cppunittest?
+        {
+            // note: pStream.clear calls RemoveLastParagraph()
+            xDocProps->setPropertyValue("UndocumentedWriterfilterHack", uno::makeAny(false));
+        }
+    });
 
     try
     {
@@ -148,9 +162,6 @@ sal_Bool RtfFilter::filter(const uno::Sequence<beans::PropertyValue>& rDescripto
                 m_xContext, xInputStream, m_xDstDoc, xFrame, xStatusIndicator, aMediaDesc));
         pDocument->resolve(*pStream);
         bResult = true;
-        sal_uInt32 nEndTime = osl_getGlobalTimer();
-        SAL_INFO("writerfilter.profile",
-                 "RtfFilter::filter: finished in " << nEndTime - nStartTime << " ms");
     }
     catch (const io::WrongFormatException&)
     {

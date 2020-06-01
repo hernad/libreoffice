@@ -33,7 +33,9 @@ $(call gb_CustomTarget_get_target,ios/iOS_setup): $(IOSGEN)/native-code.h
 #- create directories  --------------------------------------------------------
 $(IOSDIRS):
 	$(call gb_Output_announce,$(subst $(WORKDIR)/,,$@),$(true),MKD,2)
+	$(call gb_Trace_StartRange,$(subst $(WORKDIR)/,,$@),MKD)
 	mkdir -p $(IOSDIRS)
+	$(call gb_Trace_EndRange,$(subst $(WORKDIR)/,,$@),MKD)
 
 
 #- Generate resources  --------------------------------------------------------
@@ -43,6 +45,8 @@ $(IOSGEN)/native-code.h: $(BUILDDIR)/config_host.mk \
 	                 $(IOSGEN) \
 	                 $(IOSDIRS)
 	$(call gb_Output_announce,$(subst $(WORKDIR)/,,$@),$(true),EN2,2)
+	$(call gb_Trace_StartRange,$(subst $(WORKDIR)/,,$@),EN2)
+	$(call gb_Trace_EndRange,$(subst $(WORKDIR)/,,$@),EN2)
 
 	# generate native-code.h (used by LibreOffice.c)
 	$(SRCDIR)/solenv/bin/native-code.py \
@@ -64,7 +68,7 @@ $(IOSGEN)/native-code.h: $(BUILDDIR)/config_host.mk \
 	cp $(INSTDIR)/share/filter/oox-drawingml-adj-names $(IOSRES)/share/filter
 	cp $(INSTDIR)/share/filter/oox-drawingml-cs-presets $(IOSRES)/share/filter
 	cp $(INSTDIR)/share/filter/vml-shape-types $(IOSRES)/share/filter
-	cp -R $(INSTDIR)/share/registry $(IOSRES)
+	cp -R $(INSTDIR)/share/registry $(IOSRES)/share
 	cp $(INSTDIR)/share/config/*zip $(IOSRES)/share/config
 	cp -R $(INSTDIR)/share/liblangtag $(IOSRES)/share
 	cp -R $(INSTDIR)/share/theme_definitions $(IOSRES)/share
@@ -73,6 +77,7 @@ $(IOSGEN)/native-code.h: $(BUILDDIR)/config_host.mk \
 	cp -R $(INSTDIR)/share/fonts/truetype $(IOSRES)/share/fonts
 	cp -R $(INSTDIR)/share/gallery $(IOSRES)/share
 	cp -R $(INSTDIR)/share/palette $(IOSRES)/share
+	cp -R $(INSTDIR)/share/fingerprint $(IOSRES)/share
 	cp $(SRCDIR)/ios/welcome.odt $(IOSRES)
 
 	# Set up rc (the "inifile", fundamentalrc, unorc, bootstraprc and versionrc.
@@ -86,8 +91,8 @@ $(IOSGEN)/native-code.h: $(BUILDDIR)/config_host.mk \
         && echo 'BRAND_INI_DIR=file:://$$APP_DATA_DIR' \
         && echo 'BRAND_SHARE_SUBDIR=$(LIBO_SHARE_FOLDER)' \
         && echo 'BRAND_SHARE_RESOURCE_SUBDIR=$(LIBO_SHARE_RESOURCE_FOLDER)' \
-        && echo 'CONFIGURATION_LAYERS=xcsxcu:$${BRAND_BASE_DIR}/registry ' \
-	        'res:$${BRAND_BASE_DIR}/registry' \
+        && echo 'CONFIGURATION_LAYERS=xcsxcu:$${BRAND_BASE_DIR}/share/registry ' \
+	        'res:$${BRAND_BASE_DIR}/share/registry' \
 	&& echo 'LO_LIB_DIR=file://$$APP_DATA_DIR/lib/' \
 	&& echo 'UNO_TYPES=file://$$APP_DATA_DIR/udkapi.rdb ' \
 	        'file://$$APP_DATA_DIR/offapi.rdb' \

@@ -47,9 +47,6 @@ endif
 # by gb_ENABLE_PCH like everywhere else, but unsetting this disables PCH.
 LO_CLANG_USE_PCH=1
 
-# Whether to use precompiled headers for the analyzer too. Does not apply to compiling sources.
-LO_CLANG_USE_ANALYZER_PCH=1
-
 # The uninteresting rest.
 
 include $(SRCDIR)/solenv/gbuild/gbuild.mk
@@ -101,6 +98,14 @@ CLANGWERROR :=
 #TODO: /WX
 else
 CLANGWERROR := -Werror
+# When COMPILER_PLUGINS_CXXFLAGS (obtained via `llvm-config --cxxflags`) contains options like
+# -Wno-maybe-uninitialized that are targeting GCC (when LLVM was actually built with GCC), and
+# COMPILER_PLUGINS_CXX (defaulting to CXX) denotes a Clang that does not understand those options,
+# it fails with -Werror,-Wunknown-warning-option, so we need -Wno-unknown-warning-option (but which
+# GCC does not understand) at least with -Werror:
+ifeq ($(COMPILER_PLUGINS_COM_IS_CLANG),TRUE)
+CLANGWERROR += -Wno-unknown-warning-option
+endif
 endif
 endif
 
@@ -127,7 +132,7 @@ CLANGSRCOUTDIR=$(CLANGOUTDIR)/sharedvisitor/sharedvisitor.cxx
 CLANGSRC+=$(CLANGSRCOUTDIR)
 endif
 # The list of source files, generated automatically (all files in clang/, but not subdirs).
-CLANGSRCINDIR=$(foreach src,$(wildcard $(CLANGINDIR)/*.cxx), $(notdir $(src)))
+CLANGSRCINDIR=$(sort $(foreach src,$(wildcard $(CLANGINDIR)/*.cxx), $(notdir $(src))))
 CLANGSRC+=$(CLANGSRCINDIR)
 
 # Remember the sources and if they have changed, force plugin relinking.
@@ -234,7 +239,7 @@ $(CLANGOUTDIR)/clang-timestamp: $(CLANGDIR)/bin/clang$(CLANG_EXE_EXT) $(BUILDDIR
 
 
 ifdef LO_CLANG_SHARED_PLUGINS
-SHARED_SOURCES := $(shell grep -l "LO_CLANG_SHARED_PLUGINS" $(CLANGINDIR)/*.cxx)
+SHARED_SOURCES := $(sort $(shell grep -l "LO_CLANG_SHARED_PLUGINS" $(CLANGINDIR)/*.cxx))
 SHARED_SOURCE_INFOS := $(foreach source,$(SHARED_SOURCES),$(patsubst $(CLANGINDIR)/%.cxx,$(CLANGOUTDIR)/sharedvisitor/%.plugininfo,$(source)))
 
 $(CLANGOUTDIR)/sharedvisitor/%.plugininfo: $(CLANGINDIR)/%.cxx \
@@ -267,7 +272,7 @@ $(CLANGOUTDIR)/sharedvisitor/analyzer$(CLANG_EXE_EXT): $(CLANGINDIR)/sharedvisit
 	$(call gb_Output_announce,$(subst $(BUILDDIR)/,,$@),$(true),GEN,1)
 	$(QUIET)$(COMPILER_PLUGINS_CXX) $(CLANGDEFS) $(CLANGCXXFLAGS) $(CLANGWERROR) $(CLANGINCLUDES) \
         -I$(BUILDDIR)/config_host -DCLANGFLAGS='"$(CLANGTOOLDEFS)"' \
-        -DLO_CLANG_USE_ANALYZER_PCH=$(LO_CLANG_USE_ANALYZER_PCH) \
+        -DLO_CLANG_USE_ANALYZER_PCH=$(if $(COMPILER_PLUGINS_ANALYZER_PCH),1,0) \
         -c $< -o $(CLANGOUTDIR)/sharedvisitor/analyzer.o -MMD -MT $@ -MP \
         -MF $(CLANGOUTDIR)/sharedvisitor/analyzer.d
 	$(QUIET)$(COMPILER_PLUGINS_CXX) $(CLANGDEFS) $(CLANGCXXFLAGS) $(CLANGOUTDIR)/sharedvisitor/analyzer.o \
@@ -334,7 +339,7 @@ endif
 
 endif
 
-ifdef LO_CLANG_USE_ANALYZER_PCH
+ifeq ($(COMPILER_PLUGINS_ANALYZER_PCH),TRUE)
 # the PCH for usage in sharedvisitor/analyzer
 
 # these are from the invocation in analyzer.cxx

@@ -369,8 +369,8 @@ void SwRedlineTable::LOKRedlineNotification(RedlineNotification nType, SwRangeRe
     {
         SwShellCursor aCursor(pView->GetWrtShell(), *pStartPos);
         aCursor.SetMark();
-        aCursor.GetMark()->nNode = *pContentNd;
-        aCursor.GetMark()->nContent.Assign(pContentNd, pEndPos->nContent.GetIndex());
+        aCursor.GetMark()->nNode = pEndPos->nNode;
+        aCursor.GetMark()->nContent = pEndPos->nContent;
 
         aCursor.FillRects();
 
@@ -389,15 +389,16 @@ void SwRedlineTable::LOKRedlineNotification(RedlineNotification nType, SwRangeRe
         // So we need to do an own invalidation here. It invalidates text frames containing the redlining
         SwDoc* pDoc = pRedline->GetDoc();
         SwViewShell* pSh;
-        if( pDoc && !pDoc->IsInDtor() &&
-            nullptr != ( pSh = pDoc->getIDocumentLayoutAccess().GetCurrentViewShell()) )
+        if( pDoc && !pDoc->IsInDtor() )
         {
-            for(SwNodeIndex nIdx = pStartPos->nNode; nIdx <= pEndPos->nNode; ++nIdx)
-            {
-                SwContentNode* pContentNode = nIdx.GetNode().GetContentNode();
-                if (pContentNode)
-                    pSh->InvalidateWindows(pContentNode->FindLayoutRect());
-            }
+            pSh = pDoc->getIDocumentLayoutAccess().GetCurrentViewShell();
+            if( pSh )
+                for(SwNodeIndex nIdx = pStartPos->nNode; nIdx <= pEndPos->nNode; ++nIdx)
+                {
+                    SwContentNode* pContentNode = nIdx.GetNode().GetContentNode();
+                    if (pContentNode)
+                        pSh->InvalidateWindows(pContentNode->FindLayoutRect());
+                }
         }
     }
 
@@ -535,8 +536,10 @@ std::vector<SwRangeRedline*> GetAllValidRanges(std::unique_ptr<SwRangeRedline> p
                 pNew = nullptr;
             }
 
-            if( aNewStt >= *pEnd ||
-                nullptr == (pC = rNds.GoNext( &aNewStt.nNode )) )
+            if( aNewStt >= *pEnd )
+                break;
+            pC = rNds.GoNext( &aNewStt.nNode );
+            if( !pC )
                 break;
 
             aNewStt.nContent.Assign( pC, 0 );
@@ -608,10 +611,12 @@ void SwRedlineTable::Remove( size_type nP )
 
     maVector.erase( maVector.begin() + nP );
 
-    SwViewShell* pSh;
-    if( pDoc && !pDoc->IsInDtor() &&
-        nullptr != ( pSh = pDoc->getIDocumentLayoutAccess().GetCurrentViewShell()) )
-        pSh->InvalidateWindows( SwRect( 0, 0, SAL_MAX_INT32, SAL_MAX_INT32 ) );
+    if( pDoc && !pDoc->IsInDtor() )
+    {
+        SwViewShell* pSh = pDoc->getIDocumentLayoutAccess().GetCurrentViewShell();
+        if( pSh )
+            pSh->InvalidateWindows( SwRect( 0, 0, SAL_MAX_INT32, SAL_MAX_INT32 ) );
+    }
 }
 
 void SwRedlineTable::DeleteAndDestroyAll()
@@ -885,7 +890,7 @@ bool SwRedlineExtraData_Format::operator == ( const SwRedlineExtraData& rCmp ) c
 SwRedlineData::SwRedlineData( RedlineType eT, std::size_t nAut )
     : m_pNext( nullptr ), m_pExtraData( nullptr ),
     m_aStamp( DateTime::SYSTEM ),
-    m_eType( eT ), m_bAutoFormat(false), m_nAuthor( nAut ), m_nSeqNo( 0 )
+    m_nAuthor( nAut ), m_eType( eT ), m_nSeqNo( 0 ), m_bAutoFormat(false)
 {
     m_aStamp.SetNanoSec( 0 );
 }
@@ -897,10 +902,10 @@ SwRedlineData::SwRedlineData(
     , m_pExtraData( rCpy.m_pExtraData ? rCpy.m_pExtraData->CreateNew() : nullptr )
     , m_sComment( rCpy.m_sComment )
     , m_aStamp( rCpy.m_aStamp )
-    , m_eType( rCpy.m_eType )
-    , m_bAutoFormat(false)
     , m_nAuthor( rCpy.m_nAuthor )
+    , m_eType( rCpy.m_eType )
     , m_nSeqNo( rCpy.m_nSeqNo )
+    , m_bAutoFormat(false)
 {
 }
 
@@ -908,7 +913,7 @@ SwRedlineData::SwRedlineData(
 SwRedlineData::SwRedlineData(RedlineType eT, std::size_t nAut, const DateTime& rDT,
     const OUString& rCmnt, SwRedlineData *pNxt)
     : m_pNext(pNxt), m_pExtraData(nullptr), m_sComment(rCmnt), m_aStamp(rDT),
-    m_eType(eT), m_bAutoFormat(false), m_nAuthor(nAut), m_nSeqNo(0)
+    m_nAuthor(nAut), m_eType(eT), m_nSeqNo(0), m_bAutoFormat(false)
 {
 }
 
@@ -1008,7 +1013,7 @@ SwRangeRedline::SwRangeRedline( const SwRangeRedline& rCpy )
     : SwPaM( *rCpy.GetMark(), *rCpy.GetPoint() ),
     m_pRedlineData( new SwRedlineData( *rCpy.m_pRedlineData )),
     m_pContentSect( nullptr ),
-    m_nId( rCpy.m_nId )
+    m_nId( m_nLastId++ )
 {
     m_bDelLastPara = false;
     m_bIsVisible = true;
@@ -1404,7 +1409,7 @@ void SwRangeRedline::CopyToSection()
         SwNodeIndex aNdIdx( *pSttNd, 1 );
         SwTextNode* pTextNd = aNdIdx.GetNode().GetTextNode();
         SwPosition aPos( aNdIdx, SwIndex( pTextNd ));
-        pDoc->getIDocumentContentOperations().CopyRange( *this, aPos, /*bCopyAll=*/false, /*bCheckPos=*/true, /*bCopyText=*/false );
+        pDoc->getIDocumentContentOperations().CopyRange(*this, aPos, SwCopyFlags::CheckPosInFly);
 
         // Take over the style from the EndNode if needed
         // We don't want this in Doc::Copy
@@ -1427,7 +1432,7 @@ void SwRangeRedline::CopyToSection()
         if( pCEndNd )
         {
             SwPosition aPos( *pSttNd->EndOfSectionNode() );
-            pDoc->getIDocumentContentOperations().CopyRange( *this, aPos, /*bCopyAll=*/false, /*bCheckPos=*/true, /*bCopyText=*/false );
+            pDoc->getIDocumentContentOperations().CopyRange(*this, aPos, SwCopyFlags::CheckPosInFly);
         }
         else
         {

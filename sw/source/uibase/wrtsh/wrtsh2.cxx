@@ -21,6 +21,7 @@
 #include <svl/macitem.hxx>
 #include <sfx2/frame.hxx>
 #include <svl/eitem.hxx>
+#include <svl/listener.hxx>
 #include <svl/stritem.hxx>
 #include <sfx2/docfile.hxx>
 #include <sfx2/dispatch.hxx>
@@ -209,10 +210,10 @@ namespace {
 // Otherwise, the for loop in SwWrtShell::UpdateInputFields will crash when doing:
 //         'pTmp->GetField( i )->GetTyp()->UpdateFields();'
 // on a deleted field.
-class FieldDeletionModify : public SwModify
+class FieldDeletionListener : public SvtListener
 {
     public:
-        FieldDeletionModify(AbstractFieldInputDlg* pInputFieldDlg, SwField* pField)
+        FieldDeletionListener(AbstractFieldInputDlg* pInputFieldDlg, SwField* pField)
             : mpInputFieldDlg(pInputFieldDlg)
             , mpFormatField(nullptr)
         {
@@ -230,28 +231,22 @@ class FieldDeletionModify : public SwModify
 
             // Register for possible field deletion while dialog is open
             if (mpFormatField)
-                mpFormatField->Add(this);
+                StartListening(mpFormatField->GetNotifier());
         }
 
-        virtual ~FieldDeletionModify() override
+        virtual ~FieldDeletionListener() override
         {
             // Dialog closed, remove modification listener
             EndListeningAll();
         }
 
-        void Modify( const SfxPoolItem* pOld, const SfxPoolItem *) override
+        virtual void Notify(const SfxHint& rHint) override
         {
             // Input field has been deleted: better to close the dialog
-            if (pOld)
+            if(rHint.GetId() == SfxHintId::Dying)
             {
-                switch (pOld->Which())
-                {
-                case RES_REMOVE_UNO_OBJECT:
-                case RES_OBJECTDYING:
-                    mpFormatField = nullptr;
-                    mpInputFieldDlg->EndDialog(RET_CANCEL);
-                    break;
-                }
+                mpFormatField = nullptr;
+                mpInputFieldDlg->EndDialog(RET_CANCEL);
             }
         }
     private:
@@ -272,7 +267,7 @@ bool SwWrtShell::StartInputFieldDlg(SwField* pField, bool bPrevButton, bool bNex
     bool bRet;
 
     {
-        FieldDeletionModify aModify(pDlg.get(), pField);
+        FieldDeletionListener aModify(pDlg.get(), pField);
         bRet = RET_CANCEL == pDlg->Execute();
     }
 
@@ -285,7 +280,7 @@ bool SwWrtShell::StartInputFieldDlg(SwField* pField, bool bPrevButton, bool bNex
     }
 
     pDlg.disposeAndClear();
-    GetWin()->Update();
+    GetWin()->PaintImmediately();
     return bRet;
 }
 
@@ -306,7 +301,7 @@ bool SwWrtShell::StartDropDownFieldDlg(SwField* pField, bool bPrevButton, bool b
 
     pDlg.disposeAndClear();
     bool bRet = RET_CANCEL == nRet;
-    GetWin()->Update();
+    GetWin()->PaintImmediately();
     if(RET_YES == nRet)
     {
         GetView().GetViewFrame()->GetDispatcher()->Execute(FN_EDIT_FIELD, SfxCallMode::SYNCHRON);

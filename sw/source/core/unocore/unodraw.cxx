@@ -67,6 +67,7 @@
 #include <svx/scene3d.hxx>
 #include <com/sun/star/beans/PropertyAttribute.hpp>
 #include <com/sun/star/drawing/XDrawPageSupplier.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <fmtwrapinfluenceonobjpos.hxx>
 #include <com/sun/star/text/TextContentAnchorType.hpp>
 #include <basegfx/matrix/b2dhommatrixtools.hxx>
@@ -77,7 +78,7 @@ using namespace ::com::sun::star;
 
 class SwShapeDescriptor_Impl
 {
-    bool const m_isInReading;
+    bool m_isInReading;
     std::unique_ptr<SwFormatHoriOrient> m_pHOrient;
     std::unique_ptr<SwFormatVertOrient> m_pVOrient;
     std::unique_ptr<SwFormatAnchor> m_pAnchor;
@@ -686,7 +687,7 @@ void SwXDrawPage::add(const uno::Reference< drawing::XShape > & xShape)
     }
     else if ((aAnchor.GetAnchorId() != RndStdIds::FLY_AT_PAGE) && pDoc->getIDocumentLayoutAccess().GetCurrentLayout())
     {
-        SwCursorMoveState aState( MV_SETONLYTEXT );
+        SwCursorMoveState aState( CursorMoveState::SetOnlyText );
         Point aTmp(convertMm100ToTwip(aMM100Pos.X), convertMm100ToTwip(aMM100Pos.Y));
         pDoc->getIDocumentLayoutAccess().GetCurrentLayout()->GetModelPositionForViewPoint( pPam->GetPoint(), aTmp, &aState );
         aAnchor.SetAnchor( pPam->GetPoint() );
@@ -711,7 +712,16 @@ void SwXDrawPage::add(const uno::Reference< drawing::XShape > & xShape)
     if (pFormat)
     {
         if (pFormat->GetName().isEmpty())
-            pFormat->SetName(pSvxShape->GetSdrObject()->GetName(), false);
+        {
+            if (pSvxShape->GetSdrObject()->GetName().isEmpty())
+            {
+                pFormat->SetName(pDoc->GetUniqueShapeName(), false);
+            }
+            else
+            {
+                pFormat->SetName(pSvxShape->GetSdrObject()->GetName(), false);
+            }
+        }
         pShape->SetFrameFormat(pFormat);
     }
     pShape->m_bDescriptor = false;
@@ -1265,7 +1275,7 @@ void SwXShape::setPropertyValue(const OUString& rPropertyName, const uno::Any& a
                             SwPaM aPam(pDoc->GetNodes().GetEndOfContent());
                             if( pDoc->getIDocumentLayoutAccess().GetCurrentLayout() )
                             {
-                                SwCursorMoveState aState( MV_SETONLYTEXT );
+                                SwCursorMoveState aState( CursorMoveState::SetOnlyText );
                                 Point aTmp( pObj->GetSnapRect().TopLeft() );
                                 pDoc->getIDocumentLayoutAccess().GetCurrentLayout()->GetModelPositionForViewPoint( aPam.GetPoint(), aTmp, &aState );
                             }
@@ -1286,7 +1296,7 @@ void SwXShape::setPropertyValue(const OUString& rPropertyName, const uno::Any& a
                             SwPaM aPam(pDoc->GetNodes().GetEndOfContent());
                             if( pDoc->getIDocumentLayoutAccess().GetCurrentLayout() )
                             {
-                                SwCursorMoveState aState( MV_SETONLYTEXT );
+                                SwCursorMoveState aState( CursorMoveState::SetOnlyText );
                                 Point aTmp( pObj->GetSnapRect().TopLeft() );
                                 pDoc->getIDocumentLayoutAccess().GetCurrentLayout()->GetModelPositionForViewPoint( aPam.GetPoint(), aTmp, &aState );
                             }

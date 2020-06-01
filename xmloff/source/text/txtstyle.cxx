@@ -17,7 +17,9 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <sal/config.h>
 
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/style/ParagraphStyleCategory.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/beans/XPropertySetInfo.hpp>
@@ -140,13 +142,13 @@ void XMLTextParagraphExport::exportTextStyles( bool bUsed, bool bProg )
         }
     }
     exportStyleFamily( "ParagraphStyles", GetXMLToken(XML_PARAGRAPH), GetParaPropMapper(),
-                       bUsed, XML_STYLE_FAMILY_TEXT_PARAGRAPH);
+                       bUsed, XmlStyleFamily::TEXT_PARAGRAPH);
     exportStyleFamily( "CharacterStyles", GetXMLToken(XML_TEXT), GetTextPropMapper(),
-                       bUsed, XML_STYLE_FAMILY_TEXT_TEXT );
+                       bUsed, XmlStyleFamily::TEXT_TEXT );
     // get shape export to make sure the frame family is added correctly.
     GetExport().GetShapeExport();
     exportStyleFamily( "FrameStyles", OUString(XML_STYLE_FAMILY_SD_GRAPHICS_NAME), xFramePropMapper,
-                       bUsed, XML_STYLE_FAMILY_TEXT_FRAME);
+                       bUsed, XmlStyleFamily::TEXT_FRAME);
     exportNumStyles( bUsed );
     if( !IsBlockMode() )
     {

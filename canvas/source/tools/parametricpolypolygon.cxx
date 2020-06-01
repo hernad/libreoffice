@@ -26,7 +26,7 @@
 
 #include <com/sun/star/rendering/XGraphicDevice.hpp>
 
-#include <canvas/parametricpolypolygon.hxx>
+#include <parametricpolypolygon.hxx>
 
 using namespace ::com::sun::star;
 
@@ -58,10 +58,10 @@ namespace canvas
         colorStops[1] = 1;
 
         // extract args
-        for( sal_Int32 i=0; i<rArgs.getLength(); ++i )
+        for( const uno::Any& rArg : rArgs )
         {
             beans::PropertyValue aProp;
-            if( rArgs[i] >>= aProp )
+            if( rArg >>= aProp )
             {
                 if ( aProp.Name == "Colors" )
                 {

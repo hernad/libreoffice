@@ -98,7 +98,7 @@ static void do_fatal_error(const char* msg)
 {
     xxx_pGLOBAL_SQLSCAN->SQLyyerror(msg);
     /*hack to silence -Wunused-function*/
-    if (0) yy_fatal_error(msg);
+    if ((0)) yy_fatal_error(msg);
 }
 
 #define YY_FATAL_ERROR(msg) \
@@ -526,6 +526,8 @@ sal_Int32 gatherString(int delim, sal_Int32 nTyp)
     int ch;
     OStringBuffer sBuffer(256);
 
+    assert(nTyp == 0 || nTyp == 1 || nTyp == 2);
+
     while (!checkeof(ch = yyinput()))
     {
         if (ch == delim)
@@ -554,7 +556,7 @@ sal_Int32 gatherString(int delim, sal_Int32 nTyp)
             }
 
         }
-        else if (nTyp != 1 && (ch == '\r' || ch == '\n') )
+        else if (nTyp == 2 && (ch == '\r' || ch == '\n') )
             break;
         else
         {

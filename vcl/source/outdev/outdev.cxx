@@ -415,8 +415,16 @@ void OutputDevice::DrawOutDev( const Point& rDestPt, const Size& rDestSize,
 
     if ( mpMetaFile )
     {
-        const Bitmap aBmp( rOutDev.GetBitmap( rSrcPt, rSrcSize ) );
-        mpMetaFile->AddAction( new MetaBmpScaleAction( rDestPt, rDestSize, aBmp ) );
+        if (rOutDev.mpAlphaVDev)
+        {
+            const BitmapEx aBmpEx(rOutDev.GetBitmapEx(rSrcPt, rSrcSize));
+            mpMetaFile->AddAction(new MetaBmpExScaleAction(rDestPt, rDestSize, aBmpEx));
+        }
+        else
+        {
+            const Bitmap aBmp(rOutDev.GetBitmap(rSrcPt, rSrcSize));
+            mpMetaFile->AddAction(new MetaBmpScaleAction(rDestPt, rDestSize, aBmp));
+        }
     }
 
     if ( !IsDeviceOutputNecessary() )
@@ -431,42 +439,27 @@ void OutputDevice::DrawOutDev( const Point& rDestPt, const Size& rDestSize,
     if ( mbOutputClipped )
         return;
 
-    SalTwoRect aPosAry(rOutDev.ImplLogicXToDevicePixel(rSrcPt.X()),
-                       rOutDev.ImplLogicYToDevicePixel(rSrcPt.Y()),
-                       rOutDev.ImplLogicWidthToDevicePixel(rSrcSize.Width()),
-                       rOutDev.ImplLogicHeightToDevicePixel(rSrcSize.Height()),
-                       ImplLogicXToDevicePixel(rDestPt.X()),
-                       ImplLogicYToDevicePixel(rDestPt.Y()),
-                       ImplLogicWidthToDevicePixel(rDestSize.Width()),
-                       ImplLogicHeightToDevicePixel(rDestSize.Height()));
-
-    if( mpAlphaVDev )
+    if (rOutDev.mpAlphaVDev)
     {
-        if( rOutDev.mpAlphaVDev )
-        {
-            // alpha-blend source over destination
-            DrawBitmapEx( rDestPt, rDestSize, rOutDev.GetBitmapEx(rSrcPt, rSrcSize) );
-        }
-        else
-        {
-            drawOutDevDirect( &rOutDev, aPosAry );
-
-            // #i32109#: make destination rectangle opaque - source has no alpha
-            mpAlphaVDev->ImplFillOpaqueRectangle( tools::Rectangle(rDestPt, rDestSize) );
-        }
+        // alpha-blend source over destination
+        DrawBitmapEx(rDestPt, rDestSize, rOutDev.GetBitmapEx(rSrcPt, rSrcSize));
     }
     else
     {
-        if( rOutDev.mpAlphaVDev )
-        {
-            // alpha-blend source over destination
-            DrawBitmapEx( rDestPt, rDestSize, rOutDev.GetBitmapEx(rSrcPt, rSrcSize) );
-        }
-        else
-        {
-            // no alpha at all, neither in source nor destination device
-            drawOutDevDirect( &rOutDev, aPosAry );
-        }
+        SalTwoRect aPosAry(rOutDev.ImplLogicXToDevicePixel(rSrcPt.X()),
+                           rOutDev.ImplLogicYToDevicePixel(rSrcPt.Y()),
+                           rOutDev.ImplLogicWidthToDevicePixel(rSrcSize.Width()),
+                           rOutDev.ImplLogicHeightToDevicePixel(rSrcSize.Height()),
+                           ImplLogicXToDevicePixel(rDestPt.X()),
+                           ImplLogicYToDevicePixel(rDestPt.Y()),
+                           ImplLogicWidthToDevicePixel(rDestSize.Width()),
+                           ImplLogicHeightToDevicePixel(rDestSize.Height()));
+
+        drawOutDevDirect(&rOutDev, aPosAry);
+
+        // #i32109#: make destination rectangle opaque - source has no alpha
+        if (mpAlphaVDev)
+            mpAlphaVDev->ImplFillOpaqueRectangle(tools::Rectangle(rDestPt, rDestSize));
     }
 }
 
@@ -532,41 +525,17 @@ void OutputDevice::CopyDeviceArea( SalTwoRect& aPosAry, bool /*bWindowInvalidate
 void OutputDevice::drawOutDevDirect( const OutputDevice* pSrcDev, SalTwoRect& rPosAry )
 {
     SalGraphics* pSrcGraphics;
-
-    if ( this == pSrcDev )
-        pSrcGraphics = nullptr;
-    else
+    if (const OutputDevice* pCheckedSrc = DrawOutDevDirectCheck(pSrcDev))
     {
-        if ( (GetOutDevType() != pSrcDev->GetOutDevType()) ||
-             (GetOutDevType() != OUTDEV_WINDOW) )
-        {
-            if ( !pSrcDev->mpGraphics )
-            {
-                if ( !pSrcDev->AcquireGraphics() )
-                    return;
-            }
-            pSrcGraphics = pSrcDev->mpGraphics;
-        }
-        else
-        {
-            if ( static_cast<vcl::Window*>(this)->mpWindowImpl->mpFrameWindow == static_cast<const vcl::Window*>(pSrcDev)->mpWindowImpl->mpFrameWindow )
-                pSrcGraphics = nullptr;
-            else
-            {
-                if ( !pSrcDev->mpGraphics )
-                {
-                    if ( !pSrcDev->AcquireGraphics() )
-                        return;
-                }
-                pSrcGraphics = pSrcDev->mpGraphics;
-
-                if ( !mpGraphics && !AcquireGraphics() )
-                    return;
-                SAL_WARN_IF( !mpGraphics || !pSrcDev->mpGraphics, "vcl.gdi",
-                            "OutputDevice::DrawOutDev(): We need more than one Graphics" );
-            }
-        }
+        if (!pCheckedSrc->mpGraphics && !pCheckedSrc->AcquireGraphics())
+            return;
+        pSrcGraphics = pCheckedSrc->mpGraphics;
     }
+    else
+        pSrcGraphics = nullptr;
+
+    if (!mpGraphics && !AcquireGraphics())
+        return;
 
     // #102532# Offset only has to be pseudo window offset
     const tools::Rectangle aSrcOutRect( Point( pSrcDev->mnOutOffX, pSrcDev->mnOutOffY ),
@@ -580,15 +549,30 @@ void OutputDevice::drawOutDevDirect( const OutputDevice* pSrcDev, SalTwoRect& rP
         // mirroring may be required
         // because only windows have a SalGraphicsLayout
         // mirroring is performed here
-        if( (GetOutDevType() != OUTDEV_WINDOW) && pSrcGraphics && (pSrcGraphics->GetLayout() & SalLayoutFlags::BiDiRtl) )
-        {
-            SalTwoRect aPosAry2 = rPosAry;
-            pSrcGraphics->mirror( aPosAry2.mnSrcX, aPosAry2.mnSrcWidth, pSrcDev );
-            mpGraphics->CopyBits( aPosAry2, pSrcGraphics, this, pSrcDev );
-        }
-        else
-            mpGraphics->CopyBits( rPosAry, pSrcGraphics, this, pSrcDev );
+        DrawOutDevDirectProcess( pSrcDev, rPosAry, pSrcGraphics);
     }
+}
+
+const OutputDevice* OutputDevice::DrawOutDevDirectCheck(const OutputDevice* pSrcDev) const
+{
+    return this == pSrcDev ? nullptr : pSrcDev;
+}
+
+void OutputDevice::DrawOutDevDirectProcess( const OutputDevice* pSrcDev, SalTwoRect& rPosAry, SalGraphics* pSrcGraphics )
+{
+    if( pSrcGraphics && (pSrcGraphics->GetLayout() & SalLayoutFlags::BiDiRtl) )
+    {
+        SalTwoRect aPosAry2 = rPosAry;
+        pSrcGraphics->mirror( aPosAry2.mnSrcX, aPosAry2.mnSrcWidth, pSrcDev );
+        mpGraphics->CopyBits( aPosAry2, pSrcGraphics, this, pSrcDev );
+    }
+    else
+        mpGraphics->CopyBits( rPosAry, pSrcGraphics, this, pSrcDev );
+}
+
+tools::Rectangle OutputDevice::GetBackgroundComponentBounds() const
+{
+    return tools::Rectangle( Point( 0, 0 ), GetOutputSizePixel() );
 }
 
 // Layout public functions

@@ -65,6 +65,7 @@
 #include "swhtml.hxx"
 #include <numrule.hxx>
 #include <IDocumentMarkAccess.hxx>
+#include <frameformats.hxx>
 
 #include <vcl/graphicfilter.hxx>
 #include <tools/urlobj.hxx>
@@ -1003,7 +1004,7 @@ void SwHTMLParser::InsertBodyOptions()
 
     // Prepare the items for the page style (background, frame)
     // If BrushItem already set values must remain!
-    std::shared_ptr<SvxBrushItem> aBrushItem( m_pCSS1Parser->makePageDescBackground() );
+    std::unique_ptr<SvxBrushItem> aBrushItem( m_pCSS1Parser->makePageDescBackground() );
     bool bSetBrush = false;
 
     if( bBGColor && !m_pCSS1Parser->IsBodyBGColorSet() )

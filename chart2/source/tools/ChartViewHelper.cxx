@@ -20,6 +20,7 @@
 #include <ChartViewHelper.hxx>
 #include <servicenames.hxx>
 
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/lang/XComponent.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/util/XModifyListener.hpp>
@@ -41,7 +42,7 @@ void ChartViewHelper::setViewToDirtyState( const uno::Reference< frame::XModel >
                     xFact->createInstance( CHART_VIEW_SERVICE_NAME ), uno::UNO_QUERY );
             if( xModifyListener.is() )
             {
-                lang::EventObject aEvent( Reference< lang::XComponent >( xChartModel, uno::UNO_QUERY ) );
+                lang::EventObject aEvent( xChartModel );
                 xModifyListener->modified( aEvent );
             }
         }

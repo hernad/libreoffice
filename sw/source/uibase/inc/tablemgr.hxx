@@ -30,20 +30,19 @@ class SwWrtShell;
 namespace vcl { class Window; }
 class SwFlyFrameFormat;
 
-namespace com { namespace sun { namespace star {
-    namespace frame {
-        class XModel; }
+namespace com::sun::star {
+    namespace frame { class XModel; }
     namespace chart2 {
-    namespace data {
-        class XDataProvider; } }
-}}}
+        namespace data {
+            class XDataProvider; } }
+}
 
 const SwTwips lAutoWidth = INVALID_TWIPS;
 const char cParaDelim = 0x0a;
 
 class SW_DLLPUBLIC SwTableFUNC
 {
-    SwFrameFormat * const pFormat;
+    SwFrameFormat    *pFormat;
     SwWrtShell  *pSh;
     SwTabCols   aCols;
 

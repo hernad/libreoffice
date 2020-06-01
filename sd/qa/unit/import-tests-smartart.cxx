@@ -17,6 +17,8 @@
 #include <com/sun/star/text/XText.hpp>
 #include <com/sun/star/graphic/XGraphic.hpp>
 
+#include <svx/svdpage.hxx>
+#include <svx/svdogrp.hxx>
 #include <comphelper/sequenceashashmap.hxx>
 #include <oox/drawingml/drawingmltypes.hxx>
 
@@ -101,9 +103,12 @@ public:
     void testFontSize();
     void testVerticalBlockList();
     void testBulletList();
+    void testMissingBulletAndIndent();
     void testRecursion();
     void testDataFollow();
     void testOrgChart2();
+    void testTdf131553();
+    void testFillColorList();
 
     CPPUNIT_TEST_SUITE(SdImportTestSmartArt);
 
@@ -144,9 +149,12 @@ public:
     CPPUNIT_TEST(testFontSize);
     CPPUNIT_TEST(testVerticalBlockList);
     CPPUNIT_TEST(testBulletList);
+    CPPUNIT_TEST(testMissingBulletAndIndent);
     CPPUNIT_TEST(testRecursion);
     CPPUNIT_TEST(testDataFollow);
     CPPUNIT_TEST(testOrgChart2);
+    CPPUNIT_TEST(testTdf131553);
+    CPPUNIT_TEST(testFillColorList);
 
     CPPUNIT_TEST_SUITE_END();
 };
@@ -1275,6 +1283,40 @@ void SdImportTestSmartArt::testVerticalBlockList()
     xDocShRef->DoClose();
 }
 
+void SdImportTestSmartArt::testMissingBulletAndIndent()
+{
+    sd::DrawDocShellRef xDocShRef = loadURL(
+        m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/smartart-missing-bullet.pptx"),
+        PPTX);
+    uno::Reference<drawing::XShapes> xGroup(getShapeFromPage(0, 0, xDocShRef), uno::UNO_QUERY);
+    uno::Reference<drawing::XShapes> xGroup1(xGroup->getByIndex(2), uno::UNO_QUERY);
+    uno::Reference<drawing::XShapes> xGroup2(xGroup1->getByIndex(0), uno::UNO_QUERY);
+    uno::Reference<text::XText> xText(xGroup2->getByIndex(0), uno::UNO_QUERY);
+    CPPUNIT_ASSERT(xText.is());
+
+    uno::Reference<container::XEnumerationAccess> xParasAccess(xText, uno::UNO_QUERY);
+    uno::Reference<container::XEnumeration> xParas = xParasAccess->createEnumeration();
+    xParas->nextElement();// skip parent
+
+    uno::Reference<beans::XPropertySet> xPara1(xParas->nextElement(), uno::UNO_QUERY);
+    CPPUNIT_ASSERT(xPara1.is());
+
+    sal_Int16 nNumberingLevel = -1;
+    xPara1->getPropertyValue("NumberingLevel")>>= nNumberingLevel;
+    CPPUNIT_ASSERT_EQUAL(sal_Int16(1), nNumberingLevel);
+
+    uno::Reference< container::XIndexAccess > xNumRule;
+    xPara1->getPropertyValue("NumberingRules") >>= xNumRule;
+    uno::Sequence<beans::PropertyValue> aBulletProps;
+    xNumRule->getByIndex(1) >>= aBulletProps;
+
+    for (beans::PropertyValue const & rProp : std::as_const(aBulletProps))
+    {
+        if(rProp.Name == "LeftMargin")
+            CPPUNIT_ASSERT_EQUAL(sal_Int32(309), rProp.Value.get<sal_Int32>());
+    }
+}
+
 void SdImportTestSmartArt::testBulletList()
 {
     sd::DrawDocShellRef xDocShRef = loadURL(
@@ -1413,6 +1455,56 @@ void SdImportTestSmartArt::testOrgChart2()
     CPPUNIT_ASSERT_GREATEREQUAL(xShapeC2->getPosition().Y + xShapeC2->getSize().Height, xShapeD1->getPosition().Y);
 
     CPPUNIT_ASSERT_GREATEREQUAL(xShapeD1->getPosition().X + xShapeD1->getSize().Width, xShapeC4->getPosition().X);
+
+    xDocShRef->DoClose();
+}
+
+void SdImportTestSmartArt::testTdf131553()
+{
+    sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/tdf131553.pptx"), PPTX);
+    uno::Reference<drawing::XShape> xGroup(getShapeFromPage(0, 0, xDocShRef), uno::UNO_QUERY);
+
+    const SdrPage *pPage = GetPage(1, xDocShRef);
+    const SdrObjGroup *pObjGroup = dynamic_cast<SdrObjGroup *>(pPage->GetObj(0));
+    CPPUNIT_ASSERT(pObjGroup);
+    const SdrObject *pObj = pObjGroup->GetSubList()->GetObj(1);
+    CPPUNIT_ASSERT_MESSAGE("no object", pObj != nullptr);
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_uInt16>(OBJ_OLE2), pObj->GetObjIdentifier());
+
+    xDocShRef->DoClose();
+}
+
+void SdImportTestSmartArt::testFillColorList()
+{
+    sd::DrawDocShellRef xDocShRef
+        = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/fill-color-list.pptx"), PPTX);
+    uno::Reference<drawing::XShape> xGroup(getShapeFromPage(0, 0, xDocShRef), uno::UNO_QUERY);
+    uno::Reference<drawing::XShape> xShape = getChildShape(getChildShape(xGroup, 1), 0);
+    uno::Reference<beans::XPropertySet> xPropertySet(xShape, uno::UNO_QUERY_THROW);
+    sal_Int32 nFillColor = 0;
+    xPropertySet->getPropertyValue("FillColor") >>= nFillColor;
+    // Without the accompanying fix in place, this test would have failed with:
+    // - Expected: 12603469 (0xc0504d)
+    // - Actual  : 16225862 (0xf79646)
+    // i.e. the background of the "A" shape was orange-ish, rather than red-ish.
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(0xC0504D), nFillColor);
+
+    // Without the accompanying fix in place, this test would have failed with:
+    // - Expected: 2239
+    // - Actual  : 5199
+    // i.e. the "A" shape's height/width aspect ratio was not 0.4 but rather close to 1.0, even if
+    // ppt/diagrams/layout1.xml's <dgm:constr type="h" refType="w" op="lte" fact="0.4"/> requested
+    // 0.4.
+    awt::Size aActualSize = xShape->getSize();
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(2239), aActualSize.Height);
+
+    // Without the accompanying fix in place, this test would have failed with:
+    // - Expected greater than: 1738 (2766)
+    // - Actual  : 1738
+    // i.e. the columns were not centered vertically.
+    sal_Int32 nGroupTop = xGroup->getPosition().Y;
+    sal_Int32 nShapeTop = xShape->getPosition().Y;
+    CPPUNIT_ASSERT_GREATER(nGroupTop, nShapeTop);
 
     xDocShRef->DoClose();
 }

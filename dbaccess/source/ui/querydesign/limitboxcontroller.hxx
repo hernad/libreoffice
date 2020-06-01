@@ -11,16 +11,16 @@
 #define INCLUDED_DBACCESS_SOURCE_UI_QUERYDESIGN_LIMITBOXCONTROLLER_HXX
 
 #include <com/sun/star/lang/XServiceInfo.hpp>
+#include <com/sun/star/lang/XMultiServiceFactory.hpp>
+#include <connectivity/CommonTools.hxx>
 #include <svtools/toolboxcontroller.hxx>
 #include <rtl/ustring.hxx>
 #include <vcl/vclptr.hxx>
 
-#include <apitools.hxx>
-
 namespace dbaui
 {
 
-class LimitBoxImpl;
+class LimitBox;
 
 /**
  * A ToolboxController to paste LimitBox onto the Query Design Toolbar
@@ -66,7 +66,7 @@ class LimitBoxController: public svt::ToolboxController,
         using svt::ToolboxController::dispatchCommand;
 
     private:
-        VclPtr<LimitBoxImpl> m_pLimitBox;
+        VclPtr<LimitBox> m_xLimitBox;
 };
 
 } ///dbaui namespace

@@ -20,20 +20,21 @@
 #ifndef INCLUDED_XMLOFF_MARKERSTYLE_HXX
 #define INCLUDED_XMLOFF_MARKERSTYLE_HXX
 
+#include <config_options.h>
 #include <sal/config.h>
 #include <xmloff/dllapi.h>
 #include <rtl/ustring.hxx>
 
 class SvXMLImport;
 class SvXMLExport;
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace uno { template<class A> class Reference; }
-    namespace xml { namespace sax { class XAttributeList; } }
+    namespace xml::sax { class XAttributeList; }
     namespace uno { class Any; }
-} } }
+}
 
 
-class XMLOFF_DLLPUBLIC XMLMarkerStyleImport
+class UNLESS_MERGELIBS(XMLOFF_DLLPUBLIC) XMLMarkerStyleImport
 {
     SvXMLImport& rImport;
 
@@ -47,7 +48,7 @@ public:
         OUString& rStrName );
 };
 
-class XMLOFF_DLLPUBLIC XMLMarkerStyleExport
+class UNLESS_MERGELIBS(XMLOFF_DLLPUBLIC) XMLMarkerStyleExport
 {
     SvXMLExport& rExport;
 

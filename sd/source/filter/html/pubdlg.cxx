@@ -608,7 +608,7 @@ void SdPublishingDlg::CreatePages()
     m_xPage5 = m_xBuilder->weld_container("page5");
     m_xPage5_Title = m_xBuilder->weld_label("buttonStyleLabel");
     m_xPage5_TextOnly = m_xBuilder->weld_check_button("textOnlyCheckbutton");
-    m_xPage5_Buttons.reset(new SvtValueSet(m_xBuilder->weld_scrolled_window("buttonsDrawingareawin")));
+    m_xPage5_Buttons.reset(new ValueSet(m_xBuilder->weld_scrolled_window("buttonsDrawingareawin")));
     m_xPage5_ButtonsWnd.reset(new weld::CustomWeld(*m_xBuilder, "buttonsDrawingarea", *m_xPage5_Buttons));
     aAssistentFunc.InsertControl(5, m_xPage5.get());
     aAssistentFunc.InsertControl(5, m_xPage5_Title.get());
@@ -648,7 +648,7 @@ void SdPublishingDlg::SetDefaults()
     SetDesign(&aDefault);
 
     m_xPage1_NewDesign->set_active(true);
-    m_xPage1_OldDesign->set_sensitive(false);
+    m_xPage1_OldDesign->set_active(false);
     UpdatePage();
 }
 
@@ -832,7 +832,7 @@ IMPL_LINK( SdPublishingDlg, DesignHdl, weld::Button&, rButton, void )
     if (&rButton == m_xPage1_NewDesign.get())
     {
         m_xPage1_NewDesign->set_active(true); // because of DesignDeleteHdl
-        m_xPage1_OldDesign->set_sensitive(false);
+        m_xPage1_OldDesign->set_active(false);
         m_xPage1_Designs->set_sensitive(false);
         m_xPage1_DelDesign->set_sensitive(false);
         m_pDesign = nullptr;
@@ -842,7 +842,7 @@ IMPL_LINK( SdPublishingDlg, DesignHdl, weld::Button&, rButton, void )
     }
     else
     {
-        m_xPage1_NewDesign->set_sensitive(false);
+        m_xPage1_NewDesign->set_active(false);
         m_xPage1_Designs->set_sensitive(true);
         m_xPage1_DelDesign->set_sensitive(true);
 
@@ -947,10 +947,10 @@ IMPL_LINK( SdPublishingDlg, ResolutionHdl, weld::Button&, rButton, void )
 }
 
 // Clickhandler for the ValueSet with the bitmap-buttons
-IMPL_LINK_NOARG(SdPublishingDlg, ButtonsHdl, SvtValueSet*, void)
+IMPL_LINK_NOARG(SdPublishingDlg, ButtonsHdl, ValueSet*, void)
 {
     // if one bitmap-button is chosen, then disable TextOnly
-    m_xPage5_TextOnly->set_sensitive(false);
+    m_xPage5_TextOnly->set_active(false);
 }
 
 // Fill the SfxItemSet with the settings of the dialog

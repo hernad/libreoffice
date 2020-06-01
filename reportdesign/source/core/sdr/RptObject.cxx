@@ -17,55 +17,36 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 #include <RptObject.hxx>
-#include <vector>
 #include <algorithm>
 
 #include <RptDef.hxx>
 #include <svx/unoshape.hxx>
 #include <RptModel.hxx>
 #include <RptObjectListener.hxx>
-#include <toolkit/helper/convert.hxx>
 #include <RptPage.hxx>
-#include <dbaccess/dbsubcomponentcontroller.hxx>
 
-#include <strings.hrc>
 #include <strings.hxx>
-#include <svx/xflclit.hxx>
-#include <svx/xlnclit.hxx>
-#include <svx/xlndsit.hxx>
-#include <svx/xlineit0.hxx>
-#include <svx/sderitm.hxx>
-#include <svx/xlnwtit.hxx>
-#include <svx/xlntrit.hxx>
 #include <svtools/embedhlp.hxx>
 #include <com/sun/star/style/XStyle.hpp>
-#include <com/sun/star/awt/XTabControllerModel.hpp>
-#include <com/sun/star/awt/XUnoControlContainer.hpp>
-#include <com/sun/star/awt/XVclContainerPeer.hpp>
-#include <com/sun/star/awt/XWindow.hpp>
 #include <com/sun/star/awt/TextAlign.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
-#include <com/sun/star/beans/PropertyAttribute.hpp>
 #include <com/sun/star/embed/XComponentSupplier.hpp>
-#include <com/sun/star/container/XContainer.hpp>
+#include <com/sun/star/embed/XEmbeddedObject.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
-#include <com/sun/star/report/XShape.hpp>
 #include <com/sun/star/report/XFixedLine.hpp>
 #include <com/sun/star/chart/ChartDataRowSource.hpp>
 #include <com/sun/star/chart2/data/XDataReceiver.hpp>
-#include <com/sun/star/chart2/data/DatabaseDataProvider.hpp>
+#include <com/sun/star/chart2/data/XDatabaseDataProvider.hpp>
 #include <com/sun/star/chart2/XChartDocument.hpp>
-#include <com/sun/star/style/VerticalAlignment.hpp>
 #include <com/sun/star/style/ParagraphAdjust.hpp>
 #include <com/sun/star/report/XFormattedField.hpp>
+#include <cppuhelper/supportsservice.hxx>
+#include <comphelper/namedvaluecollection.hxx>
 #include <comphelper/property.hxx>
+#include <svx/svdundo.hxx>
 #include <tools/diagnose_ex.h>
 #include <PropertyForward.hxx>
-#include <connectivity/dbtools.hxx>
-#include <connectivity/dbconversion.hxx>
-#include <UndoActions.hxx>
 #include <UndoEnv.hxx>
-#include <functional>
 
 namespace rptui
 {
@@ -75,7 +56,6 @@ using namespace uno;
 using namespace beans;
 using namespace reportdesign;
 using namespace container;
-using namespace script;
 using namespace report;
 
 sal_uInt16 OObjectBase::getObjectType(const uno::Reference< report::XReportComponent>& _xComponent)
@@ -425,14 +405,13 @@ void OObjectBase::_propertyChange( const  beans::PropertyChangeEvent& /*evt*/ )
 
 bool OObjectBase::supportsService( const OUString& _sServiceName ) const
 {
-    bool bSupports = false;
-
+    // TODO: cache xServiceInfo as member?
     Reference< lang::XServiceInfo > xServiceInfo( m_xReportComponent , UNO_QUERY );
-        // TODO: cache xServiceInfo as member?
-    if ( xServiceInfo.is() )
-        bSupports = xServiceInfo->supportsService( _sServiceName );
 
-    return bSupports;
+    if ( xServiceInfo.is() )
+        return cppu::supportsService(xServiceInfo.get(), _sServiceName);
+    else
+        return false;
 }
 
 
@@ -780,54 +759,54 @@ OUString OUnoObject::GetDefaultName(const OUnoObject* _pObj)
 void OUnoObject::_propertyChange( const  beans::PropertyChangeEvent& evt )
 {
     OObjectBase::_propertyChange(evt);
-    if (isListening())
+    if (!isListening())
+        return;
+
+    if ( evt.PropertyName == PROPERTY_CHARCOLOR )
     {
-        if ( evt.PropertyName == PROPERTY_CHARCOLOR )
+        Reference<XPropertySet> xControlModel(GetUnoControlModel(),uno::UNO_QUERY);
+        if ( xControlModel.is() )
         {
-            Reference<XPropertySet> xControlModel(GetUnoControlModel(),uno::UNO_QUERY);
-            if ( xControlModel.is() )
+            OObjectBase::EndListening();
+            try
             {
+                xControlModel->setPropertyValue(PROPERTY_TEXTCOLOR,evt.NewValue);
+            }
+            catch(uno::Exception&)
+            {
+            }
+            OObjectBase::StartListening();
+        }
+    }
+    else if ( evt.PropertyName == PROPERTY_NAME )
+    {
+        Reference<XPropertySet> xControlModel(GetUnoControlModel(),uno::UNO_QUERY);
+        if ( xControlModel.is() && xControlModel->getPropertySetInfo()->hasPropertyByName(PROPERTY_NAME) )
+        {
+            // get old name
+            OUString aOldName;
+            evt.OldValue >>= aOldName;
+
+            // get new name
+            OUString aNewName;
+            evt.NewValue >>= aNewName;
+
+            if ( aNewName != aOldName )
+            {
+                // set old name property
                 OObjectBase::EndListening();
+                if ( m_xMediator.is() )
+                    m_xMediator->stopListening();
                 try
                 {
-                    xControlModel->setPropertyValue(PROPERTY_TEXTCOLOR,evt.NewValue);
+                    xControlModel->setPropertyValue( PROPERTY_NAME, evt.NewValue );
                 }
                 catch(uno::Exception&)
                 {
                 }
+                if ( m_xMediator.is() )
+                    m_xMediator->startListening();
                 OObjectBase::StartListening();
-            }
-        }
-        else if ( evt.PropertyName == PROPERTY_NAME )
-        {
-            Reference<XPropertySet> xControlModel(GetUnoControlModel(),uno::UNO_QUERY);
-            if ( xControlModel.is() && xControlModel->getPropertySetInfo()->hasPropertyByName(PROPERTY_NAME) )
-            {
-                // get old name
-                OUString aOldName;
-                evt.OldValue >>= aOldName;
-
-                // get new name
-                OUString aNewName;
-                evt.NewValue >>= aNewName;
-
-                if ( aNewName != aOldName )
-                {
-                    // set old name property
-                    OObjectBase::EndListening();
-                    if ( m_xMediator.is() )
-                        m_xMediator->stopListening();
-                    try
-                    {
-                        xControlModel->setPropertyValue( PROPERTY_NAME, evt.NewValue );
-                    }
-                    catch(uno::Exception&)
-                    {
-                    }
-                    if ( m_xMediator.is() )
-                        m_xMediator->startListening();
-                    OObjectBase::StartListening();
-                }
             }
         }
     }
@@ -835,58 +814,58 @@ void OUnoObject::_propertyChange( const  beans::PropertyChangeEvent& evt )
 
 void OUnoObject::CreateMediator(bool _bReverse)
 {
-    if ( !m_xMediator.is() )
+    if ( m_xMediator.is() )
+        return;
+
+    // tdf#118730 Directly do things formerly done in
+    // OUnoObject::impl_setReportComponent_nothrow here
+    if(!m_xReportComponent.is())
+    {
+        OReportModel& rRptModel(static_cast< OReportModel& >(getSdrModelFromSdrObject()));
+        OXUndoEnvironment::OUndoEnvLock aLock( rRptModel.GetUndoEnv() );
+        m_xReportComponent.set(getUnoShape(),uno::UNO_QUERY);
+
+        impl_initializeModel_nothrow();
+    }
+
+    if(m_xReportComponent.is() && m_bSetDefaultLabel)
     {
         // tdf#118730 Directly do things formerly done in
-        // OUnoObject::impl_setReportComponent_nothrow here
-        if(!m_xReportComponent.is())
+        // OUnoObject::EndCreate here
+        // tdf#119067 ...but *only* if result of interactive
+        // creation in Report DesignView
+        m_bSetDefaultLabel = false;
+
+        try
         {
-            OReportModel& rRptModel(static_cast< OReportModel& >(getSdrModelFromSdrObject()));
-            OXUndoEnvironment::OUndoEnvLock aLock( rRptModel.GetUndoEnv() );
-            m_xReportComponent.set(getUnoShape(),uno::UNO_QUERY);
-
-            impl_initializeModel_nothrow();
-        }
-
-        if(m_xReportComponent.is() && m_bSetDefaultLabel)
-        {
-            // tdf#118730 Directly do things formerly done in
-            // OUnoObject::EndCreate here
-            // tdf#119067 ...but *only* if result of interactive
-            // creation in Report DesignView
-            m_bSetDefaultLabel = false;
-
-            try
+            if ( supportsService( SERVICE_FIXEDTEXT ) )
             {
-                if ( supportsService( SERVICE_FIXEDTEXT ) )
-                {
-                    m_xReportComponent->setPropertyValue(
-                        PROPERTY_LABEL,
-                        uno::makeAny(GetDefaultName(this)));
-                }
-            }
-            catch(const uno::Exception&)
-            {
-                DBG_UNHANDLED_EXCEPTION("reportdesign");
+                m_xReportComponent->setPropertyValue(
+                    PROPERTY_LABEL,
+                    uno::makeAny(GetDefaultName(this)));
             }
         }
-
-        if(!m_xMediator.is() && m_xReportComponent.is())
+        catch(const uno::Exception&)
         {
-            Reference<XPropertySet> xControlModel(GetUnoControlModel(),uno::UNO_QUERY);
-
-            if(xControlModel.is())
-            {
-                m_xMediator = new OPropertyMediator(
-                    m_xReportComponent.get(),
-                    xControlModel,
-                    getPropertyNameMap(GetObjIdentifier()),
-                    _bReverse);
-            }
+            DBG_UNHANDLED_EXCEPTION("reportdesign");
         }
-
-        OObjectBase::StartListening();
     }
+
+    if(!m_xMediator.is() && m_xReportComponent.is())
+    {
+        Reference<XPropertySet> xControlModel(GetUnoControlModel(),uno::UNO_QUERY);
+
+        if(xControlModel.is())
+        {
+            m_xMediator = new OPropertyMediator(
+                m_xReportComponent.get(),
+                xControlModel,
+                getPropertyNameMap(GetObjIdentifier()),
+                _bReverse);
+        }
+    }
+
+    OObjectBase::StartListening();
 }
 
 uno::Reference< beans::XPropertySet> OUnoObject::getAwtComponent()
@@ -1099,7 +1078,7 @@ void OOle2Obj::impl_setUnoShape( const uno::Reference< uno::XInterface >& rxUnoS
 static uno::Reference< chart2::data::XDatabaseDataProvider > lcl_getDataProvider(const uno::Reference < embed::XEmbeddedObject >& _xObj)
 {
     uno::Reference< chart2::data::XDatabaseDataProvider > xSource;
-    uno::Reference< embed::XComponentSupplier > xCompSupp(_xObj,uno::UNO_QUERY);
+    uno::Reference< embed::XComponentSupplier > xCompSupp(_xObj);
     if( xCompSupp.is())
     {
         uno::Reference< chart2::XChartDocument> xChartDoc( xCompSupp->getComponent(), uno::UNO_QUERY );
@@ -1143,7 +1122,7 @@ void OOle2Obj::impl_createDataProvider_nothrow(const uno::Reference< frame::XMod
     {
         uno::Reference < embed::XEmbeddedObject > xObj = GetObjRef();
         uno::Reference< chart2::data::XDataReceiver > xReceiver;
-        uno::Reference< embed::XComponentSupplier > xCompSupp( xObj, uno::UNO_QUERY );
+        uno::Reference< embed::XComponentSupplier > xCompSupp( xObj );
         if( xCompSupp.is())
             xReceiver.set( xCompSupp->getComponent(), uno::UNO_QUERY );
         OSL_ASSERT( xReceiver.is());
@@ -1161,21 +1140,21 @@ void OOle2Obj::impl_createDataProvider_nothrow(const uno::Reference< frame::XMod
 
 void OOle2Obj::initializeOle()
 {
-    if ( m_bOnlyOnce )
-    {
-        m_bOnlyOnce = false;
-        uno::Reference < embed::XEmbeddedObject > xObj = GetObjRef();
-        OReportModel& rRptModel(static_cast< OReportModel& >(getSdrModelFromSdrObject()));
-        rRptModel.GetUndoEnv().AddElement(lcl_getDataProvider(xObj));
+    if ( !m_bOnlyOnce )
+        return;
 
-        uno::Reference< embed::XComponentSupplier > xCompSupp( xObj, uno::UNO_QUERY );
-        if( xCompSupp.is() )
-        {
-            uno::Reference< beans::XPropertySet > xChartProps( xCompSupp->getComponent(), uno::UNO_QUERY );
-            if ( xChartProps.is() )
-                xChartProps->setPropertyValue("NullDate",
-                    uno::makeAny(util::DateTime(0,0,0,0,30,12,1899,false)));
-        }
+    m_bOnlyOnce = false;
+    uno::Reference < embed::XEmbeddedObject > xObj = GetObjRef();
+    OReportModel& rRptModel(static_cast< OReportModel& >(getSdrModelFromSdrObject()));
+    rRptModel.GetUndoEnv().AddElement(lcl_getDataProvider(xObj));
+
+    uno::Reference< embed::XComponentSupplier > xCompSupp( xObj );
+    if( xCompSupp.is() )
+    {
+        uno::Reference< beans::XPropertySet > xChartProps( xCompSupp->getComponent(), uno::UNO_QUERY );
+        if ( xChartProps.is() )
+            xChartProps->setPropertyValue("NullDate",
+                uno::makeAny(util::DateTime(0,0,0,0,30,12,1899,false)));
     }
 }
 
@@ -1183,33 +1162,33 @@ void OOle2Obj::initializeChart( const uno::Reference< frame::XModel>& _xModel)
 {
     uno::Reference < embed::XEmbeddedObject > xObj = GetObjRef();
     uno::Reference< chart2::data::XDataReceiver > xReceiver;
-    uno::Reference< embed::XComponentSupplier > xCompSupp( xObj, uno::UNO_QUERY );
+    uno::Reference< embed::XComponentSupplier > xCompSupp( xObj );
     if( xCompSupp.is())
         xReceiver.set( xCompSupp->getComponent(), uno::UNO_QUERY );
     OSL_ASSERT( xReceiver.is());
-    if( xReceiver.is() )
-    {
-        // lock the model to suppress any internal updates
-        uno::Reference< frame::XModel > xChartModel( xReceiver, uno::UNO_QUERY );
-        if( xChartModel.is() )
-            xChartModel->lockControllers();
+    if( !xReceiver.is() )
+        return;
 
-        if ( !lcl_getDataProvider(xObj).is() )
-            impl_createDataProvider_nothrow(_xModel);
+    // lock the model to suppress any internal updates
+    uno::Reference< frame::XModel > xChartModel( xReceiver, uno::UNO_QUERY );
+    if( xChartModel.is() )
+        xChartModel->lockControllers();
 
-        OReportModel& rRptModel(static_cast< OReportModel& >(getSdrModelFromSdrObject()));
-        rRptModel.GetUndoEnv().AddElement(lcl_getDataProvider(xObj));
+    if ( !lcl_getDataProvider(xObj).is() )
+        impl_createDataProvider_nothrow(_xModel);
 
-        ::comphelper::NamedValueCollection aArgs;
-        aArgs.put( "CellRangeRepresentation", uno::makeAny( OUString( "all" ) ) );
-        aArgs.put( "HasCategories", uno::makeAny( true ) );
-        aArgs.put( "FirstCellAsLabel", uno::makeAny( true ) );
-        aArgs.put( "DataRowSource", uno::makeAny( chart::ChartDataRowSource_COLUMNS ) );
-        xReceiver->setArguments( aArgs.getPropertyValues() );
+    OReportModel& rRptModel(static_cast< OReportModel& >(getSdrModelFromSdrObject()));
+    rRptModel.GetUndoEnv().AddElement(lcl_getDataProvider(xObj));
 
-        if( xChartModel.is() )
-            xChartModel->unlockControllers();
-    }
+    ::comphelper::NamedValueCollection aArgs;
+    aArgs.put( "CellRangeRepresentation", uno::makeAny( OUString( "all" ) ) );
+    aArgs.put( "HasCategories", uno::makeAny( true ) );
+    aArgs.put( "FirstCellAsLabel", uno::makeAny( true ) );
+    aArgs.put( "DataRowSource", uno::makeAny( chart::ChartDataRowSource_COLUMNS ) );
+    xReceiver->setArguments( aArgs.getPropertyValues() );
+
+    if( xChartModel.is() )
+        xChartModel->unlockControllers();
 }
 
 uno::Reference< style::XStyle> getUsedStyle(const uno::Reference< report::XReportDefinition>& _xReport)

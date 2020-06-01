@@ -188,7 +188,7 @@ void SwToContentAnchoredObjectPosition::CalcPosition()
 
     // determine frame the object position has to be oriented at.
     const SwTextFrame* pOrientFrame = &rAnchorTextFrame;
-    const SwTextFrame* pAnchorFrameForVertPos = &rAnchorTextFrame;
+    const SwTextFrame* pAnchorFrameForVertPos;
     {
         // if object is at-character anchored, determine character-rectangle
         // and frame, position has to be oriented at.
@@ -543,6 +543,18 @@ void SwToContentAnchoredObjectPosition::CalcPosition()
                                                 aRectFnSet.GetTop(aPgPrtRect),
                                                 nTopOfOrient );
                 }
+                else if (aVert.GetRelationOrient() == text::RelOrientation::PAGE_PRINT_AREA_BOTTOM)
+                {
+                    // The anchored object is relative from the bottom of the page's print area.
+                    SwRect aPgPrtRect(rPageAlignLayFrame.getFrameArea());
+                    if (rPageAlignLayFrame.IsPageFrame())
+                    {
+                        auto& rPageFrame = static_cast<const SwPageFrame&>(rPageAlignLayFrame);
+                        aPgPrtRect = rPageFrame.PrtWithoutHeaderAndFooter();
+                    }
+                    SwTwips nPageBottom = aRectFnSet.GetBottom(aPgPrtRect);
+                    nVertOffsetToFrameAnchorPos += aRectFnSet.YDiff(nPageBottom, nTopOfOrient);
+                }
                 nRelPosY = nVertOffsetToFrameAnchorPos + aVert.GetPos();
             }
 
@@ -642,8 +654,8 @@ void SwToContentAnchoredObjectPosition::CalcPosition()
                         // which are anchored inside a table, doesn't follow
                         // the text flow.
                         if ( DoesObjFollowsTextFlow() &&
-                             !( aVert.GetRelationOrient() == text::RelOrientation::PAGE_FRAME ||
-                                aVert.GetRelationOrient() == text::RelOrientation::PAGE_PRINT_AREA ) &&
+                             ( aVert.GetRelationOrient() != text::RelOrientation::PAGE_FRAME &&
+                                aVert.GetRelationOrient() != text::RelOrientation::PAGE_PRINT_AREA ) &&
                              !GetAnchorFrame().IsInTab() )
                         {
                             if ( bMoveable )
@@ -799,8 +811,8 @@ void SwToContentAnchoredObjectPosition::CalcPosition()
         }
 
         if ( DoesObjFollowsTextFlow() &&
-             !( aVert.GetRelationOrient() == text::RelOrientation::PAGE_FRAME ||
-                aVert.GetRelationOrient() == text::RelOrientation::PAGE_PRINT_AREA ) )
+             ( aVert.GetRelationOrient() != text::RelOrientation::PAGE_FRAME &&
+                aVert.GetRelationOrient() != text::RelOrientation::PAGE_PRINT_AREA ) )
         {
 
             nDist = aRectFnSet.BottomDist( GetAnchoredObj().GetObjRect(),
@@ -1112,8 +1124,13 @@ void SwToContentAnchoredObjectPosition::CalcOverlap(const SwTextFrame* pAnchorFr
     }
 
     // Get the list of objects.
-    const SwSortedObjs& rSortedObjs = *pAnchorFrameForVertPos->GetDrawObjs();
-    for (const auto& pAnchoredObj : rSortedObjs)
+    auto pSortedObjs = pAnchorFrameForVertPos->GetDrawObjs();
+    if (!pSortedObjs)
+    {
+        return;
+    }
+
+    for (const auto& pAnchoredObj : *pSortedObjs)
     {
         if (pAnchoredObj == &GetAnchoredObj())
         {

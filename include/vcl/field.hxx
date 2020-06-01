@@ -20,16 +20,16 @@
 #ifndef INCLUDED_VCL_FIELD_HXX
 #define INCLUDED_VCL_FIELD_HXX
 
+#include <config_options.h>
 #include <memory>
 #include <vcl/dllapi.h>
 #include <tools/link.hxx>
 #include <tools/date.hxx>
 #include <tools/time.hxx>
 #include <vcl/spinfld.hxx>
-#include <vcl/combobox.hxx>
 #include <tools/fldunit.hxx>
 
-namespace com { namespace sun { namespace star { namespace lang { struct Locale; } } } }
+namespace com::sun::star::lang { struct Locale; }
 
 class CalendarWrapper;
 class LocaleDataWrapper;
@@ -85,7 +85,7 @@ public:
 
 #define PATTERN_FORMAT_EMPTYLITERALS    (sal_uInt16(0x0001))
 
-class VCL_DLLPUBLIC PatternFormatter : public FormatterBase
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) PatternFormatter : public FormatterBase
 {
 private:
     OString                m_aEditMask;
@@ -142,9 +142,6 @@ public:
     void                    SetUseThousandSep( bool b );
     bool                    IsUseThousandSep() const { return mbThousandSep; }
 
-    void                    SetShowTrailingZeros( bool bShowTrailingZeros );
-    bool                    IsShowTrailingZeros() const { return mbShowTrailingZeros; }
-
     void                    SetUserValue( sal_Int64 nNewValue );
     virtual void            SetValue( sal_Int64 nNewValue );
     sal_Int64               GetValue() const;
@@ -152,6 +149,9 @@ public:
 
     sal_Int64               Normalize( sal_Int64 nValue ) const;
     sal_Int64               Denormalize( sal_Int64 nValue ) const;
+
+    OUString                GetValueString() const;
+    void                    SetValueFromString(const OUString& rStr);
 
 protected:
     sal_Int64               mnLastValue;
@@ -183,60 +183,10 @@ protected:
 private:
     sal_uInt16              mnDecimalDigits;
     bool                    mbThousandSep;
-    bool                    mbShowTrailingZeros;
 
 };
 
-
-class VCL_DLLPUBLIC MetricFormatter : public NumericFormatter
-{
-public:
-    virtual                 ~MetricFormatter() override;
-
-    virtual void            Reformat() override;
-
-    virtual void            SetUnit( FieldUnit meUnit );
-    FieldUnit               GetUnit() const { return meUnit; }
-    void                    SetCustomUnitText( const OUString& rStr );
-    const OUString&         GetCustomUnitText() const { return maCustomUnitText; }
-
-    using NumericFormatter::SetMax;
-    void                    SetMax( sal_Int64 nNewMax, FieldUnit eInUnit );
-    using NumericFormatter::GetMax;
-    sal_Int64               GetMax( FieldUnit eOutUnit ) const;
-    using NumericFormatter::SetMin;
-    void                    SetMin( sal_Int64 nNewMin, FieldUnit eInUnit );
-    using NumericFormatter::GetMin;
-    sal_Int64               GetMin( FieldUnit eOutUnit ) const;
-    sal_Int64               GetBaseValue() const;
-
-    virtual void            SetValue( sal_Int64 nNewValue, FieldUnit eInUnit );
-    virtual void            SetValue( sal_Int64 nValue ) override;
-    using NumericFormatter::SetUserValue;
-    void                    SetUserValue( sal_Int64 nNewValue, FieldUnit eInUnit );
-    using NumericFormatter::GetValue;
-    sal_Int64               GetValue( FieldUnit eOutUnit ) const;
-    virtual OUString        CreateFieldText( sal_Int64 nValue ) const override;
-    sal_Int64               GetCorrectedValue( FieldUnit eOutUnit ) const;
-
-    static FieldUnit        StringToMetric(const OUString &rMetricString);
-    static bool             TextToValue(const OUString& rStr, double& rValue, sal_Int64 nBaseValue, sal_uInt16 nDecDigits, const LocaleDataWrapper& rLocaleDataWrapper, FieldUnit eUnit);
-
-protected:
-    FieldUnit               meUnit;
-
-                            MetricFormatter(Edit* pEdit);
-
-    SAL_DLLPRIVATE void     ImplMetricReformat( const OUString& rStr, double& rValue, OUString& rOutStr );
-
-    virtual sal_Int64       GetValueFromString(const OUString& rStr) const override;
-    virtual sal_Int64       GetValueFromStringUnit(const OUString& rStr, FieldUnit eOutUnit) const;
-
-private:
-    OUString                maCustomUnitText;
-};
-
-class VCL_DLLPUBLIC DateFormatter : public FormatterBase
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) DateFormatter : public FormatterBase
 {
 private:
     std::unique_ptr<CalendarWrapper> mxCalendarWrapper;
@@ -313,7 +263,7 @@ public:
     bool             IsEnforceValidValue( ) const { return mbEnforceValidValue; }
 };
 
-class VCL_DLLPUBLIC TimeFormatter : public FormatterBase
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) TimeFormatter : public FormatterBase
 {
 private:
     tools::Time             maLastTime;
@@ -384,8 +334,7 @@ public:
     bool             IsEnforceValidValue( ) const { return mbEnforceValidValue; }
 };
 
-
-class VCL_DLLPUBLIC PatternField final : public SpinField, public PatternFormatter
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) PatternField final : public SpinField, public PatternFormatter
 {
 public:
     explicit                PatternField( vcl::Window* pParent, WinBits nWinStyle );
@@ -397,7 +346,7 @@ public:
 };
 
 
-class VCL_DLLPUBLIC NumericField : public SpinField, public NumericFormatter
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) NumericField : public SpinField, public NumericFormatter
 {
 public:
     explicit                NumericField( vcl::Window* pParent, WinBits nWinStyle );
@@ -420,67 +369,7 @@ public:
     virtual boost::property_tree::ptree DumpAsPropertyTree() override;
 };
 
-
-class VCL_DLLPUBLIC MetricField : public SpinField, public MetricFormatter
-{
-public:
-    explicit                MetricField( vcl::Window* pParent, WinBits nWinStyle );
-
-    virtual bool            PreNotify( NotifyEvent& rNEvt ) override;
-    virtual bool            EventNotify( NotifyEvent& rNEvt ) override;
-    virtual void            DataChanged( const DataChangedEvent& rDCEvt ) override;
-
-    virtual Size            CalcMinimumSize() const override;
-
-    virtual void            Modify() override;
-
-    virtual void            Up() override;
-    virtual void            Down() override;
-    virtual void            First() override;
-    virtual void            Last() override;
-
-    virtual void            SetUnit( FieldUnit meUnit ) override;
-
-    void                    SetFirst( sal_Int64 nNewFirst, FieldUnit eInUnit );
-    void             SetFirst(sal_Int64 first) { SetFirst(first, FieldUnit::NONE); }
-    sal_Int64               GetFirst( FieldUnit eOutUnit ) const;
-    void                    SetLast( sal_Int64 nNewLast, FieldUnit eInUnit );
-    void             SetLast(sal_Int64 last) { SetLast(last, FieldUnit::NONE); }
-    sal_Int64               GetLast( FieldUnit eOutUnit ) const;
-
-    static sal_Int64        ConvertValue( sal_Int64 nValue, sal_Int64 mnBaseValue, sal_uInt16 nDecDigits,
-                                          FieldUnit eInUnit, FieldUnit eOutUnit );
-    static sal_Int64        ConvertValue( sal_Int64 nValue, sal_uInt16 nDecDigits,
-                                          MapUnit eInUnit, FieldUnit eOutUnit );
-
-    // for backwards compatibility
-    // caution: conversion to double loses precision
-    static double           ConvertDoubleValue( double nValue, sal_Int64 mnBaseValue, sal_uInt16 nDecDigits,
-                                                FieldUnit eInUnit, FieldUnit eOutUnit );
-    static double           ConvertDoubleValue( double nValue, sal_uInt16 nDecDigits,
-                                                FieldUnit eInUnit, MapUnit eOutUnit );
-    static double           ConvertDoubleValue( double nValue, sal_uInt16 nDecDigits,
-                                                MapUnit eInUnit, FieldUnit eOutUnit );
-
-    // for backwards compatibility
-    // caution: conversion to double loses precision
-    static double           ConvertDoubleValue( sal_Int64 nValue, sal_Int64 nBaseValue, sal_uInt16 nDecDigits,
-                                                FieldUnit eInUnit, FieldUnit eOutUnit )
-    { return ConvertDoubleValue( static_cast<double>(nValue), nBaseValue, nDecDigits, eInUnit, eOutUnit ); }
-    static double           ConvertDoubleValue( sal_Int64 nValue, sal_uInt16 nDecDigits,
-                                                FieldUnit eInUnit, MapUnit eOutUnit )
-    { return ConvertDoubleValue( static_cast<double>(nValue), nDecDigits, eInUnit, eOutUnit ); }
-    static double           ConvertDoubleValue( sal_Int64 nValue, sal_uInt16 nDecDigits,
-                                                MapUnit eInUnit, FieldUnit eOutUnit )
-    { return ConvertDoubleValue( static_cast<double>(nValue), nDecDigits, eInUnit, eOutUnit ); }
-
-    virtual bool            set_property(const OString &rKey, const OUString &rValue) override;
-    virtual void            dispose() override;
-
-    virtual boost::property_tree::ptree DumpAsPropertyTree() override;
-};
-
-class VCL_DLLPUBLIC DateField : public SpinField, public DateFormatter
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) DateField : public SpinField, public DateFormatter
 {
 private:
     Date                    maFirst;
@@ -510,7 +399,7 @@ public:
     virtual void            dispose() override;
 };
 
-class VCL_DLLPUBLIC TimeField final : public SpinField, public TimeFormatter
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) TimeField final : public SpinField, public TimeFormatter
 {
 private:
     tools::Time                    maFirst;
@@ -538,51 +427,6 @@ public:
     const tools::Time&      GetLast() const                     { return maLast; }
 
     void                    SetExtFormat( ExtTimeFieldFormat eFormat );
-    virtual void            dispose() override;
-};
-
-class VCL_DLLPUBLIC NumericBox : public ComboBox, public NumericFormatter
-{
-    SAL_DLLPRIVATE void     ImplNumericReformat( const OUString& rStr, sal_Int64& rValue, OUString& rOutStr );
-public:
-    explicit                NumericBox( vcl::Window* pParent, WinBits nWinStyle );
-
-    virtual Size            CalcMinimumSize() const override;
-
-    virtual bool            PreNotify( NotifyEvent& rNEvt ) override;
-    virtual bool            EventNotify( NotifyEvent& rNEvt ) override;
-    virtual void            DataChanged( const DataChangedEvent& rDCEvt ) override;
-
-    virtual void            Modify() override;
-
-    virtual void            ReformatAll() override;
-
-    void                    InsertValue( sal_Int64 nValue, sal_Int32  nPos = COMBOBOX_APPEND );
-    virtual void            dispose() override;
-};
-
-
-class VCL_DLLPUBLIC MetricBox : public ComboBox, public MetricFormatter
-{
-public:
-    explicit                MetricBox( vcl::Window* pParent, WinBits nWinStyle );
-
-    virtual bool            PreNotify( NotifyEvent& rNEvt ) override;
-    virtual bool            EventNotify( NotifyEvent& rNEvt ) override;
-    virtual void            DataChanged( const DataChangedEvent& rDCEvt ) override;
-
-    virtual Size            CalcMinimumSize() const override;
-
-    virtual void            Modify() override;
-
-    virtual void            ReformatAll() override;
-
-    void                    InsertValue( sal_Int64 nValue, FieldUnit eInUnit = FieldUnit::NONE,
-                                         sal_Int32  nPos = COMBOBOX_APPEND );
-
-    // Needed, because GetValue() with nPos hide these functions
-    using MetricFormatter::GetValue;
-
     virtual void            dispose() override;
 };
 

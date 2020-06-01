@@ -103,7 +103,7 @@ class AbstractScImportAsciiDlg_Impl : public AbstractScImportAsciiDlg
 {
     std::shared_ptr<ScImportAsciiDlg> m_xDlg;
 public:
-    explicit AbstractScImportAsciiDlg_Impl(std::unique_ptr<ScImportAsciiDlg> p)
+    explicit AbstractScImportAsciiDlg_Impl(std::shared_ptr<ScImportAsciiDlg> p)
         : m_xDlg(std::move(p))
     {
     }
@@ -151,7 +151,7 @@ class AbstractScCondFormatManagerDlg_Impl : public AbstractScCondFormatManagerDl
 {
     std::shared_ptr<ScCondFormatManagerDlg> m_xDlg;
 public:
-    explicit AbstractScCondFormatManagerDlg_Impl(std::unique_ptr<ScCondFormatManagerDlg> p)
+    explicit AbstractScCondFormatManagerDlg_Impl(std::shared_ptr<ScCondFormatManagerDlg> p)
         : m_xDlg(std::move(p))
     {
     }
@@ -544,8 +544,8 @@ class AbstractScShowTabDlg_Impl : public AbstractScShowTabDlg
 {
     std::shared_ptr<ScShowTabDlg> m_xDlg;
 public:
-    explicit AbstractScShowTabDlg_Impl(ScShowTabDlg* p)
-        : m_xDlg(p)
+    explicit AbstractScShowTabDlg_Impl(std::shared_ptr<ScShowTabDlg> p)
+        : m_xDlg(std::move(p))
     {
     }
     virtual short Execute() override;
@@ -633,7 +633,7 @@ class ScAbstractTabController_Impl : public SfxAbstractTabDialog
 {
     std::shared_ptr<SfxTabDialogController> m_xDlg;
 public:
-    explicit ScAbstractTabController_Impl(std::unique_ptr<SfxTabDialogController> p)
+    explicit ScAbstractTabController_Impl(std::shared_ptr<SfxTabDialogController> p)
         : m_xDlg(std::move(p))
     {
     }
@@ -700,6 +700,8 @@ public:
                                                             const OUString& aStartStr,
                                                             double          fStep,
                                                             double          fMax,
+                                                            SCSIZE          nSelectHeight,
+                                                            SCSIZE          nSelectWidth,
                                                             sal_uInt16       nPossDir) override;
     virtual VclPtr<AbstractScGroupDlg> CreateAbstractScGroupDlg(weld::Window* pParent, bool bUnGroup = false) override;
 
@@ -796,7 +798,7 @@ public:
     virtual VclPtr<SfxAbstractTabDialog> CreateScSubTotalDlg(weld::Window* pParent,
                                                              const SfxItemSet* pArgSet) override;
     virtual VclPtr<SfxAbstractTabDialog> CreateScCharDlg(weld::Window* pParent,
-        const SfxItemSet* pAttr, const SfxObjectShell* pDocShell) override;
+        const SfxItemSet* pAttr, const SfxObjectShell* pDocShell, bool bDrawText) override;
 
     virtual VclPtr<SfxAbstractTabDialog> CreateScParagraphDlg(weld::Window* pParent,
         const SfxItemSet* pAttr) override;

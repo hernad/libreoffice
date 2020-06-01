@@ -13,12 +13,20 @@ $(eval $(call gb_CppunitTest_add_exception_objects,vcl_graphic_test, \
     vcl/qa/cppunit/GraphicTest \
     vcl/qa/cppunit/GraphicDescriptorTest \
     vcl/qa/cppunit/GraphicFormatDetectorTest \
+    vcl/qa/cppunit/GraphicNativeMetadataTest \
+    vcl/qa/cppunit/VectorGraphicSearchTest \
 ))
 
-$(eval $(call gb_CppunitTest_use_externals,vcl_graphic_test,\
-	boost_headers \
-	glm_headers \
+$(eval $(call gb_CppunitTest_use_externals,vcl_graphic_test, \
+    boost_headers \
+    $(if $(filter PDFIUM,$(BUILD_TYPE)),pdfium) \
 ))
+ifeq ($(TLS),NSS)
+$(eval $(call gb_CppunitTest_use_externals,vcl_graphic_test,\
+       plc4 \
+       nss3 \
+))
+endif
 
 $(eval $(call gb_CppunitTest_set_include,vcl_graphic_test,\
     $$(INCLUDE) \
@@ -39,19 +47,9 @@ $(eval $(call gb_CppunitTest_use_libraries,vcl_graphic_test, \
 ))
 
 $(eval $(call gb_CppunitTest_use_sdk_api,vcl_graphic_test))
-
 $(eval $(call gb_CppunitTest_use_ure,vcl_graphic_test))
 $(eval $(call gb_CppunitTest_use_vcl,vcl_graphic_test))
-
-$(eval $(call gb_CppunitTest_use_components,vcl_graphic_test,\
-    configmgr/source/configmgr \
-    i18npool/util/i18npool \
-    ucb/source/core/ucb1 \
-    unotools/util/utl \
-    emfio/emfio \
-    drawinglayer/drawinglayer \
-))
-
+$(eval $(call gb_CppunitTest_use_rdb,vcl_graphic_test,services))
 $(eval $(call gb_CppunitTest_use_configuration,vcl_graphic_test))
 
 # we need to explicitly depend on Library_gie because it's dynamically loaded for .gif

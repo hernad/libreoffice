@@ -23,16 +23,12 @@
 #include <sal/log.hxx>
 #include <tools/diagnose_ex.h>
 #include <comphelper/processfactory.hxx>
-#include <com/sun/star/io/XPersistObject.hpp>
 #include <com/sun/star/sdbc/ResultSetType.hpp>
 #include <com/sun/star/sdbc/ResultSetConcurrency.hpp>
-#include <com/sun/star/sdbc/XResultSetUpdate.hpp>
 #include <com/sun/star/sdbcx/XRowLocate.hpp>
 #include <com/sun/star/sdbc/DataType.hpp>
 #include <com/sun/star/sdb/XSingleSelectQueryComposer.hpp>
 #include <com/sun/star/sdbc/XDatabaseMetaData.hpp>
-#include <com/sun/star/sdb/XDatabaseEnvironment.hpp>
-#include <com/sun/star/uno/XNamingService.hpp>
 #include <com/sun/star/sdbc/XDataSource.hpp>
 #include <com/sun/star/sdb/CommandType.hpp>
 #include <com/sun/star/sdb/DatabaseContext.hpp>
@@ -46,11 +42,10 @@
 #include <com/sun/star/form/runtime/FormController.hpp>
 #include <com/sun/star/sdbcx/XColumnsSupplier.hpp>
 #include <com/sun/star/form/XGridColumnFactory.hpp>
-#include <com/sun/star/io/XDataInputStream.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/container/XNameContainer.hpp>
-#include <svl/urihelper.hxx>
 #include <tools/debug.hxx>
+#include <tools/urlobj.hxx>
 #include <vcl/weld.hxx>
 #include "datman.hxx"
 #include "bibresid.hxx"
@@ -406,7 +401,6 @@ namespace {
 class DBChangeDialog_Impl : public weld::GenericDialogController
 {
     DBChangeDialogConfig_Impl aConfig;
-    BibDataManager* pDatMan;
 
     std::unique_ptr<weld::TreeView> m_xSelectionLB;
 
@@ -419,9 +413,8 @@ public:
 
 }
 
-DBChangeDialog_Impl::DBChangeDialog_Impl(weld::Window* pParent, BibDataManager* pMan )
+DBChangeDialog_Impl::DBChangeDialog_Impl(weld::Window* pParent, BibDataManager* pDatMan )
     : GenericDialogController(pParent, "modules/sbibliography/ui/choosedatasourcedialog.ui", "ChooseDataSourceDialog")
-    , pDatMan(pMan)
     , m_xSelectionLB(m_xBuilder->weld_tree_view("treeview"))
 {
     m_xSelectionLB->set_size_request(-1, m_xSelectionLB->get_height_rows(6));
@@ -871,77 +864,77 @@ void BibDataManager::setActiveDataSource(const OUString& rURL)
     aDataSourceURL = rURL;
 
     Reference< XPropertySet >  aPropertySet( m_xForm, UNO_QUERY );
-    if(aPropertySet.is())
+    if(!aPropertySet.is())
+        return;
+
+    unload();
+
+    Reference< XComponent >  xOldConnection;
+    aPropertySet->getPropertyValue("ActiveConnection") >>= xOldConnection;
+
+    Reference< XConnection >    xConnection = getConnection(rURL);
+    if(!xConnection.is())
     {
-        unload();
-
-        Reference< XComponent >  xOldConnection;
-        aPropertySet->getPropertyValue("ActiveConnection") >>= xOldConnection;
-
-        Reference< XConnection >    xConnection = getConnection(rURL);
-        if(!xConnection.is())
-        {
-            aDataSourceURL = sTmp;
-            return;
-        }
-        Any aVal; aVal <<= xConnection;
-        aPropertySet->setPropertyValue("ActiveConnection", aVal);
-        Reference< XMultiServiceFactory >   xFactory(xConnection, UNO_QUERY);
-        if ( xFactory.is() )
-            m_xParser.set( xFactory->createInstance("com.sun.star.sdb.SingleSelectQueryComposer"), UNO_QUERY );
-
-        if(xOldConnection.is())
-            xOldConnection->dispose();
-
-        Sequence< OUString > aTableNameSeq;
-        Reference< XTablesSupplier >  xSupplyTables(xConnection, UNO_QUERY);
-        if(xSupplyTables.is())
-        {
-            Reference< XNameAccess >  xAccess = xSupplyTables->getTables();
-            aTableNameSeq = xAccess->getElementNames();
-        }
-        if(aTableNameSeq.hasElements())
-        {
-            aActiveDataTable = aTableNameSeq[0];
-            aVal <<= aActiveDataTable;
-            aPropertySet->setPropertyValue("Command", aVal);
-            aPropertySet->setPropertyValue("CommandType", makeAny(CommandType::TABLE));
-            //Caching for Performance
-            aVal <<= sal_Int32(50);
-            aPropertySet->setPropertyValue("FetchSize", aVal);
-            OUString aString("SELECT * FROM ");
-            // quote the table name which may contain catalog.schema.table
-            Reference<XDatabaseMetaData> xMetaData = xConnection->getMetaData();
-            aQuoteChar = xMetaData->getIdentifierQuoteString();
-
-            OUString sCatalog, sSchema, sName;
-            ::dbtools::qualifiedNameComponents( xMetaData, aActiveDataTable, sCatalog, sSchema, sName, ::dbtools::EComposeRule::InDataManipulation );
-            aString += ::dbtools::composeTableNameForSelect( xConnection, sCatalog, sSchema, sName );
-
-            m_xParser->setElementaryQuery(aString);
-            BibConfig* pConfig = BibModul::GetConfig();
-            pConfig->setQueryField(getQueryField());
-            startQueryWith(pConfig->getQueryText());
-            setActiveDataTable(aActiveDataTable);
-        }
-        FeatureStateEvent aEvent;
-        util::URL aURL;
-        aEvent.IsEnabled  = true;
-        aEvent.Requery    = false;
-        aEvent.FeatureDescriptor = getActiveDataTable();
-
-        aEvent.State <<= getDataSources();
-
-        if(pToolbar)
-        {
-            aURL.Complete =".uno:Bib/source";
-            aEvent.FeatureURL = aURL;
-            pToolbar->statusChanged( aEvent );
-        }
-
-        updateGridModel();
-        load();
+        aDataSourceURL = sTmp;
+        return;
     }
+    Any aVal; aVal <<= xConnection;
+    aPropertySet->setPropertyValue("ActiveConnection", aVal);
+    Reference< XMultiServiceFactory >   xFactory(xConnection, UNO_QUERY);
+    if ( xFactory.is() )
+        m_xParser.set( xFactory->createInstance("com.sun.star.sdb.SingleSelectQueryComposer"), UNO_QUERY );
+
+    if(xOldConnection.is())
+        xOldConnection->dispose();
+
+    Sequence< OUString > aTableNameSeq;
+    Reference< XTablesSupplier >  xSupplyTables(xConnection, UNO_QUERY);
+    if(xSupplyTables.is())
+    {
+        Reference< XNameAccess >  xAccess = xSupplyTables->getTables();
+        aTableNameSeq = xAccess->getElementNames();
+    }
+    if(aTableNameSeq.hasElements())
+    {
+        aActiveDataTable = aTableNameSeq[0];
+        aVal <<= aActiveDataTable;
+        aPropertySet->setPropertyValue("Command", aVal);
+        aPropertySet->setPropertyValue("CommandType", makeAny(CommandType::TABLE));
+        //Caching for Performance
+        aVal <<= sal_Int32(50);
+        aPropertySet->setPropertyValue("FetchSize", aVal);
+        OUString aString("SELECT * FROM ");
+        // quote the table name which may contain catalog.schema.table
+        Reference<XDatabaseMetaData> xMetaData = xConnection->getMetaData();
+        aQuoteChar = xMetaData->getIdentifierQuoteString();
+
+        OUString sCatalog, sSchema, sName;
+        ::dbtools::qualifiedNameComponents( xMetaData, aActiveDataTable, sCatalog, sSchema, sName, ::dbtools::EComposeRule::InDataManipulation );
+        aString += ::dbtools::composeTableNameForSelect( xConnection, sCatalog, sSchema, sName );
+
+        m_xParser->setElementaryQuery(aString);
+        BibConfig* pConfig = BibModul::GetConfig();
+        pConfig->setQueryField(getQueryField());
+        startQueryWith(pConfig->getQueryText());
+        setActiveDataTable(aActiveDataTable);
+    }
+    FeatureStateEvent aEvent;
+    util::URL aURL;
+    aEvent.IsEnabled  = true;
+    aEvent.Requery    = false;
+    aEvent.FeatureDescriptor = getActiveDataTable();
+
+    aEvent.State <<= getDataSources();
+
+    if(pToolbar)
+    {
+        aURL.Complete =".uno:Bib/source";
+        aEvent.FeatureURL = aURL;
+        pToolbar->statusChanged( aEvent );
+    }
+
+    updateGridModel();
+    load();
 }
 
 
@@ -1035,19 +1028,19 @@ void SAL_CALL BibDataManager::unload(  )
 
     Reference< XLoadable >xFormAsLoadable( m_xForm, UNO_QUERY );
     DBG_ASSERT( xFormAsLoadable.is() || !m_xForm.is(), "BibDataManager::unload: invalid form!");
-    if ( xFormAsLoadable.is() )
+    if ( !xFormAsLoadable.is() )
+        return;
+
+    EventObject aEvt( static_cast< XWeak* >( this ) );
+
     {
-        EventObject aEvt( static_cast< XWeak* >( this ) );
+        m_aLoadListeners.notifyEach( &XLoadListener::unloading, aEvt );
+    }
 
-        {
-            m_aLoadListeners.notifyEach( &XLoadListener::unloading, aEvt );
-        }
+    xFormAsLoadable->unload();
 
-        xFormAsLoadable->unload();
-
-        {
-            m_aLoadListeners.notifyEach( &XLoadListener::unloaded, aEvt );
-        }
+    {
+        m_aLoadListeners.notifyEach( &XLoadListener::unloaded, aEvt );
     }
 }
 
@@ -1060,19 +1053,19 @@ void SAL_CALL BibDataManager::reload(  )
 
     Reference< XLoadable >xFormAsLoadable( m_xForm, UNO_QUERY );
     DBG_ASSERT( xFormAsLoadable.is() || !m_xForm.is(), "BibDataManager::unload: invalid form!");
-    if ( xFormAsLoadable.is() )
+    if ( !xFormAsLoadable.is() )
+        return;
+
+    EventObject aEvt( static_cast< XWeak* >( this ) );
+
     {
-        EventObject aEvt( static_cast< XWeak* >( this ) );
+        m_aLoadListeners.notifyEach( &XLoadListener::reloading, aEvt );
+    }
 
-        {
-            m_aLoadListeners.notifyEach( &XLoadListener::reloading, aEvt );
-        }
+    xFormAsLoadable->reload();
 
-        xFormAsLoadable->reload();
-
-        {
-            m_aLoadListeners.notifyEach( &XLoadListener::reloaded, aEvt );
-        }
+    {
+        m_aLoadListeners.notifyEach( &XLoadListener::reloaded, aEvt );
     }
 }
 

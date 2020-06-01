@@ -30,8 +30,6 @@
 #include <svtools/ctrlbox.hxx>
 #include <svx/colorbox.hxx>
 
-#include <set>
-
 namespace pcr
 {
 
@@ -360,6 +358,8 @@ namespace pcr
         virtual void SAL_CALL setValue( const css::uno::Any& _value ) override;
         virtual css::uno::Type SAL_CALL getValueType() override;
         virtual weld::Widget* getWidget() override { return getTypedControlWindow(); }
+
+        virtual void editChanged() override;
 
         virtual void SetModifyHandler() override
         {

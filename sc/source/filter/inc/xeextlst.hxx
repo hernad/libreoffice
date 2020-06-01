@@ -51,9 +51,9 @@ public:
     virtual void SaveXml( XclExpXmlStream& rStrm ) override;
 
 private:
-    ScColorScaleEntryType const meType;
+    ScColorScaleEntryType meType;
     OString maValue;
-    bool const mbFirst;
+    bool mbFirst;
 };
 
 class XclExpExtNegativeColor
@@ -63,7 +63,7 @@ public:
     void SaveXml( XclExpXmlStream& rStrm);
 
 private:
-    Color const maColor;
+    Color maColor;
 };
 
 class XclExpExtAxisColor
@@ -73,7 +73,7 @@ public:
     void SaveXml( XclExpXmlStream& rStrm );
 
 private:
-    Color const maAxisColor;
+    Color maAxisColor;
 };
 
 class XclExpExtIcon : public XclExpRecordBase, protected XclExpRoot
@@ -95,7 +95,7 @@ public:
 
 private:
     OUString aFormula;
-    const ScCondFormatEntry mrFormat;
+    ScCondFormatEntry mrFormat;
 };
 
 class XclExpExtDataBar : public XclExpRecordBase, protected XclExpRoot
@@ -141,13 +141,13 @@ public:
 
 private:
     XclExpRecordRef mxEntry;
-    OString const maId;
+    OString     maId;
     const char* pType;
-    sal_Int32 const mnPriority;
+    sal_Int32   mnPriority;
     const char* mOperator;
 };
 
-typedef std::shared_ptr<XclExpExt> XclExpExtRef;
+typedef rtl::Reference<XclExpExt> XclExpExtRef;
 
 class XclExpExtConditionalFormatting : public XclExpRecordBase, protected XclExpRoot
 {
@@ -160,7 +160,7 @@ private:
     ScRangeList maRange;
 };
 
-typedef std::shared_ptr<XclExpExtConditionalFormatting> XclExpExtConditionalFormattingRef;
+typedef rtl::Reference<XclExpExtConditionalFormatting> XclExpExtConditionalFormattingRef;
 
 class XclExpExtCondFormat : public XclExpExt
 {
@@ -170,7 +170,7 @@ public:
 
     virtual XclExpExtType GetType() override { return XclExpExtDataBarType; }
 
-    void AddRecord( const XclExpExtConditionalFormattingRef& aFormat );
+    void AddRecord( XclExpExtConditionalFormatting* pFormat );
 
 private:
     XclExpRecordList< XclExpExtConditionalFormatting > maCF;
@@ -194,15 +194,16 @@ public:
     explicit XclExtLst( const XclExpRoot& rRoot);
     virtual void SaveXml( XclExpXmlStream& rStrm ) override;
 
-    void AddRecord( const XclExpExtRef& aEntry );
+    void AddRecord( XclExpExt* pEntry );
+    void AddRecord( XclExpExtRef& aEntry ) { AddRecord(aEntry.get()); }
 
-    XclExpExtRef GetItem( XclExpExtType eType );
+    XclExpExt* GetItem( XclExpExtType eType );
 
 private:
     XclExpRecordList< XclExpExt > maExtEntries;
 };
 
-typedef std::shared_ptr< XclExtLst > XclExtLstRef;
+typedef rtl::Reference< XclExtLst > XclExtLstRef;
 
 #endif
 

@@ -22,32 +22,19 @@
 #include "OptimisticSet.hxx"
 #include <core_resource.hxx>
 #include <strings.hrc>
+#include <strings.hxx>
 #include <com/sun/star/beans/XPropertySet.hpp>
+#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/sdbc/XDatabaseMetaData.hpp>
-#include <com/sun/star/sdbc/ColumnValue.hpp>
 #include <com/sun/star/sdbc/XPreparedStatement.hpp>
 #include <com/sun/star/sdbc/XParameters.hpp>
-#include <com/sun/star/sdbc/XGeneratedResultSet.hpp>
 #include <com/sun/star/sdb/XSingleSelectQueryComposer.hpp>
-#include <com/sun/star/sdb/SQLFilterOperator.hpp>
-#include <com/sun/star/sdbc/XColumnLocate.hpp>
-#include <com/sun/star/container/XIndexAccess.hpp>
-#include <stringconstants.hxx>
-#include <apitools.hxx>
-#include <com/sun/star/sdbcx/XKeysSupplier.hpp>
-#include <com/sun/star/sdbcx/XIndexesSupplier.hpp>
-#include <cppuhelper/typeprovider.hxx>
 #include <comphelper/types.hxx>
-#include <com/sun/star/sdbcx/KeyType.hpp>
 #include <connectivity/dbtools.hxx>
 #include <connectivity/dbexception.hxx>
-#include <list>
 #include <map>
 #include <algorithm>
-#include <string.h>
-#include <com/sun/star/io/XInputStream.hpp>
 #include <com/sun/star/sdbcx/XTablesSupplier.hpp>
-#include <querycomposer.hxx>
 #include <composertools.hxx>
 
 using namespace dbaccess;
@@ -89,7 +76,7 @@ OptimisticSet::OptimisticSet(const Reference<XComponentContext>& _rContext,
                              const ORowSetValueVector& _aParameterValueForCache,
                              sal_Int32 i_nMaxRows,
                              sal_Int32& o_nRowCount)
-            :OKeySet(nullptr,nullptr,OUString(),_xComposer,_aParameterValueForCache,i_nMaxRows,o_nRowCount)
+            :OKeySet(nullptr,OUString(),_xComposer,_aParameterValueForCache,i_nMaxRows,o_nRowCount)
             ,m_aSqlParser( _rContext )
             ,m_aSqlIterator( i_xConnection, Reference<XTablesSupplier>(_xComposer,UNO_QUERY_THROW)->getTables(), m_aSqlParser )
             ,m_bResultSetChanged(false)
@@ -181,15 +168,14 @@ void OptimisticSet::updateRow(const ORowSetRow& _rInsertRow ,const ORowSetRow& _
     // here we build the condition part for the update statement
     for (auto const& columnName : *m_pColumnNames)
     {
-        if ( aResultSetChanged.find( columnName.second.sTableName ) == aResultSetChanged.end() )
-            aResultSetChanged[columnName.second.sTableName] = false;
+        aResultSetChanged.try_emplace(columnName.second.sTableName, false);
         const OUString sQuotedColumnName = ::dbtools::quoteName( aQuote,columnName.second.sRealName);
         if ( m_pKeyColumnNames->find(columnName.first) != m_pKeyColumnNames->end() )
         {
             aResultSetChanged[columnName.second.sTableName] = m_aJoinedKeyColumns.find(columnName.second.nPosition) != m_aJoinedKeyColumns.end();
-            lcl_fillKeyCondition(columnName.second.sTableName,sQuotedColumnName,(_rOriginalRow->get())[columnName.second.nPosition],aKeyConditions);
+            lcl_fillKeyCondition(columnName.second.sTableName,sQuotedColumnName,(*_rOriginalRow)[columnName.second.nPosition],aKeyConditions);
         }
-        if((_rInsertRow->get())[columnName.second.nPosition].isModified())
+        if((*_rInsertRow)[columnName.second.nPosition].isModified())
         {
             if ( m_aJoinedKeyColumns.find(columnName.second.nPosition) != m_aJoinedKeyColumns.end() )
                 throw SQLException();
@@ -197,7 +183,7 @@ void OptimisticSet::updateRow(const ORowSetRow& _rInsertRow ,const ORowSetRow& _
             std::map<sal_Int32,sal_Int32>::const_iterator aJoinIter = m_aJoinedColumns.find(columnName.second.nPosition);
             if ( aJoinIter != m_aJoinedColumns.end() )
             {
-                (_rInsertRow->get())[aJoinIter->second] = (_rInsertRow->get())[columnName.second.nPosition];
+                (*_rInsertRow)[aJoinIter->second] = (*_rInsertRow)[columnName.second.nPosition];
             }
             OUStringBuffer& rPart = aSql[columnName.second.sTableName];
             if ( !rPart.isEmpty() )
@@ -243,21 +229,20 @@ void OptimisticSet::insertRow( const ORowSetRow& _rInsertRow,const connectivity:
     // here we build the condition part for the update statement
     for (auto const& columnName : *m_pColumnNames)
     {
-        if ( aResultSetChanged.find( columnName.second.sTableName ) == aResultSetChanged.end() )
-            aResultSetChanged[columnName.second.sTableName] = false;
+        aResultSetChanged.try_emplace(columnName.second.sTableName, false);
 
         const OUString sQuotedColumnName = ::dbtools::quoteName( aQuote,columnName.second.sRealName);
-        if ( (_rInsertRow->get())[columnName.second.nPosition].isModified() )
+        if ( (*_rInsertRow)[columnName.second.nPosition].isModified() )
         {
             if ( m_aJoinedKeyColumns.find(columnName.second.nPosition) != m_aJoinedKeyColumns.end() )
             {
-                lcl_fillKeyCondition(columnName.second.sTableName,sQuotedColumnName,(_rInsertRow->get())[columnName.second.nPosition],aKeyConditions);
+                lcl_fillKeyCondition(columnName.second.sTableName,sQuotedColumnName,(*_rInsertRow)[columnName.second.nPosition],aKeyConditions);
                 aResultSetChanged[columnName.second.sTableName] = true;
             }
             std::map<sal_Int32,sal_Int32>::const_iterator aJoinIter = m_aJoinedColumns.find(columnName.second.nPosition);
             if ( aJoinIter != m_aJoinedColumns.end() )
             {
-                (_rInsertRow->get())[aJoinIter->second] = (_rInsertRow->get())[columnName.second.nPosition];
+                (*_rInsertRow)[aJoinIter->second] = (*_rInsertRow)[columnName.second.nPosition];
             }
             OUStringBuffer& rPart = aSql[columnName.second.sTableName];
             if ( !rPart.isEmpty() )
@@ -300,7 +285,7 @@ void OptimisticSet::insertRow( const ORowSetRow& _rInsertRow,const connectivity:
                     {
                         if ( keyColumnName.second.sTableName == elem.first )
                         {
-                            setParameter(i++,xParameter,(_rInsertRow->get())[keyColumnName.second.nPosition],keyColumnName.second.nType,keyColumnName.second.nScale);
+                            setParameter(i++,xParameter,(*_rInsertRow)[keyColumnName.second.nPosition],keyColumnName.second.nType,keyColumnName.second.nScale);
                         }
                     }
                     Reference<XResultSet> xRes = xPrep->executeQuery();
@@ -333,7 +318,7 @@ void OptimisticSet::deleteRow(const ORowSetRow& _rDeleteRow,const connectivity::
         {
             // only delete rows which aren't the key in the join
             const OUString sQuotedColumnName = ::dbtools::quoteName( aQuote,columnName.second.sRealName);
-            lcl_fillKeyCondition(columnName.second.sTableName,sQuotedColumnName,(_rDeleteRow->get())[columnName.second.nPosition],aKeyConditions);
+            lcl_fillKeyCondition(columnName.second.sTableName,sQuotedColumnName,(*_rDeleteRow)[columnName.second.nPosition],aKeyConditions);
         }
     }
     Reference<XDatabaseMetaData> xMetaData = m_xConnection->getMetaData();
@@ -361,13 +346,13 @@ void OptimisticSet::executeDelete(const ORowSetRow& _rDeleteRow,const OUString& 
     for (auto const& keyColumnName : *m_pKeyColumnNames)
     {
         if ( keyColumnName.second.sTableName == i_sTableName )
-            setParameter(i++,xParameter,(_rDeleteRow->get())[keyColumnName.second.nPosition],keyColumnName.second.nType,keyColumnName.second.nScale);
+            setParameter(i++,xParameter,(*_rDeleteRow)[keyColumnName.second.nPosition],keyColumnName.second.nType,keyColumnName.second.nScale);
     }
     m_bDeleted = xPrep->executeUpdate() > 0;
 
     if(m_bDeleted)
     {
-        sal_Int32 nBookmark = ::comphelper::getINT32((_rDeleteRow->get())[0].getAny());
+        sal_Int32 nBookmark = ::comphelper::getINT32((*_rDeleteRow)[0].getAny());
         if(m_aKeyIter == m_aKeyMap.find(nBookmark) && m_aKeyIter != m_aKeyMap.end())
             ++m_aKeyIter;
         m_aKeyMap.erase(nBookmark);

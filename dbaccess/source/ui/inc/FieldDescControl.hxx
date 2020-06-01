@@ -19,6 +19,8 @@
 #ifndef INCLUDED_DBACCESS_SOURCE_UI_INC_FIELDDESCCONTROL_HXX
 #define INCLUDED_DBACCESS_SOURCE_UI_INC_FIELDDESCCONTROL_HXX
 
+#include <vcl/idle.hxx>
+#include <vcl/layout.hxx>
 #include <vcl/tabpage.hxx>
 #include <vcl/weld.hxx>
 #include "QEnumTypes.hxx"
@@ -66,6 +68,8 @@ namespace dbaui
     class OFieldDescControl : public TabPage
     {
     private:
+        Idle m_aLayoutIdle;
+        VclPtr<VclVBox> m_xVclContentArea;
         std::unique_ptr<weld::Builder> m_xBuilder;
         std::unique_ptr<weld::Container> m_xContainer;
 
@@ -114,6 +118,7 @@ namespace dbaui
 
         DECL_LINK(FormatClickHdl, weld::Button&, void);
         DECL_LINK(ChangeHdl, weld::ComboBox&, void);
+        DECL_LINK(ImplHandleLayoutTimerHdl, Timer*, void);
 
         // used by ActivatePropertyField
         DECL_LINK( OnControlFocusLost, weld::Widget&, void );
@@ -181,6 +186,9 @@ namespace dbaui
         void                Init();
         virtual void        GetFocus() override;
         virtual void        LoseFocus() override;
+        virtual void        Resize() override;
+
+        virtual void queue_resize(StateChangedType eReason = StateChangedType::Layout) override;
 
         virtual css::uno::Reference< css::sdbc::XDatabaseMetaData> getMetaData() = 0;
         virtual css::uno::Reference< css::sdbc::XConnection> getConnection() = 0;

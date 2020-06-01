@@ -19,6 +19,7 @@
 #ifndef INCLUDED_SVX_SOURCE_INC_FMEXPL_HXX
 #define INCLUDED_SVX_SOURCE_INC_FMEXPL_HXX
 
+#include <config_options.h>
 #include <svl/lstner.hxx>
 #include <svl/SfxBroadcaster.hxx>
 #include <vcl/window.hxx>
@@ -56,8 +57,8 @@ class SdrMarkList;
 class FmEntryData;
 class FmNavInsertedHint : public SfxHint
 {
-    FmEntryData* const pEntryData;
-    sal_uInt32 const nPos;
+    FmEntryData* pEntryData;
+    sal_uInt32 nPos;
 
 public:
     FmNavInsertedHint( FmEntryData* pInsertedEntryData, sal_uInt32 nRelPos );
@@ -70,7 +71,7 @@ public:
 
 class FmNavModelReplacedHint : public SfxHint
 {
-    FmEntryData* const pEntryData;    // the data of the entry that has got a new model
+    FmEntryData* pEntryData;    // the data of the entry that has got a new model
 
 public:
     FmNavModelReplacedHint( FmEntryData* pAffectedEntryData );
@@ -82,7 +83,7 @@ public:
 
 class FmNavRemovedHint : public SfxHint
 {
-    FmEntryData* const pEntryData;
+    FmEntryData* pEntryData;
 
 public:
     FmNavRemovedHint( FmEntryData* pInsertedEntryData );
@@ -94,8 +95,8 @@ public:
 
 class FmNavNameChangedHint : public SfxHint
 {
-    FmEntryData* const    pEntryData;
-    OUString const          aNewName;
+    FmEntryData*    pEntryData;
+    OUString          aNewName;
 
 public:
     FmNavNameChangedHint( FmEntryData* pData, const OUString& rNewName );
@@ -532,7 +533,7 @@ namespace svxform
     };
 
 
-    class SVXCORE_DLLPUBLIC NavigatorFrameManager : public SfxChildWindow
+    class UNLESS_MERGELIBS(SVXCORE_DLLPUBLIC) NavigatorFrameManager : public SfxChildWindow
     {
     public:
         SVX_DLLPRIVATE NavigatorFrameManager( vcl::Window *pParent, sal_uInt16 nId, SfxBindings *pBindings,

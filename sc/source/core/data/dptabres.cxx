@@ -135,8 +135,8 @@ public:
 class ScDPRowMembersOrder
 {
     ScDPResultDimension& rDimension;
-    long const           nMeasure;
-    bool const           bAscending;
+    long                 nMeasure;
+    bool                 bAscending;
 
 public:
             ScDPRowMembersOrder( ScDPResultDimension& rDim, long nM, bool bAsc ) :
@@ -151,8 +151,8 @@ public:
 class ScDPColMembersOrder
 {
     ScDPDataDimension& rDimension;
-    long const         nMeasure;
-    bool const         bAscending;
+    long               nMeasure;
+    bool               bAscending;
 
 public:
             ScDPColMembersOrder( ScDPDataDimension& rDim, long nM, bool bAsc ) :
@@ -858,7 +858,7 @@ OUString ScDPResultData::GetMeasureString(long nMeasure, bool bForce, ScSubTotal
         const ScDPDimension* pDataDim = mrSource.GetDataDimension(nMeasure);
         if (pDataDim)
         {
-            const o3tl::optional<OUString> & pLayoutName = pDataDim->GetLayoutName();
+            const std::optional<OUString> & pLayoutName = pDataDim->GetLayoutName();
             if (pLayoutName)
                 return *pLayoutName;
         }
@@ -1380,7 +1380,7 @@ void ScDPResultMember::FillMemberResults(
     const ScDPMember* pMemberDesc = GetDPMember();
     if (pMemberDesc)
     {
-        const o3tl::optional<OUString> & pLayoutName = pMemberDesc->GetLayoutName();
+        const std::optional<OUString> & pLayoutName = pMemberDesc->GetLayoutName();
         if (pLayoutName)
         {
             aCaption = *pLayoutName;
@@ -1482,7 +1482,7 @@ void ScDPResultMember::FillMemberResults(
                     if (pMemberDesc)
                     {
                         // single data field layout.
-                        const o3tl::optional<OUString> & pSubtotalName = pParentDim->GetSubtotalName();
+                        const std::optional<OUString> & pSubtotalName = pParentDim->GetSubtotalName();
                         if (pSubtotalName)
                             aSubStr = lcl_parseSubtotalName(*pSubtotalName, aCaption);
                         pArray[rPos].Flags &= ~sheet::MemberResultFlags::GRANDTOTAL;
@@ -1490,7 +1490,7 @@ void ScDPResultMember::FillMemberResults(
                     else
                     {
                         // root member - subtotal (grand total?) for multi-data field layout.
-                        const o3tl::optional<OUString> & pGrandTotalName = pResultData->GetSource().GetGrandTotalName();
+                        const std::optional<OUString> & pGrandTotalName = pResultData->GetSource().GetGrandTotalName();
                         if (pGrandTotalName)
                             aSubStr = *pGrandTotalName;
                         pArray[rPos].Flags |= sheet::MemberResultFlags::GRANDTOTAL;
@@ -2685,7 +2685,7 @@ class ScDPGroupCompare
 private:
     const ScDPResultData* pResultData;
     const ScDPInitState& rInitState;
-    long const           nDimSource;
+    long                 nDimSource;
     bool                 bIncludeAll;
     bool                 bIsBase;
     long                 nGroupBase;

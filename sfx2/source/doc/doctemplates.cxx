@@ -481,6 +481,7 @@ void SfxDocTplService_Impl::getDefaultLocale()
 const char* TEMPLATE_SHORT_NAMES_ARY[] =
 {
     "standard",
+    "styles",
     "officorr",
     "offimisc",
     "personal",
@@ -490,8 +491,7 @@ const char* TEMPLATE_SHORT_NAMES_ARY[] =
     "layout",
     "presnt",
     "misc",
-    "labels",
-    "styles"
+    "labels"
 };
 
 void SfxDocTplService_Impl::readFolderList()
@@ -2267,7 +2267,7 @@ WaitWindow_Impl::WaitWindow_Impl() : WorkWindow(nullptr, WB_BORDER | WB_3DLOOK)
     SetOutputSizePixel(aRect.GetSize());
 
     Show();
-    Update();
+    PaintImmediately();
     Flush();
 }
 

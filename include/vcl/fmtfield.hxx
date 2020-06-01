@@ -20,6 +20,7 @@
 #ifndef INCLUDED_VCL_FMTFIELD_HXX
 #define INCLUDED_VCL_FMTFIELD_HXX
 
+#include <config_options.h>
 #include <vcl/spinfld.hxx>
 #include <memory>
 
@@ -51,7 +52,7 @@ private:
         ~StaticFormatter();
 
         operator SvNumberFormatter* () { return GetFormatter(); }
-        VCL_DLLPUBLIC static SvNumberFormatter* GetFormatter();
+        UNLESS_MERGELIBS(VCL_DLLPUBLIC) static SvNumberFormatter* GetFormatter();
     };
 
 protected:
@@ -65,6 +66,7 @@ protected:
     bool                m_bHasMin : 1;
     bool                m_bHasMax : 1;
 
+    bool                m_bWrapOnLimits : 1;
     bool                m_bStrictFormat : 1;
 
     bool                m_bEnableEmptyField : 1;
@@ -117,6 +119,8 @@ public:
 
     void    SetTextValue(const OUString& rText);
     // The String is transformed to a double (with a formatter) and SetValue is called afterwards
+    //
+    void    SetValueFromString(const OUString& rStr);
 
     bool    IsEmptyFieldEnabled() const         { return m_bEnableEmptyField; }
     void    EnableEmptyField(bool bEnable);
@@ -233,6 +237,10 @@ public:
     void    UseInputStringForFormatting();
     bool    IsUsingInputStringForFormatting() const { return m_bUseInputStringForFormatting;}
 
+    virtual boost::property_tree::ptree DumpAsPropertyTree() override;
+
+    virtual FactoryFunction GetUITestFactory() const override;
+
 protected:
     virtual bool EventNotify(NotifyEvent& rNEvt) override;
     void impl_Modify(bool makeValueDirty = true);
@@ -262,7 +270,7 @@ private:
     Link<sal_Int64*, TriState> m_aInputHdl;
 };
 
-class VCL_DLLPUBLIC DoubleNumericField final : public FormattedField
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) DoubleNumericField final : public FormattedField
 {
 public:
     DoubleNumericField(vcl::Window* pParent, WinBits nStyle);
@@ -279,7 +287,7 @@ private:
 };
 
 
-class VCL_DLLPUBLIC DoubleCurrencyField final : public FormattedField
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) DoubleCurrencyField final : public FormattedField
 {
 public:
     DoubleCurrencyField(vcl::Window* pParent, WinBits nStyle);

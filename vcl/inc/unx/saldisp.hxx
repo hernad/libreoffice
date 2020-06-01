@@ -122,7 +122,6 @@ class SalColormap
     Pixel                   m_nWhitePixel;
     Pixel                   m_nBlackPixel;
     Pixel                   m_nUsed;            // Pseudocolor
-    SalX11Screen            m_nXScreen;
 
     void            GetPalette();
     void            GetLookupTable();
@@ -279,7 +278,7 @@ protected:
 
     SalX11Screen                 m_nXDefaultScreen;
     std::vector< ScreenData >    m_aScreens;
-    ScreenData const      m_aInvalidScreenData;
+    ScreenData      m_aInvalidScreenData;
     Pair            aResolution_;       // [dpi]
     sal_uLong       nMaxRequestSize_;   // [byte]
 

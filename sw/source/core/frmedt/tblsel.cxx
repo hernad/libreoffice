@@ -44,6 +44,7 @@
 #include <sectfrm.hxx>
 #include <frmtool.hxx>
 #include <calbck.hxx>
+#include <frameformats.hxx>
 #include <deque>
 #include <memory>
 
@@ -1573,7 +1574,7 @@ static void lcl_FindStartEndRow( const SwLayoutFrame *&rpStart,
             {
                 // check if start & end line are the first & last Line of the
                 // box. If not return these cells.
-                // Else the hole line with all Boxes has to be deleted.
+                // Else the whole line with all Boxes has to be deleted.
                 rpStart = aSttArr[ n+1 ];
                 rpEnd = aEndArr[ n+1 ];
                 if( n )

@@ -315,11 +315,11 @@ void SfxObjectShell::SetupStorage( const uno::Reference< embed::XStorage >& xSto
         const_cast<SfxObjectShell*>( this )->SetError(ERRCODE_IO_GENERAL);
     }
 
-    SvtSaveOptions::ODFDefaultVersion nDefVersion = SvtSaveOptions::ODFVER_012;
+    SvtSaveOptions::ODFSaneDefaultVersion nDefVersion = SvtSaveOptions::ODFSVER_013;
     if (!utl::ConfigManager::IsFuzzing())
     {
         SvtSaveOptions aSaveOpt;
-        nDefVersion = aSaveOpt.GetODFDefaultVersion();
+        nDefVersion = aSaveOpt.GetODFSaneDefaultVersion();
     }
 
     // the default values, that should be used for ODF1.1 and older formats
@@ -330,12 +330,19 @@ void SfxObjectShell::SetupStorage( const uno::Reference< embed::XStorage >& xSto
         { "ChecksumAlgorithm", css::uno::makeAny(xml::crypto::DigestID::SHA1_1K) }
     };
 
-    if ( nDefVersion >= SvtSaveOptions::ODFVER_012 )
+    if (nDefVersion >= SvtSaveOptions::ODFSVER_012)
     {
         try
         {
             // older versions can not have this property set, it exists only starting from ODF1.2
-            xProps->setPropertyValue("Version", uno::makeAny<OUString>( ODFVER_012_TEXT ) );
+            if (SvtSaveOptions::ODFSVER_013 <= nDefVersion)
+            {
+                xProps->setPropertyValue("Version", uno::makeAny<OUString>(ODFVER_013_TEXT));
+            }
+            else
+            {
+                xProps->setPropertyValue("Version", uno::makeAny<OUString>(ODFVER_012_TEXT));
+            }
         }
         catch( uno::Exception& )
         {
@@ -1142,7 +1149,7 @@ bool SfxObjectShell::SaveTo_Impl
         {
             // check that the storage format stays the same
             SvtSaveOptions aSaveOpt;
-            SvtSaveOptions::ODFDefaultVersion nVersion = aSaveOpt.GetODFDefaultVersion();
+            SvtSaveOptions::ODFSaneDefaultVersion nVersion = aSaveOpt.GetODFSaneDefaultVersion();
 
             OUString aODFVersion;
             try
@@ -1163,8 +1170,8 @@ bool SfxObjectShell::SaveTo_Impl
             // document, but technically this is not correct, so this prevents old
             // signatures to be copied over to a version 1.2 document
             bNoPreserveForOasis = (
-                                   (aODFVersion == ODFVER_012_TEXT && nVersion < SvtSaveOptions::ODFVER_012) ||
-                                   (aODFVersion.isEmpty() && nVersion >= SvtSaveOptions::ODFVER_012)
+                                   (0 <= aODFVersion.compareTo(ODFVER_012_TEXT) && nVersion < SvtSaveOptions::ODFSVER_012) ||
+                                   (aODFVersion.isEmpty() && nVersion >= SvtSaveOptions::ODFSVER_012)
                                   );
         }
     }
@@ -1582,7 +1589,7 @@ bool SfxObjectShell::SaveTo_Impl
                         uno::Sequence< security::DocumentSignatureInformation > aInfos =
                             xDDSigns->verifyScriptingContentSignatures( xTarget,
                                                                         uno::Reference< io::XInputStream >() );
-                        SignatureState nState = ImplCheckSignaturesInformation( aInfos );
+                        SignatureState nState = DocumentSignatures::getSignatureState(aInfos);
                         if ( nState == SignatureState::OK || nState == SignatureState::NOTVALIDATED
                             || nState == SignatureState::PARTIAL_OK)
                         {
@@ -2481,7 +2488,7 @@ bool SfxObjectShell::DoSave_Impl( const SfxItemSet* pArgs )
 
     // copy the original itemset, but remove the "version" item, because pMediumTmp
     // is a new medium "from scratch", so no version should be stored into it
-    std::unique_ptr<SfxItemSet> pSet(new SfxAllItemSet(*pRetrMedium->GetItemSet()));
+    std::shared_ptr<SfxItemSet> pSet = std::make_shared<SfxAllItemSet>(*pRetrMedium->GetItemSet());
     pSet->ClearItem( SID_VERSION );
     pSet->ClearItem( SID_DOC_BASEURL );
 
@@ -2745,52 +2752,51 @@ bool SfxObjectShell::PreDoSaveAs_Impl(const OUString& rFileName, const OUString&
                                       const uno::Sequence<beans::PropertyValue>& rArgs)
 {
     // copy all items stored in the itemset of the current medium
-    std::unique_ptr<SfxAllItemSet> pMergedParams(new SfxAllItemSet( *pMedium->GetItemSet() ));
+    std::shared_ptr<SfxAllItemSet> xMergedParams = std::make_shared<SfxAllItemSet>( *pMedium->GetItemSet() );
 
     // in "SaveAs" title and password will be cleared ( maybe the new itemset contains new values, otherwise they will be empty )
     // #i119366# - As the SID_ENCRYPTIONDATA and SID_PASSWORD are using for setting password together, we need to clear them both.
     // Also, ( maybe the new itemset contains new values, otherwise they will be empty )
-    if (pMergedParams->HasItem( SID_PASSWORD ))
+    if (xMergedParams->HasItem( SID_PASSWORD ))
     {
-        pMergedParams->ClearItem( SID_PASSWORD );
-        pMergedParams->ClearItem( SID_ENCRYPTIONDATA );
+        xMergedParams->ClearItem( SID_PASSWORD );
+        xMergedParams->ClearItem( SID_ENCRYPTIONDATA );
     }
-    pMergedParams->ClearItem( SID_DOCINFO_TITLE );
+    xMergedParams->ClearItem( SID_DOCINFO_TITLE );
 
-    pMergedParams->ClearItem( SID_INPUTSTREAM );
-    pMergedParams->ClearItem( SID_STREAM );
-    pMergedParams->ClearItem( SID_CONTENT );
-    pMergedParams->ClearItem( SID_DOC_READONLY );
-    pMergedParams->ClearItem( SID_DOC_BASEURL );
+    xMergedParams->ClearItem( SID_INPUTSTREAM );
+    xMergedParams->ClearItem( SID_STREAM );
+    xMergedParams->ClearItem( SID_CONTENT );
+    xMergedParams->ClearItem( SID_DOC_READONLY );
+    xMergedParams->ClearItem( SID_DOC_BASEURL );
 
-    pMergedParams->ClearItem( SID_REPAIRPACKAGE );
+    xMergedParams->ClearItem( SID_REPAIRPACKAGE );
 
     // "SaveAs" will never store any version information - it's a complete new file !
-    pMergedParams->ClearItem( SID_VERSION );
+    xMergedParams->ClearItem( SID_VERSION );
 
     // merge the new parameters into the copy
     // all values present in both itemsets will be overwritten by the new parameters
-    pMergedParams->Put(rItemSet);
+    xMergedParams->Put(rItemSet);
 
-    SAL_WARN_IF( pMergedParams->GetItemState( SID_DOC_SALVAGE) >= SfxItemState::SET,
+    SAL_WARN_IF( xMergedParams->GetItemState( SID_DOC_SALVAGE) >= SfxItemState::SET,
         "sfx.doc","Salvage item present in Itemset, check the parameters!");
 
     // should be unnecessary - too hot to handle!
-    pMergedParams->ClearItem( SID_DOC_SALVAGE );
+    xMergedParams->ClearItem( SID_DOC_SALVAGE );
 
     // create a medium for the target URL
-    auto pMergedParamsTmp = pMergedParams.get();
-    SfxMedium *pNewFile = new SfxMedium( rFileName, StreamMode::READWRITE | StreamMode::SHARE_DENYWRITE | StreamMode::TRUNC, nullptr, std::move(pMergedParams) );
+    SfxMedium *pNewFile = new SfxMedium( rFileName, StreamMode::READWRITE | StreamMode::SHARE_DENYWRITE | StreamMode::TRUNC, nullptr, xMergedParams );
     pNewFile->SetArgs(rArgs);
 
-    const SfxBoolItem* pNoFileSync = pMergedParamsTmp->GetItem<SfxBoolItem>(SID_NO_FILE_SYNC, false);
+    const SfxBoolItem* pNoFileSync = xMergedParams->GetItem<SfxBoolItem>(SID_NO_FILE_SYNC, false);
     if (pNoFileSync && pNoFileSync->GetValue())
         pNewFile->DisableFileSync(true);
 
     bool bUseThumbnailSave = IsUseThumbnailSave();
     comphelper::ScopeGuard aThumbnailGuard(
         [this, bUseThumbnailSave] { this->SetUseThumbnailSave(bUseThumbnailSave); });
-    const SfxBoolItem* pNoThumbnail = pMergedParamsTmp->GetItem<SfxBoolItem>(SID_NO_THUMBNAIL, false);
+    const SfxBoolItem* pNoThumbnail = xMergedParams->GetItem<SfxBoolItem>(SID_NO_THUMBNAIL, false);
     if (pNoThumbnail)
         // Thumbnail generation should be avoided just for this save.
         SetUseThumbnailSave(!pNoThumbnail->GetValue());
@@ -2818,7 +2824,7 @@ bool SfxObjectShell::PreDoSaveAs_Impl(const OUString& rFileName, const OUString&
     }
 
     // check if a "SaveTo" is wanted, no "SaveAs"
-    const SfxBoolItem* pSaveToItem = pMergedParamsTmp->GetItem<SfxBoolItem>(SID_SAVETO, false);
+    const SfxBoolItem* pSaveToItem = xMergedParams->GetItem<SfxBoolItem>(SID_SAVETO, false);
     bool bCopyTo = GetCreateMode() == SfxObjectCreateMode::EMBEDDED || (pSaveToItem && pSaveToItem->GetValue());
 
     // distinguish between "Save" and "SaveAs"
@@ -3583,7 +3589,9 @@ void SfxObjectShell::SetMacroCallsSeenWhileLoading()
 
 bool SfxObjectShell::GetMacroCallsSeenWhileLoading() const
 {
-    return pImpl->m_bMacroCallsSeenWhileLoading;
+    if (officecfg::Office::Common::Security::Scripting::CheckDocumentEvents::get())
+        return pImpl->m_bMacroCallsSeenWhileLoading;
+    return false;
 }
 
 bool SfxObjectShell::QuerySaveSizeExceededModules_Impl( const uno::Reference< task::XInteractionHandler >& xHandler )

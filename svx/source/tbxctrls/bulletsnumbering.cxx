@@ -12,17 +12,15 @@
 
 #include <comphelper/propertysequence.hxx>
 #include <i18nlangtag/languagetag.hxx>
-#include <i18nlangtag/mslangid.hxx>
 #include <svtools/popupwindowcontroller.hxx>
 #include <svtools/toolbarmenu.hxx>
-#include <sfx2/weldutils.hxx>
-#include <sfx2/tbxctrl.hxx>
 #include <svx/strings.hrc>
 #include <svx/dialmgr.hxx>
 #include <svx/numvset.hxx>
 #include <vcl/commandinfoprovider.hxx>
 #include <vcl/toolbox.hxx>
 #include <vcl/settings.hxx>
+#include <vcl/svapp.hxx>
 
 namespace {
 
@@ -30,12 +28,12 @@ class NumberingToolBoxControl;
 
 class NumberingPopup : public WeldToolbarPopup
 {
-    NumberingPageType const mePageType;
+    NumberingPageType mePageType;
     NumberingToolBoxControl& mrController;
     std::unique_ptr<SvxNumValueSet> mxValueSet;
     std::unique_ptr<weld::CustomWeld> mxValueSetWin;
     std::unique_ptr<weld::Button> mxMoreButton;
-    DECL_LINK(VSSelectValueSetHdl, SvtValueSet*, void);
+    DECL_LINK(VSSelectValueSetHdl, ValueSet*, void);
     DECL_LINK(VSButtonClickSetHdl, weld::Button&, void);
 
     virtual void GrabFocus() override;
@@ -143,7 +141,7 @@ void NumberingPopup::statusChanged( const css::frame::FeatureStateEvent& rEvent 
         mxValueSet->SelectItem( nSelItem );
 }
 
-IMPL_LINK_NOARG(NumberingPopup, VSSelectValueSetHdl, SvtValueSet*, void)
+IMPL_LINK_NOARG(NumberingPopup, VSSelectValueSetHdl, ValueSet*, void)
 {
     sal_uInt16 nSelItem = mxValueSet->GetSelectedItemId();
     if ( mePageType == NumberingPageType::BULLET )
@@ -171,10 +169,10 @@ void NumberingPopup::GrabFocus()
 
 IMPL_LINK_NOARG(NumberingPopup, VSButtonClickSetHdl, weld::Button&, void)
 {
-    mrController.EndPopupMode();
-
     auto aArgs( comphelper::InitPropertySequence( { { "Page", css::uno::makeAny( OUString("customize") ) } } ) );
     mrController.dispatchCommand( ".uno:OutlineBullet", aArgs );
+
+    mrController.EndPopupMode();
 }
 
 NumberingToolBoxControl::NumberingToolBoxControl( const css::uno::Reference< css::uno::XComponentContext >& rxContext ):

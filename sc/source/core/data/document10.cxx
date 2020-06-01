@@ -26,6 +26,7 @@
 #include <editeng/colritem.hxx>
 #include <scitems.hxx>
 #include <datamapper.hxx>
+#include <docsh.hxx>
 
 // Add totally brand-new methods to this source file.
 
@@ -655,8 +656,8 @@ ScRangeData* copyRangeName( const ScRangeData* pOldRangeData, ScDocument& rNewDo
 
 struct SheetIndex
 {
-    SCTAB const       mnSheet;
-    sal_uInt16 const  mnIndex;
+    SCTAB       mnSheet;
+    sal_uInt16  mnIndex;
 
     SheetIndex( SCTAB nSheet, sal_uInt16 nIndex ) : mnSheet(nSheet < -1 ? -1 : nSheet), mnIndex(nIndex) {}
     bool operator<( const SheetIndex& r ) const
@@ -737,10 +738,13 @@ bool ScDocument::CopyAdjustRangeName( SCTAB& rSheet, sal_uInt16& rIndex, ScRange
         ScDocument& rNewDoc, const ScAddress& rNewPos, const ScAddress& rOldPos, const bool bGlobalNamesToLocal,
         const bool bUsedByFormula ) const
 {
-    const bool bSameDoc = (rNewDoc.GetPool() == const_cast<ScDocument*>(this)->GetPool());
-    if (bSameDoc && ((rSheet < 0 && !bGlobalNamesToLocal) || (rSheet >= 0 && rSheet != rOldPos.Tab())))
+    ScDocument* pThis = const_cast<ScDocument*>(this);
+    const bool bSameDoc = (rNewDoc.GetPool() == pThis->GetPool());
+    if (bSameDoc && ((rSheet < 0 && !bGlobalNamesToLocal) || (rSheet >= 0
+                    && (rSheet != rOldPos.Tab() || (IsClipboard() && pThis->IsCutMode())))))
         // Same doc and global name, if not copied to local name, or
-        // sheet-local name on other sheet stays the same.
+        // sheet-local name on other sheet stays the same. Sheet-local on
+        // same sheet also in a clipboard cut&paste / move operation.
         return false;
 
     // Ensure we don't fiddle with the references until exit.
@@ -881,7 +885,15 @@ bool ScDocument::CopyAdjustRangeName( SCTAB& rSheet, sal_uInt16& rIndex, ScRange
             rpRangeData = copyRangeName( pOldRangeData, rNewDoc, this, rNewPos, rOldPos, bGlobalNamesToLocal,
                     nOldSheet, nNewSheet, bSameDoc);
         }
+
+        if (rpRangeData && !rNewDoc.IsClipOrUndo())
+        {
+            ScDocShell* pDocSh = static_cast<ScDocShell*>(rNewDoc.GetDocumentShell());
+            if (pDocSh)
+                pDocSh->SetAreasChangedNeedBroadcast();
+        }
     }
+
     rSheet = nNewSheet;
     rIndex = rpRangeData ? rpRangeData->GetIndex() : 0;     // 0 means not inserted
     return true;

@@ -859,7 +859,7 @@ void ScUndoAutoFormat::Redo()
         sc::RowHeightContext aCxt(rDoc.MaxRow(), nPPTX, nPPTY, aZoomX, aZoomY, pVirtDev);
         for (SCTAB nTab=nStartZ; nTab<=nEndZ; nTab++)
         {
-            ScMarkData aDestMark(rDoc.MaxRow(), rDoc.MaxCol());
+            ScMarkData aDestMark(rDoc.GetSheetLimits());
             aDestMark.SelectOneTable( nTab );
             aDestMark.SetMarkArea( ScRange( nStartX, nStartY, nTab, nEndX, nEndY, nTab ) );
             aDestMark.MarkToMulti();
@@ -1525,7 +1525,7 @@ void ScUndoInsertAreaLink::Redo()
                                             aAreaName, aRange.aStart, nRefreshDelay );
     pLink->SetInCreate( true );
     pLink->SetDestArea( aRange );
-    pLinkManager->InsertFileLink( *pLink, OBJECT_CLIENT_FILE, aDocName, &aFltName, &aAreaName );
+    pLinkManager->InsertFileLink( *pLink, sfx2::SvBaseLinkObjectType::ClientFile, aDocName, &aFltName, &aAreaName );
     pLink->Update();
     pLink->SetInCreate( false );
 
@@ -1574,7 +1574,7 @@ void ScUndoRemoveAreaLink::Undo()
                                         aAreaName, aRange.aStart, nRefreshDelay );
     pLink->SetInCreate( true );
     pLink->SetDestArea( aRange );
-    pLinkManager->InsertFileLink( *pLink, OBJECT_CLIENT_FILE, aDocName, &aFltName, &aAreaName );
+    pLinkManager->InsertFileLink( *pLink, sfx2::SvBaseLinkObjectType::ClientFile, aDocName, &aFltName, &aAreaName );
     pLink->Update();
     pLink->SetInCreate( false );
 

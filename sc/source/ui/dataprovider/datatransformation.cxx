@@ -32,11 +32,9 @@ DataTransformation::~DataTransformation()
 
 SCROW DataTransformation::getLastRow(const ScDocument& rDoc, SCCOL nCol)
 {
-    SCROW nStartRow = 0;
     SCROW nEndRow = MAXROW;
-    rDoc.ShrinkToDataArea(0, nCol, nStartRow, nCol, nEndRow);
 
-    return nEndRow;
+    return rDoc.GetLastDataRow(0, nCol, nCol, nEndRow);
 }
 
 ColumnRemoveTransformation::ColumnRemoveTransformation(const std::set<SCCOL>& rColumns):
@@ -125,6 +123,7 @@ void MergeColumnTransformation::Transform(ScDocument& rDoc) const
     {
         nMaxRow = getLastRow(rDoc, itr);
     }
+    assert(nMaxRow != -1);
 
     SCCOL nTargetCol = *maColumns.begin();
 
@@ -199,6 +198,8 @@ void TextTransformation::Transform(ScDocument& rDoc) const
     {
         nEndRow = getLastRow(rDoc, rCol);
     }
+    assert(nEndRow != -1);
+
     for(auto& rCol : mnCol)
     {
         switch (maType)
@@ -212,7 +213,7 @@ void TextTransformation::Transform(ScDocument& rDoc) const
                     if (eType == CELLTYPE_STRING)
                     {
                         OUString aStr = rDoc.GetString(rCol, nRow, 0);
-                        rDoc.SetString(rCol, nRow, 0, ScGlobal::pCharClass->lowercase(aStr));
+                        rDoc.SetString(rCol, nRow, 0, ScGlobal::getCharClassPtr()->lowercase(aStr));
                     }
                 }
             }
@@ -226,7 +227,7 @@ void TextTransformation::Transform(ScDocument& rDoc) const
                     if (eType == CELLTYPE_STRING)
                     {
                         OUString aStr = rDoc.GetString(rCol, nRow, 0);
-                        rDoc.SetString(rCol, nRow, 0, ScGlobal::pCharClass->uppercase(aStr));
+                        rDoc.SetString(rCol, nRow, 0, ScGlobal::getCharClassPtr()->uppercase(aStr));
                     }
                 }
             }
@@ -244,16 +245,16 @@ void TextTransformation::Transform(ScDocument& rDoc) const
                         sal_Int32 length = aStr.getLength();
 
                         if(length != 0)
-                            aStr = aStr.replaceAt(0, 1, ScGlobal::pCharClass->uppercase(OUString(aStr[0])));
+                            aStr = aStr.replaceAt(0, 1, ScGlobal::getCharClassPtr()->uppercase(OUString(aStr[0])));
 
                         for (sal_Int32 i = 1; i < length; i++){
                             if (aStr[i-1] == sal_Unicode(U' '))
                             {
-                                aStr = aStr.replaceAt(i, 1, ScGlobal::pCharClass->uppercase(OUString(aStr[i])));
+                                aStr = aStr.replaceAt(i, 1, ScGlobal::getCharClassPtr()->uppercase(OUString(aStr[i])));
                             }
                             else
                             {
-                                aStr = aStr.replaceAt(i, 1, ScGlobal::pCharClass->lowercase(OUString(aStr[i])));
+                                aStr = aStr.replaceAt(i, 1, ScGlobal::getCharClassPtr()->lowercase(OUString(aStr[i])));
                             }
                         }
                         rDoc.SetString(rCol, nRow, 0, aStr);
@@ -309,6 +310,7 @@ void AggregateFunction::Transform(ScDocument& rDoc) const
     {
         nEndRow = getLastRow(rDoc, itr);
     }
+    assert(nEndRow != -1);
 
     for (auto& rCol : maColumns)
     {
@@ -426,6 +428,7 @@ void NumberTransformation::Transform(ScDocument& rDoc) const
     {
         nEndRow = getLastRow(rDoc, rCol);
     }
+    assert(nEndRow != -1);
 
     for(auto& rCol : mnCol)
     {
@@ -485,7 +488,7 @@ void NumberTransformation::Transform(ScDocument& rDoc) const
                     if (eType == CELLTYPE_VALUE)
                     {
                         double nVal = rDoc.GetValue(rCol, nRow, 0);
-                        if(rtl::math::isSignBitSet(nVal))
+                        if(std::signbit(nVal))
                             rDoc.SetValue(rCol, nRow, 0, -1 * nVal);
                     }
                 }
@@ -570,7 +573,7 @@ void NumberTransformation::Transform(ScDocument& rDoc) const
                     if (eType == CELLTYPE_VALUE)
                     {
                         double nVal = rDoc.GetValue(rCol, nRow, 0);
-                        if (!rtl::math::isSignBitSet(nVal))
+                        if (!std::signbit(nVal))
                         {
                             rDoc.SetValue(rCol, nRow, 0, sqrt(nVal));
                         }
@@ -673,15 +676,10 @@ void ReplaceNullTransformation::Transform(ScDocument& rDoc) const
     if (mnCol.empty())
         return;
 
-    SCROW nEndRow = 0;
     for(auto& rCol : mnCol)
     {
-        nEndRow = getLastRow(rDoc, rCol);
-    }
-
-    for(auto& rCol : mnCol)
-    {
-        for (SCROW nRow = 0; nRow < nEndRow; ++nRow)
+        SCROW nEndRow = getLastRow(rDoc, rCol);
+        for (SCROW nRow = 0; nRow <= nEndRow; ++nRow)
         {
             CellType eType;
             rDoc.GetCellType(rCol, nRow, 0, eType);
@@ -725,6 +723,7 @@ void DateTimeTransformation::Transform(ScDocument& rDoc) const
     {
         nEndRow = getLastRow(rDoc, rCol);
     }
+    assert(nEndRow != -1);
 
     for(auto& rCol : mnCol)
     {

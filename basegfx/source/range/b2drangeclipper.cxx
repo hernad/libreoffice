@@ -24,6 +24,7 @@
 #include <basegfx/range/b2drangeclipper.hxx>
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 #include <basegfx/range/b2drectangle.hxx>
+#include <rtl/math.hxx>
 
 #include <o3tl/vector_pool.hxx>
 
@@ -725,7 +726,7 @@ namespace basegfx
                 if( nCurrPolyIdx == -1 )
                     nCurrPolyIdx=first->getTargetPolygonIndex();
 
-                OSL_ASSERT(nCurrPolyIdx != -1);
+                assert(nCurrPolyIdx != -1);
 
                 // second encounter of my rect -> second edge
                 // encountered, done

@@ -30,22 +30,22 @@
 #include <vbahelper/vbahelper.hxx>
 #include <vbahelper/vbahelperinterface.hxx>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace frame { class XModel; }
     namespace uno { class XComponentContext; }
-} } }
+}
 
-namespace ooo { namespace vba {
+namespace ooo::vba {
     class XDialogBase;
     class XHelperInterface;
-} }
+}
 
 typedef InheritedHelperInterfaceWeakImpl< ov::XDialogBase > VbaDialogBase_BASE;
 
 class VBAHELPER_DLLPUBLIC VbaDialogBase : public VbaDialogBase_BASE
 {
 protected:
-    sal_Int32 const mnIndex;
+    sal_Int32 mnIndex;
         css::uno::Reference< css::frame::XModel > m_xModel;
 public:
     VbaDialogBase( const css::uno::Reference< ov::XHelperInterface >& xParent, const css::uno::Reference< css::uno::XComponentContext >& xContext, const css::uno::Reference< css::frame::XModel >& xModel, sal_Int32 nIndex ):VbaDialogBase_BASE( xParent, xContext ), mnIndex( nIndex ), m_xModel( xModel ) {}

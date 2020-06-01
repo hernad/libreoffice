@@ -30,13 +30,12 @@
 
 class ListBox;
 class Edit;
-class ValueSet;
 class SdHtmlAttrPreview;
 class SdPublishingDesign;
 class ButtonSet;
 
-namespace com { namespace sun { namespace star { namespace beans { struct PropertyValue; } } } }
-namespace com { namespace sun { namespace star { namespace uno { template <class E> class Sequence; } } } }
+namespace com::sun::star::beans { struct PropertyValue; }
+namespace com::sun::star::uno { template <class E> class Sequence; }
 
 // *********************************************************************
 // Html-Export Autopilot
@@ -123,7 +122,7 @@ private:
     std::unique_ptr<weld::Container> m_xPage5;
     std::unique_ptr<weld::Label> m_xPage5_Title;
     std::unique_ptr<weld::CheckButton> m_xPage5_TextOnly;
-    std::unique_ptr<SvtValueSet> m_xPage5_Buttons;
+    std::unique_ptr<ValueSet> m_xPage5_Buttons;
     std::unique_ptr<weld::CustomWeld> m_xPage5_ButtonsWnd;
 
     // page 6 controls
@@ -183,7 +182,7 @@ private:
     DECL_LINK( ContentHdl, weld::Button&, void );
     DECL_LINK( GfxFormatHdl, weld::Button&, void );
     DECL_LINK( ResolutionHdl, weld::Button&, void );
-    DECL_LINK( ButtonsHdl, SvtValueSet*, void );
+    DECL_LINK( ButtonsHdl, ValueSet*, void );
     DECL_LINK( ColorHdl, weld::Button&, void );
     DECL_LINK( WebServerHdl, weld::Button&, void );
     DECL_LINK( SlideChgHdl, weld::Button&, void );

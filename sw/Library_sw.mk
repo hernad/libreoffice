@@ -369,7 +369,6 @@ $(eval $(call gb_Library_add_exception_objects,sw,\
     sw/source/core/text/EnhancedPDFExportHelper \
     sw/source/core/text/SwGrammarMarkUp \
     sw/source/core/text/atrstck \
-    sw/source/core/text/blink \
     sw/source/core/text/frmcrsr \
     sw/source/core/text/frmform \
     sw/source/core/text/frminf \
@@ -588,7 +587,6 @@ $(eval $(call gb_Library_add_exception_objects,sw,\
     sw/source/uibase/dbui/maildispatcher \
     sw/source/uibase/dbui/mailmergehelper \
     sw/source/uibase/dbui/mmconfigitem \
-    sw/source/uibase/cctrl/actctrl \
     sw/source/uibase/chrdlg/ccoll \
     sw/source/uibase/config/StoredChapterNumbering \
     sw/source/uibase/config/barcfg \

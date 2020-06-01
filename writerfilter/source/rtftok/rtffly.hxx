@@ -14,6 +14,7 @@
 #include <com/sun/star/text/RelOrientation.hpp>
 #include <com/sun/star/text/VertOrientation.hpp>
 
+#include <ooxml/resourceids.hxx>
 #include <osl/endian.h>
 
 namespace writerfilter
@@ -72,7 +73,7 @@ public:
     }
 
 private:
-    sal_uInt16 const m_nVal;
+    sal_uInt16 m_nVal;
 };
 
 /// Stores the horizontal orientation properties of an RTF fly frame.
@@ -133,7 +134,7 @@ public:
     }
 
 private:
-    sal_uInt16 const m_nVal;
+    sal_uInt16 m_nVal;
 };
 } // namespace rtftok
 } // namespace writerfilter

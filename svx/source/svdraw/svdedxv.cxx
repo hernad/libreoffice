@@ -25,7 +25,6 @@
 #include <editeng/outlobj.hxx>
 #include <editeng/unotext.hxx>
 #include <svl/itemiter.hxx>
-#include <svl/solar.hrc>
 #include <svl/style.hxx>
 #include <svl/whiter.hxx>
 #include <svtools/accessibilityoptions.hxx>
@@ -33,7 +32,6 @@
 #include <svx/selectioncontroller.hxx>
 #include <svx/svdedxv.hxx>
 #include <svx/svdetc.hxx>
-#include <svx/svditer.hxx>
 #include <svx/svdotable.hxx>
 #include <svx/svdotext.hxx>
 #include <svx/svdoutl.hxx>
@@ -43,19 +41,15 @@
 #include <vcl/canvastools.hxx>
 #include <vcl/commandevent.hxx>
 #include <vcl/cursor.hxx>
-#include <vcl/hatch.hxx>
 #include <vcl/weld.hxx>
 #include <comphelper/lok.hxx>
 #include <drawinglayer/processor2d/baseprocessor2d.hxx>
 #include <drawinglayer/processor2d/processor2dtools.hxx>
-#include <editeng/adjustitem.hxx>
 #include <editeng/outliner.hxx>
 #include <sal/log.hxx>
 #include <sdr/overlay/overlaytools.hxx>
 #include <sfx2/viewsh.hxx>
-#include <svtools/colorcfg.hxx>
 #include <svx/dialmgr.hxx>
-#include <svx/globl3d.hxx>
 #include <svx/sdr/overlay/overlaymanager.hxx>
 #include <svx/sdr/overlay/overlayselection.hxx>
 #include <svx/sdr/table/tablecontroller.hxx>
@@ -63,10 +57,9 @@
 #include <svx/sdrpaintwindow.hxx>
 #include <svx/sdrundomanager.hxx>
 #include <svx/strings.hrc>
-#include <svx/svddrgv.hxx>
 #include <svx/svdviter.hxx>
-#include <svx/textchain.hxx>
-#include <svx/textchaincursor.hxx>
+#include <textchain.hxx>
+#include <textchaincursor.hxx>
 #include <tools/debug.hxx>
 #include <vcl/svapp.hxx>
 
@@ -421,7 +414,7 @@ protected:
     drawinglayer::primitive2d::Primitive2DContainer maLastTextPrimitives;
 
     /// bitfield
-    bool const mbVisualizeSurroundingFrame : 1;
+    bool mbVisualizeSurroundingFrame : 1;
 
     // geometry creation for OverlayObject, can use local *Last* values
     virtual drawinglayer::primitive2d::Primitive2DContainer
@@ -1008,8 +1001,8 @@ IMPL_LINK(SdrObjEditView, ImpOutlinerCalcFieldValueHdl, EditFieldInfo*, pFI, voi
     SdrTextObj* pTextObj = mxTextEditObj.get();
     if (pTextObj != nullptr)
     {
-        o3tl::optional<Color> pTxtCol;
-        o3tl::optional<Color> pFldCol;
+        std::optional<Color> pTxtCol;
+        std::optional<Color> pFldCol;
         bOk = pTextObj->CalcFieldValue(pFI->GetField(), pFI->GetPara(), pFI->GetPos(), true,
                                        pTxtCol, pFldCol, rStr);
         if (bOk)
@@ -1457,7 +1450,7 @@ SdrEndTextEditKind SdrObjEditView::SdrEndTextEdit(bool bDontDeleteReally)
 
     if (GetModel() && mxTextEditObj.is())
     {
-        SdrHint aHint(SdrHintKind::EndEdit, *mxTextEditObj.get());
+        SdrHint aHint(SdrHintKind::EndEdit, *mxTextEditObj);
         GetModel()->Broadcast(aHint);
     }
 
@@ -2033,7 +2026,7 @@ void SdrObjEditView::ImpMakeTextCursorAreaVisible()
         if (pCsr != nullptr)
         {
             Size aSiz(pCsr->GetSize());
-            if (aSiz.Width() != 0 && aSiz.Height() != 0)
+            if (!aSiz.IsEmpty())
             {
                 MakeVisible(tools::Rectangle(pCsr->GetPos(), aSiz), *pTextEditWin);
             }
@@ -2175,18 +2168,17 @@ bool SdrObjEditView::SetAttributes(const SfxItemSet& rSet, bool bReplaceAll)
                 if (bUndo)
                 {
                     BegUndo(ImpGetDescriptionString(STR_EditSetAttributes));
-                    AddUndo(
-                        GetModel()->GetSdrUndoFactory().CreateUndoGeoObject(*mxTextEditObj.get()));
+                    AddUndo(GetModel()->GetSdrUndoFactory().CreateUndoGeoObject(*mxTextEditObj));
 
                     // If this is a text object also rescue the OutlinerParaObject since
                     // applying attributes to the object may change text layout when
                     // multiple portions exist with multiple formats. If an OutlinerParaObject
                     // really exists and needs to be rescued is evaluated in the undo
                     // implementation itself.
-                    bool bRescueText = mxTextEditObj.get();
+                    bool bRescueText = mxTextEditObj;
 
                     AddUndo(GetModel()->GetSdrUndoFactory().CreateUndoAttrObject(
-                        *mxTextEditObj.get(), false, !bNoEEItems || bRescueText));
+                        *mxTextEditObj, false, !bNoEEItems || bRescueText));
                     EndUndo();
                 }
 
@@ -2223,10 +2215,8 @@ bool SdrObjEditView::SetAttributes(const SfxItemSet& rSet, bool bReplaceAll)
                 if (IsUndoEnabled())
                 {
                     BegUndo(ImpGetDescriptionString(STR_EditSetAttributes));
-                    AddUndo(
-                        GetModel()->GetSdrUndoFactory().CreateUndoGeoObject(*mxTextEditObj.get()));
-                    AddUndo(
-                        GetModel()->GetSdrUndoFactory().CreateUndoAttrObject(*mxTextEditObj.get()));
+                    AddUndo(GetModel()->GetSdrUndoFactory().CreateUndoGeoObject(*mxTextEditObj));
+                    AddUndo(GetModel()->GetSdrUndoFactory().CreateUndoAttrObject(*mxTextEditObj));
                     EndUndo();
                 }
 

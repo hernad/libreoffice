@@ -24,11 +24,11 @@
 
 #include "DomainMapper.hxx"
 #include "LoggedResources.hxx"
+#include "StyleSheetTable.hxx"
 
 #include <editeng/numitem.hxx>
 
 #include <com/sun/star/container/XIndexReplace.hpp>
-#include <com/sun/star/graphic/XGraphic.hpp>
 #include <com/sun/star/awt/XBitmap.hpp>
 
 namespace writerfilter {
@@ -43,7 +43,10 @@ class StyleSheetEntry;
 class ListLevel : public PropertyMap
 {
     sal_Int32                                     m_nIStartAt;       //LN_CT_Lvl_start
+    sal_Int32                                     m_nStartOverride;
     sal_Int32                                     m_nNFC;            //LN_CT_Lvl_numFmt
+    /// LN_CT_NumFmt_format, in case m_nNFC is custom.
+    OUString m_aCustomNumberFormat;
     sal_Int16                                     m_nXChFollow;      //LN_IXCHFOLLOW
     OUString                               m_sBulletChar;
     css::awt::Size                         m_aGraphicSize;
@@ -59,6 +62,7 @@ public:
 
     ListLevel() :
         m_nIStartAt(-1)
+        ,m_nStartOverride(-1)
         ,m_nNFC(-1)
         ,m_nXChFollow(SvxNumberFormat::LISTTAB)
         ,m_nTabstop( 0 )
@@ -67,6 +71,7 @@ public:
 
     // Setters for the import
     void SetValue( Id nId, sal_Int32 nValue );
+    void SetCustomNumberFormat(const OUString& rValue);
     void SetBulletChar( const OUString& sValue ) { m_sBulletChar = sValue; };
     void SetGraphicSize( const css::awt::Size& aValue ) { m_aGraphicSize = aValue; };
 
@@ -78,15 +83,11 @@ public:
     const OUString& GetBulletChar( ) const { return m_sBulletChar; };
     const tools::SvRef< StyleSheetEntry >& GetParaStyle( ) const { return m_pParaStyle; };
     bool isOutlineNumbering() const { return m_outline; }
+    sal_Int32 GetStartOverride() const { return m_nStartOverride; };
     /// Determines if SetValue() was called at least once.
     bool HasValues() const;
 
     // UNO mapping functions
-
-    // rPrefix and rSuffix are out parameters
-    static sal_Int16 GetParentNumbering( const OUString& sText, sal_Int16 nLevel,
-        OUString& rPrefix, OUString& rSuffix );
-
     css::uno::Sequence<css::beans::PropertyValue> GetProperties(bool bDefaults);
 
     css::uno::Sequence<css::beans::PropertyValue> GetCharStyleProperties();
@@ -125,14 +126,17 @@ private:
     // levels of a numbering.
     ::std::vector< ListLevel::Pointer >  m_aLevels;
 
-    // Only used during the numberings import
+    // Only used during the numbering import
     ListLevel::Pointer                         m_pCurrentLevel;
 
     // The style name linked to.
     OUString                      m_sNumStyleLink;
 
+    // This abstract numbering is a base definition for this style
+    OUString                      m_sStyleLink;
+
     /// list id to use for all derived numbering definitions
-    o3tl::optional<OUString> m_oListId;
+    std::optional<OUString> m_oListId;
 
 public:
     typedef tools::SvRef< AbstractListDef > Pointer;
@@ -158,7 +162,11 @@ public:
     void                  SetNumStyleLink(const OUString& sValue) { m_sNumStyleLink = sValue; };
     const OUString&       GetNumStyleLink() const { return m_sNumStyleLink; };
 
+    void                  SetStyleLink(const OUString& sValue) { m_sStyleLink = sValue; };
+    const OUString&       GetStyleLink() const { return m_sStyleLink; };
+
     const OUString& MapListId(OUString const& rId);
+    bool isOutlineNumbering( sal_uInt16 nLvl ) { return GetLevel(nLvl) && GetLevel(nLvl)->isOutlineNumbering(); }
 };
 
 class ListDef : public AbstractListDef
@@ -184,9 +192,8 @@ public:
     const AbstractListDef::Pointer& GetAbstractDefinition( ) const { return m_pAbstractDef; };
 
     // Mapping functions
-    OUString GetStyleName(sal_Int32 nId,
-            css::uno::Reference<css::container::XNameContainer> const& xStyles
-                = css::uno::Reference<css::container::XNameContainer>());
+    OUString GetStyleName() const { return m_StyleName; };
+    OUString GetStyleName(sal_Int32 nId, css::uno::Reference<css::container::XNameContainer> const& xStyles);
 
     css::uno::Sequence< css::uno::Sequence<css::beans::PropertyValue> > GetMergedPropertyValues();
 

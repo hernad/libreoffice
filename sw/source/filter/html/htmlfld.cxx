@@ -19,7 +19,7 @@
 
 #include <com/sun/star/document/XDocumentPropertiesSupplier.hpp>
 #include <com/sun/star/document/XDocumentProperties.hpp>
-
+#include <com/sun/star/frame/XModel.hpp>
 #include <osl/diagnose.h>
 #include <docsh.hxx>
 #include <IDocumentFieldsAccess.hxx>
@@ -43,7 +43,7 @@ namespace {
 struct HTMLNumFormatTableEntry
 {
     const char *pName;
-    NfIndexTableOffset const eFormat;
+    NfIndexTableOffset eFormat;
 };
 
 }
@@ -153,7 +153,7 @@ static HTMLOptionEnum<SwPageNumSubType> const aHTMLPageNumFieldSubTable[] =
 static HTMLOptionEnum<sal_uInt16> const aHTMLDocInfoFieldSubTable[] =
 {
     { OOO_STRING_SW_HTML_FS_title,   DI_TITLE },
-    { OOO_STRING_SW_HTML_FS_theme,   DI_THEMA },
+    { OOO_STRING_SW_HTML_FS_theme,   DI_SUBJECT },
     { OOO_STRING_SW_HTML_FS_keys,    DI_KEYS },
     { OOO_STRING_SW_HTML_FS_comment, DI_COMMENT },
     { "INFO1",                       DI_INFO1 },

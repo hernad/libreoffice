@@ -33,13 +33,12 @@
 #include <tools/link.hxx>
 
 #include <com/sun/star/accessibility/XAccessibleExtendedAttributes.hpp>
-#include <com/sun/star/accessibility/XAccessibleGetAccFlowTo.hpp>
 
 #include "Window.hxx"
 
-namespace com { namespace sun { namespace star { namespace accessibility { class XAccessible; } } } }
-namespace com { namespace sun { namespace star { namespace frame { class XModel; } } } }
-namespace com { namespace sun { namespace star { namespace awt { class XWindow; } } } }
+namespace com::sun::star::accessibility { class XAccessible; }
+namespace com::sun::star::frame { class XModel; }
+namespace com::sun::star::awt { class XWindow; }
 
 class VclWindowEvent;
 
@@ -87,8 +86,7 @@ class AccessibleDocumentViewBase
         public css::beans::XPropertyChangeListener,
         public css::awt::XWindowListener,
         public css::awt::XFocusListener,
-        public css::accessibility::XAccessibleExtendedAttributes,
-        public css::accessibility::XAccessibleGetAccFlowTo
+        public css::accessibility::XAccessibleExtendedAttributes
 {
 public:
     //=====  internal  ========================================================
@@ -313,9 +311,6 @@ protected:
     */
     void SetAccessibleOLEObject (
         const css::uno::Reference<css::accessibility::XAccessible>& xOLEObject);
-    //=====  XAccessibleGetAccFromXShape  ============================================
-    css::uno::Sequence< css::uno::Any >
-        SAL_CALL getAccFlowTo(const css::uno::Any& rAny, sal_Int32 nType) override;
 
 public:
     void SwitchViewActivated() { Activated(); }

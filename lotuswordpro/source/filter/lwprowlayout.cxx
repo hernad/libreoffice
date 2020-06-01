@@ -240,8 +240,8 @@ void LwpRowLayout::ConvertRow(rtl::Reference<XFTable> const & pXFTable,sal_uInt8
                 m_ConnCellList[nMarkConnCell]->GetColID());
 
             //set all cell in this merge cell to cellsmap
-            for (sal_uInt16 nRowLoop = crowid;nRowLoop<nRowMark ;nRowLoop++)
-                for (sal_uInt8 nColLoop = i;nColLoop<nColID+1;nColLoop++)
+            for (sal_uInt16 nRowLoop = crowid; nRowLoop < nRowMark; nRowLoop++)
+                for (sal_uInt16 nColLoop = i; nColLoop < nColID+1; nColLoop++)
                     pTableLayout->SetCellsMap(nRowLoop,nColLoop, xXFCell.get());
 
             i += m_ConnCellList[nMarkConnCell]->GetNumcols();
@@ -379,11 +379,13 @@ void LwpRowLayout::ConvertCommonRow(rtl::Reference<XFTable> const & pXFTable, sa
     LwpTableLayout* pTableLayout = GetParentTableLayout();
     if (!pTableLayout)
         return;
+    LwpTable* pTable = pTableLayout->GetTable();
+    if (!pTable)
+        return;
 
     rtl::Reference<XFRow> xRow(new XFRow);
     xRow->SetStyleName(m_StyleName);
 
-    LwpTable* pTable = pTableLayout->GetTable();
     sal_uInt8 nCellStartCol,nCellEndCol;
 
     for (sal_uInt8 i = nStartCol; i < nEndCol ; i++)
@@ -401,7 +403,10 @@ void LwpRowLayout::ConvertCommonRow(rtl::Reference<XFTable> const & pXFTable, sa
                 if (pCellLayout->GetLayoutType() == LWP_CONNECTED_CELL_LAYOUT)
                 {
                     LwpConnectedCellLayout* pConnCell = static_cast<LwpConnectedCellLayout*>(pCellLayout);
-                    nCellEndCol = i+pConnCell->GetNumcols()-1;
+                    auto nNumCols = pConnCell->GetNumcols();
+                    if (!nNumCols)
+                        throw std::runtime_error("loop in conversion");
+                    nCellEndCol = i + nNumCols - 1;
                     i = nCellEndCol;
                 }
                 xCell = pCellLayout->DoConvertCell(pTable->GetObjectID(),crowid,i);

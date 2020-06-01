@@ -26,10 +26,7 @@
 #include <slideshowcontext.hxx>
 #include <animationnode.hxx>
 
-namespace com { namespace sun { namespace star { namespace animations
-{
-    class XAnimationNode;
-} } } }
+namespace com::sun::star::animations { class XAnimationNode; }
 
 
 /* Definition of SlideAnimations class */
@@ -100,7 +97,7 @@ namespace slideshow
             void end();
 
         private:
-            SlideShowContext const   maContext;
+            SlideShowContext         maContext;
             const basegfx::B2DVector maSlideSize;
             AnimationNodeSharedPtr   mpRootNode;
         };

@@ -27,8 +27,8 @@
 #include <list>
 #include <memory>
 
-namespace com { namespace sun { namespace star { namespace drawing { class XDrawPage; } } } }
-namespace com { namespace sun { namespace star { namespace drawing { class XShape; } } } }
+namespace com::sun::star::drawing { class XDrawPage; }
+namespace com::sun::star::drawing { class XShape; }
 
 struct ScMyDrawPage
 {
@@ -56,7 +56,7 @@ class ScMySharedData
     std::unique_ptr<ScMyShapesContainer>        pShapesContainer;
     std::unique_ptr<ScMyDetectiveObjContainer>  pDetectiveObjContainer;
     std::unique_ptr<ScMyNoteShapesContainer>    pNoteShapes;
-    sal_Int32 const                   nTableCount;
+    sal_Int32                   nTableCount;
 public:
     explicit ScMySharedData(const sal_Int32 nTableCount);
     ~ScMySharedData();

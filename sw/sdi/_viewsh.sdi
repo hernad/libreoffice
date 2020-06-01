@@ -643,6 +643,14 @@ interface BaseTextEditView
         StateMethod = StateTabWin ;
         DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
     ]
+    SID_TABSTOP_ADD_OR_CHANGE // status()
+    [
+        ExecMethod = ExecTabWin;
+    ]
+    SID_PARAGRAPH_CHANGE_STATE // status()
+    [
+        ExecMethod = ExecTabWin;
+    ]
     // from here  Export = FALSE;
     FID_SEARCH_ON // status()
     [
@@ -805,6 +813,13 @@ interface BaseTextEditView
     ]
 
     FN_VIEW_HIDE_WHITESPACE
+    [
+        ExecMethod = ExecViewOptions ;
+        StateMethod = StateViewOptions ;
+        Export = FALSE;
+    ]
+
+    FN_VIEW_SHOW_WHITESPACE
     [
         ExecMethod = ExecViewOptions ;
         StateMethod = StateViewOptions ;

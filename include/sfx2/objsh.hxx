@@ -97,7 +97,7 @@ namespace com::sun::star::security { class XDocumentDigitalSignatures; }
 namespace com::sun::star::security { struct DocumentSignatureInformation; }
 namespace com::sun::star::task { class XInteractionHandler; }
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace document {
         class XDocumentProperties;
     }
@@ -107,7 +107,7 @@ namespace com { namespace sun { namespace star {
     namespace text {
         class XTextRange;
     }
-} } }
+}
 
 namespace sfx2 { class IXmlIdRegistry; }
 
@@ -362,7 +362,7 @@ public:
     void                        SignScriptingContent(weld::Window* pDialogParent);
     DECL_LINK(SignDocumentHandler, Button*, void);
 
-    virtual std::unique_ptr<SfxDocumentInfoDialog> CreateDocumentInfoDialog(weld::Window* pParent, const SfxItemSet& rItemSet);
+    virtual std::shared_ptr<SfxDocumentInfoDialog> CreateDocumentInfoDialog(weld::Window* pParent, const SfxItemSet& rItemSet);
 
     ErrCode                     CallBasic( const OUString& rMacro, const OUString& rBasicName,
                                     SbxArray* pArgs, SbxValue* pRet = nullptr );
@@ -397,6 +397,8 @@ public:
     bool                        AdjustMacroMode();
 
     static bool                 UnTrustedScript(const OUString& rScriptURL);
+
+    static bool                 isScriptAccessAllowed(const css::uno::Reference<css::uno::XInterface>& rScriptContext);
 
     SvKeyValueIterator*         GetHeaderAttributes();
     void                        ClearHeaderAttributesForSourceViewHack();
@@ -459,8 +461,6 @@ public:
     // Transfer IFace
     bool                        IsAbortingImport() const;
     void                        FinishedLoading( SfxLoadedFlags nWhich = SfxLoadedFlags::ALL );
-
-    virtual void                SetFormatSpecificCompatibilityOptions( const OUString& /*rFilterTypeName*/ ) { /* Do not do anything here; Derived classes must overload to do actual work */ };
 
     void                        TemplateDisconnectionAfterLoad();
     void                        SetLoading(SfxLoadedFlags nFlags);
@@ -585,6 +585,12 @@ public:
                                     const css::uno::Reference<css::embed::XStorage>& xTarget,
                                     const css::uno::Sequence<OUString>& rExceptions = css::uno::Sequence<OUString>());
 
+    bool isEditDocLocked();
+    bool isContentExtractionLocked();
+    bool isExportLocked();
+    bool isPrintLocked();
+    bool isSaveLocked();
+
     // The functions from SvPersist
     void            EnableSetModified( bool bEnable = true );
     bool            IsEnableSetModified() const;
@@ -685,8 +691,6 @@ public:
     SAL_DLLPRIVATE void BreakMacroSign_Impl( bool bBreakMacroSing );
     SAL_DLLPRIVATE void CheckSecurityOnLoading_Impl();
     SAL_DLLPRIVATE void CheckForBrokenDocSignatures_Impl();
-    SAL_DLLPRIVATE static SignatureState ImplCheckSignaturesInformation(
-                const css::uno::Sequence< css::security::DocumentSignatureInformation >& aInfos );
     SAL_DLLPRIVATE void CheckEncryption_Impl( const css::uno::Reference< css::task::XInteractionHandler >& xHandler );
     SAL_DLLPRIVATE void SetModifyPasswordEntered( bool bEntered = true );
     SAL_DLLPRIVATE bool IsModifyPasswordEntered() const;
@@ -861,7 +865,8 @@ inline SfxObjectShellLock & SfxObjectShellLock::operator=( SfxObjectShellLock &&
 }
 inline SfxObjectShellLock & SfxObjectShellLock::operator=( SfxObjectShell * pObjP )
 {
-    return *this = SfxObjectShellLock( pObjP );
+    *this = SfxObjectShellLock( pObjP );
+    return *this;
 }
 
 class SFX2_DLLPUBLIC SfxObjectShellItem final : public SfxPoolItem

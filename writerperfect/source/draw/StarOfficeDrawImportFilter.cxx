@@ -8,14 +8,11 @@
  */
 
 #include <cppuhelper/supportsservice.hxx>
-#include <com/sun/star/awt/XWindow.hpp>
 
 #include <libstaroffice/libstaroffice.hxx>
-#include <libodfgen/libodfgen.hxx>
 
 #include "StarOfficeDrawImportFilter.hxx"
 
-using com::sun::star::uno::RuntimeException;
 using com::sun::star::uno::Sequence;
 using com::sun::star::uno::XComponentContext;
 using com::sun::star::uno::XInterface;

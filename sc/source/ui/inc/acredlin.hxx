@@ -35,11 +35,11 @@ class ScRedlinData : public RedlinData
 public:
                     ScRedlinData();
                     virtual ~ScRedlinData() override;
+    sal_uLong       nActionNo;
+    sal_uLong       nInfo;
     SCTAB           nTable;
     SCCOL           nCol;
     SCROW           nRow;
-    sal_uLong       nActionNo;
-    sal_uLong       nInfo;
     bool            bIsRejectable;
     bool            bIsAcceptable;
 };
@@ -61,13 +61,13 @@ class ScAcceptChgDlg final : public SfxModelessDialogController
     OUString           aStrMove;
     OUString           aStrContent;
     OUString           aStrReject;
-    OUString const     aStrAllAccepted;
-    OUString const     aStrAllRejected;
-    OUString const     aStrNoEntry;
-    OUString const     aStrContentWithChild;
-    OUString const     aStrChildContent;
-    OUString const     aStrChildOrgContent;
-    OUString const     aStrEmpty;
+    OUString           aStrAllAccepted;
+    OUString           aStrAllRejected;
+    OUString           aStrNoEntry;
+    OUString           aStrContentWithChild;
+    OUString           aStrChildContent;
+    OUString           aStrChildOrgContent;
+    OUString           aStrEmpty;
     OUString           aUnknown;
     sal_uLong                   nAcceptCount;
     sal_uLong                   nRejectCount;

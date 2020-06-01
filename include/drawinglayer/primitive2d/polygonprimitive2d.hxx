@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_DRAWINGLAYER_PRIMITIVE2D_POLYGONPRIMITIVE2D_HXX
-#define INCLUDED_DRAWINGLAYER_PRIMITIVE2D_POLYGONPRIMITIVE2D_HXX
+#pragma once
 
 #include <drawinglayer/drawinglayerdllapi.h>
 
@@ -30,284 +29,242 @@
 #include <basegfx/polygon/b2dpolygon.hxx>
 #include <basegfx/color/bcolor.hxx>
 
-
-// PolygonHairlinePrimitive2D class
-
-namespace drawinglayer
+namespace drawinglayer::primitive2d
 {
-    namespace primitive2d
-    {
-        /** PolygonHairlinePrimitive2D class
+/** PolygonHairlinePrimitive2D class
 
-            This primitive defines a Hairline. Since hairlines are view-dependent,
-            this primitive is view-dependent, too.
+    This primitive defines a Hairline. Since hairlines are view-dependent,
+    this primitive is view-dependent, too.
 
-            This is one of the non-decomposable primitives, so a renderer
-            should process it.
-         */
-        class DRAWINGLAYER_DLLPUBLIC PolygonHairlinePrimitive2D final : public BasePrimitive2D
-        {
-        private:
-            /// the hairline geometry
-            basegfx::B2DPolygon                     maPolygon;
-
-            /// the hairline color
-            basegfx::BColor                         maBColor;
-
-        public:
-            /// constructor
-            PolygonHairlinePrimitive2D(
-                const basegfx::B2DPolygon& rPolygon,
-                const basegfx::BColor& rBColor);
-
-            /// data read access
-            const basegfx::B2DPolygon& getB2DPolygon() const { return maPolygon; }
-            const basegfx::BColor& getBColor() const { return maBColor; }
-
-            /// compare operator
-            virtual bool operator==(const BasePrimitive2D& rPrimitive) const override;
-
-            /// get range
-            virtual basegfx::B2DRange getB2DRange(const geometry::ViewInformation2D& rViewInformation) const override;
-
-            /// provide unique ID
-            virtual sal_uInt32 getPrimitive2DID() const override;
-        };
-    } // end of namespace primitive2d
-} // end of namespace drawinglayer
-
-
-// PolygonMarkerPrimitive2D class
-
-namespace drawinglayer
+    This is one of the non-decomposable primitives, so a renderer
+    should process it.
+ */
+class DRAWINGLAYER_DLLPUBLIC PolygonHairlinePrimitive2D final : public BasePrimitive2D
 {
-    namespace primitive2d
-    {
-        /** PolygonMarkerPrimitive2D class
+private:
+    /// the hairline geometry
+    basegfx::B2DPolygon maPolygon;
 
-            This primitive defines a two-colored marker hairline which is
-            dashed with the given dash length. Since hairlines are view-dependent,
-            this primitive is view-dependent, too.
+    /// the hairline color
+    basegfx::BColor maBColor;
 
-            It will be decomposed to the needed PolygonHairlinePrimitive2D if
-            not handled directly by a renderer.
-         */
-        class DRAWINGLAYER_DLLPUBLIC PolygonMarkerPrimitive2D final : public BufferedDecompositionPrimitive2D
-        {
-        private:
-            /// the marker hairline geometry
-            basegfx::B2DPolygon                     maPolygon;
+public:
+    /// constructor
+    PolygonHairlinePrimitive2D(const basegfx::B2DPolygon& rPolygon, const basegfx::BColor& rBColor);
 
-            /// the two colors
-            basegfx::BColor                         maRGBColorA;
-            basegfx::BColor                         maRGBColorB;
+    /// data read access
+    const basegfx::B2DPolygon& getB2DPolygon() const { return maPolygon; }
+    const basegfx::BColor& getBColor() const { return maBColor; }
 
-            /// the dash distance in 'pixels'
-            double                                  mfDiscreteDashLength;
+    /// compare operator
+    virtual bool operator==(const BasePrimitive2D& rPrimitive) const override;
 
-            /// decomposition is view-dependent, remember last InverseObjectToViewTransformation
-            basegfx::B2DHomMatrix                   maLastInverseObjectToViewTransformation;
+    /// get range
+    virtual basegfx::B2DRange
+    getB2DRange(const geometry::ViewInformation2D& rViewInformation) const override;
 
-            /// local decomposition.
-            virtual void create2DDecomposition(Primitive2DContainer& rContainer, const geometry::ViewInformation2D& rViewInformation) const override;
+    /// provide unique ID
+    virtual sal_uInt32 getPrimitive2DID() const override;
+};
 
-        public:
-            /// constructor
-            PolygonMarkerPrimitive2D(
-                const basegfx::B2DPolygon& rPolygon,
-                const basegfx::BColor& rRGBColorA,
-                const basegfx::BColor& rRGBColorB,
-                double fDiscreteDashLength);
+/** PolygonMarkerPrimitive2D class
 
-            /// data read access
-            const basegfx::B2DPolygon& getB2DPolygon() const { return maPolygon; }
-            const basegfx::BColor& getRGBColorA() const { return maRGBColorA; }
-            const basegfx::BColor& getRGBColorB() const { return maRGBColorB; }
-            double getDiscreteDashLength() const { return mfDiscreteDashLength; }
+    This primitive defines a two-colored marker hairline which is
+    dashed with the given dash length. Since hairlines are view-dependent,
+    this primitive is view-dependent, too.
 
-            /// compare operator
-            virtual bool operator==(const BasePrimitive2D& rPrimitive) const override;
-
-            /// get range
-            virtual basegfx::B2DRange getB2DRange(const geometry::ViewInformation2D& rViewInformation) const override;
-
-            /// Override standard getDecomposition to be view-dependent here
-            virtual void get2DDecomposition(Primitive2DDecompositionVisitor& rVisitor, const geometry::ViewInformation2D& rViewInformation) const override;
-
-            /// provide unique ID
-            virtual sal_uInt32 getPrimitive2DID() const override;
-        };
-    } // end of namespace primitive2d
-} // end of namespace drawinglayer
-
-
-// PolygonStrokePrimitive2D class
-
-namespace drawinglayer
+    It will be decomposed to the needed PolygonHairlinePrimitive2D if
+    not handled directly by a renderer.
+ */
+class DRAWINGLAYER_DLLPUBLIC PolygonMarkerPrimitive2D final
+    : public BufferedDecompositionPrimitive2D
 {
-    namespace primitive2d
-    {
-        /** PolygonStrokePrimitive2D class
+private:
+    /// the marker hairline geometry
+    basegfx::B2DPolygon maPolygon;
 
-            This primitive defines a line with line width, line join, line color
-            and stroke attributes. It will be decomposed dependent on the definition
-            to the needed primitives, e.g. filled PolyPolygons for fat lines.
-         */
-        class DRAWINGLAYER_DLLPUBLIC PolygonStrokePrimitive2D : public BufferedDecompositionPrimitive2D
-        {
-        private:
-            /// the line geometry
-            basegfx::B2DPolygon                     maPolygon;
+    /// the two colors
+    basegfx::BColor maRGBColorA;
+    basegfx::BColor maRGBColorB;
 
-            /// the line attributes like width, join and color
-            attribute::LineAttribute                maLineAttribute;
+    /// the dash distance in 'pixels'
+    double mfDiscreteDashLength;
 
-            /// the line stroking (if used)
-            attribute::StrokeAttribute              maStrokeAttribute;
+    /// decomposition is view-dependent, remember last InverseObjectToViewTransformation
+    basegfx::B2DHomMatrix maLastInverseObjectToViewTransformation;
 
-        protected:
-            /// local decomposition.
-            virtual void create2DDecomposition(Primitive2DContainer& rContainer, const geometry::ViewInformation2D& rViewInformation) const override;
+    /// local decomposition.
+    virtual void
+    create2DDecomposition(Primitive2DContainer& rContainer,
+                          const geometry::ViewInformation2D& rViewInformation) const override;
 
-        public:
-            /// constructor
-            PolygonStrokePrimitive2D(
-                const basegfx::B2DPolygon& rPolygon,
-                const attribute::LineAttribute& rLineAttribute,
-                const attribute::StrokeAttribute& rStrokeAttribute);
+public:
+    /// constructor
+    PolygonMarkerPrimitive2D(const basegfx::B2DPolygon& rPolygon, const basegfx::BColor& rRGBColorA,
+                             const basegfx::BColor& rRGBColorB, double fDiscreteDashLength);
 
-            /// constructor without stroking
-            PolygonStrokePrimitive2D(
-                const basegfx::B2DPolygon& rPolygon,
-                const attribute::LineAttribute& rLineAttribute);
+    /// data read access
+    const basegfx::B2DPolygon& getB2DPolygon() const { return maPolygon; }
+    const basegfx::BColor& getRGBColorA() const { return maRGBColorA; }
+    const basegfx::BColor& getRGBColorB() const { return maRGBColorB; }
+    double getDiscreteDashLength() const { return mfDiscreteDashLength; }
 
-            /// data read access
-            const basegfx::B2DPolygon& getB2DPolygon() const { return maPolygon; }
-            const attribute::LineAttribute& getLineAttribute() const { return maLineAttribute; }
-            const attribute::StrokeAttribute& getStrokeAttribute() const { return maStrokeAttribute; }
+    /// compare operator
+    virtual bool operator==(const BasePrimitive2D& rPrimitive) const override;
 
-            /// compare operator
-            virtual bool operator==(const BasePrimitive2D& rPrimitive) const override;
+    /// get range
+    virtual basegfx::B2DRange
+    getB2DRange(const geometry::ViewInformation2D& rViewInformation) const override;
 
-            /// get range
-            virtual basegfx::B2DRange getB2DRange(const geometry::ViewInformation2D& rViewInformation) const override;
+    /// Override standard getDecomposition to be view-dependent here
+    virtual void
+    get2DDecomposition(Primitive2DDecompositionVisitor& rVisitor,
+                       const geometry::ViewInformation2D& rViewInformation) const override;
 
-            /// provide unique ID
-            virtual sal_uInt32 getPrimitive2DID() const override;
-        };
-    } // end of namespace primitive2d
-} // end of namespace drawinglayer
+    /// provide unique ID
+    virtual sal_uInt32 getPrimitive2DID() const override;
+};
 
+/** PolygonStrokePrimitive2D class
 
-// PolygonWavePrimitive2D class
-
-namespace drawinglayer
+    This primitive defines a line with line width, line join, line color
+    and stroke attributes. It will be decomposed dependent on the definition
+    to the needed primitives, e.g. filled PolyPolygons for fat lines.
+ */
+class DRAWINGLAYER_DLLPUBLIC PolygonStrokePrimitive2D : public BufferedDecompositionPrimitive2D
 {
-    namespace primitive2d
-    {
-        /** PolygonWavePrimitive2D class
+private:
+    /// the line geometry
+    basegfx::B2DPolygon maPolygon;
 
-            This primitive defines a waveline based on a PolygonStrokePrimitive2D
-            where the wave is defined by wave width and wave length.
-         */
-        class PolygonWavePrimitive2D final : public PolygonStrokePrimitive2D
-        {
-        private:
-            /// wave definition
-            double                                  mfWaveWidth;
-            double                                  mfWaveHeight;
+    /// the line attributes like width, join and color
+    attribute::LineAttribute maLineAttribute;
 
-            /// local decomposition.
-            virtual void create2DDecomposition(Primitive2DContainer& rContainer, const geometry::ViewInformation2D& rViewInformation) const override;
+    /// the line stroking (if used)
+    attribute::StrokeAttribute maStrokeAttribute;
 
-        public:
-            /// constructor
-            PolygonWavePrimitive2D(
-                const basegfx::B2DPolygon& rPolygon,
-                const attribute::LineAttribute& rLineAttribute,
-                const attribute::StrokeAttribute& rStrokeAttribute,
-                double fWaveWidth,
-                double fWaveHeight);
+protected:
+    /// local decomposition.
+    virtual void
+    create2DDecomposition(Primitive2DContainer& rContainer,
+                          const geometry::ViewInformation2D& rViewInformation) const override;
 
-            /// constructor without stroking
-            PolygonWavePrimitive2D(
-                const basegfx::B2DPolygon& rPolygon,
-                const attribute::LineAttribute& rLineAttribute,
-                double fWaveWidth,
-                double fWaveHeight);
+public:
+    /// constructor
+    PolygonStrokePrimitive2D(const basegfx::B2DPolygon& rPolygon,
+                             const attribute::LineAttribute& rLineAttribute,
+                             const attribute::StrokeAttribute& rStrokeAttribute);
 
-            /// data read access
-            double getWaveWidth() const { return mfWaveWidth; }
-            double getWaveHeight() const { return mfWaveHeight; }
+    /// constructor without stroking
+    PolygonStrokePrimitive2D(const basegfx::B2DPolygon& rPolygon,
+                             const attribute::LineAttribute& rLineAttribute);
 
-            /// compare operator
-            virtual bool operator==(const BasePrimitive2D& rPrimitive) const override;
+    /// data read access
+    const basegfx::B2DPolygon& getB2DPolygon() const { return maPolygon; }
+    const attribute::LineAttribute& getLineAttribute() const { return maLineAttribute; }
+    const attribute::StrokeAttribute& getStrokeAttribute() const { return maStrokeAttribute; }
 
-            /// get range
-            virtual basegfx::B2DRange getB2DRange(const geometry::ViewInformation2D& rViewInformation) const override;
+    /// compare operator
+    virtual bool operator==(const BasePrimitive2D& rPrimitive) const override;
 
-            /// provide unique ID
-            virtual sal_uInt32 getPrimitive2DID() const override;
-        };
-    } // end of namespace primitive2d
-} // end of namespace drawinglayer
+    /// get range
+    virtual basegfx::B2DRange
+    getB2DRange(const geometry::ViewInformation2D& rViewInformation) const override;
 
+    /// provide unique ID
+    virtual sal_uInt32 getPrimitive2DID() const override;
+};
 
-// PolygonStrokeArrowPrimitive2D class
+/** PolygonWavePrimitive2D class
 
-namespace drawinglayer
+    This primitive defines a waveline based on a PolygonStrokePrimitive2D
+    where the wave is defined by wave width and wave length.
+ */
+class DRAWINGLAYER_DLLPUBLIC PolygonWavePrimitive2D final : public PolygonStrokePrimitive2D
 {
-    namespace primitive2d
-    {
-        /** PolygonStrokeArrowPrimitive2D class
+private:
+    /// wave definition
+    double mfWaveWidth;
+    double mfWaveHeight;
 
-            This primitive defines a PolygonStrokePrimitive2D,
-            possibly extended by start and end definitions, which are
-            normally used for arrows.
-         */
-        class DRAWINGLAYER_DLLPUBLIC PolygonStrokeArrowPrimitive2D final : public PolygonStrokePrimitive2D
-        {
-        private:
-            /// geometric definitions for line start and end
-            attribute::LineStartEndAttribute                maStart;
-            attribute::LineStartEndAttribute                maEnd;
+    /// local decomposition.
+    virtual void
+    create2DDecomposition(Primitive2DContainer& rContainer,
+                          const geometry::ViewInformation2D& rViewInformation) const override;
 
-            /// local decomposition.
-            virtual void create2DDecomposition(Primitive2DContainer& rContainer, const geometry::ViewInformation2D& rViewInformation) const override;
+public:
+    /// constructor
+    PolygonWavePrimitive2D(const basegfx::B2DPolygon& rPolygon,
+                           const attribute::LineAttribute& rLineAttribute,
+                           const attribute::StrokeAttribute& rStrokeAttribute, double fWaveWidth,
+                           double fWaveHeight);
 
-        public:
-            /// constructor
-            PolygonStrokeArrowPrimitive2D(
-                const basegfx::B2DPolygon& rPolygon,
-                const attribute::LineAttribute& rLineAttribute,
-                const attribute::StrokeAttribute& rStrokeAttribute,
-                const attribute::LineStartEndAttribute& rStart,
-                const attribute::LineStartEndAttribute& rEnd);
+    /// constructor without stroking
+    PolygonWavePrimitive2D(const basegfx::B2DPolygon& rPolygon,
+                           const attribute::LineAttribute& rLineAttribute, double fWaveWidth,
+                           double fWaveHeight);
 
-            /// constructor without stroking
-            PolygonStrokeArrowPrimitive2D(
-                const basegfx::B2DPolygon& rPolygon,
-                const attribute::LineAttribute& rLineAttribute,
-                const attribute::LineStartEndAttribute& rStart,
-                const attribute::LineStartEndAttribute& rEnd);
+    /// data read access
+    double getWaveWidth() const { return mfWaveWidth; }
+    double getWaveHeight() const { return mfWaveHeight; }
 
-            /// data read access
-            const attribute::LineStartEndAttribute& getStart() const { return maStart; }
-            const attribute::LineStartEndAttribute& getEnd() const { return maEnd; }
+    /// compare operator
+    virtual bool operator==(const BasePrimitive2D& rPrimitive) const override;
 
-            /// compare operator
-            virtual bool operator==(const BasePrimitive2D& rPrimitive) const override;
+    /// get range
+    virtual basegfx::B2DRange
+    getB2DRange(const geometry::ViewInformation2D& rViewInformation) const override;
 
-            /// get range
-            virtual basegfx::B2DRange getB2DRange(const geometry::ViewInformation2D& rViewInformation) const override;
+    /// provide unique ID
+    virtual sal_uInt32 getPrimitive2DID() const override;
+};
 
-            /// provide unique ID
-            virtual sal_uInt32 getPrimitive2DID() const override;
-        };
-    } // end of namespace primitive2d
-} // end of namespace drawinglayer
+/** PolygonStrokeArrowPrimitive2D class
 
+    This primitive defines a PolygonStrokePrimitive2D,
+    possibly extended by start and end definitions, which are
+    normally used for arrows.
+ */
+class DRAWINGLAYER_DLLPUBLIC PolygonStrokeArrowPrimitive2D final : public PolygonStrokePrimitive2D
+{
+private:
+    /// geometric definitions for line start and end
+    attribute::LineStartEndAttribute maStart;
+    attribute::LineStartEndAttribute maEnd;
 
-#endif //INCLUDED_DRAWINGLAYER_PRIMITIVE2D_POLYGONPRIMITIVE2D_HXX
+    /// local decomposition.
+    virtual void
+    create2DDecomposition(Primitive2DContainer& rContainer,
+                          const geometry::ViewInformation2D& rViewInformation) const override;
+
+public:
+    /// constructor
+    PolygonStrokeArrowPrimitive2D(const basegfx::B2DPolygon& rPolygon,
+                                  const attribute::LineAttribute& rLineAttribute,
+                                  const attribute::StrokeAttribute& rStrokeAttribute,
+                                  const attribute::LineStartEndAttribute& rStart,
+                                  const attribute::LineStartEndAttribute& rEnd);
+
+    /// constructor without stroking
+    PolygonStrokeArrowPrimitive2D(const basegfx::B2DPolygon& rPolygon,
+                                  const attribute::LineAttribute& rLineAttribute,
+                                  const attribute::LineStartEndAttribute& rStart,
+                                  const attribute::LineStartEndAttribute& rEnd);
+
+    /// data read access
+    const attribute::LineStartEndAttribute& getStart() const { return maStart; }
+    const attribute::LineStartEndAttribute& getEnd() const { return maEnd; }
+
+    /// compare operator
+    virtual bool operator==(const BasePrimitive2D& rPrimitive) const override;
+
+    /// get range
+    virtual basegfx::B2DRange
+    getB2DRange(const geometry::ViewInformation2D& rViewInformation) const override;
+
+    /// provide unique ID
+    virtual sal_uInt32 getPrimitive2DID() const override;
+};
+} // end of namespace primitive2d::drawinglayer
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

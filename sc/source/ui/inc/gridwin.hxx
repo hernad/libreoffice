@@ -39,7 +39,7 @@ namespace sc {
     struct SpellCheckContext;
 }
 
-namespace sdr { namespace overlay { class OverlayManager; } }
+namespace sdr::overlay { class OverlayManager; }
 
 class FmFormView;
 struct ScTableInfo;
@@ -80,7 +80,7 @@ struct SpellCallbackInfo;
 #define SC_PD_BREAK_V       32
 
 // predefines
-namespace sdr { namespace overlay { class OverlayObjectList; }}
+namespace sdr::overlay { class OverlayObjectList; }
 
 class SAL_DLLPUBLIC_RTTI ScGridWindow : public vcl::Window, public DropTargetHelper, public DragSourceHelper
 {
@@ -104,7 +104,7 @@ class SAL_DLLPUBLIC_RTTI ScGridWindow : public vcl::Window, public DropTargetHel
     std::unique_ptr<sdr::overlay::OverlayObjectList> mpOOHeader;
     std::unique_ptr<sdr::overlay::OverlayObjectList> mpOOShrink;
 
-    o3tl::optional<tools::Rectangle> mpAutoFillRect;
+    std::optional<tools::Rectangle> mpAutoFillRect;
 
     /// LibreOfficeKit needs a persistent FmFormView for tiled rendering,
     /// otherwise the invalidations from drawinglayer do not work.
@@ -131,10 +131,21 @@ class SAL_DLLPUBLIC_RTTI ScGridWindow : public vcl::Window, public DropTargetHel
 
     VisibleRange maVisibleRange;
 
+    struct LOKCursorEntry
+    {
+        Fraction aScaleX;
+        Fraction aScaleY;
+        tools::Rectangle aRect;
+    };
+
+    // Stores the last cursor position in twips for all
+    // zoom levels demanded from a ScGridWindow instance.
+    std::vector<LOKCursorEntry> maLOKLastCursor;
+
     std::unique_ptr<sc::SpellCheckContext> mpSpellCheckCxt;
 
     ScViewData*             pViewData;
-    ScSplitPos const        eWhich;
+    ScSplitPos              eWhich;
     ScHSplitPos             eHWhich;
     ScVSplitPos             eVWhich;
 
@@ -291,6 +302,10 @@ class SAL_DLLPUBLIC_RTTI ScGridWindow : public vcl::Window, public DropTargetHel
                                       ::std::vector< tools::Rectangle >& rPixelRects ) const;
     void            UpdateKitSelection(const std::vector<tools::Rectangle>& rRectangles,
                                        std::vector<tools::Rectangle>* pLogicRects = nullptr);
+    bool            NeedLOKCursorInvalidation(const tools::Rectangle& rCursorRect,
+                                              const Fraction aScaleX, const Fraction aScaleY);
+    void            InvalidateLOKViewCursor(const tools::Rectangle& rCursorRect,
+                                            const Fraction aScaleX, const Fraction aScaleY);
 
 protected:
     virtual void    PrePaint(vcl::RenderContext& rRenderContext) override;
@@ -357,6 +372,8 @@ public:
     void            UpdateEditViewPos();
 
     void            UpdateFormulas(SCCOL nX1 = -1, SCROW nY1 = -1, SCCOL nX2 = -1, SCROW nY2 = -1);
+
+    void            ShowFilterMenu(const tools::Rectangle& rCellRect, bool bLayoutRTL);
 
     void            LaunchDataSelectMenu( SCCOL nCol, SCROW nRow );
     void            DoScenarioMenu( const ScRange& rScenRange );

@@ -206,7 +206,7 @@
       <menu:menuitem menu:id=".uno:ViewBounds" menu:style="text"/>
       <menu:menuitem menu:id=".uno:TableBoundaries" menu:style="text"/>
       <menu:menuitem menu:id=".uno:ShowGraphics"/>
-      <menu:menuitem menu:id=".uno:HideWhitespace" menu:style="text"/>
+      <menu:menuitem menu:id=".uno:ShowWhitespace" menu:style="text"/>
       <menu:menuseparator/>
       <menu:menuitem menu:id=".uno:ViewTrackChanges"/>
       <menu:menuitem menu:id=".uno:ShowAnnotations" menu:style="text"/>
@@ -436,6 +436,7 @@
           <menu:menuseparator/>
           <menu:menuitem menu:id=".uno:InsertNeutralParagraph"/>
           <menu:menuitem menu:id=".uno:NumberingStart"/>
+          <menu:menuitem menu:id=".uno:RemoveBullets"/>
           <menu:menuseparator/>
           <menu:menuitem menu:id=".uno:JumpDownThisLevel"/>
           <menu:menuitem menu:id=".uno:JumpUpThisLevel"/>
@@ -758,6 +759,12 @@
           <menu:menuitem menu:id=".uno:UpdateCurIndex"/>
           <menu:menuitem menu:id=".uno:UpdateAllLinks"/>
           <menu:menuitem menu:id=".uno:UpdateCharts"/>
+        </menu:menupopup>
+      </menu:menu>
+      <menu:menu menu:id=".uno:ProtectMenu">
+        <menu:menupopup>
+          <menu:menuitem menu:id=".uno:ProtectFields"/>
+          <menu:menuitem menu:id=".uno:ProtectBookmarks"/>
         </menu:menupopup>
       </menu:menu>
       <menu:menuitem menu:id=".uno:CalculateSel" menu:style="text"/>

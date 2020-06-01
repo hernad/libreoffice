@@ -271,11 +271,11 @@ sal_Bool SAL_CALL ODatabaseMetaData::supportsGroupByUnrelated() { return true; }
 
 sal_Bool SAL_CALL ODatabaseMetaData::supportsMultipleTransactions() { return true; }
 
-sal_Bool SAL_CALL ODatabaseMetaData::supportsMultipleResultSets() { return false; }
+sal_Bool SAL_CALL ODatabaseMetaData::supportsMultipleResultSets() { return true; }
 
 sal_Bool SAL_CALL ODatabaseMetaData::supportsLikeEscapeClause() { return true; }
 
-sal_Bool SAL_CALL ODatabaseMetaData::supportsOrderByUnrelated() { return false; }
+sal_Bool SAL_CALL ODatabaseMetaData::supportsOrderByUnrelated() { return true; }
 
 sal_Bool SAL_CALL ODatabaseMetaData::supportsUnion()
 {
@@ -390,8 +390,7 @@ sal_Int32 SAL_CALL ODatabaseMetaData::getDriverMajorVersion()
 
 sal_Int32 SAL_CALL ODatabaseMetaData::getDefaultTransactionIsolation()
 {
-    return m_rConnection.getMysqlVersion() >= 32336 ? TransactionIsolation::READ_COMMITTED
-                                                    : TransactionIsolation::NONE;
+    return TransactionIsolation::REPEATABLE_READ;
 }
 
 sal_Int32 SAL_CALL ODatabaseMetaData::getDriverMinorVersion()
@@ -540,7 +539,7 @@ sal_Bool SAL_CALL ODatabaseMetaData::deletesAreDetected(sal_Int32 /*setType*/) {
 
 sal_Bool SAL_CALL ODatabaseMetaData::insertsAreDetected(sal_Int32 /*setType*/) { return false; }
 
-sal_Bool SAL_CALL ODatabaseMetaData::supportsBatchUpdates() { return true; }
+sal_Bool SAL_CALL ODatabaseMetaData::supportsBatchUpdates() { return false; }
 
 Reference<XConnection> SAL_CALL ODatabaseMetaData::getConnection() { return &m_rConnection; }
 

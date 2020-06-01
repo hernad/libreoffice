@@ -20,6 +20,7 @@
 #ifndef INCLUDED_COMPHELPER_ACCESSIBLEWRAPPER_HXX
 #define INCLUDED_COMPHELPER_ACCESSIBLEWRAPPER_HXX
 
+#include <config_options.h>
 #include <sal/config.h>
 
 #include <map>
@@ -39,7 +40,7 @@
 #include <comphelper/comphelperdllapi.h>
 #include <rtl/ref.hxx>
 
-namespace com { namespace sun { namespace star { namespace uno { class XComponentContext; } } } }
+namespace com::sun::star::uno { class XComponentContext; }
 
 namespace comphelper
 {
@@ -323,7 +324,7 @@ namespace comphelper
                                   >   OWrappedAccessibleChildrenManager_Base;
     /** manages wrapping XAccessible's to XAccessible's
     */
-    class COMPHELPER_DLLPUBLIC OWrappedAccessibleChildrenManager : public OWrappedAccessibleChildrenManager_Base
+    class UNLESS_MERGELIBS(COMPHELPER_DLLPUBLIC) OWrappedAccessibleChildrenManager : public OWrappedAccessibleChildrenManager_Base
     {
     protected:
         css::uno::Reference< css::uno::XComponentContext >

@@ -20,13 +20,10 @@
 #ifndef INCLUDED_OOX_SOURCE_DRAWINGML_DIAGRAM_LAYOUTATOMVISITORBASE_HXX
 #define INCLUDED_OOX_SOURCE_DRAWINGML_DIAGRAM_LAYOUTATOMVISITORBASE_HXX
 
-#include <memory>
-
-#include <oox/drawingml/shape.hxx>
 #include "diagram.hxx"
 #include "diagramlayoutatoms.hxx"
 
-namespace oox { namespace drawingml {
+namespace oox::drawingml {
 
 struct LayoutAtomVisitor
 {
@@ -92,7 +89,7 @@ private:
     size_t mnCnt;
 };
 
-} }
+}
 
 #endif
 

@@ -30,9 +30,9 @@
 #include <memory>
 #include <vector>
 
-namespace sd { namespace slidesorter { class SlideSorter; } }
+namespace sd::slidesorter { class SlideSorter; }
 
-namespace sd { namespace slidesorter { namespace controller {
+namespace sd::slidesorter::controller {
 
 /** Experimental class for simple eye candy animations.
 */
@@ -94,7 +94,7 @@ private:
     class Animation;
     typedef ::std::vector<std::shared_ptr<Animation> > AnimationList;
     AnimationList maAnimations;
-    ::canvas::tools::ElapsedTime const maElapsedTime;
+    ::canvas::tools::ElapsedTime maElapsedTime;
 
     std::unique_ptr<view::SlideSorterView::DrawLock, o3tl::default_delete<view::SlideSorterView::DrawLock>> mpDrawLock;
 
@@ -118,7 +118,7 @@ private:
     void RequestNextFrame();
 };
 
-} } } // end of namespace ::sd::slidesorter::controller
+} // end of namespace ::sd::slidesorter::controller
 
 #endif
 

@@ -21,16 +21,9 @@
 #include <strings.hrc>
 #include <osl/diagnose.h>
 #include <WCopyTable.hxx>
-#include <com/sun/star/sdbcx/XDataDescriptorFactory.hpp>
 #include <com/sun/star/sdbcx/XColumnsSupplier.hpp>
-#include <com/sun/star/sdbcx/XAppend.hpp>
 #include <core_resource.hxx>
-#include <com/sun/star/sdbc/DataType.hpp>
-#include <com/sun/star/sdbc/ColumnValue.hpp>
 #include <com/sun/star/sdb/application/CopyTableOperation.hpp>
-#include <vcl/svapp.hxx>
-#include <stringconstants.hxx>
-#include <functional>
 
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::beans;
@@ -41,7 +34,7 @@ using namespace dbaui;
 
 namespace CopyTableOperation = ::com::sun::star::sdb::application::CopyTableOperation;
 
-OUString OWizColumnSelect::GetTitle() const { return DBA_RES(STR_WIZ_COLUMN_SELECT_TITEL); }
+OUString OWizColumnSelect::GetTitle() const { return DBA_RES(STR_WIZ_COLUMN_SELECT_TITLE); }
 
 OWizardPage::OWizardPage(weld::Container* pPage, OCopyTableWizard* pWizard, const OUString& rUIXMLDescription, const OString& rID)
     : ::vcl::OWizardPage(pPage, pWizard, rUIXMLDescription, rID)
@@ -130,7 +123,9 @@ void OWizColumnSelect::Activate( )
         {
             OUString sId(OUString::number(reinterpret_cast<sal_Int64>(new OFieldDescription(*(column->second)))));
             m_xNewColumnNames->append(sId, column->first);
-            m_xOrgColumnNames->remove_text(column->first);
+            int nRemove = m_xOrgColumnNames->find_text(column->first);
+            if (nRemove != -1)
+                m_xOrgColumnNames->remove(nRemove);
         }
     }
     m_pParent->GetOKButton().set_sensitive(m_xNewColumnNames->n_children() != 0);

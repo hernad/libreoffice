@@ -204,8 +204,7 @@ SfxStyleSheetBasePool* ScDocShell::GetStyleSheetPool()
 
 static void lcl_AdjustPool( SfxStyleSheetBasePool* pStylePool )
 {
-    pStylePool->SetSearchMask(SfxStyleFamily::Page);
-    SfxStyleSheetBase *pStyle = pStylePool->First();
+    SfxStyleSheetBase *pStyle = pStylePool->First(SfxStyleFamily::Page);
     while ( pStyle )
     {
         SfxItemSet& rStyleSet = pStyle->GetItemSet();
@@ -380,7 +379,7 @@ void ScDocShell::UpdateLinks()
         {
             ScTableLink* pLink = new ScTableLink( this, aDocName, aFltName, aOptions, nRefresh );
             pLink->SetInCreate(true);
-            pLinkManager->InsertFileLink(*pLink, OBJECT_CLIENT_FILE, aDocName, &aFltName);
+            pLinkManager->InsertFileLink(*pLink, sfx2::SvBaseLinkObjectType::ClientFile, aDocName, &aFltName);
             pLink->Update();
             pLink->SetInCreate(false);
         }
@@ -479,8 +478,8 @@ void ScDocShell::CheckConfigOptions()
         // no need to check repeatedly.
         return;
 
-    OUString aDecSep = ScGlobal::GetpLocaleData()->getNumDecimalSep();
-    OUString aDecSepAlt = ScGlobal::GetpLocaleData()->getNumDecimalSepAlt();
+    OUString aDecSep = ScGlobal::getLocaleDataPtr()->getNumDecimalSep();
+    OUString aDecSepAlt = ScGlobal::getLocaleDataPtr()->getNumDecimalSepAlt();
 
     ScModule* pScMod = SC_MOD();
     const ScFormulaOptions& rOpt=pScMod->GetFormulaOptions();

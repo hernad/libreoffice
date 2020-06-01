@@ -22,8 +22,6 @@
 
 #include <com/sun/star/container/XNameAccess.hpp>
 #include <com/sun/star/sdbc/XConnection.hpp>
-#include <com/sun/star/sdbc/XResultSet.hpp>
-#include <com/sun/star/sdbc/XResultSetMetaData.hpp>
 #include <com/sun/star/sdbc/XDatabaseMetaData.hpp>
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
@@ -387,6 +385,8 @@ namespace dbaui
         */
         void clearDestColumns();
 
+        css::uno::Reference< css::beans::XPropertySet > returnTable();
+        css::uno::Reference< css::beans::XPropertySet > getTable();
         css::uno::Reference< css::beans::XPropertySet > createTable();
         css::uno::Reference< css::beans::XPropertySet > createView() const;
         sal_Int32 getMaxColumnNameLength() const;

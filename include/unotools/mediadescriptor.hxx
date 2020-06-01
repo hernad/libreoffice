@@ -29,9 +29,9 @@
 #include <rtl/ustring.hxx>
 #include <unotools/unotoolsdllapi.h>
 
-namespace com { namespace sun { namespace star { namespace io {
+namespace com::sun::star::io {
     class XInputStream;
-} } } }
+}
 namespace comphelper { class IDocPasswordVerifier; }
 
 namespace utl {
@@ -84,6 +84,7 @@ class UNOTOOLS_DLLPUBLIC MediaDescriptor : public comphelper::SequenceAsHashMap
         static const OUString& PROP_PREVIEW();
         static const OUString& PROP_READONLY();
         static const OUString& PROP_REFERRER();
+        static const OUString& PROP_REPLACEABLE();
         static const OUString& PROP_SALVAGEDFILE();
         static const OUString& PROP_STATUSINDICATOR();
         static const OUString& PROP_STREAM();

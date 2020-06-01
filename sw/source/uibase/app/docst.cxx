@@ -22,7 +22,7 @@
 #include <com/sun/star/style/XStyleFamiliesSupplier.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/container/XNameAccess.hpp>
-
+#include <com/sun/star/frame/XModel.hpp>
 #include <comphelper/flagguard.hxx>
 #include <o3tl/any.hxx>
 #include <sal/log.hxx>
@@ -309,8 +309,8 @@ void SwDocShell::ExecStyleSheet( SfxRequest& rReq )
                 false, &pItem ))
                 sParent = static_cast<const SfxStringItem*>(pItem)->GetValue();
 
-            if (sName.isEmpty() && m_xBasePool.get())
-                sName = SfxStyleDialogController::GenerateUnusedName(*m_xBasePool);
+            if (sName.isEmpty() && m_xBasePool)
+                sName = SfxStyleDialogController::GenerateUnusedName(*m_xBasePool, nFamily);
 
             Edit(sName, sParent, nFamily, nMask, true, OString(), nullptr, &rReq, nSlot);
         }
@@ -366,13 +366,12 @@ void SwDocShell::ExecStyleSheet( SfxRequest& rReq )
 
             if( !pArgs )
             {
-                nFamily = SfxStyleFamily::Para;
-
                 switch (nSlot)
                 {
                     case SID_STYLE_NEW_BY_EXAMPLE:
                     {
-                        SfxNewStyleDlg aDlg(GetView()->GetFrameWeld(), *GetStyleSheetPool());
+                        SfxStyleSheetBasePool& rPool = *GetStyleSheetPool();
+                        SfxNewStyleDlg aDlg(GetView()->GetFrameWeld(), rPool, nFamily);
                         if (aDlg.run() == RET_OK)
                         {
                             aParam = aDlg.GetName();
@@ -557,11 +556,11 @@ public:
     VclPtr<SfxAbstractApplyTabDialog> m_pDlg;
 private:
     SwDocShell &m_rDocSh;
-    bool const m_bNew;
+    bool m_bNew;
     rtl::Reference< SwDocStyleSheet > m_xTmp;
-    SfxStyleFamily const m_nFamily;
+    SfxStyleFamily m_nFamily;
     rtl::Reference< SfxStyleSheetBasePool > m_xBasePool;
-    bool const m_bModified;
+    bool m_bModified;
 };
 
 }

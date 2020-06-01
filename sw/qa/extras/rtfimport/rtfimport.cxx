@@ -73,12 +73,13 @@ CPPUNIT_TEST_FIXTURE(Test, testN695479)
     CPPUNIT_ASSERT_EQUAL(sal_Int32(convertTwipToMm100(300)),
                          getProperty<sal_Int32>(xPropertySet, "Height"));
 
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDraws = xDrawPageSupplier->getDrawPage();
+    int nShapes = getShapes();
+    CPPUNIT_ASSERT_EQUAL(3, nShapes);
+
     bool bFrameFound = false, bDrawFound = false;
-    for (int i = 0; i < xDraws->getCount(); ++i)
+    for (int i = 0; i < nShapes; ++i)
     {
-        uno::Reference<lang::XServiceInfo> xServiceInfo(xDraws->getByIndex(i), uno::UNO_QUERY);
+        uno::Reference<lang::XServiceInfo> xServiceInfo(getShape(i + 1), uno::UNO_QUERY);
         if (xServiceInfo->supportsService("com.sun.star.text.TextFrame"))
         {
             // Both frames should be anchored to the first paragraph.
@@ -141,21 +142,52 @@ CPPUNIT_TEST_FIXTURE(Test, testTdf108943)
 CPPUNIT_TEST_FIXTURE(Test, testFdo46662)
 {
     load(mpTestDocumentPath, "fdo46662.rtf");
-    uno::Reference<beans::XPropertySet> xPropertySet(
-        getStyles("NumberingStyles")->getByName("WWNum3"), uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xLevels(
-        xPropertySet->getPropertyValue("NumberingRules"), uno::UNO_QUERY);
-    uno::Sequence<beans::PropertyValue> aProps;
-    xLevels->getByIndex(1) >>= aProps; // 2nd level
 
-    for (int i = 0; i < aProps.getLength(); ++i)
+    OUString listStyle;
+
     {
-        const beans::PropertyValue& rProp = aProps[i];
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(1), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(0),
+                             getProperty<sal_Int16>(xPara, "NumberingLevel"));
+        CPPUNIT_ASSERT(xPara->getPropertyValue("NumberingStyleName") >>= listStyle);
+        CPPUNIT_ASSERT(listStyle.startsWith("WWNum"));
+        CPPUNIT_ASSERT_EQUAL(OUString("1"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
 
-        if (rProp.Name == "ParentNumbering")
-            CPPUNIT_ASSERT_EQUAL(sal_Int16(2), rProp.Value.get<sal_Int16>());
-        else if (rProp.Name == "Suffix")
-            CPPUNIT_ASSERT_EQUAL(sal_Int32(0), rProp.Value.get<OUString>().getLength());
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(2), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(1),
+                             getProperty<sal_Int16>(xPara, "NumberingLevel"));
+        CPPUNIT_ASSERT(xPara->getPropertyValue("NumberingStyleName") >>= listStyle);
+        CPPUNIT_ASSERT(listStyle.startsWith("WWNum"));
+        CPPUNIT_ASSERT_EQUAL(OUString("1.1"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(3), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(2),
+                             getProperty<sal_Int16>(xPara, "NumberingLevel"));
+        CPPUNIT_ASSERT(xPara->getPropertyValue("NumberingStyleName") >>= listStyle);
+        CPPUNIT_ASSERT(listStyle.startsWith("WWNum"));
+        CPPUNIT_ASSERT_EQUAL(OUString("1.1.1"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(4), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(3),
+                             getProperty<sal_Int16>(xPara, "NumberingLevel"));
+        CPPUNIT_ASSERT(xPara->getPropertyValue("NumberingStyleName") >>= listStyle);
+        CPPUNIT_ASSERT(listStyle.startsWith("WWNum"));
+        CPPUNIT_ASSERT_EQUAL(OUString("1.1.1.1"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(5), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(0),
+                             getProperty<sal_Int16>(xPara, "NumberingLevel"));
+        CPPUNIT_ASSERT(xPara->getPropertyValue("NumberingStyleName") >>= listStyle);
+        CPPUNIT_ASSERT(listStyle.startsWith("WWNum"));
+        CPPUNIT_ASSERT_EQUAL(OUString("2"), getProperty<OUString>(xPara, "ListLabelString"));
     }
 }
 
@@ -200,12 +232,13 @@ CPPUNIT_TEST_FIXTURE(Test, testTdf108951)
 CPPUNIT_TEST_FIXTURE(Test, testFdo47036)
 {
     load(mpTestDocumentPath, "fdo47036.rtf");
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDraws = xDrawPageSupplier->getDrawPage();
+
+    int nShapes = getShapes();
+    CPPUNIT_ASSERT_EQUAL(3, nShapes);
     int nAtCharacter = 0;
-    for (int i = 0; i < xDraws->getCount(); ++i)
+    for (int i = 0; i < nShapes; ++i)
     {
-        if (getProperty<text::TextContentAnchorType>(xDraws->getByIndex(i), "AnchorType")
+        if (getProperty<text::TextContentAnchorType>(getShape(i + 1), "AnchorType")
             == text::TextContentAnchorType_AT_CHARACTER)
             nAtCharacter++;
     }
@@ -370,28 +403,23 @@ CPPUNIT_TEST_FIXTURE(Test, testTdf122430)
 CPPUNIT_TEST_FIXTURE(Test, testFdo49892)
 {
     load(mpTestDocumentPath, "fdo49892.rtf");
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDraws = xDrawPageSupplier->getDrawPage();
-    for (int i = 0; i < xDraws->getCount(); ++i)
+    int nShapes = getShapes();
+    CPPUNIT_ASSERT_EQUAL(5, nShapes);
+    for (int i = 0; i < nShapes; ++i)
     {
-        OUString aDescription = getProperty<OUString>(xDraws->getByIndex(i), "Description");
+        OUString aDescription = getProperty<OUString>(getShape(i + 1), "Description");
         if (aDescription == "red")
-            CPPUNIT_ASSERT_EQUAL(sal_Int32(0),
-                                 getProperty<sal_Int32>(xDraws->getByIndex(i), "ZOrder"));
+            CPPUNIT_ASSERT_EQUAL(sal_Int32(0), getProperty<sal_Int32>(getShape(i + 1), "ZOrder"));
         else if (aDescription == "green")
-            CPPUNIT_ASSERT_EQUAL(sal_Int32(1),
-                                 getProperty<sal_Int32>(xDraws->getByIndex(i), "ZOrder"));
+            CPPUNIT_ASSERT_EQUAL(sal_Int32(1), getProperty<sal_Int32>(getShape(i + 1), "ZOrder"));
         else if (aDescription == "blue")
-            CPPUNIT_ASSERT_EQUAL(sal_Int32(2),
-                                 getProperty<sal_Int32>(xDraws->getByIndex(i), "ZOrder"));
+            CPPUNIT_ASSERT_EQUAL(sal_Int32(2), getProperty<sal_Int32>(getShape(i + 1), "ZOrder"));
         else if (aDescription == "rect")
         {
-            CPPUNIT_ASSERT_EQUAL(
-                text::RelOrientation::PAGE_FRAME,
-                getProperty<sal_Int16>(xDraws->getByIndex(i), "HoriOrientRelation"));
-            CPPUNIT_ASSERT_EQUAL(
-                text::RelOrientation::PAGE_FRAME,
-                getProperty<sal_Int16>(xDraws->getByIndex(i), "VertOrientRelation"));
+            CPPUNIT_ASSERT_EQUAL(text::RelOrientation::PAGE_FRAME,
+                                 getProperty<sal_Int16>(getShape(i + 1), "HoriOrientRelation"));
+            CPPUNIT_ASSERT_EQUAL(text::RelOrientation::PAGE_FRAME,
+                                 getProperty<sal_Int16>(getShape(i + 1), "VertOrientRelation"));
         }
     }
 }
@@ -481,10 +509,8 @@ CPPUNIT_TEST_FIXTURE(Test, testFdo57708)
     load(mpTestDocumentPath, "fdo57708.rtf");
     // There were two issues: the doc was of 2 pages and the picture was missing.
     CPPUNIT_ASSERT_EQUAL(1, getPages());
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDraws = xDrawPageSupplier->getDrawPage();
     // Two objects: a picture and a textframe.
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(2), xDraws->getCount());
+    CPPUNIT_ASSERT_EQUAL(2, getShapes());
 }
 
 CPPUNIT_TEST_FIXTURE(Test, testFdo45183)
@@ -656,22 +682,18 @@ CPPUNIT_TEST_FIXTURE(Test, testN823675)
 CPPUNIT_TEST_FIXTURE(Test, testGroupshape)
 {
     load(mpTestDocumentPath, "groupshape.rtf");
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDraws = xDrawPageSupplier->getDrawPage();
     // There should be a single groupshape with 2 children.
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(1), xDraws->getCount());
-    uno::Reference<drawing::XShapes> xGroupshape(xDraws->getByIndex(0), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    uno::Reference<drawing::XShapes> xGroupshape(getShape(1), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(2), xGroupshape->getCount());
 }
 
 CPPUNIT_TEST_FIXTURE(Test, testGroupshape_notext)
 {
     load(mpTestDocumentPath, "groupshape-notext.rtf");
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDraws = xDrawPageSupplier->getDrawPage();
     // There should be a single groupshape with 2 children.
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(1), xDraws->getCount());
-    uno::Reference<drawing::XShapes> xGroupshape(xDraws->getByIndex(0), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
+    uno::Reference<drawing::XShapes> xGroupshape(getShape(1), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(2), xGroupshape->getCount());
 }
 
@@ -1037,25 +1059,12 @@ CPPUNIT_TEST_FIXTURE(Test, testCp950listleveltext1)
 {
     load(mpTestDocumentPath, "cp950listleveltext1.rtf");
     // suffix with Chinese only ( most common case generated by MSO2010 TC)
-    const sal_Unicode aExpectedSuffix[1]
-        = { 0x3001 }; // This is a dot that is generally used as suffix of Chinese list number
-    uno::Reference<beans::XPropertySet> xPropertySet(
-        getStyles("NumberingStyles")->getByName("WWNum3"), uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xLevels(
-        xPropertySet->getPropertyValue("NumberingRules"), uno::UNO_QUERY);
-    uno::Sequence<beans::PropertyValue> aProps;
-    xLevels->getByIndex(0) >>= aProps; // 1st level
+    // This is a dot that is generally used as suffix of Chinese list number
+    const sal_Unicode aExpectedNumbering[] = { 0x4e00, 0x3001 };
 
-    OUString aSuffix;
-    for (int i = 0; i < aProps.getLength(); ++i)
-    {
-        const beans::PropertyValue& rProp = aProps[i];
-
-        if (rProp.Name == "Suffix")
-            aSuffix = rProp.Value.get<OUString>();
-    }
-    // Suffix was '\0' instead of ' '.
-    CPPUNIT_ASSERT_EQUAL(OUString(aExpectedSuffix, SAL_N_ELEMENTS(aExpectedSuffix)), aSuffix);
+    uno::Reference<beans::XPropertySet> xPara(getParagraph(1), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL(OUString(aExpectedNumbering, SAL_N_ELEMENTS(aExpectedNumbering)),
+                         getProperty<OUString>(xPara, "ListLabelString"));
 }
 
 // This testcase illustrate leveltext with multibyte strings coded in cp950 ( BIG5 ).
@@ -1063,85 +1072,35 @@ CPPUNIT_TEST_FIXTURE(Test, testCp950listleveltext2)
 {
     load(mpTestDocumentPath, "cp950listleveltext2.rtf");
     // Prefix and suffix with Chinese only ( tweaked from default in MSO2010 TC)
-    const sal_Unicode aExpectedPrefix[2] = { 0x524d, 0x7f6e };
-    const sal_Unicode aExpectedSuffix[3] = { 0x3001, 0x5f8c, 0x7f6e };
+    const sal_Unicode aExpectedNumbering[] = { 0x524d, 0x7f6e, 0x7532, 0x3001, 0x5f8c, 0x7f6e };
 
-    uno::Reference<beans::XPropertySet> xPropertySet(
-        getStyles("NumberingStyles")->getByName("WWNum1"), uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xLevels(
-        xPropertySet->getPropertyValue("NumberingRules"), uno::UNO_QUERY);
-    uno::Sequence<beans::PropertyValue> aProps;
-    xLevels->getByIndex(0) >>= aProps; // 1st level
-
-    OUString aSuffix, aPrefix;
-    for (int i = 0; i < aProps.getLength(); ++i)
-    {
-        const beans::PropertyValue& rProp = aProps[i];
-
-        if (rProp.Name == "Suffix")
-            aSuffix = rProp.Value.get<OUString>();
-        if (rProp.Name == "Prefix")
-            aPrefix = rProp.Value.get<OUString>();
-    }
-    // Suffix was '\0' instead of ' '.
-    CPPUNIT_ASSERT_EQUAL(OUString(aExpectedPrefix, SAL_N_ELEMENTS(aExpectedPrefix)), aPrefix);
-    CPPUNIT_ASSERT_EQUAL(OUString(aExpectedSuffix, SAL_N_ELEMENTS(aExpectedSuffix)), aSuffix);
+    uno::Reference<beans::XPropertySet> xPara(getParagraph(1), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL(OUString(aExpectedNumbering, SAL_N_ELEMENTS(aExpectedNumbering)),
+                         getProperty<OUString>(xPara, "ListLabelString"));
 }
 
 // This testcase illustrate leveltext with multibyte strings coded in cp950 ( BIG5 )
 CPPUNIT_TEST_FIXTURE(Test, testCp950listleveltext3)
 {
     load(mpTestDocumentPath, "cp950listleveltext3.rtf");
-    // Prefix and suffix that mix Chinese and English ( tweaked from default in MSO2010 TC)
-    const sal_Unicode aExpectedPrefix[4] = { 0x524d, 0x0061, 0x7f6e, 0x0062 };
-    const sal_Unicode aExpectedSuffix[6] = { 0x3001, 0x0063, 0x5f8c, 0x0064, 0x7f6e, 0x0065 };
+    // Numbering is a mix Chinese and English ( tweaked from default in MSO2010 TC)
+    const sal_Unicode aExpectedNumbering[] = { 0x524d, 0x0061, 0x7f6e, 0x0062, 0x7532, 0x3001,
+                                               0x0063, 0x5f8c, 0x0064, 0x7f6e, 0x0065 };
 
-    uno::Reference<beans::XPropertySet> xPropertySet(
-        getStyles("NumberingStyles")->getByName("WWNum1"), uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xLevels(
-        xPropertySet->getPropertyValue("NumberingRules"), uno::UNO_QUERY);
-    uno::Sequence<beans::PropertyValue> aProps;
-    xLevels->getByIndex(0) >>= aProps; // 1st level
-
-    OUString aSuffix, aPrefix;
-    for (int i = 0; i < aProps.getLength(); ++i)
-    {
-        const beans::PropertyValue& rProp = aProps[i];
-
-        if (rProp.Name == "Suffix")
-            aSuffix = rProp.Value.get<OUString>();
-        if (rProp.Name == "Prefix")
-            aPrefix = rProp.Value.get<OUString>();
-    }
-    // Suffix was '\0' instead of ' '.
-    CPPUNIT_ASSERT_EQUAL(OUString(aExpectedPrefix, SAL_N_ELEMENTS(aExpectedPrefix)), aPrefix);
-    CPPUNIT_ASSERT_EQUAL(OUString(aExpectedSuffix, SAL_N_ELEMENTS(aExpectedSuffix)), aSuffix);
+    uno::Reference<beans::XPropertySet> xPara(getParagraph(1), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL(OUString(aExpectedNumbering, SAL_N_ELEMENTS(aExpectedNumbering)),
+                         getProperty<OUString>(xPara, "ListLabelString"));
 }
 
 CPPUNIT_TEST_FIXTURE(Test, testChtOutlineNumberingRtf)
 {
     load(mpTestDocumentPath, "chtoutline.rtf");
-    const sal_Unicode aExpectedPrefix[2] = { 0x7b2c, 0x0020 };
-    const sal_Unicode aExpectedSuffix[2] = { 0x0020, 0x7ae0 };
-    uno::Reference<text::XChapterNumberingSupplier> xChapterNumberingSupplier(mxComponent,
-                                                                              uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xLevels(
-        xChapterNumberingSupplier->getChapterNumberingRules());
-    uno::Sequence<beans::PropertyValue> aProps;
-    xLevels->getByIndex(0) >>= aProps; // 1st level
 
-    OUString aSuffix, aPrefix;
-    for (int i = 0; i < aProps.getLength(); ++i)
-    {
-        const beans::PropertyValue& rProp = aProps[i];
+    const sal_Unicode aExpectedNumbering[] = { 0x7b2c, ' ', '1', ' ', 0x7ae0 };
 
-        if (rProp.Name == "Suffix")
-            aSuffix = rProp.Value.get<OUString>();
-        if (rProp.Name == "Prefix")
-            aPrefix = rProp.Value.get<OUString>();
-    }
-    CPPUNIT_ASSERT_EQUAL(OUString(aExpectedPrefix, SAL_N_ELEMENTS(aExpectedPrefix)), aPrefix);
-    CPPUNIT_ASSERT_EQUAL(OUString(aExpectedSuffix, SAL_N_ELEMENTS(aExpectedSuffix)), aSuffix);
+    uno::Reference<beans::XPropertySet> xPara(getParagraph(1), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL(OUString(aExpectedNumbering, SAL_N_ELEMENTS(aExpectedNumbering)),
+                         getProperty<OUString>(xPara, "ListLabelString"));
 }
 
 CPPUNIT_TEST_FIXTURE(Test, testTdf90046)
@@ -1170,7 +1129,7 @@ CPPUNIT_TEST_FIXTURE(Test, testFdo49893_3)
     // No artifacts (black lines in left top corner) as shape #3 are expected
     try
     {
-        uno::Reference<drawing::XShape> xShape2 = getShape(3);
+        getShape(3);
         CPPUNIT_FAIL("exception expected: no shape #3 in document");
     }
     catch (lang::IndexOutOfBoundsException const&)

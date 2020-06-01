@@ -20,8 +20,6 @@
 #define INCLUDED_SVTOOLS_BRWBOX_HXX
 
 #include <svtools/svtdllapi.h>
-#include <vcl/scrbar.hxx>
-#include <vcl/status.hxx>
 #include <vcl/ctrl.hxx>
 #include <vcl/vclptr.hxx>
 #include <tools/multisel.hxx>
@@ -40,6 +38,8 @@
 class BrowserColumn;
 class BrowserDataWin;
 class BrowserHeader;
+class ScrollBar;
+class StatusBar;
 
 namespace svt {
     class BrowseBoxImpl;
@@ -61,7 +61,6 @@ enum class BrowserMode
     NONE                 = 0x000000,
     COLUMNSELECTION      = 0x000001,
     MULTISELECTION       = 0x000002,
-    THUMBDRAGGING        = 0x000004,
     KEEPHIGHLIGHT        = 0x000008,
     HLINES               = 0x000010,
     VLINES               = 0x000020,
@@ -88,7 +87,7 @@ enum class BrowserMode
 };
 namespace o3tl
 {
-    template<> struct typed_flags<BrowserMode> : is_typed_flags<BrowserMode, 0x2cf73f> {};
+    template<> struct typed_flags<BrowserMode> : is_typed_flags<BrowserMode, 0x2cf73b> {};
 }
 
 #define BROWSER_NONE                      0
@@ -120,10 +119,10 @@ namespace o3tl
 class BrowseEvent
 {
     VclPtr<vcl::Window>     pWin;
-    long const                    nRow;
-    tools::Rectangle const        aRect;
-    sal_uInt16 const              nCol;
-    sal_uInt16 const              nColId;
+    long                    nRow;
+    tools::Rectangle        aRect;
+    sal_uInt16              nCol;
+    sal_uInt16              nColId;
 
 public:
                         BrowseEvent( vcl::Window* pWindow,
@@ -244,9 +243,9 @@ private:
     // fdo#83943, detect if making the cursor position visible is impossible to achieve
     struct CursorMoveAttempt
     {
-        long const m_nCol;
-        long const m_nRow;
-        bool const m_bScrolledToReachCell;
+        long m_nCol;
+        long m_nRow;
+        bool m_bScrolledToReachCell;
         CursorMoveAttempt(long nCol, long nRow, bool bScrolledToReachCell)
             : m_nCol(nCol)
             , m_nRow(nRow)
@@ -391,7 +390,7 @@ public:
     virtual void    GetFocus() override;
     virtual void    Resize() override;
     virtual void    Paint( vcl::RenderContext& rRenderContext, const tools::Rectangle& rRect ) override;
-    virtual void    Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawFlags nFlags ) override;
+    virtual void    Draw( OutputDevice* pDev, const Point& rPos, DrawFlags nFlags ) override;
     virtual void    Command( const CommandEvent& rEvt ) override;
     virtual void    StartDrag( sal_Int8 _nAction, const Point& _rPosPixel ) override;
 

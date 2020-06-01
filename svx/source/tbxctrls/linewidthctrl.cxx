@@ -17,34 +17,14 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <string>
-
 #include <vcl/toolbox.hxx>
 #include <sfx2/app.hxx>
-#include <sfx2/dispatch.hxx>
 #include <sfx2/objsh.hxx>
-
-#include <svtools/toolbarmenu.hxx>
-#include <svtools/popupwindowcontroller.hxx>
-#include <svtools/valueset.hxx>
-
-#include <svx/strings.hrc>
 #include <svx/svxids.hrc>
-#include <helpids.h>
-
-#include <svx/drawitem.hxx>
-#include <svx/xlineit0.hxx>
 #include <svx/xlnwtit.hxx>
-#include <svx/xlndsit.hxx>
-#include <svx/xlnstit.hxx>
-#include <svx/xlnedit.hxx>
-#include <svx/xtable.hxx>
 #include <svx/linectrl.hxx>
 #include <svx/itemwin.hxx>
-#include <svx/dialmgr.hxx>
-#include <svx/tbxcolorupdate.hxx>
-#include <svx/unoapi.hxx>
-#include <memory>
+#include "linemetricbox.hxx"
 
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::beans;
@@ -67,7 +47,6 @@ SvxLineWidthToolBoxControl::~SvxLineWidthToolBoxControl()
 {
 }
 
-
 void SvxLineWidthToolBoxControl::StateChanged(
     sal_uInt16 nSID, SfxItemState eState, const SfxPoolItem* pState )
 {
@@ -83,21 +62,17 @@ void SvxLineWidthToolBoxControl::StateChanged(
     {
         if ( eState == SfxItemState::DISABLED )
         {
-            pFld->Disable();
-            pFld->SetText( "" );
+            pFld->set_sensitive(false);
         }
         else
         {
-            pFld->Enable();
+            pFld->set_sensitive(true);
 
             if ( eState == SfxItemState::DEFAULT )
             {
                 DBG_ASSERT( dynamic_cast<const XLineWidthItem*>( pState) !=  nullptr, "wrong ItemType" );
 
-                // Core-Unit handed over to MetricField
-                // Should not happen in CreateItemWin ()!
-                // CD!!! GetCoreMetric();
-                pFld->SetCoreUnit( MapUnit::Map100thMM );
+                pFld->SetDestCoreUnit(GetCoreMetric());
 
                 pFld->Update( static_cast<const XLineWidthItem*>(pState) );
             }
@@ -107,10 +82,20 @@ void SvxLineWidthToolBoxControl::StateChanged(
     }
 }
 
-
-VclPtr<vcl::Window> SvxLineWidthToolBoxControl::CreateItemWindow( vcl::Window *pParent )
+MapUnit SvxLineWidthToolBoxControl::GetCoreMetric()
 {
-    return VclPtr<SvxMetricField>::Create( pParent, m_xFrame ).get();
+    SfxObjectShell* pSh = SfxObjectShell::Current();
+    SfxItemPool& rPool = pSh ? pSh->GetPool() : SfxGetpApp()->GetPool();
+    sal_uInt16 nWhich = rPool.GetWhich(SID_ATTR_LINE_WIDTH);
+    return rPool.GetMetric(nWhich);
+}
+
+VclPtr<InterimItemWindow> SvxLineWidthToolBoxControl::CreateItemWindow(vcl::Window *pParent)
+{
+    VclPtr<SvxMetricField> pWindow = VclPtr<SvxMetricField>::Create(pParent, m_xFrame);
+    pWindow->Show();
+
+    return pWindow;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

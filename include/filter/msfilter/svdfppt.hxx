@@ -25,7 +25,7 @@
 #include <memory>
 #include <vector>
 
-#include <o3tl/optional.hxx>
+#include <optional>
 
 #include <com/sun/star/uno/Reference.hxx>
 #include <editeng/eeitem.hxx>
@@ -48,12 +48,12 @@
 #include <vcl/graph.hxx>
 #include <salhelper/simplereferenceobject.hxx>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace awt { struct Size; }
     namespace drawing { class XShape; }
     namespace form { class XFormComponent; }
     namespace frame { class XModel; }
-} } }
+}
 
 class SdrPage;
 class SdrObject;
@@ -172,7 +172,7 @@ enum class TSS_Type : unsigned {
     Unknown        = 0xffffffff // or invalid
 };
 
-const int nMaxPPTLevels = 5;
+const int nMaxPPTLevels = 10;
 
 // Object IDs for StarDraw UserData
 #define PPT_OBJECTINFO_ID       (1)
@@ -491,7 +491,7 @@ struct MSFILTER_DLLPUBLIC PPTFieldEntry
     sal_uInt16          nTextRangeEnd;
     std::unique_ptr<SvxFieldItem> xField1;
     std::unique_ptr<SvxFieldItem> xField2;
-    o3tl::optional<OUString> xString;
+    std::optional<OUString> xString;
 
     PPTFieldEntry()
         : nPos(0)
@@ -813,7 +813,7 @@ class PPTNumberFormatCreator
                     sal_uInt32 nLevel,
                     TSS_Type nInstance,
                     TSS_Type nInstanceInSheet,
-                    o3tl::optional< sal_Int16 >& rStartNumbering,
+                    std::optional< sal_Int16 >& rStartNumbering,
                     sal_uInt32 nFontHeight,
                     PPTParagraphObj const * pPara
                 );
@@ -841,7 +841,7 @@ public:
                     SvxNumberFormat& rNumberFormat,
                     PPTParagraphObj* pPara,
                     TSS_Type nInstanceInSheet,
-                    o3tl::optional< sal_Int16 >& rStartNumbering
+                    std::optional< sal_Int16 >& rStartNumbering
                 );
 };
 
@@ -1128,7 +1128,6 @@ public:
                         const PPTTextObj* pTextObj
                     );
     sal_uInt32      Count() const { return mpFieldItem ? 1 : maString.getLength(); };
-    bool            HasTabulator() const;
 };
 
 class MSFILTER_DLLPUBLIC PPTParagraphObj
@@ -1146,9 +1145,6 @@ class MSFILTER_DLLPUBLIC PPTParagraphObj
     void operator=(PPTParagraphObj const&) = delete;
 
 public:
-
-    bool                    mbTab;          // if true, this paragraph has tabulators in text
-
     sal_uInt32              mnCurrentObject;
     ::std::vector<std::unique_ptr<PPTPortionObj>> m_PortionList;
 
@@ -1177,7 +1173,7 @@ public:
     void                    AppendPortion( PPTPortionObj& rPortion );
     void                    ApplyTo(
                                 SfxItemSet& rSet,
-                                o3tl::optional< sal_Int16 >& rStartNumbering,
+                                std::optional< sal_Int16 >& rStartNumbering,
                                 SdrPowerPointImport const & rManager,
                                 TSS_Type nInstanceInSheet
                             );

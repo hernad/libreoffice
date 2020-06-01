@@ -17,8 +17,6 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <config_options.h>
-
 #include <mid.h>
 #include <editeng/memberids.h>
 #include <svx/unomid.hxx>
@@ -90,7 +88,7 @@
 #include <svx/sdprcitm.hxx>
 #include <svx/sdmetitm.hxx>
 
-#define avmedia_MediaItem           ::avmedia::MediaItem
+#define avmedia_MediaItem ::avmedia::MediaItem
 
 #ifdef DISABLE_DYNLOADING
 /* Avoid clash with the ones from svx/source/form/typemap.cxx */

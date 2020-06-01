@@ -56,9 +56,9 @@ Reference< XMultiServiceFactory > MultiServiceFactory;
 int main( int argc, char *argv[ ], char *envp[ ] )
 {
     HRESULT hr;
-    if( FAILED( hr=CoInitialize(NULL )))
+    if( FAILED( hr=CoInitializeEx(NULL, COINIT_APARTMENTTHREADED)))
     {
-        printf("CoInitialize failed \n");
+        printf("CoInitializeEx failed \n");
         return -1;
     }
 
@@ -149,7 +149,7 @@ DWORD WINAPI MTAFunc( void* threadData)
             StartDragData* pData= (StartDragData*)msg.wParam;
             Sequence<DataFlavor> seq= pData->transferable->getTransferDataFlavors();
             // have a look what flavours are supported
-            for( int i=0; i<seq.getLength(); i++)
+            for( int i=0; i<seq.(); i++)
             {
                 DataFlavor d= seq[i];
             }

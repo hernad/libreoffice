@@ -1849,6 +1849,25 @@
     Software.</p>
     </blockquote>
     </div>
+    <h2>dtoa</h2>
+    <p>The following software may be included in this product: dtoa.</p>
+    <p>dtoa code is covered by the MIT license:</p>
+    <blockquote>
+    <p> The author of this software is David M. Gay.</p>
+
+    <p> Copyright (c) 1991, 2000, 2001 by Lucent Technologies.</p>
+
+    <p>Permission to use, copy, modify, and distribute this software for any
+    purpose without fee is hereby granted, provided that this entire notice
+    is included in all copies of any software which is or includes a copy
+    or modification of this software and in all copies of the supporting
+    documentation for such software.</p>
+
+    <p>THIS SOFTWARE IS BEING PROVIDED "AS IS", WITHOUT ANY EXPRESS OR IMPLIED
+    WARRANTY.  IN PARTICULAR, NEITHER THE AUTHOR NOR LUCENT MAKES ANY
+    REPRESENTATION OR WARRANTY OF ANY KIND CONCERNING THE MERCHANTABILITY
+    OF THIS SOFTWARE OR ITS FITNESS FOR ANY PARTICULAR PURPOSE.</p>
+    </blockquote>
     <h2>Random123: a Library of Counter-Based Random Number Generators</h2>
     <p>The following software may be included in this product: Random123: a Library of Counter-Based Random Number
     Generators. Use of any of this software is governed by the terms of the license below:</p>
@@ -4110,15 +4129,18 @@
         <p>This work is distributed under the terms of the Creative Commons BY-SA 3.0 license.</p>
         <p><a href="#a__CC-BY-SA_3_0">Jump to CC-BY-SA 3.0</a></p>
     </div>
-    <div class="tango">
-        <h2>Tango theme</h2>
-        <p>Portions of the Tango theme contain work licenced under the Creative Commons Attribution-Share Alike 3.0
-        United States License. To view a  copy of this licence, visit <a href=
-        "http://creativecommons.org/licenses/by-sa/3.0/">http://creativecommons.org/licenses/by-sa/3.0/</a> or send a
-        letter to Creative Commons, 171 Second Street, Suite 300, San Francisco, California 94105, USA.</p>
-        <p>This artwork is attributed to the "GNOME Project": <a href=
-        "http://www.gnome.org/">http://www.gnome.org</a></p>
-        <p><a href="#a__CC-BY-SA_3_0">Jump to CC-BY-SA 3.0</a></p>
+    <div class="sukapura">
+        <h2>Sukapura</h2>
+        <p>Sukapura Icon Theme</p>
+        <blockquote>
+            Copyright (c) 2019-2020 Rizal Muttaqin &lt;riz_17_oke@yahoo.co.co.id&gt;<br />
+        </blockquote>
+        <blockquote>
+            <p>This work is distributed under the terms of Mozilla Public License version 2.0. To view a copy of this
+            licence, visit <a href="https://www.mozilla.org/en-US/MPL/2.0/ ">https://www.mozilla.org/en-US/MPL/2.0/</a>
+            </p>
+            <p><a href="a__MPL_version_2">Jump to MPL 2.0</a></p>
+        </blockquote>
     </div>
     <div class="no_mpl_subset">
         <hr />

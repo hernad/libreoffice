@@ -38,12 +38,12 @@ namespace drawinglayer
         {
         private:
             tools::WeakReference<SdrOle2Obj>            mpSdrOle2Obj;
-            basegfx::B2DHomMatrix const                 maObjectTransform;
+            basegfx::B2DHomMatrix                       maObjectTransform;
 
             // #i104867# The GraphicVersion number to identify in operator== if
             // the graphic has changed, but without fetching it (which may
             // be expensive, e.g. triggering chart creation)
-            sal_uInt32 const                            mnGraphicVersion;
+            sal_uInt32                                  mnGraphicVersion;
 
             // local decomposition.
             virtual void create2DDecomposition(Primitive2DContainer& rContainer, const geometry::ViewInformation2D& aViewInformation) const override;
@@ -65,7 +65,7 @@ namespace drawinglayer
             const basegfx::B2DHomMatrix& getObjectTransform() const { return maObjectTransform; }
 
             // provide unique ID
-            DeclPrimitive2DIDBlock()
+            virtual sal_uInt32 getPrimitive2DID() const override;
         };
     } // end of namespace primitive2d
 } // end of namespace drawinglayer

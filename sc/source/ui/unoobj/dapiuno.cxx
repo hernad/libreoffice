@@ -84,7 +84,6 @@ using ::com::sun::star::container::XIndexAccess;
 using ::com::sun::star::container::XNameAccess;
 using ::com::sun::star::container::XNamed;
 
-using ::com::sun::star::beans::PropertyVetoException;
 using ::com::sun::star::beans::UnknownPropertyException;
 using ::com::sun::star::beans::XPropertyChangeListener;
 using ::com::sun::star::beans::XPropertySet;
@@ -94,7 +93,6 @@ using ::com::sun::star::beans::XVetoableChangeListener;
 using ::com::sun::star::lang::IllegalArgumentException;
 using ::com::sun::star::lang::IndexOutOfBoundsException;
 using ::com::sun::star::lang::NullPointerException;
-using ::com::sun::star::lang::WrappedTargetException;
 
 using ::com::sun::star::table::CellAddress;
 using ::com::sun::star::table::CellRangeAddress;
@@ -163,7 +161,7 @@ const SfxItemPropertyMapEntry* lcl_GetDataPilotItemMap()
 
 bool lclCheckValidDouble( double fValue, bool bAuto )
 {
-    return bAuto || ::rtl::math::isFinite( fValue );
+    return bAuto || std::isfinite( fValue );
 }
 
 bool lclCheckMinMaxStep( const DataPilotFieldGroupInfo& rInfo )
@@ -873,7 +871,7 @@ Any SAL_CALL ScDataPilotDescriptorBase::getPropertyValue( const OUString& aPrope
             }
             else if ( aPropertyName == SC_UNO_DP_GRANDTOTAL_NAME )
             {
-                const o3tl::optional<OUString> & pGrandTotalName = aNewData.GetGrandTotalName();
+                const std::optional<OUString> & pGrandTotalName = aNewData.GetGrandTotalName();
                 if (pGrandTotalName)
                     aRet <<= *pGrandTotalName;      // same behavior as in ScDPSource
             }
@@ -1672,7 +1670,7 @@ OUString SAL_CALL ScDataPilotFieldObj::getName()
             aName = SC_DATALAYOUT_NAME;
         else
         {
-            const o3tl::optional<OUString> & pLayoutName = pDim->GetLayoutName();
+            const std::optional<OUString> & pLayoutName = pDim->GetLayoutName();
             if (pLayoutName)
                 aName = *pLayoutName;
             else

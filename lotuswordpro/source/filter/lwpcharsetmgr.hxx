@@ -61,23 +61,23 @@
 #ifndef INCLUDED_LOTUSWORDPRO_SOURCE_FILTER_LWPCHARSETMGR_HXX
 #define INCLUDED_LOTUSWORDPRO_SOURCE_FILTER_LWPCHARSETMGR_HXX
 
-#include <lwpfilehdr.hxx>
+#include <rtl/textenc.h>
 #include <map>
 
 class LwpCharSetMgr
 {
 public:
-    LwpCharSetMgr(){SetCodePageMap();}
+    LwpCharSetMgr() { SetCodePageMap(); }
     static LwpCharSetMgr* GetInstance();
     void SetCodePageMap();
-    rtl_TextEncoding    GetTextCharEncoding(sal_uInt16 wordproCode);
+    rtl_TextEncoding GetTextCharEncoding(sal_uInt16 wordproCode);
     static rtl_TextEncoding GetTextCharEncoding()
     {
-        return RTL_TEXTENCODING_MS_1252;//here should be a default value,1252 or get from platform,  1-18
+        return RTL_TEXTENCODING_MS_1252; //here should be a default value,1252 or get from platform,  1-18
     }
 
 private:
-    std::map<sal_uInt16,rtl_TextEncoding> m_CodePageMap;
+    std::map<sal_uInt16, rtl_TextEncoding> m_CodePageMap;
     static LwpCharSetMgr* Instance;
 };
 

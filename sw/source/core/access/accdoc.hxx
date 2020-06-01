@@ -17,13 +17,11 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_SW_SOURCE_CORE_ACCESS_ACCDOC_HXX
-#define INCLUDED_SW_SOURCE_CORE_ACCESS_ACCDOC_HXX
+#pragma once
 
 #include "acccontext.hxx"
 #include <com/sun/star/accessibility/XAccessibleSelection.hpp>
 #include <com/sun/star/accessibility/XAccessibleExtendedAttributes.hpp>
-#include <com/sun/star/accessibility/XAccessibleGetAccFlowTo.hpp>
 #include "accselectionhelper.hxx"
 
 // base class for SwAccessibleDocument (in this same header file) and
@@ -92,8 +90,7 @@ public:
  */
 class SwAccessibleDocument : public SwAccessibleDocumentBase,
                              public css::accessibility::XAccessibleSelection,
-                             public css::accessibility::XAccessibleExtendedAttributes,
-                             public css::accessibility::XAccessibleGetAccFlowTo
+                             public css::accessibility::XAccessibleExtendedAttributes
 {
     // Implementation for XAccessibleSelection interface
     SwAccessibleSelectionHelper maSelectionHelper;
@@ -170,12 +167,6 @@ public:
 
     // XAccessibleComponent
     sal_Int32 SAL_CALL getBackground() override;
-
-    // XAccessibleGetAccFlowTo
-    css::uno::Sequence< css::uno::Any >
-        SAL_CALL getAccFlowTo(const css::uno::Any& rAny, sal_Int32 nType) override;
 };
-
-#endif
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

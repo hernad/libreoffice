@@ -27,6 +27,7 @@
 
 #include <officecfg/Office/Common.hxx>
 
+#include <rtl/ustrbuf.hxx>
 #include <rtl/ustring.hxx>
 #include <sal/log.hxx>
 
@@ -38,8 +39,6 @@ namespace uno = com::sun::star::uno;
 namespace view = com::sun::star::view;
 
 using vcl::unx::GtkPrintWrapper;
-
-using uno::UNO_QUERY;
 
 namespace {
 
@@ -257,7 +256,7 @@ GtkSalPrinter::EndJob()
     else
     {
         //To-Do, do something with this
-        fprintf(stderr, "error was %s\n", error->message);
+        SAL_WARN("vcl.gtk3", "error was " << error->message);
         g_error_free(error);
     }
 
@@ -819,7 +818,7 @@ GtkPrintDialog::run()
         switch (nStatus)
         {
             case GTK_RESPONSE_HELP:
-                fprintf(stderr, "To-Do: Help ?\n");
+                SAL_WARN("vcl.gtk3", "To-Do: Help ?");
                 bContinue = true;
                 break;
             case GTK_RESPONSE_OK:

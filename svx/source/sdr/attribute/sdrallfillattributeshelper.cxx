@@ -17,14 +17,12 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 #include <svx/sdr/attribute/sdrallfillattributeshelper.hxx>
-#include <svx/sdr/primitive2d/sdrattributecreator.hxx>
-#include <svx/sdr/primitive2d/sdrdecompositiontools.hxx>
+#include <sdr/primitive2d/sdrattributecreator.hxx>
+#include <sdr/primitive2d/sdrdecompositiontools.hxx>
 #include <basegfx/polygon/b2dpolygontools.hxx>
-#include <basegfx/matrix/b2dhommatrix.hxx>
 #include <basegfx/polygon/b2dpolygon.hxx>
 #include <drawinglayer/attribute/fillhatchattribute.hxx>
 #include <drawinglayer/attribute/sdrfillgraphicattribute.hxx>
-#include <svx/xfillit0.hxx>
 #include <vcl/graph.hxx>
 
 //////////////////////////////////////////////////////////////////////////////
@@ -47,8 +45,8 @@ namespace drawinglayer::attribute
                         basegfx::utils::createPolygonFromRect(
                             maLastPaintRange)),
                         maLastDefineRange,
-                    maFillAttribute.get() ? *maFillAttribute : drawinglayer::attribute::SdrFillAttribute(),
-                    maFillGradientAttribute.get() ? *maFillGradientAttribute : drawinglayer::attribute::FillGradientAttribute());
+                    maFillAttribute ? *maFillAttribute : drawinglayer::attribute::SdrFillAttribute(),
+                    maFillGradientAttribute ? *maFillGradientAttribute : drawinglayer::attribute::FillGradientAttribute());
             }
         }
 
@@ -88,7 +86,7 @@ namespace drawinglayer::attribute
         bool SdrAllFillAttributesHelper::isUsed() const
         {
             // only depends on fill, FillGradientAttribute alone defines no fill
-            return maFillAttribute.get() && !maFillAttribute->isDefault();
+            return maFillAttribute && !maFillAttribute->isDefault();
         }
 
         bool SdrAllFillAttributesHelper::isTransparent() const
@@ -98,7 +96,7 @@ namespace drawinglayer::attribute
                 return true;
             }
 
-            if(maFillGradientAttribute.get() && !maFillGradientAttribute->isDefault())
+            if(maFillGradientAttribute && !maFillGradientAttribute->isDefault())
             {
                 return true;
             }
@@ -115,7 +113,7 @@ namespace drawinglayer::attribute
 
         const drawinglayer::attribute::SdrFillAttribute& SdrAllFillAttributesHelper::getFillAttribute() const
         {
-            if(!maFillAttribute.get())
+            if(!maFillAttribute)
             {
                 const_cast< SdrAllFillAttributesHelper* >(this)->maFillAttribute =
                     std::make_shared<drawinglayer::attribute::SdrFillAttribute>();
@@ -126,7 +124,7 @@ namespace drawinglayer::attribute
 
         const drawinglayer::attribute::FillGradientAttribute& SdrAllFillAttributesHelper::getFillGradientAttribute() const
         {
-            if(!maFillGradientAttribute.get())
+            if(!maFillGradientAttribute)
             {
                 const_cast< SdrAllFillAttributesHelper* >(this)->maFillGradientAttribute =
                     std::make_shared<drawinglayer::attribute::FillGradientAttribute>();
@@ -156,7 +154,7 @@ namespace drawinglayer::attribute
         {
             basegfx::BColor aRetval(rFallback);
 
-            if(maFillAttribute.get() && !maFillAttribute->isDefault())
+            if(maFillAttribute && !maFillAttribute->isDefault())
             {
                 const drawinglayer::attribute::FillGradientAttribute& rFillGradientAttribute = maFillAttribute->getGradient();
                 const drawinglayer::attribute::FillHatchAttribute& rFillHatchAttribute = maFillAttribute->getHatch();

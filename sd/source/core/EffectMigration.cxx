@@ -51,7 +51,7 @@ namespace {
 
 struct deprecated_FadeEffect_conversion_table_entry
 {
-    FadeEffect const  meFadeEffect;
+    FadeEffect  meFadeEffect;
     const char* mpPresetId;
 };
 
@@ -221,7 +221,7 @@ namespace {
 
 struct deprecated_AnimationEffect_conversion_table_entry
 {
-    AnimationEffect const meEffect;
+    AnimationEffect meEffect;
     const char* mpPresetId;
     const char* mpPresetSubType;
 };
@@ -454,7 +454,7 @@ void EffectMigration::SetAnimationEffect( SvxShape* pShape, AnimationEffect eEff
     CustomAnimationPresetPtr pPreset( rPresets.getEffectDescriptor( aPresetId ) );
     sd::MainSequencePtr pMainSequence = static_cast<SdPage*>(pObj->getSdrPageFromSdrObject())->getMainSequence();
 
-    if( !(pPreset.get() && pMainSequence.get()) )
+    if( !(pPreset && pMainSequence) )
         return;
 
     const Reference< XShape > xShape( pShape );
@@ -476,7 +476,7 @@ void EffectMigration::SetAnimationEffect( SvxShape* pShape, AnimationEffect eEff
             if( nGroupId >= 0 )
             {
                 CustomAnimationTextGroupPtr pGroup = pMainSequence->findGroup( nGroupId );
-                if( pGroup.get() )
+                if( pGroup )
                 {
                     // add an effect to animate the shape
                     pMainSequence->setAnimateForm( pGroup, true );
@@ -509,7 +509,7 @@ void EffectMigration::SetAnimationEffect( SvxShape* pShape, AnimationEffect eEff
                 CustomAnimationEffectPtr pEffect = std::make_shared<CustomAnimationEffect>( xNode );
                 pEffect->setTarget( makeAny( xShape ) );
                 SdPage* pPage = dynamic_cast< SdPage* >( pObj->getSdrPageFromSdrObject() );
-                const bool bManual = (pPage == nullptr) || (pPage->GetPresChange() == PRESCHANGE_MANUAL);
+                const bool bManual = (pPage == nullptr) || (pPage->GetPresChange() == PresChange::Manual);
                 if( !bManual )
                     pEffect->setNodeType( EffectNodeType::AFTER_PREVIOUS );
 
@@ -538,7 +538,7 @@ void EffectMigration::SetAnimationEffect( SvxShape* pShape, AnimationEffect eEff
             pEffect = *aIterOnlyBackground;
         }
 
-        if( pEffect.get() )
+        if( pEffect )
         {
             if( (pEffect->getPresetId() != aPresetId) ||
                 (pEffect->getPresetSubType() != aPresetSubType) )
@@ -557,7 +557,7 @@ AnimationEffect EffectMigration::GetAnimationEffect( SvxShape* pShape )
     SdrObject* pObj = pShape->GetSdrObject();
     sd::MainSequencePtr pMainSequence = static_cast<SdPage*>(pObj->getSdrPageFromSdrObject())->getMainSequence();
 
-    if( pMainSequence.get() )
+    if( pMainSequence )
     {
         const Reference< XShape > xShape( pShape );
 
@@ -619,7 +619,7 @@ void EffectMigration::SetTextAnimationEffect( SvxShape* pShape, AnimationEffect 
 
     sd::MainSequencePtr pMainSequence = static_cast<SdPage*>(pObj->getSdrPageFromSdrObject())->getMainSequence();
 
-    if( !(pPreset.get() && pMainSequence.get()) )
+    if( !(pPreset && pMainSequence) )
         return;
 
     const Reference< XShape > xShape( pShape );
@@ -656,8 +656,6 @@ void EffectMigration::SetTextAnimationEffect( SvxShape* pShape, AnimationEffect 
             }
             else
             {
-                CustomAnimationPresetPtr pShapePreset( rPresets.getEffectDescriptor( "ooo-entrance-appear" ) );
-
                 Reference< XAnimationNode > xNode( pPreset->create( "" ) );
                 DBG_ASSERT( xNode.is(), "EffectMigration::SetTextAnimationEffect(), could not create preset!" );
                 if( xNode.is() )
@@ -668,16 +666,16 @@ void EffectMigration::SetTextAnimationEffect( SvxShape* pShape, AnimationEffect 
                     pMainSequence->append( pShapeEffect );
 
                     SdPage* pPage = dynamic_cast< SdPage* >( pObj->getSdrPageFromSdrObject() );
-                    if( pPage && pPage->GetPresChange() != PRESCHANGE_MANUAL )
+                    if( pPage && pPage->GetPresChange() != PresChange::Manual )
                         pShapeEffect->setNodeType( EffectNodeType::AFTER_PREVIOUS );
                 }
             }
         }
 
-        if( pShapeEffect.get() )
+        if( pShapeEffect )
         {
             SdPage* pPage = dynamic_cast< SdPage* >( pObj->getSdrPageFromSdrObject() );
-            const bool bManual = (pPage == nullptr) || (pPage->GetPresChange() == PRESCHANGE_MANUAL);
+            const bool bManual = (pPage == nullptr) || (pPage->GetPresChange() == PresChange::Manual);
 
             // now create effects for each paragraph
             pGroup =
@@ -732,7 +730,7 @@ AnimationEffect EffectMigration::GetTextAnimationEffect( SvxShape* pShape )
     {
         sd::MainSequencePtr pMainSequence = static_cast<SdPage*>(pObj->getSdrPageFromSdrObject())->getMainSequence();
 
-        if( pMainSequence.get() )
+        if( pMainSequence )
         {
             const Reference< XShape > xShape( pShape );
             EffectSequence::iterator aIter( ImplFindEffect( pMainSequence, xShape, ShapeAnimationSubType::ONLY_TEXT ) );
@@ -1280,8 +1278,8 @@ void EffectMigration::SetAnimationPath( SvxShape* pShape, SdrPathObj const * pPa
         if( pPage )
         {
             std::shared_ptr< sd::MainSequence > pMainSequence( pPage->getMainSequence() );
-            if( pMainSequence.get() )
-                CustomAnimationEffectPtr pCreated( pMainSequence->append( *pPathObj, makeAny( xShape ), -1.0, "" ) );
+            if( pMainSequence )
+                pMainSequence->append( *pPathObj, makeAny( xShape ), -1.0, "" );
         }
     }
 }
@@ -1355,7 +1353,7 @@ void EffectMigration::CreateAnimatedGroup(SdrObjGroup const & rGroupObj, SdPage&
 
     std::shared_ptr< sd::MainSequence > pMainSequence(rPage.getMainSequence());
 
-    if(!pMainSequence.get())
+    if(!pMainSequence)
         return;
 
     std::vector< SdrObject* > aObjects;

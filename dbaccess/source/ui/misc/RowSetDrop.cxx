@@ -18,6 +18,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <DExport.hxx>
 #include <TokenWriter.hxx>
 #include <com/sun/star/sdbc/XColumnLocate.hpp>
 #include <com/sun/star/sdbc/XResultSetMetaDataSupplier.hpp>
@@ -27,7 +28,6 @@
 #include <strings.hrc>
 #include <strings.hxx>
 #include <sqlmessage.hxx>
-#include <stringconstants.hxx>
 #include <com/sun/star/sdbc/XRowUpdate.hpp>
 
 using namespace dbaui;

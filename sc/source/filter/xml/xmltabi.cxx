@@ -43,6 +43,7 @@
 
 #include <tools/urlobj.hxx>
 #include <sax/fastattribs.hxx>
+#include <com/sun/star/sheet/XSpreadsheet.hpp>
 #include <comphelper/servicehelper.hxx>
 
 using namespace com::sun::star;
@@ -231,14 +232,6 @@ SvXMLImportContextRef ScXMLTableContext::CreateChildContext( sal_uInt16 nPrefix,
             pContext = xmloff::OFormLayerXMLImport::createOfficeFormsContext( GetScImport(), nPrefix, rLName );
         }
         break;
-    case XML_TOK_TABLE_EVENT_LISTENERS:
-    case XML_TOK_TABLE_EVENT_LISTENERS_EXT:
-        {
-            // use XEventsSupplier interface of the sheet
-            uno::Reference<document::XEventsSupplier> xSupplier( GetScImport().GetTables().GetCurrentXSheet(), uno::UNO_QUERY );
-            pContext = new XMLEventsImportContext( GetImport(), nPrefix, rLName, xSupplier );
-        }
-        break;
     default:
         ;
     }
@@ -251,7 +244,7 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL
         const uno::Reference< xml::sax::XFastAttributeList > & xAttrList )
 {
     sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
+        &sax_fastparser::castToFastAttributeList( xAttrList );
 
     if (pExternalRefInfo)
     {
@@ -286,7 +279,7 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL
         SCTAB nTab = GetScImport().GetTables().GetCurrentSheet();
         pContext = new ScXMLNamedExpressionsContext(
             GetScImport(),
-            new ScXMLNamedExpressionsContext::SheetLocalInserter(GetScImport(), nTab));
+            std::make_shared<ScXMLNamedExpressionsContext::SheetLocalInserter>(GetScImport(), nTab));
     }
         break;
     case XML_ELEMENT( TABLE, XML_TABLE_COLUMN_GROUP ):
@@ -335,6 +328,14 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL
         break;
     case XML_ELEMENT( CALC_EXT, XML_CONDITIONAL_FORMATS ):
         pContext = new ScXMLConditionalFormatsContext( GetScImport() );
+        break;
+    case XML_ELEMENT(OFFICE, XML_EVENT_LISTENERS):
+    case XML_ELEMENT(OFFICE_EXT, XML_EVENT_LISTENERS):
+        {
+            // use XEventsSupplier interface of the sheet
+            uno::Reference<document::XEventsSupplier> xSupplier( GetScImport().GetTables().GetCurrentXSheet(), uno::UNO_QUERY );
+            pContext = new XMLEventsImportContext( GetImport(), xSupplier );
+        }
         break;
     }
 
@@ -461,7 +462,7 @@ ScXMLTableProtectionContext::ScXMLTableProtectionContext(
                 bDeleteRows = IsXMLToken(aIter, XML_TRUE);
                 break;
             default:
-                SAL_WARN("sc", "unknown attribute: " << nToken);
+                SAL_WARN("sc", "unknown attribute " << SvXMLImport::getPrefixAndNameFromToken(nToken) << "=" << aIter.toString());
             }
         }
     }

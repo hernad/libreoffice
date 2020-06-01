@@ -45,11 +45,8 @@ public class OOoViewer extends Applet {
                 String officeURL = url.toString();
                 URL[] arURL = new URL[] {
                     new URL(officeURL + "/program/classes/officebean.jar"),
-                    new URL(officeURL + "/program/classes/jurt.jar"),
-                    new URL(officeURL + "/program/classes/ridl.jar"),
-                    new URL(officeURL + "/program/classes/unoil.jar"),
-                    new URL(officeURL + "/program/classes/java_uno.jar"),
-                    new URL(officeURL + "/program/classes/juh.jar")
+                    new URL(officeURL + "/program/classes/libreoffice.jar"),
+                    new URL(officeURL + "/program/classes/java_uno.jar")
                 };
                 m_loader = new CustomURLClassLoader(arURL);
                 File fileProg = new File(s + "/program");

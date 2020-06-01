@@ -31,8 +31,8 @@
 #include <memory>
 #include <vector>
 
-namespace com { namespace sun { namespace star { namespace frame { class XFrame; } } } }
-namespace com { namespace sun { namespace star { namespace frame { struct FeatureStateEvent; } } } }
+namespace com::sun::star::frame { class XFrame; }
+namespace com::sun::star::frame { struct FeatureStateEvent; }
 template <class T> class VclStatusListener;
 
 class Timer;
@@ -254,10 +254,6 @@ public:
 
 protected:
     virtual void ApplySettings(vcl::RenderContext& rRenderContext) override;
-    void SetCurItemId(sal_uInt16 nSet)
-    {
-        mnCurItemId = nSet;
-    }
 
 public:
     ToolBox(vcl::Window* pParent, WinBits nStyle = 0);
@@ -361,6 +357,9 @@ public:
     ToolBoxItemBits     GetItemBits( sal_uInt16 nItemId ) const;
 
     void                SetItemExpand( sal_uInt16 nItemId, bool bExpand );
+    // e.g. a label used as an itemwindow
+    void                SetItemWindowNonInteractive(sal_uInt16 nItemId, bool bNonInteractive);
+
 
     void                SetItemData( sal_uInt16 nItemId, void* pNewData );
     void*               GetItemData( sal_uInt16 nItemId ) const;
@@ -455,7 +454,6 @@ public:
     void                SetActivateHdl( const Link<ToolBox *, void>& rLink ) { maActivateHdl = rLink; }
     void                SetDeactivateHdl( const Link<ToolBox *, void>& rLink ) { maDeactivateHdl = rLink; }
     void                SetSelectHdl( const Link<ToolBox *, void>& rLink ) { maSelectHdl = rLink; }
-    const Link<ToolBox *, void>& GetSelectHdl() const { return maSelectHdl; }
     void                SetStateChangedHdl( const Link<StateChangedType const *, void>& aLink ) { maStateChangedHandler = aLink; }
     void                SetDataChangedHdl( const Link<DataChangedEvent const *, void>& aLink ) { maDataChangedHandler = aLink; }
     void                SetMenuButtonHdl( const Link<ToolBox *, void>& rLink ) { maMenuButtonHdl = rLink; }
@@ -499,7 +497,6 @@ public:
     static Size         GetDefaultImageSize(ToolBoxButtonSize eToolBoxButtonSize);
     Size                GetDefaultImageSize() const;
     void                ChangeHighlight( ImplToolItems::size_type nPos );
-    bool                ChangeHighlightUpDn( bool bUp );
 
 
     void SetToolbarLayoutMode( ToolBoxLayoutMode eLayout );

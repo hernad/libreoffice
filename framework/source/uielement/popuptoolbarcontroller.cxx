@@ -22,7 +22,7 @@
 #include <cppuhelper/implbase.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <comphelper/propertyvalue.hxx>
-#include <framework/menuconfiguration.hxx>
+#include <menuconfiguration.hxx>
 #include <svtools/imagemgr.hxx>
 #include <svtools/miscopt.hxx>
 #include <svtools/toolboxcontroller.hxx>
@@ -355,28 +355,28 @@ void GenericPopupToolbarController::statusChanged( const css::frame::FeatureStat
 
 void GenericPopupToolbarController::functionExecuted( const OUString& rCommand )
 {
-    if ( m_bReplaceWithLast )
+    if ( !m_bReplaceWithLast )
+        return;
+
+    removeStatusListener( m_aCommandURL );
+
+    auto aProperties = vcl::CommandInfoProvider::GetCommandProperties(rCommand, m_sModuleName);
+    OUString aRealCommand( vcl::CommandInfoProvider::GetRealCommandForCommand(aProperties) );
+    m_aCommandURL = aRealCommand.isEmpty() ? rCommand : aRealCommand;
+    addStatusListener( m_aCommandURL );
+
+    ToolBox* pToolBox = nullptr;
+    sal_uInt16 nId = 0;
+    if ( getToolboxId( nId, &pToolBox ) )
     {
-        removeStatusListener( m_aCommandURL );
+        pToolBox->SetItemCommand( nId, rCommand );
+        pToolBox->SetHelpText( nId, OUString() ); // Will retrieve the new one from help.
+        pToolBox->SetItemText(nId, vcl::CommandInfoProvider::GetLabelForCommand(aProperties));
+        pToolBox->SetQuickHelpText(nId, vcl::CommandInfoProvider::GetTooltipForCommand(rCommand, aProperties, m_xFrame));
 
-        auto aProperties = vcl::CommandInfoProvider::GetCommandProperties(rCommand, m_sModuleName);
-        OUString aRealCommand( vcl::CommandInfoProvider::GetRealCommandForCommand(aProperties) );
-        m_aCommandURL = aRealCommand.isEmpty() ? rCommand : aRealCommand;
-        addStatusListener( m_aCommandURL );
-
-        ToolBox* pToolBox = nullptr;
-        sal_uInt16 nId = 0;
-        if ( getToolboxId( nId, &pToolBox ) )
-        {
-            pToolBox->SetItemCommand( nId, rCommand );
-            pToolBox->SetHelpText( nId, OUString() ); // Will retrieve the new one from help.
-            pToolBox->SetItemText(nId, vcl::CommandInfoProvider::GetLabelForCommand(aProperties));
-            pToolBox->SetQuickHelpText(nId, vcl::CommandInfoProvider::GetTooltipForCommand(rCommand, aProperties, m_xFrame));
-
-            Image aImage = vcl::CommandInfoProvider::GetImageForCommand(rCommand, m_xFrame, pToolBox->GetImageSize());
-            if ( !!aImage )
-                pToolBox->SetItemImage( nId, aImage );
-        }
+        Image aImage = vcl::CommandInfoProvider::GetImageForCommand(rCommand, m_xFrame, pToolBox->GetImageSize());
+        if ( !!aImage )
+            pToolBox->SetItemImage( nId, aImage );
     }
 }
 
@@ -730,29 +730,33 @@ bool Impl_ExistURLInMenu(
 {
     bool bValidFallback( false );
     sal_uInt16 nCount( 0 );
-    if ( rPopupMenu.is() && ( nCount = rPopupMenu->getItemCount() ) != 0 && sURL.getLength() )
+    if ( rPopupMenu.is() )
     {
-        for ( sal_uInt16 n = 0; n < nCount; ++n )
+        nCount = rPopupMenu->getItemCount();
+        if (nCount != 0 && sURL.getLength() )
         {
-            sal_uInt16 nId = rPopupMenu->getItemId( n );
-            OUString aCmd( rPopupMenu->getCommand( nId ) );
-
-            if ( !bValidFallback && aCmd.getLength() )
+            for ( sal_uInt16 n = 0; n < nCount; ++n )
             {
-                sFallback = aCmd;
-                bValidFallback = true;
-            }
+                sal_uInt16 nId = rPopupMenu->getItemId( n );
+                OUString aCmd( rPopupMenu->getCommand( nId ) );
 
-            // match even if the menu command is more detailed
-            // (maybe an additional query) #i28667#
-            if ( aCmd.match( sURL ) )
-            {
-                sURL = aCmd;
-                const css::uno::Reference< css::graphic::XGraphic > xGraphic(
-                    rPopupMenu->getItemImage( nId ) );
-                if ( xGraphic.is() )
-                    aImage = Image( xGraphic );
-                return true;
+                if ( !bValidFallback && aCmd.getLength() )
+                {
+                    sFallback = aCmd;
+                    bValidFallback = true;
+                }
+
+                // match even if the menu command is more detailed
+                // (maybe an additional query) #i28667#
+                if ( aCmd.match( sURL ) )
+                {
+                    sURL = aCmd;
+                    const css::uno::Reference< css::graphic::XGraphic > xGraphic(
+                        rPopupMenu->getItemImage( nId ) );
+                    if ( xGraphic.is() )
+                        aImage = Image( xGraphic );
+                    return true;
+                }
             }
         }
     }

@@ -18,7 +18,6 @@
  */
 
 #include <ColumnControlWindow.hxx>
-#include <FieldControls.hxx>
 #include <unotools/syslocale.hxx>
 #include <i18nlangtag/languagetag.hxx>
 #include <connectivity/dbtools.hxx>
@@ -153,7 +152,7 @@ OUString OColumnControlWindow::getAutoIncrementValue() const
 
 TOTypeInfoSP const & OColumnControlWindow::getDefaultTyp() const
 {
-    if ( !m_pTypeInfo.get() )
+    if ( !m_pTypeInfo )
     {
         m_pTypeInfo = std::make_shared<OTypeInfo>();
         m_pTypeInfo->aUIName = m_sTypeNames.getToken(TYPE_OTHER, ';');

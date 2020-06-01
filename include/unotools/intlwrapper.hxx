@@ -26,7 +26,7 @@
 #include <i18nlangtag/languagetag.hxx>
 #include <memory>
 
-namespace com { namespace sun { namespace star { namespace uno { class XComponentContext; } } } }
+namespace com::sun::star::uno { class XComponentContext; }
 
 class CollatorWrapper;
 class LocaleDataWrapper;
@@ -50,7 +50,7 @@ class LocaleDataWrapper;
 class UNOTOOLS_DLLPUBLIC IntlWrapper
 {
 private:
-    LanguageTag const         maLanguageTag;
+    LanguageTag         maLanguageTag;
     css::uno::Reference< css::uno::XComponentContext > m_xContext;
 
     std::unique_ptr<LocaleDataWrapper>  pLocaleData;

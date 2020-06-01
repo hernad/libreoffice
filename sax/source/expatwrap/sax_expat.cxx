@@ -387,7 +387,7 @@ class ParserCleanup
 {
 private:
     SaxExpatParser_Impl& m_rParser;
-    XML_Parser const m_xmlParser;
+    XML_Parser m_xmlParser;
 public:
     ParserCleanup(SaxExpatParser_Impl& rParser, XML_Parser xmlParser)
         : m_rParser(rParser)
@@ -699,25 +699,25 @@ void SaxExpatParser_Impl::callbackStartElement( void *pvThis ,
 {
     SaxExpatParser_Impl *pImpl = static_cast<SaxExpatParser_Impl*>(pvThis);
 
-    if( pImpl->rDocumentHandler.is() ) {
+    if( !pImpl->rDocumentHandler.is() )
+        return;
 
-        int i = 0;
-        pImpl->rAttrList->Clear();
+    int i = 0;
+    pImpl->rAttrList->Clear();
 
-        while( awAttributes[i] ) {
-            assert(awAttributes[i+1]);
-            pImpl->rAttrList->AddAttribute(
-                XML_CHAR_TO_OUSTRING( awAttributes[i] ) ,
-                gsCDATA,  // expat doesn't know types
-                XML_CHAR_TO_OUSTRING( awAttributes[i+1] ) );
-            i +=2;
-        }
-
-        CALL_ELEMENT_HANDLER_AND_CARE_FOR_EXCEPTIONS(
-            pImpl ,
-            rDocumentHandler->startElement( XML_CHAR_TO_OUSTRING( pwName ) ,
-                                            pImpl->rAttrList.get() ) );
+    while( awAttributes[i] ) {
+        assert(awAttributes[i+1]);
+        pImpl->rAttrList->AddAttribute(
+            XML_CHAR_TO_OUSTRING( awAttributes[i] ) ,
+            gsCDATA,  // expat doesn't know types
+            XML_CHAR_TO_OUSTRING( awAttributes[i+1] ) );
+        i +=2;
     }
+
+    CALL_ELEMENT_HANDLER_AND_CARE_FOR_EXCEPTIONS(
+        pImpl ,
+        rDocumentHandler->startElement( XML_CHAR_TO_OUSTRING( pwName ) ,
+                                        pImpl->rAttrList.get() ) );
 }
 
 void SaxExpatParser_Impl::callbackEndElement( void *pvThis , const XML_Char *pwName  )

@@ -30,7 +30,6 @@
 #include <editeng/eeitem.hxx>
 #include <editeng/flditem.hxx>
 #include <editeng/measfld.hxx>
-#include <editeng/outliner.hxx>
 #include <editeng/outlobj.hxx>
 #include <math.h>
 #include <svl/style.hxx>
@@ -45,14 +44,10 @@
 #include <svx/svdopath.hxx>
 #include <svx/svdoutl.hxx>
 #include <svx/svdpage.hxx>
-#include <svx/svdpool.hxx>
 #include <svx/svdtrans.hxx>
 #include <svx/svdview.hxx>
 #include <svx/sxmbritm.hxx>
-#include <svx/sxmfsitm.hxx>
-#include <sxmkitm.hxx>
 #include <svx/sxmlhitm.hxx>
-#include <sxmoitm.hxx>
 #include <sxmsitm.hxx>
 #include <sxmtaitm.hxx>
 #include <svx/sxmtfitm.hxx>
@@ -67,6 +62,7 @@
 #include <svx/xlnstwit.hxx>
 #include <svx/xlnwtit.hxx>
 #include <svx/xpoly.hxx>
+#include <rtl/ustrbuf.hxx>
 #include <unotools/syslocale.hxx>
 #include <unotools/localedatawrapper.hxx>
 #include <vcl/ptrstyle.hxx>
@@ -550,7 +546,7 @@ basegfx::B2DPolyPolygon SdrMeasureObj::ImpCalcXPoly(const ImpMeasurePoly& rPol)
 
 bool SdrMeasureObj::CalcFieldValue(const SvxFieldItem& rField, sal_Int32 nPara, sal_uInt16 nPos,
     bool bEdit,
-    o3tl::optional<Color>& rpTxtColor, o3tl::optional<Color>& rpFldColor, OUString& rRet) const
+    std::optional<Color>& rpTxtColor, std::optional<Color>& rpFldColor, OUString& rRet) const
 {
     const SvxFieldData* pField=rField.GetField();
     const SdrMeasureField* pMeasureField=dynamic_cast<const SdrMeasureField*>( pField );

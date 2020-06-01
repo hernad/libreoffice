@@ -28,16 +28,16 @@
 
 namespace chart { struct ExplicitIncrementData; }
 namespace chart { struct ExplicitScaleData; }
-namespace com { namespace sun { namespace star { namespace chart2 { class XAxis; } } } }
-namespace com { namespace sun { namespace star { namespace chart2 { class XChartDocument; } } } }
-namespace com { namespace sun { namespace star { namespace chart2 { class XDataSeries; } } } }
-namespace com { namespace sun { namespace star { namespace chart2 { class XDiagram; } } } }
-namespace com { namespace sun { namespace star { namespace chart2 { class XTitle; } } } }
-namespace com { namespace sun { namespace star { namespace container { class XNameContainer; } } } }
-namespace com { namespace sun { namespace star { namespace drawing { class XDrawPage; } } } }
-namespace com { namespace sun { namespace star { namespace frame { class XModel; } } } }
-namespace com { namespace sun { namespace star { namespace lang { class XUnoTunnel; } } } }
-namespace com { namespace sun { namespace star { namespace uno { class XComponentContext; } } } }
+namespace com::sun::star::chart2 { class XAxis; }
+namespace com::sun::star::chart2 { class XChartDocument; }
+namespace com::sun::star::chart2 { class XDataSeries; }
+namespace com::sun::star::chart2 { class XDiagram; }
+namespace com::sun::star::chart2 { class XTitle; }
+namespace com::sun::star::container { class XNameContainer; }
+namespace com::sun::star::drawing { class XDrawPage; }
+namespace com::sun::star::frame { class XModel; }
+namespace com::sun::star::lang { class XUnoTunnel; }
+namespace com::sun::star::uno { class XComponentContext; }
 
 
 namespace chart
@@ -78,7 +78,7 @@ public:
     sal_Int32 getExplicitNumberFormatKeyForAxis(
             const css::uno::Reference< css::chart2::XAxis >& xAxis );
 
-    sal_Int32 getExplicitNumberFormatKeyForSeries(
+    static sal_Int32 getExplicitNumberFormatKeyForSeries(
             const css::uno::Reference< css::chart2::XDataSeries >& xSeries );
 
     /** Returns the size of the page in logic coordinates.  This value is used

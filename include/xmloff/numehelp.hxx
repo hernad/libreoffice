@@ -28,15 +28,15 @@
 
 #include <set>
 
-namespace com { namespace sun { namespace star { namespace util { class XNumberFormats; } } } }
-namespace com { namespace sun { namespace star { namespace util { class XNumberFormatsSupplier; } } } }
+namespace com::sun::star::util { class XNumberFormats; }
+namespace com::sun::star::util { class XNumberFormatsSupplier; }
 
 class SvXMLExport;
 
 struct XMLNumberFormat
 {
     OUString   sCurrency;
-    sal_Int32 const  nNumberFormat;
+    sal_Int32  nNumberFormat;
     sal_Int16  nType;
     bool       bIsStandard : 1;
 

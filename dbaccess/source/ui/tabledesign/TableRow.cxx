@@ -20,7 +20,6 @@
 #include <TableRow.hxx>
 #include <tools/stream.hxx>
 #include <FieldDescriptions.hxx>
-#include <algorithm>
 #include <comphelper/types.hxx>
 
 using namespace dbaui;
@@ -79,7 +78,7 @@ bool OTableRow::IsPrimaryKey() const
 
 void OTableRow::SetFieldType( const TOTypeInfoSP& _pType, bool _bForce )
 {
-    if ( _pType.get() )
+    if ( _pType )
     {
         if( !m_pActFieldDescr )
         {

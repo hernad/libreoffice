@@ -29,9 +29,9 @@
 #include <memory>
 #include <vector>
 
-namespace com { namespace sun { namespace star { namespace uno { class XComponentContext; } } } }
-namespace com { namespace sun { namespace star { namespace util { class XNumberFormatsSupplier; } } } }
-namespace com { namespace sun { namespace star { namespace xml { namespace sax { class XAttributeList; } } } } }
+namespace com::sun::star::uno { class XComponentContext; }
+namespace com::sun::star::util { class XNumberFormatsSupplier; }
+namespace com::sun::star::xml::sax { class XAttributeList; }
 
 #define XML_NUMBERSTYLES "NumberStyles"
 
@@ -117,9 +117,9 @@ struct MyCondition
 class XMLOFF_DLLPUBLIC SvXMLNumFormatContext : public SvXMLStyleContext
 {
     SvXMLNumImpData*    pData;
-    SvXMLStylesContext* const   pStyles;
+    SvXMLStylesContext*             pStyles;
     std::vector <MyCondition>   aMyConditions;
-    sal_uInt16 const          nType;
+    sal_uInt16          nType;
     sal_Int32           nKey;
 //  OUString       sFormatName;
     OUString       sFormatTitle;

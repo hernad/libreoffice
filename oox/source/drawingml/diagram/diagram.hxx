@@ -22,17 +22,18 @@
 
 #include <map>
 #include <memory>
+#include <vector>
 
 #include <rtl/ustring.hxx>
 
 #include "datamodel.hxx"
 #include <oox/drawingml/shape.hxx>
 
-namespace com { namespace sun { namespace star {
-    namespace xml { namespace dom { class XDocument; } }
-} } }
+namespace com::sun::star {
+    namespace xml::dom { class XDocument; }
+}
 
-namespace oox { namespace drawingml {
+namespace oox::drawingml {
 
 class Diagram;
 class LayoutNode;
@@ -111,12 +112,15 @@ typedef std::map<OUString,DiagramStyle> DiagramQStyleMap;
 
 struct DiagramColor
 {
-    oox::drawingml::Color maFillColor;
-    oox::drawingml::Color maLineColor;
-    oox::drawingml::Color maEffectColor;
-    oox::drawingml::Color maTextFillColor;
-    oox::drawingml::Color maTextLineColor;
-    oox::drawingml::Color maTextEffectColor;
+    std::vector<oox::drawingml::Color> maFillColors;
+    std::vector<oox::drawingml::Color> maLineColors;
+    std::vector<oox::drawingml::Color> maEffectColors;
+    std::vector<oox::drawingml::Color> maTextFillColors;
+    std::vector<oox::drawingml::Color> maTextLineColors;
+    std::vector<oox::drawingml::Color> maTextEffectColors;
+
+    static const oox::drawingml::Color&
+    getColorByIndex(const std::vector<oox::drawingml::Color>& rColors, sal_Int32 nIndex);
 };
 
 typedef std::map<OUString,DiagramColor> DiagramColorMap;
@@ -153,7 +157,7 @@ private:
 
 typedef std::shared_ptr< Diagram > DiagramPtr;
 
-} }
+}
 
 #endif
 

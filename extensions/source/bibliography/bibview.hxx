@@ -19,7 +19,6 @@
 #ifndef INCLUDED_EXTENSIONS_SOURCE_BIBLIOGRAPHY_BIBVIEW_HXX
 #define INCLUDED_EXTENSIONS_SOURCE_BIBLIOGRAPHY_BIBVIEW_HXX
 
-#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/awt/XControlContainer.hpp>
 #include "formcontrolcontainer.hxx"
 #include "bibshortcuthandler.hxx"
@@ -27,7 +26,7 @@
 class   BibGeneralPage;
 class   BibDataManager;
 
-namespace com{ namespace sun{ namespace star{ namespace awt{ class XFocusListener;}}}}
+namespace com::sun::star::awt{ class XFocusListener;}
 
 
 namespace bib

@@ -237,7 +237,7 @@ void ScDBDataManager::WriteToDoc(ScDocument& rDoc)
     SCROW nRowSize = std::min<SCROW>(aDestRange.aEnd.Row() - aDestRange.aStart.Row(), nEndRow);
     aDestRange.aEnd.SetRow(aDestRange.aStart.Row() + nRowSize);
 
-    ScMarkData aMark(mpDoc->MaxRow(), mpDoc->MaxCol());
+    ScMarkData aMark(mpDoc->GetSheetLimits());
     aMark.SelectTable(0, true);
     mpDoc->CopyFromClip(aDestRange, aMark, InsertDeleteFlags::CONTENTS, nullptr, &rDoc);
     ScDocShell* pDocShell = static_cast<ScDocShell*>(mpDoc->GetDocumentShell());
@@ -262,7 +262,7 @@ void ScDBDataManager::SetDatabase(const OUString& rDBName)
 
 ScDBData* ScDBDataManager::getDBData()
 {
-    ScDBData* pDBData = mpDoc->GetDBCollection()->getNamedDBs().findByUpperName(ScGlobal::pCharClass->uppercase(maDBName));
+    ScDBData* pDBData = mpDoc->GetDBCollection()->getNamedDBs().findByUpperName(ScGlobal::getCharClassPtr()->uppercase(maDBName));
     return pDBData;
 }
 

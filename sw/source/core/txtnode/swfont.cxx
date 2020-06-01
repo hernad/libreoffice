@@ -121,7 +121,7 @@ void SwFont::SetLeftBorder( const editeng::SvxBorderLine* pLeftBorder )
     m_aSub[SwFontScript::Latin].m_nFontCacheId = m_aSub[SwFontScript::CJK].m_nFontCacheId = m_aSub[SwFontScript::CTL].m_nFontCacheId = nullptr;
 }
 
-const o3tl::optional<editeng::SvxBorderLine>&
+const std::optional<editeng::SvxBorderLine>&
 SwFont::GetAbsTopBorder(const bool bVertLayout, const bool bVertLayoutLRBT) const
 {
     switch (GetOrientation(bVertLayout, bVertLayoutLRBT))
@@ -145,7 +145,7 @@ SwFont::GetAbsTopBorder(const bool bVertLayout, const bool bVertLayoutLRBT) cons
     }
 }
 
-const o3tl::optional<editeng::SvxBorderLine>&
+const std::optional<editeng::SvxBorderLine>&
 SwFont::GetAbsBottomBorder(const bool bVertLayout, const bool bVertLayoutLRBT) const
 {
     switch (GetOrientation(bVertLayout, bVertLayoutLRBT))
@@ -169,7 +169,7 @@ SwFont::GetAbsBottomBorder(const bool bVertLayout, const bool bVertLayoutLRBT) c
     }
 }
 
-const o3tl::optional<editeng::SvxBorderLine>&
+const std::optional<editeng::SvxBorderLine>&
 SwFont::GetAbsLeftBorder(const bool bVertLayout, const bool bVertLayoutLRBT) const
 {
     switch (GetOrientation(bVertLayout, bVertLayoutLRBT))
@@ -193,7 +193,7 @@ SwFont::GetAbsLeftBorder(const bool bVertLayout, const bool bVertLayoutLRBT) con
     }
 }
 
-const o3tl::optional<editeng::SvxBorderLine>&
+const std::optional<editeng::SvxBorderLine>&
 SwFont::GetAbsRightBorder(const bool bVertLayout, const bool bVertLayoutLRBT) const
 {
     switch (GetOrientation(bVertLayout, bVertLayoutLRBT))
@@ -443,9 +443,10 @@ void SwFont::SetVertical(sal_uInt16 nDir, const bool bVertFormat, const bool bVe
     if( nDir != m_aSub[SwFontScript::Latin].GetOrientation() )
     {
         m_bFontChg = true;
-        m_aSub[SwFontScript::Latin].SetVertical( nDir, bVertFormat );
-        m_aSub[SwFontScript::CJK].SetVertical( nDir, bVertFormat );
-        m_aSub[SwFontScript::CTL].SetVertical( nDir, bVertFormat );
+        bool bVertical = bVertFormat && !bVertLayoutLRBT;
+        m_aSub[SwFontScript::Latin].SetVertical(nDir, bVertical);
+        m_aSub[SwFontScript::CJK].SetVertical(nDir, bVertical);
+        m_aSub[SwFontScript::CTL].SetVertical(nDir, bVertical);
     }
 }
 
@@ -661,9 +662,6 @@ void SwFont::SetDiffFnt( const SfxItemSet *pAttrSet,
         if( SfxItemState::SET == pAttrSet->GetItemState( RES_CHRATR_KERNING,
             true, &pItem ))
             SetFixKerning( static_cast<const SvxKerningItem*>(pItem)->GetValue() );
-        if( SfxItemState::SET == pAttrSet->GetItemState( RES_CHRATR_BLINK,
-            true, &pItem ))
-            SetBlink( static_cast<const SvxBlinkItem*>(pItem)->GetValue() );
         if( SfxItemState::SET == pAttrSet->GetItemState( RES_CHRATR_ROTATE,
             true, &pItem ))
             SetVertical( static_cast<const SvxCharRotateItem*>(pItem)->GetValue() );
@@ -703,7 +701,6 @@ void SwFont::SetDiffFnt( const SfxItemSet *pAttrSet,
     else
     {
         Invalidate();
-        m_bBlink = false;
     }
     m_bPaintBlank = false;
     OSL_ENSURE( m_aSub[SwFontScript::Latin].IsTransparent(), "SwFont: Transparent revolution" );
@@ -736,7 +733,6 @@ SwFont::SwFont( const SwFont &rFont )
     m_bOrgChg = rFont.m_bOrgChg;
     m_bPaintBlank = rFont.m_bPaintBlank;
     m_bGreyWave = rFont.m_bGreyWave;
-    m_bBlink = rFont.m_bBlink;
 }
 
 SwFont::SwFont( const SwAttrSet* pAttrSet,
@@ -750,7 +746,6 @@ SwFont::SwFont( const SwAttrSet* pAttrSet,
     m_nInputFieldCount = 0;
     m_bPaintBlank = false;
     m_bGreyWave = false;
-    m_bBlink = pAttrSet->GetBlink().GetValue();
     m_bOrgChg = true;
     {
         const SvxFontItem& rFont = pAttrSet->GetFont();
@@ -932,7 +927,6 @@ SwFont& SwFont::operator=( const SwFont &rFont )
         m_bOrgChg = rFont.m_bOrgChg;
         m_bPaintBlank = rFont.m_bPaintBlank;
         m_bGreyWave = rFont.m_bGreyWave;
-        m_bBlink = rFont.m_bBlink;
     }
     return *this;
 }

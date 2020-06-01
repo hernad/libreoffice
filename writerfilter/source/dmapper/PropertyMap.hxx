@@ -20,20 +20,21 @@
 #define INCLUDED_WRITERFILTER_SOURCE_DMAPPER_PROPERTYMAP_HXX
 
 #include <rtl/ustring.hxx>
+#include <tools/ref.hxx>
 #include <com/sun/star/uno/Sequence.hxx>
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/table/BorderLine2.hpp>
 #include <com/sun/star/text/WrapTextMode.hpp>
 #include <com/sun/star/uno/Any.h>
+#include <com/sun/star/drawing/XShape.hpp>
 #include "PropertyIds.hxx"
 #include <memory>
-#include <o3tl/optional.hxx>
+#include <optional>
 #include <map>
 #include <vector>
-#include "TagLogger.hxx"
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace beans {
         struct PropertyValue;
     }
@@ -52,7 +53,7 @@ namespace com { namespace sun { namespace star {
         struct BorderLine2;
         struct ShadowFormat;
     }
-}}}
+}
 
 namespace writerfilter {
 namespace dmapper {
@@ -95,23 +96,35 @@ class PropValue
 private:
     css::uno::Any m_aValue;
     GrabBagType   m_GrabBagType;
+    bool          m_bIsDocDefault;
 
 public:
+    PropValue( const css::uno::Any& rValue, GrabBagType i_GrabBagType, bool bDocDefault )
+        : m_aValue( rValue )
+        , m_GrabBagType( i_GrabBagType )
+        , m_bIsDocDefault( bDocDefault )
+    {
+    }
+
     PropValue( const css::uno::Any& rValue, GrabBagType i_GrabBagType )
         : m_aValue( rValue )
         , m_GrabBagType( i_GrabBagType )
+        , m_bIsDocDefault( false )
     {
     }
 
     PropValue()
         : m_aValue()
         , m_GrabBagType( NO_GRAB_BAG )
+        , m_bIsDocDefault( false )
     {
     }
 
     const css::uno::Any& getValue() const { return m_aValue; }
 
     GrabBagType getGrabBagType() const { return m_GrabBagType; }
+
+    bool getIsDocDefault() const { return m_bIsDocDefault; }
 };
 
 class PropertyMap;
@@ -139,20 +152,23 @@ public:
     // the contained properties are their Value.
     css::uno::Sequence< css::beans::PropertyValue > GetPropertyValues( bool bCharGrabBag = true );
 
+    std::vector< PropertyIds > GetPropertyIds();
+
     // Add property, optionally overwriting existing attributes
-    void Insert( PropertyIds eId, const css::uno::Any& rAny, bool bOverwrite = true, GrabBagType i_GrabBagType = NO_GRAB_BAG );
+    void Insert( PropertyIds eId, const css::uno::Any& rAny, bool bOverwrite = true, GrabBagType i_GrabBagType = NO_GRAB_BAG, bool bDocDefault = false );
 
     // Remove a named property from *this, does nothing if the property id has not been set
     void Erase( PropertyIds eId);
 
-    // Imports properties from pMap
+    // Imports properties from pMap (bOverwrite==false means m_bIsDocDefault=true setting)
     void InsertProps( const PropertyMapPtr& rMap, const bool bOverwrite = true );
 
     // Returns a copy of the property if it exists, .first is its PropertyIds and .second is its Value (type css::uno::Any)
-    o3tl::optional< Property > getProperty( PropertyIds eId ) const;
+    std::optional< Property > getProperty( PropertyIds eId ) const;
 
     // Has the property named been set (via Insert)?
     bool isSet( PropertyIds eId ) const;
+    bool isDocDefault( PropertyIds eId ) const;
 
     const css::uno::Reference< css::text::XFootnote >& GetFootnote() const { return m_xFootnote; }
     const OUString& GetFootnoteStyle() const { return m_sFootnoteCharStyleName; }
@@ -207,7 +223,7 @@ private:
     // 'temporarily' the section page settings are imported as page styles
     // empty strings mark page settings as not yet imported
 
-    bool const                                      m_bIsFirstSection;
+    bool                                            m_bIsFirstSection;
     css::uno::Reference< css::text::XTextRange >    m_xStartingRange;
 
     OUString                                        m_sFirstPageStyleName;
@@ -215,7 +231,7 @@ private:
     css::uno::Reference< css::beans::XPropertySet > m_aFirstPageStyle;
     css::uno::Reference< css::beans::XPropertySet > m_aFollowPageStyle;
 
-    o3tl::optional< css::table::BorderLine2 >      m_oBorderLines[4];
+    std::optional< css::table::BorderLine2 >      m_oBorderLines[4];
     sal_Int32                                       m_nBorderDistances[4];
     BorderApply                                     m_eBorderApply;
     BorderOffsetFrom                                m_eBorderOffsetFrom;
@@ -508,7 +524,6 @@ class StyleSheetPropertyMap
 private:
     sal_Int16 mnListLevel;
     sal_Int16 mnOutlineLevel;
-    sal_Int32 mnNumId;
 
 public:
     explicit StyleSheetPropertyMap();
@@ -518,9 +533,6 @@ public:
 
     sal_Int16 GetOutlineLevel() const             { return mnOutlineLevel; }
     void      SetOutlineLevel( sal_Int16 nLevel ) { if ( nLevel < WW_OUTLINE_MAX ) mnOutlineLevel = nLevel; }
-
-    sal_Int32 GetNumId() const        { return mnNumId; }
-    void      SetNumId(sal_Int32 nId) { mnNumId = nId; }
 };
 
 class ParagraphPropertyMap
@@ -575,6 +587,17 @@ public:
 };
 
 typedef tools::SvRef< TablePropertyMap > TablePropertyMapPtr;
+
+/// Information about a paragraph to be finished after a table end.
+struct TableParagraph
+{
+    css::uno::Reference<css::text::XTextRange> m_rStartParagraph;
+    css::uno::Reference<css::text::XTextRange> m_rEndParagraph;
+    PropertyMapPtr m_pPropertyMap;
+    css::uno::Reference<css::beans::XPropertySet> m_rPropertySet;
+};
+
+typedef std::shared_ptr< std::vector<TableParagraph> > TableParagraphVectorPtr;
 
 } // namespace dmapper
 } // namespace writerfilter

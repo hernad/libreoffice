@@ -23,8 +23,6 @@
 #include <com/sun/star/report/XSection.hpp>
 #include <comphelper/propmultiplex.hxx>
 #include "ReportDefines.hxx"
-#include <svtools/colorcfg.hxx>
-#include <svx/svdedtv.hxx>
 #include <cppuhelper/basemutex.hxx>
 #include <rtl/ref.hxx>
 #include "MarkedSection.hxx"
@@ -81,8 +79,8 @@ namespace rptui
         Point            getThumbPos() const { return Point(m_aHScroll->GetThumbPos(),m_aVScroll->GetThumbPos())/*m_aScrollOffset*/; }
         void                    setTotalSize(sal_Int32 _nWidth, sal_Int32 _nHeight);
         const Size&             getTotalSize() const { return m_aTotalPixelSize; }
-        ScrollBar&       GetHScroll() { return *m_aHScroll.get(); }
-        ScrollBar&       GetVScroll() { return *m_aVScroll.get(); }
+        ScrollBar&       GetHScroll() { return *m_aHScroll; }
+        ScrollBar&       GetVScroll() { return *m_aVScroll; }
 
         // forwards
         void                    SetMode( DlgEdMode _eMode );

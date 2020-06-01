@@ -212,9 +212,9 @@ OUString OwnView_Impl::GetFilterNameFromExtentionAndInStream(
     aTypeName = xTypeDetection->queryTypeByDescriptor( aArgs, true );
 
     OUString aFilterName;
-    for ( sal_Int32 nInd = 0; nInd < aArgs.getLength(); nInd++ )
-        if ( aArgs[nInd].Name == "FilterName" )
-            aArgs[nInd].Value >>= aFilterName;
+    for ( beans::PropertyValue const & prop : std::as_const(aArgs) )
+        if ( prop.Name == "FilterName" )
+            prop.Value >>= aFilterName;
 
     if ( aFilterName.isEmpty() && !aTypeName.isEmpty() )
     {
@@ -224,11 +224,11 @@ OUString OwnView_Impl::GetFilterNameFromExtentionAndInStream(
 
         if ( xNameAccess.is() && ( xNameAccess->getByName( aTypeName ) >>= aTypes ) )
         {
-            for ( sal_Int32 nInd = 0; nInd < aTypes.getLength(); nInd++ )
+            for ( beans::PropertyValue const & prop : std::as_const(aTypes) )
             {
-                if ( aTypes[nInd].Name == "PreferredFilter" && ( aTypes[nInd].Value >>= aFilterName ) )
+                if ( prop.Name == "PreferredFilter" && ( prop.Value >>= aFilterName ) )
                 {
-                    aTypes[nInd].Value >>= aFilterName;
+                    prop.Value >>= aFilterName;
                     break;
                 }
             }
@@ -580,24 +580,24 @@ void SAL_CALL OwnView_Impl::notifyEvent( const document::EventObject& aEvent )
         }
     }
 
-    if ( xModel.is() )
-    {
-        try {
-            uno::Reference< document::XEventBroadcaster > xBroadCaster( xModel, uno::UNO_QUERY );
-            if ( xBroadCaster.is() )
-                xBroadCaster->removeEventListener( uno::Reference< document::XEventListener >(
-                                                                        static_cast< ::cppu::OWeakObject* >( this ),
-                                                                         uno::UNO_QUERY ) );
+    if ( !xModel.is() )
+        return;
 
-            uno::Reference< util::XCloseable > xCloseable( xModel, uno::UNO_QUERY );
-            if ( xCloseable.is() )
-                xCloseable->removeCloseListener( uno::Reference< util::XCloseListener >(
-                                                                        static_cast< ::cppu::OWeakObject* >( this ),
-                                                                         uno::UNO_QUERY ) );
-        }
-        catch( uno::Exception& )
-        {}
+    try {
+        uno::Reference< document::XEventBroadcaster > xBroadCaster( xModel, uno::UNO_QUERY );
+        if ( xBroadCaster.is() )
+            xBroadCaster->removeEventListener( uno::Reference< document::XEventListener >(
+                                                                    static_cast< ::cppu::OWeakObject* >( this ),
+                                                                     uno::UNO_QUERY ) );
+
+        uno::Reference< util::XCloseable > xCloseable( xModel, uno::UNO_QUERY );
+        if ( xCloseable.is() )
+            xCloseable->removeCloseListener( uno::Reference< util::XCloseListener >(
+                                                                    static_cast< ::cppu::OWeakObject* >( this ),
+                                                                     uno::UNO_QUERY ) );
     }
+    catch( uno::Exception& )
+    {}
 }
 
 

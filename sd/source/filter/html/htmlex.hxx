@@ -21,6 +21,7 @@
 #define INCLUDED_SD_SOURCE_FILTER_HTML_HTMLEX_HXX
 
 #include <resltn.hxx>
+#include <rtl/ustrbuf.hxx>
 #include <tools/color.hxx>
 #include <tools/solar.h>
 #include <vcl/errinf.hxx>
@@ -31,8 +32,8 @@
 #include <vector>
 
 namespace basegfx { class B2DPolyPolygon; }
-namespace com { namespace sun { namespace star { namespace beans { struct PropertyValue; } } } }
-namespace com { namespace sun { namespace star { namespace ucb { class XSimpleFileAccess3; } } } }
+namespace com::sun::star::beans { struct PropertyValue; }
+namespace com::sun::star::ucb { class XSimpleFileAccess3; }
 namespace sd { class DrawDocShell; }
 namespace tools { class Rectangle; }
 
@@ -53,7 +54,7 @@ class SdPage;
 class HtmlState;
 class SdrTextObj;
 class SdrObjGroup;
-namespace sdr { namespace table { class SdrTableObj; } }
+namespace sdr::table { class SdrTableObj; }
 class SdrPage;
 class SdDrawDocument;
 class ButtonSet;
@@ -80,7 +81,7 @@ class HtmlExport final
     std::vector< SdPage* > maPages;
     std::vector< SdPage* > maNotesPages;
 
-    OUString const maPath;
+    OUString maPath;
 
     SdDrawDocument* mpDoc;
     ::sd::DrawDocShell* mpDocSh;

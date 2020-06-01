@@ -79,8 +79,6 @@ void UnusedVariableMore::run()
         return;
     if (fn == SRCDIR "/i18nlangtag/source/languagetag/languagetag.cxx")
         return;
-    if (fn == SRCDIR "/vcl/workben/outdevgrind.cxx")
-        return;
     // unordered_set of Reference to delay destruction
     if (fn == SRCDIR "/stoc/source/servicemanager/servicemanager.cxx")
         return;
@@ -210,7 +208,7 @@ bool UnusedVariableMore::checkifUnused(Stmt const* stmt, VarDecl const* varDecl)
     if (!parent)
     {
         // check if we're inside a CXXCtorInitializer
-        auto parentsRange = compiler.getASTContext().getParents(*stmt);
+        auto parentsRange = getParents(*stmt);
         if (parentsRange.begin() != parentsRange.end())
         {
             auto parentDecl = parentsRange.begin()->get<Decl>();

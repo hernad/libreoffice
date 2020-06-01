@@ -11,12 +11,9 @@
 #define INCLUDED_OOX_SOURCE_PPT_EXTDRAWINGFRAGMENTHANDLER_HXX
 
 #include <oox/core/fragmenthandler2.hxx>
-#include <oox/drawingml/shapegroupcontext.hxx>
 #include <oox/ppt/slidepersist.hxx>
-#include <oox/ppt/pptshapegroupcontext.hxx>
-#include <oox/ppt/pptshape.hxx>
 
-namespace oox { namespace ppt {
+namespace oox::ppt {
 
 class ExtDrawingFragmentHandler : public ::oox::core::FragmentHandler2
 {
@@ -33,11 +30,11 @@ public:
 private:
         const oox::ppt::SlidePersistPtr mpSlidePersistPtr;
         const oox::ppt::ShapeLocation   meShapeLocation;
-        oox::drawingml::ShapePtr const  mpGroupShapePtr;
+        oox::drawingml::ShapePtr        mpGroupShapePtr;
         oox::drawingml::ShapePtr        mpShapePtr;
 };
 
-} }
+}
 
 #endif
 

@@ -32,6 +32,7 @@
 #include <tools/urlobj.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
+#include <officecfg/Office/Calc.hxx>
 
 #include <docuno.hxx>
 #include <xestream.hxx>
@@ -49,6 +50,7 @@
 #include <globstr.hrc>
 #include <scresid.hxx>
 #include <root.hxx>
+#include <sfx2/app.hxx>
 
 #include <docsh.hxx>
 #include <viewdata.hxx>
@@ -795,15 +797,30 @@ OUString XclXmlUtils::ToOUString( const ScfUInt16Vec& rBuf, sal_Int32 nStart, sa
 }
 
 OUString XclXmlUtils::ToOUString(
-    sc::CompileFormulaContext& rCtx, const ScAddress& rAddress, const ScTokenArray* pTokenArray )
+    sc::CompileFormulaContext& rCtx, const ScAddress& rAddress, const ScTokenArray* pTokenArray,
+    FormulaError nErrCode )
 {
     ScCompiler aCompiler( rCtx, rAddress, const_cast<ScTokenArray&>(*pTokenArray));
 
     /* TODO: isn't this the same as passed in rCtx and thus superfluous? */
     aCompiler.SetGrammar(FormulaGrammar::GRAM_OOXML);
 
-    OUStringBuffer aBuffer( pTokenArray->GetLen() * 5 );
-    aCompiler.CreateStringFromTokenArray( aBuffer );
+    sal_Int32 nLen = pTokenArray->GetLen();
+    OUStringBuffer aBuffer( nLen ? (nLen * 5) : 8 );
+    if (nLen)
+        aCompiler.CreateStringFromTokenArray( aBuffer );
+    else
+    {
+        if (nErrCode != FormulaError::NONE)
+            aCompiler.AppendErrorConstant( aBuffer, nErrCode);
+        else
+        {
+            // No code SHOULD be an "error cell", assert caller thought of that
+            // and it really is.
+            assert(!"No code and no error.");
+        }
+    }
+
     return aBuffer.makeStringAndClear();
 }
 
@@ -987,6 +1004,13 @@ bool XclExpXmlStream::exportDocument()
     ScDocument& rDoc = pShell->GetDocument();
     ScRefreshTimerProtector aProt(rDoc.GetRefreshTimerControlAddress());
 
+    const bool bValidateTabNames = officecfg::Office::Calc::Filter::Export::MS_Excel::TruncateLongSheetNames::get();
+    std::vector<OUString> aOriginalTabNames;
+    if (bValidateTabNames)
+    {
+        validateTabNames(aOriginalTabNames);
+    }
+
     uno::Reference<task::XStatusIndicator> xStatusIndicator = getStatusIndicator();
 
     if (xStatusIndicator.is())
@@ -1088,6 +1112,11 @@ bool XclExpXmlStream::exportDocument()
 
     commitStorage();
 
+    if (bValidateTabNames)
+    {
+        restoreTabNames(aOriginalTabNames);
+    }
+
     if (xStatusIndicator.is())
         xStatusIndicator->end();
     mpRoot = nullptr;
@@ -1102,6 +1131,121 @@ bool XclExpXmlStream::exportDocument()
 OUString XclExpXmlStream::getImplementationName()
 {
     return "TODO";
+}
+
+void XclExpXmlStream::validateTabNames(std::vector<OUString>& aOriginalTabNames)
+{
+    const int MAX_TAB_NAME_LENGTH = 31;
+
+    ScDocShell* pShell = getDocShell();
+    ScDocument& rDoc = pShell->GetDocument();
+
+    // get original names
+    aOriginalTabNames.resize(rDoc.GetTableCount());
+    for (SCTAB nTab=0; nTab < rDoc.GetTableCount(); nTab++)
+    {
+        rDoc.GetName(nTab, aOriginalTabNames[nTab]);
+    }
+
+    // new tab names
+    std::vector<OUString> aNewTabNames;
+    aNewTabNames.reserve(rDoc.GetTableCount());
+
+    // check and rename
+    for (SCTAB nTab=0; nTab < rDoc.GetTableCount(); nTab++)
+    {
+        const OUString& rOriginalName = aOriginalTabNames[nTab];
+        if (rOriginalName.getLength() > MAX_TAB_NAME_LENGTH)
+        {
+            OUString aNewName;
+
+            // let's try just truncate "<first 31 chars>"
+            if (aNewName.isEmpty())
+            {
+                aNewName = rOriginalName.copy(0, MAX_TAB_NAME_LENGTH);
+                if (aNewTabNames.end() != std::find(aNewTabNames.begin(), aNewTabNames.end(), aNewName) ||
+                    aOriginalTabNames.end() != std::find(aOriginalTabNames.begin(), aOriginalTabNames.end(), aNewName))
+                {
+                    // was found => let's use another tab name
+                    aNewName.clear();
+                }
+            }
+
+            // let's try "<first N chars>-XXX" template
+            for (int digits=1; digits<10 && aNewName.isEmpty(); digits++)
+            {
+                const int rangeStart = pow(10, digits - 1);
+                const int rangeEnd = pow(10, digits);
+
+                for (int i=rangeStart; i<rangeEnd && aNewName.isEmpty(); i++)
+                {
+                    aNewName = rOriginalName.copy(0, MAX_TAB_NAME_LENGTH - 1 - digits).concat("-").concat(OUString::number(i));
+                    if (aNewTabNames.end() != std::find(aNewTabNames.begin(), aNewTabNames.end(), aNewName) ||
+                        aOriginalTabNames.end() != std::find(aOriginalTabNames.begin(), aOriginalTabNames.end(), aNewName))
+                    {
+                        // was found => let's use another tab name
+                        aNewName.clear();
+                    }
+                }
+            }
+
+            if (!aNewName.isEmpty())
+            {
+                // new name was created => rename
+                renameTab(nTab, aNewName);
+                aNewTabNames.push_back(aNewName);
+            }
+            else
+            {
+                // default: do not rename
+                aNewTabNames.push_back(rOriginalName);
+            }
+        }
+        else
+        {
+            // default: do not rename
+            aNewTabNames.push_back(rOriginalName);
+        }
+    }
+}
+
+void XclExpXmlStream::restoreTabNames(const std::vector<OUString>& aOriginalTabNames)
+{
+    ScDocShell* pShell = getDocShell();
+    ScDocument& rDoc = pShell->GetDocument();
+
+    for (SCTAB nTab=0; nTab < rDoc.GetTableCount(); nTab++)
+    {
+        const OUString& rOriginalName = aOriginalTabNames[nTab];
+
+        OUString rModifiedName;
+        rDoc.GetName(nTab, rModifiedName);
+
+        if (rOriginalName != rModifiedName)
+        {
+            renameTab(nTab, rOriginalName);
+        }
+    }
+}
+
+void XclExpXmlStream::renameTab(SCTAB aTab, OUString aNewName)
+{
+    ScDocShell* pShell = getDocShell();
+    ScDocument& rDoc = pShell->GetDocument();
+
+    bool bAutoCalcShellDisabled = rDoc.IsAutoCalcShellDisabled();
+    bool bIdleEnabled = rDoc.IsIdleEnabled();
+
+    rDoc.SetAutoCalcShellDisabled( true );
+    rDoc.EnableIdle(false);
+
+    if (rDoc.RenameTab(aTab, aNewName))
+    {
+        SfxGetpApp()->Broadcast(SfxHint(SfxHintId::ScTablesChanged));
+    }
+
+    rDoc.SetAutoCalcShellDisabled( bAutoCalcShellDisabled );
+    rDoc.EnableIdle(bIdleEnabled);
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

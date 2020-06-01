@@ -497,7 +497,9 @@ static void defenv_getRegisteredInterfaces(
 
     for (const auto& rEntry : that->aPtr2ObjectMap)
     {
-        (*pEnv->acquireInterface)( pEnv, ppInterfaces[nPos++] = rEntry.first );
+        ppInterfaces[nPos] = rEntry.first;
+        (*pEnv->acquireInterface)( pEnv, ppInterfaces[nPos] );
+        nPos++;
     }
 
     *pppInterfaces = ppInterfaces;
@@ -842,24 +844,25 @@ static void unoenv_computeObjectIdentifier(
         ::cppu::binuno_queryInterface(
             pInterface, *typelib_static_type_getByTypeClass(
                 typelib_TypeClass_INTERFACE ) ));
-    if (nullptr != pUnoI)
-    {
-        (*pUnoI->release)( pUnoI );
-        // interface
-        OUStringBuffer oid( 64 );
-        oid.append( reinterpret_cast< sal_Int64 >(pUnoI), 16 );
-        oid.append( ';' );
-        // environment[context]
-        oid.append( pEnv->aBase.pTypeName );
-        oid.append( '[' );
-        oid.append( reinterpret_cast< sal_Int64 >(
-                        reinterpret_cast<
-                        uno_Environment * >(pEnv)->pContext ), 16 );
-        // process;good guid
-        oid.append( unoenv_getStaticOIdPart() );
-        OUString aStr( oid.makeStringAndClear() );
-        ::rtl_uString_acquire( *ppOId = aStr.pData );
-    }
+    if (nullptr == pUnoI)
+        return;
+
+    (*pUnoI->release)( pUnoI );
+    // interface
+    OUStringBuffer oid( 64 );
+    oid.append( reinterpret_cast< sal_Int64 >(pUnoI), 16 );
+    oid.append( ';' );
+    // environment[context]
+    oid.append( pEnv->aBase.pTypeName );
+    oid.append( '[' );
+    oid.append( reinterpret_cast< sal_Int64 >(
+                    reinterpret_cast<
+                    uno_Environment * >(pEnv)->pContext ), 16 );
+    // process;good guid
+    oid.append( unoenv_getStaticOIdPart() );
+    OUString aStr( oid.makeStringAndClear() );
+    *ppOId = aStr.pData;
+    ::rtl_uString_acquire( *ppOId );
 }
 
 

@@ -48,9 +48,9 @@ namespace {
 struct SvtExtensionResIdMapping_Impl
 {
     const char* _pExt;
-    bool const        _bExt;
+    bool        _bExt;
     const char* pStrId;
-    SvImageId const   _nImgId;
+    SvImageId   _nImgId;
 };
 
 }
@@ -776,13 +776,6 @@ OUString SvFileInformationManager::GetFileImageId(const INetURLObject& rObject)
     SvImageId nImage = GetImageId_Impl( rObject, false );
     DBG_ASSERT( nImage != SvImageId::NONE, "invalid ImageId" );
     return GetImageNameFromList_Impl(nImage, /*bBig*/false);
-}
-
-Image SvFileInformationManager::GetFileImage( const INetURLObject& rObject )
-{
-    SvImageId nImage = GetImageId_Impl( rObject, false );
-    DBG_ASSERT( nImage != SvImageId::NONE, "invalid ImageId" );
-    return GetImageFromList_Impl( nImage, false/*bBig*/ );
 }
 
 Image SvFileInformationManager::GetImageNoDefault(const INetURLObject& rObject, bool bBig, Size const & rPreferredSize)

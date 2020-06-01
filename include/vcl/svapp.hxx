@@ -210,7 +210,7 @@ public:
     }
 
 private:
-    Type const aEvent;
+    Type aEvent;
     std::vector<OUString> aData;
 };
 
@@ -353,6 +353,8 @@ public:
      @returns true if exited successfully, false if not able to fully exit
     */
     virtual bool                QueryExit();
+
+    virtual void                Shutdown();
 
     /** @name Change Notification Functions
 
@@ -901,8 +903,10 @@ public:
 
     /** Get useful OS, Hardware and configuration information,
      * cf. Help->About, and User-Agent
+     * bSelection = 0 to return all info, 1 for environment only,
+     *   and 2 for VCL/render related infos
      */
-    static OUString             GetHWOSConfInfo();
+    static OUString             GetHWOSConfInfo(const int bSelection = 0);
 
     /** Load a localized branding PNG file as a bitmap.
 
@@ -1324,7 +1328,7 @@ public:
     // For vclbootstrapprotector:
     static void setDeInitHook(Link<LinkParamNone*,void> const & hook);
 
-    static weld::Builder* CreateBuilder(weld::Widget* pParent, const OUString &rUIFile);
+    static weld::Builder* CreateBuilder(weld::Widget* pParent, const OUString &rUIFile, bool bMobile = false);
     static weld::Builder* CreateInterimBuilder(vcl::Window* pParent, const OUString &rUIFile); //for the duration of vcl parent windows
 
     static weld::MessageDialog* CreateMessageDialog(weld::Widget* pParent, VclMessageType eMessageType,

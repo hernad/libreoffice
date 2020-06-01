@@ -224,10 +224,7 @@ namespace slideshow::internal
                     ENSURE_OR_THROW( aPolyPoly.count() == 1,
                                       "PathAnimation::PathAnimation(): motion path consists of multiple/zero polygon(s)" );
 
-                    // TODO(F2): Since getPositionRelative() currently
-                    // cannot handle beziers, have to subdivide.
-                    // AW: Should be no longer necessary; getPositionRelative is now bezier-safe
-                    maPathPoly = ::basegfx::utils::adaptiveSubdivideByAngle(aPolyPoly.getB2DPolygon(0) );
+                    maPathPoly = aPolyPoly.getB2DPolygon(0);
                 }
 
                 virtual ~PathAnimation() override
@@ -341,7 +338,7 @@ namespace slideshow::internal
                 ::basegfx::B2DPoint                maShapeOrig;
                 const int                          mnFlags;
                 bool                               mbAnimationStarted;
-                sal_Int16 const                    mnAdditive;
+                sal_Int16                          mnAdditive;
             };
 
 
@@ -617,7 +614,7 @@ namespace slideshow::internal
                 }
 
             private:
-                double const mnScale;
+                double mnScale;
             };
 
             /** Overload for NumberAnimations which need scaling (width,height,x,y currently)

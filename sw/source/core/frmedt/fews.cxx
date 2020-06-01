@@ -19,7 +19,6 @@
 
 #include <svx/svdobj.hxx>
 #include <comphelper/lok.hxx>
-#include <editeng/charhiddenitem.hxx>
 #include <init.hxx>
 #include <fesh.hxx>
 #include <tabcol.hxx>
@@ -408,7 +407,7 @@ sal_uInt16 SwFEShell::GetPageOffset() const
         {
             if ( pFlow->IsInTab() )
                 pFlow = pFlow->FindTabFrame();
-            ::o3tl::optional<sal_uInt16> oNumOffset = pFlow->GetPageDescItem().GetNumOffset();
+            ::std::optional<sal_uInt16> oNumOffset = pFlow->GetPageDescItem().GetNumOffset();
             if ( oNumOffset )
                 return *oNumOffset;
         }
@@ -500,48 +499,6 @@ void SwFEShell::InsertLabel( const SwLabelType eType, const OUString &rText, con
         pFlyFormat = GetDoc()->InsertLabel(eType, rText, rSeparator,
                                            rNumberSeparator, bBefore, nId,
                                            nIdx, rCharacterStyle, bCpyBrd);
-
-        //if we succeeded in putting a caption on the content, and the
-        //content was a frame/graphic, then set the contained element
-        //to as-char anchoring because that's all msword is able to
-        //do when inside a frame, and in writer for freshly captioned
-        //elements it's largely irrelevant what the anchor of the contained
-        //type is but making it as-char by default results in very
-        //good roundtripping
-        if (pFlyFormat && bInnerCntIsFly)
-        {
-            SwNodeIndex aAnchIdx(*pFlyFormat->GetContent().GetContentIdx(), 1);
-            SwTextNode *pTextNode = aAnchIdx.GetNode().GetTextNode();
-
-            SwFormatAnchor aAnc(RndStdIds::FLY_AS_CHAR);
-            sal_Int32 nInsertPos = bBefore ? pTextNode->Len() : 0;
-            SwPosition aPos(*pTextNode, nInsertPos);
-
-            aAnc.SetAnchor(&aPos);
-
-            SwFlyFrame *pFly = GetSelectedOrCurrFlyFrame();
-            OSL_ENSURE(pFly, "SetFlyFrameAttr, no Fly selected.");
-            if (pFly)
-            {
-                SfxItemSet aSet(makeItemSetFromFormatAnchor(GetDoc()->GetAttrPool(), aAnc));
-                SwFlyFrameFormat* pInnerFlyFormat = pFly->GetFormat();
-                GetDoc()->SetFlyFrameAttr(*pInnerFlyFormat, aSet);
-            }
-            //put a hard-break after the graphic to keep it separated
-            //from the caption text if the outer frame is resized
-            const sal_Int32 nIndex = bBefore ? nInsertPos : 1;
-            SwIndex aIdx(pTextNode, nIndex);
-            pTextNode->InsertText("\n", aIdx);
-            //set the hard-break to be hidden, otherwise it has
-            //non-zero width in word and so hard-break flows on
-            //the next line, pushing the caption text out of
-            //the frame making the caption apparently disappear
-            SvxCharHiddenItem aHidden(true, RES_CHRATR_HIDDEN);
-            SfxItemSet aSet(GetDoc()->GetAttrPool(), {{aHidden.Which(), aHidden.Which()}});
-            aSet.Put(aHidden);
-            SwPaM aPam(*pTextNode, nIndex, *pTextNode, nIndex + 1);
-            SetAttrSet(aSet, SetAttrMode::DEFAULT, &aPam);
-        }
     }
 
     if (pFlyFormat)
@@ -967,7 +924,9 @@ void SwFEShell::CalcBoundRect( SwRect& _orRect,
                 // #i18732# - adjustment vertical 'virtual' anchor position
                 // (<aPos.Y()> respectively <aPos.X()>), if object is vertical aligned
                 // to page areas.
-                if ( _eVertRelOrient == text::RelOrientation::PAGE_FRAME || _eVertRelOrient == text::RelOrientation::PAGE_PRINT_AREA )
+                if (_eVertRelOrient == text::RelOrientation::PAGE_FRAME
+                    || _eVertRelOrient == text::RelOrientation::PAGE_PRINT_AREA
+                    || _eVertRelOrient == text::RelOrientation::PAGE_PRINT_AREA_BOTTOM)
                 {
                     if ( aRectFnSet.IsVert() && !aRectFnSet.IsVertL2R() )
                     {
@@ -996,6 +955,18 @@ void SwFEShell::CalcBoundRect( SwRect& _orRect,
                             if ( pTmpFrame->IsHeaderFrame() )
                             {
                                 aPos.setY(aPos.getY() + pTmpFrame->getFrameArea().Height());
+                            }
+                        }
+                        else if (_eVertRelOrient == text::RelOrientation::PAGE_PRINT_AREA_BOTTOM)
+                        {
+                            if (rVertEnvironLayFrame.IsPageFrame())
+                            {
+                                auto& rPageFrame = static_cast<const SwPageFrame&>(rVertEnvironLayFrame);
+                                aPos.setY(rPageFrame.PrtWithoutHeaderAndFooter().Bottom());
+                            }
+                            else
+                            {
+                                aPos.AdjustY(rVertEnvironLayFrame.getFramePrintArea().Bottom());
                             }
                         }
                     }
@@ -1124,7 +1095,7 @@ void SwFEShell::CalcBoundRect( SwRect& _orRect,
         }
 
         const SwTwips nBaseOfstForFly = ( pFrame->IsTextFrame() && pFly ) ?
-                                        static_cast<const SwTextFrame*>(pFrame)->GetBaseOfstForFly( !bWrapThrough ) :
+                                        static_cast<const SwTextFrame*>(pFrame)->GetBaseOffsetForFly( !bWrapThrough ) :
                                          0;
         if( aRectFnSet.IsVert() || aRectFnSet.IsVertL2R() )
         {
@@ -1279,8 +1250,7 @@ Size SwFEShell::GetGraphicDefaultSize() const
         // of the anchor frame is taken.
         const SwFrame* pAnchorFrame = pFly->GetAnchorFrame();
         aRet = pAnchorFrame->getFramePrintArea().SSize();
-        if ( aRet.Width() == 0 && aRet.Height() == 0 &&
-             pAnchorFrame->GetUpper() )
+        if ( aRet.IsEmpty() && pAnchorFrame->GetUpper() )
         {
             aRet = pAnchorFrame->GetUpper()->getFramePrintArea().SSize();
         }

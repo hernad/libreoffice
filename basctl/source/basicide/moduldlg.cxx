@@ -38,6 +38,7 @@
 #include <sfx2/request.hxx>
 #include <sfx2/sfxsids.hrc>
 #include <svl/stritem.hxx>
+#include <vcl/transfer.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/weld.hxx>
 #include <tools/debug.hxx>
@@ -163,22 +164,22 @@ void Shell::CopyDialogResources(
     Reference< io::XInputStream > xInput( io_xISP->createInputStream() );
     ::xmlscript::importDialogModel( xInput, xDialogModel, xContext, rSourceDoc.isDocument() ? rSourceDoc.getDocument() : Reference< frame::XModel >() );
 
-    if( xDialogModel.is() )
+    if( !xDialogModel.is() )
+        return;
+
+    if( bSourceLocalized && bDestLocalized )
     {
-        if( bSourceLocalized && bDestLocalized )
-        {
-            LocalizationMgr::copyResourceForDroppedDialog( xDialogModel, rDlgName, xDestMgr, xSourceMgr );
-        }
-        else if( bSourceLocalized )
-        {
-            LocalizationMgr::resetResourceForDialog( xDialogModel, xSourceMgr );
-        }
-        else if( bDestLocalized )
-        {
-            LocalizationMgr::setResourceIDsForDialog( xDialogModel, xDestMgr );
-        }
-        io_xISP = ::xmlscript::exportDialogModel( xDialogModel, xContext, rDestDoc.isDocument() ? rDestDoc.getDocument() : Reference< frame::XModel >() );
+        LocalizationMgr::copyResourceForDroppedDialog( xDialogModel, rDlgName, xDestMgr, xSourceMgr );
     }
+    else if( bSourceLocalized )
+    {
+        LocalizationMgr::resetResourceForDialog( xDialogModel, xSourceMgr );
+    }
+    else if( bDestLocalized )
+    {
+        LocalizationMgr::setResourceIDsForDialog( xDialogModel, xDestMgr );
+    }
+    io_xISP = ::xmlscript::exportDialogModel( xDialogModel, xContext, rDestDoc.isDocument() ? rDestDoc.getDocument() : Reference< frame::XModel >() );
 }
 
 // OrganizeDialog
@@ -191,12 +192,15 @@ OrganizeDialog::OrganizeDialog(weld::Window* pParent, sal_Int16 tabId )
 {
     m_xTabCtrl->connect_enter_page(LINK(this, OrganizeDialog, ActivatePageHdl));
 
+    OString sPage;
     if (tabId == 0)
-        m_xTabCtrl->set_current_page("modules");
+        sPage = "modules";
     else if (tabId == 1)
-        m_xTabCtrl->set_current_page("dialogs");
+        sPage = "dialogs";
     else
-        m_xTabCtrl->set_current_page("libraries");
+        sPage = "libraries";
+    m_xTabCtrl->set_current_page(sPage);
+    ActivatePageHdl(sPage);
 
     if (SfxDispatcher* pDispatcher = GetDispatcher())
         pDispatcher->Execute( SID_BASICIDE_STOREALLMODULESOURCES );
@@ -576,6 +580,7 @@ ObjectPage::~ObjectPage()
 void ObjectPage::ActivatePage()
 {
     m_xBasicBox->UpdateEntries();
+    CheckButtons();
 }
 
 void ObjectPage::CheckButtons()
@@ -771,62 +776,62 @@ void ObjectPage::NewDialog()
     ScriptDocument aDocument( ScriptDocument::getApplicationScriptDocument() );
     OUString aLibName;
 
-    if ( GetSelection( aDocument, aLibName ) )
+    if ( !GetSelection( aDocument, aLibName ) )
+        return;
+
+    aDocument.getOrCreateLibrary( E_DIALOGS, aLibName );
+
+    NewObjectDialog aNewDlg(m_pDialog->getDialog(), ObjectMode::Dialog, true);
+    aNewDlg.SetObjectName(aDocument.createObjectName(E_DIALOGS, aLibName));
+
+    if (aNewDlg.run() == RET_CANCEL)
+        return;
+
+    OUString aDlgName = aNewDlg.GetObjectName();
+    if (aDlgName.isEmpty())
+        aDlgName = aDocument.createObjectName( E_DIALOGS, aLibName);
+
+    if ( aDocument.hasDialog( aLibName, aDlgName ) )
     {
-        aDocument.getOrCreateLibrary( E_DIALOGS, aLibName );
+        std::unique_ptr<weld::MessageDialog> xError(Application::CreateMessageDialog(m_pDialog->getDialog(),
+                                                    VclMessageType::Warning, VclButtonsType::Ok, IDEResId(RID_STR_SBXNAMEALLREADYUSED2)));
+        xError->run();
+    }
+    else
+    {
+        Reference< io::XInputStreamProvider > xISP;
+        if ( !aDocument.createDialog( aLibName, aDlgName, xISP ) )
+            return;
 
-        NewObjectDialog aNewDlg(m_pDialog->getDialog(), ObjectMode::Dialog, true);
-        aNewDlg.SetObjectName(aDocument.createObjectName(E_DIALOGS, aLibName));
-
-        if (aNewDlg.run() != RET_CANCEL)
+        SbxItem aSbxItem( SID_BASICIDE_ARG_SBX, aDocument, aLibName, aDlgName, TYPE_DIALOG );
+        if (SfxDispatcher* pDispatcher = GetDispatcher())
         {
-            OUString aDlgName = aNewDlg.GetObjectName();
-            if (aDlgName.isEmpty())
-                aDlgName = aDocument.createObjectName( E_DIALOGS, aLibName);
-
-            if ( aDocument.hasDialog( aLibName, aDlgName ) )
+            pDispatcher->ExecuteList( SID_BASICIDE_SBXINSERTED,
+                SfxCallMode::SYNCHRON, { &aSbxItem });
+        }
+        LibraryLocation eLocation = aDocument.getLibraryLocation( aLibName );
+        std::unique_ptr<weld::TreeIter> xIter(m_xBasicBox->make_iterator());
+        bool bRootEntry = m_xBasicBox->FindRootEntry(aDocument, eLocation, *xIter);
+        if (bRootEntry)
+        {
+            if (!m_xBasicBox->get_row_expanded(*xIter))
+                m_xBasicBox->expand_row(*xIter);
+            bool bLibEntry = m_xBasicBox->FindEntry(aLibName, OBJ_TYPE_LIBRARY, *xIter);
+            DBG_ASSERT( bLibEntry, "LibEntry not found!" );
+            if (bLibEntry)
             {
-                std::unique_ptr<weld::MessageDialog> xError(Application::CreateMessageDialog(m_pDialog->getDialog(),
-                                                            VclMessageType::Warning, VclButtonsType::Ok, IDEResId(RID_STR_SBXNAMEALLREADYUSED2)));
-                xError->run();
-            }
-            else
-            {
-                Reference< io::XInputStreamProvider > xISP;
-                if ( !aDocument.createDialog( aLibName, aDlgName, xISP ) )
-                    return;
-
-                SbxItem aSbxItem( SID_BASICIDE_ARG_SBX, aDocument, aLibName, aDlgName, TYPE_DIALOG );
-                if (SfxDispatcher* pDispatcher = GetDispatcher())
+                if (!m_xBasicBox->get_row_expanded(*xIter))
+                    m_xBasicBox->expand_row(*xIter);
+                std::unique_ptr<weld::TreeIter> xSubRootEntry(m_xBasicBox->make_iterator(xIter.get()));
+                bool bDlgEntry = m_xBasicBox->FindEntry(aDlgName, OBJ_TYPE_DIALOG, *xIter);
+                if (!bDlgEntry)
                 {
-                    pDispatcher->ExecuteList( SID_BASICIDE_SBXINSERTED,
-                        SfxCallMode::SYNCHRON, { &aSbxItem });
+                    m_xBasicBox->AddEntry(aDlgName, RID_BMP_DIALOG, xSubRootEntry.get(), false,
+                                       std::make_unique<Entry>(OBJ_TYPE_DIALOG), xIter.get());
+                    assert(xIter && "Insert entry failed!");
                 }
-                LibraryLocation eLocation = aDocument.getLibraryLocation( aLibName );
-                std::unique_ptr<weld::TreeIter> xIter(m_xBasicBox->make_iterator());
-                bool bRootEntry = m_xBasicBox->FindRootEntry(aDocument, eLocation, *xIter);
-                if (bRootEntry)
-                {
-                    if (!m_xBasicBox->get_row_expanded(*xIter))
-                        m_xBasicBox->expand_row(*xIter);
-                    bool bLibEntry = m_xBasicBox->FindEntry(aLibName, OBJ_TYPE_LIBRARY, *xIter);
-                    DBG_ASSERT( bLibEntry, "LibEntry not found!" );
-                    if (bLibEntry)
-                    {
-                        if (!m_xBasicBox->get_row_expanded(*xIter))
-                            m_xBasicBox->expand_row(*xIter);
-                        std::unique_ptr<weld::TreeIter> xSubRootEntry(m_xBasicBox->make_iterator(xIter.get()));
-                        bool bDlgEntry = m_xBasicBox->FindEntry(aDlgName, OBJ_TYPE_DIALOG, *xIter);
-                        if (!bDlgEntry)
-                        {
-                            m_xBasicBox->AddEntry(aDlgName, RID_BMP_DIALOG, xSubRootEntry.get(), false,
-                                               std::make_unique<Entry>(OBJ_TYPE_DIALOG), xIter.get());
-                            assert(xIter.get() && "Insert entry failed!");
-                        }
-                        m_xBasicBox->set_cursor(*xIter);
-                        m_xBasicBox->select(*xIter);
-                    }
-                }
+                m_xBasicBox->set_cursor(*xIter);
+                m_xBasicBox->select(*xIter);
             }
         }
     }
@@ -837,7 +842,7 @@ void ObjectPage::DeleteCurrent()
     std::unique_ptr<weld::TreeIter> xCurEntry(m_xBasicBox->make_iterator());
     if (!m_xBasicBox->get_cursor(xCurEntry.get()))
         xCurEntry.reset();
-    DBG_ASSERT( xCurEntry.get(), "No current entry!" );
+    DBG_ASSERT( xCurEntry, "No current entry!" );
     EntryDescriptor aDesc( m_xBasicBox->GetEntryDescriptor( xCurEntry.get() ) );
     const ScriptDocument& aDocument( aDesc.GetDocument() );
     DBG_ASSERT( aDocument.isAlive(), "ObjectPage::DeleteCurrent: no document!" );
@@ -847,34 +852,34 @@ void ObjectPage::DeleteCurrent()
     const OUString& aName( aDesc.GetName() );
     EntryType eType = aDesc.GetType();
 
-    if ( ( eType == OBJ_TYPE_MODULE && QueryDelModule(aName, m_pDialog->getDialog()) ) ||
-         ( eType == OBJ_TYPE_DIALOG && QueryDelDialog(aName, m_pDialog->getDialog()) ) )
+    if ( !(( eType == OBJ_TYPE_MODULE && QueryDelModule(aName, m_pDialog->getDialog()) ) ||
+         ( eType == OBJ_TYPE_DIALOG && QueryDelDialog(aName, m_pDialog->getDialog()) )) )
+        return;
+
+    m_xBasicBox->remove(*xCurEntry);
+    if (m_xBasicBox->get_cursor(xCurEntry.get()))
+        m_xBasicBox->select(*xCurEntry);
+    if (SfxDispatcher* pDispatcher = GetDispatcher())
     {
-        m_xBasicBox->remove(*xCurEntry);
-        if (m_xBasicBox->get_cursor(xCurEntry.get()))
-            m_xBasicBox->select(*xCurEntry);
-        if (SfxDispatcher* pDispatcher = GetDispatcher())
-        {
-            SbxItem aSbxItem( SID_BASICIDE_ARG_SBX, aDocument, aLibName, aName, SbTreeListBox::ConvertType( eType ) );
-            pDispatcher->ExecuteList( SID_BASICIDE_SBXDELETED,
-                                  SfxCallMode::SYNCHRON, { &aSbxItem });
-        }
+        SbxItem aSbxItem( SID_BASICIDE_ARG_SBX, aDocument, aLibName, aName, SbTreeListBox::ConvertType( eType ) );
+        pDispatcher->ExecuteList( SID_BASICIDE_SBXDELETED,
+                              SfxCallMode::SYNCHRON, { &aSbxItem });
+    }
 
-        try
-        {
-            bool bSuccess = false;
-            if ( eType == OBJ_TYPE_MODULE )
-                bSuccess = aDocument.removeModule( aLibName, aName );
-            else if ( eType == OBJ_TYPE_DIALOG )
-                bSuccess = RemoveDialog( aDocument, aLibName, aName );
+    try
+    {
+        bool bSuccess = false;
+        if ( eType == OBJ_TYPE_MODULE )
+            bSuccess = aDocument.removeModule( aLibName, aName );
+        else if ( eType == OBJ_TYPE_DIALOG )
+            bSuccess = RemoveDialog( aDocument, aLibName, aName );
 
-            if ( bSuccess )
-                MarkDocumentModified( aDocument );
-        }
-        catch (const container::NoSuchElementException& )
-        {
-            DBG_UNHANDLED_EXCEPTION("basctl.basicide");
-        }
+        if ( bSuccess )
+            MarkDocumentModified( aDocument );
+    }
+    catch (const container::NoSuchElementException& )
+    {
+        DBG_UNHANDLED_EXCEPTION("basctl.basicide");
     }
 }
 

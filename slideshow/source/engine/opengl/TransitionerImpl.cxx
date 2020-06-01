@@ -105,9 +105,9 @@ private:
 
 struct OGLFormat
 {
-    GLint const  nInternalFormat;
-    GLenum const eFormat;
-    GLenum const eType;
+    GLint  nInternalFormat;
+    GLenum eFormat;
+    GLenum eType;
 };
 
 /* channel ordering: (0:rgba, 1:bgra, 2:argb, 3:abgr)
@@ -375,7 +375,7 @@ void OGLTransitionerImpl::setSlides( const uno::Reference< rendering::XBitmap >&
     css::uno::Reference<css::beans::XFastPropertySet> xLeavingFastPropertySet(mxLeavingBitmap, css::uno::UNO_QUERY);
     css::uno::Sequence<css::uno::Any> aEnteringBitmap;
     css::uno::Sequence<css::uno::Any> aLeavingBitmap;
-    if (xEnteringFastPropertySet.get() && xLeavingFastPropertySet.get())
+    if (xEnteringFastPropertySet && xLeavingFastPropertySet)
     {
         xEnteringFastPropertySet->getFastPropertyValue(1) >>= aEnteringBitmap;
         xLeavingFastPropertySet->getFastPropertyValue(1) >>= aLeavingBitmap;
@@ -1214,6 +1214,7 @@ public:
     virtual uno::Reference< presentation::XTransition > SAL_CALL createTransition(
         sal_Int16                                             transitionType,
         sal_Int16                                             transitionSubType,
+        sal_Int32                                             transitionFadeColor,
         const uno::Reference< presentation::XSlideShowView >& view,
         const uno::Reference< rendering::XBitmap >&           leavingBitmap,
         const uno::Reference< rendering::XBitmap >&           enteringBitmap ) override
@@ -1288,7 +1289,7 @@ public:
         } else if( transitionType == animations::TransitionType::FADE && transitionSubType == animations::TransitionSubType::CROSSFADE ) {
             pTransition = makeFadeSmoothly();
         } else if( transitionType == animations::TransitionType::FADE && transitionSubType == animations::TransitionSubType::FADEOVERCOLOR ) {
-            pTransition = makeFadeThroughBlack();
+            pTransition = makeFadeThroughColor( transitionFadeColor == 0xffffff );
         } else if( transitionType == animations::TransitionType::IRISWIPE && transitionSubType == animations::TransitionSubType::DIAMOND ) {
             pTransition = makeDiamond();
         } else if( transitionType == animations::TransitionType::ZOOM && transitionSubType == animations::TransitionSubType::ROTATEIN ) {

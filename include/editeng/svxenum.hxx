@@ -205,7 +205,11 @@ enum SvxNumType : sal_Int16
     SVX_NUM_TEXT_NUMBER           = css::style::NumberingType::TEXT_NUMBER,
     SVX_NUM_TEXT_CARDINAL         = css::style::NumberingType::TEXT_CARDINAL,
     SVX_NUM_TEXT_ORDINAL          = css::style::NumberingType::TEXT_ORDINAL,
-    SVX_NUM_SYMBOL_CHICAGO        = css::style::NumberingType::SYMBOL_CHICAGO
+    SVX_NUM_SYMBOL_CHICAGO        = css::style::NumberingType::SYMBOL_CHICAGO,
+    SVX_NUM_ARABIC_ZERO           = css::style::NumberingType::ARABIC_ZERO,
+    SVX_NUM_ARABIC_ZERO3          = css::style::NumberingType::ARABIC_ZERO3,
+    SVX_NUM_ARABIC_ZERO4          = css::style::NumberingType::ARABIC_ZERO4,
+    SVX_NUM_ARABIC_ZERO5          = css::style::NumberingType::ARABIC_ZERO5,
 };
 
 #endif

@@ -24,12 +24,8 @@
 #include <com/sun/star/beans/XPropertiesChangeNotifier.hpp>
 #include <com/sun/star/beans/XPropertyContainer.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
-#include <com/sun/star/lang/XSingleServiceFactory.hpp>
 #include <com/sun/star/lang/XInitialization.hpp>
-#include <com/sun/star/container/XNameAccess.hpp>
 #include <com/sun/star/sdbc/XRow.hpp>
-#include <com/sun/star/embed/XStorage.hpp>
-#include <com/sun/star/embed/XEmbeddedObject.hpp>
 #include <com/sun/star/lang/XUnoTunnel.hpp>
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <cppuhelper/compbase.hxx>
@@ -41,9 +37,7 @@
 #include <connectivity/sqlerror.hxx>
 #include <memory>
 
-namespace com { namespace sun { namespace star { namespace beans {
-    struct PropertyValue;
-} } } }
+namespace com::sun::star::beans { struct PropertyValue; }
 
 namespace dbaccess
 {
@@ -51,7 +45,7 @@ namespace dbaccess
     struct ContentProperties
     {
         OUString aTitle;         // Title
-        ::o3tl::optional< OUString >
+        ::std::optional< OUString >
                         aContentType;   // ContentType (aka MediaType aka MimeType)
         bool        bIsDocument;    // IsDocument
         bool        bIsFolder;      // IsFolder

@@ -22,12 +22,13 @@
 #include <sfx2/sidebar/ControllerItem.hxx>
 #include <sfx2/sidebar/IContextChangeReceiver.hxx>
 #include <sfx2/weldutils.hxx>
-#include <svx/sidebar/PanelLayout.hxx>
+#include <sfx2/sidebar/PanelLayout.hxx>
 #include <svl/poolitem.hxx>
 #include <tools/fldunit.hxx>
 #include <tools/fract.hxx>
 #include <com/sun/star/ui/XSidebar.hpp>
 #include <basegfx/range/b2drange.hxx>
+#include <vcl/EnumContext.hxx>
 #include <vcl/customweld.hxx>
 #include <vcl/weld.hxx>
 
@@ -37,7 +38,7 @@ namespace svx {
 class DialControl;
 };
 
-namespace svx { namespace sidebar {
+namespace svx::sidebar {
 
 class PosSizePropertyPanel
 :   public PanelLayout,
@@ -65,6 +66,8 @@ public:
         const SfxItemState eState,
         const SfxPoolItem* pState) override;
 
+    virtual boost::property_tree::ptree DumpAsPropertyTree() override;
+
     SfxBindings* GetBindings() { return mpBindings;}
 
     // constructor/destructor
@@ -73,6 +76,10 @@ public:
         const css::uno::Reference<css::frame::XFrame>& rxFrame,
         SfxBindings* pBindings,
         const css::uno::Reference<css::ui::XSidebar>& rxSidebar);
+
+    virtual void GetControlState(
+        const sal_uInt16 nSId,
+        boost::property_tree::ptree& rState) override;
 
 private:
     //Position
@@ -103,6 +110,13 @@ private:
 
     std::unique_ptr<weld::Toolbar> mxArrangeTbx;
     std::unique_ptr<ToolbarUnoDispatcher> mxArrangeDispatch;
+    std::unique_ptr<weld::Toolbar> mxArrangeTbx2;
+    std::unique_ptr<ToolbarUnoDispatcher> mxArrangeDispatch2;
+
+    std::unique_ptr<weld::Toolbar> mxAlignTbx;
+    std::unique_ptr<ToolbarUnoDispatcher> mxAlignDispatch;
+    std::unique_ptr<weld::Toolbar> mxAlignTbx2;
+    std::unique_ptr<ToolbarUnoDispatcher> mxAlignDispatch2;
 
     //edit charts button for online's mobile view
     std::unique_ptr<weld::Button> mxBtnEditChart;
@@ -175,7 +189,7 @@ private:
 };
 
 
-} } // end of namespace svx::sidebar
+} // end of namespace svx::sidebar
 
 
 #endif // INCLUDED_SVX_SOURCE_SIDEBAR_POSSIZE_POSSIZEPROPERTYPANEL_HXX

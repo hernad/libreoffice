@@ -9,8 +9,8 @@
 
 #include "ShapeDrawingFragmentHandler.hxx"
 
+#include <oox/drawingml/shapegroupcontext.hxx>
 #include <oox/token/namespaces.hxx>
-#include <oox/token/tokens.hxx>
 
 using namespace com::sun::star;
 

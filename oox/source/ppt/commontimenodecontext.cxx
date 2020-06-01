@@ -18,10 +18,7 @@
  */
 
 #include "commontimenodecontext.hxx"
-
-#include <algorithm>
-
-#include <cppuhelper/exc_hlp.hxx>
+#include "conditioncontext.hxx"
 
 #include <com/sun/star/animations/AnimationFill.hpp>
 #include <com/sun/star/animations/AnimationRestart.hpp>
@@ -30,8 +27,6 @@
 #include <com/sun/star/presentation/EffectNodeType.hpp>
 
 #include <oox/helper/attributelist.hxx>
-#include <oox/core/fragmenthandler.hxx>
-#include <oox/ppt/pptimport.hxx>
 #include <oox/ppt/pptfilterhelpers.hxx>
 #include <oox/drawingml/drawingmltypes.hxx>
 #include <oox/token/namespaces.hxx>

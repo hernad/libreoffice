@@ -20,7 +20,6 @@
 #define INCLUDED_REPORTDESIGN_SOURCE_FILTER_XML_XMLFUNCTION_HXX
 
 #include <xmloff/xmlictxt.hxx>
-#include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/report/XFunctionsSupplier.hpp>
 #include <com/sun/star/report/XFunctions.hpp>
 
@@ -32,7 +31,7 @@ namespace rptxml
     {
         css::uno::Reference< css::report::XFunctions >    m_xFunctions;
         css::uno::Reference< css::report::XFunction >     m_xFunction;
-        bool const                                        m_bAddToReport;
+        bool                                              m_bAddToReport;
 
         ORptFilter& GetOwnImport();
 
@@ -47,6 +46,9 @@ namespace rptxml
                     );
         virtual ~OXMLFunction() override;
 
+        virtual void SAL_CALL startFastElement(
+                sal_Int32 /*nElement*/,
+                const css::uno::Reference< css::xml::sax::XFastAttributeList >& /*xAttrList*/ ) override {}
         virtual void SAL_CALL endFastElement(sal_Int32 nElement) override;
     };
 

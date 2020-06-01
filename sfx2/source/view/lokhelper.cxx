@@ -12,6 +12,8 @@
 #include <com/sun/star/frame/Desktop.hpp>
 
 #include <comphelper/processfactory.hxx>
+#include <rtl/strbuf.hxx>
+#include <rtl/ustrbuf.hxx>
 #include <vcl/lok.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/commandevent.hxx>
@@ -63,6 +65,12 @@ private:
 int DisableCallbacks::m_nDisabled = 0;
 }
 
+namespace
+{
+static LanguageTag g_defaultLanguageTag("en-US", true);
+static LOKDeviceFormFactor g_deviceFormFactor = LOKDeviceFormFactor::UNKNOWN;
+}
+
 int SfxLokHelper::createView()
 {
     SfxViewFrame* pViewFrame = SfxViewFrame::GetFirst();
@@ -112,8 +120,9 @@ void SfxLokHelper::setView(int nId)
         {
             DisableCallbacks dc;
 
-            // update the current LOK language for the dialog tunneling
+            // update the current LOK language and locale for the dialog tunneling
             comphelper::LibreOfficeKit::setLanguageTag(pViewShell->GetLOKLanguageTag());
+            comphelper::LibreOfficeKit::setLocale(pViewShell->GetLOKLocale());
 
             if (pViewShell == SfxViewShell::Current())
                 return;
@@ -166,6 +175,16 @@ bool SfxLokHelper::getViewIds(int* pArray, size_t nSize)
     return true;
 }
 
+LanguageTag SfxLokHelper::getDefaultLanguage()
+{
+    return g_defaultLanguageTag;
+}
+
+void SfxLokHelper::setDefaultLanguage(const OUString& rBcp47LanguageTag)
+{
+    g_defaultLanguageTag = LanguageTag(rBcp47LanguageTag, true);
+}
+
 void SfxLokHelper::setViewLanguage(int nId, const OUString& rBcp47LanguageTag)
 {
     SfxViewShellArr_Impl& rViewArr = SfxGetpApp()->GetViewShells_Impl();
@@ -178,6 +197,37 @@ void SfxLokHelper::setViewLanguage(int nId, const OUString& rBcp47LanguageTag)
             return;
         }
     }
+}
+
+void SfxLokHelper::setViewLocale(int nId, const OUString& rBcp47LanguageTag)
+{
+    SfxViewShellArr_Impl& rViewArr = SfxGetpApp()->GetViewShells_Impl();
+
+    for (SfxViewShell* pViewShell : rViewArr)
+    {
+        if (pViewShell->GetViewShellId() == ViewShellId(nId))
+        {
+            pViewShell->SetLOKLocale(rBcp47LanguageTag);
+            return;
+        }
+    }
+}
+
+LOKDeviceFormFactor SfxLokHelper::getDeviceFormFactor()
+{
+    return g_deviceFormFactor;
+}
+
+void SfxLokHelper::setDeviceFormFactor(const OUString& rDeviceFormFactor)
+{
+    if (rDeviceFormFactor == "desktop")
+        g_deviceFormFactor = LOKDeviceFormFactor::DESKTOP;
+    else if (rDeviceFormFactor == "tablet")
+        g_deviceFormFactor = LOKDeviceFormFactor::TABLET;
+    else if (rDeviceFormFactor == "mobile")
+        g_deviceFormFactor = LOKDeviceFormFactor::MOBILE;
+    else
+        g_deviceFormFactor = LOKDeviceFormFactor::UNKNOWN;
 }
 
 static OString lcl_escapeQuotes(const OString &rStr)
@@ -337,7 +387,7 @@ void SfxLokHelper::notifyDocumentSizeChangedAllViews(vcl::ITiledRenderable* pDoc
     }
 }
 
-void SfxLokHelper::notifyVisCursorInvalidation(OutlinerViewShell const* pThisView, const OString& rRectangle, bool bMispelledWord)
+void SfxLokHelper::notifyVisCursorInvalidation(OutlinerViewShell const* pThisView, const OString& rRectangle, bool bMispelledWord, const OString& rHyperlink)
 {
     if (DisableCallbacks::disabled())
         return;
@@ -345,8 +395,11 @@ void SfxLokHelper::notifyVisCursorInvalidation(OutlinerViewShell const* pThisVie
     OString sPayload;
     if (comphelper::LibreOfficeKit::isViewIdForVisCursorInvalidation())
     {
+        OString sHyperlink = rHyperlink.isEmpty() ? "{}" : rHyperlink;
         sPayload = OStringLiteral("{ \"viewId\": \"") + OString::number(SfxLokHelper::getView()) +
-            "\", \"rectangle\": \"" + rRectangle + "\", \"mispelledWord\": \"" +  OString::number(bMispelledWord ? 1 : 0) + "\" }";
+            "\", \"rectangle\": \"" + rRectangle +
+            "\", \"mispelledWord\": \"" +  OString::number(bMispelledWord ? 1 : 0) +
+            "\", \"hyperlink\": " + sHyperlink + " }";
     }
     else
     {

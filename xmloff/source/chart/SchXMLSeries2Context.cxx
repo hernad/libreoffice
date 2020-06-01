@@ -29,6 +29,7 @@
 #include <com/sun/star/chart2/XRegressionCurveContainer.hpp>
 #include <com/sun/star/chart2/data/XDataSink.hpp>
 #include <com/sun/star/chart2/data/XPivotTableDataProvider.hpp>
+#include <com/sun/star/chart2/RelativePosition.hpp>
 
 #include <com/sun/star/chart2/XDataPointCustomLabelField.hpp>
 #include <com/sun/star/chart2/DataPointCustomLabelFieldType.hpp>
@@ -169,6 +170,26 @@ void lcl_resetSymbolSizeForPointsIfNecessary( const uno::Reference< beans::XProp
     uno::Any aASymbolSize( SchXMLTools::getPropertyFromContext( "SymbolSize", pPropStyleContext, pStylesCtxt ) );
     if( !aASymbolSize.hasValue() )
         lcl_setSymbolSizeIfNeeded( xPointProp, rImport );
+}
+
+void lcl_setLinkNumberFormatToSourceIfNeeded( const uno::Reference< beans::XPropertySet >& xPointProp
+    , const XMLPropStyleContext* pPropStyleContext, const SvXMLStylesContext* pStylesCtxt )
+{
+    uno::Any aAny( SchXMLTools::getPropertyFromContext("LinkNumberFormatToSource", pPropStyleContext, pStylesCtxt) );
+    if( !aAny.hasValue() )
+    {
+        if( !xPointProp.is() )
+            return;
+
+        bool bLinkToSource = false;
+        if( xPointProp.is() && (xPointProp->getPropertyValue("LinkNumberFormatToSource") >>= bLinkToSource) )
+        {
+            if( bLinkToSource )
+            {
+                xPointProp->setPropertyValue("LinkNumberFormatToSource", uno::makeAny(false));
+            }
+        }
+    }
 }
 
 void lcl_insertErrorBarLSequencesToMap(
@@ -509,7 +530,7 @@ struct DomainInfo
         : aRole(rRole), aRange(rRange), nIndexForLocalData(nIndex)
     {}
 
-    OUString const aRole;
+    OUString aRole;
     OUString aRange;
     sal_Int32 nIndexForLocalData;
 };
@@ -1085,6 +1106,8 @@ void SchXMLSeries2Context::setStylesToDataPoints( SeriesDefaultsAndStyles& rSeri
                     pPropStyleContext->FillPropertySet( xPointProp );
                     if( seriesStyle.mbSymbolSizeForSeriesIsMissingInFile )
                         lcl_resetSymbolSizeForPointsIfNecessary( xPointProp, rImport, pPropStyleContext, pStylesCtxt );
+                    if( !pPropStyleContext->isEmptyDataStyleName() )
+                        lcl_setLinkNumberFormatToSourceIfNeeded( xPointProp, pPropStyleContext, pStylesCtxt );
                 }
 
                 // Custom labels might be passed as property
@@ -1100,6 +1123,14 @@ void SchXMLSeries2Context::setStylesToDataPoints( SeriesDefaultsAndStyles& rSeri
                         xCustomLabel->setFieldType(chart2::DataPointCustomLabelFieldType::DataPointCustomLabelFieldType_TEXT);
                     }
                     xPointProp->setPropertyValue("CustomLabelFields", uno::Any(xLabels));
+                }
+
+                if( seriesStyle.mCustomLabelPos[0] != 0.0 || seriesStyle.mCustomLabelPos[1] != 0.0 )
+                {
+                    chart2::RelativePosition aCustomlabelPosition;
+                    aCustomlabelPosition.Primary = seriesStyle.mCustomLabelPos[0];
+                    aCustomlabelPosition.Secondary = seriesStyle.mCustomLabelPos[1];
+                    xPointProp->setPropertyValue("CustomLabelPosition", uno::Any(aCustomlabelPosition));
                 }
             }
             catch( const uno::Exception & )

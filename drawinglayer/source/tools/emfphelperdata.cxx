@@ -30,7 +30,13 @@
 #include <basegfx/curve/b2dcubicbezier.hxx>
 #include <wmfemfhelper.hxx>
 #include <drawinglayer/primitive2d/unifiedtransparenceprimitive2d.hxx>
-#include <drawinglayer/primitive2d/polypolygonprimitive2d.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonHairlinePrimitive2D.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonMarkerPrimitive2D.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonStrokePrimitive2D.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonColorPrimitive2D.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonGradientPrimitive2D.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonHatchPrimitive2D.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonGraphicPrimitive2D.hxx>
 #include <drawinglayer/primitive2d/svggradientprimitive2d.hxx>
 #include <drawinglayer/primitive2d/textdecoratedprimitive2d.hxx>
 #include <drawinglayer/primitive2d/textprimitive2d.hxx>
@@ -49,11 +55,22 @@
 #include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
 #include <i18nlangtag/languagetag.hxx>
+#include <toolkit/helper/vclunohelper.hxx>
 
 #include <algorithm>
 
 namespace emfplushelper
 {
+
+    enum
+    {
+        WrapModeTile = 0x00000000,
+        WrapModeTileFlipX = 0x00000001,
+        WrapModeTileFlipY = 0x00000002,
+        WrapModeTileFlipXY = 0x00000003,
+        WrapModeClamp = 0x00000004
+    };
+
     const char* emfTypeToName(sal_uInt16 type)
     {
         switch (type)
@@ -88,6 +105,7 @@ namespace emfplushelper
             case EmfPlusRecordTypeSetCompositingQuality: return "EmfPlusRecordTypeSetCompositingQuality";
             case EmfPlusRecordTypeSave: return "EmfPlusRecordTypeSave";
             case EmfPlusRecordTypeRestore: return "EmfPlusRecordTypeRestore";
+            case EmfPlusRecordTypeBeginContainer: return "EmfPlusRecordTypeBeginContainer";
             case EmfPlusRecordTypeBeginContainerNoParams: return "EmfPlusRecordTypeBeginContainerNoParams";
             case EmfPlusRecordTypeEndContainer: return "EmfPlusRecordTypeEndContainer";
             case EmfPlusRecordTypeSetWorldTransform: return "EmfPlusRecordTypeSetWorldTransform";
@@ -216,7 +234,7 @@ namespace emfplushelper
     {
     }
 
-    float EmfPlusHelperData::getUnitToPixelMultiplier(const UnitType aUnitType)
+    float EmfPlusHelperData::getUnitToPixelMultiplier(const UnitType aUnitType, const sal_uInt32 aDPI)
     {
         switch (aUnitType)
         {
@@ -224,16 +242,16 @@ namespace emfplushelper
                 return 1.0f;
 
             case UnitTypePoint:
-                return Application::GetDefaultDevice()->GetDPIX() / 72;
+                return aDPI / 72.0;
 
             case UnitTypeInch:
-                return Application::GetDefaultDevice()->GetDPIX();
+                return aDPI;
 
             case UnitTypeMillimeter:
-                return Application::GetDefaultDevice()->GetDPIX() / 25.4;
+                return aDPI / 25.4;
 
             case UnitTypeDocument:
-                return Application::GetDefaultDevice()->GetDPIX() / 300;
+                return aDPI / 300.0;
 
             case UnitTypeWorld:
             case UnitTypeDisplay:
@@ -268,6 +286,7 @@ namespace emfplushelper
                 EMFPPen *pen = new EMFPPen();
                 maEMFPObjects[index].reset(pen);
                 pen->Read(rObjectStream, *this);
+                pen->penWidth = pen->penWidth * getUnitToPixelMultiplier(static_cast<UnitType>(pen->penUnit), mnHDPI);
                 break;
             }
             case EmfPlusObjectTypePath:
@@ -311,6 +330,9 @@ namespace emfplushelper
                 font->sizeUnit = 0;
                 font->fontFlags = 0;
                 font->Read(rObjectStream);
+                // tdf#113624 Convert unit to Pixels
+                font->emSize = font->emSize * getUnitToPixelMultiplier(static_cast<UnitType>(font->sizeUnit), mnHDPI);
+
                 break;
             }
             case EmfPlusObjectTypeStringFormat:
@@ -492,212 +514,212 @@ namespace emfplushelper
         const EMFPPen* pen = dynamic_cast<EMFPPen*>(maEMFPObjects[penIndex & 0xff].get());
         SAL_WARN_IF(!pen, "drawinglayer", "emf+ missing pen");
 
-        if (pen && polygon.count())
+        if (!(pen && polygon.count()))
+            return;
+
+        // we need a line join attribute
+        basegfx::B2DLineJoin lineJoin = basegfx::B2DLineJoin::Round;
+        if (pen->penDataFlags & EmfPlusPenDataJoin) // additional line join information
         {
-            // we need a line join attribute
-            basegfx::B2DLineJoin lineJoin = basegfx::B2DLineJoin::Round;
-            if (pen->penDataFlags & EmfPlusPenDataJoin) // additional line join information
+            lineJoin = static_cast<basegfx::B2DLineJoin>(EMFPPen::lcl_convertLineJoinType(pen->lineJoin));
+        }
+
+        // we need a line cap attribute
+        css::drawing::LineCap lineCap = css::drawing::LineCap_BUTT;
+        if (pen->penDataFlags & EmfPlusPenDataStartCap) // additional line cap information
+        {
+            lineCap = static_cast<css::drawing::LineCap>(EMFPPen::lcl_convertStrokeCap(pen->startCap));
+            SAL_WARN_IF(pen->startCap != pen->endCap, "drawinglayer", "emf+ pen uses different start and end cap");
+        }
+
+        const double transformedPenWidth = maMapTransform.get(0, 0) * pen->penWidth;
+        drawinglayer::attribute::LineAttribute lineAttribute(pen->GetColor().getBColor(),
+                                                             transformedPenWidth,
+                                                             lineJoin,
+                                                             lineCap);
+
+        drawinglayer::attribute::StrokeAttribute aStrokeAttribute;
+        if (pen->penDataFlags & EmfPlusPenDataLineStyle && pen->dashStyle != EmfPlusLineStyleCustom) // pen has a predefined line style
+        {
+            // short writing
+            const double pw = maMapTransform.get(1, 1) * pen->penWidth;
+            // taken from the old cppcanvas implementation and multiplied with pen width
+            const std::vector<double> dash = { 3*pw, 3*pw };
+            const std::vector<double> dot = { pw, 3*pw };
+            const std::vector<double> dashdot = { 3*pw, 3*pw, pw, 3*pw };
+            const std::vector<double> dashdotdot = { 3*pw, 3*pw, pw, 3*pw, pw, 3*pw };
+
+            switch (pen->dashStyle)
             {
-                lineJoin = static_cast<basegfx::B2DLineJoin>(EMFPPen::lcl_convertLineJoinType(pen->lineJoin));
+                case EmfPlusLineStyleSolid: // do nothing special, use default stroke attribute
+                    break;
+                case EmfPlusLineStyleDash:
+                    aStrokeAttribute = drawinglayer::attribute::StrokeAttribute(dash);
+                    break;
+                case EmfPlusLineStyleDot:
+                    aStrokeAttribute = drawinglayer::attribute::StrokeAttribute(dot);
+                    break;
+                case EmfPlusLineStyleDashDot:
+                    aStrokeAttribute = drawinglayer::attribute::StrokeAttribute(dashdot);
+                    break;
+                case EmfPlusLineStyleDashDotDot:
+                    aStrokeAttribute = drawinglayer::attribute::StrokeAttribute(dashdotdot);
+                    break;
+            }
+        }
+        else if (pen->penDataFlags & EmfPlusPenDataDashedLine) // pen has a custom dash line
+        {
+            // StrokeAttribute needs a double vector while the pen provides a float vector
+            std::vector<double> aPattern(pen->dashPattern.size());
+            for (size_t i=0; i<aPattern.size(); i++)
+            {
+                // convert from float to double and multiply with the adjusted pen width
+                aPattern[i] = maMapTransform.get(1, 1) * pen->penWidth * pen->dashPattern[i];
+            }
+            aStrokeAttribute = drawinglayer::attribute::StrokeAttribute(aPattern);
+        }
+
+        if (pen->GetColor().GetTransparency() == 0)
+        {
+            mrTargetHolders.Current().append(
+                std::make_unique<drawinglayer::primitive2d::PolyPolygonStrokePrimitive2D>(
+                    polygon,
+                    lineAttribute,
+                    aStrokeAttribute));
+        }
+        else
+        {
+            const drawinglayer::primitive2d::Primitive2DReference aPrimitive(
+                        new drawinglayer::primitive2d::PolyPolygonStrokePrimitive2D(
+                            polygon,
+                            lineAttribute,
+                            aStrokeAttribute));
+
+            mrTargetHolders.Current().append(
+                        std::make_unique<drawinglayer::primitive2d::UnifiedTransparencePrimitive2D>(
+                            drawinglayer::primitive2d::Primitive2DContainer { aPrimitive },
+                            pen->GetColor().GetTransparency() / 255.0));
+        }
+
+        if ((pen->penDataFlags & EmfPlusPenDataCustomStartCap) && (pen->customStartCap->polygon.begin()->count() > 1))
+        {
+            SAL_WARN("drawinglayer", "EMF+\tCustom Start Line Cap");
+            ::basegfx::B2DPolyPolygon startCapPolygon(pen->customStartCap->polygon);
+
+            // get the gradient of the first line in the polypolygon
+            double x1 = polygon.begin()->getB2DPoint(0).getX();
+            double y1 = polygon.begin()->getB2DPoint(0).getY();
+            double x2 = polygon.begin()->getB2DPoint(1).getX();
+            double y2 = polygon.begin()->getB2DPoint(1).getY();
+
+            if ((x2 - x1) != 0)
+            {
+                double gradient = (y2 - y1) / (x2 - x1);
+
+                // now we get the angle that we need to rotate the arrow by
+                double angle = (M_PI / 2) - atan(gradient);
+
+                // rotate the arrow
+                startCapPolygon.transform(basegfx::utils::createRotateB2DHomMatrix(angle));
             }
 
-            // we need a line cap attribute
-            css::drawing::LineCap lineCap = css::drawing::LineCap_BUTT;
-            if (pen->penDataFlags & EmfPlusPenDataStartCap) // additional line cap information
-            {
-                lineCap = static_cast<css::drawing::LineCap>(EMFPPen::lcl_convertStrokeCap(pen->startCap));
-                SAL_WARN_IF(pen->startCap != pen->endCap, "drawinglayer", "emf+ pen uses different start and end cap");
-            }
+            startCapPolygon.transform(maMapTransform);
 
-            const double transformedPenWidth = maMapTransform.get(0, 0) * pen->penWidth;
-            drawinglayer::attribute::LineAttribute lineAttribute(pen->GetColor().getBColor(),
-                                                                 transformedPenWidth,
-                                                                 lineJoin,
-                                                                 lineCap);
+            basegfx::B2DHomMatrix tran(pen->penWidth, 0.0, polygon.begin()->getB2DPoint(0).getX(),
+                                       0.0, pen->penWidth, polygon.begin()->getB2DPoint(0).getY());
+            startCapPolygon.transform(tran);
 
-            drawinglayer::attribute::StrokeAttribute aStrokeAttribute;
-            if (pen->penDataFlags & EmfPlusPenDataLineStyle && pen->dashStyle != EmfPlusLineStyleCustom) // pen has a predefined line style
-            {
-                // short writing
-                const double pw = maMapTransform.get(1, 1) * pen->penWidth;
-                // taken from the old cppcanvas implementation and multiplied with pen width
-                const std::vector<double> dash = { 3*pw, 3*pw };
-                const std::vector<double> dot = { pw, 3*pw };
-                const std::vector<double> dashdot = { 3*pw, 3*pw, pw, 3*pw };
-                const std::vector<double> dashdotdot = { 3*pw, 3*pw, pw, 3*pw, pw, 3*pw };
-
-                switch (pen->dashStyle)
-                {
-                    case EmfPlusLineStyleSolid: // do nothing special, use default stroke attribute
-                        break;
-                    case EmfPlusLineStyleDash:
-                        aStrokeAttribute = drawinglayer::attribute::StrokeAttribute(dash);
-                        break;
-                    case EmfPlusLineStyleDot:
-                        aStrokeAttribute = drawinglayer::attribute::StrokeAttribute(dot);
-                        break;
-                    case EmfPlusLineStyleDashDot:
-                        aStrokeAttribute = drawinglayer::attribute::StrokeAttribute(dashdot);
-                        break;
-                    case EmfPlusLineStyleDashDotDot:
-                        aStrokeAttribute = drawinglayer::attribute::StrokeAttribute(dashdotdot);
-                        break;
-                }
-            }
-            else if (pen->penDataFlags & EmfPlusPenDataMiterLimit) // pen has a custom dash line
-            {
-                // StrokeAttribute needs a double vector while the pen provides a float vector
-                std::vector<double> aPattern(pen->dashPattern.size());
-                for (size_t i=0; i<aPattern.size(); i++)
-                {
-                    // convert from float to double and multiply with the adjusted pen width
-                    aPattern[i] = maMapTransform.get(1, 1) * pen->penWidth * pen->dashPattern[i];
-                }
-                aStrokeAttribute = drawinglayer::attribute::StrokeAttribute(aPattern);
-            }
-
-            if (pen->GetColor().GetTransparency() == 0)
+            if (pen->customStartCap->mbIsFilled)
             {
                 mrTargetHolders.Current().append(
-                    std::make_unique<drawinglayer::primitive2d::PolyPolygonStrokePrimitive2D>(
-                        polygon,
-                        lineAttribute,
-                        aStrokeAttribute));
+                            std::make_unique<drawinglayer::primitive2d::PolyPolygonColorPrimitive2D>(
+                                startCapPolygon,
+                                pen->GetColor().getBColor()));
             }
             else
             {
-                const drawinglayer::primitive2d::Primitive2DReference aPrimitive(
-                            new drawinglayer::primitive2d::PolyPolygonStrokePrimitive2D(
-                                polygon,
+                mrTargetHolders.Current().append(
+                            std::make_unique<drawinglayer::primitive2d::PolyPolygonStrokePrimitive2D>(
+                                startCapPolygon,
                                 lineAttribute,
                                 aStrokeAttribute));
-
-                mrTargetHolders.Current().append(
-                            std::make_unique<drawinglayer::primitive2d::UnifiedTransparencePrimitive2D>(
-                                drawinglayer::primitive2d::Primitive2DContainer { aPrimitive },
-                                pen->GetColor().GetTransparency() / 255.0));
             }
-
-            if ((pen->penDataFlags & EmfPlusPenDataCustomStartCap) && (pen->customStartCap->polygon.begin()->count() > 1))
-            {
-                SAL_WARN("drawinglayer", "EMF+\tCustom Start Line Cap");
-                ::basegfx::B2DPolyPolygon startCapPolygon(pen->customStartCap->polygon);
-
-                // get the gradient of the first line in the polypolygon
-                double x1 = polygon.begin()->getB2DPoint(0).getX();
-                double y1 = polygon.begin()->getB2DPoint(0).getY();
-                double x2 = polygon.begin()->getB2DPoint(1).getX();
-                double y2 = polygon.begin()->getB2DPoint(1).getY();
-
-                if ((x2 - x1) != 0)
-                {
-                    double gradient = (y2 - y1) / (x2 - x1);
-
-                    // now we get the angle that we need to rotate the arrow by
-                    double angle = (M_PI / 2) - atan(gradient);
-
-                    // rotate the arrow
-                    startCapPolygon.transform(basegfx::utils::createRotateB2DHomMatrix(angle));
-                }
-
-                startCapPolygon.transform(maMapTransform);
-
-                basegfx::B2DHomMatrix tran(pen->penWidth, 0.0, polygon.begin()->getB2DPoint(0).getX(),
-                                           0.0, pen->penWidth, polygon.begin()->getB2DPoint(0).getY());
-                startCapPolygon.transform(tran);
-
-                if (pen->customStartCap->mbIsFilled)
-                {
-                    mrTargetHolders.Current().append(
-                                std::make_unique<drawinglayer::primitive2d::PolyPolygonColorPrimitive2D>(
-                                    startCapPolygon,
-                                    pen->GetColor().getBColor()));
-                }
-                else
-                {
-                    mrTargetHolders.Current().append(
-                                std::make_unique<drawinglayer::primitive2d::PolyPolygonStrokePrimitive2D>(
-                                    startCapPolygon,
-                                    lineAttribute,
-                                    aStrokeAttribute));
-                }
-            }
-
-            if ((pen->penDataFlags & EmfPlusPenDataCustomEndCap) && (pen->customEndCap->polygon.begin()->count() > 1))
-            {
-                SAL_WARN("drawinglayer", "EMF+\tCustom End Line Cap");
-
-                ::basegfx::B2DPolyPolygon endCapPolygon(pen->customEndCap->polygon);
-
-                // get the gradient of the first line in the polypolygon
-                double x1 = polygon.begin()->getB2DPoint(polygon.begin()->count() - 1).getX();
-                double y1 = polygon.begin()->getB2DPoint(polygon.begin()->count() - 1).getY();
-                double x2 = polygon.begin()->getB2DPoint(polygon.begin()->count() - 2).getX();
-                double y2 = polygon.begin()->getB2DPoint(polygon.begin()->count() - 2).getY();
-
-                if ((x2 - x1) != 0)
-                {
-                    double gradient = (y2 - y1) / (x2 - x1);
-
-                    // now we get the angle that we need to rotate the arrow by
-                    double angle = (M_PI / 2) - atan(gradient);
-
-                    // rotate the arrow
-                    endCapPolygon.transform(basegfx::utils::createRotateB2DHomMatrix(angle));
-                }
-
-                endCapPolygon.transform(maMapTransform);
-                basegfx::B2DHomMatrix tran(pen->penWidth, 0.0, polygon.begin()->getB2DPoint(polygon.begin()->count() - 1).getX(),
-                                           0.0, pen->penWidth, polygon.begin()->getB2DPoint(polygon.begin()->count() - 1).getY());
-                endCapPolygon.transform(tran);
-
-                if (pen->customEndCap->mbIsFilled)
-                {
-                    mrTargetHolders.Current().append(
-                                std::make_unique<drawinglayer::primitive2d::PolyPolygonColorPrimitive2D>(
-                                    endCapPolygon,
-                                    pen->GetColor().getBColor()));
-                }
-                else
-                {
-                    mrTargetHolders.Current().append(
-                                std::make_unique<drawinglayer::primitive2d::PolyPolygonStrokePrimitive2D>(
-                                    endCapPolygon,
-                                    lineAttribute,
-                                    aStrokeAttribute));
-                }
-            }
-
-            mrPropertyHolders.Current().setLineColor(pen->GetColor().getBColor());
-            mrPropertyHolders.Current().setLineColorActive(true);
-            mrPropertyHolders.Current().setFillColorActive(false);
         }
+
+        if ((pen->penDataFlags & EmfPlusPenDataCustomEndCap) && (pen->customEndCap->polygon.begin()->count() > 1))
+        {
+            SAL_WARN("drawinglayer", "EMF+\tCustom End Line Cap");
+
+            ::basegfx::B2DPolyPolygon endCapPolygon(pen->customEndCap->polygon);
+
+            // get the gradient of the first line in the polypolygon
+            double x1 = polygon.begin()->getB2DPoint(polygon.begin()->count() - 1).getX();
+            double y1 = polygon.begin()->getB2DPoint(polygon.begin()->count() - 1).getY();
+            double x2 = polygon.begin()->getB2DPoint(polygon.begin()->count() - 2).getX();
+            double y2 = polygon.begin()->getB2DPoint(polygon.begin()->count() - 2).getY();
+
+            if ((x2 - x1) != 0)
+            {
+                double gradient = (y2 - y1) / (x2 - x1);
+
+                // now we get the angle that we need to rotate the arrow by
+                double angle = (M_PI / 2) - atan(gradient);
+
+                // rotate the arrow
+                endCapPolygon.transform(basegfx::utils::createRotateB2DHomMatrix(angle));
+            }
+
+            endCapPolygon.transform(maMapTransform);
+            basegfx::B2DHomMatrix tran(pen->penWidth, 0.0, polygon.begin()->getB2DPoint(polygon.begin()->count() - 1).getX(),
+                                       0.0, pen->penWidth, polygon.begin()->getB2DPoint(polygon.begin()->count() - 1).getY());
+            endCapPolygon.transform(tran);
+
+            if (pen->customEndCap->mbIsFilled)
+            {
+                mrTargetHolders.Current().append(
+                            std::make_unique<drawinglayer::primitive2d::PolyPolygonColorPrimitive2D>(
+                                endCapPolygon,
+                                pen->GetColor().getBColor()));
+            }
+            else
+            {
+                mrTargetHolders.Current().append(
+                            std::make_unique<drawinglayer::primitive2d::PolyPolygonStrokePrimitive2D>(
+                                endCapPolygon,
+                                lineAttribute,
+                                aStrokeAttribute));
+            }
+        }
+
+        mrPropertyHolders.Current().setLineColor(pen->GetColor().getBColor());
+        mrPropertyHolders.Current().setLineColorActive(true);
+        mrPropertyHolders.Current().setFillColorActive(false);
     }
 
     void EmfPlusHelperData::EMFPPlusFillPolygonSolidColor(const ::basegfx::B2DPolyPolygon& polygon, Color const& color)
     {
-        if (color.GetTransparency() < 255)
-        {
-            if (color.GetTransparency() == 0)
-            {
-                // not transparent
-                mrTargetHolders.Current().append(
-                            std::make_unique<drawinglayer::primitive2d::PolyPolygonColorPrimitive2D>(
-                                polygon,
-                                color.getBColor()));
-            }
-            else
-            {
-                const drawinglayer::primitive2d::Primitive2DReference aPrimitive(
-                            new drawinglayer::primitive2d::PolyPolygonColorPrimitive2D(
-                                polygon,
-                                color.getBColor()));
+        if (color.GetTransparency() >= 255)
+            return;
 
-                mrTargetHolders.Current().append(
-                            std::make_unique<drawinglayer::primitive2d::UnifiedTransparencePrimitive2D>(
-                                drawinglayer::primitive2d::Primitive2DContainer { aPrimitive },
-                                color.GetTransparency() / 255.0));
-            }
+        if (color.GetTransparency() == 0)
+        {
+            // not transparent
+            mrTargetHolders.Current().append(
+                        std::make_unique<drawinglayer::primitive2d::PolyPolygonColorPrimitive2D>(
+                            polygon,
+                            color.getBColor()));
+        }
+        else
+        {
+            const drawinglayer::primitive2d::Primitive2DReference aPrimitive(
+                        new drawinglayer::primitive2d::PolyPolygonColorPrimitive2D(
+                            polygon,
+                            color.getBColor()));
+
+            mrTargetHolders.Current().append(
+                        std::make_unique<drawinglayer::primitive2d::UnifiedTransparencePrimitive2D>(
+                            drawinglayer::primitive2d::Primitive2DContainer { aPrimitive },
+                            color.GetTransparency() / 255.0));
         }
     }
 
@@ -788,7 +810,7 @@ namespace emfplushelper
             {
                 if (brush->type == BrushTypePathGradient && !(brush->additionalFlags & 0x1))
                 {
-                    SAL_WARN("drawinglayer", "EMF+\t TODO Verify proper displaying of BrushTypePathGradient with flags: " <<  std::hex << brush->additionalFlags << std::dec);
+                    SAL_WARN("drawinglayer", "EMF+\t TODO Implement displaying BrushTypePathGradient with Boundary: ");
                 }
                 ::basegfx::B2DHomMatrix aTextureTransformation;
 
@@ -825,10 +847,11 @@ namespace emfplushelper
                             // seems like SvgRadialGradientPrimitive2D needs doubled, inverted radius
                             aBlendPoint = 2. * ( 1. - brush->blendPositions [i] );
                         }
-                        aColor.setGreen( aStartColor.getGreen() * (1. - brush->blendFactors[i]) + aEndColor.getGreen() * brush->blendFactors[i] );
-                        aColor.setBlue ( aStartColor.getBlue()  * (1. - brush->blendFactors[i]) + aEndColor.getBlue()  * brush->blendFactors[i] );
-                        aColor.setRed  ( aStartColor.getRed()   * (1. - brush->blendFactors[i]) + aEndColor.getRed()   * brush->blendFactors[i] );
-                        aVector.emplace_back(aBlendPoint, aColor, 1. );
+                        aColor.setGreen( aStartColor.getGreen() + brush->blendFactors[i] * ( aEndColor.getGreen() - aStartColor.getGreen() ) );
+                        aColor.setBlue ( aStartColor.getBlue()  + brush->blendFactors[i] * ( aEndColor.getBlue() - aStartColor.getBlue() ) );
+                        aColor.setRed  ( aStartColor.getRed()   + brush->blendFactors[i] * ( aEndColor.getRed() - aStartColor.getRed() ) );
+                        const double aTransparency = brush->solidColor.GetTransparency() + brush->blendFactors[i] * ( brush->secondColor.GetTransparency() - brush->solidColor.GetTransparency() );
+                        aVector.emplace_back(aBlendPoint, aColor, (255.0 - aTransparency) / 255.0);
                     }
                 }
                 else if (brush->colorblendPositions)
@@ -850,7 +873,7 @@ namespace emfplushelper
                             aBlendPoint = 2. * ( 1. - brush->colorblendPositions [i] );
                         }
                         aColor = brush->colorblendColors[i].getBColor();
-                        aVector.emplace_back(aBlendPoint, aColor, 1. );
+                        aVector.emplace_back(aBlendPoint, aColor, (255 - brush->colorblendColors[i].GetTransparency()) / 255.0 );
                     }
                 }
                 else // ok, no extra points: just start and end
@@ -877,10 +900,31 @@ namespace emfplushelper
 
                 if (brush->type == BrushTypeLinearGradient)
                 {
-                    basegfx::B2DPoint aStartPoint = Map(brush->firstPointX, brush->firstPointY);
+                    // support for public enum EmfPlusWrapMode
+                    basegfx::B2DPoint aStartPoint = Map(brush->firstPointX, 0.0);
                     aStartPoint = aPolygonTransformation * aStartPoint;
-                    basegfx::B2DPoint aEndPoint = Map(brush->firstPointX + brush->secondPointX, brush->firstPointY + brush->secondPointY);
+                    basegfx::B2DPoint aEndPoint = Map(brush->firstPointX + brush->aWidth, 0.0);
                     aEndPoint = aPolygonTransformation * aEndPoint;
+
+                    // support for public enum EmfPlusWrapMode
+                    drawinglayer::primitive2d::SpreadMethod aSpreadMethod(drawinglayer::primitive2d::SpreadMethod::Pad);
+                    switch(brush->wrapMode)
+                    {
+                        case WrapModeTile:
+                        case WrapModeTileFlipY:
+                        {
+                            aSpreadMethod = drawinglayer::primitive2d::SpreadMethod::Repeat;
+                            break;
+                        }
+                        case WrapModeTileFlipX:
+                        case WrapModeTileFlipXY:
+                        {
+                            aSpreadMethod = drawinglayer::primitive2d::SpreadMethod::Reflect;
+                            break;
+                        }
+                        default:
+                            break;
+                    }
 
                     // create the same one used for SVG
                     mrTargetHolders.Current().append(
@@ -891,7 +935,7 @@ namespace emfplushelper
                             aStartPoint,
                             aEndPoint,
                             false,                  // do not use UnitCoordinates
-                            drawinglayer::primitive2d::SpreadMethod::Pad));
+                            aSpreadMethod));
                 }
                 else // BrushTypePathGradient
                 {
@@ -1401,7 +1445,7 @@ namespace emfplushelper
                         SAL_INFO("drawinglayer", "EMF+\t TODO: use image attributes");
 
                         // For DrawImage and DrawImagePoints, source unit of measurement type must be 1 pixel
-                        if (sourceUnit == UnitTypePixel && maEMFPObjects[flags & 0xff].get())
+                        if (sourceUnit == UnitTypePixel && maEMFPObjects[flags & 0xff])
                         {
                             EMFPImage& image = *static_cast<EMFPImage *>(maEMFPObjects[flags & 0xff].get());
                             float sx, sy, sw, sh;
@@ -1467,7 +1511,9 @@ namespace emfplushelper
                                 if (aSize.Width() > 0 && aSize.Height() > 0)
                                 {
                                     mrTargetHolders.Current().append(
-                                        std::make_unique<drawinglayer::primitive2d::BitmapPrimitive2D>(aBmp, aTransformMatrix));
+                                        std::make_unique<drawinglayer::primitive2d::BitmapPrimitive2D>(
+                                            VCLUnoHelper::CreateVCLXBitmap(aBmp),
+                                            aTransformMatrix));
                                 }
                                 else
                                 {
@@ -1661,9 +1707,8 @@ namespace emfplushelper
                         }
                         else
                         {
-                            const float aPageScaleMul = mfPageScale * getUnitToPixelMultiplier(static_cast<UnitType>(flags));
-                            mnMmX *= aPageScaleMul;
-                            mnMmY *= aPageScaleMul;
+                            mnMmX *= mfPageScale * getUnitToPixelMultiplier(static_cast<UnitType>(flags), mnHDPI);
+                            mnMmY *= mfPageScale * getUnitToPixelMultiplier(static_cast<UnitType>(flags), mnVDPI);
                             mappingChanged();
                         }
                         break;
@@ -1739,6 +1784,35 @@ namespace emfplushelper
                         SAL_INFO("drawinglayer", "EMF+\t Restore stack index: " << stackIndex);
 
                         GraphicStatePop(mGSStack, stackIndex, mrPropertyHolders.Current());
+                        break;
+                    }
+                    case EmfPlusRecordTypeBeginContainer:
+                    {
+                        float dx, dy, dw, dh;
+                        ReadRectangle(rMS, dx, dy, dw, dh);
+                        SAL_INFO("drawinglayer", "EMF+\t Dest RectData: " << dx << "," << dy << " " << dw << "x" << dh);
+
+                        float sx, sy, sw, sh;
+                        ReadRectangle(rMS, sx, sy, sw, sh);
+                        SAL_INFO("drawinglayer", "EMF+\t Source RectData: " << sx << "," << sy << " " << sw << "x" << sh);
+
+                        sal_uInt32 stackIndex;
+                        rMS.ReadUInt32(stackIndex);
+                        SAL_INFO("drawinglayer", "EMF+\t Begin Container stack index: " << stackIndex << ", PageUnit: " << flags);
+
+                        if ((flags == UnitTypeDisplay) || (flags == UnitTypeWorld))
+                        {
+                            SAL_WARN("drawinglayer", "EMF+\t file error. UnitTypeDisplay and UnitTypeWorld are not supported by BeginContainer in EMF+ specification.");
+                            break;
+                        }
+                        const float aPageScaleX = getUnitToPixelMultiplier(static_cast<UnitType>(flags), mnHDPI);
+                        const float aPageScaleY = getUnitToPixelMultiplier(static_cast<UnitType>(flags), mnVDPI);
+                        GraphicStatePush(mGSContainerStack, stackIndex);
+                        const basegfx::B2DHomMatrix transform = basegfx::utils::createScaleTranslateB2DHomMatrix(
+                            aPageScaleX * ( dw / sw ), aPageScaleY * ( dh / sh ),
+                            aPageScaleX * ( dx - sx ), aPageScaleY * ( dy - sy) );
+                        maWorldTransform *= transform;
+                        mappingChanged();
                         break;
                     }
                     case EmfPlusRecordTypeBeginContainerNoParams:

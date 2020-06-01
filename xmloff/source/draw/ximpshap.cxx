@@ -87,6 +87,7 @@
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 #include <basegfx/polygon/b2dpolypolygontools.hxx>
 #include <basegfx/vector/b2dvector.hxx>
+#include <o3tl/any.hxx>
 #include <o3tl/safeint.hxx>
 
 using namespace ::com::sun::star;
@@ -149,7 +150,7 @@ SdXMLShapeContext::SdXMLShapeContext(
     , mxShapes( rShapes )
     , mxAttrList(xAttrList)
     , mbListContextPushed( false )
-    , mnStyleFamily(XML_STYLE_FAMILY_SD_GRAPHICS_ID)
+    , mnStyleFamily(XmlStyleFamily::SD_GRAPHICS_ID)
     , mbIsPlaceholder(false)
     , mbClearDefaultAttributes( true )
     , mbIsUserTransformed(false)
@@ -665,10 +666,10 @@ void SdXMLShapeContext::SetStyle( bool bSupportsStyle /* = true */)
 
                             uno::Reference< container::XNameAccess > xFamily;
 
-                            if( XML_STYLE_FAMILY_SD_PRESENTATION_ID == mnStyleFamily )
+                            if( XmlStyleFamily::SD_PRESENTATION_ID == mnStyleFamily )
                             {
                                 aStyleName = GetImport().GetStyleDisplayName(
-                                    XML_STYLE_FAMILY_SD_PRESENTATION_ID,
+                                    XmlStyleFamily::SD_PRESENTATION_ID,
                                     aStyleName );
                                 sal_Int32 nPos = aStyleName.lastIndexOf( '-' );
                                 if( -1 != nPos )
@@ -684,7 +685,7 @@ void SdXMLShapeContext::SetStyle( bool bSupportsStyle /* = true */)
                                 // get graphics family
                                 xFamilies->getByName("graphics") >>= xFamily;
                                 aStyleName = GetImport().GetStyleDisplayName(
-                                    XML_STYLE_FAMILY_SD_GRAPHICS_ID,
+                                    XmlStyleFamily::SD_GRAPHICS_ID,
                                     aStyleName );
                             }
 
@@ -740,7 +741,7 @@ void SdXMLShapeContext::SetStyle( bool bSupportsStyle /* = true */)
             if( nullptr == GetImport().GetShapeImport()->GetAutoStylesContext())
                 break;
 
-            const SvXMLStyleContext* pTempStyle = GetImport().GetShapeImport()->GetAutoStylesContext()->FindStyleChildContext(XML_STYLE_FAMILY_TEXT_PARAGRAPH, maTextStyleName);
+            const SvXMLStyleContext* pTempStyle = GetImport().GetShapeImport()->GetAutoStylesContext()->FindStyleChildContext(XmlStyleFamily::TEXT_PARAGRAPH, maTextStyleName);
             XMLPropStyleContext* pStyle = const_cast<XMLPropStyleContext*>(dynamic_cast<const XMLPropStyleContext*>( pTempStyle ) ); // use temp var, PTR_CAST is a bad macro, FindStyleChildContext will be called twice
             if( pStyle == nullptr )
                 break;
@@ -858,7 +859,7 @@ void SdXMLShapeContext::processAttribute( sal_uInt16 nPrefix, const OUString& rL
         else if( IsXMLToken( rLocalName, XML_STYLE_NAME ) )
         {
             maDrawStyleName = rValue;
-            mnStyleFamily = XML_STYLE_FAMILY_SD_PRESENTATION_ID;
+            mnStyleFamily = XmlStyleFamily::SD_PRESENTATION_ID;
         }
     }
     else if( XML_NAMESPACE_SVG == nPrefix )
@@ -926,7 +927,7 @@ bool SdXMLShapeContext::isPresentationShape() const
 {
     if( !maPresentationClass.isEmpty() && const_cast<SdXMLShapeContext*>(this)->GetImport().GetShapeImport()->IsPresentationShapesSupported() )
     {
-        if(XML_STYLE_FAMILY_SD_PRESENTATION_ID == mnStyleFamily)
+        if(XmlStyleFamily::SD_PRESENTATION_ID == mnStyleFamily)
         {
             return true;
         }
@@ -1557,7 +1558,7 @@ void SdXMLTextBoxShapeContext::StartElement(const uno::Reference< xml::sax::XAtt
         // check if the current document supports presentation shapes
         if( GetImport().GetShapeImport()->IsPresentationShapesSupported() )
         {
-            if( IsXMLToken( maPresentationClass, XML_PRESENTATION_SUBTITLE ))
+            if( IsXMLToken( maPresentationClass, XML_SUBTITLE ))
             {
                 // XmlShapeTypePresSubtitleShape
                 service = "com.sun.star.presentation.SubtitleShape";
@@ -1567,7 +1568,7 @@ void SdXMLTextBoxShapeContext::StartElement(const uno::Reference< xml::sax::XAtt
                 // XmlShapeTypePresOutlinerShape
                 service = "com.sun.star.presentation.OutlinerShape";
             }
-            else if( IsXMLToken( maPresentationClass, XML_PRESENTATION_NOTES ) )
+            else if( IsXMLToken( maPresentationClass, XML_NOTES ) )
             {
                 // XmlShapeTypePresNotesShape
                 service = "com.sun.star.presentation.NotesShape";
@@ -1596,7 +1597,7 @@ void SdXMLTextBoxShapeContext::StartElement(const uno::Reference< xml::sax::XAtt
                 service = "com.sun.star.presentation.DateTimeShape";
                 bClearText = true;
             }
-            else //  IsXMLToken( maPresentationClass, XML_PRESENTATION_TITLE ) )
+            else //  IsXMLToken( maPresentationClass, XML_TITLE ) )
             {
                 // XmlShapeTypePresTitleTextShape
                 service = "com.sun.star.presentation.TitleTextShape";
@@ -2206,7 +2207,7 @@ void SdXMLPageShapeContext::StartElement(const uno::Reference< xml::sax::XAttrib
     // add, set style and properties from base shape
 
     // #86163# take into account which type of PageShape needs to
-    // be constructed. It's a pres shape if presentation:XML_CLASS == XML_PRESENTATION_PAGE.
+    // be constructed. It's a pres shape if presentation:XML_CLASS == XML_PAGE.
     bool bIsPresentation = !maPresentationClass.isEmpty() &&
            GetImport().GetShapeImport()->IsPresentationShapesSupported();
 
@@ -2219,7 +2220,7 @@ void SdXMLPageShapeContext::StartElement(const uno::Reference< xml::sax::XAttrib
     }
     else
     {
-        if(bIsPresentation && !IsXMLToken( maPresentationClass, XML_PRESENTATION_PAGE ) )
+        if(bIsPresentation && !IsXMLToken( maPresentationClass, XML_PAGE ) )
         {
             bIsPresentation = false;
         }
@@ -2638,15 +2639,15 @@ void SdXMLObjectShapeContext::StartElement( const css::uno::Reference< css::xml:
 
     if( bIsPresShape )
     {
-        if( IsXMLToken( maPresentationClass, XML_PRESENTATION_CHART ) )
+        if( IsXMLToken( maPresentationClass, XML_CHART ) )
         {
             service = "com.sun.star.presentation.ChartShape";
         }
-        else if( IsXMLToken( maPresentationClass, XML_PRESENTATION_TABLE ) )
+        else if( IsXMLToken( maPresentationClass, XML_TABLE ) )
         {
             service = "com.sun.star.presentation.CalcShape";
         }
-        else if( IsXMLToken( maPresentationClass, XML_PRESENTATION_OBJECT ) )
+        else if( IsXMLToken( maPresentationClass, XML_OBJECT ) )
         {
             service = "com.sun.star.presentation.OLE2Shape";
         }
@@ -3007,7 +3008,7 @@ void SdXMLPluginShapeContext::StartElement( const css::uno::Reference< css::xml:
         bIsPresShape = !maPresentationClass.isEmpty() && GetImport().GetShapeImport()->IsPresentationShapesSupported();
         if( bIsPresShape )
         {
-            if( IsXMLToken( maPresentationClass, XML_PRESENTATION_OBJECT ) )
+            if( IsXMLToken( maPresentationClass, XML_OBJECT ) )
             {
                 service = "com.sun.star.presentation.MediaShape";
             }
@@ -3612,13 +3613,13 @@ void SdXMLFrameShapeContext::EndElement()
                 eToken = XML_IMAGE;
 
             }
-            else if( IsXMLToken( maPresentationClass, XML_PRESENTATION_PAGE ) )
+            else if( IsXMLToken( maPresentationClass, XML_PAGE ) )
             {
                 eToken = XML_PAGE_THUMBNAIL;
             }
-            else if( IsXMLToken( maPresentationClass, XML_PRESENTATION_CHART ) ||
-                     IsXMLToken( maPresentationClass, XML_PRESENTATION_TABLE ) ||
-                     IsXMLToken( maPresentationClass, XML_PRESENTATION_OBJECT ) )
+            else if( IsXMLToken( maPresentationClass, XML_CHART ) ||
+                     IsXMLToken( maPresentationClass, XML_TABLE ) ||
+                     IsXMLToken( maPresentationClass, XML_OBJECT ) )
             {
                 eToken = XML_OBJECT;
             }
@@ -3755,11 +3756,9 @@ void SdXMLCustomShapeContext::StartElement( const uno::Reference< xml::sax::XAtt
 
 void SdXMLCustomShapeContext::EndElement()
 {
-    // for backward compatibility, the above SetTransformation() may already have
-    // applied a call to SetMirroredX/SetMirroredY. This is not yet added to the
-    // beans::PropertyValues in maCustomShapeGeometry. When applying these now, this
-    // would be lost again.
-    // TTTT: Remove again after aw080
+    // Customshapes remember mirror state in its enhanced geometry.
+    // SetTransformation() in StartElement() may have applied mirroring, but that is not yet
+    // contained. Merge that information here before writing the property.
     if(!maUsedTransformation.isIdentity())
     {
         basegfx::B2DVector aScale, aTranslate;
@@ -3767,43 +3766,56 @@ void SdXMLCustomShapeContext::EndElement()
 
         maUsedTransformation.decompose(aScale, aTranslate, fRotate, fShearX);
 
-        bool bFlippedX(aScale.getX() < 0.0);
-        bool bFlippedY(aScale.getY() < 0.0);
-
-        if(bFlippedX && bFlippedY)
+        if (aScale.getX() < 0.0)
         {
-            // when both are used it is the same as 180 degree rotation; reset
-            bFlippedX = bFlippedY = false;
-        }
-
-        if(bFlippedX || bFlippedY)
-        {
-            OUString sName;
-
-            if(bFlippedX)
-                sName = "MirroredX";
-            else
-                sName = "MirroredY";
-
-            //fdo#84043 overwrite the property if it already exists, otherwise append it
-            beans::PropertyValue* pItem;
+            const OUString sName("MirroredX");
+            //fdo#84043 Merge, if property exists, otherwise append it
             auto aI = std::find_if(maCustomShapeGeometry.begin(), maCustomShapeGeometry.end(),
                 [&sName](beans::PropertyValue& rValue) { return rValue.Name == sName; });
             if (aI != maCustomShapeGeometry.end())
             {
                 beans::PropertyValue& rItem = *aI;
-                pItem = &rItem;
+                bool bMirroredX = *o3tl::doAccess<bool>(rItem.Value);
+                rItem.Value <<= !bMirroredX;
+                rItem.Handle = -1;
+                rItem.State = beans::PropertyState_DIRECT_VALUE;
             }
             else
             {
+                beans::PropertyValue* pItem;
                 maCustomShapeGeometry.emplace_back();
                 pItem = &maCustomShapeGeometry.back();
+                pItem->Name = sName;
+                pItem->Handle = -1;
+                pItem->Value <<= true;
+                pItem->State = beans::PropertyState_DIRECT_VALUE;
             }
+        }
 
-            pItem->Name = sName;
-            pItem->Handle = -1;
-            pItem->Value <<= true;
-            pItem->State = beans::PropertyState_DIRECT_VALUE;
+        if (aScale.getY() < 0.0)
+        {
+            const OUString sName("MirroredY");
+            //fdo#84043 Merge, if property exists, otherwise append it
+            auto aI = std::find_if(maCustomShapeGeometry.begin(), maCustomShapeGeometry.end(),
+                [&sName](beans::PropertyValue& rValue) { return rValue.Name == sName; });
+            if (aI != maCustomShapeGeometry.end())
+            {
+                beans::PropertyValue& rItem = *aI;
+                bool bMirroredY = *o3tl::doAccess<bool>(rItem.Value);
+                rItem.Value <<= !bMirroredY;
+                rItem.Handle = -1;
+                rItem.State = beans::PropertyState_DIRECT_VALUE;
+            }
+            else
+            {
+                beans::PropertyValue* pItem;
+                maCustomShapeGeometry.emplace_back();
+                pItem = &maCustomShapeGeometry.back();
+                pItem->Name = sName;
+                pItem->Handle = -1;
+                pItem->Value <<= true;
+                pItem->State = beans::PropertyState_DIRECT_VALUE;
+            }
         }
     }
 
@@ -3903,7 +3915,7 @@ void SdXMLTableShapeContext::StartElement( const css::uno::Reference< css::xml::
     bool bIsPresShape = !maPresentationClass.isEmpty() && GetImport().GetShapeImport()->IsPresentationShapesSupported();
     if( bIsPresShape )
     {
-        if( IsXMLToken( maPresentationClass, XML_PRESENTATION_TABLE ) )
+        if( IsXMLToken( maPresentationClass, XML_TABLE ) )
         {
             service = "com.sun.star.presentation.TableShape";
         }

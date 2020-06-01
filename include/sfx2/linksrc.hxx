@@ -26,10 +26,10 @@
 #include <com/sun/star/uno/Reference.hxx>
 #include <memory>
 
-namespace com { namespace sun { namespace star { namespace uno
+namespace com::sun::star::uno
 {
     class Any;
-}}}}
+}
 namespace weld { class Window; }
 
 template <typename Arg, typename Ret> class Link;
@@ -102,7 +102,7 @@ public:
 
         css::uno::Reference<css::io::XInputStream>
              m_xInputStreamToLoadFrom;
-        bool const m_bIsReadOnly;
+        bool m_bIsReadOnly;
     };
 
     StreamToLoadFrom getStreamToLoadFrom();

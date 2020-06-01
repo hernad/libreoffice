@@ -18,10 +18,8 @@
  */
 #include <SectionWindow.hxx>
 #include <ReportWindow.hxx>
-#include <rptui_slotid.hrc>
+#include <UITools.hxx>
 #include <ReportController.hxx>
-#include <SectionView.hxx>
-#include <RptDef.hxx>
 #include <ReportSection.hxx>
 #include <DesignView.hxx>
 #include <strings.hxx>
@@ -31,13 +29,10 @@
 #include <EndMarker.hxx>
 #include <ViewsWindow.hxx>
 
-#include <svtools/colorcfg.hxx>
 #include <functional>
 #include <algorithm>
 #include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
-
-#include <connectivity/dbtools.hxx>
 
 namespace rptui
 {
@@ -68,9 +63,9 @@ OSectionWindow::OSectionWindow( OViewsWindow* _pParent,const uno::Reference< rep
     m_aStartMarker->setCollapsedHdl(LINK(this,OSectionWindow,Collapsed));
 
     m_aStartMarker->zoom(rMapMode.GetScaleX());
-    setZoomFactor(rMapMode.GetScaleX(), *m_aReportSection.get());
-    setZoomFactor(rMapMode.GetScaleX(), *m_aSplitter.get());
-    setZoomFactor(rMapMode.GetScaleX(), *m_aEndMarker.get());
+    setZoomFactor(rMapMode.GetScaleX(), *m_aReportSection);
+    setZoomFactor(rMapMode.GetScaleX(), *m_aSplitter);
+    setZoomFactor(rMapMode.GetScaleX(), *m_aEndMarker);
 
     m_aSplitter->Show();
     m_aStartMarker->Show();
@@ -310,9 +305,9 @@ void OSectionWindow::zoom(const Fraction& _aZoom)
     setZoomFactor(_aZoom,*this);
     m_aStartMarker->zoom(_aZoom);
 
-    setZoomFactor(_aZoom, *m_aReportSection.get());
-    setZoomFactor(_aZoom, *m_aSplitter.get());
-    setZoomFactor(_aZoom, *m_aEndMarker.get());
+    setZoomFactor(_aZoom, *m_aReportSection);
+    setZoomFactor(_aZoom, *m_aSplitter);
+    setZoomFactor(_aZoom, *m_aEndMarker);
     Invalidate();
 }
 
@@ -375,19 +370,19 @@ void OSectionWindow::scrollChildren(long _nX)
 
     MapMode aMapMode( m_aReportSection->GetMapMode() );
     const Point aOld = aMapMode.GetOrigin();
-    lcl_setOrigin(*m_aReportSection.get(), aDelta.X(), 0);
+    lcl_setOrigin(*m_aReportSection, aDelta.X(), 0);
 
     aMapMode = m_aReportSection->GetMapMode();
     const Point aNew = aMapMode.GetOrigin();
     const Point aDiff = aOld - aNew;
     {
-        lcl_scroll(*m_aReportSection.get(), aDiff);
+        lcl_scroll(*m_aReportSection, aDiff);
     }
 
-    lcl_scroll(*m_aEndMarker.get(), m_aEndMarker->PixelToLogic(Point(_nX,0)));
+    lcl_scroll(*m_aEndMarker, m_aEndMarker->PixelToLogic(Point(_nX,0)));
 
-    lcl_setOrigin(*m_aSplitter.get(),_nX, 0);
-    lcl_scroll(*m_aSplitter.get(),aDiff);
+    lcl_setOrigin(*m_aSplitter,_nX, 0);
+    lcl_scroll(*m_aSplitter,aDiff);
 }
 
 } // rptui

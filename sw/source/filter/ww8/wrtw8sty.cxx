@@ -29,6 +29,7 @@
 #include <svx/svdotext.hxx>
 #include <svx/svdouno.hxx>
 #include <editeng/lrspitem.hxx>
+#include <editeng/fhgtitem.hxx>
 #include <doc.hxx>
 #include "wrtww8.hxx"
 #include <docary.hxx>
@@ -55,6 +56,7 @@
 #include <redline.hxx>
 #include <msfilter.hxx>
 #include <swmodule.hxx>
+#include <charatr.hxx>
 
 #include "sprmids.hxx"
 
@@ -249,7 +251,7 @@ sal_uInt16 MSWordStyles::GetWWId( const SwFormat& rFormat )
         case RES_POOLCOLL_NUM_LEVEL3:       nRet = 59;  break;
         case RES_POOLCOLL_NUM_LEVEL4:       nRet = 60;  break;
         case RES_POOLCOLL_NUM_LEVEL5:       nRet = 61;  break;
-        case RES_POOLCOLL_DOC_TITEL:        nRet = 62;  break;
+        case RES_POOLCOLL_DOC_TITLE:        nRet = 62;  break;
         case RES_POOLCOLL_DOC_APPENDIX:     nRet = 63;  break;
         case RES_POOLCOLL_SIGNATURE:        nRet = 64;  break;
         case RES_POOLCOLL_TEXT:             nRet = 66;  break;
@@ -259,7 +261,7 @@ sal_uInt16 MSWordStyles::GetWWId( const SwFormat& rFormat )
         case RES_POOLCOLL_BULLET_NONUM3:    nRet = 70;  break;
         case RES_POOLCOLL_BULLET_NONUM4:    nRet = 71;  break;
         case RES_POOLCOLL_BULLET_NONUM5:    nRet = 72;  break;
-        case RES_POOLCOLL_DOC_SUBTITEL:     nRet = 74;  break;
+        case RES_POOLCOLL_DOC_SUBTITLE:     nRet = 74;  break;
         case RES_POOLCOLL_GREETING:         nRet = 75;  break;
         case RES_POOLCOLL_TEXT_IDENT:       nRet = 77;  break;
 
@@ -447,7 +449,7 @@ void MSWordStyles::SetStyleDefaults( const SwFormat& rFormat, bool bPap )
 {
     const SwModify* pOldMod = m_rExport.m_pOutFormatNode;
     m_rExport.m_pOutFormatNode = &rFormat;
-    bool aFlags[ static_cast< sal_uInt16 >(RES_FRMATR_END) - RES_CHRATR_BEGIN ];
+    bool aFlags[ RES_FRMATR_END - RES_CHRATR_BEGIN ];
     sal_uInt16 nStt, nEnd, n;
     if( bPap )
     {
@@ -1096,7 +1098,7 @@ void MSWordSections::AppendSection( const SwPageDesc* pPd,
     if (HeaderFooterWritten()) {
         return; // #i117955# prevent new sections in endnotes
     }
-    aSects.emplace_back( pPd, pSectionFormat, nLnNumRestartNo, o3tl::nullopt, nullptr, bIsFirstParagraph );
+    aSects.emplace_back( pPd, pSectionFormat, nLnNumRestartNo, std::nullopt, nullptr, bIsFirstParagraph );
     NeedsDocumentProtected( aSects.back() );
 }
 
@@ -1263,7 +1265,7 @@ void MSWordSections::CheckForFacinPg( const WW8Export& rWrt ) const
     // 2 values getting set
     //      Dop.fFacingPages            == Header and Footer different
     //      Dop.fSwapBordersFacingPgs   == mirrored borders
-    sal_uInt16 nEnde = 0;
+    sal_uInt16 nEnd = 0;
     for( const WW8_SepInfo& rSepInfo : aSects )
     {
         if( !rSepInfo.pSectionFormat )
@@ -1277,7 +1279,7 @@ void MSWordSections::CheckForFacinPg( const WW8Export& rWrt ) const
                 pPd = pPd->GetFollow();
 
             // left-/right chain of pagedescs ?
-            else if( !( 1 & nEnde ) &&
+            else if( !( 1 & nEnd ) &&
                 pPd->GetFollow() && pPd != pPd->GetFollow() &&
                 pPd->GetFollow()->GetFollow() == pPd &&
                 (( UseOnPage::Left == ( UseOnPage::All & pPd->ReadUseOn() ) &&
@@ -1286,24 +1288,24 @@ void MSWordSections::CheckForFacinPg( const WW8Export& rWrt ) const
                    UseOnPage::Left == ( UseOnPage::All & pPd->GetFollow()->ReadUseOn() )) ))
             {
                 rWrt.pDop->fFacingPages = rWrt.pDop->fMirrorMargins = true;
-                nEnde |= 1;
+                nEnd |= 1;
             }
 
-            if( !( 1 & nEnde ) &&
+            if( !( 1 & nEnd ) &&
                 ( !pPd->IsHeaderShared() || !pPd->IsFooterShared() ))
             {
                 rWrt.pDop->fFacingPages = true;
-                nEnde |= 1;
+                nEnd |= 1;
             }
-            if( !( 2 & nEnde ) &&
+            if( !( 2 & nEnd ) &&
                 UseOnPage::Mirror == ( UseOnPage::Mirror & pPd->ReadUseOn() ))
             {
                 rWrt.pDop->fSwapBordersFacingPgs =
                     rWrt.pDop->fMirrorMargins = true;
-                nEnde |= 2;
+                nEnd |= 2;
             }
 
-            if( 3 == nEnde )
+            if( 3 == nEnd )
                 break;      // We do not need to go any further
         }
     }
@@ -1327,6 +1329,7 @@ void WW8AttributeOutput::StartSection()
 void WW8AttributeOutput::SectFootnoteEndnotePr()
 {
     const SwFootnoteInfo& rInfo = m_rWW8Export.m_pDoc->GetFootnoteInfo();
+    const SwEndNoteInfo& rEndNoteInfo = m_rWW8Export.m_pDoc->GetEndNoteInfo();
     m_rWW8Export.InsUInt16( NS_sprm::sprmSRncFtn );
     switch( rInfo.m_eNum )
     {
@@ -1334,6 +1337,13 @@ void WW8AttributeOutput::SectFootnoteEndnotePr()
     case FTNNUM_CHAPTER:  m_rWW8Export.pO->push_back( sal_uInt8/*rncRstSect*/ (1) ); break;
     default:              m_rWW8Export.pO->push_back( sal_uInt8/*rncCont*/ (0) ); break;
     }
+
+    m_rWW8Export.InsUInt16(NS_sprm::sprmSNfcFtnRef);
+    sal_uInt8 nId = WW8Export::GetNumId(rInfo.m_aFormat.GetNumberingType());
+    SwWW8Writer::InsUInt16(*m_rWW8Export.pO, nId);
+    m_rWW8Export.InsUInt16(NS_sprm::sprmSNfcEdnRef);
+    nId = WW8Export::GetNumId(rEndNoteInfo.m_aFormat.GetNumberingType());
+    SwWW8Writer::InsUInt16(*m_rWW8Export.pO, nId);
 }
 
 void WW8AttributeOutput::SectionFormProtection( bool bProtected )
@@ -1417,7 +1427,7 @@ void WW8AttributeOutput::SectionBiDi( bool bBiDi )
     m_rWW8Export.pO->push_back( bBiDi? 1: 0 );
 }
 
-void WW8AttributeOutput::SectionPageNumbering( sal_uInt16 nNumType, const ::o3tl::optional<sal_uInt16>& oPageRestartNumber )
+void WW8AttributeOutput::SectionPageNumbering( sal_uInt16 nNumType, const ::std::optional<sal_uInt16>& oPageRestartNumber )
 {
     // sprmSNfcPgn
     sal_uInt8 nb = WW8Export::GetNumId( nNumType );
@@ -1517,6 +1527,70 @@ void WW8Export::WriteHeadersFooters( sal_uInt8 nHeadFootFlags,
     pSepx->OutHeaderFooter( *this, false, rFirstPageFormat, nCpPos, nHeadFootFlags, WW8_FOOTER_FIRST, nBreakCode );
 }
 
+namespace
+{
+/**
+ * Determines if the continuous section break we start should use page style properties (header,
+ * footer, margins) from the next page style of the previous section.
+ */
+bool UsePrevSectionNextStyle(sal_uInt8 nBreakCode, const SwPageDesc* pPd,
+                             const WW8_SepInfo& rSepInfo)
+{
+    if (nBreakCode != 0)
+    {
+        // Not a continuous section break.
+        return false;
+    }
+
+    if (!pPd->GetFollow())
+    {
+        // Page style has no follow style.
+        return false;
+    }
+
+    // We start a continuous section break without headers/footers. Possibly the importer had
+    // headers/footers for this section break and put them to the closest page break's page style's
+    // next page style. See "find a node in the section that has a page break" in writerfilter/.
+    // Try the last-in-practice paragraph of the previous section.
+    const SwSectionFormat* pSection = rSepInfo.pSectionFormat;
+    if (pSection == reinterpret_cast<SwSectionFormat*>(sal_IntPtr(-1)))
+    {
+        return false;
+    }
+
+    const SwNodeIndex* pSectionStart = pSection->GetContent().GetContentIdx();
+    if (!pSectionStart)
+    {
+        return false;
+    }
+
+    SwPaM aPaM(*pSectionStart);
+    aPaM.Move(fnMoveBackward);
+    if (!aPaM.GetNode().IsTextNode())
+    {
+        return false;
+    }
+
+    SwTextNode* pTextNode = aPaM.GetNode().GetTextNode();
+    const SwAttrSet* pParaProps = &pTextNode->GetSwAttrSet();
+    sal_uInt32 nCharHeight = pParaProps->GetSize().GetHeight();
+    if (nCharHeight > 20)
+    {
+        return false;
+    }
+
+    aPaM.Move(fnMoveBackward);
+    if (!aPaM.GetNode().IsTextNode())
+    {
+        return false;
+    }
+
+    pTextNode = aPaM.GetNode().GetTextNode();
+    pParaProps = &pTextNode->GetSwAttrSet();
+    return pParaProps->HasItem(RES_PAGEDESC);
+}
+}
+
 void MSWordExportBase::SectionProperties( const WW8_SepInfo& rSepInfo, WW8_PdAttrDesc* pA )
 {
     const SwPageDesc* pPd = rSepInfo.pPageDesc;
@@ -1551,6 +1625,7 @@ void MSWordExportBase::SectionProperties( const WW8_SepInfo& rSepInfo, WW8_PdAtt
     bool bOutPgDscSet = true, bLeftRightPgChain = false, bOutputStyleItemSet = false;
     bool bEnsureHeaderFooterWritten = rSepInfo.pSectionFormat && rSepInfo.bIsFirstParagraph;
     const SwFrameFormat* pPdFormat = &pPd->GetMaster();
+    bool bUsePrevSectionNextStyle = false;
     if ( rSepInfo.pSectionFormat )
     {
         // if pSectionFormat is set, then there is a SectionNode
@@ -1576,6 +1651,15 @@ void MSWordExportBase::SectionProperties( const WW8_SepInfo& rSepInfo, WW8_PdAtt
             // produce Itemset, which inherits PgDesk-Attr-Set:
             // as child also the parent is searched if 'deep'-OutputItemSet
             const SfxItemSet* pPdSet = &pPdFormat->GetAttrSet();
+
+            bUsePrevSectionNextStyle = GetExportFormat() == ExportFormat::DOCX
+                                       && UsePrevSectionNextStyle(nBreakCode, pPd, rSepInfo);
+            if (bUsePrevSectionNextStyle)
+            {
+                // Take page margins from the previous section's next style.
+                pPdSet = &pPd->GetFollow()->GetMaster().GetAttrSet();
+            }
+
             SfxItemSet aSet( *pPdSet->GetPool(), pPdSet->GetRanges() );
             aSet.SetParent( pPdSet );
 
@@ -1699,7 +1783,19 @@ void MSWordExportBase::SectionProperties( const WW8_SepInfo& rSepInfo, WW8_PdAtt
 
         m_pISet = &pPdFormat->GetAttrSet();
         if (!bOutputStyleItemSet)
+        {
+            if (titlePage)
+            {
+                m_pFirstPageFormat = pPdFirstPgFormat;
+            }
+
             AttrOutput().OutputStyleItemSet( pPdFormat->GetAttrSet(), false );
+
+            if (titlePage)
+            {
+                m_pFirstPageFormat = nullptr;
+            }
+        }
         AttrOutput().SectionPageBorders( pPdFormat, pPdFirstPgFormat );
         m_pISet = pOldI;
 
@@ -1767,6 +1863,14 @@ void MSWordExportBase::SectionProperties( const WW8_SepInfo& rSepInfo, WW8_PdAtt
 
     const SwTextNode *pOldPageRoot = GetHdFtPageRoot();
     SetHdFtPageRoot( rSepInfo.pPDNd ? rSepInfo.pPDNd->GetTextNode() : nullptr );
+
+    if (bUsePrevSectionNextStyle && nHeadFootFlags == 0)
+    {
+        // Take headers/footers from the previous section's next style.
+        pPdFormat = &pPd->GetFollow()->GetMaster();
+        MSWordSections::SetHeaderFlag(nHeadFootFlags, *pPdFormat, WW8_HEADER_ODD);
+        MSWordSections::SetFooterFlag(nHeadFootFlags, *pPdFormat, WW8_FOOTER_ODD);
+    }
 
     WriteHeadersFooters( nHeadFootFlags, *pPdFormat, *pPdLeftFormat, *pPdFirstPgFormat, nBreakCode );
 

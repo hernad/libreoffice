@@ -17,22 +17,19 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_DRAWINGLAYER_PRIMITIVE2D_HIDDENGEOMETRYPRIMITIVE2D_HXX
-#define INCLUDED_DRAWINGLAYER_PRIMITIVE2D_HIDDENGEOMETRYPRIMITIVE2D_HXX
+#pragma once
 
 #include <drawinglayer/drawinglayerdllapi.h>
 
 #include <drawinglayer/primitive2d/groupprimitive2d.hxx>
 
 
-namespace drawinglayer
+namespace drawinglayer::primitive2d
 {
-    namespace primitive2d
-    {
         // This primitive is used to represent geometry for non-visible objects,
         // e.g. a PresObj's outline. To still be able to use primitives for HitTest
         // functionality, the 2d decompositions will produce an as much as possible
-        // simplified line geometry encapsulated in this primtive when there is no
+        // simplified line geometry encapsulated in this primitive when there is no
         // line geometry. In a further enhanced version this may change to 'if neither
         // filled nor lines' creation criteria. The whole primitive decomposes to nothing,
         // so no one not knowing it will be influenced. Only helper processors for hit test
@@ -53,10 +50,7 @@ namespace drawinglayer
             // provide unique ID
             virtual sal_uInt32 getPrimitive2DID() const override;
         };
-    } // end of namespace primitive2d
-} // end of namespace drawinglayer
+} // end of namespace drawinglayer::primitive2d
 
-
-#endif //INCLUDED_DRAWINGLAYER_PRIMITIVE2D_HIDDENGEOMETRYPRIMITIVE2D_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -348,6 +348,11 @@ public:
     sal_Int32  nLine,nCol1,nCol2;
     SbiRuntime* pNext;               // Stack-Chain
 
+    // tdf#79426, tdf#125180 - adds the information about a missing parameter
+    static void SetIsMissing( SbxVariable* );
+    // tdf#79426, tdf#125180 - checks if a variable contains the information about a missing parameter
+    static bool IsMissing( SbxVariable*, sal_uInt16 );
+
     SbiRuntime( SbModule*, SbMethod*, sal_uInt32 );
    ~SbiRuntime();
     void Error( ErrCode, bool bVBATranslationAlreadyDone = false );     // set error if != 0
@@ -374,7 +379,7 @@ public:
 
 inline void checkArithmeticOverflow( double d )
 {
-    if( !::rtl::math::isFinite( d ) )
+    if( !std::isfinite( d ) )
         StarBASIC::Error( ERRCODE_BASIC_MATH_OVERFLOW );
 }
 

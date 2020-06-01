@@ -145,7 +145,7 @@ gb_CXXFLAGS_COMMON += $(gb_VISIBILITY_FLAGS_CXX)
 
 gb_LinkTarget_LDFLAGS += -fstack-protector-strong
 
-ifneq ($(ENABLE_PCH),)
+ifneq ($(gb_ENABLE_PCH),)
 ifeq ($(COM_IS_CLANG),TRUE)
 # Clang by default includes in the PCH timestamps of the files it was
 # generated from, which would make the PCH be a "new" file for ccache
@@ -162,6 +162,9 @@ endif
 endif
 
 gb_CFLAGS_WERROR = $(if $(ENABLE_WERROR),-Werror)
+ifeq ($(ENABLE_OPTIMIZED)-$(COM_IS_CLANG),TRUE-)
+gb_CFLAGS_WERROR += -Wno-stringop-overflow
+endif
 
 # This is the default in non-C++11 mode
 ifeq ($(COM_IS_CLANG),TRUE)
@@ -194,6 +197,7 @@ ifeq ($(gb_ENABLE_DBGUTIL),$(false))
 ifeq ($(HAVE_GCC_FNO_ENFORCE_EH_SPECS),TRUE)
 gb_LinkTarget_EXCEPTIONFLAGS += \
 	-fno-enforce-eh-specs
+gb_FilterOutClangCFLAGS += -fno-enforce-eh-specs
 endif
 endif
 
@@ -201,6 +205,7 @@ gb_PrecompiledHeader_EXCEPTIONFLAGS := $(gb_LinkTarget_EXCEPTIONFLAGS)
 
 # optimization level
 gb_COMPILERNOOPTFLAGS := -O0 -fstrict-aliasing -fstrict-overflow
+gb_COMPILERDEBUGOPTFLAGS := -Og
 
 ifeq ($(OS),ANDROID)
 gb_DEBUGINFO_FLAGS=-glldb
@@ -214,6 +219,10 @@ gb_LINKER_DEBUGINFO_FLAGS=
 
 ifeq ($(HAVE_GCC_SPLIT_DWARF),TRUE)
 gb_DEBUGINFO_FLAGS+=-gsplit-dwarf
+endif
+
+ifeq ($(HAVE_CLANG_DEBUG_INFO_KIND_CONSTRUCTOR),TRUE)
+gb_DEBUGINFO_FLAGS+=-Xclang -debug-info-kind=constructor
 endif
 
 ifeq ($(ENABLE_GDB_INDEX),TRUE)
@@ -293,7 +302,7 @@ endef
 
 gb_Helper_get_rcfile = $(1)rc
 
-ifneq ($(ENABLE_PCH),)
+ifneq ($(gb_ENABLE_PCH),)
 # Enable use of .sum files for PCHs.
 gb_COMPILER_SETUP += CCACHE_PCH_EXTSUM=1
 # CCACHE_SLOPPINESS should contain pch_defines,time_macros for PCHs.

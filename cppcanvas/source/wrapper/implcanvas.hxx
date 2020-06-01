@@ -24,7 +24,7 @@
 #include <com/sun/star/rendering/ViewState.hpp>
 #include <cppcanvas/canvas.hxx>
 
-#include <o3tl/optional.hxx>
+#include <optional>
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 
 
@@ -34,10 +34,10 @@ namespace basegfx
     class B2DPolyPolygon;
 }
 
-namespace com { namespace sun { namespace star { namespace rendering
+namespace com::sun::star::rendering
 {
     class  XCanvas;
-} } } }
+}
 
 
 /* Definition of ImplCanvas */
@@ -77,7 +77,7 @@ namespace cppcanvas
 
         private:
             mutable css::rendering::ViewState                    maViewState;
-            o3tl::optional<basegfx::B2DPolyPolygon>             maClipPolyPolygon;
+            std::optional<basegfx::B2DPolyPolygon>             maClipPolyPolygon;
             const css::uno::Reference< css::rendering::XCanvas > mxCanvas;
         };
 

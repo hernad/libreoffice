@@ -32,19 +32,21 @@
 class SystemChildWindow;
 namespace vcl { class Window; }
 
-namespace com { namespace sun { namespace star { namespace drawing {
-    class XShape;
+namespace com::sun::star {
+    namespace drawing {
+        class XShape;
+    }
+    namespace media {
+        class XPlayer;
+        class XPlayerWindow;
+    }
+    namespace uno {
+        class XComponentContext;
+    }
+    namespace beans{
+        class XPropertySet;
+    }
 }
-namespace media {
-    class XPlayer;
-    class XPlayerWindow;
-}
-namespace uno {
-    class XComponentContext;
-}
-namespace beans{
-    class XPropertySet;
-} } } }
 
 namespace slideshow
 {
@@ -147,7 +149,7 @@ namespace slideshow
             void implInitializePlayerWindow( const ::basegfx::B2DRectangle& rBounds,
                                              const css::uno::Sequence< css::uno::Any >& rVCLDeviceParams,
                                              const OUString& rMimeType );
-            ViewLayerSharedPtr const              mpViewLayer;
+            ViewLayerSharedPtr                    mpViewLayer;
             VclPtr< SystemChildWindow >           mpMediaWindow;
             mutable css::awt::Point               maWindowOffset;
             mutable ::basegfx::B2DRectangle       maBounds;

@@ -53,6 +53,7 @@
 #define XML_SCH_TYPE_TICK_MARK_POSITION     ( XML_SCH_TYPES_START + 16 )
 #define XML_SCH_TYPE_LABEL_BORDER_STYLE     ( XML_SCH_TYPES_START + 17 )
 #define XML_SCH_TYPE_LABEL_BORDER_OPACITY   ( XML_SCH_TYPES_START + 18 )
+#define XML_SCH_TYPE_LABEL_FILL_STYLE       ( XML_SCH_TYPES_START + 19 )
 
 // context ids
 #define XML_SCH_CONTEXT_USER_SYMBOL                 ( XML_SCH_CTF_START + 0 )
@@ -84,14 +85,15 @@
 #define XML_SCH_CONTEXT_SPECIAL_REGRESSION_TYPE     ( XML_SCH_CTF_START + 26 )
 
 #define MAP_FULL( ApiName, NameSpace, XMLTokenName, XMLType, ContextId, EarliestODFVersionForExport ) { ApiName, sizeof(ApiName)-1, XML_NAMESPACE_##NameSpace, xmloff::token::XMLTokenName, XMLType|XML_TYPE_PROP_CHART, ContextId, EarliestODFVersionForExport, false }
-#define MAP_ENTRY( a, ns, nm, t )            { a, sizeof(a)-1, XML_NAMESPACE_##ns, xmloff::token::nm, t|XML_TYPE_PROP_CHART, 0, SvtSaveOptions::ODFVER_010, false }
-#define MAP_ENTRY_ODF12( a, ns, nm, t )      { a, sizeof(a)-1, XML_NAMESPACE_##ns, xmloff::token::nm, t|XML_TYPE_PROP_CHART, 0, SvtSaveOptions::ODFVER_012, false }
-#define MAP_ENTRY_ODF_EXT( a, ns, nm, t )    { a, sizeof(a)-1, XML_NAMESPACE_##ns, xmloff::token::nm, t|XML_TYPE_PROP_CHART, 0, SvtSaveOptions::ODFVER_012_EXT_COMPAT, false }
-#define MAP_ENTRY_ODF_EXT_IMPORT( a, ns, nm, t )    { a, sizeof(a)-1, XML_NAMESPACE_##ns, xmloff::token::nm, t|XML_TYPE_PROP_CHART, 0, SvtSaveOptions::ODFVER_012_EXT_COMPAT, true }
-#define MAP_CONTEXT( a, ns, nm, t, c )       { a, sizeof(a)-1, XML_NAMESPACE_##ns, xmloff::token::nm, t|XML_TYPE_PROP_CHART, c, SvtSaveOptions::ODFVER_010, false }
-#define MAP_SPECIAL( a, ns, nm, t, c )       { a, sizeof(a)-1, XML_NAMESPACE_##ns, xmloff::token::nm, t|XML_TYPE_PROP_CHART | MID_FLAG_SPECIAL_ITEM, c, SvtSaveOptions::ODFVER_010, false }
-#define MAP_SPECIAL_ODF12( a, ns, nm, t, c ) { a, sizeof(a)-1, XML_NAMESPACE_##ns, xmloff::token::nm, t|XML_TYPE_PROP_CHART | MID_FLAG_SPECIAL_ITEM, c, SvtSaveOptions::ODFVER_012, false }
-#define MAP_ENTRY_END { nullptr,0,0,xmloff::token::XML_TOKEN_INVALID,0,0,SvtSaveOptions::ODFVER_010, false }
+#define MAP_ENTRY( a, ns, nm, t )            { a, sizeof(a)-1, XML_NAMESPACE_##ns, xmloff::token::nm, t|XML_TYPE_PROP_CHART, 0, SvtSaveOptions::ODFSVER_010, false }
+#define MAP_ENTRY_ODF12( a, ns, nm, t )      { a, sizeof(a)-1, XML_NAMESPACE_##ns, xmloff::token::nm, t|XML_TYPE_PROP_CHART, 0, SvtSaveOptions::ODFSVER_012, false }
+#define MAP_ENTRY_ODF13( a, ns, nm, t )      { a, sizeof(a)-1, ns, xmloff::token::nm, t|XML_TYPE_PROP_CHART, 0, SvtSaveOptions::ODFSVER_013, false }
+#define MAP_ENTRY_ODF_EXT( a, ns, nm, t )    { a, sizeof(a)-1, XML_NAMESPACE_##ns, xmloff::token::nm, t|XML_TYPE_PROP_CHART, 0, SvtSaveOptions::ODFSVER_FUTURE_EXTENDED, false }
+#define MAP_ENTRY_ODF_EXT_IMPORT( a, ns, nm, t )    { a, sizeof(a)-1, XML_NAMESPACE_##ns, xmloff::token::nm, t|XML_TYPE_PROP_CHART, 0, SvtSaveOptions::ODFSVER_FUTURE_EXTENDED, true }
+#define MAP_CONTEXT( a, ns, nm, t, c )       { a, sizeof(a)-1, XML_NAMESPACE_##ns, xmloff::token::nm, t|XML_TYPE_PROP_CHART, c, SvtSaveOptions::ODFSVER_010, false }
+#define MAP_SPECIAL( a, ns, nm, t, c )       { a, sizeof(a)-1, XML_NAMESPACE_##ns, xmloff::token::nm, t|XML_TYPE_PROP_CHART | MID_FLAG_SPECIAL_ITEM, c, SvtSaveOptions::ODFSVER_010, false }
+#define MAP_SPECIAL_ODF12( a, ns, nm, t, c ) { a, sizeof(a)-1, XML_NAMESPACE_##ns, xmloff::token::nm, t|XML_TYPE_PROP_CHART | MID_FLAG_SPECIAL_ITEM, c, SvtSaveOptions::ODFSVER_012, false }
+#define MAP_ENTRY_END { nullptr,0,0,xmloff::token::XML_TOKEN_INVALID,0,0,SvtSaveOptions::ODFSVER_010, false }
 
 // PropertyMap for Chart properties drawing- and
 // textproperties are added later using the chaining
@@ -112,6 +114,7 @@ const XMLPropertyMapEntry aXMLChartPropMap[] =
     MAP_ENTRY( "Lines", CHART, XML_LINES, XML_TYPE_BOOL ),
     MAP_ENTRY( "Percent", CHART, XML_PERCENTAGE, XML_TYPE_BOOL ),
     MAP_ENTRY( "SolidType", CHART, XML_SOLID_TYPE, XML_SCH_TYPE_SOLID_TYPE ),
+    // ODF 1.3 OFFICE-3662 added values
     MAP_ENTRY( "SplineType", CHART, XML_INTERPOLATION, XML_SCH_TYPE_INTERPOLATION ),
     MAP_ENTRY( "Stacked", CHART, XML_STACKED, XML_TYPE_BOOL ),
     // type: "none", "automatic", "named-symbol" or "image"
@@ -151,6 +154,9 @@ const XMLPropertyMapEntry aXMLChartPropMap[] =
     MAP_ENTRY_ODF_EXT( "LabelBorderTransparency", LO_EXT, XML_LABEL_STROKE_OPACITY, XML_SCH_TYPE_LABEL_BORDER_OPACITY ),
     MAP_ENTRY_ODF_EXT( "LabelBorderWidth", LO_EXT, XML_LABEL_STROKE_WIDTH, XML_TYPE_MEASURE ),
 
+    MAP_ENTRY_ODF_EXT( "LabelFillColor", LO_EXT, XML_LABEL_FILL_COLOR, XML_TYPE_COLOR ),
+    MAP_ENTRY_ODF_EXT( "LabelFillStyle", LO_EXT, XML_LABEL_FILL, XML_SCH_TYPE_LABEL_FILL_STYLE ),
+
     MAP_ENTRY( "ScaleText", CHART, XML_SCALE_TEXT, XML_TYPE_BOOL ),
 
     // spline settings
@@ -184,11 +190,12 @@ const XMLPropertyMapEntry aXMLChartPropMap[] =
     MAP_SPECIAL( "NumberFormat", STYLE, XML_DATA_STYLE_NAME, XML_TYPE_NUMBER, XML_SCH_CONTEXT_SPECIAL_NUMBER_FORMAT ),
     MAP_ENTRY( "LinkNumberFormatToSource", CHART, XML_LINK_DATA_STYLE_TO_SOURCE, XML_TYPE_BOOL ),
     MAP_ENTRY( "Visible", CHART, XML_VISIBLE, XML_TYPE_BOOL ),
+    MAP_ENTRY_ODF_EXT( "MajorOrigin", LO_EXT, XML_MAJOR_ORIGIN, XML_TYPE_DOUBLE ),
 
-    MAP_FULL( "CrossoverPosition", CHART, XML_AXIS_POSITION, XML_SCH_TYPE_AXIS_POSITION|MID_FLAG_MERGE_ATTRIBUTE|MID_FLAG_MULTI_PROPERTY, 0, SvtSaveOptions::ODFVER_012 ),
-    MAP_FULL( "CrossoverValue", CHART, XML_AXIS_POSITION, XML_SCH_TYPE_AXIS_POSITION_VALUE|MID_FLAG_MERGE_ATTRIBUTE|MID_FLAG_MULTI_PROPERTY, 0, SvtSaveOptions::ODFVER_012 ),
-    MAP_FULL( "LabelPosition", CHART, XML_AXIS_LABEL_POSITION, XML_SCH_TYPE_AXIS_LABEL_POSITION, 0, SvtSaveOptions::ODFVER_012 ),
-    MAP_FULL( "MarkPosition", CHART, XML_TICK_MARK_POSITION, XML_SCH_TYPE_TICK_MARK_POSITION, 0, SvtSaveOptions::ODFVER_012 ),
+    MAP_FULL( "CrossoverPosition", CHART, XML_AXIS_POSITION, XML_SCH_TYPE_AXIS_POSITION|MID_FLAG_MERGE_ATTRIBUTE|MID_FLAG_MULTI_PROPERTY, 0, SvtSaveOptions::ODFSVER_012 ),
+    MAP_FULL( "CrossoverValue", CHART, XML_AXIS_POSITION, XML_SCH_TYPE_AXIS_POSITION_VALUE|MID_FLAG_MERGE_ATTRIBUTE|MID_FLAG_MULTI_PROPERTY, 0, SvtSaveOptions::ODFSVER_012 ),
+    MAP_FULL( "LabelPosition", CHART, XML_AXIS_LABEL_POSITION, XML_SCH_TYPE_AXIS_LABEL_POSITION, 0, SvtSaveOptions::ODFSVER_012 ),
+    MAP_FULL( "MarkPosition", CHART, XML_TICK_MARK_POSITION, XML_SCH_TYPE_TICK_MARK_POSITION, 0, SvtSaveOptions::ODFSVER_012 ),
 
     // statistical properties
 
@@ -204,26 +211,29 @@ const XMLPropertyMapEntry aXMLChartPropMap[] =
     // regression curve properties
     MAP_SPECIAL( "RegressionType", CHART, XML_REGRESSION_TYPE, XML_TYPE_STRING, XML_SCH_CONTEXT_SPECIAL_REGRESSION_TYPE ),
 
-    MAP_ENTRY_ODF_EXT( "CurveName", LO_EXT, XML_REGRESSION_CURVE_NAME, XML_TYPE_STRING ),
-    MAP_ENTRY_ODF_EXT( "PolynomialDegree", LO_EXT, XML_REGRESSION_MAX_DEGREE, XML_TYPE_NUMBER ),
-    MAP_ENTRY_ODF_EXT( "MovingAveragePeriod", LO_EXT, XML_REGRESSION_PERIOD, XML_TYPE_NUMBER ),
-    MAP_ENTRY_ODF_EXT( "MovingAverageType", LO_EXT, XML_REGRESSION_MOVING_TYPE, XML_TYPE_STRING ),
+    // ODF 1.3 OFFICE-3958
+    MAP_ENTRY_ODF13( "CurveName", XML_NAMESPACE_LO_EXT, XML_REGRESSION_CURVE_NAME, XML_TYPE_STRING ),
+    MAP_ENTRY_ODF13( "CurveName", XML_NAMESPACE_CHART, XML_REGRESSION_CURVE_NAME, XML_TYPE_STRING ),
+    MAP_ENTRY_ODF13( "PolynomialDegree", XML_NAMESPACE_LO_EXT, XML_REGRESSION_MAX_DEGREE, XML_TYPE_NUMBER ),
+    MAP_ENTRY_ODF13( "PolynomialDegree", XML_NAMESPACE_CHART, XML_REGRESSION_MAX_DEGREE, XML_TYPE_NUMBER ),
+    MAP_ENTRY_ODF13( "ForceIntercept", XML_NAMESPACE_LO_EXT, XML_REGRESSION_FORCE_INTERCEPT, XML_TYPE_BOOL ),
+    MAP_ENTRY_ODF13( "ForceIntercept", XML_NAMESPACE_CHART, XML_REGRESSION_FORCE_INTERCEPT, XML_TYPE_BOOL ),
+    MAP_ENTRY_ODF13( "InterceptValue", XML_NAMESPACE_LO_EXT, XML_REGRESSION_INTERCEPT_VALUE, XML_TYPE_DOUBLE ),
+    MAP_ENTRY_ODF13( "InterceptValue", XML_NAMESPACE_CHART, XML_REGRESSION_INTERCEPT_VALUE, XML_TYPE_DOUBLE ),
+
+    // ODF 1.3 OFFICE-3959
+    MAP_ENTRY_ODF13( "MovingAveragePeriod", XML_NAMESPACE_LO_EXT, XML_REGRESSION_PERIOD, XML_TYPE_NUMBER ),
+    MAP_ENTRY_ODF13( "MovingAveragePeriod", XML_NAMESPACE_CHART, XML_REGRESSION_PERIOD, XML_TYPE_NUMBER ),
+    MAP_ENTRY_ODF13( "MovingAverageType", XML_NAMESPACE_LO_EXT, XML_REGRESSION_MOVING_TYPE, XML_TYPE_STRING ),
+    MAP_ENTRY_ODF13( "MovingAverageType", XML_NAMESPACE_CHART, XML_REGRESSION_MOVING_TYPE, XML_TYPE_STRING ),
+
     MAP_ENTRY_ODF_EXT( "ExtrapolateForward", LO_EXT, XML_REGRESSION_EXTRAPOLATE_FORWARD, XML_TYPE_DOUBLE ),
     MAP_ENTRY_ODF_EXT( "ExtrapolateBackward", LO_EXT, XML_REGRESSION_EXTRAPOLATE_BACKWARD, XML_TYPE_DOUBLE ),
-    MAP_ENTRY_ODF_EXT( "ForceIntercept", LO_EXT, XML_REGRESSION_FORCE_INTERCEPT, XML_TYPE_BOOL ),
-    MAP_ENTRY_ODF_EXT( "InterceptValue", LO_EXT, XML_REGRESSION_INTERCEPT_VALUE, XML_TYPE_DOUBLE ),
-    MAP_ENTRY_ODF_EXT( "XName", LO_EXT, XML_REGRESSION_X_NAME, XML_TYPE_STRING ),
-    MAP_ENTRY_ODF_EXT( "YName", LO_EXT, XML_REGRESSION_Y_NAME, XML_TYPE_STRING ),
-
-    // import mapping for broken files
-    MAP_ENTRY_ODF_EXT_IMPORT( "CurveName", CHART, XML_REGRESSION_CURVE_NAME, XML_TYPE_STRING ),
-    MAP_ENTRY_ODF_EXT_IMPORT( "PolynomialDegree", CHART, XML_REGRESSION_MAX_DEGREE, XML_TYPE_NUMBER ),
-    MAP_ENTRY_ODF_EXT_IMPORT( "MovingAveragePeriod", CHART, XML_REGRESSION_PERIOD, XML_TYPE_NUMBER ),
-    MAP_ENTRY_ODF_EXT_IMPORT( "MovingAverageType", CHART, XML_REGRESSION_MOVING_TYPE, XML_TYPE_STRING ),
     MAP_ENTRY_ODF_EXT_IMPORT( "ExtrapolateForward", CHART, XML_REGRESSION_EXTRAPOLATE_FORWARD, XML_TYPE_DOUBLE ),
     MAP_ENTRY_ODF_EXT_IMPORT( "ExtrapolateBackward", CHART, XML_REGRESSION_EXTRAPOLATE_BACKWARD, XML_TYPE_DOUBLE ),
-    MAP_ENTRY_ODF_EXT_IMPORT( "ForceIntercept", CHART, XML_REGRESSION_FORCE_INTERCEPT, XML_TYPE_BOOL ),
-    MAP_ENTRY_ODF_EXT_IMPORT( "InterceptValue", CHART, XML_REGRESSION_INTERCEPT_VALUE, XML_TYPE_DOUBLE ),
+
+    MAP_ENTRY_ODF_EXT( "XName", LO_EXT, XML_REGRESSION_X_NAME, XML_TYPE_STRING ),
+    MAP_ENTRY_ODF_EXT( "YName", LO_EXT, XML_REGRESSION_Y_NAME, XML_TYPE_STRING ),
 
     MAP_SPECIAL_ODF12( "ErrorBarRangePositive", CHART, XML_ERROR_UPPER_RANGE, XML_TYPE_STRING, XML_SCH_CONTEXT_SPECIAL_ERRORBAR_RANGE ), // export only
     MAP_SPECIAL_ODF12( "ErrorBarRangeNegative", CHART, XML_ERROR_LOWER_RANGE, XML_TYPE_STRING, XML_SCH_CONTEXT_SPECIAL_ERRORBAR_RANGE ), // export only
@@ -311,7 +321,17 @@ const SvXMLEnumMapEntry<css::chart::ChartDataRowSource> aXMLChartDataRowSourceTy
     { ::xmloff::token::XML_TOKEN_INVALID, css::chart::ChartDataRowSource(0) }
 };
 
-const SvXMLEnumMapEntry<sal_Int32> aXMLChartInterpolationTypeEnumMap[] =
+const SvXMLEnumMapEntry<sal_Int32> g_XMLChartInterpolationTypeEnumMap_ODF12[] =
+{
+    // this is neither an enum nor a constants group, but just a
+    // documented long property
+    { ::xmloff::token::XML_NONE,               0 },
+    { ::xmloff::token::XML_CUBIC_SPLINE,       1 },
+    { ::xmloff::token::XML_B_SPLINE,           2 },
+    { ::xmloff::token::XML_TOKEN_INVALID,      0 }
+};
+
+const SvXMLEnumMapEntry<sal_Int32> g_XMLChartInterpolationTypeEnumMap[] =
 {
     // this is neither an enum nor a constants group, but just a
     // documented long property

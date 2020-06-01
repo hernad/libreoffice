@@ -25,7 +25,7 @@
 #include <sal/types.h>
 #include <rtl/ustrbuf.hxx>
 
-namespace stoc { namespace uriproc {
+namespace stoc::uriproc {
 
 class UriReference {
 public:
@@ -88,13 +88,13 @@ public:
     void clearFragment();
 
     osl::Mutex m_mutex;
-    OUString const m_scheme;
-    OUString const m_authority;
+    OUString m_scheme;
+    OUString m_authority;
     OUString m_path;
-    OUString const m_query;
+    OUString m_query;
     OUString m_fragment;
-    bool const m_hasAuthority;
-    bool const m_hasQuery;
+    bool m_hasAuthority;
+    bool m_hasQuery;
     bool m_hasFragment;
 
 private:
@@ -104,7 +104,7 @@ private:
     void appendSchemeSpecificPart(OUStringBuffer & buffer) const;
 };
 
-} }
+}
 
 #endif
 

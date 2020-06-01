@@ -29,14 +29,11 @@
 #include <sal/config.h>
 
 #include <comphelper/processfactory.hxx>
-#include <osl/thread.h>
-#include <tools/vcompat.hxx>
 #include <ucbhelper/content.hxx>
 #include <com/sun/star/ucb/ContentCreationException.hpp>
 #include <unotools/configmgr.hxx>
 #include <unotools/ucbstreamhelper.hxx>
 #include <unotools/pathoptions.hxx>
-#include <sfx2/docfile.hxx>
 #include <svx/dialmgr.hxx>
 #include <svx/gallery.hxx>
 #include <svx/strings.hrc>
@@ -744,9 +741,12 @@ GalleryTheme* Gallery::AcquireTheme( const OUString& rThemeName, SfxListener& rL
     GalleryTheme*           pTheme = nullptr;
     GalleryThemeEntry*      pThemeEntry = ImplGetThemeEntry( rThemeName );
 
-    if( pThemeEntry && ( ( pTheme = ImplGetCachedTheme( pThemeEntry ) ) != nullptr ) )
-        rListener.StartListening(*pTheme, DuplicateHandling::Prevent);
-
+    if( pThemeEntry )
+    {
+        pTheme = ImplGetCachedTheme( pThemeEntry );
+        if (pTheme)
+            rListener.StartListening(*pTheme, DuplicateHandling::Prevent);
+    }
     return pTheme;
 }
 

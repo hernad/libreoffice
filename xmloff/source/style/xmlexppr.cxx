@@ -58,8 +58,8 @@ namespace {
 
 struct XMLPropTokens_Impl
 {
-    sal_uInt16 const nType;
-    XMLTokenEnum const eToken;
+    sal_uInt16 nType;
+    XMLTokenEnum eToken;
 };
 
 const sal_uInt16 MAX_PROP_TYPES =
@@ -573,7 +573,8 @@ vector<XMLPropertyState> SvXMLExportPropertyMapper::Filter_(
     bool bDelInfo = false;
     if( !pFilterInfo )
     {
-        const SvtSaveOptions::ODFDefaultVersion nCurrentVersion( SvtSaveOptions().GetODFDefaultVersion() );
+        assert(SvtSaveOptions().GetODFDefaultVersion() != SvtSaveOptions::ODFVER_UNKNOWN);
+        const SvtSaveOptions::ODFSaneDefaultVersion nCurrentVersion(SvtSaveOptions().GetODFSaneDefaultVersion());
         pFilterInfo = new FilterPropertiesInfo_Impl;
         for( sal_Int32 i=0; i < nProps; i++ )
         {
@@ -585,12 +586,63 @@ vector<XMLPropertyState> SvXMLExportPropertyMapper::Filter_(
                 ( (0 != (nFlags & MID_FLAG_MUST_EXIST)) ||
                   xInfo->hasPropertyByName( rAPIName ) ) )
             {
-                const SvtSaveOptions::ODFDefaultVersion nEarliestODFVersionForExport(
+                const SvtSaveOptions::ODFSaneDefaultVersion nEarliestODFVersionForExport(
                         mpImpl->mxPropMapper->GetEarliestODFVersionForExport(i));
-                if( nCurrentVersion >= nEarliestODFVersionForExport
-                        || nCurrentVersion == SvtSaveOptions::ODFVER_UNKNOWN
-                        || nEarliestODFVersionForExport == SvtSaveOptions::ODFVER_UNKNOWN )
+                // note: only standard ODF versions are allowed here,
+                // only exception is the unknown future
+                assert((nEarliestODFVersionForExport & SvtSaveOptions::ODFSVER_EXTENDED) == 0
+                    || nEarliestODFVersionForExport == SvtSaveOptions::ODFSVER_FUTURE_EXTENDED);
+                static_assert(SvtSaveOptions::ODFSVER_LATEST_EXTENDED < SvtSaveOptions::ODFSVER_FUTURE_EXTENDED);
+                /// standard ODF namespaces for elements and attributes
+                static sal_uInt16 s_OdfNs[] = {
+                    XML_NAMESPACE_OFFICE,
+                    XML_NAMESPACE_STYLE,
+                    XML_NAMESPACE_TEXT,
+                    XML_NAMESPACE_TABLE,
+                    XML_NAMESPACE_DRAW,
+                    XML_NAMESPACE_FO,
+                    XML_NAMESPACE_XLINK,
+                    XML_NAMESPACE_DC,
+                    XML_NAMESPACE_META,
+                    XML_NAMESPACE_NUMBER,
+                    XML_NAMESPACE_PRESENTATION,
+                    XML_NAMESPACE_SVG,
+                    XML_NAMESPACE_CHART,
+                    XML_NAMESPACE_DR3D,
+                    XML_NAMESPACE_MATH,
+                    XML_NAMESPACE_FORM,
+                    XML_NAMESPACE_SCRIPT,
+                    XML_NAMESPACE_CONFIG,
+                    XML_NAMESPACE_DB,
+                    XML_NAMESPACE_XFORMS,
+                    XML_NAMESPACE_SMIL,
+                    XML_NAMESPACE_ANIMATION,
+                    XML_NAMESPACE_XML,
+                    XML_NAMESPACE_XHTML,
+                    XML_NAMESPACE_GRDDL,
+                };
+                static bool s_Assert(false);
+                if (!s_Assert)
+                {
+                    assert(std::is_sorted(std::begin(s_OdfNs), std::end(s_OdfNs)));
+                    s_Assert = true;
+                }
+                //static_assert(std::is_sorted(std::begin(s_OdfNs), std::end(s_OdfNs)));
+                auto const ns(mpImpl->mxPropMapper->GetEntryNameSpace(i));
+                auto const iter(std::lower_bound(std::begin(s_OdfNs), std::end(s_OdfNs),
+                            ns));
+                bool const isExtension(iter == std::end(s_OdfNs) || *iter != ns
+                        // FIXME: very special hack to suppress style:hyperlink
+                        || (ns == XML_NAMESPACE_STYLE
+                            && mpImpl->mxPropMapper->GetEntryXMLName(i) == GetXMLToken(XML_HYPERLINK)));
+                if (isExtension
+                    ? ((nCurrentVersion & SvtSaveOptions::ODFSVER_EXTENDED)
+                        // if it's in standard ODF, don't export extension
+                        && (nCurrentVersion < nEarliestODFVersionForExport))
+                    : (nEarliestODFVersionForExport <= nCurrentVersion))
+                {
                     pFilterInfo->AddProperty(rAPIName, i);
+                }
             }
         }
 
@@ -789,7 +841,7 @@ void SvXMLExportPropertyMapper::exportXML(
                 aPropTokens[i].eToken == xmloff::token::XML_GRAPHIC_PROPERTIES)
             {
                 nNamespace = XML_NAMESPACE_LO_EXT;
-                if (rExport.getDefaultVersion() <= SvtSaveOptions::ODFVER_012)
+                if ((rExport.getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED) == 0)
                 {
                     continue; // don't write for ODF <= 1.2
                 }
@@ -1030,11 +1082,20 @@ void SvXMLExportPropertyMapper::_exportXML(
             if( bRemove )
                 rAttrList.RemoveAttribute( sName );
 
+            // We don't seem to have a generic mechanism to write an attribute in the extension
+            // namespace in case of certain attribute values only, so do this manually.
             if (IsXMLToken(mpImpl->mxPropMapper->GetEntryXMLName(rProperty.mnIndex), XML_WRITING_MODE))
             {
-                // We don't seem to have a generic mechanism to write an attribute in the extension
-                // namespace in case of certain attribute values only, so do this manually.
                 if (IsXMLToken(aValue, XML_BT_LR))
+                {
+                    sName = rNamespaceMap.GetQNameByKey(
+                            XML_NAMESPACE_LO_EXT,
+                            mpImpl->mxPropMapper->GetEntryXMLName(rProperty.mnIndex));
+                }
+            }
+            else if (IsXMLToken(mpImpl->mxPropMapper->GetEntryXMLName(rProperty.mnIndex), XML_VERTICAL_REL))
+            {
+                if (IsXMLToken(aValue, XML_PAGE_CONTENT_BOTTOM))
                 {
                     sName = rNamespaceMap.GetQNameByKey(
                             XML_NAMESPACE_LO_EXT,

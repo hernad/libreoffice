@@ -51,7 +51,7 @@
 #include <o3tl/deleter.hxx>
 #include <sfx2/dispatch.hxx>
 #include <vcl/ptrstyle.hxx>
-#include <o3tl/optional.hxx>
+#include <optional>
 #include <sdmod.hxx>
 
 namespace {
@@ -93,12 +93,12 @@ namespace sd::slidesorter::controller {
 class SelectionFunction::EventDescriptor
 {
 public:
-    Point const maMousePosition;
+    Point maMousePosition;
     Point maMouseModelPosition;
     model::SharedPageDescriptor mpHitDescriptor;
     SdrPage* mpHitPage;
     sal_uInt32 mnEventCode;
-    InsertionIndicatorHandler::Mode const meDragMode;
+    InsertionIndicatorHandler::Mode meDragMode;
     bool mbIsLeaving;
 
     EventDescriptor (
@@ -198,7 +198,7 @@ protected:
     virtual bool ProcessDragEvent (SelectionFunction::EventDescriptor& rDescriptor) override;
 
 private:
-    ::o3tl::optional<Point> maButtonDownLocation;
+    ::std::optional<Point> maButtonDownLocation;
 
     /** Select all pages between and including the selection anchor and the
         specified page.
@@ -239,7 +239,7 @@ protected:
 private:
     SelectionMode meSelectionMode;
     Point maSecondCorner;
-    PointerStyle const maSavedPointer;
+    PointerStyle maSavedPointer;
     bool mbAutoScrollInstalled;
     sal_Int32 mnAnchorIndex;
     sal_Int32 mnSecondIndex;
@@ -1180,7 +1180,7 @@ void NormalModeHandler::RangeSelect (const model::SharedPageDescriptor& rpDescri
 
 void NormalModeHandler::ResetButtonDownLocation()
 {
-    maButtonDownLocation = ::o3tl::optional<Point>();
+    maButtonDownLocation = ::std::optional<Point>();
 }
 
 //===== MultiSelectionModeHandler =============================================
@@ -1386,7 +1386,7 @@ void MultiSelectionModeHandler::UpdateSelection()
             maSecondCorner,
             false,
             false));
-    if (!(nIndexUnderMouse>=0 && nIndexUnderMouse<nPageCount))
+    if (nIndexUnderMouse < 0 || nIndexUnderMouse >= nPageCount)
         return;
 
     if (mnAnchorIndex < 0)

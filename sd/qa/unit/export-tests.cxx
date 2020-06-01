@@ -53,12 +53,14 @@ public:
     void testUnknownAttributes();
     void testTdf80020();
     void testLinkedGraphicRT();
+    void testTdf79082();
     void testImageWithSpecialID();
     void testTdf62176();
     void testTransparentBackground();
     void testEmbeddedPdf();
     void testEmbeddedText();
     void testTransparenText();
+    void testDefaultSubscripts();
     void testTdf98477();
     void testAuthorField();
     void testTdf50499();
@@ -72,6 +74,8 @@ public:
     void testTdf123557();
     void testTdf113822();
     void testTdf126761();
+    void testGlow();
+    void testSoftEdges();
 
     CPPUNIT_TEST_SUITE(SdExportTest);
 
@@ -85,12 +89,14 @@ public:
     CPPUNIT_TEST(testUnknownAttributes);
     CPPUNIT_TEST(testTdf80020);
     CPPUNIT_TEST(testLinkedGraphicRT);
+    CPPUNIT_TEST(testTdf79082);
     CPPUNIT_TEST(testImageWithSpecialID);
     CPPUNIT_TEST(testTdf62176);
     CPPUNIT_TEST(testTransparentBackground);
     CPPUNIT_TEST(testEmbeddedPdf);
     CPPUNIT_TEST(testEmbeddedText);
     CPPUNIT_TEST(testTransparenText);
+    CPPUNIT_TEST(testDefaultSubscripts);
     CPPUNIT_TEST(testTdf98477);
     CPPUNIT_TEST(testAuthorField);
     CPPUNIT_TEST(testTdf50499);
@@ -104,6 +110,8 @@ public:
     CPPUNIT_TEST(testTdf123557);
     CPPUNIT_TEST(testTdf113822);
     CPPUNIT_TEST(testTdf126761);
+    CPPUNIT_TEST(testGlow);
+    CPPUNIT_TEST(testSoftEdges);
 
     CPPUNIT_TEST_SUITE_END();
 
@@ -364,12 +372,7 @@ void SdExportTest::testTdf97630()
         CPPUNIT_ASSERT_EQUAL(drawing::TextFitToSizeType_PROPORTIONAL, tmp);
         uno::Reference<beans::XPropertySet> xShape2(xDP->getByIndex(2), uno::UNO_QUERY);
         xShape2->getPropertyValue("TextFitToSize") >>= tmp;
-#if 1
-// TODO see TODO in sdpropls.cxx
-        CPPUNIT_ASSERT_EQUAL(drawing::TextFitToSizeType_ALLLINES, tmp);
-#else
         CPPUNIT_ASSERT_EQUAL(drawing::TextFitToSizeType_PROPORTIONAL, tmp);
-#endif
         uno::Reference<beans::XPropertySet> xShape3(xDP->getByIndex(3), uno::UNO_QUERY);
         xShape3->getPropertyValue("TextFitToSize") >>= tmp;
         CPPUNIT_ASSERT_EQUAL(drawing::TextFitToSizeType_AUTOFIT, tmp);
@@ -380,34 +383,17 @@ void SdExportTest::testTdf97630()
         CPPUNIT_ASSERT_EQUAL(drawing::TextFitToSizeType_NONE, tmp);
         uno::Reference<beans::XPropertySet> xShape5(xDP->getByIndex(5), uno::UNO_QUERY);
         xShape5->getPropertyValue("TextFitToSize") >>= tmp;
-#if 1
-// TODO see TODO in sdpropls.cxx
-        CPPUNIT_ASSERT_EQUAL(drawing::TextFitToSizeType_ALLLINES, tmp);
-#else
         CPPUNIT_ASSERT_EQUAL(drawing::TextFitToSizeType_PROPORTIONAL, tmp);
-#endif
     }
 
-    xmlDocPtr pXmlDoc = parseExport(aTempFile, "content.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport(aTempFile, "content.xml");
     // text shapes
     assertXPath(pXmlDoc, "//style:style[@style:family='presentation']/style:graphic-properties[@draw:fit-to-size='false' and @style:shrink-to-fit='false']", 1);
-#if 1
-// TODO see TODO in sdpropls.cxx
-    assertXPath(pXmlDoc, "//style:style[@style:family='presentation']/style:graphic-properties[@draw:fit-to-size='true' and @style:shrink-to-fit='false']", 1);
-    assertXPath(pXmlDoc, "//style:style[@style:family='presentation']/style:graphic-properties[@draw:fit-to-size='all' and @style:shrink-to-fit='false']", 1);
-    assertXPath(pXmlDoc, "//style:style[@style:family='presentation']/style:graphic-properties[@draw:fit-to-size='shrink-to-fit' and @style:shrink-to-fit='true']", 1);
-#else
     assertXPath(pXmlDoc, "//style:style[@style:family='presentation']/style:graphic-properties[@draw:fit-to-size='true' and @style:shrink-to-fit='false']", 2);
     assertXPath(pXmlDoc, "//style:style[@style:family='presentation']/style:graphic-properties[@draw:fit-to-size='false' and @style:shrink-to-fit='true']", 1);
-#endif
     // fontworks
     assertXPath(pXmlDoc, "//style:style[@style:family='graphic']/style:graphic-properties[@draw:fit-to-size='false' and @style:shrink-to-fit='false']", 1);
-#if 1
-// TODO see TODO in sdpropls.cxx
-    assertXPath(pXmlDoc, "//style:style[@style:family='graphic']/style:graphic-properties[@draw:fit-to-size='all' and @style:shrink-to-fit='false']", 1);
-#else
     assertXPath(pXmlDoc, "//style:style[@style:family='graphic']/style:graphic-properties[@draw:fit-to-size='true' and @style:shrink-to-fit='false']", 1);
-#endif
 
     xDocShRef->DoClose();
 }
@@ -501,7 +487,7 @@ void SdExportTest::testOOoXMLAnimations()
 
     // the problem was that legacy OOoXML animations were lost if store
     // immediately follows load because they were "converted" async by a timer
-    xmlDocPtr pXmlDoc = parseExport(aTempFile, "content.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport(aTempFile, "content.xml");
     assertXPath(pXmlDoc, "//anim:par[@presentation:node-type='timing-root']", 26);
     // currently getting 52 of these without the fix (depends on timing)
     assertXPath(pXmlDoc, "//anim:par", 223);
@@ -575,7 +561,7 @@ void SdExportTest::testUnknownAttributes()
 
     xDocShRef->DoClose();
 
-    xmlDocPtr pXmlDoc = parseExport(aTempFile, "content.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport(aTempFile, "content.xml");
     assertXPath(pXmlDoc, "/office:document-content/office:automatic-styles/style:style[@style:name='gr1']/style:graphic-properties[@foo:non-existent-att='bar']");
 // TODO: if the namespace is *known*, the attribute is not preserved, but that seems to be a pre-existing problem, or maybe it's even intentional?
 //    assertXPath(pXmlDoc, "/office:document-content/office:automatic-styles/style:style[@style:name='gr1']/style:graphic-properties[@svg:non-existent-att='blah']");
@@ -666,6 +652,46 @@ void SdExportTest::testLinkedGraphicRT()
 
         xDocShRef->DoClose();
     }
+}
+
+void SdExportTest::testTdf79082()
+{
+    sd::DrawDocShellRef xDocShRef
+        = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/ppt/tdf79082.ppt"), PPT);
+    utl::TempFile tempFile;
+    tempFile.EnableKillingFile();
+    xDocShRef = saveAndReload(xDocShRef.get(), ODP, &tempFile);
+    xmlDocUniquePtr pXmlDoc = parseExport(tempFile, "content.xml");
+
+    // P1 should have 6 tab stops defined
+    assertXPathChildren(
+        pXmlDoc, "//style:style[@style:name='P1']/style:paragraph-properties/style:tab-stops", 6);
+    assertXPath(pXmlDoc,
+                "//style:style[@style:name='P1']/style:paragraph-properties/style:tab-stops/"
+                "style:tab-stop[1]",
+                "position", "0cm");
+    assertXPath(pXmlDoc,
+                "//style:style[@style:name='P1']/style:paragraph-properties/style:tab-stops/"
+                "style:tab-stop[2]",
+                "position", "5.08cm");
+    assertXPath(pXmlDoc,
+                "//style:style[@style:name='P1']/style:paragraph-properties/style:tab-stops/"
+                "style:tab-stop[3]",
+                "position", "10.16cm");
+    assertXPath(pXmlDoc,
+                "//style:style[@style:name='P1']/style:paragraph-properties/style:tab-stops/"
+                "style:tab-stop[4]",
+                "position", "15.24cm");
+    assertXPath(pXmlDoc,
+                "//style:style[@style:name='P1']/style:paragraph-properties/style:tab-stops/"
+                "style:tab-stop[5]",
+                "position", "20.32cm");
+    assertXPath(pXmlDoc,
+                "//style:style[@style:name='P1']/style:paragraph-properties/style:tab-stops/"
+                "style:tab-stop[6]",
+                "position", "25.4cm");
+
+    xDocShRef->DoClose();
 }
 
 void SdExportTest::testImageWithSpecialID()
@@ -851,6 +877,21 @@ void SdExportTest::testTransparenText()
     xShell->DoClose();
 }
 
+void SdExportTest::testDefaultSubscripts()
+{
+    sd::DrawDocShellRef xShell
+        = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/tdf80194_defaultSubscripts.fodg"), FODG);
+    xShell = saveAndReload(xShell.get(), ODG);
+
+    uno::Reference<drawing::XDrawPage> xPage = getPage(0, xShell);
+    uno::Reference<drawing::XShape> xShape(xPage->getByIndex(1), uno::UNO_QUERY);
+    // Default subscripts were too large, enlarging the gap between the next line.
+    // The exact size isn't important. Was 18975, now 16604.
+    CPPUNIT_ASSERT(17000 > xShape->getSize().Height);
+
+    xShell->DoClose();
+}
+
 void SdExportTest::testTdf98477()
 {
     utl::TempFile tempFile;
@@ -858,7 +899,7 @@ void SdExportTest::testTdf98477()
 
     xDocShRef = saveAndReload(xDocShRef.get(), ODP, &tempFile);
 
-    xmlDocPtr pXmlDoc = parseExport(tempFile, "content.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport(tempFile, "content.xml");
     assertXPath(pXmlDoc, "//anim:animateTransform", "by", "0.5,0.5");
     xDocShRef->DoClose();
 }
@@ -887,7 +928,7 @@ void SdExportTest::testTdf50499()
 
     xDocShRef = saveAndReload(xDocShRef.get(), ODP, &tempFile);
 
-    xmlDocPtr pXmlDoc = parseExport(tempFile, "content.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport(tempFile, "content.xml");
     assertXPath(pXmlDoc, "//anim:animate[1]", "from", "(-width/2)");
     assertXPath(pXmlDoc, "//anim:animate[1]", "to", "(x)");
     assertXPath(pXmlDoc, "//anim:animate[3]", "by", "(height/3+width*0.1)");
@@ -1108,7 +1149,7 @@ void SdExportTest::testTdf113822()
     // Was unable to import iterate container (tdf#113822).
     xDocShRef = saveAndReload(xDocShRef.get(), ODP, &tempFile);
 
-    xmlDocPtr pXmlDoc = parseExport(tempFile, "content.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport(tempFile, "content.xml");
 
     // IterateContainer was created as ParallelTimeContainer before, so
     // the iterate type is not set too.
@@ -1129,7 +1170,7 @@ void SdExportTest::testTdf113818()
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX, &tempFile);
     xDocShRef = saveAndReload(xDocShRef.get(), ODP, &tempFile);
 
-    xmlDocPtr pXmlDoc = parseExport(tempFile, "content.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport(tempFile, "content.xml");
     assertXPath(pXmlDoc, "//anim:animate[1]", "formula", "width*sin(2.5*pi*$)");
     assertXPath(pXmlDoc, "//anim:animate[1]", "values", "0;1");
     xDocShRef->DoClose();
@@ -1142,7 +1183,7 @@ void SdExportTest::testTdf119629()
     xDocShRef = saveAndReload(xDocShRef.get(), PPT);
     xDocShRef = saveAndReload(xDocShRef.get(), ODP, &tempFile);
 
-    xmlDocPtr pXmlDoc = parseExport(tempFile, "content.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport(tempFile, "content.xml");
 
     // MSO's effect node type Click parallel node, with group node, after group node
     // were missing.
@@ -1162,7 +1203,7 @@ void SdExportTest::testTdf123557()
     sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("sd/qa/unit/data/pptx/trigger.pptx"), PPTX);
     xDocShRef = saveAndReload(xDocShRef.get(), PPTX);
     xDocShRef = saveAndReload(xDocShRef.get(), ODP, &tempFile);
-    xmlDocPtr pXmlDoc = parseExport(tempFile, "content.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport(tempFile, "content.xml");
 
     // Contains 2 interactive sequences and 3 triggered effects.
     assertXPath(pXmlDoc, "//draw:page", 1);
@@ -1194,6 +1235,74 @@ void SdExportTest::testTdf126761()
     sal_uInt32 nCharUnderline;
     xPropSet->getPropertyValue( "CharUnderline" ) >>= nCharUnderline;
     CPPUNIT_ASSERT_EQUAL( sal_uInt32(1), nCharUnderline );
+
+    xDocShRef->DoClose();
+}
+
+void SdExportTest::testGlow()
+{
+    auto xDocShRef = loadURL(m_directories.getURLFromSrc("sd/qa/unit/data/odg/glow.odg"), ODG);
+    utl::TempFile tempFile;
+    xDocShRef = saveAndReload(xDocShRef.get(), ODG, &tempFile);
+    uno::Reference<beans::XPropertySet> xShape(getShapeFromPage(0, 0, xDocShRef));
+
+    // Check glow properties
+    sal_Int32 nGlowEffectRad = 0;
+    CPPUNIT_ASSERT(xShape->getPropertyValue("GlowEffectRad") >>= nGlowEffectRad);
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(529), nGlowEffectRad); // 15 pt = 529.166... mm/100
+    sal_Int32 nGlowEffectColor = 0;
+    CPPUNIT_ASSERT(xShape->getPropertyValue("GlowEffectColor") >>= nGlowEffectColor);
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(0x00FF4000), nGlowEffectColor); // "Brick"
+    sal_Int16 nGlowEffectTransparency = 0;
+    CPPUNIT_ASSERT(xShape->getPropertyValue("GlowEffectTransparency") >>= nGlowEffectTransparency);
+    CPPUNIT_ASSERT_EQUAL(sal_Int16(60), nGlowEffectTransparency); // 60%
+
+    // Test ODF element
+    xmlDocUniquePtr pXmlDoc = parseExport(tempFile, "content.xml");
+
+    // check that we actually test graphic style
+    assertXPath(pXmlDoc, "/office:document-content/office:automatic-styles/style:style[2]",
+                "family", "graphic");
+    // check loext graphic attributes
+    assertXPath(
+        pXmlDoc,
+        "/office:document-content/office:automatic-styles/style:style[2]/style:graphic-properties",
+        "glow-radius", "0.529cm");
+    assertXPath(
+        pXmlDoc,
+        "/office:document-content/office:automatic-styles/style:style[2]/style:graphic-properties",
+        "glow-color", "#ff4000");
+    assertXPath(
+        pXmlDoc,
+        "/office:document-content/office:automatic-styles/style:style[2]/style:graphic-properties",
+        "glow-transparency", "60%");
+
+    xDocShRef->DoClose();
+}
+
+void SdExportTest::testSoftEdges()
+{
+    auto xDocShRef = loadURL(m_directories.getURLFromSrc("sd/qa/unit/data/odg/softedges.odg"), ODG);
+    utl::TempFile tempFile;
+    xDocShRef = saveAndReload(xDocShRef.get(), ODG, &tempFile);
+    auto xShapeProps(getShapeFromPage(0, 0, xDocShRef));
+
+    // Check property
+    sal_Int32 nRad = 0;
+    CPPUNIT_ASSERT(xShapeProps->getPropertyValue("SoftEdgeRad") >>= nRad);
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(635), nRad); // 18 pt
+
+    // Test ODF element
+    xmlDocUniquePtr pXmlDoc = parseExport(tempFile, "content.xml");
+
+    // check that we actually test graphic style
+    assertXPath(pXmlDoc, "/office:document-content/office:automatic-styles/style:style[2]",
+                "family", "graphic");
+    // check loext graphic attribute
+    assertXPath(
+        pXmlDoc,
+        "/office:document-content/office:automatic-styles/style:style[2]/style:graphic-properties",
+        "softedge-radius", "0.635cm");
 
     xDocShRef->DoClose();
 }

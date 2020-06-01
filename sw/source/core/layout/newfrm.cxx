@@ -29,7 +29,6 @@
 #include <dflyobj.hxx>
 #include <frmtool.hxx>
 #include "virtoutp.hxx"
-#include <blink.hxx>
 #include <notxtfrm.hxx>
 #include <pagedesc.hxx>
 #include <viewimp.hxx>
@@ -462,7 +461,7 @@ void SwRootFrame::Init( SwFrameFormat* pFormat )
 
     // Get hold of PageDesc (either via FrameFormat of the first node or the initial one).
     SwPageDesc *pDesc = nullptr;
-    ::o3tl::optional<sal_uInt16> oPgNum;
+    ::std::optional<sal_uInt16> oPgNum;
 
     if ( pTableNd )
     {
@@ -487,15 +486,9 @@ void SwRootFrame::Init( SwFrameFormat* pFormat )
     if ( !pDesc )
         pDesc = &pDoc->GetPageDesc( 0 );
 
-    const bool bOdd = !oPgNum || 0 != ( *oPgNum % 2 );
-    const bool bFirst = true;
-    // Even page numbers are supposed to be printed as left pages.  So if a
-    // page number has been explicitly set for this first page, then we must
-    // insert a blank page before it to make it a left page.
-    const bool bInsertEmpty = !bOdd;
-
     // Create a page and put it in the layout
-    SwPageFrame *pPage = ::InsertNewPage( *pDesc, this, bOdd, bFirst, bInsertEmpty, false, nullptr );
+    // The first page is always a right-page and always a first-page
+    SwPageFrame *pPage = ::InsertNewPage(*pDesc, this, true, true, false, false, nullptr);
 
     // Find the first page in the Bodytext section.
     SwLayoutFrame *pLay = pPage->FindBodyCont();
@@ -528,8 +521,6 @@ void SwRootFrame::DestroyImpl()
     mbTurboAllowed = false;
     mpTurbo = nullptr;
 
-    if(pBlink)
-        pBlink->FrameDelete( this );
     SwFrameFormat *pRegisteredInNonConst = static_cast<SwFrameFormat*>(GetDep());
     if ( pRegisteredInNonConst )
     {

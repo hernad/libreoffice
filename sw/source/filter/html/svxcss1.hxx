@@ -86,7 +86,7 @@ namespace o3tl {
 struct CSS1PropertyEnum
 {
     const char *pName;  // property value
-    sal_uInt16 const nEnum;       // and the corresponding value of enum
+    sal_uInt16 nEnum;       // and the corresponding value of enum
 };
 
 namespace editeng { class SvxBorderLine; }
@@ -142,6 +142,8 @@ public:
     SvxCSS1PageBreak m_ePageBreakBefore;
     SvxCSS1PageBreak m_ePageBreakAfter;
 
+    bool m_bVisible = true;
+
     SvxCSS1PropertyInfo();
     SvxCSS1PropertyInfo( const SvxCSS1PropertyInfo& rProp );
     ~SvxCSS1PropertyInfo();
@@ -192,7 +194,7 @@ class SvxCSS1Parser : public CSS1Parser
     CSS1Map m_Pages;
     CSS1Map m_Tags;
 
-    OUString const sBaseURL;
+    OUString sBaseURL;
 
     std::unique_ptr<SfxItemSet> pSheetItemSet;  // item set of Style-Sheet
     SfxItemSet *pItemSet;       // current item set

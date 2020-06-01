@@ -771,9 +771,9 @@ constexpr LanguageType PRV_LANGUAGE_ASIAN_PRIM = primary(LANGUAGE_CHINESE);
 struct XclBuiltInFormat
 {
     sal_uInt16          mnXclNumFmt;    /// Excel built-in index.
-    const char*     mpFormat;       /// Format string, may be 0 (meOffset used then).
-    NfIndexTableOffset const  meOffset;       /// SvNumberFormatter format index, if mpFormat==0.
-    sal_uInt16 const          mnXclReuseFmt;  /// Use this Excel format, if meOffset==PRV_NF_INDEX_REUSE.
+    const char*         mpFormat;       /// Format string, may be 0 (meOffset used then).
+    NfIndexTableOffset  meOffset;       /// SvNumberFormatter format index, if mpFormat==0.
+    sal_uInt16          mnXclReuseFmt;  /// Use this Excel format, if meOffset==PRV_NF_INDEX_REUSE.
 };
 
 /** Defines a literal Excel built-in number format. */
@@ -1400,7 +1400,7 @@ static const XclBuiltInFormat spBuiltInFormats_THAI[] =
 struct XclBuiltInFormatTable
 {
     LanguageType        meLanguage;         /// The language of this table.
-    LanguageType const        meParentLang;       /// The language of the parent table.
+    LanguageType        meParentLang;       /// The language of the parent table.
     const XclBuiltInFormat* mpFormats;      /// The number format table.
 };
 
@@ -1499,8 +1499,7 @@ void XclNumFmtBuffer::InsertBuiltinFormats()
     }
 
     // insert the default formats in the format map, from root parent to system language
-    typedef ::std::map< sal_uInt16, sal_uInt16 > XclReuseMap;
-    XclReuseMap aReuseMap;
+    std::map< sal_uInt16, sal_uInt16 > aReuseMap;
     for( XclBuiltInVec::reverse_iterator aVIt = aBuiltInVec.rbegin(), aVEnd = aBuiltInVec.rend(); aVIt != aVEnd; ++aVIt )
     {
         // put LANGUAGE_SYSTEM for all entries in default table

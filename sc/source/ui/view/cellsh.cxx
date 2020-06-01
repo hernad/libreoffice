@@ -19,7 +19,6 @@
 
 #include <scitems.hxx>
 
-#include <comphelper/lok.hxx>
 #include <svl/slstitm.hxx>
 #include <svl/stritem.hxx>
 #include <svl/whiter.hxx>
@@ -211,7 +210,7 @@ void ScCellShell::GetBlockState( SfxItemSet& rSet )
                 bDisable = false;
                 break;
             case SID_CUT:               // cut
-                bDisable = !bSimpleArea || GetViewData()->GetViewShell()->isContentExtractionLocked();
+                bDisable = !bSimpleArea || GetObjectShell()->isContentExtractionLocked();
                 break;
             case FID_INS_CELL:          // insert cells, just simple selection
                 bDisable = (!bSimpleArea);
@@ -223,6 +222,7 @@ void ScCellShell::GetBlockState( SfxItemSet& rSet )
             case SID_PASTE_ONLY_VALUE:
             case SID_PASTE_ONLY_TEXT:
             case SID_PASTE_ONLY_FORMULA:
+            case SID_PASTE_TEXTIMPORT_DIALOG:
                 bDisable = GetViewData()->SelectionForbidsCellFill();
                 break;
 
@@ -273,7 +273,7 @@ void ScCellShell::GetBlockState( SfxItemSet& rSet )
                 //! work is to be done once more
                 if ( !(!bEditable && bOnlyNotBecauseOfMatrix) )
                     bNeedEdit = false;          // allowed when protected/ReadOnly
-                bDisable = GetViewData()->GetViewShell()->isContentExtractionLocked();
+                bDisable = GetObjectShell()->isContentExtractionLocked();
                 break;
 
             case SID_AUTOFORMAT:        // Autoformat, at least 3x3 selected
@@ -334,7 +334,6 @@ void ScCellShell::GetCellState( SfxItemSet& rSet )
     ScDocument& rDoc = GetViewData()->GetDocShell()->GetDocument();
     ScAddress aCursor( GetViewData()->GetCurX(), GetViewData()->GetCurY(),
                         GetViewData()->GetTabNo() );
-    bool isLOKNoTiledAnnotations = comphelper::LibreOfficeKit::isActive() && !comphelper::LibreOfficeKit::isTiledAnnotations();
     SfxWhichIter aIter(rSet);
     sal_uInt16 nWhich = aIter.FirstWhich();
     while ( nWhich )
@@ -393,8 +392,7 @@ void ScCellShell::GetCellState( SfxItemSet& rSet )
             case SID_EDIT_POSTIT:
                 {
                     ScAddress aPos( GetViewData()->GetCurX(), GetViewData()->GetCurY(), GetViewData()->GetTabNo() );
-                    // Allow editing annotation by Id (without selecting the cell) for LOK
-                    bDisable = !(isLOKNoTiledAnnotations || rDoc.GetNote(aPos));
+                    bDisable = rDoc.GetNote(aPos) == nullptr;
                 }
                 break;
         }
@@ -528,6 +526,7 @@ IMPL_LINK( ScCellShell, ClipboardChanged, TransferableDataHelper*, pDataHelper, 
     rBindings.Invalidate( SID_PASTE_ONLY_VALUE );
     rBindings.Invalidate( SID_PASTE_ONLY_TEXT );
     rBindings.Invalidate( SID_PASTE_ONLY_FORMULA );
+    rBindings.Invalidate( SID_PASTE_TEXTIMPORT_DIALOG );
     rBindings.Invalidate( SID_CLIPBOARD_FORMAT_ITEMS );
 }
 
@@ -621,6 +620,7 @@ void ScCellShell::GetClipState( SfxItemSet& rSet )
         rSet.DisableItem( SID_PASTE_ONLY_VALUE );
         rSet.DisableItem( SID_PASTE_ONLY_TEXT );
         rSet.DisableItem( SID_PASTE_ONLY_FORMULA );
+        rSet.DisableItem( SID_PASTE_TEXTIMPORT_DIALOG );
         rSet.DisableItem( SID_CLIPBOARD_FORMAT_ITEMS );
     }
     else if ( rSet.GetItemState( SID_CLIPBOARD_FORMAT_ITEMS ) != SfxItemState::UNKNOWN )
@@ -1117,7 +1117,7 @@ void ScCellShell::GetState(SfxItemSet &rSet)
                     else
                     {
                          CommentCaptionState eState = pDoc->GetAllNoteCaptionsState( aRanges );
-                         bool bAllNotesInShown = !(eState == ALLHIDDEN || eState == MIXED);
+                         bool bAllNotesInShown = (eState != ALLHIDDEN && eState != MIXED);
                          rSet.Put( SfxBoolItem( SID_TOGGLE_NOTES, bAllNotesInShown) );
                     }
                 }

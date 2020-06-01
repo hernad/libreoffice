@@ -85,6 +85,11 @@ OUString SdResId(const char* pId)
     return Translate::get(pId, SD_MOD()->GetResLocale());
 }
 
+OUString SdResId(const char* pId, int nCardinality)
+{
+    return Translate::nget(pId, nCardinality, SD_MOD()->GetResLocale());
+}
+
 // Dtor
 SdModule::~SdModule()
 {
@@ -188,7 +193,7 @@ tools::SvRef<SotStorageStream> SdModule::GetOptionStream( const OUString& rOptio
 
         aStmName += rOptionName;
 
-        if( SD_OPTION_STORE == eMode || xOptionStorage->IsContained( aStmName ) )
+        if( SdOptionStreamMode::Store == eMode || xOptionStorage->IsContained( aStmName ) )
             xStm = xOptionStorage->OpenSotStream( aStmName );
     }
 

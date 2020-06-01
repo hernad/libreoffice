@@ -19,6 +19,8 @@
 
 #include "ConfigurationControllerBroadcaster.hxx"
 #include <com/sun/star/drawing/framework/XConfigurationChangeListener.hpp>
+#include <com/sun/star/drawing/framework/XConfigurationController.hpp>
+#include <com/sun/star/drawing/framework/XResource.hpp>
 #include <com/sun/star/lang/IllegalArgumentException.hpp>
 #include <com/sun/star/lang/DisposedException.hpp>
 #include <tools/diagnose_ex.h>
@@ -46,8 +48,8 @@ void ConfigurationControllerBroadcaster::AddListener(
             mxConfigurationController,
             0);
 
-    if (maListenerMap.find(rsEventType) == maListenerMap.end())
-        maListenerMap[rsEventType] = ListenerList();
+    maListenerMap.try_emplace(rsEventType);
+
     ListenerDescriptor aDescriptor;
     aDescriptor.mxListener = rxListener;
     aDescriptor.maUserData = rUserData;

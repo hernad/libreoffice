@@ -24,6 +24,7 @@
 
 #include <framework/dispatchhelper.hxx>
 #include <com/sun/star/frame/DispatchResultState.hpp>
+#include <com/sun/star/frame/XFrame.hpp>
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <cppuhelper/weak.hxx>
 #include <svl/eitem.hxx>
@@ -37,7 +38,7 @@
 #include <sfx2/ctrlitem.hxx>
 #include <sfx2/dispatch.hxx>
 #include <sfx2/sfxuno.hxx>
-#include <sfx2/unoctitm.hxx>
+#include <unoctitm.hxx>
 #include <sfx2/msgpool.hxx>
 #include <sfx2/viewfrm.hxx>
 
@@ -323,6 +324,19 @@ void SfxStateCache::SetState
     SetState_Impl( eState, pState, bMaybeDirty );
 }
 
+void SfxStateCache::GetState
+(
+    boost::property_tree::ptree& rState
+)
+{
+    if ( !mxDispatch.is() && pController )
+    {
+        for ( SfxControllerItem *pCtrl = pController;
+              pCtrl;
+              pCtrl = pCtrl->GetItemLink() )
+        pCtrl->GetControlState( nId, rState );
+    }
+}
 
 void SfxStateCache::SetVisibleState( bool bShow )
 {

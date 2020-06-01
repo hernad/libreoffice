@@ -407,25 +407,25 @@ void SAL_CALL FilterBase::initialize( const Sequence< Any >& rArgs )
     {
     }
 
-    if (rArgs.hasElements())
+    if (!rArgs.hasElements())
+        return;
+
+    Sequence<css::beans::PropertyValue> aSeq;
+    rArgs[0] >>= aSeq;
+    for (const auto& rVal : std::as_const(aSeq))
     {
-        Sequence<css::beans::PropertyValue> aSeq;
-        rArgs[0] >>= aSeq;
-        for (const auto& rVal : std::as_const(aSeq))
+        if (rVal.Name == "UserData")
         {
-            if (rVal.Name == "UserData")
-            {
-                css::uno::Sequence<OUString> aUserDataSeq;
-                rVal.Value >>= aUserDataSeq;
-                if (comphelper::findValue(aUserDataSeq, "macro-enabled") != -1)
-                    mxImpl->mbExportVBA = true;
-            }
-            else if (rVal.Name == "Flags")
-            {
-                sal_Int32 nFlags(0);
-                rVal.Value >>= nFlags;
-                mxImpl->mbExportTemplate = bool(static_cast<SfxFilterFlags>(nFlags) & SfxFilterFlags::TEMPLATE);
-            }
+            css::uno::Sequence<OUString> aUserDataSeq;
+            rVal.Value >>= aUserDataSeq;
+            if (comphelper::findValue(aUserDataSeq, "macro-enabled") != -1)
+                mxImpl->mbExportVBA = true;
+        }
+        else if (rVal.Name == "Flags")
+        {
+            sal_Int32 nFlags(0);
+            rVal.Value >>= nFlags;
+            mxImpl->mbExportTemplate = bool(static_cast<SfxFilterFlags>(nFlags) & SfxFilterFlags::TEMPLATE);
         }
     }
 }
@@ -472,14 +472,14 @@ sal_Bool SAL_CALL FilterBase::filter( const Sequence< PropertyValue >& rMediaDes
                 if( mxImpl->mxInStream.is() )
                 {
                     mxImpl->mxStorage = implCreateStorage( mxImpl->mxInStream );
-                    bRet = mxImpl->mxStorage.get() && importDocument();
+                    bRet = mxImpl->mxStorage && importDocument();
                 }
             break;
             case FILTERDIRECTION_EXPORT:
                 if( mxImpl->mxOutStream.is() )
                 {
                     mxImpl->mxStorage = implCreateStorage( mxImpl->mxOutStream );
-                    bRet = mxImpl->mxStorage.get() && exportDocument() && implFinalizeExport( getMediaDescriptor() );
+                    bRet = mxImpl->mxStorage && exportDocument() && implFinalizeExport( getMediaDescriptor() );
                 }
             break;
         }

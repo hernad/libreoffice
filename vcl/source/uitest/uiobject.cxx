@@ -8,20 +8,29 @@
  */
 
 #include <vcl/uitest/uiobject.hxx>
+#include <vcl/uitest/metricfielduiobject.hxx>
+#include <vcl/uitest/formattedfielduiobject.hxx>
 
+#include <vcl/svapp.hxx>
+#include <vcl/toolkit/combobox.hxx>
 #include <vcl/event.hxx>
+#include <vcl/floatwin.hxx>
 #include <vcl/tabpage.hxx>
+#include <vcl/tabctrl.hxx>
 #include <vcl/lstbox.hxx>
-#include <vcl/combobox.hxx>
 #include <vcl/toolkit/spin.hxx>
+#include <vcl/fmtfield.hxx>
 #include <vcl/spinfld.hxx>
-#include <vcl/button.hxx>
-#include <vcl/dialog.hxx>
+#include <vcl/toolkit/button.hxx>
+#include <vcl/toolkit/dialog.hxx>
+#include <vcl/toolkit/field.hxx>
 #include <vcl/edit.hxx>
 #include <vcl/vclmedit.hxx>
 #include <vcl/uitest/logger.hxx>
+#include <uiobject-internal.hxx>
 
 #include <comphelper/string.hxx>
+#include <comphelper/lok.hxx>
 
 #include <rtl/ustrbuf.hxx>
 #include <sal/log.hxx>
@@ -995,7 +1004,11 @@ ListBoxUIObject::~ListBoxUIObject()
 void ListBoxUIObject::execute(const OUString& rAction,
         const StringMap& rParameters)
 {
-    if (!mxListBox->IsEnabled() || !mxListBox->IsReallyVisible())
+    if (!mxListBox->IsEnabled())
+        return;
+
+    bool isTiledRendering = comphelper::LibreOfficeKit::isActive();
+    if (!isTiledRendering && !mxListBox->IsReallyVisible())
         return;
 
     if (rAction == "SELECT")
@@ -1282,6 +1295,97 @@ std::unique_ptr<UIObject> SpinFieldUIObject::create(vcl::Window* pWindow)
     return std::unique_ptr<UIObject>(new SpinFieldUIObject(pSpinField));
 }
 
+
+MetricFieldUIObject::MetricFieldUIObject(const VclPtr<MetricField>& xMetricField):
+    SpinFieldUIObject(xMetricField),
+    mxMetricField(xMetricField)
+{
+}
+
+MetricFieldUIObject::~MetricFieldUIObject()
+{
+}
+
+void MetricFieldUIObject::execute(const OUString& rAction,
+        const StringMap& rParameters)
+{
+    if (rAction == "VALUE")
+    {
+        auto itPos = rParameters.find("VALUE");
+        if (itPos != rParameters.end())
+        {
+            mxMetricField->SetValueFromString(itPos->second);
+        }
+    }
+    else
+        SpinFieldUIObject::execute(rAction, rParameters);
+}
+
+StringMap MetricFieldUIObject::get_state()
+{
+    StringMap aMap = EditUIObject::get_state();
+    aMap["Value"] = mxMetricField->GetValueString();
+
+    return aMap;
+}
+
+OUString MetricFieldUIObject::get_name() const
+{
+    return "MetricFieldUIObject";
+}
+
+std::unique_ptr<UIObject> MetricFieldUIObject::create(vcl::Window* pWindow)
+{
+    MetricField* pMetricField = dynamic_cast<MetricField*>(pWindow);
+    assert(pMetricField);
+    return std::unique_ptr<UIObject>(new MetricFieldUIObject(pMetricField));
+}
+
+FormattedFieldUIObject::FormattedFieldUIObject(const VclPtr<FormattedField>& xFormattedField):
+    SpinFieldUIObject(xFormattedField),
+    mxFormattedField(xFormattedField)
+{
+}
+
+FormattedFieldUIObject::~FormattedFieldUIObject()
+{
+}
+
+void FormattedFieldUIObject::execute(const OUString& rAction,
+        const StringMap& rParameters)
+{
+    if (rAction == "VALUE")
+    {
+        auto itPos = rParameters.find("VALUE");
+        if (itPos != rParameters.end())
+        {
+            mxFormattedField->SetValueFromString(itPos->second);
+        }
+    }
+    else
+        SpinFieldUIObject::execute(rAction, rParameters);
+}
+
+StringMap FormattedFieldUIObject::get_state()
+{
+    StringMap aMap = EditUIObject::get_state();
+    aMap["Value"] = OUString::number(mxFormattedField->GetValue());
+
+    return aMap;
+}
+
+OUString FormattedFieldUIObject::get_name() const
+{
+    return "FormattedFieldUIObject";
+}
+
+std::unique_ptr<UIObject> FormattedFieldUIObject::create(vcl::Window* pWindow)
+{
+    FormattedField* pFormattedField = dynamic_cast<FormattedField*>(pWindow);
+    assert(pFormattedField);
+    return std::unique_ptr<UIObject>(new FormattedFieldUIObject(pFormattedField));
+}
+
 TabControlUIObject::TabControlUIObject(const VclPtr<TabControl>& xTabControl):
     WindowUIObject(xTabControl),
     mxTabControl(xTabControl)
@@ -1352,6 +1456,51 @@ std::unique_ptr<UIObject> TabControlUIObject::create(vcl::Window* pWindow)
     return std::unique_ptr<UIObject>(new TabControlUIObject(pTabControl));
 }
 
+RoadmapWizardUIObject::RoadmapWizardUIObject(const VclPtr<vcl::RoadmapWizard>& xRoadmapWizard):
+    WindowUIObject(xRoadmapWizard),
+    mxRoadmapWizard(xRoadmapWizard)
+{
+}
 
+RoadmapWizardUIObject::~RoadmapWizardUIObject()
+{
+}
+
+void RoadmapWizardUIObject::execute(const OUString& rAction,
+        const StringMap& rParameters)
+{
+    if (rAction == "SELECT")
+    {
+        if (rParameters.find("POS") != rParameters.end())
+        {
+            auto itr = rParameters.find("POS");
+            sal_uInt32 nPos = itr->second.toUInt32();
+            mxRoadmapWizard->SelectRoadmapItemByID(nPos);
+        }
+    }
+    else
+        WindowUIObject::execute(rAction, rParameters);
+}
+
+StringMap RoadmapWizardUIObject::get_state()
+{
+    StringMap aMap = WindowUIObject::get_state();
+
+    aMap["CurrentStep"] = OUString::number(mxRoadmapWizard->GetCurrentRoadmapItemID());
+
+    return aMap;
+}
+
+OUString RoadmapWizardUIObject::get_name() const
+{
+    return "RoadmapWizardUIObject";
+}
+
+std::unique_ptr<UIObject> RoadmapWizardUIObject::create(vcl::Window* pWindow)
+{
+    vcl::RoadmapWizard* pRoadmapWizard = dynamic_cast<vcl::RoadmapWizard*>(pWindow);
+    assert(pRoadmapWizard);
+    return std::unique_ptr<UIObject>(new RoadmapWizardUIObject(pRoadmapWizard));
+}
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

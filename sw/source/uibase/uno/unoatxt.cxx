@@ -311,7 +311,8 @@ static bool lcl_CopySelToDoc( SwDoc* pInsDoc, OTextCursorHelper* pxCursor, SwXTe
             }
         }
         if (!pPam) { return false; }
-        bRet = pDoc->getIDocumentContentOperations().CopyRange( *pPam, aPos, /*bCopyAll=*/false, /*bCheckPos=*/true, /*bCopyText=*/false ) || bRet;
+        bRet = pDoc->getIDocumentContentOperations().CopyRange(*pPam, aPos, SwCopyFlags::CheckPosInFly)
+            || bRet;
     }
 
     pInsDoc->getIDocumentFieldsAccess().UnlockExpFields();
@@ -918,7 +919,7 @@ void SwXAutoTextEntry::applyTo(const uno::Reference< text::XTextRange > & xTextR
     }
 
     std::unique_ptr<SwTextBlocks> pBlock(pGlossaries->GetGroupDoc(sGroupName));
-    const bool bResult = pBlock.get() && !pBlock->GetError()
+    const bool bResult = pBlock && !pBlock->GetError()
                     && pDoc->InsertGlossary( *pBlock, sEntryName, InsertPaM);
 
     if(!bResult)

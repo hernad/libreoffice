@@ -131,6 +131,10 @@ public:
 
     SwXMLBodyContext_Impl( SwXMLImport& rImport );
 
+    virtual void SAL_CALL startFastElement(
+            sal_Int32 /*nElement*/,
+            const css::uno::Reference< css::xml::sax::XFastAttributeList >& /*xAttrList*/ ) override {}
+
     virtual css::uno::Reference< css::xml::sax::XFastContextHandler > SAL_CALL createFastChildContext(
             sal_Int32 nElement, const css::uno::Reference< css::xml::sax::XFastAttributeList >& AttrList ) override;
 };
@@ -150,11 +154,11 @@ SwXMLBodyContext_Impl::SwXMLBodyContext_Impl( SwXMLImport& rImport ) :
             rImport.GetTextImport()->GetTextStyles());
     if (!xStyles->hasByName("Default"))
     {   // this old name was used before LO 4.0
-        rImport.AddStyleDisplayName(XML_STYLE_FAMILY_TEXT_TEXT, "Default", sDefault);
+        rImport.AddStyleDisplayName(XmlStyleFamily::TEXT_TEXT, "Default", sDefault);
     }
     if (!xStyles->hasByName("Default_20_Style"))
     {   // this new name contains a space which is converted to _20_ on export
-        rImport.AddStyleDisplayName(XML_STYLE_FAMILY_TEXT_TEXT, "Default_20_Style", sDefault);
+        rImport.AddStyleDisplayName(XmlStyleFamily::TEXT_TEXT, "Default_20_Style", sDefault);
     }
     bool isEncoded(false);
     OUString const defaultEncoded(
@@ -162,7 +166,7 @@ SwXMLBodyContext_Impl::SwXMLBodyContext_Impl( SwXMLImport& rImport ) :
     if (isEncoded && defaultEncoded != "Default_20_Style"
         && !xStyles->hasByName(defaultEncoded))
     {   // new name may contain a space which is converted to _20_ on export
-        rImport.AddStyleDisplayName(XML_STYLE_FAMILY_TEXT_TEXT, defaultEncoded, sDefault);
+        rImport.AddStyleDisplayName(XmlStyleFamily::TEXT_TEXT, defaultEncoded, sDefault);
     }
 }
 

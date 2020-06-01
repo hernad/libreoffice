@@ -26,14 +26,9 @@
 #include <i18nlangtag/lang.h>
 #include <com/sun/star/uno/Reference.hxx>
 
-namespace com { namespace sun { namespace star { namespace uno { template <typename > class Sequence; } } } }
-namespace com { namespace sun { namespace star { namespace i18n { class XExtendedTransliteration; } } } }
-
-namespace com { namespace sun { namespace star {
-    namespace uno {
-        class XComponentContext;
-    }
-}}}
+namespace com::sun::star::uno { template <typename > class Sequence; }
+namespace com::sun::star::i18n { class XExtendedTransliteration; }
+namespace com::sun::star::uno { class XComponentContext; }
 enum class TransliterationFlags;
 
 namespace utl
@@ -43,7 +38,7 @@ class UNOTOOLS_DLLPUBLIC TransliterationWrapper
 {
     css::uno::Reference< css::i18n::XExtendedTransliteration > xTrans;
     LanguageTag aLanguageTag;
-    TransliterationFlags const nType;
+    TransliterationFlags nType;
     mutable bool bFirstCall;
 
     TransliterationWrapper( const TransliterationWrapper& ) = delete;

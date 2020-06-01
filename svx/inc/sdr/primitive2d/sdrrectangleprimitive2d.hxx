@@ -22,7 +22,7 @@
 
 #include <drawinglayer/primitive2d/baseprimitive2d.hxx>
 #include <basegfx/matrix/b2dhommatrix.hxx>
-#include <svx/sdr/attribute/sdrlinefillshadowtextattribute.hxx>
+#include <sdr/attribute/sdrlinefilleffectstextattribute.hxx>
 
 
 // predefines
@@ -35,13 +35,13 @@ namespace drawinglayer
         class SdrRectanglePrimitive2D final : public BufferedDecompositionPrimitive2D
         {
         private:
-            basegfx::B2DHomMatrix const                       maTransform;
-            attribute::SdrLineFillShadowTextAttribute const   maSdrLFSTAttribute;
-            double const                                      mfCornerRadiusX;    // [0.0..1.0] relative to 1/2 width
-            double const                                      mfCornerRadiusY;    // [0.0..1.0] relative to 1/2 height
+            basegfx::B2DHomMatrix                       maTransform;
+            attribute::SdrLineFillEffectsTextAttribute   maSdrLFSTAttribute;
+            double                                      mfCornerRadiusX;    // [0.0..1.0] relative to 1/2 width
+            double                                      mfCornerRadiusY;    // [0.0..1.0] relative to 1/2 height
 
             // flag which decides if the HitArea should be the filled geometry
-            bool const                                        mbForceFillForHitTest : 1;
+            bool                                        mbForceFillForHitTest : 1;
 
             // local decomposition.
             virtual void create2DDecomposition(Primitive2DContainer& rContainer, const geometry::ViewInformation2D& aViewInformation) const override;
@@ -49,14 +49,14 @@ namespace drawinglayer
         public:
             SdrRectanglePrimitive2D(
                 const basegfx::B2DHomMatrix& rTransform,
-                const attribute::SdrLineFillShadowTextAttribute& rSdrLFSTAttribute,
+                const attribute::SdrLineFillEffectsTextAttribute& rSdrLFSTAttribute,
                 double fCornerRadiusX,
                 double fCornerRadiusY,
                 bool bForceFillForHitTest);
 
             // data access
             const basegfx::B2DHomMatrix& getTransform() const { return maTransform; }
-            const attribute::SdrLineFillShadowTextAttribute& getSdrLFSTAttribute() const { return maSdrLFSTAttribute; }
+            const attribute::SdrLineFillEffectsTextAttribute& getSdrLFSTAttribute() const { return maSdrLFSTAttribute; }
             double getCornerRadiusX() const { return mfCornerRadiusX; }
             double getCornerRadiusY() const { return mfCornerRadiusY; }
             bool getForceFillForHitTest() const { return mbForceFillForHitTest; }
@@ -65,7 +65,7 @@ namespace drawinglayer
             virtual bool operator==(const BasePrimitive2D& rPrimitive) const override;
 
             // provide unique ID
-            DeclPrimitive2DIDBlock()
+            virtual sal_uInt32 getPrimitive2DID() const override;
         };
     } // end of namespace primitive2d
 } // end of namespace drawinglayer

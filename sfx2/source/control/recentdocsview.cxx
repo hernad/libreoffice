@@ -19,7 +19,7 @@
 
 #include <sal/log.hxx>
 #include <comphelper/base64.hxx>
-#include <sfx2/recentdocsview.hxx>
+#include <recentdocsview.hxx>
 #include <sfx2/sfxresid.hxx>
 #include <tools/diagnose_ex.h>
 #include <unotools/historyoptions.hxx>
@@ -39,6 +39,7 @@
 #include <bitmaps.hlst>
 #include <vcl/virdev.hxx>
 #include "recentdocsviewitem.hxx"
+#include <sfx2/app.hxx>
 
 #include <officecfg/Office/Common.hxx>
 
@@ -124,7 +125,7 @@ RecentDocsView::RecentDocsView( vcl::Window* pParent )
     : ThumbnailView(pParent)
     , mnFileTypes(ApplicationType::TYPE_NONE)
     , mnLastMouseDownItem(THUMBNAILVIEW_ITEM_NOTFOUND)
-    , maWelcomeImage(StockImage::Yes, BMP_WELCOME)
+    , maWelcomeImage()
     , maWelcomeLine1(SfxResId(STR_WELCOME_LINE1))
     , maWelcomeLine2(SfxResId(STR_WELCOME_LINE2))
 {
@@ -148,21 +149,21 @@ bool RecentDocsView::typeMatchesExtension(ApplicationType type, const OUString &
 {
     bool bRet = false;
 
-    if (rExt == "odt" || rExt == "doc" || rExt == "docx" ||
+    if (rExt == "odt" || rExt == "fodt" || rExt == "doc" || rExt == "docx" ||
         rExt == "rtf" || rExt == "txt" || rExt == "odm" || rExt == "otm")
     {
         bRet = static_cast<bool>(type & ApplicationType::TYPE_WRITER);
     }
-    else if (rExt == "ods" || rExt == "xls" || rExt == "xlsx")
+    else if (rExt == "ods" || rExt == "fods" || rExt == "xls" || rExt == "xlsx")
     {
         bRet = static_cast<bool>(type & ApplicationType::TYPE_CALC);
     }
-    else if (rExt == "odp" || rExt == "pps" || rExt == "ppt" ||
+    else if (rExt == "odp" || rExt == "fodp" || rExt == "pps" || rExt == "ppt" ||
             rExt == "pptx")
     {
         bRet = static_cast<bool>(type & ApplicationType::TYPE_IMPRESS);
     }
-    else if (rExt == "odg")
+    else if (rExt == "odg" || rExt == "fodg")
     {
         bRet = static_cast<bool>(type & ApplicationType::TYPE_DRAW);
     }
@@ -352,6 +353,12 @@ void RecentDocsView::Paint(vcl::RenderContext& rRenderContext, const tools::Rect
 
     if (mItemList.empty())
     {
+        if (maWelcomeImage.IsEmpty())
+        {
+            const long aWidth(aRect.GetWidth() > aRect.getHeight() ? aRect.GetHeight()/2 : aRect.GetWidth()/2);
+            maWelcomeImage = SfxApplication::GetApplicationLogo(aWidth);
+        }
+
         // No recent files to be shown yet. Show a welcome screen.
         rRenderContext.Push(PushFlags::FONT | PushFlags::TEXTCOLOR);
         SetMessageFont(rRenderContext);
@@ -365,13 +372,13 @@ void RecentDocsView::Paint(vcl::RenderContext& rRenderContext, const tools::Rect
         const int nX = (rSize.Width() - rImgSize.Width())/2;
         int nY = (rSize.Height() - 3 * nTextHeight - rImgSize.Height())/2;
         Point aImgPoint(nX, nY);
-        rRenderContext.DrawImage(aImgPoint, rImgSize, maWelcomeImage);
+        rRenderContext.DrawBitmapEx(aImgPoint, rImgSize, maWelcomeImage);
 
         nY = nY + rImgSize.Height();
-        rRenderContext.DrawText(tools::Rectangle(0, nY, rSize.Width(), nY + nTextHeight),
+        rRenderContext.DrawText(tools::Rectangle(0, nY + 1 * nTextHeight, rSize.Width(), nY + nTextHeight),
                                 maWelcomeLine1,
                                 DrawTextFlags::Center);
-        rRenderContext.DrawText(tools::Rectangle(0, nY + 1.5 * nTextHeight, rSize.Width(), rSize.Height()),
+        rRenderContext.DrawText(tools::Rectangle(0, nY + 2 * nTextHeight, rSize.Width(), rSize.Height()),
                                 maWelcomeLine2,
                                 DrawTextFlags::MultiLine | DrawTextFlags::WordBreak | DrawTextFlags::Center);
 

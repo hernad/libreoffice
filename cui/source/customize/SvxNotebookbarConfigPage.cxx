@@ -221,15 +221,13 @@ void SvxConfigPage::InsertEntryIntoNotebookbarTabUI(const OUString& sClassId,
                                                     weld::TreeView& rTreeView,
                                                     weld::TreeIter& rIter, int nStartCol)
 {
-    css::uno::Reference<css::container::XNameAccess> m_xCommandToLabelMap,
-        m_xGlobalCommandToLabelMap;
+    css::uno::Reference<css::container::XNameAccess> m_xCommandToLabelMap;
     uno::Reference<uno::XComponentContext> xContext = ::comphelper::getProcessComponentContext();
     uno::Reference<container::XNameAccess> xNameAccess(
         css::frame::theUICommandDescription::get(xContext));
 
-    uno::Sequence<beans::PropertyValue> aPropSeq, aGlobalPropSeq;
+    uno::Sequence<beans::PropertyValue> aPropSeq;
 
-    xNameAccess->getByName("com.sun.star.text.GlobalDocument") >>= m_xGlobalCommandToLabelMap;
     xNameAccess->getByName(getModuleId(m_sAppName)) >>= m_xCommandToLabelMap;
 
     try
@@ -242,23 +240,10 @@ void SvxConfigPage::InsertEntryIntoNotebookbarTabUI(const OUString& sClassId,
     {
     }
 
-    try
-    {
-        uno::Any aGlobalVal = m_xGlobalCommandToLabelMap->getByName(sUIItemCommand);
-        aGlobalVal >>= aGlobalPropSeq;
-    }
-    catch (container::NoSuchElementException&)
-    {
-    }
-
     OUString aLabel;
-    for (sal_Int32 i = 0; i < aPropSeq.getLength(); ++i)
-        if (aPropSeq[i].Name == "Name")
-            aPropSeq[i].Value >>= aLabel;
-    if (aLabel.isEmpty())
-        for (sal_Int32 i = 0; i < aGlobalPropSeq.getLength(); ++i)
-            if (aGlobalPropSeq[i].Name == "Name")
-                aGlobalPropSeq[i].Value >>= aLabel;
+    for (auto const& prop : std::as_const(aPropSeq))
+        if (prop.Name == "Name")
+            prop.Value >>= aLabel;
 
     OUString aName = SvxConfigPageHelper::stripHotKey(aLabel);
 
@@ -561,9 +546,10 @@ void SvxNotebookbarEntriesListBox::ChangedVisibility(int nRow)
     sfx2::SfxNotebookBar::ReloadNotebookBar(sUIPath);
 }
 
-IMPL_LINK(SvxNotebookbarEntriesListBox, CheckButtonHdl, const row_col&, rRowCol, void)
+IMPL_LINK(SvxNotebookbarEntriesListBox, CheckButtonHdl, const weld::TreeView::iter_col&, rRowCol,
+          void)
 {
-    ChangedVisibility(rRowCol.first);
+    ChangedVisibility(m_xControl->get_iter_index_in_parent(rRowCol.first));
 }
 
 IMPL_LINK(SvxNotebookbarEntriesListBox, KeyInputHdl, const KeyEvent&, rKeyEvent, bool)

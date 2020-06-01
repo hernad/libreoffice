@@ -10,14 +10,18 @@
 #include <com/sun/star/accessibility/AccessibleRole.hpp>
 #include <o3tl/enumarray.hxx>
 #include <o3tl/enumrange.hxx>
-#include <vcl/button.hxx>
+#include <vcl/toolkit/button.hxx>
 #include <vcl/decoview.hxx>
-#include <vcl/dialog.hxx>
+#include <vcl/toolkit/dialog.hxx>
 #include <vcl/layout.hxx>
+#include <vcl/scrbar.hxx>
 #include <vcl/stdtext.hxx>
+#include <vcl/split.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
+#include <bitmaps.hlst>
 #include <messagedialog.hxx>
+#include <svdata.hxx>
 #include <window.h>
 #include <boost/multi_array.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -690,7 +694,7 @@ namespace {
 struct ButtonOrder
 {
     const char* m_aType;
-    int const m_nPriority;
+    int m_nPriority;
 };
 
 }
@@ -742,7 +746,7 @@ namespace {
 
 class sortButtons
 {
-    bool const m_bVerticalContainer;
+    bool m_bVerticalContainer;
 public:
     explicit sortButtons(bool bVerticalContainer)
         : m_bVerticalContainer(bVerticalContainer)
@@ -1541,6 +1545,79 @@ bool VclAlignment::set_property(const OString &rKey, const OUString &rValue)
         return VclBin::set_property(rKey, rValue);
     return true;
 }
+
+class DisclosureButton final : public CheckBox
+{
+    virtual void ImplDrawCheckBoxState(vcl::RenderContext& rRenderContext) override
+    {
+        /* HACK: DisclosureButton is currently assuming, that the disclosure sign
+           will fit into the rectangle occupied by a normal checkbox on all themes.
+           If this does not hold true for some theme, ImplGetCheckImageSize
+           would have to be overridden for DisclosureButton; also GetNativeControlRegion
+           for ControlType::ListNode would have to be implemented and taken into account
+        */
+
+        tools::Rectangle aStateRect(GetStateRect());
+
+        ImplControlValue aControlValue(GetState() == TRISTATE_TRUE ? ButtonValue::On : ButtonValue::Off);
+        tools::Rectangle aCtrlRegion(aStateRect);
+        ControlState nState = ControlState::NONE;
+
+        if (HasFocus())
+            nState |= ControlState::FOCUSED;
+        if (GetButtonState() & DrawButtonFlags::Default)
+            nState |= ControlState::DEFAULT;
+        if (Window::IsEnabled())
+            nState |= ControlState::ENABLED;
+        if (IsMouseOver() && GetMouseRect().IsInside(GetPointerPosPixel()))
+            nState |= ControlState::ROLLOVER;
+
+        if (rRenderContext.DrawNativeControl(ControlType::ListNode, ControlPart::Entire, aCtrlRegion,
+                                              nState, aControlValue, OUString()))
+            return;
+
+        ImplSVCtrlData& rCtrlData(ImplGetSVData()->maCtrlData);
+        if (!rCtrlData.mpDisclosurePlus)
+            rCtrlData.mpDisclosurePlus.reset(new Image(StockImage::Yes, SV_DISCLOSURE_PLUS));
+        if (!rCtrlData.mpDisclosureMinus)
+            rCtrlData.mpDisclosureMinus.reset(new Image(StockImage::Yes, SV_DISCLOSURE_MINUS));
+
+        Image* pImg
+            = IsChecked() ? rCtrlData.mpDisclosureMinus.get() : rCtrlData.mpDisclosurePlus.get();
+
+        DrawImageFlags nStyle = DrawImageFlags::NONE;
+        if (!IsEnabled())
+            nStyle |= DrawImageFlags::Disable;
+
+        Size aSize(aStateRect.GetSize());
+        Size aImgSize(pImg->GetSizePixel());
+        Point aOff((aSize.Width() - aImgSize.Width()) / 2,
+                   (aSize.Height() - aImgSize.Height()) / 2);
+        aOff += aStateRect.TopLeft();
+        rRenderContext.DrawImage(aOff, *pImg, nStyle);
+    }
+
+public:
+    explicit DisclosureButton(vcl::Window* pParent)
+        : CheckBox(pParent, 0)
+    {
+    }
+
+    virtual void KeyInput( const KeyEvent& rKEvt ) override
+    {
+        vcl::KeyCode aKeyCode = rKEvt.GetKeyCode();
+
+        if( !aKeyCode.GetModifier()  &&
+            ( ( aKeyCode.GetCode() == KEY_ADD ) ||
+              ( aKeyCode.GetCode() == KEY_SUBTRACT ) )
+            )
+        {
+            Check( aKeyCode.GetCode() == KEY_ADD );
+        }
+        else
+            CheckBox::KeyInput( rKEvt );
+    }
+};
 
 VclExpander::VclExpander(vcl::Window *pParent)
     : VclBin(pParent)
@@ -2470,7 +2547,7 @@ void VclVPaned::arrange(const Size& rAllocation, long nFirstHeight, long nSecond
         {
             Point aSplitterPos(0, aFirstChildSize.Height());
             setLayoutAllocation(*m_pSplitter, aSplitterPos, aSplitterSize);
-            set_position(aSplitterPos.Y() + aSplitterSize.Height() / 2);
+            m_nPosition = aSplitterPos.Y() + aSplitterSize.Height() / 2;
         }
         else if (nElement == 1)
         {
@@ -2484,6 +2561,18 @@ void VclVPaned::arrange(const Size& rAllocation, long nFirstHeight, long nSecond
         }
         ++nElement;
     }
+}
+
+void VclVPaned::set_position(long nPosition)
+{
+    VclPaned::set_position(nPosition);
+
+    Size aAllocation(GetSizePixel());
+    Size aSplitterSize(m_pSplitter->GetSizePixel());
+
+    nPosition -= aSplitterSize.Height() / 2;
+
+    arrange(aAllocation, nPosition, aAllocation.Height() - nPosition - aSplitterSize.Height());
 }
 
 void VclVPaned::setAllocation(const Size& rAllocation)
@@ -2577,7 +2666,7 @@ void VclHPaned::arrange(const Size& rAllocation, long nFirstWidth, long nSecondW
         {
             Point aSplitterPos(aFirstChildSize.Width(), 0);
             setLayoutAllocation(*m_pSplitter, aSplitterPos, aSplitterSize);
-            set_position(aSplitterPos.X() + aSplitterSize.Width() / 2);
+            m_nPosition = aSplitterPos.X() + aSplitterSize.Width() / 2;
         }
         else if (nElement == 1)
         {
@@ -2591,6 +2680,18 @@ void VclHPaned::arrange(const Size& rAllocation, long nFirstWidth, long nSecondW
         }
         ++nElement;
     }
+}
+
+void VclHPaned::set_position(long nPosition)
+{
+    VclPaned::set_position(nPosition);
+
+    Size aAllocation(GetSizePixel());
+    Size aSplitterSize(m_pSplitter->GetSizePixel());
+
+    nPosition -= aSplitterSize.Width() / 2;
+
+    arrange(aAllocation, nPosition, aAllocation.Width() - nPosition - aSplitterSize.Width());
 }
 
 void VclHPaned::setAllocation(const Size& rAllocation)
@@ -2734,6 +2835,24 @@ void VclDrawingArea::StartDrag(sal_Int8, const Point&)
         return;
 
     xContainer->StartDrag(this, m_nDragAction);
+}
+
+VclHPaned::~VclHPaned()
+{
+}
+
+VclVPaned::~VclVPaned()
+{
+}
+
+VclPaned::~VclPaned()
+{
+    disposeOnce();
+}
+
+VclScrolledWindow::~VclScrolledWindow()
+{
+    disposeOnce();
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

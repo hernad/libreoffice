@@ -39,6 +39,7 @@
 #include <sfx2/filedlghelper.hxx>
 #include <sfx2/sfxsids.hrc>
 #include <svl/stritem.hxx>
+#include <rtl/ustrbuf.hxx>
 #include <tools/debug.hxx>
 #include <tools/diagnose_ex.h>
 #include <toolkit/helper/vclunohelper.hxx>
@@ -81,6 +82,7 @@
 #include <com/sun/star/ui/theWindowStateConfiguration.hpp>
 #include <com/sun/star/ui/dialogs/ExtendedFilePickerElementIds.hpp>
 #include <com/sun/star/ui/dialogs/TemplateDescription.hpp>
+#include <com/sun/star/ui/dialogs/XFilePicker3.hpp>
 #include <com/sun/star/ui/dialogs/XFilePickerControlAccess.hpp>
 #include <com/sun/star/util/thePathSettings.hpp>
 #include <comphelper/documentinfo.hxx>
@@ -103,29 +105,29 @@ void printPropertySet(
     uno::Reference< beans::XPropertySetInfo > xPropSetInfo =
         xPropSet->getPropertySetInfo();
 
-    uno::Sequence< beans::Property > aPropDetails =
+    const uno::Sequence< beans::Property >& aPropDetails =
         xPropSetInfo->getProperties();
 
     SAL_WARN("cui", "printPropertySet: " << aPropDetails.getLength() << " properties" );
 
-    for ( sal_Int32 i = 0; i < aPropDetails.getLength(); ++i )
+    for ( beans::Property const & aPropDetail  : aPropDetails )
     {
         OUString tmp;
         sal_Int32 ival;
 
-        uno::Any a = xPropSet->getPropertyValue( aPropDetails[i].Name );
+        uno::Any a = xPropSet->getPropertyValue( aPropDetail.Name );
 
         if ( a >>= tmp )
         {
-            SAL_WARN("cui", prefix << ": Got property: " << aPropDetails[i].Name << tmp);
+            SAL_WARN("cui", prefix << ": Got property: " << aPropDetail.Name << tmp);
         }
         else if ( ( a >>= ival ) )
         {
-            SAL_WARN("cui", prefix << ": Got property: " << aPropDetails[i].Name << " = " << ival);
+            SAL_WARN("cui", prefix << ": Got property: " << aPropDetail.Name << " = " << ival);
         }
         else
         {
-            SAL_WARN("cui", prefix << ": Got property: " << aPropDetails[i].Name << " of type " << a.getValueTypeName());
+            SAL_WARN("cui", prefix << ": Got property: " << aPropDetail.Name << " of type " << a.getValueTypeName());
         }
     }
 }
@@ -134,13 +136,13 @@ void printProperties(
     const OUString& prefix,
     const uno::Sequence< beans::PropertyValue >& aProp )
 {
-    for ( sal_Int32 i = 0; i < aProp.getLength(); ++i )
+    for (PropertyValue const & aPropVal : aProp)
     {
         OUString tmp;
 
-        aProp[i].Value >>= tmp;
+        aPropVal.Value >>= tmp;
 
-        SAL_WARN("cui", prefix << ": Got property: " << aProp[i].Name << " = " << tmp);
+        SAL_WARN("cui", prefix << ": Got property: " << aPropVal.Name << " = " << tmp);
     }
 }
 
@@ -227,18 +229,15 @@ SvxConfigDialog::SvxConfigDialog(weld::Window * pParent, const SfxItemSet* pInSe
 void SvxConfigDialog::SetFrame(const css::uno::Reference<css::frame::XFrame>& xFrame)
 {
     m_xFrame = xFrame;
-    uno::Reference<uno::XComponentContext> xContext(::comphelper::getProcessComponentContext(),
-                                                    uno::UNO_SET_THROW);
-
     OUString aModuleId = SvxConfigPage::GetFrameWithDefaultAndIdentify(m_xFrame);
-    uno::Reference<css::frame::XModuleManager2> xModuleManager(
-        css::frame::ModuleManager::create(xContext));
-    OUString aModuleName = SvxConfigPageHelper::GetUIModuleName(aModuleId, xModuleManager);
-    if (aModuleName != "Writer" && aModuleName != "Calc" && aModuleName != "Impress"
-        && aModuleName != "Draw")
+
+    if (aModuleId != "com.sun.star.text.TextDocument" &&
+        aModuleId != "com.sun.star.sheet.SpreadsheetDocument" &&
+        aModuleId != "com.sun.star.presentation.PresentationDocument" &&
+        aModuleId != "com.sun.star.drawing.DrawingDocument")
         RemoveTabPage("notebookbar");
 
-    if (!SvxConfigPageHelper::showKeyConfigTabPage(xFrame))
+    if (aModuleId == "com.sun.star.frame.StartModule")
         RemoveTabPage("keyboard");
 }
 
@@ -480,23 +479,23 @@ void SaveInData::LoadSubMenus( const uno::Reference< container::XIndexAccess >& 
                     if ( a >>= aPropSeq )
                     {
                         OUString aMenuLabel;
-                        for ( sal_Int32 i = 0; i < aPropSeq.getLength(); ++i )
+                        for ( const beans::PropertyValue& prop : std::as_const(aPropSeq) )
                         {
                             if ( bContextMenu )
                             {
-                                if ( aPropSeq[i].Name == "PopupLabel" )
+                                if ( prop.Name == "PopupLabel" )
                                 {
-                                    aPropSeq[i].Value >>= aLabel;
+                                    prop.Value >>= aLabel;
                                     break;
                                 }
-                                else if ( aPropSeq[i].Name == "Label" )
+                                else if ( prop.Name == "Label" )
                                 {
-                                    aPropSeq[i].Value >>= aMenuLabel;
+                                    prop.Value >>= aMenuLabel;
                                 }
                             }
-                            else if ( aPropSeq[i].Name == "Label" )
+                            else if ( prop.Name == "Label" )
                             {
-                                aPropSeq[i].Value >>= aLabel;
+                                prop.Value >>= aLabel;
                                 break;
                             }
                         }
@@ -1165,10 +1164,8 @@ void SvxConfigPage::Reset( const SfxItemSet* )
                 DBG_UNHANDLED_EXCEPTION("cui.customize");
             }
 
-            for ( sal_Int32 i = 0; i < aFrameList.getLength(); ++i )
+            for ( uno::Reference < frame::XFrame > const & xf : std::as_const(aFrameList) )
             {
-                uno::Reference < frame::XFrame > xf = aFrameList[i];
-
                 if ( xf.is() && xf != m_xFrame )
                 {
                     OUString aCheckId;
@@ -1305,17 +1302,21 @@ bool SvxConfigPage::FillItemSet( SfxItemSet* )
 
     for (int i = 0, nCount = m_xSaveInListBox->get_count(); i < nCount; ++i)
     {
-        SaveInData* pData =
-            reinterpret_cast<SaveInData*>(m_xSaveInListBox->get_id(i).toInt64());
-        if(m_xSaveInListBox->get_id(i) != notebookbarTabScope)
+        OUString sId = m_xSaveInListBox->get_id(i);
+        if (sId != notebookbarTabScope)
+        {
+            SaveInData* pData = reinterpret_cast<SaveInData*>(sId.toInt64());
             result = pData->Apply();
+        }
     }
     return result;
 }
 
 IMPL_LINK_NOARG(SvxConfigPage, SelectSaveInLocation, weld::ComboBox&, void)
 {
-    pCurrentSaveInData = reinterpret_cast<SaveInData*>(m_xSaveInListBox->get_active_id().toInt64());
+    OUString sId = m_xSaveInListBox->get_active_id();
+    if (sId != notebookbarTabScope)
+        pCurrentSaveInData = reinterpret_cast<SaveInData*>(sId.toInt64());
     Init();
 }
 
@@ -1562,12 +1563,10 @@ IMPL_LINK_NOARG(SvxConfigPage, FunctionDoubleClickHdl, weld::TreeView&, bool)
 
 IMPL_LINK_NOARG(SvxConfigPage, SelectFunctionHdl, weld::TreeView&, void)
 {
-    // Store the tooltip of the description field at first run
-    static const OUString sDescTooltip = m_xDescriptionField->get_tooltip_text();
-
     // GetScriptURL() returns a non-empty string if a
     // valid command is selected on the left box
-    bool bIsValidCommand = !GetScriptURL().isEmpty();
+    OUString aSelectCommand = GetScriptURL();
+    bool bIsValidCommand = !aSelectCommand.isEmpty();
 
     // Enable/disable Add and Remove buttons depending on current selection
     if (bIsValidCommand)
@@ -1575,7 +1574,21 @@ IMPL_LINK_NOARG(SvxConfigPage, SelectFunctionHdl, weld::TreeView&, void)
         m_xAddCommandButton->set_sensitive(true);
         m_xRemoveCommandButton->set_sensitive(true);
 
-        m_xDescriptionField->set_text(m_xFunctions->GetHelpText(false));
+        if (SfxHelp::IsHelpInstalled())
+        {
+            m_xDescriptionField->set_text(m_xFunctions->GetHelpText(false));
+        }
+        else
+        {
+            SfxGroupInfo_Impl *pData = reinterpret_cast<SfxGroupInfo_Impl*>(m_xFunctions->get_selected_id().toInt64());
+            if (pData)
+            {
+                OUString aLabel = CuiResId(RID_SVXSTR_COMMANDLABEL) + ": " + pData->sLabel + "\n";
+                OUString aName = CuiResId(RID_SVXSTR_COMMANDNAME) + ": " + pData->sCommand + "\n";
+                OUString aTip = CuiResId(RID_SVXSTR_COMMANDTIP) + ": " + pData->sTooltip;
+                m_xDescriptionField->set_text(aLabel + aName + aTip);
+            }
+        }
     }
     else
     {
@@ -1584,23 +1597,6 @@ IMPL_LINK_NOARG(SvxConfigPage, SelectFunctionHdl, weld::TreeView&, void)
         m_xRemoveCommandButton->set_sensitive(false);
 
         m_xDescriptionField->set_text("");
-    }
-
-    // Disable the description field and its label if the local help is not installed
-    // And inform the user via tooltips
-    if ( !SfxHelp::IsHelpInstalled() )
-    {
-        m_xDescriptionField->set_sensitive(false);
-        m_xDescriptionFieldLb->set_sensitive(false);
-        m_xDescriptionField->set_tooltip_text( sDescTooltip );
-        m_xDescriptionFieldLb->set_tooltip_text( sDescTooltip );
-    }
-    else
-    {
-        m_xDescriptionField->set_sensitive(true);
-        m_xDescriptionFieldLb->set_sensitive(true);
-        m_xDescriptionField->set_tooltip_text("");
-        m_xDescriptionFieldLb->set_tooltip_text("");
     }
 }
 
@@ -1924,11 +1920,11 @@ sal_Int32 ToolbarSaveInData::GetSystemStyle( const OUString& rResourceURL )
 
             if ( a >>= aProps )
             {
-                for ( sal_Int32 i = 0; i < aProps.getLength(); ++i )
+                for ( beans::PropertyValue const & prop : std::as_const(aProps) )
                 {
-                    if ( aProps[ i ].Name == ITEM_DESCRIPTOR_STYLE )
+                    if ( prop.Name == ITEM_DESCRIPTOR_STYLE )
                     {
-                        aProps[i].Value >>= result;
+                        prop.Value >>= result;
                         break;
                     }
                 }
@@ -1978,22 +1974,22 @@ void ToolbarSaveInData::SetSystemStyle(
         window = VCLUnoHelper::GetWindow( xWindow ).get();
     }
 
-    if ( window != nullptr && window->GetType() == WindowType::TOOLBOX )
-    {
-        ToolBox* toolbox = static_cast<ToolBox*>(window);
+    if ( window == nullptr || window->GetType() != WindowType::TOOLBOX )
+        return;
 
-        if ( nStyle == 0 )
-        {
-            toolbox->SetButtonType( ButtonType::SYMBOLONLY );
-        }
-        else if ( nStyle == 1 )
-        {
-            toolbox->SetButtonType( ButtonType::TEXT );
-        }
-        if ( nStyle == 2 )
-        {
-            toolbox->SetButtonType( ButtonType::SYMBOLTEXT );
-        }
+    ToolBox* toolbox = static_cast<ToolBox*>(window);
+
+    if ( nStyle == 0 )
+    {
+        toolbox->SetButtonType( ButtonType::SYMBOLONLY );
+    }
+    else if ( nStyle == 1 )
+    {
+        toolbox->SetButtonType( ButtonType::TEXT );
+    }
+    if ( nStyle == 2 )
+    {
+        toolbox->SetButtonType( ButtonType::SYMBOLTEXT );
     }
 }
 
@@ -2001,38 +1997,38 @@ void ToolbarSaveInData::SetSystemStyle(
     const OUString& rResourceURL,
     sal_Int32 nStyle )
 {
-    if ( rResourceURL.startsWith( "private" ) &&
+    if ( !(rResourceURL.startsWith( "private" ) &&
          m_xPersistentWindowState.is() &&
-         m_xPersistentWindowState->hasByName( rResourceURL ) )
+         m_xPersistentWindowState->hasByName( rResourceURL )) )
+        return;
+
+    try
     {
-        try
+        uno::Sequence< beans::PropertyValue > aProps;
+
+        uno::Any a( m_xPersistentWindowState->getByName( rResourceURL ) );
+
+        if ( a >>= aProps )
         {
-            uno::Sequence< beans::PropertyValue > aProps;
-
-            uno::Any a( m_xPersistentWindowState->getByName( rResourceURL ) );
-
-            if ( a >>= aProps )
+            for ( beans::PropertyValue& prop : aProps )
             {
-                for ( sal_Int32 i = 0; i < aProps.getLength(); ++i )
+                if ( prop.Name == ITEM_DESCRIPTOR_STYLE )
                 {
-                    if ( aProps[ i ].Name == ITEM_DESCRIPTOR_STYLE )
-                    {
-                        aProps[ i ].Value <<= nStyle;
-                        break;
-                    }
+                    prop.Value <<= nStyle;
+                    break;
                 }
             }
-
-            uno::Reference< container::XNameReplace >
-                xNameReplace( m_xPersistentWindowState, uno::UNO_QUERY );
-
-            xNameReplace->replaceByName( rResourceURL, uno::Any( aProps ) );
         }
-        catch ( uno::Exception& )
-        {
-            // do nothing, a default value is returned
-            SAL_WARN("cui.customize", "Exception setting toolbar style");
-        }
+
+        uno::Reference< container::XNameReplace >
+            xNameReplace( m_xPersistentWindowState, uno::UNO_QUERY );
+
+        xNameReplace->replaceByName( rResourceURL, uno::Any( aProps ) );
+    }
+    catch ( uno::Exception& )
+    {
+        // do nothing, a default value is returned
+        SAL_WARN("cui.customize", "Exception setting toolbar style");
     }
 }
 
@@ -2051,11 +2047,11 @@ OUString ToolbarSaveInData::GetSystemUIName( const OUString& rResourceURL )
 
             if ( a >>= aProps )
             {
-                for ( sal_Int32 i = 0; i < aProps.getLength(); ++i )
+                for ( beans::PropertyValue const & prop : std::as_const(aProps) )
                 {
-                    if ( aProps[ i ].Name == ITEM_DESCRIPTOR_UINAME )
+                    if ( prop.Name == ITEM_DESCRIPTOR_UINAME )
                     {
-                        aProps[ i ].Value >>= result;
+                        prop.Value >>= result;
                     }
                 }
             }
@@ -2078,11 +2074,11 @@ OUString ToolbarSaveInData::GetSystemUIName( const OUString& rResourceURL )
             uno::Sequence< beans::PropertyValue > aPropSeq;
             if ( a >>= aPropSeq )
             {
-                for ( sal_Int32 i = 0; i < aPropSeq.getLength(); ++i )
+                for ( beans::PropertyValue const & prop : std::as_const(aPropSeq) )
                 {
-                    if ( aPropSeq[i].Name == ITEM_DESCRIPTOR_LABEL )
+                    if ( prop.Name == ITEM_DESCRIPTOR_LABEL )
                     {
-                        aPropSeq[i].Value >>= result;
+                        prop.Value >>= result;
                     }
                 }
             }
@@ -2107,28 +2103,26 @@ SvxEntries* ToolbarSaveInData::GetEntries()
 
         pRootEntry.reset( new SvxConfigEntry( "MainToolbars", OUString(), true, /*bParentData*/false) );
 
-        uno::Sequence< uno::Sequence < beans::PropertyValue > > info =
+        const uno::Sequence< uno::Sequence < beans::PropertyValue > > info =
             GetConfigManager()->getUIElementsInfo(
                 css::ui::UIElementType::TOOLBAR );
 
-        for ( sal_Int32 i = 0; i < info.getLength(); ++i )
+        for ( uno::Sequence<beans::PropertyValue> const & props : info )
         {
-            uno::Sequence< beans::PropertyValue > props = info[ i ];
-
             OUString url;
             OUString systemname;
             OUString uiname;
 
-            for ( sal_Int32 j = 0; j < props.getLength(); ++j )
+            for ( const beans::PropertyValue& prop : props )
             {
-                if ( props[ j ].Name == ITEM_DESCRIPTOR_RESOURCEURL )
+                if ( prop.Name == ITEM_DESCRIPTOR_RESOURCEURL )
                 {
-                    props[ j ].Value >>= url;
+                    prop.Value >>= url;
                     systemname = url.copy( url.lastIndexOf( '/' ) + 1 );
                 }
-                else if ( props[ j ].Name == ITEM_DESCRIPTOR_UINAME )
+                else if ( prop.Name == ITEM_DESCRIPTOR_UINAME )
                 {
-                    props[ j ].Value >>= uiname;
+                    prop.Value >>= uiname;
                 }
             }
 
@@ -2184,28 +2178,26 @@ SvxEntries* ToolbarSaveInData::GetEntries()
             // Retrieve also the parent toolbars to make it possible
             // to configure module toolbars and save them into the document
             // config manager.
-            uno::Sequence< uno::Sequence < beans::PropertyValue > > info_ =
+            const uno::Sequence< uno::Sequence < beans::PropertyValue > > info_ =
                 xParentCfgMgr->getUIElementsInfo(
                     css::ui::UIElementType::TOOLBAR );
 
-            for ( sal_Int32 i = 0; i < info_.getLength(); ++i )
+            for ( uno::Sequence<beans::PropertyValue> const & props : info_ )
             {
-                uno::Sequence< beans::PropertyValue > props = info_[ i ];
-
                 OUString url;
                 OUString systemname;
                 OUString uiname;
 
-                for ( sal_Int32 j = 0; j < props.getLength(); ++j )
+                for ( const beans::PropertyValue& prop : props )
                 {
-                    if ( props[ j ].Name == ITEM_DESCRIPTOR_RESOURCEURL )
+                    if ( prop.Name == ITEM_DESCRIPTOR_RESOURCEURL )
                     {
-                        props[ j ].Value >>= url;
+                        prop.Value >>= url;
                         systemname = url.copy( url.lastIndexOf( '/' ) + 1 );
                     }
-                    else if ( props[ j ].Name == ITEM_DESCRIPTOR_UINAME )
+                    else if ( prop.Name == ITEM_DESCRIPTOR_UINAME )
                     {
-                        props[ j ].Value >>= uiname;
+                        prop.Value >>= uiname;
                     }
                 }
 
@@ -2583,11 +2575,11 @@ void ToolbarSaveInData::LoadToolbar(
                     uno::Sequence< beans::PropertyValue > aPropSeq;
                     if ( a >>= aPropSeq )
                     {
-                        for ( sal_Int32 i = 0; i < aPropSeq.getLength(); ++i )
+                        for ( beans::PropertyValue const & prop : std::as_const(aPropSeq) )
                         {
-                            if ( aPropSeq[i].Name == "Name" )
+                            if ( prop.Name == "Name" )
                             {
-                                aPropSeq[i].Value >>= aLabel;
+                                prop.Value >>= aLabel;
                                 break;
                             }
                         }
@@ -2641,7 +2633,7 @@ SvxIconSelectorDialog::SvxIconSelectorDialog(weld::Window *pWindow,
     : GenericDialogController(pWindow, "cui/ui/iconselectordialog.ui", "IconSelector")
     , m_xImageManager(rXImageManager)
     , m_xParentImageManager(rXParentImageManager)
-    , m_xTbSymbol(new SvtValueSet(m_xBuilder->weld_scrolled_window("symbolswin")))
+    , m_xTbSymbol(new ValueSet(m_xBuilder->weld_scrolled_window("symbolswin")))
     , m_xTbSymbolWin(new weld::CustomWeld(*m_xBuilder, "symbolsToolbar", *m_xTbSymbol))
     , m_xFtNote(m_xBuilder->weld_label("noteLabel"))
     , m_xBtnImport(m_xBuilder->weld_button("importButton"))
@@ -2716,12 +2708,11 @@ SvxIconSelectorDialog::SvxIconSelectorDialog(weld::Window *pWindow,
     m_xImportedImageManager->initialize(aProp);
 
     ImageInfo aImageInfo1;
-    uno::Sequence< OUString > names;
     if ( m_xImportedImageManager.is() )
     {
-        names = m_xImportedImageManager->getAllImageNames( SvxConfigPageHelper::GetImageType() );
-        for ( sal_Int32 n = 0; n < names.getLength(); ++n )
-            aImageInfo1.emplace( names[n], false );
+        const uno::Sequence< OUString > names = m_xImportedImageManager->getAllImageNames( SvxConfigPageHelper::GetImageType() );
+        for (auto const & name : names )
+            aImageInfo1.emplace( name, false );
     }
 
     uno::Sequence< OUString > name( 1 );
@@ -2741,19 +2732,19 @@ SvxIconSelectorDialog::SvxIconSelectorDialog(weld::Window *pWindow,
 
     if ( m_xParentImageManager.is() )
     {
-        names = m_xParentImageManager->getAllImageNames( SvxConfigPageHelper::GetImageType() );
-        for ( sal_Int32 n = 0; n < names.getLength(); ++n )
-            aImageInfo.emplace( names[n], false );
+        const uno::Sequence< OUString > names = m_xParentImageManager->getAllImageNames( SvxConfigPageHelper::GetImageType() );
+        for ( auto const & i : names )
+            aImageInfo.emplace( i, false );
     }
 
-    names = m_xImageManager->getAllImageNames( SvxConfigPageHelper::GetImageType() );
-    for ( sal_Int32 n = 0; n < names.getLength(); ++n )
+    const uno::Sequence< OUString > names = m_xImageManager->getAllImageNames( SvxConfigPageHelper::GetImageType() );
+    for ( auto const & i : names )
     {
-        ImageInfo::iterator pIter = aImageInfo.find( names[n] );
+        ImageInfo::iterator pIter = aImageInfo.find( i );
         if ( pIter != aImageInfo.end() )
             pIter->second = true;
         else
-            aImageInfo.emplace( names[n], true );
+            aImageInfo.emplace( i, true );
     }
 
     // large growth factor, expecting many entries
@@ -2810,7 +2801,7 @@ uno::Reference< graphic::XGraphic> SvxIconSelectorDialog::GetSelectedIcon()
     return result;
 }
 
-IMPL_LINK_NOARG(SvxIconSelectorDialog, SelectHdl, SvtValueSet*, void)
+IMPL_LINK_NOARG(SvxIconSelectorDialog, SelectHdl, ValueSet*, void)
 {
     sal_uInt16 nId = m_xTbSymbol->GetSelectedItemId();
 
@@ -2864,18 +2855,18 @@ IMPL_LINK_NOARG(SvxIconSelectorDialog, DeleteHdl, weld::Button&, void)
     std::unique_ptr<weld::MessageDialog> xWarn(Application::CreateMessageDialog(m_xDialog.get(),
                                                VclMessageType::Warning, VclButtonsType::OkCancel,
                                                message));
-    if (xWarn->run() == RET_OK)
-    {
-        sal_uInt16 nId = m_xTbSymbol->GetSelectedItemId();
+    if (xWarn->run() != RET_OK)
+        return;
 
-        OUString aSelImageText = m_xTbSymbol->GetItemText( nId );
-        uno::Sequence< OUString > URLs { aSelImageText };
-        m_xTbSymbol->RemoveItem(nId);
-        m_xImportedImageManager->removeImages( SvxConfigPageHelper::GetImageType(), URLs );
-        if ( m_xImportedImageManager->isModified() )
-        {
-            m_xImportedImageManager->store();
-        }
+    sal_uInt16 nId = m_xTbSymbol->GetSelectedItemId();
+
+    OUString aSelImageText = m_xTbSymbol->GetItemText( nId );
+    uno::Sequence< OUString > URLs { aSelImageText };
+    m_xTbSymbol->RemoveItem(nId);
+    m_xImportedImageManager->removeImages( SvxConfigPageHelper::GetImageType(), URLs );
+    if ( m_xImportedImageManager->isModified() )
+    {
+        m_xImportedImageManager->store();
     }
 }
 
@@ -3074,20 +3065,20 @@ void SvxIconSelectorDialog::ImportGraphics(
         }
     }
 
-    if ( rejectedCount != 0 )
-    {
-        OUStringBuffer message;
-        OUString fPath;
-        if (rejectedCount > 1)
-              fPath = rPaths[0].copy(8) + "/";
-        for ( sal_Int32 i = 0; i < rejectedCount; ++i )
-        {
-            message.append(fPath).append(rejected[i]).append("\n");
-        }
+    if ( rejectedCount == 0 )
+        return;
 
-        SvxIconChangeDialog aDialog(m_xDialog.get(), message.makeStringAndClear());
-        aDialog.run();
+    OUStringBuffer message;
+    OUString fPath;
+    if (rejectedCount > 1)
+          fPath = rPaths[0].copy(8) + "/";
+    for ( sal_Int32 i = 0; i < rejectedCount; ++i )
+    {
+        message.append(fPath).append(rejected[i]).append("\n");
     }
+
+    SvxIconChangeDialog aDialog(m_xDialog.get(), message.makeStringAndClear());
+    aDialog.run();
 }
 
 bool SvxIconSelectorDialog::ImportGraphic( const OUString& aURL )

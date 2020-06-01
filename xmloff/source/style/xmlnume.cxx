@@ -17,7 +17,9 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <sal/config.h>
 
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/style/XStyleFamiliesSupplier.hpp>
 #include <com/sun/star/style/NumberingType.hpp>
 #include <com/sun/star/style/XStyle.hpp>
@@ -612,15 +614,15 @@ SvxXMLNumRuleExport::SvxXMLNumRuleExport( SvXMLExport& rExp ) :
     // Let list style creation depend on Load/Save option "ODF format version" (#i89178#)
     mbExportPositionAndSpaceModeLabelAlignment( true )
 {
-    switch ( GetExport().getDefaultVersion() )
+    switch (GetExport().getSaneDefaultVersion())
     {
-        case SvtSaveOptions::ODFVER_010:
-        case SvtSaveOptions::ODFVER_011:
+        case SvtSaveOptions::ODFSVER_010:
+        case SvtSaveOptions::ODFSVER_011:
         {
             mbExportPositionAndSpaceModeLabelAlignment = false;
         }
         break;
-        default: // ODFVER_UNKNOWN or ODFVER_012
+        default: // >= ODFSVER_012
         {
             mbExportPositionAndSpaceModeLabelAlignment = true;
         }
@@ -654,8 +656,12 @@ void SvxXMLNumRuleExport::exportNumberingRule(
     }
 
     // style:hidden="..."
-    if ( bIsHidden && GetExport( ).getDefaultVersion( ) == SvtSaveOptions::ODFVER_LATEST )
-        GetExport( ).AddAttribute( XML_NAMESPACE_STYLE, XML_HIDDEN, "true" );
+    if (bIsHidden
+        && GetExport().getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
+    {
+        GetExport().AddAttribute(XML_NAMESPACE_LO_EXT, XML_HIDDEN, "true");
+        GetExport().AddAttribute(XML_NAMESPACE_STYLE, XML_HIDDEN, "true"); // FIXME for compatibility
+    }
 
     // text:consecutive-numbering="..."
     bool bContNumbering = false;
@@ -734,18 +740,18 @@ void SvxXMLNumRuleExport::exportOutline()
                     xNumRulePropSet->getPropertyValue( sName ) >>= sOutlineStyleName;
                 }
             }
-            const SvtSaveOptions::ODFDefaultVersion nODFVersion =
-                                                GetExport().getDefaultVersion();
-            if ( ( nODFVersion == SvtSaveOptions::ODFVER_010 ||
-                   nODFVersion == SvtSaveOptions::ODFVER_011 ) &&
-                 GetExport().writeOutlineStyleAsNormalListStyle() )
+            const SvtSaveOptions::ODFSaneDefaultVersion nODFVersion =
+                                                GetExport().getSaneDefaultVersion();
+            if ((nODFVersion == SvtSaveOptions::ODFSVER_010 ||
+                 nODFVersion == SvtSaveOptions::ODFSVER_011)
+                && GetExport().writeOutlineStyleAsNormalListStyle())
             {
                 exportNumberingRule( sOutlineStyleName, false, xNumRule );
             }
             else
             {
-                if ( nODFVersion != SvtSaveOptions::ODFVER_010 &&
-                     nODFVersion != SvtSaveOptions::ODFVER_011 )
+                if (nODFVersion != SvtSaveOptions::ODFSVER_010 &&
+                    nODFVersion != SvtSaveOptions::ODFSVER_011)
                 {
                     // style:name="..."
                     GetExport().CheckAttrList();

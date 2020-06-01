@@ -47,7 +47,7 @@ namespace xmloff {
     struct ParsedRDFaAttributes;
 }
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
 namespace text {
     class XText;
     class XTextCursor;
@@ -58,9 +58,9 @@ namespace text {
 namespace frame { class XModel; }
 namespace container { class XNameContainer; class XIndexReplace; }
 namespace beans { class XPropertySet; }
-namespace xml { namespace sax { class XAttributeList; } }
+namespace xml::sax { class XAttributeList; }
 namespace util { struct DateTime; }
-} } }
+}
 
 namespace rtl { template <class reference_type> class Reference; }
 
@@ -503,6 +503,7 @@ public:
             const OUString& rName ) const;
     XMLPropStyleContext* FindPageMaster(
             const OUString& rName ) const;
+    XMLPropStyleContext* FindDrawingPage(OUString const& rName) const;
 
     const css::uno::Reference< css::container::XNameContainer> & GetParaStyles() const;
 
@@ -545,6 +546,7 @@ public:
     static SvXMLImportPropertyMapper* CreateTableDefaultExtPropMapper(SvXMLImport&);
     static SvXMLImportPropertyMapper* CreateTableRowDefaultExtPropMapper(SvXMLImport&);
     static SvXMLImportPropertyMapper* CreateTableCellExtPropMapper(SvXMLImport&);
+    static SvXMLImportPropertyMapper* CreateDrawingPageExtPropMapper(SvXMLImport&);
 
     SvI18NMap& GetRenameMap();
 

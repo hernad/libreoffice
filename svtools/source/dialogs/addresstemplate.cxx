@@ -40,6 +40,7 @@
 #include <com/sun/star/sdb/SQLContext.hpp>
 #include <com/sun/star/sdbc/SQLWarning.hpp>
 #include <com/sun/star/sdbc/XConnection.hpp>
+#include <com/sun/star/sdbc/XDataSource.hpp>
 #include <com/sun/star/task/InteractionHandler.hpp>
 #include <com/sun/star/sdbcx/XTablesSupplier.hpp>
 #include <com/sun/star/sdbcx/XColumnsSupplier.hpp>
@@ -123,8 +124,8 @@ namespace svt
     class AssigmentTransientData : public IAssigmentData
     {
     protected:
-        OUString const       m_sDSName;
-        OUString const       m_sTableName;
+        OUString             m_sDSName;
+        OUString             m_sTableName;
         MapString2String     m_aAliases;
 
     public:
@@ -426,7 +427,7 @@ void AssignmentPersistentData::ImplCommit()
         /// indicates that we've an odd field number. This member is for efficiency only, it's redundant.
         bool        bOddFieldNumber : 1;
         /// indicates that we're working with the real persistent configuration
-        bool const      bWorkingPersistent : 1;
+        bool        bWorkingPersistent : 1;
 
         /// the strings to use as labels for the field selection listboxes
         std::vector<OUString>     aFieldLabels;

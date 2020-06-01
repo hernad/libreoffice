@@ -25,7 +25,7 @@
 
 namespace oox { class AttributeList; }
 namespace oox { class PropertySet; }
-namespace oox { namespace core { class Relations; } }
+namespace oox::core { class Relations; }
 
 namespace oox {
 namespace xls {
@@ -143,8 +143,8 @@ public:
 private:
     struct HFHelperData
     {
-        sal_Int32 const     mnLeftPropId;
-        sal_Int32 const     mnRightPropId;
+        sal_Int32           mnLeftPropId;
+        sal_Int32           mnRightPropId;
         sal_Int32           mnHeight;
         sal_Int32           mnBodyDist;
         bool                mbHasContent;

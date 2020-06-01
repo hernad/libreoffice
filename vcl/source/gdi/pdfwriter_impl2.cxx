@@ -168,13 +168,25 @@ void PDFWriterImpl::implWriteBitmapEx( const Point& i_rPoint, const Size& i_rSiz
         if ( bIsPng || ( aSizePixel.Width() < 32 ) || ( aSizePixel.Height() < 32 ) )
             bUseJPGCompression = false;
 
-        SvMemoryStream  aStrm;
-        Bitmap          aMask;
+        auto   pStrm=std::make_shared<SvMemoryStream>();
+        Bitmap aMask;
 
         bool bTrueColorJPG = true;
         if ( bUseJPGCompression )
         {
-
+            // TODO this checks could be done much earlier, saving us
+            // from trying conversion & stores before...
+            if ( !aBitmapEx.IsTransparent() )
+            {
+                const auto& rCacheEntry=m_aPDFBmpCache.find(
+                    aBitmapEx.GetChecksum());
+                if ( rCacheEntry != m_aPDFBmpCache.end() )
+                {
+                    m_rOuterFace.DrawJPGBitmap( *rCacheEntry->second, true, aSizePixel,
+                                                tools::Rectangle( aPoint, aSize ), aMask, i_Graphic );
+                    return;
+                }
+            }
             sal_uInt32 nZippedFileSize = 0; // sj: we will calculate the filesize of a zipped bitmap
             if ( !bIsJpeg )                 // to determine if jpeg compression is useful
             {
@@ -201,7 +213,7 @@ void PDFWriterImpl::implWriteBitmapEx( const Point& i_rPoint, const Size& i_rSiz
 
             try
             {
-                uno::Reference < io::XStream > xStream = new utl::OStreamWrapper( aStrm );
+                uno::Reference < io::XStream > xStream = new utl::OStreamWrapper( *pStrm );
                 uno::Reference< io::XSeekable > xSeekable( xStream, UNO_QUERY_THROW );
                 uno::Reference< uno::XComponentContext > xContext( comphelper::getProcessComponentContext() );
                 uno::Reference< graphic::XGraphicProvider > xGraphicProvider( graphic::GraphicProvider::create(xContext) );
@@ -222,7 +234,7 @@ void PDFWriterImpl::implWriteBitmapEx( const Point& i_rPoint, const Size& i_rSiz
                 }
                 else
                 {
-                    aStrm.Seek( STREAM_SEEK_TO_END );
+                    pStrm->Seek( STREAM_SEEK_TO_END );
 
                     xSeekable->seek( 0 );
                     Sequence< PropertyValue > aArgs( 1 );
@@ -245,7 +257,15 @@ void PDFWriterImpl::implWriteBitmapEx( const Point& i_rPoint, const Size& i_rSiz
             }
         }
         if ( bUseJPGCompression )
-            m_rOuterFace.DrawJPGBitmap( aStrm, bTrueColorJPG, aSizePixel, tools::Rectangle( aPoint, aSize ), aMask, i_Graphic );
+        {
+            m_rOuterFace.DrawJPGBitmap( *pStrm, bTrueColorJPG, aSizePixel, tools::Rectangle( aPoint, aSize ), aMask, i_Graphic );
+            if (!aBitmapEx.IsTransparent() && bTrueColorJPG)
+            {
+                // Cache last jpeg export
+                m_aPDFBmpCache.insert(
+                    {aBitmapEx.GetChecksum(), pStrm});
+            }
+        }
         else if ( aBitmapEx.IsTransparent() )
             m_rOuterFace.DrawBitmapEx( aPoint, aSize, aBitmapEx );
         else
@@ -675,88 +695,6 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                                     else if ( fTransparency == 1.0 )
                                         bSkipSequence = true;
                                 }
-/* #i81548# removing optimization for fill textures, because most of the texture settings are not
-   exported properly. In OpenOffice 3.1 the drawing layer will support graphic primitives, then it
-   will not be a problem to optimize the filltexture export. But for wysiwyg is more important than
-   filesize.
-                                else if( aFill.getFillType() == SvtGraphicFill::fillTexture && aFill.isTiling() )
-                                {
-                                    sal_Int32 nPattern = mnCachePatternId;
-                                    Graphic aPatternGraphic;
-                                    aFill.getGraphic( aPatternGraphic );
-                                    bool bUseCache = false;
-                                    SvtGraphicFill::Transform aPatTransform;
-                                    aFill.getTransform( aPatTransform );
-
-                                    if(  mnCachePatternId >= 0 )
-                                    {
-                                        SvtGraphicFill::Transform aCacheTransform;
-                                        maCacheFill.getTransform( aCacheTransform );
-                                        if( aCacheTransform.matrix[0] == aPatTransform.matrix[0] &&
-                                            aCacheTransform.matrix[1] == aPatTransform.matrix[1] &&
-                                            aCacheTransform.matrix[2] == aPatTransform.matrix[2] &&
-                                            aCacheTransform.matrix[3] == aPatTransform.matrix[3] &&
-                                            aCacheTransform.matrix[4] == aPatTransform.matrix[4] &&
-                                            aCacheTransform.matrix[5] == aPatTransform.matrix[5]
-                                            )
-                                        {
-                                            Graphic aCacheGraphic;
-                                            maCacheFill.getGraphic( aCacheGraphic );
-                                            if( aCacheGraphic == aPatternGraphic )
-                                                bUseCache = true;
-                                        }
-                                    }
-
-                                    if( ! bUseCache )
-                                    {
-
-                                        // paint graphic to metafile
-                                        GDIMetaFile aPattern;
-                                        pDummyVDev->SetConnectMetaFile( &aPattern );
-                                        pDummyVDev->Push();
-                                        pDummyVDev->SetMapMode( aPatternGraphic.GetPrefMapMode() );
-
-                                        aPatternGraphic.Draw( &rDummyVDev, Point( 0, 0 ) );
-                                        pDummyVDev->Pop();
-                                        pDummyVDev->SetConnectMetaFile( NULL );
-                                        aPattern.WindStart();
-
-                                        MapMode aPatternMapMode( aPatternGraphic.GetPrefMapMode() );
-                                        // prepare pattern from metafile
-                                        Size aPrefSize( aPatternGraphic.GetPrefSize() );
-                                        // FIXME: this magic -1 shouldn't be necessary
-                                        aPrefSize.Width() -= 1;
-                                        aPrefSize.Height() -= 1;
-                                        aPrefSize = m_rOuterFace.GetReferenceDevice()->
-                                            LogicToLogic( aPrefSize,
-                                                          &aPatternMapMode,
-                                                          &m_rOuterFace.GetReferenceDevice()->GetMapMode() );
-                                        // build bounding rectangle of pattern
-                                        Rectangle aBound( Point( 0, 0 ), aPrefSize );
-                                        m_rOuterFace.BeginPattern( aBound );
-                                        m_rOuterFace.Push();
-                                        pDummyVDev->Push();
-                                        m_rOuterFace.SetMapMode( aPatternMapMode );
-                                        pDummyVDev->SetMapMode( aPatternMapMode );
-                                        ImplWriteActions( m_rOuterFace, NULL, aPattern, rDummyVDev );
-                                        pDummyVDev->Pop();
-                                        m_rOuterFace.Pop();
-
-                                        nPattern = m_rOuterFace.EndPattern( aPatTransform );
-
-                                        // try some caching and reuse pattern
-                                        mnCachePatternId = nPattern;
-                                        maCacheFill = aFill;
-                                    }
-
-                                    // draw polypolygon with pattern fill
-                                    tools::PolyPolygon aPath;
-                                    aFill.getPath( aPath );
-                                    m_rOuterFace.DrawPolyPolygon( aPath, nPattern, aFill.getFillRule() == SvtGraphicFill::fillEvenOdd );
-
-                                    bSkipSequence = true;
-                                }
-*/
                             }
                             if ( bSkipSequence )
                             {
@@ -1671,9 +1609,9 @@ namespace {
 
 struct PixelCode
 {
-    sal_uInt32 const      mnEncodedPixels;
-    sal_uInt32 const      mnCodeBits;
-    sal_uInt32 const      mnCode;
+    sal_uInt32      mnEncodedPixels;
+    sal_uInt32      mnCodeBits;
+    sal_uInt32      mnCode;
 };
 
 }
@@ -1948,8 +1886,8 @@ void PDFWriterImpl::writeG4Stream( BitmapReadAccess const * i_pBitmap )
                 {   // vertical coding
                     static const struct
                     {
-                        sal_uInt32 const mnCodeBits;
-                        sal_uInt32 const mnCode;
+                        sal_uInt32 mnCodeBits;
+                        sal_uInt32 mnCode;
                     } VerticalCodes[7] = {
                         { 7, 0x03 },    // 0000 011
                         { 6, 0x03 },    // 0000 11

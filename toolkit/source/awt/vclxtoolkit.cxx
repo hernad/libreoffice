@@ -67,21 +67,23 @@
 #include <vcl/vclmedit.hxx>
 
 #include <toolkit/awt/vclxwindows.hxx>
-#include <toolkit/awt/vclxsystemdependentwindow.hxx>
-#include <toolkit/awt/vclxregion.hxx>
-#include <toolkit/awt/vclxtabpagecontainer.hxx>
+#include <awt/vclxsystemdependentwindow.hxx>
+#include <awt/vclxregion.hxx>
+#include <awt/vclxtabpagecontainer.hxx>
 
-#include <toolkit/awt/animatedimagespeer.hxx>
+#include <awt/animatedimagespeer.hxx>
 #include <toolkit/awt/vclxtopwindow.hxx>
 #include <toolkit/awt/vclxwindow.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
 #include <toolkit/helper/property.hxx>
 
 #include <toolkit/helper/convert.hxx>
-#include <vcl/button.hxx>
-#include <vcl/combobox.hxx>
+#include <controls/filectrl.hxx>
+#include <controls/treecontrolpeer.hxx>
+#include <vcl/toolkit/button.hxx>
+#include <vcl/toolkit/combobox.hxx>
 #include <vcl/ctrl.hxx>
-#include <vcl/dialog.hxx>
+#include <vcl/toolkit/dialog.hxx>
 #include <vcl/dockingarea.hxx>
 #include <vcl/dockwin.hxx>
 #include <vcl/edit.hxx>
@@ -90,6 +92,7 @@
 #include <vcl/fixed.hxx>
 #include <vcl/toolkit/fixedhyper.hxx>
 #include <vcl/floatwin.hxx>
+#include <vcl/fmtfield.hxx>
 #include <vcl/toolkit/prgsbar.hxx>
 #include <vcl/scheduler.hxx>
 #include <vcl/longcurr.hxx>
@@ -118,7 +121,7 @@
 #if HAVE_FEATURE_OPENGL
 #include <vcl/opengl/OpenGLWrapper.hxx>
 #endif
-#include <toolkit/awt/vclxspinbutton.hxx>
+#include <awt/vclxspinbutton.hxx>
 #include <tools/debug.hxx>
 #include <tools/diagnose_ex.h>
 #include <comphelper/processfactory.hxx>
@@ -267,7 +270,6 @@ void MessBox::ImplPosControls()
     Size            aMEditSize;
     long            nTitleWidth;
     long            nButtonSize = ImplGetButtonSize();
-    long            nMaxWidth = GetDesktopRectPixel().GetWidth()-8;
     long            nMaxLineWidth;
     long            nWidth;
     WinBits         nWinStyle = WB_LEFT | WB_NOLABEL;
@@ -280,7 +282,7 @@ void MessBox::ImplPosControls()
     OUString aMessText(maMessText.replaceAll("\t", "    "));
 
     //If window too small, we make dialog box be wider
-    nMaxWidth = 630 * GetDPIScaleFactor();
+    long nMaxWidth = 630 * GetDPIScaleFactor();
 
     // MessagBox should be at least as wide as to see the title
     // Extra-Width for Close button, because Close button is set after this call
@@ -413,7 +415,7 @@ public:
         delete this;
     }
 
-    sal_Int32 const m_nPauseMilliseconds;
+    sal_Int32 m_nPauseMilliseconds;
 };
 
 class VCLXToolkitMutexHelper
@@ -437,8 +439,8 @@ class VCLXToolkit : public VCLXToolkitMutexHelper,
     ::comphelper::OInterfaceContainerHelper2 m_aTopWindowListeners;
     ::comphelper::OInterfaceContainerHelper2 m_aKeyHandlers;
     ::comphelper::OInterfaceContainerHelper2 m_aFocusListeners;
-    ::Link<VclSimpleEvent&,void> const m_aEventListenerLink;
-    ::Link<VclWindowEvent&,bool> const m_aKeyListenerLink;
+    ::Link<VclSimpleEvent&,void> m_aEventListenerLink;
+    ::Link<VclWindowEvent&,bool> m_aKeyListenerLink;
     bool m_bEventListener;
     bool m_bKeyListener;
 
@@ -706,12 +708,14 @@ static ComponentInfo const aComponentInfos [] =
     { OUStringLiteral("dockingwindow"),      WindowType::DOCKINGWINDOW },
     { OUStringLiteral("edit"),               WindowType::EDIT },
     { OUStringLiteral("errorbox"),           WindowType::ERRORBOX },
+    { OUStringLiteral("filecontrol"),        WindowType::CONTROL },
     { OUStringLiteral("fixedbitmap"),        WindowType::FIXEDBITMAP },
     { OUStringLiteral("fixedhyperlink"),     WindowType::CONTROL },
     { OUStringLiteral("fixedimage"),         WindowType::FIXEDIMAGE },
     { OUStringLiteral("fixedline"),          WindowType::FIXEDLINE },
     { OUStringLiteral("fixedtext"),          WindowType::FIXEDTEXT },
     { OUStringLiteral("floatingwindow"),     WindowType::FLOATINGWINDOW },
+    { OUStringLiteral("formattedfield"),     WindowType::CONTROL },
     { OUStringLiteral("frame"),              WindowType::GROUPBOX },
     { OUStringLiteral("framewindow"),        WindowType::TOOLKIT_FRAMEWINDOW },
     { OUStringLiteral("groupbox"),           WindowType::GROUPBOX },
@@ -720,7 +724,7 @@ static ComponentInfo const aComponentInfos [] =
     { OUStringLiteral("infobox"),            WindowType::INFOBOX },
     { OUStringLiteral("listbox"),            WindowType::LISTBOX },
     { OUStringLiteral("longcurrencybox"),    WindowType::LONGCURRENCYBOX },
-    { OUStringLiteral("longcurrencyfield"),  WindowType::LONGCURRENCYFIELD },
+    { OUStringLiteral("longcurrencyfield"),  WindowType::CONTROL },
     { OUStringLiteral("menubutton"),         WindowType::MENUBUTTON },
     { OUStringLiteral("messbox"),            WindowType::MESSBOX },
     { OUStringLiteral("metricbox"),          WindowType::METRICBOX },
@@ -731,7 +735,7 @@ static ComponentInfo const aComponentInfos [] =
     { OUStringLiteral("multilineedit"),      WindowType::MULTILINEEDIT },
     { OUStringLiteral("multilistbox"),       WindowType::MULTILISTBOX },
     { OUStringLiteral("numericbox"),         WindowType::NUMERICBOX },
-    { OUStringLiteral("numericfield"),       WindowType::NUMERICFIELD },
+    { OUStringLiteral("numericfield"),       WindowType::CONTROL },
     { OUStringLiteral("okbutton"),           WindowType::OKBUTTON },
     { OUStringLiteral("patternbox"),         WindowType::PATTERNBOX },
     { OUStringLiteral("patternfield"),       WindowType::PATTERNFIELD },
@@ -756,6 +760,7 @@ static ComponentInfo const aComponentInfos [] =
     { OUStringLiteral("timebox"),            WindowType::TIMEBOX },
     { OUStringLiteral("timefield"),          WindowType::TIMEFIELD },
     { OUStringLiteral("toolbox"),            WindowType::TOOLBOX },
+    { OUStringLiteral("tree"),               WindowType::CONTROL },
     { OUStringLiteral("tristatebox"),        WindowType::TRISTATEBOX },
     { OUStringLiteral("warningbox"),         WindowType::WARNINGBOX },
     { OUStringLiteral("window"),             WindowType::WINDOW },
@@ -799,9 +804,9 @@ WindowType ImplGetComponentType( const OUString& rServiceName )
 
 struct MessageBoxTypeInfo
 {
-    css::awt::MessageBoxType const eType;
+    css::awt::MessageBoxType eType;
     const char              *pName;
-    sal_Int32 const          nLen;
+    sal_Int32                nLen;
 };
 
 static const MessageBoxTypeInfo aMessageBoxTypeInfo[] =
@@ -1527,11 +1532,6 @@ vcl::Window* VCLXToolkit::ImplCreateWindow( VCLXWindow** ppNewComp,
             case WindowType::LONGCURRENCYBOX:
                 pNewWindow = VclPtr<LongCurrencyBox>::Create( pParent, nWinBits );
             break;
-            case WindowType::LONGCURRENCYFIELD:
-                pNewWindow = VclPtr<LongCurrencyField>::Create( pParent, nWinBits );
-                *ppNewComp = new VCLXCurrencyField;
-                static_cast<VCLXFormattedSpinField*>(*ppNewComp)->SetFormatter( static_cast<FormatterBase*>(static_cast<LongCurrencyField*>(pNewWindow.get())) );
-            break;
             case WindowType::MENUBUTTON:
                 pNewWindow = VclPtr<MenuButton>::Create( pParent, nWinBits );
                 *ppNewComp = new VCLXButton;
@@ -1578,12 +1578,6 @@ vcl::Window* VCLXToolkit::ImplCreateWindow( VCLXWindow** ppNewComp,
             case WindowType::NUMERICBOX:
                 pNewWindow = VclPtr<NumericBox>::Create( pParent, nWinBits );
             break;
-            case WindowType::NUMERICFIELD:
-                pNewWindow = VclPtr<NumericField>::Create( pParent, nWinBits );
-                static_cast<NumericField*>(pNewWindow.get())->EnableEmptyFieldValue( true );
-                *ppNewComp = new VCLXNumericField;
-                static_cast<VCLXFormattedSpinField*>(*ppNewComp)->SetFormatter( static_cast<FormatterBase*>(static_cast<NumericField*>(pNewWindow.get())) );
-            break;
             case WindowType::OKBUTTON:
                 pNewWindow = VclPtr<OKButton>::Create( pParent, nWinBits );
                 *ppNewComp = new VCLXButton;
@@ -1605,7 +1599,7 @@ vcl::Window* VCLXToolkit::ImplCreateWindow( VCLXWindow** ppNewComp,
                 *ppNewComp = new VCLXMessageBox;
             break;
             case WindowType::RADIOBUTTON:
-                pNewWindow = VclPtr<RadioButton>::Create( pParent, nWinBits );
+                pNewWindow = VclPtr<RadioButton>::Create(pParent, false, nWinBits);
                 *ppNewComp = new VCLXRadioButton;
 
                 // by default, disable RadioCheck
@@ -1674,7 +1668,8 @@ vcl::Window* VCLXToolkit::ImplCreateWindow( VCLXWindow** ppNewComp,
                 *ppNewComp = new VCLXToolBox;
             break;
             case WindowType::TRISTATEBOX:
-                pNewWindow = VclPtr<TriStateBox>::Create( pParent, nWinBits );
+                pNewWindow = VclPtr<CheckBox>::Create( pParent, nWinBits );
+                static_cast<CheckBox*>(pNewWindow.get())->EnableTriState(true);
             break;
             case WindowType::WARNINGBOX:
                 pNewWindow = VclPtr<WarningBox>::Create( pParent, nMessBoxStyle, nWinBits, OUString() );
@@ -1803,6 +1798,32 @@ vcl::Window* VCLXToolkit::ImplCreateWindow( VCLXWindow** ppNewComp,
                     pNewWindow = VclPtr<ProgressBar>::Create( pParent, nWinBits );
                     *ppNewComp = new VCLXProgressBar;
                 }
+                else if (aServiceName == "filecontrol")
+                {
+                    pNewWindow = VclPtr<FileControl>::Create( pParent, nWinBits );
+                    *ppNewComp = new VCLXFileControl;
+                }
+                else if (aServiceName == "tree")
+                {
+                    TreeControlPeer* pPeer = new TreeControlPeer;
+                    *ppNewComp = pPeer;
+                    pNewWindow = pPeer->createVclControl( pParent, nWinBits );
+                }
+                else if (aServiceName == "formattedfield")
+                {
+                    pNewWindow = VclPtr<FormattedField>::Create( pParent, nWinBits );
+                    *ppNewComp = new SVTXFormattedField;
+                }
+                else if (aServiceName == "numericfield")
+                {
+                    pNewWindow = VclPtr<DoubleNumericField>::Create( pParent, nWinBits );
+                    *ppNewComp = new SVTXNumericField;
+                }
+                else if (aServiceName == "longcurrencyfield")
+                {
+                    pNewWindow = VclPtr<DoubleCurrencyField>::Create( pParent, nWinBits );
+                    *ppNewComp = new SVTXCurrencyField;
+                }
             break;
             default:
                 OSL_ENSURE( false, "VCLXToolkit::ImplCreateWindow: unknown window type!" );
@@ -1885,9 +1906,6 @@ css::uno::Reference< css::awt::XWindowPeer > VCLXToolkit::ImplCreateWindow(
     // if SvTools could not provide a window, create it ourself
     if ( !pNewWindow )
         pNewWindow = ImplCreateWindow( &pNewComp, rDescriptor, pParent, nWinBits, aPair.second );
-
-    if (!pNewWindow)
-        fprintf(stderr, "debug here\n");
 
     DBG_ASSERT( pNewWindow, "createWindow: Unknown Component!" );
     SAL_INFO_IF( !pNewComp, "toolkit", "createWindow: No special Interface!" );

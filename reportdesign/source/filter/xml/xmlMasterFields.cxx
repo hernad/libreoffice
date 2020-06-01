@@ -17,13 +17,13 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 #include "xmlMasterFields.hxx"
+#include "xmlReportElementBase.hxx"
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
 #include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
 #include <xmloff/ProgressBarHelper.hxx>
 #include "xmlEnums.hxx"
-#include "xmlReport.hxx"
+#include <sal/log.hxx>
 
 
 namespace rptxml
@@ -40,9 +40,7 @@ OXMLMasterFields::OXMLMasterFields( ORptFilter& rImport,
 ,m_pReport(_pReport)
 {
     OUString sMasterField,sDetailField;
-    sax_fastparser::FastAttributeList *pAttribList =
-                    sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-    for (auto &aIter : *pAttribList)
+    for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
     {
         OUString sValue = aIter.toString();
 
@@ -55,6 +53,7 @@ OXMLMasterFields::OXMLMasterFields( ORptFilter& rImport,
                 sDetailField = sValue;
                 break;
             default:
+                SAL_WARN("reportdesign", "unknown attribute " << SvXMLImport::getPrefixAndNameFromToken(aIter.getToken()) << " = " << sValue);
                 break;
         }
     }

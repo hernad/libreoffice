@@ -877,7 +877,7 @@ void ViewShell::Resize()
 
     // Make sure that the new size is not degenerate.
     const Size aSize (mpParentWindow->GetSizePixel());
-    if (aSize.Width()==0 || aSize.Height()==0)
+    if (aSize.IsEmpty())
         return;
 
     // Remember the new position and size.
@@ -928,6 +928,8 @@ SvBorder ViewShell::GetBorder()
 void ViewShell::ArrangeGUIElements()
 {
     if (mpImpl->mbArrangeActive)
+        return;
+    if (maViewSize.IsEmpty())
         return;
     mpImpl->mbArrangeActive = true;
 
@@ -1538,7 +1540,7 @@ bool ViewShell::RelocateToParentWindow (vcl::Window* pParentWindow)
 
 void ViewShell::SwitchViewFireFocus(const css::uno::Reference< css::accessibility::XAccessible >& xAcc )
 {
-    if (xAcc.get())
+    if (xAcc)
     {
         ::accessibility::AccessibleDocumentViewBase* pBase = static_cast< ::accessibility::AccessibleDocumentViewBase* >(xAcc.get());
         if (pBase)

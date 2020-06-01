@@ -28,8 +28,8 @@
 
 #include <memory>
 
-namespace com { namespace sun { namespace star { namespace beans { struct PropertyValue; } } } }
-namespace com { namespace sun { namespace star { namespace uno { template <class E> class Sequence; } } } }
+namespace com::sun::star::beans { struct PropertyValue; }
+namespace com::sun::star::uno { template <class E> class Sequence; }
 
 class INetURLObject;
 
@@ -55,7 +55,6 @@ enum class GraphicFilterImportFlags
     NONE                   = 0x000,
     SetLogsizeForJpeg      = 0x001,
     DontSetLogsizeForJpeg  = 0x002,
-    ForPreview             = 0x004,
     /// Only create a bitmap, do not read pixel data.
     OnlyCreateBitmap       = 0x020,
     /// Read pixel data into an existing bitmap.
@@ -63,7 +62,7 @@ enum class GraphicFilterImportFlags
 };
 namespace o3tl
 {
-    template<> struct typed_flags<GraphicFilterImportFlags> : is_typed_flags<GraphicFilterImportFlags, 0x0067> {};
+    template<> struct typed_flags<GraphicFilterImportFlags> : is_typed_flags<GraphicFilterImportFlags, 0x0063> {};
 }
 
 #define IMP_BMP                 "SVBMP"
@@ -143,7 +142,7 @@ class VCL_DLLPUBLIC GraphicDescriptor final
     sal_uInt16          nBitsPerPixel;
     sal_uInt16          nPlanes;
     GraphicFileFormat   nFormat;
-    bool const          bOwnStream;
+    bool                bOwnStream;
     sal_uInt8 mnNumberOfImageComponents;
     bool                bIsTransparent;
     bool                bIsAlpha;
@@ -330,7 +329,7 @@ private:
                     DECL_LINK( FilterCallback, ConvertData&, bool );
 
     std::unique_ptr<FilterErrorEx> pErrorEx;
-    bool const                     bUseConfig;
+    bool                bUseConfig;
 };
 
 #endif // INCLUDED_VCL_GRAPHICFILTER_HXX

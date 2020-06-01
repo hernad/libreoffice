@@ -17,9 +17,13 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <svx/sdr/primitive2d/sdrdecompositiontools.hxx>
+#include <sdr/primitive2d/sdrdecompositiontools.hxx>
 #include <drawinglayer/primitive2d/baseprimitive2d.hxx>
-#include <drawinglayer/primitive2d/polypolygonprimitive2d.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonGradientPrimitive2D.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonHatchPrimitive2D.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonGraphicPrimitive2D.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonColorPrimitive2D.hxx>
+#include <drawinglayer/primitive2d/softedgeprimitive2d.hxx>
 #include <drawinglayer/primitive2d/unifiedtransparenceprimitive2d.hxx>
 #include <drawinglayer/primitive2d/transparenceprimitive2d.hxx>
 #include <basegfx/polygon/b2dpolypolygontools.hxx>
@@ -30,20 +34,22 @@
 #include <drawinglayer/attribute/sdrfillgraphicattribute.hxx>
 #include <basegfx/matrix/b2dhommatrix.hxx>
 #include <drawinglayer/primitive2d/shadowprimitive2d.hxx>
-#include <svx/sdr/attribute/sdrtextattribute.hxx>
+#include <sdr/attribute/sdrtextattribute.hxx>
+#include <drawinglayer/primitive2d/glowprimitive2d.hxx>
 #include <sdr/primitive2d/sdrtextprimitive2d.hxx>
 #include <svx/svdotext.hxx>
 #include <basegfx/polygon/b2dpolygontools.hxx>
 #include <drawinglayer/primitive2d/animatedprimitive2d.hxx>
 #include <drawinglayer/animation/animationtiming.hxx>
 #include <drawinglayer/primitive2d/maskprimitive2d.hxx>
-#include <basegfx/utils/canvastools.hxx>
 #include <drawinglayer/geometry/viewinformation2d.hxx>
 #include <drawinglayer/primitive2d/texthierarchyprimitive2d.hxx>
 #include <drawinglayer/attribute/sdrfillattribute.hxx>
 #include <drawinglayer/attribute/sdrlineattribute.hxx>
 #include <drawinglayer/attribute/sdrlinestartendattribute.hxx>
 #include <drawinglayer/attribute/sdrshadowattribute.hxx>
+#include <drawinglayer/attribute/sdrglowattribute.hxx>
+#include <sal/log.hxx>
 
 
 using namespace com::sun::star;
@@ -478,16 +484,40 @@ namespace drawinglayer::primitive2d
 
         Primitive2DContainer createEmbeddedShadowPrimitive(
             const Primitive2DContainer& rContent,
-            const attribute::SdrShadowAttribute& rShadow)
+            const attribute::SdrShadowAttribute& rShadow,
+            const basegfx::B2DHomMatrix& rObjectMatrix)
         {
             if(!rContent.empty())
             {
                 Primitive2DContainer aRetval(2);
                 basegfx::B2DHomMatrix aShadowOffset;
 
-                // prepare shadow offset
-                aShadowOffset.set(0, 2, rShadow.getOffset().getX());
-                aShadowOffset.set(1, 2, rShadow.getOffset().getY());
+                {
+                    if(rShadow.getSize().getX() != 100000)
+                    {
+                        basegfx::B2DTuple aScale;
+                        basegfx::B2DTuple aTranslate;
+                        double fRotate = 0;
+                        double fShearX = 0;
+                        rObjectMatrix.decompose(aScale, aTranslate, fRotate, fShearX);
+                        // Scale the shadow
+                        double nTranslateX = aTranslate.getX();
+                        double nTranslateY = aTranslate.getY();
+
+                        // The origin for scaling is the top left corner by default. A negative
+                        // shadow offset changes the origin.
+                        if (rShadow.getOffset().getX() < 0)
+                            nTranslateX += aScale.getX();
+                        if (rShadow.getOffset().getY() < 0)
+                            nTranslateY += aScale.getY();
+
+                        aShadowOffset.translate(-nTranslateX, -nTranslateY);
+                        aShadowOffset.scale(rShadow.getSize().getX() * 0.00001, rShadow.getSize().getY() * 0.00001);
+                        aShadowOffset.translate(nTranslateX, nTranslateY);
+                    }
+
+                    aShadowOffset.translate(rShadow.getOffset().getX(), rShadow.getOffset().getY());
+                }
 
                 // create shadow primitive and add content
                 aRetval[0] = Primitive2DReference(
@@ -515,6 +545,30 @@ namespace drawinglayer::primitive2d
                 return rContent;
             }
         }
+
+        Primitive2DContainer createEmbeddedGlowPrimitive(
+            const Primitive2DContainer& rContent,
+            const attribute::SdrGlowAttribute& rGlow)
+        {
+            if(rContent.empty())
+                return rContent;
+            Primitive2DContainer aRetval(2);
+            aRetval[0] = Primitive2DReference(
+                new GlowPrimitive2D(rGlow.getColor(), rGlow.getRadius(), rContent));
+            aRetval[1] = Primitive2DReference(new GroupPrimitive2D(rContent));
+            return aRetval;
+        }
+
+        Primitive2DContainer createEmbeddedSoftEdgePrimitive(const Primitive2DContainer& rContent,
+                                                             sal_Int32 nRadius)
+        {
+            if (rContent.empty() || !nRadius)
+                return rContent;
+            Primitive2DContainer aRetval(1);
+            aRetval[0] = Primitive2DReference(new SoftEdgePrimitive2D(nRadius, rContent));
+            return aRetval;
+        }
+
 } // end of namespace
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

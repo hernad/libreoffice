@@ -185,22 +185,22 @@ short SvInsertOleDlg::run()
                         if ( xDialogCreator.is() )
                         {
                             aName = aCnt.CreateUniqueObjectName();
-                            embed::InsertedObjectInfo aNewInf = xDialogCreator->createInstanceByDialog(
+                            const embed::InsertedObjectInfo aNewInf = xDialogCreator->createInstanceByDialog(
                                                                     m_xStorage,
                                                                     aName,
                                                                     uno::Sequence < beans::PropertyValue >() );
 
                             OSL_ENSURE( aNewInf.Object.is(), "The object must be created or an exception must be thrown!" );
                             m_xObj = aNewInf.Object;
-                            for ( sal_Int32 nInd = 0; nInd < aNewInf.Options.getLength(); nInd++ )
-                                if ( aNewInf.Options[nInd].Name == "Icon" )
+                            for ( const auto& opt : aNewInf.Options )
+                                if ( opt.Name == "Icon" )
                                 {
-                                    aNewInf.Options[nInd].Value >>= m_aIconMetaFile;
+                                    opt.Value >>= m_aIconMetaFile;
                                 }
-                                else if ( aNewInf.Options[nInd].Name == "IconFormat" )
+                                else if ( opt.Name == "IconFormat" )
                                 {
                                     datatransfer::DataFlavor aFlavor;
-                                    if ( aNewInf.Options[nInd].Value >>= aFlavor )
+                                    if ( opt.Value >>= aFlavor )
                                         m_aIconMediaType = aFlavor.MimeType;
                                 }
 
@@ -462,7 +462,11 @@ short SfxInsertFloatingFrameDialog::run()
         bOK = m_xStorage.is();
     }
 
-    if ( bOK && ( nRet = InsertObjectDialog_Impl::run() ) == RET_OK )
+    if (!bOK)
+        return RET_OK;
+
+    nRet = InsertObjectDialog_Impl::run();
+    if ( nRet == RET_OK )
     {
         OUString aURL;
         if (!m_xEDURL->get_text().isEmpty())

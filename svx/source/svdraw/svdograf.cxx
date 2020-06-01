@@ -20,56 +20,39 @@
 #include <unotools/streamwrap.hxx>
 
 #include <sfx2/lnkbase.hxx>
-#include <math.h>
+#include <rtl/ustrbuf.hxx>
 #include <tools/helpers.hxx>
+#include <tools/stream.hxx>
 #include <sot/exchange.hxx>
 #include <sot/formats.hxx>
-#include <sot/storage.hxx>
-#include <unotools/ucbstreamhelper.hxx>
-#include <unotools/localfilehelper.hxx>
-#include <svl/style.hxx>
-#include <svl/urihelper.hxx>
-#include <vcl/graphicfilter.hxx>
 #include <vcl/GraphicObject.hxx>
 #include <vcl/svapp.hxx>
 
 #include <sfx2/linkmgr.hxx>
-#include <sfx2/docfile.hxx>
-#include <svx/svdetc.hxx>
 #include <svx/dialmgr.hxx>
 #include <svx/strings.hrc>
-#include <svx/svdpool.hxx>
+#include <svx/svdhdl.hxx>
 #include <svx/svdmodel.hxx>
 #include <svx/svdpage.hxx>
-#include <svx/svdmrkv.hxx>
-#include <svx/svdpagv.hxx>
-#include <svx/svdviter.hxx>
-#include <svx/svdview.hxx>
 #include <svx/svdograf.hxx>
 #include <svx/svdogrp.hxx>
 #include <svx/xbtmpit.hxx>
 #include <svx/xfillit0.hxx>
 #include <svx/xflbmtit.hxx>
-#include <svx/svdundo.hxx>
 #include "svdfmtf.hxx"
-#include <svx/sdgcoitm.hxx>
+#include <sdgcoitm.hxx>
 #include <svx/sdgcpitm.hxx>
 #include <svx/sdggaitm.hxx>
-#include <svx/sdginitm.hxx>
+#include <sdginitm.hxx>
 #include <svx/sdgluitm.hxx>
 #include <svx/sdgmoitm.hxx>
-#include <svx/sdgtritm.hxx>
-#include <editeng/eeitem.hxx>
+#include <sdgtritm.hxx>
 #include <sdr/properties/graphicproperties.hxx>
 #include <sdr/contact/viewcontactofgraphic.hxx>
 #include <basegfx/matrix/b2dhommatrixtools.hxx>
-#include <basegfx/polygon/b2dpolygon.hxx>
-#include <basegfx/polygon/b2dpolygontools.hxx>
-#include <osl/thread.hxx>
 #include <drawinglayer/processor2d/objectinfoextractor2d.hxx>
 #include <drawinglayer/primitive2d/objectinfoprimitive2d.hxx>
 #include <memory>
-#include <vcl/GraphicLoader.hxx>
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -108,7 +91,7 @@ SdrGraphicLink::SdrGraphicLink(SdrGrafObj& rObj)
         sfx2::LinkManager::GetDisplayNames( this, nullptr, &rGrafObj.aFileName, nullptr, &rGrafObj.aFilterName );
 
         Graphic aGraphic;
-        if (sfx2::LinkManager::GetGraphicFromAny(rMimeType, rValue, rGrafObj.aReferer, aGraphic, nullptr))
+        if (pLinkManager->GetGraphicFromAny(rMimeType, rValue, aGraphic, nullptr))
         {
             rGrafObj.ImpSetLinkedGraphic(aGraphic);
         }
@@ -151,9 +134,15 @@ void SdrGrafObj::onGraphicChanged()
     if (!mpGraphicObject || !mpGraphicObject->GetGraphic().isAvailable())
         return;
 
-    const VectorGraphicDataPtr& rVectorGraphicDataPtr = mpGraphicObject->GetGraphic().getVectorGraphicData();
+    auto const & rVectorGraphicDataPtr = mpGraphicObject->GetGraphic().getVectorGraphicData();
 
-    if (!rVectorGraphicDataPtr.get())
+    if (!rVectorGraphicDataPtr)
+        return;
+
+    // Skip for PDF as it is only a bitmap primitive in a sequence and
+    // doesn't contain metadata. However getting the primitive sequence
+    // will also trigger a premature rendering of the PDF.
+    if (rVectorGraphicDataPtr->getVectorGraphicDataType() == VectorGraphicDataType::Pdf)
         return;
 
     const drawinglayer::primitive2d::Primitive2DContainer aSequence(rVectorGraphicDataPtr->getPrimitive2DSequence());
@@ -294,14 +283,13 @@ const GraphicObject* SdrGrafObj::GetReplacementGraphicObject() const
 {
     if (!mpReplacementGraphicObject && mpGraphicObject)
     {
-        const VectorGraphicDataPtr& rVectorGraphicDataPtr = mpGraphicObject->GetGraphic().getVectorGraphicData();
+        auto const & rVectorGraphicDataPtr = mpGraphicObject->GetGraphic().getVectorGraphicData();
 
-        if (rVectorGraphicDataPtr.get())
+        if (rVectorGraphicDataPtr)
         {
             const_cast< SdrGrafObj* >(this)->mpReplacementGraphicObject.reset(new GraphicObject(rVectorGraphicDataPtr->getReplacement()));
         }
-        else if (mpGraphicObject->GetGraphic().hasPdfData() ||
-                 mpGraphicObject->GetGraphic().GetType() == GraphicType::GdiMetafile)
+        else if (mpGraphicObject->GetGraphic().GetType() == GraphicType::GdiMetafile)
         {
             // Replacement graphic for PDF and metafiles is just the bitmap.
             const_cast<SdrGrafObj*>(this)->mpReplacementGraphicObject.reset(new GraphicObject(mpGraphicObject->GetGraphic().GetBitmapEx()));
@@ -481,7 +469,7 @@ void SdrGrafObj::ImpRegisterLink()
         {
             pGraphicLink = new SdrGraphicLink( *this );
             pLinkManager->InsertFileLink(
-                *pGraphicLink, OBJECT_CLIENT_GRF, aFileName, (aFilterName.isEmpty() ? nullptr : &aFilterName));
+                *pGraphicLink, sfx2::SvBaseLinkObjectType::ClientGraphic, aFileName, (aFilterName.isEmpty() ? nullptr : &aFilterName));
             pGraphicLink->Connect();
         }
     }
@@ -565,11 +553,11 @@ OUString SdrGrafObj::TakeObjNameSingul() const
     if (!mpGraphicObject)
         return OUString();
 
-    const VectorGraphicDataPtr& rVectorGraphicDataPtr = mpGraphicObject->GetGraphic().getVectorGraphicData();
+    auto const & rVectorGraphicDataPtr = mpGraphicObject->GetGraphic().getVectorGraphicData();
 
     OUStringBuffer sName;
 
-    if(rVectorGraphicDataPtr.get())
+    if (rVectorGraphicDataPtr)
     {
         switch (rVectorGraphicDataPtr->getVectorGraphicDataType())
         {
@@ -635,11 +623,11 @@ OUString SdrGrafObj::TakeObjNamePlural() const
     if (!mpGraphicObject)
         return OUString();
 
-    const VectorGraphicDataPtr& rVectorGraphicDataPtr = mpGraphicObject->GetGraphic().getVectorGraphicData();
+    auto const & rVectorGraphicDataPtr = mpGraphicObject->GetGraphic().getVectorGraphicData();
 
     OUStringBuffer sName;
 
-    if(rVectorGraphicDataPtr.get())
+    if (rVectorGraphicDataPtr)
     {
         switch (rVectorGraphicDataPtr->getVectorGraphicDataType())
         {
@@ -850,7 +838,7 @@ bool SdrGrafObj::HasGDIMetaFile() const
 
 bool SdrGrafObj::isEmbeddedVectorGraphicData() const
 {
-    return GraphicType::Bitmap == GetGraphicType() && GetGraphic().getVectorGraphicData().get();
+    return GraphicType::Bitmap == GetGraphicType() && GetGraphic().getVectorGraphicData();
 }
 
 GDIMetaFile SdrGrafObj::getMetafileFromEmbeddedVectorGraphicData() const
@@ -898,16 +886,6 @@ GDIMetaFile SdrGrafObj::GetMetaFile(GraphicType &rGraphicType) const
         return GetTransformedGraphic(SdrGrafObjTransformsAttrs::MIRROR).GetGDIMetaFile();
     }
     return GDIMetaFile();
-}
-
-bool SdrGrafObj::isEmbeddedPdfData() const
-{
-   return mpGraphicObject->GetGraphic().hasPdfData();
-}
-
-const std::shared_ptr<std::vector<sal_Int8>> & SdrGrafObj::getEmbeddedPdfData() const
-{
-   return mpGraphicObject->GetGraphic().getPdfData();
 }
 
 sal_Int32 SdrGrafObj::getEmbeddedPageNumber() const
@@ -1086,7 +1064,7 @@ void SdrGrafObj::AdjustToMaxRect( const tools::Rectangle& rMaxRect, bool bShrink
                                             mpGraphicObject->GetPrefMapMode(),
                                             MapMode( MapUnit::Map100thMM ) );
 
-    if( aSize.Height() != 0 && aSize.Width() != 0 )
+    if( !aSize.IsEmpty() )
     {
         Point aPos( rMaxRect.TopLeft() );
 

@@ -74,7 +74,6 @@ using namespace ::com::sun::star;
 using namespace ::com::sun::star::presentation;
 using namespace ::com::sun::star::animations;
 
-using ::com::sun::star::uno::makeAny;
 using ::com::sun::star::uno::Any;
 using ::com::sun::star::drawing::XShape;
 
@@ -835,7 +834,7 @@ bool SdXShape::IsPresObj() const
     {
         SdPage* pPage = dynamic_cast<SdPage* >(pObj->getSdrPageFromSdrObject());
         if(pPage)
-            return pPage->GetPresObjKind(pObj) != PRESOBJ_NONE;
+            return pPage->GetPresObjKind(pObj) != PresObjKind::NONE;
     }
     return false;
 }
@@ -1029,7 +1028,7 @@ uno::Any SdXShape::GetStyleSheet() const
 class SdUnoEventsAccess : public cppu::WeakImplHelper< css::container::XNameReplace, css::lang::XServiceInfo >
 {
 private:
-    SdXShape* const   mpShape;
+    SdXShape*   mpShape;
 
 public:
     explicit SdUnoEventsAccess(SdXShape* pShape) throw();

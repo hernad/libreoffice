@@ -9,25 +9,38 @@
 
 #include "effectproperties.hxx"
 #include <oox/drawingml/drawingmltypes.hxx>
-#include <oox/drawingml/shapepropertymap.hxx>
 #include <oox/helper/graphichelper.hxx>
 #include <oox/token/properties.hxx>
-#include <oox/token/tokens.hxx>
 
 #include <basegfx/numeric/ftools.hxx>
 
 namespace oox::drawingml {
 
+void EffectGlowProperties ::assignUsed(const EffectGlowProperties& rSourceProps)
+{
+    moGlowRad.assignIfUsed( rSourceProps.moGlowRad );
+    moGlowColor.assignIfUsed( rSourceProps.moGlowColor );
+}
+
+void EffectSoftEdgeProperties::assignUsed(const EffectSoftEdgeProperties& rSourceProps)
+{
+    moRad.assignIfUsed(rSourceProps.moRad);
+}
+
 void EffectShadowProperties::assignUsed(const EffectShadowProperties& rSourceProps)
 {
     moShadowDist.assignIfUsed( rSourceProps.moShadowDist );
     moShadowDir.assignIfUsed( rSourceProps.moShadowDir );
+    moShadowSx.assignIfUsed( rSourceProps.moShadowSx );
+    moShadowSy.assignIfUsed( rSourceProps.moShadowSy );
     moShadowColor.assignIfUsed( rSourceProps.moShadowColor );
 }
 
 void EffectProperties::assignUsed( const EffectProperties& rSourceProps )
 {
     maShadow.assignUsed(rSourceProps.maShadow);
+    maGlow.assignUsed(rSourceProps.maGlow);
+    maSoftEdge.assignUsed(rSourceProps.maSoftEdge);
     if (!rSourceProps.m_Effects.empty())
     {
         m_Effects.clear();
@@ -47,6 +60,9 @@ void EffectProperties::pushToPropMap( PropertyMap& rPropMap,
         if( it->msName == "outerShdw" )
         {
             sal_Int32 nAttrDir = 0, nAttrDist = 0;
+            sal_Int32 nAttrSizeX = 100000, nAttrSizeY = 100000; // If shadow size is %100=100000 (means equal to object's size), sx sy is not exists,
+                                                                // Default values of sx, sy should be 100000 in this case.
+
             std::map< OUString, css::uno::Any >::const_iterator attribIt = it->maAttribs.find( "dir" );
             if( attribIt != it->maAttribs.end() )
                 attribIt->second >>= nAttrDir;
@@ -55,6 +71,15 @@ void EffectProperties::pushToPropMap( PropertyMap& rPropMap,
             if( attribIt != it->maAttribs.end() )
                 attribIt->second >>= nAttrDist;
 
+            attribIt = it->maAttribs.find( "sx" );
+            if( attribIt != it->maAttribs.end() )
+                attribIt->second >>= nAttrSizeX;
+
+            attribIt = it->maAttribs.find( "sy" );
+            if( attribIt != it->maAttribs.end() )
+                attribIt->second >>= nAttrSizeY;
+
+            // Negative X or Y dist indicates left or up, respectively
             // Negative X or Y dist indicates left or up, respectively
             double nAngle = basegfx::deg2rad(static_cast<double>(nAttrDir) / PER_DEGREE);
             sal_Int32 nDist = convertEmuToHmm( nAttrDist );
@@ -64,6 +89,8 @@ void EffectProperties::pushToPropMap( PropertyMap& rPropMap,
             rPropMap.setProperty( PROP_Shadow, true );
             rPropMap.setProperty( PROP_ShadowXDistance, nXDist);
             rPropMap.setProperty( PROP_ShadowYDistance, nYDist);
+            rPropMap.setProperty( PROP_ShadowSizeX, nAttrSizeX);
+            rPropMap.setProperty( PROP_ShadowSizeY, nAttrSizeY);
             rPropMap.setProperty( PROP_ShadowColor, it->moColor.getColor(rGraphicHelper ) );
             rPropMap.setProperty( PROP_ShadowTransparence, it->moColor.getTransparency());
         }

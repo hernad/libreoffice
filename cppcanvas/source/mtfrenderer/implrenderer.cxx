@@ -44,6 +44,7 @@
 #include <basegfx/tuple/b2dtuple.hxx>
 #include <basegfx/polygon/b2dpolygonclipper.hxx>
 #include <canvas/canvastools.hxx>
+#include <rtl/ustrbuf.hxx>
 #include <vcl/canvastools.hxx>
 #include <vcl/gdimtf.hxx>
 #include <vcl/metaact.hxx>
@@ -83,20 +84,20 @@ namespace
                                                           const cppcanvas::CanvasSharedPtr& rCanvas )
     {
         rIsColorSet = pAct->IsSetting();
-        if (rIsColorSet)
-        {
-            ::Color aColor( pAct->GetColor() );
+        if (!rIsColorSet)
+            return;
 
-            // force alpha part of color to
-            // opaque. transparent painting is done
-            // explicitly via MetaActionType::Transparent
-            aColor.SetTransparency(0);
-            //aColor.SetTransparency(128);
+        ::Color aColor( pAct->GetColor() );
 
-            rColorSequence = vcl::unotools::colorToDoubleSequence(
-                aColor,
-                rCanvas->getUNOCanvas()->getDevice()->getDeviceColorSpace() );
-        }
+        // force alpha part of color to
+        // opaque. transparent painting is done
+        // explicitly via MetaActionType::Transparent
+        aColor.SetTransparency(0);
+        //aColor.SetTransparency(128);
+
+        rColorSequence = vcl::unotools::colorToDoubleSequence(
+            aColor,
+            rCanvas->getUNOCanvas()->getDevice()->getDeviceColorSpace() );
     }
 
     void setupStrokeAttributes( rendering::StrokeAttributes&                          o_rStrokeAttributes,
@@ -150,46 +151,46 @@ namespace
             }
         }
 
-        if( LineStyle::Dash == rLineInfo.GetStyle() )
+        if( LineStyle::Dash != rLineInfo.GetStyle() )
+            return;
+
+        const ::cppcanvas::internal::OutDevState& rState( rParms.mrStates.getState() );
+
+        // TODO(F1): Interpret OutDev::GetRefPoint() for the start of the dashing.
+
+        // interpret dash info only if explicitly enabled as
+        // style
+        const ::basegfx::B2DSize aDistance( rLineInfo.GetDistance(), 0 );
+        const double nDistance( (rState.mapModeTransform * aDistance).getX() );
+
+        const ::basegfx::B2DSize aDashLen( rLineInfo.GetDashLen(), 0 );
+        const double nDashLen( (rState.mapModeTransform * aDashLen).getX() );
+
+        const ::basegfx::B2DSize aDotLen( rLineInfo.GetDotLen(), 0 );
+        const double nDotLen( (rState.mapModeTransform * aDotLen).getX() );
+
+        const sal_Int32 nNumArryEntries( 2*rLineInfo.GetDashCount() +
+                                         2*rLineInfo.GetDotCount() );
+
+        o_rStrokeAttributes.DashArray.realloc( nNumArryEntries );
+        double* pDashArray = o_rStrokeAttributes.DashArray.getArray();
+
+
+        // iteratively fill dash array, first with dashes, then
+        // with dots.
+
+
+        sal_Int32 nCurrEntry=0;
+
+        for( sal_Int32 i=0; i<rLineInfo.GetDashCount(); ++i )
         {
-            const ::cppcanvas::internal::OutDevState& rState( rParms.mrStates.getState() );
-
-            // TODO(F1): Interpret OutDev::GetRefPoint() for the start of the dashing.
-
-            // interpret dash info only if explicitly enabled as
-            // style
-            const ::basegfx::B2DSize aDistance( rLineInfo.GetDistance(), 0 );
-            const double nDistance( (rState.mapModeTransform * aDistance).getX() );
-
-            const ::basegfx::B2DSize aDashLen( rLineInfo.GetDashLen(), 0 );
-            const double nDashLen( (rState.mapModeTransform * aDashLen).getX() );
-
-            const ::basegfx::B2DSize aDotLen( rLineInfo.GetDotLen(), 0 );
-            const double nDotLen( (rState.mapModeTransform * aDotLen).getX() );
-
-            const sal_Int32 nNumArryEntries( 2*rLineInfo.GetDashCount() +
-                                             2*rLineInfo.GetDotCount() );
-
-            o_rStrokeAttributes.DashArray.realloc( nNumArryEntries );
-            double* pDashArray = o_rStrokeAttributes.DashArray.getArray();
-
-
-            // iteratively fill dash array, first with dashes, then
-            // with dots.
-
-
-            sal_Int32 nCurrEntry=0;
-
-            for( sal_Int32 i=0; i<rLineInfo.GetDashCount(); ++i )
-            {
-                pDashArray[nCurrEntry++] = nDashLen;
-                pDashArray[nCurrEntry++] = nDistance;
-            }
-            for( sal_Int32 i=0; i<rLineInfo.GetDotCount(); ++i )
-            {
-                pDashArray[nCurrEntry++] = nDotLen;
-                pDashArray[nCurrEntry++] = nDistance;
-            }
+            pDashArray[nCurrEntry++] = nDashLen;
+            pDashArray[nCurrEntry++] = nDistance;
+        }
+        for( sal_Int32 i=0; i<rLineInfo.GetDotCount(); ++i )
+        {
+            pDashArray[nCurrEntry++] = nDotLen;
+            pDashArray[nCurrEntry++] = nDistance;
         }
     }
 
@@ -1026,21 +1027,21 @@ namespace cppcanvas::internal
                 }
             }
 
-            if( pTextAction )
+            if( !pTextAction )
+                return;
+
+            maActions.emplace_back(
+                    pTextAction,
+                    rParms.mrCurrActionIndex );
+
+            if ( pStrikeoutTextAction )
             {
                 maActions.emplace_back(
-                        pTextAction,
-                        rParms.mrCurrActionIndex );
-
-                if ( pStrikeoutTextAction )
-                {
-                    maActions.emplace_back(
-                        pStrikeoutTextAction,
-                        rParms.mrCurrActionIndex );
-                }
-
-                rParms.mrCurrActionIndex += pTextAction->getActionCount()-1;
+                    pStrikeoutTextAction,
+                    rParms.mrCurrActionIndex );
             }
+
+            rParms.mrCurrActionIndex += pTextAction->getActionCount()-1;
         }
 
         void ImplRenderer::updateClipping( const ::basegfx::B2DPolyPolygon& rClipPoly,
@@ -1628,9 +1629,11 @@ namespace cppcanvas::internal
                         {
                             MetaGradientExAction* pGradAction = nullptr;
                             bool bDone( false );
-                            while( !bDone &&
-                                   (pCurrAct=rMtf.NextAction()) != nullptr )
+                            while( !bDone )
                             {
+                                pCurrAct=rMtf.NextAction();
+                                if (!pCurrAct)
+                                    break;
                                 switch( pCurrAct->GetType() )
                                 {
                                     // extract gradient info
@@ -2511,7 +2514,7 @@ namespace cppcanvas::internal
                                 rCanvas,
                                 rState ) );
 
-                        if( pPolyAction.get() )
+                        if( pPolyAction )
                         {
                             maActions.emplace_back(
                                     pPolyAction,

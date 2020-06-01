@@ -18,7 +18,9 @@
  */
 
 #include <basegfx/matrix/b2dhommatrix.hxx>
+#include <com/sun/star/drawing/XDrawPage.hpp>
 #include <com/sun/star/drawing/XShapes.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <oox/ppt/timenode.hxx>
 #include <oox/ppt/pptshape.hxx>
 #include <oox/ppt/slidepersist.hxx>
@@ -38,7 +40,6 @@
 #include <com/sun/star/style/XStyle.hpp>
 #include <com/sun/star/style/XStyleFamiliesSupplier.hpp>
 #include <com/sun/star/container/XNamed.hpp>
-#include <com/sun/star/beans/XMultiPropertySet.hpp>
 #include <com/sun/star/animations/XAnimationNodeSupplier.hpp>
 
 using namespace ::com::sun::star;
@@ -130,7 +131,7 @@ void SlidePersist::createXShapes( XmlFilterBase& rFilterBase )
 {
     applyTextStyles( rFilterBase );
 
-    Reference< XShapes > xShapes( getPage(), UNO_QUERY );
+    Reference< XShapes > xShapes( getPage() );
 
     std::vector< oox::drawingml::ShapePtr >& rShapes( maShapesPtr->getChildren() );
     for (auto const& shape : rShapes)
@@ -148,18 +149,18 @@ void SlidePersist::createXShapes( XmlFilterBase& rFilterBase )
     }
 
     Reference< XAnimationNodeSupplier > xNodeSupplier( getPage(), UNO_QUERY);
-    if( xNodeSupplier.is() )
-    {
-        Reference< XAnimationNode > xNode( xNodeSupplier->getAnimationNode() );
-        if( xNode.is() && !maTimeNodeList.empty() )
-        {
-            SlidePersistPtr pSlidePtr( shared_from_this() );
-            TimeNodePtr pNode(maTimeNodeList.front());
-            OSL_ENSURE( pNode, "pNode" );
+    if( !xNodeSupplier.is() )
+        return;
 
-            Reference<XAnimationNode> xDummy;
-            pNode->setNode(rFilterBase, xNode, pSlidePtr, xDummy);
-        }
+    Reference< XAnimationNode > xNode( xNodeSupplier->getAnimationNode() );
+    if( xNode.is() && !maTimeNodeList.empty() )
+    {
+        SlidePersistPtr pSlidePtr( shared_from_this() );
+        TimeNodePtr pNode(maTimeNodeList.front());
+        OSL_ENSURE( pNode, "pNode" );
+
+        Reference<XAnimationNode> xDummy;
+        pNode->setNode(rFilterBase, xNode, pSlidePtr, xDummy);
     }
 }
 
@@ -198,96 +199,96 @@ static void setTextStyle( Reference< beans::XPropertySet > const & rxPropSet, co
 
 void SlidePersist::applyTextStyles( const XmlFilterBase& rFilterBase )
 {
-    if ( mbMaster )
+    if ( !mbMaster )
+        return;
+
+    try
     {
-        try
+        Reference< style::XStyleFamiliesSupplier > aXStyleFamiliesSupplier( rFilterBase.getModel(), UNO_QUERY_THROW );
+        Reference< container::XNameAccess > aXNameAccess( aXStyleFamiliesSupplier->getStyleFamilies() );
+        Reference< container::XNamed > aXNamed( mxPage, UNO_QUERY_THROW );
+
+        if ( aXNameAccess.is() )
         {
-            Reference< style::XStyleFamiliesSupplier > aXStyleFamiliesSupplier( rFilterBase.getModel(), UNO_QUERY_THROW );
-            Reference< container::XNameAccess > aXNameAccess( aXStyleFamiliesSupplier->getStyleFamilies() );
-            Reference< container::XNamed > aXNamed( mxPage, UNO_QUERY_THROW );
+            oox::drawingml::TextListStylePtr pTextListStylePtr;
+            OUString aStyle;
+            OUString aFamily;
 
-            if ( aXNameAccess.is() )
+            const OUString sOutline( "outline1" );
+            const OUString sTitle( "title" );
+            const OUString sStandard( "standard" );
+            const OUString sSubtitle( "subtitle" );
+
+            for( int i = 0; i < 4; i++ )    // todo: aggregation of bodystyle (subtitle)
             {
-                oox::drawingml::TextListStylePtr pTextListStylePtr;
-                OUString aStyle;
-                OUString aFamily;
-
-                const OUString sOutline( "outline1" );
-                const OUString sTitle( "title" );
-                const OUString sStandard( "standard" );
-                const OUString sSubtitle( "subtitle" );
-
-                for( int i = 0; i < 4; i++ )    // todo: aggregation of bodystyle (subtitle)
+                switch( i )
                 {
-                    switch( i )
+                    case 0 :    // title style
                     {
-                        case 0 :    // title style
-                        {
-                            pTextListStylePtr = maTitleTextStylePtr;
-                            aStyle = sTitle;
-                            aFamily= aXNamed->getName();
-                            break;
-                        }
-                        case 1 :    // body style
-                        {
-                            pTextListStylePtr = maBodyTextStylePtr;
-                            aStyle = sOutline;
-                            aFamily= aXNamed->getName();
-                            break;
-                        }
-                        case 3 :    // notes style
-                        {
-                            pTextListStylePtr = maNotesTextStylePtr;
-                            aStyle = sTitle;
-                            aFamily= aXNamed->getName();
-                            break;
-                        }
-                        case 4 :    // standard style
-                        {
-                            pTextListStylePtr = maOtherTextStylePtr;
-                            aStyle = sStandard;
-                            aFamily = "graphics";
-                            break;
-                        }
-                        case 5 :    // subtitle
-                        {
-                            pTextListStylePtr = maBodyTextStylePtr;
-                            aStyle = sSubtitle;
-                            aFamily = aXNamed->getName();
-                            break;
-                        }
+                        pTextListStylePtr = maTitleTextStylePtr;
+                        aStyle = sTitle;
+                        aFamily= aXNamed->getName();
+                        break;
                     }
-                    Reference< container::XNameAccess > xFamilies;
-                    if ( aXNameAccess->hasByName( aFamily ) )
+                    case 1 :    // body style
                     {
-                        if( aXNameAccess->getByName( aFamily ) >>= xFamilies )
+                        pTextListStylePtr = maBodyTextStylePtr;
+                        aStyle = sOutline;
+                        aFamily= aXNamed->getName();
+                        break;
+                    }
+                    case 3 :    // notes style
+                    {
+                        pTextListStylePtr = maNotesTextStylePtr;
+                        aStyle = sTitle;
+                        aFamily= aXNamed->getName();
+                        break;
+                    }
+                    case 4 :    // standard style
+                    {
+                        pTextListStylePtr = maOtherTextStylePtr;
+                        aStyle = sStandard;
+                        aFamily = "graphics";
+                        break;
+                    }
+                    case 5 :    // subtitle
+                    {
+                        pTextListStylePtr = maBodyTextStylePtr;
+                        aStyle = sSubtitle;
+                        aFamily = aXNamed->getName();
+                        break;
+                    }
+                }
+                Reference< container::XNameAccess > xFamilies;
+                if ( aXNameAccess->hasByName( aFamily ) )
+                {
+                    if( aXNameAccess->getByName( aFamily ) >>= xFamilies )
+                    {
+                        if ( xFamilies->hasByName( aStyle ) )
                         {
-                            if ( xFamilies->hasByName( aStyle ) )
+                            Reference< style::XStyle > aXStyle;
+                            if ( xFamilies->getByName( aStyle ) >>= aXStyle )
                             {
-                                Reference< style::XStyle > aXStyle;
-                                if ( xFamilies->getByName( aStyle ) >>= aXStyle )
+                                Reference< beans::XPropertySet > xPropSet( aXStyle, UNO_QUERY_THROW );
+                                setTextStyle( xPropSet, rFilterBase, maDefaultTextStylePtr, 0 );
+                                setTextStyle( xPropSet, rFilterBase, pTextListStylePtr, 0 );
+                                if ( i == 1 /* BodyStyle */ )
                                 {
-                                    Reference< beans::XPropertySet > xPropSet( aXStyle, UNO_QUERY_THROW );
-                                    setTextStyle( xPropSet, rFilterBase, maDefaultTextStylePtr, 0 );
-                                    setTextStyle( xPropSet, rFilterBase, pTextListStylePtr, 0 );
-                                    if ( i == 1 /* BodyStyle */ )
+                                    for ( int nLevel = 1; nLevel < 5; nLevel++ )
                                     {
-                                        for ( int nLevel = 1; nLevel < 5; nLevel++ )
                                         {
+                                            char pOutline[ 9 ] = "outline1";
+                                            pOutline[ 7 ] = static_cast< char >( '0' + nLevel );
+                                            OUString sOutlineStyle( OUString::createFromAscii( pOutline ) );
+                                            if ( xFamilies->hasByName( sOutlineStyle ) )
                                             {
-                                                char pOutline[ 9 ] = "outline1";
-                                                pOutline[ 7 ] = static_cast< char >( '0' + nLevel );
-                                                OUString sOutlineStyle( OUString::createFromAscii( pOutline ) );
-                                                if ( xFamilies->hasByName( sOutlineStyle ) )
-                                                {
-                                                    xFamilies->getByName( sOutlineStyle ) >>= aXStyle;
-                                                    if( aXStyle.is() )
-                                                        xPropSet.set( aXStyle, UNO_QUERY_THROW );
-                                                }
+                                                xFamilies->getByName( sOutlineStyle ) >>= aXStyle;
+                                                if( aXStyle.is() )
+                                                    xPropSet.set( aXStyle, UNO_QUERY_THROW );
                                             }
-                                            setTextStyle( xPropSet, rFilterBase, maDefaultTextStylePtr, nLevel );
-                                            setTextStyle( xPropSet, rFilterBase, pTextListStylePtr, nLevel );
                                         }
+                                        setTextStyle( xPropSet, rFilterBase, maDefaultTextStylePtr, nLevel );
+                                        setTextStyle( xPropSet, rFilterBase, pTextListStylePtr, nLevel );
                                     }
                                 }
                             }
@@ -296,9 +297,9 @@ void SlidePersist::applyTextStyles( const XmlFilterBase& rFilterBase )
                 }
             }
         }
-        catch( const Exception& )
-        {
-        }
+    }
+    catch( const Exception& )
+    {
     }
 }
 

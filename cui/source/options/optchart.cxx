@@ -95,7 +95,7 @@ SvxDefaultColorOptPage::SvxDefaultColorOptPage(weld::Container* pPage, weld::Dia
     , m_xPBDefault(m_xBuilder->weld_button("default"))
     , m_xPBAdd(m_xBuilder->weld_button("add"))
     , m_xPBRemove(m_xBuilder->weld_button("delete"))
-    , m_xValSetColorBox(new ColorValueSet(m_xBuilder->weld_scrolled_window("tablewin")))
+    , m_xValSetColorBox(new SvxColorValueSet(m_xBuilder->weld_scrolled_window("tablewin")))
     , m_xValSetColorBoxWin(new weld::CustomWeld(*m_xBuilder, "table", *m_xValSetColorBox))
 {
     m_xLbChartColors->set_size_request(-1, m_xLbChartColors->get_height_rows(16));
@@ -225,29 +225,29 @@ IMPL_LINK_NOARG( SvxDefaultColorOptPage, RemoveChartColor, weld::Button&, void )
     if (nIndex == -1)
         return;
 
-    if( m_SvxChartColorTableUniquePtr )
-    {
-        OSL_ENSURE(m_SvxChartColorTableUniquePtr->size() > 1, "don't delete the last chart color");
+    if( !m_SvxChartColorTableUniquePtr )
+        return;
 
-        std::unique_ptr<weld::Builder> xBuilder(Application::CreateBuilder(GetFrameWeld(), "cui/ui/querydeletechartcolordialog.ui"));
-        std::unique_ptr<weld::MessageDialog> xQuery(xBuilder->weld_message_dialog("QueryDeleteChartColorDialog"));
+    OSL_ENSURE(m_SvxChartColorTableUniquePtr->size() > 1, "don't delete the last chart color");
 
-        if (RET_YES == xQuery->run())
-        {
-            m_SvxChartColorTableUniquePtr->remove(nIndex);
+    std::unique_ptr<weld::Builder> xBuilder(Application::CreateBuilder(GetFrameWeld(), "cui/ui/querydeletechartcolordialog.ui"));
+    std::unique_ptr<weld::MessageDialog> xQuery(xBuilder->weld_message_dialog("QueryDeleteChartColorDialog"));
 
-            FillBoxChartColorLB();
+    if (RET_YES != xQuery->run())
+        return;
 
-            m_xLbChartColors->grab_focus();
+    m_SvxChartColorTableUniquePtr->remove(nIndex);
 
-            if (nIndex == m_xLbChartColors->n_children() && m_xLbChartColors->n_children() > 0)
-                m_xLbChartColors->select(m_SvxChartColorTableUniquePtr->size() - 1);
-            else if (m_xLbChartColors->n_children() > 0)
-                m_xLbChartColors->select( nIndex );
-            else
-                m_xPBRemove->set_sensitive(true);
-        }
-    }
+    FillBoxChartColorLB();
+
+    m_xLbChartColors->grab_focus();
+
+    if (nIndex == m_xLbChartColors->n_children() && m_xLbChartColors->n_children() > 0)
+        m_xLbChartColors->select(m_SvxChartColorTableUniquePtr->size() - 1);
+    else if (m_xLbChartColors->n_children() > 0)
+        m_xLbChartColors->select( nIndex );
+    else
+        m_xPBRemove->set_sensitive(true);
 }
 
 IMPL_LINK_NOARG( SvxDefaultColorOptPage, SelectPaletteLbHdl, weld::ComboBox&, void)
@@ -258,7 +258,7 @@ IMPL_LINK_NOARG( SvxDefaultColorOptPage, SelectPaletteLbHdl, weld::ComboBox&, vo
     m_xValSetColorBox->Resize();
 }
 
-IMPL_LINK_NOARG(SvxDefaultColorOptPage, BoxClickedHdl, SvtValueSet*, void)
+IMPL_LINK_NOARG(SvxDefaultColorOptPage, BoxClickedHdl, ValueSet*, void)
 {
     sal_Int32 nIdx = m_xLbChartColors->get_selected_index();
     if (nIdx != -1)

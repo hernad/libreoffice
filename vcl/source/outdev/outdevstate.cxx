@@ -225,6 +225,13 @@ sal_uInt32 OutputDevice::GetGCStackDepth() const
     return maOutDevStateStack.size();
 }
 
+void OutputDevice::ClearStack()
+{
+    sal_uInt32 nCount = GetGCStackDepth();
+    while( nCount-- )
+        Pop();
+}
+
 void OutputDevice::EnableOutput( bool bEnable )
 {
     mbOutput = bEnable;
@@ -494,7 +501,6 @@ void OutputDevice::SetFont( const vcl::Font& rNewFont )
             else if ( mnDrawMode & DrawModeFlags::NoFill )
             {
                 aTextFillColor = COL_TRANSPARENT;
-                bTransFill = true;
             }
 
             aFont.SetFillColor( aTextFillColor );

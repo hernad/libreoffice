@@ -26,7 +26,7 @@
 #include <com/sun/star/lang/Locale.hpp>
 #include <svx/svxdllapi.h>
 
-namespace com{namespace sun{ namespace star{
+namespace com::sun::star {
     namespace container{
         class XIndexAccess;
     }
@@ -36,7 +36,7 @@ namespace com{namespace sun{ namespace star{
     namespace text{
         class XNumberingFormatter;
     }
-}}}
+}
 
 enum class NumberingPageType
 {
@@ -46,7 +46,7 @@ enum class NumberingPageType
     BITMAP
 };
 
-class SVX_DLLPUBLIC SvxNumValueSet : public SvtValueSet
+class SVX_DLLPUBLIC SvxNumValueSet : public ValueSet
 {
     NumberingPageType ePageType;
     tools::Rectangle       aOrgRect;

@@ -21,26 +21,23 @@
 
 #include <strings.hrc>
 #include <frm_resource.hxx>
+#include <property.hxx>
 #include <services.hxx>
 #include <componenttools.hxx>
 
 #include <svtools/imageresourceaccess.hxx>
 #include <sfx2/filedlghelper.hxx>
-#include <toolkit/helper/vclunohelper.hxx>
 #include <com/sun/star/awt/PopupMenu.hpp>
 #include <com/sun/star/awt/XPopupMenu.hpp>
 #include <com/sun/star/awt/PopupMenuDirection.hpp>
+#include <com/sun/star/form/FormComponentType.hpp>
 #include <com/sun/star/ui/dialogs/TemplateDescription.hpp>
 #include <com/sun/star/ui/dialogs/ExtendedFilePickerElementIds.hpp>
+#include <com/sun/star/ui/dialogs/XFilePicker3.hpp>
 #include <com/sun/star/ui/dialogs/XFilePickerControlAccess.hpp>
-#include <com/sun/star/ui/dialogs/XFilePicker.hpp>
 #include <com/sun/star/sdbc/DataType.hpp>
 #include <com/sun/star/awt/MouseButton.hpp>
 #include <com/sun/star/awt/XWindow.hpp>
-#include <com/sun/star/awt/XDialog.hpp>
-#include <com/sun/star/io/XActiveDataSink.hpp>
-#include <com/sun/star/io/NotConnectedException.hpp>
-#include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/graphic/XGraphic.hpp>
 #include <com/sun/star/graphic/GraphicObject.hpp>
 #include <tools/urlobj.hxx>
@@ -49,7 +46,6 @@
 #include <tools/diagnose_ex.h>
 #include <vcl/graph.hxx>
 #include <vcl/svapp.hxx>
-#include <vcl/window.hxx>
 #include <unotools/streamhelper.hxx>
 #include <comphelper/guarding.hxx>
 #include <comphelper/property.hxx>
@@ -70,7 +66,6 @@ using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::sdb;
 using namespace ::com::sun::star::sdbc;
-using namespace ::com::sun::star::sdbcx;
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::container;
 using namespace ::com::sun::star::form;
@@ -746,23 +741,23 @@ void SAL_CALL OImageControlControl::disposing( const EventObject& Event )
 void OImageControlControl::implClearGraphics( bool _bForce )
 {
     Reference< XPropertySet > xSet( getModel(), UNO_QUERY );
-    if ( xSet.is() )
+    if ( !xSet.is() )
+        return;
+
+    if ( _bForce )
     {
-        if ( _bForce )
-        {
-            OUString sOldImageURL;
-            xSet->getPropertyValue( PROPERTY_IMAGE_URL ) >>= sOldImageURL;
+        OUString sOldImageURL;
+        xSet->getPropertyValue( PROPERTY_IMAGE_URL ) >>= sOldImageURL;
 
-            if ( sOldImageURL.isEmpty() )
-                // the ImageURL is already empty, so simply setting a new empty one would not suffice
-                // (since it would be ignored)
-                xSet->setPropertyValue( PROPERTY_IMAGE_URL, makeAny( OUString( "private:emptyImage" ) ) );
-                    // (the concrete URL we're passing here doesn't matter. It's important that
-                    // the model cannot resolve it to a valid resource describing an image stream
-        }
-
-        xSet->setPropertyValue( PROPERTY_IMAGE_URL, makeAny( OUString() ) );
+        if ( sOldImageURL.isEmpty() )
+            // the ImageURL is already empty, so simply setting a new empty one would not suffice
+            // (since it would be ignored)
+            xSet->setPropertyValue( PROPERTY_IMAGE_URL, makeAny( OUString( "private:emptyImage" ) ) );
+                // (the concrete URL we're passing here doesn't matter. It's important that
+                // the model cannot resolve it to a valid resource describing an image stream
     }
+
+    xSet->setPropertyValue( PROPERTY_IMAGE_URL, makeAny( OUString() ) );
 }
 
 

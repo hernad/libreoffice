@@ -17,8 +17,11 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <svx/sdr/primitive2d/sdrattributecreator.hxx>
+#include <sdr/primitive2d/sdrattributecreator.hxx>
 #include <svl/itemset.hxx>
+#include <svx/sdmetitm.hxx>
+#include <svx/sdooitm.hxx>
+#include <svx/sdprcitm.hxx>
 #include <svx/xdef.hxx>
 #include <basegfx/polygon/b2dpolygon.hxx>
 #include <svx/xlineit0.hxx>
@@ -43,10 +46,6 @@
 #include <svx/xgrscit.hxx>
 #include <svx/xflhtit.hxx>
 #include <svx/xflbckit.hxx>
-#include <svx/sdshitm.hxx>
-#include <svx/sdsxyitm.hxx>
-#include <svx/sdshcitm.hxx>
-#include <svx/sdshtitm.hxx>
 #include <svx/xflbmsxy.hxx>
 #include <svx/xflbtoxy.hxx>
 #include <svx/xflboxy.hxx>
@@ -54,10 +53,8 @@
 #include <svx/xflbstit.hxx>
 #include <svx/xtextit0.hxx>
 #include <drawinglayer/attribute/sdrfillgraphicattribute.hxx>
-#include <basegfx/polygon/b2dlinegeometry.hxx>
 #include <svx/svdotext.hxx>
-#include <drawinglayer/attribute/fillgraphicattribute.hxx>
-#include <svx/sdr/attribute/sdrtextattribute.hxx>
+#include <sdr/attribute/sdrtextattribute.hxx>
 #include <svx/xbtmpit.hxx>
 #include <svl/itempool.hxx>
 #include <vcl/svapp.hxx>
@@ -74,15 +71,18 @@
 #include <editeng/editstat.hxx>
 #include <drawinglayer/attribute/fillhatchattribute.hxx>
 #include <drawinglayer/attribute/fillgradientattribute.hxx>
-#include <svx/sdr/attribute/sdrshadowtextattribute.hxx>
-#include <svx/sdr/attribute/sdrlineshadowtextattribute.hxx>
-#include <svx/sdr/attribute/sdrformtextattribute.hxx>
-#include <svx/sdr/attribute/sdrlinefillshadowtextattribute.hxx>
+#include <sdr/attribute/sdreffectstextattribute.hxx>
+#include <sdr/attribute/sdrlineeffectstextattribute.hxx>
+#include <sdr/attribute/sdrformtextattribute.hxx>
+#include <sdr/attribute/sdrlinefilleffectstextattribute.hxx>
+#include <drawinglayer/attribute/sdrglowattribute.hxx>
 #include <drawinglayer/attribute/sdrsceneattribute3d.hxx>
 #include <drawinglayer/attribute/sdrlightingattribute3d.hxx>
 #include <drawinglayer/attribute/sdrlightattribute3d.hxx>
 #include <sdr/attribute/sdrfilltextattribute.hxx>
 #include <com/sun/star/drawing/LineCap.hpp>
+
+#include <sal/log.hxx>
 
 using namespace com::sun::star;
 
@@ -211,6 +211,25 @@ namespace drawinglayer
             }
 
             return aRetval;
+        }
+
+        attribute::SdrGlowAttribute createNewSdrGlowAttribute(const SfxItemSet& rSet)
+        {
+            sal_Int32 nRadius = rSet.Get(SDRATTR_GLOW_RAD).GetValue();
+            if (!nRadius)
+                return attribute::SdrGlowAttribute();
+            Color aColor(rSet.Get(SDRATTR_GLOW_COLOR).GetColorValue());
+            sal_uInt16 nTransparency(rSet.Get(SDRATTR_GLOW_TRANSPARENCY).GetValue());
+            if (nTransparency)
+                aColor.SetTransparency(std::round(nTransparency / 100.0 * 255.0));
+
+            attribute::SdrGlowAttribute glowAttr{ nRadius, aColor };
+            return glowAttr;
+        }
+
+        sal_Int32 getSoftEdgeRadius(const SfxItemSet& rSet)
+        {
+            return rSet.Get(SDRATTR_SOFTEDGE_RAD).GetValue();
         }
     } // end of anonymous namespace
 } // end of namespace drawinglayer
@@ -372,9 +391,16 @@ namespace drawinglayer::primitive2d
                     const basegfx::B2DVector aOffset(
                         static_cast<double>(rSet.Get(SDRATTR_SHADOWXDIST).GetValue()),
                         static_cast<double>(rSet.Get(SDRATTR_SHADOWYDIST).GetValue()));
+
+                    const basegfx::B2DVector aSize(
+                        static_cast<double>(rSet.Get(SDRATTR_SHADOWSIZEX).GetValue()),
+                        static_cast<double>(rSet.Get(SDRATTR_SHADOWSIZEY).GetValue()));
+
                     const Color aColor(rSet.Get(SDRATTR_SHADOWCOLOR).GetColorValue());
 
-                    return attribute::SdrShadowAttribute(aOffset, static_cast<double>(nTransparence) * 0.01, aColor.getBColor());
+                    sal_Int32 nBlur(rSet.Get(SDRATTR_SHADOWBLUR).GetValue());
+
+                    return attribute::SdrShadowAttribute(aOffset, aSize, static_cast<double>(nTransparence) * 0.01,nBlur, aColor.getBColor());
                 }
             }
 
@@ -632,7 +658,7 @@ namespace drawinglayer::primitive2d
         {
             Graphic aGraphic(rSet.Get(XATTR_FILLBITMAP).GetGraphicObject().GetGraphic());
 
-            if(!(GraphicType::Bitmap == aGraphic.GetType() || GraphicType::GdiMetafile == aGraphic.GetType()))
+            if(GraphicType::Bitmap != aGraphic.GetType() && GraphicType::GdiMetafile != aGraphic.GetType())
             {
                 // no content if not bitmap or metafile
                 OSL_ENSURE(false, "No fill graphic in SfxItemSet (!)");
@@ -711,7 +737,7 @@ namespace drawinglayer::primitive2d
                 rSet.Get(XATTR_FILLBMP_SIZELOG).GetValue());
         }
 
-        attribute::SdrShadowTextAttribute createNewSdrShadowTextAttribute(
+        attribute::SdrEffectsTextAttribute createNewSdrEffectsTextAttribute(
             const SfxItemSet& rSet,
             const SdrText* pText,
             bool bSuppressText)
@@ -727,11 +753,13 @@ namespace drawinglayer::primitive2d
 
             // try shadow
             const attribute::SdrShadowAttribute aShadow(createNewSdrShadowAttribute(rSet));
+            const attribute::SdrGlowAttribute aGlow(createNewSdrGlowAttribute(rSet));
+            const sal_Int32 nSoftEdgeRadius(getSoftEdgeRadius(rSet));
 
-            return attribute::SdrShadowTextAttribute(aShadow, aText);
+            return attribute::SdrEffectsTextAttribute(aShadow, aText, aGlow, nSoftEdgeRadius);
         }
 
-        attribute::SdrLineShadowTextAttribute createNewSdrLineShadowTextAttribute(
+        attribute::SdrLineEffectsTextAttribute createNewSdrLineEffectsTextAttribute(
             const SfxItemSet& rSet,
             const SdrText* pText)
         {
@@ -771,14 +799,17 @@ namespace drawinglayer::primitive2d
             {
                 // try shadow
                 const attribute::SdrShadowAttribute aShadow(createNewSdrShadowAttribute(rSet));
+                const attribute::SdrGlowAttribute aGlow = createNewSdrGlowAttribute(rSet);
+                const sal_Int32 nSoftEdgeRadius(getSoftEdgeRadius(rSet));
 
-                return attribute::SdrLineShadowTextAttribute(aLine, aLineStartEnd, aShadow, aText);
+                return attribute::SdrLineEffectsTextAttribute(aLine, aLineStartEnd, aShadow, aText,
+                                                              aGlow, nSoftEdgeRadius);
             }
 
-            return attribute::SdrLineShadowTextAttribute();
+            return attribute::SdrLineEffectsTextAttribute();
         }
 
-        attribute::SdrLineFillShadowTextAttribute createNewSdrLineFillShadowTextAttribute(
+        attribute::SdrLineFillEffectsTextAttribute createNewSdrLineFillEffectsTextAttribute(
             const SfxItemSet& rSet,
             const SdrText* pText,
             bool bHasContent)
@@ -786,7 +817,6 @@ namespace drawinglayer::primitive2d
             attribute::SdrLineAttribute aLine;
             attribute::SdrFillAttribute aFill;
             attribute::SdrLineStartEndAttribute aLineStartEnd;
-            attribute::SdrShadowAttribute aShadow;
             attribute::FillGradientAttribute aFillFloatTransGradient;
             attribute::SdrTextAttribute aText;
             bool bFontworkHideContour(false);
@@ -832,13 +862,19 @@ namespace drawinglayer::primitive2d
             if(bHasContent || !aLine.isDefault() || !aFill.isDefault() || !aText.isDefault())
             {
                 // try shadow
-                aShadow = createNewSdrShadowAttribute(rSet);
+                const attribute::SdrShadowAttribute aShadow = createNewSdrShadowAttribute(rSet);
 
-                return attribute::SdrLineFillShadowTextAttribute(
-                    aLine, aFill, aLineStartEnd, aShadow, aFillFloatTransGradient, aText);
+                // glow
+                const attribute::SdrGlowAttribute aGlow = createNewSdrGlowAttribute(rSet);
+
+                const sal_Int32 nSoftEdgeRadius(getSoftEdgeRadius(rSet));
+
+                return attribute::SdrLineFillEffectsTextAttribute(aLine, aFill, aLineStartEnd,
+                                                                  aShadow, aFillFloatTransGradient,
+                                                                  aText, aGlow, nSoftEdgeRadius);
             }
 
-            return attribute::SdrLineFillShadowTextAttribute();
+            return attribute::SdrLineFillEffectsTextAttribute();
         }
 
         attribute::SdrLineFillShadowAttribute3D createNewSdrLineFillShadowAttribute(const SfxItemSet& rSet, bool bSuppressFill)

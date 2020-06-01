@@ -22,10 +22,10 @@
 
 #include <xmloff/xmlictxt.hxx>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace text { class XTextCursor; }
     namespace beans { class XPropertySet; }
-} } }
+}
 
 class XMLTextHeaderFooterContext final : public SvXMLImportContext
 {
@@ -39,8 +39,8 @@ class XMLTextHeaderFooterContext final : public SvXMLImportContext
     const OUString sTextLeft;
 
     bool    bInsertContent : 1;
-    bool const    bLeft : 1;
-    bool const    bFirst : 1;
+    bool    bLeft : 1;
+    bool    bFirst : 1;
 
 public:
 

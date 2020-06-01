@@ -21,13 +21,11 @@
 
 #include <com/sun/star/inspection/PropertyControlType.hpp>
 #include <svl/numuno.hxx>
-#include <rtl/math.hxx>
 #include <vcl/GraphicObject.hxx>
 #include <vcl/event.hxx>
 #include <tools/debug.hxx>
 #include <svl/zformat.hxx>
 #include <connectivity/dbconversion.hxx>
-#include <com/sun/star/util/Time.hpp>
 #include "modulepcr.hxx"
 #include <strings.hrc>
 
@@ -220,7 +218,7 @@ namespace pcr
     }
 
     //= OFileUrlControl
-    OFileUrlControl::OFileUrlControl(std::unique_ptr<URLBox> xWidget, std::unique_ptr<weld::Builder> xBuilder, bool bReadOnly)
+    OFileUrlControl::OFileUrlControl(std::unique_ptr<SvtURLBox> xWidget, std::unique_ptr<weld::Builder> xBuilder, bool bReadOnly)
         : OFileUrlControl_Base(PropertyControlType::Unknown, std::move(xBuilder), std::move(xWidget), bReadOnly)
     {
         getTypedControlWindow()->DisableHistory();

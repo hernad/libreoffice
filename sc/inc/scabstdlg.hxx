@@ -48,9 +48,7 @@ class Date;
 enum class CreateNameFlags;
 enum class CellShiftDisabledFlags;
 
-namespace com { namespace sun { namespace star { namespace sheet {
-    struct DataPilotFieldReference;
-} } } }
+namespace com::sun::star::sheet { struct DataPilotFieldReference; }
 
 class AbstractScImportAsciiDlg : public VclAbstractDialog
 {
@@ -434,6 +432,8 @@ public:
                                                             const OUString& aStartStr,
                                                             double          fStep,
                                                             double          fMax,
+                                                            SCSIZE          nSelectHeight,
+                                                            SCSIZE          nSelectWidth,
                                                             sal_uInt16          nPossDir) = 0;
 
     virtual VclPtr<AbstractScGroupDlg> CreateAbstractScGroupDlg(weld::Window* pParent, bool bUnGroup = false) = 0;
@@ -532,7 +532,7 @@ public:
                                                              const SfxItemSet* pArgSet) = 0;
 
     virtual VclPtr<SfxAbstractTabDialog> CreateScCharDlg(weld::Window* pParent,
-        const SfxItemSet* pAttr, const SfxObjectShell* pDocShell) = 0;
+        const SfxItemSet* pAttr, const SfxObjectShell* pDocShell, bool bDrawText) = 0;
 
     virtual VclPtr<SfxAbstractTabDialog> CreateScParagraphDlg(weld::Window* pParent,
         const SfxItemSet* pAttr) = 0;

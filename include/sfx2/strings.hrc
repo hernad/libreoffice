@@ -57,8 +57,6 @@
 #define STR_QRYTEMPL_UPDATE_BTN                 NC_("STR_QRYTEMPL_UPDATE_BTN", "~Update Styles")
 #define STR_QRYTEMPL_KEEP_BTN                   NC_("STR_QRYTEMPL_KEEP_BTN", "~Keep Old Styles")
 #define STR_ACTION_REFRESH                      NC_("STR_ACTION_REFRESH", "Refresh")
-// leave ending space
-#define STR_ACTION_DEFAULT                      NC_("STR_ACTION_DEFAULT", "Reset Default Template ")
 #define STR_CATEGORY_NEW                        NC_("STR_CATEGORY_NEW", "New Category")
 #define STR_CATEGORY_DELETE                     NC_("STR_CATEGORY_DELETE", "Delete Category")
 #define STR_CATEGORY_SELECT                     NC_("STR_CATEGORY_SELECT", "Select Category")
@@ -184,7 +182,7 @@
 
 // Translators: Target types in Auto-redaction dialog
 #define STR_REDACTION_TARGET_TYPE_TEXT          NC_("STR_REDACTION_TARGET_TYPE_TEXT", "Text")
-#define STR_REDACTION_TARGET_TYPE_REGEX         NC_("STR_REDACTION_TARGET_TYPE_REGEX", "Regex")
+#define STR_REDACTION_TARGET_TYPE_REGEX         NC_("STR_REDACTION_TARGET_TYPE_REGEX", "Regular expression")
 #define STR_REDACTION_TARGET_TYPE_PREDEF        NC_("STR_REDACTION_TARGET_TYPE_PREDEF", "Predefined")
 #define STR_REDACTION_TARGET_TYPE_UNKNOWN       NC_("STR_REDACTION_TARGET_TYPE_UNKNOWN", "Unknown")
 
@@ -237,17 +235,11 @@
 #define STR_ERROR_WRONG_CONFIRM                 NC_("STR_ERROR_WRONG_CONFIRM", "Faulty password confirmation")
 #define STR_PDF_EXPORT_SEND                     NC_("STR_PDF_EXPORT_SEND", "Send")
 #define STR_FONT_TABPAGE                        NC_("STR_FONT_TABPAGE", "Font")
-#define STR_PREVIEW_CHECKBOX                    NC_("STR_PREVIEW_CHECKBOX", "Show previews")
 
 #define STR_VIEWVERSIONCOMMENT                  NC_("STR_VIEWVERSIONCOMMENT", "View Version Comment")
 #define STR_NO_NAME_SET                         NC_("STR_NO_NAME_SET", "(no name set)")
 
-#define STR_STYLE_ELEMTLIST                     NC_("STR_STYLE_ELEMTLIST", "Style List")
 #define STR_STYLE_FILTER_HIERARCHICAL           NC_("STR_STYLE_FILTER_HIERARCHICAL", "Hierarchical")
-#define STR_STYLE_FILL_FORMAT_MODE              NC_("STR_STYLE_FILL_FORMAT_MODE", "Fill Format Mode")
-#define STR_STYLE_NEW_STYLE_FROM_SELECTION      NC_("STR_STYLE_NEW_STYLE_FROM_SELECTION", "New Style from Selection")
-#define STR_STYLE_NEW_STYLE_ACTION              NC_("STR_STYLE_NEW_STYLE_ACTION", "Styles actions")
-#define STR_STYLE_UPDATE_STYLE                  NC_("STR_STYLE_UPDATE_STYLE", "Update Style")
 
 #define STR_MACRO_LOSS                          NC_("STR_MACRO_LOSS", "Do you really want to cancel the recording? Any steps recorded up to this point will be lost.")
 #define STR_CANCEL_RECORDING                    NC_("STR_CANCEL_RECORDING", "Cancel Recording")
@@ -279,7 +271,7 @@
 #define STR_DONATE_BUTTON                       NC_("STR_DONATE_BUTTON", "Donate")
 #define STR_WHATSNEW_TEXT                       NC_("STR_WHATSNEW", "You are running version %PRODUCTVERSION of %PRODUCTNAME for the first time. Do you want to learn what's new?")
 #define STR_WHATSNEW_BUTTON                     NC_("STR_WHATSNEW_BUTTON", "Release Notes")
-#define STR_READONLY_DOCUMENT                   NC_("STR_READONLY_DOCUMENT", "This document is open in read-only mode.")
+#define STR_READONLY_DOCUMENT                   NC_("STR_READONLY_DOCUMENT", "This document is open in read-only mode. If you wish to modify the contents, first save it as another document, in a folder you have write access to.")
 #define STR_READONLY_PDF                        NC_("STR_READONLY_PDF", "This PDF is open in read-only mode to allow signing the existing file.")
 #define STR_CLASSIFIED_DOCUMENT                 NC_("STR_CLASSIFIED_DOCUMENT", "The classification label of this document is %1.")
 #define STR_TARGET_DOC_NOT_CLASSIFIED           NC_("STR_TARGET_DOC_NOT_CLASSIFIED", "This document must be classified before the clipboard can be pasted.")
@@ -341,6 +333,8 @@
 #define STR_TEMPLATE_NAME28                     NC_("STR_TEMPLATE_NAME28", "Modern business letter sans-serif")
 #define STR_TEMPLATE_NAME29                     NC_("STR_TEMPLATE_NAME29", "Modern business letter serif")
 #define STR_TEMPLATE_NAME30                     NC_("STR_TEMPLATE_NAME30", "Businesscard with logo")
+#define STR_TEMPLATE_NAME31                     NC_("STR_TEMPLATE_NAME31", "Simple")
+#define STR_TEMPLATE_NAME32                     NC_("STR_TEMPLATE_NAME32", "BPMN")
 
 #define STR_CLEAR_CHAR                          NC_("STR_CLEAR_CHAR", "Remove")
 #define STR_CLEAR_ALL_CHAR                      NC_("STR_CLEAR_ALL_CHAR", "Clear All")

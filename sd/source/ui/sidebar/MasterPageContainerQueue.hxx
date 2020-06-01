@@ -27,7 +27,7 @@
 
 #include <memory>
 
-namespace sd { namespace sidebar {
+namespace sd::sidebar {
 
 /** The queue stores and processes all requests from a MasterPageContainer
     for the creation of previews.
@@ -79,7 +79,7 @@ public:
     void ProcessAllRequests();
 
 private:
-    std::weak_ptr<ContainerAdapter> const mpWeakContainer;
+    std::weak_ptr<ContainerAdapter> mpWeakContainer;
     class PreviewCreationRequest;
     class RequestQueue;
     std::unique_ptr<RequestQueue> mpRequestQueue;
@@ -127,7 +127,7 @@ private:
     DECL_LINK(DelayedPreviewCreation, Timer *, void);
 };
 
-} } // end of namespace sd::sidebar
+} // end of namespace sd::sidebar
 
 #endif
 

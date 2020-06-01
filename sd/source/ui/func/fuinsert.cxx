@@ -159,13 +159,16 @@ void FuInsertGraphic::DoExecute( SfxRequest& rReq )
         if( dynamic_cast< DrawViewShell *>( mpViewShell ) )
         {
             sal_Int8    nAction = DND_ACTION_COPY;
-            SdrObject* pPickObj;
-
-            if( ( ( pPickObj = mpView->GetSelectedSingleObject( mpView->GetPage() ) ) && mbReplaceExistingImage ) || (pPickObj = mpView->GetEmptyPresentationObject( PRESOBJ_GRAPHIC ) ) )
-            {
+            SdrObject* pPickObj = nullptr;
+            if (mbReplaceExistingImage)
+                pPickObj = mpView->GetSelectedSingleObject( mpView->GetPage() );
+            if (pPickObj)
                 nAction = DND_ACTION_LINK;
-            } else {
-                pPickObj = nullptr;
+            else
+            {
+                pPickObj = mpView->GetEmptyPresentationObject( PresObjKind::Graphic );
+                if (pPickObj)
+                    nAction = DND_ACTION_LINK;
             }
 
             Point aPos = mpWindow->GetVisibleCenter();
@@ -287,7 +290,7 @@ void FuInsertOLE::DoExecute( SfxRequest& rReq )
          nSlotId == SID_INSERT_DIAGRAM ||
          nSlotId == SID_INSERT_MATH )
     {
-        PresObjKind ePresObjKind = (nSlotId == SID_INSERT_DIAGRAM) ? PRESOBJ_CHART : PRESOBJ_OBJECT;
+        PresObjKind ePresObjKind = (nSlotId == SID_INSERT_DIAGRAM) ? PresObjKind::Chart : PresObjKind::Object;
 
         SdrObject* pPickObj = mpView->GetEmptyPresentationObject( ePresObjKind );
 
@@ -338,7 +341,7 @@ void FuInsertOLE::DoExecute( SfxRequest& rReq )
 
                 Size aSize( aSz.Width, aSz.Height );
 
-                if (aSize.Height() == 0 || aSize.Width() == 0)
+                if (aSize.IsEmpty())
                 {
                     // rectangle with balanced edge ratio
                     aSize.setWidth( 14100 );
@@ -514,7 +517,7 @@ void FuInsertOLE::DoExecute( SfxRequest& rReq )
                     aSize =Size( aSz.Width, aSz.Height );
 
                     aMapUnit = VCLUnoHelper::UnoEmbed2VCLMapUnit( xObj->getMapUnit( nAspect ) );
-                    if (aSize.Height() == 0 || aSize.Width() == 0)
+                    if (aSize.IsEmpty())
                     {
                         // rectangle with balanced edge ratio
                         aSize.setWidth( 14100 );

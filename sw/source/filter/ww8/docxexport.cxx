@@ -352,12 +352,13 @@ void DocxExport::DoComboBox(const OUString& rName,
 
     m_pDocumentFS->singleElementNS(XML_w, XML_result, FSNS(XML_w, XML_val), OString::number(nId));
 
-    // Loop over the entries
-
-    for (const auto& rItem : rListItems)
+    // unfortunately Word 2013 refuses to load DOCX with more than 25 listEntry
+    SAL_WARN_IF(25 < rListItems.getLength(), "sw.ww8", "DocxExport::DoComboBox data loss with more than 25 entries");
+    auto const nSize(std::min(sal_Int32(25), rListItems.getLength()));
+    for (auto i = 0; i < nSize; ++i)
     {
         m_pDocumentFS->singleElementNS( XML_w, XML_listEntry,
-                FSNS( XML_w, XML_val ), rItem.toUtf8() );
+                FSNS(XML_w, XML_val), rListItems[i].toUtf8() );
     }
 
     m_pDocumentFS->endElementNS( XML_w, XML_ddList );
@@ -754,7 +755,10 @@ void DocxExport::WriteNumbering()
             FSNS( XML_xmlns, XML_w ), m_pFilter->getNamespaceURL(OOX_NS(doc)).toUtf8(),
             FSNS( XML_xmlns, XML_o ), m_pFilter->getNamespaceURL(OOX_NS(vmlOffice)).toUtf8(),
             FSNS( XML_xmlns, XML_r ), m_pFilter->getNamespaceURL(OOX_NS(officeRel)).toUtf8(),
-            FSNS( XML_xmlns, XML_v ), m_pFilter->getNamespaceURL(OOX_NS(vml)).toUtf8() );
+            FSNS( XML_xmlns, XML_v ), m_pFilter->getNamespaceURL(OOX_NS(vml)).toUtf8(),
+            FSNS( XML_xmlns, XML_mc ), m_pFilter->getNamespaceURL(OOX_NS(mce)).toUtf8(),
+            FSNS( XML_xmlns, XML_w14 ), m_pFilter->getNamespaceURL(OOX_NS(w14)).toUtf8(),
+            FSNS( XML_mc, XML_Ignorable ), "w14" );
 
     BulletDefinitions();
 
@@ -940,6 +944,25 @@ void DocxExport::WriteDocVars(const sax_fastparser::FSHelperPtr& pFS)
     }
 }
 
+static auto
+WriteCompat(SwDoc const& rDoc, ::sax_fastparser::FSHelperPtr const& rpFS,
+        sal_Int32 & rTargetCompatibilityMode) -> void
+{
+    if (!rDoc.getIDocumentSettingAccess().get(DocumentSettingId::ADD_EXT_LEADING))
+    {
+        rpFS->singleElementNS(XML_w, XML_noLeading);
+        if (rTargetCompatibilityMode > 14)
+        {   // Word ignores noLeading in compatibilityMode 15
+            rTargetCompatibilityMode = 14;
+        }
+    }
+    // Do not justify lines with manual break
+    if (rDoc.getIDocumentSettingAccess().get(DocumentSettingId::DO_NOT_JUSTIFY_LINES_WITH_MANUAL_BREAK))
+    {
+        rpFS->singleElementNS(XML_w, XML_doNotExpandShiftReturn);
+    }
+}
+
 void DocxExport::WriteSettings()
 {
     SwViewShell *pViewShell(m_pDoc->getIDocumentLayoutAccess().GetCurrentViewShell());
@@ -991,7 +1014,7 @@ void DocxExport::WriteSettings()
     }
 
     // Display Background Shape
-    if (std::shared_ptr<SvxBrushItem> oBrush = getBackground(); oBrush)
+    if (std::unique_ptr<SvxBrushItem> oBrush = getBackground(); oBrush)
     {
         // Turn on the 'displayBackgroundShape'
         pFS->singleElementNS(XML_w, XML_displayBackgroundShape);
@@ -1023,14 +1046,6 @@ void DocxExport::WriteSettings()
         pFS->singleElementNS( XML_w, XML_defaultTabStop, FSNS( XML_w, XML_val ),
             OString::number(m_aSettings.defaultTabStop) );
 
-    // Do not justify lines with manual break
-    if( m_pDoc->getIDocumentSettingAccess().get( DocumentSettingId::DO_NOT_JUSTIFY_LINES_WITH_MANUAL_BREAK ))
-    {
-        pFS->startElementNS(XML_w, XML_compat);
-        pFS->singleElementNS(XML_w, XML_doNotExpandShiftReturn);
-        pFS->endElementNS( XML_w, XML_compat );
-    }
-
     // export current mail merge database and table names
     SwDBData aData = m_pDoc->GetDBData();
     if ( !aData.sDataSource.isEmpty() && aData.nCommandType == css::sdb::CommandType::TABLE && !aData.sCommand.isEmpty() )
@@ -1052,13 +1067,14 @@ void DocxExport::WriteSettings()
     }
 
     // Automatic hyphenation: it's a global setting in Word, it's a paragraph setting in Writer.
-    // Use the setting from the default style.
+    // Set it's value to "auto" and disable on paragraph level, if no hyphenation is used there.
+    pFS->singleElementNS(XML_w, XML_autoHyphenation, FSNS(XML_w, XML_val), "true");
+
+    // Hyphenation details set depending on default style
     SwTextFormatColl* pColl = m_pDoc->getIDocumentStylePoolAccess().GetTextCollFromPool(RES_POOLCOLL_STANDARD, /*bRegardLanguage=*/false);
     const SfxPoolItem* pItem;
     if (pColl && SfxItemState::SET == pColl->GetItemState(RES_PARATR_HYPHENZONE, false, &pItem))
     {
-        pFS->singleElementNS(XML_w, XML_autoHyphenation,
-                             FSNS(XML_w, XML_val), OString::boolean(static_cast<const SvxHyphenZoneItem*>(pItem)->IsHyphen()));
         if (static_cast<const SvxHyphenZoneItem*>(pItem)->IsNoCapsHyphenation())
             pFS->singleElementNS(XML_w, XML_doNotHyphenateCaps);
     }
@@ -1078,17 +1094,46 @@ void DocxExport::WriteSettings()
     // Has themeFontLang information
     uno::Reference< beans::XPropertySet > xPropSet( m_pDoc->GetDocShell()->GetBaseModel(), uno::UNO_QUERY_THROW );
 
-    bool hasProtectionProperties = false;
+    bool bUseGrabBagProtection = false;
+    bool bWriterWantsToProtect = false;
+    bool bWriterWantsToProtectForm = false;
+    bool bWriterWantsToProtectRedline = false;
     bool bHasRedlineProtectionKey = false;
     bool bHasDummyRedlineProtectionKey = false;
+    bool bReadOnlyStatusUnchanged = true;
     uno::Reference< beans::XPropertySetInfo > xPropSetInfo = xPropSet->getPropertySetInfo();
+    if ( m_pDoc->getIDocumentSettingAccess().get(DocumentSettingId::PROTECT_FORM) ||
+         m_pSections->DocumentIsProtected() )
+    {
+        bWriterWantsToProtect = bWriterWantsToProtectForm = true;
+    }
     if ( xPropSetInfo->hasPropertyByName( "RedlineProtectionKey" ) )
     {
         uno::Sequence<sal_Int8> aKey;
         xPropSet->getPropertyValue( "RedlineProtectionKey" ) >>= aKey;
         bHasRedlineProtectionKey = aKey.hasElements();
         bHasDummyRedlineProtectionKey = aKey.getLength() == 1 && aKey[0] == 1;
+        if ( bHasRedlineProtectionKey && !bHasDummyRedlineProtectionKey )
+            bWriterWantsToProtect = bWriterWantsToProtectRedline = true;
     }
+
+    /* Compatibility Mode (tdf#131304)
+     * 11:  .doc level    [Word 97-2003]
+     * 12:  .docx default [Word 2007]  [LO < 7.0]
+     * 14:                [Word 2010]
+     * 15:                [Word 2013/2016/2019]  [LO >= 7.0]
+     *
+     * The PRIMARY purpose of compatibility mode does not seem to be related to layout etc.
+     * Its focus is on sharing files between multiple users, tracking the lowest supported mode in the group.
+     * It is to BENEFIT older programs by not using certain new features that they don't understand.
+     *
+     * The next time the compat mode needs to be changed, I foresee the following steps:
+     * 1.) Accept the new mode: Start round-tripping the new value, indicating we understand that format.
+     * 2.) Many years later, change the TargetCompatilityMode for new documents, when we no longer care
+     *     about working with perfect compatibility with older versions of MS Word.
+     */
+    sal_Int32 nTargetCompatibilityMode = 15; //older versions might not open our files well
+    bool bHasCompatibilityMode = false;
     const OUString aGrabBagName = UNO_NAME_MISC_OBJ_INTEROPGRABBAG;
     if ( xPropSetInfo->hasPropertyByName( aGrabBagName ) )
     {
@@ -1120,6 +1165,8 @@ void DocxExport::WriteSettings()
             {
                 pFS->startElementNS(XML_w, XML_compat);
 
+                WriteCompat(*m_pDoc, pFS, nTargetCompatibilityMode);
+
                 uno::Sequence< beans::PropertyValue > aCompatSettingsSequence;
                 rProp.Value >>= aCompatSettingsSequence;
 
@@ -1140,24 +1187,46 @@ void DocxExport::WriteSettings()
                         else if( rPropVal.Name == "val" )
                             rPropVal.Value >>= aValue;
                     }
+                    if ( aName == "compatibilityMode" )
+                    {
+                        bHasCompatibilityMode = true;
+                        // Among the group of programs sharing this document, the lowest mode is retained.
+                        // Reduce this number if we are not comfortable with the new/unknown mode yet.
+                        // Step 1 in accepting a new mode would be to comment out the following clause
+                        // and roundtrip the new value instead of overwriting with the older number.
+                        // There are no newer modes at the time this code was written.
+                        if ( aValue.toInt32() > nTargetCompatibilityMode )
+                            aValue = OUString::number(nTargetCompatibilityMode);
+                    }
+
                     pFS->singleElementNS( XML_w, XML_compatSetting,
                         FSNS( XML_w, XML_name ), aName.toUtf8(),
                         FSNS( XML_w, XML_uri ),  aUri.toUtf8(),
                         FSNS( XML_w, XML_val ),  aValue.toUtf8());
                 }
 
+                if ( !bHasCompatibilityMode )
+                {
+                    pFS->singleElementNS( XML_w, XML_compatSetting,
+                        FSNS( XML_w, XML_name ), "compatibilityMode",
+                        FSNS( XML_w, XML_uri ),  "http://schemas.microsoft.com/office/word",
+                        FSNS( XML_w, XML_val ),  OString::number(nTargetCompatibilityMode));
+                    bHasCompatibilityMode = true;
+                }
+
                 pFS->endElementNS( XML_w, XML_compat );
             }
             else if (rProp.Name == "DocumentProtection")
             {
-
                 uno::Sequence< beans::PropertyValue > rAttributeList;
                 rProp.Value >>= rAttributeList;
 
                 if (rAttributeList.hasElements())
                 {
-                    sax_fastparser::FastAttributeList* pAttributeList = sax_fastparser::FastSerializerHelper::createAttrList();
+                    rtl::Reference<sax_fastparser::FastAttributeList> xAttributeList = sax_fastparser::FastSerializerHelper::createAttrList();
                     bool bIsProtectionTrackChanges = false;
+                    // if grabbag protection is not enforced, allow Writer protection to override
+                    bool bEnforced = false;
                     for (const auto& rAttribute : std::as_const(rAttributeList))
                     {
                         static DocxStringTokenMap const aTokens[] =
@@ -1178,20 +1247,40 @@ void DocxExport::WriteSettings()
                         if (sal_Int32 nToken = DocxStringGetToken(aTokens, rAttribute.Name))
                         {
                             OUString sValue = rAttribute.Value.get<OUString>();
-                            pAttributeList->add(FSNS(XML_w, nToken), sValue.toUtf8());
+                            xAttributeList->add(FSNS(XML_w, nToken), sValue.toUtf8());
                             if ( nToken == XML_edit && sValue == "trackedChanges" )
                                 bIsProtectionTrackChanges = true;
+                            else if ( nToken == XML_edit && sValue == "readOnly" )
+                            {
+                                // Ignore the case where read-only was not enforced, but now is. That is handled by _MarkAsFinal
+                                bReadOnlyStatusUnchanged = m_pDoc->GetDocShell()->IsSecurityOptOpenReadOnly();
+                            }
+                            else if ( nToken == XML_enforcement )
+                                bEnforced = sValue.toBoolean();
                         }
                     }
 
                     // we have document protection from input DOCX file
-                    // and in the case of change tracking protection, we didn't modify it
+                    if ( !bEnforced )
+                    {
+                        // Leave as an un-enforced suggestion if Writer doesn't want to set any enforcement
+                        bUseGrabBagProtection = !bWriterWantsToProtect;
+                    }
+                    else
+                    {
+                        // Check if the grabbag protection is still valid
+                        // In the case of change tracking protection, we didn't modify it
+                        // and in the case of read-only, we didn't modify it.
+                        bUseGrabBagProtection = (!bIsProtectionTrackChanges || bHasDummyRedlineProtectionKey)
+                                                && bReadOnlyStatusUnchanged;
+                    }
 
-                    sax_fastparser::XFastAttributeListRef xAttributeList(pAttributeList);
-                    if (!bIsProtectionTrackChanges || bHasDummyRedlineProtectionKey)
-                        pFS->singleElementNS(XML_w, XML_documentProtection, xAttributeList);
+                    if ( bUseGrabBagProtection )
+                    {
+                        sax_fastparser::XFastAttributeListRef xFastAttributeList(xAttributeList.get());
+                        pFS->singleElementNS(XML_w, XML_documentProtection, xFastAttributeList);
+                    }
 
-                    hasProtectionProperties = true;
                 }
             }
             else if (rProp.Name == "HyphenationZone")
@@ -1203,15 +1292,26 @@ void DocxExport::WriteSettings()
             }
         }
     }
+    if ( !bHasCompatibilityMode )
+    {
+        pFS->startElementNS(XML_w, XML_compat);
+
+        WriteCompat(*m_pDoc, pFS, nTargetCompatibilityMode);
+
+        pFS->singleElementNS( XML_w, XML_compatSetting,
+            FSNS( XML_w, XML_name ), "compatibilityMode",
+            FSNS( XML_w, XML_uri ),  "http://schemas.microsoft.com/office/word",
+            FSNS( XML_w, XML_val ),  OString::number(nTargetCompatibilityMode));
+        pFS->endElementNS( XML_w, XML_compat );
+    }
 
     WriteDocVars(pFS);
 
-    // Protect form
-    // Section-specific write protection
-    if (! hasProtectionProperties)
+    if ( !bUseGrabBagProtection )
     {
-        if (m_pDoc->getIDocumentSettingAccess().get(DocumentSettingId::PROTECT_FORM) ||
-            m_pSections->DocumentIsProtected())
+        // Protect form - highest priority
+        // Section-specific write protection
+        if ( bWriterWantsToProtectForm )
         {
             // we have form protection from Writer or from input ODT file
 
@@ -1219,16 +1319,15 @@ void DocxExport::WriteSettings()
                 FSNS(XML_w, XML_edit), "forms",
                 FSNS(XML_w, XML_enforcement), "true");
         }
-    }
+        // Protect Change Tracking - next priority
+        else if ( bWriterWantsToProtectRedline )
+        {
+            // we have change tracking protection from Writer or from input ODT file
 
-    // Protect Change Tracking
-    if ( bHasRedlineProtectionKey && !bHasDummyRedlineProtectionKey )
-    {
-        // we have change tracking protection from Writer or from input ODT file
-
-        pFS->singleElementNS(XML_w, XML_documentProtection,
-            FSNS(XML_w, XML_edit), "trackedChanges",
-            FSNS(XML_w, XML_enforcement), "1");
+            pFS->singleElementNS(XML_w, XML_documentProtection,
+                FSNS(XML_w, XML_edit), "trackedChanges",
+                FSNS(XML_w, XML_enforcement), "1");
+        }
     }
 
     // finish settings.xml
@@ -1543,7 +1642,7 @@ void DocxExport::WriteMainText()
     m_aLinkedTextboxesHelper.clear();
 
     // Write background page color
-    if (std::shared_ptr<SvxBrushItem> oBrush = getBackground(); oBrush)
+    if (std::unique_ptr<SvxBrushItem> oBrush = getBackground(); oBrush)
     {
         Color backgroundColor = oBrush->GetColor();
         OString aBackgroundColorStr = msfilter::util::ConvertColor(backgroundColor);

@@ -67,7 +67,6 @@ using ::com::sun::star::uno::UNO_QUERY;
 using ::com::sun::star::uno::Reference;
 using ::com::sun::star::sheet::DataPilotTablePositionData;
 using ::com::sun::star::sheet::DataPilotTableResultData;
-using ::com::sun::star::uno::makeAny;
 
 #define SC_DP_FRAME_INNER_BOLD      20
 #define SC_DP_FRAME_OUTER_BOLD      40
@@ -115,20 +114,20 @@ namespace {
 class ScDPOutputImpl
 {
     ScDocument*         mpDoc;
-    sal_uInt16 const          mnTab;
+    sal_uInt16          mnTab;
     ::std::vector< bool > mbNeedLineCols;
     ::std::vector< SCCOL > mnCols;
 
     ::std::vector< bool > mbNeedLineRows;
     ::std::vector< SCROW > mnRows;
 
-    SCCOL const   mnTabStartCol;
-    SCROW const   mnTabStartRow;
+    SCCOL   mnTabStartCol;
+    SCROW   mnTabStartRow;
 
     SCCOL   mnDataStartCol;
     SCROW   mnDataStartRow;
-    SCCOL const   mnTabEndCol;
-    SCROW const   mnTabEndRow;
+    SCCOL   mnTabEndCol;
+    SCROW   mnTabEndRow;
 
 public:
     ScDPOutputImpl( ScDocument* pDoc, sal_uInt16 nTab,
@@ -747,7 +746,7 @@ void ScDPOutput::HeaderCell( SCCOL nCol, SCROW nRow, SCTAB nTab,
     if ( nFlags & sheet::MemberResultFlags::HASMEMBER )
     {
         bool bNumeric = (nFlags & sheet::MemberResultFlags::NUMERIC) != 0;
-        if (bNumeric && rtl::math::isFinite( rData.Value))
+        if (bNumeric && std::isfinite( rData.Value))
         {
             pDoc->SetValue( nCol, nRow, nTab, rData.Value);
         }

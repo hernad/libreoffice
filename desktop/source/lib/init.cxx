@@ -47,6 +47,7 @@
 #include <rtl/bootstrap.hxx>
 #include <rtl/strbuf.hxx>
 #include <rtl/uri.hxx>
+#include <svl/zforlist.hxx>
 #include <cppuhelper/bootstrap.hxx>
 #include <comphelper/base64.hxx>
 #include <comphelper/dispatchcommand.hxx>
@@ -90,6 +91,8 @@
 
 #include <com/sun/star/linguistic2/LinguServiceManager.hpp>
 #include <com/sun/star/linguistic2/XSpellChecker.hpp>
+#include <com/sun/star/i18n/Calendar2.hpp>
+#include <com/sun/star/i18n/LocaleCalendar2.hpp>
 #include <com/sun/star/i18n/ScriptType.hpp>
 #include <com/sun/star/lang/DisposedException.hpp>
 
@@ -126,7 +129,7 @@
 #include <vcl/virdev.hxx>
 #include <vcl/ImageTree.hxx>
 #include <vcl/ITiledRenderable.hxx>
-#include <vcl/dialog.hxx>
+#include <vcl/dialoghelper.hxx>
 #include <unicode/uchar.h>
 #include <unotools/syslocaleoptions.hxx>
 #include <unotools/mediadescriptor.hxx>
@@ -239,7 +242,6 @@ static const ExtensionMap aImpressExtensionMap[] =
     { "pps",   "MS PowerPoint 97 Autoplay" },
     { "ppt",   "MS PowerPoint 97" },
     { "svg",   "impress_svg_Export" },
-    { "swf",   "impress_flash_Export" },
     { "xhtml", "XHTML Impress File" },
     { "png",   "impress_png_Export"},
     { nullptr, nullptr }
@@ -252,7 +254,6 @@ static const ExtensionMap aDrawExtensionMap[] =
     { "odg",   "draw8" },
     { "pdf",   "draw_pdf_Export" },
     { "svg",   "draw_svg_Export" },
-    { "swf",   "draw_flash_Export" },
     { "xhtml", "XHTML Draw File" },
     { "png",   "draw_png_Export"},
     { nullptr, nullptr }
@@ -1037,6 +1038,11 @@ static void doc_postUnoCommand(LibreOfficeKitDocument* pThis,
                                const char* pCommand,
                                const char* pArguments,
                                bool bNotifyWhenFinished);
+static void doc_setWindowTextSelection(LibreOfficeKitDocument* pThis,
+                                       unsigned nLOKWindowId,
+                                       bool swap,
+                                       int nX,
+                                       int nY);
 static void doc_setTextSelection (LibreOfficeKitDocument* pThis,
                                   int nType,
                                   int nX,
@@ -1130,7 +1136,11 @@ static size_t doc_renderShapeSelection(LibreOfficeKitDocument* pThis, char** pOu
 static void doc_resizeWindow(LibreOfficeKitDocument* pThis, unsigned nLOKWindowId,
                              const int nWidth, const int nHeight);
 
-static void doc_completeFunction(LibreOfficeKitDocument* pThis, int nIndex);
+static void doc_completeFunction(LibreOfficeKitDocument* pThis, const char*);
+
+
+static void doc_sendFormFieldEvent(LibreOfficeKitDocument* pThis,
+                                   const char* pArguments);
 } // extern "C"
 
 namespace {
@@ -1166,7 +1176,8 @@ rtl::Reference<LOKClipboard> forceSetClipboardForCurrentView(LibreOfficeKitDocum
 LibLODocument_Impl::LibLODocument_Impl(const uno::Reference <css::lang::XComponent> &xComponent)
     : mxComponent(xComponent)
 {
-    if (!(m_pDocumentClass = gDocumentClass.lock()))
+    m_pDocumentClass = gDocumentClass.lock();
+    if (!m_pDocumentClass)
     {
         m_pDocumentClass = std::make_shared<LibreOfficeKitDocumentClass>();
 
@@ -1201,6 +1212,7 @@ LibLODocument_Impl::LibLODocument_Impl(const uno::Reference <css::lang::XCompone
         m_pDocumentClass->sendDialogEvent = doc_sendDialogEvent;
         m_pDocumentClass->postUnoCommand = doc_postUnoCommand;
         m_pDocumentClass->setTextSelection = doc_setTextSelection;
+        m_pDocumentClass->setWindowTextSelection = doc_setWindowTextSelection;
         m_pDocumentClass->getTextSelection = doc_getTextSelection;
         m_pDocumentClass->getSelectionType = doc_getSelectionType;
         m_pDocumentClass->getClipboard = doc_getClipboard;
@@ -1243,6 +1255,8 @@ LibLODocument_Impl::LibLODocument_Impl(const uno::Reference <css::lang::XCompone
 
         m_pDocumentClass->createViewWithOptions = doc_createViewWithOptions;
         m_pDocumentClass->completeFunction = doc_completeFunction;
+
+        m_pDocumentClass->sendFormFieldEvent = doc_sendFormFieldEvent;
 
         gDocumentClass = m_pDocumentClass;
     }
@@ -1537,8 +1551,10 @@ void CallbackFlushHandler::queue(const int type, const char* data)
         for (const CallbackData& c : m_queue)
             oss << i++ << ": [" << c.Type << "] [" << c.PayloadString << "].\n";
         SAL_INFO("lok", "Current Queue: " << oss.str());
-        for (const CallbackData& c : m_queue)
-            assert(c.validate());
+        assert(
+            std::all_of(
+                m_queue.begin(), m_queue.end(),
+                [](const CallbackData& c) { return c.validate(); }));
     }
 #endif
 
@@ -1868,65 +1884,65 @@ void CallbackFlushHandler::Invoke()
 {
     comphelper::ProfileZone aZone("CallbackFlushHander::Invoke");
 
-    if (m_pCallback)
+    if (!m_pCallback)
+        return;
+
+    std::scoped_lock<std::mutex> lock(m_mutex);
+
+    SAL_INFO("lok", "Flushing " << m_queue.size() << " elements.");
+    for (const auto& rCallbackData : m_queue)
     {
-        std::scoped_lock<std::mutex> lock(m_mutex);
+        const int type = rCallbackData.Type;
+        const auto& payload = rCallbackData.PayloadString;
+        const int viewId = lcl_isViewCallbackType(type) ? lcl_getViewId(rCallbackData) : -1;
 
-        SAL_INFO("lok", "Flushing " << m_queue.size() << " elements.");
-        for (const auto& rCallbackData : m_queue)
+        if (viewId == -1)
         {
-            const int type = rCallbackData.Type;
-            const auto& payload = rCallbackData.PayloadString;
-            const int viewId = lcl_isViewCallbackType(type) ? lcl_getViewId(rCallbackData) : -1;
-
-            if (viewId == -1)
+            const auto stateIt = m_states.find(type);
+            if (stateIt != m_states.end())
             {
-                const auto stateIt = m_states.find(type);
-                if (stateIt != m_states.end())
+                // If the state didn't change, it's safe to ignore.
+                if (stateIt->second == payload)
+                {
+                    SAL_INFO("lok", "Skipping duplicate [" << type << "]: [" << payload << "].");
+                    continue;
+                }
+
+                stateIt->second = payload;
+            }
+        }
+        else
+        {
+            const auto statesIt = m_viewStates.find(viewId);
+            if (statesIt != m_viewStates.end())
+            {
+                auto& states = statesIt->second;
+                const auto stateIt = states.find(type);
+                if (stateIt != states.end())
                 {
                     // If the state didn't change, it's safe to ignore.
                     if (stateIt->second == payload)
                     {
-                        SAL_INFO("lok", "Skipping duplicate [" << type << "]: [" << payload << "].");
+                        SAL_INFO("lok", "Skipping view duplicate [" << type << ',' << viewId << "]: [" << payload << "].");
                         continue;
                     }
 
+                    SAL_INFO("lok", "Replacing an element in view states [" << type << ',' << viewId << "]: [" << payload << "].");
                     stateIt->second = payload;
                 }
-            }
-            else
-            {
-                const auto statesIt = m_viewStates.find(viewId);
-                if (statesIt != m_viewStates.end())
+                else
                 {
-                    auto& states = statesIt->second;
-                    const auto stateIt = states.find(type);
-                    if (stateIt != states.end())
-                    {
-                        // If the state didn't change, it's safe to ignore.
-                        if (stateIt->second == payload)
-                        {
-                            SAL_INFO("lok", "Skipping view duplicate [" << type << ',' << viewId << "]: [" << payload << "].");
-                            continue;
-                        }
+                    SAL_INFO("lok", "Inserted a new element in view states: [" << type << ',' << viewId << "]: [" << payload << "]");
+                    states.emplace(type, payload);
 
-                        SAL_INFO("lok", "Replacing an element in view states [" << type << ',' << viewId << "]: [" << payload << "].");
-                        stateIt->second = payload;
-                    }
-                    else
-                    {
-                        SAL_INFO("lok", "Inserted a new element in view states: [" << type << ',' << viewId << "]: [" << payload << "]");
-                        states.emplace(type, payload);
-
-                    }
                 }
             }
-
-            m_pCallback(type, payload.c_str(), m_pData);
         }
 
-        m_queue.clear();
+        m_pCallback(type, payload.c_str(), m_pData);
     }
+
+    m_queue.clear();
 }
 
 bool CallbackFlushHandler::removeAll(const std::function<bool (const CallbackFlushHandler::queue_type::value_type&)>& rTestFunc)
@@ -2072,6 +2088,14 @@ void paintTileIOS(LibreOfficeKitDocument* pThis,
 }
 #endif
 
+void setLanguageAndLocale(OUString const & aLangISO)
+{
+    SvtSysLocaleOptions aLocalOptions;
+    aLocalOptions.SetLocaleConfigString(aLangISO);
+    aLocalOptions.SetUILocaleConfigString(aLangISO);
+    aLocalOptions.Commit();
+}
+
 } // anonymous namespace
 
 // Wonder global state ...
@@ -2128,14 +2152,21 @@ static LibreOfficeKitDocument* lo_documentLoadWithOptions(LibreOfficeKit* pThis,
 
         if (!aLanguage.isEmpty())
         {
+            SfxLokHelper::setDefaultLanguage(aLanguage);
+            // Set the LOK language tag, used for dialog tunneling.
+            comphelper::LibreOfficeKit::setLanguageTag(LanguageTag(aLanguage));
+            comphelper::LibreOfficeKit::setLocale(LanguageTag(aLanguage));
+
+            SAL_INFO("lok", "Set document language to " << aLanguage);
             // use with care - it sets it for the entire core, not just the
             // document
-            SvtSysLocaleOptions aSysLocaleOptions;
-            aSysLocaleOptions.SetLocaleConfigString(aLanguage);
-            aSysLocaleOptions.SetUILocaleConfigString(aLanguage);
-            // Set the LOK language tag, used for dialog tunneling.
-            comphelper::LibreOfficeKit::setLanguageTag(aSysLocaleOptions.GetLanguageTag());
+            setLanguageAndLocale(aLanguage);
+            // Need to reset the static initialized values
+            SvNumberFormatter::resetTheCurrencyTable();
         }
+
+        const OUString aDeviceFormFactor = extractParameter(aOptions, "DeviceFormFactor");
+        SfxLokHelper::setDeviceFormFactor(aDeviceFormFactor);
 
         uno::Sequence<css::beans::PropertyValue> aFilterOptions(2);
         aFilterOptions[0] = css::beans::PropertyValue( "FilterOptions",
@@ -2453,7 +2484,6 @@ static int doc_saveAs(LibreOfficeKitDocument* pThis, const char* sUrl, const cha
             aFilterOptions = temp + aFilterOptions.copy(bIndex+12);
         }
 
-        aIndex = -1;
         if ((aIndex = aFilterOptions.indexOf(",FullSheetPreview=")) >= 0)
         {
             int bIndex = aFilterOptions.indexOf("FULLSHEETPREVEND");
@@ -2627,7 +2657,9 @@ static void doc_iniUnoCommands ()
         OUString(".uno:ToggleMergeCells"),
         OUString(".uno:NumberFormatCurrency"),
         OUString(".uno:NumberFormatPercent"),
+        OUString(".uno:NumberFormatDecimal"),
         OUString(".uno:NumberFormatDate"),
+        OUString(".uno:FrameLineColor"),
         OUString(".uno:SortAscending"),
         OUString(".uno:SortDescending"),
         OUString(".uno:TrackChanges"),
@@ -2649,7 +2681,15 @@ static void doc_iniUnoCommands ()
         OUString(".uno:OnlineAutoFormat"),
         OUString(".uno:InsertSymbol"),
         OUString(".uno:EditRegion"),
-        OUString(".uno:ThesaurusDialog")
+        OUString(".uno:ThesaurusDialog"),
+        OUString(".uno:Orientation"),
+        OUString(".uno:ObjectAlignLeft"),
+        OUString(".uno:ObjectAlignRight"),
+        OUString(".uno:AlignCenter"),
+        OUString(".uno:TransformPosX"),
+        OUString(".uno:TransformPosY"),
+        OUString(".uno:TransformWidth"),
+        OUString(".uno:TransformHeight")
     };
 
     util::URL aCommandURL;
@@ -3530,6 +3570,7 @@ static void doc_sendDialogEvent(LibreOfficeKitDocument* /*pThis*/, unsigned nWin
         const OUString sTypeAction("TYPE");
         const OUString sUpAction("UP");
         const OUString sDownAction("DOWN");
+        const OUString sValue("VALUE");
 
         try
         {
@@ -3560,6 +3601,17 @@ static void doc_sendDialogEvent(LibreOfficeKitDocument* /*pThis*/, unsigned nWin
 
                         pUIWindow->execute(sClearAction, aMap);
                         pUIWindow->execute(sTypeAction, aMap);
+                    }
+                    else if (aMap["cmd"] == "value")
+                    {
+                        aMap["VALUE"] = aMap["data"];
+                        pUIWindow->execute(sValue, aMap);
+                    }
+                    else if (aMap["cmd"] == "selecttab")
+                    {
+                        aMap["POS"] = aMap["data"];
+
+                        pUIWindow->execute(sSelectAction, aMap);
                     }
                     else
                         bIsClickAction = true;
@@ -3602,18 +3654,7 @@ static void doc_postUnoCommand(LibreOfficeKitDocument* pThis, const char* pComma
     if (nView < 0)
         return;
 
-    // Set/unset mobile view for LOK
-    if (gImpl && aCommand == ".uno:LOKSetMobile")
-    {
-        comphelper::LibreOfficeKit::setMobile(nView);
-        return;
-    }
-    else if (gImpl && aCommand == ".uno:LOKUnSetMobile")
-    {
-        comphelper::LibreOfficeKit::setMobile(nView, false);
-        return;
-    }
-    else if (gImpl && aCommand == ".uno:ToggleOrientation")
+    if (gImpl && aCommand == ".uno:ToggleOrientation")
     {
         ExecuteOrientationChange();
         return;
@@ -3802,12 +3843,10 @@ static void doc_postWindowMouseEvent(LibreOfficeKitDocument* /*pThis*/, unsigned
     }
 
     const Point aPos(nX, nY);
+
     MouseEvent aEvent(aPos, nCount, MouseEventModifiers::SIMPLECLICK, nButtons, nModifier);
 
-    if (Dialog* pDialog = dynamic_cast<Dialog*>(pWindow.get()))
-    {
-        pDialog->EnableInput();
-    }
+    vcl::EnableDialogInput(pWindow);
 
     switch (nType)
     {
@@ -3856,10 +3895,7 @@ static void doc_postWindowGestureEvent(LibreOfficeKitDocument* /*pThis*/, unsign
         PanningOrientation::Vertical,
     };
 
-    if (Dialog* pDialog = dynamic_cast<Dialog*>(pWindow.get()))
-    {
-        pDialog->EnableInput();
-    }
+    vcl::EnableDialogInput(pWindow);
 
     Application::PostGestureEvent(VclEventId::WindowGestureEvent, pWindow, &aEvent);
 }
@@ -3879,6 +3915,31 @@ static void doc_setTextSelection(LibreOfficeKitDocument* pThis, int nType, int n
     }
 
     pDoc->setTextSelection(nType, nX, nY);
+}
+
+static void doc_setWindowTextSelection(LibreOfficeKitDocument* /*pThis*/, unsigned nLOKWindowId, bool swap, int nX, int nY)
+{
+    comphelper::ProfileZone aZone("doc_setWindowTextSelection");
+
+    SolarMutexGuard aGuard;
+    SetLastExceptionMsg();
+
+    VclPtr<Window> pWindow = vcl::Window::FindLOKWindow(nLOKWindowId);
+    if (!pWindow)
+    {
+        SetLastExceptionMsg("Document doesn't support dialog rendering, or window not found.");
+        return;
+    }
+
+
+    Size aOffset(pWindow->GetOutOffXPixel(), pWindow->GetOutOffYPixel());
+    Point aCursorPos(nX, nY);
+    aCursorPos.Move(aOffset);
+    sal_uInt16 nModifier = swap ? KEY_MOD1 + KEY_MOD2 : KEY_SHIFT;
+
+    MouseEvent aCursorEvent(aCursorPos, 1, MouseEventModifiers::SIMPLECLICK, 0, nModifier);
+    Application::PostMouseEvent(VclEventId::WindowMouseButtonDown, pWindow, &aCursorEvent);
+    Application::PostMouseEvent(VclEventId::WindowMouseButtonUp, pWindow, &aCursorEvent);
 }
 
 static bool getFromTransferrable(
@@ -4292,9 +4353,9 @@ static char* getLanguages(const char* pCommand)
     boost::property_tree::ptree aValues;
     boost::property_tree::ptree aChild;
     OUString sLanguage;
-    for ( sal_Int32 itLocale = 0; itLocale < aLocales.getLength(); itLocale++ )
+    for ( css::lang::Locale const & locale : std::as_const(aLocales) )
     {
-        const LanguageTag aLanguageTag( aLocales[itLocale]);
+        const LanguageTag aLanguageTag( locale );
         sLanguage = SvtLanguageTable::GetLanguageString(aLanguageTag.getLanguageType());
         if (sLanguage.startsWith("{") && sLanguage.endsWith("}"))
             continue;
@@ -4412,8 +4473,8 @@ static char* getStyles(LibreOfficeKitDocument* pThis, const char* pCommand)
     boost::property_tree::ptree aTree;
     aTree.put("commandName", pCommand);
     uno::Reference<css::style::XStyleFamiliesSupplier> xStyleFamiliesSupplier(pDocument->mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XNameAccess> xStyleFamilies = xStyleFamiliesSupplier->getStyleFamilies();
-    uno::Sequence<OUString> aStyleFamilies = xStyleFamilies->getElementNames();
+    const uno::Reference<container::XNameAccess> xStyleFamilies = xStyleFamiliesSupplier->getStyleFamilies();
+    const uno::Sequence<OUString> aStyleFamilies = xStyleFamilies->getElementNames();
 
     static const std::vector<OUString> aWriterStyles =
     {
@@ -4432,10 +4493,9 @@ static char* getStyles(LibreOfficeKitDocument* pThis, const char* pCommand)
     std::set<OUString> aDefaultStyleNames;
 
     boost::property_tree::ptree aValues;
-    for (sal_Int32 nStyleFam = 0; nStyleFam < aStyleFamilies.getLength(); ++nStyleFam)
+    for (OUString const & sStyleFam : aStyleFamilies)
     {
         boost::property_tree::ptree aChildren;
-        OUString sStyleFam = aStyleFamilies[nStyleFam];
         uno::Reference<container::XNameAccess> xStyleFamily(xStyleFamilies->getByName(sStyleFam), uno::UNO_QUERY);
 
         // Writer provides a huge number of styles, we have a list of 7 "default" styles which
@@ -4472,7 +4532,6 @@ static char* getStyles(LibreOfficeKitDocument* pThis, const char* pCommand)
 
     // Header & Footer Styles
     {
-        OUString sName;
         boost::property_tree::ptree aChild;
         boost::property_tree::ptree aChildren;
         const OUString sPageStyles("PageStyles");
@@ -4481,16 +4540,16 @@ static char* getStyles(LibreOfficeKitDocument* pThis, const char* pCommand)
 
         if (xStyleFamilies->hasByName(sPageStyles) && (xStyleFamilies->getByName(sPageStyles) >>= xContainer))
         {
-            uno::Sequence<OUString> aSeqNames = xContainer->getElementNames();
-            for (sal_Int32 itName = 0; itName < aSeqNames.getLength(); itName++)
+            const uno::Sequence<OUString> aSeqNames = xContainer->getElementNames();
+            for (OUString const & sName : aSeqNames)
             {
                 bool bIsPhysical;
-                sName = aSeqNames[itName];
                 xProperty.set(xContainer->getByName(sName), uno::UNO_QUERY);
                 if (xProperty.is() && (xProperty->getPropertyValue("IsPhysical") >>= bIsPhysical) && bIsPhysical)
                 {
-                    xProperty->getPropertyValue("DisplayName") >>= sName;
-                    aChild.put("", sName.toUtf8());
+                    OUString displayName;
+                    xProperty->getPropertyValue("DisplayName") >>= displayName;
+                    aChild.put("", displayName.toUtf8());
                     aChildren.push_back(std::make_pair("", aChild));
                 }
             }
@@ -4840,7 +4899,11 @@ static int doc_createViewWithOptions(LibreOfficeKitDocument* pThis,
     {
         // Set the LOK language tag, used for dialog tunneling.
         comphelper::LibreOfficeKit::setLanguageTag(LanguageTag(aLanguage));
+        comphelper::LibreOfficeKit::setLocale(LanguageTag(aLanguage));
     }
+
+    const OUString aDeviceFormFactor = extractParameter(aOptions, "DeviceFormFactor");
+    SfxLokHelper::setDeviceFormFactor(aDeviceFormFactor);
 
     int nId = SfxLokHelper::createView();
 
@@ -4917,7 +4980,9 @@ static void doc_setViewLanguage(SAL_UNUSED_PARAMETER LibreOfficeKitDocument* /*p
     SolarMutexGuard aGuard;
     SetLastExceptionMsg();
 
-    SfxLokHelper::setViewLanguage(nId, OStringToOUString(language, RTL_TEXTENCODING_UTF8));
+    OUString sLanguage = OStringToOUString(language, RTL_TEXTENCODING_UTF8);
+    SfxLokHelper::setViewLanguage(nId, sLanguage);
+    SfxLokHelper::setViewLocale(nId, sLanguage);
 }
 
 
@@ -4978,7 +5043,7 @@ unsigned char* doc_renderFontOrientation(SAL_UNUSED_PARAMETER LibreOfficeKitDocu
             int nFontWidth = aRect.BottomRight().X() + 1;
             int nFontHeight = aRect.BottomRight().Y() + 1;
 
-            if (!(nFontWidth > 0 && nFontHeight > 0))
+            if (nFontWidth <= 0 || nFontHeight <= 0)
                 break;
 
             if (*pFontWidth > 0 && *pFontHeight > 0)
@@ -5103,7 +5168,7 @@ static void doc_paintWindowForView(LibreOfficeKitDocument* pThis, unsigned nLOKW
     aMapMode.SetOrigin(Point(-(nX / fDPIScale), -(nY / fDPIScale)));
     pDevice->SetMapMode(aMapMode);
 
-    pWindow->PaintToDevice(pDevice.get(), Point(0, 0), Size());
+    pWindow->PaintToDevice(pDevice.get(), Point(0, 0));
 
     CGContextRelease(cgc);
 
@@ -5118,7 +5183,7 @@ static void doc_paintWindowForView(LibreOfficeKitDocument* pThis, unsigned nLOKW
     aMapMode.SetOrigin(Point(-(nX / fDPIScale), -(nY / fDPIScale)));
     pDevice->SetMapMode(aMapMode);
 
-    pWindow->PaintToDevice(pDevice.get(), Point(0, 0), Size());
+    pWindow->PaintToDevice(pDevice.get(), Point(0, 0));
 #endif
 
     comphelper::LibreOfficeKit::setDialogPainting(false);
@@ -5140,10 +5205,12 @@ static void doc_postWindow(LibreOfficeKitDocument* /*pThis*/, unsigned nLOKWindo
 
     if (nAction == LOK_WINDOW_CLOSE)
     {
-        if (Dialog* pDialog = dynamic_cast<Dialog*>(pWindow.get()))
-            pDialog->Close();
-        else if (FloatingWindow* pFloatWin = dynamic_cast<FloatingWindow*>(pWindow.get()))
-            pFloatWin->EndPopupMode(FloatWinPopupEndFlags::Cancel | FloatWinPopupEndFlags::CloseAll);
+        bool bWasDialog = vcl::CloseDialog(pWindow);
+        if (!bWasDialog)
+        {
+            if (FloatingWindow* pFloatWin = dynamic_cast<FloatingWindow*>(pWindow.get()))
+                pFloatWin->EndPopupMode(FloatWinPopupEndFlags::Cancel | FloatWinPopupEndFlags::CloseAll);
+        }
     }
     else if (nAction == LOK_WINDOW_PASTE)
     {
@@ -5344,7 +5411,7 @@ static void doc_resizeWindow(LibreOfficeKitDocument* /*pThis*/, unsigned nLOKWin
     pWindow->SetSizePixel(Size(nWidth, nHeight));
 }
 
-static void doc_completeFunction(LibreOfficeKitDocument* pThis, int nIndex)
+static void doc_completeFunction(LibreOfficeKitDocument* pThis, const char* pFunctionName)
 {
     SolarMutexGuard aGuard;
     SetLastExceptionMsg();
@@ -5356,7 +5423,34 @@ static void doc_completeFunction(LibreOfficeKitDocument* pThis, int nIndex)
         return;
     }
 
-    pDoc->completeFunction(nIndex);
+    pDoc->completeFunction(OUString::fromUtf8(pFunctionName));
+}
+
+
+static void doc_sendFormFieldEvent(LibreOfficeKitDocument* pThis, const char* pArguments)
+{
+    SolarMutexGuard aGuard;
+
+    // Supported in Writer only
+    if (doc_getDocumentType(pThis) != LOK_DOCTYPE_TEXT)
+            return;
+
+    StringMap aMap(jsonToStringMap(pArguments));
+    ITiledRenderable* pDoc = getTiledRenderable(pThis);
+    if (!pDoc)
+    {
+        SetLastExceptionMsg("Document doesn't support tiled rendering!");
+        return;
+    }
+
+    // Sanity check
+    if (aMap.find("type") == aMap.end() || aMap.find("cmd") == aMap.end())
+    {
+        SetLastExceptionMsg("Wrong arguments for sendFormFieldEvent!");
+        return;
+    }
+
+    pDoc->executeFromFieldEvent(aMap);
 }
 
 static char* lo_getError (LibreOfficeKit *pThis)
@@ -5459,15 +5553,6 @@ static char* lo_getVersionInfo(SAL_UNUSED_PARAMETER LibreOfficeKit* /*pThis*/)
         "}"
     );
     return convertOUString(ReplaceStringHookProc(sVersionStrTemplate));
-}
-
-static void force_c_locale()
-{
-    // force locale (and resource files loaded) to en-US
-    OUString aLangISO("en-US");
-    SvtSysLocaleOptions aLocalOptions;
-    aLocalOptions.SetLocaleConfigString(aLangISO);
-    aLocalOptions.SetUILocaleConfigString(aLangISO);
 }
 
 static void aBasicErrorFunc(const OUString& rError, const OUString& rAction)
@@ -5617,6 +5702,14 @@ static void preloadData()
         xSpellChecker->isValid("forcefed", it, aNone);
     }
     std::cerr << "\n";
+
+    // Hack to load and cache the module liblocaledata_others.so which is not loaded normally
+    // (when loading dictionaries of just non-Asian locales). Creating a XCalendar4 of one Asian locale
+    // will cheaply load this missing "others" locale library. Appending an Asian locale in
+    // LOK_WHITELIST_LANGUAGES env-var also works but at the cost of loading that dictionary.
+    css::uno::Reference< css::i18n::XCalendar4 > xCal = css::i18n::LocaleCalendar2::create(comphelper::getProcessComponentContext());
+    css::lang::Locale aAsianLocale = {"hi", "IN", ""};
+    xCal->loadDefaultCalendar(aAsianLocale);
 
     // preload all available thesauri
     css::uno::Reference<linguistic2::XThesaurus> xThesaurus(xLngSvcMgr->getThesaurus());
@@ -5887,6 +5980,14 @@ static int lo_initialize(LibreOfficeKit* pThis, const char* pAppPath, const char
             SfxApplication::GetOrCreate();
 #endif
 
+#if HAVE_FEATURE_ANDROID_LOK
+            // Register the bundled extensions - so that the dictionaries work
+            desktop::Desktop::SynchronizeExtensionRepositories(false);
+            bool bFailed = desktop::Desktop::CheckExtensionDependencies();
+            if (bFailed)
+                SAL_INFO("lok", "CheckExtensionDependencies failed");
+#endif
+
             if (eStage == PRE_INIT)
             {
                 {
@@ -5932,7 +6033,7 @@ static int lo_initialize(LibreOfficeKit* pThis, const char* pAppPath, const char
                 Application::ReleaseSolarMutex();
             }
 
-            force_c_locale();
+            setLanguageAndLocale("en-US");
         }
 
         if (eStage != PRE_INIT)

@@ -42,9 +42,9 @@
 #include <com/sun/star/embed/Aspects.hpp>
 #include <memory>
 
-namespace com { namespace sun { namespace star { namespace datatransfer { namespace dnd { class XDragGestureRecognizer; } } } } }
-namespace com { namespace sun { namespace star { namespace io { class XInputStream; } } } }
-namespace com { namespace sun { namespace star { namespace datatransfer { namespace dnd { class XDropTarget; } } } } }
+namespace com::sun::star::datatransfer::dnd { class XDragGestureRecognizer; }
+namespace com::sun::star::io { class XInputStream; }
+namespace com::sun::star::datatransfer::dnd { class XDropTarget; }
 
 namespace tools { template <typename T> class SvRef; }
 template <typename Arg, typename Ret> class Link;
@@ -476,7 +476,7 @@ public:
     virtual             ~DropTargetHelper();
 
                         // typically called by the application in ::AcceptDrop and ::ExecuteDrop and (see above)
-    bool                IsDropFormatSupported( SotClipboardFormatId nFormat );
+    bool                IsDropFormatSupported(SotClipboardFormatId nFormat) const;
 
     const DataFlavorExVector& GetDataFlavorExVector() const {return maFormats; }
 
@@ -490,7 +490,6 @@ class VCL_DLLPUBLIC TransferDataContainer : public TransferableHelper
 
     virtual void        AddSupportedFormats() override;
     virtual bool        GetData( const css::datatransfer::DataFlavor& rFlavor, const OUString& rDestDoc ) override;
-    virtual void        DragFinished( sal_Int8 nDropAction ) override;
 
 public:
 
@@ -509,6 +508,7 @@ public:
     using TransferableHelper::StartDrag;
     void                StartDrag( vcl::Window* pWindow, sal_Int8 nDragSourceActions,
                                    const Link<sal_Int8,void>& rCallbck );
+    virtual void        DragFinished( sal_Int8 nDropAction ) override;
 };
 
 css::uno::Reference<css::datatransfer::clipboard::XClipboard> VCL_DLLPUBLIC GetSystemClipboard();

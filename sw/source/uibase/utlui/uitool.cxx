@@ -38,6 +38,7 @@
 #include <unotools/localedatawrapper.hxx>
 #include <com/sun/star/frame/XDispatch.hpp>
 #include <com/sun/star/frame/XDispatchProvider.hpp>
+#include <com/sun/star/frame/XFrame.hpp>
 #include <com/sun/star/util/URLTransformer.hpp>
 #include <com/sun/star/util/XURLTransformer.hpp>
 #include <comphelper/processfactory.hxx>
@@ -73,19 +74,6 @@
 using namespace ::com::sun::star;
 
 // General list of string pointer
-
-// Switch metric
-
-void SetMetric(MetricFormatter& rCtrl, FieldUnit eUnit)
-{
-    SwTwips nMin = static_cast< SwTwips >(rCtrl.GetMin(FieldUnit::TWIP));
-    SwTwips nMax = static_cast< SwTwips >(rCtrl.GetMax(FieldUnit::TWIP));
-
-    rCtrl.SetUnit(eUnit);
-
-    rCtrl.SetMin(nMin, FieldUnit::TWIP);
-    rCtrl.SetMax(nMax, FieldUnit::TWIP);
-}
 
 // Set boxinfo attribute
 
@@ -661,7 +649,7 @@ void SwToSfxPageDescAttr( SfxItemSet& rCoreSet )
 {
     const SfxPoolItem* pItem = nullptr;
     OUString aName;
-    ::o3tl::optional<sal_uInt16> oNumOffset;
+    ::std::optional<sal_uInt16> oNumOffset;
     bool bPut = true;
     switch( rCoreSet.GetItemState( RES_PAGEDESC, true, &pItem ) )
     {
@@ -726,9 +714,8 @@ void FillCharStyleListBox(weld::ComboBox& rToFill, SwDocShell* pDocSh, bool bSor
     const int nOffset = rToFill.get_count() > 0 ? 1 : 0;
     rToFill.freeze();
     SfxStyleSheetBasePool* pPool = pDocSh->GetStyleSheetPool();
-    pPool->SetSearchMask(SfxStyleFamily::Char);
     SwDoc* pDoc = pDocSh->GetDoc();
-    const SfxStyleSheetBase* pBase = pPool->First();
+    const SfxStyleSheetBase* pBase = pPool->First(SfxStyleFamily::Char);
     const OUString sStandard(SwResId(STR_POOLCHR_STANDARD));
     while(pBase)
     {

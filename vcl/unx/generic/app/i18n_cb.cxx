@@ -22,6 +22,7 @@
 
 #include <o3tl/safeint.hxx>
 #include <osl/thread.h>
+#include <sal/log.hxx>
 
 #include <X11/Xlib.h>
 
@@ -97,8 +98,10 @@ Preedit_DeleteText(preedit_text_t *ptext, int from, int howmuch)
     else
     {
           // XXX this indicates an error, are we out of sync ?
-          fprintf(stderr, "Preedit_DeleteText( from=%i to=%i length=%i )\n",
-                from, to, ptext->nLength );
+          SAL_INFO("vcl.app", "Preedit_DeleteText( from=" << from
+                  << " to=" << to
+                  << " length=" << ptext->nLength
+                  << " ).");
           fprintf (stderr, "\t XXX internal error, out of sync XXX\n");
 
           ptext->nLength = from;
@@ -225,8 +228,9 @@ Preedit_UpdateAttributes ( preedit_text_t* ptext, XIMFeedback const * feedback,
     if ( (from + amount) > static_cast<int>(ptext->nLength) )
     {
         // XXX this indicates an error, are we out of sync ?
-        fprintf (stderr, "Preedit_UpdateAttributes( %i + %i > %i )\n",
-            from, amount, ptext->nLength );
+        SAL_INFO("vcl.app", "Preedit_UpdateAttributes( "
+                << from << " + " << amount << " > " << ptext->nLength
+                << " ).");
         fprintf (stderr, "\t XXX internal error, out of sync XXX\n");
 
         return;
@@ -398,12 +402,7 @@ GetPreeditSpotLocation(XIC ic, XPointer client_data)
 void
 PreeditCaretCallback ( XIC ic, XPointer client_data,
     XIMPreeditCaretCallbackStruct *call_data )
-#else
-void
-PreeditCaretCallback ( XIC, XPointer,XIMPreeditCaretCallbackStruct* )
-#endif
 {
-    #if OSL_DEBUG_LEVEL > 1
     // XXX PreeditCaretCallback is pure debug code for now
     const char *direction = "?";
     const char *style = "?";
@@ -430,12 +429,20 @@ PreeditCaretCallback ( XIC, XPointer,XIMPreeditCaretCallbackStruct* )
         case XIMDontChange:   direction = "Don't change";  break;
     }
 
-    fprintf (stderr, "PreeditCaretCallback( ic=%p, client=%p,\n",
-        ic, client_data );
-    fprintf (stderr, "\t position=%i, direction=\"%s\", style=\"%s\" )\n",
-        call_data->position, direction, style );
-    #endif
+    SAL_INFO("vcl.app", "PreeditCaretCallback( ic=" << ic
+            << ", client=" << client_data
+            << ",");
+    SAL_INFO("vcl.app", "\t position=" << call_data->position
+            << ", direction=\"" << direction
+            << "\", style=\"" << style
+            << "\" ).");
 }
+#else
+void
+PreeditCaretCallback ( XIC, XPointer, XIMPreeditCaretCallbackStruct* )
+{
+}
+#endif
 
 // v. commit string callback: convert an extended text input (iiimp ... )
 //     into an ordinary key-event
@@ -462,45 +469,8 @@ StatusDoneCallback (XIC, XPointer, XPointer)
 }
 
 void
-StatusDrawCallback (XIC, XPointer, XIMStatusDrawCallbackStruct *call_data)
+StatusDrawCallback (XIC, XPointer, XIMStatusDrawCallbackStruct *)
 {
-    if( call_data->type == XIMTextType )
-    {
-        OUString aText;
-        if( call_data->data.text )
-        {
-            // XIM with text
-            char* pMBString = nullptr;
-            size_t nLength = 0;
-            if( call_data->data.text->encoding_is_wchar )
-            {
-                if( call_data->data.text->string.wide_char )
-                {
-                    wchar_t* pWString = call_data->data.text->string.wide_char;
-                    size_t nBytes = wcstombs( nullptr, pWString, 1024 );
-                    pMBString = static_cast<char*>(alloca( nBytes+1 ));
-                    nLength = wcstombs( pMBString, pWString, nBytes+1 );
-                }
-            }
-            else
-            {
-                if( call_data->data.text->string.multi_byte )
-                {
-                    pMBString = call_data->data.text->string.multi_byte;
-                    nLength = strlen( pMBString );
-                }
-            }
-            if( nLength )
-                aText = OUString( pMBString, nLength, osl_getThreadTextEncoding() );
-        }
-    }
-#if OSL_DEBUG_LEVEL > 1
-    else
-    {
-        fprintf( stderr, "XIMStatusDataType %s not supported\n",
-            call_data->type == XIMBitmapType ? "XIMBitmapType" : OString::number(call_data->type).getStr() );
-    }
-#endif
 }
 
 // vii. destroy callbacks: internally disable all IC/IM calls

@@ -22,9 +22,9 @@
 #include <oox/drawingml/theme.hxx>
 #include <drawingml/fillproperties.hxx>
 #include <drawingml/graphicproperties.hxx>
-#include <drawingml/scene3dcontext.hxx>
 #include <drawingml/lineproperties.hxx>
 #include <drawingml/presetgeometrynames.hxx>
+#include <drawingml/shape3dproperties.hxx>
 #include "effectproperties.hxx"
 #include <oox/drawingml/shapepropertymap.hxx>
 #include <drawingml/textbody.hxx>
@@ -46,7 +46,7 @@
 #include <oox/mathml/importutils.hxx>
 #include <oox/mathml/import.hxx>
 #include <oox/token/properties.hxx>
-#include "diagram/diagram.hxx"
+#include "diagram/datamodel.hxx"
 
 #include <comphelper/classids.hxx>
 #include <comphelper/propertysequence.hxx>
@@ -62,12 +62,10 @@
 #include <com/sun/star/awt/FontWeight.hpp>
 #include <com/sun/star/graphic/XGraphic.hpp>
 #include <com/sun/star/container/XNamed.hpp>
-#include <com/sun/star/container/XNameContainer.hpp>
-#include <com/sun/star/beans/XMultiPropertySet.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#include <com/sun/star/xml/AttributeData.hpp>
 #include <com/sun/star/xml/dom/XDocument.hpp>
 #include <com/sun/star/xml/sax/XFastSAXSerializable.hpp>
+#include <com/sun/star/drawing/FillStyle.hpp>
 #include <com/sun/star/drawing/HomogenMatrix3.hpp>
 #include <com/sun/star/drawing/TextVerticalAdjust.hpp>
 #include <com/sun/star/drawing/GraphicExportFilter.hpp>
@@ -87,8 +85,8 @@
 #include <basegfx/matrix/b2dhommatrix.hxx>
 #include <com/sun/star/document/XActionLockable.hpp>
 #include <com/sun/star/chart2/data/XDataReceiver.hpp>
-#include <svl/outstrm.hxx>
 #include <svx/svdtrans.hxx>
+#include <tools/stream.hxx>
 #include <unotools/streamwrap.hxx>
 #include <unotools/fltrcfg.hxx>
 #include <vcl/graph.hxx>
@@ -98,11 +96,7 @@
 #include <sal/log.hxx>
 #include <svx/unoapi.hxx>
 #include <svx/unoshape.hxx>
-#include <svx/xfillit0.hxx>
 #include <svx/sdtaitm.hxx>
-#include <svx/DiagramDataInterface.hxx>
-
-#include <vcl/wmf.hxx>
 
 using namespace ::oox::core;
 using namespace ::com::sun::star;
@@ -198,7 +192,7 @@ Shape::~Shape()
 
 table::TablePropertiesPtr const & Shape::getTableProperties()
 {
-    if ( !mpTablePropertiesPtr.get() )
+    if ( !mpTablePropertiesPtr )
         mpTablePropertiesPtr = std::make_shared<table::TableProperties>();
     return mpTablePropertiesPtr;
 }
@@ -327,7 +321,7 @@ void Shape::applyShapeReference( const Shape& rReferencedShape, bool bUseText )
 {
     SAL_INFO("oox.drawingml", "Shape::applyShapeReference: apply '" << rReferencedShape.msId << "' to '" << msId << "'");
 
-    if ( rReferencedShape.mpTextBody.get() && bUseText )
+    if ( rReferencedShape.mpTextBody && bUseText )
         mpTextBody = std::make_shared<TextBody>( *rReferencedShape.mpTextBody );
     else
         mpTextBody.reset();
@@ -335,7 +329,7 @@ void Shape::applyShapeReference( const Shape& rReferencedShape, bool bUseText )
     mpShapeRefLinePropPtr = std::make_shared<LineProperties>( rReferencedShape.getActualLineProperties(nullptr) );
     mpShapeRefFillPropPtr = std::make_shared<FillProperties>( rReferencedShape.getActualFillProperties(nullptr, nullptr) );
     mpCustomShapePropertiesPtr = std::make_shared<CustomShapeProperties>( *rReferencedShape.mpCustomShapePropertiesPtr );
-    mpTablePropertiesPtr = table::TablePropertiesPtr( rReferencedShape.mpTablePropertiesPtr.get() ? new table::TableProperties( *rReferencedShape.mpTablePropertiesPtr ) : nullptr );
+    mpTablePropertiesPtr = rReferencedShape.mpTablePropertiesPtr ? std::make_shared<table::TableProperties>( *rReferencedShape.mpTablePropertiesPtr ) : nullptr;
     mpShapeRefEffectPropPtr = std::make_shared<EffectProperties>( rReferencedShape.getActualEffectProperties(nullptr) );
     mpMasterTextListStyle = std::make_shared<TextListStyle>( *rReferencedShape.mpMasterTextListStyle );
     maSize = rReferencedShape.maSize;
@@ -656,7 +650,7 @@ Reference< XShape > const & Shape::createAndInsert(
     SAL_INFO("oox.drawingml", "Shape::createAndInsert: id='" << msId << "' service='" << rServiceName << "'");
 
     formulaimport::XmlStreamBuilder * pMathXml(nullptr);
-    if (mpTextBody.get())
+    if (mpTextBody)
     {
         for (auto const& it : mpTextBody->getParagraphs())
         {
@@ -675,7 +669,7 @@ Reference< XShape > const & Shape::createAndInsert(
     }
 
     // tdf#90403 PowerPoint ignores a:ext cx and cy values of p:xfrm, and uses real table width and height
-    if ( mpTablePropertiesPtr.get() && rServiceName == "com.sun.star.drawing.TableShape" )
+    if ( mpTablePropertiesPtr && rServiceName == "com.sun.star.drawing.TableShape" )
     {
         maSize.Width = 0;
         for (auto const& elem : mpTablePropertiesPtr->getTableGrid())
@@ -948,11 +942,14 @@ Reference< XShape > const & Shape::createAndInsert(
             xSet->setPropertyValue("CLSID", uno::makeAny(name.GetHexName()));
             uno::Reference<embed::XEmbeddedObject> const xObj(
                 xSet->getPropertyValue("EmbeddedObject"), uno::UNO_QUERY);
-            uno::Reference<uno::XInterface> const xMathModel(xObj->getComponent());
-            oox::FormulaImportBase *const pMagic(
-                    dynamic_cast<oox::FormulaImportBase*>(xMathModel.get()));
-            assert(pMagic);
-            pMagic->readFormulaOoxml(*pMathXml);
+            if (xObj.is())
+            {
+                uno::Reference<uno::XInterface> const xMathModel(xObj->getComponent());
+                oox::FormulaImportBase *const pMagic(
+                        dynamic_cast<oox::FormulaImportBase*>(xMathModel.get()));
+                assert(pMagic);
+                pMagic->readFormulaOoxml(*pMathXml);
+            }
         }
 
         const GraphicHelper& rGraphicHelper = rFilterBase.getGraphicHelper();
@@ -1025,7 +1022,7 @@ Reference< XShape > const & Shape::createAndInsert(
         ShapePropertyMap aShapeProps( rFilterBase.getModelObjectHelper() );
 
         // add properties from textbody to shape properties
-        if( mpTextBody.get() )
+        if( mpTextBody )
         {
             mpTextBody->getTextProperties().pushRotationAdjustments();
             aShapeProps.assignUsed( mpTextBody->getTextProperties().maPropertyMap );
@@ -1039,10 +1036,12 @@ Reference< XShape > const & Shape::createAndInsert(
         aShapeProps.assignUsed( maDefaultShapeProperties );
         if ( bIsEmbMedia || aServiceName == "com.sun.star.drawing.GraphicObjectShape" || aServiceName == "com.sun.star.drawing.OLE2Shape" || bIsCustomShape )
             mpGraphicPropertiesPtr->pushToPropMap( aShapeProps, rGraphicHelper );
-        if ( mpTablePropertiesPtr.get() && aServiceName == "com.sun.star.drawing.TableShape" )
+        if ( mpTablePropertiesPtr && aServiceName == "com.sun.star.drawing.TableShape" )
             mpTablePropertiesPtr->pushToPropSet( rFilterBase, xSet, mpMasterTextListStyle );
 
         FillProperties aFillProperties = getActualFillProperties(pTheme, &rShapeOrParentShapeFillProps);
+        if (getFillProperties().moFillType.has() && getFillProperties().moFillType.get() == XML_grpFill)
+            getFillProperties().assignUsed(aFillProperties);
         if(!bIsCroppedGraphic)
             aFillProperties.pushToPropMap( aShapeProps, rGraphicHelper, mnRotation, nFillPhClr, mbFlipH, mbFlipV );
         LineProperties aLineProperties = getActualLineProperties(pTheme);
@@ -1167,7 +1166,7 @@ Reference< XShape > const & Shape::createAndInsert(
                     xPropertySet->setPropertyValue(aGrabBagPropName, uno::makeAny(aGrabBag));
                 }
                 // TextFrames have ShadowFormat, not individual shadow properties.
-                o3tl::optional<sal_Int32> oShadowDistance;
+                std::optional<sal_Int32> oShadowDistance;
                 if (aShapeProps.hasProperty(PROP_ShadowXDistance))
                 {
                     oShadowDistance = aShapeProps.getProperty(PROP_ShadowXDistance).get<sal_Int32>();
@@ -1178,7 +1177,7 @@ Reference< XShape > const & Shape::createAndInsert(
                     // There is a single 'dist' attribute, so no need to count the avg of x and y.
                     aShapeProps.erase(PROP_ShadowYDistance);
                 }
-                o3tl::optional<sal_Int32> oShadowColor;
+                std::optional<sal_Int32> oShadowColor;
                 if (aShapeProps.hasProperty(PROP_ShadowColor))
                 {
                     oShadowColor = aShapeProps.getProperty(PROP_ShadowColor).get<sal_Int32>();
@@ -1215,6 +1214,7 @@ Reference< XShape > const & Shape::createAndInsert(
                     aFormat.ShadowWidth = *oShadowDistance;
                     aShapeProps.setProperty(PROP_ShadowFormat, aFormat);
                 }
+
             }
             else if (mbTextBox)
             {
@@ -1251,6 +1251,7 @@ Reference< XShape > const & Shape::createAndInsert(
 
             // Store original fill and line colors of the shape and the theme color name to InteropGrabBag
             std::vector<beans::PropertyValue> aProperties;
+            aProperties.push_back(comphelper::makePropertyValue("EmuLineWidth", aLineProperties.moLineWidth.get(0)));
             aProperties.push_back(comphelper::makePropertyValue("OriginalSolidFillClr", aShapeProps.getProperty(PROP_FillColor)));
             aProperties.push_back(comphelper::makePropertyValue("OriginalLnSolidFillClr", aShapeProps.getProperty(PROP_LineColor)));
             OUString sColorFillScheme = aFillProperties.maFillColor.getSchemeName();
@@ -1463,6 +1464,23 @@ Reference< XShape > const & Shape::createAndInsert(
                 ::Color nCharColor = pFontRef->maPhClr.getColor(rGraphicHelper);
                 aPropertySet.setAnyProperty(PROP_CharColor, uno::makeAny(nCharColor));
             }
+        }
+
+        // Set glow effect properties
+        if ( aEffectProperties.maGlow.moGlowRad.has() )
+        {
+            uno::Reference<beans::XPropertySet> propertySet (mxShape, uno::UNO_QUERY);
+            propertySet->setPropertyValue("GlowEffectRad", makeAny(convertEmuToHmm(aEffectProperties.maGlow.moGlowRad.get())));
+            propertySet->setPropertyValue("GlowEffectColor", makeAny(aEffectProperties.maGlow.moGlowColor.getColor(rGraphicHelper)));
+            propertySet->setPropertyValue("GlowEffectTransparency", makeAny(aEffectProperties.maGlow.moGlowColor.getTransparency()));
+        }
+
+        // Set soft edge effect properties
+        if (aEffectProperties.maSoftEdge.moRad.has())
+        {
+            uno::Reference<beans::XPropertySet> propertySet(mxShape, uno::UNO_QUERY);
+            propertySet->setPropertyValue(
+                "SoftEdgeRad", makeAny(convertEmuToHmm(aEffectProperties.maSoftEdge.moRad.get())));
         }
     }
 
@@ -1771,27 +1789,27 @@ void Shape::putPropertiesToGrabBag( const Sequence< PropertyValue >& aProperties
     Reference< XPropertySet > xSet( mxShape, UNO_QUERY );
     Reference< XPropertySetInfo > xSetInfo( xSet->getPropertySetInfo() );
     const OUString aGrabBagPropName = UNO_NAME_MISC_OBJ_INTEROPGRABBAG;
-    if( mxShape.is() && xSet.is() && xSetInfo.is() && xSetInfo->hasPropertyByName( aGrabBagPropName ) )
-    {
-        // get existing grab bag
-        Sequence< PropertyValue > aGrabBag;
-        xSet->getPropertyValue( aGrabBagPropName ) >>= aGrabBag;
+    if( !(mxShape.is() && xSet.is() && xSetInfo.is() && xSetInfo->hasPropertyByName( aGrabBagPropName )) )
+        return;
 
-        std::vector<PropertyValue> aVec;
-        aVec.reserve(aProperties.getLength());
+    // get existing grab bag
+    Sequence< PropertyValue > aGrabBag;
+    xSet->getPropertyValue( aGrabBagPropName ) >>= aGrabBag;
 
-        // put the new items
-        std::transform(aProperties.begin(), aProperties.end(), std::back_inserter(aVec),
-            [](const PropertyValue& rProp) {
-                PropertyValue aProp;
-                aProp.Name = rProp.Name;
-                aProp.Value = rProp.Value;
-                return aProp;
-            });
+    std::vector<PropertyValue> aVec;
+    aVec.reserve(aProperties.getLength());
 
-        // put it back to the shape
-        xSet->setPropertyValue( aGrabBagPropName, Any( comphelper::concatSequences(aGrabBag, aVec) ) );
-    }
+    // put the new items
+    std::transform(aProperties.begin(), aProperties.end(), std::back_inserter(aVec),
+        [](const PropertyValue& rProp) {
+            PropertyValue aProp;
+            aProp.Name = rProp.Name;
+            aProp.Value = rProp.Value;
+            return aProp;
+        });
+
+    // put it back to the shape
+    xSet->setPropertyValue( aGrabBagPropName, Any( comphelper::concatSequences(aGrabBag, aVec) ) );
 }
 
 FillProperties Shape::getActualFillProperties(const Theme* pTheme, const FillProperties* pParentShapeFillProps) const

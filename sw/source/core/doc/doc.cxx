@@ -511,39 +511,23 @@ sal_uInt16 PostItField_::GetPageNo(
     return 0;
 }
 
-bool sw_GetPostIts(
-    IDocumentFieldsAccess const * pIDFA,
-    SetGetExpFields * pSrtLst )
+bool sw_GetPostIts(IDocumentFieldsAccess const* pIDFA, SetGetExpFields* pSrtLst)
 {
-    bool bHasPostIts = false;
-
-    SwFieldType* pFieldType = pIDFA->GetSysFieldType( SwFieldIds::Postit );
+    SwFieldType* pFieldType = pIDFA->GetSysFieldType(SwFieldIds::Postit);
     assert(pFieldType);
 
-    if( pFieldType->HasWriterListeners() )
-    {
-        // Found modify object; insert all fields into the array
-        SwIterator<SwFormatField,SwFieldType> aIter( *pFieldType );
-        for( SwFormatField* pField = aIter.First(); pField;  pField = aIter.Next() )
+    std::vector<SwFormatField*> vFields;
+    pFieldType->GatherFields(vFields);
+    if(pSrtLst)
+        for(auto pField: vFields)
         {
-            const SwTextField* pTextField;
-            if( nullptr != ( pTextField = pField->GetTextField() ) &&
-                pTextField->GetTextNode().GetNodes().IsDocNodes() )
-            {
-                bHasPostIts = true;
-                if (pSrtLst)
-                {
-                    SwNodeIndex aIdx( pTextField->GetTextNode() );
-                    std::unique_ptr<PostItField_> pNew(new PostItField_( aIdx, pTextField ));
-                    pSrtLst->insert( std::move(pNew) );
-                }
-                else
-                    break;  // we just wanted to check for the existence of postits ...
-            }
-        }
-    }
+            auto pTextField = pField->GetTextField();
+            SwNodeIndex aIdx(pTextField->GetTextNode());
+            std::unique_ptr<PostItField_> pNew(new PostItField_(aIdx, pTextField));
+            pSrtLst->insert(std::move(pNew));
 
-    return bHasPostIts;
+        }
+    return vFields.size()>0;
 }
 
 static void lcl_FormatPostIt(
@@ -1080,17 +1064,16 @@ const SwFormatRefMark* SwDoc::GetRefMark( const OUString& rName ) const
 /// @return the RefMark per index - for Uno
 const SwFormatRefMark* SwDoc::GetRefMark( sal_uInt16 nIndex ) const
 {
-    const SwTextRefMark* pTextRef;
     const SwFormatRefMark* pRet = nullptr;
 
     sal_uInt32 nCount = 0;
     for (const SfxPoolItem* pItem : GetAttrPool().GetItemSurrogates(RES_TXTATR_REFMARK))
     {
         auto pRefMark = dynamic_cast<const SwFormatRefMark*>(pItem);
-
-        if( pRefMark &&
-            nullptr != (pTextRef = pRefMark->GetTextRefMark()) &&
-            &pTextRef->GetTextNode().GetNodes() == &GetNodes() )
+        if( !pRefMark )
+            continue;
+        const SwTextRefMark* pTextRef = pRefMark->GetTextRefMark();
+        if( pTextRef && &pTextRef->GetTextNode().GetNodes() == &GetNodes() )
         {
             if(nCount == nIndex)
             {
@@ -1108,16 +1091,14 @@ const SwFormatRefMark* SwDoc::GetRefMark( sal_uInt16 nIndex ) const
 // OS 25.06.96: From now on we always return the reference count
 sal_uInt16 SwDoc::GetRefMarks( std::vector<OUString>* pNames ) const
 {
-    const SwTextRefMark* pTextRef;
-
     sal_uInt16 nCount = 0;
     for (const SfxPoolItem* pItem : GetAttrPool().GetItemSurrogates(RES_TXTATR_REFMARK))
     {
         auto pRefMark = dynamic_cast<const SwFormatRefMark*>(pItem);
-
-        if( pRefMark &&
-            nullptr != (pTextRef = pRefMark->GetTextRefMark()) &&
-            &pTextRef->GetTextNode().GetNodes() == &GetNodes() )
+        if( !pRefMark )
+            continue;
+        const SwTextRefMark* pTextRef = pRefMark->GetTextRefMark();
+        if( pTextRef && &pTextRef->GetTextNode().GetNodes() == &GetNodes() )
         {
             if( pNames )
             {
@@ -1223,16 +1204,16 @@ void SwDoc::InvalidateAutoCompleteFlag()
 
 const SwFormatINetFormat* SwDoc::FindINetAttr( const OUString& rName ) const
 {
-    const SwTextINetFormat* pTextAttr;
-    const SwTextNode* pTextNd;
     for (const SfxPoolItem* pItem : GetAttrPool().GetItemSurrogates(RES_TXTATR_INETFMT))
     {
         auto pFormatItem = dynamic_cast<const SwFormatINetFormat*>(pItem);
-        if( pFormatItem &&
-            pFormatItem->GetName() == rName &&
-            nullptr != ( pTextAttr = pFormatItem->GetTextINetFormat()) &&
-            nullptr != ( pTextNd = pTextAttr->GetpTextNode() ) &&
-            &pTextNd->GetNodes() == &GetNodes() )
+        if( !pFormatItem || pFormatItem->GetName() != rName )
+            continue;
+        const SwTextINetFormat* pTextAttr = pFormatItem->GetTextINetFormat();
+        if( !pTextAttr )
+            continue;
+        const SwTextNode* pTextNd = pTextAttr->GetpTextNode();
+        if( pTextNd && &pTextNd->GetNodes() == &GetNodes() )
         {
             return pFormatItem;
         }
@@ -1280,9 +1261,9 @@ void SwDoc::Summary( SwDoc* pExtDoc, sal_uInt8 nLevel, sal_uInt8 nPara, bool bIm
         ++aEndOfDoc;
         while( aIndx < aEndOfDoc )
         {
-            SwNode *pNode;
             bool bDelete = false;
-            if( (pNode = &aIndx.GetNode())->IsTextNode() )
+            SwNode *pNode = &aIndx.GetNode();
+            if( pNode->IsTextNode() )
             {
                 SwTextNode *pNd = pNode->GetTextNode();
                 if( pNd->HasSwAttrSet() )
@@ -1339,9 +1320,10 @@ void RemoveOrDeleteContents(SwTextNode* pTextNd, IDocumentContentOperations& xOp
 bool HandleHidingField(SwFormatField& rFormatField, const SwNodes& rNodes,
                        IDocumentContentOperations& xOperations)
 {
-    SwTextNode* pTextNd;
-    if (rFormatField.GetTextField()
-        && nullptr != (pTextNd = rFormatField.GetTextField()->GetpTextNode())
+    if( !rFormatField.GetTextField() )
+        return false;
+    SwTextNode* pTextNd = rFormatField.GetTextField()->GetpTextNode();
+    if( pTextNd
         && pTextNd->GetpSwpHints() && pTextNd->IsHiddenByParaField()
         && &pTextNd->GetNodes() == &rNodes)
     {
@@ -1416,11 +1398,10 @@ bool SwDoc::RemoveInvisibleContent()
         {
             if (const SwFieldType* pType = pTypeGuard->get())
             {
-                SwIterator<SwFormatField, SwFieldType> aIter(*pType);
-                for (SwFormatField* pFormatField = aIter.First(); pFormatField;
-                     pFormatField = aIter.Next())
-                    bRet |= HandleHidingField(*pFormatField, GetNodes(),
-                                              getIDocumentContentOperations());
+                std::vector<SwFormatField*> vFields;
+                pType->GatherFields(vFields);
+                for(auto pFormatField: vFields)
+                    bRet |= HandleHidingField(*pFormatField, GetNodes(), getIDocumentContentOperations());
             }
         }
     }
@@ -1559,7 +1540,9 @@ bool SwDoc::RemoveInvisibleContent()
 
 bool SwDoc::HasInvisibleContent() const
 {
-    if(SwIterator<SwFormatField,SwFieldType>(*getIDocumentFieldsAccess().GetSysFieldType( SwFieldIds::HiddenPara)).First())
+    std::vector<SwFormatField*> vFields;
+    getIDocumentFieldsAccess().GetSysFieldType( SwFieldIds::HiddenPara)->GatherFields(vFields);
+    if(vFields.size())
         return true;
 
     // Search for any hidden paragraph (hidden text attribute)
@@ -1612,12 +1595,9 @@ bool SwDoc::ConvertFieldsToText(SwRootFrame const& rLayout)
         if ( SwFieldIds::Postit == pCurType->Which() )
             continue;
 
-        SwIterator<SwFormatField,SwFieldType> aIter( *pCurType );
-        std::vector<const SwFormatField*> aFieldFormats;
-        for( SwFormatField* pCurFieldFormat = aIter.First(); pCurFieldFormat; pCurFieldFormat = aIter.Next() )
-            aFieldFormats.push_back(pCurFieldFormat);
-
-        for(const auto& rpFieldFormat : aFieldFormats)
+        std::vector<SwFormatField*> vFieldFormats;
+        pCurType->GatherFields(vFieldFormats, false);
+        for(const auto& rpFieldFormat : vFieldFormats)
         {
             const SwTextField *pTextField = rpFieldFormat->GetTextField();
             // skip fields that are currently not in the document

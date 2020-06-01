@@ -47,7 +47,7 @@ void IconView::Resize()
     SvTreeListBox::Resize();
 }
 
-tools::Rectangle IconView::GetFocusRect( SvTreeListEntry*, long nEntryPos )
+tools::Rectangle IconView::GetFocusRect(const SvTreeListEntry*, long nEntryPos)
 {
     Size aSize;
     aSize.setHeight( nEntryHeight );
@@ -181,9 +181,6 @@ void IconView::PaintEntry(SvTreeListEntry& rEntry, long nX, long nY,
 
         // center vertically
         aEntryPos.AdjustY((nTempEntryHeight - nItemHeight) / 2 );
-
-        // draw item
-        pViewDataEntry->SetPaintRectangle(aRect);
 
         aEntryPos.AdjustY(15 );
 

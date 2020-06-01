@@ -29,7 +29,7 @@
 #include <memory>
 #include <vector>
 
-#include <o3tl/optional.hxx>
+#include <optional>
 
 class BitmapEx;
 class LanguageTag;
@@ -245,6 +245,9 @@ public:
     void                            SetDarkShadowColor( const Color& rColor );
     const Color&                    GetDarkShadowColor() const;
 
+    void                            SetDefaultButtonTextColor( const Color& rColor );
+    const Color&                    GetDefaultButtonTextColor() const;
+
     void                            SetButtonTextColor( const Color& rColor );
     const Color&                    GetButtonTextColor() const;
 
@@ -254,14 +257,38 @@ public:
     void                            SetActionButtonTextColor( const Color& rColor );
     const Color&                    GetActionButtonTextColor() const;
 
-    void                            SetActionButtonRolloverTextColor( const Color& rColor );
-    const Color&                    GetActionButtonRolloverTextColor() const;
+    void                            SetFlatButtonTextColor( const Color& rColor );
+    const Color&                    GetFlatButtonTextColor() const;
+
+    void                            SetDefaultButtonRolloverTextColor( const Color& rColor );
+    const Color&                    GetDefaultButtonRolloverTextColor() const;
 
     void                            SetButtonRolloverTextColor( const Color& rColor );
     const Color&                    GetButtonRolloverTextColor() const;
 
+    void                            SetDefaultActionButtonRolloverTextColor( const Color& rColor );
+    const Color&                    GetDefaultActionButtonRolloverTextColor() const;
+
+    void                            SetActionButtonRolloverTextColor( const Color& rColor );
+    const Color&                    GetActionButtonRolloverTextColor() const;
+
+    void                            SetFlatButtonRolloverTextColor( const Color& rColor );
+    const Color&                    GetFlatButtonRolloverTextColor() const;
+
+    void                            SetDefaultButtonPressedRolloverTextColor( const Color& rColor );
+    const Color&                    GetDefaultButtonPressedRolloverTextColor() const;
+
     void                            SetButtonPressedRolloverTextColor( const Color& rColor );
     const Color&                    GetButtonPressedRolloverTextColor() const;
+
+    void                            SetDefaultActionButtonPressedRolloverTextColor( const Color& rColor );
+    const Color&                    GetDefaultActionButtonPressedRolloverTextColor() const;
+
+    void                            SetActionButtonPressedRolloverTextColor( const Color& rColor );
+    const Color&                    GetActionButtonPressedRolloverTextColor() const;
+
+    void                            SetFlatButtonPressedRolloverTextColor( const Color& rColor );
+    const Color&                    GetFlatButtonPressedRolloverTextColor() const;
 
     void                            SetRadioCheckTextColor( const Color& rColor );
     const Color&                    GetRadioCheckTextColor() const;
@@ -549,7 +576,7 @@ public:
 
     BitmapEx const &                GetPersonaFooter() const;
 
-    const o3tl::optional<Color>&   GetPersonaMenuBarTextColor() const;
+    const std::optional<Color>&   GetPersonaMenuBarTextColor() const;
 
     // global switch to allow EdgeBlenging; currently possible for ValueSet and ListBox
     // when activated there using Get/SetEdgeBlending; default is true
@@ -680,6 +707,7 @@ public:
     static bool                             GetMathLayoutRTL();   // returns true if UI language requires right-to-left Math Layout
     const LocaleDataWrapper&                GetLocaleDataWrapper() const;
     const LocaleDataWrapper&                GetUILocaleDataWrapper() const;
+    const LocaleDataWrapper&                GetNeutralLocaleDataWrapper() const;
     const vcl::I18nHelper&                  GetLocaleI18nHelper() const;
     const vcl::I18nHelper&                  GetUILocaleI18nHelper() const;
 

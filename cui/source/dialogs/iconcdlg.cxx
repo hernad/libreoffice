@@ -20,6 +20,7 @@
 #include <iconcdlg.hxx>
 #include <cuihyperdlg.hxx>
 
+#include <cassert>
 #include <sal/log.hxx>
 #include <vcl/svapp.hxx>
 
@@ -121,7 +122,7 @@ IMPL_LINK_NOARG(SvxHpLinkDlg, ResetHdl, weld::Button&, void)
     ResetPageImpl ();
 
     IconChoicePageData* pData = GetPageData ( msCurrentPageId );
-    DBG_ASSERT( pData, "ID not known" );
+    assert( pData && "ID not known " );
 
     pData->xPage->Reset( *pSet );
 }
@@ -133,21 +134,19 @@ IMPL_LINK_NOARG(SvxHpLinkDlg, ResetHdl, weld::Button&, void)
 \**********************************************************************/
 void SvxHpLinkDlg::ActivatePageImpl()
 {
-    DBG_ASSERT( !maPageList.empty(), "no Pages registered" );
+    assert( !maPageList.empty() && "no Pages registered " );
     IconChoicePageData* pData = GetPageData ( msCurrentPageId );
-    DBG_ASSERT( pData, "ID not known" );
-    if ( pData )
-    {
-        if ( pData->bRefresh )
-        {
-            pData->xPage->Reset( *pSet );
-            pData->bRefresh = false;
-        }
+    assert( pData && "ID not known " );
 
-        if ( pExampleSet )
-            pData->xPage->ActivatePage( *pExampleSet );
-        m_xDialog->set_help_id(pData->xPage->GetHelpId());
+    if ( pData->bRefresh )
+    {
+        pData->xPage->Reset( *pSet );
+        pData->bRefresh = false;
     }
+
+    if ( pExampleSet )
+        pData->xPage->ActivatePage( *pExampleSet );
+    m_xDialog->set_help_id(pData->xPage->GetHelpId());
 
     m_xResetBtn->show();
 }
@@ -158,55 +157,55 @@ void SvxHpLinkDlg::DeActivatePageImpl ()
 
     DeactivateRC nRet = DeactivateRC::LeavePage;
 
-    if ( pData )
+    if ( !pData )
+        return;
+
+    IconChoicePage * pPage = pData->xPage.get();
+
+    if ( !pExampleSet && pPage->HasExchangeSupport() && pSet )
+        pExampleSet = new SfxItemSet( *pSet->GetPool(), pSet->GetRanges() );
+
+    if ( pSet )
     {
-        IconChoicePage * pPage = pData->xPage.get();
+        SfxItemSet aTmp( *pSet->GetPool(), pSet->GetRanges() );
 
-        if ( !pExampleSet && pPage->HasExchangeSupport() && pSet )
-            pExampleSet = new SfxItemSet( *pSet->GetPool(), pSet->GetRanges() );
+        if ( pPage->HasExchangeSupport() )
+            nRet = pPage->DeactivatePage( &aTmp );
 
-        if ( pSet )
+        if ( ( DeactivateRC::LeavePage & nRet ) &&
+             aTmp.Count() )
         {
-            SfxItemSet aTmp( *pSet->GetPool(), pSet->GetRanges() );
-
-            if ( pPage->HasExchangeSupport() )
-                nRet = pPage->DeactivatePage( &aTmp );
-
-            if ( ( DeactivateRC::LeavePage & nRet ) &&
-                 aTmp.Count() )
+            if (pExampleSet)
+                pExampleSet->Put(aTmp);
+            pOutSet->Put( aTmp );
+        }
+    }
+    else
+    {
+        if ( pPage->HasExchangeSupport() ) //!!!
+        {
+            if ( !pExampleSet )
             {
-                if (pExampleSet)
-                    pExampleSet->Put(aTmp);
-                pOutSet->Put( aTmp );
+                SfxItemPool* pPool = pPage->GetItemSet().GetPool();
+                pExampleSet =
+                    new SfxItemSet( *pPool, GetInputRanges( *pPool ) );
             }
+            nRet = pPage->DeactivatePage( pExampleSet );
         }
         else
-        {
-            if ( pPage->HasExchangeSupport() ) //!!!
-            {
-                if ( !pExampleSet )
-                {
-                    SfxItemPool* pPool = pPage->GetItemSet().GetPool();
-                    pExampleSet =
-                        new SfxItemSet( *pPool, GetInputRanges( *pPool ) );
-                }
-                nRet = pPage->DeactivatePage( pExampleSet );
-            }
-            else
-                nRet = pPage->DeactivatePage( nullptr );
-        }
+            nRet = pPage->DeactivatePage( nullptr );
+    }
 
-        if ( nRet & DeactivateRC::RefreshSet )
+    if ( nRet & DeactivateRC::RefreshSet )
+    {
+        // TODO refresh input set
+        // flag all pages to be newly initialized
+        for (auto & pObj : maPageList)
         {
-            // TODO refresh input set
-            // flag all pages to be newly initialized
-            for (auto & pObj : maPageList)
-            {
-                if ( pObj->xPage.get() != pPage )
-                    pObj->bRefresh = true;
-                else
-                    pObj->bRefresh = false;
-            }
+            if ( pObj->xPage.get() != pPage )
+                pObj->bRefresh = true;
+            else
+                pObj->bRefresh = false;
         }
     }
 }
@@ -216,7 +215,7 @@ void SvxHpLinkDlg::ResetPageImpl ()
 {
     IconChoicePageData *pData = GetPageData ( msCurrentPageId );
 
-    DBG_ASSERT( pData, "ID not known" );
+    assert( pData && "ID not known " );
 
     pData->xPage->Reset( *pSet );
 }

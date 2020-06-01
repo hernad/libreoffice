@@ -7,17 +7,12 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <libodfgen/libodfgen.hxx>
-
 #include <libqxp/libqxp.h>
 
-#include <com/sun/star/uno/XComponentContext.hpp>
-#include <com/sun/star/awt/XWindow.hpp>
 #include <cppuhelper/supportsservice.hxx>
 
 #include "QXPImportFilter.hxx"
 
-using com::sun::star::uno::RuntimeException;
 using com::sun::star::uno::Sequence;
 using com::sun::star::uno::XComponentContext;
 using com::sun::star::uno::XInterface;

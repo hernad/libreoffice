@@ -85,6 +85,7 @@
 #include <IDocumentStylePoolAccess.hxx>
 #include <oox/ole/olehelper.hxx>
 #include <fmturl.hxx>
+#include <frameformats.hxx>
 #include <sfx2/sfxsids.hrc>
 #include <unotools/saveopt.hxx>
 #include <o3tl/enumrange.hxx>
@@ -2025,12 +2026,14 @@ sal_Int32 SwBasicEscherEx::WriteFlyFrameAttr(const SwFrameFormat& rFormat,
 
     // SwWW8ImplReader::Read_GrafLayer() imports these as opaque
     // unconditionally, so if both are true, don't export the property.
-    bool bIsInHeader = sw::IsFlyFrameFormatInHeader(rFormat);
-    bool bIsThrought = rFormat.GetSurround().GetValue() == css::text::WrapTextMode_THROUGH;
+    const bool bIsInHeader = sw::IsFlyFrameFormatInHeader(rFormat);
+    const bool bIsThrough = rFormat.GetSurround().GetValue() == css::text::WrapTextMode_THROUGH;
 
-    if (bIsInHeader)
+    // Anything (like a transparent image) that allows text to wrap through should not force a non-transparent background,
+    // and neither should the commonly seen backgrounds anchored in headers.
+    if (bIsInHeader || bIsThrough)
     {
-        std::shared_ptr<SvxBrushItem> aBrush(rFormat.makeBackgroundBrushItem());
+        std::unique_ptr<SvxBrushItem> aBrush(rFormat.makeBackgroundBrushItem());
 
         if(aBrush)
         {
@@ -2039,6 +2042,7 @@ sal_Int32 SwBasicEscherEx::WriteFlyFrameAttr(const SwFrameFormat& rFormat,
     }
     else
     {
+        // for unknown reasons, force exporting a non-transparent background on fly frames.
         std::shared_ptr<SvxBrushItem> aBrush(rWrt.TrueFrameBgBrush(rFormat));
 
         if(aBrush)
@@ -2050,7 +2054,7 @@ sal_Int32 SwBasicEscherEx::WriteFlyFrameAttr(const SwFrameFormat& rFormat,
     const SdrObject* pObj = rFormat.FindRealSdrObject();
 
     if( pObj && (pObj->GetLayer() == GetHellLayerId() ||
-        pObj->GetLayer() == GetInvisibleHellId() ) && !(bIsInHeader && bIsThrought))
+        pObj->GetLayer() == GetInvisibleHellId() ) && !(bIsInHeader && bIsThrough))
     {
         rPropOpt.AddOpt( ESCHER_Prop_fPrint, 0x200020 );
     }
@@ -2101,7 +2105,7 @@ sal_Int32 SwEscherEx::WriteFlyFrameAttr(const SwFrameFormat& rFormat, MSO_SPT eS
             const tools::PolyPolygon *pPolyPoly = pNd->HasContour();
             if (pPolyPoly && pPolyPoly->Count())
             {
-                tools::Polygon aPoly = CorrectWordWrapPolygonForExport(*pPolyPoly, pNd);
+                tools::Polygon aPoly = CorrectWordWrapPolygonForExport(*pPolyPoly, pNd, /*bCorrectCrop=*/false);
                 SvMemoryStream aPolyDump;
                 aPolyDump.SetEndian(SvStreamEndian::LITTLE);
 

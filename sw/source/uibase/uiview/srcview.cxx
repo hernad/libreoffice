@@ -19,6 +19,7 @@
 
 #include <rtl/tencinfo.h>
 #include <osl/diagnose.h>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/ui/dialogs/TemplateDescription.hpp>
 #include <unotools/tempfile.hxx>
 #include <tools/urlobj.hxx>
@@ -807,7 +808,6 @@ void SwSrcView::Load(SwDocShell* pDocShell)
         utl::TempFile aTempFile;
         aTempFile.EnableKillingFile();
         const OUString sFileURL( aTempFile.GetURL() );
-        SvtSaveOptions aOpt;
 
         {
             SfxMedium aMedium( sFileURL,StreamMode::READWRITE );

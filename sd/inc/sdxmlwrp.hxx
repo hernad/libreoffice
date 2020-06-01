@@ -26,10 +26,10 @@
 class ErrCode;
 
 // SdXMLFilter
-enum SdXMLFilterMode
+enum class SdXMLFilterMode
 {
-    SDXMLMODE_Normal,   ///< standard load and save of the complete document
-    SDXMLMODE_Organizer ///< only for import, only the styles are loaded
+    Normal,   ///< standard load and save of the complete document
+    Organizer ///< only for import, only the styles are loaded
 };
 
 class SdXMLFilter final : public SdFilter
@@ -38,7 +38,7 @@ public:
     SdXMLFilter(
         SfxMedium& rMedium,
         ::sd::DrawDocShell& rDocShell,
-        SdXMLFilterMode eFilterMode = SDXMLMODE_Normal,
+        SdXMLFilterMode eFilterMode = SdXMLFilterMode::Normal,
         sal_uLong nStoreVer = SOFFICE_FILEFORMAT_8 );
     virtual ~SdXMLFilter() override;
 
@@ -46,8 +46,8 @@ public:
     bool        Export() override;
 
 private:
-    SdXMLFilterMode const meFilterMode;
-    sal_uLong const mnStoreVer;
+    SdXMLFilterMode meFilterMode;
+    sal_uLong mnStoreVer;
 };
 
 #endif // INCLUDED_SD_INC_SDXMLWRP_HXX

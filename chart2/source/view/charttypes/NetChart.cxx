@@ -36,6 +36,7 @@
 #include <osl/diagnose.h>
 
 #include <com/sun/star/drawing/XShapes.hpp>
+#include <officecfg/Office/Compatibility.hxx>
 
 namespace chart
 {
@@ -125,7 +126,7 @@ bool NetChart::impl_createLine( VDataSeries* pSeries
             double fFirstY = pSeries->getYValue( 0 );
             double fLastY = pSeries->getYValue( VSeriesPlotter::getPointCount() - 1 );
             if( (pSeries->getMissingValueTreatment() != css::chart::MissingValueTreatment::LEAVE_GAP)
-                || (::rtl::math::isFinite( fFirstY ) && ::rtl::math::isFinite( fLastY )) )
+                || (std::isfinite( fFirstY ) && std::isfinite( fLastY )) )
             {
                 // connect last point in last polygon with first point in first polygon
                 ::basegfx::B2DRectangle aScaledLogicClipDoubleRect( pPosHelper->getScaledLogicClipDoubleRect() );
@@ -318,7 +319,8 @@ void NetChart::createShapes()
     if( m_aZSlots.empty() ) //no series
         return;
 
-    if( m_bArea )
+    //tdf#127813 Don't reverse the series in OOXML-heavy environments
+    if (officecfg::Office::Compatibility::View::ReverseSeriesOrderAreaAndNetChart::get() && m_bArea)
         lcl_reorderSeries( m_aZSlots );
 
     OSL_ENSURE(m_pShapeFactory&&m_xLogicTarget.is()&&m_xFinalTarget.is(),"NetChart is not proper initialized");
@@ -373,7 +375,7 @@ void NetChart::createShapes()
                     m_pPosHelper = &getPlottingPositionHelper(nAttachedAxisIndex);
 
                     double fAdd = pSeries->getYValue( nIndex );
-                    if( !::rtl::math::isNan(fAdd) && !::rtl::math::isInf(fAdd) )
+                    if( !std::isnan(fAdd) && !std::isinf(fAdd) )
                         aLogicYSumMap[nAttachedAxisIndex] += fabs( fAdd );
                 }
             }
@@ -411,7 +413,7 @@ void NetChart::createShapes()
                         fLogicX = DateHelper::RasterizeDateValue( fLogicX, m_aNullDate, m_nTimeResolution );
                     double fLogicY = pSeries->getYValue(nIndex);
 
-                    if( m_bArea && ( ::rtl::math::isNan(fLogicY) || ::rtl::math::isInf(fLogicY) ) )
+                    if( m_bArea && ( std::isnan(fLogicY) || std::isinf(fLogicY) ) )
                     {
                         if( pSeries->getMissingValueTreatment() == css::chart::MissingValueTreatment::LEAVE_GAP )
                         {
@@ -431,9 +433,9 @@ void NetChart::createShapes()
                         fLogicY = fabs( fLogicY )/aLogicYSumMap[nAttachedAxisIndex];
                     }
 
-                    if(    ::rtl::math::isNan(fLogicX) || ::rtl::math::isInf(fLogicX)
-                        || ::rtl::math::isNan(fLogicY) || ::rtl::math::isInf(fLogicY)
-                        || ::rtl::math::isNan(fLogicZ) || ::rtl::math::isInf(fLogicZ) )
+                    if(    std::isnan(fLogicX) || std::isinf(fLogicX)
+                        || std::isnan(fLogicY) || std::isinf(fLogicY)
+                        || std::isnan(fLogicZ) || std::isinf(fLogicZ) )
                     {
                         if( pSeries->getMissingValueTreatment() == css::chart::MissingValueTreatment::LEAVE_GAP )
                         {
@@ -448,8 +450,7 @@ void NetChart::createShapes()
                         continue;
                     }
 
-                    if( aLogicYForNextSeriesMap.find(nAttachedAxisIndex) == aLogicYForNextSeriesMap.end() )
-                        aLogicYForNextSeriesMap[nAttachedAxisIndex] = 0.0;
+                    aLogicYForNextSeriesMap.try_emplace(nAttachedAxisIndex, 0.0);
 
                     double fLogicValueForLabeDisplay = fLogicY;
 

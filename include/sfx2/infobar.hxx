@@ -12,11 +12,14 @@
 #include <vector>
 
 #include <basegfx/color/bcolor.hxx>
-#include <vcl/button.hxx>
-#include <vcl/fixed.hxx>
 
 #include <sfx2/childwin.hxx>
 #include <sfx2/dllapi.h>
+
+class FixedImage;
+class FixedText;
+class Button;
+class PushButton;
 
 // These must match the values in offapi/com/sun/star/frame/InfobarType.idl
 enum class InfobarType
@@ -42,7 +45,7 @@ public:
 class SFX2_DLLPUBLIC SfxInfoBarContainerChild final : public SfxChildWindow
 {
 private:
-    SfxBindings* const m_pBindings;
+    SfxBindings* m_pBindings;
 
 public:
     SfxInfoBarContainerChild(vcl::Window* pParent, sal_uInt16 nId, SfxBindings* pBindings,
@@ -59,7 +62,7 @@ public:
 class SFX2_DLLPUBLIC SfxInfoBarWindow final : public vcl::Window
 {
 private:
-    OUString const m_sId;
+    OUString m_sId;
     InfobarType m_eType;
     VclPtr<FixedImage> m_pImage;
     VclPtr<FixedText> m_pPrimaryMessage;
@@ -111,6 +114,7 @@ public:
     VclPtr<SfxInfoBarWindow> getInfoBar(const OUString& sId);
     bool hasInfoBarWithID(const OUString& sId);
     void removeInfoBar(VclPtr<SfxInfoBarWindow> const& pInfoBar);
+    static bool isInfobarEnabled(const OUString& sId);
 
     virtual void Resize() override;
 };

@@ -32,54 +32,43 @@
 
 #include <comphelper/documentconstants.hxx>
 #include <unotools/mediadescriptor.hxx>
-#include <comphelper/property.hxx>
 #include <comphelper/propertysequence.hxx>
 #include <comphelper/sequenceashashmap.hxx>
 #include <comphelper/types.hxx>
 
 #include <connectivity/dbtools.hxx>
-#include <com/sun/star/view/PaperFormat.hpp>
-#include <com/sun/star/style/GraphicLocation.hpp>
 #include <com/sun/star/style/XStyle.hpp>
-#include <com/sun/star/style/PageStyleLayout.hpp>
 #include <com/sun/star/style/ParagraphAdjust.hpp>
 #include <com/sun/star/util/NumberFormatter.hpp>
+#include <com/sun/star/ui/dialogs/XFilePicker3.hpp>
 #include <com/sun/star/ui/dialogs/XFilePickerControlAccess.hpp>
 #include <com/sun/star/ui/dialogs/TemplateDescription.hpp>
 #include <com/sun/star/ui/dialogs/ExtendedFilePickerElementIds.hpp>
-#include <com/sun/star/container/XHierarchicalNameAccess.hpp>
 #include <com/sun/star/frame/FrameSearchFlag.hpp>
-#include <com/sun/star/datatransfer/XTransferable.hpp>
 #include <com/sun/star/container/XChild.hpp>
-#include <com/sun/star/container/XNameContainer.hpp>
 #include <com/sun/star/report/XImageControl.hpp>
 #include <com/sun/star/report/XFixedLine.hpp>
 #include <com/sun/star/report/Function.hpp>
 #include <com/sun/star/awt/FontDescriptor.hpp>
-#include <com/sun/star/sdb/XDocumentDataSource.hpp>
 #include <com/sun/star/sdb/XParametersSupplier.hpp>
 #include <com/sun/star/sdb/CommandType.hpp>
 #include <com/sun/star/sdbcx/XTablesSupplier.hpp>
-#include <com/sun/star/ui/dialogs/XExecutableDialog.hpp>
-#include <com/sun/star/embed/ElementModes.hpp>
 #include <com/sun/star/embed/EmbedMapUnits.hpp>
 #include <com/sun/star/awt/FontWeight.hpp>
 #include <com/sun/star/awt/FontUnderline.hpp>
-#include <com/sun/star/awt/TextAlign.hpp>
 #include <com/sun/star/awt/FontSlant.hpp>
 #include <com/sun/star/frame/Desktop.hpp>
 #include <com/sun/star/frame/status/FontHeight.hpp>
 #include <com/sun/star/report/ReportEngine.hpp>
 #include <com/sun/star/report/XFormattedField.hpp>
 #include <com/sun/star/sdb/SQLContext.hpp>
-#include <com/sun/star/sdbc/SQLWarning.hpp>
 #include <com/sun/star/beans/PropertyAttribute.hpp>
 #include <com/sun/star/document/XUndoManagerSupplier.hpp>
 
 #include <vcl/svapp.hxx>
 
+#include <i18nutil/paper.hxx>
 #include <svx/fmview.hxx>
-#include <editeng/paperinf.hxx>
 #include <editeng/memberids.h>
 #include <svx/svxids.hrc>
 #include <svx/svdobj.hxx>
@@ -113,8 +102,6 @@
 #include <svx/flagsdef.hxx>
 #include <svx/svdpagv.hxx>
 #include <svx/svxdlg.hxx>
-#include <svx/zoom_def.hxx>
-#include <svx/dialogs.hrc>
 
 #include <core_resource.hxx>
 #include <DesignView.hxx>
@@ -130,7 +117,6 @@
 
 #include <svl/itempool.hxx>
 #include <svl/itemset.hxx>
-#include <svl/aeitem.hxx>
 #include <svtools/cliplistener.hxx>
 #include <unotools/syslocale.hxx>
 #include <unotools/viewoptions.hxx>
@@ -188,32 +174,32 @@ namespace
 {
     void lcl_setFontWPU_nothrow(const uno::Reference< report::XReportControlFormat>& _xReportControlFormat,const sal_Int32 _nId)
     {
-        if ( _xReportControlFormat.is() )
-        {
-            try
-            {
-                awt::FontDescriptor aFontDescriptor = _xReportControlFormat->getFontDescriptor();
-                switch(_nId)
-                {
-                    case SID_ATTR_CHAR_WEIGHT:
-                        aFontDescriptor.Weight = (awt::FontWeight::NORMAL + awt::FontWeight::BOLD) - aFontDescriptor.Weight;
-                        break;
-                    case SID_ATTR_CHAR_POSTURE:
-                        aFontDescriptor.Slant = static_cast<awt::FontSlant>(static_cast<sal_Int16>(awt::FontSlant_ITALIC) - static_cast<sal_Int16>(aFontDescriptor.Slant));
-                        break;
-                    case SID_ATTR_CHAR_UNDERLINE:
-                        aFontDescriptor.Underline = awt::FontUnderline::SINGLE - aFontDescriptor.Underline;
-                        break;
-                    default:
-                        OSL_FAIL("Illegal value in default!");
-                        break;
-                }
+        if ( !_xReportControlFormat.is() )
+            return;
 
-                _xReportControlFormat->setFontDescriptor(aFontDescriptor);
-            }
-            catch(const beans::UnknownPropertyException&)
+        try
+        {
+            awt::FontDescriptor aFontDescriptor = _xReportControlFormat->getFontDescriptor();
+            switch(_nId)
             {
+                case SID_ATTR_CHAR_WEIGHT:
+                    aFontDescriptor.Weight = (awt::FontWeight::NORMAL + awt::FontWeight::BOLD) - aFontDescriptor.Weight;
+                    break;
+                case SID_ATTR_CHAR_POSTURE:
+                    aFontDescriptor.Slant = static_cast<awt::FontSlant>(static_cast<sal_Int16>(awt::FontSlant_ITALIC) - static_cast<sal_Int16>(aFontDescriptor.Slant));
+                    break;
+                case SID_ATTR_CHAR_UNDERLINE:
+                    aFontDescriptor.Underline = awt::FontUnderline::SINGLE - aFontDescriptor.Underline;
+                    break;
+                default:
+                    OSL_FAIL("Illegal value in default!");
+                    break;
             }
+
+            _xReportControlFormat->setFontDescriptor(aFontDescriptor);
+        }
+        catch(const beans::UnknownPropertyException&)
+        {
         }
     }
 }
@@ -451,6 +437,24 @@ FeatureState OReportController::GetState(sal_uInt16 _nId) const
                         ( _nId == SID_UNDO ) ? &SfxUndoManager::GetUndoActionComment : &SfxUndoManager::GetRedoActionComment;
                     aReturn.sTitle = (rUndoManager.*retrieveComment)( 0, SfxUndoManager::TopLevel );
                 }
+            }
+            break;
+        case SID_GETUNDOSTRINGS:
+        case SID_GETREDOSTRINGS:
+            {
+                size_t ( SfxUndoManager::*retrieveCount )( bool const ) const =
+                    ( _nId == SID_GETUNDOSTRINGS ) ? &SfxUndoManager::GetUndoActionCount : &SfxUndoManager::GetRedoActionCount;
+
+                OUString ( SfxUndoManager::*retrieveComment )( size_t, bool const ) const =
+                    ( _nId == SID_GETUNDOSTRINGS ) ? &SfxUndoManager::GetUndoActionComment : &SfxUndoManager::GetRedoActionComment;
+
+                SfxUndoManager& rUndoManager( getUndoManager() );
+                size_t nCount(( rUndoManager.*retrieveCount )( SfxUndoManager::TopLevel ));
+                Sequence<OUString> aSeq(nCount);
+                for (size_t n = 0; n < nCount; ++n)
+                    aSeq[n] = (rUndoManager.*retrieveComment)( n, SfxUndoManager::TopLevel );
+                aReturn.aValue <<= aSeq;
+                aReturn.bEnabled = true;
             }
             break;
         case SID_OBJECT_RESIZING:
@@ -1016,9 +1020,13 @@ void OReportController::Execute(sal_uInt16 _nId, const Sequence< PropertyValue >
             const OXUndoEnvironment::OUndoMode aLock( m_aReportModel->GetUndoEnv() );
             bool ( SfxUndoManager::*doXDo )() =
                 ( _nId == SID_UNDO ) ? &SfxUndoManager::Undo : &SfxUndoManager::Redo;
-
             SfxUndoManager& rUndoManager( getUndoManager() );
-            (rUndoManager.*doXDo)();
+
+            sal_Int16 nCount(1);
+            if (aArgs.hasElements() && aArgs[0].Name != "KeyModifier")
+                aArgs[0].Value >>= nCount;
+            while (nCount--)
+                (rUndoManager.*doXDo)();
             InvalidateAll();
             if (m_xGroupsFloater && m_xGroupsFloater->getDialog()->get_visible())
                 m_xGroupsFloater->UpdateData();
@@ -1167,16 +1175,20 @@ void OReportController::Execute(sal_uInt16 _nId, const Sequence< PropertyValue >
                 executeMethodWithUndo(RID_STR_UNDO_REMOVE_SELECTION,::std::mem_fn(&ODesignView::Delete));
             break;
         case SID_GRID_USE:
-            getDesignView()->setGridSnap(m_bGridUse = !m_bGridUse);
+            m_bGridUse = !m_bGridUse;
+            getDesignView()->setGridSnap(m_bGridUse);
             break;
         case SID_HELPLINES_MOVE:
-            getDesignView()->setDragStripes(m_bHelplinesMove = !m_bHelplinesMove);
+            m_bHelplinesMove = !m_bHelplinesMove;
+            getDesignView()->setDragStripes(m_bHelplinesMove);
             break;
         case SID_GRID_VISIBLE:
-            getDesignView()->toggleGrid(m_bGridVisible = !m_bGridVisible);
+            m_bGridVisible = !m_bGridVisible;
+            getDesignView()->toggleGrid(m_bGridVisible);
             break;
         case SID_RULER:
-            getDesignView()->showRuler(m_bShowRuler = !m_bShowRuler);
+            m_bShowRuler = !m_bShowRuler;
+            getDesignView()->showRuler(m_bShowRuler);
             break;
         case SID_OBJECT_SELECT:
             getDesignView()->SetMode(DlgEdMode::Select);
@@ -1786,7 +1798,7 @@ void OReportController::describeSupportedFeatures()
     implDescribeSupportedFeature( ".uno:DbSortingAndGrouping",      SID_SORTINGANDGROUPING,         CommandGroup::VIEW );
     implDescribeSupportedFeature( ".uno:PageHeaderFooter",          SID_PAGEHEADERFOOTER,           CommandGroup::VIEW );
     implDescribeSupportedFeature( ".uno:ReportHeaderFooter",        SID_REPORTHEADERFOOTER,         CommandGroup::VIEW );
-    implDescribeSupportedFeature( ".uno:ZoomSlider",                SID_ATTR_ZOOMSLIDER,            CommandGroup::VIEW );
+    implDescribeSupportedFeature( ".uno:ZoomSlider",                SID_ATTR_ZOOMSLIDER );
     implDescribeSupportedFeature( ".uno:Zoom",                      SID_ATTR_ZOOM,                  CommandGroup::VIEW );
 
     implDescribeSupportedFeature( ".uno:ConditionalFormatting",     SID_CONDITIONALFORMATTING,      CommandGroup::FORMAT );
@@ -1796,7 +1808,7 @@ void OReportController::describeSupportedFeatures()
     implDescribeSupportedFeature( ".uno:Bold",                      SID_ATTR_CHAR_WEIGHT,           CommandGroup::FORMAT );
     implDescribeSupportedFeature( ".uno:Italic",                    SID_ATTR_CHAR_POSTURE,          CommandGroup::FORMAT );
     implDescribeSupportedFeature( ".uno:Underline",                 SID_ATTR_CHAR_UNDERLINE,        CommandGroup::FORMAT );
-    implDescribeSupportedFeature( ".uno:BackColor",                 SID_ATTR_CHAR_COLOR_BACKGROUND, CommandGroup::FORMAT );
+    implDescribeSupportedFeature( ".uno:DBBackgroundColor",         SID_ATTR_CHAR_COLOR_BACKGROUND, CommandGroup::FORMAT );
     implDescribeSupportedFeature( ".uno:BackgroundColor",           SID_BACKGROUND_COLOR,           CommandGroup::FORMAT );
     implDescribeSupportedFeature( ".uno:CharColorExt",              SID_ATTR_CHAR_COLOR_EXT);
     implDescribeSupportedFeature( ".uno:Color",                     SID_ATTR_CHAR_COLOR);
@@ -1826,7 +1838,7 @@ void OReportController::describeSupportedFeatures()
     implDescribeSupportedFeature( ".uno:AlignMiddle",               SID_OBJECT_ALIGN_MIDDLE,        CommandGroup::FORMAT );
     implDescribeSupportedFeature( ".uno:AlignDown",                 SID_OBJECT_ALIGN_DOWN,          CommandGroup::FORMAT );
 
-    implDescribeSupportedFeature( ".uno:SectionAlign",              SID_SECTION_ALIGN,              CommandGroup::FORMAT );
+    implDescribeSupportedFeature( ".uno:SectionAlign",              SID_SECTION_ALIGN );
     implDescribeSupportedFeature( ".uno:SectionAlignLeft",          SID_SECTION_ALIGN_LEFT,         CommandGroup::FORMAT );
     implDescribeSupportedFeature( ".uno:SectionAlignCenter",        SID_SECTION_ALIGN_CENTER,       CommandGroup::FORMAT );
     implDescribeSupportedFeature( ".uno:SectionAlignRight",         SID_SECTION_ALIGN_RIGHT,        CommandGroup::FORMAT );
@@ -1996,14 +2008,13 @@ void OReportController::describeSupportedFeatures()
 
 
     // keys
-    implDescribeSupportedFeature( ".uno:Escape",                    SID_ESCAPE,                     CommandGroup::CONTROLS);
+    implDescribeSupportedFeature( ".uno:Escape",                    SID_ESCAPE);
 
     // internal one
     implDescribeSupportedFeature( ".uno:RPT_RPTHEADER_UNDO",            SID_REPORTHEADER_WITHOUT_UNDO);
     implDescribeSupportedFeature( ".uno:RPT_RPTFOOTER_UNDO",            SID_REPORTFOOTER_WITHOUT_UNDO);
     implDescribeSupportedFeature( ".uno:RPT_PGHEADER_UNDO",             SID_PAGEHEADER_WITHOUT_UNDO);
     implDescribeSupportedFeature( ".uno:RPT_PGFOOTER_UNDO",             SID_PAGEFOOTER_WITHOUT_UNDO);
-    implDescribeSupportedFeature( ".uno:DBBackgroundColor",             SID_ATTR_CHAR_COLOR_BACKGROUND);
     implDescribeSupportedFeature( ".uno:SID_GROUPHEADER",               SID_GROUPHEADER);
     implDescribeSupportedFeature( ".uno:SID_GROUPHEADER_WITHOUT_UNDO",  SID_GROUPHEADER_WITHOUT_UNDO);
     implDescribeSupportedFeature( ".uno:SID_GROUPFOOTER",               SID_GROUPFOOTER);
@@ -2022,6 +2033,8 @@ void OReportController::describeSupportedFeatures()
     implDescribeSupportedFeature( ".uno:SelectAllEdits",                SID_SELECT_ALL_EDITS);
     implDescribeSupportedFeature( ".uno:CollapseSection",           SID_COLLAPSE_SECTION);
     implDescribeSupportedFeature( ".uno:ExpandSection",             SID_EXPAND_SECTION);
+    implDescribeSupportedFeature( ".uno:GetUndoStrings",            SID_GETUNDOSTRINGS);
+    implDescribeSupportedFeature( ".uno:GetRedoStrings",            SID_GETREDOSTRINGS);
 }
 
 void OReportController::impl_onModifyChanged()
@@ -2040,70 +2053,70 @@ void OReportController::impl_onModifyChanged()
 
 void OReportController::onLoadedMenu(const Reference< frame::XLayoutManager >& _xLayoutManager)
 {
-    if ( _xLayoutManager.is() )
+    if ( !_xLayoutManager.is() )
+        return;
+
+    static const OUStringLiteral s_sMenu[] = {
+         "private:resource/statusbar/statusbar"
+        ,"private:resource/toolbar/reportcontrols"
+        ,"private:resource/toolbar/drawbar"
+        ,"private:resource/toolbar/Formatting"
+        ,"private:resource/toolbar/alignmentbar"
+        ,"private:resource/toolbar/sectionalignmentbar"
+        ,"private:resource/toolbar/resizebar"
+        ,"private:resource/toolbar/sectionshrinkbar"
+    };
+    for (const auto & i : s_sMenu)
     {
-        static const OUStringLiteral s_sMenu[] = {
-             "private:resource/statusbar/statusbar"
-            ,"private:resource/toolbar/reportcontrols"
-            ,"private:resource/toolbar/drawbar"
-            ,"private:resource/toolbar/Formatting"
-            ,"private:resource/toolbar/alignmentbar"
-            ,"private:resource/toolbar/sectionalignmentbar"
-            ,"private:resource/toolbar/resizebar"
-            ,"private:resource/toolbar/sectionshrinkbar"
-        };
-        for (const auto & i : s_sMenu)
-        {
-            _xLayoutManager->createElement( i );
-            _xLayoutManager->requestElement( i );
-        }
+        _xLayoutManager->createElement( i );
+        _xLayoutManager->requestElement( i );
     }
 }
 
 void OReportController::notifyGroupSections(const ContainerEvent& _rEvent,bool _bShow)
 {
     uno::Reference< report::XGroup> xGroup(_rEvent.Element,uno::UNO_QUERY);
-    if ( xGroup.is() )
-    {
-        SolarMutexGuard aSolarGuard;
-        ::osl::MutexGuard aGuard( getMutex() );
-        sal_Int32 nGroupPos = 0;
-        _rEvent.Accessor >>= nGroupPos;
+    if ( !xGroup.is() )
+        return;
 
-        if ( _bShow )
+    SolarMutexGuard aSolarGuard;
+    ::osl::MutexGuard aGuard( getMutex() );
+    sal_Int32 nGroupPos = 0;
+    _rEvent.Accessor >>= nGroupPos;
+
+    if ( _bShow )
+    {
+        xGroup->addPropertyChangeListener(PROPERTY_HEADERON, static_cast<XPropertyChangeListener*>(this));
+        xGroup->addPropertyChangeListener(PROPERTY_FOOTERON, static_cast<XPropertyChangeListener*>(this));
+    }
+    else
+    {
+        xGroup->removePropertyChangeListener(PROPERTY_HEADERON, static_cast<XPropertyChangeListener*>(this));
+        xGroup->removePropertyChangeListener(PROPERTY_FOOTERON, static_cast<XPropertyChangeListener*>(this));
+    }
+
+    if ( xGroup->getHeaderOn() )
+    {
+        groupChange(xGroup,PROPERTY_HEADERON,nGroupPos,_bShow);
+        if (_bShow)
         {
-            xGroup->addPropertyChangeListener(PROPERTY_HEADERON, static_cast<XPropertyChangeListener*>(this));
-            xGroup->addPropertyChangeListener(PROPERTY_FOOTERON, static_cast<XPropertyChangeListener*>(this));
+            m_pReportControllerObserver->AddSection(xGroup->getHeader());
         }
         else
         {
-            xGroup->removePropertyChangeListener(PROPERTY_HEADERON, static_cast<XPropertyChangeListener*>(this));
-            xGroup->removePropertyChangeListener(PROPERTY_FOOTERON, static_cast<XPropertyChangeListener*>(this));
+            m_pReportControllerObserver->RemoveSection(xGroup->getHeader());
         }
-
-        if ( xGroup->getHeaderOn() )
+    }
+    if ( xGroup->getFooterOn() )
+    {
+        groupChange(xGroup,PROPERTY_FOOTERON,nGroupPos,_bShow);
+        if (_bShow)
         {
-            groupChange(xGroup,PROPERTY_HEADERON,nGroupPos,_bShow);
-            if (_bShow)
-            {
-                m_pReportControllerObserver->AddSection(xGroup->getHeader());
-            }
-            else
-            {
-                m_pReportControllerObserver->RemoveSection(xGroup->getHeader());
-            }
+            m_pReportControllerObserver->AddSection(xGroup->getFooter());
         }
-        if ( xGroup->getFooterOn() )
+        else
         {
-            groupChange(xGroup,PROPERTY_FOOTERON,nGroupPos,_bShow);
-            if (_bShow)
-            {
-                m_pReportControllerObserver->AddSection(xGroup->getFooter());
-            }
-            else
-            {
-                m_pReportControllerObserver->RemoveSection(xGroup->getFooter());
-            }
+            m_pReportControllerObserver->RemoveSection(xGroup->getFooter());
         }
     }
 }
@@ -2547,21 +2560,20 @@ sal_Int32 OReportController::getGroupPosition(const uno::Reference< report::XGro
 void OReportController::Notify(SfxBroadcaster & /* _rBc */, SfxHint const & _rHint)
 {
     const DlgEdHint* pDlgEdHint = dynamic_cast<const DlgEdHint*>(&_rHint);
-    if (pDlgEdHint && pDlgEdHint->GetKind() == RPTUI_HINT_SELECTIONCHANGED)
-    {
-        const sal_Int32 nSelectionCount = getDesignView()->getMarkedObjectCount();
-        if ( m_nSelectionCount != nSelectionCount )
-        {
-            m_nSelectionCount = nSelectionCount;
-            InvalidateAll();
-        }
-        lang::EventObject aEvent(*this);
-        m_aSelectionListeners.forEach<view::XSelectionChangeListener>(
-            [&aEvent] (uno::Reference<view::XSelectionChangeListener> const& xListener) {
-                return xListener->selectionChanged(aEvent);
-            });
+    if (!(pDlgEdHint && pDlgEdHint->GetKind() == RPTUI_HINT_SELECTIONCHANGED))
+        return;
 
+    const sal_Int32 nSelectionCount = getDesignView()->getMarkedObjectCount();
+    if ( m_nSelectionCount != nSelectionCount )
+    {
+        m_nSelectionCount = nSelectionCount;
+        InvalidateAll();
     }
+    lang::EventObject aEvent(*this);
+    m_aSelectionListeners.forEach<view::XSelectionChangeListener>(
+        [&aEvent] (uno::Reference<view::XSelectionChangeListener> const& xListener) {
+            return xListener->selectionChanged(aEvent);
+        });
 }
 
 void OReportController::executeMethodWithUndo(const char* pUndoStrId,const ::std::function<void(ODesignView *)>& _pMemfun)
@@ -3618,30 +3630,30 @@ OSectionView* OReportController::getCurrentSectionView() const
 void OReportController::changeZOrder(sal_Int32 _nId)
 {
     OSectionView* pSectionView = getCurrentSectionView();
-    if ( pSectionView )
-    {
-        switch(_nId)
-        {
-            case SID_FRAME_TO_BOTTOM:
-                pSectionView->PutMarkedToBtm();
-                break;
-            case SID_FRAME_TO_TOP:
-                pSectionView->PutMarkedToTop();
-                break;
-            case SID_FRAME_DOWN:
-                pSectionView->MovMarkedToBtm();
-                break;
-            case SID_FRAME_UP:
-                pSectionView->MovMarkedToTop();
-                break;
+    if ( !pSectionView )
+        return;
 
-            case SID_OBJECT_HEAVEN:
-                pSectionView->SetMarkedToLayer( RPT_LAYER_FRONT );
-                break;
-            case SID_OBJECT_HELL:
-                pSectionView->SetMarkedToLayer( RPT_LAYER_BACK );
-                break;
-        }
+    switch(_nId)
+    {
+        case SID_FRAME_TO_BOTTOM:
+            pSectionView->PutMarkedToBtm();
+            break;
+        case SID_FRAME_TO_TOP:
+            pSectionView->PutMarkedToTop();
+            break;
+        case SID_FRAME_DOWN:
+            pSectionView->MovMarkedToBtm();
+            break;
+        case SID_FRAME_UP:
+            pSectionView->MovMarkedToTop();
+            break;
+
+        case SID_OBJECT_HEAVEN:
+            pSectionView->SetMarkedToLayer( RPT_LAYER_FRONT );
+            break;
+        case SID_OBJECT_HELL:
+            pSectionView->SetMarkedToLayer( RPT_LAYER_BACK );
+            break;
     }
 }
 
@@ -3751,95 +3763,95 @@ void OReportController::switchReportSection(const sal_Int16 _nId)
 {
     OSL_ENSURE(_nId == SID_REPORTHEADER_WITHOUT_UNDO || _nId == SID_REPORTFOOTER_WITHOUT_UNDO || _nId == SID_REPORTHEADERFOOTER ,"Illegal id given!");
 
-    if ( m_xReportDefinition.is() )
+    if ( !m_xReportDefinition.is() )
+        return;
+
+    const OXUndoEnvironment::OUndoEnvLock aLock( m_aReportModel->GetUndoEnv() );
+    const bool bSwitchOn = !m_xReportDefinition->getReportHeaderOn();
+
+    std::unique_ptr< UndoContext > pUndoContext;
+    if ( SID_REPORTHEADERFOOTER == _nId )
     {
-        const OXUndoEnvironment::OUndoEnvLock aLock( m_aReportModel->GetUndoEnv() );
-        const bool bSwitchOn = !m_xReportDefinition->getReportHeaderOn();
+        const OUString sUndoAction(RptResId(bSwitchOn ? RID_STR_UNDO_ADD_REPORTHEADERFOOTER : RID_STR_UNDO_REMOVE_REPORTHEADERFOOTER));
+        pUndoContext.reset( new UndoContext( getUndoManager(), sUndoAction ) );
 
-        std::unique_ptr< UndoContext > pUndoContext;
-        if ( SID_REPORTHEADERFOOTER == _nId )
-        {
-            const OUString sUndoAction(RptResId(bSwitchOn ? RID_STR_UNDO_ADD_REPORTHEADERFOOTER : RID_STR_UNDO_REMOVE_REPORTHEADERFOOTER));
-            pUndoContext.reset( new UndoContext( getUndoManager(), sUndoAction ) );
+        addUndoAction(std::make_unique<OReportSectionUndo>(*m_aReportModel,SID_REPORTHEADER_WITHOUT_UNDO
+                                                        ,::std::mem_fn(&OReportHelper::getReportHeader)
+                                                        ,m_xReportDefinition
+                                                        ,bSwitchOn ? Inserted : Removed
+                                                        ));
 
-            addUndoAction(std::make_unique<OReportSectionUndo>(*m_aReportModel,SID_REPORTHEADER_WITHOUT_UNDO
-                                                            ,::std::mem_fn(&OReportHelper::getReportHeader)
-                                                            ,m_xReportDefinition
-                                                            ,bSwitchOn ? Inserted : Removed
-                                                            ));
-
-            addUndoAction(std::make_unique<OReportSectionUndo>(*m_aReportModel,SID_REPORTFOOTER_WITHOUT_UNDO
-                                                            ,::std::mem_fn(&OReportHelper::getReportFooter)
-                                                            ,m_xReportDefinition
-                                                            ,bSwitchOn ? Inserted : Removed
-                                                            ));
-        }
-
-        switch( _nId )
-        {
-            case SID_REPORTHEADER_WITHOUT_UNDO:
-                m_xReportDefinition->setReportHeaderOn( bSwitchOn );
-                break;
-            case SID_REPORTFOOTER_WITHOUT_UNDO:
-                m_xReportDefinition->setReportFooterOn( !m_xReportDefinition->getReportFooterOn() );
-                break;
-            case SID_REPORTHEADERFOOTER:
-                m_xReportDefinition->setReportHeaderOn( bSwitchOn );
-                m_xReportDefinition->setReportFooterOn( bSwitchOn );
-                break;
-        }
-
-        if ( SID_REPORTHEADERFOOTER == _nId )
-            pUndoContext.reset();
-        getView()->Resize();
+        addUndoAction(std::make_unique<OReportSectionUndo>(*m_aReportModel,SID_REPORTFOOTER_WITHOUT_UNDO
+                                                        ,::std::mem_fn(&OReportHelper::getReportFooter)
+                                                        ,m_xReportDefinition
+                                                        ,bSwitchOn ? Inserted : Removed
+                                                        ));
     }
+
+    switch( _nId )
+    {
+        case SID_REPORTHEADER_WITHOUT_UNDO:
+            m_xReportDefinition->setReportHeaderOn( bSwitchOn );
+            break;
+        case SID_REPORTFOOTER_WITHOUT_UNDO:
+            m_xReportDefinition->setReportFooterOn( !m_xReportDefinition->getReportFooterOn() );
+            break;
+        case SID_REPORTHEADERFOOTER:
+            m_xReportDefinition->setReportHeaderOn( bSwitchOn );
+            m_xReportDefinition->setReportFooterOn( bSwitchOn );
+            break;
+    }
+
+    if ( SID_REPORTHEADERFOOTER == _nId )
+        pUndoContext.reset();
+    getView()->Resize();
 }
 
 void OReportController::switchPageSection(const sal_Int16 _nId)
 {
     OSL_ENSURE(_nId == SID_PAGEHEADERFOOTER || _nId == SID_PAGEHEADER_WITHOUT_UNDO || _nId == SID_PAGEFOOTER_WITHOUT_UNDO ,"Illegal id given!");
-    if ( m_xReportDefinition.is() )
+    if ( !m_xReportDefinition.is() )
+        return;
+
+    const OXUndoEnvironment::OUndoEnvLock aLock( m_aReportModel->GetUndoEnv() );
+    const bool bSwitchOn = !m_xReportDefinition->getPageHeaderOn();
+
+    std::unique_ptr< UndoContext > pUndoContext;
+    if ( SID_PAGEHEADERFOOTER == _nId )
     {
-        const OXUndoEnvironment::OUndoEnvLock aLock( m_aReportModel->GetUndoEnv() );
-        const bool bSwitchOn = !m_xReportDefinition->getPageHeaderOn();
+        const OUString sUndoAction(RptResId(bSwitchOn ? RID_STR_UNDO_ADD_REPORTHEADERFOOTER : RID_STR_UNDO_REMOVE_REPORTHEADERFOOTER));
+        pUndoContext.reset( new UndoContext( getUndoManager(), sUndoAction ) );
 
-        std::unique_ptr< UndoContext > pUndoContext;
-        if ( SID_PAGEHEADERFOOTER == _nId )
-        {
-            const OUString sUndoAction(RptResId(bSwitchOn ? RID_STR_UNDO_ADD_REPORTHEADERFOOTER : RID_STR_UNDO_REMOVE_REPORTHEADERFOOTER));
-            pUndoContext.reset( new UndoContext( getUndoManager(), sUndoAction ) );
+        addUndoAction(std::make_unique<OReportSectionUndo>(*m_aReportModel
+                                                        ,SID_PAGEHEADER_WITHOUT_UNDO
+                                                        ,::std::mem_fn(&OReportHelper::getPageHeader)
+                                                        ,m_xReportDefinition
+                                                        ,bSwitchOn ? Inserted : Removed
+                                                        ));
 
-            addUndoAction(std::make_unique<OReportSectionUndo>(*m_aReportModel
-                                                            ,SID_PAGEHEADER_WITHOUT_UNDO
-                                                            ,::std::mem_fn(&OReportHelper::getPageHeader)
-                                                            ,m_xReportDefinition
-                                                            ,bSwitchOn ? Inserted : Removed
-                                                            ));
-
-            addUndoAction(std::make_unique<OReportSectionUndo>(*m_aReportModel
-                                                            ,SID_PAGEFOOTER_WITHOUT_UNDO
-                                                            ,::std::mem_fn(&OReportHelper::getPageFooter)
-                                                            ,m_xReportDefinition
-                                                            ,bSwitchOn ? Inserted : Removed
-                                                            ));
-        }
-        switch( _nId )
-        {
-            case SID_PAGEHEADER_WITHOUT_UNDO:
-                m_xReportDefinition->setPageHeaderOn( bSwitchOn );
-                break;
-            case SID_PAGEFOOTER_WITHOUT_UNDO:
-                m_xReportDefinition->setPageFooterOn( !m_xReportDefinition->getPageFooterOn() );
-                break;
-            case SID_PAGEHEADERFOOTER:
-                m_xReportDefinition->setPageHeaderOn( bSwitchOn );
-                m_xReportDefinition->setPageFooterOn( bSwitchOn );
-                break;
-        }
-        if ( SID_PAGEHEADERFOOTER == _nId )
-            pUndoContext.reset();
-        getView()->Resize();
+        addUndoAction(std::make_unique<OReportSectionUndo>(*m_aReportModel
+                                                        ,SID_PAGEFOOTER_WITHOUT_UNDO
+                                                        ,::std::mem_fn(&OReportHelper::getPageFooter)
+                                                        ,m_xReportDefinition
+                                                        ,bSwitchOn ? Inserted : Removed
+                                                        ));
     }
+    switch( _nId )
+    {
+        case SID_PAGEHEADER_WITHOUT_UNDO:
+            m_xReportDefinition->setPageHeaderOn( bSwitchOn );
+            break;
+        case SID_PAGEFOOTER_WITHOUT_UNDO:
+            m_xReportDefinition->setPageFooterOn( !m_xReportDefinition->getPageFooterOn() );
+            break;
+        case SID_PAGEHEADERFOOTER:
+            m_xReportDefinition->setPageHeaderOn( bSwitchOn );
+            m_xReportDefinition->setPageFooterOn( bSwitchOn );
+            break;
+    }
+    if ( SID_PAGEHEADERFOOTER == _nId )
+        pUndoContext.reset();
+    getView()->Resize();
 }
 
 void OReportController::modifyGroup(const bool _bAppend, const Sequence< PropertyValue >& _aArgs)
@@ -3888,32 +3900,32 @@ void OReportController::modifyGroup(const bool _bAppend, const Sequence< Propert
 
 void OReportController::createGroupSection(const bool _bUndo,const bool _bHeader, const Sequence< PropertyValue >& _aArgs)
 {
-    if ( m_xReportDefinition.is() )
-    {
-        const SequenceAsHashMap aMap(_aArgs);
-        const bool bSwitchOn = aMap.getUnpackedValueOrDefault(_bHeader ? OUString(PROPERTY_HEADERON) : OUString(PROPERTY_FOOTERON), false);
-        uno::Reference< report::XGroup> xGroup = aMap.getUnpackedValueOrDefault(PROPERTY_GROUP,uno::Reference< report::XGroup>());
-        if ( xGroup.is() )
-        {
-            const OXUndoEnvironment::OUndoEnvLock aLock(m_aReportModel->GetUndoEnv());
-            if ( _bUndo )
-                addUndoAction(std::make_unique<OGroupSectionUndo>(*m_aReportModel
-                                                                ,_bHeader ? SID_GROUPHEADER_WITHOUT_UNDO : SID_GROUPFOOTER_WITHOUT_UNDO
-                                                                ,_bHeader ? ::std::mem_fn(&OGroupHelper::getHeader) : ::std::mem_fn(&OGroupHelper::getFooter)
-                                                                ,xGroup
-                                                                ,bSwitchOn ? Inserted : Removed
-                                                                , ( _bHeader ?
-                                                                        (bSwitchOn ? RID_STR_UNDO_ADD_GROUP_HEADER : RID_STR_UNDO_REMOVE_GROUP_HEADER)
-                                                                       :(bSwitchOn ? RID_STR_UNDO_ADD_GROUP_FOOTER : RID_STR_UNDO_REMOVE_GROUP_FOOTER)
-                                                                  )
-                                                                ));
+    if ( !m_xReportDefinition.is() )
+        return;
 
-            if ( _bHeader )
-                xGroup->setHeaderOn( bSwitchOn );
-            else
-                xGroup->setFooterOn( bSwitchOn );
-        }
-    }
+    const SequenceAsHashMap aMap(_aArgs);
+    const bool bSwitchOn = aMap.getUnpackedValueOrDefault(_bHeader ? OUString(PROPERTY_HEADERON) : OUString(PROPERTY_FOOTERON), false);
+    uno::Reference< report::XGroup> xGroup = aMap.getUnpackedValueOrDefault(PROPERTY_GROUP,uno::Reference< report::XGroup>());
+    if ( !xGroup.is() )
+        return;
+
+    const OXUndoEnvironment::OUndoEnvLock aLock(m_aReportModel->GetUndoEnv());
+    if ( _bUndo )
+        addUndoAction(std::make_unique<OGroupSectionUndo>(*m_aReportModel
+                                                        ,_bHeader ? SID_GROUPHEADER_WITHOUT_UNDO : SID_GROUPFOOTER_WITHOUT_UNDO
+                                                        ,_bHeader ? ::std::mem_fn(&OGroupHelper::getHeader) : ::std::mem_fn(&OGroupHelper::getFooter)
+                                                        ,xGroup
+                                                        ,bSwitchOn ? Inserted : Removed
+                                                        , ( _bHeader ?
+                                                                (bSwitchOn ? RID_STR_UNDO_ADD_GROUP_HEADER : RID_STR_UNDO_REMOVE_GROUP_HEADER)
+                                                               :(bSwitchOn ? RID_STR_UNDO_ADD_GROUP_FOOTER : RID_STR_UNDO_REMOVE_GROUP_FOOTER)
+                                                          )
+                                                        ));
+
+    if ( _bHeader )
+        xGroup->setHeaderOn( bSwitchOn );
+    else
+        xGroup->setFooterOn( bSwitchOn );
 }
 
 void OReportController::collapseSection(const bool _bCollapse)
@@ -3951,47 +3963,47 @@ void OReportController::createDefaultControl(const uno::Sequence< beans::Propert
     if ( !xSection.is() )
         xSection = m_xReportDefinition->getDetail();
 
-    if ( xSection.is() )
+    if ( !xSection.is() )
+        return;
+
+    const OUString sKeyModifier("KeyModifier");
+    const beans::PropertyValue* pIter = _aArgs.getConstArray();
+    const beans::PropertyValue* pEnd  = pIter + _aArgs.getLength();
+    const beans::PropertyValue* pKeyModifier = ::std::find_if(pIter, pEnd,
+        [&sKeyModifier] (const beans::PropertyValue& x) -> bool {
+            return x.Name == sKeyModifier;
+        });
+    sal_Int16 nKeyModifier = 0;
+    if ( pKeyModifier == pEnd || ((pKeyModifier->Value >>= nKeyModifier) && nKeyModifier == KEY_MOD1) )
     {
-        const OUString sKeyModifier("KeyModifier");
-        const beans::PropertyValue* pIter = _aArgs.getConstArray();
-        const beans::PropertyValue* pEnd  = pIter + _aArgs.getLength();
-        const beans::PropertyValue* pKeyModifier = ::std::find_if(pIter, pEnd,
-            [&sKeyModifier] (const beans::PropertyValue& x) -> bool {
-                return x.Name == sKeyModifier;
-            });
-        sal_Int16 nKeyModifier = 0;
-        if ( pKeyModifier == pEnd || ((pKeyModifier->Value >>= nKeyModifier) && nKeyModifier == KEY_MOD1) )
-        {
-            Sequence< PropertyValue > aCreateArgs;
-            getDesignView()->unmarkAllObjects();
-            createControl(aCreateArgs,xSection,OUString(),getDesignView()->GetInsertObj());
-        }
+        Sequence< PropertyValue > aCreateArgs;
+        getDesignView()->unmarkAllObjects();
+        createControl(aCreateArgs,xSection,OUString(),getDesignView()->GetInsertObj());
     }
 }
 
 
 void OReportController::checkChartEnabled()
 {
-    if ( !m_bChartEnabledAsked )
+    if ( m_bChartEnabledAsked )
+        return;
+
+    m_bChartEnabledAsked = true;
+    const OUString sConfigName( "/org.openoffice.Office.ReportDesign" );
+    const OUString sPropertyName( "UserData/Chart" );
+
+    try
     {
-        m_bChartEnabledAsked = true;
-        const OUString sConfigName( "/org.openoffice.Office.ReportDesign" );
-        const OUString sPropertyName( "UserData/Chart" );
+        ::utl::OConfigurationTreeRoot aConfiguration(
+            ::utl::OConfigurationTreeRoot::createWithComponentContext( m_xContext, sConfigName ) );
 
-        try
-        {
-            ::utl::OConfigurationTreeRoot aConfiguration(
-                ::utl::OConfigurationTreeRoot::createWithComponentContext( m_xContext, sConfigName ) );
-
-            bool bChartEnabled = false;
-            if ( aConfiguration.hasByHierarchicalName(sPropertyName) )
-                aConfiguration.getNodeValue( sPropertyName ) >>= bChartEnabled;
-            m_bChartEnabled = bChartEnabled;
-        }
-        catch(const Exception&)
-        {
-        }
+        bool bChartEnabled = false;
+        if ( aConfiguration.hasByHierarchicalName(sPropertyName) )
+            aConfiguration.getNodeValue( sPropertyName ) >>= bChartEnabled;
+        m_bChartEnabled = bChartEnabled;
+    }
+    catch(const Exception&)
+    {
     }
 }
 
@@ -4063,37 +4075,37 @@ bool OReportController::isUiVisible() const
 void OReportController::impl_fillState_nothrow(const OUString& _sProperty,dbaui::FeatureState& _rState) const
 {
     _rState.bEnabled = isEditable();
-    if ( _rState.bEnabled )
+    if ( !_rState.bEnabled )
+        return;
+
+    ::std::vector< uno::Reference< uno::XInterface > > aSelection;
+    getDesignView()->fillControlModelSelection(aSelection);
+    _rState.bEnabled = !aSelection.empty();
+    if ( !_rState.bEnabled )
+        return;
+
+    uno::Any aTemp;
+    ::std::vector< uno::Reference< uno::XInterface > >::const_iterator aIter = aSelection.begin();
+    for(; aIter != aSelection.end() && _rState.bEnabled ;++aIter)
     {
-        ::std::vector< uno::Reference< uno::XInterface > > aSelection;
-        getDesignView()->fillControlModelSelection(aSelection);
-        _rState.bEnabled = !aSelection.empty();
-        if ( _rState.bEnabled )
+        uno::Reference< beans::XPropertySet> xProp(*aIter,uno::UNO_QUERY);
+        try
         {
-            uno::Any aTemp;
-            ::std::vector< uno::Reference< uno::XInterface > >::const_iterator aIter = aSelection.begin();
-            for(; aIter != aSelection.end() && _rState.bEnabled ;++aIter)
+            uno::Any aTemp2 = xProp->getPropertyValue(_sProperty);
+            if ( aIter == aSelection.begin() )
             {
-                uno::Reference< beans::XPropertySet> xProp(*aIter,uno::UNO_QUERY);
-                try
-                {
-                    uno::Any aTemp2 = xProp->getPropertyValue(_sProperty);
-                    if ( aIter == aSelection.begin() )
-                    {
-                        aTemp = aTemp2;
-                    }
-                    else if ( aTemp != aTemp2 )
-                        break;
-                }
-                catch(const beans::UnknownPropertyException&)
-                {
-                    _rState.bEnabled = false;
-                }
+                aTemp = aTemp2;
             }
-            if ( aIter == aSelection.end() )
-                _rState.aValue = aTemp;
+            else if ( aTemp != aTemp2 )
+                break;
+        }
+        catch(const beans::UnknownPropertyException&)
+        {
+            _rState.bEnabled = false;
         }
     }
+    if ( aIter == aSelection.end() )
+        _rState.aValue = aTemp;
 }
 
 void OReportController::impl_zoom_nothrow()

@@ -31,17 +31,14 @@
 #include <editeng/editengdllapi.h>
 #include <o3tl/typed_flags_set.hxx>
 #include <memory>
+#include <optional>
 #include <algorithm>
 
 class SvxBrushItem;
 namespace vcl { class Font; }
 class Graphic;
 class SvxNodeNum;
-namespace com{namespace sun{ namespace star{
-    namespace text{
-        class XNumberingFormatter;
-    }
-}}}
+namespace com::sun::star::text { class XNumberingFormatter; }
 
 namespace com::sun::star::lang { struct Locale; }
 
@@ -52,6 +49,9 @@ namespace com::sun::star::lang { struct Locale; }
 
 
 #define LINK_TOKEN  0x80 //indicate linked bitmaps - for use in dialog only
+
+typedef struct _xmlTextWriter* xmlTextWriterPtr;
+
 class EDITENG_DLLPUBLIC SvxNumberType
 {
     static sal_Int32 nRefCount;
@@ -81,6 +81,8 @@ public:
                                css::style::NumberingType::CHAR_SPECIAL != nNumType &&
                                css::style::NumberingType::BITMAP != nNumType;
                     }
+
+    void dumpAsXml(xmlTextWriterPtr w) const;
 };
 
 class EDITENG_DLLPUBLIC SvxNumberFormat : public SvxNumberType
@@ -102,6 +104,9 @@ public:
 private:
     OUString            sPrefix;
     OUString            sSuffix;
+    std::optional<OUString> sListFormat;        // Format string ">%1.%2<" can be used instead of prefix/suffix
+                                                // Right now it is optional value to distinguish empty list format
+                                                // and not set list format when we need to fallback to prefix/suffix.
 
     SvxAdjust           eNumAdjust;
 
@@ -166,6 +171,9 @@ public:
     const OUString& GetPrefix() const { return sPrefix;}
     void            SetSuffix(const OUString& rSet) { sSuffix = rSet;}
     const OUString& GetSuffix() const { return sSuffix;}
+    void            SetListFormat(const OUString& rSet) { sListFormat = rSet; }
+    bool            HasListFormat() const { return sListFormat.has_value(); }
+    const OUString& GetListFormat() const { return *sListFormat; }
 
     void                    SetCharFormatName(const OUString& rSet){ sCharStyleName = rSet; }
     virtual OUString        GetCharFormatName()const;
@@ -228,7 +236,7 @@ enum class SvxNumRuleFlags
 };
 namespace o3tl
 {
-    template<> struct typed_flags<SvxNumRuleFlags> : is_typed_flags<SvxNumRuleFlags, 0x03dd> {};
+    template<> struct typed_flags<SvxNumRuleFlags> : is_typed_flags<SvxNumRuleFlags, 0x039d> {};
 }
 
 enum class SvxNumRuleType

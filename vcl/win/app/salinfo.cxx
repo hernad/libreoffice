@@ -20,6 +20,7 @@
 #include <svsys.h>
 #include <o3tl/char16_t2wchar_t.hxx>
 
+#include <sal/log.hxx>
 #include <vcl/window.hxx>
 
 #include <win/salsys.h>
@@ -111,10 +112,7 @@ bool WinSalSystem::initMonitors()
                 aDev.DeviceString[127] = 0;
                 OUString aDeviceName( o3tl::toU(aDev.DeviceName) );
                 OUString aDeviceString( o3tl::toU(aDev.DeviceString) );
-                if( aDeviceStringCount.find( aDeviceString ) == aDeviceStringCount.end() )
-                    aDeviceStringCount[ aDeviceString ] = 1;
-                else
-                    aDeviceStringCount[ aDeviceString ]++;
+                aDeviceStringCount[ aDeviceString ]++;
                 m_aDeviceNameToMonitor[ aDeviceName ] = m_aMonitors.size();
                 m_aMonitors.push_back( DisplayMonitor( aDeviceString,
                                                        tools::Rectangle() ) );
@@ -155,7 +153,14 @@ unsigned int WinSalSystem::GetDisplayBuiltInScreen()
 tools::Rectangle WinSalSystem::GetDisplayScreenPosSizePixel( unsigned int nScreen )
 {
     initMonitors();
-    return (nScreen < m_aMonitors.size()) ? m_aMonitors[nScreen].m_aArea : tools::Rectangle();
+    if (nScreen >= m_aMonitors.size())
+    {
+        SAL_WARN("vcl", "Requested screen size/pos for screen #"
+                            << nScreen << ", but only " << m_aMonitors.size() << " screens found.");
+        assert(false);
+        return tools::Rectangle();
+    }
+    return m_aMonitors[nScreen].m_aArea;
 }
 
 int WinSalSystem::ShowNativeMessageBox(const OUString& rTitle, const OUString& rMessage)

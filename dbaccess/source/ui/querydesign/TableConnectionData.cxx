@@ -119,9 +119,9 @@ void OTableConnectionData::ResetConnLines()
     OConnectionLineDataVec().swap(m_vConnLineData);
 }
 
-OTableConnectionData* OTableConnectionData::NewInstance() const
+std::shared_ptr<OTableConnectionData> OTableConnectionData::NewInstance() const
 {
-    return new OTableConnectionData();
+    return std::make_shared<OTableConnectionData>();
 }
 
 OConnectionLineDataVec::size_type OTableConnectionData::normalizeLines()
@@ -133,7 +133,6 @@ OConnectionLineDataVec::size_type OTableConnectionData::normalizeLines()
     {
         if(m_vConnLineData[i]->GetSourceFieldName().isEmpty() && m_vConnLineData[i]->GetDestFieldName().isEmpty())
         {
-            OConnectionLineDataRef pData = m_vConnLineData[i];
             m_vConnLineData.erase(m_vConnLineData.begin()+i);
             --nCount;
             if (i < nRet)

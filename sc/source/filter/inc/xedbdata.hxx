@@ -37,7 +37,7 @@ protected:
     struct Entry
     {
         const ScDBData* mpData;
-        sal_Int32 const mnTableId;  /// used as [n] in table[n].xml part name.
+        sal_Int32       mnTableId;  /// used as [n] in table[n].xml part name.
 
         Entry( const ScDBData* pData, sal_Int32 nTableId );
     };
@@ -57,10 +57,10 @@ public:
     virtual             ~XclExpTablesManager() override;
 
     void                Initialize();
-    ::std::shared_ptr< XclExpTables > GetTablesBySheet( SCTAB nTab );
+    rtl::Reference< XclExpTables > GetTablesBySheet( SCTAB nTab );
 
 private:
-    typedef ::std::map< SCTAB, ::std::shared_ptr< XclExpTables > > TablesMapType;
+    typedef ::std::map< SCTAB, rtl::Reference< XclExpTables > > TablesMapType;
     TablesMapType maTablesMap;
 };
 

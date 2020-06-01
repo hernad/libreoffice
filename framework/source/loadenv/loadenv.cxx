@@ -918,7 +918,7 @@ bool LoadEnv::impl_furtherDocsAllowed()
 
     try
     {
-        o3tl::optional<sal_Int32> x(officecfg::Office::Common::Misc::MaxOpenDocuments::get(xContext));
+        std::optional<sal_Int32> x(officecfg::Office::Common::Misc::MaxOpenDocuments::get(xContext));
 
         // NIL means: count of allowed documents = infinite !
         //     => return true
@@ -1093,10 +1093,11 @@ bool LoadEnv::impl_loadContent()
     bool bHidden    = m_lMediaDescriptor.getUnpackedValueOrDefault(utl::MediaDescriptor::PROP_HIDDEN(), false);
     bool bMinimized = m_lMediaDescriptor.getUnpackedValueOrDefault(utl::MediaDescriptor::PROP_MINIMIZED(), false);
     bool bPreview   = m_lMediaDescriptor.getUnpackedValueOrDefault(utl::MediaDescriptor::PROP_PREVIEW(), false);
-    css::uno::Reference< css::task::XStatusIndicator > xProgress  = m_lMediaDescriptor.getUnpackedValueOrDefault(utl::MediaDescriptor::PROP_STATUSINDICATOR(), css::uno::Reference< css::task::XStatusIndicator >());
 
     if (!bHidden && !bMinimized && !bPreview)
     {
+        css::uno::Reference<css::task::XStatusIndicator> xProgress = m_lMediaDescriptor.getUnpackedValueOrDefault(
+            utl::MediaDescriptor::PROP_STATUSINDICATOR(), css::uno::Reference<css::task::XStatusIndicator>());
         if (!xProgress.is())
         {
             // Note: it's an optional interface!
@@ -1519,12 +1520,9 @@ css::uno::Reference< css::frame::XFrame > LoadEnv::impl_searchRecycleTarget()
     if (xOldDoc.is())
     {
         utl::MediaDescriptor lOldDocDescriptor(xModel->getArgs());
-        bool bFromTemplate = lOldDocDescriptor.getUnpackedValueOrDefault(utl::MediaDescriptor::PROP_ASTEMPLATE() , false);
-        OUString sReferrer = lOldDocDescriptor.getUnpackedValueOrDefault(utl::MediaDescriptor::PROP_REFERRER(), OUString());
 
-        // tdf#83722: valid but unmodified document, either from template
-        // or opened by the user (via File > New, referrer is set to private:user)
-        if (bFromTemplate || (sReferrer == "private:user"))
+        // replaceable document
+        if (!lOldDocDescriptor.getUnpackedValueOrDefault(utl::MediaDescriptor::PROP_REPLACEABLE(), false))
             return css::uno::Reference< css::frame::XFrame >();
 
         bReactivateOldControllerOnError = xOldDoc->suspend(true);
@@ -1676,22 +1674,22 @@ void LoadEnv::impl_makeFrameWindowVisible(const css::uno::Reference< css::awt::X
 
     SolarMutexGuard aSolarGuard;
     VclPtr<vcl::Window> pWindow = VCLUnoHelper::GetWindow(xWindow);
-    if ( pWindow )
+    if ( !pWindow )
+        return;
+
+    bool const preview( m_lMediaDescriptor.getUnpackedValueOrDefault(
+            utl::MediaDescriptor::PROP_PREVIEW(), false) );
+
+    bool bForceFrontAndFocus(false);
+    if ( !preview )
     {
-        bool const preview( m_lMediaDescriptor.getUnpackedValueOrDefault(
-                utl::MediaDescriptor::PROP_PREVIEW(), false) );
-
-        bool bForceFrontAndFocus(false);
-        if ( !preview )
-        {
-            bForceFrontAndFocus = officecfg::Office::Common::View::NewDocumentHandling::ForceFocusAndToFront::get(xContext);
-        }
-
-        if( pWindow->IsVisible() && (bForceFrontAndFocus || bForceToFront) )
-            pWindow->ToTop( ToTopFlags::RestoreWhenMin | ToTopFlags::ForegroundTask );
-        else
-            pWindow->Show(true, (bForceFrontAndFocus || bForceToFront) ? ShowFlags::ForegroundTask : ShowFlags::NONE );
+        bForceFrontAndFocus = officecfg::Office::Common::View::NewDocumentHandling::ForceFocusAndToFront::get(xContext);
     }
+
+    if( pWindow->IsVisible() && (bForceFrontAndFocus || bForceToFront) )
+        pWindow->ToTop( ToTopFlags::RestoreWhenMin | ToTopFlags::ForegroundTask );
+    else
+        pWindow->Show(true, (bForceFrontAndFocus || bForceToFront) ? ShowFlags::ForegroundTask : ShowFlags::NONE );
 }
 
 void LoadEnv::impl_applyPersistentWindowState(const css::uno::Reference< css::awt::XWindow >& xWindow)

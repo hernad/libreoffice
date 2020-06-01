@@ -20,12 +20,10 @@
 #include <drawingml/textcharacterpropertiescontext.hxx>
 
 #include <oox/helper/attributelist.hxx>
-#include <oox/drawingml/drawingmltypes.hxx>
 #include <drawingml/colorchoicecontext.hxx>
+#include <drawingml/misccontexts.hxx>
+#include <drawingml/textcharacterproperties.hxx>
 #include <drawingml/texteffectscontext.hxx>
-#include <drawingml/lineproperties.hxx>
-#include <drawingml/textparagraphproperties.hxx>
-#include <oox/core/relations.hxx>
 #include "hyperlinkcontext.hxx"
 #include <oox/token/namespaces.hxx>
 #include <oox/token/tokens.hxx>
@@ -102,10 +100,11 @@ ContextHandlerRef TextCharacterPropertiesContext::onCreateContext( sal_Int32 aEl
         case A_TOKEN( effectDag ):  // CT_EffectContainer 5.1.10.25
         case A_TOKEN( effectLst ):  // CT_EffectList 5.1.10.26
         break;
-
         case A_TOKEN( highlight ):  // CT_Color
-            return new ColorContext( *this, mrTextCharacterProperties.maHighlightColor );
-
+            return new ColorContext(*this, mrTextCharacterProperties.maHighlightColor);
+        case W_TOKEN( highlight ):
+            mrTextCharacterProperties.maHighlightColor = rAttribs.getHighlightColor(W_TOKEN(val));
+            break;
         // EG_TextUnderlineLine
         case A_TOKEN( uLnTx ):      // CT_TextUnderlineLineFollowText
             mrTextCharacterProperties.moUnderlineLineFollowText = true;
@@ -164,6 +163,59 @@ ContextHandlerRef TextCharacterPropertiesContext::onCreateContext( sal_Int32 aEl
                 mrTextCharacterProperties.maAsianThemeFont.setAttributes(rAttribs.getString(W_TOKEN(eastAsiaTheme), OUString()));
             }
             break;
+        case W_TOKEN( u ):
+        {
+            // If you add here, check if it is in drawingmltypes.cxx 113.
+            auto attrib = rAttribs.getString(W_TOKEN(val), OUString());
+            if (attrib == "single" || attrib == "words") // TODO: implement words properly. Now it is a single line.
+                mrTextCharacterProperties.moUnderline = XML_sng;
+            else if (attrib == "wavyHeavy")
+                mrTextCharacterProperties.moUnderline = XML_wavyHeavy;
+            else if (attrib == "wavyDouble")
+                mrTextCharacterProperties.moUnderline = XML_wavyDbl;
+            else if (attrib == "wave")
+                mrTextCharacterProperties.moUnderline = XML_wavy;
+            else if (attrib == "thick")
+                mrTextCharacterProperties.moUnderline = XML_heavy;
+            else if (attrib == "dottedHeavy")
+                mrTextCharacterProperties.moUnderline = XML_dottedHeavy;
+            else if (attrib == "dotted")
+                mrTextCharacterProperties.moUnderline = XML_dotted;
+            else if (attrib == "dashDotDotHeavy")
+                mrTextCharacterProperties.moUnderline = XML_dotDotDashHeavy;
+            else if (attrib == "dotDotDash")
+                mrTextCharacterProperties.moUnderline = XML_dotDotDash;
+            else if (attrib == "dashDotHeavy")
+                mrTextCharacterProperties.moUnderline = XML_dotDashHeavy;
+            else if (attrib == "dotDash")
+                mrTextCharacterProperties.moUnderline = XML_dotDash;
+            else if (attrib == "double")
+                mrTextCharacterProperties.moUnderline = XML_dbl;
+            else if (attrib == "dashLongHeavy")
+                mrTextCharacterProperties.moUnderline = XML_dashLongHeavy;
+            else if (attrib == "dashLong")
+                mrTextCharacterProperties.moUnderline = XML_dashLong;
+            else if (attrib == "dashedHeavy")
+                mrTextCharacterProperties.moUnderline = XML_dashHeavy;
+            else if (attrib == "dash")
+                mrTextCharacterProperties.moUnderline = XML_dash;
+            else if (attrib == "none")
+                mrTextCharacterProperties.moUnderline = XML_none;
+            auto colorAttrib = rAttribs.getIntegerHex(W_TOKEN(color));
+            if (colorAttrib.has())
+            {
+                oox::drawingml::Color theColor;
+                theColor.setSrgbClr(colorAttrib.get());
+                mrTextCharacterProperties.maUnderlineColor = theColor;
+            }
+            break;
+        }
+        case W_TOKEN( spacing ):
+        {
+            auto attrib = rAttribs.getInteger(W_TOKEN( val ), 0);
+            mrTextCharacterProperties.moSpacing = attrib;
+            break;
+        }
         case W_TOKEN( b ):
             mrTextCharacterProperties.moBold = rAttribs.getBool(W_TOKEN( val ), true);
             break;
@@ -171,6 +223,14 @@ ContextHandlerRef TextCharacterPropertiesContext::onCreateContext( sal_Int32 aEl
             mrTextCharacterProperties.moItalic = rAttribs.getBool(W_TOKEN( val ), true);
             break;
         case W_TOKEN( bCs ):
+            break;
+        case W_TOKEN( strike ):
+            if (rAttribs.getBool(W_TOKEN(val), true))
+                mrTextCharacterProperties.moStrikeout = XML_sngStrike;
+            break;
+        case W_TOKEN( dstrike ):
+            if (rAttribs.getBool(W_TOKEN(val), true))
+                mrTextCharacterProperties.moStrikeout = XML_dblStrike;
             break;
         case W_TOKEN( color ):
             if (rAttribs.getInteger(W_TOKEN(val)).has())
@@ -216,6 +276,9 @@ ContextHandlerRef TextCharacterPropertiesContext::onCreateContext( sal_Int32 aEl
                 mrTextCharacterProperties.moBaseline = -25000;
             break;
         }
+        case W_TOKEN(lang):
+            mrTextCharacterProperties.moLang = rAttribs.getString(W_TOKEN(val), OUString());
+            break;
         case OOX_TOKEN(w14, glow):
         case OOX_TOKEN(w14, shadow):
         case OOX_TOKEN(w14, reflection):

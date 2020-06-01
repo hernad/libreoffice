@@ -35,7 +35,7 @@
 #include <vcl/cursor.hxx>
 #include <vcl/wrkwin.hxx>
 #include <vcl/floatwin.hxx>
-#include <vcl/dialog.hxx>
+#include <vcl/toolkit/dialog.hxx>
 #include <vcl/help.hxx>
 #include <vcl/dockwin.hxx>
 #include <vcl/menu.hxx>
@@ -160,16 +160,6 @@ static bool ImplHandleMouseFloatMode( vcl::Window* pChild, const Point& rMousePo
 
 static void ImplHandleMouseHelpRequest( vcl::Window* pChild, const Point& rMousePos )
 {
-    if (comphelper::LibreOfficeKit::isActive())
-    {
-        // Ignore tooltips in popup color palettes
-        // (e.g. Character Properties dialog -> Font Effects -> Font Color)
-        if(pChild->GetType() == WindowType::CONTROL &&
-           pChild->GetParent() && pChild->GetParent()->GetParent() &&
-           pChild->GetParent()->GetParent()->GetType() == WindowType::DOCKINGWINDOW)
-            return;
-    }
-
     ImplSVHelpData& aHelpData = ImplGetSVHelpData();
     if ( !aHelpData.mpHelpWin ||
          !( aHelpData.mpHelpWin->IsWindowOrChild( pChild ) ||
@@ -471,10 +461,10 @@ bool ImplHandleMouseEvent( const VclPtr<vcl::Window>& xWindow, MouseNotifyEvent 
                     //long nMouseY = nY;
                     long nMouseX = aMousePos.X(); // #106074# use the possibly re-mirrored coordinates (RTL) ! nX,nY are unmodified !
                     long nMouseY = aMousePos.Y();
-                    if ( !(((nMouseX-nDragW) <= pMouseDownWin->ImplGetFrameData()->mnFirstMouseX) &&
-                           ((nMouseX+nDragW) >= pMouseDownWin->ImplGetFrameData()->mnFirstMouseX)) ||
-                         !(((nMouseY-nDragH) <= pMouseDownWin->ImplGetFrameData()->mnFirstMouseY) &&
-                           ((nMouseY+nDragH) >= pMouseDownWin->ImplGetFrameData()->mnFirstMouseY)) )
+                    if ( (((nMouseX-nDragW) > pMouseDownWin->ImplGetFrameData()->mnFirstMouseX) ||
+                           ((nMouseX+nDragW) < pMouseDownWin->ImplGetFrameData()->mnFirstMouseX)) ||
+                         (((nMouseY-nDragH) > pMouseDownWin->ImplGetFrameData()->mnFirstMouseY) ||
+                           ((nMouseY+nDragH) < pMouseDownWin->ImplGetFrameData()->mnFirstMouseY)) )
                     {
                         pMouseDownWin->ImplGetFrameData()->mbStartDragCalled  = true;
 
@@ -1338,7 +1328,7 @@ class HandleGestureEventBase
 protected:
     ImplSVData* m_pSVData;
     VclPtr<vcl::Window> m_pWindow;
-    Point const m_aMousePos;
+    Point m_aMousePos;
 
 public:
     HandleGestureEventBase(vcl::Window *pWindow, const Point &rMousePos)
@@ -1505,7 +1495,7 @@ bool HandleWheelEvent::HandleEvent(const SalWheelMouseEvent& rEvt)
 
     pSVData->mpWinData->mpLastWheelWindow = Dispatch(xMouseWindow);
 
-    return pSVData->mpWinData->mpLastWheelWindow.get();
+    return pSVData->mpWinData->mpLastWheelWindow;
 }
 
 namespace {
@@ -1633,7 +1623,7 @@ static void ImplHandlePaint( vcl::Window* pWindow, const tools::Rectangle& rBoun
         // (GetSizePixel does that for us)
         pWindow->GetSizePixel();
         // force drawing immediately
-        pWindow->Update();
+        pWindow->PaintImmediately();
     }
 }
 

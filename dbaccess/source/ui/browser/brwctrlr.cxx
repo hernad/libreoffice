@@ -23,27 +23,16 @@
 #include <strings.hrc>
 #include <strings.hxx>
 #include <core_resource.hxx>
-#include <stringconstants.hxx>
 #include <queryfilter.hxx>
 #include <queryorder.hxx>
 #include <sqlmessage.hxx>
 
-#include <com/sun/star/beans/PropertyAttribute.hpp>
 #include <com/sun/star/container/XNameContainer.hpp>
-#include <com/sun/star/container/XNamed.hpp>
-#include <com/sun/star/form/FormButtonType.hpp>
-#include <com/sun/star/form/FormSubmitEncoding.hpp>
-#include <com/sun/star/form/FormSubmitMethod.hpp>
-#include <com/sun/star/form/XApproveActionBroadcaster.hpp>
 #include <com/sun/star/form/XBoundControl.hpp>
-#include <com/sun/star/form/XChangeBroadcaster.hpp>
-#include <com/sun/star/form/XChangeListener.hpp>
 #include <com/sun/star/form/XDatabaseParameterBroadcaster.hpp>
 #include <com/sun/star/form/XLoadable.hpp>
 #include <com/sun/star/form/XReset.hpp>
 #include <com/sun/star/form/XResetListener.hpp>
-#include <com/sun/star/form/XSubmit.hpp>
-#include <com/sun/star/form/XSubmitListener.hpp>
 #include <com/sun/star/form/runtime/XFormController.hpp>
 #include <com/sun/star/form/runtime/FormOperations.hpp>
 #include <com/sun/star/lang/IndexOutOfBoundsException.hpp>
@@ -52,21 +41,17 @@
 #include <com/sun/star/sdb/CommandType.hpp>
 #include <com/sun/star/sdb/ErrorCondition.hpp>
 #include <com/sun/star/sdb/ParametersRequest.hpp>
-#include <com/sun/star/sdb/SQLContext.hpp>
 #include <com/sun/star/sdb/XInteractionSupplyParameters.hpp>
 #include <com/sun/star/sdb/XSQLErrorBroadcaster.hpp>
 #include <com/sun/star/sdb/XSingleSelectQueryComposer.hpp>
 #include <com/sun/star/sdb/SQLFilterOperator.hpp>
 #include <com/sun/star/sdbc/XConnection.hpp>
 #include <com/sun/star/sdbc/XResultSetUpdate.hpp>
-#include <com/sun/star/sdbc/XRowSetListener.hpp>
 #include <com/sun/star/sdbc/XWarningsSupplier.hpp>
 #include <com/sun/star/sdbcx/Privilege.hpp>
 #include <com/sun/star/sdbcx/XRowLocate.hpp>
 #include <com/sun/star/task/InteractionHandler.hpp>
-#include <com/sun/star/uno/TypeClass.hpp>
 #include <com/sun/star/util/NumberFormatter.hpp>
-#include <com/sun/star/util/XCancellable.hpp>
 
 #include <comphelper/enumhelper.hxx>
 #include <comphelper/extract.hxx>
@@ -79,10 +64,8 @@
 #include <connectivity/sqlerror.hxx>
 #include <cppuhelper/exc_hlp.hxx>
 #include <cppuhelper/implbase2.hxx>
-#include <cppuhelper/typeprovider.hxx>
 #include <osl/mutex.hxx>
 #include <sal/log.hxx>
-#include <sfx2/app.hxx>
 #include <svx/fmsearch.hxx>
 #include <svx/svxdlg.hxx>
 #include <tools/diagnose_ex.h>
@@ -1231,34 +1214,36 @@ void SbaXDataBrowserController::frameAction(const css::frame::FrameActionEvent& 
 
     SbaXDataBrowserController_Base::frameAction( aEvent );
 
-    if ( aEvent.Source == getFrame() )
-        switch ( aEvent.Action )
-        {
-            case FrameAction_FRAME_ACTIVATED:
-            case FrameAction_FRAME_UI_ACTIVATED:
-                // ensure that the active cell (if any) has the focus
-                m_aAsyncGetCellFocus.Call();
-                // start the clipboard timer
-                if (getBrowserView() && getBrowserView()->getVclControl() && !m_aInvalidateClipboard.IsActive())
-                {
-                    m_aInvalidateClipboard.Start();
-                    OnInvalidateClipboard( nullptr );
-                }
-                break;
-            case FrameAction_FRAME_DEACTIVATING:
-            case FrameAction_FRAME_UI_DEACTIVATING:
-                // stop the clipboard invalidator
-                if (getBrowserView() && getBrowserView()->getVclControl() && m_aInvalidateClipboard.IsActive())
-                {
-                    m_aInvalidateClipboard.Stop();
-                    OnInvalidateClipboard( nullptr );
-                }
-                // remove the "get cell focus"-event
-                m_aAsyncGetCellFocus.CancelCall();
-                break;
-            default:
-                break;
-        }
+    if ( aEvent.Source != getFrame() )
+        return;
+
+    switch ( aEvent.Action )
+    {
+        case FrameAction_FRAME_ACTIVATED:
+        case FrameAction_FRAME_UI_ACTIVATED:
+            // ensure that the active cell (if any) has the focus
+            m_aAsyncGetCellFocus.Call();
+            // start the clipboard timer
+            if (getBrowserView() && getBrowserView()->getVclControl() && !m_aInvalidateClipboard.IsActive())
+            {
+                m_aInvalidateClipboard.Start();
+                OnInvalidateClipboard( nullptr );
+            }
+            break;
+        case FrameAction_FRAME_DEACTIVATING:
+        case FrameAction_FRAME_UI_DEACTIVATING:
+            // stop the clipboard invalidator
+            if (getBrowserView() && getBrowserView()->getVclControl() && m_aInvalidateClipboard.IsActive())
+            {
+                m_aInvalidateClipboard.Stop();
+                OnInvalidateClipboard( nullptr );
+            }
+            // remove the "get cell focus"-event
+            m_aAsyncGetCellFocus.CancelCall();
+            break;
+        default:
+            break;
+    }
 }
 
 IMPL_LINK_NOARG( SbaXDataBrowserController, OnAsyncDisplayError, void*, void )
@@ -2422,50 +2407,50 @@ void SbaXDataBrowserController::LoadFinished(bool /*bWasSynch*/)
 {
     m_nRowSetPrivileges = 0;
 
-    if (isValid() && !loadingCancelled())
+    if (!(isValid() && !loadingCancelled()))
+        return;
+
+    // obtain cached values
+    try
     {
-        // obtain cached values
-        try
-        {
-            Reference< XPropertySet > xFormProps( m_xLoadable, UNO_QUERY_THROW );
-            OSL_VERIFY( xFormProps->getPropertyValue( PROPERTY_PRIVILEGES ) >>= m_nRowSetPrivileges );
-        }
-        catch( const Exception& )
-        {
-            DBG_UNHANDLED_EXCEPTION("dbaccess");
-        }
-
-        // switch the control to alive mode
-        getBrowserView()->getGridControl()->setDesignMode(false);
-
-        initializeParser();
-
-        InvalidateAll();
-
-        m_aAsyncGetCellFocus.Call();
+        Reference< XPropertySet > xFormProps( m_xLoadable, UNO_QUERY_THROW );
+        OSL_VERIFY( xFormProps->getPropertyValue( PROPERTY_PRIVILEGES ) >>= m_nRowSetPrivileges );
     }
+    catch( const Exception& )
+    {
+        DBG_UNHANDLED_EXCEPTION("dbaccess");
+    }
+
+    // switch the control to alive mode
+    getBrowserView()->getGridControl()->setDesignMode(false);
+
+    initializeParser();
+
+    InvalidateAll();
+
+    m_aAsyncGetCellFocus.Call();
 }
 
 void SbaXDataBrowserController::initializeParser() const
 {
-    if ( !m_xParser.is() )
+    if ( m_xParser.is() )
+        return;
+
+    // create a parser (needed for filtering/sorting)
+    try
     {
-        // create a parser (needed for filtering/sorting)
-        try
-        {
-            const Reference< XPropertySet >  xFormSet(getRowSet(), UNO_QUERY);
-            if (::comphelper::getBOOL(xFormSet->getPropertyValue(PROPERTY_ESCAPE_PROCESSING)))
-            {   // (only if the statement isn't native)
-                // (it is allowed to use the PROPERTY_ISPASSTHROUGH : _after_ loading a form it is valid)
-                xFormSet->getPropertyValue(PROPERTY_SINGLESELECTQUERYCOMPOSER) >>= m_xParser;
-            }
+        const Reference< XPropertySet >  xFormSet(getRowSet(), UNO_QUERY);
+        if (::comphelper::getBOOL(xFormSet->getPropertyValue(PROPERTY_ESCAPE_PROCESSING)))
+        {   // (only if the statement isn't native)
+            // (it is allowed to use the PROPERTY_ISPASSTHROUGH : _after_ loading a form it is valid)
+            xFormSet->getPropertyValue(PROPERTY_SINGLESELECTQUERYCOMPOSER) >>= m_xParser;
         }
-        catch(Exception&)
-        {
-            DBG_UNHANDLED_EXCEPTION("dbaccess");
-            m_xParser = nullptr;
-            // no further handling, we ignore the error
-        }
+    }
+    catch(Exception&)
+    {
+        DBG_UNHANDLED_EXCEPTION("dbaccess");
+        m_xParser = nullptr;
+        // no further handling, we ignore the error
     }
 }
 

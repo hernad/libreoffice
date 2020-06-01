@@ -28,14 +28,12 @@
 #include <memory>
 #include <vector>
 
-namespace com { namespace sun { namespace star { namespace ucb {
-class XContent;
-class XCommandEnvironment;
-} } } }
+namespace com::sun::star::ucb {
+    class XContent;
+    class XCommandEnvironment;
+}
 
-namespace com { namespace sun { namespace star { namespace sdbc {
-class XResultSet;
-} } } }
+namespace com::sun::star::sdbc { class XResultSet; }
 
 namespace sd {
 
@@ -47,8 +45,8 @@ public:
     TemplateEntry   (const OUString& rsTitle, const OUString& rsPath)
         :   msTitle(rsTitle), msPath(rsPath) {}
 
-    OUString const msTitle;
-    OUString const msPath;
+    OUString msTitle;
+    OUString msPath;
 };
 
 /** This class scans the template folders for impress templates.  There are

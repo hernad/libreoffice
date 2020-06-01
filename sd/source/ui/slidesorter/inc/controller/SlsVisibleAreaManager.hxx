@@ -21,13 +21,13 @@
 #define INCLUDED_SD_SOURCE_UI_SLIDESORTER_INC_CONTROLLER_SLSVISIBLEAREAMANAGER_HXX
 
 #include <model/SlsSharedPageDescriptor.hxx>
-#include <o3tl/optional.hxx>
+#include <optional>
 #include <tools/gen.hxx>
 #include <vector>
 
-namespace sd { namespace slidesorter { class SlideSorter; } }
+namespace sd::slidesorter { class SlideSorter; }
 
-namespace sd { namespace slidesorter { namespace controller {
+namespace sd::slidesorter::controller {
 
 /** Manage requests for scrolling page objects into view.
 */
@@ -81,10 +81,10 @@ private:
     int  mnDisableCount;
 
     void MakeVisible();
-    ::o3tl::optional<Point> GetRequestedTopLeft() const;
+    ::std::optional<Point> GetRequestedTopLeft() const;
 };
 
-} } } // end of namespace ::sd::slidesorter::view
+} // end of namespace ::sd::slidesorter::view
 
 #endif
 

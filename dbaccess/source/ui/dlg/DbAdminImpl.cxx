@@ -25,12 +25,9 @@
 #include <svl/stritem.hxx>
 #include <svl/intitem.hxx>
 #include <svl/eitem.hxx>
-#include "DriverSettings.hxx"
 #include <IItemSetHelper.hxx>
 #include <UITools.hxx>
 #include <core_resource.hxx>
-#include <dbu_dlg.hxx>
-#include <stringconstants.hxx>
 #include <strings.hrc>
 #include <strings.hxx>
 #include <dsitems.hxx>
@@ -45,10 +42,8 @@
 #include <com/sun/star/sdb/SQLContext.hpp>
 #include <com/sun/star/sdbc/ConnectionPool.hpp>
 #include <com/sun/star/sdbc/XDriver.hpp>
-#include <com/sun/star/sdbc/XDriverAccess.hpp>
 #include <com/sun/star/task/InteractionHandler.hpp>
 #include <com/sun/star/task/XInteractionRequest.hpp>
-#include <com/sun/star/ucb/XInteractionSupplyAuthentication2.hpp>
 #include <com/sun/star/ucb/AuthenticationRequest.hpp>
 
 #include <comphelper/interaction.hxx>
@@ -781,24 +776,24 @@ void ODbDataSourceAdministrationHelper::fillDatasourceInfo(const SfxItemSet& _rS
     }
 
     // check which values are still left ('cause they were not present in the original sequence, but are to be set)
-    if ( !aRelevantSettings.empty() )
+    if ( aRelevantSettings.empty() )
+        return;
+
+    sal_Int32 nOldLength = _rInfo.getLength();
+    _rInfo.realloc(nOldLength + aRelevantSettings.size());
+    PropertyValue* pAppendValues = _rInfo.getArray() + nOldLength;
+    for (auto const& relevantSetting : aRelevantSettings)
     {
-        sal_Int32 nOldLength = _rInfo.getLength();
-        _rInfo.realloc(nOldLength + aRelevantSettings.size());
-        PropertyValue* pAppendValues = _rInfo.getArray() + nOldLength;
-        for (auto const& relevantSetting : aRelevantSettings)
+        if ( relevantSetting.Name == INFO_CHARSET )
         {
-            if ( relevantSetting.Name == INFO_CHARSET )
-            {
-                OUString sCharSet;
-                relevantSetting.Value >>= sCharSet;
-                if ( !sCharSet.isEmpty() )
-                    *pAppendValues = relevantSetting;
-            }
-            else
+            OUString sCharSet;
+            relevantSetting.Value >>= sCharSet;
+            if ( !sCharSet.isEmpty() )
                 *pAppendValues = relevantSetting;
-            ++pAppendValues;
         }
+        else
+            *pAppendValues = relevantSetting;
+        ++pAppendValues;
     }
 }
 

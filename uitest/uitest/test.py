@@ -22,11 +22,6 @@ class DialogNotExecutedException(Exception):
     def __str__(self):
         return "Dialog not executed for: " + self.command
 
-class DialogNotClosedException(Exception):
-
-    def __str__(self):
-        return "Dialog was not closed"
-
 class UITest(object):
 
     def __init__(self, xUITest, xContext):
@@ -53,6 +48,24 @@ class UITest(object):
             if component is not None:
                 return component
 
+    def wait_until_child_is_available(self, parent, childName):
+        time_ = 0
+        while time_ < MAX_WAIT:
+            if childName in parent.getChildren():
+                break
+            else:
+                time_ += DEFAULT_SLEEP
+                time.sleep(DEFAULT_SLEEP)
+
+    def wait_until_property_is_updated(self, element, propertyName, value):
+        time_ = 0
+        while time_ < MAX_WAIT:
+            if get_state_as_dict(element)[propertyName] == value:
+                break
+            else:
+                time_ += DEFAULT_SLEEP
+                time.sleep(DEFAULT_SLEEP)
+
     def load_file(self, url):
         desktop = self.get_desktop()
         with EventListener(self._xContext, "OnLoad") as event:
@@ -68,19 +81,15 @@ class UITest(object):
                 time_ += DEFAULT_SLEEP
                 time.sleep(DEFAULT_SLEEP)
 
-    def execute_dialog_through_command(self, command, printNames=False, maxWait=MAX_WAIT):
+    def execute_dialog_through_command(self, command, printNames=False):
         with EventListener(self._xContext, "DialogExecute", printNames=printNames) as event:
             if not self._xUITest.executeDialog(command):
                 raise DialogNotExecutedException(command)
-            time_ = 0
-            while time_ < maxWait:
+            while True:
                 if event.executed:
                     time.sleep(DEFAULT_SLEEP)
                     return
-                time_ += DEFAULT_SLEEP
                 time.sleep(DEFAULT_SLEEP)
-
-        raise DialogNotExecutedException(command)
 
     def execute_modeless_dialog_through_command(self, command, printNames=False):
         with EventListener(self._xContext, "ModelessDialogVisible", printNames = printNames) as event:
@@ -152,31 +161,26 @@ class UITest(object):
     def close_dialog_through_button(self, button):
         with EventListener(self._xContext, "DialogClosed" ) as event:
             button.executeAction("CLICK", tuple())
-            time_ = 0
-            while time_ < MAX_WAIT:
+            while True:
                 if event.executed:
                     time.sleep(DEFAULT_SLEEP)
                     return
-                time_ += DEFAULT_SLEEP
                 time.sleep(DEFAULT_SLEEP)
-        raise DialogNotClosedException()
 
     def close_doc(self):
-        with EventListener(self._xContext, ["DialogExecute", "OnViewClosed"] ) as event:
-            if not self._xUITest.executeDialog(".uno:CloseDoc"):
-                print(".uno:CloseDoc failed")
-            time_ = 0
-            while time_ < MAX_WAIT:
-                if event.hasExecuted("DialogExecute"):
-                    xCloseDlg = self._xUITest.getTopFocusWindow()
-                    xNoBtn = xCloseDlg.getChild("discard")
-                    xNoBtn.executeAction("CLICK", tuple())
-                    return
-                elif event.hasExecuted("OnViewClosed"):
-                    return
-
-                time_ += DEFAULT_SLEEP
-                time.sleep(DEFAULT_SLEEP)
+        desktop = self.get_desktop()
+        active_frame = desktop.getActiveFrame()
+        if not active_frame:
+            print("close_doc: no active frame")
+            return
+        component = active_frame.getController().getModel()
+        if not component:
+            print("close_doc: active frame has no component")
+            return
+        component.dispose()
+        frames = desktop.getFrames()
+        if frames:
+            frames[0].activate()
 
     def execute_blocking_action(self, action, dialog_element=None,
             args=(), dialog_handler=None, printNames=False):

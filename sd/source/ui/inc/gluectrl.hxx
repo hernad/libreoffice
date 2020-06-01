@@ -20,7 +20,7 @@
 #ifndef INCLUDED_SD_SOURCE_UI_INC_GLUECTRL_HXX
 #define INCLUDED_SD_SOURCE_UI_INC_GLUECTRL_HXX
 
-#include <vcl/lstbox.hxx>
+#include <vcl/InterimItemWindow.hxx>
 #include <sfx2/tbxctrl.hxx>
 
 enum class SdrEscapeDirection;
@@ -28,18 +28,26 @@ enum class SdrEscapeDirection;
 /**
  * GluePointEscDirLB
  */
-class GlueEscDirLB : public ListBox
+class GlueEscDirLB final : public InterimItemWindow
 {
 private:
     css::uno::Reference< css::frame::XFrame > m_xFrame;
+    std::unique_ptr<weld::ComboBox> m_xWidget;
+
+    DECL_LINK(SelectHdl, weld::ComboBox&, void);
+    DECL_LINK(KeyInputHdl, const KeyEvent&, bool);
+
 public:
-                 GlueEscDirLB( vcl::Window* pParent,
-                              const css::uno::Reference< css::frame::XFrame >& rFrame );
-                 virtual ~GlueEscDirLB() override;
+    GlueEscDirLB(vcl::Window* pParent, const css::uno::Reference<css::frame::XFrame>& rFrame);
+    virtual void dispose() override;
+    virtual ~GlueEscDirLB() override;
 
-    virtual void Select() override;
+    virtual void GetFocus() override;
 
-    void         Fill();
+    void set_active(int nPos) { m_xWidget->set_active(nPos); }
+    void set_sensitive(bool bSensitive);
+
+    void Fill();
 };
 
 /**
@@ -53,7 +61,7 @@ private:
 public:
     virtual void StateChanged( sal_uInt16 nSId, SfxItemState eState,
                                 const SfxPoolItem* pState ) override;
-    virtual VclPtr<vcl::Window> CreateItemWindow( vcl::Window *pParent ) override;
+    virtual VclPtr<InterimItemWindow> CreateItemWindow( vcl::Window *pParent ) override;
 
             SFX_DECL_TOOLBOX_CONTROL();
 

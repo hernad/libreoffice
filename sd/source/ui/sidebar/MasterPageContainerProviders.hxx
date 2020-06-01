@@ -29,7 +29,7 @@ class SdPage;
 namespace sd { class PreviewRenderer; }
 namespace sd { class DrawDocShell; }
 
-namespace sd { namespace sidebar {
+namespace sd::sidebar {
 
 /** Interface for a provider of page objects.  It is used by the
     MasterPageDescriptor to create master page objects on demand.
@@ -116,7 +116,7 @@ public:
     virtual SdPage* operator () (SdDrawDocument* pDocument) override;
     virtual int GetCostIndex() override;
 private:
-    OUString const msURL;
+    OUString msURL;
     SfxObjectShellLock mxDocumentShell;
     ::sd::DrawDocShell* LoadDocument (const OUString& sFileName);
 };
@@ -133,7 +133,7 @@ public:
     virtual int GetCostIndex() override;
     virtual bool NeedsPageObject() override;
 private:
-    OUString const msURL;
+    OUString msURL;
 };
 
 /** Create an empty default master page.
@@ -158,10 +158,10 @@ public:
     virtual SdPage* operator() (SdDrawDocument* pDocument) override;
     virtual int GetCostIndex() override;
 private:
-    SdPage* const mpPage;
+    SdPage* mpPage;
 };
 
-} } // end of namespace sd::sidebar
+} // end of namespace sd::sidebar
 
 #endif
 

@@ -20,6 +20,7 @@
 #ifndef INCLUDED_SVX_SOURCE_INC_CELL_HXX
 #define INCLUDED_SVX_SOURCE_INC_CELL_HXX
 
+#include <config_options.h>
 #include <com/sun/star/table/XMergeableCell.hpp>
 #include <com/sun/star/awt/XLayoutConstrains.hpp>
 #include <com/sun/star/lang/XEventListener.hpp>
@@ -35,16 +36,13 @@
 class SfxItemSet;
 class OutlinerParaObject;
 class SdrObject;
-
-namespace sdr { namespace properties {
-    class TextProperties;
-} }
+namespace sdr::properties { class TextProperties; }
 
 
-namespace sdr { namespace table {
+namespace sdr::table {
 
 
-class SVXCORE_DLLPUBLIC Cell :  public SdrText,
+class UNLESS_MERGELIBS(SVXCORE_DLLPUBLIC) Cell :  public SdrText,
                 public SvxUnoTextBase,
                 public css::table::XMergeableCell,
                 public css::awt::XLayoutConstrains,
@@ -216,7 +214,7 @@ private:
 };
 
 
-} }
+}
 
 #endif
 

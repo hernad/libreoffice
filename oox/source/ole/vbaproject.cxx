@@ -35,10 +35,8 @@
 #include <comphelper/storagehelper.hxx>
 #include <osl/diagnose.h>
 #include <rtl/tencinfo.h>
-#include <rtl/ustrbuf.h>
 #include <sal/log.hxx>
 #include <oox/helper/binaryinputstream.hxx>
-#include <oox/helper/containerhelper.hxx>
 #include <oox/helper/propertyset.hxx>
 #include <oox/helper/textinputstream.hxx>
 #include <oox/ole/olestorage.hxx>
@@ -198,7 +196,7 @@ void VbaProject::importVbaData(const uno::Reference<io::XInputStream>& xInputStr
 
 void VbaProject::registerMacroAttacher( const VbaMacroAttacherRef& rxAttacher )
 {
-    OSL_ENSURE( rxAttacher.get(), "VbaProject::registerMacroAttacher - unexpected empty reference" );
+    OSL_ENSURE( rxAttacher, "VbaProject::registerMacroAttacher - unexpected empty reference" );
     maMacroAttachers.push_back( rxAttacher );
 }
 
@@ -265,7 +263,7 @@ void VbaProject::importVba( StorageBase& rVbaPrjStrg, const GraphicHelper& rGrap
 void VbaProject::readVbaModules( StorageBase& rVbaPrjStrg )
 {
     StorageRef xVbaStrg = rVbaPrjStrg.openSubStorage( "VBA", false );
-    OSL_ENSURE( xVbaStrg.get(), "VbaProject::readVbaModules - cannot open 'VBA' substorage" );
+    OSL_ENSURE( xVbaStrg, "VbaProject::readVbaModules - cannot open 'VBA' substorage" );
     if( !xVbaStrg )
         return;
 
@@ -399,7 +397,11 @@ void VbaProject::readVbaModules( StorageBase& rVbaPrjStrg )
             }
         }
     }
-    if( !maModules.empty() ) try
+
+    if( maModules.empty() )
+        return;
+
+    try
     {
         /*  Set library container to VBA compatibility mode. This will create
             the VBA Globals object and store it in the Basic manager of the
@@ -423,7 +425,7 @@ void VbaProject::readVbaModules( StorageBase& rVbaPrjStrg )
 void VbaProject::importModulesAndForms( StorageBase& rVbaPrjStrg, const GraphicHelper& rGraphicHelper )
 {
     StorageRef xVbaStrg = rVbaPrjStrg.openSubStorage( "VBA", false );
-    OSL_ENSURE( xVbaStrg.get(), "VbaProject::importModulesAndForms - cannot open 'VBA' substorage" );
+    OSL_ENSURE( xVbaStrg, "VbaProject::importModulesAndForms - cannot open 'VBA' substorage" );
     if( !xVbaStrg )
         return;
     rtl_TextEncoding eTextEnc = RTL_TEXTENCODING_MS_1252;
@@ -489,7 +491,7 @@ void VbaProject::importModulesAndForms( StorageBase& rVbaPrjStrg, const GraphicH
         if( elem != "VBA" )
         {
             StorageRef xSubStrg = rVbaPrjStrg.openSubStorage( elem, false );
-            if( xSubStrg.get() ) try
+            if( xSubStrg ) try
             {
                 // resolve module name from storage name (which equals the module stream name)
                 VbaModule* pModule = maModulesByStrm.get( elem ).get();
@@ -513,7 +515,10 @@ void VbaProject::importModulesAndForms( StorageBase& rVbaPrjStrg, const GraphicH
 
 void VbaProject::attachMacros()
 {
-    if( !maMacroAttachers.empty() && mxContext.is() ) try
+    if( !(!maMacroAttachers.empty() && mxContext.is()) )
+        return;
+
+    try
     {
         comphelper::DocumentInfo::notifyMacroEventRead(mxDocModel);
 
@@ -533,7 +538,10 @@ void VbaProject::attachMacros()
 
 void VbaProject::copyStorage( StorageBase& rVbaPrjStrg )
 {
-    if( mxContext.is() ) try
+    if( !mxContext.is() )
+        return;
+
+    try
     {
         Reference< XStorageBasedDocument > xStorageBasedDoc( mxDocModel, UNO_QUERY_THROW );
         Reference< XStorage > xDocStorage( xStorageBasedDoc->getDocumentStorage(), UNO_SET_THROW );

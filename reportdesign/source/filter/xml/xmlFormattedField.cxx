@@ -20,13 +20,8 @@
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
 #include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
-#include "xmlEnums.hxx"
-#include "xmlControlProperty.hxx"
-#include "xmlHelper.hxx"
-#include <xmloff/xmluconv.hxx>
-#include "xmlReportElement.hxx"
-#include "xmlComponent.hxx"
+#include <sal/log.hxx>
+#include <osl/diagnose.h>
 
 
 namespace rptxml
@@ -45,9 +40,7 @@ OXMLFormattedField::OXMLFormattedField( ORptFilter& rImport
 
     try
     {
-        sax_fastparser::FastAttributeList *pAttribList =
-                        sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-        for (auto &aIter : *pAttribList)
+        for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
         {
             OUString sValue = aIter.toString();
 
@@ -60,6 +53,7 @@ OXMLFormattedField::OXMLFormattedField( ORptFilter& rImport
                     _xComponent->setDataField("rpt:PageNumber()");
                     break;
                 default:
+                    SAL_WARN("reportdesign", "unknown attribute " << SvXMLImport::getPrefixAndNameFromToken(aIter.getToken()) << " = " << sValue);
                     break;
             }
         }

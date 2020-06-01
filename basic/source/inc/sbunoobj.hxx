@@ -21,8 +21,8 @@
 
 #include <basic/sbxobj.hxx>
 #include <basic/sbxmeth.hxx>
-#include <basic/sbxprop.hxx>
-#include <basic/sbxfac.hxx>
+#include <sbxprop.hxx>
+#include <sbxfac.hxx>
 #include <basic/sbx.hxx>
 #include <com/sun/star/beans/XMaterialHolder.hpp>
 #include <com/sun/star/beans/XExactName.hpp>
@@ -359,16 +359,11 @@ public:
     virtual void Clear() override;
 };
 
-typedef std::unordered_map< OUString, css::uno::Any > VBAConstantsHash;
-
-typedef std::vector< OUString > VBAConstantsVector;
-
 class VBAConstantHelper
 {
 private:
-
-    VBAConstantsVector aConstCache;
-    VBAConstantsHash aConstHash;
+    std::vector< OUString > aConstCache;
+    std::unordered_map< OUString, css::uno::Any > aConstHash;
     bool isInited;
     VBAConstantHelper():isInited( false ) {}
     VBAConstantHelper(const VBAConstantHelper&) = delete;

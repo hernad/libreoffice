@@ -1421,39 +1421,42 @@ bool View::InsertData( const TransferableDataHelper& rDataHelper,
         }
     }
 
-    bool bIsRTF = false;
-    if(!bReturn && !bLink && (( bIsRTF = CHECK_FORMAT_TRANS(SotClipboardFormatId::RTF) ) || CHECK_FORMAT_TRANS(SotClipboardFormatId::RICHTEXT) ))
+    if(!bReturn && !bLink)
     {
-        ::tools::SvRef<SotStorageStream> xStm;
-
-        if( aDataHelper.GetSotStorageStream( bIsRTF ? SotClipboardFormatId::RTF : SotClipboardFormatId::RICHTEXT, xStm ) )
+        bool bIsRTF = CHECK_FORMAT_TRANS(SotClipboardFormatId::RTF);
+        if (bIsRTF || CHECK_FORMAT_TRANS(SotClipboardFormatId::RICHTEXT))
         {
-            xStm->Seek( 0 );
+            ::tools::SvRef<SotStorageStream> xStm;
 
-            if( bTable )
+            if( aDataHelper.GetSotStorageStream( bIsRTF ? SotClipboardFormatId::RTF : SotClipboardFormatId::RICHTEXT, xStm ) )
             {
-                bReturn = PasteRTFTable( xStm, pPage, nPasteOptions );
-            }
-            else
-            {
-                OutlinerView* pOLV = GetTextEditOutlinerView();
+                xStm->Seek( 0 );
 
-                if( pOLV )
+                if( bTable )
                 {
-                    ::tools::Rectangle   aRect( pOLV->GetOutputArea() );
-                    Point       aPos( pOLV->GetWindow()->PixelToLogic( maDropPos ) );
-
-                    if( aRect.IsInside( aPos ) || ( !bDrag && IsTextEdit() ) )
-                    {
-                        // mba: clipboard always must contain absolute URLs (could be from alien source)
-                        pOLV->Read( *xStm, EETextFormat::Rtf, mpDocSh->GetHeaderAttributes() );
-                        bReturn = true;
-                    }
+                    bReturn = PasteRTFTable( xStm, pPage, nPasteOptions );
                 }
+                else
+                {
+                    OutlinerView* pOLV = GetTextEditOutlinerView();
 
-                if( !bReturn )
-                    // mba: clipboard always must contain absolute URLs (could be from alien source)
-                    bReturn = SdrView::Paste( *xStm, EETextFormat::Rtf, maDropPos, pPage, nPasteOptions );
+                    if( pOLV )
+                    {
+                        ::tools::Rectangle   aRect( pOLV->GetOutputArea() );
+                        Point       aPos( pOLV->GetWindow()->PixelToLogic( maDropPos ) );
+
+                        if( aRect.IsInside( aPos ) || ( !bDrag && IsTextEdit() ) )
+                        {
+                            // mba: clipboard always must contain absolute URLs (could be from alien source)
+                            pOLV->Read( *xStm, EETextFormat::Rtf, mpDocSh->GetHeaderAttributes() );
+                            bReturn = true;
+                        }
+                    }
+
+                    if( !bReturn )
+                        // mba: clipboard always must contain absolute URLs (could be from alien source)
+                        bReturn = SdrView::Paste( *xStm, EETextFormat::Rtf, maDropPos, pPage, nPasteOptions );
+                }
             }
         }
     }
@@ -1524,7 +1527,7 @@ bool View::InsertData( const TransferableDataHelper& rDataHelper,
 bool View::PasteRTFTable( const ::tools::SvRef<SotStorageStream>& xStm, SdrPage* pPage, SdrInsertFlags nPasteOptions )
 {
     std::unique_ptr<SdDrawDocument> pModel(new SdDrawDocument( DocumentType::Impress, mpDocSh ));
-    pModel->NewOrLoadCompleted(NEW_DOC);
+    pModel->NewOrLoadCompleted(DocCreationMode::New);
     pModel->GetItemPool().SetDefaultMetric(MapUnit::Map100thMM);
     pModel->InsertPage(pModel->AllocPage(false));
 

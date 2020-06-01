@@ -675,8 +675,8 @@ void DrawViewShell::FuDeleteSelectedObjects()
             SdrObject* pObj = rMarkList.GetMark(i)->GetMarkedSdrObj();
             SdPage* pPage = static_cast<SdPage*>(pObj->getSdrPageFromSdrObject());
             PresObjKind eKind = pPage->GetPresObjKind(pObj);
-            if (eKind == PRESOBJ_FOOTER || eKind == PRESOBJ_HEADER ||
-                eKind == PRESOBJ_DATETIME || eKind == PRESOBJ_SLIDENUMBER)
+            if (eKind == PresObjKind::Footer || eKind == PresObjKind::Header ||
+                eKind == PresObjKind::DateTime || eKind == PresObjKind::SlideNumber)
             {
                 aPresMarksToRemove.push_back(pObj);
             }
@@ -1209,7 +1209,7 @@ void DrawViewShell::FuSupport(SfxRequest& rReq)
             ::tools::Rectangle aVisArea = mpFrameView->GetVisArea();
             Size aVisAreaSize = aVisArea.GetSize();
 
-            if (aVisAreaSize.Height()!=0 && aVisAreaSize.Width()!=0)
+            if (!aVisAreaSize.IsEmpty())
             {
                 mbZoomOnPage = false;
                 SetZoomRect(aVisArea);

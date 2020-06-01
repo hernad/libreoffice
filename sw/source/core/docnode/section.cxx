@@ -695,9 +695,9 @@ void SwSectionFormat::DelFrames()
             pLast = aIter.Next();
         }
 
-        sal_uLong nEnde = pSectNd->EndOfSectionIndex();
+        sal_uLong nEnd = pSectNd->EndOfSectionIndex();
         sal_uLong nStart = pSectNd->GetIndex()+1;
-        sw_DeleteFootnote( pSectNd, nStart, nEnde );
+        sw_DeleteFootnote( pSectNd, nStart, nEnd );
     }
     if( pIdx )
     {
@@ -1141,7 +1141,7 @@ static void lcl_UpdateLinksInSect( SwBaseLink& rUpdLnk, SwSectionNode& rSectNd )
 
         ::sfx2::SvBaseLink* pLnk = &(*rLnks[ --n ]);
         if( pLnk != &rUpdLnk &&
-            OBJECT_CLIENT_FILE == pLnk->GetObjType() &&
+            sfx2::SvBaseLinkObjectType::ClientFile == pLnk->GetObjType() &&
             dynamic_cast< const SwBaseLink *>( pLnk ) !=  nullptr &&
             ( pBLink = static_cast<SwBaseLink*>(pLnk) )->IsInRange( rSectNd.GetIndex(),
                                                 rSectNd.EndOfSectionIndex() ) )
@@ -1321,7 +1321,7 @@ static void lcl_UpdateLinksInSect( SwBaseLink& rUpdLnk, SwSectionNode& rSectNd )
                             pCpyPam->Start()->nNode > rInsPos ||
                             rInsPos >= pCpyPam->End()->nNode )
                         {
-                            pSrcDoc->getIDocumentContentOperations().CopyRange( *pCpyPam, *pPam->GetPoint(), /*bCopyAll=*/false, /*bCheckPos=*/true, /*bCopyText=*/false );
+                            pSrcDoc->getIDocumentContentOperations().CopyRange(*pCpyPam, *pPam->GetPoint(), SwCopyFlags::CheckPosInFly);
                         }
                         delete pCpyPam;
                     }
@@ -1526,7 +1526,7 @@ void SwSection::CreateLink( LinkCreateType eCreateType )
             const OUString sFltr(sCmd.getToken( 0, sfx2::cTokenSeparator, nIndex ));
             const OUString sRange(sCmd.getToken( 0, sfx2::cTokenSeparator, nIndex ));
             pFormat->GetDoc()->getIDocumentLinksAdministration().GetLinkManager().InsertFileLink( *pLnk,
-                                static_cast<sal_uInt16>(m_Data.GetType()),
+                                static_cast<sfx2::SvBaseLinkObjectType>(m_Data.GetType()),
                                 sFile,
                                 ( !sFltr.isEmpty() ? &sFltr : nullptr ),
                                 ( !sRange.isEmpty() ? &sRange : nullptr ) );

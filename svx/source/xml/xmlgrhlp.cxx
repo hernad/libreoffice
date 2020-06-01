@@ -20,7 +20,6 @@
 #include <sal/config.h>
 #include <sal/log.hxx>
 
-#include <sal/macros.h>
 #include <com/sun/star/embed/XTransactedObject.hpp>
 #include <com/sun/star/embed/ElementModes.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
@@ -38,7 +37,6 @@
 #include <unotools/streamwrap.hxx>
 #include <unotools/tempfile.hxx>
 #include <unotools/saveopt.hxx>
-#include <vcl/cvtgrf.hxx>
 #include <vcl/gfxlink.hxx>
 #include <vcl/metaact.hxx>
 #include <tools/zcodec.hxx>
@@ -659,7 +657,8 @@ OUString SvXMLGraphicHelper::implSaveGraphic(css::uno::Reference<css::graphic::X
                     // into an svm. slight catch22 here, since strict ODF
                     // conformance _recommends_ svg - then again, most old
                     // ODF consumers are believed to be OOo
-                    if (SvtSaveOptions().GetODFDefaultVersion() <= SvtSaveOptions::ODFVER_012)
+                    if (SvtSaveOptions().GetODFSaneDefaultVersion() < SvtSaveOptions::ODFSVER_012
+                        || SvtSaveOptions().GetODFSaneDefaultVersion() == SvtSaveOptions::ODFSVER_012_EXT_COMPAT)
                     {
                         bUseGfxLink = false;
                         aExtension = ".svm";
@@ -756,29 +755,7 @@ OUString SvXMLGraphicHelper::implSaveGraphic(css::uno::Reference<css::graphic::X
             std::unique_ptr<SvStream> pStream(utl::UcbStreamHelper::CreateStream(aStream.xStream));
             if (bUseGfxLink && aGfxLink.GetDataSize() && aGfxLink.GetData())
             {
-                const std::shared_ptr<std::vector<sal_Int8>> rPdfData = aGraphic.getPdfData();
-                if (rPdfData && !rPdfData->empty())
-                {
-                    // See if we have this PDF already, and avoid duplicate storage.
-                    auto aIt = maExportPdf.find(rPdfData.get());
-                    if (aIt != maExportPdf.end())
-                    {
-                        auto const& aURLAndMimePair = aIt->second;
-                        rOutSavedMimeType = aURLAndMimePair.second;
-                        return aURLAndMimePair.first;
-                    }
-
-                    // The graphic has PDF data attached to it, use that.
-                    // vcl::ImportPDF() possibly downgraded the PDF data from a
-                    // higher PDF version, while aGfxLink still contains the
-                    // original data provided by the user.
-                    pStream->WriteBytes(rPdfData->data(), rPdfData->size());
-                }
-                else
-                {
-                    pStream->WriteBytes(aGfxLink.GetData(), aGfxLink.GetDataSize());
-                }
-
+                pStream->WriteBytes(aGfxLink.GetData(), aGfxLink.GetDataSize());
                 rOutSavedMimeType = aMimeType;
                 bSuccess = (pStream->GetError() == ERRCODE_NONE);
             }
@@ -844,8 +821,6 @@ OUString SvXMLGraphicHelper::implSaveGraphic(css::uno::Reference<css::graphic::X
 
             // put into cache
             maExportGraphics[aGraphic] = std::make_pair(aStoragePath, rOutSavedMimeType);
-            if (aGraphic.hasPdfData())
-                maExportPdf[aGraphic.getPdfData().get()] = std::make_pair(aStoragePath, rOutSavedMimeType);
 
             return aStoragePath;
         }
@@ -999,7 +974,7 @@ protected:
     virtual Sequence< OUString > SAL_CALL getSupportedServiceNames() override;
 
 private:
-    SvXMLGraphicHelperMode const        m_eGraphicHelperMode;
+    SvXMLGraphicHelperMode              m_eGraphicHelperMode;
     Reference< XGraphicObjectResolver > m_xGraphicObjectResolver;
     Reference< XGraphicStorageHandler > m_xGraphicStorageHandler;
     Reference< XBinaryStreamResolver >  m_xBinaryStreamResolver;

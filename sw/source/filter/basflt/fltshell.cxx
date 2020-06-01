@@ -347,7 +347,7 @@ void SwFltControlStack::KillUnlockedAttrs(const SwPosition& rPos)
 // be applied to the document and removed from the stack.
 // Returns if there were any selected attributes on the stack
 SwFltStackEntry* SwFltControlStack::SetAttr(const SwPosition& rPos,
-    sal_uInt16 nAttrId, bool bTstEnde, long nHand,
+    sal_uInt16 nAttrId, bool bTstEnd, long nHand,
     bool consumedByField)
 {
     SwFltStackEntry *pRet = nullptr;
@@ -356,7 +356,7 @@ SwFltStackEntry* SwFltControlStack::SetAttr(const SwPosition& rPos,
 
     OSL_ENSURE(!nAttrId ||
         (POOLATTR_BEGIN <= nAttrId && POOLATTR_END > nAttrId) ||
-        (RES_FLTRATTR_BEGIN <= nAttrId && o3tl::make_unsigned(RES_FLTRATTR_END) > nAttrId),
+        (RES_FLTRATTR_BEGIN <= nAttrId && RES_FLTRATTR_END > nAttrId),
         "Wrong id for attribute");
 
     auto aI = m_Entries.begin();
@@ -413,7 +413,7 @@ SwFltStackEntry* SwFltControlStack::SetAttr(const SwPosition& rPos,
         // refrain from applying it; there needs to be following text,
         // except at the very end. (attribute expansion !!)
         // Never apply end stack except at document ending
-        if (bTstEnde)
+        if (bTstEnd)
         {
             if (bIsEndStack)
             {
@@ -971,6 +971,12 @@ void SwFltAnchorListener::Notify(const SfxHint& rHint)
         if(pFrameFormat)
             m_pFltAnchor->SetFrameFormat(pFrameFormat);
     }
+    else if (auto pDrawFrameFormatHint = dynamic_cast<const sw::DrawFrameFormatHint*>(&rHint))
+    {
+        if (pDrawFrameFormatHint->m_eId != sw::DrawFrameFormatHintId::DYING)
+            return;
+        m_pFltAnchor->SetFrameFormat(nullptr);
+    }
 }
 
 // methods of SwFltRedline follow
@@ -1061,8 +1067,8 @@ const std::vector< std::pair<OUString, OUString> >& SwFltRDFMark::GetAttributes(
 }
 
 // methods of SwFltTOX follow
-SwFltTOX::SwFltTOX(SwTOXBase* pBase)
-    : SfxPoolItem(RES_FLTR_TOX), m_xTOXBase(pBase),
+SwFltTOX::SwFltTOX(std::shared_ptr<SwTOXBase> xBase)
+    : SfxPoolItem(RES_FLTR_TOX), m_xTOXBase(std::move(xBase)),
       bHadBreakItem( false ), bHadPageDescItem( false )
 {
 }

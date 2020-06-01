@@ -27,7 +27,6 @@
 #include "DbAdminImpl.hxx"
 #include "DriverSettings.hxx"
 #include "optionalboolitem.hxx"
-#include <dbu_dlg.hxx>
 
 #include <svl/eitem.hxx>
 #include <svl/intitem.hxx>
@@ -203,7 +202,7 @@ namespace dbaui
 
             bool bTriState = false;
 
-            o3tl::optional<bool> aValue;
+            std::optional<bool> aValue;
 
             const SfxPoolItem* pItem = _rSet.GetItem<SfxPoolItem>(booleanSetting.nItemId);
             if (const SfxBoolItem *pBoolItem = dynamic_cast<const SfxBoolItem*>( pItem) )

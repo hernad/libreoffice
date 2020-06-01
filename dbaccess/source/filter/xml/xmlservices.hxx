@@ -22,8 +22,6 @@
 
 #include <sal/config.h>
 
-#include <sal/types.h>
-
 extern "C" {
 
 void createRegistryInfo_DBContentLoader2();
@@ -32,7 +30,6 @@ void createRegistryInfo_ODBFilter();
 void createRegistryInfo_ODBFilterExport();
 void createRegistryInfo_OFullExport();
 void createRegistryInfo_OSettingsExport();
-
 }
 
 #endif

@@ -29,12 +29,12 @@
 #include <tools/gen.hxx>
 
 
-namespace com { namespace sun { namespace star { namespace awt {
+namespace com::sun::star::awt {
     struct Point;
     struct Rectangle;
     struct Size;
     class XFocusListener;
-} } } };
+}
 class SvxPixelCtl;
 class SvxPixelCtlAccessible;
 
@@ -91,9 +91,9 @@ private:
     SvxPixelCtl& mrParentWindow;
     rtl::Reference<SvxPixelCtlAccessible> mxParent;
     bool m_bPixelColorOrBG;//Pixel Color Or BackGround Color
-    tools::Rectangle const  maBoundingBox;
+    tools::Rectangle  maBoundingBox;
     /// index of child in parent
-    long const              mnIndexInParent;
+    long mnIndexInParent;
 };
 
 class SvxPixelCtlAccessible final : public ::comphelper::OAccessibleSelectionHelper,

@@ -23,6 +23,7 @@
 #include "gifread.hxx"
 #include <memory>
 #include <bitmapwriteaccess.hxx>
+#include <graphic/GraphicReader.hxx>
 
 #define NO_PENDING( rStm ) ( ( rStm ).GetError() != ERRCODE_IO_PENDING )
 
@@ -959,8 +960,8 @@ bool IsGIFAnimated(SvStream & rStm)
 
 VCL_DLLPUBLIC bool ImportGIF( SvStream & rStm, Graphic& rGraphic )
 {
-    std::shared_ptr<GraphicReader> pContext = rGraphic.GetContext();
-    rGraphic.SetContext(nullptr);
+    std::shared_ptr<GraphicReader> pContext = rGraphic.GetReaderContext();
+    rGraphic.SetReaderContext(nullptr);
     GIFReader* pGIFReader = dynamic_cast<GIFReader*>( pContext.get() );
     if (!pGIFReader)
     {
@@ -982,7 +983,7 @@ VCL_DLLPUBLIC bool ImportGIF( SvStream & rStm, Graphic& rGraphic )
     else if (eReadState == GIFREAD_NEED_MORE)
     {
         rGraphic = pGIFReader->GetIntermediateGraphic();
-        rGraphic.SetContext(pContext);
+        rGraphic.SetReaderContext(pContext);
     }
 
     rStm.SetEndian(nOldFormat);

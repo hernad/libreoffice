@@ -19,11 +19,6 @@
 
 #include <svx/svdoashp.hxx>
 #include <svx/unoapi.hxx>
-#include <svx/unoshape.hxx>
-#include <ucbhelper/content.hxx>
-#include <unotools/datetime.hxx>
-#include <sfx2/lnkbase.hxx>
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/loader/CannotActivateFactoryException.hpp>
 #include <com/sun/star/drawing/XShape.hpp>
 #include <com/sun/star/drawing/XCustomShapeEngine.hpp>
@@ -33,21 +28,15 @@
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/sequenceashashmap.hxx>
-#include <svl/urihelper.hxx>
 #include <com/sun/star/uno/Sequence.h>
-#include <svx/svdogrp.hxx>
 #include <tools/helpers.hxx>
 #include <svx/svddrag.hxx>
-#include <svx/xpool.hxx>
-#include <svx/xpoly.hxx>
 #include <svx/svddrgmt.hxx>
 #include <svx/svdmodel.hxx>
 #include <svx/svdpage.hxx>
 #include <svx/svditer.hxx>
 #include <svx/svdobj.hxx>
 #include <svx/svdtrans.hxx>
-#include <svx/svdetc.hxx>
-#include <svx/svdoedge.hxx>
 #include <svx/dialmgr.hxx>
 #include <svx/strings.hrc>
 #include <editeng/eeitem.hxx>
@@ -68,8 +57,6 @@
 #include <editeng/writingmodeitem.hxx>
 #include <svx/xlineit0.hxx>
 #include <svx/xlnclit.hxx>
-#include <svx/svxids.hrc>
-#include <svl/whiter.hxx>
 #include <sdr/properties/customshapeproperties.hxx>
 #include <sdr/contact/viewcontactofsdrobjcustomshape.hxx>
 #include <svx/xlntrit.hxx>
@@ -79,7 +66,6 @@
 #include <svx/xflgrit.hxx>
 #include <svx/xflhtit.hxx>
 #include <svx/xbtmpit.hxx>
-#include <vcl/bitmapaccess.hxx>
 #include <vcl/virdev.hxx>
 #include <svx/svdview.hxx>
 #include <svx/sdmetitm.hxx>
@@ -95,6 +81,8 @@
 #include <basegfx/polygon/b2dpolygontools.hxx>
 #include <basegfx/range/b2drange.hxx>
 #include <svdobjplusdata.hxx>
+#include <rtl/ustrbuf.hxx>
+#include <sal/log.hxx>
 #include "presetooxhandleadjustmentrelations.hxx"
 
 using namespace ::com::sun::star;
@@ -2258,7 +2246,7 @@ void SdrObjCustomShape::SuggestTextFrameSize(Size aSuggestedTextFrameSize)
 bool SdrObjCustomShape::AdjustTextFrameWidthAndHeight(tools::Rectangle& rR, bool bHgt, bool bWdt) const
 {
     // Either we have text or the application has native text and suggested its size to us.
-    bool bHasText = HasText() || (m_aSuggestedTextFrameSize.Width() != 0 && m_aSuggestedTextFrameSize.Height() != 0);
+    bool bHasText = HasText() || !m_aSuggestedTextFrameSize.IsEmpty();
     if ( bHasText && !rR.IsEmpty() )
     {
         bool bWdtGrow=bWdt && IsAutoGrowWidth();
@@ -2987,20 +2975,28 @@ void SdrObjCustomShape::AdjustToMaxRect(const tools::Rectangle& rMaxRect, bool b
 
 void SdrObjCustomShape::TRSetBaseGeometry(const basegfx::B2DHomMatrix& rMatrix, const basegfx::B2DPolyPolygon& /*rPolyPolygon*/)
 {
+    // The shape might have already flipping in its enhanced geometry. LibreOffice applies
+    // such after all transformations. We remove it, but remember it to apply them later.
+    bool bIsMirroredX = IsMirroredX();
+    bool bIsMirroredY = IsMirroredY();
+    if (bIsMirroredX || bIsMirroredY)
+    {
+        Point aCurrentCenter = GetSnapRect().Center();
+        if (bIsMirroredX) // mirror on the y-axis
+        {
+            Mirror(aCurrentCenter, Point(aCurrentCenter.X(), aCurrentCenter.Y() + 1000));
+        }
+        if (bIsMirroredY) // mirror on the x-axis
+        {
+            Mirror(aCurrentCenter, Point(aCurrentCenter.X() + 1000, aCurrentCenter.Y()));
+        }
+    }
+
     // break up matrix
     basegfx::B2DTuple aScale;
     basegfx::B2DTuple aTranslate;
     double fRotate, fShearX;
     rMatrix.decompose(aScale, aTranslate, fRotate, fShearX);
-
-    // #i75086# Old DrawingLayer (GeoStat and geometry) does not support holding negative scalings
-    // in X and Y which equal a 180 degree rotation. Recognize it and react accordingly
-    if(basegfx::fTools::less(aScale.getX(), 0.0) && basegfx::fTools::less(aScale.getY(), 0.0))
-    {
-        aScale.setX(fabs(aScale.getX()));
-        aScale.setY(fabs(aScale.getY()));
-        fRotate = fmod(fRotate + F_PI, F_2PI);
-    }
 
     // reset object shear and rotations
     fObjectRotation = 0.0;
@@ -3018,14 +3014,19 @@ void SdrObjCustomShape::TRSetBaseGeometry(const basegfx::B2DHomMatrix& rMatrix, 
         }
     }
 
-    // build and set BaseRect (use scale)
-    Size aSize(FRound(aScale.getX()), FRound(aScale.getY()));
+    // scale
+    Size aSize(FRound(fabs(aScale.getX())), FRound(fabs(aScale.getY())));
     // fdo#47434 We need a valid rectangle here
     if( !aSize.Height() ) aSize.setHeight( 1 );
     if( !aSize.Width() ) aSize.setWidth( 1 );
-
     tools::Rectangle aBaseRect(Point(), aSize);
-    SetSnapRect(aBaseRect);
+    SetLogicRect(aBaseRect);
+
+    // Apply flipping from Matrix, which is a transformation relative to origin
+    if (basegfx::fTools::less(aScale.getX(), 0.0))
+        Mirror(Point(0, 0), Point(0, 1000)); // mirror on the y-axis
+    if (basegfx::fTools::less(aScale.getY(), 0.0))
+        Mirror(Point(0, 0), Point(1000, 0)); // mirror on the x-axis
 
     // shear?
     if(!basegfx::fTools::equalZero(fShearX))
@@ -3057,6 +3058,30 @@ void SdrObjCustomShape::TRSetBaseGeometry(const basegfx::B2DHomMatrix& rMatrix, 
     {
         Move(Size(FRound(aTranslate.getX()), FRound(aTranslate.getY())));
     }
+
+    // Apply flipping from enhanced geometry at center of the shape.
+    if (bIsMirroredX || bIsMirroredY)
+    {
+        // create mathematically matrix for the applied transformations
+        // aScale was in most cases built from a rectangle including edge
+        // and is therefore mathematically too large by 1
+        if (aScale.getX() > 2.0 && aScale.getY() > 2.0)
+            aScale -= basegfx::B2DTuple(1.0, 1.0);
+        basegfx::B2DHomMatrix aMathMat = basegfx::utils::createScaleShearXRotateTranslateB2DHomMatrix(
+                        aScale, -fShearX, basegfx::fTools::equalZero(fRotate) ? 0.0 : fRotate,
+                        aTranslate);
+        // Use matrix to get current center
+        basegfx::B2DPoint aCenter(0.5,0.5);
+        aCenter = aMathMat * aCenter;
+        double fCenterX = aCenter.getX();
+        double fCenterY = aCenter.getY();
+        if (bIsMirroredX) // vertical axis
+            Mirror(Point(FRound(fCenterX),FRound(fCenterY)),
+                Point(FRound(fCenterX), FRound(fCenterY + 1000.0)));
+        if (bIsMirroredY) // horizontal axis
+            Mirror(Point(FRound(fCenterX),FRound(fCenterY)),
+                Point(FRound(fCenterX + 1000.0), FRound(fCenterY)));
+    }
 }
 
 // taking fObjectRotation instead of aGeo.nAngle
@@ -3078,6 +3103,7 @@ bool SdrObjCustomShape::TRGetBaseGeometry(basegfx::B2DHomMatrix& rMatrix, basegf
 
         if ( bMirroredX )
         {
+            fShearX = -fShearX;
             tools::Polygon aPol = Rect2Poly(maRect, aNewGeo);
             tools::Rectangle aBoundRect( aPol.GetBoundRect() );
 
@@ -3100,6 +3126,7 @@ bool SdrObjCustomShape::TRGetBaseGeometry(basegfx::B2DHomMatrix& rMatrix, basegf
         }
         if ( bMirroredY )
         {
+            fShearX = -fShearX;
             tools::Polygon aPol( Rect2Poly( aRectangle, aNewGeo ) );
             tools::Rectangle aBoundRect( aPol.GetBoundRect() );
 

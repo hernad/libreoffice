@@ -60,7 +60,7 @@
 #ifndef INCLUDED_LOTUSWORDPRO_SOURCE_FILTER_XFILTER_XFBASE64_HXX
 #define INCLUDED_LOTUSWORDPRO_SOURCE_FILTER_XFILTER_XFBASE64_HXX
 
-#include <xfilter/xfglobal.hxx>
+#include <rtl/ustring.hxx>
 
 /**
  * @brief
@@ -75,7 +75,7 @@ public:
     /**
      * @descr   Encode binary buffer to base64 encoding.
      */
-    static OUString    Encode(sal_uInt8 const *buf, sal_Int32 len);
+    static OUString Encode(sal_uInt8 const* buf, sal_Int32 len);
 };
 
 #endif

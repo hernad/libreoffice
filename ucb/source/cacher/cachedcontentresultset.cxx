@@ -167,7 +167,7 @@ sal_Int32 CachedContentResultSet::CCRS_Cache
         return 0;
     sal_Int32 nEnd = m_pResult->StartIndex;
     if( m_pResult->Orientation )
-        return nEnd += m_pResult->Rows.getLength() - 1;
+        return nEnd + m_pResult->Rows.getLength() - 1;
     else
         return nEnd;
 }
@@ -558,9 +558,8 @@ sal_Int32 CCRS_PropertySetInfo
 bool CCRS_PropertySetInfo
         ::impl_queryProperty( const OUString& rName, Property& rProp ) const
 {
-    for( sal_Int32 nN = m_pProperties->getLength(); nN--; )
+    for( const Property& rMyProp : std::as_const(*m_pProperties) )
     {
-        const Property& rMyProp = (*m_pProperties)[nN];
         if( rMyProp.Name == rName )
         {
             rProp.Name = rMyProp.Name;
@@ -598,9 +597,9 @@ sal_Int32 CCRS_PropertySetInfo
     while( bFound )
     {
         bFound = false;
-        for( sal_Int32 nN = m_pProperties->getLength(); nN--; )
+        for( const auto & rProp : std::as_const(*m_pProperties) )
         {
-            if( nHandle == (*m_pProperties)[nN].Handle )
+            if( nHandle == rProp.Handle )
             {
                 bFound = true;
                 nHandle++;
@@ -979,8 +978,7 @@ void SAL_CALL CachedContentResultSet
         {
             nNew = COMSUNSTARUCBCCRS_DEFAULT_FETCH_DIRECTION;
         }
-        else if( !( nNew == FetchDirection::FORWARD
-                || nNew == FetchDirection::REVERSE ) )
+        else if( nNew != FetchDirection::FORWARD && nNew != FetchDirection::REVERSE )
         {
             throw IllegalArgumentException();
         }

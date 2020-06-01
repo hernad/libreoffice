@@ -30,9 +30,9 @@
 #include <unotools/options.hxx>
 #include <sddllapi.h>
 
-namespace svx { namespace sidebar { class SelectionChangeHandler; } }
-namespace com { namespace sun { namespace star { namespace lang { class XEventListener; } } } }
-namespace com { namespace sun { namespace star { namespace scanner { class XScannerManager2; } } } }
+namespace svx::sidebar { class SelectionChangeHandler; }
+namespace com::sun::star::lang { class XEventListener; }
+namespace com::sun::star::scanner { class XScannerManager2; }
 
 class Outliner;
 class SdPage;
@@ -141,7 +141,7 @@ public:
     OUString        GetSelectionText( bool bCompleteWords );
     bool            HasSelection( bool bText ) const;
 
-    //If we are editing a PRESOBJ_OUTLINE return the Outliner and fill rSel
+    //If we are editing a PresObjKind::Outline return the Outliner and fill rSel
     //with the current selection
     ::Outliner*     GetOutlinerForMasterPageOutlineTextObj(ESelection &rSel);
 
@@ -259,7 +259,6 @@ public:
     //Realize multi-selection of objects, If object is marked, the
     //corresponding entry is set true, else the corresponding entry is set
     //false.
-    void            FreshNavigatrEntry();
     void            FreshNavigatrTree();
     void            MakeVisible(const ::tools::Rectangle& rRect, vcl::Window& rWin);
 

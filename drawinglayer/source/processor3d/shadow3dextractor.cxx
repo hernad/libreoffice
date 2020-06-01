@@ -17,8 +17,8 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <drawinglayer/processor3d/shadow3dextractor.hxx>
-#include <drawinglayer/primitive3d/shadowprimitive3d.hxx>
+#include <processor3d/shadow3dextractor.hxx>
+#include <primitive3d/shadowprimitive3d.hxx>
 #include <drawinglayer/primitive2d/shadowprimitive2d.hxx>
 #include <drawinglayer/primitive2d/unifiedtransparenceprimitive2d.hxx>
 #include <drawinglayer/primitive3d/transformprimitive3d.hxx>
@@ -27,7 +27,7 @@
 #include <drawinglayer/primitive2d/polygonprimitive2d.hxx>
 #include <drawinglayer/primitive3d/polypolygonprimitive3d.hxx>
 #include <basegfx/polygon/b2dpolypolygontools.hxx>
-#include <drawinglayer/primitive2d/polypolygonprimitive2d.hxx>
+#include <drawinglayer/primitive2d/PolyPolygonColorPrimitive2D.hxx>
 #include <drawinglayer/primitive3d/drawinglayer_primitivetypes3d.hxx>
 
 
@@ -226,22 +226,22 @@ namespace drawinglayer::processor3d
             mfLightPlaneScalar = maLightNormal.scalar(maShadowPlaneNormal);
 
             // use only when scalar is > 0.0, so the light is in front of the object
-            if(basegfx::fTools::more(mfLightPlaneScalar, 0.0))
-            {
-                // prepare buffered WorldToEye and EyeToView
-                maWorldToEye = getViewInformation3D().getOrientation() * getViewInformation3D().getObjectTransformation();
-                maEyeToView = getViewInformation3D().getDeviceToView() * getViewInformation3D().getProjection();
+            if(!basegfx::fTools::more(mfLightPlaneScalar, 0.0))
+                return;
 
-                // calculate range to get front edge around which to rotate the shadow's projection
-                basegfx::B3DRange aContained3DRange(rContained3DRange);
-                aContained3DRange.transform(getWorldToEye());
-                maPlanePoint.setX(maShadowPlaneNormal.getX() < 0.0 ? aContained3DRange.getMinX() : aContained3DRange.getMaxX());
-                maPlanePoint.setY(maShadowPlaneNormal.getY() > 0.0 ? aContained3DRange.getMinY() : aContained3DRange.getMaxY());
-                maPlanePoint.setZ(aContained3DRange.getMinZ() - (aContained3DRange.getDepth() / 8.0));
+            // prepare buffered WorldToEye and EyeToView
+            maWorldToEye = getViewInformation3D().getOrientation() * getViewInformation3D().getObjectTransformation();
+            maEyeToView = getViewInformation3D().getDeviceToView() * getViewInformation3D().getProjection();
 
-                // set flag that shadow projection is prepared and allowed
-                mbShadowProjectionIsValid = true;
-            }
+            // calculate range to get front edge around which to rotate the shadow's projection
+            basegfx::B3DRange aContained3DRange(rContained3DRange);
+            aContained3DRange.transform(getWorldToEye());
+            maPlanePoint.setX(maShadowPlaneNormal.getX() < 0.0 ? aContained3DRange.getMinX() : aContained3DRange.getMaxX());
+            maPlanePoint.setY(maShadowPlaneNormal.getY() > 0.0 ? aContained3DRange.getMinY() : aContained3DRange.getMaxY());
+            maPlanePoint.setZ(aContained3DRange.getMinZ() - (aContained3DRange.getDepth() / 8.0));
+
+            // set flag that shadow projection is prepared and allowed
+            mbShadowProjectionIsValid = true;
         }
 
         Shadow3DExtractingProcessor::~Shadow3DExtractingProcessor()

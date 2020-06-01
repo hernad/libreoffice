@@ -22,13 +22,13 @@
 
 #include <drawingml/chart/converterbase.hxx>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace chart2 { class XChartType; }
     namespace chart2 { class XCoordinateSystem; }
     namespace chart2 { class XDataSeries; }
     namespace chart2 { class XDiagram; }
-    namespace chart2 { namespace data { class XLabeledDataSequence; } }
-} } }
+    namespace chart2::data { class XLabeledDataSequence; }
+}
 
 namespace oox {
 namespace drawingml {
@@ -86,7 +86,6 @@ struct TypeGroupInfo
     bool                mbCategoryAxis;         /// True = X axis contains categories.
     bool                mbSwappedAxesSet;       /// True = X axis and Y axis are swapped.
     bool                mbSupportsStacking;     /// True = data points can be stacked on each other.
-    bool                mbReverseSeries;        /// True = insert unstacked series in reverse order.
     bool                mbPictureOptions;       /// True = bitmaps support options from c:pictureOptions.
 };
 

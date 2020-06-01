@@ -19,7 +19,8 @@
 #ifndef INCLUDED_SVX_INC_GALLERYCONTROL_HXX
 #define INCLUDED_SVX_INC_GALLERYCONTROL_HXX
 
-#include <svx/sidebar/PanelLayout.hxx>
+#include <config_options.h>
+#include <sfx2/sidebar/PanelLayout.hxx>
 #include <svx/svxdllapi.h>
 
 class SfxBindings;
@@ -30,10 +31,10 @@ class GalleryBrowser2;
 class FmFormModel;
 class Splitter;
 
-namespace svx { namespace sidebar {
+namespace svx::sidebar {
 
 
-class SVXCORE_DLLPUBLIC GalleryControl final : public PanelLayout
+class UNLESS_MERGELIBS(SVXCORE_DLLPUBLIC) GalleryControl final : public PanelLayout
 {
 public:
     GalleryControl( vcl::Window* pParentWindow );
@@ -49,7 +50,7 @@ private:
     virtual void dispose() override;
 };
 
-} } // end of namespace svx::sidebar
+} // end of namespace svx::sidebar
 
 #endif
 

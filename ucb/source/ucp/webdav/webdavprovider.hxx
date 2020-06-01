@@ -31,9 +31,9 @@
 #include <ucbhelper/providerhelper.hxx>
 #include "PropertyMap.hxx"
 
-namespace com { namespace sun { namespace star { namespace lang {
+namespace com::sun::star::lang {
 class XSingleServiceFactory;
-} } } }
+}
 
 namespace http_dav_ucp {
 

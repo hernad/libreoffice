@@ -118,7 +118,7 @@ class ScDrawStringsVars
     bool                bRepeat;
     bool                bShrink;
 
-    bool const          bPixelToLogic;
+    bool                bPixelToLogic;
     bool                bCellContrast;
 
     Color               aBackConfigColor;       // used for ScPatternAttr::GetFont calls
@@ -637,7 +637,7 @@ void ScDrawStringsVars::SetTextToWidthOrHash( ScRefCellValue& rCell, long nWidth
     }
     sal_uInt8 nSignCount = 0, nDecimalCount = 0, nExpCount = 0;
     sal_Int32 nLen = aString.getLength();
-    sal_Unicode cDecSep = ScGlobal::GetpLocaleData()->getLocaleItem().decimalSeparator[0];
+    sal_Unicode cDecSep = ScGlobal::getLocaleDataPtr()->getLocaleItem().decimalSeparator[0];
     for( sal_Int32 i = 0; i < nLen; ++i )
     {
         sal_Unicode c = aString[i];
@@ -745,7 +745,7 @@ long ScDrawStringsVars::GetDotWidth()
     if (nDotWidth > 0)
         return nDotWidth;
 
-    const OUString& sep = ScGlobal::GetpLocaleData()->getLocaleItem().decimalSeparator;
+    const OUString& sep = ScGlobal::getLocaleDataPtr()->getLocaleItem().decimalSeparator;
     nDotWidth = pOutput->pFmtDevice->GetTextWidth(sep);
     return nDotWidth;
 }
@@ -917,19 +917,33 @@ bool ScOutputData::GetMergeOrigin( SCCOL nX, SCROW nY, SCSIZE nArrY,
     bool bIsLeft = ( nX == nVisX1 );
     bool bIsTop  = ( nY == nVisY1 ) || bVisRowChanged;
 
-    CellInfo* pInfo = &pRowInfo[nArrY].pCellInfo[nX+1];
-    if ( pInfo->bHOverlapped && pInfo->bVOverlapped )
+    bool bHOver;
+    bool bVOver;
+    bool bHidden;
+
+    if (!mpDoc->ColHidden(nX, nTab) && nX >= nX1 && nX <= nX2
+            && !mpDoc->RowHidden(nY, nTab) && nY >= nY1 && nY <= nY2)
+    {
+        CellInfo* pInfo = &pRowInfo[nArrY].pCellInfo[nX+1];
+        bHOver = pInfo->bHOverlapped;
+        bVOver = pInfo->bVOverlapped;
+    }
+    else
+    {
+        ScMF nOverlap2 = mpDoc->GetAttr(nX, nY, nTab, ATTR_MERGE_FLAG)->GetValue();
+        bHOver = bool(nOverlap2 & ScMF::Hor);
+        bVOver = bool(nOverlap2 & ScMF::Ver);
+    }
+
+    if ( bHOver && bVOver )
         bDoMerge = bIsLeft && bIsTop;
-    else if ( pInfo->bHOverlapped )
+    else if ( bHOver )
         bDoMerge = bIsLeft;
-    else if ( pInfo->bVOverlapped )
+    else if ( bVOver )
         bDoMerge = bIsTop;
 
     rOverX = nX;
     rOverY = nY;
-    bool bHOver = pInfo->bHOverlapped;
-    bool bVOver = pInfo->bVOverlapped;
-    bool bHidden;
 
     while (bHOver)              // nY constant
     {
@@ -1369,7 +1383,7 @@ bool beginsWithRTLCharacter(const OUString& rStr)
     if (rStr.isEmpty())
         return false;
 
-    switch (ScGlobal::pCharClass->getCharacterDirection(rStr, 0))
+    switch (ScGlobal::getCharClassPtr()->getCharacterDirection(rStr, 0))
     {
         case i18n::DirectionProperty_RIGHT_TO_LEFT:
         case i18n::DirectionProperty_RIGHT_TO_LEFT_ARABIC:
@@ -2779,7 +2793,7 @@ public:
 private:
     tools::Rectangle        maRect;
     VclPtr<OutputDevice>    mpDev;
-    bool const              mbMetaFile;
+    bool                    mbMetaFile;
 };
 
 // Returns needed width in current units; sets rNeededPixel to needed width in pixels
@@ -2958,8 +2972,8 @@ void ScOutputData::DrawEditStandard(DrawEditParam& rParam)
                         for ( long nRepeat = 1; nRepeat < nRepeatCount; nRepeat++ )
                             aRepeated.append(aCellStr);
 
-                        nEngineWidth = SetEngineTextAndGetWidth( rParam, aRepeated.makeStringAndClear(),
-                                                        nNeededPixel, (nLeftM + nRightM ) );
+                        SetEngineTextAndGetWidth( rParam, aRepeated.makeStringAndClear(),
+                                                  nNeededPixel, (nLeftM + nRightM ) );
 
                         nEngineHeight = rParam.mpEngine->GetTextHeight();
                     }
@@ -2970,7 +2984,7 @@ void ScOutputData::DrawEditStandard(DrawEditParam& rParam)
 
         if ( rParam.mbCellIsValue && ( aAreaParam.mbLeftClip || aAreaParam.mbRightClip ) )
         {
-            nEngineWidth = SetEngineTextAndGetWidth( rParam, "###", nNeededPixel, ( nLeftM + nRightM ) );
+            SetEngineTextAndGetWidth( rParam, "###", nNeededPixel, ( nLeftM + nRightM ) );
 
             //  No clip marks if "###" doesn't fit (same as in DrawStrings)
         }

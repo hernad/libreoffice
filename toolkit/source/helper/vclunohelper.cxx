@@ -35,13 +35,13 @@
 #include <com/sun/star/graphic/XGraphic.hpp>
 #include <toolkit/helper/vclunohelper.hxx>
 #include <toolkit/helper/convert.hxx>
-#include <toolkit/awt/vclxbitmap.hxx>
-#include <toolkit/awt/vclxregion.hxx>
+#include <awt/vclxbitmap.hxx>
+#include <awt/vclxregion.hxx>
 #include <toolkit/awt/vclxwindow.hxx>
-#include <toolkit/awt/vclxgraphics.hxx>
+#include <awt/vclxgraphics.hxx>
 #include <toolkit/awt/vclxfont.hxx>
-#include <toolkit/controls/unocontrolcontainer.hxx>
-#include <toolkit/controls/unocontrolcontainermodel.hxx>
+#include <controls/unocontrolcontainer.hxx>
+#include <controls/unocontrolcontainermodel.hxx>
 #include <vcl/graph.hxx>
 #include <comphelper/processfactory.hxx>
 
@@ -99,6 +99,11 @@ css::uno::Reference< css::awt::XBitmap> VCLUnoHelper::CreateBitmap( const Bitmap
     Graphic aGraphic( rBitmap );
     css::uno::Reference< css::awt::XBitmap> xBmp( aGraphic.GetXGraphic(), css::uno::UNO_QUERY );
     return xBmp;
+}
+
+css::uno::Reference< css::awt::XBitmap> VCLUnoHelper::CreateVCLXBitmap( const BitmapEx& rBitmap )
+{
+    return css::uno::Reference< css::awt::XBitmap >(new VCLXBitmap(rBitmap));
 }
 
 VclPtr< vcl::Window > VCLUnoHelper::GetWindow( const css::uno::Reference< css::awt::XWindow>& rxWindow )

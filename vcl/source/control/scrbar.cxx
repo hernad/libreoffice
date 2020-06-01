@@ -269,7 +269,7 @@ void ScrollBar::ImplCalc( bool bUpdate )
                      aControlRegion, ControlState::NONE, ImplControlValue(), aBoundingRegion, aTrackRegion ) )
                 maTrackRect = aTrackRegion;
             else
-                maTrackRect = tools::Rectangle( maBtn1Rect.TopRight(), maBtn2Rect.BottomLeft() );
+                maTrackRect = tools::Rectangle::Justify( maBtn1Rect.TopRight(), maBtn2Rect.BottomLeft() );
 
             // Check if available space is big enough for thumb ( min thumb size = ScrBar width/height )
             mnThumbPixRange = maTrackRect.Right() - maTrackRect.Left();
@@ -306,7 +306,7 @@ void ScrollBar::ImplCalc( bool bUpdate )
                      aControlRegion, ControlState::NONE, ImplControlValue(), aBoundingRegion, aTrackRegion ) )
                 maTrackRect = aTrackRegion;
             else
-                maTrackRect = tools::Rectangle( maBtn1Rect.BottomLeft()+Point(0,1), maBtn2Rect.TopRight() );
+                maTrackRect = tools::Rectangle::Justify( maBtn1Rect.BottomLeft()+Point(0,1), maBtn2Rect.TopRight() );
 
             // Check if available space is big enough for thumb
             mnThumbPixRange = maTrackRect.Bottom() - maTrackRect.Top();
@@ -370,7 +370,7 @@ void ScrollBar::ImplCalc( bool bUpdate )
     ImplUpdateRects( bUpdate );
 }
 
-void ScrollBar::Draw( OutputDevice* pDev, const Point& rPos, const Size& /* rSize */, DrawFlags nFlags )
+void ScrollBar::Draw( OutputDevice* pDev, const Point& rPos, DrawFlags nFlags )
 {
     Point aPos  = pDev->LogicToPixel( rPos );
 
@@ -817,7 +817,7 @@ void ScrollBar::ImplDragThumb( const Point& rMousePos )
             if (SupportsDoubleBuffering())
             {
                 Invalidate();
-                Update();
+                PaintImmediately();
             }
             else
                 ImplDraw(*this);
@@ -1251,11 +1251,10 @@ tools::Rectangle* ScrollBar::ImplFindPartRect( const Point& rPt )
 
 bool ScrollBar::PreNotify( NotifyEvent& rNEvt )
 {
-    const MouseEvent* pMouseEvt = nullptr;
-
-    if( (rNEvt.GetType() == MouseNotifyEvent::MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) != nullptr )
+    if( rNEvt.GetType() == MouseNotifyEvent::MOUSEMOVE )
     {
-        if( !pMouseEvt->GetButtons() && !pMouseEvt->IsSynthetic() && !pMouseEvt->IsModifierChanged() )
+        const MouseEvent* pMouseEvt = rNEvt.GetMouseEvent();
+        if( pMouseEvt && !pMouseEvt->GetButtons() && !pMouseEvt->IsSynthetic() && !pMouseEvt->IsModifierChanged() )
         {
             // Trigger a redraw if mouse over state has changed
             if( IsNativeControlSupported(ControlType::Scrollbar, ControlPart::Entire) )

@@ -20,14 +20,9 @@
 #ifndef INCLUDED_WRITERFILTER_SOURCE_OOXML_OOXMLFACTORY_HXX
 #define INCLUDED_WRITERFILTER_SOURCE_OOXML_OOXMLFACTORY_HXX
 
-#include <memory>
-
 #include <dmapper/resourcemodel.hxx>
 
-#include <oox/token/tokens.hxx>
-
 #include "OOXMLFastContextHandler.hxx"
-#include <boost/intrusive_ptr.hpp>
 
 namespace writerfilter {
 namespace ooxml {
@@ -60,9 +55,9 @@ enum class ResourceType {
 
 struct AttributeInfo
 {
-    Token_t const m_nToken;
-    ResourceType const m_nResource;
-    Id const m_nRef;
+    Token_t m_nToken;
+    ResourceType m_nResource;
+    Id m_nRef;
 };
 
 class OOXMLFactory_ns : public virtual SvRefBase {

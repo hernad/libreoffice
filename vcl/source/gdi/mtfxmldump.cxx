@@ -14,6 +14,7 @@
 #include <vcl/metaact.hxx>
 #include <vcl/outdev.hxx>
 #include <rtl/string.hxx>
+#include <rtl/ustrbuf.hxx>
 
 #include <sstream>
 
@@ -1136,6 +1137,7 @@ void MetafileXmlDump::writeXml(const GDIMetaFile& rMetaFile, tools::XmlWriter& r
                 rWriter.attribute("height", aFont.GetFontSize().Height());
                 rWriter.attribute("orientation", aFont.GetOrientation());
                 rWriter.attribute("weight", convertFontWeigthToString(aFont.GetWeight()));
+                rWriter.attribute("vertical", aFont.IsVertical() ? "true" : "false");
 
                 rWriter.endElement();
             }

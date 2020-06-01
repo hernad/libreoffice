@@ -68,10 +68,9 @@ using namespace ::com::sun::star;
 
 //  Corner-Button
 
-ScCornerButton::ScCornerButton( vcl::Window* pParent, ScViewData* pData, bool bAdditional ) :
+ScCornerButton::ScCornerButton( vcl::Window* pParent, ScViewData* pData ) :
     Window( pParent, WinBits( 0 ) ),
-    pViewData( pData ),
-    bAdd( bAdditional )
+    pViewData( pData )
 {
     EnableRTL( false );
 }
@@ -93,32 +92,6 @@ void ScCornerButton::Paint(vcl::RenderContext& rRenderContext, const tools::Rect
 
     bool bLayoutRTL = pViewData->GetDocument()->IsLayoutRTL( pViewData->GetTabNo() );
     long nDarkX = bLayoutRTL ? 0 : nPosX;
-
-    if (!bAdd)
-    {
-        // match the shaded look of column/row headers
-
-        Color aFace(rStyleSettings.GetFaceColor());
-        Color aWhite(COL_WHITE);
-        Color aCenter(aFace);
-        aCenter.Merge(aWhite, 0xd0);          // lighten up a bit
-        Color aOuter(aFace );
-        aOuter.Merge(aWhite, 0xa0);           // lighten up more
-
-        long nCenterX = (aSize.Width() / 2) - 1;
-        long nCenterY = (aSize.Height() / 2) - 1;
-
-        rRenderContext.SetLineColor();
-        rRenderContext.SetFillColor(aCenter);
-        rRenderContext.DrawRect(tools::Rectangle(nCenterX, nCenterY, nCenterX, nPosY));
-        rRenderContext.DrawRect(tools::Rectangle(nCenterX, nCenterY, nDarkX, nCenterY));
-        rRenderContext.SetFillColor(aOuter);
-        rRenderContext.DrawRect(tools::Rectangle(0, 0, nPosX, nCenterY - 1));
-        if (bLayoutRTL)
-            rRenderContext.DrawRect(tools::Rectangle(nCenterX + 1, nCenterY, nPosX, nPosY));
-        else
-            rRenderContext.DrawRect(tools::Rectangle(0, nCenterY, nCenterX - 1, nPosY));
-    }
 
     //  both buttons have the same look now - only dark right/bottom lines
     rRenderContext.SetLineColor(rStyleSettings.GetDarkShadowColor());
@@ -201,8 +174,8 @@ ScTabView::ScTabView( vcl::Window* pParent, ScDocShell& rDocSh, ScTabViewShell* 
     aVScrollBottom( VclPtr<ScrollBar>::Create( pFrameWin, WinBits( WB_VSCROLL | WB_DRAG ) ) ),
     aHScrollLeft( VclPtr<ScrollBar>::Create( pFrameWin, WinBits( WB_HSCROLL | WB_DRAG ) ) ),
     aHScrollRight( VclPtr<ScrollBar>::Create( pFrameWin, WinBits( WB_HSCROLL | WB_DRAG ) ) ),
-    aCornerButton( VclPtr<ScCornerButton>::Create( pFrameWin, &aViewData, false ) ),
-    aTopButton( VclPtr<ScCornerButton>::Create( pFrameWin, &aViewData, true ) ),
+    aCornerButton( VclPtr<ScCornerButton>::Create( pFrameWin, &aViewData ) ),
+    aTopButton( VclPtr<ScCornerButton>::Create( pFrameWin, &aViewData ) ),
     aScrollBarBox( VclPtr<ScrollBarBox>::Create( pFrameWin, WB_SIZEABLE ) ),
     mxInputHintOO(),
     pTimerWindow( nullptr ),
@@ -222,10 +195,10 @@ ScTabView::ScTabView( vcl::Window* pParent, ScDocShell& rDocSh, ScTabViewShell* 
     nOldCurX( 0 ),
     nOldCurY( 0 ),
     mfPendingTabBarWidth( -1.0 ),
-    mnLOKStartHeaderRow( std::numeric_limits<SCROW>::min() ),
-    mnLOKEndHeaderRow( std::numeric_limits<SCROW>::min() ),
-    mnLOKStartHeaderCol( std::numeric_limits<SCCOL>::min() ),
-    mnLOKEndHeaderCol( std::numeric_limits<SCCOL>::min() ),
+    mnLOKStartHeaderRow( -2 ),
+    mnLOKEndHeaderRow( -1 ),
+    mnLOKStartHeaderCol( -2 ),
+    mnLOKEndHeaderCol( -1 ),
     bMinimized( false ),
     bInUpdateHeader( false ),
     bInActivatePart( false ),
@@ -1216,7 +1189,7 @@ void ScTabView::ScrollX( long nDeltaX, ScHSplitPos eWhich, bool bUpdBars )
         // already have painted the column/row bar with updated position.  -
         // Therefore call Update once before on column/row bar
         if (pColBar[eWhich])
-            pColBar[eWhich]->Update();
+            pColBar[eWhich]->PaintImmediately();
 
         long nOldPos = aViewData.GetScrPos( nTrackX, 0, eWhich ).X();
         aViewData.SetPosX( eWhich, nNewX );
@@ -1234,14 +1207,14 @@ void ScTabView::ScrollX( long nDeltaX, ScHSplitPos eWhich, bool bUpdBars )
             if ( aViewData.GetVSplitMode() != SC_SPLIT_NONE )
                 pGridWin[SC_SPLIT_TOPRIGHT]->ScrollPixel( nDiff, 0 );
         }
-        if (pColBar[eWhich])     { pColBar[eWhich]->Scroll( nDiff,0 ); pColBar[eWhich]->Update(); }
+        if (pColBar[eWhich])     { pColBar[eWhich]->Scroll( nDiff,0 ); pColBar[eWhich]->PaintImmediately(); }
         if (pColOutline[eWhich]) pColOutline[eWhich]->ScrollPixel( nDiff );
         if (bUpdBars)
             UpdateScrollBars();
     }
 
     if (nDeltaX==1 || nDeltaX==-1)
-        pGridWin[aViewData.GetActivePart()]->Update();
+        pGridWin[aViewData.GetActivePart()]->PaintImmediately();
 
     ShowAllCursors();
 
@@ -1300,7 +1273,7 @@ void ScTabView::ScrollY( long nDeltaY, ScVSplitPos eWhich, bool bUpdBars )
         UpdateHeaderWidth( &eWhich, &nUNew );               // adjust row headers
 
         if (pRowBar[eWhich])
-            pRowBar[eWhich]->Update();
+            pRowBar[eWhich]->PaintImmediately();
 
         long nOldPos = aViewData.GetScrPos( 0, nTrackY, eWhich ).Y();
         aViewData.SetPosY( eWhich, nNewY );
@@ -1318,14 +1291,14 @@ void ScTabView::ScrollY( long nDeltaY, ScVSplitPos eWhich, bool bUpdBars )
             if ( aViewData.GetHSplitMode() != SC_SPLIT_NONE )
                 pGridWin[SC_SPLIT_BOTTOMRIGHT]->ScrollPixel( 0, nDiff );
         }
-        if (pRowBar[eWhich])     { pRowBar[eWhich]->Scroll( 0,nDiff ); pRowBar[eWhich]->Update(); }
+        if (pRowBar[eWhich])     { pRowBar[eWhich]->Scroll( 0,nDiff ); pRowBar[eWhich]->PaintImmediately(); }
         if (pRowOutline[eWhich]) pRowOutline[eWhich]->ScrollPixel( nDiff );
         if (bUpdBars)
             UpdateScrollBars();
     }
 
     if (nDeltaY==1 || nDeltaY==-1)
-        pGridWin[aViewData.GetActivePart()]->Update();
+        pGridWin[aViewData.GetActivePart()]->PaintImmediately();
 
     ShowAllCursors();
 
@@ -2777,6 +2750,7 @@ OUString ScTabView::getRowColumnHeaders(const tools::Rectangle& rRectangle)
     tools::Rectangle aChangedArea = aNewVisArea.GetBoundRect();
     if (!aChangedArea.IsEmpty())
     {
+        UpdateVisibleRange();
         UpdateFormulas(aChangedArea.Left(), aChangedArea.Top(), aChangedArea.Right(), aChangedArea.Bottom());
     }
 

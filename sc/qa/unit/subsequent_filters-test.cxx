@@ -77,6 +77,7 @@
 
 #include "helper/qahelper.hxx"
 #include "helper/shared_test_impl.hxx"
+#include <cellsuno.hxx>
 
 namespace com::sun::star::frame { class XModel; }
 
@@ -227,6 +228,9 @@ public:
     void testTdf100709XLSX();
     void testTdf97598XLSX();
     void testTdf110440XLSX();
+    void testTdf132278();
+    void testTdf130959();
+    void testTdf131380();
     void testTdf111974XLSM();
     void testTdf83672XLSX();
 
@@ -240,6 +244,8 @@ public:
 
     void testMergedCellsXLSXML();
     void testBackgroundColorStandardXLSXML();
+    void testTdf131536();
+    void testTdf85617();
     void testNamedExpressionsXLSXML();
     void testEmptyRowsXLSXML();
     void testBorderDirectionsXLSXML();
@@ -252,6 +258,7 @@ public:
     void testAutoheight2Rows();
     void testXLSDefColWidth();
     void testPreviewMissingObjLink();
+    void testShapeRotationImport();
 
     CPPUNIT_TEST_SUITE(ScFiltersTest);
     CPPUNIT_TEST(testBooleanFormatXLSX);
@@ -371,6 +378,9 @@ public:
     CPPUNIT_TEST(testTdf100709XLSX);
     CPPUNIT_TEST(testTdf97598XLSX);
     CPPUNIT_TEST(testTdf110440XLSX);
+    CPPUNIT_TEST(testTdf132278);
+    CPPUNIT_TEST(testTdf130959);
+    CPPUNIT_TEST(testTdf131380);
     CPPUNIT_TEST(testTdf111974XLSM);
     CPPUNIT_TEST(testTdf83672XLSX);
 
@@ -382,6 +392,8 @@ public:
 #endif
     CPPUNIT_TEST(testMergedCellsXLSXML);
     CPPUNIT_TEST(testBackgroundColorStandardXLSXML);
+    CPPUNIT_TEST(testTdf131536);
+    CPPUNIT_TEST(testTdf85617);
     CPPUNIT_TEST(testNamedExpressionsXLSXML);
     CPPUNIT_TEST(testEmptyRowsXLSXML);
     CPPUNIT_TEST(testBorderDirectionsXLSXML);
@@ -395,6 +407,7 @@ public:
     CPPUNIT_TEST(testAutoheight2Rows);
     CPPUNIT_TEST(testXLSDefColWidth);
     CPPUNIT_TEST(testPreviewMissingObjLink);
+    CPPUNIT_TEST(testShapeRotationImport);
 
     CPPUNIT_TEST_SUITE_END();
 
@@ -802,7 +815,7 @@ void ScFiltersTest::testFormulaDepDeleteContentsODS()
     // Delete D2:D5.
     ScDocFunc& rFunc = xDocSh->GetDocFunc();
     ScRange aRange(3,1,0,3,4,0);
-    ScMarkData aMark(MAXROW, MAXCOL);
+    ScMarkData aMark(rDoc.GetSheetLimits());
     aMark.SetMarkArea(aRange);
     aMark.MarkToMulti();
     bool bGood = rFunc.DeleteContents(aMark, InsertDeleteFlags::ALL, true, true);
@@ -2840,7 +2853,7 @@ void ScFiltersTest::testOptimalHeightReset()
 
     // delete content of A1
     ScRange aDelRange(0,0,0,0,0,0);
-    ScMarkData aMark(MAXROW, MAXCOL);
+    ScMarkData aMark(rDoc.GetSheetLimits());
     aMark.SetMarkArea(aDelRange);
     bool bRet = rFunc.DeleteContents( aMark, InsertDeleteFlags::ALL, false, true );
     CPPUNIT_ASSERT_MESSAGE("DeleteContents failed", bRet);
@@ -3540,11 +3553,51 @@ void ScFiltersTest::testTdf110440XLSX()
     xDocSh->DoClose();
 }
 
+void ScFiltersTest::testTdf132278()
+{
+    // Would crash without the fix on loading
+    ScDocShellRef xDocSh = loadDoc("tdf132278.", FORMAT_ODS);
+    CPPUNIT_ASSERT_MESSAGE("Failed to open doc", xDocSh.is());
+
+    ScDocument& rDoc = xDocSh->GetDocument();
+    rDoc.CalcAll(); // perform hard re-calculation.
+
+    xDocSh->DoClose();
+}
+
+void ScFiltersTest::testTdf130959()
+{
+    // Would crash without the fix on loading
+    ScDocShellRef xDocSh = loadDoc("tdf130959.", FORMAT_XLSX);
+    CPPUNIT_ASSERT_MESSAGE("Failed to open doc", xDocSh.is());
+
+    ScDocument& rDoc = xDocSh->GetDocument();
+    rDoc.CalcAll(); // perform hard re-calculation.
+
+    xDocSh->DoClose();
+}
+
+void ScFiltersTest::testTdf131380()
+{
+    ScDocShellRef xDocSh = loadDoc("tdf131380.", FORMAT_XLSX);
+    CPPUNIT_ASSERT_MESSAGE("Failed to open doc", xDocSh.is());
+
+    // Would crash without the fix on recalculating
+    ScDocument& rDoc = xDocSh->GetDocument();
+    rDoc.CalcAll(); // perform hard re-calculation.
+
+    xDocSh->DoClose();
+}
+
 void ScFiltersTest::testTdf111974XLSM()
 {
     // Would crash without the fix on loading
     ScDocShellRef xDocSh = loadDoc("tdf111974.", FORMAT_XLSM);
     CPPUNIT_ASSERT_MESSAGE("Failed to open doc", xDocSh.is());
+
+    ScDocument& rDoc = xDocSh->GetDocument();
+    rDoc.CalcAll(); // perform hard re-calculation.
+
     xDocSh->DoClose();
 }
 
@@ -3780,6 +3833,34 @@ void ScFiltersTest::testBackgroundColorStandardXLSXML()
     }
 
     xDocSh->DoClose();
+}
+
+void ScFiltersTest::testTdf131536()
+{
+    ScDocShellRef xDocSh = loadDoc("tdf131536.", FORMAT_XLSX);
+    CPPUNIT_ASSERT_MESSAGE("Failed to load the document", xDocSh.is());
+    ScDocument& rDoc = xDocSh->GetDocument();
+
+    ScAddress aPos(3,9,0);
+    CPPUNIT_ASSERT_EQUAL(1.0, rDoc.GetValue(aPos));
+    ASSERT_FORMULA_EQUAL(rDoc, aPos, "IF(D$4=\"-\",\"-\",MID(TEXT(INDEX($Comparison.$I:$J,$Comparison.$A5,$Comparison.D$2),\"\"),2,4)"
+                                     "=RIGHT(TEXT(INDEX($Comparison.$L:$Z,$Comparison.$A5,$Comparison.D$4),\"\"),4))", nullptr);
+
+    ScAddress aPos2(4,9,0);
+    CPPUNIT_ASSERT_EQUAL(1.0, rDoc.GetValue(aPos2));
+    ASSERT_FORMULA_EQUAL(rDoc, aPos2, "IF(D$4=\"-\",\"-\",MID(TEXT(INDEX($Comparison.$I:$J,$Comparison.$A5,$Comparison.D$2),\"0\"),2,4)"
+                                      "=RIGHT(TEXT(INDEX($Comparison.$L:$Z,$Comparison.$A5,$Comparison.D$4),\"0\"),4))", nullptr);
+}
+
+void ScFiltersTest::testTdf85617()
+{
+    ScDocShellRef xDocSh = loadDoc("tdf85617.", FORMAT_XLSX);
+    CPPUNIT_ASSERT_MESSAGE("Failed to load the document", xDocSh.is());
+    ScDocument& rDoc = xDocSh->GetDocument();
+
+    ScAddress aPos(2,2,0);
+    //Without the fix in place, it would be Err:509
+    CPPUNIT_ASSERT_EQUAL(4.5, rDoc.GetValue(aPos));
 }
 
 void ScFiltersTest::testNamedExpressionsXLSXML()
@@ -4323,11 +4404,16 @@ void ScFiltersTest::testAutoheight2Rows()
 
     SCTAB nTab = 0;
     int nHeight1 = rDoc.GetRowHeight(0, nTab, false);
-    int nHeight3 = rDoc.GetRowHeight(2, nTab, false);
+    int nHeight2 = rDoc.GetRowHeight(1, nTab, false);
+    int nHeight4 = rDoc.GetRowHeight(3, nTab, false);
+    int nHeight5 = rDoc.GetRowHeight(4, nTab, false);
 
     // We will do relative comparison, because calculated autoheight
     // can be different on different platforms
-    CPPUNIT_ASSERT_MESSAGE("Row #3 should be thinner than #1", nHeight3 < nHeight1);
+    CPPUNIT_ASSERT_MESSAGE("Row #1 and row #4 must have same height after load & auto-adjust",
+                           abs( nHeight1 - nHeight4 ) < 10 );
+    CPPUNIT_ASSERT_MESSAGE("Row #2 and row #5 must have same height after load & auto-adjust",
+                           abs( nHeight2 - nHeight5 ) < 10 );
 
     xDocSh->DoClose();
 }
@@ -4360,6 +4446,52 @@ void ScFiltersTest::testPreviewMissingObjLink()
     CPPUNIT_ASSERT_MESSAGE("the ole object links to a missing file, but we should retain its preview", pGraphic);
 
     xDocSh->DoClose();
+}
+
+void ScFiltersTest::testShapeRotationImport()
+{
+    // tdf#83593 Incorrectly calculated bounding rectangles caused shapes to appear as if there
+    // were extra or missing rotations. Hence, we check the sizes of these rectangles.
+    ScDocShellRef xDocSh = loadDoc("testShapeRotationImport.", FORMAT_XLSX);
+    CPPUNIT_ASSERT_MESSAGE("Failed to load testShapeRotationImport.xlsx", xDocSh.is());
+    uno::Reference< drawing::XDrawPagesSupplier > xDoc(xDocSh->GetModel(), uno::UNO_QUERY_THROW);
+    uno::Reference< drawing::XDrawPage > xPage(xDoc->getDrawPages()->getByIndex(0), uno::UNO_QUERY_THROW);
+
+    // The expected values are in the map below. Note that some of the angles are outside of the set which contains
+    // the value of the wrong angles. This is to check the border cases and one value on both sides.
+    std::map<sal_Int32, std::map<std::string, sal_Int32>> aExpectedValues
+    {
+        {  4400, { { "x",  6832 }, { "y", 36893 }, { "width",  8898 }, { "height", 1163 } } },
+        {  4500, { { "x",  4490 }, { "y", 36400 }, { "width",  8898 }, { "height", 1163 } } },
+        {  4600, { { "x",  1673 }, { "y", 36270 }, { "width",  8862 }, { "height", 1144 } } },
+        { 13400, { { "x", 13762 }, { "y", 28403 }, { "width",  8863 }, { "height", 1194 } } },
+        { 13500, { { "x", 10817 }, { "y", 27951 }, { "width",  8863 }, { "height", 1170 } } },
+        { 13600, { { "x",  8449 }, { "y", 28336 }, { "width",  8897 }, { "height", 1164 } } },
+        { 22400, { { "x", 14948 }, { "y", 12978 }, { "width",  8898 }, { "height", 1164 } } },
+        { 22500, { { "x", 11765 }, { "y", 12834 }, { "width",  8898 }, { "height", 1164 } } },
+        { 22600, { { "x",  8253 }, { "y", 12919 }, { "width",  8863 }, { "height", 1171 } } },
+        { 31400, { { "x",  8099 }, { "y",  1160 }, { "width",  9815 }, { "height", 1171 } } },
+        { 31500, { { "x",  4427 }, { "y",  1274 }, { "width", 10238 }, { "height", 1171 } } },
+        { 31600, { { "x",  1964 }, { "y",  1878 }, { "width", 10307 }, { "height", 1164 } } },
+    };
+
+    for (sal_Int32 ind = 0; ind < 12; ++ind)
+    {
+        uno::Reference< drawing::XShape > xShape(xPage->getByIndex(ind), uno::UNO_QUERY_THROW);
+
+        uno::Reference< beans::XPropertySet > xShapeProperties(xShape, uno::UNO_QUERY);
+        uno::Any nRotProp = xShapeProperties->getPropertyValue("RotateAngle");
+        sal_Int32 nRot = nRotProp.get<sal_Int32>();
+
+        awt::Point aPosition = xShape->getPosition();
+        awt::Size aSize = xShape->getSize();
+
+        CPPUNIT_ASSERT(aExpectedValues.find(nRot) != aExpectedValues.end());
+        CPPUNIT_ASSERT_EQUAL(aExpectedValues[nRot]["x"],      aPosition.X);
+        CPPUNIT_ASSERT_EQUAL(aExpectedValues[nRot]["y"],      aPosition.Y);
+        CPPUNIT_ASSERT_EQUAL(aExpectedValues[nRot]["width"],  aSize.Width);
+        CPPUNIT_ASSERT_EQUAL(aExpectedValues[nRot]["height"], aSize.Height);
+    }
 }
 
 ScFiltersTest::ScFiltersTest()

@@ -17,15 +17,14 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_AVMEDIA_SOURCE_MACAVF_FRAMEGRABBER_HXX
-#define INCLUDED_AVMEDIA_SOURCE_MACAVF_FRAMEGRABBER_HXX
+#pragma once
 
 #include "macavfcommon.hxx"
 #include <cppuhelper/implbase.hxx>
 
 #include <com/sun/star/media/XFrameGrabber.hpp>
 
-namespace avmedia { namespace macavf {
+namespace avmedia::macavf {
 
 class FrameGrabber : public ::cppu::WeakImplHelper< css::media::XFrameGrabber,
                                                     css::lang::XServiceInfo >
@@ -52,9 +51,6 @@ private:
     AVAssetImageGenerator* mpImageGen;
 };
 
-} // namespace macavf
-} // namespace avmedia
-
-#endif // INCLUDED_AVMEDIA_SOURCE_MACAVF_FRAMEGRABBER_HXX
+} // namespace avmedia::macavf
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -27,7 +27,7 @@
 #include <QtGui/QPainterPath>
 #include <QtGui/QRegion>
 
-#include "Qt5Data.hxx"
+#include "Qt5GraphicsBase.hxx"
 
 class PhysicalFontCollection;
 class QImage;
@@ -37,7 +37,7 @@ class Qt5FontFace;
 class Qt5Frame;
 class Qt5Painter;
 
-class Qt5Graphics final : public SalGraphics
+class Qt5Graphics final : public SalGraphics, public Qt5GraphicsBase
 {
     friend class Qt5Bitmap;
     friend class Qt5Painter;
@@ -92,7 +92,6 @@ public:
                                                         const Size& rSize) const override;
     virtual css::uno::Any GetNativeSurfaceHandle(cairo::SurfaceSharedPtr& rSurface,
                                                  const basegfx::B2ISize& rSize) const override;
-    virtual SystemFontData GetSysFontData(int nFallbacklevel) const override;
 #endif // ENABLE_CAIRO_CANVAS
 
     // GDI
@@ -118,10 +117,10 @@ public:
                                        const SalPoint* const* pPtAry,
                                        const PolyFlags* const* pFlgAry) override;
     virtual bool drawPolyLine(const basegfx::B2DHomMatrix& rObjectToDevice,
-                              const basegfx::B2DPolygon&, double fTransparency,
-                              const basegfx::B2DVector& rLineWidths, basegfx::B2DLineJoin,
-                              css::drawing::LineCap eLineCap, double fMiterMinimumAngle,
-                              bool bPixelSnapHairline) override;
+                              const basegfx::B2DPolygon&, double fTransparency, double fLineWidths,
+                              const std::vector<double>* pStroke, // MM01
+                              basegfx::B2DLineJoin, css::drawing::LineCap eLineCap,
+                              double fMiterMinimumAngle, bool bPixelSnapHairline) override;
     virtual bool drawGradient(const tools::PolyPolygon&, const Gradient&) override;
 
     virtual void copyArea(long nDestX, long nDestY, long nSrcX, long nSrcY, long nSrcWidth,

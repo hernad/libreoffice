@@ -112,12 +112,7 @@ void TextCharacterProperties::pushToPropMap( PropertyMap& rPropMap, const XmlFil
         Color aColor = maFillProperties.getBestSolidColor();
         rPropMap.setProperty(PROP_CharColor, aColor.getColor(rFilter.getGraphicHelper()));
 
-        if( maFillProperties.moFillType.get() == XML_noFill )
-        {
-            // noFill doesn't exist for characters. Map noFill to 99% transparency
-            rPropMap.setProperty(PROP_CharTransparence, sal_Int16((MAX_PERCENT - 1) / PER_PERCENT) );
-        }
-        else if (aColor.hasTransparency())
+        if (aColor.hasTransparency())
         {
             rPropMap.setProperty(PROP_CharTransparence, aColor.getTransparency());
         }
@@ -184,15 +179,15 @@ void TextCharacterProperties::pushToPropMap( PropertyMap& rPropMap, const XmlFil
         rPropMap.setProperty( PROP_CharBackColor, maHighlightColor.getColor( rFilter.getGraphicHelper() ));
 }
 
-static void pushToGrabBag( PropertySet& rPropSet, const std::vector<PropertyValue>& aVectorOfProperyValues )
+static void pushToGrabBag( PropertySet& rPropSet, const std::vector<PropertyValue>& aVectorOfPropertyValues )
 {
-    if (!rPropSet.hasProperty(PROP_CharInteropGrabBag) || aVectorOfProperyValues.empty())
+    if (!rPropSet.hasProperty(PROP_CharInteropGrabBag) || aVectorOfPropertyValues.empty())
         return;
     Sequence<PropertyValue> aGrabBag;
     Any aAnyGrabBag = rPropSet.getAnyProperty(PROP_CharInteropGrabBag);
     aAnyGrabBag >>= aGrabBag;
 
-    rPropSet.setAnyProperty(PROP_CharInteropGrabBag, makeAny(comphelper::concatSequences(aGrabBag, aVectorOfProperyValues)));
+    rPropSet.setAnyProperty(PROP_CharInteropGrabBag, makeAny(comphelper::concatSequences(aGrabBag, aVectorOfPropertyValues)));
 }
 
 void TextCharacterProperties::pushToPropSet( PropertySet& rPropSet, const XmlFilterBase& rFilter ) const

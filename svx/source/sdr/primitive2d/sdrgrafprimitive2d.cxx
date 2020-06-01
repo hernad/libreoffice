@@ -20,13 +20,9 @@
 #include <sdr/primitive2d/sdrgrafprimitive2d.hxx>
 #include <drawinglayer/primitive2d/graphicprimitive2d.hxx>
 #include <basegfx/polygon/b2dpolygontools.hxx>
-#include <svx/sdr/primitive2d/sdrdecompositiontools.hxx>
-#include <drawinglayer/primitive2d/groupprimitive2d.hxx>
+#include <sdr/primitive2d/sdrdecompositiontools.hxx>
 #include <svx/sdr/primitive2d/svx_primitivetypes2d.hxx>
-#include <drawinglayer/primitive2d/sdrdecompositiontools2d.hxx>
 #include <basegfx/polygon/b2dpolygon.hxx>
-#include <basegfx/matrix/b2dhommatrixtools.hxx>
-#include <drawinglayer/primitive2d/transformprimitive2d.hxx>
 
 namespace drawinglayer::primitive2d
 {
@@ -59,7 +55,6 @@ namespace drawinglayer::primitive2d
                         getTransform(),
                         getGraphicObject(),
                         getGraphicAttr()));
-
                 aRetval.push_back(xGraphicContentPrimitive);
             }
 
@@ -102,6 +97,13 @@ namespace drawinglayer::primitive2d
                 }
             }
 
+            // Soft edges should be before text, since text is not affected by soft edges
+            if (!aRetval.empty() && getSdrLFSTAttribute().getSoftEdgeRadius())
+            {
+                aRetval = createEmbeddedSoftEdgePrimitive(
+                    aRetval, getSdrLFSTAttribute().getSoftEdgeRadius());
+            }
+
             // add text
             if(!getSdrLFSTAttribute().getText().isDefault())
             {
@@ -115,12 +117,20 @@ namespace drawinglayer::primitive2d
                         false));
             }
 
+            // tdf#132199: put glow before shadow, to have shadow of the glow, not the opposite
+            if (!aRetval.empty() && !getSdrLFSTAttribute().getGlow().isDefault())
+            {
+                // glow
+                aRetval = createEmbeddedGlowPrimitive(aRetval, getSdrLFSTAttribute().getGlow());
+            }
+
             // add shadow
             if(!getSdrLFSTAttribute().getShadow().isDefault())
             {
                 aRetval = createEmbeddedShadowPrimitive(
                     aRetval,
-                    getSdrLFSTAttribute().getShadow());
+                    getSdrLFSTAttribute().getShadow(),
+                    getTransform());
             }
 
             rContainer.insert(rContainer.end(), aRetval.begin(), aRetval.end());
@@ -128,7 +138,7 @@ namespace drawinglayer::primitive2d
 
         SdrGrafPrimitive2D::SdrGrafPrimitive2D(
             const basegfx::B2DHomMatrix& rTransform,
-            const attribute::SdrLineFillShadowTextAttribute& rSdrLFSTAttribute,
+            const attribute::SdrLineFillEffectsTextAttribute& rSdrLFSTAttribute,
             const GraphicObject& rGraphicObject,
             const GraphicAttr& rGraphicAttr)
         :   BufferedDecompositionPrimitive2D(),

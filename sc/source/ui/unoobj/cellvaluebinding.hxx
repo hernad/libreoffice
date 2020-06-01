@@ -31,9 +31,9 @@
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/lang/XInitialization.hpp>
 
-namespace com { namespace sun { namespace star { namespace table { class XCell; } } } }
-namespace com { namespace sun { namespace star { namespace sheet { class XSpreadsheetDocument; } } } }
-namespace com { namespace sun { namespace star { namespace text { class XTextRange; } } } }
+namespace com::sun::star::table { class XCell; }
+namespace com::sun::star::sheet { class XSpreadsheetDocument; }
+namespace com::sun::star::text { class XTextRange; }
 
 namespace calc
 {
@@ -69,7 +69,7 @@ namespace calc
         ::comphelper::OInterfaceContainerHelper2
                     m_aModifyListeners;     /// our modify listeners
         bool        m_bInitialized;         /// has XInitialization::initialize been called?
-        bool const  m_bListPos;             /// constructed as ListPositionCellBinding?
+        bool        m_bListPos;             /// constructed as ListPositionCellBinding?
 
     public:
         OCellValueBinding(

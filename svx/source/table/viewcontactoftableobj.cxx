@@ -22,16 +22,12 @@
 #include <svx/svdotable.hxx>
 #include <com/sun/star/table/XTable.hpp>
 #include <basegfx/polygon/b2dpolygontools.hxx>
-#include <basegfx/polygon/b2dpolygon.hxx>
-#include <drawinglayer/primitive2d/polygonprimitive2d.hxx>
-#include <svx/sdr/primitive2d/sdrattributecreator.hxx>
-#include <drawinglayer/primitive2d/groupprimitive2d.hxx>
-#include <svx/sdr/primitive2d/sdrdecompositiontools.hxx>
+#include <sdr/primitive2d/sdrattributecreator.hxx>
+#include <sdr/primitive2d/sdrdecompositiontools.hxx>
 #include <basegfx/matrix/b2dhommatrix.hxx>
-#include <svx/sdr/attribute/sdrtextattribute.hxx>
+#include <sdr/attribute/sdrtextattribute.hxx>
 #include <svx/sdr/primitive2d/svx_primitivetypes2d.hxx>
 #include <editeng/borderline.hxx>
-#include <drawinglayer/primitive2d/borderlineprimitive2d.hxx>
 #include <sdr/attribute/sdrfilltextattribute.hxx>
 #include <drawinglayer/attribute/sdrlineattribute.hxx>
 #include <drawinglayer/attribute/sdrshadowattribute.hxx>
@@ -57,8 +53,8 @@ namespace drawinglayer::primitive2d
         class SdrCellPrimitive2D : public BufferedDecompositionPrimitive2D
         {
         private:
-            basegfx::B2DHomMatrix const                       maTransform;
-            attribute::SdrFillTextAttribute const             maSdrFTAttribute;
+            basegfx::B2DHomMatrix                       maTransform;
+            attribute::SdrFillTextAttribute             maSdrFTAttribute;
 
         protected:
             // local decomposition.
@@ -82,7 +78,7 @@ namespace drawinglayer::primitive2d
             virtual bool operator==(const BasePrimitive2D& rPrimitive) const override;
 
             // provide unique ID
-            DeclPrimitive2DIDBlock()
+            virtual sal_uInt32 getPrimitive2DID() const override;
         };
 
         }

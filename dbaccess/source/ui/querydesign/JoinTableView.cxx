@@ -19,7 +19,7 @@
 
 #include <JoinTableView.hxx>
 #include <osl/diagnose.h>
-#include <querycontroller.hxx>
+#include <JoinController.hxx>
 #include <JoinDesignView.hxx>
 #include <TableWindow.hxx>
 #include <TableWindowListBox.hxx>
@@ -28,22 +28,24 @@
 #include <ConnectionLine.hxx>
 #include <ConnectionLineData.hxx>
 #include <browserids.hxx>
-#include <svl/urlbmk.hxx>
 #include <com/sun/star/sdbc/XDatabaseMetaData.hpp>
+#include <com/sun/star/sdbc/SQLException.hpp>
 #include "QueryMoveTabWinUndoAct.hxx"
 #include "QuerySizeTabWinUndoAct.hxx"
+#include <toolkit/helper/vclunohelper.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/commandevent.hxx>
 #include <vcl/event.hxx>
 #include <vcl/ptrstyle.hxx>
+#include <vcl/builder.hxx>
 #include <TableWindowData.hxx>
 #include <JAccess.hxx>
 #include <com/sun/star/accessibility/XAccessible.hpp>
 #include <com/sun/star/accessibility/AccessibleRole.hpp>
 #include <com/sun/star/accessibility/AccessibleEventId.hpp>
-#include <UITools.hxx>
 #include <cppuhelper/exc_hlp.hxx>
+#include <connectivity/dbtools.hxx>
 #include <tools/diagnose_ex.h>
 #include <algorithm>
 #include <functional>
@@ -305,11 +307,11 @@ TTableWindowData::value_type OJoinTableView::createTableWindowData(const OUStrin
     return pData;
 }
 
-OTableWindowData* OJoinTableView::CreateImpl(const OUString& _rComposedName
+std::shared_ptr<OTableWindowData> OJoinTableView::CreateImpl(const OUString& _rComposedName
                                              ,const OUString& _sTableName
                                              ,const OUString& _rWinName)
 {
-    return new OTableWindowData( nullptr,_rComposedName,_sTableName, _rWinName );
+    return std::make_shared<OTableWindowData>( nullptr,_rComposedName,_sTableName, _rWinName );
 }
 
 void OJoinTableView::AddTabWin(const OUString& _rComposedName, const OUString& rWinName, bool /*bNewTable*/)
@@ -796,7 +798,7 @@ void OJoinTableView::Tracking( const TrackingEvent& rTEvt )
         {
             Point aMousePos = rTEvt.GetMouseEvent().GetPosPixel();
             m_aSizingRect = m_pSizingWin->getSizingRect(aMousePos,m_aOutputSize);
-            Update();
+            PaintImmediately();
             ShowTracking( m_aSizingRect, ShowTrackFlags::Small | ShowTrackFlags::TrackWindow );
         }
     }
@@ -816,22 +818,22 @@ void OJoinTableView::MouseButtonUp( const MouseEvent& rEvt )
 {
     Window::MouseButtonUp(rEvt);
     // Has a connection been selected?
-    if( !m_vTableConnection.empty() )
+    if( m_vTableConnection.empty() )
+        return;
+
+    DeselectConn(GetSelectedConn());
+
+    for (auto & elem : m_vTableConnection)
     {
-        DeselectConn(GetSelectedConn());
-
-        for (auto & elem : m_vTableConnection)
+        if( elem->CheckHit(rEvt.GetPosPixel()) )
         {
-            if( elem->CheckHit(rEvt.GetPosPixel()) )
-            {
-                SelectConn(elem);
+            SelectConn(elem);
 
-                // Double-click
-                if( rEvt.GetClicks() == 2 )
-                    ConnDoubleClicked(elem);
+            // Double-click
+            if( rEvt.GetClicks() == 2 )
+                ConnDoubleClicked(elem);
 
-                break;
-            }
+            break;
         }
     }
 }
@@ -880,47 +882,47 @@ void OJoinTableView::SelectConn(OTableConnection* pConn)
     // select the concerned entries in the windows
     OTableWindow* pConnSource = pConn->GetSourceWin();
     OTableWindow* pConnDest = pConn->GetDestWin();
-    if (pConnSource && pConnDest)
+    if (!(pConnSource && pConnDest))
+        return;
+
+    OTableWindowListBox* pSourceBox = pConnSource->GetListBox().get();
+    OTableWindowListBox* pDestBox = pConnDest->GetListBox().get();
+    if (!(pSourceBox && pDestBox))
+        return;
+
+    pSourceBox->SelectAll(false);
+    pDestBox->SelectAll(false);
+
+    SvTreeListEntry* pFirstSourceVisible = pSourceBox->GetFirstEntryInView();
+    SvTreeListEntry* pFirstDestVisible = pDestBox->GetFirstEntryInView();
+
+    const std::vector<std::unique_ptr<OConnectionLine>>& rLines = pConn->GetConnLineList();
+    auto aIter = rLines.rbegin();
+    for(;aIter != rLines.rend();++aIter)
     {
-        OTableWindowListBox* pSourceBox = pConnSource->GetListBox().get();
-        OTableWindowListBox* pDestBox = pConnDest->GetListBox().get();
-        if (pSourceBox && pDestBox)
+        if ((*aIter)->IsValid())
         {
-            pSourceBox->SelectAll(false);
-            pDestBox->SelectAll(false);
-
-            SvTreeListEntry* pFirstSourceVisible = pSourceBox->GetFirstEntryInView();
-            SvTreeListEntry* pFirstDestVisible = pDestBox->GetFirstEntryInView();
-
-            const std::vector<std::unique_ptr<OConnectionLine>>& rLines = pConn->GetConnLineList();
-            auto aIter = rLines.rbegin();
-            for(;aIter != rLines.rend();++aIter)
+            SvTreeListEntry* pSourceEntry = pSourceBox->GetEntryFromText((*aIter)->GetData()->GetSourceFieldName());
+            if (pSourceEntry)
             {
-                if ((*aIter)->IsValid())
-                {
-                    SvTreeListEntry* pSourceEntry = pSourceBox->GetEntryFromText((*aIter)->GetData()->GetSourceFieldName());
-                    if (pSourceEntry)
-                    {
-                        pSourceBox->Select(pSourceEntry);
-                        pSourceBox->MakeVisible(pSourceEntry);
-                    }
-
-                    SvTreeListEntry* pDestEntry = pDestBox->GetEntryFromText((*aIter)->GetData()->GetDestFieldName());
-                    if (pDestEntry)
-                    {
-                        pDestBox->Select(pDestEntry);
-                        pDestBox->MakeVisible(pDestEntry);
-                    }
-
-                }
+                pSourceBox->Select(pSourceEntry);
+                pSourceBox->MakeVisible(pSourceEntry);
             }
 
-            if ((pFirstSourceVisible != pSourceBox->GetFirstEntryInView())
-                || (pFirstDestVisible != pDestBox->GetFirstEntryInView()))
-                // scrolling was done -> redraw
-                Invalidate(InvalidateFlags::NoChildren);
+            SvTreeListEntry* pDestEntry = pDestBox->GetEntryFromText((*aIter)->GetData()->GetDestFieldName());
+            if (pDestEntry)
+            {
+                pDestBox->Select(pDestEntry);
+                pDestBox->MakeVisible(pDestEntry);
+            }
+
         }
     }
+
+    if ((pFirstSourceVisible != pSourceBox->GetFirstEntryInView())
+        || (pFirstDestVisible != pDestBox->GetFirstEntryInView()))
+        // scrolling was done -> redraw
+        Invalidate(InvalidateFlags::NoChildren);
 }
 
 void OJoinTableView::Paint(vcl::RenderContext& rRenderContext, const tools::Rectangle& rRect)
@@ -1056,7 +1058,7 @@ void OJoinTableView::ScrollWhileDragging()
 
     // redraw DraggingRect
     m_aDragRect = tools::Rectangle(m_ptPrevDraggingPos - m_aDragOffset, m_pDragWin->GetSizePixel());
-    Update();
+    PaintImmediately();
     ShowTracking( m_aDragRect, ShowTrackFlags::Small | ShowTrackFlags::TrackWindow );
 }
 
@@ -1423,23 +1425,23 @@ void OJoinTableView::StateChanged( StateChangedType nType )
     Window::StateChanged( nType );
 
     // FIXME RenderContext
-    if ( nType == StateChangedType::Zoom )
+    if ( nType != StateChangedType::Zoom )
+        return;
+
+    const StyleSettings& rStyleSettings = GetSettings().GetStyleSettings();
+
+    vcl::Font aFont = rStyleSettings.GetGroupFont();
+    if ( IsControlFont() )
+        aFont.Merge( GetControlFont() );
+    SetZoomedPointFont(*this, aFont);
+
+    for (auto const& elem : m_aTableMap)
     {
-        const StyleSettings& rStyleSettings = GetSettings().GetStyleSettings();
-
-        vcl::Font aFont = rStyleSettings.GetGroupFont();
-        if ( IsControlFont() )
-            aFont.Merge( GetControlFont() );
-        SetZoomedPointFont(*this, aFont);
-
-        for (auto const& elem : m_aTableMap)
-        {
-            elem.second->SetZoom(GetZoom());
-            Size aSize(CalcZoom(elem.second->GetSizePixel().Width()),CalcZoom(elem.second->GetSizePixel().Height()));
-            elem.second->SetSizePixel(aSize);
-        }
-        Resize();
+        elem.second->SetZoom(GetZoom());
+        Size aSize(CalcZoom(elem.second->GetSizePixel().Width()),CalcZoom(elem.second->GetSizePixel().Height()));
+        elem.second->SetSizePixel(aSize);
     }
+    Resize();
 }
 
 void OJoinTableView::HideTabWins()

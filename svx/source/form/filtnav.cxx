@@ -24,12 +24,9 @@
 #include <fmprop.hxx>
 #include <svx/strings.hrc>
 
-#include <com/sun/star/awt/XControlModel.hpp>
 #include <com/sun/star/awt/XControl.hpp>
 #include <com/sun/star/form/runtime/XFormController.hpp>
-#include <com/sun/star/lang/XUnoTunnel.hpp>
 #include <com/sun/star/util/NumberFormatter.hpp>
-#include <com/sun/star/beans/XFastPropertySet.hpp>
 #include <com/sun/star/sdb/SQLContext.hpp>
 
 #include <comphelper/processfactory.hxx>
@@ -38,12 +35,9 @@
 #include <connectivity/sqlnode.hxx>
 #include <cppuhelper/implbase.hxx>
 #include <i18nlangtag/languagetag.hxx>
-#include <fmservs.hxx>
 #include <fmshimp.hxx>
 #include <o3tl/safeint.hxx>
-#include <sfx2/dispatch.hxx>
 #include <sfx2/objitem.hxx>
-#include <sfx2/objsh.hxx>
 #include <sfx2/request.hxx>
 #include <svx/dialmgr.hxx>
 #include <svx/fmshell.hxx>
@@ -87,7 +81,6 @@ namespace svxform
     using ::com::sun::star::form::runtime::XFilterControllerListener;
     using ::com::sun::star::form::runtime::FilterEvent;
     using ::com::sun::star::lang::EventObject;
-    using ::com::sun::star::uno::RuntimeException;
     using ::com::sun::star::form::XForm;
     using ::com::sun::star::container::XChild;
     using ::com::sun::star::awt::XControl;
@@ -182,7 +175,7 @@ namespace {
 
 class FmFilterHint : public SfxHint
 {
-    FmFilterData* const   m_pData;
+    FmFilterData*   m_pData;
 
 public:
     explicit FmFilterHint(FmFilterData* pData):m_pData(pData){}
@@ -191,7 +184,7 @@ public:
 
 class FmFilterInsertedHint : public FmFilterHint
 {
-    size_t const m_nPos;   // Position relative to the parent of the data
+    size_t m_nPos;   // Position relative to the parent of the data
 
 public:
     FmFilterInsertedHint(FmFilterData* pData, size_t nRelPos)

@@ -134,7 +134,6 @@ $(eval $(call gb_UnoApi_add_idlfiles_nohdl,offapi,com/sun/star/document,\
 	OOXMLDocumentPropertiesImporter \
 	XMLBasicExporter \
 	XMLOasisBasicExporter \
-	XMLOasisBasicImporter \
 ))
 $(eval $(call gb_UnoApi_add_idlfiles_nohdl,offapi,com/sun/star/drawing,\
 	ColorTable \
@@ -213,6 +212,7 @@ $(eval $(call gb_UnoApi_add_idlfiles_nohdl,offapi,com/sun/star/graphic,\
 	Primitive2DTools \
 	SvgTools \
 	EmfTools \
+	PdfTools \
 ))
 $(eval $(call gb_UnoApi_add_idlfiles_nohdl,offapi,com/sun/star/inspection,\
 	DefaultHelpProvider \
@@ -757,7 +757,6 @@ $(eval $(call gb_UnoApi_add_idlfiles_noheader,offapi,com/sun/star/document,\
 	PDFDialog \
 	Settings \
 	TypeDetection \
-	XMLBasicImporter \
 ))
 $(eval $(call gb_UnoApi_add_idlfiles_noheader,offapi,com/sun/star/drawing,\
 	AccessibleDrawDocumentView \
@@ -1622,6 +1621,7 @@ $(eval $(call gb_UnoApi_add_idlfiles,offapi,com/sun/star/accessibility,\
 	AccessibleRelation \
 	AccessibleRelationType \
 	AccessibleRole \
+	AccessibleScrollType \
 	AccessibleStateType \
 	AccessibleTableModelChange \
 	AccessibleTableModelChangeType \
@@ -1640,7 +1640,6 @@ $(eval $(call gb_UnoApi_add_idlfiles,offapi,com/sun/star/accessibility,\
 	XAccessibleEventListener \
     XAccessibleExtendedAttributes \
 	XAccessibleExtendedComponent \
-    XAccessibleGetAccFlowTo \
     XAccessibleGroupPosition \
 	XAccessibleHyperlink \
 	XAccessibleHypertext \
@@ -2258,7 +2257,6 @@ $(eval $(call gb_UnoApi_add_idlfiles,offapi,com/sun/star/document,\
 	XVbaMethodParameter \
 	XViewDataSupplier \
 	XXMLBasicExporter \
-	XXMLOasisBasicImporter \
 ))
 $(eval $(call gb_UnoApi_add_idlfiles,offapi,com/sun/star/drawing,\
 	Alignment \
@@ -2604,6 +2602,7 @@ $(eval $(call gb_UnoApi_add_idlfiles,offapi,com/sun/star/frame,\
 	XControllerBorder \
 	XDesktop \
 	XDesktop2 \
+	XDesktopInternal \
 	XDesktopTask \
 	XDispatch \
 	XDispatchHelper \
@@ -2724,6 +2723,7 @@ $(eval $(call gb_UnoApi_add_idlfiles,offapi,com/sun/star/graphic,\
 	XPrimitiveFactory2D \
 	XSvgParser \
 	XEmfParser \
+	XPdfDecomposer \
 ))
 $(eval $(call gb_UnoApi_add_idlfiles,offapi,com/sun/star/i18n,\
 	AmPmValue \
@@ -2933,6 +2933,8 @@ $(eval $(call gb_UnoApi_add_idlfiles,offapi,com/sun/star/packages,\
 	NoRawFormatException \
 	WrongPasswordException \
 	XDataSinkEncrSupport \
+	XPackageEncryption \
+	PackageEncryption \
 ))
 $(eval $(call gb_UnoApi_add_idlfiles,offapi,com/sun/star/packages/manifest,\
 	XManifestReader \

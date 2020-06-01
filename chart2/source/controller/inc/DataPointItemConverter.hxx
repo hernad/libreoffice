@@ -27,14 +27,14 @@
 
 #include <vector>
 
-namespace com { namespace sun { namespace star { namespace awt { struct Size; } } } }
-namespace com { namespace sun { namespace star { namespace chart2 { class XDataSeries; } } } }
-namespace com { namespace sun { namespace star { namespace frame { class XModel; } } } }
-namespace com { namespace sun { namespace star { namespace uno { class XComponentContext; } } } }
+namespace com::sun::star::awt { struct Size; }
+namespace com::sun::star::chart2 { class XDataSeries; }
+namespace com::sun::star::frame { class XModel; }
+namespace com::sun::star::uno { class XComponentContext; }
 
 class SdrModel;
 
-namespace chart { namespace wrapper {
+namespace chart::wrapper {
 
 class DataPointItemConverter : public ItemConverter
 {
@@ -54,7 +54,8 @@ public:
         sal_Int32 nSpecialFillColor = 0,
         bool bOverwriteLabelsForAttributedDataPointsAlso = false,
         sal_Int32 nNumberFormat = 0,
-        sal_Int32 nPercentNumberFormat = 0 );
+        sal_Int32 nPercentNumberFormat = 0,
+        sal_Int32 nPointIndex = -1 );
 
     virtual ~DataPointItemConverter() override;
 
@@ -78,9 +79,12 @@ private:
     sal_Int32                           m_nPercentNumberFormat;
     css::uno::Sequence<sal_Int32>       m_aAvailableLabelPlacements;
     bool                                m_bForbidPercentValue;
+    bool                                m_bHideLegendEntry;
+    sal_Int32                           m_nPointIndex;
+    css::uno::Reference<css::chart2::XDataSeries> m_xSeries;
 };
 
-}}
+}
 
 #endif
 

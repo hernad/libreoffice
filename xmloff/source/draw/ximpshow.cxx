@@ -18,6 +18,7 @@
  */
 
 #include <com/sun/star/beans/XPropertySet.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/util/Duration.hpp>
 #include <com/sun/star/xml/sax/XAttributeList.hpp>
 #include <com/sun/star/lang/XSingleServiceFactory.hpp>
@@ -88,9 +89,7 @@ SdXMLShowsContext::SdXMLShowsContext( SdXMLImport& rImport, const Reference< XFa
             bIsMouseVisible = false;
 
         // read attributes
-        sax_fastparser::FastAttributeList *pAttribList =
-            sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
-        for (auto &aIter : *pAttribList)
+        for (auto &aIter : sax_fastparser::castToFastAttributeList( xAttrList ))
         {
             OUString sValue = aIter.toString();
 
@@ -205,9 +204,7 @@ css::uno::Reference< css::xml::sax::XFastContextHandler > SdXMLShowsContext::cre
         OUString aPages;
 
         // read attributes
-        sax_fastparser::FastAttributeList *pAttribList =
-            sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
-        for (auto &aIter : *pAttribList)
+        for (auto &aIter : sax_fastparser::castToFastAttributeList( xAttrList ))
         {
             OUString sValue = aIter.toString();
 

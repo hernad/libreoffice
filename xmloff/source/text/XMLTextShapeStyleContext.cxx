@@ -20,6 +20,7 @@
 #include <tools/debug.hxx>
 #include <com/sun/star/document/XEventsSupplier.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
+#include <com/sun/star/style/XStyle.hpp>
 #include <xmloff/xmlnmspe.hxx>
 #include <xmloff/xmltoken.hxx>
 #include <xmloff/xmlimp.hxx>
@@ -144,7 +145,7 @@ static const OUStringLiteral gsIsAutoUpdate( "IsAutoUpdate" );
 XMLTextShapeStyleContext::XMLTextShapeStyleContext( SvXMLImport& rImport,
         sal_uInt16 nPrfx, const OUString& rLName,
         const Reference< XAttributeList > & xAttrList,
-        SvXMLStylesContext& rStyles, sal_uInt16 nFamily ) :
+        SvXMLStylesContext& rStyles, XmlStyleFamily nFamily ) :
     XMLShapeStyleContext( rImport, nPrfx, rLName, xAttrList, rStyles,
                           nFamily ),
     bAutoUpdate( false )

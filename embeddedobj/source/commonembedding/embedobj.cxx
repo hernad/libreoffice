@@ -74,9 +74,9 @@ awt::Rectangle GetRectangleInterception( const awt::Rectangle& aRect1, const awt
 
 sal_Int32 OCommonEmbeddedObject::ConvertVerbToState_Impl( sal_Int32 nVerb )
 {
-    for ( sal_Int32 nInd = 0; nInd < m_aVerbTable.getLength(); nInd++ )
-        if ( m_aVerbTable[nInd][0] == nVerb )
-            return m_aVerbTable[nInd][1];
+    auto it = m_aVerbTable.find( nVerb );
+    if (it != m_aVerbTable.end())
+        return it->second;
 
     throw lang::IllegalArgumentException(); // TODO: unexpected verb provided
 }
@@ -90,6 +90,10 @@ void OCommonEmbeddedObject::Deactivate()
     uno::Reference< embed::XEmbeddedClient > xClientSite = m_xClientSite;
     if ( !xClientSite.is() )
         throw embed::WrongStateException(); //TODO: client site is not set!
+
+    // tdf#131146 close frame before saving of the document
+    // (during CloseFrame() call some changes could be detected not registered in util::XModifiable)
+    m_xDocHolder->CloseFrame();
 
     // store document if it is modified
     if ( xModif.is() && xModif->isModified() )
@@ -110,47 +114,45 @@ void OCommonEmbeddedObject::Deactivate()
         }
     }
 
-    m_xDocHolder->CloseFrame();
-
     xClientSite->visibilityChanged( false );
 }
 
 
 void OCommonEmbeddedObject::StateChangeNotification_Impl( bool bBeforeChange, sal_Int32 nOldState, sal_Int32 nNewState ,::osl::ResettableMutexGuard& rGuard )
 {
-    if ( m_pInterfaceContainer )
+    if ( !m_pInterfaceContainer )
+        return;
+
+    ::cppu::OInterfaceContainerHelper* pContainer = m_pInterfaceContainer->getContainer(
+                        cppu::UnoType<embed::XStateChangeListener>::get());
+    if ( pContainer == nullptr )
+        return;
+
+    lang::EventObject aSource( static_cast< ::cppu::OWeakObject* >( this ) );
+    ::cppu::OInterfaceIteratorHelper pIterator(*pContainer);
+
+    // should be locked after the method is finished successfully
+    rGuard.clear();
+
+    while (pIterator.hasMoreElements())
     {
-        ::cppu::OInterfaceContainerHelper* pContainer = m_pInterfaceContainer->getContainer(
-                            cppu::UnoType<embed::XStateChangeListener>::get());
-        if ( pContainer != nullptr )
+        try
         {
-            lang::EventObject aSource( static_cast< ::cppu::OWeakObject* >( this ) );
-            ::cppu::OInterfaceIteratorHelper pIterator(*pContainer);
-
-            // should be locked after the method is finished successfully
-            rGuard.clear();
-
-            while (pIterator.hasMoreElements())
-            {
-                try
-                {
-                    if ( bBeforeChange )
-                        static_cast<embed::XStateChangeListener*>(pIterator.next())->changingState( aSource, nOldState, nNewState );
-                    else
-                        static_cast<embed::XStateChangeListener*>(pIterator.next())->stateChanged( aSource, nOldState, nNewState );
-                }
-                catch( const uno::Exception& )
-                {
-                    // even if the listener complains ignore it for now
-                   }
-
-                if ( m_bDisposed )
-                    return;
-            }
-
-            rGuard.reset();
+            if ( bBeforeChange )
+                static_cast<embed::XStateChangeListener*>(pIterator.next())->changingState( aSource, nOldState, nNewState );
+            else
+                static_cast<embed::XStateChangeListener*>(pIterator.next())->stateChanged( aSource, nOldState, nNewState );
         }
+        catch( const uno::Exception& )
+        {
+            // even if the listener complains ignore it for now
+           }
+
+        if ( m_bDisposed )
+            return;
     }
+
+    rGuard.reset();
 }
 
 
@@ -445,8 +447,8 @@ void SAL_CALL OCommonEmbeddedObject::changeState( sal_Int32 nNewState )
         StateChangeNotification_Impl( true, nOldState, nNewState,aGuard );
 
         try {
-            for ( sal_Int32 nInd = 0; nInd < aIntermediateStates.getLength(); nInd++ )
-                SwitchStateTo_Impl( aIntermediateStates[nInd] );
+            for ( sal_Int32 state : aIntermediateStates )
+                SwitchStateTo_Impl( state );
 
             SwitchStateTo_Impl( nNewState );
         }

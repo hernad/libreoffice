@@ -24,22 +24,25 @@
 #include <vcl/gfxlink.hxx>
 #include <vcl/graphicfilter.hxx>
 #include <memory>
-#include <TypeSerializer.hxx>
-
+#include <boost/functional/hash.hpp>
 
 GfxLink::GfxLink()
     : meType(GfxLinkType::NONE)
     , mnUserId(0)
+    , maHash(0)
     , mnSwapInDataSize(0)
     , mbPrefMapModeValid(false)
     , mbPrefSizeValid(false)
 {
 }
 
+
+
 GfxLink::GfxLink(std::unique_ptr<sal_uInt8[]> pBuf, sal_uInt32 nSize, GfxLinkType nType)
     : meType(nType)
     , mnUserId(0)
     , mpSwapInData(std::shared_ptr<sal_uInt8>(pBuf.release(), pBuf.get_deleter())) // std::move(pBuf) does not compile on Jenkins MacOSX (24 May 2016)
+    , maHash(0)
     , mnSwapInDataSize(nSize)
     , mbPrefMapModeValid(false)
     , mbPrefSizeValid(false)
@@ -48,30 +51,45 @@ GfxLink::GfxLink(std::unique_ptr<sal_uInt8[]> pBuf, sal_uInt32 nSize, GfxLinkTyp
                 "GfxLink::GfxLink(): empty/NULL buffer given");
 }
 
-bool GfxLink::operator==( const GfxLink& rGfxLink ) const
+size_t GfxLink::GetHash() const
 {
-    bool bIsEqual = false;
-
-    if ( ( mnSwapInDataSize == rGfxLink.mnSwapInDataSize ) && ( meType == rGfxLink.meType ) )
+    if (!maHash)
     {
-        const sal_uInt8* pSource = GetData();
-        const sal_uInt8* pDest = rGfxLink.GetData();
-        sal_uInt32 nSourceSize = GetDataSize();
-        sal_uInt32 nDestSize = rGfxLink.GetDataSize();
-        if ( pSource && pDest && ( nSourceSize == nDestSize ) )
-        {
-            bIsEqual = memcmp( pSource, pDest, nSourceSize ) == 0;
-        }
-        else if ( ( pSource == nullptr ) && ( pDest == nullptr ) )
-            bIsEqual = true;
+        std::size_t seed = 0;
+        boost::hash_combine(seed, mnSwapInDataSize);
+        boost::hash_combine(seed, meType);
+        const sal_uInt8* pData = GetData();
+        if (pData)
+            seed += boost::hash_range(pData, pData + GetDataSize());
+        maHash = seed;
+
     }
-    return bIsEqual;
+    return maHash;
 }
 
+bool GfxLink::operator==( const GfxLink& rGfxLink ) const
+{
+    if (GetHash() != rGfxLink.GetHash())
+        return false;
+
+    if ( mnSwapInDataSize != rGfxLink.mnSwapInDataSize ||
+         meType != rGfxLink.meType )
+        return false;
+
+    const sal_uInt8* pSource = GetData();
+    const sal_uInt8* pDest = rGfxLink.GetData();
+    if ( pSource == pDest )
+        return true;
+    sal_uInt32 nSourceSize = GetDataSize();
+    sal_uInt32 nDestSize = rGfxLink.GetDataSize();
+    if ( pSource && pDest && ( nSourceSize == nDestSize ) )
+        return (memcmp( pSource, pDest, nSourceSize ) == 0);
+    return false;
+}
 
 bool GfxLink::IsNative() const
 {
-    return( meType >= GFX_LINK_FIRST_NATIVE_ID && meType <= GFX_LINK_LAST_NATIVE_ID );
+    return meType >= GfxLinkType::NativeFirst && meType <= GfxLinkType::NativeLast;
 }
 
 
@@ -145,75 +163,6 @@ bool GfxLink::ExportNative( SvStream& rOStream ) const
     }
 
     return ( rOStream.GetError() == ERRCODE_NONE );
-}
-
-SvStream& WriteGfxLink( SvStream& rOStream, const GfxLink& rGfxLink )
-{
-    std::unique_ptr<VersionCompat> pCompat(new VersionCompat( rOStream, StreamMode::WRITE, 2 ));
-    TypeSerializer aSerializer(rOStream);
-
-    // Version 1
-    rOStream.WriteUInt16( static_cast<sal_uInt16>(rGfxLink.GetType()) ).WriteUInt32( rGfxLink.GetDataSize() ).WriteUInt32( rGfxLink.GetUserId() );
-
-    // Version 2
-    aSerializer.writeSize(rGfxLink.GetPrefSize());
-    WriteMapMode( rOStream, rGfxLink.GetPrefMapMode() );
-
-    pCompat.reset(); // destructor writes stuff into the header
-
-    if( rGfxLink.GetDataSize() )
-    {
-        auto pData = rGfxLink.GetSwapInData();
-        if (pData)
-            rOStream.WriteBytes( pData.get(), rGfxLink.mnSwapInDataSize );
-    }
-
-    return rOStream;
-}
-
-SvStream& ReadGfxLink( SvStream& rIStream, GfxLink& rGfxLink)
-{
-    Size            aSize;
-    MapMode         aMapMode;
-    bool            bMapAndSizeValid( false );
-    std::unique_ptr<VersionCompat>  pCompat(new VersionCompat( rIStream, StreamMode::READ ));
-
-    TypeSerializer aSerializer(rIStream);
-
-    // Version 1
-    sal_uInt16 nType(0);
-    sal_uInt32 nSize(0), nUserId(0);
-    rIStream.ReadUInt16(nType).ReadUInt32(nSize).ReadUInt32(nUserId);
-
-    if( pCompat->GetVersion() >= 2 )
-    {
-        aSerializer.readSize(aSize);
-        ReadMapMode( rIStream, aMapMode );
-        bMapAndSizeValid = true;
-    }
-
-    pCompat.reset(); // destructor writes stuff into the header
-
-    auto nRemainingData = rIStream.remainingSize();
-    if (nSize > nRemainingData)
-    {
-        SAL_WARN("vcl", "graphic link stream is smaller than requested size");
-        nSize = nRemainingData;
-    }
-
-    std::unique_ptr<sal_uInt8[]> pBuf(new sal_uInt8[ nSize ]);
-    rIStream.ReadBytes( pBuf.get(), nSize );
-
-    rGfxLink = GfxLink( std::move(pBuf), nSize, static_cast<GfxLinkType>(nType) );
-    rGfxLink.SetUserId( nUserId );
-
-    if( bMapAndSizeValid )
-    {
-        rGfxLink.SetPrefSize( aSize );
-        rGfxLink.SetPrefMapMode( aMapMode );
-    }
-
-    return rIStream;
 }
 
 std::shared_ptr<sal_uInt8> GfxLink::GetSwapInData() const

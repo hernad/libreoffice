@@ -351,14 +351,14 @@ bool SwFlyFreeFrame::supportsAutoContour() const
     {
         const drawinglayer::attribute::SdrAllFillAttributesHelperPtr aFillAttributes(GetFormat()->getSdrAllFillAttributesHelper());
 
-        if(aFillAttributes.get() && aFillAttributes->isUsed())
+        if(aFillAttributes && aFillAttributes->isUsed())
         {
             return false;
         }
     }
     else
     {
-        const std::shared_ptr<SvxBrushItem> aBack(GetFormat()->makeBackgroundBrushItem());
+        const std::unique_ptr<SvxBrushItem> aBack(GetFormat()->makeBackgroundBrushItem());
 
         if(aBack && aBack->isUsed())
         {

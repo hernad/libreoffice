@@ -28,9 +28,9 @@
 
 #include <jpeglib.h>
 
-namespace com { namespace sun { namespace star { namespace task {
+namespace com::sun::star::task {
     class XStatusIndicator;
-} } } }
+}
 class JPEGReader;
 class JPEGWriter;
 class Size;
@@ -47,7 +47,7 @@ bool    WriteJPEG( JPEGWriter* pJPEGWriter, void* pOutputStream,
                    css::uno::Reference<css::task::XStatusIndicator> const & status);
 
 void    ReadJPEG( JPEGReader* pJPEGReader, void* pInputStream, long* pLines,
-                  Size const & previewSize, GraphicFilterImportFlags nImportFlags,
+                  GraphicFilterImportFlags nImportFlags,
                   BitmapScopedWriteAccess* ppAccess );
 
 void    Transform(void* pInputStream, void* pOutputStream, long nAngle);

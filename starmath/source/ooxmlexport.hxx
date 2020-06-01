@@ -24,7 +24,7 @@ class SmOoxmlExport : public SmWordExportBase
 public:
     SmOoxmlExport(const SmNode* pIn, oox::core::OoxmlVersion version,
             oox::drawingml::DocumentType documentType);
-    void ConvertFromStarMath( const ::sax_fastparser::FSHelperPtr& m_pSerializer );
+    void ConvertFromStarMath( const ::sax_fastparser::FSHelperPtr& m_pSerializer, const sal_Int8 );
 private:
     void HandleVerticalStack( const SmNode* pNode, int nLevel ) override;
     void HandleText( const SmNode* pNode, int nLevel ) override;
@@ -38,7 +38,7 @@ private:
     void HandleVerticalBrace( const SmVerticalBraceNode* pNode, int nLevel ) override;
     void HandleBlank() override;
     ::sax_fastparser::FSHelperPtr m_pSerializer;
-    oox::core::OoxmlVersion const version;
+    oox::core::OoxmlVersion version;
     /// needed to determine markup for nested run properties
     oox::drawingml::DocumentType const m_DocumentType;
 };

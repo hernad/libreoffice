@@ -46,6 +46,7 @@
 #include <ndindex.hxx>
 #include <node.hxx>
 #include <ndtxt.hxx>
+#include <frameformats.hxx>
 
 #include <limits>
 #include <set>
@@ -601,7 +602,9 @@ sal_uLong SwLayHelper::CalcPageCount()
         if ( nNdCount > 100 ) // no estimation below this value
         {
             if ( nPgCount > 0 )
-                mnMaxParaPerPage = nNdCount / nPgCount;
+            {   // tdf#129529 avoid 0...
+                mnMaxParaPerPage = std::max<sal_uLong>(3, nNdCount / nPgCount);
+            }
             else
             {
                 mnMaxParaPerPage = std::max( sal_uLong(20),
@@ -652,15 +655,10 @@ bool SwLayHelper::CheckInsertPage()
 
     if ( bBrk || pDesc )
     {
-        ::o3tl::optional<sal_uInt16> oPgNum;
+        ::std::optional<sal_uInt16> oPgNum;
         if ( !pDesc )
         {
             pDesc = mrpPage->GetPageDesc()->GetFollow();
-
-            SwFormatPageDesc aFollowDesc( pDesc );
-            oPgNum = aFollowDesc.GetNumOffset();
-            if ( oPgNum )
-                static_cast<SwRootFrame*>(mrpPage->GetUpper())->SetVirtPageNum(true);
         }
         else
         {
@@ -668,17 +666,19 @@ bool SwLayHelper::CheckInsertPage()
             if ( oPgNum )
                 static_cast<SwRootFrame*>(mrpPage->GetUpper())->SetVirtPageNum(true);
         }
-        bool bNextPageOdd = !mrpPage->OnRightPage();
+        bool bNextPageRight = !mrpPage->OnRightPage();
         bool bInsertEmpty = false;
-        if( oPgNum && bNextPageOdd != ( ( *oPgNum % 2 ) != 0 ) )
+        assert(mrpPage->GetUpper()->GetLower());
+        if (oPgNum && bNextPageRight != IsRightPageByNumber(
+                    *static_cast<SwRootFrame*>(mrpPage->GetUpper()), *oPgNum))
         {
-            bNextPageOdd = !bNextPageOdd;
+            bNextPageRight = !bNextPageRight;
             bInsertEmpty = true;
         }
         // If the page style is changing, we'll have a first page.
         bool bNextPageFirst = pDesc != mrpPage->GetPageDesc();
         ::InsertNewPage( const_cast<SwPageDesc&>(*pDesc), mrpPage->GetUpper(),
-                         bNextPageOdd, bNextPageFirst, bInsertEmpty, false, mrpPage->GetNext() );
+             bNextPageRight, bNextPageFirst, bInsertEmpty, false, mrpPage->GetNext());
         if ( bEnd )
         {
             OSL_ENSURE( mrpPage->GetNext(), "No new page?" );

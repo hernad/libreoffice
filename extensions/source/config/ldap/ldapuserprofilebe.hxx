@@ -21,19 +21,17 @@
 #define INCLUDED_EXTENSIONS_SOURCE_CONFIG_LDAP_LDAPUSERPROFILEBE_HXX
 
 #include <com/sun/star/beans/XPropertySet.hpp>
-#include <com/sun/star/lang/XInitialization.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/container/XNameAccess.hpp>
-#include <com/sun/star/lang/IllegalArgumentException.hpp>
 #include <cppuhelper/compbase.hxx>
 
 #include "ldapaccess.hxx"
 
-namespace com { namespace sun { namespace star { namespace uno {
+namespace com::sun::star::uno {
     class XComponentContext;
-} } } }
+}
 
-namespace extensions { namespace config { namespace ldap {
+namespace extensions::config::ldap {
 
 namespace uno = css::uno ;
 namespace lang = css::lang ;
@@ -123,7 +121,7 @@ class LdapUserProfileBe : private LdapProfileMutexHolder, public BackendBase
     LdapData data_;
 } ;
 
-}}}
+}
 
 #endif // EXTENSIONS_CONFIG_LDAP_LDAPUSERPROFILE_HXX_
 

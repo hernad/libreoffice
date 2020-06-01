@@ -20,17 +20,17 @@
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
 #include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
 #include <xmloff/ProgressBarHelper.hxx>
 #include "xmlEnums.hxx"
-#include "xmlReportElement.hxx"
 #include "xmlCell.hxx"
 #include <strings.hxx>
+#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/report/XFormattedField.hpp>
 #include <com/sun/star/report/XFixedText.hpp>
 #include <com/sun/star/text/ControlCharacter.hpp>
 #include "xmlTable.hxx"
 #include <xmloff/XMLCharContext.hxx>
+#include <osl/diagnose.h>
 
 namespace rptxml
 {
@@ -87,7 +87,7 @@ void OXMLCharContent::InsertControlCharacter(sal_Int16   _nControl)
     switch( _nControl )
     {
         case ControlCharacter::LINE_BREAK:
-            m_pFixedContent->Characters("\n");
+            m_pFixedContent->characters("\n");
             break;
         default:
             OSL_FAIL("Not supported control character");
@@ -97,7 +97,7 @@ void OXMLCharContent::InsertControlCharacter(sal_Int16   _nControl)
 
 void OXMLCharContent::InsertString(const OUString& _sString)
 {
-    m_pFixedContent->Characters(_sString);
+    m_pFixedContent->characters(_sString);
 }
 
 
@@ -119,11 +119,11 @@ OXMLFixedContent::~OXMLFixedContent()
 }
 
 
-css::uno::Reference< css::xml::sax::XFastContextHandler > OXMLFixedContent::createFastChildContext_(
+css::uno::Reference< css::xml::sax::XFastContextHandler > OXMLFixedContent::createFastChildContext(
         sal_Int32 nElement,
         const css::uno::Reference< css::xml::sax::XFastAttributeList > & xAttrList )
 {
-    css::uno::Reference< css::xml::sax::XFastContextHandler > xContext = OXMLReportElementBase::createFastChildContext_(nElement,xAttrList);
+    css::uno::Reference< css::xml::sax::XFastContextHandler > xContext = OXMLReportElementBase::createFastChildContext(nElement,xAttrList);
     if (xContext)
         return xContext;
 
@@ -163,34 +163,34 @@ css::uno::Reference< css::xml::sax::XFastContextHandler > OXMLFixedContent::crea
     return xContext;
 }
 
-void OXMLFixedContent::endFastElement(sal_Int32 )
+void OXMLFixedContent::endFastElement(sal_Int32 nElement)
 {
-    if ( m_pInP )
+    if ( !m_pInP )
+        return;
+
+    const Reference<XMultiServiceFactory> xFactor(m_rImport.GetModel(),uno::UNO_QUERY);
+    if ( m_bFormattedField )
     {
-        const Reference<XMultiServiceFactory> xFactor(m_rImport.GetModel(),uno::UNO_QUERY);
-        if ( m_bFormattedField )
-        {
-            uno::Reference< uno::XInterface> xInt = xFactor->createInstance(SERVICE_FORMATTEDFIELD);
-            Reference< report::XFormattedField > xControl(xInt,uno::UNO_QUERY);
-            xControl->setDataField("rpt:" + m_sPageText);
-            OSL_ENSURE(xControl.is(),"Could not create FormattedField!");
-            m_pInP->m_xReportComponent = xControl.get();
-            m_xReportComponent = xControl.get();
-        }
-        else
-        {
-            Reference< XFixedText > xControl(xFactor->createInstance(SERVICE_FIXEDTEXT),uno::UNO_QUERY);
-            OSL_ENSURE(xControl.is(),"Could not create FixedContent!");
-            m_pInP->m_xReportComponent = xControl.get();
-            m_xReportComponent = xControl.get();
-            xControl->setLabel(m_sLabel);
-        }
-
-        m_pContainer->addCell(m_xReportComponent);
-        m_rCell.setComponent(m_xReportComponent);
-
-        OXMLReportElementBase::EndElement();
+        uno::Reference< uno::XInterface> xInt = xFactor->createInstance(SERVICE_FORMATTEDFIELD);
+        Reference< report::XFormattedField > xControl(xInt,uno::UNO_QUERY);
+        xControl->setDataField("rpt:" + m_sPageText);
+        OSL_ENSURE(xControl.is(),"Could not create FormattedField!");
+        m_pInP->m_xReportComponent = xControl.get();
+        m_xReportComponent = xControl.get();
     }
+    else
+    {
+        Reference< XFixedText > xControl(xFactor->createInstance(SERVICE_FIXEDTEXT),uno::UNO_QUERY);
+        OSL_ENSURE(xControl.is(),"Could not create FixedContent!");
+        m_pInP->m_xReportComponent = xControl.get();
+        m_xReportComponent = xControl.get();
+        xControl->setLabel(m_sLabel);
+    }
+
+    m_pContainer->addCell(m_xReportComponent);
+    m_rCell.setComponent(m_xReportComponent);
+
+    OXMLReportElementBase::endFastElement(nElement);
 }
 
 void OXMLFixedContent::characters( const OUString& rChars )

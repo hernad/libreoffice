@@ -17,27 +17,10 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <sfx2/sfxsids.hrc>
 #include <browserids.hxx>
-#include <stringconstants.hxx>
-#include <connectivity/dbtools.hxx>
-#include <com/sun/star/container/XChild.hpp>
-#include <com/sun/star/container/XNameContainer.hpp>
-#include <com/sun/star/sdbcx/XDataDescriptorFactory.hpp>
-#include <com/sun/star/sdbcx/XTablesSupplier.hpp>
-#include <com/sun/star/sdbcx/KeyType.hpp>
-#include <com/sun/star/sdbcx/XDrop.hpp>
-#include <com/sun/star/sdbcx/XAlterTable.hpp>
-#include <com/sun/star/sdbcx/XAppend.hpp>
-#include <com/sun/star/sdb/SQLContext.hpp>
-#include <com/sun/star/sdbc/SQLWarning.hpp>
-#include <com/sun/star/sdbc/ColumnValue.hpp>
 #include <com/sun/star/sdbc/XRow.hpp>
 #include <connectivity/dbexception.hxx>
 #include <com/sun/star/ui/dialogs/XExecutableDialog.hpp>
-#include <com/sun/star/io/XActiveDataSource.hpp>
-#include <com/sun/star/io/XActiveDataSink.hpp>
-#include <sqlmessage.hxx>
 #include <JoinController.hxx>
 #include <TableWindowData.hxx>
 #include <TableWindow.hxx>
@@ -45,7 +28,6 @@
 #include <adtabdlg.hxx>
 #include <vcl/svapp.hxx>
 #include <osl/mutex.hxx>
-#include <UITools.hxx>
 #include <osl/diagnose.h>
 
 using namespace ::com::sun::star::uno;
@@ -55,7 +37,6 @@ using namespace ::com::sun::star::frame;
 using namespace ::com::sun::star::util;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::container;
-using namespace ::com::sun::star::sdbcx;
 using namespace ::com::sun::star::sdbc;
 using namespace ::com::sun::star::sdb;
 using namespace ::com::sun::star::ui::dialogs;
@@ -307,6 +288,8 @@ void OJoinController::describeSupportedFeatures()
     implDescribeSupportedFeature( ".uno:Undo",      ID_BROWSER_UNDO,    CommandGroup::EDIT );
     implDescribeSupportedFeature( ".uno:AddTable",  ID_BROWSER_ADDTABLE,CommandGroup::EDIT );
     implDescribeSupportedFeature( ".uno:EditDoc",   ID_BROWSER_EDITDOC, CommandGroup::EDIT );
+    implDescribeSupportedFeature( ".uno:GetUndoStrings", SID_GETUNDOSTRINGS );
+    implDescribeSupportedFeature( ".uno:GetRedoStrings", SID_GETREDOSTRINGS );
 }
 
 sal_Bool SAL_CALL OJoinController::suspend(sal_Bool _bSuspend)
@@ -382,29 +365,29 @@ void OJoinController::loadTableWindow( const ::comphelper::NamedValueCollection&
 
 void OJoinController::saveTableWindows( ::comphelper::NamedValueCollection& o_rViewSettings ) const
 {
-    if ( !m_vTableData.empty() )
+    if ( m_vTableData.empty() )
+        return;
+
+    ::comphelper::NamedValueCollection aAllTablesData;
+
+    sal_Int32 i = 1;
+    for (auto const& elem : m_vTableData)
     {
-        ::comphelper::NamedValueCollection aAllTablesData;
+        ::comphelper::NamedValueCollection aWindowData;
+        aWindowData.put( "ComposedName", elem->GetComposedName() );
+        aWindowData.put( "TableName", elem->GetTableName() );
+        aWindowData.put( "WindowName", elem->GetWinName() );
+        aWindowData.put( "WindowTop", static_cast<sal_Int32>(elem->GetPosition().Y()) );
+        aWindowData.put( "WindowLeft", static_cast<sal_Int32>(elem->GetPosition().X()) );
+        aWindowData.put( "WindowWidth", static_cast<sal_Int32>(elem->GetSize().Width()) );
+        aWindowData.put( "WindowHeight", static_cast<sal_Int32>(elem->GetSize().Height()) );
+        aWindowData.put( "ShowAll", elem->IsShowAll() );
 
-        sal_Int32 i = 1;
-        for (auto const& elem : m_vTableData)
-        {
-            ::comphelper::NamedValueCollection aWindowData;
-            aWindowData.put( "ComposedName", elem->GetComposedName() );
-            aWindowData.put( "TableName", elem->GetTableName() );
-            aWindowData.put( "WindowName", elem->GetWinName() );
-            aWindowData.put( "WindowTop", static_cast<sal_Int32>(elem->GetPosition().Y()) );
-            aWindowData.put( "WindowLeft", static_cast<sal_Int32>(elem->GetPosition().X()) );
-            aWindowData.put( "WindowWidth", static_cast<sal_Int32>(elem->GetSize().Width()) );
-            aWindowData.put( "WindowHeight", static_cast<sal_Int32>(elem->GetSize().Height()) );
-            aWindowData.put( "ShowAll", elem->IsShowAll() );
-
-            const OUString sTableName( "Table" + OUString::number( i++ ) );
-            aAllTablesData.put( sTableName, aWindowData.getPropertyValues() );
-        }
-
-        o_rViewSettings.put( "Tables", aAllTablesData.getPropertyValues() );
+        const OUString sTableName( "Table" + OUString::number( i++ ) );
+        aAllTablesData.put( sTableName, aWindowData.getPropertyValues() );
     }
+
+    o_rViewSettings.put( "Tables", aAllTablesData.getPropertyValues() );
 }
 
 TTableWindowData::value_type OJoinController::createTableWindowData(const OUString& _sComposedName,const OUString& _sTableName,const OUString& _sWindowName)

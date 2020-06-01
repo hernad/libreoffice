@@ -65,7 +65,7 @@ class Menu;
 class SgaObject;
 struct DispatchInfo;
 
-namespace svx { namespace sidebar { class GalleryControl; } }
+namespace svx::sidebar { class GalleryControl; }
 
 class GalleryBrowser2 : public SfxListener
 {
@@ -106,12 +106,12 @@ private:
     virtual void        Notify( SfxBroadcaster& rBC, const SfxHint& rHint ) override;
 
                         DECL_LINK( SelectObjectHdl, weld::TreeView&, void );
-                        DECL_LINK( SelectObjectValueSetHdl, SvtValueSet*, void );
+                        DECL_LINK( SelectObjectValueSetHdl, ValueSet*, void );
                         DECL_LINK( SelectTbxHdl, weld::ToggleButton&, void );
                         DECL_LINK( PopupMenuHdl, const CommandEvent&, bool );
                         DECL_LINK( KeyInputHdl, const KeyEvent&, bool );
                         DECL_LINK( RowActivatedHdl, weld::TreeView&, bool );
-                        DECL_LINK( DragBeginHdl, weld::TreeView&, bool );
+                        DECL_LINK( DragBeginHdl, bool&, bool );
                         DECL_LINK( VisRowsScrolledHdl, weld::TreeView&, void );
                         DECL_LINK( SizeAllocHdl, const Size&, void );
 

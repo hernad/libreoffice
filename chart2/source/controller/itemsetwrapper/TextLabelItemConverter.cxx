@@ -36,12 +36,14 @@
 #include <svx/tabline.hxx>
 #include <tools/diagnose_ex.h>
 #include <vcl/graph.hxx>
+#include <rtl/math.hxx>
 
 #include <com/sun/star/chart/DataLabelPlacement.hpp>
 #include <com/sun/star/chart2/AxisType.hpp>
 #include <com/sun/star/chart2/DataPointLabel.hpp>
 #include <com/sun/star/chart2/Symbol.hpp>
 #include <com/sun/star/chart2/RelativePosition.hpp>
+#include <com/sun/star/frame/XModel.hpp>
 #include <memory>
 
 using namespace com::sun::star;
@@ -371,13 +373,9 @@ bool TextLabelItemConverter::ApplySpecialItem( sal_uInt16 nWhichId, const SfxIte
             try
             {
                 sal_Int32 nNew = static_cast<const SfxInt32Item&>(rItemSet.Get(nWhichId)).GetValue();
-                sal_Int32 nOld = 0;
+                sal_Int32 nOld = -1;
                 RelativePosition aCustomLabelPosition;
-                if (!(GetPropertySet()->getPropertyValue("LabelPlacement") >>= nOld))
-                {
-                    if (maAvailableLabelPlacements.hasElements())
-                        nOld = maAvailableLabelPlacements[0];
-                }
+                GetPropertySet()->getPropertyValue("LabelPlacement") >>= nOld;
                 if (mbDataSeries)
                 {
                     Reference<chart2::XDataSeries> xSeries(GetPropertySet(), uno::UNO_QUERY);
@@ -552,13 +550,31 @@ void TextLabelItemConverter::FillSpecialItem( sal_uInt16 nWhichId, SfxItemSet& r
         break;
         case SID_ATTR_NUMBERFORMAT_SOURCE:
         {
-            bool bNumberFormatIsSet = GetPropertySet()->getPropertyValue(CHART_UNONAME_NUMFMT).hasValue();
+            bool bUseSourceFormat = false;
+            try
+            {
+                GetPropertySet()->getPropertyValue(CHART_UNONAME_LINK_TO_SRC_NUMFMT) >>= bUseSourceFormat;
+            }
+            catch (const uno::Exception&)
+            {
+                TOOLS_WARN_EXCEPTION("chart2", "");
+            }
+            bool bNumberFormatIsSet = GetPropertySet()->getPropertyValue(CHART_UNONAME_NUMFMT).hasValue() && !bUseSourceFormat;
             rOutItemSet.Put(SfxBoolItem(nWhichId, !bNumberFormatIsSet));
         }
         break;
         case SCHATTR_PERCENT_NUMBERFORMAT_SOURCE:
         {
-            bool bNumberFormatIsSet = GetPropertySet()->getPropertyValue("PercentageNumberFormat").hasValue();
+            bool bUseSourceFormat = false;
+            try
+            {
+                GetPropertySet()->getPropertyValue(CHART_UNONAME_LINK_TO_SRC_NUMFMT) >>= bUseSourceFormat;
+            }
+            catch (const uno::Exception&)
+            {
+                TOOLS_WARN_EXCEPTION("chart2", "");
+            }
+            bool bNumberFormatIsSet = GetPropertySet()->getPropertyValue("PercentageNumberFormat").hasValue() && !bUseSourceFormat;
             rOutItemSet.Put(SfxBoolItem(nWhichId, !bNumberFormatIsSet));
         }
         break;

@@ -30,7 +30,6 @@ ScRetypePassDlg::ScRetypePassDlg(weld::Window* pParent)
     , maTextNotPassProtected(ScResId(STR_NOT_PASS_PROTECTED))
     , maTextHashBad(ScResId(STR_HASH_BAD))
     , maTextHashGood(ScResId(STR_HASH_GOOD))
-    , mpDocItem(static_cast<ScDocProtection*>(nullptr))
     , meDesiredHash(PASSHASH_SHA1)
     , mxBtnOk(m_xBuilder->weld_button("ok"))
     , mxTextDocStatus(m_xBuilder->weld_label("docStatusLabel"))
@@ -101,7 +100,7 @@ void ScRetypePassDlg::SetDesiredHash(ScPasswordHash eHash)
 
 void ScRetypePassDlg::WriteNewDataToDocument(ScDocument& rDoc) const
 {
-    if (mpDocItem.get())
+    if (mpDocItem)
         rDoc.SetDocProtection(mpDocItem.get());
 
     size_t nTabCount = static_cast<size_t>(rDoc.GetTableCount());
@@ -142,7 +141,7 @@ void ScRetypePassDlg::PopulateDialog()
 void ScRetypePassDlg::SetDocData()
 {
     bool bBtnEnabled = false;
-    if (mpDocItem.get() && mpDocItem->isProtected())
+    if (mpDocItem && mpDocItem->isProtected())
     {
         if (mpDocItem->isPasswordEmpty())
             mxTextDocStatus->set_label(maTextNotPassProtected);

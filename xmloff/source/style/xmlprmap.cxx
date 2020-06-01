@@ -57,7 +57,7 @@ struct XMLPropertySetMapperEntry_Impl
     sal_Int32                          nType;
     sal_uInt16                         nXMLNameSpace;
     sal_Int16                          nContextId;
-    SvtSaveOptions::ODFDefaultVersion  nEarliestODFVersionForExport;
+    SvtSaveOptions::ODFSaneDefaultVersion  nEarliestODFVersionForExport;
     bool                               bImportOnly;
     const XMLPropertyHandler          *pHdl;
 
@@ -91,7 +91,7 @@ struct XMLPropertySetMapper::Impl
     std::vector<XMLPropertySetMapperEntry_Impl> maMapEntries;
     std::vector<rtl::Reference <XMLPropertyHandlerFactory> > maHdlFactories;
 
-    bool const mbOnlyExportMappings;
+    bool mbOnlyExportMappings;
 
     explicit Impl( bool bForExport ) : mbOnlyExportMappings(bForExport) {}
 };
@@ -192,10 +192,11 @@ sal_Int16 XMLPropertySetMapper::GetEntryContextId( sal_Int32 nIndex ) const
     return nIndex == -1 ? 0 : mpImpl->maMapEntries[nIndex].nContextId;
 }
 
-SvtSaveOptions::ODFDefaultVersion XMLPropertySetMapper::GetEarliestODFVersionForExport( sal_Int32 nIndex ) const
+SvtSaveOptions::ODFSaneDefaultVersion
+XMLPropertySetMapper::GetEarliestODFVersionForExport(sal_Int32 const nIndex) const
 {
-    assert((-1 <= nIndex) && (nIndex < static_cast<sal_Int32>(mpImpl->maMapEntries.size())));
-    return nIndex == -1 ? SvtSaveOptions::ODFVER_UNKNOWN : mpImpl->maMapEntries[nIndex].nEarliestODFVersionForExport;
+    assert((0 <= nIndex) && (nIndex < static_cast<sal_Int32>(mpImpl->maMapEntries.size())));
+    return mpImpl->maMapEntries[nIndex].nEarliestODFVersionForExport;
 }
 
 const XMLPropertyHandler* XMLPropertySetMapper::GetPropertyHandler( sal_Int32 nIndex ) const

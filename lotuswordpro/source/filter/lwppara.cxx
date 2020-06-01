@@ -79,6 +79,7 @@
 #include <xfilter/xfhyperlink.hxx>
 #include <xfilter/xfliststyle.hxx>
 #include "lwpcharsetmgr.hxx"
+#include "lwpfribheader.hxx"
 #include "lwpsection.hxx"
 #include "lwplayout.hxx"
 #include "lwpusewhen.hxx"
@@ -264,25 +265,25 @@ void LwpPara::RegisterMasterPage(XFParaStyle const * pBaseStyle)
     //get story
     LwpStory* pStory = dynamic_cast<LwpStory*>(m_Story.obj().get());
     //if pagelayout is modified, register the pagelayout
-    if(pStory && pStory->IsPMModified())
-    {
-        bool bNewSection = pStory->IsNeedSection();
-        LwpPageLayout* pLayout = pStory->GetCurrentLayout();
-        if(bNewSection)
-        {
-            RegisterNewSectionStyle(pLayout);
-        }
+    if(!(pStory && pStory->IsPMModified()))
+        return;
 
-        //register master page style
-        std::unique_ptr<XFParaStyle> xOverStyle(new XFParaStyle);
-        *xOverStyle = *pBaseStyle;
-        xOverStyle->SetStyleName( "");
-        xOverStyle->SetMasterPage(pLayout->GetStyleName());
-        if (!m_ParentStyleName.isEmpty())
-            xOverStyle->SetParentStyleName(m_ParentStyleName);
-        XFStyleManager* pXFStyleManager = LwpGlobalMgr::GetInstance()->GetXFStyleManager();
-        m_StyleName = pXFStyleManager->AddStyle(std::move(xOverStyle)).m_pStyle->GetStyleName();
+    bool bNewSection = pStory->IsNeedSection();
+    LwpPageLayout* pLayout = pStory->GetCurrentLayout();
+    if(bNewSection)
+    {
+        RegisterNewSectionStyle(pLayout);
     }
+
+    //register master page style
+    std::unique_ptr<XFParaStyle> xOverStyle(new XFParaStyle);
+    *xOverStyle = *pBaseStyle;
+    xOverStyle->SetStyleName( "");
+    xOverStyle->SetMasterPage(pLayout->GetStyleName());
+    if (!m_ParentStyleName.isEmpty())
+        xOverStyle->SetParentStyleName(m_ParentStyleName);
+    XFStyleManager* pXFStyleManager = LwpGlobalMgr::GetInstance()->GetXFStyleManager();
+    m_StyleName = pXFStyleManager->AddStyle(std::move(xOverStyle)).m_pStyle->GetStyleName();
 }
 /**
  * @short   register paragraph style

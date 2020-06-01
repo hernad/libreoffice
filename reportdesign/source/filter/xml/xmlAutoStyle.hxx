@@ -21,8 +21,6 @@
 
 #include <xmloff/maptype.hxx>
 #include <xmloff/xmlaustp.hxx>
-#include <xmloff/xmltypes.hxx>
-#include <xmloff/xmlprmap.hxx>
 
 namespace rptxml
 {
@@ -33,7 +31,7 @@ namespace rptxml
 
         virtual void exportStyleAttributes(
                 SvXMLAttributeList& rAttrList,
-                sal_Int32 nFamily,
+                XmlStyleFamily nFamily,
                 const ::std::vector< XMLPropertyState >& rProperties,
                 const SvXMLExportPropertyMapper& rPropExp,
                 const SvXMLUnitConverter& rUnitConverter,

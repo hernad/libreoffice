@@ -64,6 +64,7 @@
 #include <osl/diagnose.h>
 #include <strings.hrc>
 #include <frmatr.hxx>
+#include <frameformats.hxx>
 #include <com/sun/star/text/VertOrientation.hpp>
 #include <com/sun/star/text/RelOrientation.hpp>
 #include <com/sun/star/text/HoriOrientation.hpp>
@@ -117,8 +118,8 @@ namespace
     void lcl_SetDfltFont( DefaultFontType nFntType, SfxItemSet& rSet )
     {
         static struct {
-            sal_uInt16 const nResLngId;
-            sal_uInt16 const nResFntId;
+            sal_uInt16 nResLngId;
+            sal_uInt16 nResFntId;
         } aArr[ 3 ] = {
             { RES_CHRATR_LANGUAGE, RES_CHRATR_FONT },
             { RES_CHRATR_CJK_LANGUAGE, RES_CHRATR_CJK_FONT },
@@ -141,8 +142,8 @@ namespace
                             DefaultFontType nCTLFntType, SfxItemSet& rSet )
     {
         static struct {
-            sal_uInt16 const nResLngId;
-            sal_uInt16 const nResFntId;
+            sal_uInt16 nResLngId;
+            sal_uInt16 nResFntId;
             DefaultFontType nFntType;
         } aArr[ 3 ] = {
             { RES_CHRATR_LANGUAGE, RES_CHRATR_FONT, static_cast<DefaultFontType>(0) },
@@ -359,14 +360,14 @@ static const char* STR_POOLCOLL_EXTRA_ARY[]
     STR_POOLCOLL_HEADER,
     STR_POOLCOLL_HEADERL,
     STR_POOLCOLL_HEADERR,
-    // Subcategroy Footer
+    // Subcategory Footer
     STR_POOLCOLL_FOOTER,
     STR_POOLCOLL_FOOTERL,
     STR_POOLCOLL_FOOTERR,
-    // Subcategroy Table
+    // Subcategory Table
     STR_POOLCOLL_TABLE,
     STR_POOLCOLL_TABLE_HDLN,
-    // Subcategroy Labels
+    // Subcategory Labels
     STR_POOLCOLL_LABEL,
     STR_POOLCOLL_LABEL_ABB,
     STR_POOLCOLL_LABEL_TABLE,
@@ -434,8 +435,8 @@ static const char* STR_POOLCOLL_REGISTER_ARY[] =
 static const char* STR_POOLCOLL_DOC_ARY[] =
 {
     // Category Chapter/Document
-    STR_POOLCOLL_DOC_TITEL,
-    STR_POOLCOLL_DOC_SUBTITEL,
+    STR_POOLCOLL_DOC_TITLE,
+    STR_POOLCOLL_DOC_SUBTITLE,
     STR_POOLCOLL_DOC_APPENDIX
 };
 
@@ -526,7 +527,7 @@ static const char* STR_POOLNUMRULE_NUM_ARY[] =
 
 // XXX MUST match the entries of TableStyleProgNameTable in
 // sw/source/core/doc/SwStyleNameMapper.cxx and MUST match the order of
-// RES_POOL_TABSTYLE_TYPE in sw/inc/poolfmt.hxx
+// RES_POOL_TABLESTYLE_TYPE in sw/inc/poolfmt.hxx
 static const char* STR_TABSTYLE_ARY[] =
 {
     // XXX MUST be in order, Writer first, then Svx old, then Svx new
@@ -584,7 +585,8 @@ SwTextFormatColl* DocumentStylePoolManager::GetTextCollFromPool( sal_uInt16 nId,
     sal_uInt16 nOutLvlBits = 0;
     for (size_t n = 0, nSize = m_rDoc.GetTextFormatColls()->size(); n < nSize; ++n)
     {
-        if( nId == ( pNewColl = (*m_rDoc.GetTextFormatColls())[ n ] )->GetPoolFormatId() )
+        pNewColl = (*m_rDoc.GetTextFormatColls())[ n ];
+        if( nId == pNewColl->GetPoolFormatId() )
         {
             return pNewColl;
         }
@@ -1292,7 +1294,7 @@ SwTextFormatColl* DocumentStylePoolManager::GetTextCollFromPool( sal_uInt16 nId,
                             0, SwNumRule::GetBullIndent( 4 ), 0, PT_6 );
             break;
 
-        case RES_POOLCOLL_DOC_TITEL:            // Document Title
+        case RES_POOLCOLL_DOC_TITLE:            // Document Title
             {
                 SetAllScriptItem( aSet, SvxWeightItem( WEIGHT_BOLD, RES_CHRATR_WEIGHT ) );
                 SetAllScriptItem( aSet, SvxFontHeightItem( PT_28, 100, RES_CHRATR_FONTSIZE ) );
@@ -1303,7 +1305,7 @@ SwTextFormatColl* DocumentStylePoolManager::GetTextCollFromPool( sal_uInt16 nId,
             }
             break;
 
-        case RES_POOLCOLL_DOC_SUBTITEL:         // Document subtitle
+        case RES_POOLCOLL_DOC_SUBTITLE:         // Document subtitle
             {
                 SvxULSpaceItem aUL( PT_3, PT_6, RES_UL_SPACE );
                 aSet.Put( aUL );
@@ -1466,11 +1468,13 @@ SwFormat* DocumentStylePoolManager::GetFormatFromPool( sal_uInt16 nId )
 
     while( nArrCnt-- )
         for( size_t n = 0; n < (*pArray[nArrCnt]).GetFormatCount(); ++n )
-            if( nId == ( pNewFormat = (*pArray[ nArrCnt ] ).GetFormat( n ) )->
-                    GetPoolFormatId() )
+        {
+            pNewFormat = (*pArray[ nArrCnt ] ).GetFormat( n );
+            if( nId == pNewFormat->GetPoolFormatId() )
             {
                 return pNewFormat;
             }
+        }
 
     OUString aNm(SwResId(pRCId));
     SwAttrSet aSet( m_rDoc.GetAttrPool(), pWhichRange );
@@ -1514,7 +1518,7 @@ SwFormat* DocumentStylePoolManager::GetFormatFromPool( sal_uInt16 nId )
     case RES_POOLCHR_ENDNOTE_ANCHOR:        // Endnote anchor
     case RES_POOLCHR_FOOTNOTE_ANCHOR:       // Footnote anchor
         {
-            aSet.Put( SvxEscapementItem( DFLT_ESC_AUTO_SUPER, 58, RES_CHRATR_ESCAPEMENT ) );
+            aSet.Put( SvxEscapementItem( DFLT_ESC_AUTO_SUPER, DFLT_ESC_PROP, RES_CHRATR_ESCAPEMENT ) );
         }
         break;
 
@@ -1872,7 +1876,8 @@ SwNumRule* DocumentStylePoolManager::GetNumRuleFromPool( sal_uInt16 nId )
 
     for (size_t n = 0; n < m_rDoc.GetNumRuleTable().size(); ++n )
     {
-        if (nId == ( pNewRule = m_rDoc.GetNumRuleTable()[ n ] )->GetPoolFormatId())
+        pNewRule = m_rDoc.GetNumRuleTable()[ n ];
+        if (nId == pNewRule->GetPoolFormatId())
         {
             return pNewRule;
         }
@@ -2496,9 +2501,11 @@ bool DocumentStylePoolManager::IsPoolFormatUsed( sal_uInt16 nId ) const
         bFnd = false;
         while( nArrCnt-- && !bFnd )
             for( size_t n = 0; !bFnd && n < (*pArray[nArrCnt]).GetFormatCount(); ++n )
-                if( nId == ( pNewFormat = (*pArray[ nArrCnt ] ).GetFormat( n ) )->
-                        GetPoolFormatId() )
+            {
+                pNewFormat = (*pArray[ nArrCnt ] ).GetFormat( n );
+                if( nId == pNewFormat->GetPoolFormatId() )
                     bFnd = true;
+            }
     }
 
     // Not found or no dependencies?

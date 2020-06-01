@@ -83,7 +83,8 @@ AquaSalFrame::AquaSalFrame( SalFrame* pParent, SalFrameStyleFlags salFrameStyle 
     mePointerStyle( PointerStyle::Arrow ),
     mnTrackingRectTag( 0 ),
     mrClippingPath( nullptr ),
-    mnICOptions( InputContextFlags::NONE )
+    mnICOptions( InputContextFlags::NONE ),
+    mnBlinkCursorDelay ( 500 )
 {
     mpParent = dynamic_cast<AquaSalFrame*>(pParent);
 
@@ -91,6 +92,19 @@ AquaSalFrame::AquaSalFrame( SalFrame* pParent, SalFrameStyleFlags salFrameStyle 
 
     SalData* pSalData = GetSalData();
     pSalData->mpInstance->insertFrame( this );
+    NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
+    if (userDefaults != nil)
+    {
+        id setting = [userDefaults objectForKey: @"NSTextInsertionPointBlinkPeriodOn"];
+        if (setting)
+            mnBlinkCursorDelay = [setting intValue];
+        else
+        {
+            setting = [userDefaults objectForKey: @"NSTextInsertionPointBlinkPeriodOff"];
+            if (setting)
+                mnBlinkCursorDelay = [setting intValue];
+        }
+    }
 }
 
 AquaSalFrame::~AquaSalFrame()
@@ -1090,13 +1104,13 @@ OUString AquaSalFrame::GetKeyName( sal_uInt16 nKeyCode )
     if( it != aKeyMap.end() )
     {
         if( (nKeyCode & KEY_SHIFT) != 0 )
-            aResult.append( u'\x21e7' ); //⇧
+            aResult.append( u'\x21e7' ); // shift
         if( (nKeyCode & KEY_MOD1) != 0 )
-            aResult.append( u'\x2318' ); //⌘
+            aResult.append( u'\x2318' ); // command
         if( (nKeyCode & KEY_MOD2) != 0 )
-            aResult.append( u'\x2325' ); //⌥
+            aResult.append( u'\x2325' ); // alternate
         if( (nKeyCode & KEY_MOD3) != 0 )
-            aResult.append( u'\x2303' ); //⌃
+            aResult.append( u'\x2303' ); // control
 
         aResult.append( it->second );
     }
@@ -1280,7 +1294,33 @@ SAL_WNODEPRECATED_DECLARATIONS_POP
     aStyleSettings.SetMenuBarRolloverTextColor( aMenuTextColor );
     aStyleSettings.SetMenuBarHighlightTextColor(aStyleSettings.GetMenuHighlightTextColor());
 
-    aStyleSettings.SetCursorBlinkTime( 500 );
+    // Set text colors for buttons and their different status according to OS settings, typically white for selected buttons,
+    // black otherwise
+
+    Color aControlTextColor(getColor([NSColor controlTextColor], COL_BLACK, mpNSWindow));
+    Color aSelectedControlTextColor(getColor([NSColor alternateSelectedControlTextColor], COL_WHITE, mpNSWindow));
+    aStyleSettings.SetDefaultButtonTextColor(aSelectedControlTextColor);
+    aStyleSettings.SetButtonTextColor(aControlTextColor);
+    aStyleSettings.SetDefaultActionButtonTextColor(aSelectedControlTextColor);
+    aStyleSettings.SetActionButtonTextColor(aControlTextColor);
+    aStyleSettings.SetFlatButtonTextColor(aControlTextColor);
+    aStyleSettings.SetDefaultButtonRolloverTextColor(aSelectedControlTextColor);
+    aStyleSettings.SetButtonRolloverTextColor(aControlTextColor);
+    aStyleSettings.SetDefaultActionButtonRolloverTextColor(aSelectedControlTextColor);
+    aStyleSettings.SetActionButtonRolloverTextColor(aControlTextColor);
+    aStyleSettings.SetFlatButtonRolloverTextColor(aControlTextColor);
+    aStyleSettings.SetDefaultButtonPressedRolloverTextColor(aSelectedControlTextColor);
+    aStyleSettings.SetButtonPressedRolloverTextColor(aSelectedControlTextColor);
+    aStyleSettings.SetDefaultActionButtonPressedRolloverTextColor(aSelectedControlTextColor);
+    aStyleSettings.SetActionButtonPressedRolloverTextColor(aSelectedControlTextColor);
+    aStyleSettings.SetFlatButtonPressedRolloverTextColor(aControlTextColor);
+
+    // Set text colors for tabs according to OS settings, typically white for selected buttons, black otherwise
+
+    aStyleSettings.SetTabTextColor(aControlTextColor);
+    aStyleSettings.SetTabHighlightTextColor(aSelectedControlTextColor);
+
+    aStyleSettings.SetCursorBlinkTime( mnBlinkCursorDelay );
 
     // no mnemonics on macOS
     aStyleSettings.SetOptions( aStyleSettings.GetOptions() | StyleSettingsOptions::NoMnemonics );

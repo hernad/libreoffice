@@ -144,34 +144,37 @@ TitleConverter::~TitleConverter()
 
 void TitleConverter::convertFromModel( const Reference< XTitled >& rxTitled, const OUString& rAutoTitle, ObjectType eObjType, sal_Int32 nMainIdx, sal_Int32 nSubIdx )
 {
-    if( rxTitled.is() )
+    if( !rxTitled.is() )
+        return;
+
+    // create the formatted strings
+    TextModel& rText = mrModel.mxText.getOrCreate();
+    TextConverter aTextConv( *this, rText );
+    Sequence< Reference< XFormattedString > > aStringSeq = aTextConv.createStringSequence( rAutoTitle, mrModel.mxTextProp, eObjType );
+    if( !aStringSeq.hasElements() )
+        return;
+
+    try
     {
-        // create the formatted strings
-        TextModel& rText = mrModel.mxText.getOrCreate();
-        TextConverter aTextConv( *this, rText );
-        Sequence< Reference< XFormattedString > > aStringSeq = aTextConv.createStringSequence( rAutoTitle, mrModel.mxTextProp, eObjType );
-        if( aStringSeq.hasElements() ) try
-        {
-            // create the title object and set the string data
-            Reference< XTitle > xTitle( createInstance( "com.sun.star.chart2.Title" ), UNO_QUERY_THROW );
-            xTitle->setText( aStringSeq );
-            rxTitled->setTitleObject( xTitle );
+        // create the title object and set the string data
+        Reference< XTitle > xTitle( createInstance( "com.sun.star.chart2.Title" ), UNO_QUERY_THROW );
+        xTitle->setText( aStringSeq );
+        rxTitled->setTitleObject( xTitle );
 
-            // frame formatting (text formatting already done in TextConverter::createStringSequence())
-            PropertySet aPropSet( xTitle );
-            getFormatter().convertFrameFormatting( aPropSet, mrModel.mxShapeProp, eObjType );
+        // frame formatting (text formatting already done in TextConverter::createStringSequence())
+        PropertySet aPropSet( xTitle );
+        getFormatter().convertFrameFormatting( aPropSet, mrModel.mxShapeProp, eObjType );
 
-            // frame rotation
-            OSL_ENSURE( !mrModel.mxTextProp || !rText.mxTextBody, "TitleConverter::convertFromModel - multiple text properties" );
-            ModelRef< TextBody > xTextProp = mrModel.mxTextProp.is() ? mrModel.mxTextProp : rText.mxTextBody;
-            ObjectFormatter::convertTextRotation( aPropSet, xTextProp, true, mrModel.mnDefaultRotation );
+        // frame rotation
+        OSL_ENSURE( !mrModel.mxTextProp || !rText.mxTextBody, "TitleConverter::convertFromModel - multiple text properties" );
+        ModelRef< TextBody > xTextProp = mrModel.mxTextProp.is() ? mrModel.mxTextProp : rText.mxTextBody;
+        ObjectFormatter::convertTextRotation( aPropSet, xTextProp, true, mrModel.mnDefaultRotation );
 
-            // register the title and layout data for conversion of position
-            registerTitleLayout( xTitle, mrModel.mxLayout, eObjType, nMainIdx, nSubIdx );
-        }
-        catch( Exception& )
-        {
-        }
+        // register the title and layout data for conversion of position
+        registerTitleLayout( xTitle, mrModel.mxLayout, eObjType, nMainIdx, nSubIdx );
+    }
+    catch( Exception& )
+    {
     }
 }
 
@@ -186,7 +189,10 @@ LegendConverter::~LegendConverter()
 
 void LegendConverter::convertFromModel( const Reference< XDiagram >& rxDiagram )
 {
-    if( rxDiagram.is() ) try
+    if( !rxDiagram.is() )
+        return;
+
+    try
     {
         namespace cssc = ::com::sun::star::chart;
         namespace cssc2 = ::com::sun::star::chart2;
@@ -201,7 +207,7 @@ void LegendConverter::convertFromModel( const Reference< XDiagram >& rxDiagram )
         getFormatter().convertFormatting( aPropSet, mrModel.mxShapeProp, mrModel.mxTextProp, OBJECTTYPE_LEGEND );
 
         // predefined legend position and expansion
-        cssc2::LegendPosition eLegendPos = cssc2::LegendPosition_CUSTOM;
+        cssc2::LegendPosition eLegendPos = cssc2::LegendPosition_LINE_END;
         cssc::ChartLegendExpansion eLegendExpand = cssc::ChartLegendExpansion_CUSTOM;
         RelativePosition eRelPos;
         bool bTopRight=false;
@@ -216,7 +222,6 @@ void LegendConverter::convertFromModel( const Reference< XDiagram >& rxDiagram )
                 eLegendExpand = cssc::ChartLegendExpansion_HIGH;
             break;
             case XML_tr:    // top-right not supported
-                eLegendPos = LegendPosition_CUSTOM;
                 eRelPos.Primary = 1;
                 eRelPos.Secondary =0;
                 eRelPos.Anchor = Alignment_TOP_RIGHT;
@@ -233,7 +238,7 @@ void LegendConverter::convertFromModel( const Reference< XDiagram >& rxDiagram )
         }
         bool bManualLayout=false;
         // manual positioning and size
-        if( mrModel.mxLayout.get() )
+        if( mrModel.mxLayout )
         {
             LayoutConverter aLayoutConv( *this, *mrModel.mxLayout );
             // manual size needs ChartLegendExpansion_CUSTOM
@@ -248,8 +253,11 @@ void LegendConverter::convertFromModel( const Reference< XDiagram >& rxDiagram )
         aPropSet.setProperty( PROP_AnchorPosition, eLegendPos );
         aPropSet.setProperty( PROP_Expansion, eLegendExpand );
 
-        if(eLegendPos == LegendPosition_CUSTOM && bTopRight && !bManualLayout)
+        if (bTopRight && !bManualLayout)
             aPropSet.setProperty( PROP_RelativePosition , makeAny(eRelPos));
+
+        aPropSet.setProperty(PROP_Overlay, mrModel.mbOverlay);
+
         if (mrModel.maLegendEntries.size() > 0)
             legendEntriesFormatting(rxDiagram);
     }

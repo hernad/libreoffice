@@ -138,7 +138,7 @@ public:
         }
     }
 
-    virtual o3tl::optional< OUString > getCwdUrl() override { return m_cwdUrl; }
+    virtual std::optional< OUString > getCwdUrl() override { return m_cwdUrl; }
 
     virtual bool next(OUString * argument) override { return next(argument, true); }
 
@@ -192,7 +192,7 @@ private:
         }
     }
 
-    o3tl::optional< OUString > m_cwdUrl;
+    std::optional< OUString > m_cwdUrl;
     OString m_input;
     sal_Int32 m_index;
 };
@@ -667,8 +667,9 @@ void RequestHandler::EnableRequests()
         if (pGlobal->mState != State::Downing) {
             pGlobal->mState = State::RequestsEnabled;
         }
-        // hit the compiler over the head
-        ProcessDocumentsRequest aEmptyReq { o3tl::optional< OUString >() };
+        // hit the compiler over the head - this avoids GCC -Werror=maybe-uninitialized
+        std::optional<OUString> tmp;
+        ProcessDocumentsRequest aEmptyReq(tmp);
         // trigger already queued requests
         RequestHandler::ExecuteCmdLineRequests(aEmptyReq, true);
     }
@@ -868,30 +869,30 @@ void RequestHandler::Disable()
 {
     osl::ClearableMutexGuard aMutex( GetMutex() );
 
-    if( pGlobal.is() )
-    {
-        rtl::Reference< RequestHandler > handler(pGlobal);
-        pGlobal.clear();
+    if( !pGlobal.is() )
+        return;
 
-        handler->mState = State::Downing;
-        if (handler->mIpcThread.is()) {
-            handler->mIpcThread->close();
-        }
+    rtl::Reference< RequestHandler > handler(pGlobal);
+    pGlobal.clear();
 
-        // release mutex to avoid deadlocks
-        aMutex.clear();
-
-        handler->cReady.set();
-
-        // exit gracefully and join
-        if (handler->mIpcThread.is())
-        {
-            handler->mIpcThread->join();
-            handler->mIpcThread.clear();
-        }
-
-        handler->cReady.reset();
+    handler->mState = State::Downing;
+    if (handler->mIpcThread.is()) {
+        handler->mIpcThread->close();
     }
+
+    // release mutex to avoid deadlocks
+    aMutex.clear();
+
+    handler->cReady.set();
+
+    // exit gracefully and join
+    if (handler->mIpcThread.is())
+    {
+        handler->mIpcThread->join();
+        handler->mIpcThread.clear();
+    }
+
+    handler->cReady.reset();
 }
 
 RequestHandler::RequestHandler() :
@@ -1221,7 +1222,7 @@ void PipeIpcThread::execute()
 
 static void AddToDispatchList(
     std::vector<DispatchWatcher::DispatchRequest>& rDispatchList,
-    o3tl::optional< OUString > const & cwdUrl,
+    std::optional< OUString > const & cwdUrl,
     std::vector< OUString > const & aRequestList,
     DispatchWatcher::RequestType nType,
     const OUString& aParam,
@@ -1235,7 +1236,7 @@ static void AddToDispatchList(
 
 static void AddConversionsToDispatchList(
     std::vector<DispatchWatcher::DispatchRequest>& rDispatchList,
-    o3tl::optional< OUString > const & cwdUrl,
+    std::optional< OUString > const & cwdUrl,
     std::vector< OUString > const & rRequestList,
     const OUString& rParam,
     const OUString& rPrinterName,

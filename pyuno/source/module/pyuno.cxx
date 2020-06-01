@@ -317,14 +317,9 @@ static sal_Int32 lcl_PyNumber_AsSal_Int32( PyObject *pObj )
 
     // Convert Python number to platform long, then check actual value against
     // bounds of sal_Int32
-#if PY_VERSION_HEX >= 0x03020000
     int nOverflow;
     long nResult = PyLong_AsLongAndOverflow( pObj, &nOverflow );
     if ( nOverflow || nResult > SAL_MAX_INT32 || nResult < SAL_MIN_INT32) {
-#else
-    long nResult = PyLong_AsLong( pObj );
-    if ( nResult > SAL_MAX_INT32 || nResult < SAL_MIN_INT32) {
-#endif
         PyErr_SetString( PyExc_IndexError, "Python int too large to convert to UNO long" );
         return -1;
     }
@@ -336,14 +331,8 @@ static int lcl_PySlice_GetIndicesEx( PyObject *pObject, sal_Int32 nLen, sal_Int3
 {
     Py_ssize_t nStart_ssize, nStop_ssize, nStep_ssize, nSliceLength_ssize;
 
-    int nResult =
-#if PY_VERSION_HEX >= 0x030200f0
-        PySlice_GetIndicesEx(pObject,
+    int nResult = PySlice_GetIndicesEx(pObject,
         nLen, &nStart_ssize, &nStop_ssize, &nStep_ssize, &nSliceLength_ssize );
-#else
-        PySlice_GetIndicesEx(reinterpret_cast<PySliceObject*>(pObject),
-        nLen, &nStart_ssize, &nStop_ssize, &nStep_ssize, &nSliceLength_ssize );
-#endif
     if (nResult == -1)
         return -1;
 
@@ -472,7 +461,7 @@ PyObject *PyUNO_str( PyObject * self )
         buf = "pyuno object " + OUStringToOString(s,RTL_TEXTENCODING_ASCII_US);
     }
 
-    return PyStr_FromString( buf.getStr() );
+    return PyUnicode_FromString( buf.getStr() );
 }
 
 static PyObject* PyUNO_dir (PyObject* self)
@@ -603,7 +592,7 @@ static PyObject* lcl_getitem_XCellRange( PyUNO const * me, PyObject* pKey )
     Any aRet;
 
     // Single string key is sugar for getCellRangeByName()
-    if ( PyStr_Check( pKey ) ) {
+    if ( PyUnicode_Check( pKey ) ) {
 
         aParams.realloc (1);
         aParams[0] <<= pyString2ustring( pKey );
@@ -833,7 +822,7 @@ static PyObject* PyUNO_getitem( PyObject *self, PyObject *pKey )
         }
 
         // XNameAccess access by key
-        if ( PyStr_Check( pKey ) )
+        if ( PyUnicode_Check( pKey ) )
         {
             PyObject* pRet = lcl_getitem_string( me, pKey, runtime );
             if ( pRet != nullptr )
@@ -1168,7 +1157,7 @@ static int PyUNO_setitem( PyObject *self, PyObject *pKey, PyObject *pValue )
         {
             return lcl_setitem_slice( me, pKey, pValue );
         }
-        else if ( PyStr_Check( pKey ) )
+        else if ( PyUnicode_Check( pKey ) )
         {
             return lcl_setitem_string( me, pKey, pValue );
         }
@@ -1308,7 +1297,7 @@ static int PyUNO_contains( PyObject *self, PyObject *pKey )
         // useful for objects which implement both XIndexAccess and XNameAccess
 
         // For XNameAccess
-        if ( PyStr_Check( pKey ) )
+        if ( PyUnicode_Check( pKey ) )
         {
             OUString sKey;
             aValue >>= sKey;
@@ -1554,9 +1543,6 @@ static PyNumberMethods PyUNONumberMethods[] =
     nullptr,                                         /* nb_add */
     nullptr,                                         /* nb_subtract */
     nullptr,                                         /* nb_multiply */
-#if PY_MAJOR_VERSION < 3
-    nullptr,                                         /* nb_divide */
-#endif
     nullptr,                                         /* nb_remainder */
     nullptr,                                         /* nb_divmod */
     nullptr,                                         /* nb_power */
@@ -1570,22 +1556,12 @@ static PyNumberMethods PyUNONumberMethods[] =
     nullptr,                                         /* nb_and */
     nullptr,                                         /* nb_xor */
     nullptr,                                         /* nb_or */
-#if PY_MAJOR_VERSION < 3
-    nullptr,                                         /* nb_coerce */
-#endif
     nullptr,                                         /* nb_int */
     nullptr,                                         /* nb_reserved */
     nullptr,                                         /* nb_float */
-#if PY_MAJOR_VERSION < 3
-    nullptr,                                         /* nb_oct */
-    nullptr,                                         /* nb_hex */
-#endif
     nullptr,                                         /* nb_inplace_add */
     nullptr,                                         /* nb_inplace_subtract */
     nullptr,                                         /* nb_inplace_multiply */
-#if PY_MAJOR_VERSION < 3
-    nullptr,                                         /* nb_inplace_divide */
-#endif
     nullptr,                                         /* nb_inplace_remainder */
     nullptr,                                         /* nb_inplace_power */
     nullptr,                                         /* nb_inplace_lshift */
@@ -1684,6 +1660,16 @@ static PyTypeObject PyUNOType =
     , nullptr
 #if PY_VERSION_HEX >= 0x03080000
     , nullptr // vectorcallfunc tp_vectorcall
+#if PY_VERSION_HEX < 0x03090000
+#if defined __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+    , nullptr // tp_print
+#if defined __clang__
+#pragma clang diagnostic pop
+#endif
+#endif
 #endif
 #endif
 };

@@ -18,6 +18,7 @@
  */
 
 #include <sal/config.h>
+#include <sal/log.hxx>
 
 #include "mysqlc_connection.hxx"
 #include "mysqlc_propertyids.hxx"
@@ -50,13 +51,13 @@ OCommonStatement::OCommonStatement(OConnection* _pConnection)
 
 OCommonStatement::~OCommonStatement() {}
 
-void OCommonStatement::disposeResultSet()
+void OCommonStatement::closeResultSet()
 {
-    // free the cursor if alive
     if (m_xResultSet.is())
     {
+        css::uno::Reference<css::sdbc::XCloseable> xClose(m_xResultSet, UNO_QUERY_THROW);
+        xClose->close();
         m_xResultSet.clear();
-        m_pMysqlResult = nullptr; // it is freed by XResultSet
     }
 }
 
@@ -87,6 +88,11 @@ Sequence<Type> SAL_CALL OCommonStatement::getTypes()
     return concatSequences(aTypes.getTypes(), OCommonStatement_IBase::getTypes());
 }
 
+Sequence<Type> SAL_CALL OStatement::getTypes()
+{
+    return concatSequences(OStatement_BASE::getTypes(), OCommonStatement::getTypes());
+}
+
 void SAL_CALL OCommonStatement::cancel()
 {
     MutexGuard aGuard(m_aMutex);
@@ -105,22 +111,23 @@ void SAL_CALL OCommonStatement::close()
         checkDisposed(rBHelper.bDisposed);
     }
     dispose();
-    disposeResultSet();
+    closeResultSet();
 }
 
-void SAL_CALL OStatement::clearBatch()
-{
-    // if you support batches clear it here
-}
+// void SAL_CALL OStatement::clearBatch()
+// {
+//     mysqlc_sdbc_driver::throwFeatureNotImplementedException("com:sun:star:sdbc:XBatchExecution");
+// }
 
-sal_Bool SAL_CALL OCommonStatement::execute(const OUString& sql)
+sal_Bool SAL_CALL OStatement::execute(const OUString& sql)
 {
     MutexGuard aGuard(m_aMutex);
     checkDisposed(rBHelper.bDisposed);
-    const OUString sSqlStatement = m_xConnection->transFormPreparedStatement(sql);
 
-    OString toExec
-        = OUStringToOString(sSqlStatement, m_xConnection->getConnectionSettings().encoding);
+    closeResultSet();
+    m_nAffectedRows = -1;
+
+    OString toExec = OUStringToOString(sql, m_xConnection->getConnectionSettings().encoding);
 
     MYSQL* pMySql = m_xConnection->getMysqlConnection();
 
@@ -129,42 +136,32 @@ sal_Bool SAL_CALL OCommonStatement::execute(const OUString& sql)
     // toExec = mysqlc_sdbc_driver::escapeSql(toExec);
     int failure = mysql_real_query(pMySql, toExec.getStr(), toExec.getLength());
 
-    if (failure)
-        mysqlc_sdbc_driver::throwSQLExceptionWithMsg(mysql_error(pMySql), mysql_errno(pMySql),
-                                                     *this, m_xConnection->getConnectionEncoding());
-    m_nAffectedRows = mysql_affected_rows(pMySql);
+    if (failure || mysql_errno(pMySql))
+        mysqlc_sdbc_driver::throwSQLExceptionWithMsg(mysql_error(pMySql), mysql_sqlstate(pMySql),
+                                                     mysql_errno(pMySql), *this,
+                                                     m_xConnection->getConnectionEncoding());
 
-    return !failure;
+    return getResult();
 }
 
-Reference<XResultSet> SAL_CALL OCommonStatement::executeQuery(const OUString& sql)
+Reference<XResultSet> SAL_CALL OStatement::executeQuery(const OUString& sql)
 {
-    MutexGuard aGuard(m_aMutex);
-    checkDisposed(rBHelper.bDisposed);
-    const OUString sSqlStatement = sql; // TODO m_xConnection->transFormPreparedStatement( sql );
-    OString toExec
-        = OUStringToOString(sSqlStatement, m_xConnection->getConnectionSettings().encoding);
+    bool isRS(execute(sql));
+    // if a MySQL error occurred, it was already thrown and the below is not executed
+    assert(isRS == m_xResultSet.is());
+    if (!isRS)
+        mysqlc_sdbc_driver::throwSQLExceptionWithMsg(
+            "executeQuery called on SQL command that does not return a ResultSet", "02000", 0,
+            *this);
+    if (!m_xResultSet.is())
+        mysqlc_sdbc_driver::throwSQLExceptionWithMsg(
+            "internal MySQL-SDBC error: executeQuery: no ResultSet after execute() returned true.",
+            "02000", 0, *this);
 
-    MYSQL* pMySql = m_xConnection->getMysqlConnection();
-    // toExec = mysqlc_sdbc_driver::escapeSql(toExec);
-    int failure = mysql_real_query(pMySql, toExec.getStr(), toExec.getLength());
-    if (failure)
-        mysqlc_sdbc_driver::throwSQLExceptionWithMsg(mysql_error(pMySql), mysql_errno(pMySql),
-                                                     *this, m_xConnection->getConnectionEncoding());
-
-    m_pMysqlResult = mysql_store_result(pMySql);
-    if (m_pMysqlResult == nullptr)
-    {
-        mysqlc_sdbc_driver::throwSQLExceptionWithMsg(mysql_error(pMySql), mysql_errno(pMySql),
-                                                     *this, m_xConnection->getConnectionEncoding());
-    }
-
-    m_xResultSet = new OResultSet(*getOwnConnection(), this, m_pMysqlResult,
-                                  m_xConnection->getConnectionEncoding());
     return m_xResultSet;
 }
 
-Reference<XConnection> SAL_CALL OCommonStatement::getConnection()
+Reference<XConnection> SAL_CALL OStatement::getConnection()
 {
     MutexGuard aGuard(m_aMutex);
     checkDisposed(rBHelper.bDisposed);
@@ -173,33 +170,35 @@ Reference<XConnection> SAL_CALL OCommonStatement::getConnection()
     return m_xConnection.get();
 }
 
-sal_Int32 SAL_CALL OCommonStatement::getUpdateCount() { return m_nAffectedRows; }
+sal_Int32 SAL_CALL OStatement::getUpdateCount() { return m_nAffectedRows; }
 
 Any SAL_CALL OStatement::queryInterface(const Type& rType)
 {
-    Any aRet = ::cppu::queryInterface(rType, static_cast<XBatchExecution*>(this));
+    Any aRet = OCommonStatement::queryInterface(rType);
     if (!aRet.hasValue())
     {
-        aRet = OCommonStatement::queryInterface(rType);
+        aRet = OStatement_BASE::queryInterface(rType);
     }
     return aRet;
 }
 
-void SAL_CALL OStatement::addBatch(const OUString&)
-{
-    MutexGuard aGuard(m_aMutex);
-    checkDisposed(rBHelper.bDisposed);
-}
+// void SAL_CALL OStatement::addBatch(const OUString&)
+// {
+//     MutexGuard aGuard(m_aMutex);
+//     checkDisposed(rBHelper.bDisposed);
 
-Sequence<sal_Int32> SAL_CALL OStatement::executeBatch()
-{
-    MutexGuard aGuard(m_aMutex);
-    checkDisposed(rBHelper.bDisposed);
+//     mysqlc_sdbc_driver::throwFeatureNotImplementedException("com:sun:star:sdbc:XBatchExecution");
+// }
 
-    return Sequence<sal_Int32>();
-}
+// Sequence<sal_Int32> SAL_CALL OStatement::executeBatch()
+// {
+//     MutexGuard aGuard(m_aMutex);
+//     checkDisposed(rBHelper.bDisposed);
 
-sal_Int32 SAL_CALL OCommonStatement::executeUpdate(const OUString& sql)
+//     mysqlc_sdbc_driver::throwFeatureNotImplementedException("com:sun:star:sdbc:XBatchExecution");
+// }
+
+sal_Int32 SAL_CALL OStatement::executeUpdate(const OUString& sql)
 {
     MutexGuard aGuard(m_aMutex);
     checkDisposed(rBHelper.bDisposed);
@@ -208,7 +207,7 @@ sal_Int32 SAL_CALL OCommonStatement::executeUpdate(const OUString& sql)
     return m_nAffectedRows;
 }
 
-Reference<XResultSet> SAL_CALL OCommonStatement::getResultSet()
+Reference<XResultSet> SAL_CALL OStatement::getResultSet()
 {
     MutexGuard aGuard(m_aMutex);
     checkDisposed(rBHelper.bDisposed);
@@ -216,9 +215,68 @@ Reference<XResultSet> SAL_CALL OCommonStatement::getResultSet()
     return m_xResultSet;
 }
 
-sal_Bool SAL_CALL OCommonStatement::getMoreResults()
+bool OStatement::getResult()
 {
-    return false; // TODO IMPL
+    // all callers already reset that
+    assert(!m_xResultSet.is());
+    assert(m_nAffectedRows == -1);
+
+    MYSQL* pMySql = m_xConnection->getMysqlConnection();
+    MYSQL_RES* pMysqlResult = mysql_store_result(pMySql);
+    if (pMysqlResult != nullptr)
+    {
+        // MariaDB/MySQL will return the number of rows in the ResultSet from mysql_affected_rows();
+        // sdbc mandates -1 when the command (query) returns a ResultSet
+        assert(m_nAffectedRows == -1);
+        m_xResultSet = new OResultSet(*getOwnConnection(), this, pMysqlResult,
+                                      m_xConnection->getConnectionEncoding());
+        return true;
+    }
+    else if (mysql_field_count(pMySql) == 0)
+    {
+        m_nAffectedRows = mysql_affected_rows(pMySql);
+        return false;
+    }
+    else
+    {
+        mysqlc_sdbc_driver::throwSQLExceptionWithMsg(
+            "mysql_store_result indicated success and SQL command was supposed to return a "
+            "ResultSet, but did not.",
+            "02000", 0, *this);
+    }
+    //unreachable
+    assert(false);
+    // keep -Werror=return-type happy
+    return false;
+}
+
+sal_Bool SAL_CALL OStatement::getMoreResults()
+{
+    MutexGuard aGuard(m_aMutex);
+    checkDisposed(rBHelper.bDisposed);
+
+    closeResultSet();
+    m_nAffectedRows = -1;
+
+    MYSQL* pMySql = m_xConnection->getMysqlConnection();
+    int status = mysql_next_result(pMySql);
+
+    if (status > 0 || mysql_errno(pMySql))
+        mysqlc_sdbc_driver::throwSQLExceptionWithMsg(mysql_error(pMySql), mysql_sqlstate(pMySql),
+                                                     mysql_errno(pMySql), *this,
+                                                     m_xConnection->getConnectionEncoding());
+
+    if (status == -1)
+        return false;
+
+    if (status != 0)
+    {
+        const OUString errMsg("mysql_next_result returned unexpected value: "
+                              + OUString::number(status));
+        mysqlc_sdbc_driver::throwSQLExceptionWithMsg(errMsg, "02000", 0, *this);
+    }
+
+    return getResult();
 }
 
 Any SAL_CALL OCommonStatement::getWarnings()

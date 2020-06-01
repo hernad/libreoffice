@@ -58,6 +58,7 @@ $(eval $(call gb_Library_add_exception_objects,drawinglayer,\
     drawinglayer/source/attribute/sdrallattribute3d \
     drawinglayer/source/attribute/sdrfillattribute \
     drawinglayer/source/attribute/sdrfillgraphicattribute \
+    drawinglayer/source/attribute/sdrglowattribute \
     drawinglayer/source/attribute/sdrlightattribute3d \
     drawinglayer/source/attribute/sdrlightingattribute3d \
     drawinglayer/source/attribute/sdrlineattribute \
@@ -82,6 +83,7 @@ $(eval $(call gb_Library_add_exception_objects,drawinglayer,\
     drawinglayer/source/primitive2d/fillgraphicprimitive2d \
     drawinglayer/source/primitive2d/fillgradientprimitive2d \
     drawinglayer/source/primitive2d/fillhatchprimitive2d \
+    drawinglayer/source/primitive2d/glowprimitive2d \
     drawinglayer/source/primitive2d/graphicprimitivehelper2d \
     drawinglayer/source/primitive2d/graphicprimitive2d \
     drawinglayer/source/primitive2d/gridprimitive2d \
@@ -100,12 +102,20 @@ $(eval $(call gb_Library_add_exception_objects,drawinglayer,\
     drawinglayer/source/primitive2d/patternfillprimitive2d \
     drawinglayer/source/primitive2d/pointarrayprimitive2d \
     drawinglayer/source/primitive2d/polygonprimitive2d \
-    drawinglayer/source/primitive2d/polypolygonprimitive2d \
+    drawinglayer/source/primitive2d/PolyPolygonHairlinePrimitive2D \
+    drawinglayer/source/primitive2d/PolyPolygonMarkerPrimitive2D \
+    drawinglayer/source/primitive2d/PolyPolygonStrokePrimitive2D \
+    drawinglayer/source/primitive2d/PolyPolygonColorPrimitive2D \
+    drawinglayer/source/primitive2d/PolyPolygonGradientPrimitive2D \
+    drawinglayer/source/primitive2d/PolyPolygonHatchPrimitive2D \
+    drawinglayer/source/primitive2d/PolyPolygonGraphicPrimitive2D \
+    drawinglayer/source/primitive2d/PolyPolygonSelectionPrimitive2D \
     drawinglayer/source/primitive2d/primitivetools2d \
     drawinglayer/source/primitive2d/Primitive2DContainer \
     drawinglayer/source/primitive2d/sceneprimitive2d \
     drawinglayer/source/primitive2d/sdrdecompositiontools2d \
     drawinglayer/source/primitive2d/shadowprimitive2d \
+    drawinglayer/source/primitive2d/softedgeprimitive2d \
     drawinglayer/source/primitive2d/structuretagprimitive2d \
     drawinglayer/source/primitive2d/svggradientprimitive2d \
     drawinglayer/source/primitive2d/textbreakuphelper \

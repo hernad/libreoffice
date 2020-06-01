@@ -26,6 +26,7 @@
 #include <comphelper/fileurl.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/weld.hxx>
+#include <vcl/window.hxx>
 #include <svl/style.hxx>
 
 #include <svl/intitem.hxx>
@@ -130,7 +131,7 @@ SfxObjectShell::CreatePreviewMetaFile_Impl( bool bFullContent ) const
     }
 
     xFile->SetPrefSize( aTmpSize );
-    DBG_ASSERT( aTmpSize.Height() != 0 && aTmpSize.Width() != 0,
+    DBG_ASSERT( !aTmpSize.IsEmpty(),
         "size of first page is 0, override GetFirstPageSize or set visible-area!" );
 
     xFile->Record( pDevice );
@@ -260,10 +261,10 @@ void SfxObjectShell::UpdateTime_Impl(
     }
 }
 
-std::unique_ptr<SfxDocumentInfoDialog> SfxObjectShell::CreateDocumentInfoDialog(weld::Window* pParent,
+std::shared_ptr<SfxDocumentInfoDialog> SfxObjectShell::CreateDocumentInfoDialog(weld::Window* pParent,
                                                                                 const SfxItemSet& rSet)
 {
-    return std::make_unique<SfxDocumentInfoDialog>(pParent, rSet);
+    return std::make_shared<SfxDocumentInfoDialog>(pParent, rSet);
 }
 
 std::set<Color> SfxObjectShell::GetDocColors()
@@ -312,11 +313,11 @@ void SfxObjectShell::LoadStyles
     DBG_ASSERT(pSourcePool, "Source-DocumentShell without StyleSheetPool");
     SfxStyleSheetBasePool *pMyPool = GetStyleSheetPool();
     DBG_ASSERT(pMyPool, "Dest-DocumentShell without StyleSheetPool");
-    pSourcePool->SetSearchMask(SfxStyleFamily::All);
-    std::unique_ptr<Styles_Impl[]> pFound(new Styles_Impl[pSourcePool->Count()]);
+    auto xIter = pSourcePool->CreateIterator(SfxStyleFamily::All);
+    std::unique_ptr<Styles_Impl[]> pFound(new Styles_Impl[xIter->Count()]);
     sal_uInt16 nFound = 0;
 
-    SfxStyleSheetBase *pSource = pSourcePool->First();
+    SfxStyleSheetBase *pSource = xIter->First();
     while ( pSource )
     {
         SfxStyleSheetBase *pDest =
@@ -330,7 +331,7 @@ void SfxObjectShell::LoadStyles
         pFound[nFound].pSource = pSource;
         pFound[nFound].pDest = pDest;
         ++nFound;
-        pSource = pSourcePool->Next();
+        pSource = xIter->Next();
     }
 
     for ( sal_uInt16 i = 0; i < nFound; ++i )

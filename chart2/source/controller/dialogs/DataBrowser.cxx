@@ -211,6 +211,9 @@ private:
     std::unique_ptr<weld::Builder> m_xBuilder1;
     std::unique_ptr<weld::Builder> m_xBuilder2;
 
+    weld::Container* m_pParent;
+    weld::Container* m_pColorParent;
+
     std::unique_ptr<weld::Container> m_xContainer1;
     std::unique_ptr<weld::Container> m_xContainer2;
     std::unique_ptr<weld::Image> m_spSymbol;
@@ -238,6 +241,8 @@ SeriesHeader::SeriesHeader(weld::Container* pParent, weld::Container* pColorPare
     : m_aUpdateDataTimer("UpdateDataTimer")
     , m_xBuilder1(Application::CreateBuilder(pParent, "modules/schart/ui/columnfragment.ui"))
     , m_xBuilder2(Application::CreateBuilder(pColorParent, "modules/schart/ui/imagefragment.ui"))
+    , m_pParent(pParent)
+    , m_pColorParent(pColorParent)
     , m_xContainer1(m_xBuilder1->weld_container("container"))
     , m_xContainer2(m_xBuilder2->weld_container("container"))
     , m_spSymbol(m_xBuilder1->weld_image("image"))
@@ -260,9 +265,8 @@ SeriesHeader::SeriesHeader(weld::Container* pParent, weld::Container* pColorPare
 SeriesHeader::~SeriesHeader()
 {
     m_aUpdateDataTimer.Stop();
-    m_xDevice.clear();
-    m_xBuilder2.reset();
-    m_xBuilder1.reset();
+    m_pParent->move(m_xContainer1.get(), nullptr);
+    m_pColorParent->move(m_xContainer2.get(), nullptr);
 }
 
 void SeriesHeader::notifyChanges()
@@ -514,6 +518,7 @@ DataBrowser::~DataBrowser()
 
 void DataBrowser::dispose()
 {
+    m_aSeriesHeaders.clear();
     m_aNumberEditField.disposeAndClear();
     m_aTextEditField.disposeAndClear();
     ::svt::EditBrowseBox::dispose();
@@ -578,7 +583,7 @@ bool DataBrowser::MayMoveLeftColumns() const
     return ! IsReadOnly()
         && ( nColIdx > 1 )
         && ( nColIdx <= ColCount() - 2 )
-        && m_apDataBrowserModel.get()
+        && m_apDataBrowserModel
         && !m_apDataBrowserModel->isCategoriesColumn( nColIdx );
 }
 
@@ -595,7 +600,7 @@ bool DataBrowser::MayMoveRightColumns() const
     return ! IsReadOnly()
         && ( nColIdx > 0 )
         && ( nColIdx < ColCount()-2 )
-        && m_apDataBrowserModel.get()
+        && m_apDataBrowserModel
         && !m_apDataBrowserModel->isCategoriesColumn( nColIdx );
 }
 
@@ -696,7 +701,7 @@ OUString DataBrowser::GetCellText( long nRow, sal_uInt16 nColumnId ) const
     {
         aResult = OUString::number(static_cast< sal_Int32 >( nRow ) + 1);
     }
-    else if( nRow >= 0 && m_apDataBrowserModel.get())
+    else if( nRow >= 0 && m_apDataBrowserModel)
     {
         sal_Int32 nColIndex = static_cast< sal_Int32 >( nColumnId ) - 1;
 
@@ -705,8 +710,8 @@ OUString DataBrowser::GetCellText( long nRow, sal_uInt16 nColumnId ) const
             double fData( m_apDataBrowserModel->getCellNumber( nColIndex, nRow ));
             Color nLabelColor;
 
-            if( ! ::rtl::math::isNan( fData ) &&
-                m_spNumberFormatterWrapper.get() )
+            if( ! std::isnan( fData ) &&
+                m_spNumberFormatterWrapper )
             {
                 bool bColorChanged = false;
                 aResult = m_spNumberFormatterWrapper->getFormattedString(
@@ -723,7 +728,7 @@ OUString DataBrowser::GetCellText( long nRow, sal_uInt16 nColumnId ) const
                 aResult = aText;
             else if( aAny>>=fDouble )
             {
-                if( ! ::rtl::math::isNan( fDouble ) && m_spNumberFormatterWrapper.get() )
+                if( ! std::isnan( fDouble ) && m_spNumberFormatterWrapper )
                 {
                     // If a numberformat was available here we could directly
                     // obtain the corresponding edit format in
@@ -753,8 +758,7 @@ double DataBrowser::GetCellNumber( long nRow, sal_uInt16 nColumnId ) const
     double fResult;
     ::rtl::math::setNan( & fResult );
 
-    if(( nColumnId >= 1 ) && ( nRow >= 0 ) &&
-        m_apDataBrowserModel.get())
+    if(( nColumnId >= 1 ) && ( nRow >= 0 ) && m_apDataBrowserModel)
     {
         fResult = m_apDataBrowserModel->getCellNumber(
             static_cast< sal_Int32 >( nColumnId ) - 1, nRow );
@@ -827,7 +831,7 @@ bool DataBrowser::IsDataValid() const
         OUString aText( m_aNumberEditField->GetText());
 
         if( !aText.isEmpty() &&
-            m_spNumberFormatterWrapper.get() &&
+            m_spNumberFormatterWrapper &&
             m_spNumberFormatterWrapper->getSvNumberFormatter() &&
             ! m_spNumberFormatterWrapper->getSvNumberFormatter()->IsNumberFormat(
               aText, nDummy, fDummy ))
@@ -873,8 +877,7 @@ void DataBrowser::InsertColumn()
 {
     sal_Int32 nColIdx = lcl_getColumnInDataOrHeader( GetCurColumnId(), m_aSeriesHeaders );
 
-    if( nColIdx >= 0 &&
-        m_apDataBrowserModel.get())
+    if( nColIdx >= 0 && m_apDataBrowserModel)
     {
         // save changes made to edit-field
         if( IsModified() )
@@ -889,8 +892,7 @@ void DataBrowser::InsertTextColumn()
 {
     sal_Int32 nColIdx = lcl_getColumnInDataOrHeader( GetCurColumnId(), m_aSeriesHeaders );
 
-    if( nColIdx >= 0 &&
-        m_apDataBrowserModel.get())
+    if( nColIdx >= 0 && m_apDataBrowserModel)
     {
         // save changes made to edit-field
         if( IsModified() )
@@ -905,8 +907,7 @@ void DataBrowser::RemoveColumn()
 {
     sal_Int32 nColIdx = lcl_getColumnInDataOrHeader( GetCurColumnId(), m_aSeriesHeaders );
 
-    if( nColIdx >= 0 &&
-        m_apDataBrowserModel.get())
+    if( nColIdx >= 0 && m_apDataBrowserModel)
     {
         // save changes made to edit-field
         if( IsModified() )
@@ -922,8 +923,7 @@ void DataBrowser::InsertRow()
 {
      sal_Int32 nRowIdx = lcl_getRowInData( GetCurRow());
 
-     if( nRowIdx >= 0 &&
-        m_apDataBrowserModel.get())
+     if( nRowIdx >= 0 && m_apDataBrowserModel)
     {
         // save changes made to edit-field
         if( IsModified() )
@@ -938,8 +938,7 @@ void DataBrowser::RemoveRow()
 {
      sal_Int32 nRowIdx = lcl_getRowInData( GetCurRow());
 
-     if( nRowIdx >= 0 &&
-        m_apDataBrowserModel.get())
+     if( nRowIdx >= 0 && m_apDataBrowserModel)
     {
         // save changes made to edit-field
         if( IsModified() )
@@ -955,88 +954,84 @@ void DataBrowser::MoveLeftColumn()
 {
     sal_Int32 nColIdx = lcl_getColumnInDataOrHeader( GetCurColumnId(), m_aSeriesHeaders );
 
-    if( nColIdx > 0 &&
-        m_apDataBrowserModel.get())
+    if( !(nColIdx > 0 && m_apDataBrowserModel))
+        return;
+
+    // save changes made to edit-field
+    if( IsModified() )
+        SaveModified();
+
+    m_apDataBrowserModel->swapDataSeries( nColIdx - 1 );
+
+    // keep cursor in swapped column
+    if(( 0 < GetCurColumnId() ) && ( GetCurColumnId() <= ColCount() - 1 ))
     {
-        // save changes made to edit-field
-        if( IsModified() )
-            SaveModified();
-
-        m_apDataBrowserModel->swapDataSeries( nColIdx - 1 );
-
-        // keep cursor in swapped column
-        if(( 0 < GetCurColumnId() ) && ( GetCurColumnId() <= ColCount() - 1 ))
-        {
-            Dispatch( BROWSER_CURSORLEFT );
-        }
-        RenewTable();
+        Dispatch( BROWSER_CURSORLEFT );
     }
+    RenewTable();
 }
 
 void DataBrowser::MoveRightColumn()
 {
     sal_Int32 nColIdx = lcl_getColumnInDataOrHeader( GetCurColumnId(), m_aSeriesHeaders );
 
-    if( nColIdx >= 0 &&
-        m_apDataBrowserModel.get())
+    if( !(nColIdx >= 0 && m_apDataBrowserModel))
+        return;
+
+    // save changes made to edit-field
+    if( IsModified() )
+        SaveModified();
+
+    m_apDataBrowserModel->swapDataSeries( nColIdx );
+
+    // keep cursor in swapped column
+    if( GetCurColumnId() < ColCount() - 1 )
     {
-        // save changes made to edit-field
-        if( IsModified() )
-            SaveModified();
-
-        m_apDataBrowserModel->swapDataSeries( nColIdx );
-
-        // keep cursor in swapped column
-        if( GetCurColumnId() < ColCount() - 1 )
-        {
-            Dispatch( BROWSER_CURSORRIGHT );
-        }
-        RenewTable();
+        Dispatch( BROWSER_CURSORRIGHT );
     }
+    RenewTable();
 }
 
 void DataBrowser::MoveUpRow()
 {
-     sal_Int32 nRowIdx = lcl_getRowInData( GetCurRow());
+    sal_Int32 nRowIdx = lcl_getRowInData( GetCurRow());
 
-     if( nRowIdx > 0 &&
-        m_apDataBrowserModel.get())
+    if( !(nRowIdx > 0 && m_apDataBrowserModel))
+        return;
+
+    // save changes made to edit-field
+    if( IsModified() )
+        SaveModified();
+
+    m_apDataBrowserModel->swapDataPointForAllSeries( nRowIdx - 1 );
+
+    // keep cursor in swapped row
+    if(( 0 < GetCurRow() ) && ( GetCurRow() <= GetRowCount() - 1 ))
     {
-        // save changes made to edit-field
-        if( IsModified() )
-            SaveModified();
-
-        m_apDataBrowserModel->swapDataPointForAllSeries( nRowIdx - 1 );
-
-        // keep cursor in swapped row
-        if(( 0 < GetCurRow() ) && ( GetCurRow() <= GetRowCount() - 1 ))
-        {
-            Dispatch( BROWSER_CURSORUP );
-        }
-        RenewTable();
+        Dispatch( BROWSER_CURSORUP );
     }
+    RenewTable();
 }
 
 void DataBrowser::MoveDownRow()
 {
-     sal_Int32 nRowIdx = lcl_getRowInData( GetCurRow());
+    sal_Int32 nRowIdx = lcl_getRowInData( GetCurRow());
 
-     if( nRowIdx >= 0 &&
-        m_apDataBrowserModel.get())
+    if( !(nRowIdx >= 0 && m_apDataBrowserModel))
+        return;
+
+    // save changes made to edit-field
+    if( IsModified() )
+        SaveModified();
+
+    m_apDataBrowserModel->swapDataPointForAllSeries( nRowIdx );
+
+    // keep cursor in swapped row
+    if( GetCurRow() < GetRowCount() - 1 )
     {
-        // save changes made to edit-field
-        if( IsModified() )
-            SaveModified();
-
-        m_apDataBrowserModel->swapDataPointForAllSeries( nRowIdx );
-
-        // keep cursor in swapped row
-        if( GetCurRow() < GetRowCount() - 1 )
-        {
-            Dispatch( BROWSER_CURSORDOWN );
-        }
-        RenewTable();
+        Dispatch( BROWSER_CURSORDOWN );
     }
+    RenewTable();
 }
 
 void DataBrowser::SetCursorMovedHdl( const Link<DataBrowser*,void>& rLink )
@@ -1140,7 +1135,7 @@ void DataBrowser::InitController(
     {
         // treat invalid and empty text as Nan
         m_aNumberEditField->EnableNotANumber( true );
-        if( ::rtl::math::isNan( GetCellNumber( nRow, nCol )))
+        if( std::isnan( GetCellNumber( nRow, nCol )))
             m_aNumberEditField->SetTextValue( OUString());
         else
             m_aNumberEditField->SetValue( GetCellNumber( nRow, nCol ) );
@@ -1170,7 +1165,7 @@ sal_uInt32 DataBrowser::GetNumberFormatKey( sal_uInt16 nCol ) const
 bool DataBrowser::isDateTimeString( const OUString& aInputString, double& fOutDateTimeValue )
 {
     sal_uInt32 nNumberFormat=0;
-    SvNumberFormatter* pSvNumberFormatter = m_spNumberFormatterWrapper.get() ? m_spNumberFormatterWrapper->getSvNumberFormatter() : nullptr;
+    SvNumberFormatter* pSvNumberFormatter = m_spNumberFormatterWrapper ? m_spNumberFormatterWrapper->getSvNumberFormatter() : nullptr;
     if( !aInputString.isEmpty() &&  pSvNumberFormatter && pSvNumberFormatter->IsNumberFormat( aInputString, nNumberFormat, fOutDateTimeValue ) )
     {
         SvNumFormatType nType = pSvNumberFormatter->GetType( nNumberFormat);
@@ -1191,7 +1186,7 @@ bool DataBrowser::SaveModified()
 
     OSL_ENSURE( nRow >= 0 || nCol >= 0, "This cell should not be modified!" );
 
-    SvNumberFormatter* pSvNumberFormatter = m_spNumberFormatterWrapper.get() ? m_spNumberFormatterWrapper->getSvNumberFormatter() : nullptr;
+    SvNumberFormatter* pSvNumberFormatter = m_spNumberFormatterWrapper ? m_spNumberFormatterWrapper->getSvNumberFormatter() : nullptr;
     switch( m_apDataBrowserModel->getCellType( nCol ))
     {
         case DataBrowserModel::NUMBER:
@@ -1380,21 +1375,21 @@ IMPL_LINK( DataBrowser, SeriesHeaderChanged, impl::SeriesHeaderEdit&, rEdit, voi
     Reference< chart2::XDataSeries > xSeries(
         m_apDataBrowserModel->getDataSeriesByColumn( rEdit.getStartColumn() - 1 ));
     Reference< chart2::data::XDataSource > xSource( xSeries, uno::UNO_QUERY );
-    if( xSource.is())
+    if( !xSource.is())
+        return;
+
+    Reference< chart2::XChartType > xChartType(
+        m_apDataBrowserModel->getHeaderForSeries( xSeries ).m_xChartType );
+    if( xChartType.is())
     {
-        Reference< chart2::XChartType > xChartType(
-            m_apDataBrowserModel->getHeaderForSeries( xSeries ).m_xChartType );
-        if( xChartType.is())
+        Reference< chart2::data::XLabeledDataSequence > xLabeledSeq(
+            DataSeriesHelper::getDataSequenceByRole( xSource, xChartType->getRoleOfSequenceForSeriesLabel()));
+        if( xLabeledSeq.is())
         {
-            Reference< chart2::data::XLabeledDataSequence > xLabeledSeq(
-                DataSeriesHelper::getDataSequenceByRole( xSource, xChartType->getRoleOfSequenceForSeriesLabel()));
-            if( xLabeledSeq.is())
-            {
-                Reference< container::XIndexReplace > xIndexReplace( xLabeledSeq->getLabel(), uno::UNO_QUERY );
-                if( xIndexReplace.is())
-                    xIndexReplace->replaceByIndex(
-                        0, uno::Any( rEdit.GetText()));
-            }
+            Reference< container::XIndexReplace > xIndexReplace( xLabeledSeq->getLabel(), uno::UNO_QUERY );
+            if( xIndexReplace.is())
+                xIndexReplace->replaceByIndex(
+                    0, uno::Any( rEdit.GetText()));
         }
     }
 }

@@ -21,16 +21,8 @@
 #define INCLUDED_REPORTDESIGN_SOURCE_FILTER_XML_XMLSTYLEIMPORT_HXX
 
 #include <rtl/ustring.hxx>
-#include <xmloff/xmlimp.hxx>
-#include <xmloff/xmlictxt.hxx>
-#include <xmloff/maptype.hxx>
 #include <xmloff/prstylei.hxx>
 #include <xmloff/xmlimppr.hxx>
-#include <xmloff/XMLTextMasterPageContext.hxx>
-#include <xmloff/XMLTextMasterStylesContext.hxx>
-#include <xmloff/contextid.hxx>
-#include <xmloff/controlpropertyhdl.hxx>
-#include <vector>
 
 namespace rptxml
 {
@@ -57,7 +49,7 @@ namespace rptxml
         OControlStyleContext( ORptFilter& rImport, sal_uInt16 nPrfx,
                 const OUString& rLName,
                 const css::uno::Reference< css::xml::sax::XAttributeList > & xAttrList,
-                SvXMLStylesContext& rStyles, sal_uInt16 nFamily );
+                SvXMLStylesContext& rStyles, XmlStyleFamily nFamily );
 
         virtual ~OControlStyleContext() override;
 
@@ -74,7 +66,7 @@ namespace rptxml
     {
         ORptFilter&           m_rImport;
         sal_Int32 m_nNumberFormatIndex;
-        bool const bAutoStyles : 1;
+        bool bAutoStyles : 1;
 
         //mutable rtl::Reference < SvXMLImportPropertyMapper > m_xControlImpPropMapper;
         mutable rtl::Reference < SvXMLImportPropertyMapper > m_xCellImpPropMapper;
@@ -95,32 +87,30 @@ namespace rptxml
 
         // Create a style context.
         virtual SvXMLStyleContext *CreateStyleStyleChildContext(
-                sal_uInt16 nFamily,
+                XmlStyleFamily nFamily,
                 sal_uInt16 nPrefix,
                 const OUString& rLocalName,
                 const css::uno::Reference< css::xml::sax::XAttributeList > & xAttrList ) override;
 
         virtual SvXMLStyleContext *CreateDefaultStyleStyleChildContext(
-                sal_uInt16 nFamily, sal_uInt16 nPrefix,
+                XmlStyleFamily nFamily, sal_uInt16 nPrefix,
                 const OUString& rLocalName,
                 const css::uno::Reference< css::xml::sax::XAttributeList > & xAttrList ) override;
 
     public:
 
 
-        OReportStylesContext( ORptFilter& rImport, sal_uInt16 nPrfx ,
-                const OUString& rLName ,
-                const css::uno::Reference< css::xml::sax::XAttributeList > & xAttrList,
+        OReportStylesContext( ORptFilter& rImport,
                 const bool bAutoStyles );
         virtual ~OReportStylesContext() override;
 
-        virtual void EndElement() override;
+        virtual void SAL_CALL endFastElement(sal_Int32 nElement) override;
 
         virtual rtl::Reference < SvXMLImportPropertyMapper > GetImportPropertyMapper(
-                            sal_uInt16 nFamily ) const override;
+                            XmlStyleFamily nFamily ) const override;
         virtual css::uno::Reference< css::container::XNameContainer >
-            GetStylesContainer( sal_uInt16 nFamily ) const override;
-        virtual OUString GetServiceName( sal_uInt16 nFamily ) const override;
+            GetStylesContainer( XmlStyleFamily nFamily ) const override;
+        virtual OUString GetServiceName( XmlStyleFamily nFamily ) const override;
 
         sal_Int32 GetIndex(const sal_Int16 nContextID);
     };

@@ -715,6 +715,56 @@ namespace
     CPPUNIT_ASSERT_EQUAL(SbxDOUBLE, symbols[0].type);
     CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
     CPPUNIT_ASSERT_EQUAL(1u, static_cast<unsigned int>(errors));    // math error, overflow
+
+    // trailing data type character % = SbxINTEGER
+    symbols = getSymbols("1.23%");
+    CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(1.23, symbols[0].number, 1E-12);
+    CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
+    CPPUNIT_ASSERT_EQUAL(SbxINTEGER, symbols[0].type);
+    CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
+
+    // trailing data type character & = SbxLONG
+    symbols = getSymbols("1.23&");
+    CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(1.23, symbols[0].number, 1E-12);
+    CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
+    CPPUNIT_ASSERT_EQUAL(SbxLONG, symbols[0].type);
+    CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
+
+    // trailing data type character ! = SbxSINGLE
+    symbols = getSymbols("1.23!");
+    CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(1.23, symbols[0].number, 1E-12);
+    CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
+    CPPUNIT_ASSERT_EQUAL(SbxSINGLE, symbols[0].type);
+    CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
+
+    // trailing data type character # = SbxDOUBLE
+    symbols = getSymbols("1.23#");
+    CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(1.23, symbols[0].number, 1E-12);
+    CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
+    CPPUNIT_ASSERT_EQUAL(SbxDOUBLE, symbols[0].type);
+    CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
+
+    // trailing data type character @ = SbxCURRENCY
+    symbols = getSymbols("1.23@");
+    CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(1.23, symbols[0].number, 1E-12);
+    CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
+    CPPUNIT_ASSERT_EQUAL(SbxCURRENCY, symbols[0].type);
+    CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
+
+    // trailing data type character $ = SbxSTRING
+    symbols = getSymbols("1.23$", errors);
+    CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(1.23, symbols[0].number, 1E-12);
+    CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
+    CPPUNIT_ASSERT_EQUAL(SbxSTRING, symbols[0].type);
+    CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
+    // ERRCODE_BASIC_SYNTAX
+    CPPUNIT_ASSERT_EQUAL(1u, static_cast<unsigned int>(errors));
   }
 
   void ScannerTest::testDataType()
@@ -777,15 +827,7 @@ namespace
     const OUString source8("&O123000000000000000000000");
     const OUString source9("&H1.23");
 
-    // tdf#62323, tdf#62326 - conversion of Hex literals to basic signed Integers
-    const OUString source10("&H0");
-    const OUString source11("&H8000");
-    const OUString source12("&H80000000");
-    const OUString source13("&HFFFF");
-    const OUString source14("&HFFFFFFFF");
-    const OUString source15("&H7FFF");
-    const OUString source16("&H7FFFFFFF");
-
+    sal_Int32 errors;
     std::vector<Symbol> symbols;
 
     symbols = getSymbols(source1);
@@ -816,7 +858,7 @@ namespace
     CPPUNIT_ASSERT_EQUAL(SbxVARIANT, symbols[0].type);
     CPPUNIT_ASSERT_DOUBLES_EQUAL(0.0, symbols[1].number, 1E-12);
     CPPUNIT_ASSERT_EQUAL(OUString(), symbols[1].text);
-    CPPUNIT_ASSERT_EQUAL(SbxINTEGER, symbols[1].type);
+    CPPUNIT_ASSERT_EQUAL(SbxLONG, symbols[1].type);
     CPPUNIT_ASSERT_DOUBLES_EQUAL(1.0, symbols[2].number, 1E-12);
     CPPUNIT_ASSERT_EQUAL(OUString(), symbols[2].text);
     CPPUNIT_ASSERT_EQUAL(SbxINTEGER, symbols[2].type);
@@ -832,7 +874,7 @@ namespace
     CPPUNIT_ASSERT_EQUAL(size_t(3), symbols.size());
     CPPUNIT_ASSERT_DOUBLES_EQUAL(0.0, symbols[0].number, 1E-12);
     CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
-    CPPUNIT_ASSERT_EQUAL(SbxINTEGER, symbols[0].type);
+    CPPUNIT_ASSERT_EQUAL(SbxLONG, symbols[0].type);
     CPPUNIT_ASSERT_DOUBLES_EQUAL(0.0, symbols[1].number, 1E-12);
     CPPUNIT_ASSERT_EQUAL(OUString("O12"), symbols[1].text);
     CPPUNIT_ASSERT_EQUAL(SbxVARIANT, symbols[1].type);
@@ -868,8 +910,10 @@ namespace
     CPPUNIT_ASSERT_EQUAL(SbxDOUBLE, symbols[1].type);
     CPPUNIT_ASSERT_EQUAL(cr, symbols[2].text);
 
+    /* tdf#62323, tdf#62326 - conversion of Hex literals to basic signed Integers */
+
     // &H0 = 0
-    symbols = getSymbols(source10);
+    symbols = getSymbols("&H0");
     CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
     CPPUNIT_ASSERT_DOUBLES_EQUAL(0.0, symbols[0].number, 1E-12);
     CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
@@ -877,7 +921,7 @@ namespace
     CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
 
     // &H8000 = -32768
-    symbols = getSymbols(source11);
+    symbols = getSymbols("&H8000");
     CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
     CPPUNIT_ASSERT_DOUBLES_EQUAL(SbxMININT, symbols[0].number, 1E-12);
     CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
@@ -885,7 +929,7 @@ namespace
     CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
 
     // &H80000000 = -2147483648
-    symbols = getSymbols(source12);
+    symbols = getSymbols("&H80000000");
     CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
     CPPUNIT_ASSERT_DOUBLES_EQUAL(SbxMINLNG, symbols[0].number, 1E-12);
     CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
@@ -893,7 +937,7 @@ namespace
     CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
 
     // &HFFFF = -1
-    symbols = getSymbols(source13);
+    symbols = getSymbols("&HFFFF");
     CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
     CPPUNIT_ASSERT_DOUBLES_EQUAL(-1.0, symbols[0].number, 1E-12);
     CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
@@ -901,7 +945,7 @@ namespace
     CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
 
     // &HFFFFFFFF = -1
-    symbols = getSymbols(source14);
+    symbols = getSymbols("&HFFFFFFFF");
     CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
     CPPUNIT_ASSERT_DOUBLES_EQUAL(-1.0, symbols[0].number, 1E-12);
     CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
@@ -909,7 +953,7 @@ namespace
     CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
 
     // &H7FFF = 32767
-    symbols = getSymbols(source15);
+    symbols = getSymbols("&H7FFF");
     CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
     CPPUNIT_ASSERT_DOUBLES_EQUAL(SbxMAXINT, symbols[0].number, 1E-12);
     CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
@@ -917,12 +961,150 @@ namespace
     CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
 
     // &H7FFFFFFF = 2147483647
-    symbols = getSymbols(source16);
+    symbols = getSymbols("&H7FFFFFFF");
     CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
     CPPUNIT_ASSERT_DOUBLES_EQUAL(SbxMAXLNG, symbols[0].number, 1E-12);
     CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
     CPPUNIT_ASSERT_EQUAL(SbxLONG, symbols[0].type);
     CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
+
+    /* tdf#130476 - trailing data type characters */
+
+    // % = SbxINTEGER
+    symbols = getSymbols("&H0%");
+    CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(0.0, symbols[0].number, 1E-12);
+    CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
+    CPPUNIT_ASSERT_EQUAL(SbxINTEGER, symbols[0].type);
+    CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
+
+    // & = SbxLONG
+    symbols = getSymbols("&H0&");
+    CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(0.0, symbols[0].number, 1E-12);
+    CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
+    CPPUNIT_ASSERT_EQUAL(SbxLONG, symbols[0].type);
+    CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
+
+    // ! = SbxSINGLE
+    symbols = getSymbols("&H0!");
+    CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(0.0, symbols[0].number, 1E-12);
+    CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
+    CPPUNIT_ASSERT_EQUAL(SbxSINGLE, symbols[0].type);
+    CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
+
+    // # = SbxDOUBLE
+    symbols = getSymbols("&H0#");
+    CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(0.0, symbols[0].number, 1E-12);
+    CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
+    CPPUNIT_ASSERT_EQUAL(SbxDOUBLE, symbols[0].type);
+    CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
+
+    // @ = SbxCURRENCY
+    symbols = getSymbols("&H0@");
+    CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(0.0, symbols[0].number, 1E-12);
+    CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
+    CPPUNIT_ASSERT_EQUAL(SbxCURRENCY, symbols[0].type);
+    CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
+
+    // $ = SbxSTRING
+    symbols = getSymbols("&H0$", errors);
+    CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(0.0, symbols[0].number, 1E-12);
+    CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
+    CPPUNIT_ASSERT_EQUAL(SbxSTRING, symbols[0].type);
+    CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
+    // ERRCODE_BASIC_SYNTAX
+    CPPUNIT_ASSERT_EQUAL(1u, static_cast<unsigned int>(errors));
+
+    // % = SbxINTEGER
+    symbols = getSymbols("&O0%");
+    CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(0.0, symbols[0].number, 1E-12);
+    CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
+    CPPUNIT_ASSERT_EQUAL(SbxINTEGER, symbols[0].type);
+    CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
+
+    // & = SbxLONG
+    symbols = getSymbols("&O0&");
+    CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(0.0, symbols[0].number, 1E-12);
+    CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
+    CPPUNIT_ASSERT_EQUAL(SbxLONG, symbols[0].type);
+    CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
+
+    // ! = SbxSINGLE
+    symbols = getSymbols("&O0!");
+    CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(0.0, symbols[0].number, 1E-12);
+    CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
+    CPPUNIT_ASSERT_EQUAL(SbxSINGLE, symbols[0].type);
+    CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
+
+    // # = SbxDOUBLE
+    symbols = getSymbols("&O0#");
+    CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(0.0, symbols[0].number, 1E-12);
+    CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
+    CPPUNIT_ASSERT_EQUAL(SbxDOUBLE, symbols[0].type);
+    CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
+
+    // @ = SbxCURRENCY
+    symbols = getSymbols("&O0@");
+    CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(0.0, symbols[0].number, 1E-12);
+    CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
+    CPPUNIT_ASSERT_EQUAL(SbxCURRENCY, symbols[0].type);
+    CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
+
+    // $ = SbxSTRING
+    symbols = getSymbols("&O0$", errors);
+    CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(0.0, symbols[0].number, 1E-12);
+    CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
+    CPPUNIT_ASSERT_EQUAL(SbxSTRING, symbols[0].type);
+    CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
+    // ERRCODE_BASIC_SYNTAX
+    CPPUNIT_ASSERT_EQUAL(1u, static_cast<unsigned int>(errors));
+
+    // maximum for Hex % = SbxINTEGER
+    symbols = getSymbols("&HFFFF%");
+    CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(-1.0, symbols[0].number, 1E-12);
+    CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
+    CPPUNIT_ASSERT_EQUAL(SbxINTEGER, symbols[0].type);
+    CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
+
+    // overflow for Hex % = SbxINTEGER
+    symbols = getSymbols("&H10000%", errors);
+    CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(0, symbols[0].number, 1E-12);
+    CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
+    CPPUNIT_ASSERT_EQUAL(SbxINTEGER, symbols[0].type);
+    CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
+    // ERRCODE_BASIC_MATH_OVERFLOW
+    CPPUNIT_ASSERT_EQUAL(1u, static_cast<unsigned int>(errors));
+
+    // maximum for Octal % = SbxINTEGER
+    symbols = getSymbols("&O177777%");
+    CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(-1.0, symbols[0].number, 1E-12);
+    CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
+    CPPUNIT_ASSERT_EQUAL(SbxINTEGER, symbols[0].type);
+    CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
+
+    // overflow for Octal % = SbxINTEGER
+    symbols = getSymbols("&O200000%", errors);
+    CPPUNIT_ASSERT_EQUAL(size_t(2), symbols.size());
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(0, symbols[0].number, 1E-12);
+    CPPUNIT_ASSERT_EQUAL(OUString(), symbols[0].text);
+    CPPUNIT_ASSERT_EQUAL(SbxINTEGER, symbols[0].type);
+    CPPUNIT_ASSERT_EQUAL(cr, symbols[1].text);
+    // ERRCODE_BASIC_MATH_OVERFLOW
+    CPPUNIT_ASSERT_EQUAL(1u, static_cast<unsigned int>(errors));
   }
 
   void ScannerTest::testTdf103104()

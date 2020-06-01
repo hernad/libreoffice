@@ -42,12 +42,12 @@ class SdrView;
 class SdrUnoObj;
 class LinkParamNone;
 
-namespace com { namespace sun { namespace star { namespace form {
+namespace com::sun::star::form {
     class XForm;
     namespace runtime {
         class XFormController;
     }
-} } } }
+}
 
 namespace com::sun::star::awt { class XControl; }
 namespace com::sun::star::awt { class XControlModel; }
@@ -61,7 +61,7 @@ namespace svx
 
 class SAL_WARN_UNUSED SVXCORE_DLLPUBLIC FmDesignModeChangedHint final : public SfxHint
 {
-    bool const m_bDesignMode;
+    bool m_bDesignMode;
 
 public:
     FmDesignModeChangedHint( bool bDesMode );

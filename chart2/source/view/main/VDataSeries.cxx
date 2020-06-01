@@ -116,7 +116,7 @@ void lcl_clearIfNoValuesButTextIsContained( VDataSequence& rData, const uno::Ref
     sal_Int32 nCount = rData.Doubles.getLength();
     for( sal_Int32 i = 0; i < nCount; ++i )
     {
-        if( !::rtl::math::isNan( rData.Doubles[i] ) )
+        if( !std::isnan( rData.Doubles[i] ) )
             return;
     }
     //no double value is contained
@@ -137,7 +137,7 @@ void lcl_clearIfNoValuesButTextIsContained( VDataSequence& rData, const uno::Ref
 void lcl_maybeReplaceNanWithZero( double& rfValue, sal_Int32 nMissingValueTreatment )
 {
     if( nMissingValueTreatment == css::chart::MissingValueTreatment::USE_ZERO
-        && (::rtl::math::isNan(rfValue) || ::rtl::math::isInf(rfValue)) )
+        && (std::isnan(rfValue) || std::isinf(rfValue)) )
             rfValue = 0.0;
 }
 
@@ -242,23 +242,23 @@ VDataSeries::VDataSeries( const uno::Reference< XDataSeries >& xDataSeries )
     }
 
     uno::Reference<beans::XPropertySet> xProp(xDataSeries, uno::UNO_QUERY );
-    if( xProp.is())
+    if( !xProp.is())
+        return;
+
+    try
     {
-        try
-        {
-            //get AttributedDataPoints
-            xProp->getPropertyValue("AttributedDataPoints") >>= m_aAttributedDataPointIndexList;
+        //get AttributedDataPoints
+        xProp->getPropertyValue("AttributedDataPoints") >>= m_aAttributedDataPointIndexList;
 
-            xProp->getPropertyValue("StackingDirection") >>= m_eStackingDirection;
+        xProp->getPropertyValue("StackingDirection") >>= m_eStackingDirection;
 
-            xProp->getPropertyValue("AttachedAxisIndex") >>= m_nAxisIndex;
-            if(m_nAxisIndex<0)
-                m_nAxisIndex=0;
-        }
-        catch( const uno::Exception& )
-        {
-            TOOLS_WARN_EXCEPTION("chart2", "" );
-        }
+        xProp->getPropertyValue("AttachedAxisIndex") >>= m_nAxisIndex;
+        if(m_nAxisIndex<0)
+            m_nAxisIndex=0;
+    }
+    catch( const uno::Exception& )
+    {
+        TOOLS_WARN_EXCEPTION("chart2", "" );
     }
 }
 
@@ -268,33 +268,33 @@ VDataSeries::~VDataSeries()
 
 void VDataSeries::doSortByXValues()
 {
-    if( m_aValues_X.is() && m_aValues_X.Doubles.hasElements() )
+    if( !(m_aValues_X.is() && m_aValues_X.Doubles.hasElements()) )
+        return;
+
+    //prepare a vector for sorting
+    std::vector< std::vector< double > > aTmp;//outer vector are points, inner vector are the different values of the point
+    double fNan;
+    ::rtl::math::setNan( & fNan );
+    sal_Int32 nPointIndex = 0;
+    for( nPointIndex=0; nPointIndex < m_nPointCount; nPointIndex++ )
     {
-        //prepare a vector for sorting
-        std::vector< std::vector< double > > aTmp;//outer vector are points, inner vector are the different values of the point
-        double fNan;
-        ::rtl::math::setNan( & fNan );
-        sal_Int32 nPointIndex = 0;
-        for( nPointIndex=0; nPointIndex < m_nPointCount; nPointIndex++ )
-        {
-            std::vector< double > aSinglePoint;
-            aSinglePoint.push_back( (nPointIndex < m_aValues_X.Doubles.getLength()) ? m_aValues_X.Doubles[nPointIndex] : fNan );
-            aSinglePoint.push_back( (nPointIndex < m_aValues_Y.Doubles.getLength()) ? m_aValues_Y.Doubles[nPointIndex] : fNan );
-            aTmp.push_back( aSinglePoint );
-        }
+        std::vector< double > aSinglePoint;
+        aSinglePoint.push_back( (nPointIndex < m_aValues_X.Doubles.getLength()) ? m_aValues_X.Doubles[nPointIndex] : fNan );
+        aSinglePoint.push_back( (nPointIndex < m_aValues_Y.Doubles.getLength()) ? m_aValues_Y.Doubles[nPointIndex] : fNan );
+        aTmp.push_back( aSinglePoint );
+    }
 
-        //do sort
-        std::stable_sort( aTmp.begin(), aTmp.end(), lcl_LessXOfPoint() );
+    //do sort
+    std::stable_sort( aTmp.begin(), aTmp.end(), lcl_LessXOfPoint() );
 
-        //fill the sorted points back to the members
-        m_aValues_X.Doubles.realloc( m_nPointCount );
-        m_aValues_Y.Doubles.realloc( m_nPointCount );
+    //fill the sorted points back to the members
+    m_aValues_X.Doubles.realloc( m_nPointCount );
+    m_aValues_Y.Doubles.realloc( m_nPointCount );
 
-        for( nPointIndex=0; nPointIndex < m_nPointCount; nPointIndex++ )
-        {
-            m_aValues_X.Doubles[nPointIndex]=aTmp[nPointIndex][0];
-            m_aValues_Y.Doubles[nPointIndex]=aTmp[nPointIndex][1];
-        }
+    for( nPointIndex=0; nPointIndex < m_nPointCount; nPointIndex++ )
+    {
+        m_aValues_X.Doubles[nPointIndex]=aTmp[nPointIndex][0];
+        m_aValues_Y.Doubles[nPointIndex]=aTmp[nPointIndex][1];
     }
 }
 
@@ -498,25 +498,25 @@ void VDataSeries::getMinMaxXValue(double& fMin, double& fMax) const
 
     uno::Sequence< double > aValuesX = getAllX();
 
-    if(aValuesX.hasElements())
-    {
-        sal_Int32 i = 0;
-        while ( i < aValuesX.getLength() && ::rtl::math::isNan(aValuesX[i]) )
-            i++;
-        if ( i < aValuesX.getLength() )
-            fMax = fMin = aValuesX[i++];
+    if(!aValuesX.hasElements())
+        return;
 
-        for ( ; i < aValuesX.getLength(); i++)
+    sal_Int32 i = 0;
+    while ( i < aValuesX.getLength() && std::isnan(aValuesX[i]) )
+        i++;
+    if ( i < aValuesX.getLength() )
+        fMax = fMin = aValuesX[i++];
+
+    for ( ; i < aValuesX.getLength(); i++)
+    {
+        const double aValue = aValuesX[i];
+        if ( aValue > fMax)
         {
-            const double aValue = aValuesX[i];
-            if ( aValue > fMax)
-            {
-                fMax = aValue;
-            }
-            else if ( aValue < fMin)
-            {
-                fMin = aValue;
-            }
+            fMax = aValue;
+        }
+        else if ( aValue < fMin)
+        {
+            fMin = aValue;
         }
     }
 }
@@ -608,14 +608,16 @@ sal_Int32 VDataSeries::getLabelPlacement( sal_Int32 nPointIndex, const uno::Refe
         uno::Sequence < sal_Int32 > aAvailablePlacements( ChartTypeHelper::getSupportedLabelPlacements(
                 xChartType, bSwapXAndY, m_xDataSeries ) );
 
-        for( sal_Int32 nN = 0; nN < aAvailablePlacements.getLength(); nN++ )
-            if( aAvailablePlacements[nN] == nLabelPlacement )
+        for( sal_Int32 n : aAvailablePlacements )
+            if( n == nLabelPlacement )
                 return nLabelPlacement; //ok
 
         //otherwise use the first supported one
         if( aAvailablePlacements.hasElements() )
         {
             nLabelPlacement = aAvailablePlacements[0];
+            if( xPointProps.is() )
+                xPointProps->setPropertyValue("LabelPlacement", uno::Any(nLabelPlacement));
             return nLabelPlacement;
         }
 
@@ -698,7 +700,7 @@ double VDataSeries::getMinimumofAllDifferentYValues( sal_Int32 index ) const
             fMin=fY;
     }
 
-    if( ::rtl::math::isInf(fMin) )
+    if( std::isinf(fMin) )
         ::rtl::math::setNan(&fMin);
 
     return fMin;
@@ -734,7 +736,7 @@ double VDataSeries::getMaximumofAllDifferentYValues( sal_Int32 index ) const
             fMax=fY;
     }
 
-    if( ::rtl::math::isInf(fMax) )
+    if( std::isinf(fMax) )
         ::rtl::math::setNan(&fMax);
 
     return fMax;
@@ -768,7 +770,7 @@ uno::Sequence< double > const & VDataSeries::getAllY() const
 
 double VDataSeries::getXMeanValue() const
 {
-    if( ::rtl::math::isNan( m_fXMeanValue ) )
+    if( std::isnan( m_fXMeanValue ) )
     {
         uno::Reference< XRegressionCurveCalculator > xCalculator( RegressionCurveHelper::createRegressionCurveCalculatorByServiceName( "com.sun.star.chart2.MeanValueRegressionCurve" ) );
         uno::Sequence< double > aXValuesDummy;
@@ -780,7 +782,7 @@ double VDataSeries::getXMeanValue() const
 
 double VDataSeries::getYMeanValue() const
 {
-    if( ::rtl::math::isNan( m_fYMeanValue ) )
+    if( std::isnan( m_fYMeanValue ) )
     {
         uno::Reference< XRegressionCurveCalculator > xCalculator(
             RegressionCurveHelper::createRegressionCurveCalculatorByServiceName("com.sun.star.chart2.MeanValueRegressionCurve"));
@@ -830,7 +832,7 @@ Symbol* VDataSeries::getSymbolProperties( sal_Int32 index ) const
             if (!m_apSymbolProperties_Series)
                 m_apSymbolProperties_Series
                     = getSymbolPropertiesFromPropertySet(getPropertiesOfSeries());
-            if( m_apSymbolProperties_Series.get() && m_apSymbolProperties_Series->Style != SymbolStyle_NONE )
+            if( m_apSymbolProperties_Series && m_apSymbolProperties_Series->Style != SymbolStyle_NONE )
             {
                 if (!m_apSymbolProperties_InvisibleSymbolForSelection)
                 {
@@ -908,9 +910,9 @@ bool VDataSeries::isAttributedDataPoint( sal_Int32 index ) const
     //returns true if the data point assigned by the given index has set its own properties
     if( index>=m_nPointCount || m_nPointCount==0)
         return false;
-    for(sal_Int32 nN=m_aAttributedDataPointIndexList.getLength();nN--;)
+    for(sal_Int32 n : m_aAttributedDataPointIndexList)
     {
-        if(index==m_aAttributedDataPointIndexList[nN])
+        if(index == n)
             return true;
     }
     return false;

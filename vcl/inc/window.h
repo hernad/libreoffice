@@ -31,7 +31,7 @@
 #include <o3tl/typed_flags_set.hxx>
 #include <cppuhelper/weakref.hxx>
 
-#include <o3tl/optional.hxx>
+#include <optional>
 #include <list>
 #include <memory>
 #include <vector>
@@ -54,36 +54,38 @@ enum class GetFocusFlags;
 enum class ParentClipMode;
 enum class SalEvent;
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
 
-namespace accessibility {
-    class XAccessible;
-    class XAccessibleContext;
-    class XAccessibleEditableText;
-}
+    namespace accessibility {
+        class XAccessible;
+        class XAccessibleContext;
+        class XAccessibleEditableText;
+    }
 
-namespace rendering {
-    class XCanvas;
-}
+    namespace rendering {
+        class XCanvas;
+    }
 
-namespace awt {
-    class XWindowPeer;
-    class XWindow;
+    namespace awt {
+        class XWindowPeer;
+        class XWindow;
+    }
+    namespace uno {
+        class Any;
+        class XInterface;
+    }
+    namespace datatransfer {
+        namespace clipboard {
+            class XClipboard;
+        }
+        namespace dnd {
+            class XDropTargetListener;
+            class XDragGestureRecognizer;
+            class XDragSource;
+            class XDropTarget;
+        }
+    }
 }
-namespace uno {
-    class Any;
-    class XInterface;
-}
-namespace datatransfer { namespace clipboard {
-    class XClipboard;
-}
-
-namespace dnd {
-    class XDropTargetListener;
-    class XDragGestureRecognizer;
-    class XDragSource;
-    class XDropTarget;
-}}}}}
 
 VCL_DLLPUBLIC Size bestmaxFrameSizeForScreenSize(const Size &rScreenSize);
 
@@ -97,20 +99,20 @@ bool ImplWindowFrameProc( vcl::Window* pInst, SalEvent nEvent, const void* pEven
 
 struct ImplWinData
 {
-    o3tl::optional<OUString>
+    std::optional<OUString>
                         mpExtOldText;
     std::unique_ptr<ExtTextInputAttr[]>
                         mpExtOldAttrAry;
-    o3tl::optional<tools::Rectangle>
+    std::optional<tools::Rectangle>
                         mpCursorRect;
     long                mnCursorExtWidth;
     bool                mbVertical;
     std::unique_ptr<tools::Rectangle[]>
                         mpCompositionCharRects;
     long                mnCompositionCharRects;
-    o3tl::optional<tools::Rectangle>
+    std::optional<tools::Rectangle>
                         mpFocusRect;
-    o3tl::optional<tools::Rectangle>
+    std::optional<tools::Rectangle>
                         mpTrackRect;
     ShowTrackFlags      mnTrackFlags;
     sal_uInt16          mnIsTopWindow;
@@ -183,9 +185,9 @@ struct ImplFrameData
 struct ImplAccessibleInfos
 {
     sal_uInt16          nAccessibleRole;
-    o3tl::optional<OUString>
+    std::optional<OUString>
                         pAccessibleName;
-    o3tl::optional<OUString>
+    std::optional<OUString>
                         pAccessibleDescription;
     VclPtr<vcl::Window> pLabeledByWindow;
     VclPtr<vcl::Window> pLabelForWindow;
@@ -247,6 +249,7 @@ public:
     std::set<Link<VclWindowEvent&,void>> maChildEventListenersDeleted;
     Link<vcl::Window&, bool> maHelpRequestHdl;
     Link<vcl::Window&, bool> maMnemonicActivateHdl;
+    Link<boost::property_tree::ptree&, void> maDumpAsPropertyTreeHdl;
 
     // The canvas interface for this VCL window. Is persistent after the first GetCanvas() call
     css::uno::WeakReference< css::rendering::XCanvas >    mxCanvas;
@@ -280,7 +283,6 @@ public:
     css::uno::Reference< css::accessibility::XAccessible > mxAccessible;
     std::shared_ptr< VclSizeGroup > m_xSizeGroup;
     std::vector<VclPtr<FixedText>> m_aMnemonicLabels;
-    std::vector<css::accessibility::AccessibleRelation> m_aExtraAccessibleRelations;
     std::unique_ptr<ImplAccessibleInfos> mpAccessibleInfos;
     VCLXWindow*         mpVCLXWindow;
     vcl::Region              maWinRegion;            //< region to 'shape' the VCL window (frame coordinates)

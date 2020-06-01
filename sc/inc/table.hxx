@@ -45,11 +45,11 @@ namespace utl {
     class TextSearch;
 }
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace sheet {
         struct TablePageBreakData;
     }
-} } }
+}
 
 namespace formula { struct VectorRefArray; }
 namespace sc {
@@ -392,11 +392,13 @@ public:
     void        UnlockTable();
 
     bool        IsBlockEditable( SCCOL nCol1, SCROW nRow1, SCCOL nCol2,
-                        SCROW nRow2, bool* pOnlyNotBecauseOfMatrix = nullptr ) const;
+                        SCROW nRow2, bool* pOnlyNotBecauseOfMatrix = nullptr,
+                        bool bNoMatrixAtAll = false ) const;
     bool        IsSelectionEditable( const ScMarkData& rMark,
                         bool* pOnlyNotBecauseOfMatrix = nullptr ) const;
 
-    bool        HasBlockMatrixFragment( const SCCOL nCol1, SCROW nRow1, const SCCOL nCol2, SCROW nRow2 ) const;
+    bool        HasBlockMatrixFragment( const SCCOL nCol1, SCROW nRow1, const SCCOL nCol2, SCROW nRow2,
+                                        bool bNoMatrixAtAll = false ) const;
     bool        HasSelectionMatrixFragment( const ScMarkData& rMark ) const;
 
     bool        IsBlockEmpty( SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2, bool bIgnoreNotes ) const;

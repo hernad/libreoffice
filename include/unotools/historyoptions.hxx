@@ -27,9 +27,9 @@
 #include <unotools/options.hxx>
 #include <memory>
 
-#include <o3tl/optional.hxx>
+#include <optional>
 
-namespace com { namespace sun { namespace star { namespace beans { struct PropertyValue; } } } }
+namespace com::sun::star::beans { struct PropertyValue; }
 
 // The method GetList() returns a list of property values.
 // Use follow defines to separate values by names.
@@ -86,7 +86,7 @@ public:
     */
     void AppendItem(EHistoryType eHistory,
             const OUString& sURL, const OUString& sFilter, const OUString& sTitle,
-            const o3tl::optional<OUString>& sThumbnail);
+            const std::optional<OUString>& sThumbnail);
 
     /** Delete item from the specified list.
     */

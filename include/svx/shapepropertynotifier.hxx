@@ -20,6 +20,7 @@
 #ifndef INCLUDED_SVX_SHAPEPROPERTYNOTIFIER_HXX
 #define INCLUDED_SVX_SHAPEPROPERTYNOTIFIER_HXX
 
+#include <config_options.h>
 #include <svx/svxdllapi.h>
 #include <svx/shapeproperty.hxx>
 #include <rtl/ustring.hxx>

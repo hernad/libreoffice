@@ -107,7 +107,7 @@ static bool SplitString( const OUString &sWhole,
     sal_Int32 nPos = 0;
     while (nPos < sWhole.getLength())
     {
-        const sal_uInt16 nType = ScGlobal::pCharClass->getCharacterType( sWhole, nPos);
+        const sal_uInt16 nType = ScGlobal::getCharClassPtr()->getCharacterType( sWhole, nPos);
         if (nType & KCharacterType::DIGIT)
             break;
         sWhole.iterateCodePoints( &nPos );
@@ -118,8 +118,8 @@ static bool SplitString( const OUString &sWhole,
         return false;
 
     // Get numeral element
-    const OUString& sUser = ScGlobal::pLocaleData->getNumDecimalSep();
-    ParseResult aPRNum = ScGlobal::pCharClass->parsePredefinedToken(
+    const OUString& sUser = ScGlobal::getLocaleDataPtr()->getNumDecimalSep();
+    ParseResult aPRNum = ScGlobal::getCharClassPtr()->parsePredefinedToken(
         KParseType::ANY_NUMBER, sWhole, nPos,
         KParseTokens::ANY_NUMBER, "", KParseTokens::ANY_NUMBER, sUser );
 
@@ -261,7 +261,7 @@ private:
 
     std::vector<std::unique_ptr<ScSortInfo[]>> mvppInfo;
     SCCOLROW        nStart;
-    SCCOLROW const  mnLastIndex; /// index of last non-empty cell position.
+    SCCOLROW        mnLastIndex; /// index of last non-empty cell position.
 
     std::vector<SCCOLROW> maOrderIndices;
     bool mbKeepQuery;
@@ -597,8 +597,8 @@ struct SortedRowFlags
 
 struct PatternSpan
 {
-    SCROW const mnRow1;
-    SCROW const mnRow2;
+    SCROW mnRow1;
+    SCROW mnRow2;
     const ScPatternAttr* mpPattern;
 
     PatternSpan( SCROW nRow1, SCROW nRow2, const ScPatternAttr* pPat ) :
@@ -645,7 +645,7 @@ namespace {
 template<typename Hint, typename ReorderMap, typename Index>
 class ReorderNotifier
 {
-    Hint const maHint;
+    Hint maHint;
 public:
     ReorderNotifier( const ReorderMap& rMap, SCTAB nTab, Index nPos1, Index nPos2 ) :
         maHint(rMap, nTab, nPos1, nPos2) {}
@@ -2003,7 +2003,7 @@ bool ScTable::DoSubTotals( ScSubTotalParam& rParam )
             {
                 GetString( nGroupCol[i], nStartRow, aSubString );
                 if ( bIgnoreCase )
-                    aCompString[i] = ScGlobal::pCharClass->uppercase( aSubString );
+                    aCompString[i] = ScGlobal::getCharClassPtr()->uppercase( aSubString );
                 else
                     aCompString[i] = aSubString;
             }                                                   // aSubString stays on the last
@@ -2023,7 +2023,7 @@ bool ScTable::DoSubTotals( ScSubTotalParam& rParam )
                     {
                         GetString( nGroupCol[i], nRow, aString );
                         if (bIgnoreCase)
-                            aString = ScGlobal::pCharClass->uppercase(aString);
+                            aString = ScGlobal::getCharClassPtr()->uppercase(aString);
                         //  when sorting, blanks are separate group
                         //  otherwise blank cells are allowed below
                         bChanged = ( ( !aString.isEmpty() || rParam.bDoSort ) &&
@@ -2083,7 +2083,7 @@ bool ScTable::DoSubTotals( ScSubTotalParam& rParam )
                         {
                             GetString( nGroupCol[i], nRow, aSubString );
                             if ( bIgnoreCase )
-                                aCompString[i] = ScGlobal::pCharClass->uppercase( aSubString );
+                                aCompString[i] = ScGlobal::getCharClassPtr()->uppercase( aSubString );
                             else
                                 aCompString[i] = aSubString;
                         }
@@ -2207,7 +2207,7 @@ class QueryEvaluator
     svl::SharedStringPool& mrStrPool;
     const ScTable& mrTab;
     const ScQueryParam& mrParam;
-    bool const mpTestEqualCondition;
+    bool mpTestEqualCondition;
     utl::TransliterationWrapper* mpTransliteration;
     CollatorWrapper* mpCollator;
     const bool mbMatchWholeCell;

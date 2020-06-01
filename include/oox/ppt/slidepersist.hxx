@@ -35,15 +35,15 @@
 #include <rtl/ustring.hxx>
 #include <sal/types.h>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace animations { class XAnimationNode; }
     namespace drawing { class XDrawPage; }
-} } }
+}
 
-namespace oox { namespace core { class XmlFilterBase; } }
-namespace oox { namespace vml { class Drawing; } }
+namespace oox::core { class XmlFilterBase; }
+namespace oox::vml { class Drawing; }
 
-namespace oox { namespace ppt {
+namespace oox::ppt {
 
 enum ShapeLocation
 {
@@ -140,14 +140,14 @@ private:
 
     oox::ppt::HeaderFooter                                                  maHeaderFooter;
     sal_Int32                                                               mnLayoutValueToken;
-    bool const                                                              mbMaster;
-    bool const                                                              mbNotes;
+    bool                                                                    mbMaster;
+    bool                                                                    mbNotes;
 
-    oox::drawingml::TextListStylePtr const                                  maDefaultTextStylePtr;
-    oox::drawingml::TextListStylePtr const                                  maTitleTextStylePtr;
-    oox::drawingml::TextListStylePtr const                                  maBodyTextStylePtr;
-    oox::drawingml::TextListStylePtr const                                  maNotesTextStylePtr;
-    oox::drawingml::TextListStylePtr const                                  maOtherTextStylePtr;
+    oox::drawingml::TextListStylePtr                                        maDefaultTextStylePtr;
+    oox::drawingml::TextListStylePtr                                        maTitleTextStylePtr;
+    oox::drawingml::TextListStylePtr                                        maBodyTextStylePtr;
+    oox::drawingml::TextListStylePtr                                        maNotesTextStylePtr;
+    oox::drawingml::TextListStylePtr                                        maOtherTextStylePtr;
 
     std::map< OUString, css::uno::Reference< css::animations::XAnimationNode > > maAnimNodesMap;
     std::map< OUString, ::oox::drawingml::ShapePtr >                        maShapeMap;
@@ -157,7 +157,7 @@ private:
     CommentAuthorList                                                       maCommentAuthors;
 };
 
-} }
+}
 
 #endif // INCLUDED_OOX_PPT_SLIDEPERSIST_HXX
 

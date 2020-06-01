@@ -22,13 +22,12 @@
 #include <rtl/ustring.hxx>
 #include <sal/config.h>
 #include <sfx2/dllapi.h>
-#include <vcl/image.hxx>
 #include <svl/style.hxx>
 #include <vector>
 
 struct SFX2_DLLPUBLIC SfxFilterTuple
 {
-    OUString const aName;
+    OUString aName;
     SfxStyleSearchBits nFlags;
     SfxFilterTuple(const OUString& rName, SfxStyleSearchBits nArg)
         : aName(rName)
@@ -41,18 +40,18 @@ typedef std::vector<SfxFilterTuple> SfxStyleFilter;
 
 class SFX2_DLLPUBLIC SfxStyleFamilyItem
 {
-    SfxStyleFamily const  nFamily;
-    OUString const        aText;
-    Image const           aImage;
+    SfxStyleFamily  nFamily;
+    OUString        aText;
+    OUString        aImage;
     SfxStyleFilter  aFilterList;
 
 public:
-    SfxStyleFamilyItem(SfxStyleFamily nFamily, const OUString &rName, const Image& rImage, const std::pair<const char*, SfxStyleSearchBits>* pStringArray, const std::locale& rLocale);
+    SfxStyleFamilyItem(SfxStyleFamily nFamily, const OUString &rName, const OUString& rImage, const std::pair<const char*, SfxStyleSearchBits>* pStringArray, const std::locale& rLocale);
 
     const OUString& GetText() const { return aText; }
     SfxStyleFamily  GetFamily() const { return nFamily; }
     const SfxStyleFilter& GetFilterList() const { return aFilterList; }
-    const Image&    GetImage() const { return aImage; }
+    const OUString&    GetImage() const { return aImage; }
 };
 
 using SfxStyleFamilies = std::vector<SfxStyleFamilyItem>;

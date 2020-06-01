@@ -17,22 +17,22 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <svx/sdr/attribute/sdrformtextattribute.hxx>
+#include <sdr/attribute/sdrformtextattribute.hxx>
 #include <basegfx/vector/b2enums.hxx>
 #include <svl/itemset.hxx>
+#include <svx/sdprcitm.hxx>
+#include <svx/svddef.hxx>
 #include <svx/xftdiit.hxx>
 #include <svx/xftstit.hxx>
 #include <svx/xftshxy.hxx>
-#include <svx/xftshtit.hxx>
+#include <xftshtit.hxx>
 #include <svx/xtextit0.hxx>
 #include <svx/xftadit.hxx>
 #include <svx/xftshit.hxx>
 #include <svx/xftshcit.hxx>
 #include <svx/xftmrit.hxx>
 #include <svx/xftouit.hxx>
-#include <svx/sdshtitm.hxx>
 #include <svx/xlntrit.hxx>
-#include <svx/sdshcitm.hxx>
 #include <svx/xlnclit.hxx>
 #include <svx/xlnwtit.hxx>
 #include <svx/xlinjoit.hxx>
@@ -146,23 +146,23 @@ namespace drawinglayer::attribute
         {
         public:
             // FormText (FontWork) Attributes
-            sal_Int32 const                               mnFormTextDistance;     // distance from line in upright direction
-            sal_Int32 const                               mnFormTextStart;        // shift from polygon start
-            sal_Int32 const                               mnFormTextShdwXVal;     // shadow distance or 10th degrees
-            sal_Int32 const                               mnFormTextShdwYVal;     // shadow distance or scaling
-            sal_uInt16 const                              mnFormTextShdwTransp;   // shadow transparence
-            XFormTextStyle const                          meFormTextStyle;        // on/off and char orientation
-            XFormTextAdjust const                         meFormTextAdjust;       // adjustment (left/right/center) and scale
-            XFormTextShadow const                         meFormTextShadow;       // shadow mode
-            Color const                                   maFormTextShdwColor;    // shadow color
+            sal_Int32                               mnFormTextDistance;     // distance from line in upright direction
+            sal_Int32                               mnFormTextStart;        // shift from polygon start
+            sal_Int32                               mnFormTextShdwXVal;     // shadow distance or 10th degrees
+            sal_Int32                               mnFormTextShdwYVal;     // shadow distance or scaling
+            sal_uInt16                              mnFormTextShdwTransp;   // shadow transparence
+            XFormTextStyle                          meFormTextStyle;        // on/off and char orientation
+            XFormTextAdjust                         meFormTextAdjust;       // adjustment (left/right/center) and scale
+            XFormTextShadow                         meFormTextShadow;       // shadow mode
+            Color                                   maFormTextShdwColor;    // shadow color
 
             // outline attributes; used when getFormTextOutline() is true and (for
             // shadow) when getFormTextShadow() != XFormTextShadow::NONE
             SdrFormTextOutlineAttribute             maOutline;
             SdrFormTextOutlineAttribute             maShadowOutline;
 
-            bool const                                    mbFormTextMirror : 1;   // change orientation
-            bool const                                    mbFormTextOutline : 1;  // show contour of objects
+            bool                                    mbFormTextMirror : 1;   // change orientation
+            bool                                    mbFormTextOutline : 1;  // show contour of objects
 
             explicit ImpSdrFormTextAttribute(const SfxItemSet& rSet)
             :   mnFormTextDistance(rSet.Get(XATTR_FORMTXTDISTANCE).GetValue()),

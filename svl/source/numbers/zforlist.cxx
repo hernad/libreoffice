@@ -51,6 +51,7 @@
 #include <unotools/digitgroupingiterator.hxx>
 #include <rtl/instance.hxx>
 #include <rtl/strbuf.hxx>
+#include <rtl/math.hxx>
 
 #include <math.h>
 #include <limits>
@@ -93,11 +94,14 @@ using namespace ::std;
 
 static_assert( ZF_STANDARD_TEXT == NF_STANDARD_FORMAT_TEXT, "definition mismatch" );
 
+static_assert( NF_INDEX_TABLE_RESERVED_START == i18npool::nStopPredefinedFormatIndex,
+        "NfIndexTableOffset does not match i18npool's locale data predefined format code index bounds.");
+
 static_assert( NF_INDEX_TABLE_ENTRIES <= i18npool::nFirstFreeFormatIndex,
         "NfIndexTableOffset crosses i18npool's locale data reserved format code index bounds.\n"
         "You will need to adapt all locale data files defining index values "
         "(formatIndex=\"...\") in that range and increment those and when done "
-        "adjust nFirstFreeFormatIndex in i18npool/reservedconstants.hxx");
+        "adjust nFirstFreeFormatIndex in include/i18npool/reservedconstants.hxx");
 
 /* Locale that is set if an unknown locale (from another system) is loaded of
  * legacy documents. Can not be SYSTEM because else, for example, a German "DM"
@@ -156,6 +160,7 @@ static sal_uInt32 const indexTable[NF_INDEX_TABLE_ENTRIES] = {
     ZF_STANDARD_DATETIME + 1, // NF_DATETIME_SYS_DDMMYYYY_HHMMSS
     ZF_STANDARD_LOGICAL, // NF_BOOLEAN
     ZF_STANDARD_TEXT, // NF_TEXT
+    ZF_STANDARD_DATETIME + 4, // NF_DATETIME_SYS_DDMMYYYY_HHMM
     ZF_STANDARD_FRACTION + 2, // NF_FRACTION_3D
     ZF_STANDARD_FRACTION + 3, // NF_FRACTION_2
     ZF_STANDARD_FRACTION + 4, // NF_FRACTION_4
@@ -172,11 +177,10 @@ static sal_uInt32 const indexTable[NF_INDEX_TABLE_ENTRIES] = {
     also handles one instance of the SysLocale options
  */
 
-typedef ::std::vector< SvNumberFormatter* > SvNumberFormatterList_impl;
-
 class SvNumberFormatterRegistry_Impl : public utl::ConfigurationListener
 {
-    SvNumberFormatterList_impl  aFormatters;
+    std::vector< SvNumberFormatter* >
+                                aFormatters;
     SvtSysLocaleOptions         aSysLocaleOptions;
     LanguageType                eSysLanguage;
 
@@ -1954,15 +1958,15 @@ SvNumberformat* SvNumberFormatter::ImpInsertFormat( const css::i18n::NumberForma
                                                     sal_uInt32 nPos, bool bAfterChangingSystemCL,
                                                     sal_Int16 nOrgIndex )
 {
-    SAL_WARN_IF( NF_INDEX_TABLE_LOCALE_DATA_DEFAULTS <= rCode.Index && rCode.Index < NF_INDEX_TABLE_ENTRIES,
+    SAL_WARN_IF( NF_INDEX_TABLE_RESERVED_START <= rCode.Index && rCode.Index < NF_INDEX_TABLE_ENTRIES,
             "svl.numbers", "i18npool locale '" << maLanguageTag.getBcp47() <<
             "' uses reserved formatIndex value " << rCode.Index << ", next free: " << NF_INDEX_TABLE_ENTRIES <<
             "  Please see description in include/svl/zforlist.hxx at end of enum NfIndexTableOffset");
-    assert( (rCode.Index < NF_INDEX_TABLE_LOCALE_DATA_DEFAULTS || NF_INDEX_TABLE_ENTRIES <= rCode.Index) &&
+    assert( (rCode.Index < NF_INDEX_TABLE_RESERVED_START || NF_INDEX_TABLE_ENTRIES <= rCode.Index) &&
             "reserved formatIndex, see warning above");
 
     OUString aCodeStr( rCode.Code );
-    if ( rCode.Index < NF_INDEX_TABLE_LOCALE_DATA_DEFAULTS &&
+    if ( rCode.Index < NF_INDEX_TABLE_RESERVED_START &&
             rCode.Usage == css::i18n::KNumberFormatUsage::CURRENCY &&
             rCode.Index != NF_CURRENCY_1000DEC2_CCC )
     {   // strip surrounding [$...] on automatic currency
@@ -1999,7 +2003,7 @@ SvNumberformat* SvNumberFormatter::ImpInsertFormat( const css::i18n::NumberForma
         }
         return nullptr;
     }
-    if ( rCode.Index >= NF_INDEX_TABLE_LOCALE_DATA_DEFAULTS )
+    if ( rCode.Index >= NF_INDEX_TABLE_RESERVED_START )
     {
         sal_uInt32 nCLOffset = nPos - (nPos % SV_COUNTRY_LANGUAGE_OFFSET);
         sal_uInt32 nKey = ImpIsEntry( aCodeStr, nCLOffset, ActLnge );
@@ -2173,6 +2177,80 @@ sal_uInt32 SvNumberFormatter::GetFormatSpecialInfo( const OUString& rFormatStrin
         nLeadingCnt = 0;
     }
     return nCheckPos;
+}
+
+OUString SvNumberFormatter::GetCalcCellReturn( sal_uInt32 nFormat ) const
+{
+    ::osl::MutexGuard aGuard( GetInstanceMutex() );
+    const SvNumberformat* pFormat = GetFormatEntry( nFormat );
+    if (!pFormat)
+        return "G";
+
+    OUString    aStr;
+    bool        bAppendPrec = true;
+    sal_uInt16  nPrec, nLeading;
+    bool        bThousand, bIsRed;
+    pFormat->GetFormatSpecialInfo( bThousand, bIsRed, nPrec, nLeading );
+
+    switch (pFormat->GetMaskedType())
+    {
+        case SvNumFormatType::NUMBER:
+            if (bThousand)
+                aStr = ",";
+            else
+                aStr = "F";
+        break;
+        case SvNumFormatType::CURRENCY:
+            aStr = "C";
+        break;
+        case SvNumFormatType::SCIENTIFIC:
+            aStr = "S";
+        break;
+        case SvNumFormatType::PERCENT:
+            aStr = "P";
+        break;
+        default:
+            {
+                bAppendPrec = false;
+                switch (GetIndexTableOffset( nFormat ))
+                {
+                    case NF_DATE_SYSTEM_SHORT:
+                    case NF_DATE_SYS_DMMMYY:
+                    case NF_DATE_SYS_DDMMYY:
+                    case NF_DATE_SYS_DDMMYYYY:
+                    case NF_DATE_SYS_DMMMYYYY:
+                    case NF_DATE_DIN_DMMMYYYY:
+                    case NF_DATE_SYS_DMMMMYYYY:
+                    case NF_DATE_DIN_DMMMMYYYY: aStr = "D1"; break;
+                    case NF_DATE_SYS_DDMMM:     aStr = "D2"; break;
+                    case NF_DATE_SYS_MMYY:      aStr = "D3"; break;
+                    case NF_DATETIME_SYSTEM_SHORT_HHMM:
+                    case NF_DATETIME_SYS_DDMMYYYY_HHMM:
+                    case NF_DATETIME_SYS_DDMMYYYY_HHMMSS:
+                                                aStr = "D4"; break;
+                    case NF_DATE_DIN_MMDD:      aStr = "D5"; break;
+                    case NF_TIME_HHMMSSAMPM:    aStr = "D6"; break;
+                    case NF_TIME_HHMMAMPM:      aStr = "D7"; break;
+                    case NF_TIME_HHMMSS:        aStr = "D8"; break;
+                    case NF_TIME_HHMM:          aStr = "D9"; break;
+                    default:                    aStr = "G";
+                }
+            }
+    }
+
+    if (bAppendPrec)
+        aStr += OUString::number(nPrec);
+
+    if (pFormat->GetColor( 1 ))
+        aStr += "-";    // negative color
+
+    /* FIXME: this probably should not match on literal strings and only be
+     * performed on number or currency formats, but it is what Calc originally
+     * implemented. */
+    if (pFormat->GetFormatstring().indexOf('(') != -1)
+        aStr += "()";
+
+    return aStr;
 }
 
 sal_Int32 SvNumberFormatter::ImpGetFormatCodeIndex(
@@ -2717,6 +2795,11 @@ void SvNumberFormatter::ImpGenerateFormats( sal_uInt32 CLOffset, bool bNoAdditio
     ImpInsertFormat( aFormatSeq[nIdx],
                      CLOffset + ZF_STANDARD_DATETIME+1 /* NF_DATETIME_SYS_DDMMYYYY_HHMMSS */ );
 
+    // DD.MM.YYYY HH:MM   System
+    nIdx = ImpGetFormatCodeIndex( aFormatSeq, NF_DATETIME_SYS_DDMMYYYY_HHMM );
+    ImpInsertFormat( aFormatSeq[nIdx],
+                     CLOffset + ZF_STANDARD_DATETIME+4 /* NF_DATETIME_SYS_DDMMYYYY_HHMM */ );
+
     const NfKeywordTable & rKeyword = pFormatScanner->GetKeywords();
     i18n::NumberFormatCode aSingleFormatCode;
     aSingleFormatCode.Usage = i18n::KNumberFormatUsage::DATE_TIME;
@@ -2855,7 +2938,7 @@ void SvNumberFormatter::ImpGenerateAdditionalFormats( sal_uInt32 CLOffset,
             SAL_WARN( "svl.numbers", "ImpGenerateAdditionalFormats: too many formats" );
             break;  // for
         }
-        if ( rFormat.Index < NF_INDEX_TABLE_LOCALE_DATA_DEFAULTS &&
+        if ( rFormat.Index < NF_INDEX_TABLE_RESERVED_START &&
                 rFormat.Index != NF_CURRENCY_1000DEC2_CCC )
         {   // Insert only if not already inserted, but internal index must be
             // above so ImpInsertFormat can distinguish it.
@@ -2890,7 +2973,7 @@ void SvNumberFormatter::ImpGenerateAdditionalFormats( sal_uInt32 CLOffset,
             SAL_WARN( "svl.numbers", "ImpGenerateAdditionalFormats: too many formats" );
             break;  // for
         }
-        if ( rFormat.Index >= NF_INDEX_TABLE_LOCALE_DATA_DEFAULTS )
+        if ( rFormat.Index >= NF_INDEX_TABLE_RESERVED_START )
         {
             if ( SvNumberformat* pNewFormat = ImpInsertFormat( rFormat, nPos+1,
                         bAfterChangingSystemCL ) )
@@ -3011,7 +3094,7 @@ OUString SvNumberFormatter::GenerateFormat(sal_uInt32 nIndex,
     }
     if (eType == SvNumFormatType::PERCENT)
     {
-        sString.append('%');
+        sString.append( pFormat->GetPercentString() );
     }
     else if (eType == SvNumFormatType::SCIENTIFIC)
     {
@@ -3404,6 +3487,16 @@ sal_uInt16 SvNumberFormatter::GetYear2000Default()
     return 1930;
 }
 
+// static
+void SvNumberFormatter::resetTheCurrencyTable()
+{
+    SAL_INFO("svl", "Resetting the currency table.");
+
+    nSystemCurrencyPosition = 0;
+    bCurrencyTableInitialized = false;
+
+    GetFormatterRegistry().ConfigurationChanged(nullptr, ConfigurationHints::Locale | ConfigurationHints::Currency | ConfigurationHints::DatePatterns);
+}
 
 // static
 const NfCurrencyTable& SvNumberFormatter::GetTheCurrencyTable()

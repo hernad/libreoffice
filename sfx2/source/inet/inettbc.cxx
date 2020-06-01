@@ -34,6 +34,7 @@
 
 #include <svtools/inettbc.hxx>
 
+#include <vcl/InterimItemWindow.hxx>
 #include <sfx2/sfxsids.hrc>
 
 using namespace ::com::sun::star::uno;
@@ -50,6 +51,7 @@ SFX_IMPL_TOOLBOX_CONTROL(SfxURLToolBoxControl_Impl,SfxStringItem)
 
 SfxURLToolBoxControl_Impl::SfxURLToolBoxControl_Impl( sal_uInt16 nSlotId, sal_uInt16 nId, ToolBox& rBox )
     : SfxToolBoxControl( nSlotId, nId, rBox )
+    , m_bModified(false)
 {
     addStatusListener( ".uno:CurrentURL");
 }
@@ -58,11 +60,67 @@ SfxURLToolBoxControl_Impl::~SfxURLToolBoxControl_Impl()
 {
 }
 
-SvtURLBox* SfxURLToolBoxControl_Impl::GetURLBox() const
+class URLBoxItemWindow final : public InterimItemWindow
 {
-    return static_cast<SvtURLBox*>(GetToolBox().GetItemWindow( GetId() ));
+private:
+    std::unique_ptr<SvtURLBox> m_xWidget;
+
+    DECL_LINK(KeyInputHdl, const KeyEvent&, bool);
+public:
+    URLBoxItemWindow(vcl::Window* pParent)
+        : InterimItemWindow(pParent, "sfx/ui/urlbox.ui", "URLBox")
+        , m_xWidget(new SvtURLBox(m_xBuilder->weld_combo_box("urlbox")))
+    {
+        m_xWidget->connect_key_press(LINK(this, URLBoxItemWindow, KeyInputHdl));
+
+        int nWidth = GetDesktopRectPixel().GetWidth() > 800 ? 300 : 225;
+        SetSizePixel(Size(nWidth, m_xWidget->get_preferred_size().Height()));
+    }
+
+    SvtURLBox* GetURLBox()
+    {
+        return m_xWidget.get();
+    }
+
+    virtual void dispose() override
+    {
+        m_xWidget.reset();
+        InterimItemWindow::dispose();
+    }
+
+    virtual void GetFocus() override
+    {
+        if (m_xWidget)
+            m_xWidget->grab_focus();
+        InterimItemWindow::GetFocus();
+    }
+
+    void set_sensitive(bool bSensitive)
+    {
+        Enable(bSensitive);
+        m_xWidget->set_sensitive(bSensitive);
+    }
+
+    virtual ~URLBoxItemWindow() override
+    {
+        disposeOnce();
+    }
+};
+
+IMPL_LINK(URLBoxItemWindow, KeyInputHdl, const KeyEvent&, rKEvt, bool)
+{
+    return ChildKeyInput(rKEvt);
 }
 
+URLBoxItemWindow* SfxURLToolBoxControl_Impl::GetURLBoxItemWindow() const
+{
+    return static_cast<URLBoxItemWindow*>(GetToolBox().GetItemWindow(GetId()));
+}
+
+SvtURLBox* SfxURLToolBoxControl_Impl::GetURLBox() const
+{
+    return GetURLBoxItemWindow()->GetURLBox();
+}
 
 void SfxURLToolBoxControl_Impl::OpenURL( const OUString& rName ) const
 {
@@ -132,25 +190,28 @@ IMPL_STATIC_LINK( SfxURLToolBoxControl_Impl, ExecuteHdl_Impl, void*, p, void )
     delete pExecuteInfo;
 }
 
-
-VclPtr<vcl::Window> SfxURLToolBoxControl_Impl::CreateItemWindow( vcl::Window* pParent )
+VclPtr<InterimItemWindow> SfxURLToolBoxControl_Impl::CreateItemWindow( vcl::Window* pParent )
 {
-    VclPtrInstance<SvtURLBox> pURLBox( pParent );
-    pURLBox->SetOpenHdl( LINK( this, SfxURLToolBoxControl_Impl, OpenHdl ) );
-    pURLBox->SetSelectHdl( LINK( this, SfxURLToolBoxControl_Impl, SelectHdl ) );
-    return pURLBox.get();
+    VclPtrInstance<URLBoxItemWindow> xURLBox(pParent);
+    SvtURLBox* pURLBox = xURLBox->GetURLBox();
+    pURLBox->connect_changed(LINK(this, SfxURLToolBoxControl_Impl, SelectHdl));
+    pURLBox->connect_entry_activate(LINK(this, SfxURLToolBoxControl_Impl, OpenHdl));
+    xURLBox->Show();
+    return xURLBox;
 }
 
-IMPL_LINK_NOARG(SfxURLToolBoxControl_Impl, SelectHdl, ComboBox&, void)
+IMPL_LINK(SfxURLToolBoxControl_Impl, SelectHdl, weld::ComboBox&, rComboBox, void)
 {
+    m_bModified = true;
+
     SvtURLBox* pURLBox = GetURLBox();
     OUString aName( pURLBox->GetURL() );
 
-    if ( !pURLBox->IsTravelSelect() && !aName.isEmpty() )
+    if (rComboBox.changed_by_direct_pick() && !aName.isEmpty())
         OpenURL( aName );
 }
 
-IMPL_LINK_NOARG(SfxURLToolBoxControl_Impl, OpenHdl, SvtURLBox*, void)
+IMPL_LINK_NOARG(SfxURLToolBoxControl_Impl, OpenHdl, weld::ComboBox&, bool)
 {
     SvtURLBox* pURLBox = GetURLBox();
     OpenURL( pURLBox->GetURL() );
@@ -166,8 +227,9 @@ IMPL_LINK_NOARG(SfxURLToolBoxControl_Impl, OpenHdl, SvtURLBox*, void)
             pWin->ToTop( ToTopFlags::RestoreWhenMin );
         }
     }
-}
 
+    return true;
+}
 
 void SfxURLToolBoxControl_Impl::StateChanged
 (
@@ -179,21 +241,21 @@ void SfxURLToolBoxControl_Impl::StateChanged
     if ( nSID == SID_OPENURL )
     {
         // Disable URL box if command is disabled
-        GetURLBox()->Enable( SfxItemState::DISABLED != eState );
+        GetURLBoxItemWindow()->set_sensitive( SfxItemState::DISABLED != eState );
     }
 
-    if ( !GetURLBox()->IsEnabled() )
+    if ( !GetURLBoxItemWindow()->IsEnabled() )
         return;
 
     if( nSID == SID_FOCUSURLBOX )
     {
-        if ( GetURLBox()->IsVisible() )
-            GetURLBox()->GrabFocus();
+        if ( GetURLBoxItemWindow()->IsVisible() )
+            GetURLBoxItemWindow()->GrabFocus();
     }
-    else if ( !GetURLBox()->IsModified() && SfxItemState::DEFAULT == eState )
+    else if ( !m_bModified && SfxItemState::DEFAULT == eState )
     {
         SvtURLBox* pURLBox = GetURLBox();
-        pURLBox->Clear();
+        pURLBox->clear();
 
         const css::uno::Sequence< css::uno::Sequence< css::beans::PropertyValue > > lList = SvtHistoryOptions().GetList(ePICKLIST);
         for (const css::uno::Sequence< css::beans::PropertyValue >& lProps : lList)
@@ -212,9 +274,9 @@ void SfxURLToolBoxControl_Impl::StateChanged
                 OUString      sFile;
 
                 if (osl::FileBase::getSystemPathFromFileURL(sMainURL, sFile) == osl::FileBase::E_None)
-                    pURLBox->InsertEntry(sFile);
+                    pURLBox->append_text(sFile);
                 else
-                    pURLBox->InsertEntry(sMainURL);
+                    pURLBox->append_text(sMainURL);
             }
         }
 
@@ -224,10 +286,10 @@ void SfxURLToolBoxControl_Impl::StateChanged
         INetProtocol eProt = aURL.GetProtocol();
         if ( eProt == INetProtocol::File )
         {
-            pURLBox->SetText( aURL.PathToFileName() );
+            pURLBox->set_entry_text( aURL.PathToFileName() );
         }
         else
-            pURLBox->SetText( aURL.GetURLNoPass() );
+            pURLBox->set_entry_text( aURL.GetURLNoPass() );
     }
 }
 

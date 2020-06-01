@@ -19,13 +19,13 @@
 #ifndef INCLUDED_SW_SOURCE_UIBASE_SIDEBAR_WRAPPROPERTYPANEL_HXX
 #define INCLUDED_SW_SOURCE_UIBASE_SIDEBAR_WRAPPROPERTYPANEL_HXX
 
-#include <svx/sidebar/PanelLayout.hxx>
+#include <sfx2/sidebar/PanelLayout.hxx>
 #include <sfx2/sidebar/ControllerItem.hxx>
 #include <sfx2/weldutils.hxx>
 #include <com/sun/star/frame/XFrame.hpp>
 #include <vcl/weld.hxx>
 
-namespace sw { namespace sidebar {
+namespace sw::sidebar {
 
     class WrapPropertyPanel
         : public PanelLayout
@@ -42,6 +42,10 @@ namespace sw { namespace sidebar {
             const sal_uInt16 nSId,
             const SfxItemState eState,
             const SfxPoolItem* pState) override;
+
+        virtual void GetControlState(
+            const sal_uInt16 /*nSId*/,
+            boost::property_tree::ptree& /*rState*/) override {};
 
         virtual ~WrapPropertyPanel() override;
         virtual void dispose() override;
@@ -66,11 +70,8 @@ namespace sw { namespace sidebar {
         ::sfx2::sidebar::ControllerItem maSwLRSpacingControl;
         ::sfx2::sidebar::ControllerItem maSwULSpacingControl;
 
-        std::unique_ptr<weld::Toolbar> mxWrapOptions1;
-        std::unique_ptr<ToolbarUnoDispatcher> mxWrapOptions1Dispatch;
-
-        std::unique_ptr<weld::Toolbar> mxWrapOptions2;
-        std::unique_ptr<ToolbarUnoDispatcher> mxWrapOptions2Dispatch;
+        std::unique_ptr<weld::Toolbar> mxWrapOptions;
+        std::unique_ptr<ToolbarUnoDispatcher> mxWrapOptionsDispatch;
 
         std::unique_ptr<weld::ComboBox> mxSpacingLB;
 
@@ -80,7 +81,7 @@ namespace sw { namespace sidebar {
         DECL_LINK(SpacingLBHdl, weld::ComboBox&, void);
     };
 
-} } // end of namespace ::sw::sidebar
+} // end of namespace ::sw::sidebar
 
 #endif
 

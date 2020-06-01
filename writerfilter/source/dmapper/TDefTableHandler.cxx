@@ -23,8 +23,6 @@
 #include <filter/msfilter/util.hxx>
 #include <tools/color.hxx>
 #include <com/sun/star/table/BorderLine2.hpp>
-#include <com/sun/star/text/TableColumnSeparator.hpp>
-#include <com/sun/star/text/VertOrientation.hpp>
 #include <comphelper/sequence.hxx>
 
 namespace writerfilter::dmapper {
@@ -312,7 +310,7 @@ void TDefTableHandler::lcl_attribute(Id rName, Value & rVal)
 
 void TDefTableHandler::localResolve(Id rName, const writerfilter::Reference<Properties>::Pointer_t& pProperties)
 {
-    if( pProperties.get())
+    if( pProperties )
     {
         m_nLineWidth = m_nLineType = m_nLineColor = 0;
         std::vector<beans::PropertyValue> aSavedGrabBag;

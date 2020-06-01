@@ -27,8 +27,8 @@
 
 #include <xmloff/xmlstyle.hxx>
 
-namespace com { namespace sun { namespace star { namespace frame { class XModel; } } } }
-namespace com { namespace sun { namespace star { namespace container { class XIndexReplace; } } } }
+namespace com::sun::star::frame { class XModel; }
+namespace com::sun::star::container { class XIndexReplace; }
 
 class SvxXMLListLevelStyleContext_Impl;
 typedef std::vector<rtl::Reference<SvxXMLListLevelStyleContext_Impl>> SvxXMLListStyle_Impl;
@@ -41,7 +41,7 @@ class XMLOFF_DLLPUBLIC SvxXMLListStyleContext final
     std::unique_ptr<SvxXMLListStyle_Impl> pLevelStyles;
 
     bool                        bConsecutive : 1;
-    bool const                  bOutline : 1;
+    bool                        bOutline : 1;
 
     SAL_DLLPRIVATE virtual void SetAttribute( sal_uInt16 nPrefixKey,
                                const OUString& rLocalName,

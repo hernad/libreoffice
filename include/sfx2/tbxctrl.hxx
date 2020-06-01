@@ -31,6 +31,7 @@
 namespace com::sun::star::frame { class XDispatchProvider; }
 namespace com::sun::star::frame { class XFrame; }
 
+class InterimItemWindow;
 class SfxToolBoxControl;
 class SfxModule;
 
@@ -40,9 +41,9 @@ typedef SfxToolBoxControl* (*SfxToolBoxControlCtor)( sal_uInt16 nSlotId, sal_uIn
 
 struct SfxTbxCtrlFactory
 {
-    SfxToolBoxControlCtor const   pCtor;
-    const std::type_info&         nTypeId;
-    sal_uInt16 const              nSlotId;
+    SfxToolBoxControlCtor       pCtor;
+    const std::type_info&       nTypeId;
+    sal_uInt16                  nSlotId;
 
     SfxTbxCtrlFactory( SfxToolBoxControlCtor pTheCtor,
             const std::type_info& nTheTypeId, sal_uInt16 nTheSlotId ):
@@ -81,7 +82,7 @@ protected:
     virtual void               DoubleClick();
     virtual void               Click();
     virtual void               CreatePopupWindow();
-    virtual VclPtr<vcl::Window> CreateItemWindow( vcl::Window *pParent );
+    virtual VclPtr<InterimItemWindow> CreateItemWindow(vcl::Window *pParent);
 
 public:
     // XComponent

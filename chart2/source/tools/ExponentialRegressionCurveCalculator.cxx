@@ -63,7 +63,7 @@ void SAL_CALL ExponentialRegressionCurveCalculator::recalculateRegression(
         {
             ::rtl::math::setNan( & m_fLogSlope );
             ::rtl::math::setNan( & m_fLogIntercept );
-            ::rtl::math::setNan( & m_fCorrelationCoeffitient );// actual it is coefficient of determination
+            ::rtl::math::setNan( & m_fCorrelationCoefficient );// actual it is coefficient of determination
             return;
         }
         m_fSign = -1.0;
@@ -107,7 +107,7 @@ void SAL_CALL ExponentialRegressionCurveCalculator::recalculateRegression(
 
     m_fLogSlope = fQxy / fQx;
     m_fLogIntercept = mForceIntercept ? fLogIntercept : fAverageY - m_fLogSlope * fAverageX;
-    m_fCorrelationCoeffitient = fQxy / sqrt( fQx * fQy );
+    m_fCorrelationCoefficient = fQxy / sqrt( fQx * fQy );
 }
 
 double SAL_CALL ExponentialRegressionCurveCalculator::getCurveValue( double x )
@@ -115,8 +115,8 @@ double SAL_CALL ExponentialRegressionCurveCalculator::getCurveValue( double x )
     double fResult;
     ::rtl::math::setNan( & fResult );
 
-    if( ! ( ::rtl::math::isNan( m_fLogSlope ) ||
-            ::rtl::math::isNan( m_fLogIntercept )))
+    if( ! ( std::isnan( m_fLogSlope ) ||
+            std::isnan( m_fLogIntercept )))
     {
         fResult = m_fSign * exp(m_fLogIntercept + x * m_fLogSlope);
     }

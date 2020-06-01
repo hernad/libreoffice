@@ -52,6 +52,7 @@
 #include <compressedarray.hxx>
 #include <brdcst.hxx>
 #include <refdata.hxx>
+#include <docsh.hxx>
 
 #include <scitems.hxx>
 #include <editeng/boxitem.hxx>
@@ -66,7 +67,7 @@ namespace {
 class ColumnRegroupFormulaCells
 {
     ScColContainer& mrCols;
-    std::vector<ScAddress>* const mpGroupPos;
+    std::vector<ScAddress>* mpGroupPos;
 
 public:
     ColumnRegroupFormulaCells( ScColContainer& rCols, std::vector<ScAddress>* pGroupPos ) :
@@ -793,12 +794,12 @@ namespace {
 class TransClipHandler
 {
     ScTable& mrClipTab;
-    SCTAB const mnSrcTab;
-    SCCOL const mnSrcCol;
-    size_t const mnTopRow;
-    SCROW const mnTransRow;
-    bool const mbAsLink;
-    bool const mbWasCut;
+    SCTAB mnSrcTab;
+    SCCOL mnSrcCol;
+    size_t mnTopRow;
+    SCROW mnTransRow;
+    bool mbAsLink;
+    bool mbWasCut;
 
     ScAddress getDestPos(size_t nRow) const
     {
@@ -928,8 +929,8 @@ void ScTable::TransposeClip( SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCROW nRow2,
 
         //  Attribute
 
-        SCROW nAttrRow1;
-        SCROW nAttrRow2;
+        SCROW nAttrRow1 = {}; // spurious -Werror=maybe-uninitialized
+        SCROW nAttrRow2 = {}; // spurious -Werror=maybe-uninitialized
         const ScPatternAttr* pPattern;
         std::unique_ptr<ScAttrIterator> pAttrIter(aCol[nCol].CreateAttrIterator( nRow1, nRow2 ));
         while ( (pPattern = pAttrIter->Next( nAttrRow1, nAttrRow2 )) != nullptr )
@@ -1167,6 +1168,14 @@ void ScTable::CopyToTable(
         return;
 
     bool bIsUndoDoc = pDestTab->pDocument->IsUndo();
+
+    if (bIsUndoDoc && (nFlags & InsertDeleteFlags::CONTENTS))
+    {
+        // Copying formulas may create sheet-local named expressions on the
+        // destination sheet. Add existing to Undo first.
+        pDestTab->SetRangeName( std::unique_ptr<ScRangeName>( new ScRangeName( *GetRangeName())));
+    }
+
     if (nFlags != InsertDeleteFlags::NONE)
     {
         InsertDeleteFlags nTempFlags( nFlags &
@@ -1321,6 +1330,21 @@ void ScTable::UndoToTable(
         bool bWidth  = (nRow1==0 && nRow2==pDocument->MaxRow() && mpColWidth && pDestTab->mpColWidth);
         bool bHeight = (nCol1==0 && nCol2==pDocument->MaxCol() && mpRowHeights && pDestTab->mpRowHeights);
 
+        if ((nFlags & InsertDeleteFlags::CONTENTS) && mpRangeName)
+        {
+            // Undo sheet-local named expressions created during copying
+            // formulas. If mpRangeName is not set then the Undo wasn't even
+            // set to an empty ScRangeName map so don't "undo" that.
+            pDestTab->SetRangeName( std::unique_ptr<ScRangeName>( new ScRangeName( *GetRangeName())));
+            if (!pDestTab->pDocument->IsClipOrUndo())
+            {
+                ScDocShell* pDocSh = static_cast<ScDocShell*>(pDestTab->pDocument->GetDocumentShell());
+                if (pDocSh)
+                    pDocSh->SetAreasChangedNeedBroadcast();
+            }
+
+        }
+
         for ( SCCOL i = 0; i < aCol.size(); i++)
         {
             if ( i >= nCol1 && i <= nCol2 )
@@ -1430,7 +1454,7 @@ const ScRangeList* ScTable::GetScenarioRanges() const
     if (!pScenarioRanges)
     {
         const_cast<ScTable*>(this)->pScenarioRanges.reset(new ScRangeList);
-        ScMarkData aMark(pDocument->MaxRow(), pDocument->MaxCol());
+        ScMarkData aMark(pDocument->GetSheetLimits());
         MarkScenarioIn( aMark, ScScenarioFlags::NONE );     // always
         aMark.FillRangeListWithMarks( pScenarioRanges.get(), false );
     }
@@ -2273,7 +2297,8 @@ void ScTable::FindMaxRotCol( RowInfo* pRowInfo, SCSIZE nArrCount, SCCOL nX1, SCC
     }
 }
 
-bool ScTable::HasBlockMatrixFragment( const SCCOL nCol1, SCROW nRow1, const SCCOL nCol2, SCROW nRow2 ) const
+bool ScTable::HasBlockMatrixFragment( const SCCOL nCol1, SCROW nRow1, const SCCOL nCol2, SCROW nRow2,
+        bool bNoMatrixAtAll ) const
 {
     using namespace sc;
 
@@ -2287,28 +2312,38 @@ bool ScTable::HasBlockMatrixFragment( const SCCOL nCol1, SCROW nRow1, const SCCO
     if ( nCol1 == nMaxCol2 )
     {   // left and right column
         const MatrixEdge n = MatrixEdge::Left | MatrixEdge::Right;
-        nEdges = aCol[nCol1].GetBlockMatrixEdges( nRow1, nRow2, n );
+        nEdges = aCol[nCol1].GetBlockMatrixEdges( nRow1, nRow2, n, bNoMatrixAtAll );
         if ((nEdges != MatrixEdge::Nothing) && (((nEdges & n)!=n) || (nEdges & (MatrixEdge::Inside|MatrixEdge::Open))))
             return true;        // left or right edge is missing or open
     }
     else
     {   // left column
-        nEdges = aCol[nCol1].GetBlockMatrixEdges(nRow1, nRow2, MatrixEdge::Left);
+        nEdges = aCol[nCol1].GetBlockMatrixEdges(nRow1, nRow2, MatrixEdge::Left, bNoMatrixAtAll);
         if ((nEdges != MatrixEdge::Nothing) && ((!(nEdges & MatrixEdge::Left)) || (nEdges & (MatrixEdge::Inside|MatrixEdge::Open))))
             return true;        // left edge missing or open
         // right column
-        nEdges = aCol[nMaxCol2].GetBlockMatrixEdges(nRow1, nRow2, MatrixEdge::Right);
+        nEdges = aCol[nMaxCol2].GetBlockMatrixEdges(nRow1, nRow2, MatrixEdge::Right, bNoMatrixAtAll);
         if ((nEdges != MatrixEdge::Nothing) && ((!(nEdges & MatrixEdge::Right)) || (nEdges & (MatrixEdge::Inside|MatrixEdge::Open))))
             return true;        // right edge is missing or open
     }
 
-    if ( nRow1 == nRow2 )
+    if (bNoMatrixAtAll)
+    {
+        for (SCCOL i=nCol1; i<=nMaxCol2; i++)
+        {
+            nEdges = aCol[i].GetBlockMatrixEdges( nRow1, nRow2, MatrixEdge::Nothing, bNoMatrixAtAll);
+            if (nEdges != MatrixEdge::Nothing
+                    && (nEdges != (MatrixEdge::Top | MatrixEdge::Left | MatrixEdge::Bottom | MatrixEdge::Right)))
+                return true;
+        }
+    }
+    else if ( nRow1 == nRow2 )
     {   // Row on top and on bottom
         bool bOpen = false;
         const MatrixEdge n = MatrixEdge::Bottom | MatrixEdge::Top;
         for ( SCCOL i=nCol1; i<=nMaxCol2; i++)
         {
-            nEdges = aCol[i].GetBlockMatrixEdges( nRow1, nRow1, n );
+            nEdges = aCol[i].GetBlockMatrixEdges( nRow1, nRow1, n, bNoMatrixAtAll );
             if (nEdges != MatrixEdge::Nothing)
             {
                 if ( (nEdges & n) != n )
@@ -2336,7 +2371,7 @@ bool ScTable::HasBlockMatrixFragment( const SCCOL nCol1, SCROW nRow1, const SCCO
             bool bOpen = false;
             for ( SCCOL i=nCol1; i<=nMaxCol2; i++)
             {
-                nEdges = aCol[i].GetBlockMatrixEdges( nR, nR, n );
+                nEdges = aCol[i].GetBlockMatrixEdges( nR, nR, n, bNoMatrixAtAll );
                 if ( nEdges != MatrixEdge::Nothing)
                 {
                     // in top row no top edge respectively
@@ -2375,7 +2410,8 @@ bool ScTable::HasSelectionMatrixFragment( const ScMarkData& rMark ) const
 }
 
 bool ScTable::IsBlockEditable( SCCOL nCol1, SCROW nRow1, SCCOL nCol2,
-            SCROW nRow2, bool* pOnlyNotBecauseOfMatrix /* = NULL */ ) const
+            SCROW nRow2, bool* pOnlyNotBecauseOfMatrix /* = NULL */,
+            bool bNoMatrixAtAll ) const
 {
     if ( !ValidColRow( nCol2, nRow2 ) )
     {
@@ -2443,7 +2479,7 @@ bool ScTable::IsBlockEditable( SCCOL nCol1, SCROW nRow1, SCCOL nCol2,
     }
     if ( bIsEditable )
     {
-        if ( HasBlockMatrixFragment( nCol1, nRow1, nCol2, nRow2 ) )
+        if (HasBlockMatrixFragment( nCol1, nRow1, nCol2, nRow2, bNoMatrixAtAll))
         {
             bIsEditable = false;
             if ( pOnlyNotBecauseOfMatrix )
@@ -3683,8 +3719,8 @@ namespace {
 class OutlineArrayFinder
 {
     ScRange maRef;
-    SCCOL const mnCol;
-    SCTAB const mnTab;
+    SCCOL mnCol;
+    SCTAB mnTab;
     ScOutlineArray* mpArray;
     bool mbSizeChanged;
 
@@ -3861,7 +3897,7 @@ bool ScTable::RefVisible(const ScFormulaCell* pCell)
 void ScTable::GetUpperCellString(SCCOL nCol, SCROW nRow, OUString& rStr)
 {
     GetInputString(nCol, nRow, rStr);
-    rStr = ScGlobal::pCharClass->uppercase(rStr.trim());
+    rStr = ScGlobal::getCharClassPtr()->uppercase(rStr.trim());
 }
 
 // Calculate the size of the sheet and set the size on DrawPage

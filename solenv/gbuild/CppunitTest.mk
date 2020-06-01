@@ -86,8 +86,6 @@ $(if $(URE),\
 	    "-env:UNO_TYPES=$(foreach item,$(UNO_TYPES),$(call gb_Helper_make_url,$(item)))") \
     $(if $(strip $(UNO_SERVICES)),\
 	"-env:UNO_SERVICES=$(foreach item,$(UNO_SERVICES),$(call gb_Helper_make_url,$(item)))") \
-	$(if $(strip $(JAVA_URE)),\
-		-env:URE_MORE_JAVA_TYPES=$(call gb_Helper_make_url,$(call gb_Jar_get_target,unoil))) \
 	-env:URE_INTERNAL_LIB_DIR=$(call gb_Helper_make_url,$(INSTROOT)/$(LIBO_URE_LIB_FOLDER)) \
 	-env:LO_LIB_DIR=$(call gb_Helper_make_url,$(INSTROOT)/$(LIBO_LIB_FOLDER)) \
 	-env:LO_JAVA_DIR=$(call gb_Helper_make_url,$(INSTROOT)/$(LIBO_SHARE_JAVA_FOLDER)) \
@@ -111,6 +109,7 @@ ifneq ($(gb_SUPPRESS_TESTS),)
 	@true
 else
 	$(call gb_Output_announce,$*,$(true),CUT,2)
+	$(call gb_Trace_StartRange,$*,CUT)
 	$(call gb_Helper_abbreviate_dirs,\
 		mkdir -p $(dir $@) && \
 		rm -fr $@.user && cp -r $(WORKDIR)/unittest $@.user && \
@@ -145,6 +144,7 @@ else
 					RET=$$?; \
 					$(call gb_CppunitTest_postprocess,$(gb_CppunitTest_CPPTESTCOMMAND),$@.core,$$RET) >> $@.log 2>&1;) \
 				cat $@.log; $(gb_CppunitTest_UNITTESTFAILED) Cppunit $*)))
+	$(call gb_Trace_EndRange,$*,CUT)
 endif
 
 define gb_CppunitTest_CppunitTest
@@ -184,7 +184,6 @@ $(call gb_CppunitTest_get_clean_target,$(1)) : $(call gb_LinkTarget_get_clean_ta
 $(call gb_CppunitTest_CppunitTest_platform,$(1),$(2),$(gb_CppunitTest_DLLDIR)/$(call gb_CppunitTest_get_ilibfilename,$(1)))
 $(call gb_CppunitTest_get_target,$(1)) : ARGS :=
 $(call gb_CppunitTest_get_target,$(1)) : CONFIGURATION_LAYERS :=
-$(call gb_CppunitTest_get_target,$(1)) : JAVA_URE := $(false)
 $(call gb_CppunitTest_get_target,$(1)) : PYTHON_URE := $(false)
 $(call gb_CppunitTest_get_target,$(1)) : URE := $(false)
 $(call gb_CppunitTest_get_target,$(1)) : VCL := $(false)
@@ -375,10 +374,9 @@ endif
 
 endef
 
-define gb_CppunitTest_use_java_ure
-$(call gb_CppunitTest_get_target,$(1)) : JAVA_URE := $(true)
+define gb_CppunitTest__use_java_ure
 $(call gb_CppunitTest_get_target,$(1)) : \
-    $(foreach jar,java_uno juh jurt unoil unoloader,$(call gb_Jar_get_target,$(jar))) \
+    $(foreach jar,java_uno libreoffice unoloader,$(call gb_Jar_get_target,$(jar))) \
     $(call gb_Library_get_target,affine_uno_uno) \
     $(call gb_Library_get_target,java_uno) \
     $(call gb_Library_get_target,jpipe) \
@@ -387,7 +385,8 @@ $(call gb_CppunitTest_get_target,$(1)) : \
     $(call gb_Library_get_target,jvmaccess) \
     $(call gb_Library_get_target,jvmfwk) \
     $(call gb_Package_get_target,jvmfwk_javavendors) \
-    $(call gb_Package_get_target,jvmfwk_jreproperties)
+    $(call gb_Package_get_target,jvmfwk_jreproperties) \
+    $(call gb_Package_get_target,jvmfwk_jvmfwk3_ini) \
 
 endef
 
@@ -481,5 +480,7 @@ gb_CppunitTest_set_warnings_not_errors = $(call gb_CppunitTest__forward_to_Linkt
 gb_CppunitTest_set_warnings_disabled = $(call gb_CppunitTest__forward_to_Linktarget,$(0),$(1),$(2),$(3))
 gb_CppunitTest_set_external_code = $(call gb_CppunitTest__forward_to_Linktarget,$(0),$(1),$(2),$(3))
 gb_CppunitTest_set_generated_cxx_suffix = $(call gb_CppunitTest__forward_to_Linktarget,$(0),$(1),$(2),$(3))
+gb_CppunitTest_use_clang = $(call gb_CppunitTest__forward_to_Linktarget,$(0),$(1),$(2),$(3))
+gb_CppunitTest_set_clang_precompiled_header = $(call gb_CppunitTest__forward_to_Linktarget,$(0),$(1),$(2),$(3))
 
 # vim: set noet sw=4:

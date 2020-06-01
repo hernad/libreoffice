@@ -19,7 +19,7 @@ buildscript {
         google()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.1.3'
+        classpath 'com.android.tools.build:gradle:3.6.1'
     }
 }
 
@@ -27,20 +27,16 @@ buildscript {
 dependencies {
     implementation fileTree(dir: "${liboInstdir}/${liboUREJavaFolder}", include: [
             "java_uno.jar",
-            "juh.jar",
-            "jurt.jar",
-            "ridl.jar",
+            "libreoffice.jar",
             "unoloader.jar"
     ])
-    implementation files("${liboInstdir}/${liboShareJavaFolder}/unoil.jar")
     implementation(name:'owncloud_android_lib', ext:'aar')
     implementation 'com.android.support:design:27.1.1' // also pulls-in corresponding support libraries
     implementation 'com.android.support.constraint:constraint-layout:1.1.2'
 }
 
 android {
-    compileSdkVersion 26
-    buildToolsVersion "27.0.3"
+    compileSdkVersion 28
     compileOptions {
         // silence some java-language features hints
         sourceCompatibility 6
@@ -61,7 +57,7 @@ android {
     }
     defaultConfig {
         minSdkVersion 16
-        targetSdkVersion 26
+        targetSdkVersion 28
         vectorDrawables.useSupportLibrary = true
     }
     buildTypes {
@@ -69,12 +65,10 @@ android {
             // make android studio happy...
             jniDebuggable true
             // would work just fine with external, but setting emulator up is a little more work
-            manifestPlaceholders = [installLocation: "auto", extractNativeLibs: "false"]
+            manifestPlaceholders = [installLocation: "auto"]
         }
         release {
-            // need to extract native libs (allow to compress them in apk), since otherwise would
-            // exceed maximum size for playstore
-            manifestPlaceholders = [installLocation: "preferExternal", extractNativeLibs: "true"]
+            manifestPlaceholders = [installLocation: "preferExternal"]
         }
     }
 
@@ -162,6 +156,15 @@ task copyAssets(type: Copy) {
     from("${liboExampleDocument}") {
         rename ".*", "example.odt"
     }
+
+    // include icons
+    into ('share') {
+        into ('config') {
+            from ("${liboInstdir}/share/config")
+            includes = ['images_**.zip']
+        }
+    }
+
     into('program') {
         from "${liboInstdir}/program"
         includes = ['services.rdb', 'services/services.rdb']
@@ -183,12 +186,14 @@ task copyAssets(type: Copy) {
             include '*.data'
         }
     }
-    // documents with manual page break trigger attempt to read the ui file
+    // documents with manual page break trigger attempt to read the ui file 'pagebreakmenu.ui'
     // would trigger a css::container::NoSuchElementException with osl_File_E_NOENT
-    // if not present and since it is not caught would crash the app...
+    // if not present and since it is not caught would crash the app;
+    // 'annotationmenu.ui' required to handle documents containing comments,
+    // 'headerfootermenu.ui' when clicking inside header/footer of document
     into('config') {
         from "${liboInstdir}/share/config"
-        include '**/pagebreakmenu.ui'
+        include '**/pagebreakmenu.ui', '**/annotationmenu.ui', '**/headerfootermenu.ui'
     }
 }
 

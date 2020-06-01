@@ -312,7 +312,6 @@ ErrCode ReadThroughComponent(
     const uno::Reference < embed::XStorage >& xStorage,
     const Reference<XComponent>& xModelComponent,
     const char* pStreamName,
-    const char* pCompatibilityStreamName,
     Reference<uno::XComponentContext> const & rxContext,
     const char* pFilterName,
     const Sequence<Any>& rFilterArguments,
@@ -335,25 +334,8 @@ ErrCode ReadThroughComponent(
 
     if (!bContainsStream )
     {
-        // stream name not found! Then try the compatibility name.
-        // if no stream can be opened, return immediately with OK signal
-
-        // do we even have an alternative name?
-        if ( nullptr == pCompatibilityStreamName )
-            return ERRCODE_NONE;
-
-        // if so, does the stream exist?
-        sStreamName = OUString::createFromAscii(pCompatibilityStreamName);
-        try
-        {
-            bContainsStream = xStorage->isStreamElement(sStreamName);
-        }
-        catch (const container::NoSuchElementException&)
-        {
-        }
-
-        if (! bContainsStream )
-            return ERRCODE_NONE;
+        // stream name not found! return immediately with OK signal
+        return ERRCODE_NONE;
     }
 
     // set Base URL
@@ -404,7 +386,7 @@ ErrCode ReadThroughComponent(
 
 }
 
-//PRESOBJ_OUTLINEs in master pages are the preview of the outline styles
+//PresObjKind::Outlines in master pages are the preview of the outline styles
 //numbering format. Since fdo#78151 toggling bullets on and off changes
 //the style they are a preview of, previously toggling bullets on and off
 //would only affect the preview paragraph itself without an effect on the
@@ -419,7 +401,7 @@ static void fixupOutlinePlaceholderNumberingDepths(SdDrawDocument* pDoc)
     for (sal_uInt16 i = 0; i < pDoc->GetMasterSdPageCount(PageKind::Standard); ++i)
     {
         SdPage *pMasterPage = pDoc->GetMasterSdPage(i, PageKind::Standard);
-        SdrObject* pMasterOutline = pMasterPage->GetPresObj(PRESOBJ_OUTLINE);
+        SdrObject* pMasterOutline = pMasterPage->GetPresObj(PresObjKind::Outline);
         if (!pMasterOutline)
             continue;
         OutlinerParaObject* pOutlParaObj = pMasterOutline->GetOutlinerParaObject();
@@ -472,7 +454,7 @@ bool SdXMLFilter::Import( ErrCode& nError )
     SdDrawDocument* pDoc = mrDocShell.GetDoc();
     bool const bWasUndo(pDoc->IsUndoEnabled());
     pDoc->EnableUndo(false);
-    pDoc->NewOrLoadCompleted( NEW_DOC );
+    pDoc->NewOrLoadCompleted( DocCreationMode::New );
     pDoc->CreateFirstPages();
     pDoc->StopWorkStartupDelay();
 
@@ -598,7 +580,7 @@ bool SdXMLFilter::Import( ErrCode& nError )
             xInfoSet->setPropertyValue( "StreamRelPath", Any( aName ) );
     }
 
-    if (SDXMLMODE_Organizer == meFilterMode)
+    if (SdXMLFilterMode::Organizer == meFilterMode)
         xInfoSet->setPropertyValue("OrganizerMode", uno::makeAny(true));
 
     if( ERRCODE_NONE == nRet )
@@ -626,26 +608,26 @@ bool SdXMLFilter::Import( ErrCode& nError )
         // read storage streams
         // #i103539#: always read meta.xml for generator
         nWarn = ReadThroughComponent(
-            xStorage, xModelComp, "meta.xml", "Meta.xml", rxContext,
+            xStorage, xModelComp, "meta.xml", rxContext,
             pServices->mpMeta,
             aEmptyArgs, aName, false );
 
-        if( meFilterMode != SDXMLMODE_Organizer )
+        if( meFilterMode != SdXMLFilterMode::Organizer )
         {
             nWarn2 = ReadThroughComponent(
-                xStorage, xModelComp, "settings.xml", nullptr, rxContext,
+                xStorage, xModelComp, "settings.xml", rxContext,
                 pServices->mpSettings,
                 aFilterArgs, aName, false );
         }
 
         nRet = ReadThroughComponent(
-            xStorage, xModelComp, "styles.xml", nullptr, rxContext,
+            xStorage, xModelComp, "styles.xml", rxContext,
             pServices->mpStyles,
             aFilterArgs, aName, true );
 
-        if( !nRet && (meFilterMode != SDXMLMODE_Organizer) )
+        if( !nRet && (meFilterMode != SdXMLFilterMode::Organizer) )
             nRet = ReadThroughComponent(
-               xStorage, xModelComp, "content.xml", "Content.xml", rxContext,
+               xStorage, xModelComp, "content.xml", rxContext,
                pServices->mpContent,
                aFilterArgs, aName, true );
 

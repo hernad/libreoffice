@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_DRAWINGLAYER_PRIMITIVE2D_DRAWINGLAYER_PRIMITIVETYPES2D_HXX
-#define INCLUDED_DRAWINGLAYER_PRIMITIVE2D_DRAWINGLAYER_PRIMITIVETYPES2D_HXX
+#pragma once
 
 
 // define ranges for other libraries
@@ -103,9 +102,9 @@
 #define PRIMITIVE2D_ID_OBJECTINFOPRIMITIVE2D                (PRIMITIVE2D_ID_RANGE_DRAWINGLAYER| 68)
 #define PRIMITIVE2D_ID_POLYPOLYGONSELECTIONPRIMITIVE2D      (PRIMITIVE2D_ID_RANGE_DRAWINGLAYER| 69)
 #define PRIMITIVE2D_ID_PAGEHIERARCHYPRIMITIVE2D             (PRIMITIVE2D_ID_RANGE_DRAWINGLAYER| 70)
+#define PRIMITIVE2D_ID_GLOWPRIMITIVE2D                      (PRIMITIVE2D_ID_RANGE_DRAWINGLAYER| 71)
+#define PRIMITIVE2D_ID_SOFTEDGEPRIMITIVE2D                  (PRIMITIVE2D_ID_RANGE_DRAWINGLAYER| 72)
 // When you add a new primitive, please update the drawinglayer::primitive2d::idToString() function
-// in drawinglayer/source/primitive2d/baseprimitive2d.cxx.
-
-#endif // INCLUDED_DRAWINGLAYER_PRIMITIVE2D_DRAWINGLAYER_PRIMITIVETYPES2D_HXX
+// in drawinglayer/source/primitive2d/Tools.cxx.
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

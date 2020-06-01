@@ -47,7 +47,7 @@ bool lcl_ParseText(OUString const &rText, size_t& rLineNr )
     if (aText.isEmpty())
         return false;
     sal_Unicode cFirst = aText[0];
-    if (cFirst != '#' && !(cFirst >= '0' && cFirst <= '9'))
+    if (cFirst != '#' && (cFirst < '0' || cFirst > '9'))
         return false;
     if (cFirst == '#')
         aText = aText.copy(1);
@@ -70,7 +70,7 @@ BreakPointDialog::BreakPointDialog(weld::Window* pParent, BreakPointList& rBrkPn
     , m_xNewButton(m_xBuilder->weld_button("new"))
     , m_xDelButton(m_xBuilder->weld_button("delete"))
     , m_xCheckBox(m_xBuilder->weld_check_button("active"))
-    , m_xNumericField(m_xBuilder->weld_spin_button("pass-nospin"))
+    , m_xNumericField(m_xBuilder->weld_spin_button("pass"))
 {
     m_xComboBox->set_size_request(m_xComboBox->get_approximate_digit_width() * 20, -1);
     m_xComboBox->set_height_request_by_rows(12);

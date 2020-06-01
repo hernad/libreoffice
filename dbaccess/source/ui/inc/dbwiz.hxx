@@ -20,13 +20,12 @@
 #ifndef INCLUDED_DBACCESS_SOURCE_UI_INC_DBWIZ_HXX
 #define INCLUDED_DBACCESS_SOURCE_UI_INC_DBWIZ_HXX
 
-#include <sfx2/tabdlg.hxx>
 #include <dsntypes.hxx>
 #include "IItemSetHelper.hxx"
 #include <vcl/wizardmachine.hxx>
 #include <memory>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace beans {
         class XPropertySet;
     }
@@ -36,7 +35,7 @@ namespace com { namespace sun { namespace star {
     namespace lang {
         class XMultiServiceFactory;
     }
-}}}
+}
 
 using vcl::WizardTypes::WizardState;
 using vcl::WizardTypes::CommitPageReason;

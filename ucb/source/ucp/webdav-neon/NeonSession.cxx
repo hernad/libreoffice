@@ -32,6 +32,7 @@
 #include <string.h>
 #include <sal/log.hxx>
 #include <osl/diagnose.h>
+#include <osl/thread.h>
 #include <osl/time.h>
 #include <ne_socket.h>
 #include <ne_auth.h>
@@ -787,44 +788,7 @@ void NeonSession::Init()
     }
 
     // Add hooks (i.e. for adding additional headers to the request)
-
-#if 0
-    /* Hook called when a request is created. */
-    //typedef void (*ne_create_request_fn)(ne_request *req, void *userdata,
-    //                 const char *method, const char *path);
-
-    ne_hook_create_request( m_pHttpSession, create_req_hook_fn, this );
-#endif
-
-    /* Hook called before the request is sent.  'header' is the raw HTTP
-     * header before the trailing CRLF is added: add in more here. */
-    //typedef void (*ne_pre_send_fn)(ne_request *req, void *userdata,
-    //               ne_buffer *header);
-
     ne_hook_pre_send( m_pHttpSession, NeonSession_PreSendRequest, this );
-#if 0
-    /* Hook called after the request is sent. May return:
-     *  NE_OK     everything is okay
-     *  NE_RETRY  try sending the request again.
-     * anything else signifies an error, and the request is failed. The
-     * return code is passed back the _dispatch caller, so the session error
-     * must also be set appropriately (ne_set_error).
-     */
-    //typedef int (*ne_post_send_fn)(ne_request *req, void *userdata,
-    //               const ne_status *status);
-
-    ne_hook_post_send( m_pHttpSession, post_send_req_hook_fn, this );
-
-    /* Hook called when the request is destroyed. */
-    //typedef void (*ne_destroy_req_fn)(ne_request *req, void *userdata);
-
-    ne_hook_destroy_request( m_pHttpSession, destroy_req_hook_fn, this );
-
-    /* Hook called when the session is destroyed. */
-    //typedef void (*ne_destroy_sess_fn)(void *userdata);
-
-    ne_hook_destroy_session( m_pHttpSession, destroy_sess_hook_fn, this );
-#endif
 
     if ( !m_aProxyName.isEmpty() )
     {
@@ -843,13 +807,9 @@ void NeonSession::Init()
     ne_redirect_register( m_pHttpSession );
 
     // authentication callbacks.
-#if 1
     ne_add_server_auth( m_pHttpSession, NE_AUTH_ALL, NeonSession_NeonAuth, this );
     ne_add_proxy_auth ( m_pHttpSession, NE_AUTH_ALL, NeonSession_NeonAuth, this );
-#else
-    ne_set_server_auth( m_pHttpSession, NeonSession_NeonAuth, this );
-    ne_set_proxy_auth ( m_pHttpSession, NeonSession_NeonAuth, this );
-#endif
+
     // set timeout to connect
     // if connect_timeout is not set, neon returns NE_CONNECT when the TCP socket default
     // timeout elapses
@@ -871,6 +831,7 @@ void NeonSession::Init()
                          std::max( nReadTimeoutMin,
                                    std::min( nReadTimeout, nReadTimeoutMax ) ) );
 
+    ne_set_session_flag(m_pHttpSession, NE_SESSFLAG_SHAREPOINT, 1);
 }
 
 bool NeonSession::CanUse( const OUString & inUri,
@@ -1664,6 +1625,10 @@ bool NeonSession::LOCK( NeonLock * pLock,
     TimeValue startCall;
     osl_getSystemTime( &startCall );
 
+    // save the current requested timeout, because ne_lock_refresh uses
+    // pLock->timeout as an out parameter. This prevents a feedback-loop,
+    // where we would request a shorter timeout on each refresh.
+    long timeout = pLock->timeout;
     const int theRetVal = ne_lock_refresh(m_pHttpSession, pLock);
     if (theRetVal == NE_OK)
     {
@@ -1671,7 +1636,6 @@ bool NeonSession::LOCK( NeonLock * pLock,
             = lastChanceToSendRefreshRequest( startCall, pLock->timeout );
 
         SAL_INFO( "ucb.ucp.webdav", "LOCK (refresh) - Lock successfully refreshed." );
-        return true;
     }
     else
     {
@@ -1688,6 +1652,8 @@ bool NeonSession::LOCK( NeonLock * pLock,
         }
         return false;
     }
+    pLock->timeout = timeout;
+    return theRetVal;
 }
 
 void NeonSession::UNLOCK( const OUString & inPath,
@@ -1867,8 +1833,8 @@ void NeonSession::HandleError( int nError,
 
         case NE_ERROR:        // Generic error
         {
-            OUString aText = OUString::createFromAscii(
-                ne_get_error( m_pHttpSession ) );
+            const char* sErr = ne_get_error(m_pHttpSession);
+            OUString aText(sErr, strlen(sErr), osl_getThreadTextEncoding());
 
             sal_uInt16 code = makeStatusCode( aText );
 
@@ -2028,9 +1994,9 @@ void NeonSession::HandleError( int nError,
         default:
         {
             SAL_WARN( "ucb.ucp.webdav", "Unknown Neon error code!" );
+            const char* sErr = ne_get_error(m_pHttpSession);
             throw DAVException( DAVException::DAV_HTTP_ERROR,
-                                OUString::createFromAscii(
-                                    ne_get_error( m_pHttpSession ) ) );
+                                OUString(sErr, strlen(sErr), osl_getThreadTextEncoding()) );
         }
     }
 }

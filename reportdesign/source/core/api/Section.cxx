@@ -18,24 +18,19 @@
  */
 #include <Section.hxx>
 #include <comphelper/enumhelper.hxx>
-#include <connectivity/dbtools.hxx>
+#include <comphelper/servicehelper.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <cppuhelper/typeprovider.hxx>
 #include <com/sun/star/report/XReportComponent.hpp>
 #include <com/sun/star/report/ForceNewPage.hpp>
-#include <com/sun/star/beans/PropertyAttribute.hpp>
 #include <com/sun/star/lang/NoSupportException.hpp>
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <strings.hxx>
 #include <Tools.hxx>
 #include <RptModel.hxx>
 #include <RptPage.hxx>
+#include <ReportControlModel.hxx>
 #include <ReportDefinition.hxx>
-#include <Shape.hxx>
-#include <svx/unoshape.hxx>
 #include <vcl/svapp.hxx>
-#include <RptObject.hxx>
-#include <ReportDrawPage.hxx>
 
 namespace reportdesign
 {
@@ -194,22 +189,22 @@ void OSection::init()
     uno::Reference< report::XReportDefinition> xReport = getReportDefinition();
     std::shared_ptr<rptui::OReportModel> pModel = OReportDefinition::getSdrModel(xReport);
     assert(pModel && "No model set at the report definition!");
-    if ( pModel )
-    {
-        uno::Reference<report::XSection> const xSection(this);
-        SdrPage & rSdrPage(*pModel->createNewPage(xSection));
-        m_xDrawPage.set(rSdrPage.getUnoPage(), uno::UNO_QUERY_THROW);
-        m_xDrawPage_ShapeGrouper.set(m_xDrawPage, uno::UNO_QUERY_THROW);
-        // apparently we may also get OReportDrawPage which doesn't support this
-        m_xDrawPage_FormSupplier.set(m_xDrawPage, uno::UNO_QUERY);
-        m_xDrawPage_Tunnel.set(m_xDrawPage, uno::UNO_QUERY_THROW);
-        // fdo#53872: now also exchange the XDrawPage in the SdrPage so that
-        // rSdrPage.getUnoPage returns this
-        rSdrPage.SetUnoPage(this);
-        // createNewPage _should_ have stored away 2 uno::References to this,
-        // so our ref count cannot be 1 here, so this isn't destroyed here
-        assert(m_refCount > 1);
-    }
+    if ( !pModel )
+        return;
+
+    uno::Reference<report::XSection> const xSection(this);
+    SdrPage & rSdrPage(*pModel->createNewPage(xSection));
+    m_xDrawPage.set(rSdrPage.getUnoPage(), uno::UNO_QUERY_THROW);
+    m_xDrawPage_ShapeGrouper.set(m_xDrawPage, uno::UNO_QUERY_THROW);
+    // apparently we may also get OReportDrawPage which doesn't support this
+    m_xDrawPage_FormSupplier.set(m_xDrawPage, uno::UNO_QUERY);
+    m_xDrawPage_Tunnel.set(m_xDrawPage, uno::UNO_QUERY_THROW);
+    // fdo#53872: now also exchange the XDrawPage in the SdrPage so that
+    // rSdrPage.getUnoPage returns this
+    rSdrPage.SetUnoPage(this);
+    // createNewPage _should_ have stored away 2 uno::References to this,
+    // so our ref count cannot be 1 here, so this isn't destroyed here
+    assert(m_refCount > 1);
 }
 
 // XSection

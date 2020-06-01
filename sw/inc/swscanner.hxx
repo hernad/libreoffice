@@ -31,7 +31,7 @@ class SwTextNode;
 // during spell check
 class SwScanner
 {
-    std::function<LanguageType (sal_Int32, sal_Int32, bool)> const m_pGetLangOfChar;
+    std::function<LanguageType (sal_Int32, sal_Int32, bool)> m_pGetLangOfChar;
     OUString m_aWord;
     const OUString m_aPreDashReplacementText;
     OUString m_aText;
@@ -43,18 +43,18 @@ class SwScanner
     sal_Int32 m_nLength;
     sal_Int32 m_nOverriddenDashCount;
     LanguageType m_aCurrentLang;
-    sal_uInt16 const m_nWordType;
-    bool const m_bClip;
+    sal_uInt16 m_nWordType;
+    bool m_bClip;
 
 public:
     SwScanner(const std::function<LanguageType(sal_Int32, sal_Int32, bool)>& pGetLangOfChar,
               const OUString& rText, const LanguageType* pLang, const ModelToViewHelper& rConvMap,
-              sal_uInt16 nWordType, sal_Int32 nStart, sal_Int32 nEnde, bool bClip = false);
+              sal_uInt16 nWordType, sal_Int32 nStart, sal_Int32 nEnd, bool bClip = false);
     SwScanner( const SwTextNode& rNd, const OUString& rText,
                const LanguageType* pLang,
                const ModelToViewHelper& rConvMap,
                sal_uInt16 nWordType,
-               sal_Int32 nStart, sal_Int32 nEnde, bool bClip = false );
+               sal_Int32 nStart, sal_Int32 nEnd, bool bClip = false );
 
     // This next word function tries to find the language for the next word
     // It should currently _not_ be used for spell checking, and works only for

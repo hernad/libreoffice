@@ -23,11 +23,11 @@
 #include <memory>
 #include <xmloff/xmlstyle.hxx>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace uno { template<class X> class Reference; }
-    namespace xml { namespace sax { class XAttributeList; } }
+    namespace xml::sax { class XAttributeList; }
     namespace beans { class XPropertySet; }
-} } }
+}
 class SvXMLImport;
 
 /// import footnote and endnote configuration elements
@@ -51,6 +51,10 @@ class XMLFootnoteConfigurationImportContext final : public SvXMLStyleContext
     bool bPosition;
     bool bIsEndnote;
 
+    /// parse attributes
+    virtual void SetAttribute( sal_uInt16 nPrefixKey,
+                               const OUString& rLocalName,
+                               const OUString& rValue ) override;
 public:
 
 
@@ -61,10 +65,6 @@ public:
         const css::uno::Reference< css::xml::sax::XAttributeList> & xAttrList);
 
     virtual ~XMLFootnoteConfigurationImportContext() override;
-
-    /// parse attributes
-    virtual void StartElement(
-        const css::uno::Reference< css::xml::sax::XAttributeList> & xAttrList ) override;
 
     /// for footnotes, also parse begin and end notices
     virtual SvXMLImportContextRef CreateChildContext(

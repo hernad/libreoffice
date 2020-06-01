@@ -67,6 +67,8 @@
 #include "lwpholder.hxx"
 #include "lwpnumericfmt.hxx"
 #include "lwptable.hxx"
+#include "lwprowlayout.hxx"
+#include <lwpfilehdr.hxx>
 #include <lwpglobalmgr.hxx>
 
 #include <xfilter/xfstylemanager.hxx>
@@ -713,10 +715,7 @@ void LwpConnectedCellLayout::SetCellMap()
 LwpCellBorderType LwpConnectedCellLayout::GetCellBorderType(sal_uInt16 nRow, sal_uInt16 nCol, LwpTableLayout * pTableLayout)
 {
     if (!pTableLayout)
-    {
-        assert(false);
-        return enumWholeBorder;
-    }
+        throw std::runtime_error("missing table layout");
 
     sal_uInt16 nRowSpan = m_nRealrowspan;
 
