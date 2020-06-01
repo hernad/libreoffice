@@ -20,15 +20,6 @@
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
 #include <xmloff/xmlnmspe.hxx>
-#include <xmloff/xmluconv.hxx>
-#include <xmloff/nmspmap.hxx>
-#include "xmlEnums.hxx"
-#include "xmlHelper.hxx"
-#include <strings.hxx>
-#include "xmlStyleImport.hxx"
-#include <ucbhelper/content.hxx>
-#include <com/sun/star/awt/FontDescriptor.hpp>
-#include <com/sun/star/beans/PropertyAttribute.hpp>
 #include <sal/log.hxx>
 #include <osl/diagnose.h>
 
@@ -48,9 +39,7 @@ OXMLComponent::OXMLComponent( ORptFilter& _rImport
 {
     OSL_ENSURE(m_xComponent.is(),"Component is NULL!");
 
-    sax_fastparser::FastAttributeList *pAttribList =
-                    sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-    for (auto &aIter : *pAttribList)
+    for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
     {
         OUString sValue = aIter.toString();
 

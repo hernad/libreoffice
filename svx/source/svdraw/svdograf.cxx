@@ -91,7 +91,7 @@ SdrGraphicLink::SdrGraphicLink(SdrGrafObj& rObj)
         sfx2::LinkManager::GetDisplayNames( this, nullptr, &rGrafObj.aFileName, nullptr, &rGrafObj.aFilterName );
 
         Graphic aGraphic;
-        if (sfx2::LinkManager::GetGraphicFromAny(rMimeType, rValue, rGrafObj.aReferer, aGraphic, nullptr))
+        if (pLinkManager->GetGraphicFromAny(rMimeType, rValue, aGraphic, nullptr))
         {
             rGrafObj.ImpSetLinkedGraphic(aGraphic);
         }
@@ -838,7 +838,7 @@ bool SdrGrafObj::HasGDIMetaFile() const
 
 bool SdrGrafObj::isEmbeddedVectorGraphicData() const
 {
-    return GraphicType::Bitmap == GetGraphicType() && GetGraphic().getVectorGraphicData().get();
+    return GraphicType::Bitmap == GetGraphicType() && GetGraphic().getVectorGraphicData();
 }
 
 GDIMetaFile SdrGrafObj::getMetafileFromEmbeddedVectorGraphicData() const

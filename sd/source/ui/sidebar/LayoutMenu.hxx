@@ -24,12 +24,13 @@
 #include <sfx2/sidebar/PanelLayout.hxx>
 
 #include <svtools/valueset.hxx>
+#include <vcl/menu.hxx>
 #include <vcl/transfer.hxx>
 #include <sfx2/request.hxx>
 #include <xmloff/autolayout.hxx>
 
-namespace com { namespace sun { namespace star { namespace frame { class XStatusListener; } } } }
-namespace com { namespace sun { namespace star { namespace ui { class XSidebar; } } } }
+namespace com::sun::star::frame { class XStatusListener; }
+namespace com::sun::star::ui { class XSidebar; }
 
 
 namespace sd {
@@ -37,11 +38,9 @@ class DrawDocShell;
 class ViewShellBase;
 }
 
-namespace sd { namespace tools {
-class EventMultiplexerEvent;
-} }
+namespace sd::tools { class EventMultiplexerEvent; }
 
-namespace sd { namespace sidebar {
+namespace sd::sidebar {
 
 class LayoutValueSet;
 
@@ -171,7 +170,7 @@ private:
     DECL_LINK(OnMenuItemSelected, Menu*, bool);
 };
 
-} } // end of namespace ::sd::toolpanel
+} // end of namespace ::sd::toolpanel
 
 #endif
 

@@ -727,8 +727,8 @@ void XMLShapeExport::exportShape(const uno::Reference< drawing::XShape >& xShape
         }
     }
 
-    // export draw:display (do not export in ODF 1.2 or older)
-    if( xSet.is() && ( mrExport.getDefaultVersion() > SvtSaveOptions::ODFVER_012 ) )
+    // export draw:display (do not export in ODF 1.3 or older)
+    if (xSet.is() && (mrExport.getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED))
     {
         if( aShapeInfo.meShapeType != XmlShapeTypeDrawPageShape && aShapeInfo.meShapeType != XmlShapeTypePresPageShape &&
             aShapeInfo.meShapeType != XmlShapeTypeHandoutShape && aShapeInfo.meShapeType != XmlShapeTypeDrawChartShape )
@@ -1563,9 +1563,9 @@ void XMLShapeExport::ImpExportText( const uno::Reference< drawing::XShape >& xSh
 {
     if (eExtensionNS == TextPNS::EXTENSION)
     {
-        if (mrExport.getDefaultVersion() <= SvtSaveOptions::ODFVER_012)
+        if ((mrExport.getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED) == 0)
         {
-            return; // do not export to ODF 1.1/1.2
+            return; // do not export to ODF 1.1/1.2/1.3
         }
     }
     uno::Reference< text::XText > xText( xShape, uno::UNO_QUERY );
@@ -2351,9 +2351,7 @@ void XMLShapeExport::ImpExportGraphicObjectShape(
     SvXMLElementExport aElem( mrExport, XML_NAMESPACE_DRAW,
                               XML_FRAME, bCreateNewline, true );
 
-    const bool bSaveBackwardsCompatible = bool( mrExport.getExportFlags() & SvXMLExportFlags::SAVEBACKWARDCOMPATIBLE );
-
-    if (!bIsEmptyPresObj || bSaveBackwardsCompatible)
+    if (!bIsEmptyPresObj)
     {
         uno::Reference<graphic::XGraphic> xGraphic;
         OUString sOutMimeType;
@@ -2408,15 +2406,19 @@ void XMLShapeExport::ImpExportGraphicObjectShape(
         }
 
         {
-            if (GetExport().getDefaultVersion() > SvtSaveOptions::ODFVER_012)
+            if (GetExport().getSaneDefaultVersion() > SvtSaveOptions::ODFSVER_012)
             {
                 if (sOutMimeType.isEmpty())
                 {
                     GetExport().GetGraphicMimeTypeFromStream(xGraphic, sOutMimeType);
                 }
                 if (!sOutMimeType.isEmpty())
-                {
-                    GetExport().AddAttribute(XML_NAMESPACE_LO_EXT, "mime-type", sOutMimeType);
+                {   // ODF 1.3 OFFICE-3943
+                    GetExport().AddAttribute(
+                        SvtSaveOptions::ODFSVER_013 <= GetExport().getSaneDefaultVersion()
+                            ? XML_NAMESPACE_DRAW
+                            : XML_NAMESPACE_LO_EXT,
+                        "mime-type", sOutMimeType);
                 }
             }
 
@@ -2456,8 +2458,14 @@ void XMLShapeExport::ImpExportGraphicObjectShape(
                     mrExport.AddAttribute(XML_NAMESPACE_XLINK, XML_ACTUATE, XML_ONLOAD );
                 }
 
-                if (!aMimeType.isEmpty() && GetExport().getDefaultVersion() > SvtSaveOptions::ODFVER_012)
-                    mrExport.AddAttribute(XML_NAMESPACE_LO_EXT, "mime-type", aMimeType);
+                if (!aMimeType.isEmpty() && GetExport().getSaneDefaultVersion() > SvtSaveOptions::ODFSVER_012)
+                {   // ODF 1.3 OFFICE-3943
+                    mrExport.AddAttribute(
+                        SvtSaveOptions::ODFSVER_013 <= GetExport().getSaneDefaultVersion()
+                            ? XML_NAMESPACE_DRAW
+                            : XML_NAMESPACE_LO_EXT,
+                        "mime-type", aMimeType);
+                }
 
                 SvXMLElementExport aElement(mrExport, XML_NAMESPACE_DRAW, XML_IMAGE, true, true);
 
@@ -2475,7 +2483,7 @@ void XMLShapeExport::ImpExportGraphicObjectShape(
     ImpExportDescription( xShape ); // #i68101#
 
     // Signature Line, QR Code - needs to be after the images!
-    if (GetExport().getDefaultVersion() > SvtSaveOptions::ODFVER_012)
+    if (GetExport().getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
     {
         ImpExportSignatureLine(xShape);
         ImpExportQRCode(xShape);
@@ -2856,9 +2864,7 @@ void XMLShapeExport::ImpExportOLE2Shape(
     SvXMLElementExport aElement( mrExport, XML_NAMESPACE_DRAW,
                               XML_FRAME, bCreateNewline, true );
 
-    const bool bSaveBackwardsCompatible = bool( mrExport.getExportFlags() & SvXMLExportFlags::SAVEBACKWARDCOMPATIBLE );
-
-    if( !bIsEmptyPresObj || bSaveBackwardsCompatible )
+    if (!bIsEmptyPresObj)
     {
         if (pAttrList)
         {
@@ -4116,7 +4122,7 @@ static void ImpExportEnhancedPath( SvXMLExport& rExport,
     }
     aStr = aStrBuffer.makeStringAndClear();
     rExport.AddAttribute( bExtended ? XML_NAMESPACE_DRAW_EXT : XML_NAMESPACE_DRAW, XML_ENHANCED_PATH, aStr );
-    if ( !bExtended && bNeedExtended && (rExport.getDefaultVersion() > SvtSaveOptions::ODFVER_012) )
+    if (!bExtended && bNeedExtended && (rExport.getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED))
         ImpExportEnhancedPath( rExport, rCoordinates, rSegments, true );
 }
 
@@ -4578,8 +4584,8 @@ static void ImpExportEnhancedGeometry( SvXMLExport& rExport, const uno::Referenc
                                 {
                                     case EAS_SubViewSize:
                                     {
-                                        // export draw:sub-view-size (do not export in ODF 1.2 or older)
-                                        if (rExport.getDefaultVersion() <= SvtSaveOptions::ODFVER_012)
+                                        // export draw:sub-view-size (do not export in ODF 1.3 or older)
+                                        if ((rExport.getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED) == 0)
                                         {
                                             continue;
                                         }
@@ -4835,7 +4841,7 @@ void XMLShapeExport::ImpExportTableShape( const uno::Reference< drawing::XShape 
         SvXMLElementExport aElement( mrExport, XML_NAMESPACE_DRAW, XML_FRAME, bCreateNewline, true );
 
         // do not export in ODF 1.1 or older
-        if( mrExport.getDefaultVersion() >= SvtSaveOptions::ODFVER_012 )
+        if (mrExport.getSaneDefaultVersion() >= SvtSaveOptions::ODFSVER_012)
         {
             if( !bIsEmptyPresObj )
             {

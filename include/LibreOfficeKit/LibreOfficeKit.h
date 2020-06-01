@@ -437,7 +437,7 @@ struct _LibreOfficeKitDocumentClass
                                 int viewId);
 
     /// @see lok::Document::completeFunction().
-    void (*completeFunction) (LibreOfficeKitDocument* pThis, int nIndex);
+    void (*completeFunction) (LibreOfficeKitDocument* pThis, const char* pFunctionName);
 
     /// @see lok::Document::setWindowTextSelection
     void (*setWindowTextSelection) (LibreOfficeKitDocument* pThis,
@@ -445,6 +445,10 @@ struct _LibreOfficeKitDocumentClass
                                     bool bSwap,
                                     int nX,
                                     int nY);
+
+    /// @see lok::Document::sendFormFieldEvent
+    void (*sendFormFieldEvent) (LibreOfficeKitDocument* pThis,
+                                const char* pArguments);
 
 #endif // defined LOK_USE_UNSTABLE_API || defined LIBO_INTERNAL_ONLY
 };

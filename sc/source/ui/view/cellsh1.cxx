@@ -17,7 +17,6 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <globalnames.hxx>
 #include <config_features.h>
 
 #include <com/sun/star/i18n/TextConversionOption.hpp>
@@ -1382,9 +1381,9 @@ void ScCellShell::ExecuteEdit( SfxRequest& rReq )
                                     pOwnClip->GetDocument()->GetClipStart( nClipStartX, nClipStartY );
                                     pOwnClip->GetDocument()->GetClipArea( nClipSizeX, nClipSizeY, true );
 
-                                    if ( !( pData->GetSimpleArea( nStartX, nStartY, nStartTab,
-                                                   nEndX, nEndY, nEndTab ) == SC_MARK_SIMPLE &&
-                                                   nStartTab == nEndTab ) )
+                                    if ( pData->GetSimpleArea( nStartX, nStartY, nStartTab,
+                                                   nEndX, nEndY, nEndTab ) != SC_MARK_SIMPLE ||
+                                                   nStartTab != nEndTab )
                                     {
                                         // the destination is not a simple range,
                                         // assume the destination as the current cell
@@ -2467,7 +2466,7 @@ void ScCellShell::ExecuteEdit( SfxRequest& rReq )
                 ScViewData* pData  = GetViewData();
                 ScMarkData& rMark  = pData->GetMarkData();
                 ScDocument* pDoc   = pData->GetDocument();
-                ScMarkData  aNewMark(pDoc->MaxRow(), pDoc->MaxCol());
+                ScMarkData  aNewMark(pDoc->GetSheetLimits());
                 ScRangeList aRangeList;
 
                 for (auto const& rTab : rMark.GetSelectedTabs())
@@ -2874,31 +2873,12 @@ void ScCellShell::ExecuteDataPilotDialog()
                 pTabViewShell->GetFrameWeld(), bEnableExt));
 
         // Populate named ranges (if any).
-        // We must take into account 2 types of scope : global doc and sheets
-        // for global doc: <name of the range>
-        // for sheets: <sheetname>.<name of the range>
-        std::map<OUString, ScRangeName*> aRangeMap;
-        pDoc->GetRangeNameMap(aRangeMap);
-        for (auto const& elemRangeMap : aRangeMap)
+        ScRangeName* pRangeName = pDoc->GetRangeName();
+        if (pRangeName)
         {
-            ScRangeName* pRangeName = elemRangeMap.second;
-            if (pRangeName)
-            {
-                if (elemRangeMap.first == STR_GLOBAL_RANGE_NAME)
-                {
-                    for (auto const& elem : *pRangeName)
-                        pTypeDlg->AppendNamedRange(elem.second->GetName());
-                }
-                else
-                {
-                    OUString aScope(elemRangeMap.first);
-                    ScGlobal::AddQuotes(aScope, '\'');
-                    for (auto const& elem : *pRangeName)
-                    {
-                        pTypeDlg->AppendNamedRange(aScope + "." + elem.second->GetName());
-                    }
-                }
-            }
+            ScRangeName::const_iterator itr = pRangeName->begin(), itrEnd = pRangeName->end();
+            for (; itr != itrEnd; ++itr)
+                pTypeDlg->AppendNamedRange(itr->second->GetName());
         }
 
         if ( pTypeDlg->Execute() == RET_OK )

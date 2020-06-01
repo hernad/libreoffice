@@ -26,75 +26,54 @@
 namespace svt
 {
 
-
     //= ComboBoxControl
-
     ComboBoxControl::ComboBoxControl(vcl::Window* pParent)
-                   :ComboBox(pParent, WB_DROPDOWN|WB_NOBORDER)
+        : InterimItemWindow(pParent, "svt/ui/combocontrol.ui", "ComboControl")
+        , m_xWidget(m_xBuilder->weld_combo_box("combobox"))
     {
-        EnableAutoSize(false);
-        EnableAutocomplete(true);
-        SetDropDownLineCount(5);
+        m_xWidget->set_entry_width_chars(1); // so a smaller than default width can be used
     }
 
-
-    bool ComboBoxControl::PreNotify( NotifyEvent& rNEvt )
+    void ComboBoxControl::dispose()
     {
-        if (rNEvt.GetType() == MouseNotifyEvent::KEYINPUT && !IsInDropDown())
-        {
-            const KeyEvent *pEvt = rNEvt.GetKeyEvent();
-            const vcl::KeyCode rKey = pEvt->GetKeyCode();
-
-            if ((rKey.GetCode() == KEY_UP || rKey.GetCode() == KEY_DOWN) &&
-                (!pEvt->GetKeyCode().IsShift() && pEvt->GetKeyCode().IsMod1()))
-            {
-                // select next resp. previous entry
-                sal_Int32 nPos = GetEntryPos(GetText());
-                int nDir = (rKey.GetCode() == KEY_DOWN ? 1 : -1);
-                if (!((nPos == 0 && nDir == -1) || (nPos >= GetEntryCount() && nDir == 1)))
-                {
-                    nPos += nDir;
-                    SetText(GetEntry(nPos));
-                }
-                return true;
-            }
-        }
-        return ComboBox::PreNotify(rNEvt);
+        m_xWidget.reset();
+        InterimItemWindow::dispose();
     }
 
     //= ComboBoxCellController
     ComboBoxCellController::ComboBoxCellController(ComboBoxControl* pWin)
                              :CellController(pWin)
     {
-        GetComboBox().SetModifyHdl( LINK(this, ComboBoxCellController, ModifyHdl) );
+        GetComboBox().connect_changed(LINK(this, ComboBoxCellController, ModifyHdl));
     }
 
-    IMPL_LINK_NOARG(ComboBoxCellController, ModifyHdl, Edit&, void)
+    IMPL_LINK_NOARG(ComboBoxCellController, ModifyHdl, weld::ComboBox&, void)
     {
         callModifyHdl();
     }
 
-
     bool ComboBoxCellController::MoveAllowed(const KeyEvent& rEvt) const
     {
-        ComboBoxControl& rBox = GetComboBox();
+        weld::ComboBox& rBox = GetComboBox();
         switch (rEvt.GetKeyCode().GetCode())
         {
             case KEY_END:
             case KEY_RIGHT:
             {
-                Selection aSel = rBox.GetSelection();
-                return !aSel && aSel.Max() == rBox.GetText().getLength();
+                int nStartPos, nEndPos;
+                bool bNoSelection = rBox.get_entry_selection_bounds(nStartPos, nEndPos);
+                return bNoSelection && nEndPos == rBox.get_active_text().getLength();
             }
             case KEY_HOME:
             case KEY_LEFT:
             {
-                Selection aSel = rBox.GetSelection();
-                return !aSel && aSel.Min() == 0;
+                int nStartPos, nEndPos;
+                bool bNoSelection = rBox.get_entry_selection_bounds(nStartPos, nEndPos);
+                return bNoSelection && nStartPos == 0;
             }
             case KEY_UP:
             case KEY_DOWN:
-                if (rBox.IsInDropDown())
+                if (rBox.get_popup_shown())
                     return false;
                 if (!rEvt.GetKeyCode().IsShift() &&
                      rEvt.GetKeyCode().IsMod1())
@@ -106,7 +85,7 @@ namespace svt
             case KEY_PAGEUP:
             case KEY_PAGEDOWN:
             case KEY_RETURN:
-                if (rBox.IsInDropDown())
+                if (rBox.get_popup_shown())
                     return false;
                 [[fallthrough]];
             default:
@@ -114,64 +93,40 @@ namespace svt
         }
     }
 
-
     bool ComboBoxCellController::IsModified() const
     {
-        return GetComboBox().IsValueChangedFromSaved();
+        return GetComboBox().get_value_changed_from_saved();
     }
 
     void ComboBoxCellController::ClearModified()
     {
-        GetComboBox().SaveValue();
+        GetComboBox().save_value();
     }
 
     //= ListBoxControl
     ListBoxControl::ListBoxControl(vcl::Window* pParent)
-                  :ListBox(pParent, WB_DROPDOWN|WB_NOBORDER)
+        : InterimItemWindow(pParent, "svt/ui/listcontrol.ui", "ListControl")
+        , m_xWidget(m_xBuilder->weld_combo_box("listbox"))
     {
-        EnableAutoSize(false);
-        EnableMultiSelection(false);
-        SetDropDownLineCount(20);
+        m_xWidget->set_size_request(42, -1); // so a later narrow size request can stick
     }
 
-    bool ListBoxControl::PreNotify( NotifyEvent& rNEvt )
+    void ListBoxControl::dispose()
     {
-        if (rNEvt.GetType() == MouseNotifyEvent::KEYINPUT && !IsInDropDown())
-        {
-            const KeyEvent *pEvt = rNEvt.GetKeyEvent();
-            const vcl::KeyCode rKey = pEvt->GetKeyCode();
-
-            if ((rKey.GetCode() == KEY_UP || rKey.GetCode() == KEY_DOWN) &&
-                (!pEvt->GetKeyCode().IsShift() && pEvt->GetKeyCode().IsMod1()))
-            {
-                // select next resp. previous entry
-                sal_Int32 nPos = GetSelectedEntryPos();
-                int nDir = (rKey.GetCode() == KEY_DOWN ? 1 : -1);
-                if (!((nPos == 0 && nDir == -1) || (nPos >= GetEntryCount() && nDir == 1)))
-                {
-                    nPos += nDir;
-                    SelectEntryPos(nPos);
-                }
-                Select();   // for calling Modify
-                return true;
-            }
-            else if (GetParent()->PreNotify(rNEvt))
-                return true;
-        }
-        return ListBox::PreNotify(rNEvt);
+        m_xWidget.reset();
+        InterimItemWindow::dispose();
     }
 
     //= ListBoxCellController
     ListBoxCellController::ListBoxCellController(ListBoxControl* pWin)
                              :CellController(pWin)
     {
-        GetListBox().SetSelectHdl(LINK(this, ListBoxCellController, ListBoxSelectHdl));
+        GetListBox().connect_changed(LINK(this, ListBoxCellController, ListBoxSelectHdl));
     }
-
 
     bool ListBoxCellController::MoveAllowed(const KeyEvent& rEvt) const
     {
-        const ListBoxControl& rBox = GetListBox();
+        const weld::ComboBox& rBox = GetListBox();
         switch (rEvt.GetKeyCode().GetCode())
         {
             case KEY_UP:
@@ -186,7 +141,7 @@ namespace svt
                 [[fallthrough]];
             case KEY_PAGEUP:
             case KEY_PAGEDOWN:
-                if (rBox.IsTravelSelect())
+                if (rBox.get_popup_shown())
                     return false;
                 [[fallthrough]];
             default:
@@ -194,28 +149,22 @@ namespace svt
         }
     }
 
-
     bool ListBoxCellController::IsModified() const
     {
-        return GetListBox().IsValueChangedFromSaved();
+        return GetListBox().get_value_changed_from_saved();
     }
-
 
     void ListBoxCellController::ClearModified()
     {
-        GetListBox().SaveValue();
+        GetListBox().save_value();
     }
 
-
-    IMPL_LINK_NOARG(ListBoxCellController, ListBoxSelectHdl, ListBox&, void)
+    IMPL_LINK_NOARG(ListBoxCellController, ListBoxSelectHdl, weld::ComboBox&, void)
     {
         callModifyHdl();
     }
 
-
     //= CheckBoxControl
-
-
     CheckBoxControl::CheckBoxControl(vcl::Window* pParent)
                    :Control(pParent, 0)
     {
@@ -230,14 +179,14 @@ namespace svt
 
         EnableChildTransparentMode();
 
-        pBox = VclPtr<TriStateBox>::Create(this,WB_CENTER|WB_VCENTER);
+        pBox = VclPtr<CheckBox>::Create(this,WB_CENTER|WB_VCENTER);
+        pBox->EnableTriState( true );
         pBox->SetLegacyNoTextAlign( true );
         pBox->EnableChildTransparentMode();
         pBox->SetPaintTransparent( true );
         pBox->SetClickHdl( LINK( this, CheckBoxControl, OnClick ) );
         pBox->Show();
     }
-
 
     CheckBoxControl::~CheckBoxControl()
     {
@@ -279,12 +228,10 @@ namespace svt
             pBox->SetZoom(GetZoom());
     }
 
-
-    void CheckBoxControl::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawFlags nFlags )
+    void CheckBoxControl::Draw( OutputDevice* pDev, const Point& rPos, DrawFlags nFlags )
     {
-        pBox->Draw(pDev,rPos,rSize,nFlags);
+        pBox->Draw(pDev, rPos, nFlags);
     }
-
 
     void CheckBoxControl::GetFocus()
     {

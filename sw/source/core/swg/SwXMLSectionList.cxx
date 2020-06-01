@@ -66,8 +66,8 @@ public:
         {
             return new SvXMLSectionListContext(GetImport());
         }
-        if ((Element & NMSP_MASK) == NAMESPACE_TOKEN(XML_NAMESPACE_TEXT) ||
-            (Element & NMSP_MASK) == NAMESPACE_TOKEN(XML_NAMESPACE_TEXT_OOO))
+        if (IsTokenInNamespace(Element, XML_NAMESPACE_TEXT) ||
+            IsTokenInNamespace(Element, XML_NAMESPACE_TEXT_OOO))
         {
             auto nToken = Element & TOKEN_MASK;
             if (nToken == XML_P ||
@@ -121,11 +121,8 @@ css::uno::Reference<css::xml::sax::XFastContextHandler> SvXMLSectionListContext:
         Element == XML_ELEMENT(TEXT_OOO, XML_SECTION ) ||
         Element == XML_ELEMENT(TEXT_OOO, XML_BOOKMARK) )
     {
-        sax_fastparser::FastAttributeList *pAttribList =
-            sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
-
         OUString sName;
-        for (auto &aIter : *pAttribList)
+        for (auto &aIter : sax_fastparser::castToFastAttributeList( xAttrList ))
             if (aIter.getToken() == XML_ELEMENT(TEXT, XML_NAME) ||
                 aIter.getToken() == XML_ELEMENT(TEXT_OOO, XML_NAME))
                 sName = aIter.toString();

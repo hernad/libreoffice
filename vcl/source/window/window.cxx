@@ -1247,41 +1247,19 @@ void Window::CopyDeviceArea( SalTwoRect& aPosAry, bool bWindowInvalidate )
     OutputDevice::CopyDeviceArea(aPosAry, bWindowInvalidate);
 }
 
-void Window::DrawOutDevDirectCheck(const OutputDevice* pSrcDev, SalGraphics*& pSrcGraphics)
+const OutputDevice* Window::DrawOutDevDirectCheck(const OutputDevice* pSrcDev) const
 {
+    const OutputDevice* pSrcDevChecked;
     if ( this == pSrcDev )
-        pSrcGraphics = nullptr;
+        pSrcDevChecked = nullptr;
+    else if (GetOutDevType() != pSrcDev->GetOutDevType())
+        pSrcDevChecked = pSrcDev;
+    else if (this->mpWindowImpl->mpFrameWindow == static_cast<const vcl::Window*>(pSrcDev)->mpWindowImpl->mpFrameWindow)
+        pSrcDevChecked = nullptr;
     else
-    {
-        if ( GetOutDevType() != pSrcDev->GetOutDevType() )
-        {
-            if ( !pSrcDev->mpGraphics )
-            {
-                if ( !pSrcDev->AcquireGraphics() )
-                    return;
-            }
-            pSrcGraphics = pSrcDev->mpGraphics;
-        }
-        else
-        {
-            if ( this->mpWindowImpl->mpFrameWindow == static_cast<const vcl::Window*>(pSrcDev)->mpWindowImpl->mpFrameWindow )
-                pSrcGraphics = nullptr;
-            else
-            {
-                if ( !pSrcDev->mpGraphics )
-                {
-                    if ( !pSrcDev->AcquireGraphics() )
-                        return;
-                }
-                pSrcGraphics = pSrcDev->mpGraphics;
+        pSrcDevChecked = pSrcDev;
 
-                if ( !mpGraphics && !AcquireGraphics() )
-                    return;
-                SAL_WARN_IF( !mpGraphics || !pSrcDev->mpGraphics, "vcl.gdi",
-                            "OutputDevice::DrawOutDev(): We need more than one Graphics" );
-            }
-        }
-    }
+    return pSrcDevChecked;
 }
 
 void Window::DrawOutDevDirectProcess( const OutputDevice* pSrcDev, SalTwoRect& rPosAry, SalGraphics* pSrcGraphics )
@@ -1843,7 +1821,7 @@ void Window::KeyUp( const KeyEvent& rKEvt )
         mpWindowImpl->mbKeyUp = true;
 }
 
-void Window::Draw( OutputDevice*, const Point&, const Size&, DrawFlags )
+void Window::Draw( OutputDevice*, const Point&, DrawFlags )
 {
 }
 
@@ -2958,28 +2936,22 @@ tools::Rectangle Window::ImplOutputToUnmirroredAbsoluteScreenPixel( const tools:
 tools::Rectangle Window::GetWindowExtentsRelative( vcl::Window *pRelativeWindow ) const
 {
     // with decoration
-    return ImplGetWindowExtentsRelative( pRelativeWindow, false );
+    return ImplGetWindowExtentsRelative( pRelativeWindow );
 }
 
-tools::Rectangle Window::GetClientWindowExtentsRelative() const
-{
-    // without decoration
-    return ImplGetWindowExtentsRelative( nullptr, true );
-}
-
-tools::Rectangle Window::ImplGetWindowExtentsRelative( vcl::Window *pRelativeWindow, bool bClientOnly ) const
+tools::Rectangle Window::ImplGetWindowExtentsRelative( vcl::Window *pRelativeWindow ) const
 {
     SalFrameGeometry g = mpWindowImpl->mpFrame->GetGeometry();
     // make sure we use the extent of our border window,
     // otherwise we miss a few pixels
-    const vcl::Window *pWin = (!bClientOnly && mpWindowImpl->mpBorderWindow) ? mpWindowImpl->mpBorderWindow : this;
+    const vcl::Window *pWin = mpWindowImpl->mpBorderWindow ? mpWindowImpl->mpBorderWindow : this;
 
     Point aPos( pWin->OutputToScreenPixel( Point(0,0) ) );
     aPos.AdjustX(g.nX );
     aPos.AdjustY(g.nY );
     Size aSize ( pWin->GetSizePixel() );
     // #104088# do not add decoration to the workwindow to be compatible to java accessibility api
-    if( !bClientOnly && (mpWindowImpl->mbFrame || (mpWindowImpl->mpBorderWindow && mpWindowImpl->mpBorderWindow->mpWindowImpl->mbFrame && GetType() != WindowType::WORKWINDOW)) )
+    if( mpWindowImpl->mbFrame || (mpWindowImpl->mpBorderWindow && mpWindowImpl->mpBorderWindow->mpWindowImpl->mbFrame && GetType() != WindowType::WORKWINDOW) )
     {
         aPos.AdjustX( -sal_Int32(g.nLeftDecoration) );
         aPos.AdjustY( -sal_Int32(g.nTopDecoration) );
@@ -2989,7 +2961,7 @@ tools::Rectangle Window::ImplGetWindowExtentsRelative( vcl::Window *pRelativeWin
     if( pRelativeWindow )
     {
         // #106399# express coordinates relative to borderwindow
-        vcl::Window *pRelWin = (!bClientOnly && pRelativeWindow->mpWindowImpl->mpBorderWindow) ? pRelativeWindow->mpWindowImpl->mpBorderWindow.get() : pRelativeWindow;
+        vcl::Window *pRelWin = pRelativeWindow->mpWindowImpl->mpBorderWindow ? pRelativeWindow->mpWindowImpl->mpBorderWindow.get() : pRelativeWindow;
         aPos = pRelWin->AbsoluteScreenToOutputPixel( aPos );
     }
     return tools::Rectangle( aPos, aSize );
@@ -3364,6 +3336,7 @@ const char* windowTypeName(WindowType nWindowType)
         case WindowType::PATTERNFIELD:              return "patternfield";
         case WindowType::NUMERICFIELD:              return "numericfield";
         case WindowType::METRICFIELD:               return "metricfield";
+        case WindowType::FORMATTEDFIELD:            return "formattedfield";
         case WindowType::CURRENCYFIELD:             return "currencyfield";
         case WindowType::DATEFIELD:                 return "datefield";
         case WindowType::TIMEFIELD:                 return "timefield";

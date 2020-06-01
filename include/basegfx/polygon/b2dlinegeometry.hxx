@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_BASEGFX_POLYGON_B2DLINEGEOMETRY_HXX
-#define INCLUDED_BASEGFX_POLYGON_B2DLINEGEOMETRY_HXX
+#pragma once
 
 #include <basegfx/numeric/ftools.hxx>
 #include <basegfx/polygon/b2dpolypolygon.hxx>
@@ -27,10 +26,8 @@
 #include <basegfx/basegfxdllapi.h>
 #include <basegfx/polygon/b2dpolygontriangulator.hxx>
 
-namespace basegfx
+namespace basegfx::utils
 {
-    namespace utils
-    {
         /** Create line start/end geometry element, mostly arrows and things like that.
 
             @param rCandidate
@@ -145,9 +142,6 @@ namespace basegfx
             double fMiterMinimumAngle = basegfx::deg2rad(15.0),
             basegfx::triangulator::B2DTriangleVector* pTriangles = nullptr);
 
-    } // end of namespace utils
-} // end of namespace basegfx
-
-#endif // INCLUDED_BASEGFX_POLYGON_B2DLINEGEOMETRY_HXX
+} // end of namespace basegfx::utils
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

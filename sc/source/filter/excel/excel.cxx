@@ -24,14 +24,20 @@
 #include <sot/exchange.hxx>
 #include <filter/msfilter/classids.hxx>
 #include <tools/globname.hxx>
+#include <com/sun/star/packages/XPackageEncryption.hpp>
 #include <com/sun/star/ucb/ContentCreationException.hpp>
+#include <com/sun/star/uno/XComponentContext.hpp>
 #include <unotools/streamwrap.hxx>
+#include <unotools/defaultencoding.hxx>
+#include <unotools/wincodepage.hxx>
 #include <osl/diagnose.h>
 #include <filter.hxx>
 #include <document.hxx>
 #include <xistream.hxx>
 #include <xltools.hxx>
 #include <docoptio.hxx>
+#include <comphelper/sequenceashashmap.hxx>
+#include <comphelper/processfactory.hxx>
 
 #include <docsh.hxx>
 #include <scerrors.hxx>
@@ -41,6 +47,99 @@
 #include <scdll.hxx>
 
 #include <memory>
+
+using namespace css;
+
+static void lcl_getListOfStreams(SotStorage * pStorage, comphelper::SequenceAsHashMap& aStreamsData, const OUString& sPrefix)
+{
+    SvStorageInfoList aElements;
+    pStorage->FillInfoList(&aElements);
+    for (const auto & aElement : aElements)
+    {
+        OUString sStreamFullName = sPrefix.getLength() ? sPrefix + "/" + aElement.GetName() : aElement.GetName();
+        if (aElement.IsStorage())
+        {
+            SotStorage * pSubStorage = pStorage->OpenSotStorage(aElement.GetName(), StreamMode::STD_READ | StreamMode::SHARE_DENYALL);
+            lcl_getListOfStreams(pSubStorage, aStreamsData, sStreamFullName);
+        }
+        else
+        {
+            // Read stream
+            tools::SvRef<SotStorageStream> rStream = pStorage->OpenSotStream(aElement.GetName(), StreamMode::READ | StreamMode::SHARE_DENYALL);
+            if (rStream.is())
+            {
+                sal_Int32 nStreamSize = rStream->GetSize();
+                uno::Sequence< sal_Int8 > oData;
+                oData.realloc(nStreamSize);
+                sal_Int32 nReadBytes = rStream->ReadBytes(oData.getArray(), nStreamSize);
+                if (nStreamSize == nReadBytes)
+                    aStreamsData[sStreamFullName] <<= oData;
+            }
+        }
+    }
+}
+
+static tools::SvRef<SotStorage> lcl_DRMDecrypt(SfxMedium& rMedium, tools::SvRef<SotStorage>& rStorage, std::shared_ptr<SvStream>& rNewStorageStrm)
+{
+    tools::SvRef<SotStorage> aNewStorage;
+
+    // We have DRM encrypted storage. We should try to decrypt it first, if we can
+    uno::Sequence< uno::Any > aArguments;
+    uno::Reference<uno::XComponentContext> xComponentContext(comphelper::getProcessComponentContext());
+    uno::Reference< packages::XPackageEncryption > xPackageEncryption(
+        xComponentContext->getServiceManager()->createInstanceWithArgumentsAndContext(
+            "com.sun.star.comp.oox.crypto.DRMDataSpace", aArguments, xComponentContext), uno::UNO_QUERY);
+
+    if (!xPackageEncryption.is())
+    {
+        // We do not know how to decrypt this
+        return aNewStorage;
+    }
+
+    comphelper::SequenceAsHashMap aStreamsData;
+    lcl_getListOfStreams(rStorage.get(), aStreamsData, "");
+
+    try {
+        uno::Sequence<beans::NamedValue> aStreams = aStreamsData.getAsConstNamedValueList();
+        if (!xPackageEncryption->readEncryptionInfo(aStreams))
+        {
+            // We failed with decryption
+            return aNewStorage;
+        }
+
+        tools::SvRef<SotStorageStream> rContentStream = rStorage->OpenSotStream("\011DRMContent", StreamMode::READ | StreamMode::SHARE_DENYALL);
+        if (!rContentStream.is())
+        {
+            return aNewStorage;
+        }
+
+        rNewStorageStrm = std::make_shared<SvMemoryStream>();
+
+        uno::Reference<io::XInputStream > xInputStream(new utl::OSeekableInputStreamWrapper(rContentStream.get(), false));
+        uno::Reference<io::XOutputStream > xDecryptedStream(new utl::OSeekableOutputStreamWrapper(*rNewStorageStrm));
+
+        if (!xPackageEncryption->decrypt(xInputStream, xDecryptedStream))
+        {
+            // We failed with decryption
+            return aNewStorage;
+        }
+
+        rNewStorageStrm->Seek(0);
+
+        // Further reading is done from new document
+        aNewStorage = new SotStorage(*rNewStorageStrm);
+
+        // Set the media descriptor data
+        uno::Sequence<beans::NamedValue> aEncryptionData = xPackageEncryption->createEncryptionData("");
+        rMedium.GetItemSet()->Put(SfxUnoAnyItem(SID_ENCRYPTIONDATA, uno::makeAny(aEncryptionData)));
+    }
+    catch (const std::exception&)
+    {
+        return aNewStorage;
+    }
+
+    return aNewStorage;
+}
 
 ErrCode ScFormatFilterPluginImpl::ScImportExcel( SfxMedium& rMedium, ScDocument* pDocument, const EXCIMPFORMAT eFormat )
 {
@@ -67,6 +166,7 @@ ErrCode ScFormatFilterPluginImpl::ScImportExcel( SfxMedium& rMedium, ScDocument*
     // try to open an OLE storage
     tools::SvRef<SotStorage> xRootStrg;
     tools::SvRef<SotStorageStream> xStrgStrm;
+    std::shared_ptr<SvStream> aNewStorageStrm;
     if( SotStorage::IsStorageFile( pMedStrm ) )
     {
         xRootStrg = new SotStorage( pMedStrm, false );
@@ -77,6 +177,13 @@ ErrCode ScFormatFilterPluginImpl::ScImportExcel( SfxMedium& rMedium, ScDocument*
     // try to open "Book" or "Workbook" stream in OLE storage
     if( xRootStrg.is() )
     {
+        // Check if there is DRM encryption in storage
+        tools::SvRef<SotStorageStream> xDRMStrm = ScfTools::OpenStorageStreamRead(xRootStrg, "\011DRMContent");
+        if (xDRMStrm.is())
+        {
+            xRootStrg = lcl_DRMDecrypt(rMedium, xRootStrg, aNewStorageStrm);
+        }
+
         // try to open the "Book" stream
         tools::SvRef<SotStorageStream> xBookStrm = ScfTools::OpenStorageStreamRead( xRootStrg, EXC_STREAM_BOOK );
         XclBiff eBookBiff = xBookStrm.is() ?  XclImpStream::DetectBiffVersion( *xBookStrm ) : EXC_BIFF_UNKNOWN;
@@ -118,7 +225,9 @@ ErrCode ScFormatFilterPluginImpl::ScImportExcel( SfxMedium& rMedium, ScDocument*
     {
         pBookStrm->SetBufferSize( 0x8000 );     // still needed?
 
-        XclImpRootData aImpData( eBiff, rMedium, xRootStrg, *pDocument, RTL_TEXTENCODING_MS_1252 );
+        XclImpRootData aImpData(
+            eBiff, rMedium, xRootStrg, *pDocument,
+            utl_getWinTextEncodingFromLangStr(utl_getLocaleForGlobalDefaultEncoding()));
         std::unique_ptr< ImportExcel > xFilter;
         switch( eBiff )
         {
@@ -143,6 +252,37 @@ ErrCode ScFormatFilterPluginImpl::ScImportExcel( SfxMedium& rMedium, ScDocument*
 static ErrCode lcl_ExportExcelBiff( SfxMedium& rMedium, ScDocument *pDocument,
         SvStream* pMedStrm, bool bBiff8, rtl_TextEncoding eNach )
 {
+    uno::Reference< packages::XPackageEncryption > xPackageEncryption;
+    uno::Sequence< beans::NamedValue > aEncryptionData;
+    const SfxUnoAnyItem* pEncryptionDataItem = SfxItemSet::GetItem<SfxUnoAnyItem>(rMedium.GetItemSet(), SID_ENCRYPTIONDATA, false);
+    SvStream* pOriginalMediaStrm = pMedStrm;
+    std::shared_ptr<SvStream> pMediaStrm;
+    if (pEncryptionDataItem && (pEncryptionDataItem->GetValue() >>= aEncryptionData))
+    {
+        ::comphelper::SequenceAsHashMap aHashData(aEncryptionData);
+        OUString sCryptoType = aHashData.getUnpackedValueOrDefault("CryptoType", OUString());
+
+        if (sCryptoType.getLength())
+        {
+            uno::Reference<uno::XComponentContext> xComponentContext(comphelper::getProcessComponentContext());
+            uno::Sequence<uno::Any> aArguments{
+                uno::makeAny(beans::NamedValue("Binary", uno::makeAny(true))) };
+            xPackageEncryption.set(
+                xComponentContext->getServiceManager()->createInstanceWithArgumentsAndContext(
+                    "com.sun.star.comp.oox.crypto." + sCryptoType, aArguments, xComponentContext), uno::UNO_QUERY);
+
+            if (xPackageEncryption.is())
+            {
+                // We have an encryptor. Export document into memory stream and encrypt it later
+                pMediaStrm = std::make_shared<SvMemoryStream>();
+                pMedStrm = pMediaStrm.get();
+
+                // Temp removal of EncryptionData to avoid password protection triggering
+                rMedium.GetItemSet()->ClearItem(SID_ENCRYPTIONDATA);
+            }
+        }
+    }
+
     // try to open an OLE storage
     tools::SvRef<SotStorage> xRootStrg = new SotStorage( pMedStrm, false );
     if( xRootStrg->GetError() ) return SCERR_IMPORT_OPEN;
@@ -190,6 +330,67 @@ static ErrCode lcl_ExportExcelBiff( SfxMedium& rMedium, ScDocument *pDocument,
 
     xStrgStrm->Commit();
     xRootStrg->Commit();
+
+    if (xPackageEncryption.is())
+    {
+        // Perform DRM encryption
+        pMedStrm->Seek(0);
+
+        xPackageEncryption->setupEncryption(aEncryptionData);
+
+        uno::Reference<io::XInputStream > xInputStream(new utl::OSeekableInputStreamWrapper(pMedStrm, false));
+        uno::Sequence<beans::NamedValue> aStreams = xPackageEncryption->encrypt(xInputStream);
+
+        tools::SvRef<SotStorage> xEncryptedRootStrg = new SotStorage(pOriginalMediaStrm, false);
+        for (const beans::NamedValue & aStreamData : std::as_const(aStreams))
+        {
+            // To avoid long paths split and open substorages recursively
+            // Splitting paths manually, since comphelper::string::split is trimming special characters like \0x01, \0x09
+            SotStorage * pStorage = xEncryptedRootStrg.get();
+            OUString sFileName;
+            sal_Int32 idx = 0;
+            do
+            {
+                OUString sPathElem = aStreamData.Name.getToken(0, L'/', idx);
+                if (!sPathElem.isEmpty())
+                {
+                    if (idx < 0)
+                    {
+                        sFileName = sPathElem;
+                    }
+                    else
+                    {
+                        pStorage = pStorage->OpenSotStorage(sPathElem);
+                    }
+                }
+            } while (pStorage && idx >= 0);
+
+            if (!pStorage)
+            {
+                eRet = ERRCODE_IO_GENERAL;
+                break;
+            }
+
+            SotStorageStream* pStream = pStorage->OpenSotStream(sFileName);
+            if (!pStream)
+            {
+                eRet = ERRCODE_IO_GENERAL;
+                break;
+            }
+            uno::Sequence<sal_Int8> aStreamContent;
+            aStreamData.Value >>= aStreamContent;
+            size_t nBytesWritten = pStream->WriteBytes(aStreamContent.getArray(), aStreamContent.getLength());
+            if (nBytesWritten != static_cast<size_t>(aStreamContent.getLength()))
+            {
+                eRet = ERRCODE_IO_CANTWRITE;
+                break;
+            }
+        }
+        xEncryptedRootStrg->Commit();
+
+        // Restore encryption data
+        rMedium.GetItemSet()->Put(SfxUnoAnyItem(SID_ENCRYPTIONDATA, uno::makeAny(aEncryptionData)));
+    }
 
     return eRet;
 }

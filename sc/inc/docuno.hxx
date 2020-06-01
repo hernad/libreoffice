@@ -56,8 +56,8 @@
 #include <svl/itemprop.hxx>
 #include <vcl/ITiledRenderable.hxx>
 
-namespace com { namespace sun { namespace star { namespace chart2 { namespace data { class XDataProvider; } } } } }
-namespace com { namespace sun { namespace star { namespace sheet { namespace opencl { struct OpenCLPlatform; } } } } }
+namespace com::sun::star::chart2::data { class XDataProvider; }
+namespace com::sun::star::sheet::opencl { struct OpenCLPlatform; }
 
 class ScDocShell;
 class ScAnnotationObj;
@@ -387,7 +387,7 @@ public:
     OUString getPostItsPos() override;
 
     /// @see vcl::ITiledRenderable::completeFunction().
-    virtual void completeFunction(int nIndex) override;
+    virtual void completeFunction(const OUString& rFunctionName) override;
 };
 
 class ScDrawPagesObj final : public cppu::WeakImplHelper<

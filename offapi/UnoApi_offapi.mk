@@ -1621,6 +1621,7 @@ $(eval $(call gb_UnoApi_add_idlfiles,offapi,com/sun/star/accessibility,\
 	AccessibleRelation \
 	AccessibleRelationType \
 	AccessibleRole \
+	AccessibleScrollType \
 	AccessibleStateType \
 	AccessibleTableModelChange \
 	AccessibleTableModelChangeType \
@@ -1639,7 +1640,6 @@ $(eval $(call gb_UnoApi_add_idlfiles,offapi,com/sun/star/accessibility,\
 	XAccessibleEventListener \
     XAccessibleExtendedAttributes \
 	XAccessibleExtendedComponent \
-    XAccessibleGetAccFlowTo \
     XAccessibleGroupPosition \
 	XAccessibleHyperlink \
 	XAccessibleHypertext \
@@ -2933,6 +2933,8 @@ $(eval $(call gb_UnoApi_add_idlfiles,offapi,com/sun/star/packages,\
 	NoRawFormatException \
 	WrongPasswordException \
 	XDataSinkEncrSupport \
+	XPackageEncryption \
+	PackageEncryption \
 ))
 $(eval $(call gb_UnoApi_add_idlfiles,offapi,com/sun/star/packages/manifest,\
 	XManifestReader \

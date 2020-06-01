@@ -189,8 +189,10 @@ uno::Sequence<beans::PropertyValue> ListLevel::GetLevelProperties(bool bDefaults
 {
     std::vector<beans::PropertyValue> aNumberingProperties;
 
-    if( m_nIStartAt >= 0)
+    if (m_nIStartAt >= 0)
         aNumberingProperties.push_back(lcl_makePropVal<sal_Int16>(PROP_START_WITH, m_nIStartAt) );
+    else if (bDefaults)
+        aNumberingProperties.push_back(lcl_makePropVal<sal_Int16>(PROP_START_WITH, 0));
 
     sal_Int16 nNumberFormat = -1;
     if (m_nNFC == NS_ooxml::LN_Value_ST_NumberFormat_custom)
@@ -212,27 +214,23 @@ uno::Sequence<beans::PropertyValue> ListLevel::GetLevelProperties(bool bDefaults
         aNumberingProperties.push_back(lcl_makePropVal(PROP_NUMBERING_TYPE, nNumberFormat));
     }
 
-
-    if( !isOutlineNumbering())
+    // todo: this is not the bullet char
+    if( nNumberFormat == style::NumberingType::CHAR_SPECIAL )
     {
-        // todo: this is not the bullet char
-        if( nNumberFormat == style::NumberingType::CHAR_SPECIAL )
+        if (!m_sBulletChar.isEmpty())
         {
-            if (!m_sBulletChar.isEmpty())
-            {
-                aNumberingProperties.push_back(lcl_makePropVal(PROP_BULLET_CHAR, m_sBulletChar.copy(0, 1)));
-            }
-            else
-            {
-                // If w:lvlText's value is null - set bullet char to zero.
-                aNumberingProperties.push_back(lcl_makePropVal<sal_Unicode>(PROP_BULLET_CHAR, 0));
-            }
+            aNumberingProperties.push_back(lcl_makePropVal(PROP_BULLET_CHAR, m_sBulletChar.copy(0, 1)));
         }
-        if (m_xGraphicBitmap.is())
+        else
         {
-            aNumberingProperties.push_back(lcl_makePropVal(PROP_GRAPHIC_BITMAP, m_xGraphicBitmap));
-            aNumberingProperties.push_back(lcl_makePropVal(PROP_GRAPHIC_SIZE, m_aGraphicSize));
+            // If w:lvlText's value is null - set bullet char to zero.
+            aNumberingProperties.push_back(lcl_makePropVal<sal_Unicode>(PROP_BULLET_CHAR, 0));
         }
+    }
+    if (m_xGraphicBitmap.is())
+    {
+        aNumberingProperties.push_back(lcl_makePropVal(PROP_GRAPHIC_BITMAP, m_xGraphicBitmap));
+        aNumberingProperties.push_back(lcl_makePropVal(PROP_GRAPHIC_SIZE, m_aGraphicSize));
     }
 
     if (bDefaults || m_nTabstop != 0)
@@ -523,7 +521,7 @@ void ListDef::CreateNumberingRules( DomainMapper& rDMapper,
 
                 // Get the char style
                 uno::Sequence< beans::PropertyValue > aAbsCharStyleProps = pAbsLevel->GetCharStyleProperties( );
-                if ( pLevel.get( ) )
+                if ( pLevel )
                 {
                     uno::Sequence< beans::PropertyValue >& rAbsCharStyleProps = aAbsCharStyleProps;
                     uno::Sequence< beans::PropertyValue > aCharStyleProps =
@@ -547,7 +545,7 @@ void ListDef::CreateNumberingRules( DomainMapper& rDMapper,
                 // and add them to the level properties
                 OUString sText = pAbsLevel->GetBulletChar( );
                 // Inherit <w:lvlText> from the abstract level in case the override would be empty.
-                if (pLevel.get() && !pLevel->GetBulletChar().isEmpty())
+                if (pLevel && !pLevel->GetBulletChar().isEmpty())
                     sText = pLevel->GetBulletChar( );
 
                 if (sText.isEmpty())
@@ -666,15 +664,15 @@ void ListsManager::lcl_attribute( Id nName, Value& rVal )
 
     if (nName != NS_ooxml::LN_CT_NumPicBullet_numPicBulletId)
     {
-        OSL_ENSURE( m_pCurrentDefinition.get(), "current entry has to be set here");
-        if(!m_pCurrentDefinition.get())
+        OSL_ENSURE( m_pCurrentDefinition, "current entry has to be set here");
+        if(!m_pCurrentDefinition)
             return ;
         pCurrentLvl = m_pCurrentDefinition->GetCurrentLevel( );
     }
     else
     {
-        SAL_WARN_IF(!m_pCurrentNumPicBullet.get(), "writerfilter", "current entry has to be set here");
-        if (!m_pCurrentNumPicBullet.get())
+        SAL_WARN_IF(!m_pCurrentNumPicBullet, "writerfilter", "current entry has to be set here");
+        if (!m_pCurrentNumPicBullet)
             return;
     }
     int nIntValue = rVal.getInt();
@@ -689,7 +687,7 @@ void ListsManager::lcl_attribute( Id nName, Value& rVal )
             //these numbers can be mixed randomly together with separators pre- and suffixes
             //the Writer supports only a number of upper levels to show, separators is always a dot
             //and each level can have a prefix and a suffix
-            if(pCurrentLvl.get())
+            if(pCurrentLvl)
             {
                 //if the BulletChar is a soft-hyphen (0xad)
                 //replace it with a hard-hyphen (0x2d)
@@ -705,7 +703,7 @@ void ListsManager::lcl_attribute( Id nName, Value& rVal )
         case NS_ooxml::LN_CT_NumFmt_val:
         case NS_ooxml::LN_CT_Lvl_isLgl:
         case NS_ooxml::LN_CT_Lvl_legacy:
-            if ( pCurrentLvl.get( ) )
+            if ( pCurrentLvl )
             {
                 if (nName == NS_ooxml::LN_CT_NumFmt_format)
                 {
@@ -732,7 +730,7 @@ void ListsManager::lcl_attribute( Id nName, Value& rVal )
             m_pCurrentDefinition->AddLevel();
 
             writerfilter::Reference<Properties>::Pointer_t pProperties = rVal.getProperties();
-            if(pProperties.get())
+            if(pProperties)
                 pProperties->resolve(*this);
         }
         break;
@@ -746,17 +744,17 @@ void ListsManager::lcl_attribute( Id nName, Value& rVal )
         break;
         case NS_ooxml::LN_CT_Ind_start:
         case NS_ooxml::LN_CT_Ind_left:
-            if ( pCurrentLvl.get( ) )
+            if ( pCurrentLvl )
                 pCurrentLvl->Insert(
                     PROP_INDENT_AT, uno::makeAny( ConversionHelper::convertTwipToMM100( nIntValue ) ));
             break;
         case NS_ooxml::LN_CT_Ind_hanging:
-            if ( pCurrentLvl.get( ) )
+            if ( pCurrentLvl )
                 pCurrentLvl->Insert(
                     PROP_FIRST_LINE_INDENT, uno::makeAny( - ConversionHelper::convertTwipToMM100( nIntValue ) ));
         break;
         case NS_ooxml::LN_CT_Ind_firstLine:
-            if ( pCurrentLvl.get( ) )
+            if ( pCurrentLvl )
                 pCurrentLvl->Insert(
                     PROP_FIRST_LINE_INDENT, uno::makeAny( ConversionHelper::convertTwipToMM100( nIntValue ) ));
         break;
@@ -767,7 +765,7 @@ void ListsManager::lcl_attribute( Id nName, Value& rVal )
         case NS_ooxml::LN_CT_TabStop_pos:
         {
             //no paragraph attributes in ListTable char style sheets
-            if ( pCurrentLvl.get( ) )
+            if ( pCurrentLvl )
                 pCurrentLvl->SetValue( nName,
                     ConversionHelper::convertTwipToMM100( nIntValue ) );
         }
@@ -789,10 +787,10 @@ void ListsManager::lcl_sprm( Sprm& rSprm )
 {
     //fill the attributes of the style sheet
     sal_uInt32 nSprmId = rSprm.getId();
-    if( m_pCurrentDefinition.get() ||
+    if( m_pCurrentDefinition ||
         nSprmId == NS_ooxml::LN_CT_Numbering_abstractNum ||
         nSprmId == NS_ooxml::LN_CT_Numbering_num ||
-        (nSprmId == NS_ooxml::LN_CT_NumPicBullet_pict && m_pCurrentNumPicBullet.get()) ||
+        (nSprmId == NS_ooxml::LN_CT_NumPicBullet_pict && m_pCurrentNumPicBullet) ||
         nSprmId == NS_ooxml::LN_CT_Numbering_numPicBullet)
     {
         static bool bIsStartVisited = false;
@@ -802,10 +800,10 @@ void ListsManager::lcl_sprm( Sprm& rSprm )
             case NS_ooxml::LN_CT_Numbering_abstractNum:
             {
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                if(pProperties.get())
+                if(pProperties)
                 {
                     //create a new Abstract list entry
-                    OSL_ENSURE( !m_pCurrentDefinition.get(), "current entry has to be NULL here");
+                    OSL_ENSURE( !m_pCurrentDefinition, "current entry has to be NULL here");
                     m_pCurrentDefinition = new AbstractListDef;
                     pProperties->resolve( *this );
                     //append it to the table
@@ -817,10 +815,10 @@ void ListsManager::lcl_sprm( Sprm& rSprm )
             case NS_ooxml::LN_CT_Numbering_num:
             {
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                if(pProperties.get())
+                if(pProperties)
                 {
                     // Create a new list entry
-                    OSL_ENSURE( !m_pCurrentDefinition.get(), "current entry has to be NULL here");
+                    OSL_ENSURE( !m_pCurrentDefinition, "current entry has to be NULL here");
                     ListDef::Pointer listDef( new ListDef );
                     m_pCurrentDefinition = listDef.get();
                     pProperties->resolve( *this );
@@ -834,7 +832,7 @@ void ListsManager::lcl_sprm( Sprm& rSprm )
             case NS_ooxml::LN_CT_Numbering_numPicBullet:
             {
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                if (pProperties.get())
+                if (pProperties)
                 {
                     NumPicBullet::Pointer numPicBullet(new NumPicBullet());
                     m_pCurrentNumPicBullet = numPicBullet;
@@ -924,7 +922,7 @@ void ListsManager::lcl_sprm( Sprm& rSprm )
             {
                 m_pCurrentDefinition->AddLevel();
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                if(pProperties.get())
+                if(pProperties)
                     pProperties->resolve(*this);
             }
             break;
@@ -936,7 +934,7 @@ void ListsManager::lcl_sprm( Sprm& rSprm )
             case NS_ooxml::LN_CT_Lvl_numFmt:
             {
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                if (pProperties.get())
+                if (pProperties)
                 {
                     pProperties->resolve(*this);
                 }
@@ -979,7 +977,7 @@ void ListsManager::lcl_sprm( Sprm& rSprm )
             case NS_ooxml::LN_CT_Lvl_rPr : //contains LN_EG_RPrBase_rFonts
             {
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                if(pProperties.get())
+                if(pProperties)
                     pProperties->resolve(*this);
             }
             break;
@@ -987,7 +985,7 @@ void ListsManager::lcl_sprm( Sprm& rSprm )
             {
                 // overwrite level
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                if(pProperties.get())
+                if(pProperties)
                     pProperties->resolve(*this);
             }
             break;
@@ -1024,7 +1022,7 @@ void ListsManager::lcl_sprm( Sprm& rSprm )
             {
                 //todo: how to handle paragraph properties within numbering levels (except LeftIndent and FirstLineIndent)?
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                if(pProperties.get())
+                if(pProperties)
                     pProperties->resolve(*this);
             }
             break;
@@ -1032,7 +1030,7 @@ void ListsManager::lcl_sprm( Sprm& rSprm )
             case NS_ooxml::LN_CT_Tabs_tab:
             {
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                if(pProperties.get())
+                if(pProperties)
                     pProperties->resolve(*this);
             }
             break;
@@ -1050,7 +1048,7 @@ void ListsManager::lcl_sprm( Sprm& rSprm )
             case NS_ooxml::LN_CT_Num_lvlOverride:
             {
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                if (pProperties.get())
+                if (pProperties)
                     pProperties->resolve(*this);
             }
             break;
@@ -1069,6 +1067,12 @@ void ListsManager::lcl_sprm( Sprm& rSprm )
             {
                 OUString sStyleName = rSprm.getValue( )->getString( );
                 m_pCurrentDefinition->SetNumStyleLink(sStyleName);
+            }
+            break;
+            case NS_ooxml::LN_CT_AbstractNum_styleLink:
+            {
+                OUString sStyleName = rSprm.getValue()->getString();
+                m_pCurrentDefinition->SetStyleLink(sStyleName);
             }
             break;
             case NS_ooxml::LN_EG_RPrBase_rFonts: //contains font properties
@@ -1098,7 +1102,7 @@ void ListsManager::lcl_entry(writerfilter::Reference<Properties>::Pointer_t ref 
     else
     {
         // Create AbstractListDef's
-        OSL_ENSURE( !m_pCurrentDefinition.get(), "current entry has to be NULL here");
+        OSL_ENSURE( !m_pCurrentDefinition, "current entry has to be NULL here");
         m_pCurrentDefinition = new AbstractListDef( );
         ref->resolve(*this);
         //append it to the table
@@ -1109,44 +1113,44 @@ void ListsManager::lcl_entry(writerfilter::Reference<Properties>::Pointer_t ref 
 
 AbstractListDef::Pointer ListsManager::GetAbstractList( sal_Int32 nId )
 {
-    AbstractListDef::Pointer pAbstractList;
-
-    int nLen = m_aAbstractLists.size( );
-    int i = 0;
-    while ( !pAbstractList.get( ) && i < nLen )
+    for (const auto& listDef : m_aAbstractLists)
     {
-        if ( m_aAbstractLists[i]->GetId( ) == nId )
+        if (listDef->GetId( ) == nId)
         {
-            if ( m_aAbstractLists[i]->GetNumStyleLink().getLength() > 0 )
+            if (listDef->GetNumStyleLink().getLength() > 0)
             {
                 // If the abstract num has a style linked, check the linked style's number id.
                 StyleSheetTablePtr pStylesTable = m_rDMapper.GetStyleSheetTable( );
 
                 const StyleSheetEntryPtr pStyleSheetEntry =
-                    pStylesTable->FindStyleSheetByISTD( m_aAbstractLists[i]->GetNumStyleLink() );
+                    pStylesTable->FindStyleSheetByISTD(listDef->GetNumStyleLink() );
 
                 const StyleSheetPropertyMap* pStyleSheetProperties =
                     dynamic_cast<const StyleSheetPropertyMap*>(pStyleSheetEntry ? pStyleSheetEntry->pProperties.get() : nullptr);
 
-                if( pStyleSheetProperties && pStyleSheetProperties->GetNumId() >= 0 )
+                if( pStyleSheetProperties && pStyleSheetProperties->GetListId() >= 0 )
                 {
-                    ListDef::Pointer pList = GetList( pStyleSheetProperties->GetNumId() );
+                    ListDef::Pointer pList = GetList( pStyleSheetProperties->GetListId() );
                     if ( pList!=nullptr )
                         return pList->GetAbstractDefinition();
-                    else
-                        pAbstractList = m_aAbstractLists[i];
                 }
 
+                // In stylesheet we did not found anything useful. Try to find base abstractnum having this stylelink
+                for (const auto & baseListDef : m_aAbstractLists)
+                {
+                    if (baseListDef->GetStyleLink() == listDef->GetNumStyleLink())
+                    {
+                        return baseListDef;
+                    }
+                }
             }
-            else
-            {
-                pAbstractList = m_aAbstractLists[i];
-            }
+
+            // Standalone abstract list
+            return listDef;
         }
-        i++;
     }
 
-    return pAbstractList;
+    return nullptr;
 }
 
 ListDef::Pointer ListsManager::GetList( sal_Int32 nId )
@@ -1155,7 +1159,7 @@ ListDef::Pointer ListsManager::GetList( sal_Int32 nId )
 
     int nLen = m_aLists.size( );
     int i = 0;
-    while ( !pList.get( ) && i < nLen )
+    while ( !pList && i < nLen )
     {
         if ( m_aLists[i]->GetId( ) == nId )
             pList = m_aLists[i];

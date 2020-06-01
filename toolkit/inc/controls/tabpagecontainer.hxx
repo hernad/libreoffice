@@ -28,9 +28,9 @@
 #include <toolkit/helper/listenermultiplexer.hxx>
 
 
-namespace com { namespace sun { namespace star { namespace awt { namespace tab { class XTabPage; } } } } }
-namespace com { namespace sun { namespace star { namespace awt { namespace tab { class XTabPageContainerListener; } } } } }
-namespace com { namespace sun { namespace star { namespace awt { namespace tab { class XTabPageModel; } } } } }
+namespace com::sun::star::awt::tab { class XTabPage; }
+namespace com::sun::star::awt::tab { class XTabPageContainerListener; }
+namespace com::sun::star::awt::tab { class XTabPageModel; }
 
 
 typedef ::cppu::AggImplInheritanceHelper1   <   UnoControlModel
@@ -110,6 +110,9 @@ public:
     virtual css::uno::Reference< css::awt::tab::XTabPage > SAL_CALL getTabPageByID( ::sal_Int16 tabPageID ) override;
     virtual void SAL_CALL addTabPageContainerListener( const css::uno::Reference< css::awt::tab::XTabPageContainerListener >& listener ) override;
     virtual void SAL_CALL removeTabPageContainerListener( const css::uno::Reference< css::awt::tab::XTabPageContainerListener >& listener ) override;
+
+    // css::beans::XPropertiesChangeListener
+    virtual void SAL_CALL propertiesChange( const ::css::uno::Sequence< ::css::beans::PropertyChangeEvent >& aEvent ) override;
 
     virtual void SAL_CALL addControl( const OUString& Name, const css::uno::Reference< css::awt::XControl >& Control ) override;
     // css::lang::XServiceInfo

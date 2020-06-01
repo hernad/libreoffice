@@ -20,18 +20,15 @@
 #include <DesignView.hxx>
 #include <ReportController.hxx>
 #include <svtools/acceleratorexecute.hxx>
-#include <unotools/syslocale.hxx>
 #include <unotools/viewoptions.hxx>
 #include <RptDef.hxx>
 #include <UITools.hxx>
 #include <RptObject.hxx>
 #include <propbrw.hxx>
-#include <toolkit/helper/convert.hxx>
 #include <helpids.h>
 #include <SectionView.hxx>
 #include <ReportSection.hxx>
 #include <rptui_slotid.hrc>
-#include <svx/svxids.hrc>
 #include <AddField.hxx>
 #include <ScrollHelper.hxx>
 #include <Navigator.hxx>
@@ -195,7 +192,7 @@ bool ODesignView::PreNotify( NotifyEvent& rNEvt )
             const KeyEvent* pKeyEvent = rNEvt.GetKeyEvent();
             if ( handleKeyEvent(*pKeyEvent) )
                 bRet = true;
-            else if ( bRet && m_pAccel.get() )
+            else if ( bRet && m_pAccel )
             {
                 const vcl::KeyCode& rCode = pKeyEvent->GetKeyCode();
                 util::URL aUrl;

@@ -177,6 +177,7 @@ $(eval $(call gb_Library_add_exception_objects,svx,\
     svx/source/mnuctrls/smarttagmenu \
     svx/source/sidebar/ContextChangeEventMultiplexer \
     svx/source/sidebar/EmptyPanel \
+    svx/source/sidebar/inspector/InspectorTextPanel \
     svx/source/sidebar/nbdtmg \
     svx/source/sidebar/nbdtmgfact	\
     svx/source/sidebar/PanelFactory \
@@ -198,6 +199,7 @@ $(eval $(call gb_Library_add_exception_objects,svx,\
     svx/source/sidebar/area/AreaPropertyPanelBase \
     svx/source/sidebar/area/AreaTransparencyGradientPopup \
     svx/source/sidebar/glow/GlowPropertyPanel \
+    svx/source/sidebar/softedge/SoftEdgePropertyPanel \
     svx/source/sidebar/shadow/ShadowPropertyPanel \
     svx/source/sidebar/graphic/GraphicPropertyPanel \
     svx/source/sidebar/line/LinePropertyPanel \

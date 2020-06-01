@@ -27,6 +27,7 @@
 #include <com/sun/star/container/XNameContainer.hpp>
 #include <queue>
 #include <stack>
+#include <set>
 #include <unordered_map>
 #include <vector>
 #include <optional>
@@ -47,7 +48,7 @@
 #include "FormControlHelper.hxx"
 #include <map>
 
-namespace com{ namespace sun{ namespace star{
+namespace com::sun::star{
         namespace awt{
             struct Size;
         }
@@ -61,7 +62,7 @@ namespace com{ namespace sun{ namespace star{
                 class XFormField;
         }
         namespace beans{ class XPropertySet;}
-}}}
+}
 
 namespace writerfilter {
 namespace dmapper {
@@ -484,6 +485,8 @@ private:
     // TableManagers are stacked: one for each stream to avoid any confusion
     std::stack< tools::SvRef< DomainMapperTableManager > > m_aTableManagers;
     tools::SvRef<DomainMapperTableHandler> m_pTableHandler;
+    // List of document lists overrides. They are applied only once on first occurrence in document
+    std::set<sal_Int32> m_aListOverrideApplied;
 
     //each context needs a stack of currently used attributes
     std::stack<PropertyMapPtr>  m_aPropertyStacks[NUMBER_OF_CONTEXTS];
@@ -678,7 +681,8 @@ public:
     void appendTextPortion( const OUString& rString, const PropertyMapPtr& pPropertyMap );
     void appendTextContent(const css::uno::Reference<css::text::XTextContent>&, const css::uno::Sequence<css::beans::PropertyValue>&);
     void appendOLE( const OUString& rStreamName, const std::shared_ptr<OLEHandler>& pOleHandler );
-    void appendStarMath( const Value& v );
+    void appendStarMath( const Value& v);
+    void adjustLastPara(sal_Int8 nAlign);
     css::uno::Reference<css::beans::XPropertySet> appendTextSectionAfter(css::uno::Reference<css::text::XTextRange> const & xBefore);
 
     /// AutoText import: each entry is placed in the separate section
@@ -884,7 +888,7 @@ public:
 
     void appendTableHandler( )
     {
-        if (m_pTableHandler.get())
+        if (m_pTableHandler)
             m_aTableManagers.top()->setHandler(m_pTableHandler);
     }
 
@@ -1057,9 +1061,6 @@ public:
     /// store their data, and create them after frame creation
     bool m_bIsActualParagraphFramed;
     std::vector<css::uno::Any> aFramedRedlines;
-
-    /// Table paragraph properties may need style update based on table style
-    std::vector<TableParagraph> m_aParagraphsToEndTable;
 
 private:
     void PushPageHeaderFooter(bool bHeader, SectionPropertyMap::PageType eType);

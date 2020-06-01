@@ -38,8 +38,10 @@
  * methods and the SvXMLElementExport constructor.
  */
 
-namespace xmloff { namespace token {
+namespace xmloff::token {
 
+    // IMPORTANT! XMLTokenEnum order MUST be in synch with aTokenList in
+    // xmloff/source/core/xmltoken.cxx, and with xmloff/source/token/tokens.txt.
 
     /**
      * The enumeration of all XML tokens.
@@ -925,9 +927,9 @@ namespace xmloff { namespace token {
         XML_GCD,
         XML_GENERATOR,
         XML_GEQ,
-        XML_GLOW,
         XML_GLOW_RADIUS,
         XML_GLOW_COLOR,
+        XML_GLOW_TRANSPARENCY,
         XML_GOURAUD,
         XML_GRADIENT,
         XML_GRADIENT_ANGLE,
@@ -1092,6 +1094,8 @@ namespace xmloff { namespace token {
         XML_LABEL_ARRANGEMENT,
         XML_LABEL_CELL_ADDRESS,
         XML_LABEL_CELL_RANGE_ADDRESS,
+        XML_LABEL_FILL,
+        XML_LABEL_FILL_COLOR,
         XML_LABEL_RANGE,
         XML_LABEL_RANGES,
         XML_LABEL_STRING,
@@ -1316,8 +1320,8 @@ namespace xmloff { namespace token {
         XML_NOEMPTY,
         XML_NOHREF,
         XML_NOMATCH,
+        XML_NON_WHITESPACE_CHARACTER_COUNT,
         XML_NONE,
-        XML_NOPRTSUBSET,
         XML_NORMAL,
         XML_NORMALS_DIRECTION,
         XML_NORMALS_KIND,
@@ -1327,6 +1331,7 @@ namespace xmloff { namespace token {
         XML_NOTE,
         XML_NOTES,
         XML_NOTIN,
+        XML_NOTPRSUBSET,
         XML_NOTSUBSET,
         XML_NULL_DATE,
         XML_NULL_YEAR,
@@ -1690,6 +1695,7 @@ namespace xmloff { namespace token {
         XML_SLANT_Y,
         XML_SLIDE,
         XML_SLOW,
+        XML_SOFTEDGE_RADIUS,
         XML_SOLID,
         XML_SOLID_TYPE,
         XML_SORT,
@@ -3354,6 +3360,8 @@ namespace xmloff { namespace token {
 
         XML_RESOLVED,
 
+        XML_PAGE_CONTENT_BOTTOM,
+
         XML_TOKEN_END
     };
 
@@ -3370,7 +3378,7 @@ namespace xmloff { namespace token {
     XMLOFF_DLLPUBLIC bool IsXMLToken(
         const sax_fastparser::FastAttributeList::FastAttributeIter& aIter,
         enum XMLTokenEnum eToken );
-} }
+}
 
 #endif
 

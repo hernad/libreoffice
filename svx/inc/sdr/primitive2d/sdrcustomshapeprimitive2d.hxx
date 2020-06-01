@@ -22,7 +22,7 @@
 
 #include <drawinglayer/primitive2d/baseprimitive2d.hxx>
 #include <basegfx/matrix/b2dhommatrix.hxx>
-#include <sdr/attribute/sdrshadowtextattribute.hxx>
+#include <sdr/attribute/sdreffectstextattribute.hxx>
 
 
 // predefines
@@ -35,7 +35,7 @@ namespace drawinglayer
         class SdrCustomShapePrimitive2D : public BufferedDecompositionPrimitive2D
         {
         private:
-            attribute::SdrShadowTextAttribute           maSdrSTAttribute;
+            attribute::SdrEffectsTextAttribute           maSdrSTAttribute;
             Primitive2DContainer                         maSubPrimitives;
             basegfx::B2DHomMatrix                       maTextBox;
 
@@ -47,20 +47,23 @@ namespace drawinglayer
             // making exceptions with shadow generation
             bool                                        mb3DShape : 1;
 
+            basegfx::B2DHomMatrix maTransform;
+
         protected:
             // local decomposition.
             virtual void create2DDecomposition(Primitive2DContainer& rContainer, const geometry::ViewInformation2D& aViewInformation) const override;
 
         public:
             SdrCustomShapePrimitive2D(
-                const attribute::SdrShadowTextAttribute& rSdrSTAttribute,
+                const attribute::SdrEffectsTextAttribute& rSdrSTAttribute,
                 const Primitive2DContainer& rSubPrimitives,
                 const basegfx::B2DHomMatrix& rTextBox,
                 bool bWordWrap,
-                bool b3DShape);
+                bool b3DShape,
+                const basegfx::B2DHomMatrix& rObjectMatrix);
 
             // data access
-            const attribute::SdrShadowTextAttribute& getSdrSTAttribute() const { return maSdrSTAttribute; }
+            const attribute::SdrEffectsTextAttribute& getSdrSTAttribute() const { return maSdrSTAttribute; }
             const Primitive2DContainer& getSubPrimitives() const { return maSubPrimitives; }
             const basegfx::B2DHomMatrix& getTextBox() const { return maTextBox; }
             bool getWordWrap() const { return mbWordWrap; }

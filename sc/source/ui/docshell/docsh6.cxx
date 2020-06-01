@@ -204,8 +204,7 @@ SfxStyleSheetBasePool* ScDocShell::GetStyleSheetPool()
 
 static void lcl_AdjustPool( SfxStyleSheetBasePool* pStylePool )
 {
-    pStylePool->SetSearchMask(SfxStyleFamily::Page);
-    SfxStyleSheetBase *pStyle = pStylePool->First();
+    SfxStyleSheetBase *pStyle = pStylePool->First(SfxStyleFamily::Page);
     while ( pStyle )
     {
         SfxItemSet& rStyleSet = pStyle->GetItemSet();

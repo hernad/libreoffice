@@ -126,6 +126,8 @@ DomainMapper::DomainMapper( const uno::Reference< uno::XComponentContext >& xCon
     m_pImpl->SetDocumentSettingsProperty("StylesNoDefault", uno::makeAny(true));
     m_pImpl->SetDocumentSettingsProperty("MsWordCompTrailingBlanks", uno::makeAny(true));
 
+    m_pImpl->SetDocumentSettingsProperty("TabAtLeftIndentForParagraphsInList", uno::makeAny(true));
+
     // Initialize RDF metadata, to be able to add statements during the import.
     try
     {
@@ -732,8 +734,21 @@ void DomainMapper::lcl_attribute(Id nName, Value & val)
             m_pImpl->ImportGraphic( val.getProperties(), IMPORT_AS_DETECTED_INLINE );
         }
         break;
+        case NS_ooxml::LN_Value_math_ST_Jc_centerGroup:
+        case NS_ooxml::LN_Value_math_ST_Jc_center:
+            m_pImpl->appendStarMath(val);
+            m_pImpl->adjustLastPara(sal_Int8(style::ParagraphAdjust::ParagraphAdjust_CENTER));
+            break;
+        case NS_ooxml::LN_Value_math_ST_Jc_left:
+            m_pImpl->appendStarMath(val);
+            m_pImpl->adjustLastPara(sal_Int8(style::ParagraphAdjust::ParagraphAdjust_LEFT));
+            break;
+        case NS_ooxml::LN_Value_math_ST_Jc_right:
+            m_pImpl->appendStarMath(val);
+            m_pImpl->adjustLastPara(sal_Int8(style::ParagraphAdjust::ParagraphAdjust_RIGHT));
+            break;
         case NS_ooxml::LN_starmath:
-            m_pImpl->appendStarMath( val );
+            m_pImpl->appendStarMath(val);
             break;
         case NS_ooxml::LN_CT_FramePr_dropCap:
         case NS_ooxml::LN_CT_FramePr_lines:
@@ -826,7 +841,7 @@ void DomainMapper::lcl_attribute(Id nName, Value & val)
                             // be a text frame "fixes" it. I'm not sure what "inline" is supposed to mean in practice
                             // anyway, so as long as this doesn't cause trouble elsewhere ...
                                 PropertyMapPtr pContext = m_pImpl->GetTopContextOfType(CONTEXT_PARAGRAPH);
-                                if( pContext.get() )
+                                if( pContext )
                                 {
                                     ParagraphPropertyMap* pParaContext = dynamic_cast< ParagraphPropertyMap* >( pContext.get() );
                                     if (pParaContext)
@@ -866,10 +881,11 @@ void DomainMapper::lcl_attribute(Id nName, Value & val)
                                     sal::static_int_cast<Id>(nIntValue) == NS_ooxml::LN_Value_doc_ST_Wrap_none ||
                                     sal::static_int_cast<Id>(nIntValue) == NS_ooxml::LN_Value_doc_ST_Wrap_auto,
                             "wrap not around, not_Beside, through, none or auto?");
-                        if( sal::static_int_cast<Id>(nIntValue) == NS_ooxml::LN_Value_doc_ST_Wrap_around ||
-                            sal::static_int_cast<Id>(nIntValue) == NS_ooxml::LN_Value_doc_ST_Wrap_through ||
+                        if( sal::static_int_cast<Id>(nIntValue) == NS_ooxml::LN_Value_doc_ST_Wrap_through ||
                             sal::static_int_cast<Id>(nIntValue) == NS_ooxml::LN_Value_doc_ST_Wrap_auto )
                             pParaProperties->SetWrap ( text::WrapTextMode_DYNAMIC ) ;
+                        else if (sal::static_int_cast<Id>(nIntValue) == NS_ooxml::LN_Value_doc_ST_Wrap_around)
+                            pParaProperties->SetWrap(text::WrapTextMode_PARALLEL);
                         else if (sal::static_int_cast<Id>(nIntValue) == NS_ooxml::LN_Value_doc_ST_Wrap_none)
                             pParaProperties->SetWrap ( text::WrapTextMode_THROUGH ) ;
                         else
@@ -1152,7 +1168,7 @@ void DomainMapper::lcl_attribute(Id nName, Value & val)
         case NS_ooxml::LN_CT_DocPartGallery_val:
         {
             const OUString& sGlossaryEntryGallery = sStringValue;
-            if(m_pImpl->GetTopContext().get())
+            if(m_pImpl->GetTopContext())
             {
                 OUString sName = sGlossaryEntryGallery + ":" + m_sGlossaryEntryName;
                 // Add glossary entry name as a first paragraph in section
@@ -1245,8 +1261,8 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, const PropertyMapPtr& rContext )
         break;
     }
 
-    OSL_ENSURE(rContext.get(), "PropertyMap has to be valid!");
-    if(!rContext.get())
+    OSL_ENSURE(rContext, "PropertyMap has to be valid!");
+    if(!rContext)
         return ;
 
     sal_uInt32 nSprmId = rSprm.getId();
@@ -1302,7 +1318,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, const PropertyMapPtr& rContext )
                 if (pStyleSheetPropertyMap)
                     pStyleSheetPropertyMap->SetListId( nIntValue );
             }
-            if( pList.get( ) )
+            if( pList )
             {
                 if( !IsStyleSheetImport() )
                 {
@@ -1314,8 +1330,6 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, const PropertyMapPtr& rContext )
                         assert(dynamic_cast<ParagraphPropertyMap*>(pContext.get()));
                         static_cast<ParagraphPropertyMap*>(pContext.get())->SetListId(pList->GetId());
                     }
-                    // erase numbering from pStyle if already set
-                    rContext->Erase(PROP_NUMBERING_STYLE_NAME);
 
                     // Indentation can came from:
                     // 1) Paragraph style's numbering's indentation: the current non-style numId has priority over it.
@@ -1365,7 +1379,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, const PropertyMapPtr& rContext )
     case NS_ooxml::LN_CT_PBdr_between:
     {
         writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-        if( pProperties.get())
+        if( pProperties )
         {
             auto pBorderHandler = std::make_shared<BorderHandler>( true );
             pProperties->resolve(*pBorderHandler);
@@ -1420,7 +1434,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, const PropertyMapPtr& rContext )
     {
         //contains fore color, back color and shadow percentage, results in a brush
         writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-        if( pProperties.get())
+        if( pProperties )
         {
             auto pCellColorHandler = std::make_shared<CellColorHandler>();
             pCellColorHandler->setOutputFormat( CellColorHandler::Paragraph );
@@ -1817,7 +1831,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, const PropertyMapPtr& rContext )
         {
             //contains fore color, back color and shadow percentage, results in a brush
             writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-            if( pProperties.get())
+            if( pProperties )
             {
                 auto pCellColorHandler = std::make_shared<CellColorHandler>();
                 pCellColorHandler->setOutputFormat( CellColorHandler::Character );
@@ -1920,7 +1934,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, const PropertyMapPtr& rContext )
     case NS_ooxml::LN_EG_RPrBase_bdr:
         {
             writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-            if( pProperties.get())
+            if( pProperties )
             {
                 auto pBorderHandler = std::make_shared<BorderHandler>( true );
                 pProperties->resolve(*pBorderHandler);
@@ -2042,7 +2056,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, const PropertyMapPtr& rContext )
     if (!m_pImpl->GetSdt())
     {
         PropertyMapPtr pContext = m_pImpl->GetTopContextOfType(CONTEXT_PARAGRAPH);
-        if( pContext.get() )
+        if( pContext )
         {
             // If there is a deferred page break applied to this framed paragraph,
             // create a dummy paragraph without extra properties,
@@ -2110,7 +2124,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, const PropertyMapPtr& rContext )
     case NS_ooxml::LN_EG_SectPrContents_cols:
     {
         writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-        if( pProperties.get())
+        if( pProperties )
         {
 
             tools::SvRef< SectionColumnHandler > pSectHdl( new SectionColumnHandler );
@@ -2171,7 +2185,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, const PropertyMapPtr& rContext )
     case NS_ooxml::LN_EG_SectPrContents_pgBorders:
     {
         writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-        if( pProperties.get( ) && pSectionContext )
+        if( pProperties && pSectionContext )
         {
             tools::SvRef< PageBordersHandler > pHandler( new PageBordersHandler );
             pProperties->resolve( *pHandler );
@@ -2209,7 +2223,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, const PropertyMapPtr& rContext )
 
             // First check if the style exists in the document.
             StyleSheetEntryPtr pEntry = m_pImpl->GetStyleSheetTable( )->FindStyleSheetByConvertedStyleName( sConvertedName );
-            bool bExists = pEntry.get( ) && ( pEntry->nStyleTypeCode == STYLE_TYPE_CHAR );
+            bool bExists = pEntry && ( pEntry->nStyleTypeCode == STYLE_TYPE_CHAR );
             // Add the property if the style exists, but do not add it elements in TOC:
             // they will receive later another style references from TOC
             if ( bExists && m_pImpl->GetTopContext() && !m_pImpl->IsInTOC())
@@ -2229,7 +2243,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, const PropertyMapPtr& rContext )
     case NS_ooxml::LN_CT_TblCellMar_right:
     {
         writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-        if( pProperties.get())
+        if( pProperties )
         {
             MeasureHandlerPtr pMeasureHandler( new MeasureHandler );
             pProperties->resolve(*pMeasureHandler);
@@ -2270,7 +2284,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, const PropertyMapPtr& rContext )
             break;
 
         writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-        if( pProperties.get())
+        if( pProperties )
         {
             GraphicImportType eGraphicType =
                 (NS_ooxml::LN_anchor_anchor ==
@@ -2313,7 +2327,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, const PropertyMapPtr& rContext )
     case NS_ooxml::LN_CT_EdnProps_numFmt:
     {
         writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-        if (pProperties.get())
+        if (pProperties)
         {
             pProperties->resolve(*this);
         }
@@ -2433,7 +2447,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, const PropertyMapPtr& rContext )
     case NS_ooxml::LN_object:
     {
         writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-        if( pProperties.get( ) )
+        if( pProperties )
         {
             auto pOLEHandler = std::make_shared<OLEHandler>(*this);
             pProperties->resolve(*pOLEHandler);
@@ -2613,7 +2627,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, const PropertyMapPtr& rContext )
     case NS_ooxml::LN_EG_SectPrContents_pgNumType:
     {
         writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-        if( pProperties.get())
+        if( pProperties )
         {
             pProperties->resolve(*this);
         }
@@ -2692,7 +2706,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, const PropertyMapPtr& rContext )
         if(aPropertyId)
         {
             writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-            if( pProperties.get())
+            if( pProperties )
             {
                 pProperties->resolve(*pTextEffectsHandlerPtr);
 
@@ -2717,7 +2731,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, const PropertyMapPtr& rContext )
     case NS_ooxml::LN_CT_TblPrBase_tblLook:
     {
         writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-        if (pProperties.get())
+        if (pProperties)
         {
             pProperties->resolve(*this);
             m_pImpl->getTableManager().finishTableLook();
@@ -2858,7 +2872,7 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, const PropertyMapPtr& rContext )
     case NS_ooxml::LN_CT_SmartTagRun_smartTagPr:
     {
         writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-        if (pProperties.get() && m_pImpl->GetTopContextType() == CONTEXT_PARAGRAPH)
+        if (pProperties && m_pImpl->GetTopContextType() == CONTEXT_PARAGRAPH)
             pProperties->resolve(m_pImpl->getSmartTagHandler());
     }
     break;
@@ -3495,6 +3509,7 @@ void DomainMapper::lcl_utext(const sal_uInt8 * data_, size_t len)
                 // to the next paragraph in sw SplitNode and then be applied to
                 // every following paragraph
                 xContext->Erase(PROP_NUMBERING_RULES);
+                static_cast<ParagraphPropertyMap*>(xContext.get())->SetListId(-1);;
                 xContext->Erase(PROP_NUMBERING_LEVEL);
             }
             m_pImpl->SetParaSectpr(false);

@@ -761,9 +761,9 @@ public:
      *
      * @param nIndex is the index of the selected function
      */
-    void completeFunction(int nIndex)
+    void completeFunction(const char* pFunctionName)
     {
-        mpDoc->pClass->completeFunction(mpDoc, nIndex);
+        mpDoc->pClass->completeFunction(mpDoc, pFunctionName);
     }
 
     /**
@@ -777,6 +777,16 @@ public:
     void setWindowTextSelection(unsigned nWindowId, bool bSwap, int nX, int nY)
     {
         mpDoc->pClass->setWindowTextSelection(mpDoc, nWindowId, bSwap, nX, nY);
+    }
+
+    /**
+     * Posts an event for the form field at the cursor position.
+     *
+     * @param pArguments arguments of the event.
+     */
+    void sendFormFieldEvent(const char* pArguments)
+    {
+        mpDoc->pClass->sendFormFieldEvent(mpDoc, pArguments);
     }
 
 #endif // defined LOK_USE_UNSTABLE_API || defined LIBO_INTERNAL_ONLY

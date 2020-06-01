@@ -25,7 +25,7 @@
 #include <com/sun/star/style/XStyleFamiliesSupplier.hpp>
 #include <com/sun/star/style/XAutoStylesSupplier.hpp>
 #include <com/sun/star/style/XAutoStyleFamily.hpp>
-#include "PageMasterPropMapper.hxx"
+#include <PageMasterPropMapper.hxx>
 #include <sal/log.hxx>
 #include <svl/style.hxx>
 #include <xmloff/nmspmap.hxx>
@@ -122,6 +122,13 @@ void SvXMLStyleContext::SetAttribute( sal_uInt16 nPrefixKey,
             maFollow = rValue;
         }
         else if( IsXMLToken( rLocalName, XML_HIDDEN ) )
+        {
+            mbHidden = rValue.toBoolean();
+        }
+    }
+    else if (XML_NAMESPACE_LO_EXT == nPrefixKey)
+    {
+        if (IsXMLToken(rLocalName, XML_HIDDEN))
         {
             mbHidden = rValue.toBoolean();
         }
@@ -635,7 +642,7 @@ rtl::Reference < SvXMLImportPropertyMapper > SvXMLStylesContext::GetImportProper
     case XmlStyleFamily::SCH_CHART_ID:
         if( ! mxChartImpPropMapper.is() )
         {
-            XMLPropertySetMapper *pPropMapper = new XMLChartPropertySetMapper( false );
+            XMLPropertySetMapper *const pPropMapper = new XMLChartPropertySetMapper(nullptr);
             mxChartImpPropMapper = new XMLChartImportPropertyMapper( pPropMapper, GetImport() );
         }
         xMapper = mxChartImpPropMapper;

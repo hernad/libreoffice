@@ -58,13 +58,13 @@ protected:
 
 DECLARE_OOXMLEXPORT_TEST(testfdo81381, "fdo81381.docx")
 {
-    if (xmlDocPtr pXmlDoc = parseExport("word/document.xml"))
+    if (xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml"))
         assertXPath(pXmlDoc, "/w:document/w:body/w:p[1]/w:r[1]/w:object[1]/o:OLEObject[1]", "DrawAspect", "Icon");
 }
 
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testSdtAlias, "sdt-alias.docx")
 {
-    xmlDocPtr pXmlDoc = parseExport();
+    xmlDocUniquePtr pXmlDoc = parseExport();
 
     // <w:alias> was completely missing.
     assertXPath(pXmlDoc, "/w:document/w:body/w:sdt/w:sdtPr/w:alias", "val", "Subtitle");
@@ -72,7 +72,7 @@ DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testSdtAlias, "sdt-alias.docx")
 
 DECLARE_OOXMLEXPORT_TEST(testFooterBodyDistance, "footer-body-distance.docx")
 {
-    if (xmlDocPtr pXmlDoc = parseExport())
+    if (xmlDocUniquePtr pXmlDoc = parseExport())
         // Page break was exported as section break, this was 0
         assertXPath(pXmlDoc, "/w:document/w:body/w:p/w:r/w:br", 1);
 }
@@ -86,7 +86,7 @@ DECLARE_OOXMLEXPORT_TEST(testTdf118393, "tdf118393.odt")
 
     // First page has no header/footer
     {
-        xmlDocPtr pXmlDoc = parseLayoutDump();
+        xmlDocUniquePtr pXmlDoc = parseLayoutDump();
 
         // check first page
         xmlXPathObjectPtr pXmlPage1Header = getXPathNode(pXmlDoc, "/root/page[1]/header");
@@ -141,7 +141,7 @@ DECLARE_OOXMLEXPORT_TEST(testfdo81031, "fdo81031.docx")
 DECLARE_OOXMLEXPORT_TEST(testPlausableBorder, "plausable-border.docx")
 {
     // sw::util::IsPlausableSingleWordSection() did not merge two page styles due to borders.
-    if (xmlDocPtr pXmlDoc = parseExport())
+    if (xmlDocUniquePtr pXmlDoc = parseExport())
         // Page break was exported as section break, this was 0
         assertXPath(pXmlDoc, "/w:document/w:body/w:p/w:r/w:br", 1);
 
@@ -150,14 +150,14 @@ DECLARE_OOXMLEXPORT_TEST(testPlausableBorder, "plausable-border.docx")
 
 DECLARE_OOXMLEXPORT_TEST(testUnwantedSectionBreak, "unwanted-section-break.docx")
 {
-    if (xmlDocPtr pXmlDoc = parseExport())
+    if (xmlDocUniquePtr pXmlDoc = parseExport())
         // This was 2: an additional sectPr was added to the document.
         assertXPath(pXmlDoc, "//w:sectPr", 1);
 }
 
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testfdo80897 , "fdo80897.docx")
 {
-    xmlDocPtr pXmlDoc = parseExport();
+    xmlDocUniquePtr pXmlDoc = parseExport();
     assertXPath(pXmlDoc, "/w:document/w:body/w:p/w:r/mc:AlternateContent/mc:Choice/w:drawing/wp:anchor/a:graphic/a:graphicData/wps:wsp/wps:bodyPr/a:prstTxWarp", "prst", "textTriangle");
 }
 
@@ -172,7 +172,7 @@ DECLARE_OOXMLEXPORT_TEST(testFdo80997, "fdo80997.docx")
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testFdo80902, "fdo80902.docx")
 {
     // The problem was that the docGrid type was set as default so fix it for other grid type
-    xmlDocPtr pXmlDoc = parseExport("word/document.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml");
 
     assertXPath(pXmlDoc, "/w:document/w:body/w:sectPr/w:docGrid", "type", "lines");
 }
@@ -180,7 +180,7 @@ DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testFdo80902, "fdo80902.docx")
 DECLARE_OOXMLEXPORT_TEST(testParaShading, "para-shading.docx")
 {
     // Make sure the themeColor attribute is not written when it would be empty.
-    if (xmlDocPtr pXmlDoc = parseExport("word/document.xml"))
+    if (xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml"))
         assertXPathNoAttribute(pXmlDoc, "/w:document/w:body/w:p/w:pPr/w:shd", "themeColor");
 }
 
@@ -209,7 +209,7 @@ DECLARE_OOXMLEXPORT_TEST(testFirstHeaderFooter, "first-header-footer.docx")
 
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testFDO83044, "fdo83044.docx")
 {
-    xmlDocPtr pXmlDoc = parseExport("word/document.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml");
 
     assertXPath(pXmlDoc, "/w:document/w:body/w:sdt/w:sdtPr/w:text", 1);
 }
@@ -224,7 +224,7 @@ DECLARE_OOXMLEXPORT_TEST(testfdo83428, "fdo83428.docx")
 
 DECLARE_OOXMLEXPORT_TEST(testShapeInFloattable, "shape-in-floattable.docx")
 {
-    if (xmlDocPtr pXmlDoc = parseExport("word/document.xml"))
+    if (xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml"))
     {
         // No nested drawingML w:txbxContent.
         assertXPath(pXmlDoc, "//mc:Choice//w:txbxContent//w:txbxContent", 0);
@@ -246,7 +246,7 @@ DECLARE_OOXMLEXPORT_TEST(testEmptyAnnotationMark, "empty-annotation-mark.docx")
         xStorable->store();
 
         // Then inspect the OOXML markup of the modified document model.
-        xmlDocPtr pXmlDoc = parseExport("word/document.xml");
+        xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml");
         // There were two commentReference nodes.
         assertXPath(pXmlDoc, "//w:commentReference", "id", "0");
         // Empty comment range was not ignored on export, this was 1.
@@ -283,7 +283,7 @@ DECLARE_OOXMLEXPORT_TEST(testTableAlignment, "table-alignment.docx")
 
 DECLARE_OOXMLEXPORT_TEST(testSdtIgnoredFooter, "sdt-ignored-footer.docx")
 {
-    if (xmlDocPtr pXmlDoc = parseExport("word/document.xml"))
+    if (xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml"))
     {
         // This was 1, make sure no w:sdt sneaks into the main document from the footer.
         assertXPath(pXmlDoc, "//w:sdt", 0);
@@ -293,7 +293,7 @@ DECLARE_OOXMLEXPORT_TEST(testSdtIgnoredFooter, "sdt-ignored-footer.docx")
 DECLARE_OOXMLEXPORT_TEST(testSdtRunPicture, "sdt-run-picture.docx")
 {
     // SDT around run was exported as SDT around paragraph
-    if (xmlDocPtr pXmlDoc = parseExport("word/document.xml"))
+    if (xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml"))
     {
         // This was 1: there was an SDT around w:p.
         assertXPath(pXmlDoc, "//w:body/w:sdt", 0);
@@ -310,7 +310,7 @@ DECLARE_OOXMLEXPORT_TEST(testChartDupe, "chart-dupe.docx")
     // This was 2, on second import we got a duplicated chart copy.
     CPPUNIT_ASSERT_EQUAL(sal_Int32(1), xEmbeddedObjects->getCount());
 
-    xmlDocPtr pXmlDocCT = parseExport("[Content_Types].xml");
+    xmlDocUniquePtr pXmlDocCT = parseExport("[Content_Types].xml");
 
     if (!pXmlDocCT)
        return; // initial import
@@ -322,13 +322,13 @@ DECLARE_OOXMLEXPORT_TEST(testChartDupe, "chart-dupe.docx")
     assertXPath(pXmlDocCT, "/ContentType:Types/ContentType:Override[@PartName='/word/embeddings/Microsoft_Excel_Worksheet1.xlsx']", "ContentType", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 
     // check the rels too
-    xmlDocPtr pXmlDocRels = parseExport("word/charts/_rels/chart1.xml.rels");
+    xmlDocUniquePtr pXmlDocRels = parseExport("word/charts/_rels/chart1.xml.rels");
     assertXPath(pXmlDocRels,
         "/rels:Relationships/rels:Relationship[@Target='../embeddings/Microsoft_Excel_Worksheet1.xlsx']",
         "Type",
         "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package");
     // check the content too
-    xmlDocPtr pXmlDocChart1 = parseExport("word/charts/chart1.xml");
+    xmlDocUniquePtr pXmlDocChart1 = parseExport("word/charts/chart1.xml");
     assertXPath(pXmlDocChart1,
         "/c:chartSpace/c:externalData",
         "id",
@@ -369,6 +369,7 @@ DECLARE_OOXMLEXPORT_TEST(testNumberingFont, "numbering-font.docx")
 
 DECLARE_OOXMLEXPORT_TEST(testTdf106541_noinheritChapterNumbering, "tdf106541_noinheritChapterNumbering.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // in LO, it appears that styles based on the Chapter Numbering style explicitly set the
     // numbering style/outline level to 0 by default, and that LO prevents inheriting directly from "Outline" style.
     // Adding this preventative unit test to ensure that any fix for tdf106541 doesn't make incorrect assumptions.
@@ -379,7 +380,7 @@ DECLARE_OOXMLEXPORT_TEST(testTdf106541_noinheritChapterNumbering, "tdf106541_noi
     OUString sPara3NumberingStyle = getProperty<OUString>(getParagraph(3), "NumberingStyleName");
     CPPUNIT_ASSERT_EQUAL(sPara3NumberingStyle, getProperty<OUString>(getParagraph(4), "NumberingStyleName"));
 
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     assertXPath(pXmlDoc, "//body/txt/Special", 3);  //three of the four paragraphs have numbering
     assertXPath(pXmlDoc, "//body/txt[1]/Special", "rText", "1");
     assertXPath(pXmlDoc, "//body/txt[2]/Special", 0); //second paragraph style disables numbering
@@ -409,14 +410,14 @@ DECLARE_OOXMLEXPORT_TEST(testTdf104713_undefinedStyles, "tdf104713_undefinedStyl
 DECLARE_OOXMLEXPORT_TEST(testDrawingmlFlipv, "drawingml-flipv.docx")
 {
     // The problem was that the shape had vertical flip only, but then we added rotation as well on export.
-    if (xmlDocPtr pXmlDoc = parseExport("word/document.xml"))
+    if (xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml"))
         assertXPathNoAttribute(pXmlDoc, "//a:xfrm", "rot");
 }
 
 DECLARE_OOXMLEXPORT_TEST(testRot90Fliph, "rot90-fliph.docx")
 {
     // The problem was that a shape rotation of 90° got turned into 270° after roundtrip.
-    if (xmlDocPtr pXmlDoc = parseExport("word/document.xml"))
+    if (xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml"))
     {
         assertXPath(pXmlDoc, "//a:xfrm", "flipH", "1");
         // This was 16200000 (270 * 60000).
@@ -427,7 +428,7 @@ DECLARE_OOXMLEXPORT_TEST(testRot90Fliph, "rot90-fliph.docx")
 DECLARE_OOXMLEXPORT_TEST(testRot180Flipv, "rot180-flipv.docx")
 {
     // 180° rotation got lost after roundtrip.
-    if (xmlDocPtr pXmlDoc = parseExport("word/document.xml"))
+    if (xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml"))
     {
         assertXPath(pXmlDoc, "//a:xfrm", "flipV", "1");
         // This attribute was completely missing.
@@ -438,7 +439,7 @@ DECLARE_OOXMLEXPORT_TEST(testRot180Flipv, "rot180-flipv.docx")
 DECLARE_OOXMLEXPORT_TEST(testRot270Flipv, "rot270-flipv.docx")
 {
     // 270° rotation got turned into 90° after roundtrip.
-    if (xmlDocPtr pXmlDoc = parseExport("word/document.xml"))
+    if (xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml"))
     {
         assertXPath(pXmlDoc, "//a:xfrm", "flipV", "1");
         // This was 5400000.
@@ -448,7 +449,7 @@ DECLARE_OOXMLEXPORT_TEST(testRot270Flipv, "rot270-flipv.docx")
 
 DECLARE_OOXMLEXPORT_TEST(testMsoPosition, "bnc884615-mso-position.docx")
 {
-    if(xmlDocPtr doc = parseExport("word/footer1.xml"))
+    if(xmlDocUniquePtr doc = parseExport("word/footer1.xml"))
     {
         // We write the frames out in different order than they were read, so check it's the correct
         // textbox first by checking width. These tests may need reordering if that gets fixed.
@@ -467,7 +468,7 @@ DECLARE_OOXMLEXPORT_TEST(testMsoPosition, "bnc884615-mso-position.docx")
         CPPUNIT_ASSERT( style3.indexOf( ";mso-position-vertical-relative:text" ) >= 0 );
     }
 
-    xmlDocPtr doc = parseExport("word/header1.xml");
+    xmlDocUniquePtr doc = parseExport("word/header1.xml");
     if(!doc)
         return;
 
@@ -565,7 +566,7 @@ DECLARE_OOXMLEXPORT_TEST(testCropPixel, "crop-pixel.docx")
 {
     // If map mode of the graphic is in pixels, then we used to handle original
     // size of the graphic as mm100, but it was in pixels.
-    if (xmlDocPtr pXmlDoc = parseExport("word/document.xml"))
+    if (xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml"))
     {
         // This is 17667 in the original document, was 504666 (so the image
         // become invisible), now is around 19072.
@@ -577,7 +578,7 @@ DECLARE_OOXMLEXPORT_TEST(testEffectExtent, "effect-extent.docx")
 {
     // The problem was that in case there were no shadows on the picture, we
     // wrote a <wp:effectExtent> full or zeros.
-    if (xmlDocPtr pXmlDoc = parseExport("word/document.xml"))
+    if (xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml"))
         // E.g. this was 0.
         assertXPath(pXmlDoc, "//wp:effectExtent", "l", "114300");
 }
@@ -586,7 +587,7 @@ DECLARE_OOXMLEXPORT_TEST(testEffectExtentInline, "effect-extent-inline.docx")
 {
     // The problem was that in case there was inline rotated picture, we
     // wrote a <wp:effectExtent> full or zeros.
-    if (xmlDocPtr pXmlDoc = parseExport("word/document.xml"))
+    if (xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml"))
     {
         // E.g. this was 0.
         assertXPath(pXmlDoc, "//wp:effectExtent", "l", "609600");
@@ -632,9 +633,20 @@ DECLARE_OOXMLEXPORT_TEST(testParagraphMark, "paragraph-mark.docx")
     CPPUNIT_ASSERT_EQUAL(OUString("Emphasis"), getProperty<OUString>(getRun(getParagraph(1), 1), "CharStyleName"));
 }
 
+DECLARE_OOXMLEXPORT_TEST(testParagraphMark2, "paragraph-mark2.docx")
+{
+    // The problem was that we didn't handle the situation when an empty paragraph's marker had both a char style and some direct formatting.
+
+    // This was Segoe UI, set by Char Style FontStyle11 presumably.
+    CPPUNIT_ASSERT_EQUAL(OUString("Arial"), getProperty<OUString>(getRun(getParagraph(1), 1), "CharFontName"));
+    // This was 11, set by Char Style FontStyle11 presumably.
+    CPPUNIT_ASSERT_EQUAL(10.f, getProperty<float>(getRun(getParagraph(1), 1), "CharHeight"));
+}
+
 DECLARE_OOXMLEXPORT_TEST(testParagraphMarkNonempty, "paragraph-mark-nonempty.odt")
 {
-    if (xmlDocPtr pXmlDoc = parseExport())
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+    if (xmlDocUniquePtr pXmlDoc = parseExport())
         // There were two <w:sz> elements, make sure the 40 one is dropped and the 20 one is kept.
         assertXPath(pXmlDoc, "//w:p/w:pPr/w:rPr/w:sz", "val", "20");
 }
@@ -710,21 +722,24 @@ DECLARE_OOXMLEXPORT_TEST(testOoxmlSymbolChicagoList, "symbol_chicago_list.docx")
 
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testOoxmlNumListZHTW, "numlist-zhtw.odt")
 {
-    xmlDocPtr pXmlDoc = parseExport("word/numbering.xml");
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+    xmlDocUniquePtr pXmlDoc = parseExport("word/numbering.xml");
 
     assertXPath ( pXmlDoc, "/w:numbering/w:abstractNum[1]/w:lvl[1]/w:numFmt","val","taiwaneseCountingThousand" );
 }
 
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testOoxmlNumListZHCN, "numlist-zhcn.odt")
 {
-    xmlDocPtr pXmlDoc = parseExport("word/numbering.xml");
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+    xmlDocUniquePtr pXmlDoc = parseExport("word/numbering.xml");
 
     assertXPath ( pXmlDoc, "/w:numbering/w:abstractNum[1]/w:lvl[1]/w:numFmt","val","chineseCountingThousand" );
 }
 
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testOOxmlOutlineNumberTypes, "outline-number-types.odt")
 {
-    xmlDocPtr pXmlDoc = parseExport("word/numbering.xml");
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+    xmlDocUniquePtr pXmlDoc = parseExport("word/numbering.xml");
 
     assertXPath(pXmlDoc, "/w:numbering/w:abstractNum[1]/w:lvl[1]/w:pStyle", "val", "Heading1");
     assertXPath(pXmlDoc, "/w:numbering/w:abstractNum[1]/w:lvl[1]/w:numFmt", "val", "none");
@@ -765,7 +780,7 @@ DECLARE_OOXMLEXPORT_TEST(testNumOverrideLvltext, "num-override-lvltext.docx")
 {
     uno::Reference<container::XIndexAccess> xRules = getProperty< uno::Reference<container::XIndexAccess> >(getStyles("NumberingStyles")->getByName("WWNum1"), "NumberingRules");
     // This was 1, i.e. the numbering on the second level was "1", not "1.1".
-    // Check the praragraph properties, not the list ones, since they can differ due to overrides
+    // Check the paragraph properties, not the list ones, since they can differ due to overrides
     uno::Reference<beans::XPropertySet> xPara(getParagraph(1), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(1), getProperty<sal_Int16>(xPara, "NumberingLevel"));
     CPPUNIT_ASSERT_EQUAL(OUString("1.1"), getProperty<OUString>(xPara, "ListLabelString"));
@@ -811,6 +826,7 @@ DECLARE_OOXMLEXPORT_TEST(testEffectExtentMargin, "effectextent-margin.docx")
 
 DECLARE_OOXMLEXPORT_TEST(testTdf88583, "tdf88583.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     CPPUNIT_ASSERT_EQUAL(drawing::FillStyle_SOLID, getProperty<drawing::FillStyle>(getParagraph(1), "FillStyle"));
     CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(0x00cc00), getProperty<sal_Int32>(getParagraph(1), "FillColor"));
 }
@@ -867,10 +883,8 @@ DECLARE_OOXMLEXPORT_TEST(testTdf91261, "tdf91261.docx")
 
 DECLARE_OOXMLEXPORT_TEST(testTdf79639, "tdf79639.docx")
 {
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<drawing::XDrawPage> xDrawPage = xDrawPageSupplier->getDrawPage();
     // This was 0, floating table in header wasn't converted to a TextFrame.
-    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(1), xDrawPage->getCount());
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
 }
 
 DECLARE_OOXMLEXPORT_TEST(testTdf89890, "tdf89890.docx")
@@ -882,10 +896,8 @@ DECLARE_OOXMLEXPORT_TEST(testTdf89890, "tdf89890.docx")
     xLevels->getByIndex(0) >>= aProps; // 1st level
 
     bool bFound = false;
-    for (int i = 0; i < aProps.getLength(); ++i)
+    for (beans::PropertyValue const & rProp : std::as_const(aProps))
     {
-        const beans::PropertyValue& rProp = aProps[i];
-
         if (rProp.Name == "GraphicSize")
         {
             // Height of the graphic was too large: 4382 after import, then 2485 after roundtrip.
@@ -946,7 +958,7 @@ DECLARE_OOXMLEXPORT_TEST(testTdf106953, "tdf106953.docx")
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf115094v3, "tdf115094v3.docx")
 {
     // floating table is now exported directly without surrounding frame
-    xmlDocPtr pXmlDoc = parseExport("word/document.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml");
 
     assertXPath(pXmlDoc, "/w:document/w:body/w:tbl/w:tblPr/w:tblpPr", "tblpX", "1996");
     assertXPath(pXmlDoc, "/w:document/w:body/w:tbl/w:tblPr/w:tblpPr", "tblpY", "1064");

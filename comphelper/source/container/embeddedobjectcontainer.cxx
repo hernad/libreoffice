@@ -195,7 +195,7 @@ void EmbeddedObjectContainer::CloseEmbeddedObjects()
 {
     for( const auto& rObj : pImpl->maNameToObjectMap )
     {
-        uno::Reference < util::XCloseable > xClose( rObj.second, uno::UNO_QUERY );
+        uno::Reference < util::XCloseable > const & xClose = rObj.second;
         if( xClose.is() )
         {
             try
@@ -761,14 +761,14 @@ uno::Reference < embed::XEmbeddedObject > EmbeddedObjectContainer::CopyAndGetEmb
                     if ( !xOrigInfo.is() )
                         throw uno::RuntimeException();
 
-                    uno::Sequence< beans::Property > aPropertiesList = xOrigInfo->getProperties();
-                    for ( sal_Int32 nInd = 0; nInd < aPropertiesList.getLength(); nInd++ )
+                    const uno::Sequence< beans::Property > aPropertiesList = xOrigInfo->getProperties();
+                    for ( const auto & p : aPropertiesList )
                     {
                         try
                         {
                             xTargetProps->setPropertyValue(
-                                aPropertiesList[nInd].Name,
-                                xOrigProps->getPropertyValue( aPropertiesList[nInd].Name ) );
+                                p.Name,
+                                xOrigProps->getPropertyValue( p.Name ) );
                         }
                         catch (const beans::PropertyVetoException&)
                         {

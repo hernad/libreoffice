@@ -100,10 +100,11 @@ ContextHandlerRef TextCharacterPropertiesContext::onCreateContext( sal_Int32 aEl
         case A_TOKEN( effectDag ):  // CT_EffectContainer 5.1.10.25
         case A_TOKEN( effectLst ):  // CT_EffectList 5.1.10.26
         break;
-
         case A_TOKEN( highlight ):  // CT_Color
-            return new ColorContext( *this, mrTextCharacterProperties.maHighlightColor );
-
+            return new ColorContext(*this, mrTextCharacterProperties.maHighlightColor);
+        case W_TOKEN( highlight ):
+            mrTextCharacterProperties.maHighlightColor = rAttribs.getHighlightColor(W_TOKEN(val));
+            break;
         // EG_TextUnderlineLine
         case A_TOKEN( uLnTx ):      // CT_TextUnderlineLineFollowText
             mrTextCharacterProperties.moUnderlineLineFollowText = true;
@@ -200,6 +201,13 @@ ContextHandlerRef TextCharacterPropertiesContext::onCreateContext( sal_Int32 aEl
                 mrTextCharacterProperties.moUnderline = XML_dash;
             else if (attrib == "none")
                 mrTextCharacterProperties.moUnderline = XML_none;
+            auto colorAttrib = rAttribs.getIntegerHex(W_TOKEN(color));
+            if (colorAttrib.has())
+            {
+                oox::drawingml::Color theColor;
+                theColor.setSrgbClr(colorAttrib.get());
+                mrTextCharacterProperties.maUnderlineColor = theColor;
+            }
             break;
         }
         case W_TOKEN( spacing ):

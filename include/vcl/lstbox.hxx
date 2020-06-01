@@ -87,7 +87,6 @@ private:
     sal_Int32                   mnSaveValue;
     sal_Int32                   m_nMaxWidthChars;
     Link<ListBox&,void>          maSelectHdl;
-    Link<ListBox&,void>         maDoubleClickHdl;
     sal_uInt16                  mnLineCount;
 
     bool            mbDDAutoSize : 1;
@@ -123,7 +122,7 @@ public:
     virtual void        dispose() override;
 
     virtual void        ApplySettings(vcl::RenderContext& rRenderContext) override;
-    virtual void        Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawFlags nFlags ) override;
+    virtual void        Draw( OutputDevice* pDev, const Point& rPos, DrawFlags nFlags ) override;
     virtual void        Resize() override;
     virtual bool        PreNotify( NotifyEvent& rNEvt ) override;
     virtual void        StateChanged( StateChangedType nType ) override;
@@ -172,7 +171,6 @@ public:
 
     void                SetEntryData( sal_Int32  nPos, void* pNewData );
     void*               GetEntryData( sal_Int32  nPos ) const;
-    void*               GetSelectedEntryData() const { return GetEntryData(GetSelectedEntryPos()); }
 
     /** this methods stores a combination of flags from the
         ListBoxEntryFlags::* defines at the given entry.
@@ -186,9 +184,6 @@ public:
 
     void                SetTopEntry( sal_Int32  nPos );
     sal_Int32           GetTopEntry() const;
-
-    void                SaveValue() { mnSaveValue = GetSelectedEntryPos(); }
-    bool                IsValueChangedFromSaved() const { return mnSaveValue != GetSelectedEntryPos(); }
 
     /**
      * Removes existing separators, and sets the position of the
@@ -220,8 +215,6 @@ public:
     tools::Rectangle           GetBoundingRectangle( sal_Int32  nItem ) const;
 
     void                SetSelectHdl( const Link<ListBox&,void>& rLink )     { maSelectHdl = rLink; }
-    void                SetDoubleClickHdl( const Link<ListBox&,void>& rLink ) { maDoubleClickHdl = rLink; }
-    const Link<ListBox&,void>& GetDoubleClickHdl() const               { return maDoubleClickHdl; }
 
     Size                CalcSubEditSize() const;    //size of area inside lstbox, i.e. no scrollbar/dropdown
     Size                CalcMinimumSize() const;    //size of lstbox area, i.e. including scrollbar/dropdown

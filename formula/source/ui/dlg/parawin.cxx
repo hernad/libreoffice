@@ -108,7 +108,7 @@ void ParaWin::UpdateArgDesc( sal_uInt16 nArg )
     if (nMaxArgs > 4)
         nArg = sal::static_int_cast<sal_uInt16>( nArg + GetSliderPos() );
 
-    if (!((nMaxArgs > 0) && (nArg<nMaxArgs)))
+    if ((nMaxArgs <= 0) || (nArg >= nMaxArgs))
         return;
 
     OUString  aArgDesc;
@@ -318,6 +318,8 @@ void ParaWin::SetFunctionDesc(const IFunctionDescription* pFDesc)
         }
         nArgs = pFuncDesc->getSuppressedArgumentCount();
         nMaxArgs = std::min( nArgs, kMaxArgCount);
+        if (sal_uInt16 nVarArgsLimit = pFuncDesc->getVarArgsLimit())
+            nMaxArgs = std::min( nVarArgsLimit, nMaxArgs);
         pFuncDesc->fillVisibleArgumentMapping(aVisibleArgMapping);
         m_xSlider->set_vpolicy(VclPolicyType::NEVER);
         m_xSlider->set_size_request(-1, -1);

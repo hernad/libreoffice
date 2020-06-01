@@ -155,9 +155,7 @@ XMLCharContext::XMLCharContext(
 {
     if( bCount )
     {
-        sax_fastparser::FastAttributeList *pAttribList =
-            sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
-        for (auto &aIter : *pAttribList)
+        for (auto &aIter : sax_fastparser::castToFastAttributeList( xAttrList ))
         {
             if( aIter.getToken() == XML_ELEMENT(TEXT, XML_C) )
             {
@@ -2339,7 +2337,7 @@ XMLNumberedParaContext::XMLNumberedParaContext(
         i_rImport.GetTextImport()->GetTextListHelper() );
     if (m_ListId.isEmpty())
       {
-        SAL_WARN_IF( i_rImport.GetODFVersion() == "1.2", "xmloff.text", "invalid numbered-paragraph: no list-id (1.2)" );
+        SAL_WARN_IF(0 <= i_rImport.GetODFVersion().compareTo("1.2"), "xmloff.text", "invalid numbered-paragraph: no list-id (1.2)");
         m_ListId = rTextListsHelper.GetNumberedParagraphListId(m_Level,
             StyleName);
         SAL_WARN_IF(m_ListId.isEmpty(), "xmloff.text", "numbered-paragraph: no ListId");

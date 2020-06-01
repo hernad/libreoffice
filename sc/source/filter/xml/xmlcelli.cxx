@@ -688,7 +688,7 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL ScXMLTableRowCellContex
 {
     SvXMLImportContext *pContext = nullptr;
     sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
+        &sax_fastparser::castToFastAttributeList( xAttrList );
 
     // bool bTextP(false);
     switch (nElement)
@@ -1234,7 +1234,7 @@ void ScXMLTableRowCellContext::AddTextAndValueCell( const ScAddress& rCellPos,
                 }
                 else
                 {
-                    if (!bWasEmpty || mxAnnotationData.get())
+                    if (!bWasEmpty || mxAnnotationData)
                     {
                         if (rCurrentPos.Row() > pDoc->MaxRow())
                             rXMLImport.SetRangeOverflowType(SCWARN_IMPORT_ROW_OVERFLOW);
@@ -1316,7 +1316,7 @@ void ScXMLTableRowCellContext::AddNonFormulaCell( const ScAddress& rCellPos )
     }
 
     ScAddress aCurrentPos( rCellPos );
-    if( mxAnnotationData.get() || pDetectiveObjVec || pCellRangeSource ) // has special content
+    if( mxAnnotationData || pDetectiveObjVec || pCellRangeSource ) // has special content
         bIsEmpty = false;
 
     AddTextAndValueCell( rCellPos, pOUText, aCurrentPos );

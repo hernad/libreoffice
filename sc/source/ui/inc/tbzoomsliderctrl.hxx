@@ -22,10 +22,10 @@
 #include <vcl/customweld.hxx>
 #include <vcl/window.hxx>
 #include <svl/poolitem.hxx>
-#include <svtools/InterimItemWindow.hxx>
+#include <vcl/InterimItemWindow.hxx>
 #include <sfx2/tbxctrl.hxx>
 
-namespace com { namespace sun { namespace star { namespace frame { class XDispatchProvider; } } } }
+namespace com::sun::star::frame { class XDispatchProvider; }
 
 class SvxZoomSliderItem;
 
@@ -53,7 +53,7 @@ private:
     void DoPaint(vcl::RenderContext& rRenderContext);
 public:
     ScZoomSlider(const css::uno::Reference<css::frame::XDispatchProvider>& rDispatchProvider,
-                 sal_uInt16 nCurrentZoom);
+                 sal_uInt16 nCurrentZoom, vcl::Window*);
 
     void UpdateFromItem(const SvxZoomSliderItem* pZoomSliderItem);
 

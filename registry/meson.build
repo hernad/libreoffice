@@ -1,0 +1,13 @@
+reg_lib = shared_library('reglo',
+  'source/keyimpl.cxx',
+  'source/reflread.cxx',
+  'source/reflwrit.cxx',
+  'source/regimpl.cxx',
+  'source/registry.cxx',
+  'source/regkey.cxx',
+  include_directories: [main_inc, 'inc'],
+  cpp_args: ['-DLIBO_INTERNAL_ONLY'],
+  link_with: [store_lib, salhelper_lib, sal_lib],
+  gnu_symbol_visibility: 'hidden',
+  install: true,
+)

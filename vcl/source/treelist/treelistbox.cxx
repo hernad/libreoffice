@@ -402,6 +402,7 @@ SvTreeListBox::SvTreeListBox(vcl::Window* pParent, WinBits nWinStyle) :
     mbAlternatingRowColors(false),
     mbUpdateAlternatingRows(false),
     mbQuickSearch(false),
+    mbActivateOnSingleClick(false),
     eSelMode(SelectionMode::NONE),
     nMinWidthInChars(0),
     mnDragAction(DND_ACTION_COPYMOVE | DND_ACTION_LINK),
@@ -487,7 +488,6 @@ bool SvTreeListBox::DoubleClickHdl()
 {
     return !aDoubleClickHdl.IsSet() || aDoubleClickHdl.Call(this);
 }
-
 
 bool SvTreeListBox::CheckDragAndDropMode( SvTreeListBox const * pSource, sal_Int8 nAction )
 {
@@ -1408,11 +1408,6 @@ void SvTreeListBox::SetNoAutoCurEntry( bool b )
     pImpl->SetNoAutoCurEntry( b );
 }
 
-void SvTreeListBox::SetSublistOpenWithReturn()
-{
-    pImpl->m_bSubLstOpRet = true;
-}
-
 void SvTreeListBox::SetSublistOpenWithLeftRight()
 {
     pImpl->m_bSubLstOpLR = true;
@@ -1837,14 +1832,6 @@ SvTreeListEntry* SvTreeListBox::CloneEntry( SvTreeListEntry* pSource )
     return pClone;
 }
 
-void SvTreeListBox::SetIndent( short nNewIndent )
-{
-    nIndent = nNewIndent;
-    SetTabs();
-    if( IsUpdateMode() )
-        Invalidate();
-}
-
 const Image& SvTreeListBox::GetDefaultExpandedEntryBmp( ) const
 {
     return pImpl->GetDefaultEntryExpBmp( );
@@ -1990,6 +1977,7 @@ void SvTreeListBox::LoseFocus()
 void SvTreeListBox::ModelHasCleared()
 {
     pImpl->m_pCursor = nullptr; // else we crash in GetFocus when editing in-place
+    pTargetEntry = nullptr;
     pEdCtrl.reset();
     pImpl->Clear();
     nFocusWidth = -1;
@@ -2074,9 +2062,9 @@ void SvTreeListBox::SetEntryHeight( SvTreeListEntry const * pEntry )
     }
 }
 
-void SvTreeListBox::SetEntryHeight( short nHeight, bool bForce )
+void SvTreeListBox::SetEntryHeight( short nHeight )
 {
-    if( nHeight > nEntryHeight || bForce )
+    if( nHeight > nEntryHeight )
     {
         nEntryHeight = nHeight;
         if( nEntryHeight )
@@ -2263,8 +2251,12 @@ void SvTreeListBox::ModelIsRemoving( SvTreeListEntry* pEntry )
 
 void SvTreeListBox::ModelHasRemoved( SvTreeListEntry* pEntry  )
 {
-    if ( pEntry == pHdlEntry)
+    if (pEntry == pHdlEntry)
         pHdlEntry = nullptr;
+
+    if (pEntry == pTargetEntry)
+        pTargetEntry = nullptr;
+
     pImpl->EntryRemoved();
 }
 
@@ -2768,7 +2760,6 @@ void SvTreeListBox::PaintEntry1(SvTreeListEntry& rEntry, long nLine, vcl::Render
         // draw item
         // center vertically
         aEntryPos.AdjustY((nTempEntryHeight - aSize.Height()) / 2 );
-        pViewDataEntry->SetPaintRectangle(aRect);
 
         rItem.Paint(aEntryPos, *this, rRenderContext, pViewDataEntry, rEntry);
 
@@ -2824,7 +2815,7 @@ void SvTreeListBox::PaintEntry1(SvTreeListEntry& rEntry, long nLine, vcl::Render
         pNextTab = nNextTab < nTabCount ? aTabs[nNextTab].get() : nullptr;
     } while (pNextTab && pNextTab->IsDynamic());
 
-    if (!(!pNextTab || (GetTabPos( &rEntry, pNextTab ) > nDynTabPos)))
+    if (pNextTab && (GetTabPos( &rEntry, pNextTab ) <= nDynTabPos))
         return;
 
     if (!((nWindowStyle & WB_HASBUTTONSATROOT) || pModel->GetDepth(&rEntry) > 0))
@@ -3287,22 +3278,6 @@ void SvTreeListBox::Command(const CommandEvent& rCEvt)
         Control::Command(rCEvt);
 }
 
-void SvTreeListBox::RemoveParentKeepChildren( SvTreeListEntry* pParent )
-{
-    assert(pParent);
-    SvTreeListEntry* pNewParent = GetParent( pParent );
-    if( pParent->HasChildren())
-    {
-        SvTreeListEntry* pChild = FirstChild( pParent );
-        while( pChild )
-        {
-            pModel->Move( pChild, pNewParent, TREELIST_APPEND );
-            pChild = FirstChild( pParent );
-        }
-    }
-    pModel->Remove( pParent );
-}
-
 SvLBoxTab* SvTreeListBox::GetFirstTab( SvLBoxTabFlags nFlagMask, sal_uInt16& rPos )
 {
     sal_uInt16 nTabCount = aTabs.size();
@@ -3605,6 +3580,10 @@ bool SvTreeListBox::set_property(const OString &rKey, const OUString &rValue)
     else if (rKey == "enable-search")
     {
         SetQuickSearch(toBool(rValue));
+    }
+    else if (rKey == "activate-on-single-click")
+    {
+        SetActivateOnSingleClick(toBool(rValue));
     }
     else if (rKey == "reorderable")
     {

@@ -187,7 +187,7 @@ namespace dbaui
 
     public:
         ::osl::Mutex&   getMutex() { return m_aMutex; }
-        bool            isInitialized() const { return m_xSourceConnection.is() && m_pSourceObject.get() && m_xDestConnection.is(); }
+        bool            isInitialized() const { return m_xSourceConnection.is() && m_pSourceObject && m_xDestConnection.is(); }
 
     protected:
         explicit CopyTableWizard( const Reference< XComponentContext >& _rxORB );
@@ -1328,13 +1328,17 @@ void CopyTableWizard::impl_doCopy_nothrow()
 
             case CopyTableOperation::AppendData:
             {
-
+                // note that the CopyDefinitionAndData case falls through to here.
+                assert((rWizard.getOperation() == CopyTableOperation::CopyDefinitionAndData) ||
+                       (rWizard.getOperation() == CopyTableOperation::AppendData));
+                assert((rWizard.getOperation() == CopyTableOperation::CopyDefinitionAndData) == xTable.is());
                 if ( !xTable.is() )
                 {
-                    xTable = rWizard.createTable();
+                    assert(rWizard.getOperation() == CopyTableOperation::AppendData);
+                    xTable = rWizard.getTable();
                     if ( !xTable.is() )
                     {
-                        SAL_WARN("dbaccess.ui", "CopyTableWizard::impl_doCopy_nothrow: createTable should throw here, shouldn't it?" );
+                        SAL_WARN("dbaccess.ui", "CopyTableWizard::impl_doCopy_nothrow: getTable should throw here, shouldn't it?" );
                         break;
                     }
                 }

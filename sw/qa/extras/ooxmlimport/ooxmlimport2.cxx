@@ -280,6 +280,18 @@ DECLARE_OOXMLIMPORT_TEST(testTdf43017, "tdf43017.docx")
                                  getProperty<sal_Int32>(xText, "CharColor"));
 }
 
+CPPUNIT_TEST_FIXTURE(Test, testTdf127778)
+{
+    load(mpTestDocumentPath, "tdf127778.docx");
+    xmlDocUniquePtr pLayout = parseLayoutDump();
+    // Without the accompanying fix in place, this test would have failed with:
+    // equality assertion failed
+    // - Expected: 0
+    // - Actual  : 1
+    // i.e. the 2nd page had an unexpected header.
+    assertXPath(pLayout, "//page[2]/header", 0);
+}
+
 // related tdf#43017
 DECLARE_OOXMLIMPORT_TEST(testTdf124754, "tdf124754.docx")
 {
@@ -402,10 +414,8 @@ DECLARE_OOXMLIMPORT_TEST(testTdf121804, "tdf121804.docx")
 
 DECLARE_OOXMLIMPORT_TEST(testTdf114217, "tdf114217.docx")
 {
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<drawing::XDrawPage> xDrawPage = xDrawPageSupplier->getDrawPage();
     // This was 1, multi-page table was imported as a floating one.
-    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(0), xDrawPage->getCount());
+    CPPUNIT_ASSERT_EQUAL(0, getShapes());
 }
 
 DECLARE_OOXMLIMPORT_TEST(testTdf116486, "tdf116486.docx")
@@ -431,9 +441,7 @@ DECLARE_OOXMLIMPORT_TEST(testTdf115094, "tdf115094.docx")
 {
     // anchor of graphic has to be the text in the text frame
     // xray ThisComponent.DrawPage(1).Anchor.Text
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDrawPage = xDrawPageSupplier->getDrawPage();
-    uno::Reference<text::XTextContent> xShape(xDrawPage->getByIndex(1), uno::UNO_QUERY);
+    uno::Reference<text::XTextContent> xShape(getShape(2), uno::UNO_QUERY);
     uno::Reference<text::XTextRange> xText1 = xShape->getAnchor()->getText();
 
     // xray ThisComponent.TextTables(0).getCellByName("A1")
@@ -531,12 +539,11 @@ DECLARE_OOXMLIMPORT_TEST(testTdf103345, "numbering-circle.docx")
     uno::Sequence<beans::PropertyValue> aProps;
     xLevels->getByIndex(0) >>= aProps; // 1st level
 
-    for (int i = 0; i < aProps.getLength(); ++i)
+    for (beans::PropertyValue const& prop : std::as_const(aProps))
     {
-        if (aProps[i].Name == "NumberingType")
+        if (prop.Name == "NumberingType")
         {
-            CPPUNIT_ASSERT_EQUAL(style::NumberingType::CIRCLE_NUMBER,
-                                 aProps[i].Value.get<sal_Int16>());
+            CPPUNIT_ASSERT_EQUAL(style::NumberingType::CIRCLE_NUMBER, prop.Value.get<sal_Int16>());
             return;
         }
     }

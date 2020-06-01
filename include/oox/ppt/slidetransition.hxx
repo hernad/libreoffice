@@ -26,13 +26,13 @@
 #include <rtl/ustring.hxx>
 #include <sal/types.h>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace animations { class XTransitionFilter; }
-} } }
+}
 
 namespace oox { class PropertyMap; }
 
-namespace oox { namespace ppt {
+namespace oox::ppt {
 
     class SlideTransition
     {
@@ -72,9 +72,10 @@ namespace oox { namespace ppt {
         double mfTransitionDurationInSeconds;
         bool  mbMode; /**< https://api.libreoffice.org/docs/common/ref/com/sun/star/animations/XTransitionFilter.html Mode property */
         ::sal_Int32 mnAdvanceTime;
+        ::sal_Int32 mnTransitionFadeColor;
     };
 
-} }
+}
 
 #endif
 

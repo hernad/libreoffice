@@ -167,7 +167,7 @@ size_t ValueSet::ImplGetItem( const Point& rPos ) const
         return VALUESET_ITEM_NOTFOUND;
     }
 
-    if (mpNoneItem.get() && maNoneItemRect.IsInside(rPos))
+    if (mpNoneItem && maNoneItemRect.IsInside(rPos))
     {
         return VALUESET_ITEM_NONEITEM;
     }
@@ -477,7 +477,6 @@ bool ValueSet::MouseButtonDown( const MouseEvent& rMouseEvent )
                 SelectItem( pItem->mnId );
                 if (!(GetStyle() & WB_NOPOINTERFOCUS))
                     GrabFocus();
-                Select();
             }
             else if ( rMouseEvent.GetClicks() == 2 )
                 maDoubleClickHdl.Call( this );
@@ -487,6 +486,17 @@ bool ValueSet::MouseButtonDown( const MouseEvent& rMouseEvent )
     }
 
     return CustomWidgetController::MouseButtonDown( rMouseEvent );
+}
+
+bool ValueSet::MouseButtonUp( const MouseEvent& rMouseEvent )
+{
+    if (rMouseEvent.IsLeft() && !rMouseEvent.IsMod2())
+    {
+        Select();
+        return true;
+    }
+
+    return CustomWidgetController::MouseButtonUp( rMouseEvent );
 }
 
 bool ValueSet::MouseMove(const MouseEvent& rMouseEvent)
@@ -1296,7 +1306,7 @@ void ValueSet::ImplFormatItem(vcl::RenderContext const & rRenderContext, ValueSe
     if (pItem == mpNoneItem.get())
         pItem->maText = GetText();
 
-    if (!((aRect.GetHeight() > 0) && (aRect.GetWidth() > 0)))
+    if ((aRect.GetHeight() <= 0) || (aRect.GetWidth() <= 0))
         return;
 
     const StyleSettings& rStyleSettings = rRenderContext.GetSettings().GetStyleSettings();

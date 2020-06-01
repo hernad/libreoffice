@@ -2395,7 +2395,7 @@ sal_Int16 FileDialogHelper::GetDialogType() const { return mpImpl ? mpImpl->m_nD
 
 bool FileDialogHelper::IsPasswordEnabled() const
 {
-    return mpImpl.get() && mpImpl->isPasswordEnabled();
+    return mpImpl && mpImpl->isPasswordEnabled();
 }
 
 OUString FileDialogHelper::GetRealFilter() const
@@ -2674,8 +2674,8 @@ ErrCode RequestPassword(const std::shared_ptr<const SfxFilter>& pCurrentFilter, 
         OString const utf8Pwd(OUStringToOString(pPasswordRequest->getPassword(), RTL_TEXTENCODING_UTF8));
         OString const utf8Ptm(OUStringToOString(pPasswordRequest->getPasswordToModify(), RTL_TEXTENCODING_UTF8));
         if (!(52 <= utf8Pwd.getLength() && utf8Pwd.getLength() <= 55
-                && SvtSaveOptions().GetODFDefaultVersion() < SvtSaveOptions::ODFVER_012)
-            && !(52 <= utf8Ptm.getLength() && utf8Ptm.getLength() <= 55))
+                && SvtSaveOptions().GetODFSaneDefaultVersion() < SvtSaveOptions::ODFSVER_012)
+            && (52 > utf8Ptm.getLength() || utf8Ptm.getLength() > 55))
         {
             break;
         }
@@ -2697,7 +2697,8 @@ ErrCode RequestPassword(const std::shared_ptr<const SfxFilter>& pCurrentFilter, 
                 if (bOOXML)
                 {
                     ::comphelper::SequenceAsHashMap aHashData;
-                    aHashData[ OUString( "OOXPassword"  ) ] <<= pPasswordRequest->getPassword();
+                    aHashData[ OUString( "OOXPassword" ) ] <<= pPasswordRequest->getPassword();
+                    aHashData[ OUString( "CryptoType" ) ] <<= OUString( "Standard" );
                     aEncryptionData = aHashData.getAsConstNamedValueList();
                 }
                 else

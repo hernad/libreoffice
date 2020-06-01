@@ -41,6 +41,7 @@
 #include <vcl/stdtext.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/weld.hxx>
+#include <vcl/scheduler.hxx>
 #include <sfx2/printer.hxx>
 #include <sfx2/fcontnr.hxx>
 #include <sfx2/viewfrm.hxx>
@@ -376,6 +377,7 @@ void SwMMResultPrintDialog::FillInPrinterSettings()
     PrinterChangeHdl_Impl(*m_xPrinterLB);
 
     sal_Int32 count = xConfigItem->GetMergedDocumentCount();
+    m_xFromNF->set_max(count);
     m_xToNF->set_value(count);
     m_xToNF->set_max(count);
 }
@@ -406,10 +408,6 @@ void SwMMResultEmailDialog::FillInEmailSettings()
 
     }
 
-    //fill mail address ListBox
-    if (m_xMailToLB->get_count())
-        return;
-
     //select first column
     uno::Reference< sdbcx::XColumnsSupplier > xColsSupp(xConfigItem->GetResultSet(), uno::UNO_QUERY);
     //get the name of the actual columns
@@ -417,6 +415,9 @@ void SwMMResultEmailDialog::FillInEmailSettings()
     uno::Sequence< OUString > aFields;
     if (xColAccess.is())
         aFields = xColAccess->getElementNames();
+
+    // fill mail address ListBox
+    assert(m_xMailToLB->get_count() == 0);
     for (const OUString& rField : std::as_const(aFields))
         m_xMailToLB->append_text(rField);
 
@@ -433,6 +434,10 @@ void SwMMResultEmailDialog::FillInEmailSettings()
     m_xSendAsLB->set_active(3);
     SendTypeHdl_Impl(*m_xSendAsLB);
 
+    const sal_Int32 nCount = xConfigItem->GetMergedDocumentCount();
+    m_xFromNF->set_max(nCount);
+    m_xToNF->set_max(nCount);
+    m_xToNF->set_value(nCount);
 }
 
 IMPL_LINK_NOARG(SwMMResultSaveDialog, DocumentSelectionHdl_Impl, weld::ToggleButton&, void)
@@ -664,7 +669,8 @@ IMPL_LINK_NOARG(SwMMResultSaveDialog, SaveOutputHdl_Impl, weld::Button&, void)
             while(true)
             {
                 //time for other slots is needed
-                Application::Reschedule( true );
+                Scheduler::ProcessEventsToIdle();
+
                 bool bFailed = false;
                 try
                 {

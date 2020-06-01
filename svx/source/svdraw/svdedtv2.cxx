@@ -34,7 +34,7 @@
 #include <svx/xlineit0.hxx>
 #include <svx/xtextit0.hxx>
 #include "svdfmtf.hxx"
-#include "svdpdf.hxx"
+#include <svdpdf.hxx>
 #include <svx/svdetc.hxx>
 #include <editeng/outlobj.hxx>
 #include <editeng/eeitem.hxx>
@@ -51,7 +51,6 @@
 #include <vector>
 #include <vcl/graph.hxx>
 
-using ::std::vector;
 using namespace com::sun::star;
 
 SdrObject* SdrEditView::GetMaxToTopObj(SdrObject* /*pObj*/) const
@@ -767,7 +766,7 @@ struct ImpDistributeEntry
 
 }
 
-typedef vector<ImpDistributeEntry> ImpDistributeEntryList;
+typedef std::vector<ImpDistributeEntry> ImpDistributeEntryList;
 
 void SdrEditView::DistributeMarkedObjects(weld::Window* pParent)
 {
@@ -2105,7 +2104,7 @@ void SdrEditView::DoImportMarkedMtf(SvdProgressInfo *pProgrInfo)
 #if HAVE_FEATURE_PDFIUM
                 aLogicRect = pGraf->GetLogicRect();
                 ImpSdrPdfImport aFilter(*mpModel, pObj->GetLayer(), aLogicRect, aGraphic);
-                if (pGraf->getEmbeddedPageNumber() < aFilter.GetPageCount())
+                if (aGraphic.getPageNumber() < aFilter.GetPageCount())
                 {
                     nInsCnt = aFilter.DoImport(*pOL, nInsPos, aGraphic.getPageNumber(), pProgrInfo);
                 }

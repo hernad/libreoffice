@@ -26,7 +26,7 @@
 
 namespace com::sun::star::frame { class XToolbarController; }
 
-namespace sfx2 { namespace sidebar {
+namespace sfx2::sidebar {
 
 /** The sidebar tool box has two responsibilities:
     1. Coordinated location, size, and other states with its parent
@@ -62,6 +62,7 @@ protected:
     ControllerContainer maControllers;
     bool mbAreHandlersRegistered;
     bool mbUseDefaultButtonSize;
+    bool mbSideBar;
 
     DECL_LINK(DropDownClickHandler, ToolBox*, void);
     DECL_LINK(ClickHandler, ToolBox*, void);
@@ -73,12 +74,12 @@ protected:
 
     void CreateController(const sal_uInt16 nItemId,
                           const css::uno::Reference<css::frame::XFrame>& rxFrame,
-                          const sal_Int32 nItemWidth);
+                          const sal_Int32 nItemWidth, bool bSideBar);
     void RegisterHandlers();
 };
 
 
-} } // end of namespace sfx2::sidebar
+} // end of namespace sfx2::sidebar
 
 #endif
 

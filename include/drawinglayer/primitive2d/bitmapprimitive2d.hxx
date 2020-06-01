@@ -17,26 +17,16 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_DRAWINGLAYER_PRIMITIVE2D_BITMAPPRIMITIVE2D_HXX
-#define INCLUDED_DRAWINGLAYER_PRIMITIVE2D_BITMAPPRIMITIVE2D_HXX
+#pragma once
 
 #include <drawinglayer/drawinglayerdllapi.h>
 
 #include <drawinglayer/primitive2d/baseprimitive2d.hxx>
 #include <basegfx/matrix/b2dhommatrix.hxx>
 
-namespace com
-{
-namespace sun
-{
-namespace star
-{
-namespace awt
+namespace com::sun::star::awt
 {
 class XBitmap;
-}
-}
-}
 }
 
 namespace drawinglayer::primitive2d
@@ -84,7 +74,5 @@ public:
 };
 
 } // end of namespace drawinglayer::primitive2d
-
-#endif // INCLUDED_DRAWINGLAYER_PRIMITIVE2D_BITMAPPRIMITIVE2D_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -50,12 +50,13 @@ using namespace com::sun::star;
 using namespace ::xmloff::token;
 using namespace ::formula;
 
-#define MAP(name,prefix,token,type,context)  { name, sizeof(name)-1, prefix, token, type, context, SvtSaveOptions::ODFVER_010, false }
+#define MAP(name,prefix,token,type,context)  { name, sizeof(name)-1, prefix, token, type, context, SvtSaveOptions::ODFSVER_010, false }
+#define MAP_ODF13(name,prefix,token,type,context)  { name, sizeof(name)-1, prefix, token, type, context, SvtSaveOptions::ODFSVER_013, false }
 // extensions import/export
-#define MAP_EXT(name,prefix,token,type,context)  { name, sizeof(name)-1, prefix, token, type, context, SvtSaveOptions::ODFVER_012_EXT_COMPAT, false }
+#define MAP_EXT(name,prefix,token,type,context)  { name, sizeof(name)-1, prefix, token, type, context, SvtSaveOptions::ODFSVER_FUTURE_EXTENDED, false }
 // extensions import only
-#define MAP_EXT_I(name,prefix,token,type,context)  { name, sizeof(name)-1, prefix, token, type, context, SvtSaveOptions::ODFVER_012_EXT_COMPAT, true }
-#define MAP_END()   { nullptr, 0, 0, XML_TOKEN_INVALID, 0, 0, SvtSaveOptions::ODFVER_010, false }
+#define MAP_EXT_I(name,prefix,token,type,context)  { name, sizeof(name)-1, prefix, token, type, context, SvtSaveOptions::ODFSVER_FUTURE_EXTENDED, true }
+#define MAP_END()   { nullptr, 0, 0, XML_TOKEN_INVALID, 0, 0, SvtSaveOptions::ODFSVER_010, false }
 
 const XMLPropertyMapEntry aXMLScCellStylesProperties[] =
 {
@@ -77,7 +78,9 @@ const XMLPropertyMapEntry aXMLScCellStylesProperties[] =
     MAP( "HoriJustify", XML_NAMESPACE_FO, XML_TEXT_ALIGN, XML_TYPE_PROP_PARAGRAPH|XML_SC_TYPE_HORIJUSTIFY|MID_FLAG_MERGE_PROPERTY, 0 ),
     MAP( "HoriJustify", XML_NAMESPACE_STYLE, XML_TEXT_ALIGN_SOURCE, XML_TYPE_PROP_TABLE_CELL|XML_SC_TYPE_HORIJUSTIFYSOURCE|MID_FLAG_MERGE_PROPERTY, 0 ),
     MAP( "HoriJustify", XML_NAMESPACE_STYLE, XML_REPEAT_CONTENT, XML_TYPE_PROP_TABLE_CELL|XML_SC_TYPE_HORIJUSTIFYREPEAT|MID_FLAG_MERGE_PROPERTY, 0 ),
+    // FIXME this was wrongly exported to STYLE namespace since 2013
     MAP_EXT( SC_UNONAME_HYPERLINK, XML_NAMESPACE_STYLE, XML_HYPERLINK, XML_TYPE_PROP_TABLE_CELL | XML_TYPE_STRING | MID_FLAG_ELEMENT_ITEM, CTF_SC_HYPERLINK ),
+    MAP_EXT( SC_UNONAME_HYPERLINK, XML_NAMESPACE_LO_EXT, XML_HYPERLINK, XML_TYPE_PROP_TABLE_CELL | XML_TYPE_STRING | MID_FLAG_ELEMENT_ITEM, CTF_SC_HYPERLINK ),
     MAP_EXT( SC_UNONAME_CELLHJUS_METHOD, XML_NAMESPACE_CSS3TEXT, XML_TEXT_JUSTIFY, XML_TYPE_PROP_PARAGRAPH|XML_SC_TYPE_HORIJUSTIFY_METHOD, 0 ),
     MAP( "IsCellBackgroundTransparent", XML_NAMESPACE_FO, XML_BACKGROUND_COLOR, XML_TYPE_PROP_TABLE_CELL|XML_TYPE_ISTRANSPARENT|MID_FLAG_MULTI_PROPERTY|MID_FLAG_MERGE_ATTRIBUTE, 0 ),
     MAP( "IsTextWrapped", XML_NAMESPACE_FO, XML_WRAP_OPTION, XML_TYPE_PROP_TABLE_CELL|XML_SC_ISTEXTWRAPPED, 0 ),
@@ -161,8 +164,8 @@ const XMLPropertyMapEntry aXMLScTableStylesImportProperties[] =
     MAP( "IsVisible", XML_NAMESPACE_TABLE, XML_DISPLAY, XML_TYPE_PROP_TABLE|XML_TYPE_BOOL, 0 ),
     MAP( "PageStyle", XML_NAMESPACE_STYLE, XML_MASTER_PAGE_NAME, XML_TYPE_PROP_TABLE|XML_TYPE_STRING|MID_FLAG_SPECIAL_ITEM, CTF_SC_MASTERPAGENAME ),
     MAP( "TableLayout", XML_NAMESPACE_STYLE, XML_WRITING_MODE, XML_TYPE_PROP_TABLE|XML_TYPE_TEXT_WRITING_MODE, 0 ),
-    MAP( "TabColor", XML_NAMESPACE_TABLE, XML_TAB_COLOR, XML_TYPE_PROP_TABLE|XML_TYPE_COLORAUTO, 0 ),
-    MAP_EXT( "TabColor", XML_NAMESPACE_TABLE_EXT, XML_TAB_COLOR, XML_TYPE_PROP_TABLE|XML_TYPE_COLORAUTO, 0 ),
+    MAP_ODF13( "TabColor", XML_NAMESPACE_TABLE, XML_TAB_COLOR, XML_TYPE_PROP_TABLE|XML_TYPE_COLORAUTO, 0 ),
+    MAP_ODF13( "TabColor", XML_NAMESPACE_TABLE_EXT, XML_TAB_COLOR, XML_TYPE_PROP_TABLE|XML_TYPE_COLORAUTO, 0 ),
     MAP_END()
 };
 
@@ -171,7 +174,9 @@ const XMLPropertyMapEntry aXMLScTableStylesProperties[] =
     MAP( "IsVisible", XML_NAMESPACE_TABLE, XML_DISPLAY, XML_TYPE_PROP_TABLE|XML_TYPE_BOOL, 0 ),
     MAP( "PageStyle", XML_NAMESPACE_STYLE, XML_MASTER_PAGE_NAME, XML_TYPE_PROP_TABLE|XML_TYPE_STRING|MID_FLAG_SPECIAL_ITEM, CTF_SC_MASTERPAGENAME ),
     MAP( "TableLayout", XML_NAMESPACE_STYLE, XML_WRITING_MODE, XML_TYPE_PROP_TABLE|XML_TYPE_TEXT_WRITING_MODE, 0 ),
-    MAP_EXT( "TabColor", XML_NAMESPACE_TABLE_EXT, XML_TAB_COLOR, XML_TYPE_PROP_TABLE|XML_TYPE_COLORAUTO, 0 ),
+    // ODF 1.3 OFFICE-2173
+    MAP_ODF13( "TabColor", XML_NAMESPACE_TABLE, XML_TAB_COLOR, XML_TYPE_PROP_TABLE|XML_TYPE_COLORAUTO, 0 ),
+    MAP_ODF13( "TabColor", XML_NAMESPACE_TABLE_EXT, XML_TAB_COLOR, XML_TYPE_PROP_TABLE|XML_TYPE_COLORAUTO, 0 ),
     MAP_END()
 };
 

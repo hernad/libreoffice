@@ -17,30 +17,25 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_BASEGFX_COLOR_BCOLORTOOLS_HXX
-#define INCLUDED_BASEGFX_COLOR_BCOLORTOOLS_HXX
+#pragma once
 
 #include <basegfx/basegfxdllapi.h>
 
+namespace basegfx { class BColor; }
 
-namespace basegfx
+namespace basegfx::utils
 {
-    class BColor;
 
-    namespace utils
-    {
-        /// Transform from RGB to HSL
-        BASEGFX_DLLPUBLIC BColor rgb2hsl(const BColor& rRGBColor);
-        /// Transform from HSL to RGB
-        BASEGFX_DLLPUBLIC BColor hsl2rgb(const BColor& rHSLColor);
+/// Transform from RGB to HSL
+BASEGFX_DLLPUBLIC BColor rgb2hsl(const BColor& rRGBColor);
+/// Transform from HSL to RGB
+BASEGFX_DLLPUBLIC BColor hsl2rgb(const BColor& rHSLColor);
 
-        /// Transform from RGB to HSV
-        BASEGFX_DLLPUBLIC BColor rgb2hsv(const BColor& rRGBColor);
-        /// Transform from HSV to RGB
-        BASEGFX_DLLPUBLIC BColor hsv2rgb(const BColor& rHSVColor);
-    }
+/// Transform from RGB to HSV
+BASEGFX_DLLPUBLIC BColor rgb2hsv(const BColor& rRGBColor);
+/// Transform from HSV to RGB
+BASEGFX_DLLPUBLIC BColor hsv2rgb(const BColor& rHSVColor);
+
 } // end of namespace basegfx
-
-#endif // INCLUDED_BASEGFX_COLOR_BCOLORTOOLS_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

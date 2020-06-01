@@ -32,7 +32,7 @@ class PhysicalFontCollection;
 
 namespace psp { struct JobData; class PrinterGfx; }
 
-class FreetypeFont;
+class FreetypeFontInstance;
 class FontAttributes;
 class SalInfoPrinter;
 class ImplFontMetricData;
@@ -42,7 +42,8 @@ class VCL_DLLPUBLIC GenPspGraphics final : public SalGraphics
     psp::JobData*           m_pJobData;
     psp::PrinterGfx*        m_pPrinterGfx;
 
-    FreetypeFont*           m_pFreetypeFont[ MAX_FALLBACK ];
+    rtl::Reference<FreetypeFontInstance>
+                            m_pFreetypeFont[ MAX_FALLBACK ];
 public:
                             GenPspGraphics();
     virtual                ~GenPspGraphics() override;
@@ -131,7 +132,7 @@ public:
                                 const basegfx::B2DHomMatrix& rObjectToDevice,
                                 const basegfx::B2DPolygon&,
                                 double fTransparency,
-                                const basegfx::B2DVector& rLineWidths,
+                                double fLineWidth,
                                 const std::vector< double >* pStroke, // MM01
                                 basegfx::B2DLineJoin,
                                 css::drawing::LineCap,
@@ -202,8 +203,6 @@ public:
     virtual cairo::SurfaceSharedPtr CreateSurface(const OutputDevice& rRefDevice, int x, int y, int width, int height) const override;
     virtual cairo::SurfaceSharedPtr CreateBitmapSurface(const OutputDevice& rRefDevice, const BitmapSystemData& rData, const Size& rSize) const override;
     virtual css::uno::Any   GetNativeSurfaceHandle(cairo::SurfaceSharedPtr& rSurface, const basegfx::B2ISize& rSize) const override;
-
-    virtual SystemFontData  GetSysFontData( int nFallbacklevel ) const override;
 #endif // ENABLE_CAIRO_CANVAS
 };
 

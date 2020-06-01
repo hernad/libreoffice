@@ -24,7 +24,7 @@
 #include <vcl/EnumContext.hxx>
 #include <sfx2/sidebar/PanelLayout.hxx>
 
-namespace svx { namespace sidebar {
+namespace svx::sidebar {
 
 class TextPropertyPanel
     : public PanelLayout,
@@ -62,6 +62,8 @@ private:
     std::unique_ptr<ToolbarUnoDispatcher> mxToolBoxBackgroundColorDispatch;
     std::unique_ptr<weld::Toolbar> mxResetBar;
     std::unique_ptr<ToolbarUnoDispatcher> mxResetBarDispatch;
+    std::unique_ptr<weld::Toolbar> mxDefaultBar;
+    std::unique_ptr<ToolbarUnoDispatcher> mxDefaultBarDispatch;
     std::unique_ptr<weld::Toolbar> mxPositionBar;
     std::unique_ptr<ToolbarUnoDispatcher> mxPositionBarDispatch;
     std::unique_ptr<weld::Toolbar> mxSpacingBar;
@@ -70,7 +72,7 @@ private:
     vcl::EnumContext maContext;
 };
 
-} } // end of namespace svx::sidebar
+} // end of namespace svx::sidebar
 
 #endif
 

@@ -31,8 +31,8 @@
 #include <memory>
 #include <vector>
 
-namespace com { namespace sun { namespace star { namespace frame { class XFrame; } } } }
-namespace com { namespace sun { namespace star { namespace frame { struct FeatureStateEvent; } } } }
+namespace com::sun::star::frame { class XFrame; }
+namespace com::sun::star::frame { struct FeatureStateEvent; }
 template <class T> class VclStatusListener;
 
 class Timer;
@@ -254,10 +254,6 @@ public:
 
 protected:
     virtual void ApplySettings(vcl::RenderContext& rRenderContext) override;
-    void SetCurItemId(sal_uInt16 nSet)
-    {
-        mnCurItemId = nSet;
-    }
 
 public:
     ToolBox(vcl::Window* pParent, WinBits nStyle = 0);
@@ -458,7 +454,6 @@ public:
     void                SetActivateHdl( const Link<ToolBox *, void>& rLink ) { maActivateHdl = rLink; }
     void                SetDeactivateHdl( const Link<ToolBox *, void>& rLink ) { maDeactivateHdl = rLink; }
     void                SetSelectHdl( const Link<ToolBox *, void>& rLink ) { maSelectHdl = rLink; }
-    const Link<ToolBox *, void>& GetSelectHdl() const { return maSelectHdl; }
     void                SetStateChangedHdl( const Link<StateChangedType const *, void>& aLink ) { maStateChangedHandler = aLink; }
     void                SetDataChangedHdl( const Link<DataChangedEvent const *, void>& aLink ) { maDataChangedHandler = aLink; }
     void                SetMenuButtonHdl( const Link<ToolBox *, void>& rLink ) { maMenuButtonHdl = rLink; }

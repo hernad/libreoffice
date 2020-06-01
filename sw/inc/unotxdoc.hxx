@@ -83,12 +83,12 @@ class SwPrintData;
 class SwRenderData;
 class SwViewShell;
 class SfxItemPropertySet;
-namespace com { namespace sun { namespace star { namespace container { class XNameContainer; } } } }
-namespace com { namespace sun { namespace star { namespace frame { class XController; } } } }
-namespace com { namespace sun { namespace star { namespace lang { struct Locale; } } } }
-namespace com { namespace sun { namespace star { namespace uno { class XAggregation; } } } }
+namespace com::sun::star::container { class XNameContainer; }
+namespace com::sun::star::frame { class XController; }
+namespace com::sun::star::lang { struct Locale; }
+namespace com::sun::star::uno { class XAggregation; }
 
-namespace com { namespace sun { namespace star { namespace util { class XReplaceDescriptor; } } } }
+namespace com::sun::star::util { class XReplaceDescriptor; }
 
 typedef cppu::WeakImplHelper
 <
@@ -443,6 +443,9 @@ public:
     OUString getRulerState() override;
     /// @see vcl::ITiledRenderable::getPostIts().
     OUString getPostIts() override;
+
+    /// @see vcl::ITiledRenderable::executeFromFieldEvent().
+    virtual void executeFromFieldEvent(const StringMap& aArguments) override;
 
     // css::tiledrendering::XTiledRenderable
     virtual void SAL_CALL paintTile( const ::css::uno::Any& Parent, ::sal_Int32 nOutputWidth, ::sal_Int32 nOutputHeight, ::sal_Int32 nTilePosX, ::sal_Int32 nTilePosY, ::sal_Int32 nTileWidth, ::sal_Int32 nTileHeight ) override;

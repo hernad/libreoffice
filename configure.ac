@@ -9,7 +9,7 @@ dnl in order to create a configure script.
 # several non-alphanumeric characters, those are split off and used only for the
 # ABOUTBOXPRODUCTVERSIONSUFFIX in openoffice.lst. Why that is necessary, no idea.
 
-AC_INIT([LibreOffice],[7.0.0.0.alpha0+],[],[],[http://documentfoundation.org/])
+AC_INIT([LibreOffice],[7.1.0.0.alpha0+],[],[],[http://documentfoundation.org/])
 
 dnl libnumbertext needs autoconf 2.68, but that can pick up autoconf268 just fine if it is installed
 dnl whereas aclocal (as run by autogen.sh) insists on using autoconf and fails hard
@@ -208,11 +208,6 @@ LIBO_VERSION_MINOR=$2
 LIBO_VERSION_MICRO=$3
 LIBO_VERSION_PATCH=$4
 
-# The CFBundleShortVersionString in Info.plist consists of three integers, so encode the third
-# as the micro version times 1000 plus the patch number. Unfortunately the LIBO_VERSION_SUFFIX can be anything so
-# no way to encode that into an integer in general.
-MACOSX_BUNDLE_SHORTVERSION=$LIBO_VERSION_MAJOR.$LIBO_VERSION_MINOR.`expr $LIBO_VERSION_MICRO '*' 1000 + $LIBO_VERSION_PATCH`
-
 LIBO_VERSION_SUFFIX=$5
 # Split out LIBO_VERSION_SUFFIX_SUFFIX... horrible crack. But apparently wanted separately in
 # openoffice.lst as ABOUTBOXPRODUCTVERSIONSUFFIX. Note that the double brackets are for m4's sake,
@@ -226,7 +221,6 @@ AC_SUBST(LIBO_VERSION_MAJOR)
 AC_SUBST(LIBO_VERSION_MINOR)
 AC_SUBST(LIBO_VERSION_MICRO)
 AC_SUBST(LIBO_VERSION_PATCH)
-AC_SUBST(MACOSX_BUNDLE_SHORTVERSION)
 AC_SUBST(LIBO_VERSION_SUFFIX)
 AC_SUBST(LIBO_VERSION_SUFFIX_SUFFIX)
 
@@ -710,7 +704,7 @@ darwin*) # macOS or iOS
         _os=Darwin
         INSTROOTBASESUFFIX=/$PRODUCTNAME_WITHOUT_SPACES.app
         INSTROOTCONTENTSUFFIX=/Contents
-        SDKDIRNAME=AC_PACKAGE_NAME${PRODUCTVERSION}_SDK
+        SDKDIRNAME=${PRODUCTNAME}${PRODUCTVERSION}_SDK
     fi
     # See comment above the case "$host_os"
     LINKFLAGSSHL="-dynamiclib -single_module"
@@ -1076,7 +1070,7 @@ libo_FUZZ_ARG_ENABLE(pdfium,
 
 libo_FUZZ_ARG_ENABLE(skia,
     AS_HELP_STRING([--disable-skia],
-        [Disable building Skia.])
+        [Disable building Skia. Use --enable-skia=debug to build without optimizations.])
 )
 
 ###############################################################################
@@ -1245,9 +1239,12 @@ AC_ARG_ENABLE(lto,
 AC_ARG_ENABLE(python,
     AS_HELP_STRING([--enable-python=<no/auto/system/internal/fully-internal>],
         [Enables or disables Python support at run-time.
-         Also specifies what Python to use. 'auto' is the default.
+         Also specifies what Python to use at build-time.
          'fully-internal' even forces the internal version for uses of Python
-         during the build.]))
+         during the build.
+         On macOS the only choices are
+         'internal' (default) or 'fully-internal'. Otherwise the default is 'auto'.
+         ]))
 
 libo_FUZZ_ARG_ENABLE(gtk3,
     AS_HELP_STRING([--disable-gtk3],
@@ -1493,7 +1490,7 @@ libo_FUZZ_ARG_ENABLE(readonly-installset,
     AS_HELP_STRING([--enable-readonly-installset],
         [Prevents any attempts by LibreOffice to write into its installation. That means
          at least that no "system-wide" extensions can be added. Partly experimental work in
-         progress, probably not fully implemented (but is useful for sandboxed macOS builds).]),
+         progress, probably not fully implemented. Always enabled for macOS.]),
 ,)
 
 libo_FUZZ_ARG_ENABLE(postgresql-sdbc,
@@ -1619,7 +1616,7 @@ AC_ARG_WITH(theme,
     AS_HELP_STRING([--with-theme="theme1 theme2..."],
         [Choose which themes to include. By default those themes with an '*' are included.
          Possible choices: *breeze, *breeze_dark, *breeze_dark_svg, *breeze_svg, *colibre, *colibre_svg, *elementary,
-         *elementary_svg, *karasa_jaga, *karasa_jaga_svg, *sifr, *sifr_dark, *sifr_dark_svg, *sifr_svg, *sukapura, *sukapura_svg, *tango.]),
+         *elementary_svg, *karasa_jaga, *karasa_jaga_svg, *sifr, *sifr_dark, *sifr_dark_svg, *sifr_svg, *sukapura, *sukapura_svg.]),
 ,)
 
 libo_FUZZ_ARG_WITH(helppack-integration,
@@ -1964,6 +1961,11 @@ AC_ARG_WITH(system-qrcodegen,
         [Use libqrcodegen already on system.]),,
     [with_system_qrcodegen="$with_system_libs"])
 
+AC_ARG_WITH(system-box2d,
+    AS_HELP_STRING([--with-system-box2d],
+        [Use box2d already on system.]),,
+    [with_system_box2d="$with_system_libs"])
+
 AC_ARG_WITH(system-mythes,
     AS_HELP_STRING([--with-system-mythes],
         [Use mythes already on system.]),,
@@ -2005,7 +2007,7 @@ AC_ARG_WITH(linker-hash-style,
 
 AC_ARG_WITH(jdk-home,
     AS_HELP_STRING([--with-jdk-home=<absolute path to JDK home>],
-        [If you have installed JDK 8 or later on your system please supply the
+        [If you have installed JDK 9 or later on your system please supply the
          path here. Note that this is not the location of the java command but the
          location of the entire distribution.]),
 ,)
@@ -2182,7 +2184,7 @@ libo_FUZZ_ARG_WITH(latest-c++,
     AS_HELP_STRING([--with-latest-c++],
         [Try to enable the latest features of the C++ compiler, even if they are not yet part of a
          published standard.]),,
-        [$with_latest_c__=no])
+        [with_latest_c__=no])
 
 dnl ===================================================================
 dnl Branding
@@ -2334,11 +2336,17 @@ AC_MSG_CHECKING([whether build target is Release Build])
 if test "$enable_release_build" = "" -o "$enable_release_build" = "no"; then
     AC_MSG_RESULT([no])
     ENABLE_RELEASE_BUILD=
+    GET_TASK_ALLOW_ENTITLEMENT='
+        <!-- We want to be able to debug a hardened process when not building for release -->
+        <key>com.apple.security.get-task-allow</key>
+        <true/>'
 else
     AC_MSG_RESULT([yes])
     ENABLE_RELEASE_BUILD=TRUE
+    GET_TASK_ALLOW_ENTITLEMENT=''
 fi
 AC_SUBST(ENABLE_RELEASE_BUILD)
+AC_SUBST(GET_TASK_ALLOW_ENTITLEMENT)
 
 dnl ===================================================================
 dnl Test whether to sign Windows Build
@@ -3055,8 +3063,8 @@ dnl ===================================================================
 
 if test $_os = iOS; then
     AC_MSG_CHECKING([what iOS SDK to use])
-    current_sdk_ver=13.4
-    older_sdk_vers="13.2 13.1 13.0 12.4 12.2"
+    current_sdk_ver=13.5
+    older_sdk_vers="13.4 13.2 13.1 13.0 12.4 12.2"
     if test "$enable_ios_simulator" = "yes"; then
         platform=iPhoneSimulator
         versionmin=-mios-simulator-version-min=12.2
@@ -3110,8 +3118,9 @@ fi
 
 AC_MSG_CHECKING([whether to treat the installation as read-only])
 
-if test \( -z "$enable_readonly_installset" -a "$ENABLE_MACOSX_SANDBOX" = TRUE \) -o \
-        "$enable_extensions" != yes; then
+if test $_os = Darwin; then
+    enable_readonly_installset=yes
+elif test "$enable_extensions" != yes; then
     enable_readonly_installset=yes
 fi
 if test "$enable_readonly_installset" = yes; then
@@ -3553,10 +3562,6 @@ if test "$_os" = "WINNT"; then
         CC=$MSVC_CXX
         CC_BASE=`first_arg_basename "$CC"`
     fi
-    if test "$BITNESS_OVERRIDE" = ""; then
-        dnl since MSVC 2012, default for x86 is -arch:SSE2:
-        MSVC_CXX="$MSVC_CXX -arch:SSE"
-    fi
     if test -z "$CXX"; then
         CXX=$MSVC_CXX
         CXX_BASE=`first_arg_basename "$CXX"`
@@ -3571,10 +3576,6 @@ if test "$_os" = "WINNT"; then
             if test -n "$VC_PRODUCT_DIR"; then
                 COMPATH=$VC_PRODUCT_DIR
             fi
-        fi
-        if test "$BITNESS_OVERRIDE" = ""; then
-            dnl since MSVC 2012, default for x86 is -arch:SSE2:
-            CC="$CC -arch:SSE"
         fi
 
         COMPATH="$COMPATH/Tools/MSVC/$vcbuildnumber"
@@ -4090,6 +4091,19 @@ if test "$enable_split_debug" != no; then
     fi
 fi
 AC_SUBST(HAVE_GCC_SPLIT_DWARF)
+
+HAVE_CLANG_DEBUG_INFO_KIND_CONSTRUCTOR=
+AC_MSG_CHECKING([whether $CC_BASE supports -Xclang -debug-info-kind=constructor])
+save_CFLAGS=$CFLAGS
+CFLAGS="$CFLAGS -Werror -Xclang -debug-info-kind=constructor"
+AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[ return 0; ]])],[ HAVE_CLANG_DEBUG_INFO_KIND_CONSTRUCTOR=TRUE ],[])
+CFLAGS=$save_CFLAGS
+if test "$HAVE_CLANG_DEBUG_INFO_KIND_CONSTRUCTOR" = "TRUE"; then
+    AC_MSG_RESULT([yes])
+else
+    AC_MSG_RESULT([no])
+fi
+AC_SUBST(HAVE_CLANG_DEBUG_INFO_KIND_CONSTRUCTOR)
 
 ENABLE_GDB_INDEX=
 if test "$enable_gdb_index" != "no"; then
@@ -4757,6 +4771,7 @@ if test "$cross_compiling" = "yes"; then
         bin/bffvalidator.sh.in \
         bin/odfvalidator.sh.in \
         bin/officeotron.sh.in \
+        hardened_runtime.xcent.in \
         instsetoo_native/util/openoffice.lst.in \
         config_host/*.in \
         sysui/desktop/macosx/Info.plist.in) \
@@ -6425,20 +6440,6 @@ if test "$GCC" = "yes" -o "$COM_IS_CLANG" = TRUE; then
             AC_MSG_RESULT([yes])
         ], [AC_MSG_RESULT([no])])
     AC_LANG_POP([C++])
-
-    dnl Available in GCC 4.9 and at least since Clang 3.4; this check can eventually be removed
-    dnl completely (e.g., after libreoffice-6-5 branch off):
-    AC_MSG_CHECKING([that $CXX_BASE supports __attribute__((warn_unused))])
-    AC_LANG_PUSH([C++])
-    save_CXXFLAGS=$CXXFLAGS
-    CXXFLAGS="$CXXFLAGS -Werror"
-    AC_COMPILE_IFELSE([AC_LANG_SOURCE([
-            struct __attribute__((warn_unused)) dummy {};
-        ])], [
-            AC_MSG_RESULT([yes])
-        ], [AC_MSG_ERROR([no])])
-    CXXFLAGS=$save_CXXFLAGS
-AC_LANG_POP([C++])
 fi
 
 AC_SUBST(HAVE_GCC_AVX)
@@ -6665,30 +6666,6 @@ if test "$GCC" = yes; then
 fi
 AC_SUBST([HAVE_GCC_FNO_SIZED_DEALLOCATION])
 
-dnl This check can eventually be removed completely (e.g., after libreoffice-7-0 branch off):
-AC_MSG_CHECKING([that $CXX_BASE supports guaranteed copy elision])
-AC_LANG_PUSH([C++])
-save_CXXFLAGS=$CXXFLAGS
-CXXFLAGS="$CXXFLAGS $CXXFLAGS_CXX11"
-AC_COMPILE_IFELSE([AC_LANG_SOURCE([
-        // At least VS 2017 15.8.1 defines __cpp_guaranteed_copy_elision as 201606L without actually
-        // supporting it:
-        #if !defined __cpp_guaranteed_copy_elision || (defined _MSC_VER && !defined __clang__)
-        struct S {
-        private:
-            S(S const &);
-        public:
-            S();
-            ~S();
-        };
-        S copy();
-        void f() { S c(copy()); }
-        #endif
-    ])], [AC_MSG_RESULT([yes])
-    ], [AC_MSG_ERROR([no])])
-CXXFLAGS=$save_CXXFLAGS
-AC_LANG_POP([C++])
-
 AC_MSG_CHECKING([whether $CXX_BASE supports C++2a constinit sorted vectors])
 AC_LANG_PUSH([C++])
 save_CXXFLAGS=$CXXFLAGS
@@ -6844,8 +6821,7 @@ else
     # MSVC seems to differentiate only between SSE and SSE2, where in fact
     # SSE2 seems to be SSE2+.
     # Even if -arch:SSE2 is the default, set it explicitly, so that the variable
-    # is not empty (and can be tested in gbuild), moreover we now default to SSE
-    # for 32bit x86.
+    # is not empty (and can be tested in gbuild).
     flag_sse2=-arch:SSE2
     flag_ssse3=-arch:SSE2
     flag_sse41=-arch:SSE2
@@ -7202,7 +7178,7 @@ if test "$COM_IS_CLANG" = "TRUE"; then
         dnl The prefix where Clang resides, override to where Clang resides if
         dnl using a source build:
         if test -z "$CLANGDIR"; then
-            CLANGDIR=$(dirname $(dirname $($CXX -print-prog-name=$(basename $CXX))))
+            CLANGDIR=$(dirname $(dirname $($CXX -print-prog-name=$(basename $(printf '%s\n' $CXX | head -n 1)))))
         fi
         # Assume Clang is self-built, but allow overriding COMPILER_PLUGINS_CXX to the compiler Clang was built with.
         if test -z "$COMPILER_PLUGINS_CXX"; then
@@ -7447,20 +7423,12 @@ if test "$ENABLE_JAVA" != ""; then
                 reg_get_value "$bitness" "HKEY_LOCAL_MACHINE/SOFTWARE/JavaSoft/JDK/$ver/JavaHome"
                 _jdk_home=$regvalue
             fi
-            if test -z "$with_jdk_home"; then
-                for ver in 1.8; do
-                    reg_get_value "$bitness" "HKEY_LOCAL_MACHINE/SOFTWARE/JavaSoft/Java Development Kit/$ver/JavaHome"
-                    if test -n "$regvalue"; then
-                        _jdk_home=$regvalue
-                        break
-                    fi
-                done
-            fi
+
             if test -f "$_jdk_home/lib/jvm.lib" -a -f "$_jdk_home/bin/java.exe"; then
                 with_jdk_home="$_jdk_home"
                 howfound="found automatically"
             else
-                AC_MSG_ERROR([No JDK found, pass the --with-jdk-home option pointing to a $bitness-bit JDK])
+                AC_MSG_ERROR([No JDK found, pass the --with-jdk-home option pointing to a $bitness-bit JDK >= 9])
             fi
         else
             test "$build_os" = "cygwin" && with_jdk_home=`win_short_path_for_make "$with_jdk_home"`
@@ -7542,24 +7510,7 @@ if test "$ENABLE_JAVA" != ""; then
         elif test `$JAVAINTERPRETER -version 2>&1 | $AWK '{ print }' | $GREP -c "BEA"` -gt 0; then
             AC_MSG_ERROR([No valid check available. Please check the block for your desired java in configure.ac])
         elif test `$JAVAINTERPRETER -version 2>&1 | $AWK '{ print }' | $GREP -c "IBM"` -gt 0; then
-            JDK=ibm
-
-            dnl IBM JDK specific tests
-            _jdk=`$JAVAINTERPRETER -version 2>&1 | $AWK -F'"' '{ print \$2 }' | $SED s/[[-A-Za-z]]*//`
-            _jdk_ver=`echo "$_jdk" | $AWK -F. '{ print (($1 * 100) + $2) * 100 + $3;}'`
-
-            if test "$_jdk_ver" -lt 10800; then
-                AC_MSG_ERROR([IBM JDK is too old, you need at least 8])
-            fi
-
-            AC_MSG_RESULT([found (IBM JDK $_jdk)])
-
-            if test "$with_jdk_home" = ""; then
-                AC_MSG_ERROR([In order to successfully build LibreOffice using the IBM JDK,
-you must use the "--with-jdk-home" configure option explicitly])
-            fi
-
-            JAVA_HOME=$with_jdk_home
+            AC_MSG_ERROR([No valid check available. Please check the block for your desired java in configure.ac])
         else
             JDK=sun
 
@@ -7567,10 +7518,10 @@ you must use the "--with-jdk-home" configure option explicitly])
             _jdk=`$JAVAINTERPRETER -version 2>&1 | $AWK -F'"' '{ print \$2 }' | $SED '/^$/d' | $SED s/[[-A-Za-z]]*//`
             _jdk_ver=`echo "$_jdk" | $AWK -F. '{ print (($1 * 100) + $2) * 100 + $3;}'`
 
-            if test "$_jdk_ver" -lt 10800; then
-                AC_MSG_ERROR([JDK is too old, you need at least 8])
+            if test "$_jdk_ver" -lt 10900; then
+                AC_MSG_ERROR([JDK is too old, you need at least 9])
             fi
-            if test "$_jdk_ver" -gt 10800; then
+            if test "$_jdk_ver" -gt 10900; then
                 JAVA_CLASSPATH_NOT_SET=TRUE
             fi
 
@@ -7586,7 +7537,7 @@ you must use the "--with-jdk-home" configure option explicitly])
             JAVAFLAGS=-J-Xmx128M
         fi
     else
-        AC_MSG_ERROR([Java not found. You need at least JDK 8])
+        AC_MSG_ERROR([Java not found. You need at least JDK 9])
     fi
 else
     dnl Java disabled
@@ -8769,6 +8720,10 @@ AC_SUBST(XMLLINT)
 # Optionally user can pass an option to configure, i. e.
 # ./configure PYTHON=/usr/bin/python
 # =====================================================================
+if test $_os = Darwin -a "$enable_python" != fully-internal -a "$enable_python" != internal; then
+    # Only allowed choices for macOS are 'internal' (default) and 'fully-internal'
+    enable_python=internal
+fi
 if test "$build_os" != "cygwin" -a "$enable_python" != fully-internal; then
     if test -n "$PYTHON"; then
         PYTHON_FOR_BUILD=$PYTHON
@@ -9706,7 +9661,7 @@ SYSTEM_GENBRK=
 SYSTEM_GENCCODE=
 SYSTEM_GENCMN=
 
-ICU_MAJOR=65
+ICU_MAJOR=67
 ICU_MINOR=1
 ICU_RECLASSIFIED_PREPEND_SET_EMPTY="TRUE"
 ICU_RECLASSIFIED_CONDITIONAL_JAPANESE_STARTER="TRUE"
@@ -10266,6 +10221,32 @@ AC_SUBST(QRCODEGEN_CFLAGS)
 AC_SUBST(QRCODEGEN_LIBS)
 
 dnl ===================================================================
+dnl Check for system box2d
+dnl ===================================================================
+AC_MSG_CHECKING([which box2d to use])
+if test "$with_system_box2d" = "yes"; then
+    AC_MSG_RESULT([external])
+    SYSTEM_BOX2D=TRUE
+    AC_LANG_PUSH([C++])
+    AC_CHECK_HEADER(Box2D/Box2D.h, [],
+        [AC_MSG_ERROR(box2d headers not found.)], [])
+    AC_CHECK_LIB([Box2D], [main], [:],
+        [ AC_MSG_ERROR(box2d library not found.) ], [])
+    BOX2D_LIBS=-lBox2D
+    AC_LANG_POP([C++])
+    BOX2D_CFLAGS=$(printf '%s' "$BOX2D_CFLAGS" | sed -e "s/-I/${ISYSTEM?}/g")
+    FilterLibs "${BOX2D_LIBS}"
+    BOX2D_LIBS="${filteredlibs}"
+else
+    AC_MSG_RESULT([internal])
+    SYSTEM_BOX2D=
+    BUILD_TYPE="$BUILD_TYPE BOX2D"
+fi
+AC_SUBST(SYSTEM_BOX2D)
+AC_SUBST(BOX2D_CFLAGS)
+AC_SUBST(BOX2D_LIBS)
+
+dnl ===================================================================
 dnl Checking for altlinuxhyph
 dnl ===================================================================
 AC_MSG_CHECKING([which altlinuxhyph to use])
@@ -10704,17 +10685,7 @@ if test "x$enable_gtk3" = "xyes"; then
                         [AC_MSG_ERROR(EGL headers not found. install mesa-libEGL-devel)], [])
     fi
 fi
-AC_SUBST(GTK3_LIBS)
-AC_SUBST(GTK3_CFLAGS)
 AC_SUBST(ENABLE_GTK3)
-
-if test "$enable_introspection" = yes; then
-    if test "$ENABLE_GTK3" = TRUE; then
-        GOBJECT_INTROSPECTION_REQUIRE(INTROSPECTION_REQUIRED_VERSION)
-    else
-        AC_MSG_ERROR([--enable-introspection requires --enable-gtk3])
-    fi
-fi
 
 ENABLE_QT5=""
 if test "x$enable_qt5" = "xyes"; then
@@ -10734,11 +10705,39 @@ AC_SUBST(ENABLE_KF5)
 
 ENABLE_GTK3_KDE5=""
 if test "x$enable_gtk3_kde5" = "xyes"; then
-    ENABLE_GTK3_KDE5="TRUE"
-    AC_DEFINE(ENABLE_GTK3_KDE5)
-    R="$R gtk3_kde5"
+    if test "$with_system_cairo" = no; then
+        AC_MSG_ERROR([System cairo required for gtk3 support, do not combine --enable-gtk3 with --without-system-cairo])
+    fi
+    : ${with_system_cairo:=yes}
+    PKG_CHECK_MODULES(GTK3, gtk+-3.0 >= 3.18 gtk+-unix-print-3.0 gmodule-no-export-2.0 glib-2.0 >= 2.38 cairo, ENABLE_GTK3_KDE5="TRUE", ENABLE_GTK3_KDE5="")
+    if test "x$ENABLE_GTK3_KDE5" = "xTRUE"; then
+        AC_DEFINE(ENABLE_GTK3_KDE5)
+        R="$R gtk3_kde5"
+    else
+        AC_MSG_ERROR([gtk3_kde5 or dependent libraries of the correct versions, not found])
+    fi
+    GTK3_CFLAGS=$(printf '%s' "$GTK3_CFLAGS" | sed -e "s/-I/${ISYSTEM?}/g")
+    FilterLibs "${GTK3_LIBS}"
+    GTK3_LIBS="${filteredlibs}"
+
+    dnl We require egl only for the gtk3 plugin. Otherwise we use glx.
+    if test "$with_system_epoxy" != "yes"; then
+        AC_CHECK_LIB(EGL, eglMakeCurrent, [:], AC_MSG_ERROR([libEGL required.]))
+        AC_CHECK_HEADER(EGL/eglplatform.h, [],
+                        [AC_MSG_ERROR(EGL headers not found. install mesa-libEGL-devel)], [])
+    fi
 fi
 AC_SUBST(ENABLE_GTK3_KDE5)
+AC_SUBST(GTK3_LIBS)
+AC_SUBST(GTK3_CFLAGS)
+
+if test "$enable_introspection" = yes; then
+    if test "$ENABLE_GTK3" = "TRUE" -o "$ENABLE_GTK3_KDE5" = "TRUE"; then
+        GOBJECT_INTROSPECTION_REQUIRE(INTROSPECTION_REQUIRED_VERSION)
+    else
+        AC_MSG_ERROR([--enable-introspection requires --enable-gtk3])
+    fi
+fi
 
 if test "$_os" = "WINNT"; then
     R="$R win"
@@ -10871,7 +10870,7 @@ AC_SUBST(SYSTEM_BLUEZ)
 dnl ===================================================================
 dnl Check whether to enable GIO support
 dnl ===================================================================
-if test "$ENABLE_GTK3" = "TRUE"; then
+if test "$ENABLE_GTK3" = "TRUE" -o "$ENABLE_GTK3_KDE5" = "TRUE"; then
     AC_MSG_CHECKING([whether to enable GIO support])
     if test "$_os" != "WINNT" -a "$_os" != "Darwin" -a "$enable_gio" = "yes"; then
         dnl Need at least 2.26 for the dbus support.
@@ -11113,7 +11112,13 @@ AC_SUBST(POPPLER_LIBS)
 AC_MSG_CHECKING([whether to build Skia])
 ENABLE_SKIA=
 if test "$enable_skia" != "no" -a "$build_skia" = "yes"; then
-    AC_MSG_RESULT([yes])
+    if test "$enable_skia" = "debug"; then
+        AC_MSG_RESULT([yes (debug)])
+        ENABLE_SKIA_DEBUG=TRUE
+    else
+        AC_MSG_RESULT([yes])
+        ENABLE_SKIA_DEBUG=
+    fi
     ENABLE_SKIA=TRUE
     AC_DEFINE(HAVE_FEATURE_SKIA)
     BUILD_TYPE="$BUILD_TYPE SKIA"
@@ -11121,6 +11126,7 @@ else
     AC_MSG_RESULT([no])
 fi
 AC_SUBST(ENABLE_SKIA)
+AC_SUBST(ENABLE_SKIA_DEBUG)
 
 CLANG_CXXFLAGS_INTRINSICS_SSE2=
 CLANG_CXXFLAGS_INTRINSICS_SSSE3=
@@ -11140,9 +11146,9 @@ if test "$ENABLE_SKIA" = TRUE -a "$COM_IS_CLANG" != TRUE; then
             AC_MSG_CHECKING([for clang-cl])
             if test -x "$VC_PRODUCT_DIR/Tools/Llvm/bin/clang-cl.exe"; then
                 CLANG_CC=`win_short_path_for_make "$VC_PRODUCT_DIR/Tools/Llvm/bin/clang-cl.exe"`
-                dnl match our MSVC default, also explicitly set -m32/-m64
+                dnl explicitly set -m32/-m64
                 if test "$BITNESS_OVERRIDE" = ""; then
-                    CLANG_CC="$CLANG_CC -m32 -arch:SSE"
+                    CLANG_CC="$CLANG_CC -m32"
                 else
                     CLANG_CC="$CLANG_CC -m64"
                 fi
@@ -11166,9 +11172,13 @@ if test "$ENABLE_SKIA" = TRUE -a "$COM_IS_CLANG" != TRUE; then
         fi
     fi
     if test -z "$CLANG_CC" -o -z "$CLANG_CXX"; then
-        # So far do not require this, but release builds with Skia should possibly
-        # do so.
-        AC_MSG_WARN([Clang compiler not found.])
+        # Skia is the default on Windows, so hard-require Clang.
+        # Elsewhere it's used just by the 'gen' VCL backend which is rarely used.
+        if test "$_os" = "WINNT"; then
+            AC_MSG_ERROR([Clang compiler not found. The Skia library needs to be built using Clang.])
+        else
+            AC_MSG_WARN([Clang compiler not found.])
+        fi
     else
 
         save_CXX="$CXX"
@@ -11978,14 +11988,14 @@ dnl ===================================================================
 AC_MSG_CHECKING([which themes to include])
 # if none given use default subset of available themes
 if test "x$with_theme" = "x" -o "x$with_theme" = "xyes"; then
-    with_theme="breeze breeze_dark breeze_dark_svg breeze_svg colibre colibre_svg elementary elementary_svg karasa_jaga karasa_jaga_svg sifr sifr_svg sifr_dark sifr_dark_svg sukapura sukapura_svg tango"
+    with_theme="breeze breeze_dark breeze_dark_svg breeze_svg colibre colibre_svg elementary elementary_svg karasa_jaga karasa_jaga_svg sifr sifr_svg sifr_dark sifr_dark_svg sukapura sukapura_svg"
 fi
 
 WITH_THEMES=""
 if test "x$with_theme" != "xno"; then
     for theme in $with_theme; do
         case $theme in
-        breeze|breeze_dark|breeze_dark_svg|breeze_svg|colibre|colibre_svg|elementary|elementary_svg|karasa_jaga|karasa_jaga_svg|sifr|sifr_svg|sifr_dark|sifr_dark_svg|sukapura|sukapura_svg|tango) real_theme="$theme" ;;
+        breeze|breeze_dark|breeze_dark_svg|breeze_svg|colibre|colibre_svg|elementary|elementary_svg|karasa_jaga|karasa_jaga_svg|sifr|sifr_svg|sifr_dark|sifr_dark_svg|sukapura|sukapura_svg) real_theme="$theme" ;;
         default) real_theme=colibre ;;
         *) AC_MSG_ERROR([Unknown value for --with-theme: $theme]) ;;
         esac
@@ -13175,7 +13185,7 @@ if test "$enable_mpl_subset" = "yes"; then
     for theme in $WITH_THEMES; do
         case $theme in
         breeze|breeze_dark|breeze_dark_svg|breeze_svg|elementary|elementary_svg|karasa_jaga|karasa_jaga_svg|sukapura|sukapura_svg) #blacklist of icon themes under GPL or LGPL
-            AC_MSG_ERROR([need to disable icon themes from '$WITH_THEMES': $theme present, use --with-theme=tango]) ;;
+            AC_MSG_ERROR([need to disable icon themes from '$WITH_THEMES': $theme present, use --with-theme=colibre]) ;;
         *) : ;;
         esac
     done
@@ -13394,12 +13404,15 @@ CFLAGS=$my_original_CFLAGS
 CXXFLAGS=$my_original_CXXFLAGS
 CPPFLAGS=$my_original_CPPFLAGS
 
+# Keep in sync with list of files far up, at AC_MSG_CHECKING([for
+# BUILD platform configuration] - otherwise breaks cross building
 AC_CONFIG_FILES([config_host.mk
                  config_host_lang.mk
                  Makefile
                  bin/bffvalidator.sh
                  bin/odfvalidator.sh
                  bin/officeotron.sh
+                 hardened_runtime.xcent
                  instsetoo_native/util/openoffice.lst
                  sysui/desktop/macosx/Info.plist])
 AC_CONFIG_HEADERS([config_host/config_buildid.h])
@@ -13521,11 +13534,11 @@ _EOF
 
 if test $_os != WINNT -a "$CROSS_COMPILING" != TRUE; then
     cat << _EOF
-After the build of LibreOffice has finished successfully, you can immediately run LibreOffice using the command:
+After the build has finished successfully, you can immediately run what you built using the command:
 _EOF
 
     if test $_os = Darwin; then
-        echo open instdir/$PRODUCTNAME.app
+        echo open instdir/$PRODUCTNAME_WITHOUT_SPACES.app
     else
         echo instdir/program/soffice
     fi

@@ -23,7 +23,7 @@
 #include <vector>
 #include <memory>
 #include <vcl/toolbox.hxx>
-#include <svtools/InterimItemWindow.hxx>
+#include <vcl/InterimItemWindow.hxx>
 #include <sfx2/childwin.hxx>
 #include <svl/lstner.hxx>
 #include <vcl/button.hxx>
@@ -31,6 +31,7 @@
 #include <vcl/window.hxx>
 #include <vcl/transfer.hxx>
 #include <vcl/menu.hxx>
+#include <formula/opcode.hxx>
 
 class EditView;
 class ScAccessibleEditLineTextData;
@@ -57,6 +58,7 @@ public:
     virtual void            SetFormulaMode( bool bSet ) = 0;
     virtual bool            IsInputActive() = 0;
     virtual void            TextGrabFocus() = 0;
+    virtual long            GetNumLines() const = 0;
 };
 
 class ScTextWnd : public ScTextWndBase, public DragSourceHelper     // edit window
@@ -95,7 +97,7 @@ public:
     long GetPixelHeightForLines(long nLines);
     long GetEditEngTxtHeight() const;
 
-    long GetNumLines() const { return mnLines; }
+    virtual long GetNumLines() const override { return mnLines; }
     void SetNumLines(long nLines);
     long GetLastNumExpandedLines() const { return mnLastExpandedLines; }
 
@@ -198,7 +200,7 @@ public:
     virtual void            InsertAccessibleTextData(ScAccessibleEditLineTextData& rTextData) override;
     virtual EditView*       GetEditView() override;
     long                    GetLastNumExpandedLines() const;
-    long                    GetNumLines() const;
+    virtual long            GetNumLines() const override;
     long                    GetPixelHeightForLines(long nLines);
     ScrollBar&              GetScrollBar();
     virtual const OUString& GetTextString() const override;
@@ -243,7 +245,7 @@ public:
     bool                    IsInputActive() override;
     void                    IncrementVerticalSize();
     void                    DecrementVerticalSize();
-    long                    GetNumLines() const { return maTextWndGroup->GetNumLines(); }
+    virtual long            GetNumLines() const override { return maTextWndGroup->GetNumLines(); }
     long                    GetVertOffset() const { return  mnVertOffset; }
 
 private:
@@ -307,6 +309,8 @@ public:
 
     DECL_LINK( MenuHdl, Menu *, bool );
     DECL_LINK( DropdownClickHdl, ToolBox*, void );
+
+    void            AutoSum( bool& bRangeFinder, bool& bSubTotal, OpCode eCode );
 
 private:
     bool IsPointerAtResizePos();

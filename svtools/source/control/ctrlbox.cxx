@@ -423,6 +423,8 @@ void FontNameBox::InitFontMRUEntriesFile()
 void FontNameBox::ImplDestroyFontList()
 {
     mpFontList.reset();
+    mnPreviewProgress = 0;
+    maUpdateIdle.Stop();
 }
 
 void FontNameBox::Fill( const FontList* pList )
@@ -453,9 +455,9 @@ void FontNameBox::Fill( const FontList* pList )
 
     m_xComboBox->thaw();
 
-    if (mbWYSIWYG)
+    if (mbWYSIWYG && nFontCount)
     {
-        mnPreviewProgress = 0;
+        assert(mnPreviewProgress == 0 && "ImplDestroyFontList wasn't called");
         maUpdateIdle.Start();
     }
 
@@ -526,7 +528,12 @@ namespace
 IMPL_LINK_NOARG(FontNameBox, UpdateHdl, Timer*, void)
 {
     CachePreview(mnPreviewProgress++, nullptr);
-    if (mnPreviewProgress < mpFontList->size())
+    // tdf#132536 limit to ~25 pre-rendered for now. The font caches look
+    // b0rked, the massive charmaps are ~never swapped out, and don't count
+    // towards the size of a font in the font cache and if the freetype font
+    // cache size is set experimentally very low then we crash, so there's an
+    // awful lot to consider there.
+    if (mnPreviewProgress < std::min<size_t>(25, mpFontList->size()))
         maUpdateIdle.Start();
 }
 
@@ -788,8 +795,7 @@ void FontNameBox::set_active_or_entry_text(const OUString& rText)
     const int nFound = m_xComboBox->find_text(rText);
     if (nFound != -1)
         m_xComboBox->set_active(nFound);
-    else
-        m_xComboBox->set_entry_text(rText);
+    m_xComboBox->set_entry_text(rText);
 }
 
 FontStyleBox::FontStyleBox(std::unique_ptr<weld::ComboBox> p)
@@ -977,8 +983,7 @@ void FontSizeBox::set_active_or_entry_text(const OUString& rText)
     const int nFound = m_xComboBox->find_text(rText);
     if (nFound != -1)
         m_xComboBox->set_active(nFound);
-    else
-        m_xComboBox->set_entry_text(rText);
+    m_xComboBox->set_entry_text(rText);
 }
 
 IMPL_LINK(FontSizeBox, ReformatHdl, weld::Widget&, rWidget, void)

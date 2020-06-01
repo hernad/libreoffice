@@ -544,7 +544,7 @@ void SeriesPlotterContainer::initializeCooSysAndSeriesPlotter(
             uno::Sequence< uno::Reference< XDataSeries > > aSeriesList( xDataSeriesContainer->getDataSeries() );
             for( sal_Int32 nS = 0; nS < aSeriesList.getLength(); ++nS )
             {
-                uno::Reference< XDataSeries > xDataSeries( aSeriesList[nS], uno::UNO_QUERY );
+                uno::Reference< XDataSeries > const & xDataSeries = aSeriesList[nS];
                 if(!xDataSeries.is())
                     continue;
                 if( !bIncludeHiddenCells && !DataSeriesHelper::hasUnhiddenData(xDataSeries) )
@@ -628,19 +628,13 @@ void SeriesPlotterContainer::initializeCooSysAndSeriesPlotter(
 bool SeriesPlotterContainer::isCategoryPositionShifted(
     const chart2::ScaleData& rSourceScale, bool bHasComplexCategories )
 {
-    if (rSourceScale.AxisType == AxisType::CATEGORY && rSourceScale.ShiftedCategoryPosition)
-        return true;
-
-    if (rSourceScale.AxisType == AxisType::CATEGORY && bHasComplexCategories)
-        return true;
+    if (rSourceScale.AxisType == AxisType::CATEGORY)
+        return bHasComplexCategories || rSourceScale.ShiftedCategoryPosition;
 
     if (rSourceScale.AxisType == AxisType::DATE)
-        return true;
+        return rSourceScale.ShiftedCategoryPosition;
 
-    if (rSourceScale.AxisType == AxisType::SERIES)
-        return true;
-
-    return false;
+    return rSourceScale.AxisType == AxisType::SERIES;
 }
 
 void SeriesPlotterContainer::initAxisUsageList(const Date& rNullDate)
@@ -1070,7 +1064,7 @@ ChartView::ChartView(
 
 void ChartView::init()
 {
-    if( !m_pDrawModelWrapper.get() )
+    if( !m_pDrawModelWrapper )
     {
         SolarMutexGuard aSolarGuard;
         m_pDrawModelWrapper = std::make_shared< DrawModelWrapper >();
@@ -1094,7 +1088,7 @@ ChartView::~ChartView()
     if ( xComp.is() )
         xComp->dispose();
 
-    if( m_pDrawModelWrapper.get() )
+    if( m_pDrawModelWrapper )
     {
         SolarMutexGuard aSolarGuard;
         EndListening( m_pDrawModelWrapper->getSdrModel() );
@@ -1401,7 +1395,7 @@ void lcl_setDefaultWritingMode( const std::shared_ptr< DrawModelWrapper >& pDraw
         }
         if( nWritingMode != -1 && nWritingMode != text::WritingMode2::PAGE )
         {
-            if( pDrawModelWrapper.get() )
+            if( pDrawModelWrapper )
                 pDrawModelWrapper->GetItemPool().SetPoolDefaultItem(SvxFrameDirectionItem(static_cast<SvxFrameDirection>(nWritingMode), EE_PARA_WRITINGDIR) );
         }
     }
@@ -2233,12 +2227,13 @@ bool lcl_createLegend( const uno::Reference< XLegend > & xLegend
     if (!VLegend::isVisible(xLegend))
         return false;
 
+    awt::Size rDefaultLegendSize;
     VLegend aVLegend( xLegend, xContext, rLegendEntryProviderList,
             xPageShapes, xShapeFactory, rModel);
     aVLegend.setDefaultWritingMode( nDefaultWritingMode );
     aVLegend.createShapes( awt::Size( rRemainingSpace.Width, rRemainingSpace.Height ),
-                           rPageSize );
-    aVLegend.changePosition( rRemainingSpace, rPageSize );
+                           rPageSize, rDefaultLegendSize );
+    aVLegend.changePosition( rRemainingSpace, rPageSize, rDefaultLegendSize );
     return true;
 }
 

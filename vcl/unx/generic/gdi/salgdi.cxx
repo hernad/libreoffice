@@ -58,7 +58,6 @@
 #include <vcl/skia/SkiaHelper.hxx>
 #if HAVE_FEATURE_SKIA
 #include <skia/x11/gdiimpl.hxx>
-#include <skia/x11/cairotextrender.hxx>
 #include <skia/x11/textrender.hxx>
 #endif
 
@@ -87,11 +86,7 @@ X11SalGraphics::X11SalGraphics():
     if (m_bSkia)
     {
         mxImpl.reset(new X11SkiaSalGraphicsImpl(*this));
-#if 1
         mxTextRenderImpl.reset(new SkiaTextRender);
-#else // old method, probably can be removed once native Skia render works well
-        mxTextRenderImpl.reset(new SkiaX11CairoTextRender(*this));
-#endif
     }
     else
 #endif
@@ -707,7 +702,7 @@ bool X11SalGraphics::drawPolyLine(
     const basegfx::B2DHomMatrix& rObjectToDevice,
     const basegfx::B2DPolygon& rPolygon,
     double fTransparency,
-    const basegfx::B2DVector& rLineWidth,
+    double fLineWidth,
     const std::vector< double >* pStroke, // MM01
     basegfx::B2DLineJoin eLineJoin,
     css::drawing::LineCap eLineCap,
@@ -744,7 +739,7 @@ bool X11SalGraphics::drawPolyLine(
                 rObjectToDevice,
                 rPolygon,
                 fTransparency,
-                rLineWidth,
+                fLineWidth,
                 pStroke, // MM01
                 eLineJoin,
                 eLineCap,
@@ -764,7 +759,7 @@ bool X11SalGraphics::drawPolyLine(
         rObjectToDevice,
         rPolygon,
         fTransparency,
-        rLineWidth,
+        fLineWidth,
         pStroke, // MM01
         eLineJoin,
         eLineCap,

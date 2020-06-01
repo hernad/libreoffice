@@ -71,10 +71,10 @@
 #include <editeng/editstat.hxx>
 #include <drawinglayer/attribute/fillhatchattribute.hxx>
 #include <drawinglayer/attribute/fillgradientattribute.hxx>
-#include <sdr/attribute/sdrshadowtextattribute.hxx>
-#include <sdr/attribute/sdrlineshadowtextattribute.hxx>
+#include <sdr/attribute/sdreffectstextattribute.hxx>
+#include <sdr/attribute/sdrlineeffectstextattribute.hxx>
 #include <sdr/attribute/sdrformtextattribute.hxx>
-#include <sdr/attribute/sdrlinefillshadowtextattribute.hxx>
+#include <sdr/attribute/sdrlinefilleffectstextattribute.hxx>
 #include <drawinglayer/attribute/sdrglowattribute.hxx>
 #include <drawinglayer/attribute/sdrsceneattribute3d.hxx>
 #include <drawinglayer/attribute/sdrlightingattribute3d.hxx>
@@ -212,6 +212,25 @@ namespace drawinglayer
 
             return aRetval;
         }
+
+        attribute::SdrGlowAttribute createNewSdrGlowAttribute(const SfxItemSet& rSet)
+        {
+            sal_Int32 nRadius = rSet.Get(SDRATTR_GLOW_RAD).GetValue();
+            if (!nRadius)
+                return attribute::SdrGlowAttribute();
+            Color aColor(rSet.Get(SDRATTR_GLOW_COLOR).GetColorValue());
+            sal_uInt16 nTransparency(rSet.Get(SDRATTR_GLOW_TRANSPARENCY).GetValue());
+            if (nTransparency)
+                aColor.SetTransparency(std::round(nTransparency / 100.0 * 255.0));
+
+            attribute::SdrGlowAttribute glowAttr{ nRadius, aColor };
+            return glowAttr;
+        }
+
+        sal_Int32 getSoftEdgeRadius(const SfxItemSet& rSet)
+        {
+            return rSet.Get(SDRATTR_SOFTEDGE_RAD).GetValue();
+        }
     } // end of anonymous namespace
 } // end of namespace drawinglayer
 
@@ -335,18 +354,6 @@ namespace drawinglayer::primitive2d
             return attribute::SdrLineStartEndAttribute();
         }
 
-        attribute::SdrGlowAttribute createNewSdrGlowAttribute( const SfxItemSet& rSet)
-        {
-            const bool bGlow(rSet.Get(SDRATTR_GLOW).GetValue());
-            if(!bGlow)
-                return attribute::SdrGlowAttribute();
-            sal_Int32 nRadius = rSet.Get(SDRATTR_GLOW_RAD).GetValue();
-            const Color aColor(rSet.Get(SDRATTR_GLOW_COLOR).GetColorValue());
-
-            attribute::SdrGlowAttribute glowAttr{ nRadius, aColor.getBColor() };
-            return glowAttr;
-        }
-
         attribute::SdrShadowAttribute createNewSdrShadowAttribute(const SfxItemSet& rSet)
         {
             const bool bShadow(rSet.Get(SDRATTR_SHADOW).GetValue());
@@ -391,7 +398,9 @@ namespace drawinglayer::primitive2d
 
                     const Color aColor(rSet.Get(SDRATTR_SHADOWCOLOR).GetColorValue());
 
-                    return attribute::SdrShadowAttribute(aOffset, aSize, static_cast<double>(nTransparence) * 0.01, aColor.getBColor());
+                    sal_Int32 nBlur(rSet.Get(SDRATTR_SHADOWBLUR).GetValue());
+
+                    return attribute::SdrShadowAttribute(aOffset, aSize, static_cast<double>(nTransparence) * 0.01,nBlur, aColor.getBColor());
                 }
             }
 
@@ -649,7 +658,7 @@ namespace drawinglayer::primitive2d
         {
             Graphic aGraphic(rSet.Get(XATTR_FILLBITMAP).GetGraphicObject().GetGraphic());
 
-            if(!(GraphicType::Bitmap == aGraphic.GetType() || GraphicType::GdiMetafile == aGraphic.GetType()))
+            if(GraphicType::Bitmap != aGraphic.GetType() && GraphicType::GdiMetafile != aGraphic.GetType())
             {
                 // no content if not bitmap or metafile
                 OSL_ENSURE(false, "No fill graphic in SfxItemSet (!)");
@@ -728,7 +737,7 @@ namespace drawinglayer::primitive2d
                 rSet.Get(XATTR_FILLBMP_SIZELOG).GetValue());
         }
 
-        attribute::SdrShadowTextAttribute createNewSdrShadowTextAttribute(
+        attribute::SdrEffectsTextAttribute createNewSdrEffectsTextAttribute(
             const SfxItemSet& rSet,
             const SdrText* pText,
             bool bSuppressText)
@@ -745,11 +754,12 @@ namespace drawinglayer::primitive2d
             // try shadow
             const attribute::SdrShadowAttribute aShadow(createNewSdrShadowAttribute(rSet));
             const attribute::SdrGlowAttribute aGlow(createNewSdrGlowAttribute(rSet));
+            const sal_Int32 nSoftEdgeRadius(getSoftEdgeRadius(rSet));
 
-            return attribute::SdrShadowTextAttribute(aShadow, aText, aGlow);
+            return attribute::SdrEffectsTextAttribute(aShadow, aText, aGlow, nSoftEdgeRadius);
         }
 
-        attribute::SdrLineShadowTextAttribute createNewSdrLineShadowTextAttribute(
+        attribute::SdrLineEffectsTextAttribute createNewSdrLineEffectsTextAttribute(
             const SfxItemSet& rSet,
             const SdrText* pText)
         {
@@ -789,15 +799,17 @@ namespace drawinglayer::primitive2d
             {
                 // try shadow
                 const attribute::SdrShadowAttribute aShadow(createNewSdrShadowAttribute(rSet));
-                attribute::SdrGlowAttribute aGlow = createNewSdrGlowAttribute(rSet);
+                const attribute::SdrGlowAttribute aGlow = createNewSdrGlowAttribute(rSet);
+                const sal_Int32 nSoftEdgeRadius(getSoftEdgeRadius(rSet));
 
-                return attribute::SdrLineShadowTextAttribute(aLine, aLineStartEnd, aShadow, aText, aGlow);
+                return attribute::SdrLineEffectsTextAttribute(aLine, aLineStartEnd, aShadow, aText,
+                                                              aGlow, nSoftEdgeRadius);
             }
 
-            return attribute::SdrLineShadowTextAttribute();
+            return attribute::SdrLineEffectsTextAttribute();
         }
 
-        attribute::SdrLineFillShadowTextAttribute createNewSdrLineFillShadowTextAttribute(
+        attribute::SdrLineFillEffectsTextAttribute createNewSdrLineFillEffectsTextAttribute(
             const SfxItemSet& rSet,
             const SdrText* pText,
             bool bHasContent)
@@ -850,16 +862,19 @@ namespace drawinglayer::primitive2d
             if(bHasContent || !aLine.isDefault() || !aFill.isDefault() || !aText.isDefault())
             {
                 // try shadow
-                attribute::SdrShadowAttribute aShadow = createNewSdrShadowAttribute(rSet);
+                const attribute::SdrShadowAttribute aShadow = createNewSdrShadowAttribute(rSet);
 
                 // glow
-                attribute::SdrGlowAttribute aGlow = createNewSdrGlowAttribute(rSet);
+                const attribute::SdrGlowAttribute aGlow = createNewSdrGlowAttribute(rSet);
 
-                return attribute::SdrLineFillShadowTextAttribute(
-                    aLine, aFill, aLineStartEnd, aShadow, aFillFloatTransGradient, aText, aGlow);
+                const sal_Int32 nSoftEdgeRadius(getSoftEdgeRadius(rSet));
+
+                return attribute::SdrLineFillEffectsTextAttribute(aLine, aFill, aLineStartEnd,
+                                                                  aShadow, aFillFloatTransGradient,
+                                                                  aText, aGlow, nSoftEdgeRadius);
             }
 
-            return attribute::SdrLineFillShadowTextAttribute();
+            return attribute::SdrLineFillEffectsTextAttribute();
         }
 
         attribute::SdrLineFillShadowAttribute3D createNewSdrLineFillShadowAttribute(const SfxItemSet& rSet, bool bSuppressFill)

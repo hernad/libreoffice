@@ -29,7 +29,7 @@
 #include <vcl/spinfld.hxx>
 #include <tools/fldunit.hxx>
 
-namespace com { namespace sun { namespace star { namespace lang { struct Locale; } } } }
+namespace com::sun::star::lang { struct Locale; }
 
 class CalendarWrapper;
 class LocaleDataWrapper;
@@ -149,6 +149,9 @@ public:
 
     sal_Int64               Normalize( sal_Int64 nValue ) const;
     sal_Int64               Denormalize( sal_Int64 nValue ) const;
+
+    OUString                GetValueString() const;
+    void                    SetValueFromString(const OUString& rStr);
 
 protected:
     sal_Int64               mnLastValue;

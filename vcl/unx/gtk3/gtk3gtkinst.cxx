@@ -7,6 +7,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+#include <sal/config.h>
+
+#include <deque>
 #include <stack>
 #include <string.h>
 #include <osl/process.h>
@@ -402,25 +405,24 @@ bool GtkInstance::AnyInput( VclInputFlags nType )
         return true;
 
     bool bRet = false;
-    std::stack<GdkEvent*> aEvents;
+    std::deque<GdkEvent*> aEvents;
     GdkEvent *pEvent = nullptr;
     while ((pEvent = gdk_event_get()))
     {
-        aEvents.push(pEvent);
+        aEvents.push_back(pEvent);
         VclInputFlags nEventType = categorizeEvent(pEvent);
         if ( (nEventType & nType) || ( nEventType == VclInputFlags::NONE && (nType & VclInputFlags::OTHER) ) )
         {
             bRet = true;
-            break;
         }
     }
 
     while (!aEvents.empty())
     {
-        pEvent = aEvents.top();
+        pEvent = aEvents.front();
         gdk_event_put(pEvent);
         gdk_event_free(pEvent);
-        aEvents.pop();
+        aEvents.pop_front();
     }
     return bRet;
 }
@@ -1710,10 +1712,14 @@ namespace
     }
 #endif
 
-    void insertParent(GtkWidget* pWidget, GtkWidget* pReplacement)
+    void replaceWidget(GtkWidget* pWidget, GtkWidget* pReplacement)
     {
         // remove the widget and replace it with pReplacement
         GtkWidget* pParent = gtk_widget_get_parent(pWidget);
+
+        // if pWidget was un-parented then don't bother
+        if (!pParent)
+            return;
 
         g_object_ref(pWidget);
 
@@ -1785,8 +1791,23 @@ namespace
                     nullptr);
         }
 
-        gtk_widget_set_hexpand(pReplacement, gtk_widget_get_hexpand(pWidget));
-        gtk_widget_set_vexpand(pReplacement, gtk_widget_get_vexpand(pWidget));
+        if (gtk_widget_get_hexpand_set(pWidget))
+            gtk_widget_set_hexpand(pReplacement, gtk_widget_get_hexpand(pWidget));
+
+        if (gtk_widget_get_vexpand_set(pWidget))
+            gtk_widget_set_vexpand(pReplacement, gtk_widget_get_vexpand(pWidget));
+
+        gtk_widget_set_halign(pReplacement, gtk_widget_get_halign(pWidget));
+        gtk_widget_set_valign(pReplacement, gtk_widget_get_valign(pWidget));
+
+        g_object_unref(pWidget);
+    }
+
+    void insertAsParent(GtkWidget* pWidget, GtkWidget* pReplacement)
+    {
+        g_object_ref(pWidget);
+
+        replaceWidget(pWidget, pReplacement);
 
         gtk_container_add(GTK_CONTAINER(pReplacement), pWidget);
 
@@ -1811,7 +1832,7 @@ namespace
             pMouseEventBox = gtk_event_box_new();
             gtk_event_box_set_above_child(GTK_EVENT_BOX(pMouseEventBox), false);
             gtk_event_box_set_visible_window(GTK_EVENT_BOX(pMouseEventBox), false);
-            insertParent(pWidget, pMouseEventBox);
+            insertAsParent(pWidget, pMouseEventBox);
         }
 
         return pMouseEventBox;
@@ -2018,7 +2039,6 @@ private:
 
     rtl::Reference<GtkDropTarget> m_xDropTarget;
     rtl::Reference<GtkDragSource> m_xDragSource;
-    std::vector<AtkRelation*> m_aExtraAtkRelations;
 
     static void signalSizeAllocate(GtkWidget*, GdkRectangle* allocation, gpointer widget)
     {
@@ -2732,33 +2752,6 @@ public:
         g_object_unref(pRelationSet);
     }
 
-    virtual void add_extra_accessible_relation(const css::accessibility::AccessibleRelation &rRelation) override
-    {
-        AtkObject* pAtkObject = gtk_widget_get_accessible(m_pWidget);
-        if (!pAtkObject)
-            return;
-
-        AtkRelationSet *pRelationSet = atk_object_ref_relation_set(pAtkObject);
-        AtkRelation *pRel = atk_object_wrapper_relation_new(rRelation);
-        m_aExtraAtkRelations.push_back(pRel);
-        atk_relation_set_add(pRelationSet, pRel);
-        g_object_unref(pRel);
-        g_object_unref(pRelationSet);
-    }
-
-    virtual void clear_extra_accessible_relations() override
-    {
-        AtkObject* pAtkObject = gtk_widget_get_accessible(m_pWidget);
-        if (!pAtkObject)
-            return;
-
-        AtkRelationSet *pRelationSet = atk_object_ref_relation_set(pAtkObject);
-        for (AtkRelation* pRel : m_aExtraAtkRelations)
-            atk_relation_set_remove(pRelationSet, pRel);
-        m_aExtraAtkRelations.clear();
-        g_object_unref(pRelationSet);
-    }
-
     virtual bool get_extents_relative_to(weld::Widget& rRelative, int& x, int &y, int& width, int &height) override
     {
         //for toplevel windows this is sadly futile under wayland, so we can't tell where a dialog is in order to allow
@@ -3044,6 +3037,46 @@ public:
         xRet->SetBackground(COL_TRANSPARENT);
         return xRet;
     }
+
+    virtual void draw(VirtualDevice& rOutput) override
+    {
+        // detect if we have to manually setup its size
+        bool bAlreadyRealized = gtk_widget_get_realized(m_pWidget);
+        // has to be visible for draw to work
+        bool bAlreadyVisible = gtk_widget_get_visible(m_pWidget);
+        // has to be mapped for draw to work
+        bool bAlreadyMapped = gtk_widget_get_mapped(m_pWidget);
+        if (!bAlreadyVisible)
+            gtk_widget_show(m_pWidget);
+
+        GtkAllocation allocation;
+
+        if (!bAlreadyRealized)
+            gtk_widget_realize(m_pWidget);
+
+        if (!bAlreadyMapped)
+            gtk_widget_map(m_pWidget);
+
+        if (GTK_IS_CONTAINER(m_pWidget))
+            gtk_container_resize_children(GTK_CONTAINER(m_pWidget));
+
+        gtk_widget_get_allocation(m_pWidget, &allocation);
+
+        rOutput.SetOutputSizePixel(Size(allocation.width, allocation.height));
+        cairo_surface_t* pSurface = get_underlying_cairo_surface(rOutput);
+        cairo_t* cr = cairo_create(pSurface);
+
+        gtk_widget_draw(m_pWidget, cr);
+
+        cairo_destroy(cr);
+
+        if (!bAlreadyVisible)
+            gtk_widget_hide(m_pWidget);
+        if (!bAlreadyMapped)
+            gtk_widget_unmap(m_pWidget);
+        if (!bAlreadyRealized)
+            gtk_widget_unrealize(m_pWidget);
+    }
 };
 
 }
@@ -3064,7 +3097,14 @@ IMPL_LINK(GtkInstanceWidget, async_drag_cancel, void*, arg, void)
 {
     m_pDragCancelEvent = nullptr;
     GdkDragContext* context = static_cast<GdkDragContext*>(arg);
-    gtk_drag_cancel(context);
+
+    // tdf#132477 simply calling gtk_drag_cancel on the treeview dnd under X
+    // doesn't seem to work as hoped for (though under wayland all is well).
+    // Under X the next (allowed) drag effort doesn't work to drop anything,
+    // but a then repeated attempt does.
+    // emitting cancel to get gtk to cancel the drag for us does work as hoped for.
+    g_signal_emit_by_name(context, "cancel", 0, GDK_DRAG_CANCEL_USER_CANCELLED);
+
     g_object_unref(context);
 }
 
@@ -5067,6 +5107,28 @@ public:
     virtual std::unique_ptr<weld::Label> weld_label_widget() const override;
 };
 
+class GtkInstancePaned : public GtkInstanceContainer, public virtual weld::Paned
+{
+private:
+    GtkPaned* m_pPaned;
+public:
+    GtkInstancePaned(GtkPaned* pPaned, GtkInstanceBuilder* pBuilder, bool bTakeOwnership)
+        : GtkInstanceContainer(GTK_CONTAINER(pPaned), pBuilder, bTakeOwnership)
+        , m_pPaned(pPaned)
+    {
+    }
+
+    virtual void set_position(int nPos) override
+    {
+        gtk_paned_set_position(m_pPaned, nPos);
+    }
+
+    virtual int get_position() const override
+    {
+        return gtk_paned_get_position(m_pPaned);
+    }
+};
+
 }
 
 static GType crippled_viewport_get_type();
@@ -6884,7 +6946,7 @@ void do_ungrab(GtkWidget* pWidget)
         gdk_device_ungrab(pKeyboard, nCurrentTime);
 }
 
-void show_menu_older_gtk(GtkWidget* pMenuButton, GtkWindow* pMenu)
+GtkPositionType show_menu_older_gtk(GtkWidget* pMenuButton, GtkWindow* pMenu)
 {
     //place the toplevel just below its launcher button
     GtkWidget* pToplevel = gtk_widget_get_toplevel(pMenuButton);
@@ -6921,6 +6983,8 @@ void show_menu_older_gtk(GtkWidget* pMenuButton, GtkWindow* pMenu)
             x = 0;
     }
 
+    GtkPositionType ePosUsed = GTK_POS_BOTTOM;
+
     gint endy = y + nMenuHeight;
     gint nMissingBelow = endy - aWorkArea.Bottom();
     if (nMissingBelow > 0)
@@ -6935,14 +6999,20 @@ void show_menu_older_gtk(GtkWidget* pMenuButton, GtkWindow* pMenu)
             {
                 nMenuHeight -= nMissingAbove;
                 y = aWorkArea.Top();
+                ePosUsed = GTK_POS_TOP;
             }
             gtk_widget_set_size_request(GTK_WIDGET(pMenu), nMenuWidth, nMenuHeight);
         }
         else
+        {
             y = nNewY;
+            ePosUsed = GTK_POS_TOP;
+        }
     }
 
     gtk_window_move(pMenu, x, y);
+
+    return ePosUsed;
 }
 
 bool show_menu_newer_gtk(GtkWidget* pComboBox, GtkWindow* pMenu)
@@ -6991,8 +7061,12 @@ bool show_menu_newer_gtk(GtkWidget* pComboBox, GtkWindow* pMenu)
     return true;
 }
 
-void show_menu(GtkWidget* pMenuButton, GtkWindow* pMenu)
+GtkPositionType show_menu(GtkWidget* pMenuButton, GtkWindow* pMenu)
 {
+    // we only use ePosUsed in the replacement-for-X-popover case of a
+    // MenuButton, so we only need it when show_menu_older_gtk is used
+    GtkPositionType ePosUsed = GTK_POS_BOTTOM;
+
     // tdf#120764 It isn't allowed under wayland to have two visible popups that share
     // the same top level parent. The problem is that since gtk 3.24 tooltips are also
     // implemented as popups, which means that we cannot show any popup if there is a
@@ -7009,10 +7083,12 @@ void show_menu(GtkWidget* pMenuButton, GtkWindow* pMenu)
 
     // try with gdk_window_move_to_rect, but if that's not available, try without
     if (!show_menu_newer_gtk(pMenuButton, pMenu))
-        show_menu_older_gtk(pMenuButton, pMenu);
+        ePosUsed = show_menu_older_gtk(pMenuButton, pMenu);
     gtk_widget_show_all(GTK_WIDGET(pMenu));
     gtk_widget_grab_focus(GTK_WIDGET(pMenu));
     do_grab(GTK_WIDGET(pMenu));
+
+    return ePosUsed;
 }
 
 class GtkInstanceMenuButton : public GtkInstanceToggleButton, public MenuHelper, public virtual weld::MenuButton
@@ -7024,6 +7100,8 @@ private:
     GtkWidget* m_pLabel;
     //popover cannot escape dialog under X so stick up own window instead
     GtkWindow* m_pMenuHack;
+    //when doing so, if it's a toolbar menubutton align the menu to the full toolitem
+    GtkWidget* m_pMenuHackAlign;
     GtkWidget* m_pPopover;
     gulong m_nSignalId;
 
@@ -7073,7 +7151,9 @@ private:
             gtk_container_add(GTK_CONTAINER(m_pMenuHack), pChild);
             g_object_unref(pChild);
 
-            show_menu(GTK_WIDGET(m_pMenuButton), m_pMenuHack);
+            GtkPositionType ePosUsed = show_menu(m_pMenuHackAlign ? m_pMenuHackAlign : GTK_WIDGET(m_pMenuButton), m_pMenuHack);
+            // tdf#132540 keep the placeholder popover on this same side as the replacement menu
+            gtk_popover_set_position(gtk_menu_button_get_popover(m_pMenuButton), ePosUsed);
         }
     }
 
@@ -7159,12 +7239,13 @@ private:
     }
 
 public:
-    GtkInstanceMenuButton(GtkMenuButton* pMenuButton, GtkInstanceBuilder* pBuilder, bool bTakeOwnership)
+    GtkInstanceMenuButton(GtkMenuButton* pMenuButton, GtkWidget* pMenuAlign, GtkInstanceBuilder* pBuilder, bool bTakeOwnership)
         : GtkInstanceToggleButton(GTK_TOGGLE_BUTTON(pMenuButton), pBuilder, bTakeOwnership)
         , MenuHelper(gtk_menu_button_get_popup(pMenuButton), false)
         , m_pMenuButton(pMenuButton)
         , m_pImage(nullptr)
         , m_pMenuHack(nullptr)
+        , m_pMenuHackAlign(pMenuAlign)
         , m_pPopover(nullptr)
         , m_nSignalId(0)
     {
@@ -7591,6 +7672,16 @@ public:
 
     void remove(const OString& rIdent) override
     {
+        if (!m_aExtraItems.empty())
+        {
+            GtkMenuItem* pMenuItem = m_aMap[rIdent];
+            auto iter = std::find(m_aExtraItems.begin(), m_aExtraItems.end(), pMenuItem);
+            if (iter != m_aExtraItems.end())
+            {
+                m_pTopLevelMenuHelper->remove_from_map(pMenuItem);
+                m_aExtraItems.erase(iter);
+            }
+        }
         MenuHelper::remove_item(rIdent);
     }
 
@@ -7661,6 +7752,7 @@ class GtkInstanceToolbar : public GtkInstanceWidget, public virtual weld::Toolba
 {
 private:
     GtkToolbar* m_pToolbar;
+    GtkCssProvider *m_pMenuButtonProvider;
 
     std::map<OString, GtkToolItem*> m_aMap;
     std::map<OString, std::unique_ptr<GtkInstanceMenuButton>> m_aMenuButtonMap;
@@ -7712,12 +7804,45 @@ private:
         m_aMap[id] = pToolItem;
         if (pMenuButton)
         {
-            m_aMenuButtonMap[id] = std::make_unique<GtkInstanceMenuButton>(pMenuButton, m_pBuilder, false);
+            m_aMenuButtonMap[id] = std::make_unique<GtkInstanceMenuButton>(pMenuButton, GTK_WIDGET(pToolItem), m_pBuilder, false);
             // so that, e.g. with focus initially in writer main document then
             // after clicking the heading menu in the writer navigator focus is
             // left in the main document and not in the toolbar
             gtk_button_set_focus_on_click(GTK_BUTTON(pMenuButton), false);
             g_signal_connect(pMenuButton, "toggled", G_CALLBACK(signalItemToggled), this);
+
+            if (pMenuButton)
+            {
+                // by default the GtkMenuButton down arrow button is as wide as
+                // a normal button and LibreOffice's original ones are very
+                // narrow, that assumption is fairly baked into the toolbar and
+                // sidebar designs, try and minimize the width of the dropdown
+                // zone.
+                GtkStyleContext *pButtonContext = gtk_widget_get_style_context(GTK_WIDGET(pMenuButton));
+
+                if (!m_pMenuButtonProvider)
+                {
+                    m_pMenuButtonProvider = gtk_css_provider_new();
+                    static const gchar data[] = "* { "
+                      "padding: 0;"
+                      "margin-left: 0px;"
+                      "margin-right: 0px;"
+                      "min-width: 4px;"
+                      "}";
+                    const gchar olddata[] = "* { "
+                      "padding: 0;"
+                      "margin-left: 0px;"
+                      "margin-right: 0px;"
+                      "}";
+                    gtk_css_provider_load_from_data(m_pMenuButtonProvider, gtk_check_version(3, 20, 0) == nullptr ? data : olddata, -1, nullptr);
+                }
+
+                gtk_style_context_add_provider(pButtonContext,
+                                               GTK_STYLE_PROVIDER(m_pMenuButtonProvider),
+                                               GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+                gtk_style_context_add_class(pButtonContext, "small-button");
+            }
+
         }
         if (!GTK_IS_TOOL_BUTTON(pToolItem))
             return;
@@ -7788,6 +7913,7 @@ public:
     GtkInstanceToolbar(GtkToolbar* pToolbar, GtkInstanceBuilder* pBuilder, bool bTakeOwnership)
         : GtkInstanceWidget(GTK_WIDGET(pToolbar), pBuilder, bTakeOwnership)
         , m_pToolbar(pToolbar)
+        , m_pMenuButtonProvider(nullptr)
     {
         gtk_container_foreach(GTK_CONTAINER(pToolbar), collect, this);
     }
@@ -8038,6 +8164,11 @@ public:
         GdkKeymap* pKeymap = gdk_keymap_get_default();
         guint nState = gdk_keymap_get_modifier_state(pKeymap);
         return GtkSalFrame::GetKeyModCode(nState);
+    }
+
+    int get_drop_index(const Point& rPoint) const override
+    {
+        return gtk_toolbar_get_drop_index(m_pToolbar, rPoint.X(), rPoint.Y());
     }
 
     virtual ~GtkInstanceToolbar() override
@@ -8319,7 +8450,7 @@ private:
 
     bool signal_key_press(GdkEventKey* pEvent)
     {
-        if (pEvent->keyval == GDK_KEY_Return)
+        if (pEvent->keyval == GDK_KEY_Return || pEvent->keyval == GDK_KEY_KP_Enter)
         {
             signal_activated();
             return true;
@@ -8989,7 +9120,7 @@ private:
         GtkInstanceTreeIter aIter(nullptr);
         if (!get_cursor(&aIter))
             return;
-        if (iter_has_child(aIter))
+        if (gtk_tree_model_iter_has_child(GTK_TREE_MODEL(m_pTreeStore), &aIter.iter))
             get_row_expanded(aIter) ? collapse_row(aIter) : expand_row(aIter);
     }
 
@@ -9252,8 +9383,7 @@ private:
     {
         GtkTreePath *tree_path = gtk_tree_path_new_from_string(path);
 
-        // toggled signal handlers can query get_cursor to get which
-        // node was clicked
+        // additionally set the cursor into the row the toggled element is in
         gtk_tree_view_set_cursor(m_pTreeView, tree_path, nullptr, false);
 
         GtkTreeModel *pModel = GTK_TREE_MODEL(m_pTreeStore);
@@ -9265,13 +9395,9 @@ private:
         bRet = !bRet;
         gtk_tree_store_set(m_pTreeStore, &iter, nCol, bRet, -1);
 
-        gint depth;
-        gint* indices = gtk_tree_path_get_indices_with_depth(tree_path, &depth);
-        int nRow = indices[depth-1];
-
         set(iter, m_aToggleTriStateMap[nCol], false);
 
-        signal_toggled(std::make_pair(nRow, nCol));
+        signal_toggled(iter_col(GtkInstanceTreeIter(iter), nCol));
 
         gtk_tree_path_free(tree_path);
     }
@@ -9322,7 +9448,7 @@ private:
         gtk_tree_path_free(tree_path);
 
         OUString sText(pNewText, pNewText ? strlen(pNewText) : 0, RTL_TEXTENCODING_UTF8);
-        if (signal_editing_done(std::pair<const weld::TreeIter&, OUString>(aGtkIter, sText)))
+        if (signal_editing_done(iter_string(aGtkIter, sText)))
         {
             void* pData = g_object_get_data(G_OBJECT(pCell), "g-lo-CellIndex");
             set(aGtkIter.iter, reinterpret_cast<sal_IntPtr>(pData), sText);
@@ -9427,9 +9553,11 @@ private:
         if (!get_cursor(&aIter))
             return false;
 
+        bool bHasChild = gtk_tree_model_iter_has_child(GTK_TREE_MODEL(m_pTreeStore), &aIter.iter);
+
         if (pEvent->keyval == GDK_KEY_Right)
         {
-            if (iter_has_child(aIter) && !get_row_expanded(aIter))
+            if (bHasChild && !get_row_expanded(aIter))
             {
                 expand_row(aIter);
                 return true;
@@ -9437,7 +9565,7 @@ private:
             return false;
         }
 
-        if (iter_has_child(aIter) && get_row_expanded(aIter))
+        if (bHasChild && get_row_expanded(aIter))
         {
             collapse_row(aIter);
             return true;
@@ -9762,19 +9890,29 @@ public:
         gtk_tree_view_column_set_title(pColumn, OUStringToOString(rTitle, RTL_TEXTENCODING_UTF8).getStr());
     }
 
-    virtual void set_column_custom_renderer(int nColumn) override
+    virtual void set_column_custom_renderer(int nColumn, bool bEnable) override
     {
+        assert(n_children() == 0 && "tree must be empty");
         GtkTreeViewColumn* pColumn = GTK_TREE_VIEW_COLUMN(g_list_nth_data(m_pColumns, nColumn));
         assert(pColumn && "wrong count");
         gtk_cell_layout_clear(GTK_CELL_LAYOUT(pColumn));
-        GtkCellRenderer *pRenderer = custom_cell_renderer_surface_new();
-        GValue value = G_VALUE_INIT;
-        g_value_init(&value, G_TYPE_POINTER);
-        g_value_set_pointer(&value, static_cast<gpointer>(this));
-        g_object_set_property(G_OBJECT(pRenderer), "instance", &value);
-        gtk_tree_view_column_pack_start(pColumn, pRenderer, true);
-        gtk_tree_view_column_add_attribute(pColumn, pRenderer, "text", m_nTextCol);
-        gtk_tree_view_column_add_attribute(pColumn, pRenderer, "id", m_nIdCol);
+        if (bEnable)
+        {
+            GtkCellRenderer *pRenderer = custom_cell_renderer_surface_new();
+            GValue value = G_VALUE_INIT;
+            g_value_init(&value, G_TYPE_POINTER);
+            g_value_set_pointer(&value, static_cast<gpointer>(this));
+            g_object_set_property(G_OBJECT(pRenderer), "instance", &value);
+            gtk_tree_view_column_pack_start(pColumn, pRenderer, true);
+            gtk_tree_view_column_add_attribute(pColumn, pRenderer, "text", m_nTextCol);
+            gtk_tree_view_column_add_attribute(pColumn, pRenderer, "id", m_nIdCol);
+        }
+        else
+        {
+            GtkCellRenderer *pRenderer = gtk_cell_renderer_text_new();
+            gtk_tree_view_column_pack_start(pColumn, pRenderer, true);
+            gtk_tree_view_column_add_attribute(pColumn, pRenderer, "text", m_nTextCol);
+        }
     }
 
     virtual void insert(const weld::TreeIter* pParent, int pos, const OUString* pText, const OUString* pId, const OUString* pIconName,
@@ -10963,7 +11101,7 @@ public:
         weld::TreeView::connect_popup_menu(rLink);
     }
 
-    virtual bool get_dest_row_at_pos(const Point &rPos, weld::TreeIter* pResult) override
+    virtual bool get_dest_row_at_pos(const Point &rPos, weld::TreeIter* pResult, bool bHighLightTarget) override
     {
         const bool bAsTree = gtk_tree_view_get_enable_tree_lines(m_pTreeView);
 
@@ -11013,7 +11151,7 @@ public:
             gtk_tree_model_get_iter(pModel, &rGtkIter.iter, path);
         }
 
-        if (m_bInDrag)
+        if (m_bInDrag && bHighLightTarget) // bHighLightTarget alone might be sufficient
         {
             // highlight the row
             gtk_tree_view_set_drag_dest_row(m_pTreeView, path, pos);
@@ -13145,7 +13283,7 @@ private:
             }
             default:
                 // tdf#131076 let base space toggle menu popup when it's not already visible
-                if (nCode == KEY_SPACE && !pEvent->state && !m_bPopupActive)
+                if (nCode == KEY_SPACE && !aKeyCode.GetModifier() && !m_bPopupActive)
                     bDone = false;
                 else
                     bDone = m_aQuickSelectionEngine.HandleKeyEvent(aKEvt);
@@ -13605,7 +13743,7 @@ public:
         , m_nMRUCount(0)
         , m_nMaxMRUCount(0)
     {
-        insertParent(GTK_WIDGET(m_pComboBox), GTK_WIDGET(getContainer()));
+        insertAsParent(GTK_WIDGET(m_pComboBox), GTK_WIDGET(getContainer()));
         gtk_widget_set_visible(GTK_WIDGET(m_pComboBox), false);
         gtk_widget_set_no_show_all(GTK_WIDGET(m_pComboBox), true);
 
@@ -13952,6 +14090,30 @@ public:
         gtk_entry_set_placeholder_text(GTK_ENTRY(m_pEntry), rText.toUtf8().getStr());
     }
 
+    virtual void set_entry_editable(bool bEditable) override
+    {
+        assert(m_pEntry);
+        gtk_editable_set_editable(GTK_EDITABLE(m_pEntry), bEditable);
+    }
+
+    virtual void cut_entry_clipboard() override
+    {
+        assert(m_pEntry);
+        gtk_editable_cut_clipboard(GTK_EDITABLE(m_pEntry));
+    }
+
+    virtual void copy_entry_clipboard() override
+    {
+        assert(m_pEntry);
+        gtk_editable_copy_clipboard(GTK_EDITABLE(m_pEntry));
+    }
+
+    virtual void paste_entry_clipboard() override
+    {
+        assert(m_pEntry);
+        gtk_editable_paste_clipboard(GTK_EDITABLE(m_pEntry));
+    }
+
     virtual void set_entry_font(const vcl::Font& rFont) override
     {
         m_xFont.reset(new vcl::Font(rFont));
@@ -14213,6 +14375,23 @@ public:
         g_signal_handler_disconnect(m_pTreeView, m_nRowActivatedSignalId);
         g_signal_handler_disconnect(m_pToggleButton, m_nPopupShownSignalId);
 
+        gtk_combo_box_set_model(m_pComboBox, m_pTreeModel);
+        gtk_tree_view_set_model(m_pTreeView, nullptr);
+
+        // restore original hierarchy in dtor so a new GtkInstanceComboBox will
+        // result in the same layout each time
+        {
+            g_object_ref(m_pComboBox);
+
+            GtkContainer* pContainer = getContainer();
+
+            gtk_container_remove(pContainer, GTK_WIDGET(m_pComboBox));
+
+            replaceWidget(GTK_WIDGET(pContainer), GTK_WIDGET(m_pComboBox));
+
+            g_object_unref(m_pComboBox);
+        }
+
         g_object_unref(m_pComboBuilder);
     }
 };
@@ -14332,7 +14511,7 @@ private:
 
     bool signal_key_press(GdkEventKey* pEvent)
     {
-        if (pEvent->state) // only with no modifiers held
+        if (GtkSalFrame::GetMouseModCode(pEvent->state)) // only with no modifiers held
             return false;
 
         if (pEvent->keyval == GDK_KEY_KP_Up || pEvent->keyval == GDK_KEY_Up || pEvent->keyval == GDK_KEY_KP_Page_Up || pEvent->keyval == GDK_KEY_Page_Up ||
@@ -14394,7 +14573,7 @@ private:
         if (nStart == -1)
             nStart = 0;
 
-        // Try match case insensitive from current position
+        // Try match case sensitive from current position
         int nPos = m_pTreeView->starts_with(aStartText, 0, nStart, true);
         if (nPos == -1 && nStart != 0)
         {
@@ -14489,6 +14668,26 @@ public:
     virtual void set_entry_placeholder_text(const OUString& rText) override
     {
         m_xEntry->set_placeholder_text(rText);
+    }
+
+    virtual void set_entry_editable(bool bEditable) override
+    {
+        m_xEntry->set_editable(bEditable);
+    }
+
+    virtual void cut_entry_clipboard() override
+    {
+        m_xEntry->cut_clipboard();
+    }
+
+    virtual void copy_entry_clipboard() override
+    {
+        m_xEntry->copy_clipboard();
+    }
+
+    virtual void paste_entry_clipboard() override
+    {
+        m_xEntry->paste_clipboard();
     }
 
     virtual void set_entry_font(const vcl::Font& rFont) override
@@ -15125,6 +15324,15 @@ public:
         return std::make_unique<GtkInstanceBox>(pBox, this, bTakeOwnership);
     }
 
+    virtual std::unique_ptr<weld::Paned> weld_paned(const OString &id, bool bTakeOwnership) override
+    {
+        GtkPaned* pPaned = GTK_PANED(gtk_builder_get_object(m_pBuilder, id.getStr()));
+        if (!pPaned)
+            return nullptr;
+        auto_add_parentless_widgets_to_container(GTK_WIDGET(pPaned));
+        return std::make_unique<GtkInstancePaned>(pPaned, this, bTakeOwnership);
+    }
+
     virtual std::unique_ptr<weld::Frame> weld_frame(const OString &id, bool bTakeOwnership) override
     {
         GtkFrame* pFrame = GTK_FRAME(gtk_builder_get_object(m_pBuilder, id.getStr()));
@@ -15167,7 +15375,7 @@ public:
         if (!pButton)
             return nullptr;
         auto_add_parentless_widgets_to_container(GTK_WIDGET(pButton));
-        return std::make_unique<GtkInstanceMenuButton>(pButton, this, bTakeOwnership);
+        return std::make_unique<GtkInstanceMenuButton>(pButton, nullptr, this, bTakeOwnership);
     }
 
     virtual std::unique_ptr<weld::LinkButton> weld_link_button(const OString &id, bool bTakeOwnership) override

@@ -32,6 +32,8 @@
 #include <vcl/event.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
+#include <vcl/uitest/uiobject.hxx>
+#include <vcl/uitest/metricfielduiobject.hxx>
 
 #include <svdata.hxx>
 
@@ -621,6 +623,28 @@ sal_Int64 NumericFormatter::GetValueFromString(const OUString& rStr) const
     }
     else
         return mnLastValue;
+}
+
+OUString NumericFormatter::GetValueString() const
+{
+    return Application::GetSettings().GetNeutralLocaleDataWrapper().
+        getNum(GetValue(), GetDecimalDigits(), false, false);
+}
+
+// currently used by online
+void NumericFormatter::SetValueFromString(const OUString& rStr)
+{
+    sal_Int64 nValue;
+
+    if (ImplNumericGetValue(rStr, nValue, GetDecimalDigits(),
+        Application::GetSettings().GetNeutralLocaleDataWrapper()))
+    {
+        ImplNewFieldValue(nValue);
+    }
+    else
+    {
+        SAL_WARN("vcl", "fail to convert the value: " << rStr );
+    }
 }
 
 sal_Int64 NumericFormatter::GetValue() const
@@ -1548,7 +1572,7 @@ sal_Int64 MetricFormatter::GetCorrectedValue( FieldUnit eOutUnit ) const
 }
 
 MetricField::MetricField(vcl::Window* pParent, WinBits nWinStyle)
-    : SpinField(pParent, nWinStyle)
+    : SpinField(pParent, nWinStyle, WindowType::METRICFIELD)
     , MetricFormatter(this)
 {
     Reformat();
@@ -1694,7 +1718,16 @@ boost::property_tree::ptree MetricField::DumpAsPropertyTree()
     aTree.put("min", GetMin());
     aTree.put("max", GetMax());
     aTree.put("unit", FieldUnitToString(GetUnit()));
+    OUString sValue = Application::GetSettings().GetNeutralLocaleDataWrapper().
+        getNum(GetValue(), GetDecimalDigits(), false, false);
+    aTree.put("value", sValue.toUtf8().getStr());
+
     return aTree;
+}
+
+FactoryFunction MetricField::GetUITestFactory() const
+{
+    return MetricFieldUIObject::create;
 }
 
 MetricBox::MetricBox(vcl::Window* pParent, WinBits nWinStyle)

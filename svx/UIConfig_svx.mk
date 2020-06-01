@@ -80,6 +80,7 @@ $(eval $(call gb_UIConfig_add_uifiles,svx,\
 	svx/uiconfig/ui/headfootformatpage \
 	svx/uiconfig/ui/imapdialog \
 	svx/uiconfig/ui/imapmenu \
+	svx/uiconfig/ui/inspectortextpanel \
 	svx/uiconfig/ui/interimdockparent \
 	svx/uiconfig/ui/interimparent \
 	svx/uiconfig/ui/labelbox \
@@ -119,6 +120,7 @@ $(eval $(call gb_UIConfig_add_uifiles,svx,\
 	svx/uiconfig/ui/sidebarempty \
 	svx/uiconfig/ui/sidebarglow \
 	svx/uiconfig/ui/sidebarshadow \
+	svx/uiconfig/ui/sidebarsoftedge \
 	svx/uiconfig/ui/sidebargallery \
 	svx/uiconfig/ui/sidebargraphic \
 	svx/uiconfig/ui/sidebarline \

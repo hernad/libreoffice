@@ -677,7 +677,7 @@ void HTMLTableCnts::Add( std::unique_ptr<HTMLTableCnts> pNewCnts )
 
 inline void HTMLTableCnts::SetTableBox( SwTableBox *pBox )
 {
-    OSL_ENSURE(m_xLayoutInfo.get(), "There is no layout info");
+    OSL_ENSURE(m_xLayoutInfo, "There is no layout info");
     if (m_xLayoutInfo)
         m_xLayoutInfo->SetTableBox(pBox);
 }
@@ -1484,7 +1484,7 @@ void HTMLTable::FixFrameFormat( SwTableBox *pBox,
             // the same.
             SwTableAutoFormatTable& rTable = m_pParser->GetDoc()->GetTableStyles();
             SwTableAutoFormat* pTableFormat = rTable.FindAutoFormat(
-                SwStyleNameMapper::GetUIName(RES_POOLTABSTYLE_DEFAULT, OUString()));
+                SwStyleNameMapper::GetUIName(RES_POOLTABLESTYLE_DEFAULT, OUString()));
             if (pTableFormat)
             {
                 sal_uInt8 nPos = SwTableAutoFormat::CountPos(nCol, m_nCols, nRow, m_nRows);
@@ -2859,7 +2859,7 @@ public:
                      bool bReadOpt );
 
     void AddContents( std::unique_ptr<HTMLTableCnts> pNewCnts );
-    bool HasFirstContents() const { return m_xCnts.get(); }
+    bool HasFirstContents() const { return bool(m_xCnts); }
 
     void ClearIsInSection() { m_pCurrCnts = nullptr; }
     bool IsInSection() const { return m_pCurrCnts!=nullptr; }

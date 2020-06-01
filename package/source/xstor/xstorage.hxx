@@ -55,9 +55,9 @@
 #include <vector>
 #include <memory>
 
-namespace com { namespace sun { namespace star { namespace uno {
+namespace com::sun::star::uno {
     class XComponentContext;
-} } } }
+}
 
 #define RELINFO_NO_INIT             1
 #define RELINFO_READ                2
@@ -91,8 +91,6 @@ struct SotElement_Impl
 public:
     SotElement_Impl(const OUString& rName, bool bStor, bool bNew);
 };
-
-typedef ::std::vector< SotElement_Impl* > SotElementVector_Impl;
 
 // Main storage implementation
 
@@ -133,7 +131,7 @@ struct OStorage_Impl
     }
 
     std::unordered_map<OUString, std::vector<SotElement_Impl*>> m_aChildrenMap;
-    SotElementVector_Impl                         m_aDeletedVector;
+    std::vector< SotElement_Impl* > m_aDeletedVector;
 
     css::uno::Reference< css::container::XNameContainer > m_xPackageFolder;
 

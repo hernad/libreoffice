@@ -461,10 +461,10 @@ bool ImplHandleMouseEvent( const VclPtr<vcl::Window>& xWindow, MouseNotifyEvent 
                     //long nMouseY = nY;
                     long nMouseX = aMousePos.X(); // #106074# use the possibly re-mirrored coordinates (RTL) ! nX,nY are unmodified !
                     long nMouseY = aMousePos.Y();
-                    if ( !(((nMouseX-nDragW) <= pMouseDownWin->ImplGetFrameData()->mnFirstMouseX) &&
-                           ((nMouseX+nDragW) >= pMouseDownWin->ImplGetFrameData()->mnFirstMouseX)) ||
-                         !(((nMouseY-nDragH) <= pMouseDownWin->ImplGetFrameData()->mnFirstMouseY) &&
-                           ((nMouseY+nDragH) >= pMouseDownWin->ImplGetFrameData()->mnFirstMouseY)) )
+                    if ( (((nMouseX-nDragW) > pMouseDownWin->ImplGetFrameData()->mnFirstMouseX) ||
+                           ((nMouseX+nDragW) < pMouseDownWin->ImplGetFrameData()->mnFirstMouseX)) ||
+                         (((nMouseY-nDragH) > pMouseDownWin->ImplGetFrameData()->mnFirstMouseY) ||
+                           ((nMouseY+nDragH) < pMouseDownWin->ImplGetFrameData()->mnFirstMouseY)) )
                     {
                         pMouseDownWin->ImplGetFrameData()->mbStartDragCalled  = true;
 
@@ -1495,7 +1495,7 @@ bool HandleWheelEvent::HandleEvent(const SalWheelMouseEvent& rEvt)
 
     pSVData->mpWinData->mpLastWheelWindow = Dispatch(xMouseWindow);
 
-    return pSVData->mpWinData->mpLastWheelWindow.get();
+    return pSVData->mpWinData->mpLastWheelWindow;
 }
 
 namespace {

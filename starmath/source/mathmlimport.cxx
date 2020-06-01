@@ -195,7 +195,7 @@ ErrCode SmXMLImportWrapper::Import(SfxMedium &rMedium)
             xStatusIndicator->setValue(nSteps++);
 
         auto nWarn = ReadThroughComponent(
-            rMedium.GetStorage(), xModelComp, "meta.xml", "Meta.xml",
+            rMedium.GetStorage(), xModelComp, "meta.xml",
             xContext, xInfoSet,
                 (bOASIS ? "com.sun.star.comp.Math.XMLOasisMetaImporter"
                         : "com.sun.star.comp.Math.XMLMetaImporter") );
@@ -206,7 +206,7 @@ ErrCode SmXMLImportWrapper::Import(SfxMedium &rMedium)
                 xStatusIndicator->setValue(nSteps++);
 
             nWarn = ReadThroughComponent(
-                rMedium.GetStorage(), xModelComp, "settings.xml", nullptr,
+                rMedium.GetStorage(), xModelComp, "settings.xml",
                 xContext, xInfoSet,
                 (bOASIS ? "com.sun.star.comp.Math.XMLOasisSettingsImporter"
                         : "com.sun.star.comp.Math.XMLSettingsImporter" ) );
@@ -217,7 +217,7 @@ ErrCode SmXMLImportWrapper::Import(SfxMedium &rMedium)
                     xStatusIndicator->setValue(nSteps++);
 
                 nError = ReadThroughComponent(
-                    rMedium.GetStorage(), xModelComp, "content.xml", "Content.xml",
+                    rMedium.GetStorage(), xModelComp, "content.xml",
                     xContext, xInfoSet, "com.sun.star.comp.Math.XMLImporter" );
             }
             else
@@ -351,7 +351,6 @@ ErrCode SmXMLImportWrapper::ReadThroughComponent(
     const uno::Reference< embed::XStorage >& xStorage,
     const Reference<XComponent>& xModelComponent,
     const char* pStreamName,
-    const char* pCompatibilityStreamName,
     Reference<uno::XComponentContext> const & rxContext,
     Reference<beans::XPropertySet> const & rPropSet,
     const char* pFilterName )
@@ -361,13 +360,6 @@ ErrCode SmXMLImportWrapper::ReadThroughComponent(
 
     // open stream (and set parser input)
     OUString sStreamName = OUString::createFromAscii(pStreamName);
-    if ( !xStorage->hasByName(sStreamName) || !xStorage->isStreamElement(sStreamName) )
-    {
-        // stream name not found! Then try the compatibility name.
-        // do we even have an alternative name?
-        if ( pCompatibilityStreamName )
-            sStreamName = OUString::createFromAscii(pCompatibilityStreamName);
-    }
 
     // get input stream
     try
@@ -599,9 +591,7 @@ void SmXMLContext_Helper::RetrieveAttrs(const uno::Reference<
     xml::sax::XFastAttributeList > & xAttrList )
 {
     bool bMvFound = false;
-    sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
-    for (auto &aIter : *pAttribList)
+    for (auto &aIter : sax_fastparser::castToFastAttributeList( xAttrList ))
     {
         OUString sValue = aIter.toString();
         // sometimes they have namespace, sometimes not?
@@ -767,9 +757,7 @@ public:
 
 void SmXMLTokenAttrHelper::RetrieveAttrs(const uno::Reference<xml::sax::XFastAttributeList>& xAttrList)
 {
-    sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
-    for (auto &aIter : *pAttribList)
+    for (auto &aIter : sax_fastparser::castToFastAttributeList( xAttrList ))
     {
         OUString sValue = aIter.toString();
         switch(aIter.getToken())
@@ -1077,9 +1065,7 @@ public:
 void SmXMLFencedContext_Impl::startFastElement(sal_Int32 /*nElement*/, const uno::Reference<
     xml::sax::XFastAttributeList > & xAttrList )
 {
-    sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
-    for (auto &aIter : *pAttribList)
+    for (auto &aIter : sax_fastparser::castToFastAttributeList( xAttrList ))
     {
         OUString sValue = aIter.toString();
         switch(aIter.getToken())
@@ -1227,9 +1213,7 @@ public:
 void SmXMLAnnotationContext_Impl::startFastElement(sal_Int32 /*nElement*/, const uno::Reference<
     xml::sax::XFastAttributeList > & xAttrList )
 {
-    sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
-    for (auto &aIter : *pAttribList)
+    for (auto &aIter : sax_fastparser::castToFastAttributeList( xAttrList ))
     {
         OUString sValue = aIter.toString();
         // sometimes they have namespace, sometimes not?
@@ -1443,9 +1427,7 @@ void SmXMLOperatorContext_Impl::startFastElement(sal_Int32 /*nElement*/, const u
 {
     maTokenAttrHelper.RetrieveAttrs(xAttrList);
 
-    sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
-    for (auto &aIter : *pAttribList)
+    for (auto &aIter : sax_fastparser::castToFastAttributeList( xAttrList ))
     {
         OUString sValue = aIter.toString();
         switch(aIter.getToken())
@@ -1510,9 +1492,7 @@ void SmXMLSpaceContext_Impl::startFastElement(sal_Int32 /*nElement*/,
     MathMLAttributeLengthValue aLV;
     sal_Int32 nWide = 0, nNarrow = 0;
 
-    sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
-    for (auto &aIter : *pAttribList)
+    for (auto &aIter : sax_fastparser::castToFastAttributeList( xAttrList ))
     {
         OUString sValue = aIter.toString();
         switch (aIter.getToken())
@@ -1671,9 +1651,9 @@ public:
 void SmXMLUnderContext_Impl::startFastElement(sal_Int32 /*nElement*/, const uno::Reference<
     xml::sax::XFastAttributeList > & xAttrList )
 {
-    sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
-    nAttrCount = pAttribList->getFastAttributeTokens().size();
+    sax_fastparser::FastAttributeList& rAttribList =
+        sax_fastparser::castToFastAttributeList( xAttrList );
+    nAttrCount = rAttribList.getFastAttributeTokens().size();
 }
 
 void SmXMLUnderContext_Impl::HandleAccent()
@@ -1735,9 +1715,9 @@ public:
 void SmXMLOverContext_Impl::startFastElement(sal_Int32 /*nElement*/, const uno::Reference<
     xml::sax::XFastAttributeList > & xAttrList )
 {
-    sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
-    nAttrCount = pAttribList->getFastAttributeTokens().size();
+    sax_fastparser::FastAttributeList& rAttribList =
+        sax_fastparser::castToFastAttributeList( xAttrList );
+    nAttrCount = rAttribList.getFastAttributeTokens().size();
 }
 
 
@@ -2559,9 +2539,7 @@ void SmXMLMultiScriptsContext_Impl::endFastElement(sal_Int32 )
 
 void SmXMLActionContext_Impl::startFastElement(sal_Int32 /*nElement*/, const uno::Reference<xml::sax::XFastAttributeList> & xAttrList)
 {
-    sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
-    for (auto &aIter : *pAttribList)
+    for (auto &aIter : sax_fastparser::castToFastAttributeList( xAttrList ))
     {
         OUString sValue = aIter.toString();
         switch(aIter.getToken())
@@ -2628,7 +2606,7 @@ SvXMLImportContext *SmXMLImport::CreateFastContext(sal_Int32 nElement,
         }
         break;
         default:
-            if ((nElement & NMSP_MASK) == NAMESPACE_TOKEN(XML_NAMESPACE_OFFICE))
+            if (IsTokenInNamespace(nElement, XML_NAMESPACE_OFFICE))
                 pContext = new SmXMLOfficeContext_Impl(*this);
             else
                 pContext = new SmXMLDocContext_Impl(*this);

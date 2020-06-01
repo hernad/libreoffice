@@ -524,7 +524,7 @@ void WorkbookGlobals::initialize()
     mxDoc.set( mrBaseFilter.getModel(), UNO_QUERY );
     OSL_ENSURE( mxDoc.is(), "WorkbookGlobals::initialize - no spreadsheet document" );
 
-    if (mxDoc.get())
+    if (mxDoc)
     {
         ScModelObj* pModel = dynamic_cast<ScModelObj*>(mxDoc.get());
         if (pModel)
@@ -688,7 +688,7 @@ void WorkbookHelper::finalizeWorkbookImport()
     // contains the workbook code name).  Do it before processing formulas in
     // order to correctly resolve VBA custom function names.
     StorageRef xVbaPrjStrg = mrBookGlob.getVbaProjectStorage();
-    if( xVbaPrjStrg.get() && xVbaPrjStrg->isStorage() )
+    if( xVbaPrjStrg && xVbaPrjStrg->isStorage() )
         getBaseFilter().getVbaProject().importModulesAndForms( *xVbaPrjStrg, getBaseFilter().getGraphicHelper() );
 
     // need to import formulas before scenarios

@@ -107,8 +107,6 @@ using namespace ::com::sun::star::xml::sax;
 using namespace ::com::sun::star::io;
 using namespace ::xmloff::token;
 
-char const sXML_1_2[] = "1.2";
-
 #define XML_MODEL_SERVICE_WRITER    "com.sun.star.text.TextDocument"
 #define XML_MODEL_SERVICE_CALC      "com.sun.star.sheet.SpreadsheetDocument"
 #define XML_MODEL_SERVICE_DRAW      "com.sun.star.drawing.DrawingDocument"
@@ -258,7 +256,6 @@ public:
     OUString                                            msPackageURIScheme;
     // Written OpenDocument file format doesn't fit to the created text document (#i69627#)
     bool                                                mbOutlineStyleAsNormalListStyle;
-    bool                                                mbSaveBackwardCompatibleODF;
 
     uno::Reference< embed::XStorage >                   mxTargetStorage;
 
@@ -293,7 +290,6 @@ SvXMLExport_Impl::SvXMLExport_Impl()
 :    mxUriReferenceFactory( uri::UriReferenceFactory::create(comphelper::getProcessComponentContext()) ),
     // Written OpenDocument file format doesn't fit to the created text document (#i69627#)
     mbOutlineStyleAsNormalListStyle( false ),
-    mbSaveBackwardCompatibleODF( true ),
     mDepth( 0 ),
     mbExportTextNumberElement( false ),
     mbNullDateInitialized( false )
@@ -353,7 +349,7 @@ void SvXMLExport::InitCtor_()
         mpNamespaceMap->Add( GetXMLToken(XML_NP_OOOC),  GetXMLToken(XML_N_OOOC),    XML_NAMESPACE_OOOC );
         mpNamespaceMap->Add( GetXMLToken(XML_NP_OF),    GetXMLToken(XML_N_OF),      XML_NAMESPACE_OF );
 
-        if (getDefaultVersion() > SvtSaveOptions::ODFVER_012)
+        if (getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
         {
             mpNamespaceMap->Add(
                 GetXMLToken(XML_NP_TABLE_EXT), GetXMLToken(XML_N_TABLE_EXT), XML_NAMESPACE_TABLE_EXT);
@@ -412,14 +408,6 @@ void SvXMLExport::InitCtor_()
 
     // Determine model type (#i51726#)
     DetermineModelType_();
-
-    // cl: but only if we do export to current oasis format, old openoffice format *must* always be compatible
-    if( getExportFlags() & SvXMLExportFlags::OASIS )
-    {
-        mpImpl->mbSaveBackwardCompatibleODF =
-            officecfg::Office::Common::Save::Document::
-            SaveBackwardCompatibleODF::get( comphelper::getProcessComponentContext() );
-    }
 }
 
 // Shapes in Writer cannot be named via context menu (#i51726#)
@@ -611,11 +599,6 @@ void SAL_CALL SvXMLExport::setSourceDocument( const uno::Reference< lang::XCompo
             }
         }
     }
-
-    if ( mpImpl->mbSaveBackwardCompatibleODF )
-        mnExportFlags |= SvXMLExportFlags::SAVEBACKWARDCOMPATIBLE;
-    else
-        mnExportFlags &= ~SvXMLExportFlags::SAVEBACKWARDCOMPATIBLE;
 
     // namespaces for user defined attributes
     Reference< XMultiServiceFactory > xFactory( mxModel,    UNO_QUERY );
@@ -1005,7 +988,7 @@ void SvXMLExport::AddLanguageTagAttributes( sal_uInt16 nPrefix, sal_uInt16 nPref
         if (bWriteEmpty || !rLanguageTag.isSystemLocale())
         {
             AddAttribute( nPrefix, XML_LANGUAGE, rLanguageTag.getLanguage());
-            if (rLanguageTag.hasScript() && getDefaultVersion() >= SvtSaveOptions::ODFVER_012)
+            if (rLanguageTag.hasScript() && getSaneDefaultVersion() >= SvtSaveOptions::ODFSVER_012)
                 AddAttribute( nPrefix, XML_SCRIPT, rLanguageTag.getScript());
             if (bWriteEmpty || !rLanguageTag.getCountry().isEmpty())
                 AddAttribute( nPrefix, XML_COUNTRY, rLanguageTag.getCountry());
@@ -1013,7 +996,7 @@ void SvXMLExport::AddLanguageTagAttributes( sal_uInt16 nPrefix, sal_uInt16 nPref
     }
     else
     {
-        if (getDefaultVersion() >= SvtSaveOptions::ODFVER_012)
+        if (getSaneDefaultVersion() >= SvtSaveOptions::ODFSVER_012)
             AddAttribute( nPrefixRfc, XML_RFC_LANGUAGE_TAG, rLanguageTag.getBcp47());
         // Also in case of non-pure-ISO tag store best matching fo: attributes
         // for consumers not handling *:rfc-language-tag, ensuring that only
@@ -1024,7 +1007,7 @@ void SvXMLExport::AddLanguageTagAttributes( sal_uInt16 nPrefix, sal_uInt16 nPref
         if (!aLanguage.isEmpty())
         {
             AddAttribute( nPrefix, XML_LANGUAGE, aLanguage);
-            if (!aScript.isEmpty() && getDefaultVersion() >= SvtSaveOptions::ODFVER_012)
+            if (!aScript.isEmpty() && getSaneDefaultVersion() >= SvtSaveOptions::ODFSVER_012)
                 AddAttribute( nPrefix, XML_SCRIPT, aScript);
             if (!aCountry.isEmpty())
                 AddAttribute( nPrefix, XML_COUNTRY, aCountry);
@@ -1203,9 +1186,9 @@ static void
 lcl_AddGrddl(SvXMLExport const & rExport, const SvXMLExportFlags /*nExportMode*/)
 {
     // check version >= 1.2
-    switch (rExport.getDefaultVersion()) {
-        case SvtSaveOptions::ODFVER_011: // fall through
-        case SvtSaveOptions::ODFVER_010: return;
+    switch (rExport.getSaneDefaultVersion()) {
+        case SvtSaveOptions::ODFSVER_011: // fall through
+        case SvtSaveOptions::ODFSVER_010: return;
         default: break;
     }
 
@@ -1227,6 +1210,25 @@ void SvXMLExport::addChaffWhenEncryptedStorage()
     {
         mxExtHandler->comment(OStringToOUString(comphelper::xml::makeXMLChaff(), RTL_TEXTENCODING_ASCII_US));
     }
+}
+
+auto SvXMLExport::GetODFVersionAttributeValue() const -> char const*
+{
+    char const* pVersion(nullptr);
+    switch (getSaneDefaultVersion())
+    {
+    case SvtSaveOptions::ODFSVER_013_EXTENDED: [[fallthrough]];
+    case SvtSaveOptions::ODFSVER_013: pVersion = "1.3"; break;
+    case SvtSaveOptions::ODFSVER_012_EXTENDED: [[fallthrough]];
+    case SvtSaveOptions::ODFSVER_012_EXT_COMPAT: [[fallthrough]];
+    case SvtSaveOptions::ODFSVER_012: pVersion = "1.2"; break;
+    case SvtSaveOptions::ODFSVER_011: pVersion = "1.1"; break;
+    case SvtSaveOptions::ODFSVER_010: break;
+
+    default:
+        assert(!"xmloff::SvXMLExport::exportDoc(), unexpected odf default version!");
+    }
+    return pVersion;
 }
 
 ErrCode SvXMLExport::exportDoc( enum ::xmloff::token::XMLTokenEnum eClass )
@@ -1323,18 +1325,7 @@ ErrCode SvXMLExport::exportDoc( enum ::xmloff::token::XMLTokenEnum eClass )
     }
 
     // office:version = ...
-    const char* pVersion = nullptr;
-    switch (getDefaultVersion())
-    {
-    case SvtSaveOptions::ODFVER_LATEST: pVersion = sXML_1_2; break;
-    case SvtSaveOptions::ODFVER_012_EXT_COMPAT: pVersion = sXML_1_2; break;
-    case SvtSaveOptions::ODFVER_012: pVersion = sXML_1_2; break;
-    case SvtSaveOptions::ODFVER_011: pVersion = "1.1"; break;
-    case SvtSaveOptions::ODFVER_010: break;
-
-    default:
-        SAL_WARN("xmloff.core", "xmloff::SvXMLExport::exportDoc(), unexpected odf default version!");
-    }
+    const char*const pVersion = GetODFVersionAttributeValue();
 
     if (pVersion)
     {
@@ -2299,16 +2290,6 @@ uno::Reference< embed::XStorage > const & SvXMLExport::GetTargetStorage() const
     return mpImpl->mxTargetStorage;
 }
 
-/// returns the currently configured default version for ODF export
-SvtSaveOptions::ODFDefaultVersion SvXMLExport::getDefaultVersion() const
-{
-    if( mpImpl )
-        return mpImpl->maSaveOptions.GetODFDefaultVersion();
-
-    // fatal error, use current version as default
-    return SvtSaveOptions::ODFVER_012;
-}
-
 SvtSaveOptions::ODFSaneDefaultVersion SvXMLExport::getSaneDefaultVersion() const
 {
     if( mpImpl )
@@ -2322,9 +2303,9 @@ void
 SvXMLExport::AddAttributeIdLegacy(
         sal_uInt16 const nLegacyPrefix, OUString const& rValue)
 {
-    switch (getDefaultVersion()) {
-        case SvtSaveOptions::ODFVER_011: // fall through
-        case SvtSaveOptions::ODFVER_010: break;
+    switch (getSaneDefaultVersion()) {
+        case SvtSaveOptions::ODFSVER_011: // fall through
+        case SvtSaveOptions::ODFSVER_010: break;
         default: // ODF 1.2: xml:id
             AddAttribute(XML_NAMESPACE_XML, XML_ID, rValue);
     }
@@ -2338,9 +2319,9 @@ void
 SvXMLExport::AddAttributeXmlId(uno::Reference<uno::XInterface> const & i_xIfc)
 {
     // check version >= 1.2
-    switch (getDefaultVersion()) {
-        case SvtSaveOptions::ODFVER_011: // fall through
-        case SvtSaveOptions::ODFVER_010: return;
+    switch (getSaneDefaultVersion()) {
+        case SvtSaveOptions::ODFSVER_011: // fall through
+        case SvtSaveOptions::ODFSVER_010: return;
         default: break;
     }
     const uno::Reference<rdf::XMetadatable> xMeta(i_xIfc,
@@ -2389,9 +2370,9 @@ SvXMLExport::AddAttributesRDFa(
     uno::Reference<text::XTextContent> const & i_xTextContent)
 {
     // check version >= 1.2
-    switch (getDefaultVersion()) {
-        case SvtSaveOptions::ODFVER_011: // fall through
-        case SvtSaveOptions::ODFVER_010: return;
+    switch (getSaneDefaultVersion()) {
+        case SvtSaveOptions::ODFSVER_011: // fall through
+        case SvtSaveOptions::ODFSVER_010: return;
         default: break;
     }
 

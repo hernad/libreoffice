@@ -100,7 +100,6 @@ void XclExpOperandList::AppendOperand( sal_uInt16 nTokPos, XclFuncParamConv eCon
 }
 
 typedef std::shared_ptr< XclExpOperandList > XclExpOperandListRef;
-typedef std::vector< XclExpOperandListRef > XclExpOperandListVector;
 
 /** Encapsulates all data needed for a call to an external function (macro, add-in). */
 struct XclExpExtFuncData
@@ -270,7 +269,8 @@ struct XclExpCompData
 
     ScfUInt8Vec         maTokVec;           /// Byte vector containing token data.
     ScfUInt8Vec         maExtDataVec;       /// Byte vector containing extended data (arrays, stacked NLRs).
-    XclExpOperandListVector maOpListVec;    /// Formula structure, maps operators to their operands.
+    std::vector< XclExpOperandListRef >
+                        maOpListVec;    /// Formula structure, maps operators to their operands.
     ScfUInt16Vec        maOpPosStack;       /// Stack with positions of operand tokens waiting for an operator.
     bool                mbStopAtSep;        /// True = Stop subexpression creation at an ocSep token.
     bool                mbVolatile;         /// True = Formula contains volatile function.
@@ -454,12 +454,12 @@ private:
 private:
     typedef std::map< XclFormulaType, XclExpCompConfig >  XclExpCompConfigMap;
     typedef std::shared_ptr< XclExpCompData >             XclExpCompDataRef;
-    typedef std::vector< XclExpCompDataRef >              XclExpCompDataVector;
 
     XclExpCompConfigMap maCfgMap;       /// Compiler configuration map for all formula types.
     XclFunctionProvider maFuncProv;     /// Excel function data provider.
     XclExpCompDataRef   mxData;         /// Working data for current formula.
-    XclExpCompDataVector maDataStack;   /// Stack for working data, when compiler is called recursively.
+    std::vector< XclExpCompDataRef >
+                        maDataStack;   /// Stack for working data, when compiler is called recursively.
     const XclBiff       meBiff;         /// Cached BIFF version to save GetBiff() calls.
     const SCCOL         mnMaxAbsCol;    /// Maximum column index.
     const SCROW         mnMaxAbsRow;    /// Maximum row index.
@@ -568,7 +568,7 @@ const XclExpCompConfig* XclExpFmlaCompImpl::GetConfigForType( XclFormulaType eTy
 void XclExpFmlaCompImpl::Init( XclFormulaType eType )
 {
     // compiler invoked recursively? - store old working data
-    if( mxData.get() )
+    if( mxData )
         maDataStack.push_back( mxData );
     // new compiler working data structure
     mxData = std::make_shared<XclExpCompData>( GetConfigForType( eType ) );
@@ -2159,7 +2159,7 @@ void XclExpFmlaCompImpl::ProcessExternalName( const XclExpScToken& rTokData )
         sal_uInt16 nFileId = rTokData.mpScToken->GetIndex();
         OUString aName = rTokData.mpScToken->GetString().getString();
         ScExternalRefCache::TokenArrayRef xArray = rExtRefMgr.getRangeNameTokens( nFileId, aName );
-        if( xArray.get() )
+        if( xArray )
         {
             // store external cell contents in CRN records
             if( mxData->mpScBasePos )
@@ -2217,7 +2217,7 @@ void XclExpFmlaCompImpl::PushOperandPos( sal_uInt16 nTokPos )
 void XclExpFmlaCompImpl::PushOperatorPos( sal_uInt16 nTokPos, const XclExpOperandListRef& rxOperands )
 {
     PushOperandPos( nTokPos );
-    OSL_ENSURE( rxOperands.get(), "XclExpFmlaCompImpl::AppendOperatorTokenId - missing operand list" );
+    OSL_ENSURE( rxOperands, "XclExpFmlaCompImpl::AppendOperatorTokenId - missing operand list" );
     if( mxData->maOpListVec.size() <= nTokPos )
         mxData->maOpListVec.resize( nTokPos + 1, XclExpOperandListRef() );
     mxData->maOpListVec[ nTokPos ] = rxOperands;
@@ -2518,7 +2518,7 @@ void XclExpFmlaCompImpl::InsertZeros( sal_uInt16 nInsertPos, sal_uInt16 nInsertS
     if( nInsertPos < mxData->maOpListVec.size() )
         mxData->maOpListVec.insert( mxData->maOpListVec.begin() + nInsertPos, nInsertSize, XclExpOperandListRef() );
     for( auto& rxOpList : mxData->maOpListVec )
-        if( rxOpList.get() )
+        if( rxOpList )
             for( auto& rOp : *rxOpList )
                 if( nInsertPos <= rOp.mnTokPos )
                     rOp.mnTokPos += nInsertSize;

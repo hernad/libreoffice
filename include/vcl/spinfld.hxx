@@ -29,7 +29,7 @@
 class VCL_DLLPUBLIC SpinField : public Edit
 {
 public:
-    explicit        SpinField( vcl::Window* pParent, WinBits nWinStyle );
+    explicit        SpinField( vcl::Window* pParent, WinBits nWinStyle, WindowType nType = WindowType::SPINFIELD );
     virtual         ~SpinField() override;
     virtual void    dispose() override;
 
@@ -44,7 +44,7 @@ public:
     virtual void    MouseButtonUp( const MouseEvent& rMEvt ) override;
     virtual void    MouseMove( const MouseEvent& rMEvt ) override;
     virtual void    Paint( vcl::RenderContext& rRenderContext, const tools::Rectangle& rRect ) override;
-    virtual void    Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawFlags nFlags ) override;
+    virtual void    Draw( OutputDevice* pDev, const Point& rPos, DrawFlags nFlags ) override;
     virtual void    Resize() override;
     virtual void    StateChanged( StateChangedType nType ) override;
     virtual void    DataChanged( const DataChangedEvent& rDCEvt ) override;

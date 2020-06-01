@@ -190,6 +190,7 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/source/control/fixedhyper \
     vcl/source/control/hyperlabel \
     vcl/source/control/fmtfield \
+    vcl/source/control/InterimItemWindow \
     vcl/source/control/imgctrl \
     vcl/source/control/imivctl1 \
     vcl/source/control/imivctl2 \
@@ -316,6 +317,7 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/source/gdi/TypeSerializer \
     vcl/source/pdf/ResourceDict \
     vcl/source/pdf/Matrix3 \
+    vcl/source/pdf/XmpMetadata \
     vcl/source/graphic/GraphicID \
     vcl/source/graphic/GraphicLoader \
     vcl/source/graphic/GraphicObject \
@@ -328,9 +330,11 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/source/graphic/UnoGraphicObject \
     vcl/source/graphic/UnoGraphicProvider \
     vcl/source/graphic/UnoGraphicTransformer \
+    vcl/source/graphic/VectorGraphicSearch \
     vcl/source/bitmap/bitmap \
     vcl/source/bitmap/bitmapfilter \
     vcl/source/bitmap/BitmapAlphaClampFilter \
+    vcl/source/bitmap/BitmapBasicMorphologyFilter \
     vcl/source/bitmap/BitmapMonochromeFilter \
     vcl/source/bitmap/BitmapSmoothenFilter \
     vcl/source/bitmap/BitmapLightenFilter \
@@ -453,13 +457,13 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/source/fontsubset/sft \
     vcl/source/fontsubset/ttcr \
     vcl/source/fontsubset/xlat \
-    vcl/source/pdf/XmpMetadata \
     vcl/source/uitest/logger \
     vcl/source/uitest/uiobject \
     vcl/source/uitest/uitest \
     vcl/source/uitest/uno/uiobject_uno \
     vcl/source/uitest/uno/uitest_uno \
     vcl/backendtest/outputdevice/bitmap \
+    vcl/backendtest/outputdevice/clip \
     vcl/backendtest/outputdevice/common \
     vcl/backendtest/outputdevice/gradient \
     vcl/backendtest/outputdevice/line \
@@ -471,6 +475,7 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/backendtest/outputdevice/polyline \
     vcl/backendtest/outputdevice/polyline_b2d \
     vcl/backendtest/outputdevice/rectangle \
+    vcl/jsdialog/jsdialogbuilder \
 ))
 
 $(eval $(call gb_Library_add_cobjects,vcl,\
@@ -593,7 +598,6 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/source/opengl/OpenGLHelper \
     vcl/skia/SkiaHelper \
     $(if $(filter SKIA,$(BUILD_TYPE)), \
-        vcl/skia/packedsurfaceatlas \
         vcl/skia/salbmp \
         vcl/skia/zone \
         vcl/skia/gdiimpl \

@@ -57,11 +57,12 @@ struct SfxChildWinInfo;
 class SwTOXMark;
 struct SwDocStat;
 struct SwInsertTableOptions;
+class SwInsTableDlg;
 enum class SwBorderModes;
 enum class SwCharDlgMode;
 enum class SfxStyleFamily;
 
-namespace com{namespace sun{namespace star{
+namespace com::sun::star{
     namespace frame{
         class XModel;
     }
@@ -75,10 +76,10 @@ namespace com{namespace sun{namespace star{
     }
     namespace container { class XNameAccess; }
     namespace container { class XNamed; }
-}}}
+}
 
 
-namespace sw { namespace mark { class IFieldmark; class IDateFieldmark; } }
+namespace sw::mark { class IFieldmark; class IDateFieldmark; }
 
 typedef   void (*SwLabDlgMethod) (css::uno::Reference< css::frame::XModel> const & xModel, const SwLabItem& rItem);
 
@@ -117,14 +118,15 @@ public:
     virtual void        SetText( const OUString& rStr ) = 0;
 };
 
-class AbstractInsTableDlg : public VclAbstractDialog
+class AbstractInsTableDlg
 {
 protected:
-    virtual ~AbstractInsTableDlg() override = default;
+    virtual ~AbstractInsTableDlg() = default;
 public:
     virtual void            GetValues( OUString& rName, sal_uInt16& rRow, sal_uInt16& rCol,
                                 SwInsertTableOptions& rInsTableFlags, OUString& rTableAutoFormatName,
                                 std::unique_ptr<SwTableAutoFormat>& prTAFormat ) = 0;
+    virtual std::shared_ptr<weld::DialogController> getDialogController() = 0;
 };
 
 class AbstractJavaEditDialog : public VclAbstractDialog
@@ -150,7 +152,9 @@ public:
     virtual css::uno::Reference< css::sdbc::XResultSet> GetResultSet() const = 0;
     virtual bool IsSaveSingleDoc() const = 0;
     virtual bool IsGenerateFromDataBase() const = 0;
+    virtual bool IsFileEncryptedFromDataBase() const = 0;
     virtual OUString GetColumnName() const = 0;
+    virtual OUString GetPasswordColumnName() const = 0;
     virtual OUString GetTargetURL() const = 0;
 };
 
@@ -457,7 +461,7 @@ public:
         SwWrtShell &rSh, bool bEd = false) = 0;
     virtual VclPtr<VclAbstractDialog>          CreateTitlePageDlg(weld::Window* pParent) = 0;
     virtual VclPtr<VclAbstractDialog>         CreateVclSwViewDialog(SwView& rView) = 0;
-    virtual VclPtr<AbstractInsTableDlg>        CreateInsTableDlg(SwView& rView) = 0;
+    virtual std::shared_ptr<AbstractInsTableDlg> CreateInsTableDlg(SwView& rView) = 0;
     virtual VclPtr<AbstractJavaEditDialog>     CreateJavaEditDialog(weld::Window* pParent,
         SwWrtShell* pWrtSh) = 0;
     virtual VclPtr<AbstractMailMergeDlg>       CreateMailMergeDlg(

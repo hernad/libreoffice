@@ -33,7 +33,7 @@
 #include <sal/types.h>
 #include <sax/fshelper.hxx>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace beans {
         class XPropertySet;
     }
@@ -60,14 +60,14 @@ namespace com { namespace sun { namespace star {
     namespace frame {
         class XModel;
     }
-}}}
+}
 
 namespace oox {
 namespace core {
     class XmlFilterBase;
 }}
 
-namespace oox { namespace drawingml {
+namespace oox::drawingml {
 
 enum AxesType
 {
@@ -106,7 +106,6 @@ private:
 
     // members filled by InitRangeSegmentationProperties (retrieved from DataProvider)
     bool mbHasCategoryLabels; //if the categories are only automatically generated this will be false
-    bool mbIsCategoryPositionShifted; //if the value axis crosses the category axis between tickmarks this will be true
 
     //css::uno::Reference< css::drawing::XShapes > mxAdditionalShapes;
     css::uno::Reference< css::chart2::data::XDataSequence > mxCategoriesValues;
@@ -231,7 +230,7 @@ public:
             css::chart2::XChartDocument > & xChartDoc );
 };
 
-}}
+}
 
 #endif // INCLUDED_OOX_EXPORT_CHARTEXPORT_HXX
 

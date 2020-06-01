@@ -62,6 +62,8 @@
 #include <vector>
 #include <com/sun/star/reflection/theCoreReflection.hpp>
 #include <unotools/charclass.hxx>
+#include "uiobject.hxx"
+
 
 namespace basctl
 {
@@ -233,12 +235,14 @@ EditorWindow::EditorWindow (vcl::Window* pParent, ModulWindow* pModulWindow) :
     Window(pParent, WB_BORDER),
     rModulWindow(*pModulWindow),
     nCurTextWidth(0),
+    m_nSetSourceInBasicId(nullptr),
     aHighlighter(HighlighterLanguage::Basic),
     bHighlighting(false),
     bDoSyntaxHighlight(true),
     bDelayHighlight(true),
     pCodeCompleteWnd(VclPtr<CodeCompleteWindow>::Create(this))
 {
+    set_id("EditorWindow");
     SetBackground(Wallpaper(rModulWindow.GetLayout().GetSyntaxBackgroundColor()));
     SetPointer( PointerStyle::Text );
     SetHelpId( HID_BASICIDE_EDITORWINDOW );
@@ -263,6 +267,12 @@ EditorWindow::~EditorWindow()
 
 void EditorWindow::dispose()
 {
+    if (m_nSetSourceInBasicId)
+    {
+        Application::RemoveUserEvent(m_nSetSourceInBasicId);
+        m_nSetSourceInBasicId = nullptr;
+    }
+
     Reference< beans::XMultiPropertySet > n;
     {
         osl::MutexGuard g(mutex_);
@@ -929,8 +939,18 @@ void EditorWindow::Paint(vcl::RenderContext& rRenderContext, const tools::Rectan
 
 void EditorWindow::LoseFocus()
 {
-    SetSourceInBasic();
+    // tdf#114258 wait until the next event loop cycle to do this so it doesn't
+    // happen during a mouse down/up selection in the treeview whose contents
+    // this may update
+    if (!m_nSetSourceInBasicId)
+        m_nSetSourceInBasicId = Application::PostUserEvent(LINK(this, EditorWindow, SetSourceInBasicHdl));
     Window::LoseFocus();
+}
+
+IMPL_LINK_NOARG(EditorWindow, SetSourceInBasicHdl, void*, void)
+{
+    m_nSetSourceInBasicId = nullptr;
+    SetSourceInBasic();
 }
 
 void EditorWindow::SetSourceInBasic()
@@ -1341,6 +1361,12 @@ void EditorWindow::ForceSyntaxTimeout()
     aSyntaxIdle.Stop();
     aSyntaxIdle.Invoke();
 }
+
+FactoryFunction EditorWindow::GetUITestFactory() const
+{
+    return EditorWindowUIObject::create;
+}
+
 
 // BreakPointWindow
 
@@ -2835,13 +2861,10 @@ std::vector< OUString > UnoTypeCodeCompletetor::GetXIdlClassMethods() const
     std::vector< OUString > aRetVect;
     if( bCanComplete && ( xClass != nullptr ) )
     {
-        Sequence< Reference< reflection::XIdlMethod > > aMethods = xClass->getMethods();
-        if( aMethods.hasElements() )
+        const Sequence< Reference< reflection::XIdlMethod > > aMethods = xClass->getMethods();
+        for(Reference< reflection::XIdlMethod > const & rMethod : aMethods)
         {
-            for(sal_Int32 l = 0; l < aMethods.getLength(); ++l)
-            {
-                aRetVect.push_back( aMethods[l]->getName() );
-            }
+            aRetVect.push_back( rMethod->getName() );
         }
     }
     return aRetVect;//this is empty when cannot code complete
@@ -2852,13 +2875,10 @@ std::vector< OUString > UnoTypeCodeCompletetor::GetXIdlClassFields() const
     std::vector< OUString > aRetVect;
     if( bCanComplete && ( xClass != nullptr ) )
     {
-        Sequence< Reference< reflection::XIdlField > > aFields = xClass->getFields();
-        if( aFields.hasElements() )
+        const Sequence< Reference< reflection::XIdlField > > aFields = xClass->getFields();
+        for(Reference< reflection::XIdlField > const & rxField : aFields)
         {
-            for(sal_Int32 l = 0; l < aFields.getLength(); ++l)
-            {
-                aRetVect.push_back( aFields[l]->getName() );
-            }
+            aRetVect.push_back( rxField->getName() );
         }
     }
     return aRetVect;//this is empty when cannot code complete

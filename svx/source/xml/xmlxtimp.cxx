@@ -101,14 +101,11 @@ css::uno::Reference< css::xml::sax::XFastContextHandler >
         SvxXMLTableImportContext::createFastChildContext(sal_Int32 nElement,
             const css::uno::Reference< css::xml::sax::XFastAttributeList > & rAttrList)
 {
-    sal_Int32 nNamespace = nElement & NMSP_MASK;
-    if( NAMESPACE_TOKEN(XML_NAMESPACE_DRAW) == nNamespace ||
-        NAMESPACE_TOKEN(XML_NAMESPACE_DRAW_OOO) == nNamespace )
+    if( IsTokenInNamespace(nElement, XML_NAMESPACE_DRAW) ||
+        IsTokenInNamespace(nElement, XML_NAMESPACE_DRAW_OOO) )
     {
-        sax_fastparser::FastAttributeList *pFastAttribList =
-            sax_fastparser::FastAttributeList::castToFastAttributeList( rAttrList );
         SvXMLAttributeList *pAttrList = new SvXMLAttributeList;
-        for (auto& aIter : *pFastAttribList)
+        for (auto& aIter : sax_fastparser::castToFastAttributeList( rAttrList ))
             pAttrList->AddAttribute(
                 SvXMLImport::getNamespacePrefixFromToken(aIter.getToken(), nullptr) + ":" +
                 GetXMLToken(static_cast<XMLTokenEnum>(aIter.getToken() & TOKEN_MASK)),
@@ -430,13 +427,12 @@ bool SvxXMLXTableImport::load( const OUString &rPath, const OUString &rReferer,
 SvXMLImportContext *SvxXMLXTableImport::CreateFastContext( sal_Int32 nElement,
         const ::css::uno::Reference< ::css::xml::sax::XFastAttributeList >& /*xAttrList*/ )
 {
-    sal_Int32 nNamespace = nElement & NMSP_MASK;
-    if( NAMESPACE_TOKEN(XML_NAMESPACE_OOO) == nNamespace ||
-        NAMESPACE_TOKEN(XML_NAMESPACE_OFFICE) == nNamespace ||
-        NAMESPACE_TOKEN(XML_NAMESPACE_OFFICE_OOO) == nNamespace )
+    if( IsTokenInNamespace(nElement, XML_NAMESPACE_OOO) ||
+        IsTokenInNamespace(nElement, XML_NAMESPACE_OFFICE) ||
+        IsTokenInNamespace(nElement, XML_NAMESPACE_OFFICE_OOO) )
     {
-        bool bOOoFormat = (NAMESPACE_TOKEN(XML_NAMESPACE_OFFICE) == nNamespace) ||
-                          (NAMESPACE_TOKEN(XML_NAMESPACE_OFFICE_OOO) == nNamespace);
+        bool bOOoFormat = IsTokenInNamespace(nElement, XML_NAMESPACE_OFFICE) ||
+                          IsTokenInNamespace(nElement, XML_NAMESPACE_OFFICE_OOO);
         Type aType = mrTable->getElementType();
         sal_Int32 nToken = nElement & TOKEN_MASK;
 

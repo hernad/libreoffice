@@ -3624,10 +3624,7 @@ desktop/win32/source/unoinfo.cxx
 drawinglayer/inc/converters.hxx
 drawinglayer/inc/emfplushelper.hxx
 drawinglayer/inc/primitive2d/cropprimitive2d.hxx
-drawinglayer/inc/primitive2d/epsprimitive2d.hxx
-drawinglayer/inc/primitive2d/fillhatchprimitive2d.hxx
 drawinglayer/inc/primitive2d/graphicprimitivehelper2d.hxx
-drawinglayer/inc/primitive2d/pointarrayprimitive2d.hxx
 drawinglayer/inc/primitive2d/texteffectprimitive2d.hxx
 drawinglayer/inc/primitive2d/textlineprimitive2d.hxx
 drawinglayer/inc/primitive2d/textstrikeoutprimitive2d.hxx
@@ -3645,7 +3642,6 @@ drawinglayer/inc/processor3d/zbufferprocessor3d.hxx
 drawinglayer/inc/texture/texture.hxx
 drawinglayer/inc/texture/texture3d.hxx
 drawinglayer/inc/wmfemfhelper.hxx
-drawinglayer/qa/unit/border.cxx
 drawinglayer/source/animation/animationtiming.cxx
 drawinglayer/source/attribute/fillgradientattribute.cxx
 drawinglayer/source/attribute/fillgraphicattribute.cxx
@@ -3744,20 +3740,12 @@ drawinglayer/source/processor2d/baseprocessor2d.cxx
 drawinglayer/source/processor2d/contourextractor2d.cxx
 drawinglayer/source/processor2d/getdigitlanguage.cxx
 drawinglayer/source/processor2d/getdigitlanguage.hxx
-drawinglayer/source/processor2d/helperwrongspellrenderer.cxx
-drawinglayer/source/processor2d/helperwrongspellrenderer.hxx
 drawinglayer/source/processor2d/hittestprocessor2d.cxx
 drawinglayer/source/processor2d/linegeometryextractor2d.cxx
 drawinglayer/source/processor2d/objectinfoextractor2d.cxx
 drawinglayer/source/processor2d/processor2dtools.cxx
 drawinglayer/source/processor2d/processorfromoutputdevice.cxx
 drawinglayer/source/processor2d/textaspolygonextractor2d.cxx
-drawinglayer/source/processor2d/vclhelperbufferdevice.cxx
-drawinglayer/source/processor2d/vclhelperbufferdevice.hxx
-drawinglayer/source/processor2d/vclmetafileprocessor2d.cxx
-drawinglayer/source/processor2d/vclmetafileprocessor2d.hxx
-drawinglayer/source/processor2d/vclpixelprocessor2d.cxx
-drawinglayer/source/processor2d/vclprocessor2d.cxx
 drawinglayer/source/processor3d/baseprocessor3d.cxx
 drawinglayer/source/processor3d/cutfindprocessor3d.cxx
 drawinglayer/source/processor3d/defaultprocessor3d.cxx
@@ -4991,7 +4979,6 @@ framework/inc/xml/statusbardocumenthandler.hxx
 framework/inc/xml/toolboxconfigurationdefines.hxx
 framework/inc/xml/toolboxdocumenthandler.hxx
 framework/inc/xml/xmlnamespaces.hxx
-framework/qa/cppunit/dispatchtest.cxx
 framework/source/accelerators/acceleratorconfiguration.cxx
 framework/source/accelerators/documentacceleratorconfiguration.cxx
 framework/source/accelerators/globalacceleratorconfiguration.cxx
@@ -5669,7 +5656,6 @@ include/comphelper/propertysequence.hxx
 include/comphelper/propertysethelper.hxx
 include/comphelper/propertysetinfo.hxx
 include/comphelper/propertystatecontainer.hxx
-include/comphelper/propertyvalue.hxx
 include/comphelper/propmultiplex.hxx
 include/comphelper/propstate.hxx
 include/comphelper/proxyaggregation.hxx
@@ -5849,6 +5835,9 @@ include/drawinglayer/attribute/sdrobjectattribute3d.hxx
 include/drawinglayer/attribute/sdrsceneattribute3d.hxx
 include/drawinglayer/attribute/sdrshadowattribute.hxx
 include/drawinglayer/geometry/viewinformation3d.hxx
+include/drawinglayer/primitive2d/epsprimitive2d.hxx
+include/drawinglayer/primitive2d/fillhatchprimitive2d.hxx
+include/drawinglayer/primitive2d/pointarrayprimitive2d.hxx
 include/drawinglayer/primitive2d/discretebitmapprimitive2d.hxx
 include/drawinglayer/primitive2d/discreteshadowprimitive2d.hxx
 include/drawinglayer/primitive2d/drawinglayer_primitivetypes2d.hxx
@@ -6444,7 +6433,6 @@ include/sfx2/sfxuno.hxx
 include/sfx2/shell.hxx
 include/sfx2/sidebar/AsynchronousCall.hxx
 include/sfx2/sidebar/Context.hxx
-include/sfx2/sidebar/ControlFactory.hxx
 include/sfx2/sidebar/ControllerItem.hxx
 include/sfx2/sidebar/Deck.hxx
 include/sfx2/sidebar/FocusManager.hxx
@@ -6462,7 +6450,6 @@ include/sfx2/sidebar/SidebarPanelBase.hxx
 include/sfx2/sidebar/SidebarToolBox.hxx
 include/sfx2/sidebar/TabBar.hxx
 include/sfx2/sidebar/Theme.hxx
-include/sfx2/sidebar/UnoSidebar.hxx
 include/sfx2/signaturestate.hxx
 include/sfx2/stbitem.hxx
 include/sfx2/styfitem.hxx
@@ -6472,7 +6459,6 @@ include/sfx2/tbxctrl.hxx
 include/sfx2/templatedlg.hxx
 include/sfx2/templatelocalview.hxx
 include/sfx2/templateproperties.hxx
-include/sfx2/templdlg.hxx
 include/sfx2/thumbnailview.hxx
 include/sfx2/titledockwin.hxx
 include/sfx2/tplpitem.hxx
@@ -7345,7 +7331,6 @@ include/vcl/cairo.hxx
 include/vcl/calendar.hxx
 include/vcl/canvastools.hxx
 include/vcl/checksum.hxx
-include/vcl/combobox.hxx
 include/vcl/commandevent.hxx
 include/vcl/commandinfoprovider.hxx
 include/vcl/ctrl.hxx
@@ -7368,7 +7353,6 @@ include/vcl/extoutdevdata.hxx
 include/vcl/field.hxx
 include/vcl/fixed.hxx
 include/vcl/floatwin.hxx
-include/vcl/fltcall.hxx
 include/vcl/fmtfield.hxx
 include/vcl/fntstyle.hxx
 include/vcl/font.hxx
@@ -7464,6 +7448,8 @@ include/vcl/textview.hxx
 include/vcl/threadex.hxx
 include/vcl/timer.hxx
 include/vcl/toolbox.hxx
+include/vcl/toolkit/button.hxx
+include/vcl/toolkit/combobox.hxx
 include/vcl/toolkit/controllayout.hxx
 include/vcl/toolkit/dialog.hxx
 include/vcl/toolkit/field.hxx
@@ -8386,7 +8372,6 @@ oox/source/drawingml/color.cxx
 oox/source/drawingml/colorchoicecontext.cxx
 oox/source/drawingml/connectorshapecontext.cxx
 oox/source/drawingml/customshapegeometry.cxx
-oox/source/drawingml/customshapepresetdata.cxx
 oox/source/drawingml/customshapeproperties.cxx
 oox/source/drawingml/diagram/constraintlistcontext.cxx
 oox/source/drawingml/diagram/constraintlistcontext.hxx
@@ -8554,15 +8539,11 @@ oox/source/ppt/timenode.cxx
 oox/source/ppt/timenodelistcontext.cxx
 oox/source/ppt/timetargetelementcontext.cxx
 oox/source/ppt/timetargetelementcontext.hxx
-oox/source/shape/LockedCanvasContext.cxx
-oox/source/shape/LockedCanvasContext.hxx
 oox/source/shape/ShapeContextHandler.cxx
 oox/source/shape/ShapeContextHandler.hxx
 oox/source/shape/ShapeDrawingFragmentHandler.cxx
 oox/source/shape/ShapeDrawingFragmentHandler.hxx
 oox/source/shape/ShapeFilterBase.cxx
-oox/source/shape/WpgContext.cxx
-oox/source/shape/WpgContext.hxx
 oox/source/token/namespacemap.cxx
 oox/source/token/propertynames.cxx
 oox/source/token/relationship.cxx
@@ -9271,7 +9252,6 @@ sc/inc/dptabres.hxx
 sc/inc/dptabsrc.hxx
 sc/inc/dputil.hxx
 sc/inc/dragdata.hxx
-sc/inc/drawpage.hxx
 sc/inc/drdefuno.hxx
 sc/inc/drwlayer.hxx
 sc/inc/editdataarray.hxx
@@ -9301,7 +9281,6 @@ sc/inc/funcdesc.hxx
 sc/inc/funcuno.hxx
 sc/inc/generalfunction.hxx
 sc/inc/global.hxx
-sc/inc/globalnames.hxx
 sc/inc/grouparealistener.hxx
 sc/inc/helpids.h
 sc/inc/hints.hxx
@@ -9356,7 +9335,6 @@ sc/inc/refhint.hxx
 sc/inc/refreshtimer.hxx
 sc/inc/refreshtimerprotector.hxx
 sc/inc/reftokenhelper.hxx
-sc/inc/refupdatecontext.hxx
 sc/inc/reordermap.hxx
 sc/inc/rowheightcontext.hxx
 sc/inc/scabstdlg.hxx
@@ -9377,7 +9355,6 @@ sc/inc/sheetdata.hxx
 sc/inc/sheetevents.hxx
 sc/inc/shellids.hxx
 sc/inc/simpleformulacalc.hxx
-sc/inc/simplerangelist.hxx
 sc/inc/sortparam.hxx
 sc/inc/spellcheckcontext.hxx
 sc/inc/srchuno.hxx
@@ -9402,7 +9379,6 @@ sc/inc/tokenstringcontext.hxx
 sc/inc/tokenuno.hxx
 sc/inc/typedstrdata.hxx
 sc/inc/types.hxx
-sc/inc/undorangename.hxx
 sc/inc/unitconv.hxx
 sc/inc/unonames.hxx
 sc/inc/unoreflist.hxx
@@ -9413,7 +9389,6 @@ sc/inc/validat.hxx
 sc/inc/viewopti.hxx
 sc/inc/viewuno.hxx
 sc/inc/waitoff.hxx
-sc/inc/warnpassword.hxx
 sc/inc/xmlwrap.hxx
 sc/inc/zforauto.hxx
 sc/qa/extras/check_data_pilot_field.cxx
@@ -9425,7 +9400,6 @@ sc/qa/extras/new_cond_format.cxx
 sc/qa/extras/recordchanges-test.cxx
 sc/qa/extras/regression-test.cxx
 sc/qa/extras/scannotationsobj.cxx
-sc/qa/extras/scarealinkobj.cxx
 sc/qa/extras/sccellcursorobj.cxx
 sc/qa/extras/sccellrangesobj.cxx
 sc/qa/extras/scdatabaserangeobj.cxx
@@ -9435,12 +9409,9 @@ sc/qa/extras/scnamedrangeobj.cxx
 sc/qa/extras/scoutlineobj.cxx
 sc/qa/extras/scsubtotalfieldobj.cxx
 sc/qa/extras/sctablesheetobj.cxx
-sc/qa/extras/sctablesheetsobj.cxx
-sc/qa/extras/sctabviewobj.cxx
 sc/qa/perf/scperfobj.cxx
 sc/qa/unit/bugfix-test.cxx
 sc/qa/unit/copy_paste_test.cxx
-sc/qa/unit/datacache.cxx
 sc/qa/unit/dataproviders_test.cxx
 sc/qa/unit/datatransformation_test.cxx
 sc/qa/unit/filters-test.cxx
@@ -9459,7 +9430,6 @@ sc/qa/unit/functions_test.hxx
 sc/qa/unit/functions_test_old.cxx
 sc/qa/unit/functions_text.cxx
 sc/qa/unit/helper/csv_handler.hxx
-sc/qa/unit/helper/debughelper.hxx
 sc/qa/unit/helper/qahelper.cxx
 sc/qa/unit/helper/qahelper.hxx
 sc/qa/unit/helper/shared_test_impl.hxx
@@ -9469,7 +9439,6 @@ sc/qa/unit/helper/xpath.hxx
 sc/qa/unit/mark_test.cxx
 sc/qa/unit/opencl-test.cxx
 sc/qa/unit/parallelism.cxx
-sc/qa/unit/pivottable_filters_test.cxx
 sc/qa/unit/range.cxx
 sc/qa/unit/rangelst_test.cxx
 sc/qa/unit/screenshots/screenshots.cxx
@@ -9478,7 +9447,6 @@ sc/qa/unit/subsequent_filters-test.cxx
 sc/qa/unit/test_ScChartListenerCollection.cxx
 sc/qa/unit/tiledrendering/tiledrendering.cxx
 sc/qa/unit/ucalc.cxx
-sc/qa/unit/ucalc.hxx
 sc/qa/unit/ucalc_column.cxx
 sc/qa/unit/ucalc_condformat.cxx
 sc/qa/unit/ucalc_formula.cxx
@@ -9845,7 +9813,6 @@ sc/source/filter/inc/numberformatsbuffer.hxx
 sc/source/filter/inc/ooxformulaparser.hxx
 sc/source/filter/inc/op.h
 sc/source/filter/inc/optab.h
-sc/source/filter/inc/orcusfiltersimpl.hxx
 sc/source/filter/inc/orcusinterface.hxx
 sc/source/filter/inc/otlnbuff.hxx
 sc/source/filter/inc/pagesettings.hxx
@@ -9863,7 +9830,6 @@ sc/source/filter/inc/richstring.hxx
 sc/source/filter/inc/richstringcontext.hxx
 sc/source/filter/inc/root.hxx
 sc/source/filter/inc/rtfexp.hxx
-sc/source/filter/inc/rtfimp.hxx
 sc/source/filter/inc/rtfparse.hxx
 sc/source/filter/inc/scenariobuffer.hxx
 sc/source/filter/inc/scenariocontext.hxx
@@ -10015,7 +9981,6 @@ sc/source/filter/oox/worksheethelper.cxx
 sc/source/filter/oox/worksheetsettings.cxx
 sc/source/filter/orcus/filterdetect.cxx
 sc/source/filter/orcus/interface.cxx
-sc/source/filter/orcus/orcusfiltersimpl.cxx
 sc/source/filter/orcus/xmlcontext.cxx
 sc/source/filter/qpro/qpro.cxx
 sc/source/filter/qpro/qproform.cxx
@@ -10189,7 +10154,6 @@ sc/source/ui/app/scdll.cxx
 sc/source/ui/app/scmod.cxx
 sc/source/ui/app/seltrans.cxx
 sc/source/ui/app/transobj.cxx
-sc/source/ui/app/typemap.cxx
 sc/source/ui/app/uiitems.cxx
 sc/source/ui/attrdlg/attrdlg.cxx
 sc/source/ui/attrdlg/scabstdlg.cxx
@@ -10296,7 +10260,6 @@ sc/source/ui/drawfunc/fupoor.cxx
 sc/source/ui/drawfunc/fusel.cxx
 sc/source/ui/drawfunc/fusel2.cxx
 sc/source/ui/drawfunc/futext.cxx
-sc/source/ui/drawfunc/futext2.cxx
 sc/source/ui/drawfunc/futext3.cxx
 sc/source/ui/drawfunc/graphsh.cxx
 sc/source/ui/drawfunc/mediash.cxx
@@ -10335,9 +10298,7 @@ sc/source/ui/inc/IAnyRefDialog.hxx
 sc/source/ui/inc/MatrixComparisonGenerator.hxx
 sc/source/ui/inc/MovingAverageDialog.hxx
 sc/source/ui/inc/PivotLayoutDialog.hxx
-sc/source/ui/inc/PivotLayoutTreeList.hxx
 sc/source/ui/inc/PivotLayoutTreeListBase.hxx
-sc/source/ui/inc/PivotLayoutTreeListData.hxx
 sc/source/ui/inc/PivotLayoutTreeListLabel.hxx
 sc/source/ui/inc/RandomNumberGeneratorDialog.hxx
 sc/source/ui/inc/RegressionDialog.hxx
@@ -10353,7 +10314,6 @@ sc/source/ui/inc/areasave.hxx
 sc/source/ui/inc/areasdlg.hxx
 sc/source/ui/inc/asciiopt.hxx
 sc/source/ui/inc/attrdlg.hxx
-sc/source/ui/inc/auditsh.hxx
 sc/source/ui/inc/autofmt.hxx
 sc/source/ui/inc/autostyl.hxx
 sc/source/ui/inc/cbutton.hxx
@@ -10363,7 +10323,6 @@ sc/source/ui/inc/chartsh.hxx
 sc/source/ui/inc/checklistmenu.hxx
 sc/source/ui/inc/client.hxx
 sc/source/ui/inc/cliputil.hxx
-sc/source/ui/inc/colorformat.hxx
 sc/source/ui/inc/colrowba.hxx
 sc/source/ui/inc/condformatdlg.hxx
 sc/source/ui/inc/condformatdlgentry.hxx
@@ -10374,22 +10333,18 @@ sc/source/ui/inc/condformatuno.hxx
 sc/source/ui/inc/conflictsdlg.hxx
 sc/source/ui/inc/consdlg.hxx
 sc/source/ui/inc/content.hxx
-sc/source/ui/inc/corodlg.hxx
-sc/source/ui/inc/crdlg.hxx
 sc/source/ui/inc/crnrdlg.hxx
 sc/source/ui/inc/csvcontrol.hxx
 sc/source/ui/inc/csvgrid.hxx
 sc/source/ui/inc/csvruler.hxx
 sc/source/ui/inc/csvsplits.hxx
 sc/source/ui/inc/csvtablebox.hxx
-sc/source/ui/inc/dapidata.hxx
 sc/source/ui/inc/dapitype.hxx
 sc/source/ui/inc/datafdlg.hxx
 sc/source/ui/inc/dataprovider.hxx
 sc/source/ui/inc/dataproviderdlg.hxx
 sc/source/ui/inc/datastream.hxx
 sc/source/ui/inc/datastreamdlg.hxx
-sc/source/ui/inc/datatableview.hxx
 sc/source/ui/inc/datatransformation.hxx
 sc/source/ui/inc/dbdocfun.hxx
 sc/source/ui/inc/dbfunc.hxx
@@ -10403,12 +10358,10 @@ sc/source/ui/inc/dpgroupdlg.hxx
 sc/source/ui/inc/drawsh.hxx
 sc/source/ui/inc/drawutil.hxx
 sc/source/ui/inc/drawview.hxx
-sc/source/ui/inc/drformsh.hxx
 sc/source/ui/inc/drtxtob.hxx
 sc/source/ui/inc/drwtrans.hxx
 sc/source/ui/inc/dwfunctr.hxx
 sc/source/ui/inc/editable.hxx
-sc/source/ui/inc/editfield.hxx
 sc/source/ui/inc/editsh.hxx
 sc/source/ui/inc/filldlg.hxx
 sc/source/ui/inc/filtdlg.hxx
@@ -10441,24 +10394,18 @@ sc/source/ui/inc/inputwin.hxx
 sc/source/ui/inc/inscodlg.hxx
 sc/source/ui/inc/instbdlg.hxx
 sc/source/ui/inc/invmerge.hxx
-sc/source/ui/inc/lbseldlg.hxx
 sc/source/ui/inc/linkarea.hxx
 sc/source/ui/inc/lnktrans.hxx
-sc/source/ui/inc/mediash.hxx
-sc/source/ui/inc/mergecellsdialog.hxx
 sc/source/ui/inc/msgpool.hxx
 sc/source/ui/inc/mtrindlg.hxx
 sc/source/ui/inc/mvtabdlg.hxx
-sc/source/ui/inc/namecrea.hxx
 sc/source/ui/inc/namedefdlg.hxx
 sc/source/ui/inc/namedlg.hxx
 sc/source/ui/inc/namemgrtable.hxx
-sc/source/ui/inc/namepast.hxx
 sc/source/ui/inc/navcitem.hxx
 sc/source/ui/inc/navipi.hxx
 sc/source/ui/inc/navsett.hxx
 sc/source/ui/inc/notemark.hxx
-sc/source/ui/inc/oleobjsh.hxx
 sc/source/ui/inc/olinefun.hxx
 sc/source/ui/inc/olinewin.hxx
 sc/source/ui/inc/opredlin.hxx
@@ -10468,8 +10415,6 @@ sc/source/ui/inc/overlayobject.hxx
 sc/source/ui/inc/pagedata.hxx
 sc/source/ui/inc/pfiltdlg.hxx
 sc/source/ui/inc/pfuncache.hxx
-sc/source/ui/inc/pgbrksh.hxx
-sc/source/ui/inc/pivotsh.hxx
 sc/source/ui/inc/pntlock.hxx
 sc/source/ui/inc/preview.hxx
 sc/source/ui/inc/prevloc.hxx
@@ -10507,7 +10452,6 @@ sc/source/ui/inc/spelleng.hxx
 sc/source/ui/inc/spellparam.hxx
 sc/source/ui/inc/strindlg.hxx
 sc/source/ui/inc/styledlg.hxx
-sc/source/ui/inc/subtdlg.hxx
 sc/source/ui/inc/tabbgcolordlg.hxx
 sc/source/ui/inc/tabcont.hxx
 sc/source/ui/inc/tabopdlg.hxx
@@ -10549,8 +10493,6 @@ sc/source/ui/inc/validate.hxx
 sc/source/ui/inc/viewdata.hxx
 sc/source/ui/inc/viewfunc.hxx
 sc/source/ui/inc/viewutil.hxx
-sc/source/ui/inc/warnbox.hxx
-sc/source/ui/inc/xmlsourcedlg.hxx
 sc/source/ui/miscdlgs/acredlin.cxx
 sc/source/ui/miscdlgs/anyrefdg.cxx
 sc/source/ui/miscdlgs/autofmt.cxx
@@ -10600,7 +10542,6 @@ sc/source/ui/navipi/navcitem.cxx
 sc/source/ui/navipi/navipi.cxx
 sc/source/ui/navipi/scenwnd.cxx
 sc/source/ui/optdlg/calcoptionsdlg.cxx
-sc/source/ui/optdlg/calcoptionsdlg.hxx
 sc/source/ui/optdlg/opredlin.cxx
 sc/source/ui/optdlg/tpcalc.cxx
 sc/source/ui/optdlg/tpcompatibility.cxx
@@ -10620,9 +10561,7 @@ sc/source/ui/sidebar/AlignmentPropertyPanel.hxx
 sc/source/ui/sidebar/CellAppearancePropertyPanel.cxx
 sc/source/ui/sidebar/CellAppearancePropertyPanel.hxx
 sc/source/ui/sidebar/CellBorderStyleControl.cxx
-sc/source/ui/sidebar/CellBorderStyleControl.hxx
 sc/source/ui/sidebar/CellLineStyleControl.cxx
-sc/source/ui/sidebar/CellLineStyleControl.hxx
 sc/source/ui/sidebar/CellLineStyleValueSet.cxx
 sc/source/ui/sidebar/CellLineStyleValueSet.hxx
 sc/source/ui/sidebar/NumberFormatControl.cxx
@@ -11999,6 +11938,7 @@ sfx2/inc/sidebar/Accessible.hxx
 sfx2/inc/sidebar/AccessibleTitleBar.hxx
 sfx2/inc/sidebar/ContextChangeBroadcaster.hxx
 sfx2/inc/sidebar/ContextList.hxx
+sfx2/inc/sidebar/ControlFactory.hxx
 sfx2/inc/sidebar/ControllerFactory.hxx
 sfx2/inc/sidebar/DeckDescriptor.hxx
 sfx2/inc/sidebar/DeckLayouter.hxx
@@ -12015,6 +11955,7 @@ sfx2/inc/sidebar/UnoDeck.hxx
 sfx2/inc/sidebar/UnoDecks.hxx
 sfx2/inc/sidebar/UnoPanel.hxx
 sfx2/inc/sidebar/UnoPanels.hxx
+sfx2/inc/sidebar/UnoSidebar.hxx
 sfx2/inc/sorgitm.hxx
 sfx2/inc/srchdlg.hxx
 sfx2/inc/strings.hxx
@@ -12792,8 +12733,6 @@ starmath/source/unomodel.cxx
 starmath/source/utility.cxx
 starmath/source/view.cxx
 starmath/source/visitors.cxx
-starmath/source/wordexportbase.cxx
-starmath/source/wordexportbase.hxx
 stoc/source/corereflection/base.hxx
 stoc/source/corereflection/crarray.cxx
 stoc/source/corereflection/crbase.cxx
@@ -13219,9 +13158,9 @@ svx/inc/sdgtritm.hxx
 svx/inc/sdr/attribute/sdrfilltextattribute.hxx
 svx/inc/sdr/attribute/sdrformtextattribute.hxx
 svx/inc/sdr/attribute/sdrformtextoutlineattribute.hxx
-svx/inc/sdr/attribute/sdrlinefillshadowtextattribute.hxx
-svx/inc/sdr/attribute/sdrlineshadowtextattribute.hxx
-svx/inc/sdr/attribute/sdrshadowtextattribute.hxx
+svx/inc/sdr/attribute/sdrlinefilleffectstextattribute.hxx
+svx/inc/sdr/attribute/sdrlineeffectstextattribute.hxx
+svx/inc/sdr/attribute/sdreffectstextattribute.hxx
 svx/inc/sdr/attribute/sdrtextattribute.hxx
 svx/inc/sdr/contact/objectcontactofobjlistpainter.hxx
 svx/inc/sdr/contact/viewcontactofe3d.hxx
@@ -13332,7 +13271,6 @@ svx/inc/unomlstr.hxx
 svx/inc/xpolyimp.hxx
 svx/qa/unit/svdraw/test_SdrTextObject.cxx
 svx/qa/unit/svx-dialogs-test.cxx
-svx/qa/unit/xoutdev.cxx
 svx/source/accessibility/AccessibleControlShape.cxx
 svx/source/accessibility/AccessibleEmptyEditSource.cxx
 svx/source/accessibility/AccessibleEmptyEditSource.hxx
@@ -13609,9 +13547,9 @@ svx/source/sdr/attribute/sdrallfillattributeshelper.cxx
 svx/source/sdr/attribute/sdrfilltextattribute.cxx
 svx/source/sdr/attribute/sdrformtextattribute.cxx
 svx/source/sdr/attribute/sdrformtextoutlineattribute.cxx
-svx/source/sdr/attribute/sdrlinefillshadowtextattribute.cxx
-svx/source/sdr/attribute/sdrlineshadowtextattribute.cxx
-svx/source/sdr/attribute/sdrshadowtextattribute.cxx
+svx/source/sdr/attribute/sdrlinefilleffectstextattribute.cxx
+svx/source/sdr/attribute/sdrlineeffectstextattribute.cxx
+svx/source/sdr/attribute/sdreffectstextattribute.cxx
 svx/source/sdr/attribute/sdrtextattribute.cxx
 svx/source/sdr/contact/displayinfo.cxx
 svx/source/sdr/contact/objectcontact.cxx
@@ -13897,6 +13835,7 @@ svx/source/tbxctrls/itemwin.cxx
 svx/source/tbxctrls/layctrl.cxx
 svx/source/tbxctrls/lboxctrl.cxx
 svx/source/tbxctrls/linectrl.cxx
+svx/source/tbxctrls/linemetricbox.hxx
 svx/source/tbxctrls/linewidthctrl.cxx
 svx/source/tbxctrls/tbcontrl.cxx
 svx/source/tbxctrls/tbunocontroller.cxx
@@ -14258,6 +14197,7 @@ sw/qa/extras/ooxmlexport/ooxmlexport10.cxx
 sw/qa/extras/ooxmlexport/ooxmlexport11.cxx
 sw/qa/extras/ooxmlexport/ooxmlexport13.cxx
 sw/qa/extras/ooxmlexport/ooxmlexport14.cxx
+sw/qa/extras/ooxmlexport/ooxmlexport15.cxx
 sw/qa/extras/ooxmlexport/ooxmlexport2.cxx
 sw/qa/extras/ooxmlexport/ooxmlexport3.cxx
 sw/qa/extras/ooxmlexport/ooxmlexport4.cxx
@@ -14570,7 +14510,6 @@ sw/source/core/inc/acorrect.hxx
 sw/source/core/inc/anchoredobjectposition.hxx
 sw/source/core/inc/annotationmark.hxx
 sw/source/core/inc/ascharanchoredobjectposition.hxx
-sw/source/core/inc/blink.hxx
 sw/source/core/inc/bodyfrm.hxx
 sw/source/core/inc/bookmrk.hxx
 sw/source/core/inc/cellfrm.hxx
@@ -14728,7 +14667,6 @@ sw/source/core/text/EnhancedPDFExportHelper.cxx
 sw/source/core/text/SwGrammarMarkUp.cxx
 sw/source/core/text/atrhndl.hxx
 sw/source/core/text/atrstck.cxx
-sw/source/core/text/blink.cxx
 sw/source/core/text/frmcrsr.cxx
 sw/source/core/text/frmform.cxx
 sw/source/core/text/frminf.cxx
@@ -14973,7 +14911,6 @@ sw/source/filter/ww8/fields.cxx
 sw/source/filter/ww8/fields.hxx
 sw/source/filter/ww8/needed_cast.hxx
 sw/source/filter/ww8/sortedarray.hxx
-sw/source/filter/ww8/sprmids.hxx
 sw/source/filter/ww8/styles.cxx
 sw/source/filter/ww8/types.hxx
 sw/source/filter/ww8/writerhelper.cxx
@@ -15362,8 +15299,6 @@ sw/source/uibase/docvw/PageBreakWin.cxx
 sw/source/uibase/docvw/PostItMgr.cxx
 sw/source/uibase/docvw/ShadowOverlayObject.cxx
 sw/source/uibase/docvw/ShadowOverlayObject.hxx
-sw/source/uibase/docvw/SidebarScrollBar.cxx
-sw/source/uibase/docvw/SidebarScrollBar.hxx
 sw/source/uibase/docvw/SidebarTxtControl.cxx
 sw/source/uibase/docvw/SidebarTxtControl.hxx
 sw/source/uibase/docvw/SidebarTxtControlAcc.cxx
@@ -15475,7 +15410,6 @@ sw/source/uibase/inc/javaedit.hxx
 sw/source/uibase/inc/label.hxx
 sw/source/uibase/inc/labelcfg.hxx
 sw/source/uibase/inc/labimg.hxx
-sw/source/uibase/inc/labimp.hxx
 sw/source/uibase/inc/labrec.hxx
 sw/source/uibase/inc/langhelper.hxx
 sw/source/uibase/inc/listsh.hxx
@@ -16642,6 +16576,7 @@ vcl/inc/displayconnectiondispatch.hxx
 vcl/inc/dndeventdispatcher.hxx
 vcl/inc/dndlistenercontainer.hxx
 vcl/inc/factory.hxx
+vcl/inc/fltcall.hxx
 vcl/inc/fontattributes.hxx
 vcl/inc/fontinstance.hxx
 vcl/inc/fontselect.hxx
@@ -17680,8 +17615,6 @@ winaccessibility/source/service/AccTreeEventListener.cxx
 winaccessibility/source/service/AccWindowEventListener.cxx
 winaccessibility/source/service/ResIDGenerator.cxx
 winaccessibility/source/service/msaaservice_impl.cxx
-writerfilter/inc/dmapper/DomainMapperFactory.hxx
-writerfilter/inc/dmapper/GraphicZOrderHelper.hxx
 writerfilter/inc/dmapper/resourcemodel.hxx
 writerfilter/inc/ooxml/OOXMLDocument.hxx
 writerfilter/inc/ooxml/QNameToString.hxx
@@ -17713,8 +17646,6 @@ writerfilter/source/dmapper/GraphicHelpers.cxx
 writerfilter/source/dmapper/GraphicHelpers.hxx
 writerfilter/source/dmapper/GraphicImport.cxx
 writerfilter/source/dmapper/GraphicImport.hxx
-writerfilter/source/dmapper/LatentStyleHandler.cxx
-writerfilter/source/dmapper/LatentStyleHandler.hxx
 writerfilter/source/dmapper/LoggedResources.cxx
 writerfilter/source/dmapper/LoggedResources.hxx
 writerfilter/source/dmapper/MeasureHandler.cxx
@@ -17737,17 +17668,12 @@ writerfilter/source/dmapper/SectionColumnHandler.cxx
 writerfilter/source/dmapper/SectionColumnHandler.hxx
 writerfilter/source/dmapper/SettingsTable.cxx
 writerfilter/source/dmapper/SettingsTable.hxx
-writerfilter/source/dmapper/SmartTagHandler.cxx
-writerfilter/source/dmapper/SmartTagHandler.hxx
 writerfilter/source/dmapper/StyleSheetTable.cxx
 writerfilter/source/dmapper/StyleSheetTable.hxx
 writerfilter/source/dmapper/TDefTableHandler.cxx
 writerfilter/source/dmapper/TDefTableHandler.hxx
 writerfilter/source/dmapper/TableData.hxx
-writerfilter/source/dmapper/TableManager.cxx
 writerfilter/source/dmapper/TableManager.hxx
-writerfilter/source/dmapper/TablePositionHandler.cxx
-writerfilter/source/dmapper/TablePositionHandler.hxx
 writerfilter/source/dmapper/TablePropertiesHandler.cxx
 writerfilter/source/dmapper/TablePropertiesHandler.hxx
 writerfilter/source/dmapper/TagLogger.cxx
@@ -17762,7 +17688,6 @@ writerfilter/source/dmapper/TrackChangesHandler.cxx
 writerfilter/source/dmapper/TrackChangesHandler.hxx
 writerfilter/source/dmapper/WrapPolygonHandler.cxx
 writerfilter/source/dmapper/WrapPolygonHandler.hxx
-writerfilter/source/dmapper/domainmapperfactory.cxx
 writerfilter/source/dmapper/util.cxx
 writerfilter/source/dmapper/util.hxx
 writerfilter/source/ooxml/Handler.cxx
@@ -18470,7 +18395,6 @@ xmlscript/source/xmlmod_imexp/xmlmod_export.cxx
 xmlscript/source/xmlmod_imexp/xmlmod_import.cxx
 xmlscript/test/imexp.cxx
 xmlsecurity/inc/biginteger.hxx
-xmlsecurity/inc/certificate.hxx
 xmlsecurity/inc/certificatechooser.hxx
 xmlsecurity/inc/certificateviewer.hxx
 xmlsecurity/inc/digitalsignaturesdialog.hxx
@@ -18525,7 +18449,6 @@ xmlsecurity/source/gpg/XMLSecurityContext.cxx
 xmlsecurity/source/gpg/XMLSecurityContext.hxx
 xmlsecurity/source/gpg/xmlsignature_gpgimpl.cxx
 xmlsecurity/source/helper/documentsignaturehelper.cxx
-xmlsecurity/source/helper/ooxmlsecexporter.cxx
 xmlsecurity/source/helper/ooxmlsecparser.cxx
 xmlsecurity/source/helper/ooxmlsecparser.hxx
 xmlsecurity/source/helper/xmlsignaturehelper.cxx

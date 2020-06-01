@@ -25,20 +25,13 @@
 #include <connectivity/dbtools.hxx>
 #include <comphelper/genericpropertyset.hxx>
 #include <comphelper/propertysetinfo.hxx>
-#include <com/sun/star/style/ParagraphAdjust.hpp>
-#include <com/sun/star/awt/TextAlign.hpp>
 #include <com/sun/star/beans/PropertyAttribute.hpp>
 #include <com/sun/star/awt/FontDescriptor.hpp>
-#include <com/sun/star/awt/ImagePosition.hpp>
 #include <com/sun/star/awt/ImageScaleMode.hpp>
 #include <xmloff/prstylei.hxx>
 #include <strings.hxx>
 #include "xmlEnums.hxx"
-#include <xmloff/contextid.hxx>
-#include <xmloff/txtprmap.hxx>
-#include <com/sun/star/sdb/XOfficeDatabaseDocument.hpp>
 #include <com/sun/star/table/BorderLine2.hpp>
-#include <xmloff/XMLConstantsPropertyHandler.hxx>
 #include <com/sun/star/report/ForceNewPage.hpp>
 #include <com/sun/star/report/ReportPrintOption.hpp>
 #include <com/sun/star/report/KeepTogether.hpp>
@@ -104,11 +97,11 @@ const XMLPropertyHandler* OPropertyHandlerFactory::GetPropertyHandler(sal_Int32 
     return pHandler;
 }
 
-#define MAP_CONST_T_ASCII( name, prefix, token, type, context ) { name, sizeof(name)-1, XML_NAMESPACE_##prefix, XML_##token, type|XML_TYPE_PROP_TABLE,      context, SvtSaveOptions::ODFVER_010, false }
-#define MAP_CONST_P_ASCII( name, prefix, token, type, context ) { name, sizeof(name)-1, XML_NAMESPACE_##prefix, XML_##token, type|XML_TYPE_PROP_PARAGRAPH,  context, SvtSaveOptions::ODFVER_010, false }
-#define MAP_CONST_S( name, prefix, token, type, context )  { name, sizeof(name)-1,      XML_NAMESPACE_##prefix, XML_##token, type|XML_TYPE_PROP_SECTION,    context, SvtSaveOptions::ODFVER_010, false }
-#define MAP_CONST_C_ASCII( name, prefix, token, type, context ) { name, sizeof(name)-1, XML_NAMESPACE_##prefix, XML_##token, type|XML_TYPE_PROP_TABLE_CELL, context, SvtSaveOptions::ODFVER_010, false }
-#define MAP_END() { nullptr, 0, 0, XML_TOKEN_INVALID, 0 ,0, SvtSaveOptions::ODFVER_010, false}
+#define MAP_CONST_T_ASCII( name, prefix, token, type, context ) { name, sizeof(name)-1, XML_NAMESPACE_##prefix, XML_##token, type|XML_TYPE_PROP_TABLE,      context, SvtSaveOptions::ODFSVER_010, false }
+#define MAP_CONST_P_ASCII( name, prefix, token, type, context ) { name, sizeof(name)-1, XML_NAMESPACE_##prefix, XML_##token, type|XML_TYPE_PROP_PARAGRAPH,  context, SvtSaveOptions::ODFSVER_010, false }
+#define MAP_CONST_S( name, prefix, token, type, context )  { name, sizeof(name)-1,      XML_NAMESPACE_##prefix, XML_##token, type|XML_TYPE_PROP_SECTION,    context, SvtSaveOptions::ODFSVER_010, false }
+#define MAP_CONST_C_ASCII( name, prefix, token, type, context ) { name, sizeof(name)-1, XML_NAMESPACE_##prefix, XML_##token, type|XML_TYPE_PROP_TABLE_CELL, context, SvtSaveOptions::ODFSVER_010, false }
+#define MAP_END() { nullptr, 0, 0, XML_TOKEN_INVALID, 0 ,0, SvtSaveOptions::ODFSVER_010, false}
 
 rtl::Reference < XMLPropertySetMapper > OXMLHelper::GetCellStylePropertyMap(bool _bOldFormat, bool bForExport)
 {

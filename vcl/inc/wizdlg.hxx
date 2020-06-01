@@ -21,7 +21,7 @@
 #define INCLUDED_VCL_WIZDLG_HXX
 
 #include <memory>
-#include <vcl/button.hxx>
+#include <vcl/toolkit/button.hxx>
 #include <vcl/toolkit/dialog.hxx>
 #include <vcl/roadmapwizard.hxx>
 #include <vcl/tabpage.hxx>
@@ -148,6 +148,8 @@ namespace vcl
         void            SelectRoadmapItemByID(int nId);
         void            SetItemSelectHdl( const Link<LinkParamNone*,void>& _rHdl );
         void            ShowRoadmap(bool bShow);
+
+        FactoryFunction GetUITestFactory() const override;
 
     protected:
 

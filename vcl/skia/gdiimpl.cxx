@@ -198,7 +198,6 @@ SkiaSalGraphicsImpl::SkiaSalGraphicsImpl(SalGraphics& rParent, SalGeometryProvid
     , mFillColor(SALCOLOR_NONE)
     , mXorMode(false)
     , mFlush(new SkiaFlushIdle(this))
-    , mPendingPixelsToFlush(0)
 {
 }
 
@@ -338,20 +337,6 @@ void SkiaSalGraphicsImpl::postDraw()
         else if (!mFlush->IsActive())
             mFlush->Start();
     }
-    // Skia (at least when using Vulkan) queues drawing commands and executes them only later.
-    // But some operations may queue way too much data to draw, leading to Vulkan getting out of memory,
-    // which at least on Linux leads to driver problems affecting even the whole X11 session.
-    // One such problematic operation may be drawBitmap(SkBitmap), which is used by SkiaX11CairoTextRender
-    // to draw text, which is internally done by creating the SkBitmap from cairo surface data. Apparently
-    // the cairo surface's size matches the size of the destination (window), which may be large,
-    // and each text drawing allocates a new surface (and thus SkBitmap). So we may end up queueing up
-    // millions of pixels of bitmap data. So force a flush if such a possibly problematic operation
-    // has queued up too much data.
-    if (mPendingPixelsToFlush > 10 * 1024 * 1024)
-    {
-        mSurface->flush();
-        mPendingPixelsToFlush = 0;
-    }
     SkiaZone::leave(); // matched in preDraw()
 }
 
@@ -430,20 +415,14 @@ void SkiaSalGraphicsImpl::setCanvasClipRegion(SkCanvas* canvas, const vcl::Regio
 {
     SkiaZone zone;
     SkPath path;
-    // Handle polygons last, since rectangle->polygon area conversions
-    // are problematic (see addPolygonToPath() comment).
-    if (region.getRegionBand())
-    {
-        RectangleVector rectangles;
-        region.GetRegionRectangles(rectangles);
-        for (const tools::Rectangle& rectangle : rectangles)
-            path.addRect(SkRect::MakeXYWH(rectangle.getX(), rectangle.getY(), rectangle.GetWidth(),
-                                          rectangle.GetHeight()));
-    }
-    else if (!region.IsEmpty())
-    {
-        addPolyPolygonToPath(region.GetAsB2DPolyPolygon(), path);
-    }
+    // Always use region rectangles, regardless of what the region uses internally.
+    // That's what other VCL backends do, and trying to use addPolyPolygonToPath()
+    // in case a polygon is used leads to off-by-one errors such as tdf#133208.
+    RectangleVector rectangles;
+    region.GetRegionRectangles(rectangles);
+    for (const tools::Rectangle& rectangle : rectangles)
+        path.addRect(SkRect::MakeXYWH(rectangle.getX(), rectangle.getY(), rectangle.GetWidth(),
+                                      rectangle.GetHeight()));
     path.setFillType(SkPathFillType::kEvenOdd);
     canvas->clipPath(path);
 }
@@ -665,10 +644,8 @@ void SkiaSalGraphicsImpl::drawPolyLine(sal_uInt32 nPoints, const SalPoint* pPtAr
         aPolygon.setB2DPoint(i, basegfx::B2DPoint(pPtAry[i].mnX, pPtAry[i].mnY));
     aPolygon.setClosed(false);
 
-    drawPolyLine(basegfx::B2DHomMatrix(), aPolygon, 0.0, basegfx::B2DVector(1.0, 1.0),
-                 nullptr, // MM01
-                 basegfx::B2DLineJoin::Miter, css::drawing::LineCap_BUTT,
-                 basegfx::deg2rad(15.0) /*default*/, false);
+    drawPolyLine(basegfx::B2DHomMatrix(), aPolygon, 0.0, 1.0, nullptr, basegfx::B2DLineJoin::Miter,
+                 css::drawing::LineCap_BUTT, basegfx::deg2rad(15.0) /*default*/, false);
 }
 
 void SkiaSalGraphicsImpl::drawPolygon(sal_uInt32 nPoints, const SalPoint* pPtAry)
@@ -757,13 +734,11 @@ bool SkiaSalGraphicsImpl::drawPolyPolygon(const basegfx::B2DHomMatrix& rObjectTo
 
 bool SkiaSalGraphicsImpl::drawPolyLine(const basegfx::B2DHomMatrix& rObjectToDevice,
                                        const basegfx::B2DPolygon& rPolyLine, double fTransparency,
-                                       const basegfx::B2DVector& rLineWidth,
-                                       const std::vector<double>* pStroke, // MM01
+                                       double fLineWidth, const std::vector<double>* pStroke,
                                        basegfx::B2DLineJoin eLineJoin,
                                        css::drawing::LineCap eLineCap, double fMiterMinimumAngle,
                                        bool bPixelSnapHairline)
 {
-    // MM01 check done for simple reasons
     if (!rPolyLine.count() || fTransparency < 0.0 || fTransparency > 1.0
         || mLineColor == SALCOLOR_NONE)
     {
@@ -774,39 +749,14 @@ bool SkiaSalGraphicsImpl::drawPolyLine(const basegfx::B2DHomMatrix& rObjectToDev
     SAL_INFO("vcl.skia.trace", "drawpolyline(" << this << "): " << rPolyLine << ":" << mLineColor);
 
     // tdf#124848 get correct LineWidth in discrete coordinates,
-    // take hairline case into account
-    const basegfx::B2DVector aLineWidth(rLineWidth.equalZero() ? basegfx::B2DVector(1.0, 1.0)
-                                                               : rObjectToDevice * rLineWidth);
-
-    // Skia does not support B2DLineJoin::NONE; return false to use
-    // the fallback (own geometry preparation),
-    // linejoin-mode and thus the above only applies to "fat" lines.
-    if ((basegfx::B2DLineJoin::NONE == eLineJoin) && (aLineWidth.getX() > 1.3))
-        return false;
-
-    // MM01 need to do line dashing as fallback stuff here now
-    const double fDotDashLength(
-        nullptr != pStroke ? std::accumulate(pStroke->begin(), pStroke->end(), 0.0) : 0.0);
-    const bool bStrokeUsed(0.0 != fDotDashLength);
-    assert(!bStrokeUsed || (bStrokeUsed && pStroke));
-    basegfx::B2DPolyPolygon aPolyPolygonLine;
-
-    if (bStrokeUsed)
-    {
-        // apply LineStyle
-        basegfx::utils::applyLineDashing(rPolyLine, // source
-                                         *pStroke, // pattern
-                                         &aPolyPolygonLine, // target for lines
-                                         nullptr, // target for gaps
-                                         fDotDashLength); // full length if available
-    }
-    else
-    {
-        // no line dashing, just copy
-        aPolyPolygonLine.append(rPolyLine);
-    }
+    if (fLineWidth == 0) // hairline
+        fLineWidth = 1.0;
+    else // Adjust line width for object-to-device scale.
+        fLineWidth = (rObjectToDevice * basegfx::B2DVector(fLineWidth, 0)).getLength();
 
     // Transform to DeviceCoordinates, get DeviceLineWidth, execute PixelSnapHairline
+    basegfx::B2DPolyPolygon aPolyPolygonLine;
+    aPolyPolygonLine.append(rPolyLine);
     aPolyPolygonLine.transform(rObjectToDevice);
     if (bPixelSnapHairline)
     {
@@ -854,24 +804,58 @@ bool SkiaSalGraphicsImpl::drawPolyLine(const basegfx::B2DHomMatrix& rObjectToDev
     aPaint.setStrokeJoin(eSkLineJoin);
     aPaint.setColor(toSkColorWithTransparency(mLineColor, fTransparency));
     aPaint.setStrokeMiter(fMiterLimit);
-    aPaint.setStrokeWidth(aLineWidth.getX());
+    aPaint.setStrokeWidth(fLineWidth);
     aPaint.setAntiAlias(mParent.getAntiAliasB2DDraw());
 
-    SkPath aPath;
-
-    // MM01 checked/verified for Skia (on Win)
-    for (sal_uInt32 a(0); a < aPolyPolygonLine.count(); a++)
+    if (pStroke && std::accumulate(pStroke->begin(), pStroke->end(), 0.0) != 0)
     {
-        const basegfx::B2DPolygon aPolyLine(aPolyPolygonLine.getB2DPolygon(a));
-        addPolygonToPath(aPolyLine, aPath);
+        std::vector<SkScalar> intervals;
+        // Transform size by the matrix.
+        for (double stroke : *pStroke)
+            intervals.push_back((rObjectToDevice * basegfx::B2DVector(stroke, 0)).getLength());
+        aPaint.setPathEffect(SkDashPathEffect::Make(intervals.data(), intervals.size(), 0));
     }
 
-    aPath.setFillType(SkPathFillType::kEvenOdd);
-    // Apply the same adjustment as toSkX()/toSkY() do. Do it here even in the non-GPU
-    // case as it seems to produce better results.
-    aPath.offset(0.5, 0.5, nullptr);
-    getDrawCanvas()->drawPath(aPath, aPaint);
-    addXorRegion(aPath.getBounds());
+    // Skia does not support basegfx::B2DLineJoin::NONE, so in that case batch only if lines
+    // are not wider than a pixel.
+    if (eLineJoin != basegfx::B2DLineJoin::NONE || fLineWidth <= 1.0)
+    {
+        SkPath aPath;
+        aPath.setFillType(SkPathFillType::kEvenOdd);
+        for (sal_uInt32 a(0); a < aPolyPolygonLine.count(); a++)
+            addPolygonToPath(aPolyPolygonLine.getB2DPolygon(a), aPath);
+        // Apply the same adjustment as toSkX()/toSkY() do. Do it here even in the non-GPU
+        // case as it seems to produce better results.
+        aPath.offset(0.5, 0.5, nullptr);
+        getDrawCanvas()->drawPath(aPath, aPaint);
+        addXorRegion(aPath.getBounds());
+    }
+    else
+    {
+        for (sal_uInt32 i = 0; i < aPolyPolygonLine.count(); ++i)
+        {
+            const basegfx::B2DPolygon& rPolygon = aPolyPolygonLine.getB2DPolygon(i);
+            sal_uInt32 nPoints = rPolygon.count();
+            bool bClosed = rPolygon.isClosed();
+            for (sal_uInt32 j = 0; j < (bClosed ? nPoints : nPoints - 1); ++j)
+            {
+                sal_uInt32 index1 = (j + 0) % nPoints;
+                sal_uInt32 index2 = (j + 1) % nPoints;
+                SkPath aPath;
+                aPath.moveTo(rPolygon.getB2DPoint(index1).getX(),
+                             rPolygon.getB2DPoint(index1).getY());
+                aPath.lineTo(rPolygon.getB2DPoint(index2).getX(),
+                             rPolygon.getB2DPoint(index2).getY());
+
+                // Apply the same adjustment as toSkX()/toSkY() do. Do it here even in the non-GPU
+                // case as it seems to produce better results.
+                aPath.offset(0.5, 0.5, nullptr);
+                getDrawCanvas()->drawPath(aPath, aPaint);
+                addXorRegion(aPath.getBounds());
+            }
+        }
+    }
+
     postDraw();
 
     return true;
@@ -897,14 +881,16 @@ bool SkiaSalGraphicsImpl::drawPolyPolygonBezier(sal_uInt32, const sal_uInt32*,
 }
 
 static void copyArea(SkCanvas* canvas, sk_sp<SkSurface> surface, long nDestX, long nDestY,
-                     long nSrcX, long nSrcY, long nSrcWidth, long nSrcHeight)
+                     long nSrcX, long nSrcY, long nSrcWidth, long nSrcHeight, bool srcIsRaster)
 {
     // Using SkSurface::draw() should be more efficient than SkSurface::makeImageSnapshot(),
     // because it may detect copying to itself and avoid some needless copies.
-    // It cannot do a subrectangle though, so clip.
-    if (canvas == surface->getCanvas())
+    // But it has problems with drawing to itself
+    // (https://groups.google.com/forum/#!topic/skia-discuss/6yiuw24jv0I) and also
+    // raster surfaces do not avoid a copy of the source
+    // (https://groups.google.com/forum/#!topic/skia-discuss/S3FMpCi82k0).
+    if (canvas == surface->getCanvas() || srcIsRaster)
     {
-        // TODO: Currently copy-to-self is buggy with SkSurface::draw().
         SkPaint paint;
         paint.setBlendMode(SkBlendMode::kSrc); // copy as is, including alpha
         canvas->drawImageRect(surface->makeImageSnapshot(),
@@ -912,6 +898,7 @@ static void copyArea(SkCanvas* canvas, sk_sp<SkSurface> surface, long nDestX, lo
                               SkRect::MakeXYWH(nDestX, nDestY, nSrcWidth, nSrcHeight), &paint);
         return;
     }
+    // SkCanvas::draw() cannot do a subrectangle, so clip.
     canvas->save();
     canvas->clipRect(SkRect::MakeXYWH(nDestX, nDestY, nSrcWidth, nSrcHeight));
     SkPaint paint;
@@ -930,7 +917,8 @@ void SkiaSalGraphicsImpl::copyArea(long nDestX, long nDestY, long nSrcX, long nS
                                    << this << "): " << Point(nSrcX, nSrcY) << "->"
                                    << SkIRect::MakeXYWH(nDestX, nDestY, nSrcWidth, nSrcHeight));
     assert(!mXorMode);
-    ::copyArea(getDrawCanvas(), mSurface, nDestX, nDestY, nSrcX, nSrcY, nSrcWidth, nSrcHeight);
+    ::copyArea(getDrawCanvas(), mSurface, nDestX, nDestY, nSrcX, nSrcY, nSrcWidth, nSrcHeight,
+               !isGPU());
     addXorRegion(SkRect::MakeXYWH(nDestX, nDestY, nSrcWidth, nSrcHeight));
     postDraw();
 }
@@ -966,7 +954,7 @@ void SkiaSalGraphicsImpl::copyBits(const SalTwoRect& rPosAry, SalGraphics* pSrcG
         SAL_INFO("vcl.skia.trace",
                  "copybits(" << this << "): " << srcDebug() << " copy area: " << rPosAry);
         ::copyArea(getDrawCanvas(), src->mSurface, rPosAry.mnDestX, rPosAry.mnDestY, rPosAry.mnSrcX,
-                   rPosAry.mnSrcY, rPosAry.mnDestWidth, rPosAry.mnDestHeight);
+                   rPosAry.mnSrcY, rPosAry.mnDestWidth, rPosAry.mnDestHeight, !src->isGPU());
     }
     else
     {
@@ -975,6 +963,9 @@ void SkiaSalGraphicsImpl::copyBits(const SalTwoRect& rPosAry, SalGraphics* pSrcG
         sk_sp<SkImage> image = src->mSurface->makeImageSnapshot();
         SkPaint paint;
         paint.setBlendMode(SkBlendMode::kSrc); // copy as is, including alpha
+        if (rPosAry.mnSrcWidth != rPosAry.mnDestWidth
+            || rPosAry.mnSrcHeight != rPosAry.mnDestHeight)
+            paint.setFilterQuality(kHigh_SkFilterQuality);
         getDrawCanvas()->drawImageRect(image,
                                        SkIRect::MakeXYWH(rPosAry.mnSrcX, rPosAry.mnSrcY,
                                                          rPosAry.mnSrcWidth, rPosAry.mnSrcHeight),
@@ -1247,22 +1238,108 @@ bool SkiaSalGraphicsImpl::drawEPS(long, long, long, long, void*, sal_uInt32)
     return false;
 }
 
+// Create SkImage from a bitmap and possibly an alpha mask (the usual VCL one-minus-alpha),
+// with the given target size. Result will be possibly cached, unless disabled.
+static sk_sp<SkImage> mergeBitmaps(const SkiaSalBitmap& bitmap, const SkiaSalBitmap* alphaBitmap,
+                                   const Size targetSize, bool blockCaching = false)
+{
+    sk_sp<SkImage> image;
+    OString key;
+    if (alphaBitmap == nullptr && targetSize == bitmap.GetSize())
+        blockCaching = true; // probably not much point in caching of just doing a copy
+    if (targetSize.Width() > bitmap.GetSize().Width()
+        || targetSize.Height() > bitmap.GetSize().Height())
+        blockCaching = true; // caching enlarging is probably wasteful and not worth it
+    if (bitmap.GetSize().Width() < 100 && bitmap.GetSize().Height() < 100)
+        blockCaching = true; // image too small to be worth caching
+    if (SkiaHelper::renderMethodToUse() != SkiaHelper::RenderRaster
+        && targetSize == bitmap.GetSize())
+        blockCaching = true; // GPU-accelerated shouldn't need caching of applying alpha
+    if (!blockCaching)
+    {
+        OStringBuffer keyBuf;
+        keyBuf.append(targetSize.Width())
+            .append("x")
+            .append(targetSize.Height())
+            .append("_0x")
+            .append(reinterpret_cast<sal_IntPtr>(&bitmap), 16)
+            .append("_0x")
+            .append(reinterpret_cast<sal_IntPtr>(alphaBitmap), 16)
+            .append("_")
+            .append(static_cast<sal_Int64>(bitmap.GetSkImage()->uniqueID()));
+        if (alphaBitmap)
+            keyBuf.append("_").append(
+                static_cast<sal_Int64>(alphaBitmap->GetAlphaSkImage()->uniqueID()));
+        key = keyBuf.makeStringAndClear();
+        image = SkiaHelper::findCachedImage(key);
+        if (image)
+        {
+            assert(image->width() == targetSize.Width() && image->height() == targetSize.Height());
+            return image;
+        }
+    }
+    // Combine bitmap + alpha bitmap into one temporary bitmap with alpha.
+    // If scaling is needed, first apply the alpha, then scale, otherwise the scaling might affect the alpha values.
+    if (alphaBitmap && targetSize != bitmap.GetSize())
+    {
+        sk_sp<SkSurface> mergedSurface = SkiaHelper::createSkSurface(bitmap.GetSize());
+        if (!mergedSurface)
+            return nullptr;
+        SkPaint paint;
+        paint.setBlendMode(SkBlendMode::kSrc); // copy as is, including alpha
+        mergedSurface->getCanvas()->drawImage(bitmap.GetSkImage(), 0, 0, &paint);
+        paint.setBlendMode(SkBlendMode::kDstOut); // VCL alpha is one-minus-alpha
+        mergedSurface->getCanvas()->drawImage(alphaBitmap->GetAlphaSkImage(), 0, 0, &paint);
+        sk_sp<SkSurface> scaledSurface = SkiaHelper::createSkSurface(targetSize);
+        if (!scaledSurface)
+            return nullptr;
+        paint.setBlendMode(SkBlendMode::kSrc); // copy as is, including alpha
+        paint.setFilterQuality(kHigh_SkFilterQuality);
+        scaledSurface->getCanvas()->drawImageRect(
+            mergedSurface->makeImageSnapshot(),
+            SkRect::MakeXYWH(0, 0, bitmap.GetSize().Width(), bitmap.GetSize().Height()),
+            SkRect::MakeXYWH(0, 0, targetSize.Width(), targetSize.Height()), &paint);
+        image = scaledSurface->makeImageSnapshot();
+    }
+    else // No alpha or no scaling, scale directly.
+    {
+        sk_sp<SkSurface> tmpSurface = SkiaHelper::createSkSurface(targetSize);
+        if (!tmpSurface)
+            return nullptr;
+        SkCanvas* canvas = tmpSurface->getCanvas();
+        SkAutoCanvasRestore autoRestore(canvas, true);
+        SkPaint paint;
+        if (targetSize != bitmap.GetSize())
+        {
+            SkMatrix matrix;
+            matrix.set(SkMatrix::kMScaleX, 1.0 * targetSize.Width() / bitmap.GetSize().Width());
+            matrix.set(SkMatrix::kMScaleY, 1.0 * targetSize.Height() / bitmap.GetSize().Height());
+            canvas->concat(matrix);
+            paint.setFilterQuality(kHigh_SkFilterQuality);
+        }
+        paint.setBlendMode(SkBlendMode::kSrc); // copy as is, including alpha
+        canvas->drawImage(bitmap.GetSkImage(), 0, 0, &paint);
+        if (alphaBitmap != nullptr)
+        {
+            paint.setBlendMode(SkBlendMode::kDstOut); // VCL alpha is one-minus-alpha
+            canvas->drawImage(alphaBitmap->GetAlphaSkImage(), 0, 0, &paint);
+        }
+        image = tmpSurface->makeImageSnapshot();
+    }
+    if (!blockCaching)
+        SkiaHelper::addCachedImage(key, image);
+    return image;
+}
+
 bool SkiaSalGraphicsImpl::drawAlphaBitmap(const SalTwoRect& rPosAry, const SalBitmap& rSourceBitmap,
                                           const SalBitmap& rAlphaBitmap)
 {
     assert(dynamic_cast<const SkiaSalBitmap*>(&rSourceBitmap));
     assert(dynamic_cast<const SkiaSalBitmap*>(&rAlphaBitmap));
-    sk_sp<SkSurface> tmpSurface = SkiaHelper::createSkSurface(rSourceBitmap.GetSize());
-    if (!tmpSurface)
-        return false;
-    SkCanvas* canvas = tmpSurface->getCanvas();
-    SkPaint paint;
-    paint.setBlendMode(SkBlendMode::kSrc); // copy as is, including alpha
-    canvas->drawImage(static_cast<const SkiaSalBitmap&>(rSourceBitmap).GetSkImage(), 0, 0, &paint);
-    paint.setBlendMode(SkBlendMode::kDstOut); // VCL alpha is one-minus-alpha
-    canvas->drawImage(static_cast<const SkiaSalBitmap&>(rAlphaBitmap).GetAlphaSkImage(), 0, 0,
-                      &paint);
-    drawImage(rPosAry, tmpSurface->makeImageSnapshot());
+    sk_sp<SkImage> image
+        = mergeBitmaps(static_cast<const SkiaSalBitmap&>(rSourceBitmap),
+                       static_cast<const SkiaSalBitmap*>(&rAlphaBitmap), rSourceBitmap.GetSize());
+    drawImage(rPosAry, image);
     return true;
 }
 
@@ -1276,30 +1353,14 @@ void SkiaSalGraphicsImpl::drawImage(const SalTwoRect& rPosAry, const sk_sp<SkIma
 
     SkPaint aPaint;
     aPaint.setBlendMode(eBlendMode);
+    if (rPosAry.mnSrcWidth != rPosAry.mnDestWidth || rPosAry.mnSrcHeight != rPosAry.mnDestHeight)
+        aPaint.setFilterQuality(kHigh_SkFilterQuality);
 
     preDraw();
-    SAL_INFO("vcl.skia.trace", "drawimage(" << this << "): " << rPosAry << ":" << int(eBlendMode));
+    SAL_INFO("vcl.skia.trace",
+             "drawimage(" << this << "): " << rPosAry << ":" << SkBlendMode_Name(eBlendMode));
     getDrawCanvas()->drawImageRect(aImage, aSourceRect, aDestinationRect, &aPaint);
     addXorRegion(aDestinationRect);
-    postDraw();
-}
-
-void SkiaSalGraphicsImpl::drawBitmap(const SalTwoRect& rPosAry, const SkBitmap& aBitmap,
-                                     SkBlendMode eBlendMode)
-{
-    SkRect aSourceRect
-        = SkRect::MakeXYWH(rPosAry.mnSrcX, rPosAry.mnSrcY, rPosAry.mnSrcWidth, rPosAry.mnSrcHeight);
-    SkRect aDestinationRect = SkRect::MakeXYWH(rPosAry.mnDestX, rPosAry.mnDestY,
-                                               rPosAry.mnDestWidth, rPosAry.mnDestHeight);
-
-    SkPaint aPaint;
-    aPaint.setBlendMode(eBlendMode);
-
-    preDraw();
-    SAL_INFO("vcl.skia.trace", "drawbitmap(" << this << "): " << rPosAry << ":" << int(eBlendMode));
-    getDrawCanvas()->drawBitmapRect(aBitmap, aSourceRect, aDestinationRect, &aPaint);
-    addXorRegion(aDestinationRect);
-    mPendingPixelsToFlush += aBitmap.width() * aBitmap.height();
     postDraw();
 }
 
@@ -1315,44 +1376,41 @@ bool SkiaSalGraphicsImpl::drawTransformedBitmap(const basegfx::B2DPoint& rNull,
     const SkiaSalBitmap& rSkiaBitmap = static_cast<const SkiaSalBitmap&>(rSourceBitmap);
     const SkiaSalBitmap* pSkiaAlphaBitmap = static_cast<const SkiaSalBitmap*>(pAlphaBitmap);
 
-    sk_sp<SkSurface> tmpSurface = SkiaHelper::createSkSurface(rSourceBitmap.GetSize());
-    if (!tmpSurface)
-        return false;
-
-    // Combine bitmap + alpha bitmap into one temporary bitmap with alpha
-    SkCanvas* aCanvas = tmpSurface->getCanvas();
-    SkPaint aPaint;
-    aPaint.setBlendMode(SkBlendMode::kSrc); // copy as is, including alpha
-    aCanvas->drawImage(rSkiaBitmap.GetSkImage(), 0, 0, &aPaint);
-    if (pSkiaAlphaBitmap != nullptr)
-    {
-        aPaint.setBlendMode(SkBlendMode::kDstOut); // VCL alpha is one-minus-alpha
-        aCanvas->drawImage(pSkiaAlphaBitmap->GetAlphaSkImage(), 0, 0, &aPaint);
-    }
-    // setup the image transformation
-    // using the rNull, rX, rY points as destinations for the (0,0), (0,Width), (Height,0) source points
-    const basegfx::B2DVector aXRel = rX - rNull;
-    const basegfx::B2DVector aYRel = rY - rNull;
+    // Setup the image transformation,
+    // using the rNull, rX, rY points as destinations for the (0,0), (Width,0), (0,Height) source points.
+    // Round to pixels, otherwise kMScaleX/Y below could be slightly != 1, causing unnecessary uncached
+    // scaling.
+    const basegfx::B2IVector aXRel = basegfx::fround(rX - rNull);
+    const basegfx::B2IVector aYRel = basegfx::fround(rY - rNull);
 
     const Size aSize = rSourceBitmap.GetSize();
 
+    preDraw();
+    SAL_INFO("vcl.skia.trace", "drawtransformedbitmap(" << this << "): " << aSize << " " << rNull
+                                                        << ":" << rX << ":" << rY);
+
+    // TODO: How to cache properly skewed images?
+    bool blockCaching = (aXRel.getY() != 0 || aYRel.getX() != 0);
+    const Size imageSize(aXRel.getX(), aYRel.getY());
+    sk_sp<SkImage> imageToDraw
+        = mergeBitmaps(rSkiaBitmap, pSkiaAlphaBitmap, imageSize, blockCaching);
+    if (!imageToDraw)
+        return false;
+
     SkMatrix aMatrix;
-    aMatrix.set(SkMatrix::kMScaleX, aXRel.getX() / aSize.Width());
+    aMatrix.set(SkMatrix::kMScaleX, aXRel.getX() / imageToDraw->width());
     aMatrix.set(SkMatrix::kMSkewY, aXRel.getY() / aSize.Width());
     aMatrix.set(SkMatrix::kMSkewX, aYRel.getX() / aSize.Height());
-    aMatrix.set(SkMatrix::kMScaleY, aYRel.getY() / aSize.Height());
+    aMatrix.set(SkMatrix::kMScaleY, aYRel.getY() / imageToDraw->height());
     aMatrix.set(SkMatrix::kMTransX, rNull.getX());
     aMatrix.set(SkMatrix::kMTransY, rNull.getY());
 
-    preDraw();
-    SAL_INFO("vcl.skia.trace",
-             "drawtransformedbitmap(" << this << "): " << rNull << ":" << rX << ":" << rY);
     {
         SkAutoCanvasRestore autoRestore(getDrawCanvas(), true);
         getDrawCanvas()->concat(aMatrix);
         SkPaint paint;
         paint.setFilterQuality(kHigh_SkFilterQuality);
-        getDrawCanvas()->drawImage(tmpSurface->makeImageSnapshot(), 0, 0, &paint);
+        getDrawCanvas()->drawImage(imageToDraw, 0, 0, &paint);
     }
     assert(!mXorMode);
     postDraw();

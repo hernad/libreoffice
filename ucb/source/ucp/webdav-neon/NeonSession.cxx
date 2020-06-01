@@ -831,6 +831,7 @@ void NeonSession::Init()
                          std::max( nReadTimeoutMin,
                                    std::min( nReadTimeout, nReadTimeoutMax ) ) );
 
+    ne_set_session_flag(m_pHttpSession, NE_SESSFLAG_SHAREPOINT, 1);
 }
 
 bool NeonSession::CanUse( const OUString & inUri,
@@ -1624,6 +1625,10 @@ bool NeonSession::LOCK( NeonLock * pLock,
     TimeValue startCall;
     osl_getSystemTime( &startCall );
 
+    // save the current requested timeout, because ne_lock_refresh uses
+    // pLock->timeout as an out parameter. This prevents a feedback-loop,
+    // where we would request a shorter timeout on each refresh.
+    long timeout = pLock->timeout;
     const int theRetVal = ne_lock_refresh(m_pHttpSession, pLock);
     if (theRetVal == NE_OK)
     {
@@ -1631,7 +1636,6 @@ bool NeonSession::LOCK( NeonLock * pLock,
             = lastChanceToSendRefreshRequest( startCall, pLock->timeout );
 
         SAL_INFO( "ucb.ucp.webdav", "LOCK (refresh) - Lock successfully refreshed." );
-        return true;
     }
     else
     {
@@ -1648,6 +1652,8 @@ bool NeonSession::LOCK( NeonLock * pLock,
         }
         return false;
     }
+    pLock->timeout = timeout;
+    return theRetVal;
 }
 
 void NeonSession::UNLOCK( const OUString & inPath,

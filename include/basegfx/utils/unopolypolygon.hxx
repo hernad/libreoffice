@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_BASEGFX_UTILS_UNOPOLYPOLYGON_HXX
-#define INCLUDED_BASEGFX_UTILS_UNOPOLYPOLYGON_HXX
+#pragma once
 
 #include <cppuhelper/basemutex.hxx>
 #include <cppuhelper/compbase.hxx>
@@ -30,9 +29,7 @@
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 #include <basegfx/basegfxdllapi.h>
 
-namespace basegfx
-{
-namespace unotools
+namespace basegfx::unotools
 {
     typedef cppu::WeakComponentImplHelper<
             css::rendering::XLinePolyPolygon2D,
@@ -104,8 +101,5 @@ namespace unotools
         css::rendering::FillRule              meFillRule;
     };
 }
-}
-
-#endif // INCLUDED_BASEGFX_UTILS_UNOPOLYPOLYGON_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

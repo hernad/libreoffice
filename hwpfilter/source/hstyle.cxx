@@ -59,7 +59,7 @@ HWPStyle::~HWPStyle()
 
 char *HWPStyle::GetName(int n) const
 {
-    if (!(n >= 0 && n < nstyles))
+    if (n < 0 || n >= nstyles)
         return nullptr;
     return DATA[n].name;
 }
@@ -67,19 +67,19 @@ char *HWPStyle::GetName(int n) const
 
 void HWPStyle::SetName(int n, char const *name)
 {
-    if (!(n >= 0 && n < nstyles))
+    if (n < 0 || n >= nstyles)
         return;
 
     if (name)
     {
-#if defined __GNUC__ && (__GNUC__ == 8 || __GNUC__ == 9) && !defined __clang__
+#if defined __GNUC__ && (__GNUC__ >= 8 && __GNUC__ <= 10) && !defined __clang__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstringop-truncation"
 #endif
         auto const p = DATA[n].name;
         strncpy(p, name, MAXSTYLENAME);
         p[MAXSTYLENAME] = '\0'; // just in case, even though the array is zero-initialized
-#if defined __GNUC__ && (__GNUC__ == 8 || __GNUC__ == 9) && !defined __clang__
+#if defined __GNUC__ && (__GNUC__ >= 8 && __GNUC__ <= 10) && !defined __clang__
 #pragma GCC diagnostic pop
 #endif
     }
@@ -90,7 +90,7 @@ void HWPStyle::SetName(int n, char const *name)
 
 CharShape *HWPStyle::GetCharShape(int n) const
 {
-    if (!(n >= 0 && n < nstyles))
+    if (n < 0 || n >= nstyles)
         return nullptr;
     return &DATA[n].cshape;
 }
@@ -110,7 +110,7 @@ void HWPStyle::SetCharShape(int n, CharShape const * cshapep)
 
 ParaShape *HWPStyle::GetParaShape(int n) const
 {
-    if (!(n >= 0 && n < nstyles))
+    if (n < 0 || n >= nstyles)
         return nullptr;
     return &DATA[n].pshape;
 }

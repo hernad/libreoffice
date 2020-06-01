@@ -22,12 +22,12 @@
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
 #include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
+#include <xmloff/xmlstyle.hxx>
+#include <xmloff/prstylei.hxx>
 #include <xmloff/ProgressBarHelper.hxx>
 #include <sal/log.hxx>
 #include "xmlEnums.hxx"
 #include "xmlCell.hxx"
-#include "xmlStyleImport.hxx"
 #include "xmlTable.hxx"
 #include <comphelper/genericpropertyset.hxx>
 #include <comphelper/propertysetinfo.hxx>
@@ -53,9 +53,7 @@ OXMLRowColumn::OXMLRowColumn( ORptFilter& rImport
     SvXMLImportContext( rImport )
     ,m_pContainer(_pContainer)
 {
-    sax_fastparser::FastAttributeList *pAttribList =
-                    sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-    for (auto &aIter : *pAttribList)
+    for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
     {
         OUString sValue = aIter.toString();
 

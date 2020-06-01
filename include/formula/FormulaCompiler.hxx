@@ -42,12 +42,12 @@
 #define FORMULA_MAXPARAMSII      8  /* maximum number of parameters for functions that have implicit intersection ranges */
 
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace sheet {
         struct FormulaOpCodeMapEntry;
         struct FormulaToken;
     }
-}}}
+}
 
 class CharClass;
 enum class FormulaError : sal_uInt16;
@@ -60,8 +60,8 @@ struct FormulaArrayStack
 {
     FormulaArrayStack*  pNext;
     FormulaTokenArray*  pArr;
-    sal_uInt16          nIndex;
     FormulaTokenRef     mpLastToken;
+    sal_uInt16          nIndex;
     bool bTemp;
 };
 

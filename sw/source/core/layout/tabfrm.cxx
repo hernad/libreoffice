@@ -1091,7 +1091,21 @@ bool SwTabFrame::Split( const SwTwips nCutPos, bool bTryToSplit, bool bTableRowK
         m_pTable->SetRowsToRepeat(0);
         return false;
     }
-    else if ( !GetIndPrev() && nRepeat == nRowCount )
+
+    // Minimum row height has the same force as "do not split row" (as long as it fits on one page)
+    if ( bSplitRowAllowed && bTryToSplit && !pRow->IsRowSpanLine() )
+    {
+        const SwFormatFrameSize &rSz = pRow->GetFormat()->GetFrameSize();
+        const sal_Int32 nMinHeight = rSz.GetHeightSizeType() == SwFrameSize::Minimum ? rSz.GetHeight() : 0;
+        if ( nMinHeight > nRemainingSpaceForLastRow )
+        {
+            // TODO: what if we are not in a page, but a column or something that is not page-sized.
+            const sal_Int32 nFullPageHeight = FindPageFrame()->getFramePrintArea().Height();
+            bSplitRowAllowed = nMinHeight > nFullPageHeight;
+        }
+    }
+
+    if ( !GetIndPrev() && nRepeat == nRowCount )
     {
         // Second case: The first non-headline row does not fit to the page.
         // If it is not allowed to be split, or it contains a sub-row that
@@ -1520,8 +1534,6 @@ bool SwContentFrame::CalcLowers(SwLayoutFrame & rLay, SwLayoutFrame const& rDont
             // screen objects needed.
             // Thus, delete call of method <SwFrame::InvalidateObjs( true )>
             pCnt->Calc(pRenderContext);
-            // OD 2004-05-11 #i28701# - usage of new method <::FormatObjsAtFrame(..)>
-            // to format the floating screen objects
             // #i46941# - frame has to be valid
             // Note: frame could be invalid after calling its format, if it's locked.
             OSL_ENSURE( !pCnt->IsTextFrame() ||
@@ -1898,11 +1910,6 @@ void SwTabFrame::MakeAll(vcl::RenderContext* pRenderContext)
     auto pAccess = std::make_unique<SwBorderAttrAccess>(SwFrame::GetCache(), this);
     const SwBorderAttrs *pAttrs = pAccess->Get();
 
-    const bool bLargeTable = GetTable()->GetTabLines().size() > 64;  //arbitrary value, virtually guaranteed to be larger than one page.
-    const bool bEmulateTableKeep = !bLargeTable && AreAllRowsKeepWithNext( GetFirstNonHeadlineRow(), /*bCheckParents=*/false );
-    // The beloved keep attribute
-    const bool bKeep = IsKeep(pAttrs->GetAttrSet().GetKeep(), GetBreakItem(), bEmulateTableKeep);
-
     // All rows should keep together
     const bool bDontSplit = !IsFollow() &&
                             ( !GetFormat()->GetLayoutSplit().GetValue() );
@@ -1927,6 +1934,11 @@ void SwTabFrame::MakeAll(vcl::RenderContext* pRenderContext)
     // if first is set to keep with next???
     bool bLastRowHasToMoveToFollow = false;
     bool bLastRowMoveNoMoreTries = false;
+
+    const bool bLargeTable = GetTable()->GetTabLines().size() > 64;  //arbitrary value, virtually guaranteed to be larger than one page.
+    const bool bEmulateTableKeep = !bLargeTable && bTableRowKeep && AreAllRowsKeepWithNext( GetFirstNonHeadlineRow(), /*bCheckParents=*/false );
+    // The beloved keep attribute
+    const bool bKeep = IsKeep(pAttrs->GetAttrSet().GetKeep(), GetBreakItem(), bEmulateTableKeep);
 
     // Join follow table, if this table is not allowed to split:
     if ( bDontSplit )
@@ -2368,29 +2380,26 @@ void SwTabFrame::MakeAll(vcl::RenderContext* pRenderContext)
         const SwRowFrame* pFirstNonHeadlineRow = GetFirstNonHeadlineRow();
         // #i120016# if this row wants to keep, allow split in case that all rows want to keep with next,
         // the table can not move forward as it is the first one and a split is in general allowed.
-        const bool bAllowSplitOfRow = ( bTableRowKeep &&
-                                        AreAllRowsKeepWithNext( pFirstNonHeadlineRow ) ) &&
-                                      !pIndPrev &&
-                                      !bDontSplit;
-        const bool bEmulateTableKeepFwdMoveAllowed = IsKeepFwdMoveAllowed(bEmulateTableKeep);
+        const bool bAllowSplitOfRow = bTableRowKeep && !pIndPrev && AreAllRowsKeepWithNext(pFirstNonHeadlineRow);
+        // tdf91083 MSCompat: this extends bAllowSplitOfRow (and perhaps should just replace it).
+        // If the kept-together items cannot move to a new page, a table split is in general allowed.
+        const bool bEmulateTableKeepSplitAllowed =  bEmulateTableKeep && !IsKeepFwdMoveAllowed(/*IgnoreMyOwnKeepValue=*/true);
 
         if ( pFirstNonHeadlineRow && nUnSplitted > 0 &&
-             ( !bEmulateTableKeepFwdMoveAllowed ||
+             ( bEmulateTableKeepSplitAllowed || bAllowSplitOfRow ||
                ( ( !bTableRowKeep || pFirstNonHeadlineRow->GetNext() ||
-                   !pFirstNonHeadlineRow->ShouldRowKeepWithNext() || bAllowSplitOfRow
+                   !pFirstNonHeadlineRow->ShouldRowKeepWithNext()
                  ) && ( !bDontSplit || !pIndPrev )
            ) ) )
         {
             // #i29438#
             // Special DoNotSplit cases:
-            // We better avoid splitting if the table keeps with next paragraph and can move fwd still.
             // We better avoid splitting of a row frame if we are inside a columned
             // section which has a height of 0, because this is not growable and thus
             // all kinds of unexpected things could happen.
-            if ( !bEmulateTableKeepFwdMoveAllowed ||
-                 ( IsInSct() && FindSctFrame()->Lower()->IsColumnFrame() &&
-                   0 == aRectFnSet.GetHeight(GetUpper()->getFrameArea())
-               ) )
+            if ( IsInSct() && FindSctFrame()->Lower()->IsColumnFrame() &&
+                 0 == aRectFnSet.GetHeight(GetUpper()->getFrameArea())
+               )
             {
                 bTryToSplit = false;
             }
@@ -2460,7 +2469,7 @@ void SwTabFrame::MakeAll(vcl::RenderContext* pRenderContext)
                 // The repeating lines / keeping lines still fit into the upper or
                 // if we do not have an (in)direct Prev, we split anyway.
                 if( aRectFnSet.YDiff(nDeadLine, nBreakLine) >=0
-                    || !pIndPrev || !bEmulateTableKeepFwdMoveAllowed )
+                    || !pIndPrev || bEmulateTableKeepSplitAllowed )
                 {
                     aNotify.SetLowersComplete( false );
                     bSplit = true;
@@ -2480,7 +2489,7 @@ void SwTabFrame::MakeAll(vcl::RenderContext* pRenderContext)
                         }
                     }
 
-                    const bool bSplitError = !Split( nDeadLine, bTryToSplit, ( bTableRowKeep && !(bAllowSplitOfRow || !bEmulateTableKeepFwdMoveAllowed) ) );
+                    const bool bSplitError = !Split( nDeadLine, bTryToSplit, ( bTableRowKeep && !(bAllowSplitOfRow || bEmulateTableKeepSplitAllowed) ) );
                     if (!bTryToSplit && !bSplitError)
                     {
                         --nUnSplitted;
@@ -2996,7 +3005,6 @@ void SwTabFrame::Format( vcl::RenderContext* /*pRenderContext*/, const SwBorderA
             case text::HoriOrientation::CENTER:
                 {
                     // OD 07.03.2003 #i9040# - consider left/right line attribute.
-                    // OD 10.03.2003 #i9040# -
                     const SwTwips nCenterSpacing = ( nMax - nWishedTableWidth ) / 2;
                     nLeftSpacing = nLeftLine +
                                    ( (nLeftOffset > 0) ?
@@ -3999,8 +4007,6 @@ static SwTwips lcl_CalcMinCellHeight( const SwLayoutFrame *_pCell,
         long nFlyAdd = 0;
         while ( pLow )
         {
-            // OD 2004-02-18 #106629# - change condition and switch then-body
-            // and else-body
             if ( pLow->IsRowFrame() )
             {
                 // #i26945#
@@ -4041,7 +4047,6 @@ static SwTwips lcl_CalcMinCellHeight( const SwLayoutFrame *_pCell,
     return nHeight;
 }
 
-// OD 2004-02-18 #106629# - correct type of 1st parameter
 // #i26945# - add parameter <_bConsiderObjs> in order to control,
 // if floating screen objects have to be considered for the minimal cell height
 static SwTwips lcl_CalcMinRowHeight( const SwRowFrame* _pRow,

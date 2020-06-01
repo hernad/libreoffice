@@ -899,7 +899,7 @@ const OutlinerParaObject* ScPostIt::GetOutlinerObject() const
 {
     if( maNoteData.mxCaption )
         return maNoteData.mxCaption->GetOutlinerParaObject();
-    if( maNoteData.mxInitData.get() )
+    if( maNoteData.mxInitData )
         return maNoteData.mxInitData->mxOutlinerObj.get();
     return nullptr;
 }
@@ -926,7 +926,7 @@ OUString ScPostIt::GetText() const
         }
         return aBuffer.makeStringAndClear();
     }
-    if( maNoteData.mxInitData.get() )
+    if( maNoteData.mxInitData )
         return maNoteData.mxInitData->maSimpleText;
     return OUString();
 }
@@ -935,7 +935,7 @@ bool ScPostIt::HasMultiLineText() const
 {
     if( const EditTextObject* pEditObj = GetEditTextObject() )
         return pEditObj->GetParagraphCount() > 1;
-    if( maNoteData.mxInitData.get() )
+    if( maNoteData.mxInitData )
         return maNoteData.mxInitData->maSimpleText.indexOf( '\n' ) >= 0;
     return false;
 }
@@ -1013,8 +1013,8 @@ void ScPostIt::CreateCaptionFromInitData( const ScAddress& rPos ) const
 {
     // Captions are not created in Undo documents and only rarely in Clipboard,
     // but otherwise we need caption or initial data.
-    assert((maNoteData.mxCaption || maNoteData.mxInitData.get()) || mrDoc.IsUndo() || mrDoc.IsClipboard());
-    if( !maNoteData.mxInitData.get() )
+    assert((maNoteData.mxCaption || maNoteData.mxInitData) || mrDoc.IsUndo() || mrDoc.IsClipboard());
+    if( !maNoteData.mxInitData )
         return;
 
 
@@ -1049,7 +1049,7 @@ void ScPostIt::CreateCaptionFromInitData( const ScAddress& rPos ) const
     maNoteData.mxCaption->getSdrModelFromSdrObject().setLock(true);
 
     // transfer ownership of outliner object to caption, or set simple text
-    OSL_ENSURE( xInitData->mxOutlinerObj.get() || !xInitData->maSimpleText.isEmpty(),
+    OSL_ENSURE( xInitData->mxOutlinerObj || !xInitData->maSimpleText.isEmpty(),
         "ScPostIt::CreateCaptionFromInitData - need either outliner para object or simple text" );
     if (xInitData->mxOutlinerObj)
         maNoteData.mxCaption->SetOutlinerParaObject( std::move(xInitData->mxOutlinerObj) );

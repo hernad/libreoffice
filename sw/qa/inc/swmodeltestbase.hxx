@@ -451,12 +451,12 @@ protected:
     }
 
     /// Similar to parseExport(), but this gives the xmlDocPtr of the layout dump.
-    xmlDocPtr parseLayoutDump()
+    xmlDocUniquePtr parseLayoutDump()
     {
         if (!mpXmlBuffer)
             dumpLayout(mxComponent);
 
-        return xmlParseMemory(reinterpret_cast<const char*>(xmlBufferContent(mpXmlBuffer)), xmlBufferLength(mpXmlBuffer));
+        return xmlDocUniquePtr(xmlParseMemory(reinterpret_cast<const char*>(xmlBufferContent(mpXmlBuffer)), xmlBufferLength(mpXmlBuffer)));
     }
 
     /**
@@ -466,9 +466,9 @@ protected:
      */
     OUString parseDump(const OString& aXPath, const OString& aAttribute = OString())
     {
-        xmlDocPtr pXmlDoc = parseLayoutDump();
+        xmlDocUniquePtr pXmlDoc = parseLayoutDump();
 
-        xmlXPathContextPtr pXmlXpathCtx = xmlXPathNewContext(pXmlDoc);
+        xmlXPathContextPtr pXmlXpathCtx = xmlXPathNewContext(pXmlDoc.get());
         xmlXPathObjectPtr pXmlXpathObj = xmlXPathEvalExpression(BAD_CAST(aXPath.getStr()), pXmlXpathCtx);
         CPPUNIT_ASSERT_MESSAGE("xpath evaluation failed", pXmlXpathObj);
         xmlChar *pXpathStrResult;
@@ -499,7 +499,6 @@ protected:
         xmlFree(pXpathStrResult);
         xmlFree(pXmlXpathObj);
         xmlFree(pXmlXpathCtx);
-        xmlFreeDoc(pXmlDoc);
 
         return aRet;
     }
@@ -809,6 +808,7 @@ protected:
             {
                 OUString sPassword = OUString::createFromAscii(pPassword);
                 css::uno::Sequence<css::beans::NamedValue> aEncryptionData {
+                    { "CryptoType", css::uno::makeAny(OUString("Standard")) },
                     { "OOXPassword", css::uno::makeAny(sPassword) }
                 };
                 aMediaDescriptor[utl::MediaDescriptor::PROP_ENCRYPTIONDATA()] <<= aEncryptionData;
@@ -913,13 +913,21 @@ protected:
         return xCursor->getPage();
     }
 
+    /// Get shape count.
+    int getShapes() const
+    {
+        uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
+        uno::Reference<container::XIndexAccess> xDraws = xDrawPageSupplier->getDrawPage();
+        return xDraws->getCount();
+    }
+
     /**
      * Given that some problem doesn't affect the result in the importer, we
      * test the resulting file directly, by opening the zip file, parsing an
      * xml stream, and asserting an XPath expression. This method returns the
      * xml stream, so that you can do the asserting.
      */
-    xmlDocPtr parseExport(const OUString& rStreamName = OUString("word/document.xml"))
+    xmlDocUniquePtr parseExport(const OUString& rStreamName = OUString("word/document.xml"))
     {
         if (!mbExported)
             return nullptr;
@@ -932,26 +940,27 @@ protected:
      * To be used when the exporter doesn't create zip archives, but single files
      * (like Flat ODF Export)
      */
-    xmlDocPtr parseExportedFile()
+    xmlDocUniquePtr parseExportedFile()
     {
-        return parseXmlStream(maTempFile.GetStream(StreamMode::READ));
+        auto stream(SvFileStream(maTempFile.GetURL(), StreamMode::READ | StreamMode::TEMPORARY));
+        return parseXmlStream(&stream);
     }
 
-    std::shared_ptr<SvStream> parseExportStream(const OUString& url, const OUString& rStreamName)
+    std::unique_ptr<SvStream> parseExportStream(const OUString& url, const OUString& rStreamName)
     {
         // Read the stream we're interested in.
         uno::Reference<packages::zip::XZipFileAccess2> xNameAccess = packages::zip::ZipFileAccess::createWithURL(comphelper::getComponentContext(m_xSFactory), url);
         uno::Reference<io::XInputStream> xInputStream(xNameAccess->getByName(rStreamName), uno::UNO_QUERY);
         CPPUNIT_ASSERT(xInputStream.is());
-        std::shared_ptr<SvStream> pStream(utl::UcbStreamHelper::CreateStream(xInputStream, true));
+        std::unique_ptr<SvStream> pStream(utl::UcbStreamHelper::CreateStream(xInputStream, true));
         return pStream;
     }
 
-    xmlDocPtr parseExportInternal(const OUString& url, const OUString& rStreamName)
+    xmlDocUniquePtr parseExportInternal(const OUString& url, const OUString& rStreamName)
     {
-        std::shared_ptr<SvStream> pStream(parseExportStream(url, rStreamName));
+        std::unique_ptr<SvStream> pStream(parseExportStream(url, rStreamName));
 
-        xmlDocPtr pXmlDoc = parseXmlStream(pStream.get());
+        xmlDocUniquePtr pXmlDoc = parseXmlStream(pStream.get());
         pXmlDoc->name = reinterpret_cast<char *>(xmlStrdup(reinterpret_cast<xmlChar const *>(OUStringToOString(url, RTL_TEXTENCODING_UTF8).getStr())));
         return pXmlDoc;
     }

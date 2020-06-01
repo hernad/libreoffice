@@ -644,11 +644,11 @@ OUString SwNumRule::MakeNumString( const SwNumberTree::tNumberVector & rNumVecto
         {
             css::lang::Locale aLocale( LanguageTag::convertToLocale(nLang));
 
-            OUString sLevelFormat = rMyNFormat.GetListFormat();
-            if (!sLevelFormat.isEmpty())
+            if (rMyNFormat.HasListFormat())
             {
+                OUString sLevelFormat = rMyNFormat.GetListFormat();
                 // In this case we are ignoring GetIncludeUpperLevels: we put all
-                // level nubers requested by level format
+                // level numbers requested by level format
                 for (SwNumberTree::tNumberVector::size_type i=0; i <= nLevel; ++i)
                 {
                     OUString sReplacement;
@@ -1078,7 +1078,7 @@ void SwNumRule::dumpAsXml(xmlTextWriterPtr pWriter) const
 
 void SwNumRule::GetGrabBagItem(uno::Any& rVal) const
 {
-    if (mpGrabBagItem.get())
+    if (mpGrabBagItem)
         mpGrabBagItem->QueryValue(rVal);
     else
         rVal <<= uno::Sequence<beans::PropertyValue>();
@@ -1086,7 +1086,7 @@ void SwNumRule::GetGrabBagItem(uno::Any& rVal) const
 
 void SwNumRule::SetGrabBagItem(const uno::Any& rVal)
 {
-    if (!mpGrabBagItem.get())
+    if (!mpGrabBagItem)
         mpGrabBagItem = std::make_shared<SfxGrabBagItem>();
 
     mpGrabBagItem->PutValue(rVal, 0);
@@ -1226,8 +1226,7 @@ namespace numfunc
     void SwDefBulletConfig::LoadConfig()
     {
         uno::Sequence<OUString> aPropNames = GetPropNames();
-        uno::Sequence<uno::Any> aValues =
-                                                    GetProperties( aPropNames );
+        uno::Sequence<uno::Any> aValues = GetProperties( aPropNames );
         const uno::Any* pValues = aValues.getConstArray();
         OSL_ENSURE( aValues.getLength() == aPropNames.getLength(),
                 "<SwDefBulletConfig::SwDefBulletConfig()> - GetProperties failed");
@@ -1439,15 +1438,15 @@ namespace numfunc
 
         SvxNumberFormat::SvxNumPositionAndSpaceMode ePosAndSpaceMode;
         SvtSaveOptions aSaveOptions;
-        switch ( aSaveOptions.GetODFDefaultVersion() )
+        switch (aSaveOptions.GetODFSaneDefaultVersion())
         {
-            case SvtSaveOptions::ODFVER_010:
-            case SvtSaveOptions::ODFVER_011:
+            case SvtSaveOptions::ODFSVER_010:
+            case SvtSaveOptions::ODFSVER_011:
             {
                 ePosAndSpaceMode = SvxNumberFormat::LABEL_WIDTH_AND_POSITION;
             }
             break;
-            default: // ODFVER_UNKNOWN or ODFVER_012
+            default: // >= ODFSVER_012
             {
                 ePosAndSpaceMode = SvxNumberFormat::LABEL_ALIGNMENT;
             }

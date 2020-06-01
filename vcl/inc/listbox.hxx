@@ -23,7 +23,7 @@
 #include <sal/config.h>
 
 #include <o3tl/safeint.hxx>
-#include <vcl/button.hxx>
+#include <vcl/toolkit/button.hxx>
 #include <vcl/floatwin.hxx>
 #include <vcl/quickselectionengine.hxx>
 #include <vcl/glyphitem.hxx>
@@ -275,7 +275,7 @@ public:
     sal_uInt16      GetDisplayLineCount() const;
     void            SetEntryFlags( sal_Int32  nPos, ListBoxEntryFlags nFlags );
 
-    void            DrawEntry(vcl::RenderContext& rRenderContext, sal_Int32  nPos, bool bDrawImage, bool bDrawText, bool bDrawTextAtImagePos);
+    void            DrawEntry(vcl::RenderContext& rRenderContext, sal_Int32  nPos, bool bDrawImage, bool bDrawText);
 
     void            SelectEntry( sal_Int32  nPos, bool bSelect );
     void            DeselectAll();

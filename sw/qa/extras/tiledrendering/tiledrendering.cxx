@@ -48,6 +48,7 @@
 #include <svx/svxids.hrc>
 #include <flddat.hxx>
 #include <basesh.hxx>
+#include <vcl/ITiledRenderable.hxx>
 
 static char const DATA_DIRECTORY[] = "/sw/qa/extras/tiledrendering/data/";
 
@@ -121,12 +122,17 @@ public:
     void testVisCursorInvalidation();
     void testDeselectCustomShape();
     void testSemiTransparent();
+    void testHighlightNumbering();
     void testClipText();
     void testAnchorTypes();
     void testLanguageStatus();
     void testRedlineNotificationDuringSave();
     void testHyperlink();
     void testFieldmark();
+    void testDropDownFormFieldButton();
+    void testDropDownFormFieldButtonEditing();
+    void testDropDownFormFieldButtonNoSelection();
+    void testDropDownFormFieldButtonNoItem();
 
     CPPUNIT_TEST_SUITE(SwTiledRenderingTest);
     CPPUNIT_TEST(testRegisterCallback);
@@ -186,12 +192,17 @@ public:
     CPPUNIT_TEST(testVisCursorInvalidation);
     CPPUNIT_TEST(testDeselectCustomShape);
     CPPUNIT_TEST(testSemiTransparent);
+    CPPUNIT_TEST(testHighlightNumbering);
     CPPUNIT_TEST(testClipText);
     CPPUNIT_TEST(testAnchorTypes);
     CPPUNIT_TEST(testLanguageStatus);
     CPPUNIT_TEST(testRedlineNotificationDuringSave);
     CPPUNIT_TEST(testHyperlink);
     CPPUNIT_TEST(testFieldmark);
+    CPPUNIT_TEST(testDropDownFormFieldButton);
+    CPPUNIT_TEST(testDropDownFormFieldButtonEditing);
+    CPPUNIT_TEST(testDropDownFormFieldButtonNoSelection);
+    CPPUNIT_TEST(testDropDownFormFieldButtonNoItem);
     CPPUNIT_TEST_SUITE_END();
 
 private:
@@ -212,6 +223,7 @@ private:
     int m_nTrackedChangeIndex;
     OString m_sHyperlinkText;
     OString m_sHyperlinkLink;
+    OString m_aFormFieldButton;
 };
 
 SwTiledRenderingTest::SwTiledRenderingTest()
@@ -361,6 +373,11 @@ void SwTiledRenderingTest::callbackImpl(int nType, const char* pPayload)
             m_sHyperlinkText = aChild.get("text", "").c_str();
             m_sHyperlinkLink = aChild.get("link", "").c_str();
         }
+    }
+    break;
+    case LOK_CALLBACK_FORM_FIELD_BUTTON:
+    {
+        m_aFormFieldButton = OString(pPayload);
     }
     break;
     }
@@ -2386,6 +2403,31 @@ void SwTiledRenderingTest::testSemiTransparent()
     CPPUNIT_ASSERT_GREATEREQUAL(190, static_cast<int>(aColor.B));
 }
 
+void SwTiledRenderingTest::testHighlightNumbering()
+{
+    // Load a document where the top left tile contains a semi-transparent rectangle shape.
+    SwXTextDocument* pXTextDocument = createDoc("tdf114799.docx");
+
+    // Render a larger area, and then get the color of the bottom right corner of our tile.
+    size_t nCanvasWidth = 1024;
+    size_t nCanvasHeight = 512;
+    size_t nTileSize = 256;
+    std::vector<unsigned char> aPixmap(nCanvasWidth * nCanvasHeight * 4, 0);
+    ScopedVclPtrInstance<VirtualDevice> pDevice(DeviceFormat::DEFAULT);
+    pDevice->SetBackground(Wallpaper(COL_TRANSPARENT));
+    pDevice->SetOutputSizePixelScaleOffsetAndBuffer(Size(nCanvasWidth, nCanvasHeight),
+                                                    Fraction(1.0), Point(), aPixmap.data());
+    pXTextDocument->paintTile(*pDevice, nCanvasWidth, nCanvasHeight, /*nTilePosX=*/0,
+                              /*nTilePosY=*/0, /*nTileWidth=*/15360, /*nTileHeight=*/7680);
+    pDevice->EnableMapMode(false);
+    Bitmap aBitmap = pDevice->GetBitmap(Point(0, 0), Size(nTileSize, nTileSize));
+    Bitmap::ScopedReadAccess pAccess(aBitmap);
+
+    // Yellow highlighting over numbering
+    Color aColor(pAccess->GetPixel(103, 148));
+    CPPUNIT_ASSERT_EQUAL(COL_YELLOW, aColor);
+}
+
 void SwTiledRenderingTest::testClipText()
 {
     // Load a document where the top left tile contains table text with
@@ -2508,6 +2550,209 @@ void SwTiledRenderingTest::testFieldmark()
 {
     // Without the accompanying fix in place, this crashed on load.
     createDoc("fieldmark.docx");
+}
+
+void SwTiledRenderingTest::testDropDownFormFieldButton()
+{
+    SwXTextDocument* pXTextDocument = createDoc("drop_down_form_field.odt");
+    pXTextDocument->setClientVisibleArea(tools::Rectangle(0, 0, 10000, 4000));
+
+    SwWrtShell* pWrtShell = pXTextDocument->GetDocShell()->GetWrtShell();
+    pWrtShell->GetSfxViewShell()->registerLibreOfficeKitViewCallback(&SwTiledRenderingTest::callback, this);
+
+    // Move the cursor to trigger displaying of the field button.
+    pWrtShell->Right(CRSR_SKIP_CHARS, /*bSelect=*/false, 1, /*bBasicCall=*/false);
+    CPPUNIT_ASSERT(m_aFormFieldButton.isEmpty());
+
+    // Do a tile rendering to trigger the button message with a valid text area
+    size_t nCanvasWidth = 1024;
+    size_t nCanvasHeight = 512;
+    std::vector<unsigned char> aPixmap(nCanvasWidth * nCanvasHeight * 4, 0);
+    ScopedVclPtrInstance<VirtualDevice> pDevice(DeviceFormat::DEFAULT);
+    pDevice->SetBackground(Wallpaper(COL_TRANSPARENT));
+    pDevice->SetOutputSizePixelScaleOffsetAndBuffer(Size(nCanvasWidth, nCanvasHeight),
+                                                    Fraction(1.0), Point(), aPixmap.data());
+    pXTextDocument->paintTile(*pDevice, nCanvasWidth, nCanvasHeight, /*nTilePosX=*/0,
+                              /*nTilePosY=*/0, /*nTileWidth=*/10000, /*nTileHeight=*/4000);
+
+    CPPUNIT_ASSERT(!m_aFormFieldButton.isEmpty());
+    {
+        std::stringstream aStream(m_aFormFieldButton.getStr());
+        boost::property_tree::ptree aTree;
+        boost::property_tree::read_json(aStream, aTree);
+
+        OString sAction = aTree.get_child("action").get_value<std::string>().c_str();
+        CPPUNIT_ASSERT_EQUAL(OString("show"), sAction);
+
+        OString sType = aTree.get_child("type").get_value<std::string>().c_str();
+        CPPUNIT_ASSERT_EQUAL(OString("drop-down"), sType);
+
+        OString sTextArea = aTree.get_child("textArea").get_value<std::string>().c_str();
+        CPPUNIT_ASSERT_EQUAL(OString("1538, 1418, 1026, 275"), sTextArea);
+
+        boost::property_tree::ptree aItems = aTree.get_child("params").get_child("items");
+        CPPUNIT_ASSERT_EQUAL(size_t(6), aItems.size());
+
+        OStringBuffer aItemList;
+        for (auto &item : aItems)
+        {
+            aItemList.append(item.second.get_value<std::string>().c_str());
+            aItemList.append(";");
+        }
+        CPPUNIT_ASSERT_EQUAL(OString("2019/2020;2020/2021;2021/2022;2022/2023;2023/2024;2024/2025;"), aItemList.toString());
+
+        OString sSelected = aTree.get_child("params").get_child("selected").get_value<std::string>().c_str();
+        CPPUNIT_ASSERT_EQUAL(OString("1"), sSelected);
+
+        OString sPlaceholder = aTree.get_child("params").get_child("placeholderText").get_value<std::string>().c_str();
+        CPPUNIT_ASSERT_EQUAL(OString("No Item specified"), sPlaceholder);
+    }
+
+    // Move the cursor back so the button becomes hidden.
+    pWrtShell->Left(CRSR_SKIP_CHARS, /*bSelect=*/false, 1, /*bBasicCall=*/false);
+
+    CPPUNIT_ASSERT(!m_aFormFieldButton.isEmpty());
+    {
+        std::stringstream aStream(m_aFormFieldButton.getStr());
+        boost::property_tree::ptree aTree;
+        boost::property_tree::read_json(aStream, aTree);
+
+        OString sAction = aTree.get_child("action").get_value<std::string>().c_str();
+        CPPUNIT_ASSERT_EQUAL(OString("hide"), sAction);
+
+        OString sType = aTree.get_child("type").get_value<std::string>().c_str();
+        CPPUNIT_ASSERT_EQUAL(OString("drop-down"), sType);
+    }
+}
+
+void SwTiledRenderingTest::testDropDownFormFieldButtonEditing()
+{
+    SwXTextDocument* pXTextDocument = createDoc("drop_down_form_field2.odt");
+    pXTextDocument->setClientVisibleArea(tools::Rectangle(0, 0, 10000, 4000));
+
+    SwWrtShell* pWrtShell = pXTextDocument->GetDocShell()->GetWrtShell();
+    pWrtShell->GetSfxViewShell()->registerLibreOfficeKitViewCallback(&SwTiledRenderingTest::callback, this);
+
+    // Move the cursor to trigger displaying of the field button.
+    pWrtShell->Right(CRSR_SKIP_CHARS, /*bSelect=*/false, 1, /*bBasicCall=*/false);
+    CPPUNIT_ASSERT(m_aFormFieldButton.isEmpty());
+
+    // Do a tile rendering to trigger the button message with a valid text area
+    size_t nCanvasWidth = 1024;
+    size_t nCanvasHeight = 512;
+    std::vector<unsigned char> aPixmap(nCanvasWidth * nCanvasHeight * 4, 0);
+    ScopedVclPtrInstance<VirtualDevice> pDevice(DeviceFormat::DEFAULT);
+    pDevice->SetBackground(Wallpaper(COL_TRANSPARENT));
+    pDevice->SetOutputSizePixelScaleOffsetAndBuffer(Size(nCanvasWidth, nCanvasHeight),
+                                                    Fraction(1.0), Point(), aPixmap.data());
+    pXTextDocument->paintTile(*pDevice, nCanvasWidth, nCanvasHeight, /*nTilePosX=*/0,
+                              /*nTilePosY=*/0, /*nTileWidth=*/10000, /*nTileHeight=*/4000);
+
+    // The item with the index '1' is selected by default
+    CPPUNIT_ASSERT(!m_aFormFieldButton.isEmpty());
+    {
+        std::stringstream aStream(m_aFormFieldButton.getStr());
+        boost::property_tree::ptree aTree;
+        boost::property_tree::read_json(aStream, aTree);
+
+        OString sSelected = aTree.get_child("params").get_child("selected").get_value<std::string>().c_str();
+        CPPUNIT_ASSERT_EQUAL(OString("1"), sSelected);
+    }
+    m_aFormFieldButton = "";
+
+    // Trigger a form field event to select a different item.
+    vcl::ITiledRenderable::StringMap aArguments;
+    aArguments["type"] = "drop-down";
+    aArguments["cmd"] = "selected";
+    aArguments["data"] = "3";
+    pXTextDocument->executeFromFieldEvent(aArguments);
+
+    // Do a tile rendering to trigger the button message.
+    pXTextDocument->paintTile(*pDevice, nCanvasWidth, nCanvasHeight, /*nTilePosX=*/0,
+                              /*nTilePosY=*/0, /*nTileWidth=*/10000, /*nTileHeight=*/4000);
+
+    CPPUNIT_ASSERT(!m_aFormFieldButton.isEmpty());
+    {
+        std::stringstream aStream(m_aFormFieldButton.getStr());
+        boost::property_tree::ptree aTree;
+        boost::property_tree::read_json(aStream, aTree);
+
+        OString sSelected = aTree.get_child("params").get_child("selected").get_value<std::string>().c_str();
+        CPPUNIT_ASSERT_EQUAL(OString("3"), sSelected);
+    }
+}
+
+void SwTiledRenderingTest::testDropDownFormFieldButtonNoSelection()
+{
+    SwXTextDocument* pXTextDocument = createDoc("drop_down_form_field_noselection.odt");
+    pXTextDocument->setClientVisibleArea(tools::Rectangle(0, 0, 10000, 4000));
+
+    SwWrtShell* pWrtShell = pXTextDocument->GetDocShell()->GetWrtShell();
+    pWrtShell->GetSfxViewShell()->registerLibreOfficeKitViewCallback(&SwTiledRenderingTest::callback, this);
+
+    // Move the cursor to trigger displaying of the field button.
+    pWrtShell->Right(CRSR_SKIP_CHARS, /*bSelect=*/false, 1, /*bBasicCall=*/false);
+    CPPUNIT_ASSERT(m_aFormFieldButton.isEmpty());
+
+    // Do a tile rendering to trigger the button message with a valid text area
+    size_t nCanvasWidth = 1024;
+    size_t nCanvasHeight = 512;
+    std::vector<unsigned char> aPixmap(nCanvasWidth * nCanvasHeight * 4, 0);
+    ScopedVclPtrInstance<VirtualDevice> pDevice(DeviceFormat::DEFAULT);
+    pDevice->SetBackground(Wallpaper(COL_TRANSPARENT));
+    pDevice->SetOutputSizePixelScaleOffsetAndBuffer(Size(nCanvasWidth, nCanvasHeight),
+                                                    Fraction(1.0), Point(), aPixmap.data());
+    pXTextDocument->paintTile(*pDevice, nCanvasWidth, nCanvasHeight, /*nTilePosX=*/0,
+                              /*nTilePosY=*/0, /*nTileWidth=*/10000, /*nTileHeight=*/4000);
+
+    // None of the items is selected
+    CPPUNIT_ASSERT(!m_aFormFieldButton.isEmpty());
+    {
+        std::stringstream aStream(m_aFormFieldButton.getStr());
+        boost::property_tree::ptree aTree;
+        boost::property_tree::read_json(aStream, aTree);
+
+        OString sSelected = aTree.get_child("params").get_child("selected").get_value<std::string>().c_str();
+        CPPUNIT_ASSERT_EQUAL(OString("-1"), sSelected);
+    }
+}
+
+void SwTiledRenderingTest::testDropDownFormFieldButtonNoItem()
+{
+    SwXTextDocument* pXTextDocument = createDoc("drop_down_form_field_noitem.odt");
+    pXTextDocument->setClientVisibleArea(tools::Rectangle(0, 0, 10000, 4000));
+
+    SwWrtShell* pWrtShell = pXTextDocument->GetDocShell()->GetWrtShell();
+    pWrtShell->GetSfxViewShell()->registerLibreOfficeKitViewCallback(&SwTiledRenderingTest::callback, this);
+
+    // Move the cursor to trigger displaying of the field button.
+    pWrtShell->Right(CRSR_SKIP_CHARS, /*bSelect=*/false, 1, /*bBasicCall=*/false);
+    CPPUNIT_ASSERT(m_aFormFieldButton.isEmpty());
+
+    // Do a tile rendering to trigger the button message with a valid text area
+    size_t nCanvasWidth = 1024;
+    size_t nCanvasHeight = 512;
+    std::vector<unsigned char> aPixmap(nCanvasWidth * nCanvasHeight * 4, 0);
+    ScopedVclPtrInstance<VirtualDevice> pDevice(DeviceFormat::DEFAULT);
+    pDevice->SetBackground(Wallpaper(COL_TRANSPARENT));
+    pDevice->SetOutputSizePixelScaleOffsetAndBuffer(Size(nCanvasWidth, nCanvasHeight),
+                                                    Fraction(1.0), Point(), aPixmap.data());
+    pXTextDocument->paintTile(*pDevice, nCanvasWidth, nCanvasHeight, /*nTilePosX=*/0,
+                              /*nTilePosY=*/0, /*nTileWidth=*/10000, /*nTileHeight=*/4000);
+
+    // There is not item specified for the field
+    CPPUNIT_ASSERT(!m_aFormFieldButton.isEmpty());
+    {
+        std::stringstream aStream(m_aFormFieldButton.getStr());
+        boost::property_tree::ptree aTree;
+        boost::property_tree::read_json(aStream, aTree);
+
+        boost::property_tree::ptree aItems = aTree.get_child("params").get_child("items");
+        CPPUNIT_ASSERT_EQUAL(size_t(0), aItems.size());
+
+        OString sSelected = aTree.get_child("params").get_child("selected").get_value<std::string>().c_str();
+        CPPUNIT_ASSERT_EQUAL(OString("-1"), sSelected);
+    }
 }
 
 CPPUNIT_TEST_SUITE_REGISTRATION(SwTiledRenderingTest);

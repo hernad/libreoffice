@@ -80,8 +80,8 @@
 #include <toolkit/helper/convert.hxx>
 #include <controls/filectrl.hxx>
 #include <controls/treecontrolpeer.hxx>
-#include <vcl/button.hxx>
-#include <vcl/combobox.hxx>
+#include <vcl/toolkit/button.hxx>
+#include <vcl/toolkit/combobox.hxx>
 #include <vcl/ctrl.hxx>
 #include <vcl/toolkit/dialog.hxx>
 #include <vcl/dockingarea.hxx>
@@ -1599,7 +1599,7 @@ vcl::Window* VCLXToolkit::ImplCreateWindow( VCLXWindow** ppNewComp,
                 *ppNewComp = new VCLXMessageBox;
             break;
             case WindowType::RADIOBUTTON:
-                pNewWindow = VclPtr<RadioButton>::Create( pParent, nWinBits );
+                pNewWindow = VclPtr<RadioButton>::Create(pParent, false, nWinBits);
                 *ppNewComp = new VCLXRadioButton;
 
                 // by default, disable RadioCheck
@@ -1668,7 +1668,8 @@ vcl::Window* VCLXToolkit::ImplCreateWindow( VCLXWindow** ppNewComp,
                 *ppNewComp = new VCLXToolBox;
             break;
             case WindowType::TRISTATEBOX:
-                pNewWindow = VclPtr<TriStateBox>::Create( pParent, nWinBits );
+                pNewWindow = VclPtr<CheckBox>::Create( pParent, nWinBits );
+                static_cast<CheckBox*>(pNewWindow.get())->EnableTriState(true);
             break;
             case WindowType::WARNINGBOX:
                 pNewWindow = VclPtr<WarningBox>::Create( pParent, nMessBoxStyle, nWinBits, OUString() );

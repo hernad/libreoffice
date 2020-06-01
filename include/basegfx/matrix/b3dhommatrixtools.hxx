@@ -17,29 +17,17 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_BASEGFX_MATRIX_B3DHOMMATRIXTOOLS_HXX
-#define INCLUDED_BASEGFX_MATRIX_B3DHOMMATRIXTOOLS_HXX
+#pragma once
 
 #include <basegfx/basegfxdllapi.h>
 #include <basegfx/matrix/b3dhommatrix.hxx>
 
-namespace com
-{
-namespace sun
-{
-namespace star
-{
-namespace drawing
+namespace com::sun::star::drawing
 {
 struct HomogenMatrix;
 }
-}
-}
-}
 
-namespace basegfx
-{
-namespace utils
+namespace basegfx::utils
 {
 /* tooling methods for converting API matrices (drawing::HomogenMatrix) to
     B3DHomMatrix. drawing::HomogenMatrix4 is not used by OOo
@@ -51,9 +39,6 @@ BASEGFX_DLLPUBLIC void
 B3DHomMatrixToUnoHomogenMatrix(const B3DHomMatrix& rMatrixIn,
                                com::sun::star::drawing::HomogenMatrix& rMatrixOut);
 
-} // end of namespace tools
-} // end of namespace basegfx
-
-#endif // INCLUDED_BASEGFX_MATRIX_B3DHOMMATRIXTOOLS_HXX
+} // end of namespace basegfx::tools
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

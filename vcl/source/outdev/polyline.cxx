@@ -71,8 +71,7 @@ void OutputDevice::DrawPolyLine( const tools::Polygon& rPoly )
         aTransform,
         aB2DPolyLine,
         0.0,
-        // tdf#124848 hairline
-        basegfx::B2DVector::getEmptyVector(),
+        0.0, // tdf#124848 hairline
         nullptr, // MM01
         basegfx::B2DLineJoin::NONE,
         css::drawing::LineCap_BUTT,
@@ -343,13 +342,13 @@ bool OutputDevice::DrawPolyLineDirect(
         const basegfx::B2DHomMatrix aTransform(ImplGetDeviceTransformation() * rObjectTransform);
         const bool bPixelSnapHairline((mnAntialiasing & AntialiasingFlags::PixelSnapHairline) && rB2DPolygon.count() < 1000);
 
+        const double fAdjustedTransparency = mpAlphaVDev ? 0 : fTransparency;
         // draw the polyline
         bool bDrawSuccess = mpGraphics->DrawPolyLine(
             aTransform,
             rB2DPolygon,
-            fTransparency,
-            // tdf#124848 use LineWidth direct, do not try to solve for zero-case (aka hairline)
-            basegfx::B2DVector(fLineWidth, fLineWidth),
+            fAdjustedTransparency,
+            fLineWidth, // tdf#124848 use LineWidth direct, do not try to solve for zero-case (aka hairline)
             pStroke, // MM01
             eLineJoin,
             eLineCap,
@@ -372,6 +371,12 @@ bool OutputDevice::DrawPolyLineDirect(
                 const tools::Polygon aToolsPolygon( rB2DPolygon );
                 mpMetaFile->AddAction( new MetaPolyLineAction( aToolsPolygon, aLineInfo ) );
             }
+
+            if (mpAlphaVDev)
+                mpAlphaVDev->DrawPolyLineDirect(rObjectTransform, rB2DPolygon, fLineWidth,
+                                                fTransparency, pStroke, eLineJoin, eLineCap,
+                                                fMiterMinimumAngle, bBypassAACheck);
+
             return true;
         }
     }

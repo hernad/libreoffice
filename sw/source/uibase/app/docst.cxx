@@ -309,8 +309,8 @@ void SwDocShell::ExecStyleSheet( SfxRequest& rReq )
                 false, &pItem ))
                 sParent = static_cast<const SfxStringItem*>(pItem)->GetValue();
 
-            if (sName.isEmpty() && m_xBasePool.get())
-                sName = SfxStyleDialogController::GenerateUnusedName(*m_xBasePool);
+            if (sName.isEmpty() && m_xBasePool)
+                sName = SfxStyleDialogController::GenerateUnusedName(*m_xBasePool, nFamily);
 
             Edit(sName, sParent, nFamily, nMask, true, OString(), nullptr, &rReq, nSlot);
         }
@@ -366,13 +366,12 @@ void SwDocShell::ExecStyleSheet( SfxRequest& rReq )
 
             if( !pArgs )
             {
-                nFamily = SfxStyleFamily::Para;
-
                 switch (nSlot)
                 {
                     case SID_STYLE_NEW_BY_EXAMPLE:
                     {
-                        SfxNewStyleDlg aDlg(GetView()->GetFrameWeld(), *GetStyleSheetPool());
+                        SfxStyleSheetBasePool& rPool = *GetStyleSheetPool();
+                        SfxNewStyleDlg aDlg(GetView()->GetFrameWeld(), rPool, nFamily);
                         if (aDlg.run() == RET_OK)
                         {
                             aParam = aDlg.GetName();

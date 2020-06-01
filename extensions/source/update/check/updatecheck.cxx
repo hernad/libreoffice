@@ -17,6 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
+#include <comphelper/scopeguard.hxx>
 #include <config_folders.h>
 
 #include "updatecheck.hxx"
@@ -138,6 +139,12 @@ OUString getImageFromFileName(const OUString& aFile)
 
         if( osl_Process_E_None == rc )
         {
+            // Create a guard to ensure correct cleanup in its dtor in any case
+            comphelper::ScopeGuard g([hOut, hProcess] () {
+                osl_closeFile(hOut);
+                osl_freeProcessHandle(hProcess);
+            });
+
             oslProcessInfo aInfo;
             aInfo.Size = sizeof(oslProcessInfo);
 
@@ -169,9 +176,6 @@ OUString getImageFromFileName(const OUString& aFile)
                         return aImageName;
                 }
             }
-
-            osl_closeFile(hOut);
-            osl_freeProcessHandle(hProcess);
         }
     }
 #endif
@@ -585,7 +589,7 @@ DownloadThread::run()
 
 #ifdef _WIN32
     CoUninitialize();
-    CoInitialize( nullptr );
+    CoInitializeEx( nullptr, COINIT_APARTMENTTHREADED );
 #endif
 
     while( schedule() )

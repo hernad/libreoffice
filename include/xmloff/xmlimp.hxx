@@ -47,36 +47,35 @@
 #include <o3tl/typed_flags_set.hxx>
 #include <memory>
 
-namespace com { namespace sun { namespace star { namespace beans { class XPropertySet; } } } }
-namespace com { namespace sun { namespace star { namespace beans { struct NamedValue; } } } }
-namespace com { namespace sun { namespace star { namespace document { class XEmbeddedObjectResolver; } } } }
-namespace com { namespace sun { namespace star { namespace document { class XGraphicStorageHandler; } } } }
-namespace com { namespace sun { namespace star { namespace embed { class XStorage; } } } }
-namespace com { namespace sun { namespace star { namespace graphic { class XGraphic; } } } }
-namespace com { namespace sun { namespace star { namespace task { class XStatusIndicator; } } } }
-namespace com { namespace sun { namespace star { namespace uno { class XComponentContext; } } } }
-namespace com { namespace sun { namespace star { namespace util { class XNumberFormatsSupplier; } } } }
-namespace com { namespace sun { namespace star { namespace xml { namespace sax { class XAttributeList; } } } } }
-namespace com { namespace sun { namespace star { namespace xml { namespace sax { class XFastAttributeList; } } } } }
-namespace com { namespace sun { namespace star { namespace xml { namespace sax { class XFastContextHandler; } } } } }
-namespace comphelper { class AttributeList; }
-
-class ProgressBarHelper;
-
-#define NAMESPACE_TOKEN( prefixToken ) ( ( sal_Int32( prefixToken + 1 ) ) << NMSP_SHIFT )
-#define XML_ELEMENT( prefix, name ) ( NAMESPACE_TOKEN( XML_NAMESPACE_##prefix ) | name )
-
-const size_t NMSP_SHIFT = 16;
-const sal_Int32 TOKEN_MASK = 0xffff;
-const sal_Int32 NMSP_MASK = 0xffff0000;
-
-namespace com { namespace sun { namespace star {
+namespace com::sun::star::beans { class XPropertySet; }
+namespace com::sun::star::beans { struct NamedValue; }
+namespace com::sun::star::document { class XEmbeddedObjectResolver; }
+namespace com::sun::star::document { class XGraphicStorageHandler; }
+namespace com::sun::star::embed { class XStorage; }
+namespace com::sun::star::graphic { class XGraphic; }
+namespace com::sun::star::task { class XStatusIndicator; }
+namespace com::sun::star::uno { class XComponentContext; }
+namespace com::sun::star::util { class XNumberFormatsSupplier; }
+namespace com::sun::star::xml::sax { class XAttributeList; }
+namespace com::sun::star::xml::sax { class XFastAttributeList; }
+namespace com::sun::star::xml::sax { class XFastContextHandler; }
+namespace com::sun::star {
     namespace frame { class XModel; }
     namespace io { class XOutputStream; }
     namespace rdf { class XMetadatable; }
-} } }
-namespace comphelper { class UnoInterfaceToUniqueIdentifierMapper; }
+}
 
+namespace comphelper { class UnoInterfaceToUniqueIdentifierMapper; }
+namespace comphelper { class AttributeList; }
+
+namespace xmloff {
+    class RDFaImportHelper;
+}
+namespace xmloff::token {
+    class FastTokenHandler;
+}
+
+class ProgressBarHelper;
 class SvXMLNamespaceMap;
 class SvXMLImport_Impl;
 class SvXMLUnitConverter;
@@ -87,12 +86,24 @@ class XMLErrors;
 class StyleMap;
 enum class SvXMLErrorFlags;
 
-namespace xmloff {
-    class RDFaImportHelper;
+constexpr sal_Int32 LAST_NAMESPACE = 121; // last value in xmloff/xmnspe.hxx
+constexpr size_t NMSP_SHIFT = 16;
+constexpr sal_Int32 TOKEN_MASK = 0xffff;
+constexpr sal_Int32 NMSP_MASK = 0xffff0000;
+
+#define XML_ELEMENT( prefix, name ) ( NAMESPACE_TOKEN(XML_NAMESPACE_##prefix) | name )
+
+constexpr sal_Int32 NAMESPACE_TOKEN( sal_uInt16 prefixToken )
+{
+    return ( prefixToken + 1 ) << NMSP_SHIFT;
 }
-namespace xmloff::token {
-    class FastTokenHandler;
+
+constexpr bool IsTokenInNamespace(sal_Int32 nToken, sal_uInt16 nNamespacePrefix)
+{
+    auto nTmp = ((nToken & NMSP_MASK) >> NMSP_SHIFT) - 1;
+    return nTmp == nNamespacePrefix;
 }
+
 
 enum class SvXMLImportFlags {
     NONE            = 0x0000,
@@ -547,6 +558,7 @@ public:
     /// @ATTENTION: when adding a new value more specific than "6x", grep for
     /// all current uses and adapt them!!!
     static const sal_uInt16 LO_6x = 60 | LO_flag;
+    static const sal_uInt16 LO_7x = 70 | LO_flag;
     static const sal_uInt16 ProductVersionUnknown = SAL_MAX_UINT16;
 
     /** depending on whether the generator version indicates LO, compare

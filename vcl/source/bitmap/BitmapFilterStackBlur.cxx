@@ -48,9 +48,8 @@ static const sal_Int16 constShiftTable[255]
         24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
         24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24 };
 
-class BlurSharedData
+struct BlurSharedData
 {
-public:
     BitmapReadAccess* mpReadAccess;
     BitmapWriteAccess* mpWriteAccess;
     long mnRadius;
@@ -70,9 +69,8 @@ public:
     }
 };
 
-class BlurArrays
+struct BlurArrays
 {
-public:
     BlurSharedData maShared;
 
     std::vector<sal_uInt8> maStackBuffer;
@@ -98,7 +96,7 @@ public:
     {
         for (long i = 0; i < maShared.mnDiv; i++)
         {
-            maPositionTable[i] = std::min(nLastIndex, std::max(0L, i - maShared.mnRadius));
+            maPositionTable[i] = std::clamp(i - maShared.mnRadius, 0L, nLastIndex);
             maWeightTable[i] = maShared.mnRadius + 1 - std::abs(i - maShared.mnRadius);
         }
     }
@@ -109,8 +107,6 @@ public:
 };
 
 typedef void (*BlurRangeFn)(BlurSharedData const& rShared, long nStartY, long nEndY);
-
-constexpr long constBlurThreadStrip = 16;
 
 class BlurTask : public comphelper::ThreadTask
 {
@@ -261,9 +257,15 @@ void stackBlurHorizontal(BlurSharedData const& rShared, long nStart, long nEnd)
         SumFunction::set(nInSum, 0L);
         SumFunction::set(nOutSum, 0L);
 
+        // Pre-initialize blur data for first pixel.
+        // aArrays.maPositionTable contains values like (for radius of 5): [0,0,0,0,0,0,1,2,3,4,5],
+        // which are used as pixels indices in the current row that we use to prepare information
+        // for the first pixel; aArrays.maWeightTable has [1,2,3,4,5,6,5,4,3,2,1]. Before looking at
+        // the first row pixel, we pretend to have processed fake previous pixels, as if the row was
+        // extended to the left with the same color as that of the first pixel.
         for (long i = 0; i < nDiv; i++)
         {
-            pSourcePointer = pReadAccess->GetScanline(pPositionPointer[i]);
+            pSourcePointer = pReadAccess->GetScanline(y) + nComponentWidth * pPositionPointer[i];
 
             pStackPtr = &pStack[nComponentWidth * i];
 
@@ -374,9 +376,15 @@ void stackBlurVertical(BlurSharedData const& rShared, long nStart, long nEnd)
         SumFunction::set(nInSum, 0L);
         SumFunction::set(nOutSum, 0L);
 
+        // Pre-initialize blur data for first pixel.
+        // aArrays.maPositionTable contains values like (for radius of 5): [0,0,0,0,0,0,1,2,3,4,5],
+        // which are used as pixels indices in the current column that we use to prepare information
+        // for the first pixel; aArrays.maWeightTable has [1,2,3,4,5,6,5,4,3,2,1]. Before looking at
+        // the first column pixels, we pretend to have processed fake previous pixels, as if the
+        // column was extended to the top with the same color as that of the first pixel.
         for (long i = 0; i < nDiv; i++)
         {
-            pSourcePointer = pReadAccess->GetScanline(pPositionPointer[i]);
+            pSourcePointer = pReadAccess->GetScanline(pPositionPointer[i]) + nComponentWidth * x;
 
             pStackPtr = &pStack[nComponentWidth * i];
 
@@ -442,6 +450,8 @@ void stackBlurVertical(BlurSharedData const& rShared, long nStart, long nEnd)
     }
 }
 
+constexpr long nThreadStrip = 16;
+
 void runStackBlur(Bitmap& rBitmap, const long nRadius, const long nComponentWidth,
                   const long nColorChannels, BlurRangeFn pBlurHorizontalFn,
                   BlurRangeFn pBlurVerticalFn, const bool bParallel)
@@ -451,65 +461,44 @@ void runStackBlur(Bitmap& rBitmap, const long nRadius, const long nComponentWidt
         try
         {
             comphelper::ThreadPool& rShared = comphelper::ThreadPool::getSharedOptimalPool();
-            std::shared_ptr<comphelper::ThreadTaskTag> pTag
-                = comphelper::ThreadPool::createThreadTaskTag();
+            auto pTag = comphelper::ThreadPool::createThreadTaskTag();
 
             {
                 Bitmap::ScopedReadAccess pReadAccess(rBitmap);
                 BitmapScopedWriteAccess pWriteAccess(rBitmap);
-
                 BlurSharedData aSharedData(pReadAccess.get(), pWriteAccess.get(), nRadius,
                                            nComponentWidth, nColorChannels);
 
-                const Size aSize = rBitmap.GetSizePixel();
-                long nEnd = aSize.Height() - 1;
-
+                const long nLastIndex = pReadAccess->Height() - 1;
                 long nStripStart = 0;
-                long nStripEnd = nStripStart + constBlurThreadStrip - 1;
-
-                while (nStripEnd < nEnd)
+                for (; nStripStart < nLastIndex - nThreadStrip; nStripStart += nThreadStrip)
                 {
-                    std::unique_ptr<BlurTask> pTask(
-                        new BlurTask(pTag, pBlurHorizontalFn, aSharedData, nStripStart, nStripEnd));
-                    rShared.pushTask(std::move(pTask));
-                    nStripStart += constBlurThreadStrip;
-                    nStripEnd += constBlurThreadStrip;
-                }
-                if (nStripStart <= nEnd)
-                {
-                    std::unique_ptr<BlurTask> pTask(
-                        new BlurTask(pTag, pBlurHorizontalFn, aSharedData, nStripStart, nEnd));
+                    long nStripEnd = nStripStart + nThreadStrip - 1;
+                    auto pTask(std::make_unique<BlurTask>(pTag, pBlurHorizontalFn, aSharedData,
+                                                          nStripStart, nStripEnd));
                     rShared.pushTask(std::move(pTask));
                 }
+                // Do the last (or the only) strip in main thread without threading overhead
+                pBlurHorizontalFn(aSharedData, nStripStart, nLastIndex);
                 rShared.waitUntilDone(pTag);
             }
             {
                 Bitmap::ScopedReadAccess pReadAccess(rBitmap);
                 BitmapScopedWriteAccess pWriteAccess(rBitmap);
-
                 BlurSharedData aSharedData(pReadAccess.get(), pWriteAccess.get(), nRadius,
                                            nComponentWidth, nColorChannels);
 
-                const Size aSize = rBitmap.GetSizePixel();
-                long nEnd = aSize.Width() - 1;
-
+                const long nLastIndex = pReadAccess->Width() - 1;
                 long nStripStart = 0;
-                long nStripEnd = nStripStart + constBlurThreadStrip - 1;
-
-                while (nStripEnd < nEnd)
+                for (; nStripStart < nLastIndex - nThreadStrip; nStripStart += nThreadStrip)
                 {
-                    std::unique_ptr<BlurTask> pTask(
-                        new BlurTask(pTag, pBlurVerticalFn, aSharedData, nStripStart, nStripEnd));
-                    rShared.pushTask(std::move(pTask));
-                    nStripStart += constBlurThreadStrip;
-                    nStripEnd += constBlurThreadStrip;
-                }
-                if (nStripStart <= nEnd)
-                {
-                    std::unique_ptr<BlurTask> pTask(
-                        new BlurTask(pTag, pBlurVerticalFn, aSharedData, nStripStart, nEnd));
+                    long nStripEnd = nStripStart + nThreadStrip - 1;
+                    auto pTask(std::make_unique<BlurTask>(pTag, pBlurVerticalFn, aSharedData,
+                                                          nStripStart, nStripEnd));
                     rShared.pushTask(std::move(pTask));
                 }
+                // Do the last (or the only) strip in main thread without threading overhead
+                pBlurVerticalFn(aSharedData, nStripStart, nLastIndex);
                 rShared.waitUntilDone(pTag);
             }
         }
@@ -569,39 +558,6 @@ void stackBlur8(Bitmap& rBitmap, sal_Int32 nRadius, sal_Int32 nComponentWidth)
                  pBlurVerticalFn, bParallel);
 }
 
-void centerExtendBitmap(Bitmap& rBitmap, sal_Int32 nExtendSize, Color aColor)
-{
-    const Size& rSize = rBitmap.GetSizePixel();
-    const Size aNewSize(rSize.Width() + nExtendSize * 2, rSize.Height() + nExtendSize * 2);
-
-    Bitmap aNewBitmap(aNewSize, rBitmap.GetBitCount());
-
-    {
-        Bitmap::ScopedReadAccess pReadAccess(rBitmap);
-        BitmapScopedWriteAccess pWriteAccess(aNewBitmap);
-
-        long nWidthBorder = nExtendSize + rSize.Width();
-        long nHeightBorder = nExtendSize + rSize.Height();
-
-        for (long y = 0; y < aNewSize.Height(); y++)
-        {
-            for (long x = 0; x < aNewSize.Width(); x++)
-            {
-                if (y < nExtendSize || y >= nHeightBorder || x < nExtendSize || x >= nWidthBorder)
-                {
-                    pWriteAccess->SetPixel(y, x, aColor);
-                }
-                else
-                {
-                    pWriteAccess->SetPixel(y, x,
-                                           pReadAccess->GetPixel(y - nExtendSize, x - nExtendSize));
-                }
-            }
-        }
-    }
-    rBitmap = aNewBitmap;
-}
-
 } // end anonymous namespace
 
 /**
@@ -625,9 +581,8 @@ void centerExtendBitmap(Bitmap& rBitmap, sal_Int32 nExtendSize, Color aColor)
  *   (https://code.google.com/p/fog/)
  *
  */
-BitmapFilterStackBlur::BitmapFilterStackBlur(sal_Int32 nRadius, bool bExtend)
+BitmapFilterStackBlur::BitmapFilterStackBlur(sal_Int32 nRadius)
     : mnRadius(nRadius)
-    , mbExtend(bExtend)
 {
 }
 
@@ -659,21 +614,11 @@ Bitmap BitmapFilterStackBlur::filter(Bitmap const& rBitmap) const
                                   ? 4
                                   : 3;
 
-        if (mbExtend)
-        {
-            centerExtendBitmap(bitmapCopy, mnRadius, COL_WHITE);
-        }
-
         stackBlur24(bitmapCopy, mnRadius, nComponentWidth);
     }
     else if (nScanlineFormat == ScanlineFormat::N8BitPal)
     {
         int nComponentWidth = 1;
-
-        if (mbExtend)
-        {
-            centerExtendBitmap(bitmapCopy, mnRadius, COL_WHITE);
-        }
 
         stackBlur8(bitmapCopy, mnRadius, nComponentWidth);
     }

@@ -29,11 +29,11 @@
 #include <rtl/ustring.hxx>
 #include <sal/types.h>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace sheet { struct FormulaToken; }
     namespace sheet { class XFormulaOpCodeMapper; }
     namespace sheet { class XFormulaParser; }
-} } }
+}
 
 namespace com::sun::star::uno { template <class E> class Sequence; }
 
@@ -101,6 +101,7 @@ namespace formula
         // parameter
         virtual sal_uInt32 getParameterCount() const = 0;
         virtual sal_uInt32 getVarArgsStart() const = 0;
+        virtual sal_uInt32 getVarArgsLimit() const = 0;
         virtual OUString getParameterName(sal_uInt32 _nPos) const = 0;
         virtual OUString getParameterDescription(sal_uInt32 _nPos) const = 0;
         virtual bool isParameterOptional(sal_uInt32 _nPos) const = 0;

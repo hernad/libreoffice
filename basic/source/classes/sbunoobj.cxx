@@ -2044,7 +2044,7 @@ void SbUnoObject::Notify( SfxBroadcaster& rBC, const SfxHint& rHint )
             {
                 try
                 {
-                    if ( maStructInfo.get()  )
+                    if ( maStructInfo  )
                     {
                         StructRefInfo aMember = maStructInfo->getStructMember( pProp->GetName() );
                         if ( aMember.isEmpty() )
@@ -2121,7 +2121,7 @@ void SbUnoObject::Notify( SfxBroadcaster& rBC, const SfxHint& rHint )
                     StarBASIC::Error( ERRCODE_BASIC_PROP_READONLY );
                     return;
                 }
-                if (  maStructInfo.get()  )
+                if (  maStructInfo  )
                 {
                     StructRefInfo aMember = maStructInfo->getStructMember( pProp->GetName() );
                     if ( aMember.isEmpty() )
@@ -2840,7 +2840,7 @@ Any SbUnoObject::getUnoAny()
 {
     Any aRetAny;
     if( bNeedIntrospection ) doIntrospection();
-    if ( maStructInfo.get() )
+    if ( maStructInfo )
        aRetAny = maTmpUnoObj;
     else if( mxMaterialHolder.is() )
         aRetAny = mxMaterialHolder->getMaterial();
@@ -3236,9 +3236,7 @@ void VBAConstantHelper::init()
     if ( isInited )
         return;
 
-    Sequence< TypeClass > types(1);
-    types[ 0 ] = TypeClass_CONSTANTS;
-    Reference< XTypeDescriptionEnumeration > xEnum = getTypeDescriptorEnumeration( "ooo.vba", types, TypeDescriptionSearchDepth_INFINITE  );
+    Reference< XTypeDescriptionEnumeration > xEnum = getTypeDescriptorEnumeration( "ooo.vba", {TypeClass_CONSTANTS}, TypeDescriptionSearchDepth_INFINITE  );
 
     if ( !xEnum.is())
     {
@@ -3258,18 +3256,18 @@ void VBAConstantHelper::init()
                 sLeafName = sFullName.copy( indexLastDot + 1);
             }
             aConstCache.push_back( sLeafName ); // assume constant group names are unique
-            Sequence< Reference< XConstantTypeDescription > > aConsts = xConstants->getConstants();
-            for (sal_Int32 i = 0; i != aConsts.getLength(); ++i)
+            const Sequence< Reference< XConstantTypeDescription > > aConsts = xConstants->getConstants();
+            for (const auto& ctd : aConsts)
             {
                 // store constant member name
-                sFullName = aConsts[i]->getName();
+                sFullName = ctd->getName();
                 indexLastDot = sFullName.lastIndexOf('.');
                 sLeafName = sFullName;
                 if ( indexLastDot > -1 )
                 {
                     sLeafName = sFullName.copy( indexLastDot + 1);
                 }
-                aConstHash[ sLeafName.toAsciiLowerCase() ] = aConsts[i]->getConstantValue();
+                aConstHash[ sLeafName.toAsciiLowerCase() ] = ctd->getConstantValue();
             }
         }
     }
@@ -3922,9 +3920,7 @@ static Reference< XInterface > createAllListenerAdapter
         Reference< XInvocation > xInvocationToAllListenerMapper =
             new InvocationToAllListenerMapper(xListenerType, xListener, Helper);
         Type aListenerType( xListenerType->getTypeClass(), xListenerType->getName() );
-        Sequence<Type> arg2(1);
-        arg2[0] = aListenerType;
-        xAdapter = xInvocationAdapterFactory->createAdapter( xInvocationToAllListenerMapper, arg2 );
+        xAdapter = xInvocationAdapterFactory->createAdapter( xInvocationToAllListenerMapper, {aListenerType} );
     }
     return xAdapter;
 }

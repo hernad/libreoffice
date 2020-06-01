@@ -1701,13 +1701,13 @@ void ScXMLExport::SetBodyAttributes()
         if (!aBuffer.isEmpty())
         {
             AddAttribute(XML_NAMESPACE_TABLE, XML_PROTECTION_KEY, aBuffer.makeStringAndClear());
-            if ( getDefaultVersion() >= SvtSaveOptions::ODFVER_012 )
+            if (getSaneDefaultVersion() >= SvtSaveOptions::ODFSVER_012)
             {
                 if (eHashUsed == PASSHASH_XL)
                 {
                     AddAttribute(XML_NAMESPACE_TABLE, XML_PROTECTION_KEY_DIGEST_ALGORITHM,
                                  ScPassHashHelper::getHashURI(PASSHASH_XL));
-                    if (getDefaultVersion() > SvtSaveOptions::ODFVER_012)
+                    if (getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
                         AddAttribute(XML_NAMESPACE_LO_EXT, XML_PROTECTION_KEY_DIGEST_ALGORITHM_2,
                                 ScPassHashHelper::getHashURI(PASSHASH_SHA1));
                 }
@@ -1982,16 +1982,14 @@ void ScXMLExport::ExportStyles_( bool bUsed )
     SvXMLExport::ExportStyles_(bUsed);
 }
 
-void ScXMLExport::AddStyleFromCells(const uno::Reference<beans::XPropertySet>& xProperties,
+void ScXMLExport::AddStyleFromCells(const uno::Reference<sheet::XSheetCellRanges>& xCellRanges,
                                     const uno::Reference<sheet::XSpreadsheet>& xTable,
                                     sal_Int32 nTable, const OUString* pOldName)
 {
+    uno::Reference<beans::XPropertySet> xProperties(xCellRanges, uno::UNO_QUERY_THROW);
     css::uno::Any aAny = xProperties->getPropertyValue("FormatID");
     sal_uInt64 nKey = 0;
     aAny >>= nKey;
-
-    //! pass xCellRanges instead
-    uno::Reference<sheet::XSheetCellRanges> xCellRanges( xProperties, uno::UNO_QUERY );
 
     OUString sStyleName;
     sal_Int32 nNumberFormat(-1);
@@ -2258,10 +2256,10 @@ void ScXMLExport::collectAutoStyles()
                 if (bCopySheet)
                 {
                     uno::Reference <sheet::XSpreadsheet> xTable(xIndex->getByIndex(nTable), uno::UNO_QUERY);
-                    uno::Reference <beans::XPropertySet> xProperties(
+                    uno::Reference <sheet::XSheetCellRanges> xCellRanges(
                         xTable->getCellByPosition( aPos.Col(), aPos.Row() ), uno::UNO_QUERY );
 
-                    AddStyleFromCells(xProperties, xTable, nTable, &rCellEntry.maName);
+                    AddStyleFromCells(xCellRanges, xTable, nTable, &rCellEntry.maName);
                 }
             }
 
@@ -2516,12 +2514,8 @@ void ScXMLExport::collectAutoStyles()
                         uno::Reference< sheet::XSheetCellRanges> xCellRanges(xFormatRangesIndex->getByIndex(nFormatRange), uno::UNO_QUERY);
                         if (xCellRanges.is())
                         {
-                            uno::Reference <beans::XPropertySet> xProperties (xCellRanges, uno::UNO_QUERY);
-                            if (xProperties.is())
-                            {
-                                AddStyleFromCells(xProperties, xTable, nTable, nullptr);
-                                IncrementProgressBar(false);
-                            }
+                            AddStyleFromCells(xCellRanges, xTable, nTable, nullptr);
+                            IncrementProgressBar(false);
                         }
                     }
                 }
@@ -2824,13 +2818,13 @@ void ScXMLExport::WriteTable(sal_Int32 nTable, const uno::Reference<sheet::XSpre
                 if (!aBuffer.isEmpty())
                 {
                     AddAttribute(XML_NAMESPACE_TABLE, XML_PROTECTION_KEY, aBuffer.makeStringAndClear());
-                    if ( getDefaultVersion() >= SvtSaveOptions::ODFVER_012 )
+                    if (getSaneDefaultVersion() >= SvtSaveOptions::ODFSVER_012)
                     {
                         if (eHashUsed == PASSHASH_XL)
                         {
                             AddAttribute(XML_NAMESPACE_TABLE, XML_PROTECTION_KEY_DIGEST_ALGORITHM,
                                          ScPassHashHelper::getHashURI(PASSHASH_XL));
-                            if (getDefaultVersion() > SvtSaveOptions::ODFVER_012)
+                            if (getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
                                 AddAttribute(XML_NAMESPACE_LO_EXT, XML_PROTECTION_KEY_DIGEST_ALGORITHM_2,
                                         ScPassHashHelper::getHashURI(PASSHASH_SHA1));
                         }
@@ -2859,7 +2853,7 @@ void ScXMLExport::WriteTable(sal_Int32 nTable, const uno::Reference<sheet::XSpre
         AddAttribute( XML_NAMESPACE_TABLE, XML_PRINT, XML_FALSE);
     SvXMLElementExport aElemT(*this, sElemTab, true, true);
 
-    if (pProtect && pProtect->isProtected() && getDefaultVersion() > SvtSaveOptions::ODFVER_012)
+    if (pProtect && pProtect->isProtected() && getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
     {
         if (pProtect->isOptionEnabled(ScTableProtection::SELECT_LOCKED_CELLS))
             AddAttribute(XML_NAMESPACE_LO_EXT, XML_SELECT_PROTECTED_CELLS, XML_TRUE);
@@ -2885,7 +2879,7 @@ void ScXMLExport::WriteTable(sal_Int32 nTable, const uno::Reference<sheet::XSpre
     CheckAttrList();
 
     if ( pDoc && pDoc->GetSheetEvents( static_cast<SCTAB>(nTable) ) &&
-         getDefaultVersion() >= SvtSaveOptions::ODFVER_012 )
+        getSaneDefaultVersion() >= SvtSaveOptions::ODFSVER_012)
     {
         // store sheet events
         uno::Reference<document::XEventsSupplier> xSupplier(xTable, uno::UNO_QUERY);
@@ -2981,7 +2975,7 @@ void ScXMLExport::WriteTable(sal_Int32 nTable, const uno::Reference<sheet::XSpre
             WriteNamedRange(pRangeName);
         }
 
-        if(getDefaultVersion() > SvtSaveOptions::ODFVER_012)
+        if (getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
         {
             //export new conditional format information
             ExportConditionalFormat(nTable);
@@ -3138,7 +3132,7 @@ void ScXMLExport::WriteCell(ScMyCell& aCell, sal_Int32 nEqualCellCount)
             {
                 GetNumberFormatAttributesExportHelper()->SetNumberFormatAttributes(
                     aCell.nNumberFormat, aCell.maBaseCell.mfValue);
-                if( getDefaultVersion() > SvtSaveOptions::ODFVER_012 )
+                if (getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
                     GetNumberFormatAttributesExportHelper()->SetNumberFormatAttributes(
                             aCell.nNumberFormat, aCell.maBaseCell.mfValue, false, XML_NAMESPACE_CALC_EXT, false);
             }
@@ -3149,7 +3143,7 @@ void ScXMLExport::WriteCell(ScMyCell& aCell, sal_Int32 nEqualCellCount)
                 OUString sCellString = aCell.maBaseCell.getString(pDoc);
                 GetNumberFormatAttributesExportHelper()->SetNumberFormatAttributes(
                         sCellString, sFormattedString);
-                if( getDefaultVersion() > SvtSaveOptions::ODFVER_012 )
+                if (getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
                     GetNumberFormatAttributesExportHelper()->SetNumberFormatAttributes(
                             sCellString, sFormattedString, false, XML_NAMESPACE_CALC_EXT);
             }
@@ -3185,7 +3179,7 @@ void ScXMLExport::WriteCell(ScMyCell& aCell, sal_Int32 nEqualCellCount)
                     {
                         AddAttribute(sAttrValueType, XML_STRING);
                         AddAttribute(sAttrStringValue, aCell.maBaseCell.getString(pDoc));
-                        if( getDefaultVersion() > SvtSaveOptions::ODFVER_012 )
+                        if (getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
                         {
                             //export calcext:value-type="error"
                             AddAttribute(XML_NAMESPACE_CALC_EXT,XML_VALUE_TYPE, OUString("error"));
@@ -3200,7 +3194,7 @@ void ScXMLExport::WriteCell(ScMyCell& aCell, sal_Int32 nEqualCellCount)
                         {
                             GetNumberFormatAttributesExportHelper()->SetNumberFormatAttributes(
                                     aCell.nNumberFormat, pDoc->GetValue(aCell.maCellAddress));
-                            if( getDefaultVersion() > SvtSaveOptions::ODFVER_012 )
+                            if (getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
                             {
                                 GetNumberFormatAttributesExportHelper()->SetNumberFormatAttributes(
                                         aCell.nNumberFormat, pDoc->GetValue(aCell.maCellAddress), false, XML_NAMESPACE_CALC_EXT, false );
@@ -3213,7 +3207,7 @@ void ScXMLExport::WriteCell(ScMyCell& aCell, sal_Int32 nEqualCellCount)
                         {
                             AddAttribute(sAttrValueType, XML_STRING);
                             AddAttribute(sAttrStringValue, aCell.maBaseCell.getString(pDoc));
-                            if( getDefaultVersion() > SvtSaveOptions::ODFVER_012 )
+                            if (getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
                             {
                                 AddAttribute(XML_NAMESPACE_CALC_EXT,XML_VALUE_TYPE, XML_STRING);
                             }
@@ -3998,7 +3992,7 @@ void ScXMLExport::WriteExternalDataMapping()
     if (!pDoc)
         return;
 
-    if (getDefaultVersion() <= SvtSaveOptions::ODFVER_012)
+    if ((getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED) == 0)
         // Export this only for 1.2 extended and above.
         return;
 
@@ -4331,7 +4325,7 @@ void ScXMLExport::WriteDataStream()
         // Export this only in experimental mode.
         return;
 
-    if (getDefaultVersion() <= SvtSaveOptions::ODFVER_012)
+    if ((getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED) == 0)
         // Export this only for 1.2 extended and above.
         return;
 
@@ -4807,7 +4801,7 @@ void ScXMLExport::WriteExternalRefCaches()
         for (const auto& rTabName : aTabNames)
         {
             ScExternalRefCache::TableTypeRef pTable = pRefMgr->getCacheTable(nFileId, rTabName, false);
-            if (!pTable.get() || !pTable->isReferenced())
+            if (!pTable || !pTable->isReferenced())
                 continue;
 
             AddAttribute(XML_NAMESPACE_TABLE, XML_NAME, "'" + *pUrl + "'#" + rTabName);
@@ -5246,7 +5240,7 @@ ErrCode ScXMLExport::exportDoc( enum XMLTokenEnum eClass )
 
             // sheet events use officeooo namespace
             if( (getExportFlags() & SvXMLExportFlags::CONTENT) &&
-                getDefaultVersion() >= SvtSaveOptions::ODFVER_012 )
+                getSaneDefaultVersion() >= SvtSaveOptions::ODFSVER_012)
             {
                 bool bAnySheetEvents = false;
                 SCTAB nTabCount = pDoc->GetTableCount();
@@ -5280,12 +5274,12 @@ void SAL_CALL ScXMLExport::setSourceDocument( const uno::Reference<lang::XCompon
 
     // Set the document's storage grammar corresponding to the ODF version that
     // is to be written.
-    SvtSaveOptions::ODFDefaultVersion meODFDefaultVersion = getDefaultVersion();
+    SvtSaveOptions::ODFSaneDefaultVersion meODFDefaultVersion = getSaneDefaultVersion();
     switch (meODFDefaultVersion)
     {
         // ODF 1.0 and 1.1 use GRAM_PODF, everything later or unspecified GRAM_ODFF
-        case SvtSaveOptions::ODFVER_010:
-        case SvtSaveOptions::ODFVER_011:
+        case SvtSaveOptions::ODFSVER_010:
+        case SvtSaveOptions::ODFSVER_011:
             pDoc->SetStorageGrammar( formula::FormulaGrammar::GRAM_PODF);
             break;
         default:

@@ -189,10 +189,6 @@ namespace dbaui
 
             // fill the table list with this connection information
             SQLExceptionInfo aErrorInfo;
-            // the current DSN
-            OUString sURL;
-            if ( m_pTablesDlg )
-                sURL = m_pTablesDlg->getConnectionURL();
 
             try
             {
@@ -330,12 +326,9 @@ namespace dbaui
         return nResult;
     }
 
-    IMPL_LINK_NOARG(OTableSubscriptionPage, OnTreeEntryChecked, const row_col&, void)
+    IMPL_LINK(OTableSubscriptionPage, OnTreeEntryChecked, const weld::TreeView::iter_col&, rRowCol, void)
     {
-        weld::TreeView& rTreeView = m_xTablesList->GetWidget();
-        std::unique_ptr<weld::TreeIter> xEntry(rTreeView.make_iterator());
-        if (rTreeView.get_cursor(xEntry.get()))
-            m_xTablesList->checkedButton_noBroadcast(*xEntry);
+        m_xTablesList->checkedButton_noBroadcast(rRowCol.first);
         callModifiedHdl();
     }
 

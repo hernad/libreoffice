@@ -20,12 +20,7 @@
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
 #include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
 #include <xmloff/xmluconv.hxx>
-#include "xmlEnums.hxx"
-#include "xmlComponent.hxx"
-#include "xmlReportElement.hxx"
-#include "xmlControlProperty.hxx"
 #include "xmlHelper.hxx"
 #include <unotools/pathoptions.hxx>
 #include <sal/log.hxx>
@@ -52,9 +47,7 @@ OXMLImage::OXMLImage( ORptFilter& rImport,
 
     try
     {
-        sax_fastparser::FastAttributeList *pAttribList =
-                        sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-        for (auto &aIter : *pAttribList)
+        for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
         {
             OUString sValue = aIter.toString();
 

@@ -22,6 +22,7 @@
 
 #include "compat.hxx"
 #include "pluginhandler.hxx"
+#include "check.hxx"
 
 #if CLANG_VERSION >= 110000
 #include "clang/AST/ParentMapContext.h"
@@ -183,9 +184,35 @@ bool Plugin::evaluate(const Expr* expr, APSInt& x)
     return false;
 }
 
+compat::DynTypedNodeList Plugin::getParents(Decl const & decl)
+{
+#if CLANG_VERSION >= 110000
+    if (!parentMapContext_) {
+        parentMapContext_.reset(new ParentMapContext(compiler.getASTContext()));
+        parentMapContext_->setTraversalKind(TK_AsIs);
+    }
+    return parentMapContext_->getParents(decl);
+#else
+    return compiler.getASTContext().getParents(decl);
+#endif
+}
+
+compat::DynTypedNodeList Plugin::getParents(Stmt const & stmt)
+{
+#if CLANG_VERSION >= 110000
+    if (!parentMapContext_) {
+        parentMapContext_.reset(new ParentMapContext(compiler.getASTContext()));
+        parentMapContext_->setTraversalKind(TK_AsIs);
+    }
+    return parentMapContext_->getParents(stmt);
+#else
+    return compiler.getASTContext().getParents(stmt);
+#endif
+}
+
 const Stmt* Plugin::getParentStmt( const Stmt* stmt )
 {
-    auto parentsRange = compiler.getASTContext().getParents(*stmt);
+    auto parentsRange = getParents(*stmt);
     if ( parentsRange.begin() == parentsRange.end())
         return nullptr;
     return parentsRange.begin()->get<Stmt>();
@@ -193,15 +220,15 @@ const Stmt* Plugin::getParentStmt( const Stmt* stmt )
 
 Stmt* Plugin::getParentStmt( Stmt* stmt )
 {
-    auto parentsRange = compiler.getASTContext().getParents(*stmt);
+    auto parentsRange = getParents(*stmt);
     if ( parentsRange.begin() == parentsRange.end())
         return nullptr;
     return const_cast<Stmt*>(parentsRange.begin()->get<Stmt>());
 }
 
-static const Decl* getFunctionDeclContext(ASTContext& context, const Stmt* stmt)
+const Decl* Plugin::getFunctionDeclContext(const Stmt* stmt)
 {
-    auto const parents = context.getParents(*stmt);
+    auto const parents = getParents(*stmt);
     auto it = parents.begin();
 
     if (it == parents.end())
@@ -217,14 +244,14 @@ static const Decl* getFunctionDeclContext(ASTContext& context, const Stmt* stmt)
 
     stmt = it->get<Stmt>();
     if (stmt)
-        return getFunctionDeclContext(context, stmt);
+        return getFunctionDeclContext(stmt);
 
     return nullptr;
 }
 
 const FunctionDecl* Plugin::getParentFunctionDecl( const Stmt* stmt )
 {
-    const Decl *decl = getFunctionDeclContext(compiler.getASTContext(), stmt);
+    const Decl *decl = getFunctionDeclContext(stmt);
     if (decl)
         return static_cast<const FunctionDecl*>(decl->getNonClosureContext());
 
@@ -799,6 +826,41 @@ bool hasExternalLinkage(VarDecl const * decl) {
         }
     }
     return true;
+}
+
+bool isSmartPointerType(const Expr* e)
+{
+    // First check whether the object type as written is, or is derived from, std::unique_ptr or
+    // std::shared_ptr, in case the get member function is declared at a base class of that std
+    // type:
+    if (loplugin::isDerivedFrom(
+            e->IgnoreImpCasts()->getType()->getAsCXXRecordDecl(),
+            [](Decl const * decl) {
+                auto const dc = loplugin::DeclCheck(decl);
+                return dc.ClassOrStruct("unique_ptr").StdNamespace()
+                    || dc.ClassOrStruct("shared_ptr").StdNamespace();
+            }))
+        return true;
+
+    // Then check the object type coerced to the type of the get member function, in
+    // case the type-as-written is derived from one of these types (tools::SvRef is
+    // final, but the rest are not):
+    auto const tc2 = loplugin::TypeCheck(e->getType());
+    if (tc2.ClassOrStruct("unique_ptr").StdNamespace()
+           || tc2.ClassOrStruct("shared_ptr").StdNamespace()
+           || tc2.Class("Reference").Namespace("uno").Namespace("star")
+                .Namespace("sun").Namespace("com").GlobalNamespace()
+           || tc2.Class("Reference").Namespace("rtl").GlobalNamespace()
+           || tc2.Class("SvRef").Namespace("tools").GlobalNamespace()
+           || tc2.Class("WeakReference").Namespace("tools").GlobalNamespace()
+           || tc2.Class("ScopedReadAccess").Namespace("Bitmap").GlobalNamespace()
+           || tc2.Class("ScopedVclPtrInstance").GlobalNamespace()
+           || tc2.Class("VclPtr").GlobalNamespace()
+           || tc2.Class("ScopedVclPtr").GlobalNamespace())
+    {
+        return true;
+    }
+    return false;
 }
 
 

@@ -1511,11 +1511,9 @@ void SdDrawDocument::SetMasterPage(sal_uInt16 nSdPageNum,
             // only worry about presentation templates
             OUString aName;
             SdStyleSheetPool* pSourceStyleSheetPool = static_cast<SdStyleSheetPool*>( pSourceDoc->GetStyleSheetPool() );
-            pSourceStyleSheetPool->SetSearchMask(SfxStyleFamily::Page);
-            static_cast<SdStyleSheetPool*>( mxStyleSheetPool.get())->SetSearchMask(SfxStyleFamily::Page);
 
             StyleSheetCopyResultVector aCreatedStyles;          // List of created stylesheets
-            SfxStyleSheetBase* pHisSheet = pSourceStyleSheetPool->First();
+            SfxStyleSheetBase* pHisSheet = pSourceStyleSheetPool->First(SfxStyleFamily::Page);
 
             while (pHisSheet)
             {
@@ -1584,8 +1582,8 @@ void SdDrawDocument::SetMasterPage(sal_uInt16 nSdPageNum,
             {
                 for ( const auto& rRData : aReplList )
                 {
-                    SfxStyleSheetBase* pSOld = mxStyleSheetPool->Find(rRData.aName);
-                    SfxStyleSheetBase* pSNew = mxStyleSheetPool->Find(rRData.aNewName);
+                    SfxStyleSheetBase* pSOld = mxStyleSheetPool->Find(rRData.aName, SfxStyleFamily::Page);
+                    SfxStyleSheetBase* pSNew = mxStyleSheetPool->Find(rRData.aNewName, SfxStyleFamily::Page);
 
                     if (pSOld && pSNew)
                     {
@@ -1604,10 +1602,6 @@ void SdDrawDocument::SetMasterPage(sal_uInt16 nSdPageNum,
                         }
                     }
                 }
-
-                // Now look for all of them when searching
-                pSourceStyleSheetPool->SetSearchMask(SfxStyleFamily::All);
-                mxStyleSheetPool->SetSearchMask(SfxStyleFamily::All);
             }
 
             if (bUndo && !aCreatedStyles.empty())

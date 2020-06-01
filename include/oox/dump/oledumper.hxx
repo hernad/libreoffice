@@ -34,9 +34,9 @@
 
 #ifdef DBG_UTIL
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace io { class XInputStream; }
-} } }
+}
 
 namespace oox {
 namespace dump {
@@ -366,10 +366,10 @@ private:
         explicit     StreamProperty( const String& rItemName, sal_uInt16 nData ) :
                                 maItemName( rItemName ), mnData( nData ) {}
     };
-    typedef ::std::vector< StreamProperty > StreamPropertyVector;
 
     LargePropertyVector maLargeProps;
-    StreamPropertyVector maStreamProps;
+    std::vector< StreamProperty >
+                        maStreamProps;
     NameListRef         mxPropNames;
     sal_Int64           mnPropertiesStart;
     sal_Int64           mnPropertiesEnd;
@@ -548,13 +548,11 @@ struct VbaFormSiteInfo
     VbaFormSiteInfo() : mnId( 0 ), mnLength( 0 ), mbInStream( false ) {}
 };
 
-typedef ::std::vector< VbaFormSiteInfo > VbaFormSiteInfoVector;
-
 
 struct VbaFormSharedData
 {
-    OUStringVector      maClassInfoProgIds;
-    VbaFormSiteInfoVector maSiteInfos;
+    OUStringVector                 maClassInfoProgIds;
+    std::vector< VbaFormSiteInfo > maSiteInfos;
 };
 
 

@@ -27,7 +27,7 @@
 #include <vcl/settings.hxx>
 #include <vcl/toolkit/dialog.hxx>
 #include <vcl/fixed.hxx>
-#include <vcl/button.hxx>
+#include <vcl/toolkit/button.hxx>
 #include <vcl/salnativewidgets.hxx>
 #include <vcl/edit.hxx>
 #include <vcl/layout.hxx>
@@ -1288,11 +1288,11 @@ void PushButton::Paint(vcl::RenderContext& rRenderContext, const tools::Rectangl
     ImplDrawPushButton(rRenderContext);
 }
 
-void PushButton::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize,
+void PushButton::Draw( OutputDevice* pDev, const Point& rPos,
                        DrawFlags nFlags )
 {
     Point       aPos  = pDev->LogicToPixel( rPos );
-    Size        aSize = pDev->LogicToPixel( rSize );
+    Size        aSize = GetSizePixel();
     tools::Rectangle   aRect( aPos, aSize );
     vcl::Font   aFont = GetDrawPixelFont( pDev );
 
@@ -2150,6 +2150,10 @@ std::vector< VclPtr<RadioButton> > RadioButton::GetRadioButtonGroup(bool bInclud
         return aGroup;
     }
 
+    std::vector<VclPtr<RadioButton>> aGroup;
+    if (mbUsesExplicitGroup)
+        return aGroup;
+
     //old-school
 
     // go back to first in group;
@@ -2162,7 +2166,6 @@ std::vector< VclPtr<RadioButton> > RadioButton::GetRadioButtonGroup(bool bInclud
         else
             break;
     }
-    std::vector< VclPtr<RadioButton> > aGroup;
     // insert radiobuttons up to next group
     do
     {
@@ -2223,8 +2226,9 @@ void RadioButton::ImplCallClick( bool bGrabFocus, GetFocusFlags nFocusFlags )
     mbStateChanged = false;
 }
 
-RadioButton::RadioButton( vcl::Window* pParent, WinBits nStyle ) :
-    Button( WindowType::RADIOBUTTON )
+RadioButton::RadioButton(vcl::Window* pParent, bool bUsesExplicitGroup, WinBits nStyle)
+    : Button(WindowType::RADIOBUTTON)
+    , mbUsesExplicitGroup(bUsesExplicitGroup)
 {
     ImplInitRadioButtonData();
     ImplInit( pParent, nStyle );
@@ -2345,14 +2349,14 @@ void RadioButton::Paint( vcl::RenderContext& rRenderContext, const tools::Rectan
     ImplDrawRadioButton(rRenderContext);
 }
 
-void RadioButton::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize,
+void RadioButton::Draw( OutputDevice* pDev, const Point& rPos,
                         DrawFlags nFlags )
 {
     if ( !maImage )
     {
         MapMode     aResMapMode( MapUnit::Map100thMM );
         Point       aPos  = pDev->LogicToPixel( rPos );
-        Size        aSize = pDev->LogicToPixel( rSize );
+        Size        aSize = GetSizePixel();
         Size        aImageSize = pDev->LogicToPixel( Size( 300, 300 ), aResMapMode );
         Size        aBrd1Size = pDev->LogicToPixel( Size( 20, 20 ), aResMapMode );
         Size        aBrd2Size = pDev->LogicToPixel( Size( 60, 60 ), aResMapMode );
@@ -2776,7 +2780,7 @@ void RadioButton::ImplAdjustNWFSizes()
     Pop();
 }
 
-Size RadioButton::CalcMinimumSize() const
+Size RadioButton::CalcMinimumSize(long nMaxWidth) const
 {
     Size aSize;
     if ( !maImage )
@@ -2800,7 +2804,7 @@ Size RadioButton::CalcMinimumSize() const
     {
         bool bTopImage = (GetStyle() & WB_TOP) != 0;
 
-        Size aTextSize = GetTextRect( tools::Rectangle( Point(), Size( 0x7fffffff, 0x7fffffff ) ),
+        Size aTextSize = GetTextRect( tools::Rectangle( Point(), Size( nMaxWidth > 0 ? nMaxWidth : 0x7fffffff, 0x7fffffff ) ),
                                       aText, FixedText::ImplGetTextStyle( GetStyle() ) ).GetSize();
 
         aSize.AdjustWidth(2 );   // for focus rect
@@ -3193,12 +3197,12 @@ void CheckBox::Paint(vcl::RenderContext& rRenderContext, const tools::Rectangle&
     ImplDrawCheckBox(rRenderContext);
 }
 
-void CheckBox::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize,
+void CheckBox::Draw( OutputDevice* pDev, const Point& rPos,
                      DrawFlags nFlags )
 {
     MapMode     aResMapMode( MapUnit::Map100thMM );
     Point       aPos  = pDev->LogicToPixel( rPos );
-    Size        aSize = pDev->LogicToPixel( rSize );
+    Size        aSize = GetSizePixel();
     Size        aImageSize = pDev->LogicToPixel( Size( 300, 300 ), aResMapMode );
     Size        aBrd1Size = pDev->LogicToPixel( Size( 20, 20 ), aResMapMode );
     Size        aBrd2Size = pDev->LogicToPixel( Size( 30, 30 ), aResMapMode );
@@ -3690,81 +3694,6 @@ void ImageButton::ImplInitStyle()
         nStyle |= WB_VCENTER;
 
     SetStyle( nStyle );
-}
-
-TriStateBox::TriStateBox( vcl::Window* pParent, WinBits nStyle ) :
-    CheckBox( pParent, nStyle )
-{
-    EnableTriState();
-}
-
-DisclosureButton::DisclosureButton( vcl::Window* pParent ) :
-    CheckBox( pParent, 0 )
-{
-}
-
-void DisclosureButton::ImplDrawCheckBoxState(vcl::RenderContext& rRenderContext)
-{
-    /* HACK: DisclosureButton is currently assuming, that the disclosure sign
-       will fit into the rectangle occupied by a normal checkbox on all themes.
-       If this does not hold true for some theme, ImplGetCheckImageSize
-       would have to be overridden for DisclosureButton; also GetNativeControlRegion
-       for ControlType::ListNode would have to be implemented and taken into account
-    */
-
-    tools::Rectangle aStateRect(GetStateRect());
-
-    ImplControlValue aControlValue(GetState() == TRISTATE_TRUE ? ButtonValue::On : ButtonValue::Off);
-    tools::Rectangle aCtrlRegion(aStateRect);
-    ControlState nState = ControlState::NONE;
-
-    if (HasFocus())
-        nState |= ControlState::FOCUSED;
-    if (GetButtonState() & DrawButtonFlags::Default)
-        nState |= ControlState::DEFAULT;
-    if (Window::IsEnabled())
-        nState |= ControlState::ENABLED;
-    if (IsMouseOver() && GetMouseRect().IsInside(GetPointerPosPixel()))
-        nState |= ControlState::ROLLOVER;
-
-    if (rRenderContext.DrawNativeControl(ControlType::ListNode, ControlPart::Entire, aCtrlRegion,
-                                          nState, aControlValue, OUString()))
-        return;
-
-    ImplSVCtrlData& rCtrlData(ImplGetSVData()->maCtrlData);
-    if (!rCtrlData.mpDisclosurePlus)
-        rCtrlData.mpDisclosurePlus.reset(new Image(StockImage::Yes, SV_DISCLOSURE_PLUS));
-    if (!rCtrlData.mpDisclosureMinus)
-        rCtrlData.mpDisclosureMinus.reset(new Image(StockImage::Yes, SV_DISCLOSURE_MINUS));
-
-    Image* pImg
-        = IsChecked() ? rCtrlData.mpDisclosureMinus.get() : rCtrlData.mpDisclosurePlus.get();
-
-    DrawImageFlags nStyle = DrawImageFlags::NONE;
-    if (!IsEnabled())
-        nStyle |= DrawImageFlags::Disable;
-
-    Size aSize(aStateRect.GetSize());
-    Size aImgSize(pImg->GetSizePixel());
-    Point aOff((aSize.Width() - aImgSize.Width()) / 2,
-               (aSize.Height() - aImgSize.Height()) / 2);
-    aOff += aStateRect.TopLeft();
-    rRenderContext.DrawImage(aOff, *pImg, nStyle);
-}
-
-void DisclosureButton::KeyInput( const KeyEvent& rKEvt )
-{
-    vcl::KeyCode aKeyCode = rKEvt.GetKeyCode();
-
-    if( !aKeyCode.GetModifier()  &&
-        ( ( aKeyCode.GetCode() == KEY_ADD ) ||
-          ( aKeyCode.GetCode() == KEY_SUBTRACT ) )
-        )
-    {
-        Check( aKeyCode.GetCode() == KEY_ADD );
-    }
-    else
-        CheckBox::KeyInput( rKEvt );
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

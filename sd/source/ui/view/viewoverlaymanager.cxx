@@ -314,7 +314,7 @@ bool ChangePlaceholderTag::MouseButtonDown( const MouseEvent& /*rMEvt*/, SmartHd
     {
         sal_uInt16 nSID = gButtonSlots[nHighlightId];
 
-        if( mxPlaceholderObj.get() )
+        if( mxPlaceholderObj )
         {
             // mark placeholder if it is not currently marked (or if also others are marked)
             if( !mrView.IsObjMarked( mxPlaceholderObj.get() ) || (mrView.GetMarkedObjectList().GetMarkCount() != 1) )
@@ -488,7 +488,7 @@ bool ViewOverlayManager::CreateTags()
 
     std::shared_ptr<ViewShell> aMainShell = mrBase.GetMainViewShell();
 
-    SdPage* pPage = aMainShell.get() ? aMainShell->getCurrentPage() : nullptr;
+    SdPage* pPage = aMainShell ? aMainShell->getCurrentPage() : nullptr;
 
     if( pPage && !pPage->IsMasterPage() && (pPage->GetPageKind() == PageKind::Standard) )
     {

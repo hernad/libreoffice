@@ -27,7 +27,7 @@
 class SfxItemSet;
 class SdrText;
 
-namespace drawinglayer { namespace attribute {
+namespace drawinglayer::attribute {
     class SdrLineAttribute;
     class SdrLineStartEndAttribute;
     class SdrShadowAttribute;
@@ -36,14 +36,14 @@ namespace drawinglayer { namespace attribute {
     class SdrTextAttribute;
     class FillGradientAttribute;
     class SdrFillGraphicAttribute;
-    class SdrShadowTextAttribute;
-    class SdrLineShadowTextAttribute;
-    class SdrLineFillShadowTextAttribute;
+    class SdrEffectsTextAttribute;
+    class SdrLineEffectsTextAttribute;
+    class SdrLineFillEffectsTextAttribute;
     class SdrLineFillShadowAttribute3D;
     class SdrSceneAttribute;
     class SdrLightingAttribute;
     class SdrFillTextAttribute;
-}}
+}
 
 namespace basegfx {
     class B2DRange;
@@ -68,9 +68,6 @@ namespace drawinglayer
         attribute::SdrFillAttribute SVXCORE_DLLPUBLIC createNewSdrFillAttribute(
             const SfxItemSet& rSet);
 
-        attribute::SdrGlowAttribute createNewSdrGlowAttribute(
-            const SfxItemSet& rSet);
-
         // #i101508# Support handing over given text-to-border distances
         attribute::SdrTextAttribute createNewSdrTextAttribute(
             const SfxItemSet& rSet,
@@ -86,16 +83,16 @@ namespace drawinglayer
         attribute::SdrFillGraphicAttribute createNewSdrFillGraphicAttribute(
             const SfxItemSet& rSet);
 
-        attribute::SdrShadowTextAttribute createNewSdrShadowTextAttribute(
+        attribute::SdrEffectsTextAttribute createNewSdrEffectsTextAttribute(
             const SfxItemSet& rSet,
             const SdrText* pText,
             bool bSuppressText); // #i98072# added option to suppress text on demand
 
-        attribute::SdrLineShadowTextAttribute createNewSdrLineShadowTextAttribute(
+        attribute::SdrLineEffectsTextAttribute createNewSdrLineEffectsTextAttribute(
             const SfxItemSet& rSet,
             const SdrText* pText);
 
-        attribute::SdrLineFillShadowTextAttribute createNewSdrLineFillShadowTextAttribute(
+        attribute::SdrLineFillEffectsTextAttribute createNewSdrLineFillEffectsTextAttribute(
             const SfxItemSet& rSet,
             const SdrText* pText,
             bool bHasContent); // used from OLE and graphic

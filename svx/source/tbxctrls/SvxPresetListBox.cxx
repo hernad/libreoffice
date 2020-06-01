@@ -28,7 +28,12 @@ SvxPresetListBox::SvxPresetListBox(std::unique_ptr<weld::ScrolledWindow> pWindow
     , aIconSize(60, 64)
 {
     SetEdgeBlending(true);
-    SetExtraSpacing(4);
+}
+
+void SvxPresetListBox::SetDrawingArea(weld::DrawingArea* pDrawingArea)
+{
+    ValueSet::SetDrawingArea(pDrawingArea);
+    SetStyle(GetStyle() | WB_ITEMBORDER);
 }
 
 void SvxPresetListBox::Resize()

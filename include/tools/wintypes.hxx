@@ -69,6 +69,7 @@ enum class WindowType : sal_uInt16
     PATTERNFIELD         ,
     NUMERICFIELD         , // 40 (344)
     METRICFIELD          ,
+    FORMATTEDFIELD       ,
     CURRENCYFIELD        ,
     DATEFIELD            ,
     TIMEFIELD            ,
@@ -204,8 +205,6 @@ WinBits const WB_IGNORETAB =            0x20000000;
 
 // Window-Bits for ListBox and MultiListBox
 WinBits const WB_SIMPLEMODE =           0x20000000;
-// Special case where the listbox is used as a dropdown popup (not a combobox)
-WinBits const WB_LISTBOX_POPUP =        0x40000000;
 
 // Window-Bits for FixedBitmap
 WinBits const WB_SCALE =                0x08000000;

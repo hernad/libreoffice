@@ -15,11 +15,12 @@
 #include <rtl/ustring.hxx>
 #include <sal/types.h>
 #include "scqahelperdllapi.h"
+#include <test/xmltesttools.hxx>
 
 #include <memory>
 
-namespace com { namespace sun { namespace star { namespace uno { template <class interface_type> class Reference; } } } }
-namespace com { namespace sun { namespace star { namespace lang { class XMultiServiceFactory; } } } }
+namespace com::sun::star::uno { template <class interface_type> class Reference; }
+namespace com::sun::star::lang { class XMultiServiceFactory; }
 namespace utl { class TempFile; }
 class ScDocShell;
 class SvStream;
@@ -40,13 +41,13 @@ namespace XPathHelper
      *      test several files in the same exported xml file you need to export the file manually
      *      and call the parseExport method that takes a TempFile
      */
-    SCQAHELPER_DLLPUBLIC xmlDocPtr parseExport2(ScBootstrapFixture &, ScDocShell& rShell, uno::Reference< lang::XMultiServiceFactory> const & xSFactory,
+    SCQAHELPER_DLLPUBLIC xmlDocUniquePtr parseExport2(ScBootstrapFixture &, ScDocShell& rShell, uno::Reference< lang::XMultiServiceFactory> const & xSFactory,
             const OUString& rFile, sal_Int32 nFormat);
 
     /**
      * Tries to parse the specified file in the temp file zip container as a binary file.
      */
-    SCQAHELPER_DLLPUBLIC std::shared_ptr<SvStream> parseExportStream(std::shared_ptr<utl::TempFile> const & pTempFile,
+    SCQAHELPER_DLLPUBLIC std::unique_ptr<SvStream> parseExportStream(std::shared_ptr<utl::TempFile> const & pTempFile,
             uno::Reference<lang::XMultiServiceFactory> const & xSFactory, const OUString& rFile);
 
     /**
@@ -55,7 +56,7 @@ namespace XPathHelper
      * Should be used when the same exported file is used for testing different files in
      * the same zip file.
      */
-    SCQAHELPER_DLLPUBLIC xmlDocPtr parseExport(std::shared_ptr<utl::TempFile> const & pTempFile, uno::Reference< lang::XMultiServiceFactory> const & xSFactory,
+    SCQAHELPER_DLLPUBLIC xmlDocUniquePtr parseExport(std::shared_ptr<utl::TempFile> const & pTempFile, uno::Reference< lang::XMultiServiceFactory> const & xSFactory,
             const OUString& rFile);
 }
 

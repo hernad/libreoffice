@@ -23,7 +23,10 @@
 #include <com/sun/star/embed/ElementModes.hpp>
 #include <com/sun/star/embed/XStorage.hpp>
 #include <com/sun/star/frame/XModel.hpp>
+#include <com/sun/star/packages/XPackageEncryption.hpp>
+#include <com/sun/star/uno/XComponentContext.hpp>
 #include <unotools/ucbstreamhelper.hxx>
+#include <unotools/streamwrap.hxx>
 #include <algorithm>
 #include <map>
 #include <hintids.hxx>
@@ -87,6 +90,8 @@
 #include "sprmids.hxx"
 
 #include <comphelper/sequenceashashmap.hxx>
+#include <comphelper/processfactory.hxx>
+#include <comphelper/string.hxx>
 #include "writerhelper.hxx"
 #include "writerwordglue.hxx"
 #include "ww8attributeoutput.hxx"
@@ -1515,20 +1520,19 @@ void WW8Export::AppendBookmarkEndWithCorrection( const OUString& rName )
     m_pBkmks->Append( nEndCP - 1, rName );
 }
 
-std::shared_ptr<SvxBrushItem> MSWordExportBase::getBackground()
+std::unique_ptr<SvxBrushItem> MSWordExportBase::getBackground()
 {
-    std::shared_ptr<SvxBrushItem> oRet;
     const SwFrameFormat &rFormat = m_pDoc->GetPageDesc(0).GetMaster();
-    std::shared_ptr<SvxBrushItem> aBrush(std::make_shared<SvxBrushItem>(RES_BACKGROUND));
+    std::unique_ptr<SvxBrushItem> aBrush = std::make_unique<SvxBrushItem>(RES_BACKGROUND);
     SfxItemState eState = rFormat.GetBackgroundState(aBrush);
 
     if (SfxItemState::SET == eState)
     {
         // The 'color' is set for the first page style - take it and use it as the background color of the entire DOCX
         if (aBrush->GetColor() != COL_AUTO)
-            oRet = aBrush;
+            return aBrush;
     }
-    return oRet;
+    return nullptr;
 }
 
 // #i120928 collect all the graphics of bullets applied to paragraphs
@@ -2044,8 +2048,9 @@ void WW8AttributeOutput::TableInfoRow( ww8::WW8TableNodeInfoInner::Pointer_t pTa
                 m_rWW8Export.pO->push_back( sal_uInt8(0x1) );
             }
 
-            // Most of these are per-row definitions, not per-table,
-            // so likely some the per-table functions are unnecessarily re-defined...
+            // Most of these are per-row definitions, not per-table.
+            // WW8 has no explicit table start/end markup,
+            // simply rows with the same table properties that are grouped together as a table.
             TableBidi( pTableTextNodeInfoInner );
             TableOrientation( pTableTextNodeInfoInner );
             TableSpacing( pTableTextNodeInfoInner );
@@ -2567,6 +2572,21 @@ void WW8AttributeOutput::TableCellBorders(
     const SvxBoxItem * pLastBox = nullptr;
     sal_uInt8 nSeqStart = 0; // start of sequence of cells with same borders
 
+    static const SvxBoxItemLine aBorders[] =
+    {
+        SvxBoxItemLine::TOP, SvxBoxItemLine::LEFT,
+        SvxBoxItemLine::BOTTOM, SvxBoxItemLine::RIGHT
+    };
+
+    sal_uInt16 nDefaultMargin[4] = {31681, 31681, 31681, 31681};  // outside of documented valid range
+    // last column in each row defines the row default in TableRowDefaultBorders()
+    if ( nBoxes && rTabBoxes.size() == nBoxes )
+    {
+        const SvxBoxItem& rBox = rTabBoxes[ nBoxes-1 ]->GetFrameFormat()->GetBox();
+        for ( int i = 0; i < 4; ++i )
+            nDefaultMargin[i] = rBox.GetDistance( aBorders[i] );
+    }
+
     // Detect sequences of cells which have the same borders, and output
     // a border description for each such cell range.
     for ( unsigned n = 0; n <= nBoxes; ++n )
@@ -2577,9 +2597,53 @@ void WW8AttributeOutput::TableCellBorders(
             pLastBox = pBox;
         else if( !pBox || *pLastBox != *pBox )
         {
+            if ( !pLastBox )
+                break;
+
             // This cell has different borders than the previous cell,
             // so output the borders for the preceding cell range.
             m_rWW8Export.Out_CellRangeBorders(pLastBox, nSeqStart, n);
+
+            // The last column is used as the row default for margins, so we can ignore these matching ones
+            if ( n == nBoxes )
+                break;
+
+            // Output cell margins.
+            // One CSSA can define up to all four margins if they are the same size value.
+            sal_uInt16 nMargin[4];
+            sal_uInt8 nSideBits[4] = {0, 0, 0, 0}; // 0001:top, 0010:left, 0100:bottom, 1000:right
+            for ( int i = 0; i < 4; ++i )  // sides: top, left, bottom, right
+            {
+                nMargin[i] = std::min(sal_uInt16(31680), pLastBox->GetDistance( aBorders[i] ));
+                if ( nMargin[i] == nDefaultMargin[i] )
+                    continue;
+
+                // join a previous side's definition if it shares the same value
+                for ( int p = 0; p < 4; ++p )
+                {
+                    if ( nMargin[i] == nMargin[p] )
+                    {
+                        nSideBits[p] |= 1 << i;
+                        break;
+                    }
+                }
+            }
+
+            // write out the cell margins definitions that were used
+            for ( int i = 0; i < 4; ++i )
+            {
+                if ( nSideBits[i] )
+                {
+                    SwWW8Writer::InsUInt16( *m_rWW8Export.pO, NS_sprm::sprmTCellPadding );
+                    m_rWW8Export.pO->push_back( sal_uInt8(6) );            // 6 bytes
+                    m_rWW8Export.pO->push_back( sal_uInt8(nSeqStart) );    // first cell: apply margin
+                    m_rWW8Export.pO->push_back( sal_uInt8(n) );            // end cell: do not apply margin
+                    m_rWW8Export.pO->push_back( sal_uInt8(nSideBits[i]) );
+                    m_rWW8Export.pO->push_back( sal_uInt8(3) );            // FtsDxa: size in twips
+                    SwWW8Writer::InsUInt16( *m_rWW8Export.pO, nMargin[i] );
+                }
+            }
+
             nSeqStart = n;
             pLastBox = pBox;
         }
@@ -3608,6 +3672,106 @@ void WW8Export::PrepareStorage()
 
 ErrCode SwWW8Writer::WriteStorage()
 {
+    tools::SvRef<SotStorage> pOrigStg;
+    uno::Reference< packages::XPackageEncryption > xPackageEncryption;
+    std::shared_ptr<SvStream> pSotStorageStream;
+    uno::Sequence< beans::NamedValue > aEncryptionData;
+    if (mpMedium)
+    {
+        // Check for specific encryption requests
+        const SfxUnoAnyItem* pEncryptionDataItem = SfxItemSet::GetItem<SfxUnoAnyItem>(mpMedium->GetItemSet(), SID_ENCRYPTIONDATA, false);
+        if (pEncryptionDataItem && (pEncryptionDataItem->GetValue() >>= aEncryptionData))
+        {
+            ::comphelper::SequenceAsHashMap aHashData(aEncryptionData);
+            OUString sCryptoType = aHashData.getUnpackedValueOrDefault("CryptoType", OUString());
+
+            if (sCryptoType.getLength())
+            {
+                uno::Reference<uno::XComponentContext> xComponentContext(comphelper::getProcessComponentContext());
+                uno::Sequence<uno::Any> aArguments{
+                    uno::makeAny(beans::NamedValue("Binary", uno::makeAny(true))) };
+                xPackageEncryption.set(
+                    xComponentContext->getServiceManager()->createInstanceWithArgumentsAndContext(
+                        "com.sun.star.comp.oox.crypto." + sCryptoType, aArguments, xComponentContext), uno::UNO_QUERY);
+
+                if (xPackageEncryption.is())
+                {
+                    // We have an encryptor
+                    // Create new temporary storage for content
+                    pOrigStg = m_pStg;
+                    pSotStorageStream = std::make_shared<SvMemoryStream>();
+                    m_pStg = new SotStorage(*pSotStorageStream);
+                }
+            }
+        }
+    }
+
+    ErrCode nErrorCode = WriteStorageImpl();
+
+    if (xPackageEncryption.is())
+    {
+        m_pStg->Commit();
+        pSotStorageStream->Seek(0);
+
+        // Encrypt data written into temporary storage
+        xPackageEncryption->setupEncryption(aEncryptionData);
+
+        uno::Reference<io::XInputStream > xInputStream(new utl::OSeekableInputStreamWrapper(pSotStorageStream.get(), false));
+        uno::Sequence<beans::NamedValue> aStreams = xPackageEncryption->encrypt(xInputStream);
+
+        m_pStg = pOrigStg;
+        for (const beans::NamedValue & aStreamData : std::as_const(aStreams))
+        {
+            // To avoid long paths split and open substorages recursively
+            // Splitting paths manually, since comphelper::string::split is trimming special characters like \0x01, \0x09
+            SotStorage * pStorage = m_pStg.get();
+            OUString sFileName;
+            sal_Int32 idx = 0;
+            do
+            {
+                OUString sPathElem = aStreamData.Name.getToken(0, L'/', idx);
+                if (!sPathElem.isEmpty())
+                {
+                    if (idx < 0)
+                    {
+                        sFileName = sPathElem;
+                    }
+                    else
+                    {
+                        pStorage = pStorage->OpenSotStorage(sPathElem);
+                        if (!pStorage)
+                            break;
+                    }
+                }
+            } while (pStorage && idx >= 0);
+
+            if (!pStorage)
+            {
+                nErrorCode = ERRCODE_IO_GENERAL;
+                break;
+            }
+
+            SotStorageStream* pStream = pStorage->OpenSotStream(sFileName);
+            if (!pStream)
+            {
+                nErrorCode = ERRCODE_IO_GENERAL;
+                break;
+            }
+            uno::Sequence<sal_Int8> aStreamContent;
+            aStreamData.Value >>= aStreamContent;
+            size_t nBytesWritten = pStream->WriteBytes(aStreamContent.getArray(), aStreamContent.getLength());
+            if (nBytesWritten != static_cast<size_t>(aStreamContent.getLength()))
+            {
+                nErrorCode = ERRCODE_IO_CANTWRITE;
+                break;
+            }
+        }
+    }
+
+    return nErrorCode;
+}
+ErrCode SwWW8Writer::WriteStorageImpl()
+{
     // #i34818# - update layout (if present), for SwWriteTable
     SwViewShell* pViewShell = m_pDoc->getIDocumentLayoutAccess().GetCurrentViewShell();
     if( pViewShell != nullptr )
@@ -3913,7 +4077,6 @@ void WW8Export::WriteFormData( const ::sw::mark::IFieldmark& rFieldmark )
     {
         OUString aName;
         pParameter->second >>= aName;
-        assert( aName.getLength() < 21 && "jluth seeing if following documentation will cause problems." );
         const sal_Int32 nLen = std::min( sal_Int32(20), aName.getLength() );
         ffname = aName.copy(0, nLen);
     }
@@ -3991,7 +4154,6 @@ void WW8Export::WriteFormData( const ::sw::mark::IFieldmark& rFieldmark )
             {
                 OUString aDefaultText;
                 pParameter->second >>= aDefaultText;
-                assert( aDefaultText.getLength() < 256 && "jluth seeing if following documentation will cause problems." );
                 const sal_Int32 nLen = std::min( sal_Int32(255), aDefaultText.getLength() );
                 ffdeftext = aDefaultText.copy (0, nLen);
             }
@@ -4002,7 +4164,6 @@ void WW8Export::WriteFormData( const ::sw::mark::IFieldmark& rFieldmark )
         {
             sal_uInt16 nLength = 0;
             pParameter->second >>= nLength;
-            assert( nLength < 32768 && "jluth seeing if following documentation will cause problems." );
             nLength = std::min( sal_uInt16(32767), nLength );
             aFieldHeader.cch = nLength;
         }
@@ -4013,7 +4174,6 @@ void WW8Export::WriteFormData( const ::sw::mark::IFieldmark& rFieldmark )
             OUString aFormat;
             pParameter->second >>= aFormat;
             const sal_Int32 nLen = std::min( sal_Int32(64), aFormat.getLength() );
-            assert( nLen < 65 && "jluth seeing if following documentation will cause problems." );
             ffformat = aFormat.copy(0, nLen);
         }
     }
@@ -4047,7 +4207,6 @@ void WW8Export::WriteFormData( const ::sw::mark::IFieldmark& rFieldmark )
     {
         OUString aEntryMacro;
         pParameter->second >>= aEntryMacro;
-        assert( aEntryMacro.getLength() < 33 && "jluth seeing if following documentation will cause problems." );
         const sal_Int32 nLen = std::min( sal_Int32(32), aEntryMacro.getLength() );
         ffentrymcr = aEntryMacro.copy (0, nLen);
     }
@@ -4057,7 +4216,6 @@ void WW8Export::WriteFormData( const ::sw::mark::IFieldmark& rFieldmark )
     {
         OUString aExitMacro;
         pParameter->second >>= aExitMacro;
-        assert( aExitMacro.getLength() < 33 && "jluth seeing if following documentation will cause problems." );
         const sal_Int32 nLen = std::min( sal_Int32(32), aExitMacro.getLength() );
         ffexitmcr = aExitMacro.copy (0, nLen);
     }

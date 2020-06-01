@@ -253,7 +253,6 @@
 #define STR_UndoMergeModel                                  NC_("STR_UndoMergeModel", "Insert document")
 #define STR_UndoNewLayer                                    NC_("STR_UndoNewLayer", "Insert Layer")
 #define STR_UndoDelLayer                                    NC_("STR_UndoDelLayer", "Delete layer")
-#define STR_UndoMovLayer                                    NC_("STR_UndoMovLayer", "Change order of layers")
 // Undo/Redo for setting object's name (#i73249#)
 #define STR_UndoObjName                                     NC_("STR_UndoObjName", "Change object name of %1 to")
 #define STR_UndoObjTitle                                    NC_("STR_UndoObjTitle", "Change object title of %1")
@@ -512,9 +511,10 @@
 #define SIP_SA_GRAFINVERT                                   NC_("SIP_SA_GRAFINVERT", "Invert")
 #define SIP_SA_GRAFMODE                                     NC_("SIP_SA_GRAFMODE", "Image mode")
 #define SIP_SA_GRAFCROP                                     NC_("SIP_SA_GRAFCROP", "Crop")
-#define SIP_SA_GLOW                                         NC_("SIP_SA_GLOW", "Glow effect")
 #define SIP_SA_GLOW_RAD                                     NC_("SIP_SA_GLOW_RAD", "Radius of glow effect")
 #define SIP_SA_GLOW_COLOR                                   NC_("SIP_SA_GLOW_COLOR", "Color of glow effect")
+#define SIP_SA_GLOW_TRANSPARENCY                            NC_("SIP_SA_GLOW_TRANSPARENCY", "Transparency of glow effect")
+#define SIP_SA_SOFTEDGE_RAD                                 NC_("SIP_SA_SOFTEDGE_RAD", "Radius of soft edge effect")
 #define STR_ObjNameSingulMEDIA                              NC_("STR_ObjNameSingulMEDIA", "Media object")
 #define STR_ObjNamePluralMEDIA                              NC_("STR_ObjNamePluralMEDIA", "Media objects")
 // drawing layer table strings
@@ -826,7 +826,7 @@
 #define RID_SVXSTR_BMP19                                    NC_("RID_SVXSTR_BMP19", "Night Sky")
 #define RID_SVXSTR_BMP20                                    NC_("RID_SVXSTR_BMP20", "Pool")
 #define RID_SVXSTR_BMP21                                    NC_("RID_SVXSTR_BMP21", "Bitmap")
-#define RID_SVXSTR_BMP79                                    NC_("RID_SVXSTR_BMP79", "Invoiced Paper")
+#define RID_SVXSTR_BMP79                                    NC_("RID_SVXSTR_BMP79", "Invoice Paper")
 #define RID_SVXSTR_BMP80                                    NC_("RID_SVXSTR_BMP80", "Concrete")
 #define RID_SVXSTR_BMP81                                    NC_("RID_SVXSTR_BMP81", "Brick Wall")
 #define RID_SVXSTR_BMP82                                    NC_("RID_SVXSTR_BMP82", "Stone Wall")
@@ -961,24 +961,7 @@
 #define RID_SVXSTR_COLOR_LIBRE_PURPLE_ACCENT                NC_("RID_SVXSTR_COLOR_LIBRE_PURPLE_ACCENT", "Purple Accent")
 #define RID_SVXSTR_COLOR_LIBRE_YELLOW_ACCENT                NC_("RID_SVXSTR_COLOR_LIBRE_YELLOW_ACCENT", "Yellow Accent")
 
-// Tango colors, see: http://tango.freedesktop.org/Tango_Icon_Theme_Guidelines
-#define RID_SVXSTR_COLOR_TANGO_BUTTER                       NC_("RID_SVXSTR_COLOR_TANGO_BUTTER", "Tango: Butter")
-// Tango colors, see: http://tango.freedesktop.org/Tango_Icon_Theme_Guidelines
-#define RID_SVXSTR_COLOR_TANGO_ORANGE                       NC_("RID_SVXSTR_COLOR_TANGO_ORANGE", "Tango: Orange")
-// Tango colors, see: http://tango.freedesktop.org/Tango_Icon_Theme_Guidelines
-#define RID_SVXSTR_COLOR_TANGO_CHOCOLATE                    NC_("RID_SVXSTR_COLOR_TANGO_CHOCOLATE", "Tango: Chocolate")
-// Tango colors, see: http://tango.freedesktop.org/Tango_Icon_Theme_Guidelines
-#define RID_SVXSTR_COLOR_TANGO_CHAMELEON                    NC_("RID_SVXSTR_COLOR_TANGO_CHAMELEON", "Tango: Chameleon")
-// Tango colors, see: http://tango.freedesktop.org/Tango_Icon_Theme_Guidelines
-#define RID_SVXSTR_COLOR_TANGO_SKY_BLUE                     NC_("RID_SVXSTR_COLOR_TANGO_SKY_BLUE", "Tango: Sky Blue")
-// Tango colors, see: http://tango.freedesktop.org/Tango_Icon_Theme_Guidelines
-#define RID_SVXSTR_COLOR_TANGO_PLUM                         NC_("RID_SVXSTR_COLOR_TANGO_PLUM", "Tango: Plum")
-// Tango colors, see: http://tango.freedesktop.org/Tango_Icon_Theme_Guidelines
-#define RID_SVXSTR_COLOR_TANGO_SCARLET_RED                  NC_("RID_SVXSTR_COLOR_TANGO_SCARLET_RED", "Tango: Scarlet Red")
-// Tango colors, see: http://tango.freedesktop.org/Tango_Icon_Theme_Guidelines
-#define RID_SVXSTR_COLOR_TANGO_ALUMINIUM                    NC_("RID_SVXSTR_COLOR_TANGO_ALUMINIUM", "Tango: Aluminium")
 #define RID_SVXSTR_GALLERYPROPS_GALTHEME                    NC_("RID_SVXSTR_GALLERYPROPS_GALTHEME", "Gallery Theme")
-#define RID_SVXSTR_GALLERY_PREVIEW                          NC_("RID_SVXSTR_GALLERY_PREVIEW", "Preview")
 #define RID_SVXSTR_SUCCESSRECOV                             NC_("RID_SVXSTR_SUCCESSRECOV", "Successfully recovered")
 #define RID_SVXSTR_ORIGDOCRECOV                             NC_("RID_SVXSTR_ORIGDOCRECOV", "Original document recovered")
 #define RID_SVXSTR_RECOVFAILED                              NC_("RID_SVXSTR_RECOVFAILED", "Recovery failed")
@@ -1005,7 +988,6 @@
 
 #define RID_SVXSTR_GALLERY_FILTER                           NC_("RID_SVXSTR_GALLERY_FILTER", "Graphics filter")
 #define RID_SVXSTR_GALLERY_NEWTHEME                         NC_("RID_SVXSTR_GALLERY_NEWTHEME", "New Theme")
-#define RID_SVXSTR_GALLERY_TITLE                            NC_("RID_SVXSTR_GALLERY_TITLE", "Title")
 
 #define RID_GALLERYSTR_THEME_3D                             NC_("RID_GALLERYSTR_THEME_3D", "3D Effects")
 #define RID_GALLERYSTR_THEME_ANIMATIONS                     NC_("RID_GALLERYSTR_THEME_ANIMATIONS", "Animations")
@@ -1114,12 +1096,6 @@
 #define RID_SVXSTR_UNDO_APPLY_FONTWORK_ALIGNMENT            NC_("RID_SVXSTR_UNDO_APPLY_FONTWORK_ALIGNMENT", "Apply Fontwork Alignment")
 #define RID_SVXSTR_UNDO_APPLY_FONTWORK_CHARACTER_SPACING    NC_("RID_SVXSTR_UNDO_APPLY_FONTWORK_CHARACTER_SPACING", "Apply Fontwork Character Spacing")
 
-#define RID_SVXSTR_A11Y_3D_MATERIAL_COLOR                   NC_("RID_SVXSTR_A11Y_3D_MATERIAL_COLOR", "3D material color")
-#define RID_SVXSTR_A11Y_FILLSTYLE_NONE                      NC_("RID_SVXSTR_A11Y_FILLSTYLE_NONE", "None")
-#define RID_SVXSTR_A11Y_FILLSTYLE_SOLID                     NC_("RID_SVXSTR_A11Y_FILLSTYLE_SOLID", "Solid")
-#define RID_SVXSTR_A11Y_FILLSTYLE_HATCH                     NC_("RID_SVXSTR_A11Y_FILLSTYLE_HATCH", "With hatching")
-#define RID_SVXSTR_A11Y_FILLSTYLE_GRADIENT                  NC_("RID_SVXSTR_A11Y_FILLSTYLE_GRADIENT", "Gradient")
-#define RID_SVXSTR_A11Y_FILLSTYLE_BITMAP                    NC_("RID_SVXSTR_A11Y_FILLSTYLE_BITMAP", "Bitmap")
 #define RID_SVXSTR_A11Y_WITH                                NC_("RID_SVXSTR_A11Y_WITH", "with")
 #define RID_SVXSTR_A11Y_STYLE                               NC_("RID_SVXSTR_A11Y_STYLE", "Style")
 #define RID_SVXSTR_A11Y_AND                                 NC_("RID_SVXSTR_A11Y_AND", "and")
@@ -1710,6 +1686,14 @@
 #define RID_SUBSETSTR_SYMBOLS_AND_PICTOGRAPHS_EXTENDED_A    NC_("RID_SUBSETMAP", "Symbols and Pictographs Extended-A")
 #define RID_SUBSETSTR_TAMIL_SUPPLEMENT                      NC_("RID_SUBSETMAP", "Tamil Supplement")
 #define RID_SUBSETSTR_WANCHO                                NC_("RID_SUBSETMAP", "Wancho")
+#define RID_SUBSETSTR_CHORASMIAN                            NC_("RID_SUBSETMAP", "Chorasmian")
+#define RID_SUBSETSTR_CJK_UNIFIED_IDEOGRAPHS_EXTENSION_G    NC_("RID_SUBSETMAP", "CJK Unified Ideographs Extension G")
+#define RID_SUBSETSTR_DIVES_AKURU                           NC_("RID_SUBSETMAP", "Dhives Akuru")
+#define RID_SUBSETSTR_KHITAN_SMALL_SCRIPT                   NC_("RID_SUBSETMAP", "Khitan small script")
+#define RID_SUBSETSTR_LISU_SUPPLEMENT                       NC_("RID_SUBSETMAP", "Lisu Supplement")
+#define RID_SUBSETSTR_SYMBOLS_FOR_LEGACY_COMPUTING          NC_("RID_SUBSETMAP", "Symbols for Legacy Computing")
+#define RID_SUBSETSTR_TANGUT_SUPPLEMENT                     NC_("RID_SUBSETMAP", "Tangut Supplement")
+#define RID_SUBSETSTR_YEZIDI                                NC_("RID_SUBSETMAP", "Yezidi")
 
 #define RID_SVXSTR_FRAMEDIR_LTR                             NC_("RID_SVXSTR_FRAMEDIR_LTR", "Left-to-right (LTR)")
 #define RID_SVXSTR_FRAMEDIR_RTL                             NC_("RID_SVXSTR_FRAMEDIR_RTL", "Right-to-left (RTL)")

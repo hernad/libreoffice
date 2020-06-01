@@ -745,8 +745,8 @@ CPPUNIT_TEST_FIXTURE(SigningTest, testXAdESNotype)
     uno::Reference<io::XInputStream> xInputStream(
         xMetaInf->openStreamElement("documentsignatures.xml", embed::ElementModes::READ),
         uno::UNO_QUERY);
-    std::shared_ptr<SvStream> pStream(utl::UcbStreamHelper::CreateStream(xInputStream, true));
-    xmlDocPtr pXmlDoc = parseXmlStream(pStream.get());
+    std::unique_ptr<SvStream> pStream(utl::UcbStreamHelper::CreateStream(xInputStream, true));
+    xmlDocUniquePtr pXmlDoc = parseXmlStream(pStream.get());
 
     // Without the accompanying fix in place, this test would have failed with "unexpected 'Type'
     // attribute", i.e. the signature without such an attribute was not preserved correctly.
@@ -805,8 +805,8 @@ CPPUNIT_TEST_FIXTURE(SigningTest, testXAdES)
     uno::Reference<io::XInputStream> xInputStream(
         xMetaInf->openStreamElement("documentsignatures.xml", embed::ElementModes::READ),
         uno::UNO_QUERY);
-    std::shared_ptr<SvStream> pStream(utl::UcbStreamHelper::CreateStream(xInputStream, true));
-    xmlDocPtr pXmlDoc = parseXmlStream(pStream.get());
+    std::unique_ptr<SvStream> pStream(utl::UcbStreamHelper::CreateStream(xInputStream, true));
+    xmlDocUniquePtr pXmlDoc = parseXmlStream(pStream.get());
 
     // Assert that the digest algorithm is SHA-256 in the bAdESCompliant case, not SHA-1.
     assertXPath(pXmlDoc,
@@ -845,8 +845,8 @@ CPPUNIT_TEST_FIXTURE(SigningTest, testSignatureLineOOXML)
 {
     // Given: A document (docx) with a signature line and a valid signature
     uno::Reference<security::XDocumentDigitalSignatures> xSignatures(
-        security::DocumentDigitalSignatures::createWithVersion(
-            comphelper::getProcessComponentContext(), "1.2"));
+        security::DocumentDigitalSignatures::createDefault(
+            comphelper::getProcessComponentContext()));
 
     uno::Reference<embed::XStorage> xStorage
         = comphelper::OStorageHelper::GetStorageOfFormatFromURL(
@@ -959,6 +959,24 @@ CPPUNIT_TEST_FIXTURE(SigningTest, testODFEncryptedGPG)
     CPPUNIT_ASSERT(pBaseModel);
     pObjectShell = pBaseModel->GetObjectShell();
     CPPUNIT_ASSERT(pObjectShell);
+
+    // export and import again
+    utl::TempFile aTempFile;
+    {
+        uno::Sequence<beans::PropertyValue> props(
+            comphelper::InitPropertySequence({ { "FilterName", uno::Any(OUString("writer8")) } }));
+        uno::Reference<frame::XStorable> xDocStorable(mxComponent, uno::UNO_QUERY);
+        xDocStorable->storeToURL(aTempFile.GetURL(), props);
+    }
+    validate(aTempFile.GetFileName(), test::ODF);
+
+    createDoc(aTempFile.GetURL());
+    pBaseModel = dynamic_cast<SfxBaseModel*>(mxComponent.get());
+    CPPUNIT_ASSERT(pBaseModel);
+    pObjectShell = pBaseModel->GetObjectShell();
+    CPPUNIT_ASSERT(pObjectShell);
+
+    aTempFile.EnableKillingFile();
 }
 
 #endif
@@ -1058,14 +1076,14 @@ CPPUNIT_TEST_FIXTURE(SigningTest, testPreserveMacroTemplateSignature12_ODF)
 
     // the loaded document is a OTT with a valid macro signature
     assertDocument(CPPUNIT_SOURCELINE(), "writer8_template", SignatureState::NOSIGNATURES,
-                   SignatureState::OK, ODFVER_012_TEXT);
+                   SignatureState::OK, ODFVER_013_TEXT);
 
     // load saved ODT document
     createDoc(aTempFileSaveAsODT.GetURL());
 
     // the loaded document is a ODT with a macro signature
     assertDocument(CPPUNIT_SOURCELINE(), "writer8", SignatureState::NOSIGNATURES,
-                   SignatureState::OK, ODFVER_012_TEXT);
+                   SignatureState::OK, ODFVER_013_TEXT);
 
     // save as new OTT template
     utl::TempFile aTempFileSaveAsODT_OTT;
@@ -1092,7 +1110,7 @@ CPPUNIT_TEST_FIXTURE(SigningTest, testPreserveMacroTemplateSignature12_ODF)
 
     // the loaded document is a OTT with a valid macro signature
     assertDocument(CPPUNIT_SOURCELINE(), "writer8_template", SignatureState::NOSIGNATURES,
-                   SignatureState::OK, ODFVER_012_TEXT);
+                   SignatureState::OK, ODFVER_013_TEXT);
 }
 
 /// Test if a macro signature from an OTT 1.0 is dropped for ODT 1.2
@@ -1142,7 +1160,7 @@ CPPUNIT_TEST_FIXTURE(SigningTest, testDropMacroTemplateSignature)
 
     // the loaded document is a 1.2 ODT without any signatures
     assertDocument(CPPUNIT_SOURCELINE(), "writer8", SignatureState::NOSIGNATURES,
-                   SignatureState::NOSIGNATURES, ODFVER_012_TEXT);
+                   SignatureState::NOSIGNATURES, ODFVER_013_TEXT);
 
     // load the template as-is to validate signatures
     mxComponent->dispose();
@@ -1180,7 +1198,7 @@ CPPUNIT_TEST_FIXTURE(SigningTest, testDropMacroTemplateSignature)
 
     // the loaded document is a 1.2 OTT without any signatures
     assertDocument(CPPUNIT_SOURCELINE(), "writer8_template", SignatureState::NOSIGNATURES,
-                   SignatureState::NOSIGNATURES, ODFVER_012_TEXT);
+                   SignatureState::NOSIGNATURES, ODFVER_013_TEXT);
 }
 
 namespace

@@ -1398,7 +1398,7 @@ void SlideShowImpl::registerUserPaintPolygons( const uno::Reference< lang::XMult
     }
 
     // ODF defaults from ctor of SdrLayer are not automatically set on the here
-    // created XLayer. Need to be done explicitely here.
+    // created XLayer. Need to be done explicitly here.
     aPropLayer <<= true;
     xDrawnInSlideshow->setPropertyValue("IsVisible", aPropLayer);
     xDrawnInSlideshow->setPropertyValue("IsPrintable", aPropLayer);
@@ -1410,7 +1410,7 @@ void SlideShowImpl::registerUserPaintPolygons( const uno::Reference< lang::XMult
     {
         PolyPolygonVector aPolygons = rPoly.second;
         //Get shapes for the slide
-        css::uno::Reference< css::drawing::XShapes > Shapes(rPoly.first, css::uno::UNO_QUERY);
+        css::uno::Reference< css::drawing::XShapes > Shapes = rPoly.first;
         //Retrieve polygons for one slide
         for( const auto& pPolyPoly : aPolygons )
         {
@@ -1808,7 +1808,7 @@ void SlideShowImpl::addShapeEventListener(
     }
 
     // add new listener to broadcaster
-    if( aIter->second.get() )
+    if( aIter->second )
         aIter->second->addInterface( xListener );
 
     maEventMultiplexer.notifyShapeListenerAdded(xShape);
@@ -1830,7 +1830,7 @@ void SlideShowImpl::removeShapeEventListener(
         // entry for this shape found -> remove listener from
         // helper object
         ENSURE_OR_THROW(
-            aIter->second.get(),
+            aIter->second,
             "SlideShowImpl::removeShapeEventListener(): "
             "listener map contains NULL broadcast helper" );
 

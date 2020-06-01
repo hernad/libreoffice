@@ -126,11 +126,14 @@ private:
     // levels of a numbering.
     ::std::vector< ListLevel::Pointer >  m_aLevels;
 
-    // Only used during the numberings import
+    // Only used during the numbering import
     ListLevel::Pointer                         m_pCurrentLevel;
 
     // The style name linked to.
     OUString                      m_sNumStyleLink;
+
+    // This abstract numbering is a base definition for this style
+    OUString                      m_sStyleLink;
 
     /// list id to use for all derived numbering definitions
     std::optional<OUString> m_oListId;
@@ -159,7 +162,11 @@ public:
     void                  SetNumStyleLink(const OUString& sValue) { m_sNumStyleLink = sValue; };
     const OUString&       GetNumStyleLink() const { return m_sNumStyleLink; };
 
+    void                  SetStyleLink(const OUString& sValue) { m_sStyleLink = sValue; };
+    const OUString&       GetStyleLink() const { return m_sStyleLink; };
+
     const OUString& MapListId(OUString const& rId);
+    bool isOutlineNumbering( sal_uInt16 nLvl ) { return GetLevel(nLvl) && GetLevel(nLvl)->isOutlineNumbering(); }
 };
 
 class ListDef : public AbstractListDef

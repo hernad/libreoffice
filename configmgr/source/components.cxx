@@ -516,9 +516,6 @@ Components::Components(
             userExtensionLayer_ = layer;
             parseXcsXcuIniLayer(layer, url, true);
             layer += 2; //TODO: overflow
-        } else if (type == "module") {
-            parseModuleLayer(layer, url);
-            ++layer; //TODO: overflow
         } else if (type == "res") {
             sal_uInt32 nStartTime = osl_getGlobalTimer();
             parseResLayer(layer, url);
@@ -799,17 +796,17 @@ void Components::parseXcdFiles(int layer, OUString const & url) {
         }
     }
     while (!unres.empty()) {
-        bool isResolved = false;
+        bool resolved = false;
         for (UnresolvedVector::iterator i(unres.begin()); i != unres.end();) {
             if (i->manager->parse(&existingDeps)) {
                 processedDeps.insert(i->name);
                 i = unres.erase(i);
-                isResolved = true;
+                resolved = true;
             } else {
                 ++i;
             }
         }
-        if (!isResolved) {
+        if (!resolved) {
             throw css::uno::RuntimeException(
                 "xcd: unresolved dependencies in " + url);
         }
@@ -854,10 +851,6 @@ void Components::parseXcsXcuIniLayer(
             parseFileList(layer + 1, &parseXcuFile, urls, recordAdditions);
         }
     }
-}
-
-void Components::parseModuleLayer(int layer, OUString const & url) {
-    parseFiles(layer, ".xcu", &parseXcuFile, url, false);
 }
 
 void Components::parseResLayer(int layer, OUString const & url) {

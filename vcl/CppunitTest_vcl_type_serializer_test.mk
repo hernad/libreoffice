@@ -14,6 +14,12 @@ $(eval $(call gb_CppunitTest_add_exception_objects,vcl_type_serializer_test, \
 ))
 
 $(eval $(call gb_CppunitTest_use_external,vcl_type_serializer_test,boost_headers))
+ifeq ($(TLS),NSS)
+$(eval $(call gb_CppunitTest_use_externals,vcl_type_serializer_test,\
+       plc4 \
+       nss3 \
+))
+endif
 
 $(eval $(call gb_CppunitTest_set_include,vcl_type_serializer_test,\
     $$(INCLUDE) \
@@ -33,18 +39,9 @@ $(eval $(call gb_CppunitTest_use_libraries,vcl_type_serializer_test, \
 ))
 
 $(eval $(call gb_CppunitTest_use_sdk_api,vcl_type_serializer_test))
-
+$(eval $(call gb_CppunitTest_use_rdb,vcl_type_serializer_test,services))
 $(eval $(call gb_CppunitTest_use_ure,vcl_type_serializer_test))
 $(eval $(call gb_CppunitTest_use_vcl,vcl_type_serializer_test))
-
-$(eval $(call gb_CppunitTest_use_components,vcl_type_serializer_test,\
-    configmgr/source/configmgr \
-    i18npool/util/i18npool \
-    ucb/source/core/ucb1 \
-    ucb/source/ucp/file/ucpfile1 \
-    uui/util/uui \
-))
-
 $(eval $(call gb_CppunitTest_use_configuration,vcl_type_serializer_test))
 
 # vim: set noet sw=4 ts=4:

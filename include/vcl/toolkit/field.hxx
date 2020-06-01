@@ -25,8 +25,9 @@
 #endif
 
 #include <config_options.h>
-#include <vcl/combobox.hxx>
+#include <vcl/toolkit/combobox.hxx>
 #include <vcl/field.hxx>
+#include <vcl/longcurr.hxx>
 
 class VCL_DLLPUBLIC MetricFormatter : public NumericFormatter
 {
@@ -101,6 +102,7 @@ public:
     virtual void            dispose() override;
 
     virtual boost::property_tree::ptree DumpAsPropertyTree() override;
+    virtual FactoryFunction GetUITestFactory() const override;
 };
 
 class VCL_DLLPUBLIC MetricBox : public ComboBox, public MetricFormatter
@@ -235,6 +237,17 @@ public:
 
     virtual void            ReformatAll() override;
     virtual void            dispose() override;
+};
+
+class UNLESS_MERGELIBS(VCL_DLLPUBLIC) LongCurrencyBox final : public ComboBox, public LongCurrencyFormatter
+{
+public:
+                    LongCurrencyBox( vcl::Window* pParent, WinBits nWinStyle );
+
+    virtual bool    EventNotify( NotifyEvent& rNEvt ) override;
+
+    void            Modify() override;
+    void            ReformatAll() override;
 };
 
 #endif // INCLUDED_VCL_FIELD_HXX

@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_BASEGFX_POLYGON_B3DPOLYGONTOOLS_HXX
-#define INCLUDED_BASEGFX_POLYGON_B3DPOLYGONTOOLS_HXX
+#pragma once
 
 #include <vector>
 #include <functional>
@@ -27,17 +26,15 @@
 #include <basegfx/vector/b3dvector.hxx>
 #include <basegfx/basegfxdllapi.h>
 
-
-namespace basegfx { class B3DPolyPolygon; }
-
 namespace basegfx
 {
-    // predefinitions
+    class B3DPolyPolygon;
     class B3DPolygon;
     class B3DRange;
+}
 
-    namespace utils
-    {
+namespace basegfx::utils
+{
         // B3DPolygon tools
 
         /** Check if given polygon is closed. This is kind of a
@@ -127,9 +124,6 @@ namespace basegfx
         */
         BASEGFX_DLLPUBLIC B3DPolygon snapPointsOfHorizontalOrVerticalEdges(const B3DPolygon& rCandidate);
 
-    } // end of namespace utils
-} // end of namespace basegfx
-
-#endif // INCLUDED_BASEGFX_POLYGON_B3DPOLYGONTOOLS_HXX
+} // end of namespace basegfx::utils
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

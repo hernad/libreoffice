@@ -1136,7 +1136,11 @@ static size_t doc_renderShapeSelection(LibreOfficeKitDocument* pThis, char** pOu
 static void doc_resizeWindow(LibreOfficeKitDocument* pThis, unsigned nLOKWindowId,
                              const int nWidth, const int nHeight);
 
-static void doc_completeFunction(LibreOfficeKitDocument* pThis, int nIndex);
+static void doc_completeFunction(LibreOfficeKitDocument* pThis, const char*);
+
+
+static void doc_sendFormFieldEvent(LibreOfficeKitDocument* pThis,
+                                   const char* pArguments);
 } // extern "C"
 
 namespace {
@@ -1251,6 +1255,8 @@ LibLODocument_Impl::LibLODocument_Impl(const uno::Reference <css::lang::XCompone
 
         m_pDocumentClass->createViewWithOptions = doc_createViewWithOptions;
         m_pDocumentClass->completeFunction = doc_completeFunction;
+
+        m_pDocumentClass->sendFormFieldEvent = doc_sendFormFieldEvent;
 
         gDocumentClass = m_pDocumentClass;
     }
@@ -1545,8 +1551,10 @@ void CallbackFlushHandler::queue(const int type, const char* data)
         for (const CallbackData& c : m_queue)
             oss << i++ << ": [" << c.Type << "] [" << c.PayloadString << "].\n";
         SAL_INFO("lok", "Current Queue: " << oss.str());
-        for (const CallbackData& c : m_queue)
-            assert(c.validate());
+        assert(
+            std::all_of(
+                m_queue.begin(), m_queue.end(),
+                [](const CallbackData& c) { return c.validate(); }));
     }
 #endif
 
@@ -2156,6 +2164,9 @@ static LibreOfficeKitDocument* lo_documentLoadWithOptions(LibreOfficeKit* pThis,
             // Need to reset the static initialized values
             SvNumberFormatter::resetTheCurrencyTable();
         }
+
+        const OUString aDeviceFormFactor = extractParameter(aOptions, "DeviceFormFactor");
+        SfxLokHelper::setDeviceFormFactor(aDeviceFormFactor);
 
         uno::Sequence<css::beans::PropertyValue> aFilterOptions(2);
         aFilterOptions[0] = css::beans::PropertyValue( "FilterOptions",
@@ -3559,6 +3570,7 @@ static void doc_sendDialogEvent(LibreOfficeKitDocument* /*pThis*/, unsigned nWin
         const OUString sTypeAction("TYPE");
         const OUString sUpAction("UP");
         const OUString sDownAction("DOWN");
+        const OUString sValue("VALUE");
 
         try
         {
@@ -3589,6 +3601,17 @@ static void doc_sendDialogEvent(LibreOfficeKitDocument* /*pThis*/, unsigned nWin
 
                         pUIWindow->execute(sClearAction, aMap);
                         pUIWindow->execute(sTypeAction, aMap);
+                    }
+                    else if (aMap["cmd"] == "value")
+                    {
+                        aMap["VALUE"] = aMap["data"];
+                        pUIWindow->execute(sValue, aMap);
+                    }
+                    else if (aMap["cmd"] == "selecttab")
+                    {
+                        aMap["POS"] = aMap["data"];
+
+                        pUIWindow->execute(sSelectAction, aMap);
                     }
                     else
                         bIsClickAction = true;
@@ -3631,17 +3654,7 @@ static void doc_postUnoCommand(LibreOfficeKitDocument* pThis, const char* pComma
     if (nView < 0)
         return;
 
-    if (gImpl && (aCommand == ".uno:LOKSetMobile" || aCommand == ".uno:LOKSetMobilePhone"))
-    {
-        comphelper::LibreOfficeKit::setMobilePhone(nView);
-        return;
-    }
-    else if (gImpl && aCommand == ".uno:LOKSetTablet")
-    {
-        comphelper::LibreOfficeKit::setTablet(nView);
-        return;
-    }
-    else if (gImpl && aCommand == ".uno:ToggleOrientation")
+    if (gImpl && aCommand == ".uno:ToggleOrientation")
     {
         ExecuteOrientationChange();
         return;
@@ -3829,9 +3842,8 @@ static void doc_postWindowMouseEvent(LibreOfficeKitDocument* /*pThis*/, unsigned
         return;
     }
 
-    Size aOffset(pWindow->GetOutOffXPixel(), pWindow->GetOutOffYPixel());
-    Point aPos(nX, nY);
-    aPos.Move(aOffset);
+    const Point aPos(nX, nY);
+
     MouseEvent aEvent(aPos, nCount, MouseEventModifiers::SIMPLECLICK, nButtons, nModifier);
 
     vcl::EnableDialogInput(pWindow);
@@ -4341,9 +4353,9 @@ static char* getLanguages(const char* pCommand)
     boost::property_tree::ptree aValues;
     boost::property_tree::ptree aChild;
     OUString sLanguage;
-    for ( sal_Int32 itLocale = 0; itLocale < aLocales.getLength(); itLocale++ )
+    for ( css::lang::Locale const & locale : std::as_const(aLocales) )
     {
-        const LanguageTag aLanguageTag( aLocales[itLocale]);
+        const LanguageTag aLanguageTag( locale );
         sLanguage = SvtLanguageTable::GetLanguageString(aLanguageTag.getLanguageType());
         if (sLanguage.startsWith("{") && sLanguage.endsWith("}"))
             continue;
@@ -4461,8 +4473,8 @@ static char* getStyles(LibreOfficeKitDocument* pThis, const char* pCommand)
     boost::property_tree::ptree aTree;
     aTree.put("commandName", pCommand);
     uno::Reference<css::style::XStyleFamiliesSupplier> xStyleFamiliesSupplier(pDocument->mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XNameAccess> xStyleFamilies = xStyleFamiliesSupplier->getStyleFamilies();
-    uno::Sequence<OUString> aStyleFamilies = xStyleFamilies->getElementNames();
+    const uno::Reference<container::XNameAccess> xStyleFamilies = xStyleFamiliesSupplier->getStyleFamilies();
+    const uno::Sequence<OUString> aStyleFamilies = xStyleFamilies->getElementNames();
 
     static const std::vector<OUString> aWriterStyles =
     {
@@ -4481,10 +4493,9 @@ static char* getStyles(LibreOfficeKitDocument* pThis, const char* pCommand)
     std::set<OUString> aDefaultStyleNames;
 
     boost::property_tree::ptree aValues;
-    for (sal_Int32 nStyleFam = 0; nStyleFam < aStyleFamilies.getLength(); ++nStyleFam)
+    for (OUString const & sStyleFam : aStyleFamilies)
     {
         boost::property_tree::ptree aChildren;
-        OUString sStyleFam = aStyleFamilies[nStyleFam];
         uno::Reference<container::XNameAccess> xStyleFamily(xStyleFamilies->getByName(sStyleFam), uno::UNO_QUERY);
 
         // Writer provides a huge number of styles, we have a list of 7 "default" styles which
@@ -4521,7 +4532,6 @@ static char* getStyles(LibreOfficeKitDocument* pThis, const char* pCommand)
 
     // Header & Footer Styles
     {
-        OUString sName;
         boost::property_tree::ptree aChild;
         boost::property_tree::ptree aChildren;
         const OUString sPageStyles("PageStyles");
@@ -4530,16 +4540,16 @@ static char* getStyles(LibreOfficeKitDocument* pThis, const char* pCommand)
 
         if (xStyleFamilies->hasByName(sPageStyles) && (xStyleFamilies->getByName(sPageStyles) >>= xContainer))
         {
-            uno::Sequence<OUString> aSeqNames = xContainer->getElementNames();
-            for (sal_Int32 itName = 0; itName < aSeqNames.getLength(); itName++)
+            const uno::Sequence<OUString> aSeqNames = xContainer->getElementNames();
+            for (OUString const & sName : aSeqNames)
             {
                 bool bIsPhysical;
-                sName = aSeqNames[itName];
                 xProperty.set(xContainer->getByName(sName), uno::UNO_QUERY);
                 if (xProperty.is() && (xProperty->getPropertyValue("IsPhysical") >>= bIsPhysical) && bIsPhysical)
                 {
-                    xProperty->getPropertyValue("DisplayName") >>= sName;
-                    aChild.put("", sName.toUtf8());
+                    OUString displayName;
+                    xProperty->getPropertyValue("DisplayName") >>= displayName;
+                    aChild.put("", displayName.toUtf8());
                     aChildren.push_back(std::make_pair("", aChild));
                 }
             }
@@ -4892,6 +4902,9 @@ static int doc_createViewWithOptions(LibreOfficeKitDocument* pThis,
         comphelper::LibreOfficeKit::setLocale(LanguageTag(aLanguage));
     }
 
+    const OUString aDeviceFormFactor = extractParameter(aOptions, "DeviceFormFactor");
+    SfxLokHelper::setDeviceFormFactor(aDeviceFormFactor);
+
     int nId = SfxLokHelper::createView();
 
 #ifdef IOS
@@ -5030,7 +5043,7 @@ unsigned char* doc_renderFontOrientation(SAL_UNUSED_PARAMETER LibreOfficeKitDocu
             int nFontWidth = aRect.BottomRight().X() + 1;
             int nFontHeight = aRect.BottomRight().Y() + 1;
 
-            if (!(nFontWidth > 0 && nFontHeight > 0))
+            if (nFontWidth <= 0 || nFontHeight <= 0)
                 break;
 
             if (*pFontWidth > 0 && *pFontHeight > 0)
@@ -5155,7 +5168,7 @@ static void doc_paintWindowForView(LibreOfficeKitDocument* pThis, unsigned nLOKW
     aMapMode.SetOrigin(Point(-(nX / fDPIScale), -(nY / fDPIScale)));
     pDevice->SetMapMode(aMapMode);
 
-    pWindow->PaintToDevice(pDevice.get(), Point(0, 0), Size());
+    pWindow->PaintToDevice(pDevice.get(), Point(0, 0));
 
     CGContextRelease(cgc);
 
@@ -5170,7 +5183,7 @@ static void doc_paintWindowForView(LibreOfficeKitDocument* pThis, unsigned nLOKW
     aMapMode.SetOrigin(Point(-(nX / fDPIScale), -(nY / fDPIScale)));
     pDevice->SetMapMode(aMapMode);
 
-    pWindow->PaintToDevice(pDevice.get(), Point(0, 0), Size());
+    pWindow->PaintToDevice(pDevice.get(), Point(0, 0));
 #endif
 
     comphelper::LibreOfficeKit::setDialogPainting(false);
@@ -5398,7 +5411,7 @@ static void doc_resizeWindow(LibreOfficeKitDocument* /*pThis*/, unsigned nLOKWin
     pWindow->SetSizePixel(Size(nWidth, nHeight));
 }
 
-static void doc_completeFunction(LibreOfficeKitDocument* pThis, int nIndex)
+static void doc_completeFunction(LibreOfficeKitDocument* pThis, const char* pFunctionName)
 {
     SolarMutexGuard aGuard;
     SetLastExceptionMsg();
@@ -5410,7 +5423,34 @@ static void doc_completeFunction(LibreOfficeKitDocument* pThis, int nIndex)
         return;
     }
 
-    pDoc->completeFunction(nIndex);
+    pDoc->completeFunction(OUString::fromUtf8(pFunctionName));
+}
+
+
+static void doc_sendFormFieldEvent(LibreOfficeKitDocument* pThis, const char* pArguments)
+{
+    SolarMutexGuard aGuard;
+
+    // Supported in Writer only
+    if (doc_getDocumentType(pThis) != LOK_DOCTYPE_TEXT)
+            return;
+
+    StringMap aMap(jsonToStringMap(pArguments));
+    ITiledRenderable* pDoc = getTiledRenderable(pThis);
+    if (!pDoc)
+    {
+        SetLastExceptionMsg("Document doesn't support tiled rendering!");
+        return;
+    }
+
+    // Sanity check
+    if (aMap.find("type") == aMap.end() || aMap.find("cmd") == aMap.end())
+    {
+        SetLastExceptionMsg("Wrong arguments for sendFormFieldEvent!");
+        return;
+    }
+
+    pDoc->executeFromFieldEvent(aMap);
 }
 
 static char* lo_getError (LibreOfficeKit *pThis)

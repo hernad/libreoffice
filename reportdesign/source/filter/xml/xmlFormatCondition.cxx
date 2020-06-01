@@ -20,14 +20,7 @@
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
 #include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
-#include <xmloff/xmluconv.hxx>
-#include "xmlEnums.hxx"
 #include "xmlHelper.hxx"
-#include <com/sun/star/awt/FontDescriptor.hpp>
-#include <com/sun/star/beans/PropertyAttribute.hpp>
-#include <strings.hxx>
-#include "xmlStyleImport.hxx"
 #include <sal/log.hxx>
 #include <osl/diagnose.h>
 
@@ -51,9 +44,7 @@ OXMLFormatCondition::OXMLFormatCondition( ORptFilter& rImport,
     static const OUString s_sTRUE = ::xmloff::token::GetXMLToken(XML_TRUE);
     try
     {
-        sax_fastparser::FastAttributeList *pAttribList =
-                        sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-        for (auto &aIter : *pAttribList)
+        for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
         {
             OUString sValue = aIter.toString();
 

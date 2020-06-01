@@ -20,7 +20,7 @@
 #include <uielement/edittoolbarcontroller.hxx>
 
 #include <com/sun/star/beans/PropertyValue.hpp>
-#include <svtools/InterimItemWindow.hxx>
+#include <vcl/InterimItemWindow.hxx>
 #include <svtools/toolboxcontroller.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/toolbox.hxx>
@@ -185,12 +185,12 @@ void EditToolbarController::executeControlCommand( const css::frame::ControlComm
     if ( !rControlCommand.Command.startsWith( "SetText" ))
         return;
 
-    for ( sal_Int32 i = 0; i < rControlCommand.Arguments.getLength(); i++ )
+    for ( const NamedValue& rArg : rControlCommand.Arguments )
     {
-        if ( rControlCommand.Arguments[i].Name.startsWith( "Text" ))
+        if ( rArg.Name.startsWith( "Text" ))
         {
             OUString aText;
-            rControlCommand.Arguments[i].Value >>= aText;
+            rArg.Value >>= aText;
             m_pEditControl->set_text(aText);
 
             // send notification

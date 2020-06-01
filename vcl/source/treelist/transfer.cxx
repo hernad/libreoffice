@@ -1442,6 +1442,15 @@ Any TransferableDataHelper::GetAny( const DataFlavor& rFlavor, const OUString& r
                 {
                     if( ( nRequestFormat == format.mnSotId ) && !rFlavor.MimeType.equalsIgnoreAsciiCase( format.MimeType ) )
                     {
+// tdf#133365: only release solar mutex on Windows
+#ifdef _WIN32
+                        // tdf#133527: first, make sure that we actually hold the mutex
+                        SolarMutexGuard g;
+                        // Our own thread may handle the nested IDataObject::GetData call,
+                        // and try to acquire solar mutex
+                        SolarMutexReleaser r;
+#endif // _WIN32
+
                         if (xTransfer2.is())
                             aRet = xTransfer2->getTransferData2(format, rDestDoc);
                         else
@@ -1455,6 +1464,15 @@ Any TransferableDataHelper::GetAny( const DataFlavor& rFlavor, const OUString& r
 
             if( !aRet.hasValue() )
             {
+// tdf#133365: only release solar mutex on Windows
+#ifdef _WIN32
+                // tdf#133527: first, make sure that we actually hold the mutex
+                SolarMutexGuard g;
+                // Our own thread may handle the nested IDataObject::GetData call,
+                // and try to acquire solar mutex
+                SolarMutexReleaser r;
+#endif // _WIN32
+
                 if (xTransfer2.is())
                     aRet = xTransfer2->getTransferData2(rFlavor, rDestDoc);
                 else

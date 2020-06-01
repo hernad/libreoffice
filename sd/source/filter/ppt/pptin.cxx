@@ -1487,7 +1487,7 @@ struct Ppt97AnimationStlSortHelper
 
 bool Ppt97AnimationStlSortHelper::operator()( const std::pair< SdrObject*, Ppt97AnimationPtr >& p1, const std::pair< SdrObject*, Ppt97AnimationPtr >& p2 )
 {
-    if( !p1.second.get() || !p2.second.get() )
+    if( !p1.second || !p2.second )
         return p1.second.get() < p2.second.get();
     if( *p1.second < *p2.second )
         return true;
@@ -1833,7 +1833,7 @@ void ImplSdPPTImport::ImportPageEffect( SdPage* pPage, const bool bNewAnimations
 
     if ( !bNewAnimationsUsed )
     {
-        tAnimationVector aAnimationsOnThisPage;
+        std::vector< std::pair< SdrObject*, Ppt97AnimationPtr > > aAnimationsOnThisPage;
 
         // add effects from page in correct order
         SdrObjListIter aSdrIter( pPage, SdrIterMode::Flat );
@@ -1853,7 +1853,7 @@ void ImplSdPPTImport::ImportPageEffect( SdPage* pPage, const bool bNewAnimations
         for( auto& rEntry : aAnimationsOnThisPage )
         {
             Ppt97AnimationPtr pPpt97Animation = rEntry.second;
-            if( pPpt97Animation.get() )
+            if( pPpt97Animation )
                 pPpt97Animation->createAndSetCustomAnimationEffect( rEntry.first );
         }
     }

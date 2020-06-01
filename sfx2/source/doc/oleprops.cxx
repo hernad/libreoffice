@@ -793,7 +793,7 @@ bool SfxOleSection::GetDateValue( util::Date& rValue, sal_Int32 nPropId ) const
 
 void SfxOleSection::SetProperty( const SfxOlePropertyRef& xProp )
 {
-    if( xProp.get() )
+    if( xProp )
         maPropMap[ xProp->GetPropId() ] = xProp;
 }
 
@@ -845,20 +845,17 @@ void SfxOleSection::SetDateValue( sal_Int32 nPropId, const util::Date& rValue )
 void SfxOleSection::SetThumbnailValue( sal_Int32 nPropId,
     const uno::Sequence<sal_Int8> & i_rData)
 {
-    SfxOleThumbnailProperty* pThumbnail = new SfxOleThumbnailProperty( nPropId, i_rData );
-    SfxOlePropertyRef xProp( pThumbnail );  // take ownership
+    auto pThumbnail = std::make_shared<SfxOleThumbnailProperty>( nPropId, i_rData );
     if( pThumbnail->IsValid() )
-        SetProperty( xProp );
+        SetProperty( pThumbnail );
 }
 
 void SfxOleSection::SetBlobValue( sal_Int32 nPropId,
     const uno::Sequence<sal_Int8> & i_rData)
 {
-    SfxOleBlobProperty* pBlob( new SfxOleBlobProperty( nPropId, i_rData ) );
-    SfxOlePropertyRef xProp( pBlob );
-    if( pBlob->IsValid() ) {
-        SetProperty( xProp );
-    }
+    auto pBlob = std::make_shared<SfxOleBlobProperty>( nPropId, i_rData );
+    if( pBlob->IsValid() )
+        SetProperty( pBlob );
 }
 
 Any SfxOleSection::GetAnyValue( sal_Int32 nPropId ) const
@@ -1065,7 +1062,7 @@ void SfxOleSection::LoadProperty( SvStream& rStrm, sal_Int32 nPropId )
         break;
     }
     // load property contents
-    if( xProp.get() )
+    if( xProp )
     {
         SetError( xProp->Load( rStrm ) );
         maPropMap[ nPropId ] = xProp;

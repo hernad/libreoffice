@@ -25,9 +25,9 @@
 
 #include <set>
 
-namespace com { namespace sun { namespace star { namespace linguistic2 { class XHyphenatedWord; } } } }
+namespace com::sun::star::linguistic2 { class XHyphenatedWord; }
 
-namespace sw { namespace mark { class IMark; } }
+namespace sw::mark { class IMark; }
 class SwCharRange;
 class SwTextNode;
 class SwTextAttrEnd;
@@ -220,7 +220,6 @@ class SW_DLLPUBLIC SwTextFrame: public SwContentFrame
     bool mbInFootnoteConnect  : 1;        // Is in Connect at the moment
     bool mbFootnote           : 1;        // Has at least one footnote
     bool mbRepaint       : 1;        // TextFrame: Repaint is ready to be fetched
-    bool mbHasBlinkPortions      : 1;        // Contains Blink Portions
     /// Contains rotated portions.
     bool mbHasRotatedPortions : 1;
     bool mbFieldFollow   : 1;        // Start with Field rest of the Master
@@ -518,9 +517,6 @@ public:
     inline void SetRepaint() const;
     inline void ResetRepaint() const;
     bool HasRepaint() const { return mbRepaint; }
-    inline void SetBlinkPor() const;
-    inline void ResetBlinkPor() const;
-    bool HasBlinkPor() const { return mbHasBlinkPortions; }
     void SetHasRotatedPortions(bool bHasRotatedPortions);
     bool GetHasRotatedPortions() const { return mbHasRotatedPortions; }
     void SetAnimation() const
@@ -870,15 +866,6 @@ inline void SwTextFrame::SetRepaint() const
 inline void SwTextFrame::ResetRepaint() const
 {
     const_cast<SwTextFrame*>(this)->mbRepaint = false;
-}
-
-inline void SwTextFrame::SetBlinkPor() const
-{
-    const_cast<SwTextFrame*>(this)->mbHasBlinkPortions = true;
-}
-inline void SwTextFrame::ResetBlinkPor() const
-{
-    const_cast<SwTextFrame*>(this)->mbHasBlinkPortions = false;
 }
 
 class TemporarySwap {

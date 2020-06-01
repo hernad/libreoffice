@@ -102,9 +102,7 @@ protected:
 
 DECLARE_OOXMLEXPORT_TEST(testSmartart, "smartart.docx")
 {
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDraws = xDrawPageSupplier->getDrawPage();
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(1), xDraws->getCount()); // One groupshape in the doc
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
 
     uno::Reference<container::XIndexAccess> xGroup(getShape(1), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(5), xGroup->getCount()); // background, 3 rectangles and an arrow in the group
@@ -172,7 +170,7 @@ DECLARE_OOXMLEXPORT_TEST(testWpgNested, "wpg-nested.docx")
 
     // This failed, the right edge of the shape was outside the page
     // boundaries.
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     sal_Int32 nPageLeft = getXPath(pXmlDoc, "/root/page[1]/infos/bounds", "left").toInt32();
     sal_Int32 nPageWidth = getXPath(pXmlDoc, "/root/page[1]/infos/bounds", "width").toInt32();
     sal_Int32 nShapeLeft
@@ -215,7 +213,7 @@ DECLARE_OOXMLEXPORT_TEST(testTdf120412_400PercentSubscript, "tdf120412_400Percen
 
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testFontEsc, "test_tdf120412.docx")
 {
-    xmlDocPtr pXmlDoc =parseExport("word/document.xml");
+    xmlDocUniquePtr pXmlDoc =parseExport("word/document.xml");
     // don't lose the run with superscript formatting
     assertXPath(pXmlDoc, "/w:document/w:body/w:p/w:r", 2);
     // Superscript should be raised by 100% (11pt). Was 110% (12pt)
@@ -271,9 +269,7 @@ DECLARE_OOXMLEXPORT_TEST(testFdo70457, "fdo70457.docx")
     // It must be imported as a XShape object with the proper rotation value
 
     // Check: there is one shape in the doc
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDraws = xDrawPageSupplier->getDrawPage();
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(1), xDraws->getCount());
+    CPPUNIT_ASSERT_EQUAL(1, getShapes());
 
     // Check: the angle of the shape is 45º
     CPPUNIT_ASSERT_EQUAL(sal_Int32(4500), getProperty<sal_Int32>(getShape(1), "RotateAngle"));
@@ -373,7 +369,7 @@ DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testFdo73389,"fdo73389.docx")
     // The width of the inner table was too large. The first fix still converted
     // the "auto" table width to a fixed one. The second fix used variable width.
     // The recent fix uses fixed width again, according to the fixed width cells.
-    xmlDocPtr pXmlDoc = parseExport();
+    xmlDocUniquePtr pXmlDoc = parseExport();
 
     assertXPath(pXmlDoc, "/w:document/w:body/w:tbl/w:tr/w:tc/w:tbl/w:tblPr/w:tblW","type","dxa");
     assertXPath(pXmlDoc, "/w:document/w:body/w:tbl/w:tr/w:tc/w:tbl/w:tblPr/w:tblW","w","1611");
@@ -382,7 +378,7 @@ DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testFdo73389,"fdo73389.docx")
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf59274, "tdf59274.docx")
 {
     // Table with "auto" table width and incomplete grid: 11 columns, but only 4 gridCol elements.
-    xmlDocPtr pXmlDoc = parseExport();
+    xmlDocUniquePtr pXmlDoc = parseExport();
 
     assertXPath(pXmlDoc, "/w:document/w:body/w:tbl/w:tblPr/w:tblW", "type", "dxa");
     // This was 7349: sum of the cell widths in first row, but the table width is determined by a longer row later.
@@ -567,9 +563,7 @@ DECLARE_OOXMLIMPORT_TEST(testFdo38414, "fdo38414.docx" )
 DECLARE_OOXMLEXPORT_TEST(test_extra_image, "test_extra_image.docx" )
 {
     // fdo#74652 Check there is no shape added to the doc during import
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDraws = xDrawPageSupplier->getDrawPage();
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(0), xDraws->getCount());
+    CPPUNIT_ASSERT_EQUAL(0, getShapes());
 }
 
 DECLARE_OOXMLEXPORT_TEST(testFdo74401, "fdo74401.docx")
@@ -608,7 +602,7 @@ DECLARE_OOXMLEXPORT_TEST(testGridBefore, "gridbefore.docx")
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf116194, "tdf116194.docx")
 {
     // The problem was that the importer lost consecutive tables with w:gridBefore
-    xmlDocPtr pXmlDoc = parseExport();
+    xmlDocUniquePtr pXmlDoc = parseExport();
     assertXPath(pXmlDoc, "/w:document/w:body/w:tbl", 2);
 }
 
@@ -827,6 +821,7 @@ DECLARE_OOXMLEXPORT_TEST(testFdo85542, "fdo85542.docx")
 
 DECLARE_OOXMLEXPORT_TEST(testTdf65955, "tdf65955.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<text::XBookmarksSupplier> xBookmarksSupplier(mxComponent, uno::UNO_QUERY);
     uno::Reference<container::XIndexAccess> xBookmarksByIdx(xBookmarksSupplier->getBookmarks(), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(2), xBookmarksByIdx->getCount());
@@ -845,6 +840,7 @@ DECLARE_OOXMLEXPORT_TEST(testTdf65955, "tdf65955.odt")
 
 DECLARE_OOXMLEXPORT_TEST(testTdf65955_2, "tdf65955_2.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference<text::XBookmarksSupplier> xBookmarksSupplier(mxComponent, uno::UNO_QUERY);
     uno::Reference<container::XIndexAccess> xBookmarksByIdx(xBookmarksSupplier->getBookmarks(), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(1), xBookmarksByIdx->getCount());
@@ -876,11 +872,8 @@ DECLARE_OOXMLEXPORT_TEST(mathtype, "mathtype.docx")
 
 DECLARE_OOXMLEXPORT_TEST(testTdf8255, "tdf8255.docx")
 {
-    uno::Reference<text::XTextDocument> xTextDocument(mxComponent, uno::UNO_QUERY);
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(xTextDocument, uno::UNO_QUERY);
-    uno::Reference<drawing::XDrawPage> xDrawPage = xDrawPageSupplier->getDrawPage();
     // This was 1: a full-page-wide multi-page floating table was imported as a TextFrame.
-    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(0), xDrawPage->getCount());
+    CPPUNIT_ASSERT_EQUAL(0, getShapes());
 }
 
 DECLARE_OOXMLEXPORT_TEST(testTdf87460, "tdf87460.docx")
@@ -993,7 +986,7 @@ DECLARE_OOXMLEXPORT_TEST(testTdf95377, "tdf95377.docx")
     CPPUNIT_ASSERT_EQUAL(beans::PropertyState_DIRECT_VALUE, xParagraph->getPropertyState("ParaFirstLineIndent"));
 
     //default style has numbering enabled.  Styles inherit numbering unless specifically disabled
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     assertXPath(pXmlDoc, "//body/txt/Special", 3);  //first three paragraphs have numbering
     assertXPath(pXmlDoc, "//body/txt[1]/Special", "rText", "a.");
     assertXPath(pXmlDoc, "//body/txt[2]/Special", "rText", "b.");
@@ -1155,11 +1148,8 @@ DECLARE_OOXMLEXPORT_TEST(testTdf97371, "tdf97371.docx")
 
 DECLARE_OOXMLEXPORT_TEST(testTdf99140, "tdf99140.docx")
 {
-    uno::Reference<text::XTextDocument> xTextDocument(mxComponent, uno::UNO_QUERY);
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(xTextDocument, uno::UNO_QUERY);
-    uno::Reference<drawing::XDrawPage> xDrawPage = xDrawPageSupplier->getDrawPage();
     // This was 1: a multi-page floating table was imported as a TextFrame.
-    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(0), xDrawPage->getCount());
+    CPPUNIT_ASSERT_EQUAL(0, getShapes());
 
     uno::Reference<text::XTextTablesSupplier> xTablesSupplier(mxComponent, uno::UNO_QUERY);
     uno::Reference<container::XIndexAccess> xTables(xTablesSupplier->getTextTables(), uno::UNO_QUERY);
@@ -1181,7 +1171,7 @@ DECLARE_OOXMLEXPORT_TEST(testTableMarginAdjustment, "table.fodt")
     // since LO is exporting in the NEW way now instead of the OLD way.
     // This was 55 when using 2007's compatibilityMode of 12 (old)
 
-    xmlDocPtr pXmlDoc = parseExport("word/document.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml");
 
     assertXPath(pXmlDoc, "//w:tbl[1]/w:tblPr[1]/w:tblInd[1]", "type", "dxa");
     assertXPath(pXmlDoc, "//w:tbl[1]/w:tblPr[1]/w:tblInd[1]", "w", "0");
@@ -1191,7 +1181,7 @@ DECLARE_OOXMLEXPORT_TEST(testTdf119760_tableInTablePosition, "tdf119760_tableInT
 {
     if ( mbExported )
     {
-        xmlDocPtr pXmlDoc = parseExport("word/document.xml");
+        xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml");
 
         assertXPath(pXmlDoc, "//w:tbl[1]/w:tr[1]/w:tc[1]/w:tbl[1]/w:tblPr[1]/w:tblInd[1]", "type", "dxa");
         assertXPath(pXmlDoc, "//w:tbl[1]/w:tr[1]/w:tc[1]/w:tbl[1]//w:tblPr[1]/w:tblInd[1]", "w", "0");

@@ -87,8 +87,29 @@ using namespace ::com::sun::star;
 #include <drawdoc.hxx>
 #include <svtools/embedhlp.hxx>
 #include <sfx2/event.hxx>
+#include <com/sun/star/ui/dialogs/DialogClosedEvent.hpp>
+#include <com/sun/star/ui/dialogs/ExecutableDialogResults.hpp>
+#include <IDocumentUndoRedo.hxx>
 
 SFX_IMPL_INTERFACE(SwTextShell, SwBaseShell)
+
+IMPL_STATIC_LINK( SwTextShell, DialogClosedHdl, css::ui::dialogs::DialogClosedEvent*, pEvent, void )
+{
+    SwView* pView = ::GetActiveView();
+    SwWrtShell& rWrtShell = pView->GetWrtShell();
+
+    sal_Int16 nDialogRet = pEvent->DialogResult;
+    if( nDialogRet == ui::dialogs::ExecutableDialogResults::CANCEL )
+    {
+        rWrtShell.Undo();
+        rWrtShell.GetIDocumentUndoRedo().ClearRedo();
+    }
+    else
+    {
+        OSL_ENSURE( nDialogRet == ui::dialogs::ExecutableDialogResults::OK,
+            "dialog execution failed" );
+    }
+}
 
 void SwTextShell::InitInterface_Impl()
 {
@@ -303,7 +324,7 @@ void SwTextShell::ExecInsert(SfxRequest &rReq)
                 break;
             if(!rReq.IsAPI())
             {
-                SwInsertChart();
+                SwInsertChart( LINK( this, SwTextShell, DialogClosedHdl ) );
             }
             else
             {
@@ -961,7 +982,7 @@ void SwTextShell::InsertSymbol( SfxRequest& rReq )
         // #108876# a font attribute has to be set always due to a guessed script type
         if( !aNewFont.GetFamilyName().isEmpty() )
         {
-            std::shared_ptr<SvxFontItem> aNewFontItem(aFont->Clone());
+            std::unique_ptr<SvxFontItem> aNewFontItem(aFont->Clone());
             aNewFontItem->SetFamilyName( aNewFont.GetFamilyName() );
             aNewFontItem->SetFamily(  aNewFont.GetFamilyType());
             aNewFontItem->SetPitch(   aNewFont.GetPitch());

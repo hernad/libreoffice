@@ -717,7 +717,7 @@ void SvxToolbarConfigPage::UpdateButtonStates()
     bool  bIsSeparator =
         selection != -1 && reinterpret_cast<SvxConfigEntry*>(m_xContentsListBox->get_id(selection).toInt64())->IsSeparator();
     bool bIsValidSelection =
-        !(m_xContentsListBox->n_children() == 0 || selection == -1);
+        (m_xContentsListBox->n_children() != 0 && selection != -1);
 
     m_xMoveUpButton->set_sensitive( bIsValidSelection );
     m_xMoveDownButton->set_sensitive( bIsValidSelection );
@@ -865,9 +865,9 @@ void SvxToolbarEntriesListBox::ChangedVisibility(int nRow)
     }
 }
 
-IMPL_LINK(SvxToolbarEntriesListBox, CheckButtonHdl, const row_col&, rRowCol, void)
+IMPL_LINK(SvxToolbarEntriesListBox, CheckButtonHdl, const weld::TreeView::iter_col&, rRowCol, void)
 {
-    ChangedVisibility(rRowCol.first);
+    ChangedVisibility(m_xControl->get_iter_index_in_parent(rRowCol.first));
 }
 
 IMPL_LINK(SvxToolbarEntriesListBox, KeyInputHdl, const KeyEvent&, rKeyEvent, bool)
@@ -905,7 +905,7 @@ IMPL_LINK( SvxToolbarConfigPage, ContentContextMenuHdl, const CommandEvent&, rCE
     bool  bIsSeparator =
         nSelectIndex != -1 && reinterpret_cast<SvxConfigEntry*>(m_xContentsListBox->get_id(nSelectIndex).toInt64())->IsSeparator();
     bool bIsValidSelection =
-        !( m_xContentsListBox->n_children() == 0 || nSelectIndex == -1 );
+        ( m_xContentsListBox->n_children() != 0 && nSelectIndex != -1 );
 
     std::unique_ptr<weld::Builder> xBuilder(Application::CreateBuilder( &rTreeView, "cui/ui/entrycontextmenu.ui" ) );
     auto xContextMenu = xBuilder->weld_menu("menu");

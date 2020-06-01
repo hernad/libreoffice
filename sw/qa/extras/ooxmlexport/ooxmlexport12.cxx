@@ -38,6 +38,7 @@ protected:
 
 DECLARE_OOXMLEXPORT_TEST(testTableCrossReference, "table_cross_reference.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // tdf#42346: Cross references to tables were not saved
     // MSO uses simple bookmarks for referencing table caption, so we do the same by export
     if (!mbExported)
@@ -211,6 +212,7 @@ DECLARE_OOXMLEXPORT_TEST(testTableCrossReference, "table_cross_reference.odt")
 DECLARE_OOXMLEXPORT_TEST(testTableCrossReferenceCustomFormat,
                          "table_cross_reference_custom_format.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // tdf#42346: Cross references to tables were not saved
     // Check also captions with custom formatting
     if (!mbExported)
@@ -344,6 +346,8 @@ DECLARE_OOXMLEXPORT_TEST(testTableCrossReferenceCustomFormat,
 
 DECLARE_OOXMLEXPORT_TEST(testObjectCrossReference, "object_cross_reference.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(10, getShapes());
+    CPPUNIT_ASSERT_EQUAL(2, getPages());
     // tdf#42346: Cross references to objects were not saved
     // MSO uses simple bookmarks for referencing table caption, so we do the same by export
     if (!mbExported)
@@ -676,7 +680,7 @@ DECLARE_OOXMLEXPORT_TEST(testObjectCrossReference, "object_cross_reference.odt")
 
 DECLARE_OOXMLEXPORT_TEST(testTdf112202, "090716_Studentische_Arbeit_VWS.docx")
 {
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
 
     // page 1 header: 1 paragraph, 2 flys, 1 draw object
     assertXPath(pXmlDoc, "/root/page[1]/header/txt", 1);
@@ -855,7 +859,7 @@ DECLARE_OOXMLEXPORT_TEST(testWatermarkTrim, "tdf114308.docx")
 
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf73547, "tdf73547-dash.docx")
 {
-    xmlDocPtr pXmlDoc = parseExport("word/document.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml");
     double nD = getXPath(pXmlDoc, "//a:custDash/a:ds[1]", "d").toDouble();
     CPPUNIT_ASSERT_DOUBLES_EQUAL(105000.0, nD, 5000.0); // was 100000
     double nSp = getXPath(pXmlDoc, "//a:custDash/a:ds[1]", "sp").toDouble();
@@ -884,7 +888,7 @@ DECLARE_OOXMLEXPORT_TEST(testTdf119143, "tdf119143.docx")
 
 DECLARE_OOXMLEXPORT_TEST(testTdf105444, "tdf105444.docx")
 {
-    xmlDocPtr pXmlComm = parseExport("word/comments.xml");
+    xmlDocUniquePtr pXmlComm = parseExport("word/comments.xml");
     if (!pXmlComm)
         return;
     // there is no extra paragraph on Win32, only a single one.
@@ -909,7 +913,7 @@ DECLARE_OOXMLEXPORT_TEST(testTdf117137, "tdf117137.docx")
 
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf99631, "tdf99631.docx")
 {
-    xmlDocPtr pXmlDoc = parseExport("word/document.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml");
 
     assertXPath(pXmlDoc, "//w:object", 2);
     assertXPath(pXmlDoc, "/w:document/w:body/w:p[2]/w:r/w:object", 2);
@@ -923,12 +927,31 @@ DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf99631, "tdf99631.docx")
 
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf122563, "tdf122563.docx")
 {
-    xmlDocPtr pXmlDoc = parseExport("word/document.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml");
 
     assertXPath(pXmlDoc, "/w:document/w:body/w:p[2]/w:r/w:object", 1);
     // Size of the embedded OLE spreadsheet was the bad "width:28.35pt;height:28.35pt"
     assertXPath(pXmlDoc, "/w:document/w:body/w:p[2]/w:r[1]/w:object/v:shape", "style",
                 "width:255.75pt;height:63.75pt");
+}
+
+DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf94628, "tdf94628.docx")
+{
+    uno::Reference<beans::XPropertySet> xPropertySet(
+        getStyles("NumberingStyles")->getByName("WWNum1"), uno::UNO_QUERY);
+    uno::Reference<container::XIndexAccess> xLevels(
+        xPropertySet->getPropertyValue("NumberingRules"), uno::UNO_QUERY);
+    uno::Sequence<beans::PropertyValue> aProps;
+    xLevels->getByIndex(0) >>= aProps; // 1st level
+
+    OUString sBulletChar = std::find_if(aProps.begin(), aProps.end(),
+                                        [](const beans::PropertyValue& rValue) {
+                                            return rValue.Name == "BulletChar";
+                                        })
+                               ->Value.get<OUString>();
+    // Actually for 'BLACK UPPER RIGHT TRIANGLE' is \u25E5
+    // But we use Wingdings 3 font here, so code is different
+    CPPUNIT_ASSERT_EQUAL(OUString(u"\uF07B"), sBulletChar);
 }
 
 DECLARE_OOXMLEXPORT_TEST(testTdf122594, "tdf122594.docx")
@@ -992,7 +1015,7 @@ DECLARE_OOXMLEXPORT_TEST(testTdf122594, "tdf122594.docx")
 DECLARE_OOXMLEXPORT_TEST(testLanguageInGroupShape, "tdf131922_LanguageInGroupShape.docx")
 {
     // tdf#131922: Check if good language is used in shape group texts
-    xmlDocPtr pXml = parseExport("word/document.xml");
+    xmlDocUniquePtr pXml = parseExport("word/document.xml");
     if (!pXml)
         return;
     assertXPath(pXml,
@@ -1000,6 +1023,50 @@ DECLARE_OOXMLEXPORT_TEST(testLanguageInGroupShape, "tdf131922_LanguageInGroupSha
                 "a:graphic/a:graphicData/wpg:wgp/"
                 "wps:wsp[1]/wps:txbx/w:txbxContent/w:p/w:r/w:rPr/w:lang",
                 "val", "de-DE");
+}
+
+DECLARE_OOXMLEXPORT_TEST(testTdf116883, "tdf116883.docx")
+{
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(1), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("1>1>"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(2), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("1>2>"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(3), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("1>2>1>1>"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(4), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("1>2>2>"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(5), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("1>2>3>"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(6), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("1>1)"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(7), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("1>2)"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(8), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("1>2>1<1)"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(9), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("1>2.2)"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(10), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("1>2.3)"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
 }
 
 CPPUNIT_PLUGIN_IMPLEMENT();

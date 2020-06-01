@@ -164,7 +164,7 @@ namespace svgio::svgreader
         {
             if(GraphicType::Bitmap == rGraphic.GetType())
             {
-                if(rGraphic.getVectorGraphicData().get())
+                if(rGraphic.getVectorGraphicData())
                 {
                     // embedded Svg
                     rEmbedded = rGraphic.getVectorGraphicData()->getPrimitive2DSequence();
@@ -196,7 +196,7 @@ namespace svgio::svgreader
             const double fWidth(getWidth().solve(*this, xcoordinate));
             const double fHeight(getHeight().solve(*this, ycoordinate));
 
-            if(!(fWidth > 0.0 && fHeight > 0.0))
+            if(fWidth <= 0.0 || fHeight <= 0.0)
                 return;
 
             BitmapEx aBitmapEx;

@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_BASEGFX_POLYGON_B2DPOLYGONTOOLS_HXX
-#define INCLUDED_BASEGFX_POLYGON_B2DPOLYGONTOOLS_HXX
+#pragma once
 
 #include <vector>
 #include <functional>
@@ -55,12 +54,12 @@ namespace o3tl
 
 namespace basegfx
 {
-    // predefinitions
     class B2DPolygon;
     class B2DRange;
+}
 
-    namespace utils
-    {
+namespace basegfx::utils
+{
         // B2DPolygon tools
 
         // open/close with point add/remove and control point corrections
@@ -525,9 +524,6 @@ namespace basegfx
          */
         BASEGFX_DLLPUBLIC OUString exportToSvgPoints( const B2DPolygon& rPoly );
 
-    } // end of namespace utils
-} // end of namespace basegfx
-
-#endif // INCLUDED_BASEGFX_POLYGON_B2DPOLYGONTOOLS_HXX
+} // end of namespace basegfx::utils
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

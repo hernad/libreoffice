@@ -1003,7 +1003,7 @@ bool ScChangeActionDel::Reject( ScDocument* pDoc )
             switch ( GetType() )
             {
                 case SC_CAT_DELETE_COLS :
-                    if ( !(aRange.aStart.Col() == 0 && aRange.aEnd.Col() == pDoc->MaxCol()) )
+                    if ( aRange.aStart.Col() != 0 || aRange.aEnd.Col() != pDoc->MaxCol() )
                     {   // Only if not TabDelete
                         bOk = pDoc->CanInsertCol( aRange ) && pDoc->InsertCol( aRange );
                     }
@@ -1834,7 +1834,7 @@ void ScChangeActionContent::PutValueToDoc(
                 aRange.aEnd.IncCol( nC-1 );
             if ( nR > 1 )
                 aRange.aEnd.IncRow( nR-1 );
-            ScMarkData aDestMark(pDoc->MaxRow(), pDoc->MaxCol());
+            ScMarkData aDestMark(pDoc->GetSheetLimits());
             aDestMark.SelectOneTable( aPos.Tab() );
             aDestMark.SetMarkArea( aRange );
             pDoc->InsertMatrixFormula( aPos.Col(), aPos.Row(),

@@ -63,7 +63,6 @@
 #include <rangeutl.hxx>
 #include <docfunc.hxx>
 #include <funcdesc.hxx>
-#include <formula/opcode.hxx>
 #include <editeng/fontitem.hxx>
 #include <AccessibleEditObject.hxx>
 #include <AccessibleText.hxx>
@@ -194,10 +193,16 @@ ScInputWindow::ScInputWindow( vcl::Window* pParent, const SfxBindings* pBind ) :
         InsertSeparator (1);
         InsertItem      (SID_INPUT_FUNCTION, Image(StockImage::Yes, RID_BMP_INPUT_FUNCTION), ToolBoxItemBits::NONE, 2);
     }
-    InsertItem      (SID_INPUT_SUM,      Image(StockImage::Yes, RID_BMP_INPUT_SUM), ToolBoxItemBits::DROPDOWNONLY, 3);
-    InsertItem      (SID_INPUT_EQUAL,    Image(StockImage::Yes, RID_BMP_INPUT_EQUAL), ToolBoxItemBits::NONE, 4);
-    InsertItem      (SID_INPUT_CANCEL,   Image(StockImage::Yes, RID_BMP_INPUT_CANCEL), ToolBoxItemBits::NONE, 5);
-    InsertItem      (SID_INPUT_OK,       Image(StockImage::Yes, RID_BMP_INPUT_OK), ToolBoxItemBits::NONE, 6);
+
+    // sigma and equal buttons
+    if (!mpViewShell->isLOKMobilePhone())
+    {
+        InsertItem      (SID_INPUT_SUM,      Image(StockImage::Yes, RID_BMP_INPUT_SUM), ToolBoxItemBits::DROPDOWNONLY, 3);
+        InsertItem      (SID_INPUT_EQUAL,    Image(StockImage::Yes, RID_BMP_INPUT_EQUAL), ToolBoxItemBits::NONE, 4);
+        InsertItem      (SID_INPUT_CANCEL,   Image(StockImage::Yes, RID_BMP_INPUT_CANCEL), ToolBoxItemBits::NONE, 5);
+        InsertItem      (SID_INPUT_OK,       Image(StockImage::Yes, RID_BMP_INPUT_OK), ToolBoxItemBits::NONE, 6);
+    }
+
     if (!comphelper::LibreOfficeKit::isActive())
     {
         InsertSeparator (7);
@@ -220,23 +225,27 @@ ScInputWindow::ScInputWindow( vcl::Window* pParent, const SfxBindings* pBind ) :
         SetHelpId   (SID_INPUT_FUNCTION, HID_INSWIN_CALC);
     }
 
-    SetItemText (SID_INPUT_SUM, ScResId( SCSTR_QHELP_BTNSUM ) );
-    SetHelpId   (SID_INPUT_SUM, HID_INSWIN_SUMME);
+    // sigma and equal buttons
+    if (!mpViewShell->isLOKMobilePhone())
+    {
+        SetItemText (SID_INPUT_SUM, ScResId( SCSTR_QHELP_BTNSUM ) );
+        SetHelpId   (SID_INPUT_SUM, HID_INSWIN_SUMME);
 
-    SetItemText (SID_INPUT_EQUAL, ScResId( SCSTR_QHELP_BTNEQUAL ) );
-    SetHelpId   (SID_INPUT_EQUAL, HID_INSWIN_FUNC);
+        SetItemText (SID_INPUT_EQUAL, ScResId( SCSTR_QHELP_BTNEQUAL ) );
+        SetHelpId   (SID_INPUT_EQUAL, HID_INSWIN_FUNC);
 
-    SetItemText ( SID_INPUT_CANCEL, ScResId( SCSTR_QHELP_BTNCANCEL ) );
-    SetHelpId   ( SID_INPUT_CANCEL, HID_INSWIN_CANCEL );
+        SetItemText ( SID_INPUT_CANCEL, ScResId( SCSTR_QHELP_BTNCANCEL ) );
+        SetHelpId   ( SID_INPUT_CANCEL, HID_INSWIN_CANCEL );
 
-    SetItemText ( SID_INPUT_OK, ScResId( SCSTR_QHELP_BTNOK ) );
-    SetHelpId   ( SID_INPUT_OK, HID_INSWIN_OK );
+        SetItemText ( SID_INPUT_OK, ScResId( SCSTR_QHELP_BTNOK ) );
+        SetHelpId   ( SID_INPUT_OK, HID_INSWIN_OK );
 
-    EnableItem( SID_INPUT_CANCEL, false );
-    EnableItem( SID_INPUT_OK, false );
+        EnableItem( SID_INPUT_CANCEL, false );
+        EnableItem( SID_INPUT_OK, false );
 
-    HideItem( SID_INPUT_CANCEL );
-    HideItem( SID_INPUT_OK );
+        HideItem( SID_INPUT_CANCEL );
+        HideItem( SID_INPUT_OK );
+    }
 
     SetHelpId( HID_SC_INPUTWIN ); // For the whole input row
 
@@ -506,6 +515,7 @@ void ScInputWindow::Resize()
     {
         std::vector<vcl::LOKPayloadItem> aItems;
         aItems.emplace_back("size", GetSizePixel().toString());
+        aItems.emplace_back("lines", OString::number(aTextWindow.GetNumLines()));
         pNotifier->notifyWindow(GetLOKWindowId(), "size_changed", aItems);
     }
 
@@ -524,8 +534,9 @@ void ScInputWindow::NotifyLOKClient()
         {
             std::vector<vcl::LOKPayloadItem> aItems;
             aItems.emplace_back("type", "calc-input-win");
-            aItems.emplace_back(std::make_pair("position", Point(0, 0).toString()));
+            aItems.emplace_back(std::make_pair("position", Point(GetOutOffXPixel(), GetOutOffYPixel()).toString()));
             aItems.emplace_back(std::make_pair("size", aSize.toString()));
+            aItems.emplace_back("lines", OString::number(aTextWindow.GetNumLines()));
             pNotifier->notifyWindow(GetLOKWindowId(), "created", aItems);
         }
 
@@ -809,6 +820,43 @@ void ScInputWindow::MouseButtonUp( const MouseEvent& rMEvt )
     ToolBox::MouseButtonUp( rMEvt );
 }
 
+void ScInputWindow::AutoSum( bool& bRangeFinder, bool& bSubTotal, OpCode eCode )
+{
+    ScModule* pScMod = SC_MOD();
+    ScTabViewShell* pViewSh = dynamic_cast<ScTabViewShell*>( SfxViewShell::Current()  );
+    if ( pViewSh )
+    {
+        const OUString aFormula = pViewSh->DoAutoSum(bRangeFinder, bSubTotal, eCode);
+        if ( !aFormula.isEmpty() )
+        {
+            SetFuncString( aFormula );
+            const sal_Int32 aOpen = aFormula.indexOf('(');
+            const sal_Int32 aLen  = aFormula.getLength();
+            if (bRangeFinder && pScMod->IsEditMode())
+            {
+                ScInputHandler* pHdl = pScMod->GetInputHdl( pViewSh );
+                if ( pHdl )
+                {
+                    pHdl->InitRangeFinder( aFormula );
+
+                    //! SetSelection at the InputHandler?
+                    //! Set bSelIsRef?
+                    if ( aOpen != -1 && aLen > aOpen )
+                    {
+                        ESelection aSel( 0, aOpen + (bSubTotal ? 3 : 1), 0, aLen-1 );
+                        EditView* pTableView = pHdl->GetTableView();
+                        if ( pTableView )
+                            pTableView->SetSelection( aSel );
+                        EditView* pTopView = pHdl->GetTopView();
+                        if ( pTopView )
+                            pTopView->SetSelection( aSel );
+                    }
+                }
+            }
+        }
+    }
+}
+
 ScInputBarGroup::ScInputBarGroup(vcl::Window* pParent, ScTabViewShell* pViewSh)
     : ScTextWndBase(pParent, WinBits(WB_HIDE | WB_TABSTOP)),
       maTextWndGroup(VclPtr<ScTextWndGroup>::Create(this, pViewSh)),
@@ -823,7 +871,8 @@ ScInputBarGroup::ScInputBarGroup(vcl::Window* pParent, ScTabViewShell* pViewSh)
     maButton->SetSymbol(SymbolType::SPIN_DOWN);
     maButton->SetQuickHelpText(ScResId(SCSTR_QHELP_EXPAND_FORMULA));
     // disable the multiline toggle on the mobile phones
-    if (!comphelper::LibreOfficeKit::isActive() || !comphelper::LibreOfficeKit::isMobilePhone(SfxLokHelper::getView()))
+    const SfxViewShell* pViewShell = SfxViewShell::Current();
+    if (!comphelper::LibreOfficeKit::isActive() || !(pViewShell && pViewShell->isLOKMobilePhone()))
         maButton->Show();
 }
 
@@ -949,63 +998,31 @@ IMPL_LINK( ScInputWindow, MenuHdl, Menu *, pMenu, bool )
     OString aCommand = pMenu->GetCurItemIdent();
     if (!aCommand.isEmpty())
     {
-        ScModule* pScMod = SC_MOD();
-        ScTabViewShell* pViewSh = dynamic_cast<ScTabViewShell*>( SfxViewShell::Current()  );
-        if ( pViewSh )
+        bool bSubTotal = false;
+        bool bRangeFinder = false;
+        OpCode eCode = ocSum;
+        if ( aCommand ==  "sum" )
         {
-            bool bSubTotal = false;
-            bool bRangeFinder = false;
-            OpCode eCode = ocSum;
-            if ( aCommand ==  "sum" )
-            {
-                eCode = ocSum;
-            }
-            else if ( aCommand == "average" )
-            {
-                eCode = ocAverage;
-            }
-            else if ( aCommand == "max" )
-            {
-                eCode = ocMax;
-            }
-            else if ( aCommand == "min" )
-            {
-                eCode = ocMin;
-            }
-            else if ( aCommand == "count" )
-            {
-                eCode = ocCount;
-            }
-
-            const OUString aFormula = pViewSh->DoAutoSum(bRangeFinder, bSubTotal, eCode);
-            if ( !aFormula.isEmpty() )
-            {
-                SetFuncString( aFormula );
-                const sal_Int32 aOpen = aFormula.indexOf('(');
-                const sal_Int32 aLen  = aFormula.getLength();
-                if (bRangeFinder && pScMod->IsEditMode())
-                {
-                    ScInputHandler* pHdl = pScMod->GetInputHdl( pViewSh );
-                    if ( pHdl )
-                    {
-                        pHdl->InitRangeFinder( aFormula );
-
-                        //! SetSelection at the InputHandler?
-                        //! Set bSelIsRef?
-                        if ( aOpen != -1 && aLen > aOpen )
-                        {
-                            ESelection aSel( 0, aOpen + (bSubTotal ? 3 : 1), 0, aLen-1 );
-                            EditView* pTableView = pHdl->GetTableView();
-                            if ( pTableView )
-                                pTableView->SetSelection( aSel );
-                            EditView* pTopView = pHdl->GetTopView();
-                            if ( pTopView )
-                                pTopView->SetSelection( aSel );
-                        }
-                    }
-                }
-            }
+            eCode = ocSum;
         }
+        else if ( aCommand == "average" )
+        {
+            eCode = ocAverage;
+        }
+        else if ( aCommand == "max" )
+        {
+            eCode = ocMax;
+        }
+        else if ( aCommand == "min" )
+        {
+            eCode = ocMin;
+        }
+        else if ( aCommand == "count" )
+        {
+            eCode = ocCount;
+        }
+
+        AutoSum( bRangeFinder, bSubTotal, eCode );
     }
     return false;
 }

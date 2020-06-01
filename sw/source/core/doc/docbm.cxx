@@ -651,9 +651,7 @@ namespace sw::mark
                 pMark = std::make_unique<AnnotationMark>( rPaM, rName );
                 break;
         }
-        assert(pMark.get() &&
-            "MarkManager::makeMark(..)"
-            " - Mark was not created.");
+        assert(pMark && "MarkManager::makeMark(..) - Mark was not created.");
 
         if(pMark->GetMarkPos() != pMark->GetMarkStart())
             pMark->Swap();
@@ -1481,7 +1479,6 @@ namespace sw::mark
             if (m_pLastActiveFieldmark != pFieldBM)
             {
                 FieldmarkWithDropDownButton& rFormField = dynamic_cast<FieldmarkWithDropDownButton&>(*pFieldBM);
-                rFormField.ShowButton(&rEditWin);
                 pNewActiveFieldmark = &rFormField;
             }
             else
@@ -1494,6 +1491,8 @@ namespace sw::mark
         {
             ClearFieldActivation();
             m_pLastActiveFieldmark = pNewActiveFieldmark;
+            if(pNewActiveFieldmark)
+                pNewActiveFieldmark->ShowButton(&rEditWin);
         }
     }
 

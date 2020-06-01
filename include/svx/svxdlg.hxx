@@ -34,14 +34,13 @@ namespace sd {
     class View;
 }
 
-namespace com{namespace sun{namespace star{
-namespace linguistic2{
+namespace com::sun::star::linguistic2 {
     class XDictionary;
     class XSpellChecker1;
     class XSpellChecker;
     class XThesaurus;
     class XHyphenator;
-}}}}
+}
 class SdrModel;
 class SdrView;
 class SvxSpellWrapper;
@@ -301,13 +300,14 @@ public:
     virtual void SetSplitVerticalByDefault() = 0;
 };
 
-class SvxAbstractNewTableDialog : public VclAbstractDialog
+class SvxAbstractNewTableDialog
 {
 protected:
-    virtual ~SvxAbstractNewTableDialog() override = default;
+    virtual ~SvxAbstractNewTableDialog() = default;
 public:
     virtual sal_Int32 getRows() const = 0;
     virtual sal_Int32 getColumns() const = 0;
+    virtual std::shared_ptr<weld::DialogController> getDialogController() = 0;
 };
 
 class SvxAbstractInsRowColDlg : public VclAbstractDialog
@@ -454,7 +454,7 @@ public:
 
     virtual VclPtr<SvxAbstractSplitTableDialog> CreateSvxSplitTableDialog(weld::Window* pParent, bool bIsTableVertical, long nMaxVertical) = 0;
 
-    virtual VclPtr<SvxAbstractNewTableDialog> CreateSvxNewTableDialog(weld::Window* pParent) = 0;
+    virtual std::shared_ptr<SvxAbstractNewTableDialog> CreateSvxNewTableDialog(weld::Window* pParent) = 0;
 
     virtual VclPtr<SvxAbstractInsRowColDlg> CreateSvxInsRowColDlg(weld::Window* pParent, bool bCol, const OString& rHelpId) = 0;
 };

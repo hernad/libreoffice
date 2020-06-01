@@ -103,11 +103,10 @@ public:
                                  const basegfx::B2DPolyPolygon&, double fTransparency) override;
 
     virtual bool drawPolyLine(const basegfx::B2DHomMatrix& rObjectToDevice,
-                              const basegfx::B2DPolygon&, double fTransparency,
-                              const basegfx::B2DVector& rLineWidths,
-                              const std::vector<double>* pStroke, // MM01
-                              basegfx::B2DLineJoin, css::drawing::LineCap,
-                              double fMiterMinimumAngle, bool bPixelSnapHairline) override;
+                              const basegfx::B2DPolygon&, double fTransparency, double fLineWidth,
+                              const std::vector<double>* pStroke, basegfx::B2DLineJoin,
+                              css::drawing::LineCap, double fMiterMinimumAngle,
+                              bool bPixelSnapHairline) override;
 
     virtual bool drawPolyLineBezier(sal_uInt32 nPoints, const SalPoint* pPtAry,
                                     const PolyFlags* pFlgAry) override;
@@ -202,8 +201,6 @@ public:
     // Default blend mode for SkPaint is SkBlendMode::kSrcOver
     void drawImage(const SalTwoRect& rPosAry, const sk_sp<SkImage>& aImage,
                    SkBlendMode eBlendMode = SkBlendMode::kSrcOver);
-    void drawBitmap(const SalTwoRect& rPosAry, const SkBitmap& aBitmap,
-                    SkBlendMode eBlendMode = SkBlendMode::kSrcOver);
 
     enum class GlyphOrientation
     {
@@ -300,7 +297,6 @@ protected:
     std::unique_ptr<SkCanvas> mXorCanvas;
     SkRegion mXorRegion; // the area that needs updating for the xor operation
     std::unique_ptr<SkiaFlushIdle> mFlush;
-    int mPendingPixelsToFlush;
 };
 
 #endif

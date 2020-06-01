@@ -120,20 +120,12 @@ class WW8_WrtRedlineAuthor;
 class SvxMSExportOLEObjects;
 class SwMSConvertControls;
 class WW8_WrPc;
-
-namespace com { namespace sun { namespace star { namespace embed {
-class XEmbeddedObject;
-} } } }
-typedef std::map<const css::embed::XEmbeddedObject*, sal_Int32> WW8OleMap;
 struct WW8_PdAttrDesc;
 class SvxBrushItem;
-namespace sw
-{
-namespace mark
-{
-class IFieldmark;
-}
-}
+namespace sw::mark { class IFieldmark; }
+namespace com::sun::star::embed { class XEmbeddedObject; }
+
+typedef std::map<const css::embed::XEmbeddedObject*, sal_Int32> WW8OleMap;
 typedef std::set< sal_Int32 > SwSoftPageBreakList;
 
 #define GRF_MAGIC_1 0x12    // 3 magic bytes for PicLocFc attribute
@@ -458,6 +450,7 @@ public:
     OUString m_aMainStg;
     std::vector<const SwTOXType*> m_aTOXArr;
     const SfxItemSet* m_pISet;    // for double attributes
+    const SwFrameFormat* m_pFirstPageFormat = nullptr;
     WW8_WrPct*  m_pPiece;         // Pointer to Piece-Table
     std::unique_ptr<SwNumRuleTable> m_pUsedNumTable;  // all used NumRules
     /// overriding numdef index -> (existing numdef index, abstractnumdef index)
@@ -684,9 +677,6 @@ public:
     /// Access to the sections/headers/footres.
     virtual MSWordSections& Sections() const = 0;
 
-    /// Determines if column break with one column should be exported or not.
-    virtual bool SupportsOneColumnBreak() const = 0;
-
     /// Determines if the import filter already quoted fields or not.
     virtual bool FieldsQuoted() const = 0;
 
@@ -911,7 +901,7 @@ protected:
     void SetCurPam(sal_uLong nStt, sal_uLong nEnd);
 
     /// Get background color of the document, if there is one.
-    std::shared_ptr<SvxBrushItem> getBackground();
+    std::unique_ptr<SvxBrushItem> getBackground();
     /// Populates m_vecBulletPic with all the bullet graphics used by numberings.
     int CollectGrfsOfBullets();
     /// Write the numbering picture bullets.
@@ -990,6 +980,7 @@ public:
 private:
     SwWW8Writer(const SwWW8Writer&) = delete;
     SwWW8Writer& operator=(const SwWW8Writer&) = delete;
+    ErrCode WriteStorageImpl();
 };
 
 /// Exporter of the binary Word file formats.
@@ -1025,8 +1016,6 @@ public:
     virtual bool PreferPageBreakBefore() const override { return true; }
 
     virtual bool AllowPostponedTextInTable() const override { return false; }
-
-    virtual bool SupportsOneColumnBreak() const override { return false; }
 
     virtual bool FieldsQuoted() const override { return false; }
 

@@ -222,6 +222,7 @@ class VCL_DLLPUBLIC SvTreeListBox
     bool mbAlternatingRowColors;
     bool mbUpdateAlternatingRows;
     bool mbQuickSearch;     // Enables type-ahead search in the check list box.
+    bool mbActivateOnSingleClick;     // Make single click "activate" a row like a double-click normally does
 
     SvTreeListEntry*    pHdlEntry;
 
@@ -438,7 +439,6 @@ public:
     void            SetSelectHdl( const Link<SvTreeListBox*,void>& rNewHdl ) {aSelectHdl=rNewHdl; }
     void            SetDeselectHdl( const Link<SvTreeListBox*,void>& rNewHdl ) {aDeselectHdl=rNewHdl; }
     void            SetDoubleClickHdl(const Link<SvTreeListBox*,bool>& rNewHdl) {aDoubleClickHdl=rNewHdl;}
-    const Link<SvTreeListBox*,bool>&   GetDoubleClickHdl() const { return aDoubleClickHdl; }
     void            SetExpandingHdl(const Link<SvTreeListBox*,bool>& rNewHdl){aExpandingHdl=rNewHdl;}
     void            SetExpandedHdl(const Link<SvTreeListBox*,void>& rNewHdl){aExpandedHdl=rNewHdl;}
     void SetPopupMenuHdl(const Link<const CommandEvent&, bool>& rLink) { aPopupMenuHdl = rLink; }
@@ -446,8 +446,8 @@ public:
     void SetCustomRenderHdl(const Link<svtree_render_args, void>& rLink) { aCustomRenderHdl = rLink; }
     void SetCustomMeasureHdl(const Link<svtree_measure_args, Size>& rLink) { aCustomMeasureHdl = rLink; }
 
-    virtual void    ExpandedHdl();
-    virtual bool    ExpandingHdl();
+    void            ExpandedHdl();
+    bool            ExpandingHdl();
     virtual void    SelectHdl();
     virtual void    DeselectHdl();
     virtual bool    DoubleClickHdl();
@@ -469,7 +469,7 @@ public:
     SvTreeListEntry*         CloneEntry( SvTreeListEntry* pSource );
 
     // Return value: TRISTATE_TRUE == Ok, TRISTATE_FALSE == Cancel, TRISTATE_INDET == Ok and Make visible moved entry
-    virtual TriState NotifyMoving(
+    TriState NotifyMoving(
         SvTreeListEntry*  pTarget,       // D'n'D DropPosition in GetModel()
         SvTreeListEntry*  pEntry,        // Entry to be moved from GetSourceListBox()->GetModel()
         SvTreeListEntry*& rpNewParent,   // New TargetParent
@@ -615,7 +615,6 @@ public:
     void            SetCheckButtonHdl( const Link<SvTreeListBox*,void>& rLink )  { aCheckButtonHdl=rLink; }
     virtual void    CheckButtonHdl();
 
-    void            SetSublistOpenWithReturn();      // open/close sublist with return/enter
     void            SetSublistOpenWithLeftRight();   // open/close sublist with cursor left/right
 
     void            EnableInplaceEditing( bool bEnable );
@@ -647,14 +646,11 @@ public:
 
     short           GetColumnsCount() const { return nColumns; }
     short           GetEntryHeight() const  { return nEntryHeight; }
-    void            SetEntryHeight( short nHeight, bool bForce = false );
+    void            SetEntryHeight( short nHeight );
     short           GetEntryWidth() const { return nEntryWidth; }
     void            SetEntryWidth( short nWidth );
     Size            GetOutputSizePixel() const;
     short           GetIndent() const { return nIndent; }
-    void            SetIndent( short nIndent );
-    // Place the expander checkitem at the optimal indent for hierarchical lists
-    void            SetOptimalImageIndent() { SetIndent(12); }
     void            SetSpaceBetweenEntries( short nSpace );
     Point           GetEntryPosition(const SvTreeListEntry*) const;
     void            MakeVisible( SvTreeListEntry* pEntry );
@@ -696,9 +692,6 @@ public:
 
     void            SetHighlightRange(sal_uInt16 nFirstTab=0, sal_uInt16 nLastTab=0xffff);
 
-    // A Parent's Children are turned into Children of the Parent which comes next in hierarchy
-    void            RemoveParentKeepChildren( SvTreeListEntry* pParent );
-
     sal_Int32       DefaultCompare(const SvLBoxString* pLeftText, const SvLBoxString* pRightText);
 
     DECL_LINK( DefaultCompare, const SvSortData&, sal_Int32 );
@@ -726,6 +719,9 @@ public:
 
     // Enables type-ahead search in the check list box.
     void            SetQuickSearch(bool bEnable) { mbQuickSearch = bEnable; }
+
+    // Make single click "activate" a row like a double-click normally does
+    void            SetActivateOnSingleClick(bool bEnable) { mbActivateOnSingleClick = bEnable; }
 
     void            SetForceMakeVisible(bool bEnable);
 

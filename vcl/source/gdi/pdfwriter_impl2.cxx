@@ -168,13 +168,25 @@ void PDFWriterImpl::implWriteBitmapEx( const Point& i_rPoint, const Size& i_rSiz
         if ( bIsPng || ( aSizePixel.Width() < 32 ) || ( aSizePixel.Height() < 32 ) )
             bUseJPGCompression = false;
 
-        SvMemoryStream  aStrm;
-        Bitmap          aMask;
+        auto   pStrm=std::make_shared<SvMemoryStream>();
+        Bitmap aMask;
 
         bool bTrueColorJPG = true;
         if ( bUseJPGCompression )
         {
-
+            // TODO this checks could be done much earlier, saving us
+            // from trying conversion & stores before...
+            if ( !aBitmapEx.IsTransparent() )
+            {
+                const auto& rCacheEntry=m_aPDFBmpCache.find(
+                    aBitmapEx.GetChecksum());
+                if ( rCacheEntry != m_aPDFBmpCache.end() )
+                {
+                    m_rOuterFace.DrawJPGBitmap( *rCacheEntry->second, true, aSizePixel,
+                                                tools::Rectangle( aPoint, aSize ), aMask, i_Graphic );
+                    return;
+                }
+            }
             sal_uInt32 nZippedFileSize = 0; // sj: we will calculate the filesize of a zipped bitmap
             if ( !bIsJpeg )                 // to determine if jpeg compression is useful
             {
@@ -201,7 +213,7 @@ void PDFWriterImpl::implWriteBitmapEx( const Point& i_rPoint, const Size& i_rSiz
 
             try
             {
-                uno::Reference < io::XStream > xStream = new utl::OStreamWrapper( aStrm );
+                uno::Reference < io::XStream > xStream = new utl::OStreamWrapper( *pStrm );
                 uno::Reference< io::XSeekable > xSeekable( xStream, UNO_QUERY_THROW );
                 uno::Reference< uno::XComponentContext > xContext( comphelper::getProcessComponentContext() );
                 uno::Reference< graphic::XGraphicProvider > xGraphicProvider( graphic::GraphicProvider::create(xContext) );
@@ -222,7 +234,7 @@ void PDFWriterImpl::implWriteBitmapEx( const Point& i_rPoint, const Size& i_rSiz
                 }
                 else
                 {
-                    aStrm.Seek( STREAM_SEEK_TO_END );
+                    pStrm->Seek( STREAM_SEEK_TO_END );
 
                     xSeekable->seek( 0 );
                     Sequence< PropertyValue > aArgs( 1 );
@@ -245,7 +257,15 @@ void PDFWriterImpl::implWriteBitmapEx( const Point& i_rPoint, const Size& i_rSiz
             }
         }
         if ( bUseJPGCompression )
-            m_rOuterFace.DrawJPGBitmap( aStrm, bTrueColorJPG, aSizePixel, tools::Rectangle( aPoint, aSize ), aMask, i_Graphic );
+        {
+            m_rOuterFace.DrawJPGBitmap( *pStrm, bTrueColorJPG, aSizePixel, tools::Rectangle( aPoint, aSize ), aMask, i_Graphic );
+            if (!aBitmapEx.IsTransparent() && bTrueColorJPG)
+            {
+                // Cache last jpeg export
+                m_aPDFBmpCache.insert(
+                    {aBitmapEx.GetChecksum(), pStrm});
+            }
+        }
         else if ( aBitmapEx.IsTransparent() )
             m_rOuterFace.DrawBitmapEx( aPoint, aSize, aBitmapEx );
         else

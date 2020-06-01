@@ -786,9 +786,8 @@ void SvxMSDffManager::SolveSolver( const SvxMSDffSolverContainer& rSolver )
     }
 }
 
-
-static basegfx::B2DPolyPolygon GetLineArrow( const sal_Int32 nLineWidth, const MSO_LineEnd eLineEnd,
-    const MSO_LineEndWidth eLineWidth, const MSO_LineEndLength eLineLength,
+static basegfx::B2DPolyPolygon GetLineArrow( const sal_Int32 nLineWidth, const sal_uInt32 eLineEnd,
+    const sal_uInt32 eLineWidth, const sal_uInt32 eLineLength,
     sal_Int32& rnArrowWidth, bool& rbArrowCenter,
     OUString& rsArrowName, bool bScaleArrow )
 {
@@ -1087,9 +1086,9 @@ void DffPropertyReader::ApplyLineAttributes( SfxItemSet& rSet, const MSO_SPT eSh
 
             if ( IsProperty( DFF_Prop_lineEndArrowhead ) )
             {
-                MSO_LineEnd         eLineEnd = static_cast<MSO_LineEnd>(GetPropertyValue( DFF_Prop_lineEndArrowhead, 0 ));
-                MSO_LineEndWidth    eWidth = static_cast<MSO_LineEndWidth>(GetPropertyValue( DFF_Prop_lineEndArrowWidth, mso_lineMediumWidthArrow ));
-                MSO_LineEndLength   eLength = static_cast<MSO_LineEndLength>(GetPropertyValue( DFF_Prop_lineEndArrowLength, mso_lineMediumLenArrow ));
+                auto eLineEnd = GetPropertyValue(DFF_Prop_lineEndArrowhead, 0);
+                auto eWidth = GetPropertyValue(DFF_Prop_lineEndArrowWidth, mso_lineMediumWidthArrow);
+                auto eLength = GetPropertyValue(DFF_Prop_lineEndArrowLength, mso_lineMediumLenArrow);
 
                 sal_Int32   nArrowWidth;
                 bool        bArrowCenter;
@@ -1468,7 +1467,7 @@ void DffPropertyReader::ApplyCustomShapeTextAttributes( SfxItemSet& rSet ) const
 
     if ( IsProperty( DFF_Prop_txflTextFlow ) )
     {
-        MSO_TextFlow eTextFlow = static_cast<MSO_TextFlow>( GetPropertyValue( DFF_Prop_txflTextFlow, 0 ) & 0xFFFF );
+        auto eTextFlow = GetPropertyValue(DFF_Prop_txflTextFlow, 0) & 0xFFFF;
         switch( eTextFlow )
         {
             case mso_txflTtoBA :    /* #68110# */   // Top to Bottom @-font, oben -> unten
@@ -1631,7 +1630,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
     if ( IsProperty( DFF_Prop_txflTextFlow ) || IsProperty( DFF_Prop_cdirFont ) )
     {
         sal_Int32 nTextRotateAngle = 0;
-        MSO_TextFlow eTextFlow = static_cast<MSO_TextFlow>( GetPropertyValue( DFF_Prop_txflTextFlow, 0 ) & 0xFFFF );
+        auto eTextFlow = GetPropertyValue(DFF_Prop_txflTextFlow, 0) & 0xFFFF;
 
         if ( eTextFlow == mso_txflBtoT )    // Bottom to Top non-@
             nTextRotateAngle += 90;
@@ -3635,7 +3634,7 @@ void SvxMSDffManager::ReadObjText( SvStream& rStream, SdrObject* pObj )
     DffRecordHeader aRecHd;
     if (!ReadDffRecordHeader(rStream, aRecHd))
         return;
-    if( !(aRecHd.nRecType == DFF_msofbtClientTextbox || aRecHd.nRecType == 0x1022) )
+    if( aRecHd.nRecType != DFF_msofbtClientTextbox && aRecHd.nRecType != 0x1022 )
         return;
 
     while (rStream.good() && rStream.Tell() < aRecHd.GetRecEndFilePos())
@@ -5299,8 +5298,7 @@ SdrObject* SvxMSDffManager::ProcessObj(SvStream& rSt,
             bool bVerticalText = false;
             if ( IsProperty( DFF_Prop_txflTextFlow ) )
             {
-                MSO_TextFlow eTextFlow = static_cast<MSO_TextFlow>(GetPropertyValue(
-                    DFF_Prop_txflTextFlow, 0) & 0xFFFF);
+                auto eTextFlow = GetPropertyValue(DFF_Prop_txflTextFlow, 0) & 0xFFFF;
                 switch( eTextFlow )
                 {
                     case mso_txflBtoT:

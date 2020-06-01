@@ -40,7 +40,7 @@ class SwPaM;
 class SwNode;
 struct SwPosition;
 
-namespace sw { namespace mark
+namespace sw::mark
 {
     class IMark;
 
@@ -82,7 +82,7 @@ namespace sw { namespace mark
             virtual ~ContentIdxStore() {};
             static std::shared_ptr<ContentIdxStore> Create();
     };
-}}
+}
 
 namespace o3tl {
     template<> struct typed_flags<sw::mark::RestoreMode> : is_typed_flags<sw::mark::RestoreMode, 3> {};
@@ -98,15 +98,15 @@ void DelBookmarks(const SwNodeIndex& rStt,
  *  location. */
 struct SaveFly
 {
+    SwFrameFormat* pFrameFormat;      /// the fly's frame format
     sal_uLong nNdDiff;      /// relative node difference
     sal_Int32 nContentIndex; ///< index in node
-    SwFrameFormat* pFrameFormat;      /// the fly's frame format
     bool isAtInsertNode;   ///< if true, anchor _at_ insert node index
 
     SaveFly( sal_uLong nNodeDiff, sal_Int32 const nCntntIdx, SwFrameFormat* pFormat, bool bInsert )
-        : nNdDiff(nNodeDiff)
+        : pFrameFormat(pFormat)
+        , nNdDiff(nNodeDiff)
         , nContentIndex(nCntntIdx)
-        , pFrameFormat(pFormat)
         , isAtInsertNode(bInsert)
     { }
 };

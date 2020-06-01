@@ -149,7 +149,7 @@ public:
         SwXNumberingRules::SetPropertiesToNumFormat(
             aNumberFormat,
             charStyleName,
-            nullptr, nullptr, nullptr, nullptr, nullptr,
+            nullptr, nullptr, nullptr, nullptr,
             props);
         SwNumRulesWithName *const pRules(GetOrCreateRules());
         pRules->SetNumFormat(nIndex, aNumberFormat, charStyleName);
@@ -277,17 +277,14 @@ public:
         OUString displayName;
         XmlStyleFamily nFamily(XmlStyleFamily::DATA_STYLE);
 
-        sax_fastparser::FastAttributeList *pAttribList =
-            sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
-
-        for (auto &aIter : *pAttribList)
+        for (auto &aIter : sax_fastparser::castToFastAttributeList( xAttrList ))
             if (aIter.getToken() == (XML_NAMESPACE_STYLE | XML_FAMILY))
             {
-                if (IsXMLToken(aIter.toString(), XML_TEXT))
+                if (IsXMLToken(aIter, XML_TEXT))
                     nFamily = XmlStyleFamily::TEXT_TEXT;
-                else if (IsXMLToken(aIter.toString(), XML_NAME))
+                else if (IsXMLToken(aIter, XML_NAME))
                     name = aIter.toString();
-                else if (IsXMLToken(aIter.toString(), XML_DISPLAY_NAME))
+                else if (IsXMLToken(aIter, XML_DISPLAY_NAME))
                     displayName = aIter.toString();
                 else
                     SAL_WARN("xmloff", "unknown value for style:family=" << aIter.toString());

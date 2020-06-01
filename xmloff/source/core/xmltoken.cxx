@@ -49,6 +49,9 @@ namespace xmloff::token {
     #define TOKEN( s, e ) { sizeof(s)-1, s, std::nullopt }
 #endif
 
+    // IMPORTANT! aTokenList order MUST be in synch with XMLTokenEnum in include/xmloff/xmltoken.hxx
+    // and with xmloff/source/token/tokens.txt.
+
     struct XMLTokenEntry aTokenList[] =
     {
 #if OSL_DEBUG_LEVEL > 0
@@ -929,9 +932,9 @@ namespace xmloff::token {
         TOKEN( "gcd",                             XML_GCD ),
         TOKEN( "generator",                       XML_GENERATOR ),
         TOKEN( "geq",                             XML_GEQ ),
-        TOKEN( "glow",                            XML_GLOW ),
         TOKEN( "glow-radius",                     XML_GLOW_RADIUS ),
         TOKEN( "glow-color",                      XML_GLOW_COLOR ),
+        TOKEN( "glow-transparency",               XML_GLOW_TRANSPARENCY ),
         TOKEN( "gouraud",                         XML_GOURAUD ),
         TOKEN( "gradient",                        XML_GRADIENT ),
         TOKEN( "angle",                           XML_GRADIENT_ANGLE ),
@@ -1097,6 +1100,8 @@ namespace xmloff::token {
         TOKEN( "label-arrangement",               XML_LABEL_ARRANGEMENT ),
         TOKEN( "label-cell-address",              XML_LABEL_CELL_ADDRESS ),
         TOKEN( "label-cell-range-address",        XML_LABEL_CELL_RANGE_ADDRESS ),
+        TOKEN( "label-fill",                      XML_LABEL_FILL ),
+        TOKEN( "label-fill-color",                XML_LABEL_FILL_COLOR ),
         TOKEN( "label-range",                     XML_LABEL_RANGE ),
         TOKEN( "label-ranges",                    XML_LABEL_RANGES ),
         TOKEN( "label-string",                    XML_LABEL_STRING ),
@@ -1321,8 +1326,8 @@ namespace xmloff::token {
         TOKEN( "!empty",                          XML_NOEMPTY ),
         TOKEN( "nohref",                          XML_NOHREF ),
         TOKEN( "!match",                          XML_NOMATCH ),
+        TOKEN( "non-whitespace-character-count",  XML_NON_WHITESPACE_CHARACTER_COUNT ),
         TOKEN( "none",                            XML_NONE ),
-        TOKEN( "notprsubset",                     XML_NOPRTSUBSET ),
         TOKEN( "normal",                          XML_NORMAL ),
         TOKEN( "normals-direction",               XML_NORMALS_DIRECTION ),
         TOKEN( "normals-kind",                    XML_NORMALS_KIND ),
@@ -1332,6 +1337,7 @@ namespace xmloff::token {
         TOKEN( "note",                            XML_NOTE ),
         TOKEN( "notes",                           XML_NOTES ),
         TOKEN( "notin",                           XML_NOTIN ),
+        TOKEN( "notprsubset",                     XML_NOTPRSUBSET ),
         TOKEN( "notsubset",                       XML_NOTSUBSET ),
         TOKEN( "null-date",                       XML_NULL_DATE ),
         TOKEN( "null-year",                       XML_NULL_YEAR ),
@@ -1695,6 +1701,7 @@ namespace xmloff::token {
         TOKEN( "slant-y",                         XML_SLANT_Y ),
         TOKEN( "slide",                           XML_SLIDE ),
         TOKEN( "slow",                            XML_SLOW ),
+        TOKEN( "softedge-radius",                 XML_SOFTEDGE_RADIUS ),
         TOKEN( "solid",                           XML_SOLID ),
         TOKEN( "solid-type",                      XML_SOLID_TYPE ),
         TOKEN( "sort",                            XML_SORT ),
@@ -3349,6 +3356,8 @@ namespace xmloff::token {
 
         // For recording whether comments/annotations are resolved
         TOKEN( "resolved",                        XML_RESOLVED ),
+
+        TOKEN( "page-content-bottom",             XML_PAGE_CONTENT_BOTTOM ),
 
 #if OSL_DEBUG_LEVEL > 0
         { 0, nullptr, std::nullopt,               XML_TOKEN_END }

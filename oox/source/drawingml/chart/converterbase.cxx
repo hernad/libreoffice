@@ -138,10 +138,9 @@ OOX_DEFINEFUNC_GETAXISTITLESHAPE( lclGetSecYAxisTitleShape, XSecondAxisTitleSupp
 
 struct ConverterData
 {
-    typedef ::std::map< TitleKey, TitleLayoutInfo > TitleMap;
-
     ObjectFormatter     maFormatter;
-    TitleMap            maTitles;
+    std::map< TitleKey, TitleLayoutInfo >
+                        maTitles;
     XmlFilterBase&      mrFilter;
     ChartConverter&     mrConverter;
     Reference< XChartDocument > mxDoc;
@@ -402,7 +401,7 @@ void LayoutConverter::convertFromModel( const Reference< XShape >& rxShape, doub
     awt::Point aShapePos(
         lclCalcPosition( aChartSize.Width,  mrModel.mfX, mrModel.mnXMode ),
         lclCalcPosition( aChartSize.Height, mrModel.mfY, mrModel.mnYMode ) );
-    if( !((aShapePos.X >= 0) && (aShapePos.Y >= 0)) )
+    if( (aShapePos.X < 0) || (aShapePos.Y < 0) )
         return;
 
     bool bPropSet = false;

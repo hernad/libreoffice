@@ -492,8 +492,8 @@ void SvXMLNumFmtExport::WriteRepeatedElement_Impl( sal_Unicode nChar )
     SvtSaveOptions::ODFSaneDefaultVersion eVersion = rExport.getSaneDefaultVersion();
     if (eVersion > SvtSaveOptions::ODFSVER_012)
     {
-        FinishTextElement_Impl(true);
-        // For 1.2+ use loext namespace, for 1.3 use number namespace.
+        FinishTextElement_Impl(eVersion < SvtSaveOptions::ODFSVER_013);
+        // OFFICE-3765 For 1.2+ use loext namespace, for 1.3 use number namespace.
         SvXMLElementExport aElem( rExport,
                                   ((eVersion < SvtSaveOptions::ODFSVER_013) ? XML_NAMESPACE_LO_EXT : XML_NAMESPACE_NUMBER),
                                   XML_FILL_CHARACTER, true, false );
@@ -547,7 +547,7 @@ void SvXMLNumFmtExport::WriteNumberElement_Impl(
         SvtSaveOptions::ODFSaneDefaultVersion eVersion = rExport.getSaneDefaultVersion();
         if (eVersion > SvtSaveOptions::ODFSVER_012)
         {
-            // For 1.2+ use loext namespace, for 1.3 use number namespace.
+            // OFFICE-3860 For 1.2+ use loext namespace, for 1.3 use number namespace.
             rExport.AddAttribute(
                 ((eVersion < SvtSaveOptions::ODFSVER_013) ? XML_NAMESPACE_LO_EXT : XML_NAMESPACE_NUMBER),
                                  XML_MIN_DECIMAL_PLACES,
@@ -636,7 +636,7 @@ void SvXMLNumFmtExport::WriteScientificElement_Impl(
         // Export only for 1.2 with extensions or 1.3 and later.
         if (eVersion > SvtSaveOptions::ODFSVER_012)
         {
-            // For 1.2+ use loext namespace, for 1.3 use number namespace.
+            // OFFICE-3860 For 1.2+ use loext namespace, for 1.3 use number namespace.
             rExport.AddAttribute(
                 ((eVersion < SvtSaveOptions::ODFSVER_013) ? XML_NAMESPACE_LO_EXT : XML_NAMESPACE_NUMBER),
                                  XML_MIN_DECIMAL_PLACES,
@@ -670,7 +670,7 @@ void SvXMLNumFmtExport::WriteScientificElement_Impl(
         // Export only for 1.2 with extensions or 1.3 and later.
         if (eVersion > SvtSaveOptions::ODFSVER_012)
         {
-            // For 1.2+ use loext namespace, for 1.3 use number namespace.
+            // OFFICE-1828 For 1.2+ use loext namespace, for 1.3 use number namespace.
             rExport.AddAttribute(
                     ((eVersion < SvtSaveOptions::ODFSVER_013) ? XML_NAMESPACE_LO_EXT : XML_NAMESPACE_NUMBER),
                     XML_EXPONENT_INTERVAL, OUString::number( nExpInterval ) );
@@ -681,7 +681,7 @@ void SvXMLNumFmtExport::WriteScientificElement_Impl(
     // Export only for 1.2 with extensions or 1.3 and later.
     if (eVersion > SvtSaveOptions::ODFSVER_012)
     {
-        // For 1.2+ use loext namespace, for 1.3 use number namespace.
+        // OFFICE-3860 For 1.2+ use loext namespace, for 1.3 use number namespace.
         rExport.AddAttribute(
             ((eVersion < SvtSaveOptions::ODFSVER_013) ? XML_NAMESPACE_LO_EXT : XML_NAMESPACE_NUMBER),
                              XML_FORCED_EXPONENT_SIGN,
@@ -743,7 +743,7 @@ void SvXMLNumFmtExport::WriteFractionElement_Impl(
     SvtSaveOptions::ODFSaneDefaultVersion eVersion = rExport.getSaneDefaultVersion();
     if ( !aIntegerFractionDelimiterString.isEmpty() && aIntegerFractionDelimiterString != " "
         && ((eVersion & SvtSaveOptions::ODFSVER_EXTENDED) != 0) )
-    {   // Export only for 1.2 with extensions or 1.3 and later.
+    {   // Export only for 1.2/1.3 with extensions.
         rExport.AddAttribute( XML_NAMESPACE_LO_EXT, XML_INTEGER_FRACTION_DELIMITER,
                               aIntegerFractionDelimiterString );
     }
@@ -753,7 +753,7 @@ void SvXMLNumFmtExport::WriteFractionElement_Impl(
         nMinNumeratorDigits++;
     rExport.AddAttribute( XML_NAMESPACE_NUMBER, XML_MIN_NUMERATOR_DIGITS,
                           OUString::number( nMinNumeratorDigits ) );
-    // Export only for 1.2 with extensions or 1.3 and later.
+    // Export only for 1.2/1.3 with extensions.
     if ((eVersion & SvtSaveOptions::ODFSVER_EXTENDED) != 0)
     {
         // For extended ODF use loext namespace
@@ -779,7 +779,7 @@ void SvXMLNumFmtExport::WriteFractionElement_Impl(
                               OUString::number( nMinDenominatorDigits ) );
         if (eVersion > SvtSaveOptions::ODFSVER_012)
         {
-            // For 1.2+ use loext namespace, for 1.3 use number namespace.
+            // OFFICE-3695 For 1.2+ use loext namespace, for 1.3 use number namespace.
             rExport.AddAttribute(
                 ((eVersion < SvtSaveOptions::ODFSVER_013) ? XML_NAMESPACE_LO_EXT : XML_NAMESPACE_NUMBER),
                                  XML_MAX_DENOMINATOR_VALUE,
@@ -1211,9 +1211,9 @@ void SvXMLNumFmtExport::ExportPart_Impl( const SvNumberformat& rFormat, sal_uInt
             LanguageTag aLanguageTag( aAttr.Locale);
             OUString aLanguage, aScript, aCountry;
             aLanguageTag.getIsoLanguageScriptCountry( aLanguage, aScript, aCountry);
-            // For 1.2+ use loext namespace, for 1.3 use number namespace.
-            rExport.AddAttribute( ((eVersion < SvtSaveOptions::ODFSVER_013) ?
-                        XML_NAMESPACE_LO_EXT : XML_NAMESPACE_NUMBER),
+            // For 1.2/1.3+ use loext namespace.
+            rExport.AddAttribute( /*((eVersion < SvtSaveOptions::ODFSVER_)
+                        ? */ XML_NAMESPACE_LO_EXT /*: XML_NAMESPACE_NUMBER)*/,
                     XML_TRANSLITERATION_SPELLOUT, aAttr.Spellout );
             rExport.AddAttribute( XML_NAMESPACE_NUMBER, XML_TRANSLITERATION_LANGUAGE,
                                   aLanguage );
@@ -1699,7 +1699,7 @@ void SvXMLNumFmtExport::ExportPart_Impl( const SvNumberformat& rFormat, sal_uInt
                     break;
                 case NF_SYMBOLTYPE_STAR :
                     // export only if ODF 1.2 extensions are enabled
-                    if( rExport.getDefaultVersion() > SvtSaveOptions::ODFVER_012 )
+                    if (rExport.getSaneDefaultVersion() > SvtSaveOptions::ODFSVER_012)
                     {
                         if ( pElemStr && pElemStr->getLength() > 1 )
                             WriteRepeatedElement_Impl( (*pElemStr)[1] );

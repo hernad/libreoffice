@@ -198,6 +198,10 @@ public:
                     {
                         mnGeneratorVersion = SvXMLImport::LO_6x;
                     }
+                    else if ('7' == loVersion[0])
+                    {
+                        mnGeneratorVersion = SvXMLImport::LO_7x;
+                    }
                     else
                     {
                         SAL_INFO("xmloff.core", "unknown LO version: " << loVersion);
@@ -838,10 +842,10 @@ void SAL_CALL SvXMLImport::startFastElement (sal_Int32 Element,
 {
     if ( Attribs.is() )
     {
-        sax_fastparser::FastAttributeList *pAttribList =
-            sax_fastparser::FastAttributeList::castToFastAttributeList( Attribs );
-        auto aIter( pAttribList->find( XML_ELEMENT( OFFICE, XML_VERSION ) ) );
-        if( aIter != pAttribList->end() )
+        sax_fastparser::FastAttributeList& rAttribList =
+            sax_fastparser::castToFastAttributeList( Attribs );
+        auto aIter( rAttribList.find( XML_ELEMENT( OFFICE, XML_VERSION ) ) );
+        if( aIter != rAttribList.end() )
         {
             mpImpl->aODFVersion = aIter.toString();
 
@@ -1705,9 +1709,8 @@ bool SvXMLImport::IsODFVersionConsistent( const OUString& aODFVersion )
         // check the consistency only for the ODF1.2 and later ( according to content.xml )
         // manifest.xml might have no version, it should be checked here and the correct version should be set
         try
-        {
-            uno::Reference< document::XStorageBasedDocument > xDoc( mxModel, uno::UNO_QUERY_THROW );
-            uno::Reference< embed::XStorage > xStor = xDoc->getDocumentStorage();
+        {   // don't use getDocumentStorage(), it's temporary and latest version
+            uno::Reference<embed::XStorage> const xStor(GetSourceStorage());
             uno::Reference< beans::XPropertySet > xStorProps( xStor, uno::UNO_QUERY_THROW );
 
             // the check should be done only for OASIS format

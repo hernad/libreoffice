@@ -44,7 +44,6 @@ extras_PRESENTATIONS_XMLFILES := \
 	Beehive/content.xml \
 	Beehive/META-INF/manifest.xml \
 	Beehive/meta.xml \
-	Beehive/Pictures/1000000000000020000000204B249CA79A42C6D7.png \
 	Beehive/styles.xml \
 	Beehive/Thumbnails/thumbnail.png \
 	Blue_Curve/content.xml \
@@ -58,6 +57,8 @@ extras_PRESENTATIONS_XMLFILES := \
 	Blueprint_Plans/Pictures/10000000000000580000001F99D2A38C014B254B.png \
 	Blueprint_Plans/Pictures/100000000000033C0000026D847ACE982C6E20B6.png \
 	Blueprint_Plans/Pictures/10000000000004220000031A5C2E04AB7C51FB60.png \
+	Blueprint_Plans/Pictures/1000020100000500000002D03918081590A75FCF.png \
+	Blueprint_Plans/Pictures/1000020100000500000002D0F25E20EA381A5EBD.png \
 	Blueprint_Plans/styles.xml \
 	Blueprint_Plans/Thumbnails/thumbnail.png \
 	BrightBlue/content.xml \
@@ -84,19 +85,11 @@ extras_PRESENTATIONS_XMLFILES := \
 	Focus/content.xml \
 	Focus/META-INF/manifest.xml \
 	Focus/meta.xml \
-	Focus/Pictures/2000000C0000634100004A4C3651558E9C43717A.svm \
-	Focus/Pictures/2000000E0000634100004A4C2A08177FA3DF9654.svm \
-	Focus/Pictures/2000000E0000634100004A4C8B8C0B6EC20B2683.svm \
-	Focus/Pictures/2000000E0000634100004A4CCD2247D4D39A5527.svm \
 	Focus/styles.xml \
 	Focus/Thumbnails/thumbnail.png \
 	Forestbird/content.xml \
 	Forestbird/META-INF/manifest.xml \
 	Forestbird/meta.xml \
-	Forestbird/Pictures/10000000000003FB000002FE917E6CB003A83232.png \
-	Forestbird/Pictures/10000000000003FD000002FE4C4CDF0F4A7ED9F9.png \
-	Forestbird/Pictures/10000000000003FD000002FE92464623A3FB3F6D.png \
-	Forestbird/Pictures/10000201000003FC000002FE87524FDDC56B0E9E.png \
 	Forestbird/styles.xml \
 	Forestbird/Thumbnails/thumbnail.png \
 	Impress/content.xml \
@@ -107,23 +100,16 @@ extras_PRESENTATIONS_XMLFILES := \
 	Inspiration/content.xml \
 	Inspiration/META-INF/manifest.xml \
 	Inspiration/meta.xml \
-	Inspiration/Pictures/1000000000000CEC000009B16D3849F3A43CBBBC.png \
 	Inspiration/styles.xml \
 	Inspiration/Thumbnails/thumbnail.png \
 	Lights/content.xml \
 	Lights/META-INF/manifest.xml \
 	Lights/meta.xml \
-	Lights/Pictures/100000000000042100000319935403CE7B0BE43B.jpg \
-	Lights/Pictures/1000000000000423000000634B59AC09AB41D853.jpg \
 	Lights/styles.xml \
 	Lights/Thumbnails/thumbnail.png \
 	LushGreen/content.xml \
 	LushGreen/META-INF/manifest.xml \
 	LushGreen/meta.xml \
-	LushGreen/Pictures/1000020100000640000004AD17A4D9F0A443E0A2.png \
-	LushGreen/Pictures/1000020100000640000004AD5A95F4B7B86B2ED1.png \
-	LushGreen/Pictures/1000020100000640000004AD88FC52DBCACCDD82.png \
-	LushGreen/Pictures/1000020100000640000004ADF67714D670705C1E.png \
 	LushGreen/styles.xml \
 	LushGreen/Thumbnails/thumbnail.png \
 	Metropolis/content.xml \
@@ -136,7 +122,6 @@ extras_PRESENTATIONS_XMLFILES := \
 	Midnightblue/content.xml \
 	Midnightblue/META-INF/manifest.xml \
 	Midnightblue/meta.xml \
-	Midnightblue/Pictures/1000000000000020000000204B249CA79A42C6D7.png \
 	Midnightblue/styles.xml \
 	Midnightblue/Thumbnails/thumbnail.png \
 	Nature_Illustration/content.xml \
@@ -164,9 +149,6 @@ extras_PRESENTATIONS_XMLFILES := \
 	Portfolio/content.xml \
 	Portfolio/META-INF/manifest.xml \
 	Portfolio/meta.xml \
-	Portfolio/Pictures/1000020100000CEB000009B00D8BDC51D4D18334.png \
-	Portfolio/Pictures/1000020100000CEB000009B0698EB1ACA470D143.png \
-	Portfolio/Pictures/1000020100000CEB000009B0C3D535B3CBDAE49B.png \
 	Portfolio/styles.xml \
 	Portfolio/Thumbnails/thumbnail.png \
 	Progress/content.xml \
@@ -177,8 +159,6 @@ extras_PRESENTATIONS_XMLFILES := \
 	Sunset/content.xml \
 	Sunset/META-INF/manifest.xml \
 	Sunset/meta.xml \
-	Sunset/Pictures/10000201000003AF000002126EB1F3F571D17DD0.png \
-	Sunset/Pictures/1000416600008D2E00004F6045D45030E4D3EC44.svg \
 	Sunset/styles.xml \
 	Sunset/Thumbnails/thumbnail.png \
 	Vintage/content.xml \
@@ -194,10 +174,6 @@ extras_PRESENTATIONS_XMLFILES := \
 	Vivid/content.xml \
 	Vivid/META-INF/manifest.xml \
 	Vivid/meta.xml \
-	Vivid/Pictures/1000000000000020000000204B249CA79A42C6D7.png \
-	Vivid/Pictures/10000000000004F900000322783ADE15FCCE3CBA.png \
-	Vivid/Pictures/10000000000004F900000322B6E66A5FF68F74A7.png \
-	Vivid/Pictures/10000000000005550000035C66CD1AA3E88406D5.png \
 	Vivid/styles.xml \
 	Vivid/Thumbnails/thumbnail.png \
 

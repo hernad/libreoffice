@@ -28,8 +28,9 @@
 #include <vcl/weld.hxx>
 #include <CustomAnimationEffect.hxx>
 
-namespace com { namespace sun { namespace star { namespace drawing { class XShape; } } } }
+namespace com::sun::star::drawing { class XShape; }
 
+struct ImplSVEvent;
 class VclBuilder;
 
 namespace sd {

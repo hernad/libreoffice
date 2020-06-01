@@ -95,7 +95,7 @@ ScXMLBodyContext::ScXMLBodyContext( ScXMLImport& rImport,
     for (auto &it : *rAttrList)
     {
         sal_Int32 nToken = it.getToken();
-        if( NAMESPACE_TOKEN( XML_NAMESPACE_TABLE ) == ( nToken & NMSP_MASK ) )
+        if( IsTokenInNamespace(nToken, XML_NAMESPACE_TABLE) )
         {
             const sal_Int32 nLocalToken = nToken & TOKEN_MASK;
             if( nLocalToken == XML_STRUCTURE_PROTECTED )
@@ -132,7 +132,7 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL
 
     SvXMLImportContext *pContext = nullptr;
     sax_fastparser::FastAttributeList *pAttribList =
-        sax_fastparser::FastAttributeList::castToFastAttributeList( xAttrList );
+        &sax_fastparser::castToFastAttributeList( xAttrList );
 
     switch( nElement )
     {
@@ -165,7 +165,7 @@ uno::Reference< xml::sax::XFastContextHandler > SAL_CALL
     case XML_ELEMENT( TABLE, XML_NAMED_EXPRESSIONS ):
         pContext = new ScXMLNamedExpressionsContext (
             GetScImport(),
-            new ScXMLNamedExpressionsContext::GlobalInserter(GetScImport()) );
+            std::make_shared<ScXMLNamedExpressionsContext::GlobalInserter>(GetScImport()) );
         break;
     case XML_ELEMENT( TABLE, XML_DATABASE_RANGES ):
         pContext = new ScXMLDatabaseRangesContext ( GetScImport() );

@@ -948,15 +948,6 @@ void SectionPropertyMap::CopyLastHeaderFooter( bool bFirstPage, DomainMapper_Imp
 void SectionPropertyMap::PrepareHeaderFooterProperties( bool bFirstPage )
 {
     bool bCopyFirstToFollow = bFirstPage && m_bTitlePage && m_aFollowPageStyle.is();
-    if (bCopyFirstToFollow)
-    {
-        // This is a first page and has a follow style, then enable the
-        // header/footer there as well to be consistent.
-        if (HasHeader(/*bFirstPage=*/true))
-            m_aFollowPageStyle->setPropertyValue("HeaderIsOn", uno::makeAny(true));
-        if (HasFooter(/*bFirstPage=*/true))
-            m_aFollowPageStyle->setPropertyValue("FooterIsOn", uno::makeAny(true));
-    }
 
     sal_Int32 nTopMargin = m_nTopMargin;
     sal_Int32 nHeaderTop = m_nHeaderTop;
@@ -1615,7 +1606,7 @@ void SectionPropertyMap::CloseSectionGroup( DomainMapper_Impl& rDM_Impl )
 
         sal_Int32 nCharWidth = 423; //240 twip/ 12 pt
         const StyleSheetEntryPtr pEntry = rDM_Impl.GetStyleSheetTable()->FindStyleSheetByConvertedStyleName( "Standard" );
-        if ( pEntry.get() )
+        if ( pEntry )
         {
             std::optional< PropertyMap::Property > pPropHeight = pEntry->pProperties->getProperty( PROP_CHAR_HEIGHT_ASIAN );
             if ( pPropHeight )
@@ -1922,7 +1913,6 @@ sal_Int32 SectionPropertyMap::GetPageWidth() const
 StyleSheetPropertyMap::StyleSheetPropertyMap()
     : mnListLevel( -1 )
     , mnOutlineLevel( -1 )
-    , mnNumId( -1 )
 {
 }
 

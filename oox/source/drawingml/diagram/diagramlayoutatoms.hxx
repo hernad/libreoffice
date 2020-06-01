@@ -27,7 +27,7 @@
 
 #include "diagram.hxx"
 
-namespace oox { namespace drawingml {
+namespace oox::drawingml {
 
 class DiagramLayout;
 typedef std::shared_ptr< DiagramLayout > DiagramLayoutPtr;
@@ -259,7 +259,8 @@ public:
         { mpNodeShapes.push_back(pShape); }
 
     bool setupShape( const ShapePtr& rShape,
-                     const dgm::Point* pPresNode ) const;
+                     const dgm::Point* pPresNode,
+                     sal_Int32 nCurrIdx ) const;
 
     const LayoutNode* getParentLayoutNode() const;
 
@@ -290,7 +291,7 @@ private:
 
 typedef std::shared_ptr< ShapeAtom > ShapeAtomPtr;
 
-} }
+}
 
 #endif
 

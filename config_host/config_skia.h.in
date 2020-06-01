@@ -31,6 +31,9 @@ are the same.
 
 #define SK_VULKAN 1
 
+// Memory allocator for Vulkan.
+#define SK_USE_VMA 1
+
 #define SK_CODEC_DECODES_PNG 1
 #define SK_ENCODE_PNG 1
 
@@ -39,6 +42,8 @@ are the same.
 #define SK_ASSUME_GL_ES 0
 
 
+// Enable Skia's internal checks depending on DBG_UTIL mode. ENABLE_SKIA_DEBUG
+// controls whether to build with or without optimizations (set in Makefile).
 #ifdef DBG_UTIL
 
 #define SK_DEBUG

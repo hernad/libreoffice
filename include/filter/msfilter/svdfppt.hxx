@@ -48,12 +48,12 @@
 #include <vcl/graph.hxx>
 #include <salhelper/simplereferenceobject.hxx>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace awt { struct Size; }
     namespace drawing { class XShape; }
     namespace form { class XFormComponent; }
     namespace frame { class XModel; }
-} } }
+}
 
 class SdrPage;
 class SdrObject;
@@ -172,7 +172,7 @@ enum class TSS_Type : unsigned {
     Unknown        = 0xffffffff // or invalid
 };
 
-const int nMaxPPTLevels = 5;
+const int nMaxPPTLevels = 10;
 
 // Object IDs for StarDraw UserData
 #define PPT_OBJECTINFO_ID       (1)
@@ -1128,7 +1128,6 @@ public:
                         const PPTTextObj* pTextObj
                     );
     sal_uInt32      Count() const { return mpFieldItem ? 1 : maString.getLength(); };
-    bool            HasTabulator() const;
 };
 
 class MSFILTER_DLLPUBLIC PPTParagraphObj
@@ -1146,9 +1145,6 @@ class MSFILTER_DLLPUBLIC PPTParagraphObj
     void operator=(PPTParagraphObj const&) = delete;
 
 public:
-
-    bool                    mbTab;          // if true, this paragraph has tabulators in text
-
     sal_uInt32              mnCurrentObject;
     ::std::vector<std::unique_ptr<PPTPortionObj>> m_PortionList;
 

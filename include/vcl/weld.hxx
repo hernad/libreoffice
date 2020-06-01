@@ -21,7 +21,7 @@
 #include <vcl/dllapi.h>
 #include <vcl/vclenum.hxx>
 #include <vcl/font.hxx>
-#include <vcl/menu.hxx>
+#include <vcl/vclptr.hxx>
 #include <vcl/uitest/factory.hxx>
 
 #include <com/sun/star/accessibility/XAccessibleRelationSet.hpp>
@@ -62,9 +62,10 @@ typedef css::uno::Reference<css::accessibility::XAccessible> a11yref;
 typedef css::uno::Reference<css::accessibility::XAccessibleRelationSet> a11yrelationset;
 
 enum class PointerStyle;
-class SvNumberFormatter;
+class CommandEvent;
 class KeyEvent;
 class MouseEvent;
+class SvNumberFormatter;
 class TransferDataContainer;
 class OutputDevice;
 class VirtualDevice;
@@ -73,6 +74,7 @@ struct SystemEnvData;
 namespace vcl
 {
 class ILibreOfficeKitNotifier;
+typedef OutputDevice RenderContext;
 }
 
 namespace weld
@@ -167,11 +169,6 @@ public:
 
     virtual void set_accessible_relation_labeled_by(weld::Widget* pLabel) = 0;
     virtual void set_accessible_relation_label_for(weld::Widget* pLabeled) = 0;
-
-    virtual void
-    add_extra_accessible_relation(const css::accessibility::AccessibleRelation& rRelation)
-        = 0;
-    virtual void clear_extra_accessible_relations() = 0;
 
     virtual void set_tooltip_text(const OUString& rTip) = 0;
     virtual OUString get_tooltip_text() const = 0;
@@ -270,6 +267,9 @@ public:
     virtual void connect_get_property_tree(const Link<boost::property_tree::ptree&, void>& rLink)
         = 0;
 
+    // render the widget to an output device
+    virtual void draw(VirtualDevice& rOutput) = 0;
+
     virtual ~Widget() {}
 };
 
@@ -290,6 +290,15 @@ class VCL_DLLPUBLIC Box : virtual public Container
 public:
     // Moves child to a new position in the list of children
     virtual void reorder_child(weld::Widget* pWidget, int position) = 0;
+};
+
+class VCL_DLLPUBLIC Paned : virtual public Container
+{
+public:
+    // set pixel position of divider
+    virtual void set_position(int nPos) = 0;
+    // get pixel position of divider
+    virtual int get_position() const = 0;
 };
 
 class VCL_DLLPUBLIC ScrolledWindow : virtual public Container
@@ -450,8 +459,6 @@ public:
 
     virtual void resize_to_request() = 0;
 
-    // render the dialog for a screenshot
-    virtual void draw(VirtualDevice& rOutput) = 0;
     // collect positions of widgets and their help ids for screenshot purposes
     virtual ScreenShotCollection collect_screenshot_data() = 0;
 };
@@ -611,9 +618,7 @@ protected:
     void signal_custom_render(vcl::RenderContext& rDevice, const tools::Rectangle& rRect,
                               bool bSelected, const OUString& rId)
     {
-        m_aRenderHdl.Call(
-            std::tuple<vcl::RenderContext&, const tools::Rectangle, bool, const OUString&>(
-                rDevice, rRect, bSelected, rId));
+        m_aRenderHdl.Call(render_args(rDevice, rRect, bSelected, rId));
     }
 
     Link<vcl::RenderContext&, Size> m_aGetSizeHdl;
@@ -695,6 +700,10 @@ public:
     virtual bool get_entry_selection_bounds(int& rStartPos, int& rEndPos) = 0;
     virtual void set_entry_completion(bool bEnable, bool bCaseSensitive = false) = 0;
     virtual void set_entry_placeholder_text(const OUString& rText) = 0;
+    virtual void set_entry_editable(bool bEditable) = 0;
+    virtual void cut_entry_clipboard() = 0;
+    virtual void copy_entry_clipboard() = 0;
+    virtual void paste_entry_clipboard() = 0;
 
     // font size is in points, not pixels, e.g. see Window::[G]etPointFont
     virtual void set_entry_font(const vcl::Font& rFont) = 0;
@@ -750,6 +759,14 @@ public:
 
 class VCL_DLLPUBLIC TreeView : virtual public Container
 {
+public:
+    typedef std::pair<const TreeIter&, int> iter_col;
+    typedef std::pair<const TreeIter&, OUString> iter_string;
+    // OUString is the id of the row, it may be null to measure the height of a generic line
+    typedef std::pair<vcl::RenderContext&, const OUString&> get_size_args;
+    typedef std::tuple<vcl::RenderContext&, const tools::Rectangle&, bool, const OUString&>
+        render_args;
+
 private:
     OUString m_sSavedValue;
 
@@ -757,9 +774,9 @@ protected:
     Link<TreeView&, void> m_aChangeHdl;
     Link<TreeView&, bool> m_aRowActivatedHdl;
     Link<int, void> m_aColumnClickedHdl;
-    Link<const std::pair<int, int>&, void> m_aRadioToggleHdl;
+    Link<const iter_col&, void> m_aRadioToggleHdl;
     Link<const TreeIter&, bool> m_aEditingStartedHdl;
-    Link<const std::pair<const TreeIter&, OUString>&, bool> m_aEditingDoneHdl;
+    Link<const iter_string&, bool> m_aEditingDoneHdl;
     // if handler returns false, the expansion of the row is refused
     Link<const TreeIter&, bool> m_aExpandingHdl;
     // if handler returns false, the collapse of the row is refused
@@ -772,12 +789,6 @@ protected:
     // arg to false to disable the treeview default dnd icon
     Link<bool&, bool> m_aDragBeginHdl;
     std::function<int(const weld::TreeIter&, const weld::TreeIter&)> m_aCustomSort;
-
-public:
-    // OUString is the id of the row, it may be null to measure the height of a generic line
-    typedef std::pair<vcl::RenderContext&, const OUString&> get_size_args;
-    typedef std::tuple<vcl::RenderContext&, const tools::Rectangle&, bool, const OUString&>
-        render_args;
 
 protected:
     std::vector<int> m_aRadioIndexes;
@@ -796,12 +807,11 @@ protected:
     void signal_visible_range_changed() { m_aVisibleRangeChangedHdl.Call(*this); }
     void signal_model_changed() { m_aModelChangedHdl.Call(*this); }
 
-    // arg is pair<row,col>
-    void signal_toggled(const std::pair<int, int>& rRowCol) { m_aRadioToggleHdl.Call(rRowCol); }
+    void signal_toggled(const iter_col& rIterCol) { m_aRadioToggleHdl.Call(rIterCol); }
 
     bool signal_editing_started(const TreeIter& rIter) { return m_aEditingStartedHdl.Call(rIter); }
 
-    bool signal_editing_done(const std::pair<const TreeIter&, OUString>& rIterText)
+    bool signal_editing_done(const iter_string& rIterText)
     {
         return m_aEditingDoneHdl.Call(rIterText);
     }
@@ -813,15 +823,13 @@ protected:
     void signal_custom_render(vcl::RenderContext& rDevice, const tools::Rectangle& rRect,
                               bool bSelected, const OUString& rId)
     {
-        m_aRenderHdl.Call(
-            std::tuple<vcl::RenderContext&, const tools::Rectangle, bool, const OUString&>(
-                rDevice, rRect, bSelected, rId));
+        m_aRenderHdl.Call(render_args(rDevice, rRect, bSelected, rId));
     }
 
     Link<get_size_args, Size> m_aGetSizeHdl;
     Size signal_custom_get_size(vcl::RenderContext& rDevice, const OUString& rId)
     {
-        return m_aGetSizeHdl.Call(std::pair<vcl::RenderContext&, const OUString&>(rDevice, rId));
+        return m_aGetSizeHdl.Call(get_size_args(rDevice, rId));
     }
 
 public:
@@ -890,10 +898,7 @@ public:
 
     // Argument is a pair of row, col describing the node in non-tree mode.
     // If in tree mode, then retrieve the toggled node with get_cursor
-    void connect_toggled(const Link<const std::pair<int, int>&, void>& rLink)
-    {
-        m_aRadioToggleHdl = rLink;
-    }
+    void connect_toggled(const Link<const iter_col&, void>& rLink) { m_aRadioToggleHdl = rLink; }
 
     void connect_column_clicked(const Link<int, void>& rLink) { m_aColumnClickedHdl = rLink; }
     void connect_model_changed(const Link<TreeView&, void>& rLink) { m_aModelChangedHdl = rLink; }
@@ -1052,9 +1057,8 @@ public:
 
     // rStartLink returns true to allow editing, false to disallow
     // rEndLink returns true to accept the edit, false to reject
-    virtual void
-    connect_editing(const Link<const TreeIter&, bool>& rStartLink,
-                    const Link<const std::pair<const TreeIter&, OUString>&, bool>& rEndLink)
+    virtual void connect_editing(const Link<const TreeIter&, bool>& rStartLink,
+                                 const Link<const iter_string&, bool>& rEndLink)
     {
         assert(rStartLink.IsSet() == rEndLink.IsSet() && "should be both on or both off");
         m_aEditingStartedHdl = rStartLink;
@@ -1138,10 +1142,12 @@ public:
     void connect_custom_get_size(const Link<get_size_args, Size>& rLink) { m_aGetSizeHdl = rLink; }
     void connect_custom_render(const Link<render_args, void>& rLink) { m_aRenderHdl = rLink; }
     // call set_column_custom_renderer after setting custom callbacks
-    virtual void set_column_custom_renderer(int nColumn) = 0;
+    virtual void set_column_custom_renderer(int nColumn, bool bEnable) = 0;
 
     // for dnd
-    virtual bool get_dest_row_at_pos(const Point& rPos, weld::TreeIter* pResult) = 0;
+    virtual bool get_dest_row_at_pos(const Point& rPos, weld::TreeIter* pResult,
+                                     bool bHighLightTarget = true)
+        = 0;
     virtual void unset_drag_dest_row() = 0;
     virtual tools::Rectangle get_row_area(const weld::TreeIter& rIter) const = 0;
     // for dragging and dropping between TreeViews, return the active source
@@ -2092,11 +2098,11 @@ public:
     }
     void append(const OUString& rId, const OUString& rStr, const OUString& rImage)
     {
-        insert(-1, rId, rStr, &rImage, nullptr, TRISTATE_FALSE);
+        insert(-1, rId, rStr, &rImage, nullptr, TRISTATE_INDET);
     }
     void append(const OUString& rId, const OUString& rStr, VirtualDevice& rImage)
     {
-        insert(-1, rId, rStr, nullptr, &rImage, TRISTATE_FALSE);
+        insert(-1, rId, rStr, nullptr, &rImage, TRISTATE_INDET);
     }
 
     // return the number of toplevel nodes
@@ -2154,6 +2160,10 @@ public:
     // return what modifiers are held
     virtual sal_uInt16 get_modifier_state() const = 0;
 
+    // This function returns the position a new item should be inserted if dnd
+    // is dropped at rPoint
+    virtual int get_drop_index(const Point& rPoint) const = 0;
+
     void connect_clicked(const Link<const OString&, void>& rLink) { m_aClickHdl = rLink; }
     void connect_menu_toggled(const Link<const OString&, void>& rLink) { m_aToggleMenuHdl = rLink; }
 };
@@ -2182,6 +2192,7 @@ public:
                                                       bool bTakeOwnership = false)
         = 0;
     virtual std::unique_ptr<Box> weld_box(const OString& id, bool bTakeOwnership = false) = 0;
+    virtual std::unique_ptr<Paned> weld_paned(const OString& id, bool bTakeOwnership = false) = 0;
     virtual std::unique_ptr<Button> weld_button(const OString& id, bool bTakeOwnership = false) = 0;
     virtual std::unique_ptr<MenuButton> weld_menu_button(const OString& id,
                                                          bool bTakeOwnership = false)
@@ -2285,7 +2296,7 @@ protected:
 
 public:
     GenericDialogController(weld::Widget* pParent, const OUString& rUIFile,
-                            const OString& rDialogId);
+                            const OString& rDialogId, bool bMobile = false);
     virtual Dialog* getDialog() override;
     virtual ~GenericDialogController() COVERITY_NOEXCEPT_FALSE override;
 };

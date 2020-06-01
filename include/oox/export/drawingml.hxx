@@ -46,7 +46,7 @@
 class Graphic;
 class SdrObjCustomShape;
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
 namespace awt {
     struct FontDescriptor;
     struct Gradient;
@@ -80,7 +80,7 @@ namespace uno {
 namespace frame {
     class XModel;
 }
-}}}
+}
 
 struct EscherConnectorListEntry;
 class OutlinerParaObject;
@@ -168,6 +168,7 @@ protected:
     static bool EqualGradients( css::awt::Gradient aGradient1, css::awt::Gradient aGradient2 );
 
     void WriteGlowEffect(const css::uno::Reference<css::beans::XPropertySet>& rXPropSet);
+    void WriteSoftEdgeEffect(const css::uno::Reference<css::beans::XPropertySet>& rXPropSet);
 
 public:
     DrawingML( ::sax_fastparser::FSHelperPtr pFS, ::oox::core::XmlFilterBase* pFB, DocumentType eDocumentType = DOCUMENT_PPTX, DMLTextExport* pTextExport = nullptr )
@@ -249,6 +250,7 @@ public:
     void WriteParagraphProperties(const css::uno::Reference< css::text::XTextContent >& rParagraph, float fFirstCharHeight);
     void WriteParagraphNumbering(const css::uno::Reference< css::beans::XPropertySet >& rXPropSet, float fFirstCharHeight,
                                   sal_Int16 nLevel );
+    void WriteParagraphTabStops(const css::uno::Reference<css::beans::XPropertySet>& rXPropSet);
     void WriteRun( const css::uno::Reference< css::text::XTextRange >& rRun,
                    bool& rbOverridingCharHeight, sal_Int32& rnCharHeight );
     void WriteRunProperties( const css::uno::Reference< css::beans::XPropertySet >& rRun, bool bIsField, sal_Int32 nElement, bool bCheckDirect,

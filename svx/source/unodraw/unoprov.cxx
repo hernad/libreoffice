@@ -62,6 +62,7 @@ static SfxItemPropertyMapEntry const * ImplGetSvxShapePropertyMap()
         MISC_OBJ_PROPERTIES
         LINKTARGET_PROPERTIES
         GLOW_PROPERTIES
+        SOFTEDGE_PROPERTIES
         SHADOW_PROPERTIES
         TEXT_PROPERTIES
         // #FontWork#
@@ -86,6 +87,7 @@ static SfxItemPropertyMapEntry const * ImplGetSvxTextShapePropertyMap()
         MISC_OBJ_PROPERTIES_NO_SHEAR
         LINKTARGET_PROPERTIES
         GLOW_PROPERTIES
+        SOFTEDGE_PROPERTIES
         SHADOW_PROPERTIES
         TEXT_PROPERTIES
         // #FontWork#
@@ -111,6 +113,7 @@ static SfxItemPropertyMapEntry const * ImplGetSvxConnectorPropertyMap()
         MISC_OBJ_PROPERTIES
         LINKTARGET_PROPERTIES
         GLOW_PROPERTIES
+        SOFTEDGE_PROPERTIES
         SHADOW_PROPERTIES
         TEXT_PROPERTIES
         // #FontWork#
@@ -136,6 +139,7 @@ static SfxItemPropertyMapEntry const * ImplGetSvxDimensioningPropertyMap()
         MISC_OBJ_PROPERTIES
         LINKTARGET_PROPERTIES
         GLOW_PROPERTIES
+        SOFTEDGE_PROPERTIES
         SHADOW_PROPERTIES
         TEXT_PROPERTIES
         // #FontWork#
@@ -161,6 +165,7 @@ static SfxItemPropertyMapEntry const * ImplGetSvxCirclePropertyMap()
         MISC_OBJ_PROPERTIES
         LINKTARGET_PROPERTIES
         GLOW_PROPERTIES
+        SOFTEDGE_PROPERTIES
         SHADOW_PROPERTIES
         TEXT_PROPERTIES
         // #FontWork#
@@ -188,6 +193,7 @@ static SfxItemPropertyMapEntry const * ImplGetSvxPolyPolygonPropertyMap()
         MISC_OBJ_PROPERTIES
         LINKTARGET_PROPERTIES
         GLOW_PROPERTIES
+        SOFTEDGE_PROPERTIES
         SHADOW_PROPERTIES
         TEXT_PROPERTIES
         // #FontWork#
@@ -218,6 +224,7 @@ static SfxItemPropertyMapEntry const * ImplGetSvxGraphicObjectPropertyMap()
 
         LINKTARGET_PROPERTIES
         GLOW_PROPERTIES
+        SOFTEDGE_PROPERTIES
         SHADOW_PROPERTIES
         TEXT_PROPERTIES
         // #FontWork#
@@ -369,6 +376,7 @@ static SfxItemPropertyMapEntry const * ImplGetSvxAllPropertyMap()
     static SfxItemPropertyMapEntry const aAllPropertyMap_Impl[] =
     {
         GLOW_PROPERTIES
+        SOFTEDGE_PROPERTIES
         SHADOW_PROPERTIES
         LINE_PROPERTIES
         LINE_PROPERTIES_START_END
@@ -432,6 +440,7 @@ static SfxItemPropertyMapEntry const * ImplGetSvxOle2PropertyMap()
         MISC_OBJ_PROPERTIES
         LINKTARGET_PROPERTIES
         GLOW_PROPERTIES
+        SOFTEDGE_PROPERTIES
         SHADOW_PROPERTIES
         TEXT_PROPERTIES
         FONTWORK_PROPERTIES
@@ -684,6 +693,7 @@ static SfxItemPropertyMapEntry const * ImplGetSvxCustomShapePropertyMap()
         MISC_OBJ_PROPERTIES
         LINKTARGET_PROPERTIES
         GLOW_PROPERTIES
+        SOFTEDGE_PROPERTIES
         SHADOW_PROPERTIES
         TEXT_PROPERTIES
         {OUString("UserDefinedAttributes"),     SDRATTR_XMLATTRIBUTES,      cppu::UnoType<css::container::XNameContainer>::get(),        0,     0},
@@ -763,6 +773,7 @@ static comphelper::PropertyMapEntry const * ImplGetSvxDrawingDefaultsPropertyMap
     static comphelper::PropertyMapEntry const aSvxDrawingDefaultsPropertyMap_Impl[] =
     {
         GLOW_PROPERTIES
+        SOFTEDGE_PROPERTIES
         SHADOW_PROPERTIES
         LINE_PROPERTIES_DEFAULTS
         FILL_PROPERTIES_BMP
@@ -1776,15 +1787,7 @@ static const char* SvxUnoColorNameDefResId[] =
     RID_SVXSTR_COLOR_LIBRE_ORANGE_ACCENT_DEF,
     RID_SVXSTR_COLOR_LIBRE_PURPLE_DEF,
     RID_SVXSTR_COLOR_LIBRE_PURPLE_ACCENT_DEF,
-    RID_SVXSTR_COLOR_LIBRE_YELLOW_ACCENT_DEF,
-    RID_SVXSTR_COLOR_TANGO_BUTTER_DEF,
-    RID_SVXSTR_COLOR_TANGO_ORANGE_DEF,
-    RID_SVXSTR_COLOR_TANGO_CHOCOLATE_DEF,
-    RID_SVXSTR_COLOR_TANGO_CHAMELEON_DEF,
-    RID_SVXSTR_COLOR_TANGO_SKY_BLUE_DEF,
-    RID_SVXSTR_COLOR_TANGO_PLUM_DEF,
-    RID_SVXSTR_COLOR_TANGO_SCARLET_RED_DEF,
-    RID_SVXSTR_COLOR_TANGO_ALUMINIUM_DEF
+    RID_SVXSTR_COLOR_LIBRE_YELLOW_ACCENT_DEF
 };
 
 static const char* SvxUnoColorNameResId[] =
@@ -1888,15 +1891,7 @@ static const char* SvxUnoColorNameResId[] =
     RID_SVXSTR_COLOR_LIBRE_ORANGE_ACCENT,
     RID_SVXSTR_COLOR_LIBRE_PURPLE,
     RID_SVXSTR_COLOR_LIBRE_PURPLE_ACCENT,
-    RID_SVXSTR_COLOR_LIBRE_YELLOW_ACCENT,
-    RID_SVXSTR_COLOR_TANGO_BUTTER,
-    RID_SVXSTR_COLOR_TANGO_ORANGE,
-    RID_SVXSTR_COLOR_TANGO_CHOCOLATE,
-    RID_SVXSTR_COLOR_TANGO_CHAMELEON,
-    RID_SVXSTR_COLOR_TANGO_SKY_BLUE,
-    RID_SVXSTR_COLOR_TANGO_PLUM,
-    RID_SVXSTR_COLOR_TANGO_SCARLET_RED,
-    RID_SVXSTR_COLOR_TANGO_ALUMINIUM
+    RID_SVXSTR_COLOR_LIBRE_YELLOW_ACCENT
 };
 
 /// @throws std::exception

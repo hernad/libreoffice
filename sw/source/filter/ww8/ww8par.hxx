@@ -108,12 +108,12 @@ struct ESelection;
 class SfxItemSet;
 class OutlinerParaObject;
 
-namespace com{namespace sun {namespace star{
+namespace com::sun::star{
     namespace beans{ class XPropertySet;}
     namespace form { class XFormComponent;}
     namespace drawing{class XShape;}
     namespace lang{class XMultiServiceFactory;}
-}}}
+}
 
 // defines only for the WW8-variable of the INI file
 #define WW8FL_NO_STYLES      2
@@ -132,9 +132,12 @@ struct WW8LFOInfo;
 
 class WW8Reader : public StgReader
 {
+    std::shared_ptr<SvStream> mDecodedStream;
     virtual ErrCode Read(SwDoc &, const OUString& rBaseURL, SwPaM &, const OUString &) override;
     ErrCode OpenMainStream( tools::SvRef<SotStorageStream>& rRef, sal_uInt16& rBuffSize );
+    ErrCode DecryptDRMPackage();
 public:
+    WW8Reader() {}
     virtual SwReaderType GetReaderType() override;
 
     virtual bool HasGlossaries() const override;
@@ -1067,7 +1070,6 @@ private:
 //            Storage-Reader
 
 typedef std::set<WW8_CP> cp_set;
-typedef std::vector<WW8_CP> cp_vector;
 
 class SwWW8ImplReader
 {
@@ -1117,7 +1119,7 @@ private:
     This stack is for fields whose true conversion cannot be determined until
     the end of the document, it is the same stack for headers/footers/main
     text/textboxes/tables etc... They are things that reference other things
-    e.g. NoteRef and Ref, they are processed after pReffedStck
+    e.g. NoteRef and Ref, they are processed after m_xReffedStck
     */
     std::unique_ptr<SwWW8FltRefStack> m_xReffingStck;
 
@@ -1376,7 +1378,7 @@ private:
     bool m_bCareLastParaEndInToc;
     cp_set m_aTOXEndCps;
 
-    cp_vector m_aEndParaPos;
+    std::vector<WW8_CP> m_aEndParaPos;
     WW8_CP m_aCurrAttrCP;
     bool m_bOnLoadingMain:1;
     bool m_bNotifyMacroEventRead:1;

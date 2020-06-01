@@ -241,9 +241,9 @@ void SvxConfigPage::InsertEntryIntoNotebookbarTabUI(const OUString& sClassId,
     }
 
     OUString aLabel;
-    for (sal_Int32 i = 0; i < aPropSeq.getLength(); ++i)
-        if (aPropSeq[i].Name == "Name")
-            aPropSeq[i].Value >>= aLabel;
+    for (auto const& prop : std::as_const(aPropSeq))
+        if (prop.Name == "Name")
+            prop.Value >>= aLabel;
 
     OUString aName = SvxConfigPageHelper::stripHotKey(aLabel);
 
@@ -546,9 +546,10 @@ void SvxNotebookbarEntriesListBox::ChangedVisibility(int nRow)
     sfx2::SfxNotebookBar::ReloadNotebookBar(sUIPath);
 }
 
-IMPL_LINK(SvxNotebookbarEntriesListBox, CheckButtonHdl, const row_col&, rRowCol, void)
+IMPL_LINK(SvxNotebookbarEntriesListBox, CheckButtonHdl, const weld::TreeView::iter_col&, rRowCol,
+          void)
 {
-    ChangedVisibility(rRowCol.first);
+    ChangedVisibility(m_xControl->get_iter_index_in_parent(rRowCol.first));
 }
 
 IMPL_LINK(SvxNotebookbarEntriesListBox, KeyInputHdl, const KeyEvent&, rKeyEvent, bool)

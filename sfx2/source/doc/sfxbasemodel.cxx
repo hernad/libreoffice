@@ -1106,6 +1106,11 @@ void SAL_CALL SfxBaseModel::setArgs(const Sequence<beans::PropertyValue>& aArgs)
                 ok = true;
             }
         }
+        else if (rArg.Name == "EncryptionData")
+        {
+            pMedium->GetItemSet()->Put(SfxUnoAnyItem(SID_ENCRYPTIONDATA, rArg.Value));
+            ok = true;
+        }
         if (!ok)
         {
             throw lang::IllegalArgumentException("Setting property not supported: " + rArg.Name,
@@ -3463,7 +3468,7 @@ bool SfxBaseModel::hasValidSignatures() const
 
 void SfxBaseModel::getGrabBagItem(css::uno::Any& rVal) const
 {
-    if (m_pData->m_xGrabBagItem.get())
+    if (m_pData->m_xGrabBagItem)
         m_pData->m_xGrabBagItem->QueryValue(rVal);
     else
         rVal <<= uno::Sequence<beans::PropertyValue>();
@@ -3471,7 +3476,7 @@ void SfxBaseModel::getGrabBagItem(css::uno::Any& rVal) const
 
 void SfxBaseModel::setGrabBagItem(const css::uno::Any& rVal)
 {
-    if (!m_pData->m_xGrabBagItem.get())
+    if (!m_pData->m_xGrabBagItem)
         m_pData->m_xGrabBagItem = std::make_shared<SfxGrabBagItem>();
 
     m_pData->m_xGrabBagItem->PutValue(rVal, 0);
@@ -3919,7 +3924,7 @@ OUString SAL_CALL SfxBaseModel::getTitle()
     SfxModelGuard aGuard( *this );
 
     OUString aResult = impl_getTitleHelper()->getTitle ();
-    if ( !m_pData->m_bExternalTitle && m_pData->m_pObjectShell.get() )
+    if ( !m_pData->m_bExternalTitle && m_pData->m_pObjectShell )
     {
         SfxMedium* pMedium = m_pData->m_pObjectShell->GetMedium();
         if ( pMedium )

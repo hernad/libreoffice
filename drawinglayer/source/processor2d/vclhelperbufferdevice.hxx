@@ -17,44 +17,39 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_DRAWINGLAYER_SOURCE_PROCESSOR2D_VCLHELPERBUFFERDEVICE_HXX
-#define INCLUDED_DRAWINGLAYER_SOURCE_PROCESSOR2D_VCLHELPERBUFFERDEVICE_HXX
+#pragma once
 
 #include <vcl/virdev.hxx>
 
-
-// predefines
-
-namespace basegfx { class B2DRange; }
-
+namespace basegfx
+{
+class B2DRange;
+}
 
 // support methods for vcl direct gradient rendering
 
 namespace drawinglayer
 {
-    class impBufferDevice
-    {
-        OutputDevice&                       mrOutDev;
-        VclPtr<VirtualDevice>               mpContent;
-        VclPtr<VirtualDevice>               mpMask;
-        VclPtr<VirtualDevice>               mpAlpha;
-        ::tools::Rectangle                  maDestPixel;
+class impBufferDevice
+{
+    OutputDevice& mrOutDev;
+    VclPtr<VirtualDevice> mpContent;
+    VclPtr<VirtualDevice> mpMask;
+    VclPtr<VirtualDevice> mpAlpha;
+    tools::Rectangle maDestPixel;
+    bool mbContentTransparent;
 
-    public:
-        impBufferDevice(
-            OutputDevice& rOutDev,
-            const basegfx::B2DRange& rRange);
-        ~impBufferDevice();
+public:
+    impBufferDevice(OutputDevice& rOutDev, const basegfx::B2DRange& rRange,
+                    bool bContentTransparent = false);
+    ~impBufferDevice();
 
-        void paint(double fTrans = 0.0);
-        bool isVisible() const { return !maDestPixel.IsEmpty(); }
-        VirtualDevice& getContent();
-        VirtualDevice& getMask();
-        VirtualDevice& getTransparence();
-    };
+    void paint(double fTrans = 0.0);
+    bool isVisible() const { return !maDestPixel.IsEmpty(); }
+    VirtualDevice& getContent();
+    VirtualDevice& getMask();
+    VirtualDevice& getTransparence();
+};
 } // end of namespace drawinglayer
-
-
-#endif // INCLUDED_DRAWINGLAYER_SOURCE_PROCESSOR2D_VCLHELPERBUFFERDEVICE_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

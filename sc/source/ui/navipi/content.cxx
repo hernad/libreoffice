@@ -620,11 +620,11 @@ IMPL_LINK(ScContentTree, QueryTooltipHdl, const weld::TreeIter&, rEntry, OUStrin
         aHelpText = OUString::number(m_xTreeView->iter_n_children(rEntry)) +
                     " " + m_xTreeView->get_text(rEntry);
     }
-    else if (m_xTreeView->iter_compare(*xParent, *m_aRootNodes[ScContentId::NOTE]) == 0)
+    else if (m_aRootNodes[ScContentId::NOTE] && m_xTreeView->iter_compare(*xParent, *m_aRootNodes[ScContentId::NOTE]) == 0)
     {
         aHelpText = m_xTreeView->get_text(rEntry);     // notes as help text
     }
-    else if (m_xTreeView->iter_compare(*xParent, *m_aRootNodes[ScContentId::AREALINK]) == 0)
+    else if (m_aRootNodes[ScContentId::AREALINK] && m_xTreeView->iter_compare(*xParent, *m_aRootNodes[ScContentId::AREALINK]) == 0)
     {
         auto nIndex = GetChildIndex(&rEntry);
         if (nIndex != SC_CONTENT_NOCHILD)
@@ -659,14 +659,22 @@ void ScContentTree::ObjectFresh(ScContentId nType, const weld::TreeIter* pEntry)
 {
     if (bHiddenDoc && !pHiddenDocument)
         return;     // other document displayed
+
     if (nType == ScContentId::GRAPHIC || nType == ScContentId::OLEOBJECT || nType == ScContentId::DRAWING)
     {
+        auto nOldChildren = m_aRootNodes[nType] ? m_xTreeView->iter_n_children(*m_aRootNodes[nType]) : 0;
+        auto nOldPos = m_xTreeView->vadjustment_get_value();
+
         freeze();
         ClearType( nType );
         GetDrawNames( nType/*, nId*/ );
         thaw();
+
+        auto nNewChildren = m_aRootNodes[nType] ? m_xTreeView->iter_n_children(*m_aRootNodes[nType]) : 0;
+        bool bRestorePos = nOldChildren == nNewChildren;
+
         if (!pEntry)
-            ApplyNavigatorSettings();
+            ApplyNavigatorSettings(bRestorePos, nOldPos);
         if (pEntry)
         {
             weld::TreeIter* pParent = m_aRootNodes[nType].get();
@@ -1180,7 +1188,7 @@ static bool lcl_DoDragCells( ScDocShell* pSrcShell, const ScRange& rRange, ScDra
     bool bDisallow = true;
 
     ScDocument& rSrcDoc = pSrcShell->GetDocument();
-    ScMarkData aMark(rSrcDoc.MaxRow(), rSrcDoc.MaxCol());
+    ScMarkData aMark(rSrcDoc.GetSheetLimits());
     aMark.SelectTable( rRange.aStart.Tab(), true );
     aMark.SetMarkArea( rRange );
 
@@ -1562,13 +1570,21 @@ void ScContentTree::SelectEntryByName(const ScContentId nRoot, const OUString& r
     }
 }
 
-void ScContentTree::ApplyNavigatorSettings()
+void ScContentTree::ApplyNavigatorSettings(bool bRestorePos, int nScrollPos)
 {
     const ScNavigatorSettings* pSettings = ScNavigatorDlg::GetNavigatorSettings();
     if( pSettings )
     {
         ScContentId nRootSel = pSettings->GetRootSelected();
-        sal_uLong nChildSel = pSettings->GetChildSelected();
+        auto nChildSel = pSettings->GetChildSelected();
+
+        // tdf#133079 ensure Sheet root is selected if nothing
+        // else would be
+        if (nRootSel == ScContentId::ROOT)
+        {
+            nRootSel = ScContentId::TABLE;
+            nChildSel = SC_CONTENT_NOCHILD;
+        }
 
         for( int i = 1; i <= int(ScContentId::LAST); ++i )
         {
@@ -1594,6 +1610,9 @@ void ScContentTree::ApplyNavigatorSettings()
                 // select
                 if( nRootSel == nEntry )
                 {
+                    if (bRestorePos)
+                        m_xTreeView->vadjustment_set_value(nScrollPos);
+
                     std::unique_ptr<weld::TreeIter> xEntry;
                     if (bExp && (nChildSel != SC_CONTENT_NOCHILD))
                     {

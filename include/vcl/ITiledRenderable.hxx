@@ -20,7 +20,7 @@
 #include <com/sun/star/datatransfer/XTransferable.hpp>
 
 namespace com::sun::star::beans { struct PropertyValue; }
-namespace com::sun::star::datatransfer { namespace clipboard { class XClipboard; } }
+namespace com::sun::star::datatransfer::clipboard { class XClipboard; }
 namespace com::sun::star::uno { template <class interface_type> class Reference; }
 namespace com::sun::star::uno { template <typename > class Sequence; }
 namespace vcl { class Window; }
@@ -44,6 +44,9 @@ namespace vcl
 class VCL_DLLPUBLIC ITiledRenderable
 {
 public:
+
+    typedef std::map<const OUString, OUString>  StringMap;
+
     virtual ~ITiledRenderable();
 
     /**
@@ -284,7 +287,7 @@ public:
     virtual void moveSelectedParts(int /*nPosition*/, bool /*bDuplicate*/) {}
 
     /// @see lok::Document::completeFunction().
-    virtual void completeFunction(int /*nIndex*/)
+    virtual void completeFunction(const OUString& /*rFunctionName*/)
     {
     }
 
@@ -295,6 +298,14 @@ public:
     virtual bool isDisposed() const
     {
         return false;
+    }
+
+    /**
+     * Execute a form field event in the document.
+     * E.g. select an item from a drop down field's list.
+     */
+    virtual void executeFromFieldEvent(const StringMap&)
+    {
     }
 };
 } // namespace vcl

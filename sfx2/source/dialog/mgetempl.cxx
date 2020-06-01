@@ -103,14 +103,13 @@ SfxManageStyleSheetPage::SfxManageStyleSheetPage(weld::Container* pPage, weld::D
 
     if ( pPool )
     {
-        pPool->SetSearchMask( pStyle->GetFamily() );
-        pPool->First();     // for SW - update internal list
+        pPool->First(pStyle->GetFamily()); // for SW - update internal list
     }
 
     if ( pStyle->GetName().isEmpty() && pPool )
     {
         // NullString as Name -> generate Name
-        OUString aNoName(SfxStyleDialogController::GenerateUnusedName(*pPool));
+        OUString aNoName(SfxStyleDialogController::GenerateUnusedName(*pPool, pStyle->GetFamily()));
         pStyle->SetName( aNoName );
         aName = aNoName;
         aFollow = pStyle->GetFollow();
@@ -128,7 +127,7 @@ SfxManageStyleSheetPage::SfxManageStyleSheetPage(weld::Container* pPage, weld::D
 
     if ( pStyle->HasFollowSupport() && pPool )
     {
-        SfxStyleSheetBase* pPoolStyle = pPool->First();
+        SfxStyleSheetBase* pPoolStyle = pPool->First(pStyle->GetFamily());
 
         m_xFollowLb->freeze();
 
@@ -161,7 +160,7 @@ SfxManageStyleSheetPage::SfxManageStyleSheetPage(weld::Container* pPage, weld::D
             // the base template can be set to NULL
             m_xBaseLb->append_text(SfxResId(STR_NONE));
 
-        SfxStyleSheetBase* pPoolStyle = pPool->First();
+        SfxStyleSheetBase* pPoolStyle = pPool->First(pStyle->GetFamily());
 
         while ( pPoolStyle )
         {

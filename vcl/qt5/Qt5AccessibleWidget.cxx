@@ -30,6 +30,7 @@
 
 #include <com/sun/star/accessibility/AccessibleRelationType.hpp>
 #include <com/sun/star/accessibility/AccessibleRole.hpp>
+#include <com/sun/star/accessibility/AccessibleScrollType.hpp>
 #include <com/sun/star/accessibility/AccessibleStateType.hpp>
 #include <com/sun/star/accessibility/XAccessible.hpp>
 #include <com/sun/star/accessibility/XAccessibleAction.hpp>
@@ -847,26 +848,25 @@ QString Qt5AccessibleWidget::attributes(int offset, int* startOffset, int* endOf
         return QString();
     }
 
-    Sequence<PropertyValue> attribs = xText->getCharacterAttributes(offset, Sequence<OUString>());
-    const PropertyValue* pValues = attribs.getConstArray();
+    const Sequence<PropertyValue> attribs
+        = xText->getCharacterAttributes(offset, Sequence<OUString>());
     OUString aRet;
-    for (sal_Int32 i = 0; i < attribs.getLength(); i++)
+    for (PropertyValue const& prop : attribs)
     {
-        if (pValues[i].Name == "CharFontName")
+        if (prop.Name == "CharFontName")
         {
-            aRet += "font-family:" + *o3tl::doAccess<OUString>(pValues[i].Value) + ";";
+            aRet += "font-family:" + *o3tl::doAccess<OUString>(prop.Value) + ";";
             continue;
         }
-        if (pValues[i].Name == "CharHeight")
+        if (prop.Name == "CharHeight")
         {
-            aRet += "font-size:" + OUString::number(*o3tl::doAccess<double>(pValues[i].Value))
-                    + "pt;";
+            aRet += "font-size:" + OUString::number(*o3tl::doAccess<double>(prop.Value)) + "pt;";
             continue;
         }
-        if (pValues[i].Name == "CharWeight")
+        if (prop.Name == "CharWeight")
         {
-            aRet += "font-weight:"
-                    + lcl_convertFontWeight(*o3tl::doAccess<double>(pValues[i].Value)) + ";";
+            aRet += "font-weight:" + lcl_convertFontWeight(*o3tl::doAccess<double>(prop.Value))
+                    + ";";
             continue;
         }
     }
@@ -900,9 +900,11 @@ void Qt5AccessibleWidget::removeSelection(int /* selectionIndex */)
 {
     SAL_INFO("vcl.qt5", "Unsupported QAccessibleTextInterface::removeSelection");
 }
-void Qt5AccessibleWidget::scrollToSubstring(int /* startIndex */, int /* endIndex */)
+void Qt5AccessibleWidget::scrollToSubstring(int startIndex, int endIndex)
 {
-    SAL_INFO("vcl.qt5", "Unsupported QAccessibleTextInterface::scrollToSubstring");
+    Reference<XAccessibleText> xText(m_xAccessible, UNO_QUERY);
+    if (xText.is())
+        xText->scrollSubstringTo(startIndex, endIndex, AccessibleScrollType_SCROLL_ANYWHERE);
 }
 
 void Qt5AccessibleWidget::selection(int selectionIndex, int* startOffset, int* endOffset) const

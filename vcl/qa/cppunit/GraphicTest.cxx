@@ -7,6 +7,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+#include <sal/config.h>
+#include <config_oox.h>
 #include <cppunit/TestAssert.h>
 #include <cppunit/TestFixture.h>
 #include <cppunit/extensions/HelperMacros.h>
@@ -25,12 +27,20 @@
 
 #include <impgraph.hxx>
 
+#if USE_TLS_NSS
+#include <nss.h>
+#endif
+
 using namespace css;
 
 namespace
 {
 class GraphicTest : public CppUnit::TestFixture
 {
+public:
+    ~GraphicTest();
+
+private:
     void testUnloadedGraphic();
     void testUnloadedGraphicLoading();
     void testUnloadedGraphicWmf();
@@ -49,6 +59,13 @@ class GraphicTest : public CppUnit::TestFixture
     CPPUNIT_TEST(testSwappingVectorGraphic);
     CPPUNIT_TEST_SUITE_END();
 };
+
+GraphicTest::~GraphicTest()
+{
+#if USE_TLS_NSS
+    NSS_Shutdown();
+#endif
+}
 
 BitmapEx createBitmap(bool alpha = false)
 {
@@ -289,7 +306,8 @@ void GraphicTest::testSwapping()
 
     CPPUNIT_ASSERT_EQUAL(120L, aGraphic.GetSizePixel().Width());
     CPPUNIT_ASSERT_EQUAL(100L, aGraphic.GetSizePixel().Height());
-    CPPUNIT_ASSERT_EQUAL(BitmapChecksum(0xF5331397837B58EB), aGraphic.GetChecksum());
+
+    BitmapChecksum aChecksumBeforeSwapping = aGraphic.GetChecksum();
 
     CPPUNIT_ASSERT_EQUAL(sal_uInt32(319), aGraphic.GetGfxLink().GetDataSize());
 
@@ -330,7 +348,7 @@ void GraphicTest::testSwapping()
     CPPUNIT_ASSERT_EQUAL(true, aGraphic.isAvailable());
     CPPUNIT_ASSERT_EQUAL(false, aGraphic.ImplGetImpGraphic()->isSwappedOut());
 
-    CPPUNIT_ASSERT_EQUAL(BitmapChecksum(0xF5331397837B58EB), aGraphic.GetChecksum());
+    CPPUNIT_ASSERT_EQUAL(aChecksumBeforeSwapping, aGraphic.GetChecksum());
 
     // File shouldn't be available anymore
     CPPUNIT_ASSERT_EQUAL(false, comphelper::DirectoryHelper::fileExists(rSwapFileURL));

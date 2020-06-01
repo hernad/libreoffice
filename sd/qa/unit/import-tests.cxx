@@ -13,7 +13,6 @@
 #include <config_poppler.h>
 #include <memory>
 #include <ostream>
-#include <utility>
 #include <sdpage.hxx>
 
 #include "sdmodeltestbase.hxx"
@@ -180,9 +179,9 @@ public:
     void testAoo124143();
     void testTdf103567();
     void testTdf103792();
-    void testTdf118776();
     void testTdf103876();
     void testTdf79007();
+    void testTdf129686();
     void testTdf104015();
     void testTdf104201();
     void testTdf103477();
@@ -287,9 +286,9 @@ public:
     CPPUNIT_TEST(testAoo124143);
     CPPUNIT_TEST(testTdf103567);
     CPPUNIT_TEST(testTdf103792);
-    CPPUNIT_TEST(testTdf118776);
     CPPUNIT_TEST(testTdf103876);
     CPPUNIT_TEST(testTdf79007);
+    CPPUNIT_TEST(testTdf129686);
     CPPUNIT_TEST(testTdf104015);
     CPPUNIT_TEST(testTdf104201);
     CPPUNIT_TEST(testTdf103477);
@@ -1366,10 +1365,10 @@ void SdImportTest::testPDFImport()
 
 void SdImportTest::testPDFImportSkipImages()
 {
-    auto pParams = std::make_unique<SfxAllItemSet>( SfxGetpApp()->GetPool() );
+    auto pParams = std::make_shared<SfxAllItemSet>( SfxGetpApp()->GetPool() );
     pParams->Put( SfxStringItem ( SID_FILE_FILTEROPTIONS, "SkipImages" ) );
 
-    sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/pdf/txtpic.pdf"), PDF, std::move(pParams));
+    sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/pdf/txtpic.pdf"), PDF, pParams);
     SdDrawDocument *pDoc = xDocShRef->GetDoc();
     CPPUNIT_ASSERT_MESSAGE( "no document", pDoc != nullptr );
     uno::Reference< drawing::XDrawPagesSupplier > xDoc(xDocShRef->GetDoc()->getUnoModel(), uno::UNO_QUERY_THROW );
@@ -1841,26 +1840,6 @@ void SdImportTest::testTdf103792()
     xDocShRef->DoClose();
 }
 
-void SdImportTest::testTdf118776()
-{
-    sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("/sd/qa/unit/data/pptx/tdf118776.pptx"), PPTX);
-    uno::Reference< beans::XPropertySet > xShape( getShapeFromPage( 0, 0, xDocShRef ) );
-
-    // Get first paragraph of the text
-    uno::Reference<text::XTextRange> const xParagraph( getParagraphFromShape( 0, xShape ) );
-
-    // Get first run of the paragraph
-    uno::Reference<text::XTextRange> xRun( getRunFromParagraph (0, xParagraph ) );
-    uno::Reference< beans::XPropertySet > xPropSet( xRun, uno::UNO_QUERY_THROW );
-    sal_Int16 nTransparency = 0;
-    xPropSet->getPropertyValue("CharTransparence") >>= nTransparency;
-
-    // Import noFill color as 99% transparency
-    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(99), nTransparency);
-
-    xDocShRef->DoClose();
-}
-
 void SdImportTest::testTdf103876()
 {
     // Title text shape's placeholder text did not inherit the corresponding text properties
@@ -1931,6 +1910,26 @@ void SdImportTest::testTdf79007()
     sal_Int16 nLuminance3;
     xShape3->getPropertyValue("AdjustLuminance") >>= nLuminance3;
     CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(0), nLuminance3);
+
+    xDocShRef->DoClose();
+}
+
+void SdImportTest::testTdf129686()
+{
+    sd::DrawDocShellRef xDocShRef = loadURL(m_directories.getURLFromSrc("sd/qa/unit/data/pptx/tdf129686.pptx"), PPTX);
+    uno::Reference< beans::XPropertySet > xShape( getShapeFromPage( 0, 0, xDocShRef ) );
+
+    // Get first paragraph of the text
+    uno::Reference<text::XTextRange> const xParagraph( getParagraphFromShape( 0, xShape ) );
+
+    // Get first run of the paragraph
+    uno::Reference<text::XTextRange> xRun( getRunFromParagraph (0, xParagraph ) );
+    uno::Reference< beans::XPropertySet > xPropSet( xRun, uno::UNO_QUERY_THROW );
+    sal_Int16 nTransparency = 0;
+    xPropSet->getPropertyValue("CharTransparence") >>= nTransparency;
+
+    // 100 = no transparency
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(100), nTransparency);
 
     xDocShRef->DoClose();
 }
@@ -2079,9 +2078,8 @@ void SdImportTest::testTdf104445()
         uno::Sequence<beans::PropertyValue> aBulletProps;
         xNumRule->getByIndex(0) >>= aBulletProps;
 
-        for (int i = 0; i < aBulletProps.getLength(); ++i)
+        for (beans::PropertyValue const & rProp : std::as_const(aBulletProps))
         {
-            const beans::PropertyValue& rProp = aBulletProps[i];
             if(rProp.Name == "NumberingType")
                 CPPUNIT_ASSERT_EQUAL(sal_Int16(style::NumberingType::NUMBER_NONE), rProp.Value.get<sal_Int16>());
             if(rProp.Name == "LeftMargin")
@@ -2100,9 +2098,8 @@ void SdImportTest::testTdf104445()
         uno::Sequence<beans::PropertyValue> aBulletProps;
         xNumRule->getByIndex(0) >>= aBulletProps;
 
-        for(int i = 0; i < aBulletProps.getLength(); ++i)
+        for(beans::PropertyValue const & rProp : std::as_const(aBulletProps))
         {
-            const beans::PropertyValue& rProp = aBulletProps[i];
             if(rProp.Name == "NumberingType")
                 CPPUNIT_ASSERT_EQUAL(sal_Int16(style::NumberingType::CHAR_SPECIAL), rProp.Value.get<sal_Int16>());
             if(rProp.Name == "LeftMargin")
@@ -2966,14 +2963,14 @@ void SdImportTest::testOOXTheme()
     xPropSet->getPropertyValue("InteropGrabBag") >>= aGrabBag;
 
     bool bTheme = false;
-    for (int i = 0; i < aGrabBag.getLength(); i++)
+    for (beans::PropertyValue const & prop : std::as_const(aGrabBag))
     {
-        if (aGrabBag[i].Name == "OOXTheme")
+        if (prop.Name == "OOXTheme")
         {
             bTheme = true;
             uno::Reference<xml::dom::XDocument> aThemeDom;
-            CPPUNIT_ASSERT(aGrabBag[i].Value >>= aThemeDom); // PropertyValue of proper type
-            CPPUNIT_ASSERT(aThemeDom.get()); // Reference not empty
+            CPPUNIT_ASSERT(prop.Value >>= aThemeDom); // PropertyValue of proper type
+            CPPUNIT_ASSERT(aThemeDom); // Reference not empty
         }
     }
     CPPUNIT_ASSERT(bTheme); // Grab Bag has all the expected elements
@@ -3113,15 +3110,15 @@ void SdImportTest::testShapeGlowEffectPPTXImpoer()
         = loadURL(m_directories.getURLFromSrc("sd/qa/unit/data/pptx/shape-glow-effect.pptx"), PPTX);
 
     uno::Reference<beans::XPropertySet> xShape(getShapeFromPage(0, 0, xDocShRef));
-    bool bHasGlow = false;
-    xShape->getPropertyValue("GlowEffect") >>= bHasGlow;
-    CPPUNIT_ASSERT(bHasGlow);
-    sal_Int64 nRadius = -1;
+    sal_Int32 nRadius = -1;
     xShape->getPropertyValue("GlowEffectRad") >>= nRadius;
-    CPPUNIT_ASSERT_EQUAL(sal_Int64(139700l), nRadius);
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(388), nRadius); // 139700 EMU = 388.0556 mm/100
     Color nColor;
     xShape->getPropertyValue("GlowEffectColor") >>= nColor;
     CPPUNIT_ASSERT_EQUAL(Color(0xFFC000), nColor);
+    sal_Int16 nTransparency;
+    xShape->getPropertyValue("GlowEffectTransparency") >>= nTransparency;
+    CPPUNIT_ASSERT_EQUAL(sal_Int16(60), nTransparency);
 }
 
 CPPUNIT_TEST_SUITE_REGISTRATION(SdImportTest);

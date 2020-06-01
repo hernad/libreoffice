@@ -728,6 +728,7 @@ $(eval $(call gb_Helper_register_jars_for_install,URE,ure, \
 	java_uno \
 	juh \
 	jurt \
+	libreoffice \
 	ridl \
 	unoloader \
 ))
@@ -895,6 +896,7 @@ $(eval $(call gb_Helper_register_packages_for_install,ooo,\
 	extras_tploffimisc \
 	extras_tplpresnt \
 	extras_tpl_styles \
+	extras_tpldraw \
 	extras_tplpersonal \
 	extras_tplwizbitmap \
 	extras_tplwizdesktop \

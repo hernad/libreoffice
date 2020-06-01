@@ -48,7 +48,7 @@
 #include <vcl/event.hxx>
 #include <vcl/waitobj.hxx>
 #include <vcl/wrkwin.hxx>
-#include <vcl/button.hxx>
+#include <vcl/toolkit/button.hxx>
 #include <vcl/mnemonic.hxx>
 #include <vcl/toolkit/dialog.hxx>
 #include <vcl/dialoghelper.hxx>
@@ -1101,7 +1101,7 @@ void Dialog::EndDialog( long nResult )
 
         RemoveFromDlgList();
 
-        // set focus to previous modal dialogue if it is modal for
+        // set focus to previous modal dialog if it is modal for
         // the same frame parent (or NULL)
         ImplSVData* pSVData = ImplGetSVData();
         if (!pSVData->mpWinData->mpExecuteDialogs.empty())
@@ -1301,10 +1301,10 @@ void Dialog::GetDrawWindowBorder( sal_Int32& rLeftBorder, sal_Int32& rTopBorder,
     aImplWin->GetBorder( rLeftBorder, rTopBorder, rRightBorder, rBottomBorder );
 }
 
-void Dialog::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawFlags )
+void Dialog::Draw( OutputDevice* pDev, const Point& rPos, DrawFlags )
 {
     Point aPos = pDev->LogicToPixel( rPos );
-    Size aSize = pDev->LogicToPixel( rSize );
+    Size aSize = GetSizePixel();
 
     Wallpaper aWallpaper = GetBackground();
     if ( !aWallpaper.IsBitmap() )

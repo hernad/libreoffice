@@ -66,17 +66,6 @@ using namespace ::com::sun::star::linguistic2;
 
 class SfxStyleSheetPool;
 
-namespace sd {
-
-SearchSelection::SearchSelection(int nPage, const OString& rRectangles)
-    : m_nPage(nPage),
-    m_aRectangles(rRectangles)
-{
-}
-
-} // end of namespace sd
-
-
 class SdOutliner::Implementation
 {
 public:
@@ -482,17 +471,6 @@ bool SdOutliner::StartSearchAndReplace (const SvxSearchItem* pSearchItem)
                     bEndOfSearch = false;
             }
             mnStartPageIndex = sal_uInt16(-1);
-        }
-
-        SfxChildWindow *pChildWin =
-            SfxViewFrame::Current()->GetChildWindow(
-            SvxSearchDialogWrapper::GetChildWindowId());
-        if (pChildWin)
-        {
-            SvxSearchDialog* pSearchDlg =
-                static_cast<SvxSearchDialog*>(pChildWin->GetController().get());
-            pSearchDlg->SetDocWin( pViewShell->GetActiveWindow(), nCommand );
-            pSearchDlg->SetSrchFlag(false);
         }
     }
 

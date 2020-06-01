@@ -28,17 +28,17 @@ using namespace ::com::sun::star;
 
 SvXMLImportContext::SvXMLImportContext( SvXMLImport& rImp, sal_uInt16 nPrfx,
                               const OUString& rLName )
-    : m_nRefCount(0)
-    , mrImport(rImp)
-    , mnPrefix(nPrfx)
+    : mrImport(rImp)
     , maLocalName(rLName)
+    , m_nRefCount(0)
+    , mnPrefix(nPrfx)
     , mbPrefixAndLocalNameFilledIn(true)
 {
 }
 
 SvXMLImportContext::SvXMLImportContext( SvXMLImport& rImp )
-    : m_nRefCount(0)
-    , mrImport(rImp)
+    : mrImport(rImp)
+    , m_nRefCount(0)
     , mnPrefix(0)
     , mbPrefixAndLocalNameFilledIn(false)
 {
@@ -88,10 +88,7 @@ void SAL_CALL SvXMLImportContext::startUnknownElement(const OUString & /*rNamesp
 
     if ( Attribs.is() )
     {
-        sax_fastparser::FastAttributeList *pAttribList =
-            sax_fastparser::FastAttributeList::castToFastAttributeList( Attribs );
-
-        for( auto &it : *pAttribList )
+        for( auto &it : sax_fastparser::castToFastAttributeList( Attribs ) )
         {
             sal_Int32 nToken = it.getToken();
             const OUString& rAttrNamespacePrefix = SvXMLImport::getNamespacePrefixFromToken(nToken, &GetImport().GetNamespaceMap());

@@ -22,7 +22,7 @@
 #include <unotools/localedatawrapper.hxx>
 #include <unotools/resmgr.hxx>
 #include <vcl/builder.hxx>
-#include <vcl/button.hxx>
+#include <vcl/toolkit/button.hxx>
 #include <vcl/calendar.hxx>
 #include <vcl/toolkit/dialog.hxx>
 #include <vcl/edit.hxx>
@@ -68,6 +68,7 @@
 #include <tools/diagnose_ex.h>
 #include <wizdlg.hxx>
 #include <tools/svlibrary.h>
+#include <jsdialog/jsdialogbuilder.hxx>
 
 #if defined(DISABLE_DYNLOADING) || defined(LINUX)
 #include <dlfcn.h>
@@ -151,9 +152,20 @@ namespace
 }
 #endif
 
-weld::Builder* Application::CreateBuilder(weld::Widget* pParent, const OUString &rUIFile)
+weld::Builder* Application::CreateBuilder(weld::Widget* pParent, const OUString &rUIFile, bool bMobile)
 {
-    return ImplGetSVData()->mpDefInst->CreateBuilder(pParent, VclBuilderContainer::getUIRootDir(), rUIFile);
+    bool bUseJSBuilder = false;
+
+    if (bMobile)
+    {
+        if (rUIFile == "modules/swriter/ui/wordcount-mobile.ui")
+            bUseJSBuilder = true;
+    }
+
+    if (bUseJSBuilder)
+        return new JSInstanceBuilder(pParent, VclBuilderContainer::getUIRootDir(), rUIFile);
+    else
+        return ImplGetSVData()->mpDefInst->CreateBuilder(pParent, VclBuilderContainer::getUIRootDir(), rUIFile);
 }
 
 weld::Builder* Application::CreateInterimBuilder(vcl::Window* pParent, const OUString &rUIFile)
@@ -1361,83 +1373,6 @@ namespace
         return xWindow;
     }
 
-    OUString extractUnit(const OUString& sPattern)
-    {
-        OUString sUnit(sPattern);
-        for (sal_Int32 i = 0; i < sPattern.getLength(); ++i)
-        {
-            if (sPattern[i] != '.' && sPattern[i] != ',' && sPattern[i] != '0')
-            {
-                sUnit = sPattern.copy(i);
-                break;
-            }
-        }
-        return sUnit;
-    }
-
-    int extractDecimalDigits(const OUString& sPattern)
-    {
-        int nDigits = 0;
-        bool bAfterPoint = false;
-        for (sal_Int32 i = 0; i < sPattern.getLength(); ++i)
-        {
-            if (sPattern[i] == '.' || sPattern[i] == ',')
-                bAfterPoint = true;
-            else if (sPattern[i] == '0')
-            {
-                if (bAfterPoint)
-                    ++nDigits;
-            }
-            else
-                break;
-        }
-        return nDigits;
-    }
-
-    FieldUnit detectMetricUnit(const OUString& sUnit)
-    {
-        FieldUnit eUnit = FieldUnit::NONE;
-
-        if (sUnit == "mm")
-            eUnit = FieldUnit::MM;
-        else if (sUnit == "cm")
-            eUnit = FieldUnit::CM;
-        else if (sUnit == "m")
-            eUnit = FieldUnit::M;
-        else if (sUnit == "km")
-            eUnit = FieldUnit::KM;
-        else if ((sUnit == "twips") || (sUnit == "twip"))
-            eUnit = FieldUnit::TWIP;
-        else if (sUnit == "pt")
-            eUnit = FieldUnit::POINT;
-        else if (sUnit == "pc")
-            eUnit = FieldUnit::PICA;
-        else if (sUnit == "\"" || (sUnit == "in") || (sUnit == "inch"))
-            eUnit = FieldUnit::INCH;
-        else if ((sUnit == "'") || (sUnit == "ft") || (sUnit == "foot") || (sUnit == "feet"))
-            eUnit = FieldUnit::FOOT;
-        else if (sUnit == "mile" || (sUnit == "miles"))
-            eUnit = FieldUnit::MILE;
-        else if (sUnit == "ch")
-            eUnit = FieldUnit::CHAR;
-        else if (sUnit == "line")
-            eUnit = FieldUnit::LINE;
-        else if (sUnit == "%")
-            eUnit = FieldUnit::PERCENT;
-        else if ((sUnit == "pixels") || (sUnit == "pixel") || (sUnit == "px"))
-            eUnit = FieldUnit::PIXEL;
-        else if ((sUnit == "degrees") || (sUnit == "degree"))
-            eUnit = FieldUnit::DEGREE;
-        else if ((sUnit == "sec") || (sUnit == "seconds") || (sUnit == "second"))
-            eUnit = FieldUnit::SECOND;
-        else if ((sUnit == "ms") || (sUnit == "milliseconds") || (sUnit == "millisecond"))
-            eUnit = FieldUnit::MILLISECOND;
-        else if (sUnit != "0")
-            eUnit = FieldUnit::CUSTOM;
-
-        return eUnit;
-    }
-
     WinBits extractDeferredBits(VclBuilder::stringmap &rMap)
     {
         WinBits nBits = WB_3DLOOK|WB_HIDE;
@@ -1965,9 +1900,6 @@ VclPtr<vcl::Window> VclBuilder::makeObject(vcl::Window *pParent, const OString &
     {
         extractGroup(id, rMap);
         WinBits nBits = WB_CLIPCHILDREN|WB_CENTER|WB_VCENTER|WB_3DLOOK;
-        OUString sWrap = BuilderUtils::extractCustomProperty(rMap);
-        if (!sWrap.isEmpty())
-            nBits |= WB_WORDBREAK;
         VclPtr<RadioButton> xButton = VclPtr<RadioButton>::Create(pParent, nBits);
         xButton->SetImageAlign(ImageAlign::Left); //default to left
         xWindow = xButton;
@@ -1980,16 +1912,8 @@ VclPtr<vcl::Window> VclBuilder::makeObject(vcl::Window *pParent, const OString &
     else if (name == "GtkCheckButton")
     {
         WinBits nBits = WB_CLIPCHILDREN|WB_CENTER|WB_VCENTER|WB_3DLOOK;
-        OUString sWrap = BuilderUtils::extractCustomProperty(rMap);
-        if (!sWrap.isEmpty())
-            nBits |= WB_WORDBREAK;
-        //maybe always import as TriStateBox and enable/disable tristate
         bool bIsTriState = extractInconsistent(rMap);
-        VclPtr<CheckBox> xCheckBox;
-        if (bIsTriState && m_bLegacy)
-            xCheckBox = VclPtr<TriStateBox>::Create(pParent, nBits);
-        else
-            xCheckBox = VclPtr<CheckBox>::Create(pParent, nBits);
+        VclPtr<CheckBox> xCheckBox = VclPtr<CheckBox>::Create(pParent, nBits);
         if (bIsTriState)
         {
             xCheckBox->EnableTriState(true);
@@ -2007,61 +1931,26 @@ VclPtr<vcl::Window> VclBuilder::makeObject(vcl::Window *pParent, const OString &
     else if (name == "GtkSpinButton")
     {
         OUString sAdjustment = extractAdjustment(rMap);
-        OUString sPattern = BuilderUtils::extractCustomProperty(rMap);
-        OUString sUnit = extractUnit(sPattern);
 
-        WinBits nBits = WB_CLIPCHILDREN|WB_LEFT|WB_BORDER|WB_3DLOOK;
-        if (!id.endsWith("-nospin"))
-            nBits |= WB_SPIN | WB_REPEAT;
+        WinBits nBits = WB_CLIPCHILDREN|WB_LEFT|WB_BORDER|WB_3DLOOK|WB_SPIN|WB_REPEAT;
 
-        if (sPattern.isEmpty())
+        if (m_bLegacy)
         {
-            SAL_INFO("vcl.builder", "making numeric field for " << name << " " << sUnit);
-            if (m_bLegacy)
-            {
-                connectNumericFormatterAdjustment(id, sAdjustment);
-                xWindow = VclPtr<NumericField>::Create(pParent, nBits);
-            }
-            else
-            {
-                connectFormattedFormatterAdjustment(id, sAdjustment);
-                VclPtrInstance<FormattedField> xField(pParent, nBits);
-                xField->SetMinValue(0);
-                xWindow = xField;
-            }
+            connectNumericFormatterAdjustment(id, sAdjustment);
+            xWindow = VclPtr<NumericField>::Create(pParent, nBits);
         }
         else
         {
-            if (sPattern == "hh:mm")
-            {
-                connectTimeFormatterAdjustment(id, sAdjustment);
-                SAL_INFO("vcl.builder", "making time field for " << name << " " << sUnit);
-                xWindow = VclPtr<TimeField>::Create(pParent, nBits);
-            }
-            else if (sPattern == "yy:mm:dd")
-            {
-                connectDateFormatterAdjustment(id, sAdjustment);
-                SAL_INFO("vcl.builder", "making date field for " << name << " " << sUnit);
-                xWindow = VclPtr<DateField>::Create(pParent, nBits);
-            }
-            else
-            {
-                connectNumericFormatterAdjustment(id, sAdjustment);
-                FieldUnit eUnit = detectMetricUnit(sUnit);
-                SAL_INFO("vcl.builder", "making metric field for " << name << " " << sUnit);
-                VclPtrInstance<MetricField> xField(pParent, nBits);
-                xField->SetUnit(eUnit);
-                if (eUnit == FieldUnit::CUSTOM)
-                    xField->SetCustomUnitText(sUnit);
-                xWindow = xField;
-            }
+            connectFormattedFormatterAdjustment(id, sAdjustment);
+            VclPtrInstance<FormattedField> xField(pParent, nBits);
+            xField->SetMinValue(0);
+            xWindow = xField;
         }
     }
     else if (name == "GtkLinkButton")
         xWindow = VclPtr<FixedHyperlink>::Create(pParent, WB_CENTER|WB_VCENTER|WB_3DLOOK|WB_NOLABEL);
     else if (name == "GtkComboBox" || name == "GtkComboBoxText")
     {
-        OUString sPattern = BuilderUtils::extractCustomProperty(rMap);
         extractModel(id, rMap);
 
         WinBits nBits = WB_CLIPCHILDREN|WB_LEFT|WB_VCENTER|WB_3DLOOK;
@@ -2071,25 +1960,7 @@ VclPtr<vcl::Window> VclBuilder::makeObject(vcl::Window *pParent, const OString &
         if (bDropdown)
             nBits |= WB_DROPDOWN;
 
-        if (!sPattern.isEmpty())
-        {
-            OUString sAdjustment = extractAdjustment(rMap);
-            connectNumericFormatterAdjustment(id, sAdjustment);
-            OUString sUnit = extractUnit(sPattern);
-            FieldUnit eUnit = detectMetricUnit(sUnit);
-            SAL_WARN("vcl.builder", "making metric box for type: " << name
-                << " unit: " << sUnit
-                << " name: " << id
-                << " use a GtkSpinButton instead");
-            VclPtrInstance<MetricBox> xBox(pParent, nBits);
-            xBox->EnableAutoSize(true);
-            xBox->SetUnit(eUnit);
-            xBox->SetDecimalDigits(extractDecimalDigits(sPattern));
-            if (eUnit == FieldUnit::CUSTOM)
-                xBox->SetCustomUnitText(sUnit);
-            xWindow = xBox;
-        }
-        else if (extractEntry(rMap))
+        if (extractEntry(rMap))
         {
             VclPtrInstance<ComboBox> xComboBox(pParent, nBits);
             xComboBox->EnableAutoSize(true);
@@ -2232,9 +2103,6 @@ VclPtr<vcl::Window> VclBuilder::makeObject(vcl::Window *pParent, const OString &
     else if (name == "GtkLabel")
     {
         WinBits nWinStyle = WB_CENTER|WB_VCENTER|WB_3DLOOK;
-        OUString sBorder = BuilderUtils::extractCustomProperty(rMap);
-        if (!sBorder.isEmpty())
-            nWinStyle |= WB_BORDER;
         extractMnemonicWidget(id, rMap);
         if (extractSelectable(rMap))
             xWindow = VclPtr<SelectableFixedText>::Create(pParent, nWinStyle);
@@ -2296,20 +2164,13 @@ VclPtr<vcl::Window> VclBuilder::makeObject(vcl::Window *pParent, const OString &
     }
     else if (name == "GtkDrawingArea")
     {
-        OUString sBorder = BuilderUtils::extractCustomProperty(rMap);
-        xWindow = VclPtr<VclDrawingArea>::Create(pParent, sBorder.isEmpty() ? WB_TABSTOP : WB_BORDER | WB_TABSTOP);
+        xWindow = VclPtr<VclDrawingArea>::Create(pParent, WB_TABSTOP);
     }
     else if (name == "GtkTextView")
     {
         extractBuffer(id, rMap);
 
         WinBits nWinStyle = WB_CLIPCHILDREN|WB_LEFT;
-        if (m_bLegacy)
-        {
-            OUString sBorder = BuilderUtils::extractCustomProperty(rMap);
-            if (!sBorder.isEmpty())
-                nWinStyle |= WB_BORDER;
-        }
         //VclMultiLineEdit manages its own scrolling,
         vcl::Window *pRealParent = prepareWidgetOwnScrolling(pParent, nWinStyle);
         if (pRealParent != pParent)
@@ -4518,32 +4379,29 @@ void VclBuilder::mungeAdjustment(NumericFormatter &rTarget, const Adjustment &rA
 
 void VclBuilder::mungeAdjustment(FormattedField &rTarget, const Adjustment &rAdjustment)
 {
+    double nMaxValue = 0, nMinValue = 0, nValue = 0, nSpinSize = 0;
+
     for (auto const& elem : rAdjustment)
     {
         const OString &rKey = elem.first;
         const OUString &rValue = elem.second;
 
         if (rKey == "upper")
-        {
-            rTarget.SetMaxValue(rValue.toDouble());
-        }
+            nMaxValue = rValue.toDouble();
         else if (rKey == "lower")
-        {
-            rTarget.SetMinValue(rValue.toDouble());
-        }
+            nMinValue = rValue.toDouble();
         else if (rKey == "value")
-        {
-            rTarget.SetValue(rValue.toDouble());
-        }
+            nValue = rValue.toDouble();
         else if (rKey == "step-increment")
-        {
-            rTarget.SetSpinSize(rValue.toDouble());
-        }
+            nSpinSize = rValue.toDouble();
         else
-        {
             SAL_INFO("vcl.builder", "unhandled property :" << rKey);
-        }
     }
+
+    rTarget.SetMinValue(nMinValue);
+    rTarget.SetMaxValue(nMaxValue);
+    rTarget.SetValue(nValue);
+    rTarget.SetSpinSize(nSpinSize);
 }
 
 void VclBuilder::mungeAdjustment(TimeField &rTarget, const Adjustment &rAdjustment)

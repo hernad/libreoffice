@@ -136,7 +136,7 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdfChangeNumberingListAutoFormat)
     CPPUNIT_ASSERT(pViewShell);
     pViewShell->Reformat();
 
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
 
     // Check that we actually test the line we need
     assertXPathContent(pXmlDoc, "/root/page/body/tab/row/cell/txt[3]", "GHI GHI GHI GHI");
@@ -287,6 +287,30 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testRedlineInHiddenSection)
     CPPUNIT_ASSERT(
         !pNode->GetNodes()[pNode->GetIndex() + 3]->GetTextNode()->getLayoutFrame(nullptr));
     CPPUNIT_ASSERT(pNode->GetNodes()[pNode->GetIndex() + 4]->IsEndNode());
+}
+
+CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf132236)
+{
+    load(DATA_DIRECTORY, "tdf132236.odt");
+
+    SwXTextDocument* const pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
+    CPPUNIT_ASSERT(pTextDoc);
+
+    // select everything and delete
+    SwWrtShell* const pWrtShell(pTextDoc->GetDocShell()->GetWrtShell());
+    pWrtShell->Down(true);
+    pWrtShell->Down(true);
+    pWrtShell->Down(true);
+    pWrtShell->Delete();
+    SwDoc* const pDoc(pWrtShell->GetDoc());
+    sw::UndoManager& rUndoManager(pDoc->GetUndoManager());
+    rUndoManager.Undo();
+
+    // check that the text frames exist inside their sections
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
+    assertXPath(pXmlDoc, "/root/page[1]/body/section[1]/txt", 1);
+    assertXPath(pXmlDoc, "/root/page[1]/body/section[2]/txt", 2);
+    assertXPath(pXmlDoc, "/root/page[1]/body/txt", 1);
 }
 
 CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf54819)
@@ -980,7 +1004,7 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf123102)
     createDoc("tdf123102.odt");
     // insert a new row after a vertically merged cell
     dispatchCommand(mxComponent, ".uno:InsertRowsAfter", {});
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     // This was "3." - caused by the hidden numbered paragraph of the new merged cell
     assertXPath(pXmlDoc, "/root/page/body/tab/row[6]/cell[1]/txt/Special", "rText", "2.");
 }
@@ -1596,9 +1620,7 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testDocxAttributeTableExport)
 
     // get the table frame, set new values and dismiss the references
     {
-        uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-        uno::Reference<container::XIndexAccess> xDrawPage = xDrawPageSupplier->getDrawPage();
-        uno::Reference<beans::XPropertySet> xShape(xDrawPage->getByIndex(0), uno::UNO_QUERY);
+        uno::Reference<beans::XPropertySet> xShape(getShape(1), uno::UNO_QUERY);
 
         // change the properties
         // 8133 -> 8000
@@ -1613,9 +1635,7 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testDocxAttributeTableExport)
     // save it to docx
     reload("Office Open XML Text", "floating-table-position.docx");
 
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDrawPage = xDrawPageSupplier->getDrawPage();
-    uno::Reference<beans::XPropertySet> xShape(xDrawPage->getByIndex(0), uno::UNO_QUERY);
+    uno::Reference<beans::XPropertySet> xShape(getShape(1), uno::UNO_QUERY);
 
     // test the new values
     sal_Int32 nValue = getProperty<sal_Int32>(xShape, "VertOrientPosition");
@@ -2355,7 +2375,7 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf118311)
     //  .uno:Cut doesn't remove the table, only the selected content of the first cell
     dispatchCommand(mxComponent, ".uno:Cut", {});
 
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     assertXPath(pXmlDoc, "//page[1]//body/tab");
 
     // .uno:SelectAll selects the whole table, and UNO command Cut cuts it
@@ -2486,7 +2506,7 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf90069)
 CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf129655)
 {
     createDoc("tdf129655-vtextbox.odt");
-    xmlDocPtr pXmlDoc = parseLayoutDump();
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
     assertXPath(pXmlDoc, "//fly/txt[@WritingMode='Vertical']", 1);
 }
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

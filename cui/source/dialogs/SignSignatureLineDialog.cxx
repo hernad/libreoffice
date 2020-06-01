@@ -18,6 +18,7 @@
 #include <comphelper/graphicmimetype.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/xmlsechelper.hxx>
+#include <comphelper/storagehelper.hxx>
 #include <sfx2/docfile.hxx>
 #include <sfx2/docfilt.hxx>
 #include <sfx2/objsh.hxx>
@@ -166,8 +167,19 @@ IMPL_LINK_NOARG(SignSignatureLineDialog, chooseCertificate, weld::Button&, void)
     if (!pShell->PrepareForSigning(m_xDialog.get()))
         return;
 
-    Reference<XDocumentDigitalSignatures> xSigner(DocumentDigitalSignatures::createWithVersion(
-        comphelper::getProcessComponentContext(), "1.2"));
+    Reference<XDocumentDigitalSignatures> xSigner;
+    if (pShell->GetMedium()->GetFilter()->IsAlienFormat())
+    {
+        xSigner
+            = DocumentDigitalSignatures::createDefault(comphelper::getProcessComponentContext());
+    }
+    else
+    {
+        OUString const aODFVersion(
+            comphelper::OStorageHelper::GetODFVersionFromStorage(pShell->GetStorage()));
+        xSigner = DocumentDigitalSignatures::createWithVersion(
+            comphelper::getProcessComponentContext(), aODFVersion);
+    }
     xSigner->setParentWindow(m_xDialog->GetXWindow());
     OUString aDescription;
     CertificateKind certificateKind = CertificateKind_NONE;
@@ -180,8 +192,8 @@ IMPL_LINK_NOARG(SignSignatureLineDialog, chooseCertificate, weld::Button&, void)
     if (xSignCertificate.is())
     {
         m_xSelectedCertifate = xSignCertificate;
-        m_xBtnChooseCertificate->set_label(
-            xmlsec::GetContentPart(xSignCertificate->getSubjectName()));
+        m_xBtnChooseCertificate->set_label(xmlsec::GetContentPart(
+            xSignCertificate->getSubjectName(), xSignCertificate->getCertificateKind()));
     }
     ValidateFields();
 }
@@ -223,7 +235,9 @@ css::uno::Reference<css::graphic::XGraphic> SignSignatureLineDialog::getSignedGr
 
     OUString aIssuerLine
         = CuiResId(RID_SVXSTR_SIGNATURELINE_SIGNED_BY)
-              .replaceFirst("%1", xmlsec::GetContentPart(m_xSelectedCertifate->getSubjectName()));
+              .replaceFirst("%1",
+                            xmlsec::GetContentPart(m_xSelectedCertifate->getSubjectName(),
+                                                   m_xSelectedCertifate->getCertificateKind()));
     aSvgImage = aSvgImage.replaceAll("[SIGNED_BY]", getCDataString(aIssuerLine));
     if (bValid)
         aSvgImage = aSvgImage.replaceAll("[INVALID_SIGNATURE]", "");

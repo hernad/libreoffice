@@ -72,8 +72,6 @@ using namespace ::com::sun::star;
 #define THROW_WHERE ""
 #endif
 
-typedef ::std::vector< uno::WeakReference< lang::XComponent > > WeakComponentVector;
-
 struct StorInternalData_Impl
 {
     rtl::Reference<comphelper::RefCountedMutex> m_xSharedMutex;
@@ -85,7 +83,7 @@ struct StorInternalData_Impl
 
     ::rtl::Reference<OChildDispListener_Impl> m_pSubElDispListener;
 
-    WeakComponentVector m_aOpenSubComponentsVector;
+    ::std::vector< uno::WeakReference< lang::XComponent > > m_aOpenSubComponentsVector;
 
     ::rtl::Reference< OHierarchyHolder_Impl > m_rHierarchyHolder;
 
@@ -1841,7 +1839,7 @@ void OStorage::InternalDispose( bool bNotifyImpl )
 
     if ( m_pData->m_bReadOnlyWrap )
     {
-        OSL_ENSURE( m_pData->m_aOpenSubComponentsVector.empty() || m_pData->m_pSubElDispListener.get(),
+        OSL_ENSURE( m_pData->m_aOpenSubComponentsVector.empty() || m_pData->m_pSubElDispListener,
                     "If any subelements are open the listener must exist!" );
 
         if (m_pData->m_pSubElDispListener)

@@ -151,7 +151,7 @@ static bool g_bInputLanguageSwitched = false;
 // not currently being pulled open. Unfortunately in MouseButtonDown there
 // is being selected at double/triple click. That selection is completely
 // finished in the Handler and thus can't be distinguished in the Up.
-// To resolve this g_bHoldSelection is set in Down at evaluated in Up.
+// To resolve this g_bHoldSelection is set in Down and evaluated in Up.
 static bool g_bHoldSelection      = false;
 
 bool g_bFrameDrag                   = false;
@@ -3054,7 +3054,7 @@ void SwEditWin::MouseButtonDown(const MouseEvent& _rMEvt)
                                                   pHdl->GetKind() != SdrHdlKind::Anchor_TR;
 
                         if ((rSh.IsInsideSelectedObj(aDocPos) || bHitHandle) &&
-                            !(rMEvt.GetModifier() == KEY_SHIFT && !bHitHandle))
+                            (rMEvt.GetModifier() != KEY_SHIFT || bHitHandle))
                         {
                             rSh.EnterSelFrameMode( &aDocPos );
                             if ( !m_pApplyTempl )
@@ -6179,7 +6179,7 @@ bool SwEditWin::IsInHeaderFooter( const Point &rDocPt, FrameControlType &rContro
         if ( rSh.IsShowHeaderFooterSeparator( FrameControlType::Header ) )
         {
             SwFrameControlPtr pControl = rMgr.GetControl( FrameControlType::Header, pPageFrame );
-            if ( pControl.get() && pControl->Contains( aPoint ) )
+            if ( pControl && pControl->Contains( aPoint ) )
             {
                 rControl = FrameControlType::Header;
                 return true;
@@ -6189,7 +6189,7 @@ bool SwEditWin::IsInHeaderFooter( const Point &rDocPt, FrameControlType &rContro
         if ( rSh.IsShowHeaderFooterSeparator( FrameControlType::Footer ) )
         {
             SwFrameControlPtr pControl = rMgr.GetControl( FrameControlType::Footer, pPageFrame );
-            if ( pControl.get() && pControl->Contains( aPoint ) )
+            if ( pControl && pControl->Contains( aPoint ) )
             {
                 rControl = FrameControlType::Footer;
                 return true;

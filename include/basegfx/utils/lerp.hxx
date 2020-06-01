@@ -17,33 +17,27 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_BASEGFX_UTILS_LERP_HXX
-#define INCLUDED_BASEGFX_UTILS_LERP_HXX
+#pragma once
 
-namespace basegfx
+namespace basegfx::utils
 {
-    namespace utils
+    /** Generic linear interpolator
+
+        @tpl ValueType
+        Must have operator+ and operator* defined, and should
+        have value semantics.
+
+        @param t
+        As usual, t must be in the [0,1] range
+    */
+    template< typename ValueType > ValueType lerp( const ValueType&     rFrom,
+                                                   const ValueType&     rTo,
+                                                   double               t )
     {
-        /** Generic linear interpolator
-
-            @tpl ValueType
-            Must have operator+ and operator* defined, and should
-            have value semantics.
-
-            @param t
-            As usual, t must be in the [0,1] range
-        */
-        template< typename ValueType > ValueType lerp( const ValueType&     rFrom,
-                                                       const ValueType&     rTo,
-                                                       double               t )
-        {
-            // This is only to suppress a double->int warning. All other
-            // types should be okay here.
-            return static_cast<ValueType>( (1.0-t)*rFrom + t*rTo );
-        }
+        // This is only to suppress a double->int warning. All other
+        // types should be okay here.
+        return static_cast<ValueType>( (1.0-t)*rFrom + t*rTo );
     }
 }
-
-#endif // INCLUDED_BASEGFX_UTILS_LERP_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

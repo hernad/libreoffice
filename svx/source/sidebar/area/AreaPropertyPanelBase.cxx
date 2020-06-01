@@ -75,7 +75,7 @@ AreaPropertyPanelBase::AreaPropertyPanelBase(
       maGradientRect(),
       mxColorTextFT(m_xBuilder->weld_label("filllabel")),
       mxLbFillType(m_xBuilder->weld_combo_box("fillstylearea")),
-      mxLbFillAttr(m_xBuilder->weld_combo_box("fillattr")),
+      mxLbFillAttr(m_xBuilder->weld_combo_box("fillattrhb")),
       mxLbFillGradFrom(new ColorListBox(m_xBuilder->weld_menu_button("fillgrad1"), GetFrameWeld())),
       mxLbFillGradTo(new ColorListBox(m_xBuilder->weld_menu_button("fillgrad2"), GetFrameWeld())),
       mxToolBoxColor(m_xBuilder->weld_toolbar("selectcolor")),
@@ -615,7 +615,7 @@ void AreaPropertyPanelBase::SelectFillAttrHdl_Impl()
 
 void AreaPropertyPanelBase::ImpUpdateTransparencies()
 {
-    if(mpTransparanceItem.get() || mpFloatTransparenceItem.get())
+    if(mpTransparanceItem || mpFloatTransparenceItem)
     {
         bool bZeroValue(false);
 
@@ -646,7 +646,7 @@ void AreaPropertyPanelBase::ImpUpdateTransparencies()
             }
         }
 
-        if(bZeroValue && mpFloatTransparenceItem.get())
+        if(bZeroValue && mpFloatTransparenceItem)
         {
             if(mpFloatTransparenceItem->IsEnabled())
             {

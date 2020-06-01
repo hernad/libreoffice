@@ -1142,7 +1142,7 @@ bool  SwDocStyleSheet::SetName(const OUString& rStr, bool bReindexNow)
 
     if( bChg )
     {
-        m_pPool->First();  // internal list has to be updated
+        m_pPool->First(nFamily);  // internal list has to be updated
         m_pPool->Broadcast( SfxStyleSheetHint( SfxHintId::StyleSheetModified, *this ) );
         SwEditShell* pSh = rDoc.GetEditShell();
         if( pSh )
@@ -2727,8 +2727,7 @@ SfxStyleSheetBase*  SwStyleSheetIterator::First()
                 }
 
                 if(  rDoc.getIDocumentSettingAccess().get(DocumentSettingId::HTML_MODE) && !(nId & USER_FMT) &&
-                    !( RES_POOLCHR_HTML_BEGIN <= nId &&
-                          nId < RES_POOLCHR_HTML_END ) &&
+                    ( RES_POOLCHR_HTML_BEGIN > nId || nId >= RES_POOLCHR_HTML_END ) &&
                     RES_POOLCHR_INET_NORMAL != nId &&
                     RES_POOLCHR_INET_VISIT != nId &&
                     RES_POOLCHR_FOOTNOTE  != nId &&
@@ -3189,7 +3188,8 @@ void SwStyleSheetIterator::AppendStyleList(const std::vector<OUString>& rList,
 
 void SwDocStyleSheetPool::InvalidateIterator()
 {
-    dynamic_cast<SwStyleSheetIterator&>(GetIterator_Impl()).InvalidateIterator();
+    if (SfxStyleSheetIterator* pIter = GetCachedIterator())
+        dynamic_cast<SwStyleSheetIterator&>(*pIter).InvalidateIterator();
 }
 
 void SwStyleSheetIterator::InvalidateIterator()

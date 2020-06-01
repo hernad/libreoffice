@@ -18,9 +18,9 @@ $(eval $(call gb_UIConfig_add_uifiles,sfx,\
 	sfx2/uiconfig/ui/charmapcontrol \
 	sfx2/uiconfig/ui/charviewmenu \
 	sfx2/uiconfig/ui/checkin \
+	sfx2/uiconfig/ui/classificationbox \
 	sfx2/uiconfig/ui/cmisinfopage \
 	sfx2/uiconfig/ui/cmisline \
-	sfx2/uiconfig/ui/classificationbox \
 	sfx2/uiconfig/ui/custominfopage \
 	sfx2/uiconfig/ui/descriptioninfopage \
 	sfx2/uiconfig/ui/dockingwindow \
@@ -38,6 +38,7 @@ $(eval $(call gb_UIConfig_add_uifiles,sfx,\
 	sfx2/uiconfig/ui/helpindexpage \
 	sfx2/uiconfig/ui/helpmanual \
 	sfx2/uiconfig/ui/helpsearchpage \
+	sfx2/uiconfig/ui/helpwindow \
 	sfx2/uiconfig/ui/inputdialog \
 	sfx2/uiconfig/ui/licensedialog \
 	sfx2/uiconfig/ui/linefragment \
@@ -51,6 +52,7 @@ $(eval $(call gb_UIConfig_add_uifiles,sfx,\
 	sfx2/uiconfig/ui/notebookbarpopup \
 	sfx2/uiconfig/ui/printeroptionsdialog \
 	sfx2/uiconfig/ui/querysavedialog \
+	sfx2/uiconfig/ui/saveastemplatedlg \
 	sfx2/uiconfig/ui/safemodequerydialog \
 	sfx2/uiconfig/ui/searchdialog \
 	sfx2/uiconfig/ui/securityinfopage \
@@ -58,8 +60,8 @@ $(eval $(call gb_UIConfig_add_uifiles,sfx,\
 	sfx2/uiconfig/ui/startcenter \
 	sfx2/uiconfig/ui/stylecontextmenu \
 	sfx2/uiconfig/ui/templatedlg \
-	sfx2/uiconfig/ui/saveastemplatedlg \
 	sfx2/uiconfig/ui/templatecategorydlg \
+	sfx2/uiconfig/ui/templatepanel \
 	sfx2/uiconfig/ui/urlbox \
 	sfx2/uiconfig/ui/versionsofdialog \
 	sfx2/uiconfig/ui/versioncommentdialog \

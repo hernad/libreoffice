@@ -219,46 +219,37 @@ static bool lcl_hasCategoryLabels( const Reference< chart2::XChartDocument >& xC
     return xCategories.is();
 }
 
-static bool lcl_isCategoryAxisShifted(const Reference< chart2::XChartDocument >& xChartDoc)
+static bool lcl_isCategoryAxisShifted( const Reference< chart2::XDiagram >& xDiagram )
 {
-    Reference< chart2::XDiagram > xDiagram(xChartDoc->getFirstDiagram());
-    bool isCategoryPositionShifted = false;
-
+    bool bCategoryPositionShifted = false;
     try
     {
         Reference< chart2::XCoordinateSystemContainer > xCooSysCnt(
             xDiagram, uno::UNO_QUERY_THROW);
         const Sequence< Reference< chart2::XCoordinateSystem > > aCooSysSeq(
             xCooSysCnt->getCoordinateSystems());
-        for( const auto& xCooSys : aCooSysSeq )
+        for (const auto& xCooSys : aCooSysSeq)
         {
             OSL_ASSERT(xCooSys.is());
-            for( sal_Int32 nN = xCooSys->getDimension(); nN--; )
+            if( 0 < xCooSys->getDimension() && 0 <= xCooSys->getMaximumAxisIndexByDimension(0) )
             {
-                const sal_Int32 nMaxAxisIndex = xCooSys->getMaximumAxisIndexByDimension(nN);
-                for( sal_Int32 nI = 0; nI <= nMaxAxisIndex; ++nI )
+                Reference< chart2::XAxis > xAxis = xCooSys->getAxisByDimension(0, 0);
+                OSL_ASSERT(xAxis.is());
+                if (xAxis.is())
                 {
-                    Reference< chart2::XAxis > xAxis = xCooSys->getAxisByDimension(nN, nI);
-                    OSL_ASSERT(xAxis.is());
-                    if( xAxis.is())
-                    {
-                        chart2::ScaleData aScaleData = xAxis->getScaleData();
-                        if( aScaleData.AxisType == AXIS_PRIMARY_Y )
-                        {
-                            isCategoryPositionShifted = aScaleData.ShiftedCategoryPosition;
-                            break;
-                        }
-                    }
+                    chart2::ScaleData aScaleData = xAxis->getScaleData();
+                    bCategoryPositionShifted = aScaleData.ShiftedCategoryPosition;
+                    break;
                 }
             }
         }
     }
-    catch (const uno::Exception &)
+    catch (const uno::Exception&)
     {
         DBG_UNHANDLED_EXCEPTION("oox");
     }
 
-    return isCategoryPositionShifted;
+    return bCategoryPositionShifted;
 }
 
 static sal_Int32 lcl_getCategoryAxisType( const Reference< chart2::XDiagram >& xDiagram, sal_Int32 nDimensionIndex, sal_Int32 nAxisIndex )
@@ -447,7 +438,6 @@ ChartExport::ChartExport( sal_Int32 nXmlNamespace, FSHelperPtr pFS, Reference< f
     , mxChartModel( xModel )
     , mpURLTransformer(std::make_shared<URLTransformer>())
     , mbHasCategoryLabels( false )
-    , mbIsCategoryPositionShifted( false )
     , mbHasZAxis( false )
     , mbIs3DChart( false )
     , mbStacked(false)
@@ -805,7 +795,6 @@ void ChartExport::InitRangeSegmentationProperties( const Reference< chart2::XCha
         if( xDataProvider.is())
         {
             mbHasCategoryLabels = lcl_hasCategoryLabels( xChartDoc );
-            mbIsCategoryPositionShifted = lcl_isCategoryAxisShifted( xChartDoc );
         }
     }
     catch( const uno::Exception & )
@@ -2584,9 +2573,11 @@ void ChartExport::exportTextProps(const Reference<XPropertySet>& xPropSet)
     pFS->startElement(FSNS(XML_c, XML_txPr));
 
     sal_Int32 nRotation = 0;
+    const char* textWordWrap = nullptr;
+
     if (auto xServiceInfo = uno::Reference<lang::XServiceInfo>(xPropSet, uno::UNO_QUERY))
     {
-        double fMultiplier = 0;
+        double fMultiplier = 0.0;
         // We have at least two possible units of returned value: degrees (e.g., for data labels),
         // and 100ths of degree (e.g., for axes labels). The latter is returned as an Any wrapping
         // a sal_Int32 value (see WrappedTextRotationProperty::convertInnerToOuterValue), while
@@ -2594,8 +2585,15 @@ void ChartExport::exportTextProps(const Reference<XPropertySet>& xPropSet)
         // use. But testing the service info should be more robust.
         if (xServiceInfo->supportsService("com.sun.star.chart.ChartAxis"))
             fMultiplier = -600.0;
-        else if (xServiceInfo->supportsService("com.sun.star.chart2.DataSeries"))
+        else if (xServiceInfo->supportsService("com.sun.star.chart2.DataSeries") || xServiceInfo->supportsService("com.sun.star.chart2.DataPointProperties"))
+        {
             fMultiplier = -60000.0;
+            bool bTextWordWrap = false;
+            if ((xPropSet->getPropertyValue("TextWordWrap") >>= bTextWordWrap) && bTextWordWrap)
+                textWordWrap = "square";
+            else
+                textWordWrap = "none";
+        }
 
         if (fMultiplier)
         {
@@ -2603,25 +2601,26 @@ void ChartExport::exportTextProps(const Reference<XPropertySet>& xPropSet)
             uno::Any aAny = xPropSet->getPropertyValue("TextRotation");
             if (aAny.hasValue() && (aAny >>= fTextRotation))
             {
+                fTextRotation *= fMultiplier;
                 // The MS Office UI allows values only in range of [-90,90].
-                if (fTextRotation > 9000.0 && fTextRotation < 27000.0)
+                if (fTextRotation < -5400000.0 && fTextRotation > -16200000.0)
                 {
                     // Reflect the angle if the value is between 90° and 270°
-                    fTextRotation -= 18000.0;
+                    fTextRotation += 10800000.0;
                 }
-                else if (fTextRotation >=27000.0)
+                else if (fTextRotation <= -16200000.0)
                 {
-                    fTextRotation -= 36000.0;
+                    fTextRotation += 21600000.0;
                 }
-                nRotation = std::round(fTextRotation * fMultiplier);
+                nRotation = std::round(fTextRotation);
             }
         }
     }
 
     if (nRotation)
-        pFS->singleElement(FSNS(XML_a, XML_bodyPr), XML_rot, OString::number(nRotation));
+        pFS->singleElement(FSNS(XML_a, XML_bodyPr), XML_rot, OString::number(nRotation), XML_wrap, textWordWrap);
     else
-        pFS->singleElement(FSNS(XML_a, XML_bodyPr));
+        pFS->singleElement(FSNS(XML_a, XML_bodyPr), XML_wrap, textWordWrap);
 
     pFS->singleElement(FSNS(XML_a, XML_lstStyle));
 
@@ -3095,7 +3094,7 @@ void ChartExport::_exportAxis(
     // crossBetween
     if( nAxisType == XML_valAx )
     {
-        if( mbIsCategoryPositionShifted )
+        if( lcl_isCategoryAxisShifted( mxNewDiagram ))
             pFS->singleElement(FSNS(XML_c, XML_crossBetween), XML_val, "between");
         else
             pFS->singleElement(FSNS(XML_c, XML_crossBetween), XML_val, "midCat");

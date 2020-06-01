@@ -238,6 +238,7 @@ struct ImplAllSettingsData
     LanguageTag                             maUILocale;
     std::unique_ptr<LocaleDataWrapper>      mpLocaleDataWrapper;
     std::unique_ptr<LocaleDataWrapper>      mpUILocaleDataWrapper;
+    std::unique_ptr<LocaleDataWrapper>      mpNeutralLocaleDataWrapper;
     std::unique_ptr<vcl::I18nHelper>        mpI18nHelper;
     std::unique_ptr<vcl::I18nHelper>        mpUII18nHelper;
     SvtSysLocale                            maSysLocale;
@@ -2755,6 +2756,7 @@ ImplAllSettingsData::~ImplAllSettingsData()
 {
     mpLocaleDataWrapper.reset();
     mpUILocaleDataWrapper.reset();
+    mpNeutralLocaleDataWrapper.reset();
     mpI18nHelper.reset();
     mpUII18nHelper.reset();
 }
@@ -2989,6 +2991,14 @@ const LocaleDataWrapper& AllSettings::GetUILocaleDataWrapper() const
         const_cast<AllSettings*>(this)->mxData->mpUILocaleDataWrapper.reset( new LocaleDataWrapper(
             comphelper::getProcessComponentContext(), GetUILanguageTag() ) );
     return *mxData->mpUILocaleDataWrapper;
+}
+
+const LocaleDataWrapper& AllSettings::GetNeutralLocaleDataWrapper() const
+{
+    if ( !mxData->mpNeutralLocaleDataWrapper )
+        const_cast<AllSettings*>(this)->mxData->mpNeutralLocaleDataWrapper.reset( new LocaleDataWrapper(
+            comphelper::getProcessComponentContext(), LanguageTag("en-US") ) );
+    return *mxData->mpNeutralLocaleDataWrapper;
 }
 
 const vcl::I18nHelper& AllSettings::GetLocaleI18nHelper() const

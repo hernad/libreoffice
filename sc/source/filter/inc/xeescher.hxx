@@ -32,11 +32,9 @@
 class ScPostIt;
 
 namespace utl { class TempFile; }
-namespace com { namespace sun { namespace star { namespace chart { class XChartDocument; } } } }
+namespace com::sun::star::chart { class XChartDocument; }
+namespace com::sun::star::script { struct ScriptEventDescriptor; }
 
-namespace com { namespace sun { namespace star {
-    namespace script { struct ScriptEventDescriptor; }
-} } }
 
 // DFF client anchor ==========================================================
 
@@ -190,6 +188,8 @@ private:
     XclTokenArrayRef    mxCellLink;     /// Formula for linked cell.
     XclTokenArrayRef    mxSrcRange;     /// Formula for source data range.
     sal_uInt16          mnEntryCount;   /// Number of entries in source range.
+protected:
+    ScAddress mxCellLinkAddress;
 };
 
 class XclMacroHelper : public XclExpControlHelper
@@ -257,6 +257,13 @@ public:
         @return  true = The passed event descriptor was valid, macro name has been found. */
     bool                SetMacroLink( const css::script::ScriptEventDescriptor& rEvent );
 
+    virtual void        SaveXml( XclExpXmlStream& rStrm ) override;
+
+    OUString SaveControlPropertiesXml(XclExpXmlStream& rStrm) const;
+    void SaveSheetXml(XclExpXmlStream& rStrm, const OUString& aIdFormControlPr) const;
+
+    void setShapeId(sal_Int32 aShapeId);
+
 private:
     virtual void        WriteSubRecs( XclExpStream& rStrm ) override;
 
@@ -266,6 +273,7 @@ private:
     void                WriteSbs( XclExpStream& rStrm );
 
 private:
+    const css::uno::Reference< css::drawing::XShape > mxShape;
     ScfInt16Vec         maMultiSel;     /// Indexes of all selected entries in a multi selection.
     XclTbxEventType     meEventType;    /// Type of supported macro event.
     sal_Int32           mnHeight;       /// Height of the control.
@@ -281,6 +289,13 @@ private:
     bool                mbFlatBorder;   /// False = 3D border style; True = Flat border style.
     bool                mbMultiSel;     /// true = Multi selection in listbox.
     bool                mbScrollHor;    /// Scrollbar: true = horizontal.
+    bool                mbPrint;
+    bool                mbVisible;
+    OUString            msCtrlName;
+    OUString            msLabel;
+    sal_Int32           mnShapeId;
+    tools::Rectangle    maAreaFrom;
+    tools::Rectangle    maAreaTo;
 };
 
 //#endif
@@ -420,7 +435,7 @@ private:
 
 private:
     std::shared_ptr< ::utl::TempFile > mxTempFile;
-    std::shared_ptr< SvStream >  mxDffStrm;
+    std::unique_ptr< SvStream >  mxDffStrm;
     std::shared_ptr< XclEscherEx > mxEscherEx;
     rtl::Reference< XclExpObjList > mxObjList;
 };

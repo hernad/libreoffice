@@ -35,7 +35,7 @@
 #include <svl/style.hxx>
 #include <svtools/ctrltool.hxx>
 #include <svtools/borderhelper.hxx>
-#include <svtools/InterimItemWindow.hxx>
+#include <vcl/InterimItemWindow.hxx>
 #include <sfx2/tplpitem.hxx>
 #include <sfx2/sfxstatuslistener.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
@@ -104,7 +104,7 @@
 
 #define MAX_MRU_FONTNAME_ENTRIES    5
 
-#define COMBO_WIDTH_IN_CHARS        16
+#define COMBO_WIDTH_IN_CHARS        18
 
 // namespaces
 using namespace ::editeng;
@@ -213,7 +213,6 @@ protected:
     SfxStyleFamily                  eStyleFamily;
     int                             m_nMaxUserDrawFontWidth;
     bool                            bRelease;
-    bool                            bVisible;
     Reference< XDispatchProvider >  m_xDispatchProvider;
     Reference< XFrame >             m_xFrame;
     OUString                        m_aCommand;
@@ -301,7 +300,6 @@ class SvxFontNameBox_Base
 {
 protected:
     SvxFontNameToolBoxControl& m_rCtrl;
-    int m_nCharWidth;
 
     std::unique_ptr<FontNameBox>   m_xWidget;
     const FontList*                pFontList;
@@ -834,7 +832,6 @@ SvxStyleBox_Base::SvxStyleBox_Base(std::unique_ptr<weld::ComboBox> xWidget,
     , eStyleFamily( eFamily )
     , m_nMaxUserDrawFontWidth(0)
     , bRelease( true )
-    , bVisible(false)
     , m_xDispatchProvider( rDispatchProvider )
     , m_xFrame(_xFrame)
     , m_aCommand( rCommand )
@@ -855,10 +852,7 @@ SvxStyleBox_Base::SvxStyleBox_Base(std::unique_ptr<weld::ComboBox> xWidget,
     m_xWidget->connect_custom_render(LINK(this, SvxStyleBox_Base, CustomRenderHdl));
     m_xWidget->set_custom_renderer();
 
-    int nCharWidth = m_xWidget->get_approximate_digit_width() * COMBO_WIDTH_IN_CHARS;
-    // set width in chars low so the size request will not be overridden
-    m_xWidget->set_entry_width_chars(1);
-    m_xWidget->set_size_request(nCharWidth, -1);
+    m_xWidget->set_entry_width_chars(COMBO_WIDTH_IN_CHARS);
 }
 
 IMPL_LINK(SvxStyleBox_Base, CustomGetSizeHdl, OutputDevice&, rArg, Size)
@@ -974,9 +968,7 @@ void SvxStyleBox_Base::Select(bool bNonTravelSelect)
 
     if ( pPool )
     {
-        pPool->SetSearchMask( eStyleFamily );
-
-        pStyle = pPool->First();
+        pStyle = pPool->First(eStyleFamily);
         while ( pStyle && pStyle->GetName() != aSearchEntry )
             pStyle = pPool->Next();
     }
@@ -1092,6 +1084,12 @@ bool SvxStyleBox_Base::AdjustFontForItemHeight(OutputDevice& rDevice, tools::Rec
 
 void SvxStyleBox_Impl::SetOptimalSize()
 {
+    // set width in chars low so the size request will not be overridden
+    m_xWidget->set_entry_width_chars(1);
+    // tdf#132338 purely using this calculation to keep things their traditional width
+    Size aSize(LogicToPixel(Size(COMBO_WIDTH_IN_CHARS * 4, 0), MapMode(MapUnit::MapAppFont)));
+    m_xWidget->set_size_request(aSize.Width(), -1);
+
     SetSizePixel(get_preferred_size());
 }
 
@@ -1139,9 +1137,7 @@ void SvxStyleBox_Base::SetupEntry(vcl::RenderContext& rRenderContext, sal_Int32 
 
         if ( pPool )
         {
-            pPool->SetSearchMask( eStyleFamily );
-
-            pStyle = pPool->First();
+            pStyle = pPool->First(eStyleFamily);
             while (pStyle && pStyle->GetName() != rStyleName)
                 pStyle = pPool->Next();
         }
@@ -1444,7 +1440,6 @@ SvxFontNameBox_Base::SvxFontNameBox_Base(std::unique_ptr<weld::ComboBox> xWidget
                                          const Reference<XFrame>& rFrame,
                                          SvxFontNameToolBoxControl& rCtrl)
     : m_rCtrl(rCtrl)
-    , m_nCharWidth(xWidget->get_approximate_digit_width() * COMBO_WIDTH_IN_CHARS)
     , m_xWidget(new FontNameBox(std::move(xWidget)))
     , pFontList(nullptr)
     , nFtCount(0)
@@ -1462,9 +1457,7 @@ SvxFontNameBox_Base::SvxFontNameBox_Base(std::unique_ptr<weld::ComboBox> xWidget
     m_xWidget->connect_focus_out(LINK(this, SvxFontNameBox_Base, FocusOutHdl));
     m_xWidget->connect_get_property_tree(LINK(this, SvxFontNameBox_Base, DumpAsPropertyTreeHdl));
 
-    // set width in chars low so the size request will not be overridden
-    m_xWidget->set_entry_width_chars(1);
-    m_xWidget->set_size_request(m_nCharWidth, -1);
+    m_xWidget->set_entry_width_chars(COMBO_WIDTH_IN_CHARS);
 }
 
 SvxFontNameBox_Impl::SvxFontNameBox_Impl(vcl::Window* pParent, const Reference<XDispatchProvider>& rDispatchProvider,
@@ -1597,6 +1590,12 @@ IMPL_LINK_NOARG(SvxFontNameBox_Base, FocusOutHdl, weld::Widget&, void)
 
 void SvxFontNameBox_Impl::SetOptimalSize()
 {
+    // set width in chars low so the size request will not be overridden
+    m_xWidget->set_entry_width_chars(1);
+    // tdf#132338 purely using this calculation to keep things their traditional width
+    Size aSize(LogicToPixel(Size(COMBO_WIDTH_IN_CHARS * 4, 0), MapMode(MapUnit::MapAppFont)));
+    m_xWidget->set_size_request(aSize.Width(), -1);
+
     SetSizePixel(get_preferred_size());
 }
 
@@ -2748,14 +2747,14 @@ void SvxStyleToolBoxControl::FillStyleBox()
     if ( pStyleSheetPool && pBox && nActFamily!=0xffff )
     {
         const SfxStyleFamily    eFamily     = GetActFamily();
-        sal_uInt16              nCount      = pStyleSheetPool->Count();
         SfxStyleSheetBase*      pStyle      = nullptr;
         bool                    bDoFill     = false;
 
-        pStyleSheetPool->SetSearchMask( eFamily, SfxStyleSearchBits::Used );
+        auto xIter = pStyleSheetPool->CreateIterator(eFamily, SfxStyleSearchBits::Used);
+        sal_uInt16 nCount = xIter->Count();
 
         // Check whether fill is necessary
-        pStyle = pStyleSheetPool->First();
+        pStyle = xIter->First();
         //!!! TODO: This condition isn't right any longer, because we always show some default entries
         //!!! so the list doesn't show the count
         if ( nCount != pBox->get_count() )
@@ -2768,7 +2767,7 @@ void SvxStyleToolBoxControl::FillStyleBox()
             while ( pStyle && !bDoFill )
             {
                 bDoFill = ( pBox->get_text(i) != pStyle->GetName() );
-                pStyle = pStyleSheetPool->Next();
+                pStyle = xIter->Next();
                 i++;
             }
         }
@@ -2782,7 +2781,7 @@ void SvxStyleToolBoxControl::FillStyleBox()
             std::vector<OUString> aStyles;
 
             {
-                pStyle = pStyleSheetPool->Next();
+                pStyle = xIter->Next();
 
                 if( pImpl->bSpecModeWriter || pImpl->bSpecModeCalc )
                 {
@@ -2802,7 +2801,7 @@ void SvxStyleToolBoxControl::FillStyleBox()
 
                         if( bInsert )
                             aStyles.push_back(aName);
-                        pStyle = pStyleSheetPool->Next();
+                        pStyle = xIter->Next();
                     }
                 }
                 else
@@ -2810,7 +2809,7 @@ void SvxStyleToolBoxControl::FillStyleBox()
                     while ( pStyle )
                     {
                         aStyles.push_back(pStyle->GetName());
-                        pStyle = pStyleSheetPool->Next();
+                        pStyle = xIter->Next();
                     }
                 }
             }

@@ -40,7 +40,7 @@ class EPUBExportTest : public test::BootstrapFixture,
 protected:
     uno::Reference<lang::XComponent> mxComponent;
     utl::TempFile maTempFile;
-    xmlDocPtr mpXmlDoc = nullptr;
+    xmlDocUniquePtr mpXmlDoc;
     uno::Reference<packages::zip::XZipFileAccess2> mxZipFile;
     OUString maFilterOptions;
 
@@ -50,7 +50,7 @@ public:
     void registerNamespaces(xmlXPathContextPtr& pXmlXpathCtx) override;
     void createDoc(const OUString& rFile, const uno::Sequence<beans::PropertyValue>& rFilterData);
     /// Returns an XML representation of the stream named rName in the exported package.
-    xmlDocPtr parseExport(const OUString& rName);
+    xmlDocUniquePtr parseExport(const OUString& rName);
     /// Parses a CSS representation of the stream named rName and returns it.
     std::map<OUString, std::vector<OUString>> parseCss(const OUString& rName);
     /// Looks up a key of a class in rCss.
@@ -70,11 +70,7 @@ void EPUBExportTest::tearDown()
     if (mxComponent.is())
         mxComponent->dispose();
 
-    if (mpXmlDoc)
-    {
-        xmlFreeDoc(mpXmlDoc);
-        mpXmlDoc = nullptr;
-    }
+    mpXmlDoc.reset();
 
     test::BootstrapFixture::tearDown();
 }
@@ -108,10 +104,10 @@ void EPUBExportTest::createDoc(const OUString& rFile,
         = packages::zip::ZipFileAccess::createWithURL(mxComponentContext, maTempFile.GetURL());
 }
 
-xmlDocPtr EPUBExportTest::parseExport(const OUString& rName)
+xmlDocUniquePtr EPUBExportTest::parseExport(const OUString& rName)
 {
     uno::Reference<io::XInputStream> xInputStream(mxZipFile->getByName(rName), uno::UNO_QUERY);
-    std::shared_ptr<SvStream> pStream(utl::UcbStreamHelper::CreateStream(xInputStream, true));
+    std::unique_ptr<SvStream> pStream(utl::UcbStreamHelper::CreateStream(xInputStream, true));
     return parseXmlStream(pStream.get());
 }
 
@@ -120,7 +116,7 @@ std::map<OUString, std::vector<OUString>> EPUBExportTest::parseCss(const OUStrin
     std::map<OUString, std::vector<OUString>> aRet;
 
     uno::Reference<io::XInputStream> xInputStream(mxZipFile->getByName(rName), uno::UNO_QUERY);
-    std::shared_ptr<SvStream> pStream(utl::UcbStreamHelper::CreateStream(xInputStream, true));
+    std::unique_ptr<SvStream> pStream(utl::UcbStreamHelper::CreateStream(xInputStream, true));
 
     // Minimal CSS handler till orcus is up to our needs.
     OString aLine;
@@ -780,7 +776,6 @@ CPPUNIT_TEST_FIXTURE(EPUBExportTest, testPageSize)
     assertXPath(mpXmlDoc, "/xhtml:html/xhtml:head/xhtml:meta[@name='viewport']", "content",
                 "width=816, height=1056");
 
-    xmlFreeDoc(mpXmlDoc);
     mpXmlDoc = parseExport("OEBPS/images/image0001.svg");
     // This was 288mm, logic->logic conversion input was a pixel value.
     assertXPath(mpXmlDoc, "/svg:svg", "width", "216mm");
@@ -797,7 +792,7 @@ CPPUNIT_TEST_FIXTURE(EPUBExportTest, testSVG)
     CPPUNIT_ASSERT(mxZipFile->hasByName("OEBPS/images/image0001.svg"));
     uno::Reference<io::XInputStream> xInputStream(
         mxZipFile->getByName("OEBPS/images/image0001.svg"), uno::UNO_QUERY);
-    std::shared_ptr<SvStream> pStream(utl::UcbStreamHelper::CreateStream(xInputStream, true));
+    std::unique_ptr<SvStream> pStream(utl::UcbStreamHelper::CreateStream(xInputStream, true));
 
     SvMemoryStream aMemoryStream;
     aMemoryStream.WriteStream(*pStream);
@@ -835,8 +830,6 @@ CPPUNIT_TEST_FIXTURE(EPUBExportTest, testTdf115623SplitByChapter)
         OUString aClass = getXPath(mpXmlDoc, "//xhtml:body", "class");
         CPPUNIT_ASSERT_EQUAL(OUString("vertical-rl"),
                              EPUBExportTest::getCss(aCssDoc, aClass, "writing-mode"));
-        xmlFreeDoc(mpXmlDoc);
-        mpXmlDoc = nullptr;
     }
     // Split HTML should keep the same writing-mode.
     {
@@ -857,8 +850,6 @@ CPPUNIT_TEST_FIXTURE(EPUBExportTest, testTdf115623ManyPageSpans)
         OUString aClass = getXPath(mpXmlDoc, "//xhtml:body", "class");
         CPPUNIT_ASSERT_EQUAL(OUString("vertical-rl"),
                              EPUBExportTest::getCss(aCssDoc, aClass, "writing-mode"));
-        xmlFreeDoc(mpXmlDoc);
-        mpXmlDoc = nullptr;
     }
     {
         mpXmlDoc = parseExport("OEBPS/sections/section0002.xhtml");

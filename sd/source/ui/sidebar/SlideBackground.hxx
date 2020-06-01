@@ -30,7 +30,7 @@
 #include <sfx2/sidebar/IContextChangeReceiver.hxx>
 
 namespace sd { class ViewShellBase; }
-namespace sd { namespace tools { class EventMultiplexerEvent; } }
+namespace sd::tools { class EventMultiplexerEvent; }
 
 class ColorListBox;
 class SvxPageItem;
@@ -44,7 +44,7 @@ class XFillHatchItem;
 
 static const long MINBODY = 284;
 
-namespace sd { namespace sidebar {
+namespace sd::sidebar {
 
 class SlideBackground :
     public PanelLayout,
@@ -86,7 +86,8 @@ private:
     std::unique_ptr<weld::ComboBox> mxFillStyle;
     std::unique_ptr<ColorListBox> mxFillLB;
     std::unique_ptr<weld::ComboBox> mxFillAttr;
-    std::unique_ptr<ColorListBox> mxFillGrad;
+    std::unique_ptr<ColorListBox> mxFillGrad1;
+    std::unique_ptr<ColorListBox> mxFillGrad2;
     std::unique_ptr<weld::Button> mxInsertImage;
     std::unique_ptr<weld::CheckButton> mxDspMasterBackground;
     std::unique_ptr<weld::CheckButton> mxDspMasterObjects;
@@ -179,7 +180,7 @@ private:
     static FieldUnit GetCurrentUnit(SfxItemState eState, const SfxPoolItem* pState);
 };
 
-}}
+}
 
 #endif
 

@@ -24,14 +24,12 @@
 #include <drawinglayer/primitive2d/textprimitive2d.hxx>
 #include <drawinglayer/primitive2d/textenumsprimitive2d.hxx>
 
-namespace basegfx { namespace utils {
+namespace basegfx::utils {
     class B2DHomMatrixBufferedOnDemandDecompose;
-}}
+}
 
-namespace drawinglayer
+namespace drawinglayer::primitive2d
 {
-    namespace primitive2d
-    {
         /** TextDecoratedPortionPrimitive2D class
 
             This primitive expands the TextSimplePortionPrimitive2D by common
@@ -121,7 +119,6 @@ namespace drawinglayer
             /// provide unique ID
             virtual sal_uInt32 getPrimitive2DID() const override;
         };
-    } // end of namespace primitive2d
-} // end of namespace drawinglayer
+} // end of namespace drawinglayer::primitive2d
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

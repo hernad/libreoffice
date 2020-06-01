@@ -19,6 +19,8 @@
 
 #include <sal/config.h>
 
+#include <utility>
+
 #include <com/sun/star/datatransfer/UnsupportedFlavorException.hpp>
 #include <com/sun/star/lang/IllegalArgumentException.hpp>
 #include <sal/types.h>
@@ -143,8 +145,8 @@ Sequence< DataFlavor > SAL_CALL OSXTransferable::getTransferDataFlavors(  )
 
 sal_Bool SAL_CALL OSXTransferable::isDataFlavorSupported(const DataFlavor& aFlavor)
 {
-    for (sal_Int32 i = 0; i < mFlavorList.getLength(); i++)
-      if (compareDataFlavors(aFlavor, mFlavorList[i]))
+    for (const DataFlavor& rFlavor : std::as_const(mFlavorList))
+      if (compareDataFlavors(aFlavor, rFlavor))
         return true;
 
     return false;

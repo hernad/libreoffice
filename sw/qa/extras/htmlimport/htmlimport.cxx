@@ -152,10 +152,8 @@ DECLARE_HTMLIMPORT_TEST(testListStyleType, "list-style.html")
     xLevels->getByIndex(0) >>= aProps; // 1st level
 
     bool bBulletFound=false;
-    for (int i = 0; i < aProps.getLength(); ++i)
+    for (beans::PropertyValue const & rProp : std::as_const(aProps))
     {
-        const beans::PropertyValue& rProp = aProps[i];
-
         if (rProp.Name == "BulletChar")
         {
             // should be 'o'.
@@ -173,10 +171,8 @@ DECLARE_HTMLIMPORT_TEST(testListStyleType, "list-style.html")
                 uno::UNO_QUERY);
     xLevels->getByIndex(0) >>= aProps; // 1st level
 
-    for (int i = 0; i < aProps.getLength(); ++i)
+    for (beans::PropertyValue const & rProp : std::as_const(aProps))
     {
-        const beans::PropertyValue& rProp = aProps[i];
-
         if (rProp.Name == "NumberingType")
         {
             printf("style is %d\n", rProp.Value.get<sal_Int16>());
@@ -384,6 +380,13 @@ DECLARE_HTMLIMPORT_TEST(testTdf122789, "tdf122789.html")
     CPPUNIT_ASSERT_EQUAL(static_cast<sal_uInt8>(70), rFormats[0]->GetAttrSet().GetFrameSize().GetWidthPercent());
 }
 
+DECLARE_HTMLIMPORT_TEST(testTdf118579, "tdf118579.html")
+{
+    //Without the fix in place, the file fails to load
+    SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
+    CPPUNIT_ASSERT(pTextDoc);
+}
+
 DECLARE_HTMLIMPORT_TEST(testReqIfPageStyle, "reqif-page-style.xhtml")
 {
     // Without the accompanying fix in place, this test would have failed with
@@ -422,6 +425,27 @@ CPPUNIT_TEST_FIXTURE(SwHtmlOptionsImportTest, testAllowedRTFOLEMimeTypes)
     // Without the accompanying fix in place, this test would have failed, because the returned
     // embedded object was a dummy one, which does not support in-place editing.
     CPPUNIT_ASSERT(xEmbeddedObject.is());
+}
+
+CPPUNIT_TEST_FIXTURE(SwHtmlOptionsImportTest, testHiddenTextframe)
+{
+    // Load HTML content into Writer, similar to HTML paste.
+    uno::Sequence<beans::PropertyValue> aLoadProperties = {
+        comphelper::makePropertyValue("FilterName", OUString("HTML (StarWriter)")),
+    };
+    OUString aURL
+        = m_directories.getURLFromSrc(DATA_DIRECTORY) + "hidden-textframe.html";
+    mxComponent = loadFromDesktop(aURL, "com.sun.star.text.TextDocument", aLoadProperties);
+
+    // Check the content of the draw page.
+    uno::Reference<drawing::XDrawPageSupplier> xSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<drawing::XDrawPage> xDrawPage = xSupplier->getDrawPage();
+
+    // Without the accompanying fix in place, this test would have failed with:
+    // - Expected: 0
+    // - Actual  : 1
+    // i.e. an unexpected text frame was created, covering the actual content.
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(0), xDrawPage->getCount());
 }
 
 CPPUNIT_PLUGIN_IMPLEMENT();

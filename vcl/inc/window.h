@@ -54,36 +54,38 @@ enum class GetFocusFlags;
 enum class ParentClipMode;
 enum class SalEvent;
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
 
-namespace accessibility {
-    class XAccessible;
-    class XAccessibleContext;
-    class XAccessibleEditableText;
-}
+    namespace accessibility {
+        class XAccessible;
+        class XAccessibleContext;
+        class XAccessibleEditableText;
+    }
 
-namespace rendering {
-    class XCanvas;
-}
+    namespace rendering {
+        class XCanvas;
+    }
 
-namespace awt {
-    class XWindowPeer;
-    class XWindow;
+    namespace awt {
+        class XWindowPeer;
+        class XWindow;
+    }
+    namespace uno {
+        class Any;
+        class XInterface;
+    }
+    namespace datatransfer {
+        namespace clipboard {
+            class XClipboard;
+        }
+        namespace dnd {
+            class XDropTargetListener;
+            class XDragGestureRecognizer;
+            class XDragSource;
+            class XDropTarget;
+        }
+    }
 }
-namespace uno {
-    class Any;
-    class XInterface;
-}
-namespace datatransfer { namespace clipboard {
-    class XClipboard;
-}
-
-namespace dnd {
-    class XDropTargetListener;
-    class XDragGestureRecognizer;
-    class XDragSource;
-    class XDropTarget;
-}}}}}
 
 VCL_DLLPUBLIC Size bestmaxFrameSizeForScreenSize(const Size &rScreenSize);
 
@@ -281,7 +283,6 @@ public:
     css::uno::Reference< css::accessibility::XAccessible > mxAccessible;
     std::shared_ptr< VclSizeGroup > m_xSizeGroup;
     std::vector<VclPtr<FixedText>> m_aMnemonicLabels;
-    std::vector<css::accessibility::AccessibleRelation> m_aExtraAccessibleRelations;
     std::unique_ptr<ImplAccessibleInfos> mpAccessibleInfos;
     VCLXWindow*         mpVCLXWindow;
     vcl::Region              maWinRegion;            //< region to 'shape' the VCL window (frame coordinates)

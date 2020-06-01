@@ -20,10 +20,6 @@
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
 #include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
-#include "xmlEnums.hxx"
-#include "xmlControlProperty.hxx"
-#include "xmlComponent.hxx"
 #include <strings.hxx>
 #include <sal/log.hxx>
 #include <osl/diagnose.h>
@@ -44,9 +40,7 @@ OXMLCondPrtExpr::OXMLCondPrtExpr( ORptFilter& _rImport
     OSL_ENSURE(m_xComponent.is(),"Component is NULL!");
     try
     {
-        sax_fastparser::FastAttributeList *pAttribList =
-                        sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-        for (auto &aIter : *pAttribList)
+        for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
         {
             OUString sValue = aIter.toString();
 

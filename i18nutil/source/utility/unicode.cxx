@@ -713,7 +713,7 @@ OString unicode::getExemplarLanguageForUScriptCode(UScriptCode eScript)
             sRet = "mis";   // Hanb - Han with Bopomofo, zh-Hanb ?
             break;
         case USCRIPT_JAMO:
-            sRet = "mis";   // Jamo - Jamo subset of Hangul, ko-Jamo ?
+            sRet = "ko";   // Jamo - elements of Hangul Syllables
             break;
         case USCRIPT_SYMBOLS_EMOJI:
             sRet = "mis";   // Zsye - Emoji variant
@@ -765,6 +765,20 @@ OString unicode::getExemplarLanguageForUScriptCode(UScriptCode eScript)
             break;
         case USCRIPT_WANCHO:
             sRet = "nnp-Wcho";
+            break;
+#endif
+#if (U_ICU_VERSION_MAJOR_NUM >= 66)
+        case USCRIPT_CHORASMIAN:
+            sRet = "xco-Chrs";
+            break;
+        case USCRIPT_DIVES_AKURU:
+            sRet = "dv-Diak";
+            break;
+        case USCRIPT_KHITAN_SMALL_SCRIPT:
+            sRet = "zkt-Kits";
+            break;
+        case USCRIPT_YEZIDI:
+            sRet = "kmr-Yezi";
             break;
 #endif
     }

@@ -553,7 +553,7 @@ void SAL_CALL SdXMLExport::setSourceDocument( const Reference< lang::XComponent 
         GetXMLToken(XML_N_ANIMATION),
         XML_NAMESPACE_ANIMATION);
 
-    if( getDefaultVersion() > SvtSaveOptions::ODFVER_012 )
+    if (getSaneDefaultVersion() & SvtSaveOptions::ODFSVER_EXTENDED)
     {
         GetNamespaceMap_().Add(
             GetXMLToken(XML_NP_OFFICE_EXT),
@@ -1996,7 +1996,7 @@ void SdXMLExport::ExportStyles_(bool bUsed)
     GetShapeExport()->ExportGraphicDefaults();
 
     // do not export in ODF 1.1 or older
-    if( getDefaultVersion() >= SvtSaveOptions::ODFVER_012 )
+    if (getSaneDefaultVersion() >= SvtSaveOptions::ODFSVER_012)
         GetShapeExport()->GetShapeTableExport()->exportTableStyles();
 
     // write presentation styles
@@ -2500,7 +2500,7 @@ void SdXMLExport::collectAnnotationAutoStyles( const Reference<XDrawPage>& xDraw
 void SdXMLExport::exportAnnotations( const Reference<XDrawPage>& xDrawPage )
 {
     // do not export in ODF 1.2 or older
-    if( getDefaultVersion() <= SvtSaveOptions::ODFVER_012 )
+    if (getSaneDefaultVersion() <= SvtSaveOptions::ODFSVER_012)
         return;
 
     Reference< XAnnotationAccess > xAnnotationAccess( xDrawPage, UNO_QUERY );
@@ -2551,9 +2551,15 @@ void SdXMLExport::exportAnnotations( const Reference<XDrawPage>& xDrawPage )
                 OUString aInitials( xAnnotation->getInitials() );
                 if( !aInitials.isEmpty() )
                 {
-                    // TODO: see OFFICE-3776 export meta:creator-initials for ODF 1.3
-                    SvXMLElementExport aInitialsElem( *this, XML_NAMESPACE_LO_EXT,
-                            XML_SENDER_INITIALS, true, false );
+                    // OFFICE-3776 export meta:creator-initials for ODF 1.3
+                    SvXMLElementExport aInitialsElem( *this,
+                            (SvtSaveOptions::ODFSVER_013 <= getSaneDefaultVersion())
+                                ? XML_NAMESPACE_META
+                                : XML_NAMESPACE_LO_EXT,
+                            (SvtSaveOptions::ODFSVER_013 <= getSaneDefaultVersion())
+                                ? XML_CREATOR_INITIALS
+                                : XML_SENDER_INITIALS,
+                            true, false );
                     Characters(aInitials);
                 }
 

@@ -30,10 +30,9 @@
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
 #include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
 #include <xmloff/ProgressBarHelper.hxx>
 #include "xmlEnums.hxx"
-#include <tools/datetime.hxx>
+#include <tools/date.hxx>
 #include <unotools/datetime.hxx>
 #include <com/sun/star/util/DateTime.hpp>
 #include <rtl/math.hxx>
@@ -63,9 +62,7 @@ OXMLControlProperty::OXMLControlProperty( ORptFilter& rImport
 
     OSL_ENSURE(m_xControl.is(),"Control is NULL!");
 
-    sax_fastparser::FastAttributeList *pAttribList =
-                    sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-    for (auto &aIter : *pAttribList)
+    for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
     {
         OUString sValue = aIter.toString();
 

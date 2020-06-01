@@ -12,6 +12,9 @@
 #include <vcl/scheduler.hxx>
 #include <com/sun/star/text/TextContentAnchorType.hpp>
 #include <comphelper/propertysequence.hxx>
+#include <boost/property_tree/json_parser.hpp>
+
+#include <wrtsh.hxx>
 
 namespace
 {
@@ -30,25 +33,22 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest3, testTdf129382)
     SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
     CPPUNIT_ASSERT(pTextDoc);
 
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDraws = xDrawPageSupplier->getDrawPage();
-
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(8), xDraws->getCount());
+    CPPUNIT_ASSERT_EQUAL(8, getShapes());
     CPPUNIT_ASSERT_EQUAL(2, getPages());
     dispatchCommand(mxComponent, ".uno:SelectAll", {});
     dispatchCommand(mxComponent, ".uno:Cut", {});
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(3), xDraws->getCount());
+    CPPUNIT_ASSERT_EQUAL(3, getShapes());
     CPPUNIT_ASSERT_EQUAL(1, getPages());
     dispatchCommand(mxComponent, ".uno:Paste", {});
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(8), xDraws->getCount());
+    CPPUNIT_ASSERT_EQUAL(8, getShapes());
     CPPUNIT_ASSERT_EQUAL(2, getPages());
     dispatchCommand(mxComponent, ".uno:Undo", {});
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(3), xDraws->getCount());
+    CPPUNIT_ASSERT_EQUAL(3, getShapes());
     CPPUNIT_ASSERT_EQUAL(1, getPages());
 
     // without the fix, it crashes
     dispatchCommand(mxComponent, ".uno:Undo", {});
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(8), xDraws->getCount());
+    CPPUNIT_ASSERT_EQUAL(8, getShapes());
 }
 
 CPPUNIT_TEST_FIXTURE(SwUiWriterTest3, testTdf126626)
@@ -58,23 +58,45 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest3, testTdf126626)
     SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
     CPPUNIT_ASSERT(pTextDoc);
 
-    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
-    uno::Reference<container::XIndexAccess> xDraws = xDrawPageSupplier->getDrawPage();
-
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(2), xDraws->getCount());
+    CPPUNIT_ASSERT_EQUAL(2, getShapes());
     dispatchCommand(mxComponent, ".uno:SelectAll", {});
     dispatchCommand(mxComponent, ".uno:Copy", {});
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(2), xDraws->getCount());
+    CPPUNIT_ASSERT_EQUAL(2, getShapes());
     dispatchCommand(mxComponent, ".uno:Paste", {});
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(2), xDraws->getCount());
+    CPPUNIT_ASSERT_EQUAL(2, getShapes());
     dispatchCommand(mxComponent, ".uno:Paste", {});
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(4), xDraws->getCount());
+    CPPUNIT_ASSERT_EQUAL(4, getShapes());
     dispatchCommand(mxComponent, ".uno:Undo", {});
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(2), xDraws->getCount());
+    CPPUNIT_ASSERT_EQUAL(2, getShapes());
 
     // without the fix, it crashes
     dispatchCommand(mxComponent, ".uno:Paste", {});
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(4), xDraws->getCount());
+    CPPUNIT_ASSERT_EQUAL(4, getShapes());
+}
+
+CPPUNIT_TEST_FIXTURE(SwUiWriterTest3, testTdf132187)
+{
+    load(DATA_DIRECTORY, "tdf132187.odt");
+
+    SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
+    CPPUNIT_ASSERT(pTextDoc);
+
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+    dispatchCommand(mxComponent, ".uno:SelectAll", {});
+    dispatchCommand(mxComponent, ".uno:Copy", {});
+    dispatchCommand(mxComponent, ".uno:GoToEndOfDoc", {});
+
+    for (sal_Int32 i = 0; i < 10; ++i)
+    {
+        dispatchCommand(mxComponent, ".uno:Paste", {});
+        Scheduler::ProcessEventsToIdle();
+    }
+
+    //without the fix in place, this test would fail with:
+    //- Expected: 1
+    //- Actual  : 70
+
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
 }
 
 CPPUNIT_TEST_FIXTURE(SwUiWriterTest3, testTdf128739)
@@ -221,6 +243,27 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest3, testTdf126340)
     CPPUNIT_ASSERT_EQUAL(OUString("foo"), getParagraph(1)->getString());
     dispatchCommand(mxComponent, ".uno:Undo", {});
     CPPUNIT_ASSERT_EQUAL(OUString("foo"), getParagraph(1)->getString());
+}
+
+CPPUNIT_TEST_FIXTURE(SwUiWriterTest3, testTdf124397)
+{
+    load(DATA_DIRECTORY, "tdf124397.docx");
+
+    SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
+    CPPUNIT_ASSERT(pTextDoc);
+
+    uno::Reference<text::XTextFramesSupplier> xTextFramesSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<container::XIndexAccess> xIndexAccess(xTextFramesSupplier->getTextFrames(),
+                                                         uno::UNO_QUERY);
+
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(1), xIndexAccess->getCount());
+
+    dispatchCommand(mxComponent, ".uno:SelectAll", {});
+    dispatchCommand(mxComponent, ".uno:Delete", {});
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(0), xIndexAccess->getCount());
+    // Without the fix in place, it would crash here
+    dispatchCommand(mxComponent, ".uno:Undo", {});
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(1), xIndexAccess->getCount());
 }
 
 CPPUNIT_TEST_FIXTURE(SwUiWriterTest3, testTdf107975)
@@ -435,6 +478,15 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest3, testTdf131684)
     // without the fix, it crashes
     dispatchCommand(mxComponent, ".uno:Undo", {});
     CPPUNIT_ASSERT_EQUAL(sal_Int32(1), xIndexAccess->getCount());
+
+    // check that the text frame has the correct upper
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
+    OUString const sectionId = getXPath(pXmlDoc, "/root/page[1]/body/section[7]", "id");
+    OUString const sectionLower = getXPath(pXmlDoc, "/root/page[1]/body/section[7]", "lower");
+    OUString const textId = getXPath(pXmlDoc, "/root/page[1]/body/section[7]/txt[1]", "id");
+    OUString const textUpper = getXPath(pXmlDoc, "/root/page[1]/body/section[7]/txt[1]", "upper");
+    CPPUNIT_ASSERT_EQUAL(textId, sectionLower);
+    CPPUNIT_ASSERT_EQUAL(sectionId, textUpper);
 }
 
 CPPUNIT_TEST_FIXTURE(SwUiWriterTest3, testTdf80663)
@@ -558,6 +610,38 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest3, testTdf87199)
     CPPUNIT_ASSERT(xCellA1->getString().endsWith("test1"));
 }
 
+CPPUNIT_TEST_FIXTURE(SwUiWriterTest3, testTdf132603)
+{
+    mxComponent = loadFromDesktop("private:factory/swriter", "com.sun.star.text.TextDocument");
+
+    SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
+    CPPUNIT_ASSERT(pTextDoc);
+
+    uno::Sequence<beans::PropertyValue> aPropertyValues
+        = comphelper::InitPropertySequence({ { "Text", uno::makeAny(OUString("Comment")) } });
+
+    dispatchCommand(mxComponent, ".uno:InsertAnnotation", aPropertyValues);
+    Scheduler::ProcessEventsToIdle();
+
+    dispatchCommand(mxComponent, ".uno:SelectAll", {});
+    Scheduler::ProcessEventsToIdle();
+
+    // Without the fix in place, it would crash here
+    dispatchCommand(mxComponent, ".uno:Copy", {});
+    Scheduler::ProcessEventsToIdle();
+
+    OUString aPostits = pTextDoc->getPostIts();
+    std::stringstream aStream(aPostits.toUtf8().getStr());
+    boost::property_tree::ptree aTree;
+    boost::property_tree::read_json(aStream, aTree);
+    for (const boost::property_tree::ptree::value_type& rValue : aTree.get_child("comments"))
+    {
+        const boost::property_tree::ptree& rComment = rValue.second;
+        OString aText(rComment.get<std::string>("text").c_str());
+        CPPUNIT_ASSERT_EQUAL(OString("Comment"), aText);
+    }
+}
+
 CPPUNIT_TEST_FIXTURE(SwUiWriterTest3, testTdf117601)
 {
     mxComponent = loadFromDesktop("private:factory/swriter", "com.sun.star.text.TextDocument");
@@ -608,6 +692,55 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest3, testTdf117601)
     CPPUNIT_ASSERT_EQUAL(sal_Int32(3), xTextTable->getColumns()->getCount());
 
     CPPUNIT_ASSERT(xCellB1->getString().endsWith("test1"));
+}
+
+CPPUNIT_TEST_FIXTURE(SwUiWriterTest3, testTdf128782)
+{
+    load(DATA_DIRECTORY, "tdf128782.odt");
+    SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
+    CPPUNIT_ASSERT(pTextDoc);
+
+    CPPUNIT_ASSERT_EQUAL(2, getShapes());
+    uno::Reference<drawing::XShape> xShape1 = getShape(1);
+    uno::Reference<drawing::XShape> xShape2 = getShape(2);
+
+    awt::Point aPos[2];
+    aPos[0] = xShape1->getPosition();
+    aPos[1] = xShape2->getPosition();
+
+    //select shape 2 and move it down
+    dispatchCommand(mxComponent, ".uno:JumpToNextFrame", {});
+    dispatchCommand(mxComponent, ".uno:JumpToNextFrame", {});
+    Scheduler::ProcessEventsToIdle();
+
+    pTextDoc->postKeyEvent(LOK_KEYEVENT_KEYINPUT, 0, KEY_DOWN);
+    Scheduler::ProcessEventsToIdle();
+
+    CPPUNIT_ASSERT_EQUAL(aPos[0].X, xShape1->getPosition().X);
+    CPPUNIT_ASSERT_EQUAL(aPos[0].Y, xShape1->getPosition().Y);
+    CPPUNIT_ASSERT_EQUAL(aPos[1].X, xShape2->getPosition().X);
+    //Y position in shape 2 has changed
+    CPPUNIT_ASSERT(aPos[1].Y != xShape2->getPosition().Y);
+
+    dispatchCommand(mxComponent, ".uno:Undo", {});
+    Scheduler::ProcessEventsToIdle();
+
+    CPPUNIT_ASSERT_EQUAL(aPos[0].X, xShape1->getPosition().X);
+    CPPUNIT_ASSERT_EQUAL(aPos[0].Y, xShape1->getPosition().Y);
+    CPPUNIT_ASSERT_EQUAL(aPos[1].X, xShape2->getPosition().X);
+    // Shape2 has come back to the original position
+    // without the fix in place, it would have failed
+    CPPUNIT_ASSERT_EQUAL(aPos[1].Y, xShape2->getPosition().Y);
+}
+
+CPPUNIT_TEST_FIXTURE(SwUiWriterTest3, testTdf132637_protectTrackChanges)
+{
+    load(DATA_DIRECTORY, "tdf132637_protectTrackChanges.doc");
+    SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
+    CPPUNIT_ASSERT(pTextDoc);
+
+    // The password should only prevent turning off track changes, not open as read-only
+    CPPUNIT_ASSERT(!pTextDoc->GetDocShell()->IsReadOnly());
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

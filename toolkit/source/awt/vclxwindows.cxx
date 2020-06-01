@@ -45,7 +45,7 @@
 #include <vcl/button.hxx>
 #include <vcl/graph.hxx>
 #include <vcl/lstbox.hxx>
-#include <vcl/combobox.hxx>
+#include <vcl/toolkit/combobox.hxx>
 #include <vcl/toolkit/field.hxx>
 #include <vcl/toolkit/fixedhyper.hxx>
 #include <vcl/longcurr.hxx>
@@ -940,7 +940,7 @@ css::awt::Size VCLXCheckBox::calcAdjustedSize( const css::awt::Size& rNewSize )
     VclPtr< CheckBox > pCheckBox = GetAs< CheckBox >();
     if ( pCheckBox )
     {
-        Size aMinSz = pCheckBox->CalcMinimumSize();
+        Size aMinSz = pCheckBox->CalcMinimumSize(rNewSize.Width);
         if ( ( aSz.Width() > aMinSz.Width() ) && ( aSz.Height() < aMinSz.Height() ) )
             aSz.setHeight( aMinSz.Height() );
         else
@@ -1288,7 +1288,7 @@ css::awt::Size VCLXRadioButton::calcAdjustedSize( const css::awt::Size& rNewSize
     VclPtr< RadioButton > pRadioButton = GetAs< RadioButton >();
     if ( pRadioButton )
     {
-        Size aMinSz = pRadioButton->CalcMinimumSize();
+        Size aMinSz = pRadioButton->CalcMinimumSize(rNewSize.Width);
         if ( ( aSz.Width() > aMinSz.Width() ) && ( aSz.Height() < aMinSz.Height() ) )
             aSz.setHeight( aMinSz.Height() );
         else
@@ -2386,10 +2386,8 @@ void SAL_CALL VCLXDialog::draw( sal_Int32 nX, sal_Int32 nY )
         if ( !pDev )
             pDev = pWindow->GetParent();
 
-        Size aSize = pDev->PixelToLogic( pWindow->GetSizePixel() );
         Point aPos = pDev->PixelToLogic( Point( nX, nY ) );
-
-        pWindow->Draw( pDev, aPos, aSize, DrawFlags::NoControls );
+        pWindow->Draw( pDev, aPos, DrawFlags::NoControls );
     }
 }
 
@@ -2509,10 +2507,8 @@ void SAL_CALL VCLXMultiPage::draw( sal_Int32 nX, sal_Int32 nY )
         if ( !pDev )
             pDev = pWindow->GetParent();
 
-        Size aSize = pDev->PixelToLogic( pWindow->GetSizePixel() );
         Point aPos = pDev->PixelToLogic( Point( nX, nY ) );
-
-        pWindow->Draw( pDev, aPos, aSize, DrawFlags::NoControls );
+        pWindow->Draw( pDev, aPos, DrawFlags::NoControls );
     }
 }
 
@@ -2756,10 +2752,8 @@ void SAL_CALL VCLXTabPage::draw( sal_Int32 nX, sal_Int32 nY )
         if ( !pDev )
             pDev = pWindow->GetParent();
 
-        Size aSize = pDev->PixelToLogic( pWindow->GetSizePixel() );
         Point aPos = pDev->PixelToLogic( Point( nX, nY ) );
-
-        pWindow->Draw( pDev, aPos, aSize, DrawFlags::NoControls );
+        pWindow->Draw( pDev, aPos, DrawFlags::NoControls );
     }
 }
 
@@ -3024,13 +3018,18 @@ css::awt::Size VCLXFixedHyperlink::getPreferredSize(  )
 css::awt::Size VCLXFixedHyperlink::calcAdjustedSize( const css::awt::Size& rNewSize )
 {
     SolarMutexGuard aGuard;
+    Size aSz( VCLUnoHelper::ConvertToVCLSize( rNewSize ));
+    VclPtr< FixedText > pFixedText = GetAs< FixedText >();
+    if (pFixedText)
+    {
+        Size aMinSz = pFixedText->CalcMinimumSize(rNewSize.Width);
+        if ( ( aSz.Width() > aMinSz.Width() ) && ( aSz.Height() < aMinSz.Height() ) )
+            aSz.setHeight( aMinSz.Height() );
+        else
+            aSz = aMinSz;
+    }
 
-    css::awt::Size aSz = rNewSize;
-    css::awt::Size aMinSz = getMinimumSize();
-    if ( aSz.Height != aMinSz.Height )
-        aSz.Height = aMinSz.Height;
-
-    return aSz;
+    return VCLUnoHelper::ConvertToAWTSize(aSz);
 }
 
 void VCLXFixedHyperlink::setProperty( const OUString& PropertyName, const css::uno::Any& Value)
@@ -6613,10 +6612,8 @@ void SAL_CALL VCLXFrame::draw( sal_Int32 nX, sal_Int32 nY )
         if ( !pDev )
             pDev = pWindow->GetParent();
 
-        Size aSize = pDev->PixelToLogic( pWindow->GetSizePixel() );
         Point aPos = pDev->PixelToLogic( Point( nX, nY ) );
-
-        pWindow->Draw( pDev, aPos, aSize, DrawFlags::NoControls );
+        pWindow->Draw( pDev, aPos, DrawFlags::NoControls );
     }
 }
 

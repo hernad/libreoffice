@@ -35,10 +35,10 @@
 #include <rtl/ustring.hxx>
 #include <sal/types.h>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace drawing { struct Hatch; }
-    namespace xml { namespace sax { class XFastAttributeList; } }
-} } }
+    namespace xml::sax { class XFastAttributeList; }
+}
 
 namespace oox {
 namespace drawingml {
@@ -105,6 +105,9 @@ sal_Int32 GetCoordinate( sal_Int32 nValue );
 
 /** converts an emu string into 1/100th mmm */
 sal_Int32 GetCoordinate( const OUString& sValue );
+
+/** converts 1/100mm to EMU */
+sal_Int32 GetPointFromCoordinate( sal_Int32 nValue );
 
 /** converts a ST_Percentage % string into 1/1000th of % */
 sal_Int32 GetPercent( const OUString& sValue );

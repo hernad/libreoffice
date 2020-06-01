@@ -1712,8 +1712,8 @@ void Fill::importPatternFill( const AttributeList& rAttribs )
 
 void Fill::importFgColor( const AttributeList& rAttribs )
 {
-    OSL_ENSURE( mxPatternModel.get(), "Fill::importFgColor - missing pattern data" );
-    if( mxPatternModel.get() )
+    OSL_ENSURE( mxPatternModel, "Fill::importFgColor - missing pattern data" );
+    if( mxPatternModel )
     {
         mxPatternModel->maPatternColor.importColor( rAttribs );
         mxPatternModel->mbPattColorUsed = true;
@@ -1722,8 +1722,8 @@ void Fill::importFgColor( const AttributeList& rAttribs )
 
 void Fill::importBgColor( const AttributeList& rAttribs )
 {
-    OSL_ENSURE( mxPatternModel.get(), "Fill::importBgColor - missing pattern data" );
-    if( mxPatternModel.get() )
+    OSL_ENSURE( mxPatternModel, "Fill::importBgColor - missing pattern data" );
+    if( mxPatternModel )
     {
         mxPatternModel->maFillColor.importColor( rAttribs );
         mxPatternModel->mbFillColorUsed = true;
@@ -1743,8 +1743,8 @@ void Fill::importGradientFill( const AttributeList& rAttribs )
 
 void Fill::importColor( const AttributeList& rAttribs, double fPosition )
 {
-    OSL_ENSURE( mxGradientModel.get(), "Fill::importColor - missing gradient data" );
-    if( mxGradientModel.get() && (fPosition >= 0.0) )
+    OSL_ENSURE( mxGradientModel, "Fill::importColor - missing gradient data" );
+    if( mxGradientModel && (fPosition >= 0.0) )
         mxGradientModel->maColors[ fPosition ].importColor( rAttribs );
 }
 
@@ -1817,7 +1817,7 @@ void Fill::finalizeImport()
 {
     const GraphicHelper& rGraphicHelper = getBaseFilter().getGraphicHelper();
 
-    if( mxPatternModel.get() )
+    if( mxPatternModel )
     {
         // finalize the OOXML data struct
         PatternFillModel& rModel = *mxPatternModel;
@@ -1882,7 +1882,7 @@ void Fill::finalizeImport()
             maApiData.mbTransparent = false;
         }
     }
-    else if( mxGradientModel.get() && !mxGradientModel->maColors.empty() )
+    else if( mxGradientModel && !mxGradientModel->maColors.empty() )
     {
         GradientFillModel& rModel = *mxGradientModel;
         maApiData.mbUsed = true;    // no support for differential attributes
@@ -2127,7 +2127,7 @@ void Xf::writeToDoc( ScDocumentImport& rDoc, const ScRange& rRange )
 const ::ScPatternAttr&
 Xf::createPattern( bool bSkipPoolDefs )
 {
-    if( mpPattern.get() )
+    if( mpPattern )
         return *mpPattern;
     mpPattern.reset( new ::ScPatternAttr( getScDocument().GetPool() ) );
     SfxItemSet& rItemSet = mpPattern->GetItemSet();
@@ -2301,11 +2301,11 @@ void Dxf::importDxf( SequenceInputStream& rStrm )
 
 void Dxf::finalizeImport()
 {
-    if( mxFont.get() )
+    if( mxFont )
         mxFont->finalizeImport();
     bool bRTL = false;
     // number format already finalized by the number formats buffer
-    if( mxAlignment.get() )
+    if( mxAlignment )
     {
         mxAlignment->finalizeImport();
         // how do we detect RTL when text dir is OOX_XF_CONTEXT? ( seems you
@@ -2313,13 +2313,13 @@ void Dxf::finalizeImport()
         if ( mxAlignment->getModel().mnTextDir == OOX_XF_TEXTDIR_RTL )
             bRTL = true;
     }
-    if( mxProtection.get() )
+    if( mxProtection )
         mxProtection->finalizeImport();
-    if( mxBorder.get() )
+    if( mxBorder )
     {
         mxBorder->finalizeImport( bRTL );
     }
-    if( mxFill.get() )
+    if( mxFill )
         mxFill->finalizeImport();
 }
 
@@ -2614,8 +2614,7 @@ void CellStyleBuffer::finalizeImport()
         {
             aUnusedName = aStyleName + OUStringChar(' ') + OUString::number( ++nIndex );
         }
-        while( aCellStyles.find( aUnusedName ) != aCellStyles.end() );
-        aCellStyles[ aUnusedName ] = rxStyle;
+        while( !aCellStyles.try_emplace( aUnusedName, rxStyle ).second );
     }
 
     // set final names and create user-defined and modified built-in cell styles
@@ -2624,7 +2623,7 @@ void CellStyleBuffer::finalizeImport()
 
 sal_Int32 CellStyleBuffer::getDefaultXfId() const
 {
-    return mxDefStyle.get() ? mxDefStyle->getModel().mnXfId : -1;
+    return mxDefStyle ? mxDefStyle->getModel().mnXfId : -1;
 }
 
 OUString CellStyleBuffer::getDefaultStyleName() const
@@ -2665,14 +2664,14 @@ void CellStyleBuffer::insertCellStyle( CellStyleRef const & xCellStyle )
 ::ScStyleSheet* CellStyleBuffer::getCellStyleSheet( const CellStyleRef& rxCellStyle )
 {
     ::ScStyleSheet* pStyleSheet = nullptr;
-    if ( rxCellStyle.get() )
+    if ( rxCellStyle )
         pStyleSheet = rxCellStyle->getStyleSheet();
     return pStyleSheet;
 }
 
 OUString CellStyleBuffer::createCellStyle( const CellStyleRef& rxCellStyle )
 {
-    if( rxCellStyle.get() )
+    if( rxCellStyle )
     {
         rxCellStyle->createCellStyle();
         const OUString& rStyleName = rxCellStyle->getFinalStyleName();
@@ -2854,14 +2853,14 @@ FontRef StylesBuffer::getDefaultFont() const
     // no font from styles - try first loaded font (e.g. BIFF2)
     if( !xDefFont )
         xDefFont = maFonts.get( 0 );
-    OSL_ENSURE( xDefFont.get(), "StylesBuffer::getDefaultFont - no default font found" );
+    OSL_ENSURE( xDefFont, "StylesBuffer::getDefaultFont - no default font found" );
     return xDefFont;
 }
 
 const FontModel& StylesBuffer::getDefaultFontModel() const
 {
     FontRef xDefFont = getDefaultFont();
-    return xDefFont.get() ? xDefFont->getModel() : getTheme().getDefaultFontModel();
+    return xDefFont ? xDefFont->getModel() : getTheme().getDefaultFontModel();
 }
 
 bool StylesBuffer::equalBorders( sal_Int32 nBorderId1, sal_Int32 nBorderId2 )

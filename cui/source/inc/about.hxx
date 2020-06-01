@@ -34,12 +34,21 @@ private:
     std::unique_ptr<weld::Image> m_pBrandImage;
     std::unique_ptr<weld::Image> m_pAboutImage;
     std::unique_ptr<weld::Label> m_pVersionLabel;
+    std::unique_ptr<weld::Label> m_pBuildCaption;
+    std::unique_ptr<weld::LinkButton> m_pBuildLabel;
+    std::unique_ptr<weld::Label> m_pEnvLabel;
+    std::unique_ptr<weld::Label> m_pUILabel;
+    std::unique_ptr<weld::Label> m_pLocaleLabel;
+    std::unique_ptr<weld::Label> m_pMiscLabel;
     std::unique_ptr<weld::Label> m_pCopyrightLabel;
 
-    static OUString GetBuildId();
     static OUString GetVersionString();
-    static OUString GetCopyrightString();
+    static OUString GetBuildString();
     static OUString GetLocaleString();
+    static OUString GetMiscString();
+
+    static OUString GetCopyrightString();
+    static bool IsStringValidGitHash(const OUString& hash);
 
     DECL_LINK(HandleClick, weld::Button&, void);
 

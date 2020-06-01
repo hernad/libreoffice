@@ -17,7 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <vcl/combobox.hxx>
+#include <vcl/toolkit/combobox.hxx>
 
 #include <set>
 
@@ -62,7 +62,6 @@ struct ComboBox::Impl
     sal_Int32           m_nMaxWidthChars;
     sal_Int32           m_nWidthInChars;
     Link<ComboBox&,void>               m_SelectHdl;
-    Link<ComboBox&,void>               m_DoubleClickHdl;
 
     explicit Impl(ComboBox & rThis)
         : m_rThis(rThis)
@@ -88,7 +87,6 @@ struct ComboBox::Impl
     DECL_LINK( ImplClickBtnHdl, void*, void );
     DECL_LINK( ImplPopupModeEndHdl, FloatingWindow*, void );
     DECL_LINK( ImplSelectionChangedHdl, sal_Int32, void );
-    DECL_LINK( ImplUserDrawHdl, UserDrawEvent*, void );
     DECL_LINK( ImplAutocompleteHdl, Edit&, void );
     DECL_LINK( ImplListItemSelectHdl , LinkParamNone*, void );
 };
@@ -237,7 +235,6 @@ void ComboBox::ImplInit( vcl::Window* pParent, WinBits nStyle )
     m_pImpl->m_pImplLB->SetSelectHdl( LINK(m_pImpl.get(), ComboBox::Impl, ImplSelectHdl) );
     m_pImpl->m_pImplLB->SetCancelHdl( LINK(m_pImpl.get(), ComboBox::Impl, ImplCancelHdl) );
     m_pImpl->m_pImplLB->SetDoubleClickHdl( LINK(m_pImpl.get(), ComboBox::Impl, ImplDoubleClickHdl) );
-    m_pImpl->m_pImplLB->SetUserDrawHdl( LINK(m_pImpl.get(), ComboBox::Impl, ImplUserDrawHdl) );
     m_pImpl->m_pImplLB->SetSelectionChangedHdl( LINK(m_pImpl.get(), ComboBox::Impl, ImplSelectionChangedHdl) );
     m_pImpl->m_pImplLB->SetListItemSelectHdl( LINK(m_pImpl.get(), ComboBox::Impl, ImplListItemSelectHdl) );
     m_pImpl->m_pImplLB->Show();
@@ -508,7 +505,7 @@ void ComboBox::Select()
 
 void ComboBox::DoubleClick()
 {
-    ImplCallEventListenersAndHandler( VclEventId::ComboboxDoubleClick, [this] () { m_pImpl->m_DoubleClickHdl.Call(*this); } );
+    ImplCallEventListenersAndHandler( VclEventId::ComboboxDoubleClick, [] () {} );
 }
 
 bool ComboBox::IsAutoSizeEnabled() const { return m_pImpl->m_isDDAutoSize; }
@@ -986,10 +983,6 @@ bool ComboBox::IsMultiSelectionEnabled() const
 
 void ComboBox::SetSelectHdl(const Link<ComboBox&,void>& rLink) { m_pImpl->m_SelectHdl = rLink; }
 
-void ComboBox::SetDoubleClickHdl(const Link<ComboBox&,void>& rLink) { m_pImpl->m_DoubleClickHdl = rLink; }
-
-const Link<ComboBox&,void>& ComboBox::GetDoubleClickHdl() const { return m_pImpl->m_DoubleClickHdl; }
-
 void ComboBox::SetEntryActivateHdl(const Link<Edit&,bool>& rLink)
 {
     if (!m_pImpl->m_pSubEdit)
@@ -1152,12 +1145,12 @@ void ComboBox::GetMaxVisColumnsAndLines( sal_uInt16& rnCols, sal_uInt16& rnLines
     }
 }
 
-void ComboBox::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawFlags nFlags )
+void ComboBox::Draw( OutputDevice* pDev, const Point& rPos, DrawFlags nFlags )
 {
     m_pImpl->m_pImplLB->GetMainWindow()->ApplySettings(*pDev);
 
     Point aPos = pDev->LogicToPixel( rPos );
-    Size aSize = pDev->LogicToPixel( rSize );
+    Size aSize = GetSizePixel();
     vcl::Font aFont = m_pImpl->m_pImplLB->GetMainWindow()->GetDrawPixelFont( pDev );
 
     pDev->Push();
@@ -1194,7 +1187,10 @@ void ComboBox::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, D
         DrawTextFlags nTextStyle = DrawTextFlags::VCenter;
 
         // First, draw the edit part
-        m_pImpl->m_pSubEdit->Draw( pDev, aPos, Size( aSize.Width(), nEditHeight ), nFlags );
+        Size aOrigSize(m_pImpl->m_pSubEdit->GetSizePixel());
+        m_pImpl->m_pSubEdit->SetSizePixel(Size(aSize.Width(), nEditHeight));
+        m_pImpl->m_pSubEdit->Draw( pDev, aPos, nFlags );
+        m_pImpl->m_pSubEdit->SetSizePixel(aOrigSize);
 
         // Second, draw the listbox
         if ( GetStyle() & WB_CENTER )
@@ -1249,19 +1245,12 @@ void ComboBox::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, D
     // Call Edit::Draw after restoring the MapMode...
     if ( IsDropDownBox() )
     {
-        m_pImpl->m_pSubEdit->Draw( pDev, rPos, rSize, nFlags );
+        Size aOrigSize(m_pImpl->m_pSubEdit->GetSizePixel());
+        m_pImpl->m_pSubEdit->SetSizePixel(GetSizePixel());
+        m_pImpl->m_pSubEdit->Draw( pDev, rPos, nFlags );
+        m_pImpl->m_pSubEdit->SetSizePixel(aOrigSize);
         // DD-Button ?
     }
-
-}
-
-IMPL_LINK(ComboBox::Impl, ImplUserDrawHdl, UserDrawEvent*, pEvent, void)
-{
-    m_rThis.UserDraw(*pEvent);
-}
-
-void ComboBox::UserDraw( const UserDrawEvent& )
-{
 }
 
 void ComboBox::SetUserDrawHdl(const Link<UserDrawEvent*, void>& rLink)
@@ -1279,15 +1268,10 @@ void ComboBox::EnableUserDraw( bool bUserDraw )
     m_pImpl->m_pImplLB->GetMainWindow()->EnableUserDraw( bUserDraw );
 }
 
-void ComboBox::DrawEntry(const UserDrawEvent& rEvt, bool bDrawText, bool bDrawTextAtImagePos)
+void ComboBox::DrawEntry(const UserDrawEvent& rEvt)
 {
     SAL_WARN_IF(rEvt.GetWindow() != m_pImpl->m_pImplLB->GetMainWindow(), "vcl", "DrawEntry?!");
-    m_pImpl->m_pImplLB->GetMainWindow()->DrawEntry(*rEvt.GetRenderContext(), rEvt.GetItemId(), /*bDrawImage*/false, bDrawText, bDrawTextAtImagePos);
-}
-
-void ComboBox::SetSeparatorPos( sal_Int32 n )
-{
-    m_pImpl->m_pImplLB->SetSeparatorPos( n );
+    m_pImpl->m_pImplLB->GetMainWindow()->DrawEntry(*rEvt.GetRenderContext(), rEvt.GetItemId(), /*bDrawImage*/false, /*bDrawText*/false);
 }
 
 void ComboBox::AddSeparator( sal_Int32 n )

@@ -26,11 +26,10 @@
 #include <svtools/svtdllapi.h>
 #include <tools/ref.hxx>
 #include <vcl/window.hxx>
-#include <vcl/combobox.hxx>
-#include <vcl/lstbox.hxx>
 
 #include <svtools/brwbox.hxx>
 #include <svtools/brwhead.hxx>
+#include <vcl/InterimItemWindow.hxx>
 #include <vcl/vclmedit.hxx>
 #include <o3tl/typed_flags_set.hxx>
 
@@ -286,7 +285,7 @@ namespace svt
         virtual void GetFocus() override;
         virtual bool PreNotify(NotifyEvent& rEvt) override;
         virtual void Paint(vcl::RenderContext& rRenderContext, const tools::Rectangle& rClientRect) override;
-        virtual void Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawFlags nFlags ) override;
+        virtual void Draw( OutputDevice* pDev, const Point& rPos, DrawFlags nFlags ) override;
         virtual void StateChanged( StateChangedType nStateChange ) override;
         virtual void DataChanged( const DataChangedEvent& _rEvent ) override;
         virtual void Resize() override;
@@ -301,9 +300,7 @@ namespace svt
         DECL_LINK( OnClick, Button*, void );
     };
 
-
     //= CheckBoxCellController
-
     class SVT_DLLPUBLIC CheckBoxCellController final : public CellController
     {
     public:
@@ -319,29 +316,29 @@ namespace svt
         DECL_LINK(ModifyHdl, LinkParamNone*, void);
     };
 
-
     //= ComboBoxControl
-
-    class SVT_DLLPUBLIC ComboBoxControl final : public ComboBox
+    class SVT_DLLPUBLIC ComboBoxControl final : public InterimItemWindow
     {
         friend class ComboBoxCellController;
 
     public:
         ComboBoxControl(vcl::Window* pParent);
 
+        weld::ComboBox& get_widget() { return *m_xWidget; }
+
+        virtual void dispose() override;
+
     private:
-        virtual bool PreNotify( NotifyEvent& rNEvt ) override;
+        std::unique_ptr<weld::ComboBox> m_xWidget;
     };
 
-
     //= ComboBoxCellController
-
     class SVT_DLLPUBLIC ComboBoxCellController : public CellController
     {
     public:
 
         ComboBoxCellController(ComboBoxControl* pParent);
-        ComboBoxControl& GetComboBox() const { return static_cast<ComboBoxControl &>(GetWindow()); }
+        weld::ComboBox& GetComboBox() const { return static_cast<ComboBoxControl&>(GetWindow()).get_widget(); }
 
         virtual bool IsModified() const override;
         virtual void ClearModified() override;
@@ -349,33 +346,31 @@ namespace svt
     protected:
         virtual bool MoveAllowed(const KeyEvent& rEvt) const override;
     private:
-        DECL_LINK(ModifyHdl, Edit&, void);
+        DECL_LINK(ModifyHdl, weld::ComboBox&, void);
     };
 
-
     //= ListBoxControl
-
-    class SVT_DLLPUBLIC ListBoxControl final : public ListBox
+    class SVT_DLLPUBLIC ListBoxControl final : public InterimItemWindow
     {
         friend class ListBoxCellController;
 
     public:
         ListBoxControl(vcl::Window* pParent);
 
+        weld::ComboBox& get_widget() { return *m_xWidget; }
+
+        virtual void dispose() override;
     private:
-        virtual bool PreNotify( NotifyEvent& rNEvt ) override;
+        std::unique_ptr<weld::ComboBox> m_xWidget;
     };
 
-
     //= ListBoxCellController
-
     class SVT_DLLPUBLIC ListBoxCellController : public CellController
     {
     public:
 
         ListBoxCellController(ListBoxControl* pParent);
-        const ListBoxControl& GetListBox() const { return static_cast<const ListBoxControl &>(GetWindow()); }
-        ListBoxControl& GetListBox() { return static_cast<ListBoxControl &>(GetWindow()); }
+        weld::ComboBox& GetListBox() const { return static_cast<ListBoxControl&>(GetWindow()).get_widget(); }
 
         virtual bool IsModified() const override;
         virtual void ClearModified() override;
@@ -383,12 +378,10 @@ namespace svt
     protected:
         virtual bool MoveAllowed(const KeyEvent& rEvt) const override;
     private:
-        DECL_LINK(ListBoxSelectHdl, ListBox&, void);
+        DECL_LINK(ListBoxSelectHdl, weld::ComboBox&, void);
     };
 
-
     //= FormattedFieldCellController
-
     class SVT_DLLPUBLIC FormattedFieldCellController final : public EditCellController
     {
     public:

@@ -24,10 +24,12 @@
 #include <vcl/syswin.hxx>
 #include <vcl/window.hxx>
 #include <vcl/ctrl.hxx>
+#include <vcl/uitest/uiobject.hxx>
 #include <comphelper/processfactory.hxx>
 #include <rtl/math.hxx>
 #include <rtl/uri.hxx>
 #include <sfx2/app.hxx>
+#include <sfx2/childwin.hxx>
 #include <sfx2/lokhelper.hxx>
 #include <test/unoapi_test.hxx>
 #include <comphelper/lok.hxx>
@@ -173,6 +175,7 @@ public:
     void testDialogInput();
     void testCalcSaveAs();
     void testControlState();
+    void testMetricField();
     void testABI();
 
     CPPUNIT_TEST_SUITE(DesktopLOKTest);
@@ -233,6 +236,7 @@ public:
     CPPUNIT_TEST(testDialogInput);
     CPPUNIT_TEST(testCalcSaveAs);
     CPPUNIT_TEST(testControlState);
+    CPPUNIT_TEST(testMetricField);
     CPPUNIT_TEST(testABI);
     CPPUNIT_TEST_SUITE_END();
 
@@ -2827,6 +2831,36 @@ void DesktopLOKTest::testControlState()
     CPPUNIT_ASSERT(!aState.empty());
 }
 
+void DesktopLOKTest::testMetricField()
+{
+    LibLODocument_Impl* pDocument = loadDoc("search.ods");
+    pDocument->pClass->postUnoCommand(pDocument, ".uno:StarShapes", nullptr, false);
+    Scheduler::ProcessEventsToIdle();
+
+    SfxViewShell* pViewShell = SfxViewShell::Current();
+    CPPUNIT_ASSERT(pViewShell);
+
+    SfxViewFrame* pViewFrame = pViewShell->GetViewFrame();
+    CPPUNIT_ASSERT(pViewFrame);
+
+    SfxChildWindow* pSideBar = pViewFrame->GetChildWindow(SID_SIDEBAR);
+    CPPUNIT_ASSERT(pSideBar);
+
+    vcl::Window* pWin = pSideBar->GetWindow();
+    CPPUNIT_ASSERT(pWin);
+
+    WindowUIObject aWinUI(pWin);
+    std::unique_ptr<UIObject> pUIWin(aWinUI.get_child("selectwidth"));
+    CPPUNIT_ASSERT(pUIWin);
+
+    StringMap aMap;
+    aMap["VALUE"] = "75.06";
+    pUIWin->execute("VALUE", aMap);
+
+    StringMap aRet = pUIWin->get_state();
+    CPPUNIT_ASSERT_EQUAL(aMap["VALUE"], aRet["Value"]);
+}
+
 namespace {
 
 constexpr size_t classOffset(int i)
@@ -2923,10 +2957,11 @@ void DesktopLOKTest::testABI()
     CPPUNIT_ASSERT_EQUAL(documentClassOffset(58), offsetof(struct _LibreOfficeKitDocumentClass, paintWindowForView));
     CPPUNIT_ASSERT_EQUAL(documentClassOffset(59), offsetof(struct _LibreOfficeKitDocumentClass, completeFunction));
     CPPUNIT_ASSERT_EQUAL(documentClassOffset(60), offsetof(struct _LibreOfficeKitDocumentClass, setWindowTextSelection));
+    CPPUNIT_ASSERT_EQUAL(documentClassOffset(61), offsetof(struct _LibreOfficeKitDocumentClass, sendFormFieldEvent));
 
     // Extending is fine, update this, and add new assert for the offsetof the
     // new method
-    CPPUNIT_ASSERT_EQUAL(documentClassOffset(61), sizeof(struct _LibreOfficeKitDocumentClass));
+    CPPUNIT_ASSERT_EQUAL(documentClassOffset(62), sizeof(struct _LibreOfficeKitDocumentClass));
 }
 
 CPPUNIT_TEST_SUITE_REGISTRATION(DesktopLOKTest);

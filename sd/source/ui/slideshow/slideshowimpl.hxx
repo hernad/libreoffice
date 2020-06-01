@@ -38,8 +38,8 @@
 
 #include <slideshow.hxx>
 
-namespace com { namespace sun { namespace star { namespace frame { class XModel; } } } }
-namespace com { namespace sun { namespace star { namespace media { class XPlayer; } } } }
+namespace com::sun::star::frame { class XModel; }
+namespace com::sun::star::media { class XPlayer; }
 namespace sd { class DrawDocShell; }
 namespace sd { class ViewShell; }
 
@@ -81,7 +81,6 @@ struct WrappedShapeEventImpl
 };
 
 typedef std::shared_ptr< WrappedShapeEventImpl > WrappedShapeEventImplPtr;
-typedef std::map< css::uno::Reference< css::drawing::XShape >, WrappedShapeEventImplPtr > WrappedShapeEventImplMap;
 
 class SlideShowListenerProxy : private ::cppu::BaseMutex,
         public ::cppu::WeakImplHelper< css::presentation::XSlideShowListener, css::presentation::XShapeEventListener >
@@ -323,7 +322,8 @@ private:
     bool            mbUsePen;
     double          mdUserPaintStrokeWidth;
 
-    WrappedShapeEventImplMap    maShapeEventMap;
+    std::map< css::uno::Reference< css::drawing::XShape >, WrappedShapeEventImplPtr >
+                    maShapeEventMap;
 
     css::uno::Reference< css::drawing::XDrawPage > mxPreviewDrawPage;
     css::uno::Reference< css::animations::XAnimationNode > mxPreviewAnimationNode;

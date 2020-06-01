@@ -341,7 +341,7 @@ TableStyleSheetEntry * DomainMapperTableHandler::endTableGetTableStyle(TableInfo
     // will receive the table style if any
     TableStyleSheetEntry* pTableStyle = nullptr;
 
-    if( m_aTableProperties.get() )
+    if( m_aTableProperties )
     {
         //create properties from the table attributes
         //...pPropMap->Insert( PROP_LEFT_MARGIN, uno::makeAny( m_nLeftMargin - m_nGapHalf ));
@@ -674,7 +674,7 @@ TableStyleSheetEntry * DomainMapperTableHandler::endTableGetTableStyle(TableInfo
         m_aTableProperties->Insert( PROP_HEADER_ROW_COUNT, uno::makeAny( sal_Int32(0)), false);
 
         // if table is only a single row, and row is set as don't split, set the same value for the whole table.
-        if( m_aRowProperties.size() == 1 && m_aRowProperties[0].get() )
+        if( m_aRowProperties.size() == 1 && m_aRowProperties[0] )
         {
             std::optional<PropertyMap::Property> oSplitAllowed = m_aRowProperties[0]->getProperty(PROP_IS_SPLIT_ALLOWED);
             if( oSplitAllowed )
@@ -1252,6 +1252,7 @@ void DomainMapperTableHandler::endTable(unsigned int nestedTableLevel, bool bTab
 
             if ( !aAllTableParaProperties.empty() )
             {
+                TableParagraphVectorPtr pTableParagraphs = m_rDMapper_Impl.getTableManager().getCurrentParagraphs();
                 for (size_t nRow = 0; nRow < m_aTableRanges.size(); ++nRow)
                 {
                     for (size_t nCell = 0; nCell < m_aTableRanges[nRow].size(); ++nCell)
@@ -1263,8 +1264,8 @@ void DomainMapperTableHandler::endTable(unsigned int nestedTableLevel, bool bTab
                         uno::Reference<text::XTextRangeCompare> xTextRangeCompare(rStartPara->getText(), uno::UNO_QUERY);
                         bool bApply = false;
                         // search paragraphs of the cell
-                        std::vector<TableParagraph>::iterator aIt = m_rDMapper_Impl.m_aParagraphsToEndTable.begin();
-                        while ( aIt != m_rDMapper_Impl.m_aParagraphsToEndTable.end() ) try
+                        std::vector<TableParagraph>::iterator aIt = pTableParagraphs->begin();
+                        while ( aIt != pTableParagraphs->end() ) try
                         {
                             if (!bApply && xTextRangeCompare->compareRegionStarts(rStartPara, aIt->m_rStartParagraph) == 0)
                                 bApply = true;
@@ -1273,7 +1274,7 @@ void DomainMapperTableHandler::endTable(unsigned int nestedTableLevel, bool bTab
                                 bool bEndOfApply = (xTextRangeCompare->compareRegionEnds(rEndPara, aIt->m_rEndParagraph) == 0);
                                 ApplyParagraphPropertiesFromTableStyle(*aIt, aAllTableParaProperties, aCellProperties[nRow][nCell]);
                                 // erase processed paragraph from list of pending paragraphs
-                                aIt = m_rDMapper_Impl.m_aParagraphsToEndTable.erase(aIt);
+                                aIt = pTableParagraphs->erase(aIt);
                                 if (bEndOfApply)
                                     break;
                             }
@@ -1435,8 +1436,6 @@ void DomainMapperTableHandler::endTable(unsigned int nestedTableLevel, bool bTab
     m_aCellProperties.clear();
     m_aRowProperties.clear();
     m_bHadFootOrEndnote = false;
-    if (nestedTableLevel <= 1 && m_rDMapper_Impl.m_bConvertedTable)
-        m_rDMapper_Impl.m_aParagraphsToEndTable.clear();
 
 #ifdef DBG_UTIL
     TagLogger::getInstance().endElement();
@@ -1470,7 +1469,7 @@ void DomainMapperTableHandler::startCell(const css::uno::Reference< css::text::X
                                          const TablePropertyMapPtr& pProps )
 {
     sal_uInt32 nRow = m_aRowProperties.size();
-    if ( pProps.get( ) )
+    if ( pProps )
         m_aCellProperties[nRow - 1].push_back( pProps.get() );
     else
     {
@@ -1485,14 +1484,14 @@ void DomainMapperTableHandler::startCell(const css::uno::Reference< css::text::X
     TagLogger::getInstance().startElement("table.cell.start");
     TagLogger::getInstance().chars(XTextRangeToString(start));
     TagLogger::getInstance().endElement();
-    if (pProps.get())
+    if (pProps)
         pProps->printProperties();
 #endif
 
     //add a new 'row' of properties
     m_aCellRange.clear();
     uno::Reference<text::XTextRange> xStart;
-    if (start.get())
+    if (start)
         xStart = start->getStart();
     m_aCellRange.push_back(xStart);
 }
@@ -1507,7 +1506,7 @@ void DomainMapperTableHandler::endCell(const css::uno::Reference< css::text::XTe
 #endif
 
     uno::Reference<text::XTextRange> xEnd;
-    if (end.get())
+    if (end)
         xEnd = end->getEnd();
     m_aCellRange.push_back(xEnd);
     m_aRowRanges.push_back(comphelper::containerToSequence(m_aCellRange));

@@ -28,7 +28,7 @@
 #include <vcl/svapp.hxx>
 #include <vcl/tabpage.hxx>
 #include <vcl/tabctrl.hxx>
-#include <vcl/button.hxx>
+#include <vcl/toolkit/button.hxx>
 #include <vcl/settings.hxx>
 #include <sal/log.hxx>
 #include <i18nlangtag/languagetag.hxx>
@@ -600,7 +600,7 @@ namespace
     {
         std::vector<VclPtr<RadioButton> > aGroup(pSourceWindow->GetRadioButtonGroup());
 
-        if (aGroup.size() == 1) //only one button in group
+        if (aGroup.size() < 2) // have to have at last 2 buttons to be a useful group
             return false;
 
         if (bBackward)

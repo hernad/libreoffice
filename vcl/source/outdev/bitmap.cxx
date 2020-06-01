@@ -647,14 +647,6 @@ void OutputDevice::DrawDeviceAlphaBitmap( const Bitmap& rBmp, const AlphaMask& r
     if (!aDstRect.Intersection(tools::Rectangle(aOutPt, aOutSz)).IsEmpty())
     {
         static const char* pDisableNative = getenv( "SAL_DISABLE_NATIVE_ALPHA");
-        // #i83087# Naturally, system alpha blending cannot work with
-        // separate alpha VDev
-
-        // Not clear how the above comment relates to the following declaration and initialisation
-        // of bTryDirectPaint. Does bTryDirectPaint being true mean that we can use "system alpha
-        // blending"? Or that we can't? Or are the two not related at all, and should the above
-        // comment actually be better located below, before the "if (mpAlphaVDev)" test?
-
         bool bTryDirectPaint(!pDisableNative && !bHMirr && !bVMirr);
 
         if (bTryDirectPaint)
@@ -669,13 +661,15 @@ void OutputDevice::DrawDeviceAlphaBitmap( const Bitmap& rBmp, const AlphaMask& r
             SalBitmap* pSalSrcBmp = rBmp.ImplGetSalBitmap().get();
             SalBitmap* pSalAlphaBmp = rAlpha.ImplGetSalBitmap().get();
 
+            // #i83087# Naturally, system alpha blending (SalGraphics::DrawAlphaBitmap) cannot work
+            // with separate alpha VDev
+
             // try to blend the alpha bitmap with the alpha virtual device
             if (mpAlphaVDev)
             {
                 Bitmap aAlphaBitmap( mpAlphaVDev->GetBitmap( aRelPt, aOutSz ) );
-                if (aAlphaBitmap.ImplGetSalBitmap())
+                if (SalBitmap* pSalAlphaBmp2 = aAlphaBitmap.ImplGetSalBitmap().get())
                 {
-                    SalBitmap* pSalAlphaBmp2 = aAlphaBitmap.ImplGetSalBitmap().get();
                     if (mpGraphics->BlendAlphaBitmap(aTR, *pSalSrcBmp, *pSalAlphaBmp, *pSalAlphaBmp2, this))
                     {
                         mpAlphaVDev->BlendBitmap(aTR, rAlpha);
@@ -1057,17 +1051,25 @@ bool OutputDevice::DrawTransformBitmapExDirect(
     const basegfx::B2DPoint aTopY(aFullTransform * basegfx::B2DPoint(0.0, 1.0));
     SalBitmap* pSalSrcBmp = rBitmapEx.GetBitmap().ImplGetSalBitmap().get();
     SalBitmap* pSalAlphaBmp = nullptr;
+    Bitmap aAlphaBitmap;
 
     if(rBitmapEx.IsTransparent())
     {
         if(rBitmapEx.IsAlpha())
         {
-            pSalAlphaBmp = rBitmapEx.GetAlpha().ImplGetSalBitmap().get();
+            aAlphaBitmap = rBitmapEx.GetAlpha();
         }
         else
         {
-            pSalAlphaBmp = rBitmapEx.GetMask().ImplGetSalBitmap().get();
+            aAlphaBitmap = rBitmapEx.GetMask();
         }
+        if (!mpAlphaVDev)
+            pSalAlphaBmp = aAlphaBitmap.ImplGetSalBitmap().get();
+    }
+    else if (mpAlphaVDev)
+    {
+        aAlphaBitmap = Bitmap(rBitmapEx.GetSizePixel(), 1);
+        aAlphaBitmap.Erase(COL_BLACK);
     }
 
     bDone = mpGraphics->DrawTransformedBitmap(
@@ -1077,6 +1079,9 @@ bool OutputDevice::DrawTransformBitmapExDirect(
         *pSalSrcBmp,
         pSalAlphaBmp,
         this);
+
+    if (mpAlphaVDev)
+        mpAlphaVDev->DrawTransformBitmapExDirect(aFullTransform, BitmapEx(aAlphaBitmap));
 
     return bDone;
 };

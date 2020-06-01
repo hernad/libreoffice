@@ -1066,15 +1066,15 @@ TOTypeInfoSP queryPrimaryKeyType(const OTypeInfoMap& _rTypeInfo)
             pTypeInfo = elem.second; // alternative
             break;
         }
-        else if ( !pTypeInfo.get() && elem.second->nType == DataType::DOUBLE )
+        else if ( !pTypeInfo && elem.second->nType == DataType::DOUBLE )
             pTypeInfo = elem.second; // alternative
-        else if ( !pTypeInfo.get() && elem.second->nType == DataType::REAL )
+        else if ( !pTypeInfo && elem.second->nType == DataType::REAL )
             pTypeInfo = elem.second; // alternative
     }
-    if ( !pTypeInfo.get() ) // just a fallback
+    if ( !pTypeInfo ) // just a fallback
         pTypeInfo = queryTypeInfoByType(DataType::VARCHAR,_rTypeInfo);
 
-    OSL_ENSURE(pTypeInfo.get(),"checkColumns: can't find a type which is usable as a key!");
+    OSL_ENSURE(pTypeInfo,"checkColumns: can't find a type which is usable as a key!");
     return pTypeInfo;
 }
 

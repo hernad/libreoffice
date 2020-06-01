@@ -34,7 +34,7 @@
 #include <memory>
 #include <vector>
 
-namespace sdext { namespace presenter {
+namespace sdext::presenter {
 
 class PresenterPaneBase;
 class PresenterSprite;
@@ -74,7 +74,6 @@ public:
     class PaneDescriptor
     {
     public:
-        typedef ::std::function<std::shared_ptr<PresenterSprite> ()> SpriteProvider;
         css::uno::Reference<css::drawing::framework::XResourceId> mxPaneId;
         OUString msViewURL;
         ::rtl::Reference<PresenterPaneBase> mxPane;
@@ -155,7 +154,7 @@ private:
     css::uno::Reference<css::drawing::XPresenterHelper> mxPresenterHelper;
 };
 
-} } // end of namespace ::sdext::presenter
+} // end of namespace ::sdext::presenter
 
 #endif
 

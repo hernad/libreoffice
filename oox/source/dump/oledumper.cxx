@@ -323,7 +323,7 @@ void OlePropertyStreamObject::dumpDictionaryProperty( sal_uInt32 nStartPos )
             TableGuard aTabGuard( mxOut, 10, 20 );
             sal_Int32 nId = dumpDec< sal_Int32 >( "id" );
             OUString aName = dumpString8( "name" );
-            if( mxPropIds.get() )
+            if( mxPropIds )
                 mxPropIds->setName( nId, aName );
         }
     }
@@ -1859,7 +1859,7 @@ VbaDirStreamObject::VbaDirStreamObject( const ObjectBase& rParent,
     mrVbaData( rVbaData )
 {
     mxInStrm = rxStrm;
-    if( mxInStrm.get() )
+    if( mxInStrm )
     {
         BinaryInputStreamRef xVbaStrm( std::make_shared<::oox::ole::VbaInputStream>( *mxInStrm ) );
         SequenceRecordObjectBase::construct( rParent, xVbaStrm, rSysFileName, "VBA-DIR-RECORD-NAMES", "VBA-DIR-SIMPLE-RECORDS" );
@@ -1868,7 +1868,7 @@ VbaDirStreamObject::VbaDirStreamObject( const ObjectBase& rParent,
 
 bool VbaDirStreamObject::implIsValid() const
 {
-    return mxInStrm.get() && SequenceRecordObjectBase::implIsValid();
+    return mxInStrm && SequenceRecordObjectBase::implIsValid();
 }
 
 bool VbaDirStreamObject::implReadRecordHeader( BinaryInputStream& rBaseStrm, sal_Int64& ornRecId, sal_Int64& ornRecSize )

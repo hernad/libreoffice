@@ -210,9 +210,12 @@
     { OUString("FontWorkShadowTransparence"),XATTR_FORMTXTSHDWTRANSP,   ::cppu::UnoType<sal_Int16>::get(),            0,  0},
 
 #define GLOW_PROPERTIES \
-    { OUString("GlowEffect"),                     SDRATTR_GLOW,             cppu::UnoType<bool>::get(),           0,      0}, \
     { OUString{"GlowEffectRad"},                  SDRATTR_GLOW_RAD,         ::cppu::UnoType<sal_Int32>::get(),    0,      0, PropertyMoreFlags::METRIC_ITEM}, \
-    { OUString{"GlowEffectColor"},                SDRATTR_GLOW_COLOR,       ::cppu::UnoType<sal_Int32>::get(),    0,      0},
+    { OUString{"GlowEffectColor"},                SDRATTR_GLOW_COLOR,       ::cppu::UnoType<sal_Int32>::get(),    0,      0}, \
+    { OUString{"GlowEffectTransparency"},         SDRATTR_GLOW_TRANSPARENCY,::cppu::UnoType<sal_Int16>::get(),    0,      0 },
+
+#define SOFTEDGE_PROPERTIES \
+    { OUString{"SoftEdgeRad"},              SDRATTR_SOFTEDGE_RAD,       cppu::UnoType<sal_Int32>::get(),      0,      0, PropertyMoreFlags::METRIC_ITEM},
 
 #define SHADOW_PROPERTIES \
     { OUString(UNO_NAME_SHADOW),            SDRATTR_SHADOW,             cppu::UnoType<bool>::get(),    0,      0}, \
@@ -221,7 +224,9 @@
     { OUString(UNO_NAME_SHADOWXDIST),       SDRATTR_SHADOWXDIST,        ::cppu::UnoType<sal_Int32>::get(),    0,      0, PropertyMoreFlags::METRIC_ITEM}, \
     { OUString(UNO_NAME_SHADOWYDIST),       SDRATTR_SHADOWYDIST,        ::cppu::UnoType<sal_Int32>::get(),    0,      0, PropertyMoreFlags::METRIC_ITEM}, \
     { OUString(UNO_NAME_SHADOWSIZEX),       SDRATTR_SHADOWSIZEX,        ::cppu::UnoType<sal_Int32>::get(),    0,      0, PropertyMoreFlags::METRIC_ITEM}, \
-    { OUString(UNO_NAME_SHADOWSIZEY),       SDRATTR_SHADOWSIZEY,        ::cppu::UnoType<sal_Int32>::get(),    0,      0, PropertyMoreFlags::METRIC_ITEM},
+    { OUString(UNO_NAME_SHADOWSIZEY),       SDRATTR_SHADOWSIZEY,        ::cppu::UnoType<sal_Int32>::get(),    0,      0, PropertyMoreFlags::METRIC_ITEM}, \
+    { OUString{UNO_NAME_SHADOWBLUR},        SDRATTR_SHADOWBLUR,         ::cppu::UnoType<sal_Int32>::get(),    0,      0, PropertyMoreFlags::METRIC_ITEM},
+
 
 #define LINE_PROPERTIES_DEFAULTS\
     { OUString(UNO_NAME_LINECAP),           XATTR_LINECAP,          ::cppu::UnoType<css::drawing::LineCap>::get(),     0,     0}, \

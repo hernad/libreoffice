@@ -47,6 +47,7 @@
 
 #include <com/sun/star/awt/Size.hpp>
 #include <com/sun/star/drawing/LineStyle.hpp>
+#include <com/sun/star/drawing/FillStyle.hpp>
 #include <com/sun/star/chart/ChartAxisMarks.hpp>
 #include <com/sun/star/chart/ChartDataCaption.hpp>
 #include <com/sun/star/chart2/XChartDocument.hpp>
@@ -71,6 +72,12 @@ SvXMLEnumMapEntry<drawing::LineStyle> const aLineStyleMap[] =
     { XML_TOKEN_INVALID, drawing::LineStyle(0) }
 };
 
+SvXMLEnumMapEntry<drawing::FillStyle> const aFillStyleMap[] =
+{
+    { XML_NONE,     drawing::FillStyle_NONE },
+    { XML_SOLID,    drawing::FillStyle_SOLID }
+};
+
 }
 
 // the following class implementations are in this file:
@@ -80,6 +87,11 @@ SvXMLEnumMapEntry<drawing::LineStyle> const aLineStyleMap[] =
 // * XMLChartExportPropertyMapper
 // * XMLChartImportPropertyMapper
 // * SchXMLStyleExport
+
+XMLChartPropHdlFactory::XMLChartPropHdlFactory(SvXMLExport const*const pExport)
+    : m_pExport(pExport)
+{
+}
 
 XMLChartPropHdlFactory::~XMLChartPropHdlFactory()
 {
@@ -139,7 +151,14 @@ const XMLPropertyHandler* XMLChartPropHdlFactory::GetPropertyHandler( sal_Int32 
                 break;
 
             case XML_SCH_TYPE_INTERPOLATION:
-                pHdl = new XMLEnumPropertyHdl( aXMLChartInterpolationTypeEnumMap );
+                if (m_pExport && m_pExport->getSaneDefaultVersion() < SvtSaveOptions::ODFSVER_013)
+                {
+                    pHdl = new XMLEnumPropertyHdl(g_XMLChartInterpolationTypeEnumMap_ODF12);
+                }
+                else // ODF 1.3 OFFICE-3662
+                {
+                    pHdl = new XMLEnumPropertyHdl(g_XMLChartInterpolationTypeEnumMap);
+                }
                 break;
             case XML_SCH_TYPE_SYMBOL_TYPE:
                 pHdl = new XMLSymbolTypePropertyHdl( false );
@@ -158,6 +177,9 @@ const XMLPropertyHandler* XMLChartPropHdlFactory::GetPropertyHandler( sal_Int32 
             case XML_SCH_TYPE_LABEL_BORDER_OPACITY:
                 pHdl = new XMLOpacityPropertyHdl(nullptr);
             break;
+            case XML_SCH_TYPE_LABEL_FILL_STYLE:
+                pHdl = new XMLEnumPropertyHdl( aFillStyleMap );
+            break;
             default:
                 ;
         }
@@ -168,8 +190,8 @@ const XMLPropertyHandler* XMLChartPropHdlFactory::GetPropertyHandler( sal_Int32 
     return pHdl;
 }
 
-XMLChartPropertySetMapper::XMLChartPropertySetMapper( bool bForExport ) :
-        XMLPropertySetMapper( aXMLChartPropMap, new XMLChartPropHdlFactory, bForExport )
+XMLChartPropertySetMapper::XMLChartPropertySetMapper(SvXMLExport const*const pExport)
+    : XMLPropertySetMapper(aXMLChartPropMap, new XMLChartPropHdlFactory(pExport), pExport != nullptr)
 {
 }
 
@@ -414,8 +436,8 @@ void XMLChartExportPropertyMapper::handleSpecialItem(
                     {
                         if( ( nValue & chart::ChartDataCaption::PERCENT ) == chart::ChartDataCaption::PERCENT )
                         {
-                            const SvtSaveOptions::ODFDefaultVersion nCurrentVersion( SvtSaveOptions().GetODFDefaultVersion() );
-                            if( nCurrentVersion < SvtSaveOptions::ODFVER_012 )
+                            const SvtSaveOptions::ODFSaneDefaultVersion nCurrentVersion( SvtSaveOptions().GetODFSaneDefaultVersion() );
+                            if (nCurrentVersion < SvtSaveOptions::ODFSVER_012)
                                 sValueBuffer.append( GetXMLToken( XML_PERCENTAGE ));
                             else
                                 sValueBuffer.append( GetXMLToken( XML_VALUE_AND_PERCENTAGE ));
@@ -466,7 +488,7 @@ void XMLChartExportPropertyMapper::handleSpecialItem(
                 break;
             case XML_SCH_CONTEXT_SPECIAL_REGRESSION_TYPE:
                 {
-                    const SvtSaveOptions::ODFDefaultVersion nCurrentVersion( SvtSaveOptions().GetODFDefaultVersion() );
+                    const SvtSaveOptions::ODFSaneDefaultVersion nCurrentVersion( SvtSaveOptions().GetODFSaneDefaultVersion() );
 
                     OUString aServiceName;
                     rProperty.maValue >>= aServiceName;
@@ -478,10 +500,14 @@ void XMLChartExportPropertyMapper::handleSpecialItem(
                         sValueBuffer.append( GetXMLToken( XML_EXPONENTIAL ));
                     else if (aServiceName == "com.sun.star.chart2.PotentialRegressionCurve")
                         sValueBuffer.append( GetXMLToken( XML_POWER ));
-                    else if (nCurrentVersion > SvtSaveOptions::ODFVER_012 && aServiceName == "com.sun.star.chart2.PolynomialRegressionCurve")
+                    else if (nCurrentVersion >= SvtSaveOptions::ODFSVER_013 && aServiceName == "com.sun.star.chart2.PolynomialRegressionCurve")
+                    {   // ODF 1.3 OFFICE-3958
                         sValueBuffer.append( GetXMLToken( XML_POLYNOMIAL ));
-                    else if (nCurrentVersion > SvtSaveOptions::ODFVER_012 && aServiceName == "com.sun.star.chart2.MovingAverageRegressionCurve")
+                    }
+                    else if (nCurrentVersion >= SvtSaveOptions::ODFSVER_013 && aServiceName == "com.sun.star.chart2.MovingAverageRegressionCurve")
+                    {   // ODF 1.3 OFFICE-3959
                         sValueBuffer.append( GetXMLToken( XML_MOVING_AVERAGE ));
+                    }
                 }
                 break;
 

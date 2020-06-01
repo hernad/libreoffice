@@ -17,36 +17,33 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_DRAWINGLAYER_PRIMITIVE2D_GLOWPRIMITIVE2D_HXX
-#define INCLUDED_DRAWINGLAYER_PRIMITIVE2D_GLOWPRIMITIVE2D_HXX
+#pragma once
 
 #include <drawinglayer/drawinglayerdllapi.h>
 
 #include <drawinglayer/primitive2d/groupprimitive2d.hxx>
 #include <basegfx/matrix/b2dhommatrix.hxx>
 #include <basegfx/color/bcolor.hxx>
+#include <tools/color.hxx>
 
-namespace drawinglayer
-{
-namespace primitive2d
+namespace drawinglayer::primitive2d
 {
 class DRAWINGLAYER_DLLPUBLIC GlowPrimitive2D final : public GroupPrimitive2D
 {
 private:
-    /// the Glow transformation, normally just an offset
-    basegfx::B2DHomMatrix maGlowTransform;
+    /// the Glow color to which all geometry is to be forced; includes alpha
+    Color maGlowColor;
 
-    /// the Glow color to which all geometry is to be forced
-    basegfx::BColor maGlowColor;
+    /// the Glow size, in logical units (100ths of mm)
+    double mfGlowRadius;
 
 public:
     /// constructor
-    GlowPrimitive2D(const basegfx::B2DHomMatrix& rGlowTransform, const basegfx::BColor& rGlowColor,
-                    const Primitive2DContainer& rChildren);
+    GlowPrimitive2D(const Color& rGlowColor, double fRadius, const Primitive2DContainer& rChildren);
 
     /// data read access
-    const basegfx::B2DHomMatrix& getGlowTransform() const { return maGlowTransform; }
-    const basegfx::BColor& getGlowColor() const { return maGlowColor; }
+    const Color& getGlowColor() const { return maGlowColor; }
+    double getGlowRadius() const { return mfGlowRadius; }
 
     /// compare operator
     virtual bool operator==(const BasePrimitive2D& rPrimitive) const override;
@@ -55,17 +52,9 @@ public:
     virtual basegfx::B2DRange
     getB2DRange(const geometry::ViewInformation2D& rViewInformation) const override;
 
-    ///  create decomposition
-    virtual void
-    get2DDecomposition(Primitive2DDecompositionVisitor& rVisitor,
-                       const geometry::ViewInformation2D& rViewInformation) const override;
-
     /// provide unique ID
     virtual sal_uInt32 getPrimitive2DID() const override;
 };
-} // end of namespace primitive2d
-} // end of namespace drawinglayer
-
-#endif //INCLUDED_DRAWINGLAYER_PRIMITIVE2D_GLOWPRIMITIVE2D_HXX
+} // end of namespace drawinglayer::primitive2d
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

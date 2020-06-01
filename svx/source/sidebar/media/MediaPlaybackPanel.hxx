@@ -16,8 +16,7 @@
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
-#ifndef INCLUDED_SD_SOURCE_SIDEBAR_MEDIAPLAYBACKPANEL_HXX
-#define INCLUDED_SD_SOURCE_SIDEBAR_MEDIAPLAYBACKPANEL_HXX
+#pragma once
 
 #include <memory>
 #include <com/sun/star/frame/XFrame.hpp>
@@ -32,7 +31,7 @@ using namespace css;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::frame;
 
-namespace svx { namespace sidebar {
+namespace svx::sidebar {
 
 /** This panel provides media playback control in document
 */
@@ -79,8 +78,6 @@ private:
 };
 
 
-} } // end of namespace svx::sidebar
-
-#endif
+} // end of namespace svx::sidebar
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

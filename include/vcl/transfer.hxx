@@ -42,9 +42,9 @@
 #include <com/sun/star/embed/Aspects.hpp>
 #include <memory>
 
-namespace com { namespace sun { namespace star { namespace datatransfer { namespace dnd { class XDragGestureRecognizer; } } } } }
-namespace com { namespace sun { namespace star { namespace io { class XInputStream; } } } }
-namespace com { namespace sun { namespace star { namespace datatransfer { namespace dnd { class XDropTarget; } } } } }
+namespace com::sun::star::datatransfer::dnd { class XDragGestureRecognizer; }
+namespace com::sun::star::io { class XInputStream; }
+namespace com::sun::star::datatransfer::dnd { class XDropTarget; }
 
 namespace tools { template <typename T> class SvRef; }
 template <typename Arg, typename Ret> class Link;
@@ -476,7 +476,7 @@ public:
     virtual             ~DropTargetHelper();
 
                         // typically called by the application in ::AcceptDrop and ::ExecuteDrop and (see above)
-    bool                IsDropFormatSupported( SotClipboardFormatId nFormat );
+    bool                IsDropFormatSupported(SotClipboardFormatId nFormat) const;
 
     const DataFlavorExVector& GetDataFlavorExVector() const {return maFormats; }
 

@@ -9,18 +9,7 @@
 
 #include <swmodeltestbase.hxx>
 
-#include <comphelper/classids.hxx>
-#include <svtools/embedhlp.hxx>
-#include <svx/svdpage.hxx>
-#include <tools/globname.hxx>
-#include <unotest/bootstrapfixturebase.hxx>
 #include <vcl/gdimtf.hxx>
-
-#include <wrtsh.hxx>
-#include <fmtanchr.hxx>
-#include <IDocumentDrawModelAccess.hxx>
-#include <drawdoc.hxx>
-#include <dcontact.hxx>
 
 static char const DATA_DIRECTORY[] = "/sw/qa/core/txtnode/data/";
 
@@ -40,7 +29,7 @@ CPPUNIT_TEST_FIXTURE(SwCoreTxtnodeTest, testBtlrCellChinese)
     SwDocShell* pShell = pTextDoc->GetDocShell();
     std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
     MetafileXmlDump dumper;
-    xmlDocPtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
     assertXPath(pXmlDoc, "//font[1]", "orientation", "900");
     // Without the accompanying fix in place, this test would have failed with:
     // - Expected: false

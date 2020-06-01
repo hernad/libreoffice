@@ -24,6 +24,7 @@
 #include <svtools/svtdllapi.h>
 #include <tools/wintypes.hxx>
 #include <vcl/customweld.hxx>
+#include <vcl/image.hxx>
 #include <memory>
 #include <vector>
 
@@ -271,6 +272,7 @@ public:
     virtual void    SetDrawingArea(weld::DrawingArea* pDrawingArea) override;
 
     virtual bool    MouseButtonDown( const MouseEvent& rMEvt ) override;
+    virtual bool    MouseButtonUp( const MouseEvent& rMEvt ) override;
     virtual bool    MouseMove( const MouseEvent& rMEvt ) override;
     virtual bool    KeyInput( const KeyEvent& rKEvt ) override;
     virtual void    Paint(vcl::RenderContext& rRenderContext, const tools::Rectangle& rRect) override;

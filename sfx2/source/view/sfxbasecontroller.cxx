@@ -76,7 +76,7 @@
 #include <unordered_map>
 
 #include <com/sun/star/ui/XSidebarProvider.hpp>
-#include <sfx2/sidebar/UnoSidebar.hxx>
+#include <sidebar/UnoSidebar.hxx>
 
 #define TIMEOUT_START_RESCHEDULE    10L /* 10th s */
 
@@ -1533,6 +1533,13 @@ void SAL_CALL SfxBaseController::removeInfobar(const OUString& sId)
     if (!pViewFrame->HasInfoBarWithID(sId))
         throw css::container::NoSuchElementException("Infobar with ID '" + sId + "' not found.");
     pViewFrame->RemoveInfoBar(sId);
+}
+
+sal_Bool SAL_CALL SfxBaseController::hasInfobar(const OUString& sId)
+{
+    SolarMutexGuard aGuard;
+    SfxViewFrame* pViewFrame = m_pData->m_pViewShell->GetFrame();
+    return pViewFrame->HasInfoBarWithID(sId);
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

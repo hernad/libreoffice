@@ -23,6 +23,7 @@
 #include <drawinglayer/primitive2d/PolyPolygonHatchPrimitive2D.hxx>
 #include <drawinglayer/primitive2d/PolyPolygonGraphicPrimitive2D.hxx>
 #include <drawinglayer/primitive2d/PolyPolygonColorPrimitive2D.hxx>
+#include <drawinglayer/primitive2d/softedgeprimitive2d.hxx>
 #include <drawinglayer/primitive2d/unifiedtransparenceprimitive2d.hxx>
 #include <drawinglayer/primitive2d/transparenceprimitive2d.hxx>
 #include <basegfx/polygon/b2dpolypolygontools.hxx>
@@ -48,6 +49,7 @@
 #include <drawinglayer/attribute/sdrlinestartendattribute.hxx>
 #include <drawinglayer/attribute/sdrshadowattribute.hxx>
 #include <drawinglayer/attribute/sdrglowattribute.hxx>
+#include <sal/log.hxx>
 
 
 using namespace com::sun::star;
@@ -483,8 +485,7 @@ namespace drawinglayer::primitive2d
         Primitive2DContainer createEmbeddedShadowPrimitive(
             const Primitive2DContainer& rContent,
             const attribute::SdrShadowAttribute& rShadow,
-            sal_Int32 nGraphicTranslateX,
-            sal_Int32 nGraphicTranslateY)
+            const basegfx::B2DHomMatrix& rObjectMatrix)
         {
             if(!rContent.empty())
             {
@@ -494,10 +495,25 @@ namespace drawinglayer::primitive2d
                 {
                     if(rShadow.getSize().getX() != 100000)
                     {
+                        basegfx::B2DTuple aScale;
+                        basegfx::B2DTuple aTranslate;
+                        double fRotate = 0;
+                        double fShearX = 0;
+                        rObjectMatrix.decompose(aScale, aTranslate, fRotate, fShearX);
                         // Scale the shadow
-                        aShadowOffset.translate(-nGraphicTranslateX, -nGraphicTranslateY);
+                        double nTranslateX = aTranslate.getX();
+                        double nTranslateY = aTranslate.getY();
+
+                        // The origin for scaling is the top left corner by default. A negative
+                        // shadow offset changes the origin.
+                        if (rShadow.getOffset().getX() < 0)
+                            nTranslateX += aScale.getX();
+                        if (rShadow.getOffset().getY() < 0)
+                            nTranslateY += aScale.getY();
+
+                        aShadowOffset.translate(-nTranslateX, -nTranslateY);
                         aShadowOffset.scale(rShadow.getSize().getX() * 0.00001, rShadow.getSize().getY() * 0.00001);
-                        aShadowOffset.translate(nGraphicTranslateX, nGraphicTranslateY);
+                        aShadowOffset.translate(nTranslateX, nTranslateY);
                     }
 
                     aShadowOffset.translate(rShadow.getOffset().getX(), rShadow.getOffset().getY());
@@ -537,14 +553,19 @@ namespace drawinglayer::primitive2d
             if(rContent.empty())
                 return rContent;
             Primitive2DContainer aRetval(2);
-            const uno::Sequence< beans::PropertyValue > xViewParameters;
-            geometry::ViewInformation2D aViewInformation2D(xViewParameters);
             aRetval[0] = Primitive2DReference(
-                new GlowPrimitive2D(
-                    rGlow.GetTransfMatrix(rContent.getB2DRange(aViewInformation2D)),
-                    rGlow.getColor(),
-                    rContent));
+                new GlowPrimitive2D(rGlow.getColor(), rGlow.getRadius(), rContent));
             aRetval[1] = Primitive2DReference(new GroupPrimitive2D(rContent));
+            return aRetval;
+        }
+
+        Primitive2DContainer createEmbeddedSoftEdgePrimitive(const Primitive2DContainer& rContent,
+                                                             sal_Int32 nRadius)
+        {
+            if (rContent.empty() || !nRadius)
+                return rContent;
+            Primitive2DContainer aRetval(1);
+            aRetval[0] = Primitive2DReference(new SoftEdgePrimitive2D(nRadius, rContent));
             return aRetval;
         }
 

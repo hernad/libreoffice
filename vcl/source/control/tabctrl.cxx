@@ -25,7 +25,7 @@
 #include <vcl/help.hxx>
 #include <vcl/event.hxx>
 #include <vcl/menu.hxx>
-#include <vcl/button.hxx>
+#include <vcl/toolkit/button.hxx>
 #include <vcl/tabpage.hxx>
 #include <vcl/tabctrl.hxx>
 #include <vcl/toolkit/controllayout.hxx>
@@ -680,7 +680,6 @@ void TabControl::ImplChangeTabPage( sal_uInt16 nId, sal_uInt16 nOldId )
             pCtrlParent->SetHelpId( pPage->GetHelpId() );
         }
 
-        pPage->ActivatePage();
         pPage->Show();
 
         if ( pOldPage && pOldPage->HasChildPathFocus() )
@@ -2160,6 +2159,24 @@ std::vector<sal_uInt16> TabControl::GetPageIDs() const
 FactoryFunction TabControl::GetUITestFactory() const
 {
     return TabControlUIObject::create;
+}
+
+boost::property_tree::ptree TabControl::DumpAsPropertyTree()
+{
+    boost::property_tree::ptree aTree = Control::DumpAsPropertyTree();
+
+    boost::property_tree::ptree aTabs;
+    for(auto id : GetPageIDs())
+    {
+        boost::property_tree::ptree aTab;
+        aTab.put("text", GetPageText(id));
+        aTab.put("id", id);
+        aTabs.push_back(std::make_pair("", aTab));
+    }
+
+    aTree.add_child("tabs", aTabs);
+
+    return aTree;
 }
 
 sal_uInt16 NotebookbarTabControlBase::m_nHeaderHeight = 0;

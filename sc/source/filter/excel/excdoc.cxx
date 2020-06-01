@@ -663,7 +663,7 @@ void ExcTable::FillAsEmptyTable( SCTAB nCodeNameIdx )
 void ExcTable::Write( XclExpStream& rStrm )
 {
     SetCurrScTab( mnScTab );
-    if( mxCellTable.get() )
+    if( mxCellTable )
         mxCellTable->Finalize(true);
     aRecList.Save( rStrm );
 }
@@ -689,8 +689,11 @@ void ExcTable::WriteXml( XclExpXmlStream& rStrm )
     rStrm.PushStream( pWorksheet );
 
     pWorksheet->startElement( XML_worksheet,
-            XML_xmlns, rStrm.getNamespaceURL(OOX_NS(xls)).toUtf8(),
-            FSNS(XML_xmlns, XML_r), rStrm.getNamespaceURL(OOX_NS(officeRel)).toUtf8() );
+        XML_xmlns, rStrm.getNamespaceURL(OOX_NS(xls)).toUtf8(),
+        FSNS(XML_xmlns, XML_r), rStrm.getNamespaceURL(OOX_NS(officeRel)).toUtf8(),
+        FSNS(XML_xmlns, XML_xdr), "http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing", // rStrm.getNamespaceURL(OOX_NS(xm)).toUtf8() -> "http://schemas.microsoft.com/office/excel/2006/main",
+        FSNS(XML_xmlns, XML_x14), rStrm.getNamespaceURL(OOX_NS(xls14Lst)).toUtf8(),
+        FSNS(XML_xmlns, XML_mc), rStrm.getNamespaceURL(OOX_NS(mce)).toUtf8());
 
     SetCurrScTab( mnScTab );
     if (mxCellTable)
@@ -781,7 +784,7 @@ void ExcDocument::Write( SvStream& rSvStrm )
         {
             // set current stream position in BOUNDSHEET record
             ExcBoundsheetRef xBoundsheet = maBoundsheetList.GetRecord( nTab );
-            if( xBoundsheet.get() )
+            if( xBoundsheet )
                 xBoundsheet->SetStreamPos( aXclStrm.GetSvStreamPos() );
             // write the table
             maTableList.GetRecord( nTab )->Write( aXclStrm );

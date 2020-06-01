@@ -510,7 +510,7 @@ void GraphicImport::lcl_attribute(Id nName, Value& rValue)
         case NS_ooxml::LN_blip: //the binary graphic data in a shape
             {
             writerfilter::Reference<Properties>::Pointer_t pProperties = rValue.getProperties();
-            if( pProperties.get())
+            if( pProperties )
             {
                 pProperties->resolve(*this);
             }
@@ -519,7 +519,7 @@ void GraphicImport::lcl_attribute(Id nName, Value& rValue)
         case NS_ooxml::LN_payload :
         {
             writerfilter::Reference<BinaryObj>::Pointer_t pPictureData = rValue.getBinary();
-            if( pPictureData.get())
+            if( pPictureData )
                 pPictureData->resolve(*this);
         }
         break;
@@ -1067,7 +1067,7 @@ void GraphicImport::lcl_sprm(Sprm& rSprm)
         case NS_ooxml::LN_hlinkClick_hlinkClick:
         {
             writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-            if( pProperties.get())
+            if( pProperties )
             {
                 pProperties->resolve(*this);
             }
@@ -1097,7 +1097,7 @@ void GraphicImport::lcl_sprm(Sprm& rSprm)
             // Use a special handler for the positioning
             auto pHandler = std::make_shared<PositionHandler>( m_pImpl->m_rPositionOffsets, m_pImpl->m_rAligns );
             writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-            if( pProperties.get( ) )
+            if( pProperties )
             {
                 pProperties->resolve( *pHandler );
                 if( !m_pImpl->bUseSimplePos )
@@ -1125,7 +1125,7 @@ void GraphicImport::lcl_sprm(Sprm& rSprm)
             // Use a special handler for the positioning
             auto pHandler = std::make_shared<PositionHandler>( m_pImpl->m_rPositionOffsets, m_pImpl->m_rAligns);
             writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-            if( pProperties.get( ) )
+            if( pProperties )
             {
                 pProperties->resolve( *pHandler );
                 if( !m_pImpl->bUseSimplePos )
@@ -1195,14 +1195,14 @@ void GraphicImport::lcl_sprm(Sprm& rSprm)
                 m_pImpl->bIsGraphic = true;
 
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                if( pProperties.get())
+                if( pProperties )
                     pProperties->resolve(*this);
             }
         break;
         case NS_ooxml::LN_CT_NonVisualDrawingProps_a_hlinkClick: // 90689;
             {
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
-                if( pProperties.get( ) )
+                if( pProperties )
                     pProperties->resolve( *this );
             }
         break;
@@ -1404,6 +1404,17 @@ uno::Reference<text::XTextContent> GraphicImport::createGraphicObject(uno::Refer
                         pCorrected = m_pImpl->mpWrapPolygon->correctWordWrapPolygonPixel(aGraphicSize);
                     }
                 }
+
+                text::GraphicCrop aGraphicCrop;
+                xShapeProps->getPropertyValue("GraphicCrop") >>= aGraphicCrop;
+                if (aGraphicCrop.Top != 0 || aGraphicCrop.Bottom != 0 || aGraphicCrop.Left != 0
+                    || aGraphicCrop.Right != 0)
+                {
+                    // Word's wrap polygon deals with a canvas which has the size of the already
+                    // cropped graphic, correct our polygon to have the same render result.
+                    pCorrected = pCorrected->correctCrop(aGraphicSize, aGraphicCrop);
+                }
+
                 if (pCorrected)
                 {
                     aContourPolyPolygon <<= pCorrected->getPointSequenceSequence();

@@ -28,9 +28,9 @@
 
 #include <vector>
 
-namespace com { namespace sun { namespace star { namespace xml { namespace sax { class XFastTokenHandler; } } } } }
-namespace com { namespace sun { namespace star { namespace xml { struct Attribute; } } } }
-namespace com { namespace sun { namespace star { namespace xml { struct FastAttribute; } } } }
+namespace com::sun::star::xml::sax { class XFastTokenHandler; }
+namespace com::sun::star::xml { struct Attribute; }
+namespace com::sun::star::xml { struct FastAttribute; }
 
 namespace sax_fastparser
 {
@@ -46,8 +46,6 @@ struct UnknownAttribute
 
     void FillAttribute( css::xml::Attribute* pAttrib ) const;
 };
-
-typedef std::vector< UnknownAttribute > UnknownAttributeList;
 
 /// A native C++ interface to tokenisation
 class SAX_DLLPUBLIC FastTokenHandlerBase :
@@ -69,6 +67,7 @@ class SAX_DLLPUBLIC FastTokenHandlerBase :
                          const FastTokenHandlerBase *pTokenHandler,
                          const char *pStr, size_t nLength );
 };
+
 
 class SAX_DLLPUBLIC FastAttributeList final : public cppu::WeakImplHelper< css::xml::sax::XFastAttributeList >
 {
@@ -116,13 +115,6 @@ public:
             if (maAttributeTokens[i] == Token)
                 return i;
         return -1;
-    }
-
-    static FastAttributeList* castToFastAttributeList(
-                        const css::uno::Reference< css::xml::sax::XFastAttributeList >& xAttrList )
-    {
-        assert( dynamic_cast <FastAttributeList *> ( xAttrList.get() ) != nullptr );
-        return static_cast <FastAttributeList *> ( xAttrList.get() );
     }
 
     /// Use for fast iteration and conversion of attributes
@@ -206,9 +198,16 @@ private:
     // maAttributeValues[0] == 0
     std::vector< sal_Int32 > maAttributeValues;
     std::vector< sal_Int32 > maAttributeTokens;
-    UnknownAttributeList maUnknownAttributes;
+    std::vector< UnknownAttribute > maUnknownAttributes;
     FastTokenHandlerBase * mpTokenHandler;
 };
+
+inline FastAttributeList& castToFastAttributeList(
+                    const css::uno::Reference< css::xml::sax::XFastAttributeList >& xAttrList )
+{
+    assert( dynamic_cast <FastAttributeList *> ( xAttrList.get() ) != nullptr );
+    return *static_cast <FastAttributeList *> ( xAttrList.get() );
+}
 
 }
 

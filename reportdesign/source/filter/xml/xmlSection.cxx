@@ -20,16 +20,9 @@
 #include "xmlfilter.hxx"
 #include <xmloff/xmltoken.hxx>
 #include <xmloff/xmlnmspe.hxx>
-#include <xmloff/nmspmap.hxx>
 #include <xmloff/xmluconv.hxx>
 #include "xmlHelper.hxx"
-#include "xmlEnums.hxx"
-#include "xmlColumn.hxx"
-#include "xmlCondPrtExpr.hxx"
-#include "xmlStyleImport.hxx"
-#include <connectivity/dbtools.hxx>
 #include <com/sun/star/report/ReportPrintOption.hpp>
-#include <strings.hxx>
 #include "xmlTable.hxx"
 #include <sal/log.hxx>
 #include <osl/diagnose.h>
@@ -64,9 +57,7 @@ OXMLSection::OXMLSection( ORptFilter& rImport,
     static const OUString s_sTRUE = ::xmloff::token::GetXMLToken(XML_TRUE);
     try
     {
-        sax_fastparser::FastAttributeList *pAttribList =
-                        sax_fastparser::FastAttributeList::castToFastAttributeList( _xAttrList );
-        for (auto &aIter : *pAttribList)
+        for (auto &aIter : sax_fastparser::castToFastAttributeList( _xAttrList ))
         {
             OUString sValue = aIter.toString();
 

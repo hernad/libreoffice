@@ -307,10 +307,9 @@ SwInsertDBColAutoPilot::SwInsertDBColAutoPilot( SwView& rView,
     // fill paragraph templates-ListBox
     {
         SfxStyleSheetBasePool* pPool = pView->GetDocShell()->GetStyleSheetPool();
-        pPool->SetSearchMask( SfxStyleFamily::Para );
         m_xLbDbParaColl->append_text( sNoTmpl );
 
-        const SfxStyleSheetBase* pBase = pPool->First();
+        const SfxStyleSheetBase* pBase = pPool->First(SfxStyleFamily::Para);
         while( pBase )
         {
             m_xLbDbParaColl->append_text( pBase->GetName() );

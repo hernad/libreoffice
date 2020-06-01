@@ -23,7 +23,8 @@
       constructor="com_sun_star_comp_Chart_XMLExporter_get_implementation">
     <service name="com.sun.star.comp.Chart.XMLExporter"/>
   </implementation>
-  <implementation name="SchXMLExport.Content">
+  <implementation name="SchXMLExport.Content"
+    constructor="com_sun_star_comp_Chart_XMLContentExporter_get_implementation">
     <service name="com.sun.star.comp.Chart.XMLContentExporter"/>
   </implementation>
   <implementation name="SchXMLExport.Oasis.Compact"
@@ -194,7 +195,8 @@
       constructor="XMLMetaExportComponent_get_implementation">
     <service name="com.sun.star.document.XMLOasisMetaExporter"/>
   </implementation>
-  <implementation name="XMLMetaExportOOo">
+  <implementation name="XMLMetaExportOOo"
+    constructor="XMLMetaExportOOo_get_implementation">
     <service name="com.sun.star.document.XMLMetaExporter"/>
   </implementation>
   <implementation name="XMLMetaImportComponent"
@@ -209,7 +211,8 @@
     <service name="com.sun.star.comp.Writer.XMLAutotextEventsExporter"/>
   </implementation>
   <implementation
-      name="com.sun.star.comp.Writer.XMLOasisAutotextEventsExporter">
+      name="com.sun.star.comp.Writer.XMLOasisAutotextEventsExporter"
+      constructor="com_sun_star_comp_Writer_XMLOasisAutotextEventsExporter_get_implementation">
     <service name="com.sun.star.comp.Writer.XMLOasisAutotextEventsExporter"/>
   </implementation>
   <implementation

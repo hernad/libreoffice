@@ -39,7 +39,7 @@ class SwDocShell;
 class SwNumRule;
 class SwNumFormat;
 class SfxItemPropertySet;
-namespace com { namespace sun { namespace star { namespace beans { struct PropertyValue; } } } }
+namespace com::sun::star::beans { struct PropertyValue; }
 
 class SwXFootnoteProperties final : public cppu::WeakAggImplHelper2
 <
@@ -217,7 +217,7 @@ public:
             OUString *const pBulletFontName,
             OUString *const pHeadingStyleName,
             OUString *const pParagraphStyleName,
-            SwDoc *const pDoc, SwDocShell *const pDocShell,
+            SwDoc *const pDoc,
             css::uno::Sequence<css::beans::PropertyValue> const& rProperties);
 
 };

@@ -26,7 +26,7 @@
 
 #include <basic/sbmod.hxx>
 #include <basic/sbstar.hxx>
-#include <svtools/InterimItemWindow.hxx>
+#include <vcl/InterimItemWindow.hxx>
 #include <vcl/idle.hxx>
 #include <vcl/weld.hxx>
 
@@ -44,9 +44,7 @@
 class ExtTextEngine;
 class TextView;
 class SvxSearchItem;
-namespace com { namespace sun { namespace star { namespace beans {
-    class XMultiPropertySet;
-} } } }
+namespace com::sun::star::beans { class XMultiPropertySet; }
 
 namespace basctl
 {
@@ -65,6 +63,7 @@ void setTextEngineText (ExtTextEngine&, OUString const&);
 class EditorWindow final : public vcl::Window, public SfxListener
 {
 friend class CodeCompleteWindow;
+friend class EditorWindowUIObject;
 private:
     class ChangesListener;
 
@@ -79,10 +78,13 @@ private:
 
     long            nCurTextWidth;
 
+    ImplSVEvent* m_nSetSourceInBasicId;
+
     SyntaxHighlighter   aHighlighter;
     Idle                aSyntaxIdle;
     std::set<sal_uInt16>       aSyntaxLineTable;
     DECL_LINK(SyntaxTimerHdl, Timer *, void);
+    DECL_LINK(SetSourceInBasicHdl, void*, void);
 
     // progress bar
     class ProgressInfo;
@@ -150,6 +152,8 @@ public:
     void            UpdateSyntaxHighlighting ();
 
     bool            GetProcedureName(OUString const & rLine, OUString& rProcType, OUString& rProcName) const;
+
+    FactoryFunction GetUITestFactory() const override;
 };
 
 class BreakPointWindow final : public vcl::Window

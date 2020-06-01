@@ -322,12 +322,6 @@ namespace vclcanvas
             ::basegfx::B2DPolyPolygon aPolyPoly(
                 ::basegfx::unotools::b2DPolyPolygonFromXPolyPolygon2D(xPolyPolygon) );
 
-            if( aPolyPoly.areControlPointsUsed() )
-            {
-                // AW: Not needed for ApplyLineDashing anymore; should be removed
-                aPolyPoly = ::basegfx::utils::adaptiveSubdivideByAngle(aPolyPoly);
-            }
-
             // apply dashing, if any
             if( strokeAttributes.DashArray.hasElements() )
             {
@@ -873,7 +867,7 @@ namespace vclcanvas
 
     geometry::IntegerSize2D CanvasHelper::getSize()
     {
-        if( !mpOutDevProvider.get() )
+        if( !mpOutDevProvider )
             return geometry::IntegerSize2D(); // we're disposed
 
         return vcl::unotools::integerSize2DFromSize( mpOutDevProvider->getOutDev().GetOutputSizePixel() );
@@ -882,7 +876,7 @@ namespace vclcanvas
     uno::Reference< rendering::XBitmap > CanvasHelper::getScaledBitmap( const geometry::RealSize2D& newSize,
                                                                         bool                        beFast )
     {
-        if( !mpOutDevProvider.get() || !mpDevice )
+        if( !mpOutDevProvider || !mpDevice )
             return uno::Reference< rendering::XBitmap >(); // we're disposed
 
         OutputDevice& rOutDev( mpOutDevProvider->getOutDev() );
@@ -907,7 +901,7 @@ namespace vclcanvas
     uno::Sequence< sal_Int8 > CanvasHelper::getData( rendering::IntegerBitmapLayout&     rLayout,
                                                      const geometry::IntegerRectangle2D& rect )
     {
-        if( !mpOutDevProvider.get() )
+        if( !mpOutDevProvider )
             return uno::Sequence< sal_Int8 >(); // we're disposed
 
         rLayout = getMemoryLayout();
@@ -957,7 +951,7 @@ namespace vclcanvas
     uno::Sequence< sal_Int8 > CanvasHelper::getPixel( rendering::IntegerBitmapLayout& rLayout,
                                                       const geometry::IntegerPoint2D& pos )
     {
-        if( !mpOutDevProvider.get() )
+        if( !mpOutDevProvider )
             return uno::Sequence< sal_Int8 >(); // we're disposed
 
         rLayout = getMemoryLayout();
@@ -986,7 +980,7 @@ namespace vclcanvas
 
     rendering::IntegerBitmapLayout CanvasHelper::getMemoryLayout()
     {
-        if( !mpOutDevProvider.get() )
+        if( !mpOutDevProvider )
             return rendering::IntegerBitmapLayout(); // we're disposed
 
         rendering::IntegerBitmapLayout aBitmapLayout( ::canvas::tools::getStdMemoryLayout(getSize()) );
@@ -1000,7 +994,7 @@ namespace vclcanvas
                                         const rendering::RenderState&   renderState,
                                         ColorType                       eColorType ) const
     {
-        ENSURE_OR_THROW( mpOutDevProvider.get(),
+        ENSURE_OR_THROW( mpOutDevProvider,
                          "outdev null. Are we disposed?" );
 
         ::canvas::tools::verifyInput( renderState,
@@ -1085,7 +1079,7 @@ namespace vclcanvas
                                         const rendering::RenderState&                   renderState,
                                         const uno::Reference< rendering::XCanvasFont >& xFont   ) const
     {
-        ENSURE_OR_THROW( mpOutDevProvider.get(),
+        ENSURE_OR_THROW( mpOutDevProvider,
                          "outdev null. Are we disposed?" );
 
         OutputDevice& rOutDev( mpOutDevProvider->getOutDev() );

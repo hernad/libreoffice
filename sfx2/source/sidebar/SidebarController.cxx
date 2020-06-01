@@ -1218,11 +1218,12 @@ IMPL_LINK(SidebarController, OnMenuItemSelected, Menu*, pMenu, bool)
 
 void SidebarController::RequestCloseDeck()
 {
-    if (comphelper::LibreOfficeKit::isActive() && mpCurrentDeck.get())
+    if (comphelper::LibreOfficeKit::isActive() && mpCurrentDeck)
     {
         const vcl::ILibreOfficeKitNotifier* pNotifier = mpCurrentDeck->GetLOKNotifier();
         auto pMobileNotifier = SfxViewShell::Current();
-        if (pMobileNotifier && comphelper::LibreOfficeKit::isMobilePhone(SfxLokHelper::getView()))
+        const SfxViewShell* pViewShell = SfxViewShell::Current();
+        if (pMobileNotifier && pViewShell && pViewShell->isLOKMobilePhone())
         {
             // Mobile phone.
             std::stringstream aStream;
@@ -1242,7 +1243,7 @@ void SidebarController::RequestCloseDeck()
     mbIsDeckRequestedOpen = false;
     UpdateDeckOpenState();
 
-    if (!mpCurrentDeck.get())
+    if (!mpCurrentDeck)
         mpTabBar->RemoveDeckHighlight();
 }
 

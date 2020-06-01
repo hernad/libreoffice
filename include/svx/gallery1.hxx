@@ -112,16 +112,16 @@ public:
 
     static Gallery*             GetGalleryInstance();
 
-    SAL_DLLPRIVATE size_t       GetThemeCount() const { return aThemeList.size(); }
+    size_t                      GetThemeCount() const { return aThemeList.size(); }
     SAL_DLLPRIVATE const GalleryThemeEntry* GetThemeInfo( size_t nPos )
                                 { return nPos < aThemeList.size() ? aThemeList[ nPos ].get() : nullptr; }
-    SAL_DLLPRIVATE const GalleryThemeEntry* GetThemeInfo( const OUString& rThemeName ) { return ImplGetThemeEntry( rThemeName ); }
+    const GalleryThemeEntry* GetThemeInfo( const OUString& rThemeName ) { return ImplGetThemeEntry( rThemeName ); }
 
     bool                        HasTheme( const OUString& rThemeName );
     SAL_DLLPRIVATE OUString     GetThemeName( sal_uInt32 nThemeId ) const;
 
     bool                        CreateTheme( const OUString& rThemeName );
-    SAL_DLLPRIVATE void         RenameTheme( const OUString& rOldName, const OUString& rNewName );
+    void                        RenameTheme( const OUString& rOldName, const OUString& rNewName );
     bool                        RemoveTheme( const OUString& rThemeName );
 
     GalleryTheme*               AcquireTheme( const OUString& rThemeName, SfxListener& rListener );

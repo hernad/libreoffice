@@ -10,9 +10,9 @@
 #include <test/bootstrapfixture.hxx>
 
 #include <vcl/wrkwin.hxx>
-#include <vcl/button.hxx>
 #include <vcl/edit.hxx>
-#include <vcl/combobox.hxx>
+#include <vcl/toolkit/button.hxx>
+#include <vcl/toolkit/combobox.hxx>
 #include <vcl/toolkit/dialog.hxx>
 #include <vcl/toolkit/field.hxx>
 #include <vcl/virdev.hxx>
@@ -76,6 +76,8 @@ void LifecycleTest::testVirtualDevice()
     VclPtrInstance<VirtualDevice> pVDev3;
     VclPtrInstance<VirtualDevice> pVDev4(DeviceFormat::BITMASK);
     CPPUNIT_ASSERT(!!pVDev && !!pVDev2 && !!pVDev3 && !!pVDev4);
+    pVDev.disposeAndClear();
+    pVDev4.disposeAndClear();
 }
 
 void LifecycleTest::testMultiDispose()

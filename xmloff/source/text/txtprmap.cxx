@@ -32,13 +32,13 @@ using namespace ::com::sun::star::uno;
 using namespace ::xmloff::token;
 
 #define M_E_( a, p, l, t, c ) \
-    { a, sizeof(a)-1, XML_NAMESPACE_##p, XML_##l, t, c, SvtSaveOptions::ODFVER_010, false }
+    { a, sizeof(a)-1, XML_NAMESPACE_##p, XML_##l, t, c, SvtSaveOptions::ODFSVER_010, false }
 
 #define M_EV_( a, p, l, t, c, v ) \
     { a, sizeof(a)-1, XML_NAMESPACE_##p, XML_##l, t, c, v, false }
 
 #define M_ED_( a, p, l, t, c ) \
-    { a, sizeof(a)-1, XML_NAMESPACE_##p, XML_##l, (t) | MID_FLAG_DEFAULT_ITEM_EXPORT, c, SvtSaveOptions::ODFVER_010, false }
+    { a, sizeof(a)-1, XML_NAMESPACE_##p, XML_##l, (t) | MID_FLAG_DEFAULT_ITEM_EXPORT, c, SvtSaveOptions::ODFSVER_010, false }
 
 // text properties
 #define MT_E( a, p, l, t, c ) \
@@ -74,15 +74,17 @@ using namespace ::xmloff::token;
 #define MC_E( a, p, l, t, c ) \
     M_E_( a, p, l, (t|XML_TYPE_PROP_TABLE_CELL), c )
 
+#define MAP_ODF13(name,prefix,token,type,context)  { name, sizeof(name)-1, prefix, token, type, context, SvtSaveOptions::ODFSVER_013, false }
+
 // extensions import/export
-#define MAP_EXT(name,prefix,token,type,context)  { name, sizeof(name)-1, prefix, token, type, context, SvtSaveOptions::ODFVER_012_EXT_COMPAT, false }
+#define MAP_EXT(name,prefix,token,type,context)  { name, sizeof(name)-1, prefix, token, type, context, SvtSaveOptions::ODFSVER_FUTURE_EXTENDED, false }
 // extensions import only
-#define MAP_EXT_I(name,prefix,token,type,context)  { name, sizeof(name)-1, prefix, token, type, context, SvtSaveOptions::ODFVER_012_EXT_COMPAT, true }
+#define MAP_EXT_I(name,prefix,token,type,context)  { name, sizeof(name)-1, prefix, token, type, context, SvtSaveOptions::ODFSVER_FUTURE_EXTENDED, true }
 
 #define M_END() \
-    { nullptr, 0, 0, XML_TOKEN_INVALID, 0, 0, SvtSaveOptions::ODFVER_010, false }
+    { nullptr, 0, 0, XML_TOKEN_INVALID, 0, 0, SvtSaveOptions::ODFSVER_010, false }
 
-#define MAP_(name,prefix,token,type,context)  { name, sizeof(name)-1, prefix, token, type, context, SvtSaveOptions::ODFVER_010, false }
+#define MAP_(name,prefix,token,type,context)  { name, sizeof(name)-1, prefix, token, type, context, SvtSaveOptions::ODFSVER_010, false }
 #define GMAP(name,prefix,token,type,context) MAP_(name,prefix,token,static_cast<sal_Int32>(type|XML_TYPE_PROP_GRAPHIC),context)
 
 XMLPropertyMapEntry const aXMLParaPropMap[] =
@@ -127,8 +129,8 @@ XMLPropertyMapEntry const aXMLParaPropMap[] =
     MP_E( "ParaTopMarginRelative",  FO, MARGIN_TOP,         XML_TYPE_PERCENT16, CTF_PARATOPMARGIN_REL ),
     MP_E( "ParaBottomMargin",       FO, MARGIN_BOTTOM,      XML_TYPE_MEASURE|MID_FLAG_MULTI_PROPERTY, CTF_PARABOTTOMMARGIN ),
     MP_E( "ParaBottomMarginRelative",FO,    MARGIN_BOTTOM,      XML_TYPE_PERCENT16, CTF_PARABOTTOMMARGIN_REL ),
-    MAP_EXT_I( "ParaContextMargin", XML_NAMESPACE_STYLE, XML_CONTEXTUAL_SPACING, XML_TYPE_BOOL|XML_TYPE_PROP_PARAGRAPH, 0 ),    // proposed ODF 1.2+ and was written by LO<=4.2
-    MAP_EXT( "ParaContextMargin", XML_NAMESPACE_LO_EXT, XML_CONTEXTUAL_SPACING, XML_TYPE_BOOL|XML_TYPE_PROP_PARAGRAPH, 0 ),     // extension namespace
+    MAP_ODF13( "ParaContextMargin", XML_NAMESPACE_STYLE, XML_CONTEXTUAL_SPACING, XML_TYPE_BOOL|XML_TYPE_PROP_PARAGRAPH, 0 ),    // ODF 1.3 OFFICE-3767 and was written by LO<=4.2
+    MAP_ODF13( "ParaContextMargin", XML_NAMESPACE_LO_EXT, XML_CONTEXTUAL_SPACING, XML_TYPE_BOOL|XML_TYPE_PROP_PARAGRAPH, 0 ),     // extension namespace
     // RES_CHRATR_CASEMAP
     MT_E( "CharCaseMap",        FO,     FONT_VARIANT,       XML_TYPE_TEXT_CASEMAP_VAR,  0 ),
     MT_E( "CharCaseMap",        FO,     TEXT_TRANSFORM,     XML_TYPE_TEXT_CASEMAP,  0 ),
@@ -179,9 +181,9 @@ XMLPropertyMapEntry const aXMLParaPropMap[] =
     // RES_CHRATR_WEIGHT
     MT_E( "CharWeight",     FO,     FONT_WEIGHT,        XML_TYPE_TEXT_WEIGHT, 0 ),
     // RES_CHRATR_RSID
-    { "Rsid", sizeof("Rsid")-1, XML_NAMESPACE_OFFICE_EXT, XML_RSID, XML_TYPE_HEX|XML_TYPE_PROP_TEXT, 0, SvtSaveOptions::ODFVER_012_EXT_COMPAT, false },
+    { "Rsid", sizeof("Rsid")-1, XML_NAMESPACE_OFFICE_EXT, XML_RSID, XML_TYPE_HEX|XML_TYPE_PROP_TEXT, 0, SvtSaveOptions::ODFSVER_FUTURE_EXTENDED, false },
     // RES_PARATR_RSID
-    { "ParRsid", sizeof("ParRsid")-1, XML_NAMESPACE_OFFICE_EXT, XML_PARRSID, XML_TYPE_HEX|XML_TYPE_PROP_TEXT, 0, SvtSaveOptions::ODFVER_012_EXT_COMPAT, false },
+    { "ParRsid", sizeof("ParRsid")-1, XML_NAMESPACE_OFFICE_EXT, XML_PARRSID, XML_TYPE_HEX|XML_TYPE_PROP_TEXT, 0, SvtSaveOptions::ODFSVER_FUTURE_EXTENDED, false },
     // RES_CHRATR_WORDLINEMODE
     MT_E( "CharWordMode",   STYLE,  TEXT_UNDERLINE_MODE,        XML_TYPE_TEXT_LINE_MODE|MID_FLAG_MERGE_PROPERTY, 0 ),
     MT_E( "CharWordMode",   STYLE,  TEXT_OVERLINE_MODE,     XML_TYPE_TEXT_LINE_MODE|MID_FLAG_MERGE_PROPERTY, 0 ),
@@ -361,7 +363,7 @@ XMLPropertyMapEntry const aXMLParaPropMap[] =
     MP_E( "ParaIsAutoFirstLineIndent",  STYLE, AUTO_TEXT_INDENT,    XML_TYPE_BOOL, 0 ),
     // RES_PAGEDESC
     MP_E( "PageDescName",           STYLE,  MASTER_PAGE_NAME,           MID_FLAG_SPECIAL_ITEM|XML_TYPE_STYLENAME, CTF_PAGEDESCNAME ),
-    MP_E( "PageNumberOffset",       STYLE,  PAGE_NUMBER,            XML_TYPE_NUMBER16_AUTO, 0 ),
+    MP_E( "PageNumberOffset",       STYLE,  PAGE_NUMBER,            XML_TYPE_NUMBER16_AUTO|MID_FLAG_SPECIAL_ITEM_EXPORT, CTF_PAGENUMBEROFFSET ),
     // RES_BREAK : TODO: does this work?
     MP_E( "BreakType",      FO, BREAK_BEFORE,       XML_TYPE_TEXT_BREAKBEFORE|MID_FLAG_MULTI_PROPERTY, 0 ),
     MP_E( "BreakType",      FO, BREAK_AFTER,        XML_TYPE_TEXT_BREAKAFTER, 0 ),
@@ -523,9 +525,9 @@ XMLPropertyMapEntry const aXMLTextPropMap[] =
     // RES_CHRATR_WEIGHT
     MT_E( "CharWeight",     FO,     FONT_WEIGHT,        XML_TYPE_TEXT_WEIGHT, 0 ),
     // RES_CHRATR_RSID
-    { "Rsid", sizeof("Rsid")-1, XML_NAMESPACE_OFFICE_EXT, XML_RSID, XML_TYPE_HEX|XML_TYPE_PROP_TEXT, 0, SvtSaveOptions::ODFVER_012_EXT_COMPAT, false },
+    { "Rsid", sizeof("Rsid")-1, XML_NAMESPACE_OFFICE_EXT, XML_RSID, XML_TYPE_HEX|XML_TYPE_PROP_TEXT, 0, SvtSaveOptions::ODFSVER_FUTURE_EXTENDED, false },
     // RES_PARATR_RSID
-    { "ParRsid", sizeof("ParRsid")-1, XML_NAMESPACE_OFFICE_EXT, XML_PARRSID, XML_TYPE_HEX|XML_TYPE_PROP_TEXT, 0, SvtSaveOptions::ODFVER_012_EXT_COMPAT, false },
+    { "ParRsid", sizeof("ParRsid")-1, XML_NAMESPACE_OFFICE_EXT, XML_PARRSID, XML_TYPE_HEX|XML_TYPE_PROP_TEXT, 0, SvtSaveOptions::ODFSVER_FUTURE_EXTENDED, false },
     // RES_CHRATR_WORDLINEMODE
     MT_E( "CharWordMode",   STYLE,  TEXT_UNDERLINE_MODE,        XML_TYPE_TEXT_LINE_MODE|MID_FLAG_MERGE_PROPERTY, 0 ),
     MT_E( "CharWordMode",   STYLE,  TEXT_OVERLINE_MODE,     XML_TYPE_TEXT_LINE_MODE|MID_FLAG_MERGE_PROPERTY, 0 ),
@@ -540,7 +542,7 @@ XMLPropertyMapEntry const aXMLTextPropMap[] =
     // RES_CHRATR_BACKGROUND
     MT_E( "CharBackColor",  FO, BACKGROUND_COLOR, XML_TYPE_COLORTRANSPARENT|MID_FLAG_MULTI_PROPERTY, CTF_CHAR_BACKGROUND ),
     MT_E( "CharBackTransparent",    FO, BACKGROUND_COLOR, XML_TYPE_ISTRANSPARENT|MID_FLAG_MERGE_ATTRIBUTE, CTF_CHAR_BACKGROUND_TRANSPARENCY),
-    { "CharShadingValue", sizeof("CharShadingValue")-1, XML_NAMESPACE_LO_EXT, XML_CHAR_SHADING_VALUE, XML_TYPE_NUMBER|XML_TYPE_PROP_TEXT, 0, SvtSaveOptions::ODFVER_012_EXT_COMPAT, false },
+    { "CharShadingValue", sizeof("CharShadingValue")-1, XML_NAMESPACE_LO_EXT, XML_CHAR_SHADING_VALUE, XML_TYPE_NUMBER|XML_TYPE_PROP_TEXT, 0, SvtSaveOptions::ODFSVER_FUTURE_EXTENDED, false },
     MT_E( "CharBackColor",  FO, TEXT_BACKGROUND_COLOR, XML_TYPE_COLOR|MID_FLAG_SPECIAL_ITEM_EXPORT, CTF_OLDTEXTBACKGROUND ),
     // RES_CHRATR_CJK_FONT
     MT_ED( "CharFontNameAsian", STYLE,  FONT_NAME_ASIAN,            XML_TYPE_STRING|MID_FLAG_SPECIAL_ITEM_IMPORT, CTF_FONTNAME_CJK ),
@@ -740,6 +742,9 @@ XMLPropertyMapEntry const aXMLFramePropMap[] =
     MG_ED( "VertOrientRelation",        STYLE,  VERTICAL_REL,         XML_TYPE_TEXT_VERTICAL_REL, CTF_VERTICALREL ),
     MG_ED( "VertOrientRelation",        STYLE,  VERTICAL_REL,         XML_TYPE_TEXT_VERTICAL_REL_PAGE|MID_FLAG_SPECIAL_ITEM_IMPORT, CTF_VERTICALREL_PAGE ),
     MG_ED( "VertOrientRelation",        STYLE,  VERTICAL_REL,         XML_TYPE_TEXT_VERTICAL_REL_FRAME|MID_FLAG_SPECIAL_ITEM_IMPORT, CTF_VERTICALREL_FRAME ),
+    MAP_EXT_I( "VertOrientRelation",    XML_NAMESPACE_LO_EXT, XML_VERTICAL_REL, XML_TYPE_TEXT_VERTICAL_REL|XML_TYPE_PROP_GRAPHIC|MID_FLAG_DEFAULT_ITEM_EXPORT, CTF_VERTICALREL ),
+    MAP_EXT_I( "VertOrientRelation",    XML_NAMESPACE_LO_EXT, XML_VERTICAL_REL, XML_TYPE_TEXT_VERTICAL_REL_PAGE|MID_FLAG_SPECIAL_ITEM_IMPORT|XML_TYPE_PROP_GRAPHIC|MID_FLAG_DEFAULT_ITEM_EXPORT, CTF_VERTICALREL_PAGE ),
+    MAP_EXT_I( "VertOrientRelation",    XML_NAMESPACE_LO_EXT, XML_VERTICAL_REL, XML_TYPE_TEXT_VERTICAL_REL_FRAME|MID_FLAG_SPECIAL_ITEM_IMPORT|XML_TYPE_PROP_GRAPHIC|MID_FLAG_DEFAULT_ITEM_EXPORT, CTF_VERTICALREL_FRAME ),
     // RES_HORI_ORIENT
     MG_ED( "HoriOrient",                STYLE,  HORIZONTAL_POS,       XML_TYPE_TEXT_HORIZONTAL_POS|MID_FLAG_MULTI_PROPERTY, CTF_HORIZONTALPOS ),
     MG_ED( "PageToggle",        STYLE,  HORIZONTAL_POS,       XML_TYPE_TEXT_HORIZONTAL_MIRROR, CTF_HORIZONTALMIRROR ),
@@ -832,7 +837,7 @@ XMLPropertyMapEntry const aXMLFramePropMap[] =
     MG_E( "HoriMirroredOnOddPages",     STYLE,  MIRROR,     XML_TYPE_TEXT_MIRROR_HORIZONTAL_RIGHT|MID_FLAG_MERGE_ATTRIBUTE|MID_FLAG_MULTI_PROPERTY, 0 ),
     MG_E( "VertMirrored",       STYLE,  MIRROR,     XML_TYPE_TEXT_MIRROR_VERTICAL|MID_FLAG_MERGE_ATTRIBUTE|MID_FLAG_MULTI_PROPERTY, 0 ),
     // RES_GRFATR_CROPGRF
-    MG_EV( "GraphicCrop",           FO,     CLIP,       XML_TYPE_TEXT_CLIP, CTF_TEXT_CLIP, SvtSaveOptions::ODFVER_012 ),
+    MG_EV( "GraphicCrop",           FO,     CLIP,       XML_TYPE_TEXT_CLIP, CTF_TEXT_CLIP, SvtSaveOptions::ODFSVER_012 ),
     MG_E( "GraphicCrop",            FO,     CLIP,       XML_TYPE_TEXT_CLIP11, CTF_TEXT_CLIP11 ),
     // RES_GRFATR_ROTATION
     // not required (exported as svg:transform attribute)
@@ -905,6 +910,9 @@ XMLPropertyMapEntry const aXMLShapePropMap[] =
     MG_E( "VertOrientRelation", STYLE,  VERTICAL_REL,   XML_TYPE_TEXT_VERTICAL_REL, CTF_SHAPE_VERTICALREL ),
     MG_E( "VertOrientRelation", STYLE,  VERTICAL_REL,   XML_TYPE_TEXT_VERTICAL_REL_PAGE|MID_FLAG_SPECIAL_ITEM_IMPORT, CTF_SHAPE_VERTICALREL_PAGE ),
     MG_E( "VertOrientRelation", STYLE,  VERTICAL_REL,   XML_TYPE_TEXT_VERTICAL_REL_FRAME|MID_FLAG_SPECIAL_ITEM_IMPORT, CTF_SHAPE_VERTICALREL_FRAME ),
+    MAP_EXT_I( "VertOrientRelation",    XML_NAMESPACE_LO_EXT, XML_VERTICAL_REL, XML_TYPE_TEXT_VERTICAL_REL|XML_TYPE_PROP_GRAPHIC, CTF_VERTICALREL ),
+    MAP_EXT_I( "VertOrientRelation",    XML_NAMESPACE_LO_EXT, XML_VERTICAL_REL, XML_TYPE_TEXT_VERTICAL_REL_PAGE|MID_FLAG_SPECIAL_ITEM_IMPORT|XML_TYPE_PROP_GRAPHIC, CTF_VERTICALREL_PAGE ),
+    MAP_EXT_I( "VertOrientRelation",    XML_NAMESPACE_LO_EXT, XML_VERTICAL_REL, XML_TYPE_TEXT_VERTICAL_REL_FRAME|MID_FLAG_SPECIAL_ITEM_IMPORT|XML_TYPE_PROP_GRAPHIC, CTF_VERTICALREL_FRAME ),
     // RES_HORI_ORIENT
     MG_E( "HoriOrient",         STYLE,  HORIZONTAL_POS, XML_TYPE_TEXT_HORIZONTAL_POS|MID_FLAG_MULTI_PROPERTY, CTF_SHAPE_HORIZONTALPOS ),
     MG_E( "PageToggle",         STYLE,  HORIZONTAL_POS, XML_TYPE_TEXT_HORIZONTAL_MIRROR, CTF_SHAPE_HORIZONTALMIRROR ),
@@ -977,7 +985,7 @@ XMLPropertyMapEntry const aXMLRubyPropMap[] =
 {
     MR_E( "RubyAdjust", STYLE, RUBY_ALIGN, XML_TYPE_TEXT_RUBY_ADJUST, 0 ),
     MR_E( "RubyIsAbove",    STYLE, RUBY_POSITION, XML_TYPE_TEXT_RUBY_IS_ABOVE, 0 ),
-    MR_EV( "RubyPosition",   LO_EXT, RUBY_POSITION, XML_TYPE_TEXT_RUBY_POSITION, 0, SvtSaveOptions::ODFVER_012_EXT_COMPAT),
+    MR_EV( "RubyPosition",   LO_EXT, RUBY_POSITION, XML_TYPE_TEXT_RUBY_POSITION, 0, SvtSaveOptions::ODFSVER_FUTURE_EXTENDED),
     M_END()
 };
 

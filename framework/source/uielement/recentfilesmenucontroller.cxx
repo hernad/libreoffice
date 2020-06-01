@@ -101,9 +101,9 @@ RecentFilesMenuController::RecentFilesMenuController( const uno::Reference< uno:
     m_bShowToolbarEntries( false )
 {
     css::beans::PropertyValue aPropValue;
-    for ( sal_Int32 i = 0; i < args.getLength(); ++i )
+    for ( uno::Any const & arg : args )
     {
-        args[i] >>= aPropValue;
+        arg >>= aPropValue;
         if ( aPropValue.Name == "InToolbar" )
         {
             aPropValue.Value >>= m_bShowToolbarEntries;
@@ -135,14 +135,14 @@ void RecentFilesMenuController::fillPopupMenu( Reference< css::awt::XPopupMenu >
     {
         for ( int i = 0; i < nPickListMenuItems; i++ )
         {
-            Sequence< PropertyValue >& rPickListEntry = aHistoryList[i];
+            const Sequence< PropertyValue >& rPickListEntry = aHistoryList[i];
             OUString aURL;
 
-            for ( int j = 0; j < rPickListEntry.getLength(); j++ )
+            for ( PropertyValue const & prop : rPickListEntry )
             {
-                if ( rPickListEntry[j].Name == HISTORY_PROPERTYNAME_URL )
+                if ( prop.Name == HISTORY_PROPERTYNAME_URL )
                 {
-                    rPickListEntry[j].Value >>= aURL;
+                    prop.Value >>= aURL;
                     break;
                 }
             }
@@ -236,8 +236,8 @@ void RecentFilesMenuController::fillPopupMenu( Reference< css::awt::XPopupMenu >
 
 void RecentFilesMenuController::executeEntry( sal_Int32 nIndex )
 {
-    if (!(( nIndex >= 0 ) &&
-        ( nIndex < sal::static_int_cast<sal_Int32>( m_aRecentFilesItems.size() ))))
+    if (( nIndex < 0 ) ||
+        ( nIndex >= sal::static_int_cast<sal_Int32>( m_aRecentFilesItems.size() )))
         return;
 
     Sequence< PropertyValue > aArgsList(3);
@@ -360,7 +360,7 @@ void SAL_CALL RecentFilesMenuController::dispatch(
     const OUString aEntryArgStr( "entry=" );
     sal_Int32 nEntryArg = aURL.Complete.indexOf( aEntryArgStr, nQueryPart );
     sal_Int32 nEntryPos = nEntryArg + aEntryArgStr.getLength();
-    if (!(( nEntryArg > 0 ) && ( nEntryPos < aURL.Complete.getLength() )))
+    if (( nEntryArg <= 0 ) || ( nEntryPos >= aURL.Complete.getLength() ))
         return;
 
     sal_Int32 nAddArgs = aURL.Complete.indexOf( '&', nEntryPos );

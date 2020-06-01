@@ -129,7 +129,8 @@ sal_Bool SAL_CALL OPreparedStatement::execute()
     if (!m_binds.empty() && mysql_stmt_bind_param(m_pStmt, m_binds.data()))
     {
         MYSQL* pMysql = m_xConnection->getMysqlConnection();
-        mysqlc_sdbc_driver::throwSQLExceptionWithMsg(mysql_stmt_error(m_pStmt), mysql_errno(pMysql),
+        mysqlc_sdbc_driver::throwSQLExceptionWithMsg(mysql_stmt_error(m_pStmt),
+                                                     mysql_sqlstate(pMysql), mysql_errno(pMysql),
                                                      *this, m_xConnection->getConnectionEncoding());
     }
 
@@ -137,7 +138,8 @@ sal_Bool SAL_CALL OPreparedStatement::execute()
     if (nFail != 0)
     {
         MYSQL* pMysql = m_xConnection->getMysqlConnection();
-        mysqlc_sdbc_driver::throwSQLExceptionWithMsg(mysql_stmt_error(m_pStmt), mysql_errno(pMysql),
+        mysqlc_sdbc_driver::throwSQLExceptionWithMsg(mysql_stmt_error(m_pStmt),
+                                                     mysql_sqlstate(pMysql), mysql_errno(pMysql),
                                                      *this, m_xConnection->getConnectionEncoding());
     }
 
@@ -152,7 +154,8 @@ sal_Int32 SAL_CALL OPreparedStatement::executeUpdate()
     if (!m_binds.empty() && mysql_stmt_bind_param(m_pStmt, m_binds.data()))
     {
         MYSQL* pMysql = m_xConnection->getMysqlConnection();
-        mysqlc_sdbc_driver::throwSQLExceptionWithMsg(mysql_stmt_error(m_pStmt), mysql_errno(pMysql),
+        mysqlc_sdbc_driver::throwSQLExceptionWithMsg(mysql_stmt_error(m_pStmt),
+                                                     mysql_sqlstate(pMysql), mysql_errno(pMysql),
                                                      *this, m_xConnection->getConnectionEncoding());
     }
 
@@ -161,7 +164,8 @@ sal_Int32 SAL_CALL OPreparedStatement::executeUpdate()
     if (nFail != 0)
     {
         MYSQL* pMysql = m_xConnection->getMysqlConnection();
-        mysqlc_sdbc_driver::throwSQLExceptionWithMsg(mysql_stmt_error(m_pStmt), mysql_errno(pMysql),
+        mysqlc_sdbc_driver::throwSQLExceptionWithMsg(mysql_stmt_error(m_pStmt),
+                                                     mysql_sqlstate(pMysql), mysql_errno(pMysql),
                                                      *this, m_xConnection->getConnectionEncoding());
     }
 
@@ -200,7 +204,8 @@ Reference<XResultSet> SAL_CALL OPreparedStatement::executeQuery()
     if (!m_binds.empty() && mysql_stmt_bind_param(m_pStmt, m_binds.data()))
     {
         MYSQL* pMysql = m_xConnection->getMysqlConnection();
-        mysqlc_sdbc_driver::throwSQLExceptionWithMsg(mysql_stmt_error(m_pStmt), mysql_errno(pMysql),
+        mysqlc_sdbc_driver::throwSQLExceptionWithMsg(mysql_stmt_error(m_pStmt),
+                                                     mysql_sqlstate(pMysql), mysql_errno(pMysql),
                                                      *this, m_xConnection->getConnectionEncoding());
     }
 
@@ -209,7 +214,8 @@ Reference<XResultSet> SAL_CALL OPreparedStatement::executeQuery()
     if (nFail != 0)
     {
         MYSQL* pMysql = m_xConnection->getMysqlConnection();
-        mysqlc_sdbc_driver::throwSQLExceptionWithMsg(mysql_stmt_error(m_pStmt), mysql_errno(pMysql),
+        mysqlc_sdbc_driver::throwSQLExceptionWithMsg(mysql_stmt_error(m_pStmt),
+                                                     mysql_sqlstate(pMysql), mysql_errno(pMysql),
                                                      *this, m_xConnection->getConnectionEncoding());
     }
 
@@ -528,18 +534,20 @@ void SAL_CALL OPreparedStatement::clearParameters()
     }
 }
 
-void SAL_CALL OPreparedStatement::clearBatch()
-{
-    mysqlc_sdbc_driver::throwFeatureNotImplementedException("OPreparedStatement::clearBatch",
-                                                            *this);
-}
+// void SAL_CALL OPreparedStatement::clearBatch()
+// {
+//     mysqlc_sdbc_driver::throwFeatureNotImplementedException("OPreparedStatement::clearBatch",
+//                                                             *this);
+// }
 
-void SAL_CALL OPreparedStatement::addBatch()
-{
-    mysqlc_sdbc_driver::throwFeatureNotImplementedException("OPreparedStatement::addBatch", *this);
-}
+// void SAL_CALL OPreparedStatement::addBatch()
+// {
+//     mysqlc_sdbc_driver::throwFeatureNotImplementedException("OPreparedStatement::addBatch", *this);
+// }
 
-Sequence<sal_Int32> SAL_CALL OPreparedStatement::executeBatch() { return Sequence<sal_Int32>(); }
+// Sequence<sal_Int32> SAL_CALL OPreparedStatement::executeBatch() {
+//     mysqlc_sdbc_driver::throwFeatureNotImplementedException("OPreparedStatement::executeBatch", *this);
+// }
 
 void OPreparedStatement::setFastPropertyValue_NoBroadcast(sal_Int32 nHandle, const Any& rValue)
 {

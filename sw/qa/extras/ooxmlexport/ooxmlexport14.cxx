@@ -44,6 +44,49 @@ protected:
     }
 };
 
+DECLARE_OOXMLIMPORT_TEST(Tdf130907, "tdf130907.docx")
+{
+    uno::Reference<text::XTextRange> xPara1 = getParagraph(2);
+    CPPUNIT_ASSERT(xPara1.is());
+    uno::Reference<beans::XPropertySet> xFormula1Props(xPara1, uno::UNO_QUERY);
+    CPPUNIT_ASSERT(xFormula1Props.is());
+    sal_Int16 nHOri1;
+    xFormula1Props->getPropertyValue("ParaAdjust") >>= nHOri1;
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("The alignment of the equation is not left!",
+        sal_Int16(style::ParagraphAdjust::ParagraphAdjust_LEFT), nHOri1);
+
+    uno::Reference<text::XTextRange> xPara2 = getParagraph(3);
+    CPPUNIT_ASSERT(xPara2.is());
+    uno::Reference<beans::XPropertySet> xFormula2Props(xPara2, uno::UNO_QUERY);
+    CPPUNIT_ASSERT(xFormula2Props.is());
+    sal_Int16 nHOri2;
+    xFormula2Props->getPropertyValue("ParaAdjust") >>= nHOri2;
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("The alignment of the equation is not center!",
+        sal_Int16(style::ParagraphAdjust::ParagraphAdjust_CENTER), nHOri2);
+
+    uno::Reference<text::XTextRange> xPara3 = getParagraph(5);
+    CPPUNIT_ASSERT(xPara3.is());
+    uno::Reference<beans::XPropertySet> xFormula3Props(xPara3, uno::UNO_QUERY);
+    CPPUNIT_ASSERT(xFormula3Props.is());
+    sal_Int16 nHOri3;
+    xFormula3Props->getPropertyValue("ParaAdjust") >>= nHOri3;
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("The alignment of the equation is not right!",
+        sal_Int16(style::ParagraphAdjust::ParagraphAdjust_RIGHT), nHOri3);
+}
+
+DECLARE_OOXMLIMPORT_TEST(testTdf123622, "tdf123622.docx")
+{
+    uno::Reference<beans::XPropertySet> XPropsRight(getShape(1),uno::UNO_QUERY);
+    sal_Int16 nRelativePosR = 0;
+    XPropsRight->getPropertyValue("HoriOrientRelation")>>=nRelativePosR;
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Shape inside the margin", sal_Int16(4), nRelativePosR);
+
+    uno::Reference<beans::XPropertySet> XPropsLeft(getShape(2), uno::UNO_QUERY);
+    sal_Int16 nRelativePosL = 0;
+    XPropsLeft->getPropertyValue("HoriOrientRelation") >>= nRelativePosL;
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Shape inside the margin", sal_Int16(3), nRelativePosL);
+}
+
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf78749, "tdf78749.docx")
 {
     //Shape lost the background image before, now check if it still has...
@@ -57,7 +100,7 @@ DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf78749, "tdf78749.docx")
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf128207, "tdf128207.docx")
 {
     //There was the charts on each other, because their horizontal and vertical position was 0!
-    xmlDocPtr p_XmlDoc = parseExport("word/document.xml");
+    xmlDocUniquePtr p_XmlDoc = parseExport("word/document.xml");
     CPPUNIT_ASSERT(p_XmlDoc);
     assertXPathContent(p_XmlDoc, "/w:document/w:body/w:p[1]/w:r[1]/w:drawing/wp:anchor/wp:positionH/wp:posOffset", "4445");
 }
@@ -65,7 +108,7 @@ DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf128207, "tdf128207.docx")
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf123873, "tdf123873.docx")
 {
     //OLE Object were overlapped due to missing wrap import
-    xmlDocPtr p_XmlDoc = parseExport("word/document.xml");
+    xmlDocUniquePtr p_XmlDoc = parseExport("word/document.xml");
     CPPUNIT_ASSERT(p_XmlDoc);
     assertXPath(
         p_XmlDoc, "/w:document/w:body/w:p[2]/w:r[2]/w:drawing/wp:anchor/wp:wrapTopAndBottom");
@@ -82,7 +125,7 @@ DECLARE_OOXMLEXPORT_TEST(testTdf130814model, "tdf130814.docx")
 
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf107020, "tdf107020.docx")
 {
-    xmlDocPtr p_XmlDoc = parseExport("word/document.xml");
+    xmlDocUniquePtr p_XmlDoc = parseExport("word/document.xml");
     CPPUNIT_ASSERT(p_XmlDoc);
     assertXPath(
         p_XmlDoc, "/w:document/w:body/w:p/w:r/w:drawing/wp:inline/a:graphic/a:graphicData/pic:pic/pic:blipFill/a:srcRect", "l", "4910");
@@ -96,7 +139,7 @@ DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf107020, "tdf107020.docx")
 
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf130814ooxml, "tdf130814.docx")
 {
-    xmlDocPtr p_XmlDoc = parseExport("word/document.xml");
+    xmlDocUniquePtr p_XmlDoc = parseExport("word/document.xml");
     CPPUNIT_ASSERT(p_XmlDoc);
     assertXPath(
         p_XmlDoc, "/w:document/w:body/w:p[2]/w:r[1]/w:rPr/w:rFonts", "eastAsia", "Arial Unicode MS");
@@ -145,11 +188,20 @@ DECLARE_OOXMLIMPORT_TEST(testTdf129888dml, "tdf129888dml.docx")
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf130120, "tdf130120.docx")
 {
     //Text for exporting the allowincell attribute:
-    xmlDocPtr p_XmlDoc = parseExport("word/document.xml");
+    xmlDocUniquePtr p_XmlDoc = parseExport("word/document.xml");
     assertXPath(p_XmlDoc, "/w:document/w:body/w:tbl/w:tr/w:tc/w:p/w:r/mc:AlternateContent/"
         "mc:Choice/w:drawing/wp:anchor", "layoutInCell", "0");
 }
 
+DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(Tdf133030, "tdf133030.docx")
+{
+    auto pExport = parseExport("word/document.xml");
+    CPPUNIT_ASSERT(pExport);
+
+    assertXPath(pExport, "/w:document/w:body/w:p[3]/m:oMathPara/m:oMathParaPr/m:jc", "val", "center");
+    assertXPath(pExport, "/w:document/w:body/w:p[5]/m:oMathPara/m:oMathParaPr/m:jc", "val", "left");
+    assertXPath(pExport, "/w:document/w:body/w:p[7]/m:oMathPara/m:oMathParaPr/m:jc", "val", "right");
+}
 
 DECLARE_OOXMLEXPORT_TEST(testTdf87569v, "tdf87569_vml.docx")
 {
@@ -159,6 +211,17 @@ DECLARE_OOXMLEXPORT_TEST(testTdf87569v, "tdf87569_vml.docx")
     xShapeProperties->getPropertyValue("IsFollowingTextFlow") >>= bValue;
     CPPUNIT_ASSERT_EQUAL_MESSAGE("tdf87569_vml: The Shape is not in the table!",
                                  true, bValue);
+}
+
+DECLARE_OOXMLEXPORT_TEST(testTdf133000_numStyleFormatting, "tdf133000_numStyleFormatting.docx")
+{
+    // Paragraph style's LeftMargin should not override numbering's Left Margin
+    xmlDocUniquePtr pDump = parseLayoutDump();
+    assertXPathContent(pDump, "/root/page[1]/body/txt[2]", "First line");
+    const sal_Int32 nLevel1Margin = getXPath(pDump, "//page[1]/body/txt[2]/infos/prtBounds", "left").toInt32();
+    assertXPathContent(pDump, "/root/page[1]/body/txt[4]", "One sublevel");
+    const sal_Int32 nLevel2Margin = getXPath(pDump, "//page[1]/body/txt[4]/infos/prtBounds", "left").toInt32();
+    CPPUNIT_ASSERT( nLevel1Margin < nLevel2Margin );
 }
 
 DECLARE_ODFEXPORT_TEST(testArabicZeroNumbering, "arabic-zero-numbering.docx")
@@ -234,7 +297,7 @@ CPPUNIT_TEST_FIXTURE(Test, testArabicZeroNumberingFootnote)
 
     reload("Office Open XML Text", "");
 
-    xmlDocPtr pXmlDoc = parseExport("word/document.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml");
     // Without the accompanying fix in place, this test would have failed with:
     // XPath '/w:document/w:body/w:sectPr/w:footnotePr/w:numFmt' number of nodes is incorrect
     // because the exporter had no idea what markup to use for ARABIC_ZERO.
@@ -262,7 +325,7 @@ CPPUNIT_TEST_FIXTURE(Test, testChicagoNumberingFootnote)
 
     reload("Office Open XML Text", "");
 
-    xmlDocPtr pXmlDoc = parseExport("word/document.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml");
     // Without the accompanying fix in place, this test would have failed with:
     // XPath '/w:document/w:body/w:sectPr/w:footnotePr/w:numFmt' number of nodes is incorrect
     // because the exporter had no idea what markup to use for SYMBOL_CHICAGO.
@@ -281,6 +344,7 @@ DECLARE_OOXMLEXPORT_TEST(testTdf87569d, "tdf87569_drawingml.docx")
 
 DECLARE_OOXMLEXPORT_TEST(testTdf130610, "tdf130610_bold_in_2_styles.ott")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // check character properties
     {
         uno::Reference<beans::XPropertySet> xStyle(
@@ -299,7 +363,7 @@ DECLARE_OOXMLEXPORT_TEST(testTdf130610, "tdf130610_bold_in_2_styles.ott")
 
     // check inline text properties
     {
-        xmlDocPtr pXmlDoc =parseExport("word/document.xml");
+        xmlDocUniquePtr pXmlDoc =parseExport("word/document.xml");
         if (pXmlDoc)
         {
             assertXPath(pXmlDoc, "/w:document/w:body/w:p[2]/w:r/w:rPr/w:b");
@@ -309,7 +373,7 @@ DECLARE_OOXMLEXPORT_TEST(testTdf130610, "tdf130610_bold_in_2_styles.ott")
 
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf121045, "tdf121045.docx")
 {
-    xmlDocPtr pXmlDoc = parseExport("word/document.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml");
     CPPUNIT_ASSERT(pXmlDoc);
     assertXPath(pXmlDoc, "/w:document/w:body/w:tbl/w:tr/w:tc[1]/w:p/w:pPr/w:rPr/w:sz", "val", "20");
     assertXPath(pXmlDoc, "/w:document/w:body/w:tbl/w:tr/w:tc[1]/w:p/w:pPr/w:rPr/w:szCs", "val", "20");
@@ -328,9 +392,18 @@ DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf121045, "tdf121045.docx")
     assertXPath(pXmlDoc, "/w:document/w:body/w:tbl/w:tr/w:tc[1]/w:p/w:r[5]/w:rPr/w:szCs", "val", "20");
 }
 
+DECLARE_OOXMLEXPORT_TEST(testTdf78352, "tdf78352.docx")
+{
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+
+    // Ensure that width of first tab is close to zero (previous value was ~1000 twips)
+    int nWidth = parseDump("/root/page/body/txt[1]/Text[@nType='PortionType::TabLeft']", "nWidth").toInt32();
+    CPPUNIT_ASSERT_LESS(150, nWidth);
+}
+
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf92472, "tdf92472.docx")
 {
-    xmlDocPtr pXmlDoc = parseExport("word/document.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml");
     CPPUNIT_ASSERT(pXmlDoc);
     assertXPath(pXmlDoc, "/w:document/w:body/w:p[2]/w:pPr/w:rPr/w:sz", "val", "20");
     assertXPath(pXmlDoc, "/w:document/w:body/w:p[2]/w:pPr/w:rPr/w:szCs", "val", "20");
@@ -347,6 +420,14 @@ DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf92472, "tdf92472.docx")
     assertXPath(pXmlDoc, "/w:document/w:body/w:p[2]/w:r[4]/w:rPr/w:szCs", "val", "20");
     assertXPath(pXmlDoc, "/w:document/w:body/w:p[2]/w:r[5]/w:rPr/w:sz", "val", "20");
     assertXPath(pXmlDoc, "/w:document/w:body/w:p[2]/w:r[5]/w:rPr/w:szCs", "val", "20");
+}
+
+DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(Tdf133035, "tdf133035.docx")
+{
+    auto pxml = parseExport("word/document.xml");
+    CPPUNIT_ASSERT(pxml);
+    OUString aXmlVal = getXPath(pxml, "/w:document/w:body/w:p[1]/w:r[1]/w:object/v:shape", "style");
+    CPPUNIT_ASSERT(aXmlVal.indexOf("margin-left:186.6pt") > -1);
 }
 
 DECLARE_OOXMLEXPORT_TEST(testTdf131260, "tdf131260.docx")
@@ -391,8 +472,20 @@ DECLARE_OOXMLEXPORT_TEST(testTdf123116_oversizedRowSplit, "tdf123116_oversizedRo
     CPPUNIT_ASSERT_EQUAL_MESSAGE("Row splits over 4 pages", 4, getPages());
 }
 
+DECLARE_OOXMLEXPORT_TEST(testPageContentBottom, "page-content-bottom.docx")
+{
+    uno::Reference<beans::XPropertySet> xShape(getShape(1), uno::UNO_QUERY);
+    sal_Int16 nExpected = text::RelOrientation::PAGE_PRINT_AREA_BOTTOM;
+    // Without the accompanying fix in place, this test would have failed with:
+    // - Expected: 10 (PAGE_PRINT_AREA_BOTTOM)
+    // - Actual  : 0 (FRAME)
+    // i.e. the bottom-of-body relation was lost.
+    CPPUNIT_ASSERT_EQUAL(nExpected, getProperty<sal_Int16>(xShape, "VertOrientRelation"));
+}
+
 DECLARE_OOXMLEXPORT_TEST(testTdf129522_removeShadowStyle, "tdf129522_removeShadowStyle.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     uno::Reference< container::XNameAccess > paragraphStyles = getStyles("ParagraphStyles");
     uno::Reference< beans::XPropertySet > xStyleProps(paragraphStyles->getByName("Shadow"), uno::UNO_QUERY_THROW);
     table::ShadowFormat aShadow = getProperty<table::ShadowFormat>(xStyleProps, "ParaShadowFormat");
@@ -487,7 +580,7 @@ DECLARE_OOXMLIMPORT_TEST(testTdf125038c, "tdf125038c.docx")
 
 DECLARE_OOXMLEXPORT_TEST(testTdf121661, "tdf121661.docx")
 {
-    xmlDocPtr pXmlSettings = parseExport("word/settings.xml");
+    xmlDocUniquePtr pXmlSettings = parseExport("word/settings.xml");
     if (!pXmlSettings)
         return;
     assertXPath(pXmlSettings, "/w:settings/w:hyphenationZone", "val", "851");
@@ -495,7 +588,7 @@ DECLARE_OOXMLEXPORT_TEST(testTdf121661, "tdf121661.docx")
 
 DECLARE_OOXMLEXPORT_TEST(testTdf121658, "tdf121658.docx")
 {
-    xmlDocPtr pXmlSettings = parseExport("word/settings.xml");
+    xmlDocUniquePtr pXmlSettings = parseExport("word/settings.xml");
     if (!pXmlSettings)
         return;
     assertXPath(pXmlSettings, "/w:settings/w:doNotHyphenateCaps");
@@ -514,7 +607,7 @@ CPPUNIT_TEST_FIXTURE(SwModelTestBase, testTableStyleConfNested)
     xStorable->storeToURL(maTempFile.GetURL(), aMediaDescriptor.getAsConstPropertyValueList());
     validate(maTempFile.GetFileName(), test::OOXML);
     mbExported = true;
-    xmlDocPtr pXmlDoc = parseExport("word/document.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml");
     CPPUNIT_ASSERT(pXmlDoc);
     // Without the accompanying fix in place, this test would have failed, as the custom table cell
     // border properties were lost, so the outer A2 cell started to have borders, not present in the
@@ -538,7 +631,7 @@ CPPUNIT_TEST_FIXTURE(SwModelTestBase, testZeroLineSpacing)
     aMediaDescriptor["FilterName"] <<= OUString("Office Open XML Text");
     xStorable->storeToURL(maTempFile.GetURL(), aMediaDescriptor.getAsConstPropertyValueList());
     mbExported = true;
-    xmlDocPtr pXmlDoc = parseExport("word/document.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml");
     CPPUNIT_ASSERT(pXmlDoc);
 
     // Without the accompanying fix in place, this test would have failed with:
@@ -569,7 +662,7 @@ CPPUNIT_TEST_FIXTURE(SwModelTestBase, testSemiTransparentText)
     aMediaDescriptor["FilterName"] <<= OUString("Office Open XML Text");
     xStorable->storeToURL(maTempFile.GetURL(), aMediaDescriptor.getAsConstPropertyValueList());
     mbExported = true;
-    xmlDocPtr pXmlDoc = parseExport("word/document.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml");
     CPPUNIT_ASSERT(pXmlDoc);
     OString aXPath
         = "/w:document/w:body/w:p/w:r/w:rPr/w14:textFill/w14:solidFill/w14:srgbClr/w14:alpha";
@@ -604,7 +697,7 @@ CPPUNIT_TEST_FIXTURE(SwModelTestBase, testUserField)
     xStorable->storeToURL(maTempFile.GetURL(), aMediaDescriptor.getAsConstPropertyValueList());
     validate(maTempFile.GetFileName(), test::OOXML);
     mbExported = true;
-    xmlDocPtr pXmlDoc = parseExport("word/document.xml");
+    xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml");
     CPPUNIT_ASSERT(pXmlDoc);
 
     // Without the accompanying fix in place, this test would have failed, the user field was
@@ -617,6 +710,36 @@ CPPUNIT_TEST_FIXTURE(SwModelTestBase, testUserField)
     CPPUNIT_ASSERT(pXmlDoc);
     assertXPath(pXmlDoc, "//w:docVars/w:docVar", "name", "foo");
     assertXPath(pXmlDoc, "//w:docVars/w:docVar", "val", "bar");
+}
+
+DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf132766, "tdf132766.docx")
+{
+    xmlDocUniquePtr pXmlDoc = parseExport("word/numbering.xml");
+    CPPUNIT_ASSERT(pXmlDoc);
+
+    // Ensure that for list=1 and level=0 we wrote correct bullet char and correct font
+    assertXPath(pXmlDoc, "//w:numbering/w:abstractNum[@w:abstractNumId='1']/w:lvl[@w:ilvl='0']/w:lvlText",
+                "val", u"\uF0B7");
+    assertXPath(pXmlDoc, "//w:numbering/w:abstractNum[@w:abstractNumId='1']/w:lvl[@w:ilvl='0']/w:rPr/w:rFonts",
+                "ascii", "Symbol");
+    assertXPath(pXmlDoc, "//w:numbering/w:abstractNum[@w:abstractNumId='1']/w:lvl[@w:ilvl='0']/w:rPr/w:rFonts",
+                "hAnsi", "Symbol");
+    assertXPath(pXmlDoc, "//w:numbering/w:abstractNum[@w:abstractNumId='1']/w:lvl[@w:ilvl='0']/w:rPr/w:rFonts",
+                "cs", "Symbol");
+}
+
+DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf128245, "tdf128245.docx")
+{
+    xmlDocUniquePtr pXmlDoc = parseExport("word/numbering.xml");
+    CPPUNIT_ASSERT(pXmlDoc);
+
+    assertXPath(pXmlDoc, "//w:num[@w:numId='1']/w:abstractNumId", "val", "1");
+    assertXPath(pXmlDoc, "//w:num[@w:numId='2']/w:abstractNumId", "val", "2");
+    assertXPath(pXmlDoc, "//w:num[@w:numId='3']/w:abstractNumId", "val", "3");
+    assertXPath(pXmlDoc, "//w:num[@w:numId='4']/w:abstractNumId", "val", "1");
+    assertXPath(pXmlDoc, "//w:num[@w:numId='4']/w:lvlOverride[@w:ilvl='0']", "ilvl", "0");
+    assertXPath(pXmlDoc, "//w:num[@w:numId='4']/w:lvlOverride/w:startOverride", "val", "1");
+    assertXPath(pXmlDoc, "//w:num[@w:numId='4']/w:lvlOverride[@w:ilvl='1']", 0);
 }
 
 DECLARE_OOXMLEXPORT_TEST(testTdf124367, "tdf124367.docx")
@@ -633,11 +756,43 @@ DECLARE_OOXMLEXPORT_TEST(testTdf124367, "tdf124367.docx")
                              .Position);
 }
 
+DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf95189, "tdf95189.docx")
+{
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(1), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("1"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(2), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("2"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(3), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("1"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(4), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("2"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(5), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("3"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(6), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("1"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(7), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("2"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+}
+
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf128820, "tdf128820.fodt")
 {
     // Import of exported DOCX failed because of wrong namespace used for wsp element
     // Now test the exported XML, in case we stop failing opening invalid files
-    xmlDocPtr pXml = parseExport("word/document.xml");
+    xmlDocUniquePtr pXml = parseExport("word/document.xml");
     CPPUNIT_ASSERT(pXml);
     // The parent wpg:wgp element has three children: wpg:cNvGrpSpPr, wpg:grpSpPr, and wpg:wsp
     // (if we start legitimately exporting additional children, this needs to be adjusted to check
@@ -660,13 +815,29 @@ DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf128820, "tdf128820.fodt")
 
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf128889, "tdf128889.fodt")
 {
-    xmlDocPtr pXml = parseExport("word/document.xml");
+    xmlDocUniquePtr pXml = parseExport("word/document.xml");
     CPPUNIT_ASSERT(pXml);
     // There was an w:r (with w:br) as an invalid child of first paragraph's w:pPr
     assertXPath(pXml, "/w:document/w:body/w:p[1]/w:pPr/w:r", 0);
     assertXPath(pXml, "/w:document/w:body/w:p[1]/w:r", 2);
     // Check that the break is in proper - last - position
     assertXPath(pXml, "/w:document/w:body/w:p[1]/w:r[2]/w:br", "type", "page");
+}
+
+DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf132754, "tdf132754.docx")
+{
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(1), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("0.0.0."), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(2), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("0.0.1."), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(3), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("0.0.2."), getProperty<OUString>(xPara, "ListLabelString"));
+    }
 }
 
 DECLARE_OOXMLEXPORT_TEST(testTdf129353, "tdf129353.docx")
@@ -698,7 +869,7 @@ DECLARE_OOXMLEXPORT_TEST(testTdf129353, "tdf129353.docx")
 
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf77796, "tdf77796.docx")
 {
-    xmlDocPtr pXml = parseExport("word/document.xml");
+    xmlDocUniquePtr pXml = parseExport("word/document.xml");
     CPPUNIT_ASSERT(pXml);
     // cell paddings from table style
     assertXPath(pXml, "/w:document/w:body/w:tbl/w:tblPr/w:tblCellMar/w:start", "w", "5");
@@ -710,14 +881,15 @@ DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf77796, "tdf77796.docx")
 
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf128290, "tdf128290.odt")
 {
-    xmlDocPtr pXml = parseExport("word/document.xml");
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+    xmlDocUniquePtr pXml = parseExport("word/document.xml");
     CPPUNIT_ASSERT(pXml);
     assertXPath(pXml, "/w:document/w:body/w:tbl/w:tblPr/w:tblLayout", "type", "fixed");
 }
 
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf123757, "tdf123757.docx")
 {
-    xmlDocPtr pXml = parseExport("word/document.xml");
+    xmlDocUniquePtr pXml = parseExport("word/document.xml");
     CPPUNIT_ASSERT(pXml);
     assertXPath(pXml, "/w:document/w:body/w:tbl", 2);
 }
@@ -755,7 +927,7 @@ DECLARE_OOXMLEXPORT_TEST(testContSectBreakHeaderFooter, "cont-sect-break-header-
     // Additional problem: top margin on page 3 was wrong.
     if (mbExported)
     {
-        xmlDocPtr pXml = parseExport("word/document.xml");
+        xmlDocUniquePtr pXml = parseExport("word/document.xml");
         // Without the accompanying fix in place, this test would have failed with:
         // - Expected: 2200
         // - Actual  : 2574
@@ -767,18 +939,19 @@ DECLARE_OOXMLEXPORT_TEST(testContSectBreakHeaderFooter, "cont-sect-break-header-
 
 DECLARE_OOXMLEXPORT_TEST(testHyphenationAuto, "hyphenation.odt")
 {
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
     // Explicitly set hyphenation=auto on document level
-    xmlDocPtr pXmlSettings = parseExport("word/settings.xml");
+    xmlDocUniquePtr pXmlSettings = parseExport("word/settings.xml");
     CPPUNIT_ASSERT(pXmlSettings);
     assertXPath(pXmlSettings, "/w:settings/w:autoHyphenation", "val", "true");
 
     // Second paragraph has explicitly enabled hyphenation
-    xmlDocPtr pXml = parseExport("word/document.xml");
+    xmlDocUniquePtr pXml = parseExport("word/document.xml");
     CPPUNIT_ASSERT(pXml);
     assertXPath(pXml, "/w:document/w:body/w:p[2]/w:pPr/w:suppressAutoHyphens", "val", "false");
 
     // Default paragraph style explicitly disables hyphens
-    xmlDocPtr pXmlStyles = parseExport("word/styles.xml");
+    xmlDocUniquePtr pXmlStyles = parseExport("word/styles.xml");
     CPPUNIT_ASSERT(pXmlStyles);
     assertXPath(pXmlStyles, "/w:styles/w:docDefaults/w:pPrDefault/w:pPr/w:suppressAutoHyphens", "val", "true");
 }
@@ -786,7 +959,7 @@ DECLARE_OOXMLEXPORT_TEST(testHyphenationAuto, "hyphenation.odt")
 DECLARE_OOXMLEXPORT_TEST(testStrikeoutGroupShapeText, "tdf131776_StrikeoutGroupShapeText.docx")
 {
     // tdf#131776: Check if strikeout is used in shape group texts
-    xmlDocPtr pXml = parseExport("word/document.xml");
+    xmlDocUniquePtr pXml = parseExport("word/document.xml");
     if (!pXml)
         return;
 
@@ -821,6 +994,28 @@ DECLARE_OOXMLEXPORT_TEST(testStrikeoutGroupShapeText, "tdf131776_StrikeoutGroupS
     //   "val" attribute is false
     assertXPath(pXml, "/w:document/w:body/w:p/w:r/mc:AlternateContent/mc:Choice/w:drawing/wp:anchor/a:graphic/a:graphicData/wpg:wgp/"
         "wps:wsp[6]/wps:txbx/w:txbxContent/w:p/w:r/w:rPr/w:strike", "val", "false");
+}
+
+DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf131539, "tdf131539.odt")
+{
+    CPPUNIT_ASSERT_EQUAL(2, getShapes());
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+    //The positions of OLE objects were not exported, check if now it is exported correctly
+    xmlDocUniquePtr p_XmlDoc = parseExport("word/document.xml");
+    CPPUNIT_ASSERT(p_XmlDoc);
+    OUString aXmlVal = getXPath(p_XmlDoc, "/w:document/w:body/w:p[4]/w:r[1]/w:object/v:shape", "style");
+    // This data was missing
+    CPPUNIT_ASSERT(aXmlVal.indexOf("margin-left:139.95")>-1);
+}
+
+DECLARE_OOXMLEXPORT_TEST(testLineWidthRounding, "tdf126363_LineWidthRounding.docx")
+{
+    // tdf#126363: check if line with stays the same after export
+    xmlDocUniquePtr pXml = parseExport("word/document.xml");
+    if (!pXml)
+        return;
+    // this was 57240 (it differs from the original 57150, losing the preset line width)
+    assertXPath(pXml, "/w:document/w:body/w:p/w:r/mc:AlternateContent/mc:Choice/w:drawing/wp:anchor/a:graphic/a:graphicData/wps:wsp/wps:spPr/a:ln", "w", "57150");
 }
 
 CPPUNIT_PLUGIN_IMPLEMENT();

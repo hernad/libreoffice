@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_BASEGFX_RASTER_RASTERCONVERT3D_HXX
-#define INCLUDED_BASEGFX_RASTER_RASTERCONVERT3D_HXX
+#pragma once
 
 #include <config_options.h>
 #include <sal/types.h>
@@ -63,10 +62,7 @@ namespace basegfx
 
         void increment(double fStep) { mfVal += fStep * mfInc; }
     };
-} // end of namespace basegfx
 
-namespace basegfx
-{
     class ip_double
     {
     private:
@@ -89,10 +85,7 @@ namespace basegfx
 
         void increment(double fStep) { maX.increment(fStep); maY.increment(fStep); }
     };
-} // end of namespace basegfx
 
-namespace basegfx
-{
     class ip_triple
     {
     private:
@@ -119,14 +112,10 @@ namespace basegfx
 
         void increment(double fStep) { maX.increment(fStep); maY.increment(fStep); maZ.increment(fStep); }
     };
-} // end of namespace basegfx
 
+    // InterpolatorProvider3D to have a common source for allocating interpolators
+    // which may then be addressed using the index to the vectors
 
-// InterpolatorProvider3D to have a common source for allocating interpolators
-// which may then be addressed using the index to the vectors
-
-namespace basegfx
-{
     #define SCANLINE_EMPTY_INDEX (0xffffffff)
 
     class InterpolatorProvider3D
@@ -304,13 +293,9 @@ namespace basegfx
         ::std::vector< ip_double >& getTextureInterpolators() { return maTextureInterpolators; }
         ::std::vector< ip_triple >& getInverseTextureInterpolators() { return maInverseTextureInterpolators; }
     };
-} // end of namespace basegfx
 
+    // RasterConversionLineEntry3D for Rasterconversion of 3D PolyPolygons
 
-// RasterConversionLineEntry3D for Rasterconversion of 3D PolyPolygons
-
-namespace basegfx
-{
     class RasterConversionLineEntry3D
     {
     private:
@@ -401,14 +386,10 @@ namespace basegfx
         sal_uInt32 getTextureIndex() const { return mnTextureIndex; }
         sal_uInt32 getInverseTextureIndex() const { return mnInverseTextureIndex; }
     };
-} // end of namespace basegfx
 
+    // the basic RasterConverter itself. Only one method needs to be overridden. The
+    // class itself is pure virtual
 
-// the basic RasterConverter itself. Only one method needs to be overridden. The
-// class itself is pure virtual
-
-namespace basegfx
-{
     class UNLESS_MERGELIBS(BASEGFX_DLLPUBLIC) RasterConverter3D : public InterpolatorProvider3D
     {
     private:
@@ -441,7 +422,5 @@ namespace basegfx
         void rasterconvertB3DPolygon(const B3DPolygon& rLine, sal_Int32 nStartLine, sal_Int32 nStopLine, sal_uInt16 nLineWidth);
     };
 } // end of namespace basegfx
-
-#endif // INCLUDED_BASEGFX_RASTER_RASTERCONVERT3D_HXX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

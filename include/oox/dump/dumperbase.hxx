@@ -42,20 +42,20 @@
 
 #ifdef DBG_UTIL
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace io { class XInputStream; }
     namespace io { class XOutputStream; }
     namespace io { class XTextOutputStream2; }
     namespace uno { class XComponentContext; }
-} } }
+}
 
 namespace oox {
     class TextInputStream;
 }
 
-namespace oox { namespace core {
+namespace oox::core {
     class FilterBase;
-} }
+}
 
 namespace oox {
 namespace dump {
@@ -447,7 +447,7 @@ public:
     Base & operator =(Base &&) = default;
 
     bool         isValid() const { return implIsValid(); }
-    static bool  isValid( const std::shared_ptr< Base >& rxBase ) { return rxBase.get() && rxBase->isValid(); }
+    static bool  isValid( const std::shared_ptr< Base >& rxBase ) { return rxBase && rxBase->isValid(); }
 
 protected:
                         Base() {}
@@ -824,7 +824,7 @@ template< typename ListType >
 void SharedConfigData::readNameList( TextInputStream& rStrm, const OUString& rListName )
 {
     NameListRef xList = createNameList< ListType >( rListName );
-    if( xList.get() )
+    if( xList )
         xList->readConfigBlock( rStrm );
 }
 
@@ -912,7 +912,7 @@ template< typename Type >
 OUString Config::getName( const NameListWrapper& rListWrp, Type nKey ) const
 {
     NameListRef xList = rListWrp.getNameList( *this );
-    return xList.get() ? xList->getName( *this, nKey ) : OOX_DUMP_ERR_NOMAP;
+    return xList ? xList->getName( *this, nKey ) : OOX_DUMP_ERR_NOMAP;
 }
 
 template< typename Type >

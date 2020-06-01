@@ -86,6 +86,9 @@
 #include <AnnotationWin.hxx>
 #include <memory>
 
+#include <fmtcntnt.hxx>
+#include <docstat.hxx>
+
 #define CTYPE_CNT   0
 #define CTYPE_CTT   1
 
@@ -924,6 +927,14 @@ IMPL_LINK(SwContentTree, DragBeginHdl, bool&, rUnsetDragIcon, bool)
 
     bool bDisallow = true;
 
+    // don't allow if tree root is selected
+    std::unique_ptr<weld::TreeIter> xEntry(m_xTreeView->make_iterator());
+    bool bEntry = m_xTreeView->get_selected(xEntry.get());
+    if (!bEntry || lcl_IsContentType(*xEntry, *m_xTreeView))
+    {
+        return true; // disallow
+    }
+
     rtl::Reference<TransferDataContainer> xContainer = new TransferDataContainer;
     sal_Int8 nDragMode = DND_ACTION_COPYMOVE | DND_ACTION_LINK;
 
@@ -937,10 +948,6 @@ IMPL_LINK(SwContentTree, DragBeginHdl, bool&, rUnsetDragIcon, bool)
 
         std::unique_ptr<weld::TreeIter> xScratch(m_xTreeView->make_iterator());
 
-        std::unique_ptr<weld::TreeIter> xEntry(m_xTreeView->make_iterator());
-        bool bEntry = m_xTreeView->get_selected(xEntry.get());
-        if (!bEntry)
-            return true; // disallow
         // Find first selected of continuous siblings
         while (true)
         {
@@ -1085,6 +1092,9 @@ sal_Int8 SwContentTree::ExecuteDrop(const ExecuteDropEvent& rEvt)
                 nTargetPos = GetWrtShell()->getIDocumentOutlineNodesAccess()->getOutlineNodesCount() - 1;
         }
 
+        // remove the drop highlight before we change the contents of the tree so we don't
+        // try and dereference a removed entry in post-processing drop
+        m_xTreeView->unset_drag_dest_row();
         MoveOutline(nTargetPos);
 
     }
@@ -1641,7 +1651,7 @@ IMPL_LINK(SwContentTree, CollapseHdl, const weld::TreeIter&, rParent, bool)
                 }
                 while (m_xTreeView->iter_next(*xEntry));
             }
-            return true;
+            return false; // return false to notify caller not to do collapse
         }
         SwContentType* pCntType = reinterpret_cast<SwContentType*>(m_xTreeView->get_id(rParent).toInt64());
         const sal_Int32 nAnd = ~(1 << static_cast<int>(pCntType->GetType()));
@@ -3288,6 +3298,32 @@ IMPL_LINK(SwContentTree, QueryTooltipHdl, const weld::TreeIter&, rEntry, OUStrin
             case ContentTypeId::GRAPHIC:
                 assert(dynamic_cast<SwGraphicContent*>(static_cast<SwTypeNumber*>(pUserData)));
                 sEntry = static_cast<SwGraphicContent*>(pUserData)->GetLink();
+            break;
+            case ContentTypeId::REGION:
+            {
+                assert(dynamic_cast<SwRegionContent*>(static_cast<SwTypeNumber*>(pUserData)));
+                sEntry = static_cast<SwRegionContent*>(pUserData)->GetName();
+                const SwSectionFormats& rFormats = GetWrtShell()->GetDoc()->GetSections();
+                for (SwSectionFormats::size_type n = rFormats.size(); n;)
+                {
+                    const SwNodeIndex* pIdx = nullptr;
+                    const SwSectionFormat* pFormat = rFormats[--n];
+                    const SwSection* pSect;
+                    if (nullptr != (pSect = pFormat->GetSection()) &&
+                        pSect->GetSectionName() == sEntry &&
+                        nullptr != (pIdx = pFormat->GetContent().GetContentIdx()) &&
+                        pIdx->GetNode().GetNodes().IsDocNodes())
+                    {
+                        SwDocStat aDocStat;
+                        SwPaM aPaM(*pIdx, *pIdx->GetNode().EndOfSectionNode());
+                        SwDoc::CountWords(aPaM, aDocStat);
+                        sEntry = SwResId(STR_REGION_DEFNAME) + ": " + sEntry + "\n" +
+                                 SwResId(FLD_STAT_WORD) + ": " + OUString::number(aDocStat.nWord) + "\n" +
+                                 SwResId(FLD_STAT_CHAR) + ": " + OUString::number(aDocStat.nChar);
+                        break;
+                    }
+                }
+            }
             break;
             default: break;
         }

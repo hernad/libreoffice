@@ -301,7 +301,7 @@ void ScDocShell::AfterXMLLoading(bool bRet)
                             {
                                 if ( *pNameBuffer == '\'' && *(pNameBuffer-1) != '\\' )
                                     bQuote = false;
-                                else if( !(*pNameBuffer == '\\' && *(pNameBuffer+1) == '\'') )
+                                else if( *pNameBuffer != '\\' || *(pNameBuffer+1) != '\'' )
                                     aDocURLBuffer.append(*pNameBuffer); // If escaped quote: only quote in the name
                                 ++pNameBuffer;
                             }
@@ -621,7 +621,7 @@ bool ScDocShell::Load( SfxMedium& rMedium )
                 if (pOrcus)
                 {
                     pOrcus->importODS_Styles(m_aDocument, aPath);
-                    m_aDocument.GetStyleSheetPool()->setAllStandard();
+                    m_aDocument.GetStyleSheetPool()->setAllParaStandard();
                 }
             }
 
@@ -1601,7 +1601,7 @@ bool ScDocShell::ConvertFrom( SfxMedium& rMedium )
             m_aDocument.GetCellArea( nTab, nEndCol, nEndRow );
             aColWidthRange.aEnd.SetCol( nEndCol );
             aColWidthRange.aEnd.SetRow( nEndRow );
-            ScMarkData aMark(m_aDocument.MaxRow(), m_aDocument.MaxCol());
+            ScMarkData aMark(m_aDocument.GetSheetLimits());
             aMark.SetMarkArea( aColWidthRange );
             aMark.MarkToMulti();
 

@@ -31,14 +31,14 @@ namespace basegfx {
     class B2DHomMatrix;
 }
 
-namespace drawinglayer { namespace attribute {
+namespace drawinglayer::attribute {
     class SdrFillAttribute;
     class SdrLineAttribute;
     class FillGradientAttribute;
     class SdrShadowAttribute;
     class SdrLineStartEndAttribute;
     class SdrTextAttribute;
-}}
+}
 
 
 namespace drawinglayer
@@ -72,12 +72,15 @@ namespace drawinglayer
         Primitive2DContainer SVXCORE_DLLPUBLIC createEmbeddedShadowPrimitive(
             const Primitive2DContainer& rContent,
             const attribute::SdrShadowAttribute& rShadow,
-            sal_Int32 nGraphicTranslateX = 0,
-            sal_Int32 nGraphicTranslateY = 0);
+            const basegfx::B2DHomMatrix& rObjectMatrix = basegfx::B2DHomMatrix());
 
         Primitive2DContainer SVXCORE_DLLPUBLIC createEmbeddedGlowPrimitive(
             const Primitive2DContainer& rContent,
             const attribute::SdrGlowAttribute& rGlow);
+
+        Primitive2DContainer SVXCORE_DLLPUBLIC createEmbeddedSoftEdgePrimitive(
+            const Primitive2DContainer& rContent,
+            sal_Int32 nRadius);
 
     } // end of namespace primitive2d
 } // end of namespace drawinglayer

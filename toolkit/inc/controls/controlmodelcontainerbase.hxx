@@ -39,8 +39,8 @@
 #include <com/sun/star/lang/XInitialization.hpp>
 #include <vector>
 
-namespace com { namespace sun { namespace star { namespace resource { class XStringResourceResolver; } } } }
-namespace com { namespace sun { namespace star { namespace uno { class XComponentContext; } } } }
+namespace com::sun::star::resource { class XStringResourceResolver; }
+namespace com::sun::star::uno { class XComponentContext; }
 
 
 typedef UnoControlModel     ControlModel_Base;
@@ -73,7 +73,6 @@ public:
     typedef ::std::vector< ModelGroup >                 AllGroups;
 
     friend struct CloneControlModel;
-    friend struct FindControlModel;
     friend struct CompareControlModel;
 
 protected:
@@ -84,7 +83,6 @@ protected:
     AllGroups                           maGroups;
     bool                            mbGroupsUpToDate;
 
-    bool                         m_bEnabled;
     OUString                         m_sImageURL;
     OUString                         m_sTooltip;
     sal_Int16                        m_nTabPageId;
@@ -214,9 +212,9 @@ typedef ::cppu::AggImplInheritanceHelper3   < UnoControlContainer
                             ,   css::container::XContainerListener
                             ,   css::util::XChangesListener
                             ,   css::util::XModifyListener
-                            >   ContainerControl_IBase;
+                            >   ControlContainer_IBase;
 
-class ControlContainerBase : public ContainerControl_IBase
+class ControlContainerBase : public ControlContainer_IBase
 {
 protected:
     css::uno::Reference< css::uno::XComponentContext >  m_xContext;

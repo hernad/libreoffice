@@ -37,11 +37,11 @@
 #include <sfx2/ipclient.hxx>
 #include <svl/stritem.hxx>
 #include <svl/sharedstringpool.hxx>
+#include <vcl/InterimItemWindow.hxx>
 #include <vcl/canvastools.hxx>
 #include <vcl/commandevent.hxx>
 #include <vcl/cursor.hxx>
 #include <vcl/inputctx.hxx>
-#include <vcl/lstbox.hxx>
 #include <vcl/settings.hxx>
 #include <sot/formats.hxx>
 #include <comphelper/classids.hxx>
@@ -187,29 +187,30 @@ bool ScGridWindow::VisibleRange::set(SCCOL nCol1, SCROW nRow1, SCCOL nCol2, SCRO
     return bChanged;
 }
 
-class ScFilterListBox : public ListBox
+class ScFilterListBox final : public InterimItemWindow
 {
 private:
+    std::unique_ptr<weld::TreeView> xTreeView;
     VclPtr<ScGridWindow>   pGridWin;
     SCCOL           nCol;
     SCROW           nRow;
     bool            bInit;
     bool            bCancelled;
-    bool            bInSelect;
     sal_uLong       nSel;
     ScFilterBoxMode eMode;
+    ImplSVEvent* nAsyncSelectHdl;
 
-protected:
-    void            SelectHdl();
+    DECL_LINK(SelectHdl, weld::TreeView&, bool);
+    DECL_LINK(KeyInputHdl, const KeyEvent&, bool);
+    DECL_LINK(AsyncSelectHdl, void*, void);
 
 public:
-                ScFilterListBox( vcl::Window* pParent, ScGridWindow* pGrid,
-                                 SCCOL nNewCol, SCROW nNewRow, ScFilterBoxMode eNewMode );
-                virtual ~ScFilterListBox() override;
+    ScFilterListBox( vcl::Window* pParent, ScGridWindow* pGrid,
+                     SCCOL nNewCol, SCROW nNewRow, ScFilterBoxMode eNewMode );
+    virtual ~ScFilterListBox() override;
     virtual void dispose() override;
 
-    virtual bool    PreNotify( NotifyEvent& rNEvt ) override;
-    virtual void    Select() override;
+    weld::TreeView& get_widget() { return *xTreeView; }
 
     SCCOL           GetCol() const          { return nCol; }
     SCROW           GetRow() const          { return nRow; }
@@ -217,22 +218,24 @@ public:
     void            EndInit();
     bool            IsInInit() const        { return bInit; }
     void            SetCancelled()          { bCancelled = true; }
-    bool            IsInSelect() const      { return bInSelect; }
 };
 
 //  ListBox in a FloatingWindow (pParent)
 ScFilterListBox::ScFilterListBox( vcl::Window* pParent, ScGridWindow* pGrid,
                                   SCCOL nNewCol, SCROW nNewRow, ScFilterBoxMode eNewMode ) :
-    ListBox( pParent, WB_AUTOHSCROLL | WB_LISTBOX_POPUP ),
+    InterimItemWindow(pParent, "modules/scalc/ui/filterlist.ui", "FilterList"),
+    xTreeView(m_xBuilder->weld_tree_view("list")),
     pGridWin( pGrid ),
     nCol( nNewCol ),
     nRow( nNewRow ),
     bInit( true ),
     bCancelled( false ),
-    bInSelect( false ),
     nSel( 0 ),
-    eMode( eNewMode )
+    eMode( eNewMode ),
+    nAsyncSelectHdl(nullptr)
 {
+    xTreeView->connect_row_activated(LINK(this, ScFilterListBox, SelectHdl));
+    xTreeView->connect_key_press(LINK(this, ScFilterListBox, KeyInputHdl));
 }
 
 ScFilterListBox::~ScFilterListBox()
@@ -242,16 +245,20 @@ ScFilterListBox::~ScFilterListBox()
 
 void ScFilterListBox::dispose()
 {
-    if (IsMouseCaptured())
-        ReleaseMouse();
+    if (nAsyncSelectHdl)
+    {
+        Application::RemoveUserEvent(nAsyncSelectHdl);
+        nAsyncSelectHdl = nullptr;
+    }
     pGridWin.clear();
-    ListBox::dispose();
+    xTreeView.reset();
+    InterimItemWindow::dispose();
 }
 
 void ScFilterListBox::EndInit()
 {
-    sal_Int32 nPos = GetSelectedEntryPos();
-    if ( LISTBOX_ENTRY_NOTFOUND == nPos )
+    sal_Int32 nPos = xTreeView->get_selected_index();
+    if (nPos == -1)
         nSel = 0;
     else
         nSel = nPos;
@@ -259,52 +266,41 @@ void ScFilterListBox::EndInit()
     bInit = false;
 }
 
-bool ScFilterListBox::PreNotify( NotifyEvent& rNEvt )
+IMPL_LINK(ScFilterListBox, KeyInputHdl, const KeyEvent&, rKeyEvent, bool)
 {
     bool bDone = false;
-    if ( rNEvt.GetType() == MouseNotifyEvent::KEYINPUT )
+
+    vcl::KeyCode aCode = rKeyEvent.GetKeyCode();
+    // esc with no modifiers
+    if (!aCode.GetModifier() && aCode.GetCode() == KEY_ESCAPE)
     {
-        KeyEvent aKeyEvt = *rNEvt.GetKeyEvent();
-        vcl::KeyCode aCode = aKeyEvt.GetKeyCode();
-        if ( !aCode.GetModifier() ) // no modifiers
-        {
-            sal_uInt16 nKey = aCode.GetCode();
-            if ( nKey == KEY_RETURN )
-            {
-                SelectHdl(); // select
-                bDone = true;
-            }
-            else if ( nKey == KEY_ESCAPE )
-            {
-                pGridWin->ClickExtern();  // clears the listbox
-                bDone = true;
-            }
-        }
+        pGridWin->ClickExtern();  // clears the listbox
+        bDone = true;
     }
 
-    return bDone || ListBox::PreNotify( rNEvt );
+    return bDone;
 }
 
-void ScFilterListBox::Select()
+IMPL_LINK_NOARG(ScFilterListBox, SelectHdl, weld::TreeView&, bool)
 {
-    ListBox::Select();
-    SelectHdl();
-}
-
-void ScFilterListBox::SelectHdl()
-{
-    if ( !IsTravelSelect() && !bInit && !bCancelled )
+    if (!bInit && !bCancelled && !nAsyncSelectHdl)
     {
-        sal_Int32 nPos = GetSelectedEntryPos();
-        if ( LISTBOX_ENTRY_NOTFOUND != nPos )
+        int nPos = xTreeView->get_selected_index();
+        if (nPos != -1)
         {
             nSel = nPos;
-            // #i81298# set bInSelect flag, so the box isn't deleted from modifications within FilterSelect
-            bInSelect = true;
-            pGridWin->FilterSelect( nSel );
-            bInSelect = false;
+            // #i81298# launch async so the box isn't deleted from modifications within FilterSelect
+            nAsyncSelectHdl = Application::PostUserEvent(LINK(this, ScFilterListBox, AsyncSelectHdl));
         }
     }
+    return true;
+}
+
+IMPL_LINK_NOARG(ScFilterListBox, AsyncSelectHdl, void*, void)
+{
+    pGridWin->FilterSelect( nSel );
+    nAsyncSelectHdl = nullptr;
+    pGridWin->ClickExtern();
 }
 
 namespace {
@@ -516,13 +512,9 @@ void ScGridWindow::ClickExtern()
 {
     do
     {
-        // #i81298# don't delete the filter box when called from its select handler
-        // (possible through row header size update)
         // #i84277# when initializing the filter box, a Basic error can deactivate the view
-        if (mpFilterBox && (mpFilterBox->IsInSelect() || mpFilterBox->IsInInit()))
-        {
+        if (mpFilterBox && mpFilterBox->IsInInit())
             break;
-        }
         mpFilterBox.disposeAndClear();
         mpFilterFloat.disposeAndClear();
     }
@@ -800,25 +792,31 @@ void ScGridWindow::UpdateAutoFilterFromMenu(AutoFilterMode eMode)
         pViewData->GetDispatcher().Execute(SID_FILTER, SfxCallMode::SLOT|SfxCallMode::RECORD);
         return;
     }
-    if (eMode != AutoFilterMode::Top10
-            && eMode != AutoFilterMode::Empty
-            && eMode != AutoFilterMode::NonEmpty)
+
+    ScQueryParam aParam;
+    pDBData->GetQueryParam(aParam);
+
+    if (eMode == AutoFilterMode::Normal)
     {
-        // do not recreate auto-filter rules if there is no any changes from the user
+        // Do not recreate autofilter rules if there are no changes from the user
         ScCheckListMenuWindow::ResultType aResult;
         mpAutoFilterPopup->getResult(aResult);
 
         if (aResult == aSaveAutoFilterResult)
         {
-            SAL_INFO("sc.ui", "nothing to do when autofilter entries are the same");
+            SAL_INFO("sc.ui", "Apply autofilter to data when entries are the same");
+            // Apply autofilter to data
+            ScQueryEntry* pEntry = aParam.FindEntryByField(rPos.Col(), true);
+            pEntry->bDoQuery = true;
+            pEntry->nField = rPos.Col();
+            pEntry->eConnect = SC_AND;
+            pEntry->eOp = SC_EQUAL;
+            pViewData->GetView()->Query(aParam, nullptr, true);
             return;
         }
     }
 
-    ScQueryParam aParam;
-    pDBData->GetQueryParam(aParam);
-
-    // Remove old entries.
+    // Remove old entries in auto-filter rules
     aParam.RemoveAllEntriesByField(rPos.Col());
 
     if( !(eMode == AutoFilterMode::Normal && mpAutoFilterPopup->isAllSelected() ) )
@@ -849,19 +847,6 @@ void ScGridWindow::UpdateAutoFilterFromMenu(AutoFilterMode eMode)
                 ScQueryEntry::QueryItemsType& rItems = pEntry->GetQueryItems();
                 rItems.clear();
                 std::for_each(aResult.begin(), aResult.end(), AddItemToEntry(rItems, rPool));
-
-                if (mpAutoFilterPopup->isAllSelected())
-                {
-                    // get all strings from the column
-                    std::vector<ScTypedStrData> aAllStrings; // case sensitive
-                    pDoc->GetDataEntries(rPos.Col(), rPos.Row(), rPos.Tab(), aAllStrings, true);
-
-                    if (rItems.size() == aAllStrings.size() || aAllStrings.empty())
-                    {
-                        // all selected => Remove filter entries
-                        aParam.RemoveAllEntriesByField(rPos.Col());
-                    }
-                }
             }
             break;
             case AutoFilterMode::Top10:
@@ -930,8 +915,56 @@ void ScGridWindow::LaunchDPFieldMenu( SCCOL nCol, SCROW nRow )
     DPLaunchFieldPopupMenu(OutputToScreenPixel(aScrPos), aScrSize, ScAddress(nCol, nRow, nTab), pDPObj);
 }
 
+void ScGridWindow::ShowFilterMenu(const tools::Rectangle& rCellRect, bool bLayoutRTL)
+{
+    auto nSizeX = rCellRect.GetWidth();
+
+    // minimum width in pixel
+    if (comphelper::LibreOfficeKit::isActive())
+    {
+        const long nMinLOKWinWidth = static_cast<long>(1.3 * STD_COL_WIDTH / TWIPS_PER_PIXEL);
+        if (nSizeX < nMinLOKWinWidth)
+            nSizeX = nMinLOKWinWidth;
+    }
+
+    weld::TreeView& rFilterBox = mpFilterBox->get_widget();
+    int nEntryCount = rFilterBox.n_children();
+    if (nEntryCount > SC_FILTERLISTBOX_LINES)
+        nEntryCount = SC_FILTERLISTBOX_LINES;
+    auto nHeight = rFilterBox.get_height_rows(nEntryCount);
+    rFilterBox.set_size_request(-1, nHeight);
+    Size aSize(rFilterBox.get_preferred_size());
+    if (aSize.Width() < nSizeX)
+        aSize.setWidth(nSizeX);
+    if (aSize.Width() > 300)
+        aSize.setWidth(300);     // do not over do it (Pixel)
+
+    aSize.AdjustWidth(4); // add a little margin
+    nSizeX += 4;
+    aSize.AdjustHeight(4);
+
+    tools::Rectangle aCellRect(rCellRect);
+    aCellRect.AdjustLeft(-2); // offset the little margin above
+
+    if (!bLayoutRTL && aSize.Width() > nSizeX)
+    {
+        //  move popup position
+        long nDiff = aSize.Width() - nSizeX;
+        long nNewX = aCellRect.Left() - nDiff;
+        if ( nNewX < 0 )
+            nNewX = 0;
+        aCellRect.SetLeft( nNewX );
+    }
+
+    mpFilterBox->SetSizePixel(aSize);
+    mpFilterFloat->SetOutputSizePixel(aSize);
+    mpFilterFloat->StartPopupMode(aCellRect, FloatWinPopupFlags::Down|FloatWinPopupFlags::GrabFocus);
+}
+
 void ScGridWindow::DoScenarioMenu( const ScRange& rScenRange )
 {
+    bool bMenuAtTop = true;
+
     ScDocument* pDoc = pViewData->GetDocument();
     mpFilterBox.disposeAndClear();
     mpFilterFloat.disposeAndClear();
@@ -942,7 +975,7 @@ void ScGridWindow::DoScenarioMenu( const ScRange& rScenRange )
     {
         nRow = rScenRange.aEnd.Row() + 1;   // Range at very the top -> Button below
         if (nRow>pDoc->MaxRow()) nRow = pDoc->MaxRow();
-        //! Add text height (if it is stored in the View...)
+        bMenuAtTop = false;
     }
 
     SCTAB nTab = pViewData->GetTabNo();
@@ -950,7 +983,6 @@ void ScGridWindow::DoScenarioMenu( const ScRange& rScenRange )
 
     long nSizeX  = 0;
     long nSizeY  = 0;
-    long nHeight = 0;
     pViewData->GetMergeSizePixel( nCol, nRow, nSizeX, nSizeY );
     // The button height should not use the merged cell height, should still use single row height
     nSizeY = ScViewData::ToPixel(pDoc->GetRowHeight(nRow, nTab), pViewData->GetPPTY());
@@ -960,43 +992,26 @@ void ScGridWindow::DoScenarioMenu( const ScRange& rScenRange )
     tools::Rectangle aCellRect( OutputToScreenPixel(aPos), Size(nSizeX,nSizeY) );
     aCellRect.AdjustTop( -nSizeY );
     aCellRect.AdjustBottom( -(nSizeY - 1) );
+    if (!bMenuAtTop)
+    {
+        Size aButSize = pViewData->GetScenButSize();
+        aCellRect.AdjustBottom(aButSize.Height());
+    }
+
     //  Place the ListBox directly below the black line of the cell grid
     //  (It looks odd if the line gets hidden...)
 
     mpFilterFloat.reset(VclPtr<ScFilterFloatingWindow>::Create(this, WinBits(WB_BORDER)));
     mpFilterFloat->SetPopupModeEndHdl( LINK( this, ScGridWindow, PopupModeEndHdl ) );
     mpFilterBox.reset(VclPtr<ScFilterListBox>::Create(mpFilterFloat.get(), this, nCol, nRow, ScFilterBoxMode::Scenario));
-    if (bLayoutRTL)
-        mpFilterBox->EnableMirroring();
+    weld::TreeView& rFilterBox = mpFilterBox->get_widget();
+    rFilterBox.set_direction(bLayoutRTL); // Fix for bug fdo#44925 use sheet direction for widget RTL/LTR
 
-    nSizeX += 1;
-
-    {
-        vcl::Font aOldFont = GetFont();
-        SetFont(mpFilterBox->GetFont());
-        MapMode aOldMode = GetMapMode();
-        SetMapMode(MapMode(MapUnit::MapPixel));
-
-        nHeight  = GetTextHeight();
-        nHeight *= SC_FILTERLISTBOX_LINES;
-
-        SetMapMode( aOldMode );
-        SetFont( aOldFont );
-    }
-
-    //  SetSize later
-
-    //  ParentSize missing check
-    Size aSize( nSizeX, nHeight );
-    mpFilterBox->SetSizePixel( aSize );
     mpFilterBox->Show();                 // Show has to be before SetUpdateMode !!!
-    mpFilterBox->SetUpdateMode(false);
-
     //  SetOutputSizePixel/StartPopupMode first below, when the size is set
 
     //  Listbox fill
-
-    long nMaxText = 0;
+    rFilterBox.freeze();
     OUString aCurrent;
     OUString aTabName;
     SCTAB nTabCount = pDoc->GetTableCount();
@@ -1006,56 +1021,31 @@ void ScGridWindow::DoScenarioMenu( const ScRange& rScenRange )
         if (pDoc->HasScenarioRange( i, rScenRange ))
             if (pDoc->GetName( i, aTabName ))
             {
-                mpFilterBox->InsertEntry(aTabName);
+                rFilterBox.append_text(aTabName);
                 if (pDoc->IsActiveScenario(i))
                     aCurrent = aTabName;
-                long nTextWidth = mpFilterBox->GetTextWidth(aTabName);
-                if ( nTextWidth > nMaxText )
-                    nMaxText = nTextWidth;
                 ++nEntryCount;
             }
     }
-    if (nEntryCount > SC_FILTERLISTBOX_LINES)
-        nMaxText += GetSettings().GetStyleSettings().GetScrollBarSize();
-    nMaxText += 4;          // for Rand
-    if ( nMaxText > 300 )
-        nMaxText = 300;     // do not over do it (Pixel)
+    rFilterBox.thaw();
 
-    if (nMaxText > nSizeX)  // Adjust size to what is needed
-    {
-        long nDiff = nMaxText - nSizeX;
-        aSize = Size( nMaxText, nHeight );
-        mpFilterBox->SetSizePixel(aSize);
-        mpFilterFloat->SetOutputSizePixel(aSize);
+    ShowFilterMenu(aCellRect, bLayoutRTL);
 
-        if ( !bLayoutRTL )
-        {
-            //  also move popup position
-            long nNewX = aCellRect.Left() - nDiff;
-            if ( nNewX < 0 )
-                nNewX = 0;
-            aCellRect.SetLeft( nNewX );
-        }
-    }
+    rFilterBox.grab_focus();
 
-    mpFilterFloat->SetOutputSizePixel( aSize );
-    mpFilterFloat->StartPopupMode( aCellRect, FloatWinPopupFlags::Down|FloatWinPopupFlags::GrabFocus );
-
-    mpFilterBox->SetUpdateMode(true);
-    mpFilterBox->GrabFocus();
-
-    sal_Int32 nPos = LISTBOX_ENTRY_NOTFOUND;
+    sal_Int32 nPos = -1;
     if (!aCurrent.isEmpty())
     {
-        nPos = mpFilterBox->GetEntryPos(aCurrent);
+        nPos = rFilterBox.find_text(aCurrent);
     }
-    if (LISTBOX_ENTRY_NOTFOUND == nPos && mpFilterBox->GetEntryCount() > 0 )
+    if (nPos == -1 && rFilterBox.n_children() > 0 )
     {
         nPos = 0;
     }
-    if (LISTBOX_ENTRY_NOTFOUND != nPos )
+    if (nPos != -1)
     {
-        mpFilterBox->SelectEntryPos(nPos);
+        rFilterBox.set_cursor(nPos);
+        rFilterBox.select(nPos);
     }
     mpFilterBox->EndInit();
 
@@ -1076,9 +1066,25 @@ void ScGridWindow::LaunchDataSelectMenu( SCCOL nCol, SCROW nRow )
 
     long nSizeX  = 0;
     long nSizeY  = 0;
-    long nHeight = 0;
     pViewData->GetMergeSizePixel( nCol, nRow, nSizeX, nSizeY );
     Point aPos = pViewData->GetScrPos( nCol, nRow, eWhich );
+    bool bLOKActive = comphelper::LibreOfficeKit::isActive();
+
+    if (bLOKActive)
+    {
+        // aPos is now view-zoom adjusted and in pixels an more importantly this is pixel aligned to the view-zoom,
+        // but once we use this to set the position of the floating window, it has no information of view-zoom level
+        // so if we don't reverse the zoom now, a simple PixelToLogic(aPos, MapMode(MapUnit::MapTwip)) employed in
+        // FloatingWindow::ImplCalcPos will produce a 'scaled' twips position which will again get zoom scaled in the
+        // client (effective double scaling) causing wrong positioning/size.
+        double fZoomX(pViewData->GetZoomX());
+        double fZoomY(pViewData->GetZoomY());
+        aPos.setX(aPos.getX() / fZoomX);
+        aPos.setY(aPos.getY() / fZoomY);
+        nSizeX = nSizeX / fZoomX;
+        nSizeY = nSizeY / fZoomY;
+    }
+
     if ( bLayoutRTL )
         aPos.AdjustX( -nSizeX );
 
@@ -1088,30 +1094,14 @@ void ScGridWindow::LaunchDataSelectMenu( SCCOL nCol, SCROW nRow )
     aPos.AdjustY( nSizeY - 1 );
 
     mpFilterFloat.reset(VclPtr<ScFilterFloatingWindow>::Create(this, WinBits(WB_BORDER)));
-    if (comphelper::LibreOfficeKit::isActive())
+    if (bLOKActive)
     {
         mpFilterFloat->SetLOKNotifier(SfxViewShell::Current());
     }
     mpFilterFloat->SetPopupModeEndHdl(LINK( this, ScGridWindow, PopupModeEndHdl));
     mpFilterBox.reset(VclPtr<ScFilterListBox>::Create(mpFilterFloat.get(), this, nCol, nRow, ScFilterBoxMode::DataSelect));
-    // Fix for bug fdo#44925
-    if (AllSettings::GetLayoutRTL() != bLayoutRTL)
-        mpFilterBox->EnableMirroring();
-
-    nSizeX += 1;
-
-    {
-        vcl::Font aOldFont = GetFont();
-        SetFont(mpFilterBox->GetFont());
-        MapMode aOldMode = GetMapMode();
-        SetMapMode(MapMode(MapUnit::MapPixel));
-
-        nHeight  = GetTextHeight();
-        nHeight *= SC_FILTERLISTBOX_LINES;
-
-        SetMapMode( aOldMode );
-        SetFont( aOldFont );
-    }
+    weld::TreeView& rFilterBox = mpFilterBox->get_widget();
+    rFilterBox.set_direction(bLayoutRTL); // Fix for bug fdo#44925 use sheet direction for widget RTL/LTR
 
     // SetSize later
 
@@ -1124,28 +1114,8 @@ void ScGridWindow::LaunchDataSelectMenu( SCCOL nCol, SCROW nRow )
 
     if (!bEmpty)
     {
-        //  Adjust position and size to Window
-        //! Check first if the entries fit (width)
-
-        // minimum width in pixel
-        const long nMinLOKWinWidth = static_cast<long>(1.3 * STD_COL_WIDTH * pViewData->GetPPTX());
-        if (comphelper::LibreOfficeKit::isActive() && nSizeX < nMinLOKWinWidth)
-            nSizeX = nMinLOKWinWidth;
-
-        Size aParentSize = GetParent()->GetOutputSizePixel();
-        Size aSize( nSizeX, nHeight );
-
-        if ( aSize.Height() > aParentSize.Height() )
-            aSize.setHeight( aParentSize.Height() );
-        if ( aPos.Y() + aSize.Height() > aParentSize.Height() )
-            aPos.setY( aParentSize.Height() - aSize.Height() );
-
-        mpFilterBox->SetSizePixel(aSize);
-        mpFilterBox->Show();                 // Show has to be before SetUpdateMode !!!
-        mpFilterBox->SetUpdateMode(false);
-
-        mpFilterFloat->SetOutputSizePixel(aSize);
-        mpFilterFloat->StartPopupMode(aCellRect, FloatWinPopupFlags::Down | FloatWinPopupFlags::GrabFocus);
+        mpFilterBox->Show();                 // Show has to be before freeze !!!
+        rFilterBox.freeze();
 
         // Fill Listbox
         bool bWait = aStrings.size() > 100;
@@ -1154,15 +1124,17 @@ void ScGridWindow::LaunchDataSelectMenu( SCCOL nCol, SCROW nRow )
             EnterWait();
 
         for (const auto& rString : aStrings)
-            mpFilterBox->InsertEntry(rString.GetString());
+            rFilterBox.append_text(rString.GetString());
 
         if (bWait)
             LeaveWait();
 
-        mpFilterBox->SetUpdateMode(true);
+        rFilterBox.thaw();
+
+        ShowFilterMenu(aCellRect, bLayoutRTL);
     }
 
-    sal_Int32 nSelPos = LISTBOX_ENTRY_NOTFOUND;
+    sal_Int32 nSelPos = -1;
 
     sal_uLong nIndex = pDoc->GetAttr( nCol, nRow, nTab, ATTR_VALIDDATA )->GetValue();
     if ( nIndex )
@@ -1204,15 +1176,16 @@ void ScGridWindow::LaunchDataSelectMenu( SCCOL nCol, SCROW nRow )
     }
     else
     {
-        mpFilterBox->GrabFocus();
+        rFilterBox.grab_focus();
 
         // Select only after GrabFocus, so that the focus rectangle gets correct
-        if ( LISTBOX_ENTRY_NOTFOUND != nSelPos )
-            mpFilterBox->SelectEntryPos(nSelPos);
-        else
+        if (nSelPos != -1)
         {
-            mpFilterBox->SetNoSelection();
+            rFilterBox.set_cursor(nSelPos);
+            rFilterBox.select(nSelPos);
         }
+        else
+            rFilterBox.unselect_all();
 
         mpFilterBox->EndInit();
     }
@@ -1220,7 +1193,8 @@ void ScGridWindow::LaunchDataSelectMenu( SCCOL nCol, SCROW nRow )
 
 void ScGridWindow::FilterSelect( sal_uLong nSel )
 {
-    OUString aString = mpFilterBox->GetEntry(static_cast<sal_Int32>(nSel));
+    weld::TreeView& rFilterBox = mpFilterBox->get_widget();
+    OUString aString = rFilterBox.get_text(static_cast<sal_Int32>(nSel));
 
     SCCOL nCol = mpFilterBox->GetCol();
     SCROW nRow = mpFilterBox->GetRow();
@@ -2214,11 +2188,10 @@ void ScGridWindow::MouseButtonUp( const MouseEvent& rMEvt )
                 }
                 // On a mobile device view there is no ctrl+click and for hyperlink popup
                 // the cell coordinates must be sent along with click position for elegance
-                if (isTiledRendering &&
-                    (comphelper::LibreOfficeKit::isMobilePhone(SfxLokHelper::getView()) ||
-                     comphelper::LibreOfficeKit::isTablet(SfxLokHelper::getView())))
+                ScTabViewShell* pViewShell = pViewData->GetViewShell();
+                if (isTiledRendering && pViewShell &&
+                    (pViewShell->isLOKMobilePhone() || pViewShell->isLOKTablet()))
                 {
-                    ScTabViewShell* pViewShell = pViewData->GetViewShell();
                     Point aPos = rMEvt.GetPosPixel();
                     SCCOL nPosX;
                     SCROW nPosY;
@@ -5428,7 +5401,7 @@ bool ScGridWindow::HasScenarioButton( const Point& rPosPixel, ScRange& rScenRang
 
         //! cache the Ranges in Table!!!!
 
-        ScMarkData aMarks(pDoc->MaxRow(), pDoc->MaxCol());
+        ScMarkData aMarks(pDoc->GetSheetLimits());
         for (SCTAB i=nTab+1; i<nTabCount && pDoc->IsScenario(i); i++)
             pDoc->MarkScenario( i, nTab, aMarks, false, ScScenarioFlags::ShowFrame );
         ScRangeList aRanges;
@@ -5735,7 +5708,6 @@ void ScGridWindow::notifyKitCellViewCursor(const SfxViewShell* pForShell) const
     if (mpOOCursors) // cf. getCellCursor above
     {
         auto pForTabView = dynamic_cast<const ScTabViewShell *>(pForShell);
-        assert(pForTabView);
         if (!pForTabView)
             return;
         aCursor = pForTabView->GetViewData().describeCellCursorAt(
@@ -5772,7 +5744,6 @@ void ScGridWindow::updateKitOtherCursors() const
          it = SfxViewShell::GetNext(*it))
     {
         auto pOther = dynamic_cast<const ScTabViewShell *>(it);
-        assert(pOther);
         if (!pOther)
             continue;
         const ScGridWindow *pGrid = pOther->GetViewData().GetActiveWin();
@@ -5968,7 +5939,6 @@ void ScGridWindow::UpdateKitSelection(const std::vector<tools::Rectangle>& rRect
         if (it == pViewShell)
             continue;
         auto pOther = dynamic_cast<const ScTabViewShell *>(it);
-        assert(pOther);
         if (!pOther)
             return;
 
@@ -5997,7 +5967,6 @@ void ScGridWindow::updateOtherKitSelections() const
          it = SfxViewShell::GetNext(*it))
     {
         auto pOther = dynamic_cast<const ScTabViewShell *>(it);
-        assert(pOther);
         if (!pOther)
             return;
 
@@ -6087,7 +6056,7 @@ void ScGridWindow::UpdateCursorOverlay()
         SCCOL nX2 = nX + rMerge.GetColMerge() - 1;
         SCROW nY2 = nY + rMerge.GetRowMerge() - 1;
         // Check if the middle or tail of the merged range is visible.
-        if (!(maVisibleRange.mnCol1 <= nX2 && maVisibleRange.mnRow1 <= nY2))
+        if (maVisibleRange.mnCol1 > nX2 || maVisibleRange.mnRow1 > nY2)
             return;     // no visible part
     }
 

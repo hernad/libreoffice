@@ -56,6 +56,7 @@
 #include <inputwin.hxx>
 #include <dbdata.hxx>
 #include <reffact.hxx>
+#include <fuinsert.hxx>
 #include <viewuno.hxx>
 #include <dispuno.hxx>
 #include <chgtrack.hxx>
@@ -1343,6 +1344,27 @@ bool ScTabViewShell::TabKeyInput(const KeyEvent& rKEvt)
             case KEY_PAGEDOWN:
                 nSlotId = bShift ? SID_CURSORPAGERIGHT_SEL : SID_CURSORPAGERIGHT_;
                 break;
+            case KEY_EQUAL:
+            {
+                // #tdf39302: Use "Alt + =" for autosum
+                if ( !bAnyEdit ) // Ignore shortcut if currently editing a cell
+                {
+                    ScInputHandler* pHdl = pScMod->GetInputHdl(this);
+                    if ( pHdl )
+                    {
+                        ScInputWindow* pWin = pHdl->GetInputWindow();
+                        if ( pWin )
+                        {
+                            bool bRangeFinder = false;
+                            bool bSubTotal = false;
+                            pWin->AutoSum( bRangeFinder, bSubTotal, ocSum );
+                        }
+                    }
+
+                    bUsed = true;
+                    break;
+                }
+            }
         }
         if ( nSlotId )
         {
@@ -1650,7 +1672,7 @@ ScTabViewShell::ScTabViewShell( SfxViewFrame* pViewFrame,
     // available to them.
     bool bInstalledScTabViewObjAsTempController = false;
     uno::Reference<frame::XController> xCurrentController(GetViewData().GetDocShell()->GetModel()->getCurrentController());
-    if (!xCurrentController.get())
+    if (!xCurrentController)
     {
         //GetController here returns the ScTabViewObj above
         GetViewData().GetDocShell()->GetModel()->setCurrentController(GetController());

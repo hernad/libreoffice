@@ -369,8 +369,6 @@ void ScFormatShell::ExecuteStyle( SfxRequest& rReq )
         OUString                aStyleName;
         sal_uInt16              nRetMask = 0xffff;
 
-        pStylePool->SetSearchMask( eFamily );
-
         switch ( nSlotId )
         {
             case SID_STYLE_NEW:
@@ -433,7 +431,7 @@ void ScFormatShell::ExecuteStyle( SfxRequest& rReq )
                         weld::Window* pDialogParent = rReq.GetFrameWeld();
                         if (!pDialogParent)
                             pDialogParent = pTabViewShell->GetFrameWeld();
-                        SfxNewStyleDlg aDlg(pDialogParent, *pStylePool);
+                        SfxNewStyleDlg aDlg(pDialogParent, *pStylePool, eFamily);
                         if (aDlg.run() != RET_OK)
                             return;
                         aStyleName = aDlg.GetName();

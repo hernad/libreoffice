@@ -55,8 +55,6 @@
 struct ImplOutDevData;
 class LogicalFontInstance;
 struct SystemGraphicsData;
-struct SystemFontData;
-struct SystemTextLayoutData;
 class ImplFontCache;
 class PhysicalFontCollection;
 class ImplDeviceFontList;
@@ -107,9 +105,9 @@ namespace basegfx {
     typedef B2IVector B2ISize;
 }
 
-namespace com { namespace sun { namespace star { namespace awt {
+namespace com::sun::star::awt {
     class XGraphics;
-} } } }
+}
 
 #if defined UNX
 #define GLYPH_FONT_HEIGHT   128
@@ -436,6 +434,8 @@ public:
     const Point&                GetRefPoint() const { return maRefPoint; }
     bool                        IsRefPoint() const { return mbRefPoint; }
 
+    virtual bool                IsScreenComp() const { return true; }
+
     virtual sal_uInt16          GetBitCount() const;
 
     Size                        GetOutputSizePixel() const
@@ -559,9 +559,9 @@ protected:
 
     virtual void                CopyDeviceArea( SalTwoRect& aPosAry, bool bWindowInvalidate);
 
-    virtual tools::Rectangle    SetBackgroundComponentBounds();
+    virtual tools::Rectangle    GetBackgroundComponentBounds() const;
 
-    virtual void                DrawOutDevDirectCheck( const OutputDevice* pSrcDev, SalGraphics*& pSrcGraphics );
+    virtual const OutputDevice* DrawOutDevDirectCheck(const OutputDevice* pSrcDev) const;
 
     virtual void                DrawOutDevDirectProcess( const OutputDevice* pSrcDev, SalTwoRect& rPosAry, SalGraphics* pSrcGraphics );
 
@@ -589,6 +589,7 @@ public:
     // this should not normally be used since Push and Pop must always be used symmetrically
     // however this may be e.g. a help when debugging code in which this somehow is not the case
     sal_uInt32                  GetGCStackDepth() const;
+    void                        ClearStack();
 
     void                        EnableOutput( bool bEnable = true );
     bool                        IsOutputEnabled() const { return mbOutput; }
@@ -673,6 +674,7 @@ public:
     void                        IntersectClipRegion( const vcl::Region& rRegion );
 
     virtual vcl::Region         GetActiveClipRegion() const;
+    virtual vcl::Region         GetOutputBoundsClipRegion() const;
 
 protected:
 
@@ -1229,15 +1231,6 @@ public:
 
     bool GetFontFeatures(std::vector<vcl::font::Feature>& rFontFeatures) const;
 
-
-    /** Retrieve detailed font information in platform independent structure
-
-        @param  nFallbacklevel      Fallback font level (0 = best matching font)
-
-        @return SystemFontData
-     */
-    SystemFontData              GetSysFontData( int nFallbacklevel ) const;
-
     SAL_DLLPRIVATE void         ImplGetEmphasisMark( tools::PolyPolygon& rPolyPoly, bool& rPolyLine, tools::Rectangle& rRect1, tools::Rectangle& rRect2,
                                                      long& rYOff, long& rWidth, FontEmphasisMark eEmphasis, long nHeight );
     SAL_DLLPRIVATE static FontEmphasisMark
@@ -1326,10 +1319,6 @@ private:
     ///@{
 
 public:
-
-    SystemTextLayoutData        GetSysTextLayoutData( const Point& rStartPt, const OUString& rStr,
-                                                      sal_Int32 nIndex, sal_Int32 nLen,
-                                                      const long* pDXAry ) const;
 
     // tells whether this output device is RTL in an LTR UI or LTR in a RTL UI
     SAL_DLLPRIVATE bool         ImplIsAntiparallel() const ;
@@ -1678,6 +1667,7 @@ public:
     void                        SetMapMode();
     virtual void                SetMapMode( const MapMode& rNewMapMode );
     void                        SetRelativeMapMode( const MapMode& rNewMapMode );
+    virtual void                SetMetafileMapMode(const MapMode& rNewMapMode, bool bIsRecord);
     const MapMode&              GetMapMode() const { return maMapMode; }
 
 protected:

@@ -848,7 +848,7 @@ void wwSectionManager::CreateSep(const long nTextPos)
     if (!pSep)
         return;
 
-    if (!maSegments.empty() && mrReader.m_pLastAnchorPos.get() && *mrReader.m_pLastAnchorPos == *mrReader.m_pPaM->GetPoint())
+    if (!maSegments.empty() && mrReader.m_pLastAnchorPos && *mrReader.m_pLastAnchorPos == *mrReader.m_pPaM->GetPoint())
     {
         bool insert = true;
         SwPaM pam( *mrReader.m_pLastAnchorPos );
@@ -3450,7 +3450,7 @@ void SwWW8ImplReader::Read_SubSuperProp( sal_uInt16, const sal_uInt8* pData, sho
     if ( m_xPlcxMan )
     {
         const sal_uInt16 nFontsizeID = m_bVer67 ? NS_sprm::v6::sprmCHps : NS_sprm::sprmCHps;
-        const SprmResult aFontsize = m_xPlcxMan->GetChpPLCF()->HasSprm( nFontsizeID );
+        const SprmResult aFontsize = m_xPlcxMan->GetChpPLCF()->HasSprm( nFontsizeID, /*bFindFirst=*/false );
         if ( aFontsize.pSprm && aFontsize.nRemainingData )
             Read_FontSize(nFontsizeID, aFontsize.pSprm, aFontsize.nRemainingData);
     }
@@ -5063,7 +5063,7 @@ void SwWW8ImplReader::Read_CharBorder(sal_uInt16 nId, const sal_uInt8* pData, sh
             = static_cast<const SvxBoxItem*>(GetFormatAttr( RES_CHRATR_BOX ));
         if( pBox )
         {
-            std::shared_ptr<SvxBoxItem> aBoxItem(pBox->Clone());
+            std::unique_ptr<SvxBoxItem> aBoxItem(pBox->Clone());
             WW8_BRCVer9 aBrc;
             int nBrcVer = (nId == NS_sprm::sprmCBrc) ? 9 : (m_bVer67 ? 6 : 8);
 

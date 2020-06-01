@@ -16,6 +16,11 @@ extern "C" void* SwCreateDialogFactory()
     return nullptr;
 }
 
+extern "C" void* com_sun_star_comp_Writer_EPUBExportFilter_get_implementation()
+{
+    return nullptr;
+}
+
 extern "C" bool TestImportFODT(SvStream &rStream);
 
 extern "C" int LLVMFuzzerInitialize(int *argc, char ***argv)
@@ -28,10 +33,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
 {
     SvMemoryStream aStream(const_cast<uint8_t*>(data), size, StreamMode::READ);
     (void)TestImportFODT(aStream);
-    //fontconfigs alloc mechanism is too complicated for lsan/valgrind so
-    //force the fontconfig options to be released now, they are demand loaded
-    //so will be recreated if necessary
-    FreetypeManager::get().ClearFontOptions();
     return 0;
 }
 

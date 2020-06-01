@@ -360,14 +360,14 @@ static const char* STR_POOLCOLL_EXTRA_ARY[]
     STR_POOLCOLL_HEADER,
     STR_POOLCOLL_HEADERL,
     STR_POOLCOLL_HEADERR,
-    // Subcategroy Footer
+    // Subcategory Footer
     STR_POOLCOLL_FOOTER,
     STR_POOLCOLL_FOOTERL,
     STR_POOLCOLL_FOOTERR,
-    // Subcategroy Table
+    // Subcategory Table
     STR_POOLCOLL_TABLE,
     STR_POOLCOLL_TABLE_HDLN,
-    // Subcategroy Labels
+    // Subcategory Labels
     STR_POOLCOLL_LABEL,
     STR_POOLCOLL_LABEL_ABB,
     STR_POOLCOLL_LABEL_TABLE,
@@ -527,7 +527,7 @@ static const char* STR_POOLNUMRULE_NUM_ARY[] =
 
 // XXX MUST match the entries of TableStyleProgNameTable in
 // sw/source/core/doc/SwStyleNameMapper.cxx and MUST match the order of
-// RES_POOL_TABSTYLE_TYPE in sw/inc/poolfmt.hxx
+// RES_POOL_TABLESTYLE_TYPE in sw/inc/poolfmt.hxx
 static const char* STR_TABSTYLE_ARY[] =
 {
     // XXX MUST be in order, Writer first, then Svx old, then Svx new

@@ -965,7 +965,7 @@ long SwWW8ImplReader::Read_Field(WW8PLCFManResult* pRes)
         if ( nSpacePos<0 )
             nSpacePos = aStr.getLength();
 
-        if ( !( aStr.getLength()>1 && aStr[1]=='=') &&
+        if ( ( aStr.getLength() <= 1 || aStr[1] != '=') &&
             (( nDotPos>=0 && nDotPos < nSpacePos ) ||
              ( nSlashPos>=0 && nSlashPos < nSpacePos )))
             return aF.nLen;
@@ -1281,7 +1281,7 @@ the appropriate set/ask field.
 long SwWW8ImplReader::MapBookmarkVariables(const WW8FieldDesc* pF,
     OUString &rOrigName, const OUString &rData)
 {
-    OSL_ENSURE(m_xPlcxMan.get(), "No pPlcxMan");
+    OSL_ENSURE(m_xPlcxMan, "No pPlcxMan");
     long nNo;
     /*
     If there was no bookmark associated with this set field, then we create a
@@ -1344,7 +1344,7 @@ SwFltStackEntry *SwWW8FltRefStack::RefToVar(const SwField* pField,
 OUString SwWW8ImplReader::GetMappedBookmark(const OUString &rOrigName)
 {
     OUString sName(BookmarkToWriter(rOrigName));
-    OSL_ENSURE(m_xPlcxMan.get(), "no pPlcxMan");
+    OSL_ENSURE(m_xPlcxMan, "no pPlcxMan");
     m_xPlcxMan->GetBook()->MapName(sName);
 
     //See if there has been a variable set with this name, if so get
@@ -2984,7 +2984,7 @@ eF_ResT SwWW8ImplReader::Read_F_Tox( WW8FieldDesc* pF, OUString& rStr )
 
     const SwTOXType* pType = m_rDoc.GetTOXType( eTox, 0 );
     SwForm aOrigForm(eTox);
-    SwTOXBase* pBase = new SwTOXBase( pType, aOrigForm, nCreateOf, OUString() );
+    std::shared_ptr<SwTOXBase> pBase = std::make_shared<SwTOXBase>( pType, aOrigForm, nCreateOf, OUString() );
     pBase->SetProtected(m_aSectionManager.CurrentSectionIsProtected());
     switch( eTox ){
     case TOX_INDEX:

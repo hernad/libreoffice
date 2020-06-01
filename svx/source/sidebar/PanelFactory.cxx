@@ -20,12 +20,14 @@
 #include <config_features.h>
 
 #include "text/TextPropertyPanel.hxx"
+#include "inspector/InspectorTextPanel.hxx"
 #include "styles/StylesPropertyPanel.hxx"
 #include "paragraph/ParaPropertyPanel.hxx"
 #include "lists/ListsPropertyPanel.hxx"
 #include "area/AreaPropertyPanel.hxx"
 #include "glow/GlowPropertyPanel.hxx"
 #include "shadow/ShadowPropertyPanel.hxx"
+#include "softedge/SoftEdgePropertyPanel.hxx"
 #include "graphic/GraphicPropertyPanel.hxx"
 #include "line/LinePropertyPanel.hxx"
 #include "possize/PosSizePropertyPanel.hxx"
@@ -123,6 +125,10 @@ Reference<ui::XUIElement> SAL_CALL PanelFactory::createUIElement (
     {
         pControl = TextPropertyPanel::Create(pParentWindow, xFrame);
     }
+    else if (rsResourceURL.endsWith("/InspectorTextPanel"))
+    {
+        pControl = InspectorTextPanel::Create(pParentWindow, xFrame);
+    }
     else if (rsResourceURL.endsWith("/StylesPropertyPanel"))
     {
         pControl = StylesPropertyPanel::Create(pParentWindow, xFrame);
@@ -146,6 +152,10 @@ Reference<ui::XUIElement> SAL_CALL PanelFactory::createUIElement (
     else if (rsResourceURL.endsWith("/ShadowPropertyPanel"))
     {
         pControl = ShadowPropertyPanel::Create(pParentWindow, xFrame, pBindings);
+    }
+    else if (rsResourceURL.endsWith("/SoftEdgePropertyPanel"))
+    {
+        pControl = SoftEdgePropertyPanel::Create(pParentWindow, xFrame, pBindings);
     }
     else if (rsResourceURL.endsWith("/GraphicPropertyPanel"))
     {

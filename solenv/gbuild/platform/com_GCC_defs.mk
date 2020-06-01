@@ -162,6 +162,9 @@ endif
 endif
 
 gb_CFLAGS_WERROR = $(if $(ENABLE_WERROR),-Werror)
+ifeq ($(ENABLE_OPTIMIZED)-$(COM_IS_CLANG),TRUE-)
+gb_CFLAGS_WERROR += -Wno-stringop-overflow
+endif
 
 # This is the default in non-C++11 mode
 ifeq ($(COM_IS_CLANG),TRUE)
@@ -216,6 +219,10 @@ gb_LINKER_DEBUGINFO_FLAGS=
 
 ifeq ($(HAVE_GCC_SPLIT_DWARF),TRUE)
 gb_DEBUGINFO_FLAGS+=-gsplit-dwarf
+endif
+
+ifeq ($(HAVE_CLANG_DEBUG_INFO_KIND_CONSTRUCTOR),TRUE)
+gb_DEBUGINFO_FLAGS+=-Xclang -debug-info-kind=constructor
 endif
 
 ifeq ($(ENABLE_GDB_INDEX),TRUE)

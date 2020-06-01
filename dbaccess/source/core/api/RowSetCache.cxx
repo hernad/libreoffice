@@ -142,7 +142,6 @@ ORowSetCache::ORowSetCache(const Reference< XResultSet >& _xRs,
     bool bNeedKeySet = !bBookmarkable || (xPropInfo->hasPropertyByName(PROPERTY_RESULTSETCONCURRENCY) &&
                             ::comphelper::getINT32(xProp->getPropertyValue(PROPERTY_RESULTSETCONCURRENCY)) == ResultSetConcurrency::READ_ONLY);
 
-    Reference< XIndexAccess> xUpdateTableKeys;
     OUString aUpdateTableName = _rUpdateTableName;
     Reference< XConnection> xConnection;
     // first we need a connection
@@ -1555,7 +1554,7 @@ bool ORowSetCache::checkJoin(const Reference< XConnection>& _xConnection,
     OUString sErrorMsg;
     ::connectivity::OSQLParser aSqlParser( m_aContext );
     std::unique_ptr< ::connectivity::OSQLParseNode> pSqlParseNode( aSqlParser.parseTree(sErrorMsg,sSql));
-    if ( pSqlParseNode.get() && SQL_ISRULE(pSqlParseNode, select_statement) )
+    if ( pSqlParseNode && SQL_ISRULE(pSqlParseNode, select_statement) )
     {
         OSQLParseNode* pTableRefCommalist = pSqlParseNode->getByRule(::connectivity::OSQLParseNode::table_ref_commalist);
         OSL_ENSURE(pTableRefCommalist,"NO tables why!?");

@@ -248,6 +248,7 @@ void OutputDevice::DrawTransparent(
 
         // create ObjectToDevice transformation
         const basegfx::B2DHomMatrix aFullTransform(ImplGetDeviceTransformation() * rObjectTransform);
+        const double fAdjustedTransparency = mpAlphaVDev ? 0 : fTransparency;
         bool bDrawnOk(true);
 
         if( IsFillColor() )
@@ -255,7 +256,7 @@ void OutputDevice::DrawTransparent(
             bDrawnOk = mpGraphics->DrawPolyPolygon(
                 aFullTransform,
                 aB2DPolyPolygon,
-                fTransparency,
+                fAdjustedTransparency,
                 this);
         }
 
@@ -268,9 +269,8 @@ void OutputDevice::DrawTransparent(
                 mpGraphics->DrawPolyLine(
                     aFullTransform,
                     rPolygon,
-                    fTransparency,
-                    // tdf#124848 hairline
-                    basegfx::B2DVector::getEmptyVector(),
+                    fAdjustedTransparency,
+                    0.0, // tdf#124848 hairline
                     nullptr, // MM01
                     basegfx::B2DLineJoin::NONE,
                     css::drawing::LineCap_BUTT,
@@ -291,6 +291,21 @@ void OutputDevice::DrawTransparent(
                     new MetaTransparentAction(
                         tools::PolyPolygon(aB2DPolyPoly),
                         static_cast< sal_uInt16 >(fTransparency * 100.0)));
+            }
+
+            if (mpAlphaVDev)
+            {
+                const Color aFillCol(mpAlphaVDev->GetFillColor());
+                const Color aLineColor(mpAlphaVDev->GetLineColor());
+                const auto nGreyScale = static_cast<sal_uInt8>(std::round(255 * fTransparency));
+                const Color aNewColor(nGreyScale, nGreyScale, nGreyScale);
+                mpAlphaVDev->SetFillColor(aNewColor);
+                mpAlphaVDev->SetLineColor(aNewColor);
+
+                mpAlphaVDev->DrawTransparent(rObjectTransform, rB2DPolyPoly, fTransparency);
+
+                mpAlphaVDev->SetFillColor(aFillCol);
+                mpAlphaVDev->SetLineColor(aLineColor);
             }
 
             return;
@@ -392,8 +407,7 @@ bool OutputDevice::DrawTransparentNatively ( const tools::PolyPolygon& rPolyPoly
                     aTransform,
                     rPolygon,
                     fTransparency,
-                    // tdf#124848 hairline
-                    basegfx::B2DVector::getEmptyVector(),
+                    0.0, // tdf#124848 hairline
                     nullptr, // MM01
                     basegfx::B2DLineJoin::NONE,
                     css::drawing::LineCap_BUTT,

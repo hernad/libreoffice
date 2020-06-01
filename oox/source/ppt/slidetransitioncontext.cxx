@@ -138,6 +138,7 @@ SlideTransitionContext::~SlideTransitionContext() throw()
     case P14_TOKEN( ripple ):
     case P14_TOKEN( glitter ):
     case P14_TOKEN( honeycomb ):
+    case P14_TOKEN( flash ):
         // CT_Empty
         if (!mbHasTransition)
         {
@@ -164,6 +165,13 @@ SlideTransitionContext::~SlideTransitionContext() throw()
         {
             mbHasTransition = true;
             maTransition.setPresetTransition(rAttribs.getString(XML_prst, ""));
+        }
+        return this;
+    case PPT_TOKEN( strips ):
+        if (!mbHasTransition)
+        {
+            mbHasTransition = true;
+            maTransition.setOoxTransitionType( aElementToken, rAttribs.getToken( XML_dir, XML_ld ), 0 );
         }
         return this;
 

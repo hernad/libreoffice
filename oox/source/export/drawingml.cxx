@@ -176,9 +176,9 @@ static css::uno::Any getLineDash( const css::uno::Reference<css::frame::XModel>&
 
 namespace
 {
-void WriteRadialGradientPath(const awt::Gradient& rGradient, const FSHelperPtr& pFS)
+void WriteGradientPath(const awt::Gradient& rGradient, const FSHelperPtr& pFS, const bool bCircle)
 {
-    pFS->startElementNS(XML_a, XML_path, XML_path, "circle");
+    pFS->startElementNS(XML_a, XML_path, XML_path, bCircle ? "circle" : "rect");
 
     // Write the focus rectangle. Work with the focus point, and assume
     // that it extends 50% in all directions.  The below
@@ -186,13 +186,13 @@ void WriteRadialGradientPath(const awt::Gradient& rGradient, const FSHelperPtr& 
     // edge of the tile rectangle and 100% means the center of it.
     rtl::Reference<sax_fastparser::FastAttributeList> pAttributeList(
         sax_fastparser::FastSerializerHelper::createAttrList());
-    sal_Int32 nLeftPercent = rGradient.XOffset * 2 - 50;
+    sal_Int32 nLeftPercent = rGradient.XOffset;
     pAttributeList->add(XML_l, OString::number(nLeftPercent * PER_PERCENT));
-    sal_Int32 nTopPercent = rGradient.YOffset * 2 - 50;
+    sal_Int32 nTopPercent = rGradient.YOffset;
     pAttributeList->add(XML_t, OString::number(nTopPercent * PER_PERCENT));
-    sal_Int32 nRightPercent = (100 - rGradient.XOffset) * 2 - 50;
+    sal_Int32 nRightPercent = 100 - rGradient.XOffset;
     pAttributeList->add(XML_r, OString::number(nRightPercent * PER_PERCENT));
-    sal_Int32 nBottomPercent = (100 - rGradient.YOffset) * 2 - 50;
+    sal_Int32 nBottomPercent = 100 - rGradient.YOffset;
     pAttributeList->add(XML_b, OString::number(nBottomPercent * PER_PERCENT));
     sax_fastparser::XFastAttributeListRef xAttributeList(pAttributeList.get());
     pFS->singleElementNS(XML_a, XML_fillToRect, xAttributeList);
@@ -570,7 +570,7 @@ void DrawingML::WriteGrabBagGradientFill( const Sequence< PropertyValue >& aGrad
                 OString::number((((3600 - rGradient.Angle + 900) * 6000) % 21600000)));
             break;
         case awt::GradientStyle_RADIAL:
-            WriteRadialGradientPath(rGradient, mpFS);
+            WriteGradientPath(rGradient, mpFS, true);
             break;
     }
 }
@@ -638,6 +638,9 @@ void DrawingML::WriteGradientFill(awt::Gradient rGradient, awt::Gradient rTransp
         }
 
         case awt::GradientStyle_RADIAL:
+        case awt::GradientStyle_ELLIPTICAL:
+        case awt::GradientStyle_RECT:
+        case awt::GradientStyle_SQUARE:
         {
             mpFS->startElementNS(XML_a, XML_gsLst);
             WriteGradientStop(0, ColorWithIntensity(rGradient.EndColor, rGradient.EndIntensity));
@@ -651,22 +654,9 @@ void DrawingML::WriteGradientFill(awt::Gradient rGradient, awt::Gradient rTransp
                               ColorWithIntensity(rGradient.StartColor, rGradient.StartIntensity));
             mpFS->endElementNS(XML_a, XML_gsLst);
 
-            WriteRadialGradientPath(rGradient, mpFS);
+            WriteGradientPath(rGradient, mpFS, rGradient.Style == awt::GradientStyle_RADIAL || rGradient.Style == awt::GradientStyle_ELLIPTICAL);
             break;
         }
-            /* I don't see how to apply transformation to gradients, so
-             * elliptical will end as radial and square as
-             * rectangular. also position offsets are not applied */
-        case awt::GradientStyle_ELLIPTICAL:
-        case awt::GradientStyle_RECT:
-        case awt::GradientStyle_SQUARE:
-            mpFS->startElementNS(XML_a, XML_gsLst);
-            WriteGradientStop( 0, ColorWithIntensity( rGradient.EndColor, rGradient.EndIntensity ) );
-            WriteGradientStop( 100, ColorWithIntensity( rGradient.StartColor, rGradient.StartIntensity ) );
-            mpFS->endElementNS( XML_a, XML_gsLst );
-            mpFS->singleElementNS( XML_a, XML_path,
-                    XML_path, ( rGradient.Style == awt::GradientStyle_RADIAL || rGradient.Style == awt::GradientStyle_ELLIPTICAL ) ? "circle" : "rect" );
-            break;
     }
 }
 
@@ -748,6 +738,7 @@ void DrawingML::WriteOutline( const Reference<XPropertySet>& rXPropSet, Referenc
         mAny >>= aLineStyle;
 
     sal_uInt32 nLineWidth = 0;
+    sal_uInt32 nEmuLineWidth = 0;
     ::Color nColor;
     sal_Int32 nColorAlpha = MAX_PERCENT;
     bool bColorSet = false;
@@ -784,6 +775,8 @@ void DrawingML::WriteOutline( const Reference<XPropertySet>& rXPropSet, Referenc
                 rProp.Value >>= aStyleProperties;
             else if( rProp.Name == "SpPrLnSolidFillSchemeClrTransformations" )
                 rProp.Value >>= aTransformations;
+            else if( rProp.Name == "EmuLineWidth" )
+                rProp.Value >>= nEmuLineWidth;
         }
         for (const auto& rStyleProp : std::as_const(aStyleProperties))
         {
@@ -864,10 +857,13 @@ void DrawingML::WriteOutline( const Reference<XPropertySet>& rXPropSet, Referenc
             break;
     }
 
+    // if the line-width was not modified after importing then the original EMU value will be exported to avoid unexpected conversion (rounding) error
+    if (nEmuLineWidth == 0 || static_cast<sal_uInt32>(oox::drawingml::convertEmuToHmm(nEmuLineWidth)) != nLineWidth)
+        nEmuLineWidth = oox::drawingml::convertHmmToEmu(nLineWidth);
     mpFS->startElementNS( XML_a, XML_ln,
                           XML_cap, cap,
-                          XML_w, nLineWidth > 1 && nStyleLineWidth != nLineWidth ?
-                              OString::number(oox::drawingml::convertHmmToEmu(nLineWidth)).getStr() : nullptr );
+                          XML_w, nLineWidth == 0 || (nLineWidth > 1 && nStyleLineWidth != nLineWidth) ?
+                              OString::number(nEmuLineWidth).getStr() : nullptr );
 
     if( bColorSet )
     {
@@ -2395,6 +2391,40 @@ void DrawingML::WriteParagraphNumbering(const Reference< XPropertySet >& rXPropS
     }
 }
 
+void DrawingML::WriteParagraphTabStops(const Reference<XPropertySet>& rXPropSet)
+{
+    css::uno::Sequence<css::style::TabStop> aTabStops;
+    if (GetProperty(rXPropSet, "ParaTabStops"))
+        aTabStops = *o3tl::doAccess<css::uno::Sequence<css::style::TabStop>>(mAny);
+
+    if (aTabStops.getLength() > 0)
+        mpFS->startElementNS(XML_a, XML_tabLst);
+
+    for (const css::style::TabStop& rTabStop : std::as_const(aTabStops))
+    {
+        OString sPosition = OString::number(GetPointFromCoordinate(rTabStop.Position));
+        OString sAlignment;
+        switch (rTabStop.Alignment)
+        {
+            case css::style::TabAlign_DECIMAL:
+                sAlignment = "dec";
+                break;
+            case css::style::TabAlign_RIGHT:
+                sAlignment = "r";
+                break;
+            case css::style::TabAlign_CENTER:
+                sAlignment = "ctr";
+                break;
+            case css::style::TabAlign_LEFT:
+            default:
+                sAlignment = "l";
+        }
+        mpFS->singleElementNS(XML_a, XML_tab, XML_algn, sAlignment, XML_pos, sPosition);
+    }
+    if (aTabStops.getLength() > 0)
+        mpFS->endElementNS(XML_a, XML_tabLst);
+}
+
 bool DrawingML::IsGroupShape( const Reference< XShape >& rXShape )
 {
     bool bRet = false;
@@ -2596,6 +2626,8 @@ void DrawingML::WriteParagraphProperties( const Reference< XTextContent >& rPara
     }
 
     WriteParagraphNumbering( rXPropSet, fFirstCharHeight, nLevel );
+
+    WriteParagraphTabStops( rXPropSet );
 
     mpFS->endElementNS( XML_a, XML_pPr );
 }
@@ -3053,9 +3085,8 @@ bool DrawingML::WriteCustomGeometry(
 
     if ( pGeometrySeq )
     {
-        for( int i = 0; i < pGeometrySeq->getLength(); ++i )
+        for( const beans::PropertyValue& rProp : *pGeometrySeq )
         {
-            const beans::PropertyValue& rProp = (*pGeometrySeq)[ i ];
             if ( rProp.Name == "Path" )
             {
                 uno::Sequence<beans::PropertyValue> aPathProp;
@@ -3599,7 +3630,7 @@ void DrawingML::WriteShapeEffect( const OUString& sName, const Sequence< Propert
                 }
                 else if( rOuterShdwProp.Name == "rad" )
                 {
-                    sal_Int32 nVal = 0;
+                    sal_Int64 nVal = 0;
                     rOuterShdwProp.Value >>= nVal;
                     aOuterShdwAttrList->add( XML_rad, OString::number( nVal ).getStr() );
                 }
@@ -3706,19 +3737,32 @@ void DrawingML::WriteShapeEffects( const Reference< XPropertySet >& rXPropSet )
         }
     }
 
+    // tdf#132201: the order of effects is important. Effects order (CT_EffectList in ECMA-376):
+    // blur -> fillOverlay -> glow -> innerShdw -> outerShdw -> prstShdw -> reflection -> softEdge
+
     if( !aEffects.hasElements() )
     {
         bool bHasShadow = false;
         if( GetProperty( rXPropSet, "Shadow" ) )
             mAny >>= bHasShadow;
-        bool bHasGlow = false;
-        if( GetProperty( rXPropSet, "GlowEffect") )
-            mAny >>= bHasGlow;
-        //rXPropSet->getPropertyValue("GlowEffect") >>= bHasGlow;
+        bool bHasEffects = bHasShadow;
+        if (!bHasEffects && GetProperty(rXPropSet, "GlowEffectRad"))
+        {
+            sal_Int32 rad = 0;
+            mAny >>= rad;
+            bHasEffects = rad > 0;
+        }
+        if (!bHasEffects && GetProperty(rXPropSet, "SoftEdgeRad"))
+        {
+            sal_Int32 rad = 0;
+            mAny >>= rad;
+            bHasEffects = rad > 0;
+        }
 
-        if( bHasShadow || bHasGlow )
+        if (bHasEffects)
         {
             mpFS->startElementNS(XML_a, XML_effectLst);
+            WriteGlowEffect(rXPropSet);
             if( bHasShadow )
             {
                 Sequence< PropertyValue > aShadowGrabBag( 3 );
@@ -3742,7 +3786,7 @@ void DrawingML::WriteShapeEffects( const Reference< XPropertySet >& rXPropSet )
 
                 WriteShapeEffect( "outerShdw", aShadowGrabBag );
             }
-            WriteGlowEffect(rXPropSet);
+            WriteSoftEdgeEffect(rXPropSet);
             mpFS->endElementNS(XML_a, XML_effectLst);
         }
     }
@@ -3784,8 +3828,18 @@ void DrawingML::WriteShapeEffects( const Reference< XPropertySet >& rXPropSet )
         }
 
         mpFS->startElementNS(XML_a, XML_effectLst);
+        bool bGlowWritten = false;
         for( const auto& rEffect : std::as_const(aEffects) )
         {
+            if (!bGlowWritten
+                && (rEffect.Name == "innerShdw" || rEffect.Name == "outerShdw"
+                    || rEffect.Name == "prstShdw" || rEffect.Name == "reflection"
+                    || rEffect.Name == "softEdge"))
+            {
+                WriteGlowEffect(rXPropSet);
+                bGlowWritten = true;
+            }
+
             if( rEffect.Name == "outerShdw" )
             {
                 WriteShapeEffect( rEffect.Name, aOuterShdwProps );
@@ -3797,7 +3851,9 @@ void DrawingML::WriteShapeEffects( const Reference< XPropertySet >& rXPropSet )
                 WriteShapeEffect( rEffect.Name, aEffectProps );
             }
         }
-        WriteGlowEffect(rXPropSet);
+        if (!bGlowWritten)
+            WriteGlowEffect(rXPropSet);
+        WriteSoftEdgeEffect(rXPropSet); // the last
 
         mpFS->endElementNS(XML_a, XML_effectLst);
     }
@@ -3805,22 +3861,41 @@ void DrawingML::WriteShapeEffects( const Reference< XPropertySet >& rXPropSet )
 
 void DrawingML::WriteGlowEffect(const Reference< XPropertySet >& rXPropSet)
 {
-    bool hasGlow = false;
-    rXPropSet->getPropertyValue("GlowEffect") >>= hasGlow;
-    if(!hasGlow)
+    sal_Int32 nRad = 0;
+    rXPropSet->getPropertyValue("GlowEffectRad") >>= nRad;
+    if (!nRad)
         return;
 
     Sequence< PropertyValue > aGlowAttribs(1);
     aGlowAttribs[0].Name = "rad";
-    aGlowAttribs[0].Value = rXPropSet->getPropertyValue("GlowEffectRad");
-    Sequence< PropertyValue > aGlowProps(2);
+    aGlowAttribs[0].Value <<= oox::drawingml::convertHmmToEmu(nRad);
+    Sequence< PropertyValue > aGlowProps(3);
     aGlowProps[0].Name = "Attribs";
     aGlowProps[0].Value <<= aGlowAttribs;
     aGlowProps[1].Name = "RgbClr";
     aGlowProps[1].Value = rXPropSet->getPropertyValue("GlowEffectColor");
+    aGlowProps[2].Name = "RgbClrTransparency";
+    aGlowProps[2].Value = rXPropSet->getPropertyValue("GlowEffectTransparency");
     // TODO other stuff like saturation or luminance
 
     WriteShapeEffect("glow", aGlowProps);
+}
+
+void DrawingML::WriteSoftEdgeEffect(const css::uno::Reference<css::beans::XPropertySet>& rXPropSet)
+{
+    sal_Int32 nRad = 0;
+    rXPropSet->getPropertyValue("SoftEdgeRad") >>= nRad;
+    if (!nRad)
+        return;
+
+    css::uno::Sequence<css::beans::PropertyValue> aAttribs(1);
+    aAttribs[0].Name = "rad";
+    aAttribs[0].Value <<= oox::drawingml::convertHmmToEmu(nRad);
+    css::uno::Sequence<css::beans::PropertyValue> aProps(1);
+    aProps[0].Name = "Attribs";
+    aProps[0].Value <<= aAttribs;
+
+    WriteShapeEffect("softEdge", aProps);
 }
 
 void DrawingML::WriteShape3DEffects( const Reference< XPropertySet >& xPropSet )

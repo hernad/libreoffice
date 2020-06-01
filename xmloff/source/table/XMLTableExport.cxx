@@ -57,11 +57,11 @@ using namespace ::com::sun::star::container;
 using namespace ::com::sun::star::text;
 using namespace ::com::sun::star::style;
 
-#define MAP_(name,prefix,token,type,context)  { name, sizeof(name)-1, prefix, token, type, context, SvtSaveOptions::ODFVER_010, false }
+#define MAP_(name,prefix,token,type,context)  { name, sizeof(name)-1, prefix, token, type, context, SvtSaveOptions::ODFSVER_010, false }
 #define CMAP(name,prefix,token,type,context) MAP_(name,prefix,token,type|XML_TYPE_PROP_TABLE_COLUMN,context)
 #define RMAP(name,prefix,token,type,context) MAP_(name,prefix,token,type|XML_TYPE_PROP_TABLE_ROW,context)
 #define CELLMAP(name,prefix,token,type,context) MAP_(name,prefix,token,type|XML_TYPE_PROP_TABLE_CELL,context)
-#define MAP_END { nullptr, 0, 0, XML_EMPTY, 0, 0, SvtSaveOptions::ODFVER_010, false }
+#define MAP_END { nullptr, 0, 0, XML_EMPTY, 0, 0, SvtSaveOptions::ODFSVER_010, false }
 
 const XMLPropertyMapEntry* getColumnPropertiesMap()
 {
@@ -355,7 +355,7 @@ static bool has_states( const std::vector< XMLPropertyState >& xPropStates )
             OUString sDefaultCellStyle;
 
             // table:style-name
-            if( xTableInfo.get() )
+            if( xTableInfo )
             {
                 Reference< XInterface > xKey( xCellRange, UNO_QUERY );
                 const OUString sStyleName( xTableInfo->maRowStyleMap[xKey] );
@@ -400,7 +400,7 @@ static bool has_states( const std::vector< XMLPropertyState >& xPropStates )
          if ( xColumnProperties.is() )
         {
             // table:style-name
-            if( rTableInfo.get() )
+            if( rTableInfo )
             {
                 Reference< XInterface > xKey( xColumnProperties, UNO_QUERY );
                 const OUString sStyleName( rTableInfo->maColumnStyleMap[xKey] );
@@ -426,7 +426,7 @@ static bool has_states( const std::vector< XMLPropertyState >& xPropStates )
 
     try
     {
-        if( rTableInfo.get() )
+        if( rTableInfo )
         {
             // table:style-name
             Reference< XInterface > xKey( xCell, UNO_QUERY );
@@ -613,7 +613,7 @@ void XMLTableExport::exportTableTemplates()
             else
             {
                 // checks if any of the extended version of ODF are set
-                if ((eVersion & SvtSaveOptions::ODFSVER_EXTENDED) != 0)
+                if (eVersion == SvtSaveOptions::ODFSVER_012_EXT_COMPAT)
                 {
                     // tdf#106780 historically this wrong attribute was used
                     // for the name; write it if extended because LO < 5.3 can

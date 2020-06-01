@@ -22,6 +22,7 @@
 #include <algorithm>
 
 #include <graphic/GraphicFormatDetector.hxx>
+#include <graphic/DetectorTools.hxx>
 #include <tools/solar.h>
 #include <tools/zcodec.hxx>
 
@@ -65,24 +66,6 @@ bool isPCT(SvStream& rStream, sal_uLong nStreamPos, sal_uLong nStreamLen)
             return true;
     }
     return false;
-}
-
-sal_uInt8* ImplSearchEntry(sal_uInt8* pSource, sal_uInt8 const* pDest, sal_uLong nComp,
-                           sal_uLong nSize)
-{
-    while (nComp-- >= nSize)
-    {
-        sal_uLong i;
-        for (i = 0; i < nSize; i++)
-        {
-            if ((pSource[i] & ~0x20) != (pDest[i] & ~0x20))
-                break;
-        }
-        if (i == nSize)
-            return pSource;
-        pSource++;
-    }
-    return nullptr;
 }
 
 } // end anonymous namespace
@@ -321,14 +304,19 @@ bool GraphicFormatDetector::checkPSD()
 
 bool GraphicFormatDetector::checkEPS()
 {
-    if ((mnFirstLong == 0xC5D0D3C6)
-        || (ImplSearchEntry(maFirstBytes.data(), reinterpret_cast<sal_uInt8 const*>("%!PS-Adobe"),
-                            10, 10)
-            && ImplSearchEntry(&maFirstBytes[15], reinterpret_cast<sal_uInt8 const*>("EPS"), 3, 3)))
+    const char* pFirstBytesAsCharArray = reinterpret_cast<char*>(maFirstBytes.data());
+
+    if (mnFirstLong == 0xC5D0D3C6)
     {
         msDetectedFormat = "EPS";
         return true;
     }
+    else if (checkArrayForMatchingStrings(pFirstBytesAsCharArray, 30, { "%!PS-Adobe", " EPS" }))
+    {
+        msDetectedFormat = "EPS";
+        return true;
+    }
+
     return false;
 }
 
@@ -416,8 +404,8 @@ bool GraphicFormatDetector::checkRAS()
 
 bool GraphicFormatDetector::checkXPM()
 {
-    if (ImplSearchEntry(maFirstBytes.data(), reinterpret_cast<sal_uInt8 const*>("/* XPM */"), 256,
-                        9))
+    const char* pFirstBytesAsCharArray = reinterpret_cast<char*>(maFirstBytes.data());
+    if (matchArrayWithString(pFirstBytesAsCharArray, 256, "/* XPM */"))
     {
         msDetectedFormat = "XPM";
         return true;
@@ -432,17 +420,13 @@ bool GraphicFormatDetector::checkXBM()
 
     mrStream.Seek(mnStreamPosition);
     mrStream.ReadBytes(pBuffer.get(), nSize);
-    sal_uInt8* pPtr
-        = ImplSearchEntry(pBuffer.get(), reinterpret_cast<sal_uInt8 const*>("#define"), nSize, 7);
 
-    if (pPtr)
+    const char* pBufferAsCharArray = reinterpret_cast<char*>(pBuffer.get());
+
+    if (checkArrayForMatchingStrings(pBufferAsCharArray, nSize, { "#define", "_width" }))
     {
-        if (ImplSearchEntry(pPtr, reinterpret_cast<sal_uInt8 const*>("_width"),
-                            pBuffer.get() + nSize - pPtr, 6))
-        {
-            msDetectedFormat = "XBM";
-            return true;
-        }
+        msDetectedFormat = "XBM";
+        return true;
     }
     return false;
 }
@@ -473,27 +457,20 @@ bool GraphicFormatDetector::checkSVG()
 
     bool bIsSvg(false);
 
-    // check for Xml
+    const char* pCheckArrayAsCharArray = reinterpret_cast<char*>(pCheckArray);
+
+    // check for XML
     // #119176# SVG files which have no xml header at all have shown up this is optional
-    if (ImplSearchEntry(pCheckArray, reinterpret_cast<sal_uInt8 const*>("<?xml"), nCheckSize,
-                        5) // is it xml
-        && ImplSearchEntry(pCheckArray, reinterpret_cast<sal_uInt8 const*>("version"), nCheckSize,
-                           7)) // does it have a version (required for xml)
+    // check for "xml" then "version" then "DOCTYPE" and "svg" tags
+    if (checkArrayForMatchingStrings(pCheckArrayAsCharArray, nCheckSize,
+                                     { "<?xml", "version", "DOCTYPE", "svg" }))
     {
-        // check for DOCTYPE svg combination
-        if (ImplSearchEntry(pCheckArray, reinterpret_cast<sal_uInt8 const*>("DOCTYPE"), nCheckSize,
-                            7) // 'DOCTYPE' is there
-            && ImplSearchEntry(pCheckArray, reinterpret_cast<sal_uInt8 const*>("svg"), nCheckSize,
-                               3)) // 'svg' is there
-        {
-            bIsSvg = true;
-        }
+        bIsSvg = true;
     }
 
     // check for svg element in 1st 256 bytes
-    if (!bIsSvg
-        && ImplSearchEntry(pCheckArray, reinterpret_cast<sal_uInt8 const*>("<svg"), nCheckSize,
-                           4)) // '<svg'
+    // search for '<svg'
+    if (!bIsSvg && checkArrayForMatchingStrings(pCheckArrayAsCharArray, nCheckSize, { "<svg" }))
     {
         bIsSvg = true;
     }
@@ -506,7 +483,7 @@ bool GraphicFormatDetector::checkSVG()
         // with Svg files containing big comment headers or Svg as the host
         // language
 
-        pCheckArray = sExtendedOrDecompressedFirstBytes;
+        pCheckArrayAsCharArray = reinterpret_cast<char*>(sExtendedOrDecompressedFirstBytes);
 
         if (bIsGZip)
         {
@@ -519,8 +496,8 @@ bool GraphicFormatDetector::checkSVG()
             nCheckSize = mrStream.ReadBytes(sExtendedOrDecompressedFirstBytes, nCheckSize);
         }
 
-        if (ImplSearchEntry(pCheckArray, reinterpret_cast<sal_uInt8 const*>("<svg"), nCheckSize,
-                            4)) // '<svg'
+        // search for '<svg'
+        if (checkArrayForMatchingStrings(pCheckArrayAsCharArray, nCheckSize, { "<svg" }))
         {
             bIsSvg = true;
         }

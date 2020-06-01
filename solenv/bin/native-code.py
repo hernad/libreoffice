@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # This file is part of the LibreOffice project.
 #
 # This Source Code Form is subject to the terms of the Mozilla Public
@@ -290,6 +290,7 @@ core_constructor_list = [
     "com_sun_star_comp_uui_UUIInteractionRequestStringResolver_get_implementation",
 # xmloff/util/xo.component
     "XMLMetaExportComponent_get_implementation",
+    "XMLMetaExportOOo_get_implementation",
     "XMLMetaImportComponent_get_implementation",
     "XMLVersionListPersistence_get_implementation",
     "com_sun_star_comp_Impress_XMLOasisImporter_get_implementation",
@@ -332,9 +333,11 @@ core_constructor_list = [
     "com_sun_star_comp_Chart_XMLOasisContentExporter_get_implementation",
     "com_sun_star_comp_Chart_XMLExporter_get_implementation",
     "com_sun_star_comp_Chart_XMLStylesExporter_get_implementation",
+    "com_sun_star_comp_Chart_XMLContentExporter_get_implementation",
     "com_sun_star_comp_Chart_XMLOasisStylesImporter_get_implementation",
     "com_sun_star_comp_Chart_XMLOasisContentImporter_get_implementation",
     "com_sun_star_comp_Chart_XMLOasisExporter_get_implementation",
+    "com_sun_star_comp_Writer_XMLOasisAutotextEventsExporter_get_implementation",
 # xmlscript/util/xmlscript.component
     "com_sun_star_comp_xmlscript_XMLBasicExporter",
     "com_sun_star_comp_xmlscript_XMLOasisBasicExporter",
@@ -356,6 +359,7 @@ core_constructor_list = [
     "com_sun_star_comp_oox_docprop_DocumentPropertiesImporter_get_implementation",
     "com_sun_star_comp_oox_ppt_PowerPointImport_get_implementation",
     "com_sun_star_comp_oox_ShapeContextHandler_get_implementation",
+    "com_sun_star_comp_oox_crypto_StrongEncryptionDataSpace_get_implementation",
     ]
 
 # edit group for apps, where you can edit documents
@@ -515,19 +519,14 @@ constructor_map = {
     }
 
 custom_widgets = [
-    'BookmarksBox',
-    'ContentListBox',
     'ContextVBox',
     'DataTreeListBox',
     'DropdownBox',
     'EmojiView',
-    'IndexBox',
     'ManagedMenuButton',
     'PriorityHBox',
     'PriorityMergedHBox',
     'RecentDocsView',
-    'SearchBox',
-    'SearchResultsBox',
     'SidebarToolBox',
     'TemplateDefaultView',
     ]

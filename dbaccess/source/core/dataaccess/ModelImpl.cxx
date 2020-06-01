@@ -289,11 +289,11 @@ Sequence< OUString > SAL_CALL DocumentStorageAccess::getDocumentSubStoragesNames
 
     std::vector< OUString > aNames;
 
-    Sequence< OUString > aElementNames( xRootStor->getElementNames() );
-    for ( sal_Int32 i=0; i<aElementNames.getLength(); ++i )
+    const Sequence< OUString > aElementNames( xRootStor->getElementNames() );
+    for ( OUString const & name : aElementNames )
     {
-        if ( xRootStor->isStorageElement( aElementNames[i] ) )
-            aNames.push_back( aElementNames[i] );
+        if ( xRootStor->isStorageElement( name ) )
+            aNames.push_back( name );
     }
     return aNames.empty()
         ?  Sequence< OUString >()
@@ -655,7 +655,7 @@ void ODatabaseModelImpl::dispose()
 
     for (auto const& elem : m_aContainer)
     {
-        if ( elem.get() )
+        if ( elem )
             elem->m_pDataSource = nullptr;
     }
     m_aContainer.clear();
@@ -1113,7 +1113,7 @@ TContentPtr& ODatabaseModelImpl::getObjectContainer( ObjectType _eType )
     OSL_PRECOND( _eType >= E_FORM && _eType <= E_TABLE, "ODatabaseModelImpl::getObjectContainer: illegal index!" );
     TContentPtr& rContentPtr = m_aContainer[ _eType ];
 
-    if ( !rContentPtr.get() )
+    if ( !rContentPtr )
     {
         rContentPtr = std::make_shared<ODefinitionContainer_Impl>();
         rContentPtr->m_pDataSource = this;

@@ -43,6 +43,7 @@
 #include <com/sun/star/drawing/DoubleSequence.hpp>
 #include <com/sun/star/drawing/XShapes.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
+#include <officecfg/Office/Compatibility.hxx>
 
 namespace chart
 {
@@ -606,7 +607,8 @@ void AreaChart::createShapes()
     if( m_aZSlots.empty() ) //no series
         return;
 
-    if( m_nDimension == 2 && ( m_bArea || !m_bCategoryXAxis ) )
+    //tdf#127813 Don't reverse the series in OOXML-heavy environments
+    if( officecfg::Office::Compatibility::View::ReverseSeriesOrderAreaAndNetChart::get() && m_nDimension == 2 && ( m_bArea || !m_bCategoryXAxis ) )
         lcl_reorderSeries( m_aZSlots );
 
     OSL_ENSURE(m_pShapeFactory&&m_xLogicTarget.is()&&m_xFinalTarget.is(),"AreaChart is not proper initialized");
@@ -747,8 +749,7 @@ void AreaChart::createShapes()
                     }
 
                     std::map< sal_Int32, double >& rLogicYForNextSeriesMap = aLogicYForNextSeriesMapByX[nIndex];
-                    if( rLogicYForNextSeriesMap.find(nAttachedAxisIndex) == rLogicYForNextSeriesMap.end() )
-                        rLogicYForNextSeriesMap[nAttachedAxisIndex] = 0.0;
+                    rLogicYForNextSeriesMap.try_emplace(nAttachedAxisIndex, 0.0);
 
                     double fPreviousYValue = rLogicYForNextSeriesMap[nAttachedAxisIndex];
                     fLogicY += rLogicYForNextSeriesMap[nAttachedAxisIndex];

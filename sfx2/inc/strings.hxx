@@ -44,6 +44,8 @@
 #define STR_TEMPLATE_NAME28_DEF "Modern business letter sans-serif"
 #define STR_TEMPLATE_NAME29_DEF "Modern business letter serif"
 #define STR_TEMPLATE_NAME30_DEF "Businesscard with logo"
+#define STR_TEMPLATE_NAME31_DEF "Simple"
+#define STR_TEMPLATE_NAME32_DEF "BPMN"
 
 #define CMIS_TYPE_STRING        "String"
 #define CMIS_TYPE_INTEGER       "Integer"

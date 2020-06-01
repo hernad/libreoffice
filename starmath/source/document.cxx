@@ -83,6 +83,7 @@
 #include "cfgitem.hxx"
 #include <memory>
 #include <utility>
+#include <oox/mathml/export.hxx>
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::accessibility;
@@ -717,16 +718,7 @@ bool SmDocShell::Load( SfxMedium& rMedium )
     if( SfxObjectShell::Load( rMedium ))
     {
         uno::Reference < embed::XStorage > xStorage = GetMedium()->GetStorage();
-        if (
-            (
-             xStorage->hasByName( "content.xml" ) &&
-             xStorage->isStreamElement( "content.xml" )
-            ) ||
-            (
-             xStorage->hasByName( "Content.xml" ) &&
-             xStorage->isStreamElement( "Content.xml" )
-            )
-           )
+        if (xStorage->hasByName("content.xml") && xStorage->isStreamElement("content.xml"))
         {
             // is this a fabulous math package ?
             Reference<css::frame::XModel> xModel(GetModel());
@@ -863,14 +855,18 @@ bool SmDocShell::ConvertTo( SfxMedium &rMedium )
 void SmDocShell::writeFormulaOoxml(
         ::sax_fastparser::FSHelperPtr const& pSerializer,
         oox::core::OoxmlVersion const version,
-        oox::drawingml::DocumentType const documentType)
+        oox::drawingml::DocumentType const documentType,
+        const sal_Int8 nAlign)
 {
     if( !mpTree )
         Parse();
     if( mpTree )
         ArrangeFormula();
     SmOoxmlExport aEquation(mpTree.get(), version, documentType);
-    aEquation.ConvertFromStarMath( pSerializer );
+    if(documentType == oox::drawingml::DOCUMENT_DOCX)
+        aEquation.ConvertFromStarMath( pSerializer, nAlign);
+    else
+        aEquation.ConvertFromStarMath(pSerializer, oox::FormulaExportBase::eFormulaAlign::INLINE);
 }
 
 void SmDocShell::writeFormulaRtf(OStringBuffer& rBuffer, rtl_TextEncoding nEncoding)

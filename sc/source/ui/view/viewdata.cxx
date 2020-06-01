@@ -727,12 +727,14 @@ ScSplitPos ScViewDataTable::SanitizeWhichActive() const
     return eWhichActive;
 }
 
+static const ScSheetLimits gaNoShellSheetLimits(MAXCOL, MAXROW);
+
 ScViewData::ScViewData( ScDocShell* pDocSh, ScTabViewShell* pViewSh ) :
         nPPTX(0.0),
         nPPTY(0.0),
         mpMarkData(pDocSh?
-                   new ScMarkData(pDocSh->GetDocument().MaxRow(), pDocSh->GetDocument().MaxCol()) :
-                   new ScMarkData(MAXROW, MAXCOL)
+                   new ScMarkData(pDocSh->GetDocument().GetSheetLimits()) :
+                   new ScMarkData(gaNoShellSheetLimits)
                   ),
         pDocShell   ( pDocSh ),
         pDoc        ( nullptr ),
@@ -819,10 +821,10 @@ ScViewData::ScViewData( ScDocShell* pDocSh, ScTabViewShell* pViewSh ) :
         SCTAB nTableCount = pDoc->GetTableCount();
         EnsureTabDataSize(nTableCount);
 
-        for ( auto &it : maTabData )
+        for ( auto & xTabData : maTabData )
         {
-            if (it.get())
-                it->InitData( pDoc );
+            if (xTabData)
+                xTabData->InitData( pDoc );
         }
     }
 
@@ -833,10 +835,10 @@ void ScViewData::InitData( ScDocument* pDocument )
 {
     pDoc = pDocument;
     *pOptions = pDoc->GetViewOptions();
-    for ( auto &it : maTabData )
+    for ( auto & xTabData : maTabData )
     {
-        if (it.get())
-            it->InitData( pDocument );
+        if (xTabData)
+            xTabData->InitData( pDocument );
     }
 }
 

@@ -17,8 +17,7 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#ifndef INCLUDED_BASEGFX_POLYGON_B2DPOLYGONTRIANGULATOR_HXX
-#define INCLUDED_BASEGFX_POLYGON_B2DPOLYGONTRIANGULATOR_HXX
+#pragma once
 
 #include <basegfx/polygon/b2dpolygon.hxx>
 #include <basegfx/point/b2dpoint.hxx>
@@ -28,10 +27,8 @@
 
 namespace basegfx { class B2DPolyPolygon; }
 
-namespace basegfx
+namespace basegfx::triangulator
 {
-    namespace triangulator
-    {
         // Simple B2D-based triangle. Main reason is to
         // keep the data types separated (before a B2DPolygon
         // was used with the convention that three points in
@@ -69,9 +66,6 @@ namespace basegfx
         // triangulate given PolyPolygon
         BASEGFX_DLLPUBLIC B2DTriangleVector triangulate(const ::basegfx::B2DPolyPolygon& rCandidate);
 
-    } // end of namespace triangulator
-} // end of namespace basegfx
-
-#endif // INCLUDED_BASEGFX_POLYGON_B2DPOLYGONTRIANGULATOR_HXX
+} // end of namespace basegfx::triangulator
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

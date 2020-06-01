@@ -2860,17 +2860,22 @@ interface DrawView
         ExecMethod = FuTemporary ;
         StateMethod = GetMenuState ;
     ]
-    SID_ATTR_GLOW
-    [
-        ExecMethod = FuTemporary ;
-        StateMethod = GetAttrState ;
-    ]
     SID_ATTR_GLOW_COLOR
     [
         ExecMethod = FuTemporary ;
         StateMethod = GetAttrState ;
     ]
     SID_ATTR_GLOW_RADIUS
+    [
+        ExecMethod = FuTemporary;
+        StateMethod = GetAttrState;
+    ]
+    SID_ATTR_GLOW_TRANSPARENCY
+    [
+        ExecMethod = FuTemporary;
+        StateMethod = GetAttrState;
+    ]
+    SID_ATTR_SOFTEDGE_RADIUS
     [
         ExecMethod = FuTemporary;
         StateMethod = GetAttrState;

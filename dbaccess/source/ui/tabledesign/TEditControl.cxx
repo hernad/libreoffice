@@ -209,7 +209,6 @@ void OTableEditorCtrl::InitCellController()
 
     // Cell type
     pTypeCell = VclPtr<ListBoxControl>::Create( &GetDataWindow() );
-    pTypeCell->SetDropDownLineCount( 15 );
 
     // Cell description
     pDescrCell = VclPtr<Edit>::Create( &GetDataWindow(), WB_LEFT );
@@ -241,7 +240,7 @@ void OTableEditorCtrl::ClearModified()
     pNameCell->ClearModifyFlag();
     pDescrCell->ClearModifyFlag();
     pHelpTextCell->ClearModifyFlag();
-    pTypeCell->SaveValue();
+    pTypeCell->get_widget().save_value();
 }
 
 OTableEditorCtrl::~OTableEditorCtrl()
@@ -367,14 +366,15 @@ void OTableEditorCtrl::InitController(CellControllerRef&, long nRow, sal_uInt16 
                     aInitString = pActFieldDescr->getTypeInfo()->aUIName;
 
                 // Set the ComboBox contents
-                pTypeCell->Clear();
+                weld::ComboBox& rTypeList = pTypeCell->get_widget();
+                rTypeList.clear();
                 if( !pActFieldDescr )
                     break;
 
                 const OTypeInfoMap& rTypeInfo = GetView()->getController().getTypeInfo();
                 for (auto const& elem : rTypeInfo)
-                    pTypeCell->InsertEntry( elem.second->aUIName );
-                pTypeCell->SelectEntry( aInitString );
+                    rTypeList.append_text(elem.second->aUIName);
+                rTypeList.set_active_text(aInitString);
             }
 
             break;
@@ -681,8 +681,8 @@ void OTableEditorCtrl::CellModified( long nRow, sal_uInt16 nColId )
 
 void OTableEditorCtrl::resetType()
 {
-    sal_Int32 nPos = pTypeCell->GetSelectedEntryPos();
-    if(nPos != LISTBOX_ENTRY_NOTFOUND)
+    sal_Int32 nPos = pTypeCell->get_widget().get_active();
+    if(nPos != -1)
         SwitchType( GetView()->getController().getTypeInfo(nPos) );
     else
         SwitchType(TOTypeInfoSP());
@@ -891,7 +891,7 @@ void OTableEditorCtrl::SetCellData( long nRow, sal_uInt16 nColId, const TOTypeIn
         default:
             OSL_FAIL("OTableEditorCtrl::SetCellData: invalid column!");
     }
-    SetControlText(nRow,nColId,_pTypeInfo.get() ? _pTypeInfo->aUIName : OUString());
+    SetControlText(nRow,nColId,_pTypeInfo ? _pTypeInfo->aUIName : OUString());
 }
 
 void OTableEditorCtrl::SetCellData( long nRow, sal_uInt16 nColId, const css::uno::Any& _rNewData )
@@ -1562,11 +1562,12 @@ void OTableEditorCtrl::SwitchType( const TOTypeInfoSP& _pType )
     // Show the new description
     std::shared_ptr<OTableRow>  pRow = (*m_pRowList)[nRow];
     pRow->SetFieldType( _pType, true );
-    if ( _pType.get() )
+    if ( _pType )
     {
-        const sal_Int32 nCurrentlySelected = pTypeCell->GetSelectedEntryPos();
+        weld::ComboBox& rTypeList = pTypeCell->get_widget();
+        const sal_Int32 nCurrentlySelected = rTypeList.get_active();
 
-        if  (   ( LISTBOX_ENTRY_NOTFOUND == nCurrentlySelected )
+        if  (   ( nCurrentlySelected == -1 )
             ||  ( GetView()->getController().getTypeInfo( nCurrentlySelected ) != _pType )
             )
         {
@@ -1578,8 +1579,8 @@ void OTableEditorCtrl::SwitchType( const TOTypeInfoSP& _pType )
                     break;
                 ++nEntryPos;
             }
-            if (nEntryPos < pTypeCell->GetEntryCount())
-                pTypeCell->SelectEntryPos( nEntryPos );
+            if (nEntryPos < rTypeList.get_count())
+                rTypeList.set_active(nEntryPos);
         }
     }
 

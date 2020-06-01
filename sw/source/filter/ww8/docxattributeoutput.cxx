@@ -387,7 +387,7 @@ void DocxAttributeOutput::StartParagraph( ww8::WW8TableNodeInfo::Pointer_t pText
         m_nColBreakStatus = COLBRK_WRITE;
 
     // Output table/table row/table cell starts if needed
-    if ( pTextNodeInfo.get() )
+    if ( pTextNodeInfo )
     {
         // New cell/row?
         if ( m_tableReference->m_nTableDepth > 0 && !m_tableReference->m_bTableCellOpen )
@@ -911,7 +911,7 @@ void DocxAttributeOutput::SyncNodelessCells(ww8::WW8TableNodeInfoInner::Pointer_
 
 void DocxAttributeOutput::FinishTableRowCell( ww8::WW8TableNodeInfoInner::Pointer_t const & pInner, bool bForceEmptyParagraph )
 {
-    if ( pInner.get() )
+    if ( pInner )
     {
         // Where are we in the table
         sal_uInt32 nRow = pInner->getRow();
@@ -1559,7 +1559,7 @@ void DocxAttributeOutput::EndRun(const SwTextNode* pNode, sal_Int32 nPos, bool /
     DoWritePermissionsEnd();
 
     for (const auto& rpMath : m_aPostponedMaths)
-        WritePostponedMath(rpMath);
+        WritePostponedMath(rpMath.pMathObject, rpMath.nMathObjAlignment);
     m_aPostponedMaths.clear();
 
     for (const auto& rpControl : m_aPostponedFormControls)
@@ -5086,11 +5086,11 @@ void DocxAttributeOutput::FlyFrameGraphic( const SwGrfNode* pGrfNode, const Size
     m_rExport.SdrExporter().endDMLAnchorInline(pFrameFormat);
 }
 
-void DocxAttributeOutput::WriteOLE2Obj( const SdrObject* pSdrObj, SwOLENode& rOLENode, const Size& rSize, const SwFlyFrameFormat* pFlyFrameFormat )
+void DocxAttributeOutput::WriteOLE2Obj( const SdrObject* pSdrObj, SwOLENode& rOLENode, const Size& rSize, const SwFlyFrameFormat* pFlyFrameFormat, const sal_Int8 nFormulaAlignment )
 {
     if( WriteOLEChart( pSdrObj, rSize, pFlyFrameFormat ))
         return;
-    if( WriteOLEMath( rOLENode ))
+    if( WriteOLEMath( rOLENode , nFormulaAlignment))
         return;
     PostponeOLE( rOLENode, rSize, pFlyFrameFormat );
 }
@@ -5185,18 +5185,28 @@ void DocxAttributeOutput::WritePostponedChart()
     m_aPostponedCharts.clear();
 }
 
-bool DocxAttributeOutput::WriteOLEMath( const SwOLENode& rOLENode )
+bool DocxAttributeOutput::WriteOLEMath( const SwOLENode& rOLENode ,const sal_Int8 nAlign)
 {
     uno::Reference < embed::XEmbeddedObject > xObj(const_cast<SwOLENode&>(rOLENode).GetOLEObj().GetOleRef());
     SvGlobalName aObjName(xObj->getClassID());
 
     if( !SotExchange::IsMath(aObjName) )
         return false;
-    m_aPostponedMaths.push_back(&rOLENode);
+
+    PostponedMathObjects aPostponedMathObject;
+    try
+    {
+        aPostponedMathObject.pMathObject = const_cast<SwOLENode*>( &rOLENode);
+        aPostponedMathObject.nMathObjAlignment = nAlign;
+        m_aPostponedMaths.push_back(aPostponedMathObject);
+    }
+    catch (const uno::Exception&)
+    {
+    }
     return true;
 }
 
-void DocxAttributeOutput::WritePostponedMath(const SwOLENode* pPostponedMath)
+void DocxAttributeOutput::WritePostponedMath(const SwOLENode* pPostponedMath, sal_Int8 nAlign)
 {
     uno::Reference < embed::XEmbeddedObject > xObj(const_cast<SwOLENode*>(pPostponedMath)->GetOLEObj().GetOleRef());
     if (embed::EmbedStates::LOADED == xObj->getCurrentState())
@@ -5223,7 +5233,7 @@ void DocxAttributeOutput::WritePostponedMath(const SwOLENode* pPostponedMath)
     assert( formulaexport != nullptr );
     if (formulaexport)
         formulaexport->writeFormulaOoxml( m_pSerializer, GetExport().GetFilter().getVersion(),
-                oox::drawingml::DOCUMENT_DOCX);
+                oox::drawingml::DOCUMENT_DOCX, nAlign);
 }
 
 void DocxAttributeOutput::WritePostponedFormControl(const SdrObject* pObject)
@@ -5539,10 +5549,52 @@ void DocxAttributeOutput::WriteOLE( SwOLENode& rNode, const Size& rSize, const S
         m_pSerializer->startElementNS(XML_w, XML_object);
     }
 
+    //tdf#131539: Export OLE positions in docx:
+    //This string will store the position output for the xml
+    OString aPos;
+    //This string will store the relative position for aPos
+    OString aAnch;
+
+    if (rFlyFrameFormat && rFlyFrameFormat->GetAnchor().GetAnchorId() != RndStdIds::FLY_AS_CHAR)
+    {
+        //Get the horizontal alignment of the OLE via the frame format, to aHAlign
+        OString aHAlign = convertToOOXMLHoriOrient(rFlyFrameFormat->GetHoriOrient().GetHoriOrient(),
+            rFlyFrameFormat->GetHoriOrient().IsPosToggle());
+        //Get the vertical alignment of the OLE via the frame format to aVAlign
+        OString aVAlign = convertToOOXMLVertOrient(rFlyFrameFormat->GetVertOrient().GetVertOrient());
+
+        //Get the relative horizontal positions for the anchors
+        OString aHAnch = convertToOOXMLHoriOrientRel(rFlyFrameFormat->GetHoriOrient().GetRelationOrient());
+        //Get the relative vertical positions for the anchors
+        OString aVAnch = convertToOOXMLVertOrientRel(rFlyFrameFormat->GetVertOrient().GetRelationOrient());
+
+        //Choice that the horizontal position is relative or not
+        if (!aHAlign.isEmpty())
+            aHAlign = ";mso-position-horizontal:" + aHAlign;
+        aHAlign = ";mso-position-horizontal-relative:" + aHAnch;
+
+        //Choice that the vertical position is relative or not
+        if (!aVAlign.isEmpty())
+            aVAlign = ";mso-position-vertical:" + aVAlign;
+        aVAlign = ";mso-position-vertical-relative:" + aVAnch;
+
+        //Set the anchoring information into one string for aPos
+        aAnch = aHAlign + aVAlign;
+
+        //Query the positions to aPos from frameformat
+        aPos =
+            "position:absolute;margin-left:" + OString::number(double(rFlyFrameFormat->GetHoriOrient().GetPos()) / 20) +
+            "pt;margin-top:" + OString::number(double(rFlyFrameFormat->GetVertOrient().GetPos()) / 20) + "pt;";
+    }
+
     OString sShapeStyle = "width:" + OString::number( double( rSize.Width() ) / 20 ) +
                         "pt;height:" + OString::number( double( rSize.Height() ) / 20 ) +
                         "pt"; //from VMLExport::AddRectangleDimensions(), it does: value/20
     OString sShapeId = "ole_" + sId;
+
+    //Export anchor setting, if it exists
+    if (!aPos.isEmpty() && !aAnch.isEmpty())
+        sShapeStyle = aPos + sShapeStyle  + aAnch;
 
     // shape definition
     m_pSerializer->startElementNS( XML_v, XML_shape,
@@ -5723,7 +5775,35 @@ void DocxAttributeOutput::OutputFlyFrame_Impl( const ww8::Frame &rFrame, const P
                 {
                     SwNodeIndex aIdx(*rFrameFormat.GetContent().GetContentIdx(), 1);
                     SwOLENode& rOLENd = *aIdx.GetNode().GetOLENode();
-                    WriteOLE2Obj( pSdrObj, rOLENd, rFrame.GetLayoutSize(), dynamic_cast<const SwFlyFrameFormat*>( &rFrameFormat ));
+
+                    //output variable for the formula alignment (default inline)
+                    sal_Int8 nAlign(FormulaExportBase::eFormulaAlign::INLINE);
+                    auto xObj(rOLENd.GetOLEObj().GetOleRef()); //get the xObject of the formula
+
+                    //tdf133030: Export formula position
+                    //If we have a formula with inline anchor...
+                    if(SotExchange::IsMath(xObj->getClassID()) && rFrame.IsInline())
+                    {
+                        SwPosition const* const aAPos = rFrameFormat.GetAnchor().GetContentAnchor();
+                        if(aAPos)
+                        {
+                            //Get the text node what the formula anchored to
+                            const SwTextNode* pTextNode = aAPos->nNode.GetNode().GetTextNode();
+                            if(pTextNode && pTextNode->Len() == 1)
+                            {
+                                //Get the paragraph alignment
+                                auto aParaAdjust = pTextNode->GetSwAttrSet().GetAdjust().GetAdjust();
+                                //And set the formula according to the paragraph alignment
+                                if (aParaAdjust == SvxAdjust::Center)
+                                    nAlign = FormulaExportBase::eFormulaAlign::CENTER;
+                                else if (aParaAdjust == SvxAdjust::Right)
+                                    nAlign = FormulaExportBase::eFormulaAlign::RIGHT;
+                                else // left in the case of left and justified paragraph alignments
+                                    nAlign = FormulaExportBase::eFormulaAlign::LEFT;
+                            }
+                        }
+                    }
+                    WriteOLE2Obj( pSdrObj, rOLENd, rFrame.GetLayoutSize(), dynamic_cast<const SwFlyFrameFormat*>( &rFrameFormat ), nAlign);
                     m_bPostponedProcessingFly = false ;
                 }
             }
@@ -6803,7 +6883,7 @@ void DocxAttributeOutput::NumberingLevel( sal_uInt8 nLevel,
     // start with the nStart value. Do not write w:start if Numbered Lists
     // starts from zero.As it's an optional parameter.
     // refer ECMA 376 Second edition Part-1
-    if(!(0 == nLevel && 0 == nStart))
+    if(0 != nLevel || 0 != nStart)
     {
         m_pSerializer->singleElementNS( XML_w, XML_start,
                 FSNS( XML_w, XML_val ), OString::number(nStart) );
@@ -6946,7 +7026,10 @@ void DocxAttributeOutput::NumberingLevel( sal_uInt8 nLevel,
                     FSNS( XML_w, XML_cs ), aFamilyName,
                     FSNS( XML_w, XML_hint ), "default" );
         }
-        m_rExport.OutputItemSet( *pOutSet, false, true, i18n::ScriptType::LATIN, m_rExport.m_bExportModeRTF );
+        else
+        {
+            m_rExport.OutputItemSet(*pOutSet, false, true, i18n::ScriptType::LATIN, m_rExport.m_bExportModeRTF);
+        }
 
         WriteCollectedRunProperties();
 
@@ -8335,6 +8418,17 @@ void DocxAttributeOutput::FormatULSpace( const SvxULSpaceItem& rULSpace )
         sal_Int32 nHeader = 0;
         if ( aDistances.HasHeader() )
             nHeader = sal_Int32( aDistances.dyaHdrTop );
+        else if (m_rExport.m_pFirstPageFormat)
+        {
+            HdFtDistanceGlue aFirstPageDistances(m_rExport.m_pFirstPageFormat->GetAttrSet());
+            if (aFirstPageDistances.HasHeader())
+            {
+                // The follow page style has no header, but the first page style has. In Word terms,
+                // this means that the header margin of "the" section is coming from the first page
+                // style.
+                nHeader = sal_Int32(aFirstPageDistances.dyaHdrTop);
+            }
+        }
 
         // Page top
         m_pageMargins.nTop = aDistances.dyaTop;

@@ -847,9 +847,9 @@ gap-width
 gcd
 generator
 geq
-glow
 glow-radius
 glow-color
+glow-transparency
 gouraud
 gradient
 angle
@@ -1010,6 +1010,8 @@ label
 label-arrangement
 label-cell-address
 label-cell-range-address
+label-fill
+label-fill-color
 label-range
 label-ranges
 label-string
@@ -1234,8 +1236,8 @@ no-wrap
 NOEMPTY_DUMMY
 nohref
 NOMATCH_DUMMY
+non-whitespace-character-count
 none
-notprsubset
 normal
 normals-direction
 normals-kind
@@ -1245,6 +1247,7 @@ notation
 note
 notes
 notin
+notprsubset
 notsubset
 null-date
 null-year
@@ -1608,6 +1611,7 @@ slant-x
 slant-y
 slide
 slow
+softedge-radius
 solid
 solid-type
 sort
@@ -3112,4 +3116,5 @@ newline
 creator-initials
 transliteration-spellout
 resolved
+page-content-bottom
 TOKEN_END_DUMMY

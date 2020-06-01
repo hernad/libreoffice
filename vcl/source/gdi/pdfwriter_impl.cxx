@@ -41,6 +41,7 @@
 #include <cppuhelper/implbase.hxx>
 #include <i18nlangtag/languagetag.hxx>
 #include <o3tl/numeric.hxx>
+#include <officecfg/Office/Common.hxx>
 #include <osl/file.hxx>
 #include <osl/thread.h>
 #include <rtl/digest.h>
@@ -1152,6 +1153,8 @@ PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext,
         m_nCurrentStructElement( 0 ),
         m_bEmitStructure( true ),
         m_nNextFID( 1 ),
+        m_aPDFBmpCache(
+            officecfg::Office::Common::VCL::PDFExportImageCacheSize::get() ),
         m_nCurrentPage( -1 ),
         m_nCatalogObject(0),
         m_nSignatureObject( -1 ),
@@ -5958,8 +5961,8 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const OUString& rText, bool 
     // perform artificial italics if necessary
     if( ( m_aCurrentPDFState.m_aFont.GetItalic() == ITALIC_NORMAL ||
           m_aCurrentPDFState.m_aFont.GetItalic() == ITALIC_OBLIQUE ) &&
-        !( GetFontInstance()->GetFontFace()->GetItalic() == ITALIC_NORMAL ||
-           GetFontInstance()->GetFontFace()->GetItalic() == ITALIC_OBLIQUE )
+        ( GetFontInstance()->GetFontFace()->GetItalic() != ITALIC_NORMAL &&
+           GetFontInstance()->GetFontFace()->GetItalic() != ITALIC_OBLIQUE )
         )
     {
         fSkew = M_PI/12.0;
@@ -9190,7 +9193,7 @@ void PDFWriterImpl::createEmbeddedFile(const Graphic& rGraphic, ReferenceXObject
     // no pdf data.
     rEmit.m_nBitmapObject = nBitmapObject;
 
-    if (!rGraphic.getVectorGraphicData().get() || rGraphic.getVectorGraphicData()->getVectorGraphicDataType() != VectorGraphicDataType::Pdf)
+    if (!rGraphic.getVectorGraphicData() || rGraphic.getVectorGraphicData()->getVectorGraphicDataType() != VectorGraphicDataType::Pdf)
         return;
 
     sal_uInt32 nLength = rGraphic.getVectorGraphicData()->getVectorGraphicDataArrayLength();
@@ -9265,7 +9268,7 @@ void PDFWriterImpl::drawJPGBitmap( SvStream& rDCTData, bool bIsTrueColor, const 
     {
         m_aJPGs.emplace( m_aJPGs.begin() );
         JPGEmit& rEmit = m_aJPGs.front();
-        if (!rGraphic.getVectorGraphicData().get() || rGraphic.getVectorGraphicData()->getVectorGraphicDataType() != VectorGraphicDataType::Pdf || m_aContext.UseReferenceXObject)
+        if (!rGraphic.getVectorGraphicData() || rGraphic.getVectorGraphicData()->getVectorGraphicDataType() != VectorGraphicDataType::Pdf || m_aContext.UseReferenceXObject)
             rEmit.m_nObject = createObject();
         rEmit.m_aID         = aID;
         rEmit.m_pStream = std::move( pStream );
@@ -9369,7 +9372,7 @@ const BitmapEmit& PDFWriterImpl::createBitmapEmit( const BitmapEx& i_rBitmap, co
         m_aBitmaps.push_front( BitmapEmit() );
         m_aBitmaps.front().m_aID        = aID;
         m_aBitmaps.front().m_aBitmap    = aBitmap;
-        if (!rGraphic.getVectorGraphicData().get() || rGraphic.getVectorGraphicData()->getVectorGraphicDataType() != VectorGraphicDataType::Pdf || m_aContext.UseReferenceXObject)
+        if (!rGraphic.getVectorGraphicData() || rGraphic.getVectorGraphicData()->getVectorGraphicDataType() != VectorGraphicDataType::Pdf || m_aContext.UseReferenceXObject)
             m_aBitmaps.front().m_nObject = createObject();
         createEmbeddedFile(rGraphic, m_aBitmaps.front().m_aReferenceXObject, m_aBitmaps.front().m_nObject);
         it = m_aBitmaps.begin();

@@ -80,6 +80,7 @@ $(eval $(call gb_Module_add_slowcheck_targets,sw,\
     CppunitTest_sw_ooxmlexport12 \
     CppunitTest_sw_ooxmlexport13 \
     CppunitTest_sw_ooxmlexport14 \
+    CppunitTest_sw_ooxmlexport15 \
     CppunitTest_sw_ooxmlexport_template \
     CppunitTest_sw_ooxmlfieldexport \
     CppunitTest_sw_ooxmllinks \
@@ -113,6 +114,7 @@ $(eval $(call gb_Module_add_slowcheck_targets,sw,\
     CppunitTest_sw_core_layout \
     CppunitTest_sw_core_frmedt \
     CppunitTest_sw_core_txtnode \
+    CppunitTest_sw_core_objectpositioning \
 ))
 
 ifneq ($(DISABLE_GUI),TRUE)
@@ -162,6 +164,7 @@ $(eval $(call gb_Module_add_uicheck_targets,sw,\
 	UITest_chapterNumbering \
 	UITest_librelogo \
 	UITest_options \
+	UITest_sw_ui_fmtui \
 	UITest_classification \
 	UITest_writer_macro_tests \
 	UITest_writer_dialogs \

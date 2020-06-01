@@ -119,7 +119,7 @@ void Primitive2dXmlDump::dump(
     pStream->Seek(STREAM_SEEK_TO_BEGIN);
 }
 
-xmlDocPtr Primitive2dXmlDump::dumpAndParse(
+xmlDocUniquePtr Primitive2dXmlDump::dumpAndParse(
     const drawinglayer::primitive2d::Primitive2DContainer& rPrimitive2DSequence,
     const OUString& rStreamName)
 {
@@ -146,9 +146,8 @@ xmlDocPtr Primitive2dXmlDump::dumpAndParse(
     pStream->ReadBytes(pBuffer.get(), nSize);
     pBuffer[nSize] = 0;
     SAL_INFO("drawinglayer", "Parsed XML: " << pBuffer.get());
-    xmlDocPtr pDoc = xmlParseDoc(reinterpret_cast<xmlChar*>(pBuffer.get()));
 
-    return pDoc;
+    return xmlDocUniquePtr(xmlParseDoc(reinterpret_cast<xmlChar*>(pBuffer.get())));
 }
 
 void Primitive2dXmlDump::decomposeAndWrite(
@@ -424,9 +423,27 @@ void Primitive2dXmlDump::decomposeAndWrite(
                 break;
             }
 
+            case PRIMITIVE2D_ID_SHADOWPRIMITIVE2D:
+            {
+                // ShadowPrimitive2D.
+                rWriter.startElement("shadow");
+                drawinglayer::primitive2d::Primitive2DContainer aPrimitiveContainer;
+                pBasePrimitive->get2DDecomposition(aPrimitiveContainer,
+                                                   drawinglayer::geometry::ViewInformation2D());
+                decomposeAndWrite(aPrimitiveContainer, rWriter);
+                rWriter.endElement();
+                break;
+            }
+
             default:
             {
-                rWriter.element(OUStringToOString(sCurrentElementTag, RTL_TEXTENCODING_UTF8));
+                rWriter.startElement("unhandled");
+                rWriter.attribute("id", OUStringToOString(sCurrentElementTag, RTL_TEXTENCODING_UTF8));
+                drawinglayer::primitive2d::Primitive2DContainer aPrimitiveContainer;
+                pBasePrimitive->get2DDecomposition(aPrimitiveContainer,
+                                                   drawinglayer::geometry::ViewInformation2D());
+                decomposeAndWrite(aPrimitiveContainer, rWriter);
+                rWriter.endElement();
             }
             break;
         }

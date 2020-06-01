@@ -35,8 +35,9 @@
 #include <com/sun/star/chart2/XDefaultSizeTransmitter.hpp>
 #include <cppuhelper/weak.hxx>
 #include <rtl/ref.hxx>
+#include <map>
 
-namespace com { namespace sun { namespace star {
+namespace com::sun::star {
     namespace embed {
         class XStorage;
     }
@@ -50,7 +51,7 @@ namespace com { namespace sun { namespace star {
         struct PropertyValue;
         struct NamedValue;
     }
-}}}
+}
 
 namespace cppu {
     class OMultiTypeInterfaceContainerHelper;
@@ -111,7 +112,7 @@ protected:
 
     css::uno::Sequence< sal_Int32 > m_aAcceptedStates;
     css::uno::Sequence< sal_Int32 > m_pIntermediateStatesSeqs[NUM_SUPPORTED_STATES][NUM_SUPPORTED_STATES];
-    css::uno::Sequence< css::uno::Sequence< sal_Int32 > > m_aVerbTable;
+    std::map< sal_Int32, sal_Int32 > m_aVerbTable;
 
     css::uno::Reference< css::embed::XEmbeddedClient > m_xClientSite;
 

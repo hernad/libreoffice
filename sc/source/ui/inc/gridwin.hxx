@@ -39,7 +39,7 @@ namespace sc {
     struct SpellCheckContext;
 }
 
-namespace sdr { namespace overlay { class OverlayManager; } }
+namespace sdr::overlay { class OverlayManager; }
 
 class FmFormView;
 struct ScTableInfo;
@@ -80,7 +80,7 @@ struct SpellCallbackInfo;
 #define SC_PD_BREAK_V       32
 
 // predefines
-namespace sdr { namespace overlay { class OverlayObjectList; }}
+namespace sdr::overlay { class OverlayObjectList; }
 
 class SAL_DLLPUBLIC_RTTI ScGridWindow : public vcl::Window, public DropTargetHelper, public DragSourceHelper
 {
@@ -372,6 +372,8 @@ public:
     void            UpdateEditViewPos();
 
     void            UpdateFormulas(SCCOL nX1 = -1, SCROW nY1 = -1, SCCOL nX2 = -1, SCROW nY2 = -1);
+
+    void            ShowFilterMenu(const tools::Rectangle& rCellRect, bool bLayoutRTL);
 
     void            LaunchDataSelectMenu( SCCOL nCol, SCROW nRow );
     void            DoScenarioMenu( const ScRange& rScenRange );
