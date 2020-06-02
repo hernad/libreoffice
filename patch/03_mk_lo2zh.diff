@@ -1,0 +1,278 @@
+diff --git a/Repository.mk b/Repository.mk
+index cf905c970723..35ab9aa36c0b 100644
+--- a/Repository.mk
++++ b/Repository.mk
+@@ -168,19 +168,19 @@ $(eval $(call gb_Helper_register_executables_for_install,OOO,base, \
+ 
+ $(eval $(call gb_Helper_register_executables_for_install,OOO,calc_brand, \
+ 	$(if $(filter WNT,$(OS)), \
+-		scalc \
++		zcalc \
+ 	) \
+ ))
+ 
+ $(eval $(call gb_Helper_register_executables_for_install,OOO,draw_brand, \
+ 	$(if $(filter WNT,$(OS)), \
+-		sdraw \
++		zdraw \
+ 	) \
+ ))
+ 
+ $(eval $(call gb_Helper_register_executables_for_install,OOO,impress_brand, \
+ 	$(if $(filter WNT,$(OS)), \
+-		simpress \
++		zimpress \
+ 	) \
+ ))
+ 
+@@ -193,7 +193,7 @@ $(eval $(call gb_Helper_register_executables_for_install,OOO,math_brand, \
+ $(eval $(call gb_Helper_register_executables_for_install,OOO,writer_brand, \
+ 	$(if $(filter WNT,$(OS)), \
+ 		sweb \
+-		swriter \
++		zwriter \
+ 	) \
+ ))
+ 
+@@ -253,7 +253,7 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,calc, \
+ 	scd \
+ 	scfilt \
+ 	scui \
+-	wpftcalc \
++	$(call gb_Helper_optional,WPFT,wpftcalc) \
+ 	solver \
+ 	$(call gb_Helper_optional,SCRIPTING,vbaobj) \
+ ))
+@@ -372,7 +372,7 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,ooo, \
+ 	fwm \
+ 	$(if $(filter WNT,$(OS)),gdipluscanvas) \
+ 	guesslang \
+-	$(if $(filter DESKTOP,$(BUILD_TYPE)),helplinker) \
++	$(if $(filter HELP,$(BUILD_TYPE)),helplinker) \
+ 	i18npool \
+ 	i18nsearch \
+     gie \
+@@ -450,7 +450,9 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,ooo, \
+ 	) \
+ 	vcl \
+ 	vclcanvas \
+-	writerperfect \
++	$(if $(ENABLE_WRITERPERFECT), \
++		writerperfect \
++	) \
+ 	xmlscript \
+ 	xmlfa \
+ 	xmlfd \
+@@ -512,6 +514,7 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,reportbuilder, \
+ ))
+ 
+ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,writer, \
++	writerfilter \
+ 	hwp \
+ 	$(if $(ENABLE_LWP),lwpft) \
+ 	msword \
+@@ -519,8 +522,7 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,writer, \
+ 	swui \
+ 	t602filter \
+ 	$(call gb_Helper_optional,SCRIPTING,vbaswobj) \
+-	wpftwriter \
+-	writerfilter \
++	$(call gb_Helper_optional,WPFT,wpftwriter) \
+ 	$(call gb_Helper_optional,DBCONNECTIVITY,writer) \
+ ))
+ 
+@@ -629,8 +631,8 @@ $(eval $(call gb_Helper_register_libraries_for_install,PLAINLIBS_OOO,ooo, \
+ 	ucphier1 \
+ 	ucppkg1 \
+ 	unopkgapp \
+-	xmlsecurity \
+-	xsec_xmlsec \
++	$(if $(ENABLE_NSS),xmlsecurity) \
++	$(if $(ENABLE_NSS),xsec_xmlsec) \
+ 	xstor \
+ 	$(if $(filter $(OS),MACOSX), \
+ 		macab1 \
+@@ -1177,7 +1179,7 @@ $(eval $(call gb_Helper_register_uiconfigs,\
+ 	svx \
+ 	uui \
+ 	vcl \
+-	writerperfect \
++	$(if $(ENABLE_WFP),writerperfect) \
+ 	$(if $(ENABLE_NSS),xmlsec) \
+ ))
+
+diff --git a/RepositoryFixes.mk b/RepositoryFixes.mk
+index 741f6bbfee21..58df4094894e 100644
+--- a/RepositoryFixes.mk
++++ b/RepositoryFixes.mk
+@@ -34,11 +34,11 @@ endif
+ ifeq ($(OS),MACOSX)
+ gb_Executable_FILENAMES := $(patsubst soffice_bin:soffice_bin,soffice_bin:soffice,$(gb_Executable_FILENAMES))
+ else
+-gb_Executable_FILENAMES := $(patsubst soffice_bin:soffice_bin%,soffice_bin:soffice.bin,$(gb_Executable_FILENAMES))
++gb_Executable_FILENAMES := $(patsubst soffice_bin:soffice_bin%,soffice_bin:zoffice.bin,$(gb_Executable_FILENAMES))
+ endif
+ 
+-gb_Executable_FILENAMES := $(patsubst soffice_exe:soffice_exe%,soffice_exe:soffice.exe,$(gb_Executable_FILENAMES))
+-gb_Executable_FILENAMES := $(patsubst soffice_com:soffice_com%,soffice_com:soffice.com,$(gb_Executable_FILENAMES))
++gb_Executable_FILENAMES := $(patsubst soffice_exe:soffice_exe%,soffice_exe:zoffice.exe,$(gb_Executable_FILENAMES))
++gb_Executable_FILENAMES := $(patsubst soffice_com:soffice_com%,soffice_com:zoffice.com,$(gb_Executable_FILENAMES))
+ 
+ gb_Executable_FILENAMES_FOR_BUILD := $(subst $(gb_Executable_EXT),$(gb_Executable_EXT_for_build),$(gb_Executable_FILENAMES))
+
+diff --git a/desktop/Executable_scalc.mk b/desktop/Executable_scalc.mk
+index b6845690dfdb..b2c8877addb5 100644
+--- a/desktop/Executable_scalc.mk
++++ b/desktop/Executable_scalc.mk
+@@ -7,24 +7,24 @@
+ # file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ #
+ 
+-$(eval $(call gb_Executable_Executable,scalc))
++$(eval $(call gb_Executable_Executable,zcalc))
+ 
+-$(eval $(call gb_Executable_set_targettype_gui,scalc,YES))
++$(eval $(call gb_Executable_set_targettype_gui,zcalc,YES))
+ 
+-$(eval $(call gb_Executable_add_ldflags,scalc,\
++$(eval $(call gb_Executable_add_ldflags,zcalc,\
+     /ENTRY:wWinMainCRTStartup \
+ ))
+ 
+-$(eval $(call gb_Executable_use_static_libraries,scalc,\
++$(eval $(call gb_Executable_use_static_libraries,zcalc,\
+     winlauncher \
+ ))
+ 
+-$(eval $(call gb_Executable_add_exception_objects,scalc,\
++$(eval $(call gb_Executable_add_exception_objects,zcalc,\
+     desktop/win32/source/applauncher/scalc \
+ ))
+ 
+-$(eval $(call gb_Executable_add_nativeres,scalc,scalc/launcher))
++$(eval $(call gb_Executable_add_nativeres,zcalc,scalc/launcher))
+ 
+-$(eval $(call gb_Executable_add_default_nativeres,scalc,$(PRODUCTNAME) Calc))
++$(eval $(call gb_Executable_add_default_nativeres,zcalc,$(PRODUCTNAME) Calc))
+ 
+ # vim: set ts=4 sw=4 et:
+diff --git a/desktop/Executable_sdraw.mk b/desktop/Executable_sdraw.mk
+index 164b65876568..912211dc0e73 100644
+--- a/desktop/Executable_sdraw.mk
++++ b/desktop/Executable_sdraw.mk
+@@ -7,24 +7,24 @@
+ # file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ #
+ 
+-$(eval $(call gb_Executable_Executable,sdraw))
++$(eval $(call gb_Executable_Executable,zdraw))
+ 
+-$(eval $(call gb_Executable_set_targettype_gui,sdraw,YES))
++$(eval $(call gb_Executable_set_targettype_gui,zdraw,YES))
+ 
+-$(eval $(call gb_Executable_add_ldflags,sdraw,\
++$(eval $(call gb_Executable_add_ldflags,zdraw,\
+     /ENTRY:wWinMainCRTStartup \
+ ))
+ 
+-$(eval $(call gb_Executable_use_static_libraries,sdraw,\
++$(eval $(call gb_Executable_use_static_libraries,zdraw,\
+     winlauncher \
+ ))
+ 
+-$(eval $(call gb_Executable_add_exception_objects,sdraw,\
++$(eval $(call gb_Executable_add_exception_objects,zdraw,\
+     desktop/win32/source/applauncher/sdraw \
+ ))
+ 
+-$(eval $(call gb_Executable_add_nativeres,sdraw,sdraw/launcher))
++$(eval $(call gb_Executable_add_nativeres,zdraw,sdraw/launcher))
+ 
+-$(eval $(call gb_Executable_add_default_nativeres,sdraw,$(PRODUCTNAME) Draw))
++$(eval $(call gb_Executable_add_default_nativeres,zdraw,$(PRODUCTNAME) Draw))
+ 
+ # vim: set ts=4 sw=4 et:
+diff --git a/desktop/Executable_simpress.mk b/desktop/Executable_simpress.mk
+index 8d3bdd0543ee..588cb456167a 100644
+--- a/desktop/Executable_simpress.mk
++++ b/desktop/Executable_simpress.mk
+@@ -7,24 +7,24 @@
+ # file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ #
+ 
+-$(eval $(call gb_Executable_Executable,simpress))
++$(eval $(call gb_Executable_Executable,zimpress))
+ 
+-$(eval $(call gb_Executable_set_targettype_gui,simpress,YES))
++$(eval $(call gb_Executable_set_targettype_gui,zimpress,YES))
+ 
+-$(eval $(call gb_Executable_add_ldflags,simpress,\
++$(eval $(call gb_Executable_add_ldflags,zimpress,\
+     /ENTRY:wWinMainCRTStartup \
+ ))
+ 
+-$(eval $(call gb_Executable_use_static_libraries,simpress,\
++$(eval $(call gb_Executable_use_static_libraries,zimpress,\
+     winlauncher \
+ ))
+ 
+-$(eval $(call gb_Executable_add_exception_objects,simpress,\
++$(eval $(call gb_Executable_add_exception_objects,zimpress,\
+     desktop/win32/source/applauncher/simpress \
+ ))
+ 
+-$(eval $(call gb_Executable_add_nativeres,simpress,simpress/launcher))
++$(eval $(call gb_Executable_add_nativeres,zimpress,simpress/launcher))
+ 
+-$(eval $(call gb_Executable_add_default_nativeres,simpress,$(PRODUCTNAME) Impress))
++$(eval $(call gb_Executable_add_default_nativeres,zimpress,$(PRODUCTNAME) Impress))
+ 
+ # vim: set ts=4 sw=4 et:
+diff --git a/desktop/Executable_swriter.mk b/desktop/Executable_swriter.mk
+index 5ced1b911e07..842f87ce4f6e 100644
+--- a/desktop/Executable_swriter.mk
++++ b/desktop/Executable_swriter.mk
+@@ -7,24 +7,24 @@
+ # file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ #
+ 
+-$(eval $(call gb_Executable_Executable,swriter))
++$(eval $(call gb_Executable_Executable,zwriter))
+ 
+-$(eval $(call gb_Executable_set_targettype_gui,swriter,YES))
++$(eval $(call gb_Executable_set_targettype_gui,zwriter,YES))
+ 
+-$(eval $(call gb_Executable_add_ldflags,swriter,\
++$(eval $(call gb_Executable_add_ldflags,zwriter,\
+     /ENTRY:wWinMainCRTStartup \
+ ))
+ 
+-$(eval $(call gb_Executable_use_static_libraries,swriter,\
++$(eval $(call gb_Executable_use_static_libraries,zwriter,\
+     winlauncher \
+ ))
+ 
+-$(eval $(call gb_Executable_add_exception_objects,swriter,\
++$(eval $(call gb_Executable_add_exception_objects,zwriter,\
+     desktop/win32/source/applauncher/swriter \
+ ))
+ 
+-$(eval $(call gb_Executable_add_nativeres,swriter,swriter/launcher))
++$(eval $(call gb_Executable_add_nativeres,zwriter,swriter/launcher))
+ 
+-$(eval $(call gb_Executable_add_default_nativeres,swriter,$(PRODUCTNAME) Writer))
++$(eval $(call gb_Executable_add_default_nativeres,zwriter,$(PRODUCTNAME) Writer))
+ 
+ # vim: set ts=4 sw=4 et:
+diff --git a/solenv/gbuild/gbuild.mk b/solenv/gbuild/gbuild.mk
+index 99547941ef8c..707b309418c0 100644
+--- a/solenv/gbuild/gbuild.mk
++++ b/solenv/gbuild/gbuild.mk
+@@ -186,7 +186,7 @@ include $(SRCDIR)/Repository.mk
+ include $(SRCDIR)/RepositoryExternal.mk
+ $(eval $(call gb_Helper_collect_knownlibs))
+ 
+-gb_Library_DLLPOSTFIX := lo
++gb_Library_DLLPOSTFIX := zh
+ 
+ # Include platform/cpu/compiler specific config/definitions
