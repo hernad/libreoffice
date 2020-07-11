@@ -13,4 +13,6 @@ echo set make win32 PATH
 
 export PATH=`pwd`/scripts/win32:$PATH
 
+echo $PATH
+
 make --version
