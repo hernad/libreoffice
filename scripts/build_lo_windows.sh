@@ -1,10 +1,10 @@
 #!/bin/bash
 
 #32bit
-#BUILD_ARCH=x86 ENVARS_ONLY=0 MAKE_ONLY=0 PARALLELISM=12 scripts/build_lo_windows.sh
+#BUILD_ARCH=x86 ENVARS_ONLY=0 MAKE_ONLY=0 PARALLELISM=8 scripts/build_lo_windows.sh
 
 #64bit
-#BUILD_ARCH=x64 ENVARS_ONLY=0 MAKE_ONLY=0 PARALLELISM=12 scripts/build_lo_windows.sh
+#BUILD_ARCH=x64 ENVARS_ONLY=0 MAKE_ONLY=0 PARALLELISM=8 scripts/build_lo_windows.sh
 
 
 # The __imp__ prefix appears whenever you are linking to a DLL. 
@@ -40,35 +40,36 @@ export VS_VERSION="2019"
 if [ "$BUILD_ARCH" == "x64" ] ; then
 
   ENABLE_64_BIT=--enable-64-bit
+  export PYTHON_HOME=c:/Python/Python37
   export PYTHON_VERSION_MAJOR=3
   export PYTHON_VERSION_MINOR=7
-  export PYTHON_VERSION="3.7.3"
+  export PYTHON_VERSION="3.7.8"
   export CONAN_DEPLOY_DIR=c:/dev/conan/deploy/x64
   export PYTHON=c:/Python/Python37/python.exe
-  export PYTHON_CFLAGS="-Ic:/Python/Python37/include"
-  export PYTHON_LIBS="c:/Python/Python37/libs/python37.lib"
+  export PYTHON_CFLAGS="-I$PYTHON_HOME/include"
+  export PYTHON_LIBS="$PYTHON_HOME/libs/python37.lib"
   BOOST_NODEFAULT_SUFIX="vc142-mt-x64-1_72.lib"
   JAVA_DIR=/cygdrive/c/AdoptOpenJDK/jdk-11.0.7.10-hotspot
 
-  export ANT_HOME=/cygdrive/c/dev/java/apache-ant-1.10.8
-  export MAVEN_HOME=/cygdrive/c/dev/java/apache-maven-3.6.3
-  export JUNIT4=/cygdrive/c/dev/java/junit-4.12.jar
-  export HAMCREST=/cygdrive/c/dev/java/hamcrest-all-1.3.jar
-
 else
   ENABLE_64_BIT=
+  export PYTHON_HOME=c:/Python/Python37-32
   export PYTHON_VERSION_MAJOR=3
   export PYTHON_VERSION_MINOR=7
-  export PYTHON_VERSION="3.7.3"
-  export CONAN_DEPLOY_DIR=c:/dev/libreoffice/conan/deploy_x86
-  export PYTHON=C:/dev/vcpkg/downloads/tools/python/python-3.7.3-x86/python.exe
-  export PYTHON_CFLAGS="-Ic:/dev/vcpkg/installed/x86-windows/include/python3.7"
-  export PYTHON_LIBS="c:/dev/vcpkg/installed/x86-windows/lib/python37.lib"
+  export PYTHON_VERSION="3.7.8"
+  export CONAN_DEPLOY_DIR=c:/dev/conan/deploy/x86_md
+  export PYTHON=c:/Python/Python37/python.exe
+  export PYTHON_CFLAGS="-I$PYTHON_HOME/include"
+  export PYTHON_LIBS="$PYTHON_HOME/libs/python37.lib"
   BOOST_NODEFAULT_SUFIX="vc142-mt-x32-1_72.lib"
-  JAVA_DIR=/cygdrive/c/openjdk-panama-foreign/x86/jdk
+  JAVA_DIR=/cygdrive/c/AdoptOpenJDK/x86/jdk-11.0.7.10-hotspot
 
 fi
 
+export ANT_HOME=/cygdrive/c/dev/java/apache-ant-1.10.8
+export MAVEN_HOME=/cygdrive/c/dev/java/apache-maven-3.6.3
+export JUNIT4=/cygdrive/c/dev/java/junit-4.12.jar
+export HAMCREST=/cygdrive/c/dev/java/hamcrest-all-1.3.jar
 
 JAVA_HOME=`cygpath -w $JAVA_DIR`
 export JAVA_HOME
@@ -111,7 +112,7 @@ export WEBDAV="--with-webdav=no"
 #export PDF_IMPORT="--disable-pdfimport"
 export PDF_IMPORT=
 
-export TLS_METHOD="--with-tls=openssl"
+#export TLS_METHOD="--with-tls=openssl" ?
 #export TLS_METHOD="--with-tls=nss"
 
 #export ODK_FEATURE=" --disable-odk"
@@ -175,7 +176,6 @@ WITH_SYSTEM=
   export BOOST_CXXFLAGS=$BOOST_CPPFLAGS
   export BOOST_LDFLAGS=""
 
-  
   export BOOST_LOCALE_LIB="-NODEFAULTLIB:libboost_locale-$BOOST_NODEFAULT_SUFIX bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/libboost_locale.lib $ZLIB_LIBS"
   export BOOST_DATE_TIME_LIB="-NODEFAULTLIB:libboost_date_time-$BOOST_NODEFAULT_SUFIX bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/libboost_date_time.lib $ZLIB_LIBS"
   export BOOST_FILESYSTEM_LIB="-NODEFAULTLIB:libboost_filesystem-$BOOST_NODEFAULT_SUFIX bcrypt.lib $CONAN_DEPLOY_DIR/bzip2/lib/bz2.lib $CONAN_DEPLOY_DIR/boost/lib/libboost_filesystem.lib $ZLIB_LIBS"
@@ -217,7 +217,6 @@ WITH_SYSTEM=
   #export BREAKPAD_LIBS="$VCPKG_STATIC_DIR/lib/libbreakpad.lib"
 
 
-
   #C:/cygwin64/bin/sh.exe ../libtool  --tag=CC  --mode=link 
   #C:/dev/libreoffice-core-meson/workdir/LinkTarget/Executable/gcc-wrapper.exe -DLT_MODULE_PREFIX=lt_module_ext_t  
   #-O2 -Oy-   -w  -avoid-version -module 
@@ -236,31 +235,6 @@ WITH_SYSTEM=
   #Microsoft (R) Library Manager Version 14.25.28612.0
   #Copyright (C) Microsoft Corporation.  All rights reserved.
   #LINK : fatal error LNK1181: cannot open input file 'libxml2.lib'
-
-
-
-
-#if [ "$WITH_VCPKG" == "1" ] ; then
-
-#  export VCPKG_LIBPATH="$VCPKG_DIR/lib"
-#  #export LIBPATH="$VCPKG_DIR/lib"
-#  #build liblangtag
-#  #libtool needs linux format -L${VCPKG_LIBPATH}
-#  #export LDFLAGS="-L${VCPKG_LIBPATH} -LIBPATH:${VCPKG_LIBPATH}"
-#  export CFLAGS="-I$VCPKG_DIR/include"
-#  export CXXFLAGS="-I$VCPKG_DIR/include"
-#
-#  export VCPKG_LIBPATH="$VCPKG_DIR/lib"
-#  export LIBPATH="$VCPKG_DIR/lib"
-#  #build liblangtag
-#  #libtool needs linux format -L${VCPKG_LIBPATH}
-#  #export LDFLAGS="-L${VCPKG_LIBPATH} -LIBPATH:${VCPKG_LIBPATH}"
-#  #export CFLAGS="-I$VCPKG_DIR/include"
-#  #export CXXFLAGS="-I$VCPKG_DIR/include"
-#
-#else
-#  export LIBPATH="c:/xx"
-#fi
 
 
 #https://github.com/mbuilov/gnumake-windows/blob/master/gnumake-4.3-dev-x64.exe
