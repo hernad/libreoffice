@@ -32,10 +32,10 @@ else
   echo junit-4.12.jar ok  
 fi
 
-if [ ! -f hamcrest-library-2.2.jar ] ; then
- curl -LO https://repo1.maven.org/maven2/org/hamcrest/hamcrest-library/2.2/hamcrest-library-2.2.jar 
+if [ ! -f hamcrest-all-1.3.jar ] ; then
+ curl -LO https://repo1.maven.org/maven2/org/hamcrest/hamcrest-all/1.3/hamcrest-all-1.3.jar
 else
- echo hamcrest-library-2.2.jar ok
+ echo hamcrest-all-1.3.jar ok
 fi
 
 ls -l $JAVA_ROOT

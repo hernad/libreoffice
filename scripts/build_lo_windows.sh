@@ -43,17 +43,17 @@ if [ "$BUILD_ARCH" == "x64" ] ; then
   export PYTHON_VERSION_MAJOR=3
   export PYTHON_VERSION_MINOR=7
   export PYTHON_VERSION="3.7.3"
-  export CONAN_DEPLOY_DIR=c:/dev/libreoffice/deploy/x64
+  export CONAN_DEPLOY_DIR=c:/dev/conan/deploy/x64
   export PYTHON=c:/Python/Python37/python.exe
   export PYTHON_CFLAGS="-Ic:/Python/Python37/include"
-  export PYTHON_LIBS="c:/Python/Python37/libs"
+  export PYTHON_LIBS="c:/Python/Python37/libs/python37.lib"
   BOOST_NODEFAULT_SUFIX="vc142-mt-x64-1_72.lib"
   JAVA_DIR=/cygdrive/c/AdoptOpenJDK/jdk-11.0.7.10-hotspot
 
   export ANT_HOME=/cygdrive/c/dev/java/apache-ant-1.10.8
   export MAVEN_HOME=/cygdrive/c/dev/java/apache-maven-3.6.3
   export JUNIT4=/cygdrive/c/dev/java/junit-4.12.jar
-  export HARMCREST=/cygdrive/c/dev/java/hamcrest-library-2.2.jar ok
+  export HAMCREST=/cygdrive/c/dev/java/hamcrest-all-1.3.jar
 
 else
   ENABLE_64_BIT=
@@ -74,7 +74,8 @@ JAVA_HOME=`cygpath -w $JAVA_DIR`
 export JAVA_HOME
 echo "JAVA_HOME=$JAVA_HOME"
 #JAVA_FEATURE="--without-java"
-JAVA_FEATURE=" --with-jdk-home=$JAVA_HOME"
+echo "HAMCREST=$HAMCREST, JUNIT4=$JUNIT4"
+JAVA_FEATURE=" --with-jdk-home=$JAVA_HOME --with-ant-home=$ANT_HOME --with-junit=$JUNIT4  --with-hamcrest=$HAMCREST"
 
 # gb_LinkTarget__command => link.exe ...
 
