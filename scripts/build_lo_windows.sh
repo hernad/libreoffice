@@ -30,7 +30,7 @@ THEME=colibre
 #THEME=sukapura_svg
 
 LO_PRODUCT_NAME=ZiherO
-LO_PRODUCT_VERSION=7.0.0.530
+LO_PRODUCT_VERSION=7.0.0.600
 
 #LO_DEBUG=" --enable-dbgutil"
 
@@ -43,12 +43,17 @@ if [ "$BUILD_ARCH" == "x64" ] ; then
   export PYTHON_VERSION_MAJOR=3
   export PYTHON_VERSION_MINOR=7
   export PYTHON_VERSION="3.7.3"
-  export CONAN_DEPLOY_DIR=c:/dev/libreoffice/conan/deploy_x64
-  export PYTHON=C:/dev/vcpkg/downloads/tools/python/python-3.7.3-x64/python.exe
-  export PYTHON_CFLAGS="-Ic:/dev/vcpkg/installed/x64-windows/include/python3.7"
-  export PYTHON_LIBS="c:/dev/vcpkg/installed/x64-windows/lib/python37.lib"
+  export CONAN_DEPLOY_DIR=c:/dev/libreoffice/deploy/x64
+  export PYTHON=c:/Python/Python37/python.exe
+  export PYTHON_CFLAGS="-Ic:/Python/Python37/include"
+  export PYTHON_LIBS="c:/Python/Python37/libs"
   BOOST_NODEFAULT_SUFIX="vc142-mt-x64-1_72.lib"
-  JAVA_DIR=/cygdrive/c/openjdk-panama-foreign/x64/jdk
+  JAVA_DIR=/cygdrive/c/AdoptOpenJDK/jdk-11.0.7.10-hotspot
+
+  export ANT_HOME=/cygdrive/c/dev/java/apache-ant-1.10.8
+  export MAVEN_HOME=/cygdrive/c/dev/java/apache-maven-3.6.3
+  export JUNIT4=/cygdrive/c/dev/java/junit-4.12.jar
+  export HARMCREST=/cygdrive/c/dev/java/hamcrest-library-2.2.jar ok
 
 else
   ENABLE_64_BIT=
