@@ -5585,7 +5585,7 @@
         <info>
           <desc>Determines whether the Tip-of-the-Day dialog is shown on startup.</desc>
         </info>
-        <value>true</value>
+        <value>false</value>
       </prop>
       <prop oor:name="LastTipOfTheDayShown" oor:type="xs:int" oor:nillable="false">
           <info>

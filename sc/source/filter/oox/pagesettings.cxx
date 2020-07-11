@@ -125,12 +125,14 @@ PageSettingsModel::PageSettingsModel() :
     mbPrintGrid( false ),
     mbPrintHeadings( false )
 {
+    printf("test\n");
 }
 
 void PageSettingsModel::setBiffPrintErrors( sal_uInt8 nPrintErrors )
 {
     static const sal_Int32 spnErrorIds[] = { XML_displayed, XML_none, XML_dash, XML_NA };
     mnPrintErrors = STATIC_ARRAY_SELECT( spnErrorIds, nPrintErrors, XML_none );
+
 }
 
 PageSettings::PageSettings( const WorksheetHelper& rHelper ) :

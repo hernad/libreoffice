@@ -16,6 +16,18 @@ $(eval $(call gb_Executable_use_externals,xpdfimport,\
     zlib \
 ))
 
+ifneq ($(SYSTEM_ZLIB),)
+    $(call gb_LinkTarget_add_libs,$(1),$(ZLIB_LIBS))
+endif
+
+ifneq ($(SYSTEM_LIBJPEG),)
+    $(call gb_LinkTarget_add_libs,$(1),$(LIBJPEG_LIBS))
+endif
+
+ifneq ($(SYSTEM_LIBPNG),)
+    $(call gb_LinkTarget_add_libs,$(1),$(LIBPNG_LIBS))
+endif
+
 $(eval $(call gb_Executable_add_exception_objects,xpdfimport,\
     sdext/source/pdfimport/xpdfwrapper/pdfioutdev_gpl \
     sdext/source/pdfimport/xpdfwrapper/pnghelper \

@@ -26,16 +26,18 @@
 #$ make sax.build OK (trazi dynamic expat.lib)
 
 
-THEME=colibre
-#THEME=sukapura_svg
+#THEME_NAME=colibre
+#THEME_NAME=sukapura_svg
+#THEME="--with-theme=$THEME_NAME"
+THEME=
+
 
 LO_PRODUCT_NAME=ZiherO
-LO_PRODUCT_VERSION=7.0.0.530
+LO_PRODUCT_VERSION=7.0.1.0
 
 #LO_DEBUG=" --enable-dbgutil"
 
 export VS_VERSION="2019"
-
 
 if [ "$BUILD_ARCH" == "x64" ] ; then
 
@@ -105,7 +107,7 @@ export WEBDAV="--with-webdav=no"
 #export PDF_IMPORT="--disable-pdfimport"
 export PDF_IMPORT=
 
-export TLS_METHOD="--with-tls=openssl"
+#export TLS_METHOD="--with-tls=openssl"
 #export TLS_METHOD="--with-tls=nss"
 
 #export ODK_FEATURE=" --disable-odk"
@@ -113,16 +115,14 @@ ODK_FEATURE=
 #EXTENSIONS=" --disable-extension-integration"
 EXTENSIONS=
 
-SKIA_FEATURE="--disable-skia"
+#SKIA_FEATURE="--disable-skia"
 #SKIA_FEATURE=
-
 
 #GALLERY=" --with-galleries=no"
 GALLERY=
 
 #make basegfx.build
 #make comphelper.build
-
 
 # EXTRA_LO_PATH koristi C:\dev\libreoffice\solenv\gbuild\platform\com_MSC_defs.mk
 # gb_Helper_set_ld_path := PATH="$(shell cygpath -w $(INSTDIR)/$(LIBO_URE_LIB_FOLDER));$(shell cygpath -w $(INSTDIR)/$(LIBO_BIN_FOLDER));$(shell cygpath -w $(EXTRA_LO_PATH));$$PATH"
@@ -134,7 +134,6 @@ GALLERY=
 
 # /usr/sbin/gencmn.exe
 export PATH=$JAVA_HOME/bin:$PATH:/usr/sbin
-
 
 # export verbose="V=1"
 
@@ -203,6 +202,10 @@ WITH_SYSTEM=
   export XMLSEC_CFLAGS="-I$CONAN_DEPLOY_DIR/xmlsec/include"
   export XMLSEC_LIBS="$CONAN_DEPLOY_DIR/xmlsec/lib/libxmlsec.lib $CONAN_DEPLOY_DIR/xmlsec/lib/libxmlsec-mscng.lib"
 
+  export NSS_CFLAGS="-I$CONAN_DEPLOY_DIR/nss/include/nss -I$CONAN_DEPLOY_DIR/nss/include/nspr"
+  export NSS_LIBS="-L$CONAN_DEPLOY_DIR/nss/lib -lnspr4 -lnss3 -lssl3 -lsmime3 -lplc4"
+
+
   #WITH_SYSTEM+=" --with-system-expat=yes"
   #export EXPAT_CFLAGS="-I$VCPKG_DIR/include"
   #export EXPAT_LIBS="$VCPKG_DIR/lib/expat.lib"
@@ -234,29 +237,6 @@ WITH_SYSTEM=
 
 
 
-#if [ "$WITH_VCPKG" == "1" ] ; then
-
-#  export VCPKG_LIBPATH="$VCPKG_DIR/lib"
-#  #export LIBPATH="$VCPKG_DIR/lib"
-#  #build liblangtag
-#  #libtool needs linux format -L${VCPKG_LIBPATH}
-#  #export LDFLAGS="-L${VCPKG_LIBPATH} -LIBPATH:${VCPKG_LIBPATH}"
-#  export CFLAGS="-I$VCPKG_DIR/include"
-#  export CXXFLAGS="-I$VCPKG_DIR/include"
-#
-#  export VCPKG_LIBPATH="$VCPKG_DIR/lib"
-#  export LIBPATH="$VCPKG_DIR/lib"
-#  #build liblangtag
-#  #libtool needs linux format -L${VCPKG_LIBPATH}
-#  #export LDFLAGS="-L${VCPKG_LIBPATH} -LIBPATH:${VCPKG_LIBPATH}"
-#  #export CFLAGS="-I$VCPKG_DIR/include"
-#  #export CXXFLAGS="-I$VCPKG_DIR/include"
-#
-#else
-#  export LIBPATH="c:/xx"
-#fi
-
-
 #https://github.com/mbuilov/gnumake-windows/blob/master/gnumake-4.3-dev-x64.exe
 
 if [ "$MAKE_ONLY" == "0" ]; then
@@ -264,11 +244,11 @@ make clean
 rm -f config_host.mk
 rm -f config_host/*.h
 
+
 ./autogen.sh --with-lang="bs" \
    $ENABLE_64_BIT --with-locales="bs" \
    $TLS_METHOD \
-   --with-vendor="hernad" \
-   --with-theme="$THEME" \
+    --with-vendor="hernad" \
     --with-visual-studio=$VS_VERSION \
     --without-doxygen \
     --with-product-name="$LO_PRODUCT_NAME" \
@@ -286,7 +266,7 @@ rm -f config_host/*.h
     --disable-online-update \
     --disable-sdremote \
     --disable-sdremote-bluetooth \
-    $EXTENSIONS $PDF_IMPORT $WEBDAV $WITH_SYSTEM $LO_DEBUG $SKIA_FEATURE $JAVA_FEATURE \
+    $THEME $EXTENSIONS $PDF_IMPORT $WEBDAV $WITH_SYSTEM $LO_DEBUG $SKIA_FEATURE $JAVA_FEATURE \
     --enable-breakpad       #Enables breakpad for crash reporting.
 
 fi

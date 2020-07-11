@@ -60,8 +60,9 @@ FilterLibs()
 }
 
 PathFormat()
-{
+{    
     formatted_path="$1"
+    path_var="$2"
     if test "$build_os" = "cygwin"; then
         pf_conv_to_dos=
         # spaces,parentheses,brackets,braces are problematic in pathname
@@ -309,9 +310,9 @@ win_short_path_for_make()
 
 
 if test "$build_os" = "cygwin"; then
-    PathFormat "$SRC_ROOT"
+    PathFormat "$SRC_ROOT" src_root
     SRC_ROOT="$formatted_path"
-    PathFormat "$BUILDDIR"
+    PathFormat "$BUILDDIR" builddir
     BUILDDIR="$formatted_path"
     x_Cygwin=
     AC_MSG_CHECKING(for explicit COMSPEC)
@@ -1729,10 +1730,10 @@ AC_ARG_WITH(system-jpeg,
         [Use jpeg already on system.]),,
     [with_system_jpeg="$with_system_libs"])
 
-AC_ARG_WITH(system-clucene,
-    AS_HELP_STRING([--with-system-clucene],
-        [Use clucene already on system.]),,
-    [with_system_clucene="$with_system_libs"])
+dnl AC_ARG_WITH(system-clucene,
+dnl     AS_HELP_STRING([--with-system-clucene],
+dnl         [Use clucene already on system.]),,
+dnl     [with_system_clucene="$with_system_libs"])
 
 AC_ARG_WITH(system-expat,
     AS_HELP_STRING([--with-system-expat],
@@ -2471,10 +2472,10 @@ pathmunge ()
     if test -n "$1"; then
         if test "$build_os" = "cygwin"; then
             if test "$GNUMAKE_WIN_NATIVE" = "TRUE" ; then
-                PathFormat "$1"
+                PathFormat "$1" gnumakewinnativetrue
                 new_path=`cygpath -sm "$formatted_path"`
             else
-                PathFormat "$1"
+                PathFormat "$1" gnumakewinnativefalse
                 new_path=`cygpath -u "$formatted_path"`
             fi
         else
@@ -2574,6 +2575,7 @@ if test -z "$enable_database_connectivity"; then
     fi
 fi
 
+
 if test "$enable_database_connectivity" = yes; then
     BUILD_TYPE="$BUILD_TYPE DBCONNECTIVITY"
     AC_DEFINE(HAVE_FEATURE_DBCONNECTIVITY)
@@ -2651,6 +2653,12 @@ else
     fi
 fi
 AC_SUBST(WITH_GALLERY_BUILD)
+
+WITH_HELP_BUILD=
+AC_SUBST(WITH_HELP_BUILD)
+
+WITH_EBOOK_BUILD=
+AC_SUBST(WITH_EBOOK_BUILD)
 
 dnl ===================================================================
 dnl  Checks if ccache is available
@@ -3349,7 +3357,7 @@ find_ucrt()
 {
     reg_get_value_32 "HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Microsoft SDKs/Windows/v10.0/InstallationFolder"
     if test -n "$regvalue"; then
-        PathFormat "$regvalue"
+        PathFormat "$regvalue" regvalue1
         UCRTSDKDIR=$formatted_path
         reg_get_value_32 "HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Microsoft SDKs/Windows/v10.0/ProductVersion"
         UCRTVERSION=$regvalue
@@ -3389,7 +3397,7 @@ find_msvc()
     vs_versions_to_check "$1"
     vswhere="$(perl -e 'print $ENV{"ProgramFiles(x86)"}')"
     vswhere+="\\Microsoft Visual Studio\\Installer\\vswhere.exe"
-    PathFormat "$vswhere"
+    PathFormat "$vswhere" vswhere
     vswhere=$formatted_path
     for ver in $vsversions; do
         vswhereoutput=`$vswhere -version "@<:@ $ver , $(expr $ver + 1) @:}@" -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath | head -1`
@@ -3399,7 +3407,7 @@ find_msvc()
             vswhereoutput=`$vswhere -products \* -version "@<:@ $ver , $(expr $ver + 1) @:}@" -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath | head -1`
         fi
         if test -n "$vswhereoutput"; then
-            PathFormat "$vswhereoutput"
+            PathFormat "$vswhereoutput" vswhereoutput
             vctest=$formatted_path
             break
         fi
@@ -3458,7 +3466,7 @@ if test "$_os" = "WINNT"; then
     find_ucrt
     # find_ucrt errors out if it doesn't find it
     AC_MSG_RESULT([found])
-    PathFormat "${UCRTSDKDIR}Include/$UCRTVERSION/ucrt"
+    PathFormat "${UCRTSDKDIR}Include/$UCRTVERSION/ucrt" ucrt
     ucrtincpath_formatted=$formatted_path
     # SOLARINC is used for external modules and must be set too.
     # And no, it's not sufficient to set SOLARINC only, as configure
@@ -3577,7 +3585,7 @@ if test "$_os" = "WINNT"; then
 
         export INCLUDE=`cygpath -d "$COMPATH\Include"`
 
-        PathFormat "$COMPATH"
+        PathFormat "$COMPATH" compath
         COMPATH=`win_short_path_for_make "$formatted_path"`
 
         VCVER=$vcnum
@@ -3630,24 +3638,24 @@ if test "$_os" = "WINNT"; then
     BUILD_X64=
     CXX_X64_BINARY=
 
-    if test "$BITNESS_OVERRIDE" = ""; then
-        AC_MSG_CHECKING([for a x64 compiler and libraries for 64-bit Explorer extensions])
-        if test -f "$VC_PRODUCT_DIR/Tools/MSVC/$vcbuildnumber/atlmfc/lib/x64/atls.lib" || \
-             test -f "$VC_PRODUCT_DIR/Tools/MSVC/$vcbuildnumber/atlmfc/lib/spectre/x64/atls.lib"; then
-            if "$VC_PRODUCT_DIR/Tools/MSVC/$vcbuildnumber/bin/$VC_HOST_DIR/x64/cl.exe" -? </dev/null >/dev/null 2>&1; then
-                BUILD_X64=TRUE
-                CXX_X64_BINARY=`win_short_path_for_make "$VC_PRODUCT_DIR/Tools/MSVC/$vcbuildnumber/bin/$VC_HOST_DIR/x64/cl.exe"`
-            fi
-        fi
-        if test "$BUILD_X64" = TRUE; then
-            AC_MSG_RESULT([found])
-        else
-            AC_MSG_RESULT([not found])
-            AC_MSG_WARN([Installation set will not contain 64-bit Explorer extensions])
-        fi
-    else
-        CXX_X64_BINARY=$CXX
-    fi
+    dnl if test "$BITNESS_OVERRIDE" = ""; then
+    dnl     AC_MSG_CHECKING([for a x64 compiler and libraries for 64-bit Explorer extensions])
+    dnl     if test -f "$VC_PRODUCT_DIR/Tools/MSVC/$vcbuildnumber/atlmfc/lib/x64/atls.lib" || \
+    dnl          test -f "$VC_PRODUCT_DIR/Tools/MSVC/$vcbuildnumber/atlmfc/lib/spectre/x64/atls.lib"; then
+    dnl         if "$VC_PRODUCT_DIR/Tools/MSVC/$vcbuildnumber/bin/$VC_HOST_DIR/x64/cl.exe" -? </dev/null >/dev/null 2>&1; then
+    dnl             BUILD_X64=TRUE
+    dnl             CXX_X64_BINARY=`win_short_path_for_make "$VC_PRODUCT_DIR/Tools/MSVC/$vcbuildnumber/bin/$VC_HOST_DIR/x64/cl.exe"`
+    dnl         fi
+    dnl     fi
+    dnl     if test "$BUILD_X64" = TRUE; then
+    dnl         AC_MSG_RESULT([found])
+    dnl     else
+    dnl         AC_MSG_RESULT([not found])
+    dnl         AC_MSG_WARN([Installation set will not contain 64-bit Explorer extensions])
+    dnl     fi
+    dnl else
+    dnl     CXX_X64_BINARY=$CXX
+    dnl fi
     AC_SUBST(BUILD_X64)
 
     # These are passed to the environment and then used in gbuild/platform/com_MSC_class.mk
@@ -5019,7 +5027,7 @@ if test -z "$TARFILE_LOCATION"; then
     TARFILE_LOCATION="$SRC_ROOT/external/tarballs"
 else
     AbsolutePath "$TARFILE_LOCATION"
-    PathFormat "${absolute_path}"
+    PathFormat "${absolute_path}" absolutepath
     TARFILE_LOCATION="${formatted_path}"
 fi
 AC_SUBST(TARFILE_LOCATION)
@@ -5333,7 +5341,7 @@ fi
 AC_MSG_CHECKING([whether GNU Make supports the 'file' function])
 TESTGMAKEFILEFUNC="`mktemp -d -t tst.XXXXXX`"
 if test "$GNUMAKE_WIN_NATIVE" = "TRUE" ; then
-    TESTGMAKEFILEFUNC=`cygpath -m $TESTGMAKEFILEFUNC`
+    TESTGMAKEFILEFUNC=`cygpath -m $TESTGMAKEFILEFUNC `
 fi
 $SED -e "s/<TAB>/$TAB/" > $TESTGMAKEFILEFUNC/Makefile << EOF
 \$(file >test.txt,Success )
@@ -5711,7 +5719,7 @@ find_msms()
     esac
 
     if test -n "$msmdir"; then
-        msmdir=`cygpath -m "$msmdir"`
+        msmdir=`cygpath -m "$msmdir" `
         AC_MSG_RESULT([$msmdir])
     else
         if test "$ENABLE_RELEASE_BUILD" = "TRUE" ; then
@@ -5957,7 +5965,7 @@ if test "$build_os" = "cygwin"; then
     dnl Check mscoree.lib / .NET Framework dir
     AC_MSG_CHECKING(.NET Framework)
     find_dotnetsdk46
-    PathFormat "$frametest"
+    PathFormat "$frametest" frametest
     frametest="$formatted_path"
     if test -f "$frametest/Lib/um/$WINDOWS_SDK_ARCH/mscoree.lib"; then
         DOTNET_FRAMEWORK_HOME="$frametest"
@@ -5972,16 +5980,16 @@ if test "$build_os" = "cygwin"; then
     fi
     AC_MSG_RESULT([found: $DOTNET_FRAMEWORK_HOME])
 
-    PathFormat "$MIDL_PATH"
+    PathFormat "$MIDL_PATH" midlpath
     MIDL_PATH="$formatted_path"
 
-    PathFormat "$AL_PATH"
+    PathFormat "$AL_PATH" alpath
     AL_PATH="$formatted_path"
 
-    PathFormat "$DOTNET_FRAMEWORK_HOME"
+    PathFormat "$DOTNET_FRAMEWORK_HOME" dotnetframeworkhome
     DOTNET_FRAMEWORK_HOME="$formatted_path"
 
-    PathFormat "$CSC_PATH"
+    PathFormat "$CSC_PATH" cscpath
     CSC_PATH="$formatted_path"
 fi
 
@@ -8253,10 +8261,14 @@ AC_MSG_CHECKING([which zlib to use])
 if test "$with_system_zlib" = "yes"; then
     AC_MSG_RESULT([external])
     SYSTEM_ZLIB=TRUE
-    AC_CHECK_HEADER(zlib.h, [],
-        [AC_MSG_ERROR(zlib.h not found. install zlib)], [])
-    AC_CHECK_LIB(z, deflate, [ ZLIB_LIBS=-lz ],
-        [AC_MSG_ERROR(zlib not found or functional)], [])
+    if test "$build_os" = "cygwin"; then
+        AC_MSG_NOTICE([cygwin - zlib system skip check])
+    else
+        AC_CHECK_HEADER(zlib.h, [],
+            [AC_MSG_ERROR(zlib.h not found. install zlib)], [])
+        AC_CHECK_LIB(z, deflate, [ ZLIB_LIBS=-lz ],
+            [AC_MSG_ERROR(zlib not found or functional)], [])
+    fi
 else
     AC_MSG_RESULT([internal])
     SYSTEM_ZLIB=
@@ -8275,10 +8287,11 @@ AC_MSG_CHECKING([which libjpeg to use])
 if test "$with_system_jpeg" = "yes"; then
     AC_MSG_RESULT([external])
     SYSTEM_LIBJPEG=TRUE
-    AC_CHECK_HEADER(jpeglib.h, [ LIBJPEG_CFLAGS= ],
-        [AC_MSG_ERROR(jpeg.h not found. install libjpeg)], [])
-    AC_CHECK_LIB(jpeg, jpeg_resync_to_restart, [ LIBJPEG_LIBS="-ljpeg" ],
-        [AC_MSG_ERROR(jpeg library not found or functional)], [])
+    if test "$build_os" = "cygwin"; then
+        AC_MSG_NOTICE([cygwin - LIBJPEG SKIP CHECK])
+    else
+        AC_MSG_NOTICE([linux - LIBJPEG SKIP CHECK])
+    fi
 else
     SYSTEM_LIBJPEG=
     AC_MSG_RESULT([internal, libjpeg-turbo])
@@ -8469,41 +8482,49 @@ dnl ===================================================================
 dnl we should rather be using
 dnl libo_CHECK_SYSTEM_MODULE([clucence],[CLUCENE],[liblucence-core]) here
 dnl but the contribs-lib check seems tricky
-AC_MSG_CHECKING([which clucene to use])
-if test "$with_system_clucene" = "yes"; then
-    AC_MSG_RESULT([external])
-    SYSTEM_CLUCENE=TRUE
-    PKG_CHECK_MODULES(CLUCENE, libclucene-core)
-    CLUCENE_CFLAGS=[$(printf '%s' "$CLUCENE_CFLAGS" | sed -e 's@-I[^ ]*/CLucene/ext@@' -e "s/-I/${ISYSTEM?}/g")]
-    FilterLibs "${CLUCENE_LIBS}"
-    CLUCENE_LIBS="${filteredlibs}"
-    AC_LANG_PUSH([C++])
-    save_CXXFLAGS=$CXXFLAGS
-    save_CPPFLAGS=$CPPFLAGS
-    CXXFLAGS="$CXXFLAGS $CLUCENE_CFLAGS"
-    CPPFLAGS="$CPPFLAGS $CLUCENE_CFLAGS"
-    dnl http://sourceforge.net/tracker/index.php?func=detail&aid=3392466&group_id=80013&atid=558446
-    dnl https://bugzilla.redhat.com/show_bug.cgi?id=794795
-    AC_CHECK_HEADER([CLucene/analysis/cjk/CJKAnalyzer.h], [],
-                 [AC_MSG_ERROR([Your version of libclucene has contribs-lib missing.])], [#include <CLucene.h>])
-    CXXFLAGS=$save_CXXFLAGS
-    CPPFLAGS=$save_CPPFLAGS
-    AC_LANG_POP([C++])
-
-    CLUCENE_LIBS="$CLUCENE_LIBS -lclucene-contribs-lib"
-else
-    AC_MSG_RESULT([internal])
-    SYSTEM_CLUCENE=
-    BUILD_TYPE="$BUILD_TYPE CLUCENE"
-fi
-AC_SUBST(SYSTEM_CLUCENE)
-AC_SUBST(CLUCENE_CFLAGS)
-AC_SUBST(CLUCENE_LIBS)
+dnl AC_MSG_CHECKING([which clucene to use])
+dnl if test "$with_system_clucene" = "yes"; then
+dnl     AC_MSG_RESULT([external])
+dnl     SYSTEM_CLUCENE=TRUE
+dnl     PKG_CHECK_MODULES(CLUCENE, libclucene-core)
+dnl     CLUCENE_CFLAGS=[$(printf '%s' "$CLUCENE_CFLAGS" | sed -e 's@-I[^ ]*/CLucene/ext@@' -e "s/-I/${ISYSTEM?}/g")]
+dnl     FilterLibs "${CLUCENE_LIBS}"
+dnl     CLUCENE_LIBS="${filteredlibs}"
+dnl     AC_LANG_PUSH([C++])
+dnl     save_CXXFLAGS=$CXXFLAGS
+dnl     save_CPPFLAGS=$CPPFLAGS
+dnl     CXXFLAGS="$CXXFLAGS $CLUCENE_CFLAGS"
+dnl     CPPFLAGS="$CPPFLAGS $CLUCENE_CFLAGS"
+dnl     dnl http://sourceforge.net/tracker/index.php?func=detail&aid=3392466&group_id=80013&atid=558446
+dnl     dnl https://bugzilla.redhat.com/show_bug.cgi?id=794795
+dnl     AC_CHECK_HEADER([CLucene/analysis/cjk/CJKAnalyzer.h], [],
+dnl                  [AC_MSG_ERROR([Your version of libclucene has contribs-lib missing.])], [#include <CLucene.h>])
+dnl     CXXFLAGS=$save_CXXFLAGS
+dnl     CPPFLAGS=$save_CPPFLAGS
+dnl     AC_LANG_POP([C++])
+dnl 
+dnl     CLUCENE_LIBS="$CLUCENE_LIBS -lclucene-contribs-lib"
+dnl else
+dnl     AC_MSG_RESULT([internal])
+dnl     SYSTEM_CLUCENE=
+dnl     BUILD_TYPE="$BUILD_TYPE CLUCENE"
+dnl fi
+dnl AC_SUBST(SYSTEM_CLUCENE)
+dnl AC_SUBST(CLUCENE_CFLAGS)
+dnl AC_SUBST(CLUCENE_LIBS)
 
 dnl ===================================================================
 dnl Check for system expat
 dnl ===================================================================
-libo_CHECK_SYSTEM_MODULE([expat], [EXPAT], [expat])
+if test $build_os = cygwin -a "$with_system_expat" = "yes"; then
+    SYSTEM_EXPAT=TRUE
+    AC_MSG_CHECKING([cygwin EXPAT external])
+else
+    libo_CHECK_SYSTEM_MODULE([expat], [EXPAT], [expat])
+fi
+AC_SUBST(EXPAT_CFLAGS)
+AC_SUBST(EXPAT_LIBS)
+AC_SUBST(LIBPATH)
 
 dnl ===================================================================
 dnl Check for system xmlsec
@@ -8530,7 +8551,7 @@ AS_IF([test "$COM" = "MSC"],
       [librevenge_libdir="${WORKDIR}/LinkTarget/Library"],
       [librevenge_libdir="${WORKDIR}/UnpackedTarball/librevenge/src/lib/.libs"]
 )
-libo_CHECK_SYSTEM_MODULE([librevenge],[REVENGE],[librevenge-0.0 >= 0.0.1],["-I${WORKDIR}/UnpackedTarball/librevenge/inc"],["-L${librevenge_libdir} -lrevenge-0.0"])
+dnl libo_CHECK_SYSTEM_MODULE([librevenge],[REVENGE],[librevenge-0.0 >= 0.0.1],["-I${WORKDIR}/UnpackedTarball/librevenge/inc"],["-L${librevenge_libdir} -lrevenge-0.0"])
 
 libo_CHECK_SYSTEM_MODULE([libodfgen],[ODFGEN],[libodfgen-0.1])
 
@@ -8556,8 +8577,8 @@ libo_CHECK_SYSTEM_MODULE([libmspub],[MSPUB],[libmspub-0.1])
 libo_CHECK_SYSTEM_MODULE([libmwaw],[MWAW],[libmwaw-0.3 >= 0.3.1])
 libo_PKG_VERSION([MWAW], [libmwaw-0.3], [0.3.16])
 
-libo_CHECK_SYSTEM_MODULE([libetonyek],[ETONYEK],[libetonyek-0.1])
-libo_PKG_VERSION([ETONYEK], [libetonyek-0.1], [0.1.8])
+dnl libo_CHECK_SYSTEM_MODULE([libetonyek],[ETONYEK],[libetonyek-0.1])
+dnl libo_PKG_VERSION([ETONYEK], [libetonyek-0.1], [0.1.8])
 
 libo_CHECK_SYSTEM_MODULE([libfreehand],[FREEHAND],[libfreehand-0.1])
 
@@ -8933,24 +8954,28 @@ dnl By now enable_python should be "system", "internal" or "no"
 case $enable_python in
 system)
     SYSTEM_PYTHON=TRUE
+    if test "$build_os" = "cygwin"; then
+        AC_MSG_RESULT([cygwin skip - check python cflags])
+        AC_DEFINE_UNQUOTED([PYTHON_VERSION_STRING], [L"${PYTHON_VERSION}"])
+    else
+        if test "x$ac_cv_header_Python_h" != "xyes"; then
+            AC_MSG_ERROR([Python headers not found. You probably want to set both the PYTHON_CFLAGS and PYTHON_LIBS environment variables.])
+        fi
 
-    if test "x$ac_cv_header_Python_h" != "xyes"; then
-       AC_MSG_ERROR([Python headers not found. You probably want to set both the PYTHON_CFLAGS and PYTHON_LIBS environment variables.])
+        AC_LANG_PUSH(C)
+        CFLAGS="$CFLAGS $PYTHON_CFLAGS"
+        AC_MSG_CHECKING([for correct python library version])
+        AC_RUN_IFELSE([AC_LANG_SOURCE([[
+    #include <Python.h>
+
+    int main(int argc, char **argv) {
+    if ((PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 3)) return 0;
+    else return 1;
+    }
+        ]])],[AC_MSG_RESULT([ok])],[AC_MSG_ERROR([Python >= 3.3 is needed when building with Python 3])],[AC_MSG_RESULT([skipped; cross-compiling])])
+        CFLAGS=$save_CFLAGS
+        AC_LANG_POP(C)
     fi
-
-    AC_LANG_PUSH(C)
-    CFLAGS="$CFLAGS $PYTHON_CFLAGS"
-    AC_MSG_CHECKING([for correct python library version])
-       AC_RUN_IFELSE([AC_LANG_SOURCE([[
-#include <Python.h>
-
-int main(int argc, char **argv) {
-   if ((PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 3)) return 0;
-   else return 1;
-}
-       ]])],[AC_MSG_RESULT([ok])],[AC_MSG_ERROR([Python >= 3.3 is needed when building with Python 3])],[AC_MSG_RESULT([skipped; cross-compiling])])
-    CFLAGS=$save_CFLAGS
-    AC_LANG_POP(C)
 
     dnl FIXME Check if the Python library can be linked with, too?
     ;;
@@ -8990,7 +9015,25 @@ AC_SUBST(PYTHON_VERSION)
 AC_SUBST(PYTHON_VERSION_MAJOR)
 AC_SUBST(PYTHON_VERSION_MINOR)
 
-ENABLE_MARIADBC=TRUE
+ENABLE_DBACCESS=TRUE
+if test "$ENABLE_DBACCESS" = "TRUE"; then
+    BUILD_TYPE="$BUILD_TYPE DBACCESS"
+    AC_DEFINE(HAVE_FEATURE_DBACCESS)
+fi
+
+ENABLE_ADO=
+if test "$ENABLE_ADO" = "TRUE"; then
+    BUILD_TYPE="$BUILD_TYPE ADO"
+    AC_DEFINE(HAVE_FEATURE_ADO)
+fi
+
+ENABLE_WRITERPERFECT=
+if test "$ENABLE_WRITERPERFECT" = "TRUE"; then
+    BUILD_TYPE="$BUILD_TYPE WRITERPERFECT"
+    AC_DEFINE(HAVE_FEATURE_WRITERPERFECT)
+fi
+
+ENABLE_MARIADBC=
 if test "$_os" = "Android" -o "$_os" = "iOS" -o "$enable_mpl_subset" = "yes"; then
     ENABLE_MARIADBC=
 fi
@@ -9067,7 +9110,7 @@ if test "$ENABLE_MARIADBC" = "TRUE"; then
             AC_MSG_CHECKING([for $LIBMARIADB in $LIBMARIADB_PATH])
             if test -e "$LIBMARIADB_PATH/$LIBMARIADB"; then
                 AC_MSG_RESULT([found.])
-                PathFormat "$LIBMARIADB_PATH"
+                PathFormat "$LIBMARIADB_PATH" lmariadbpath
                 LIBMARIADB_PATH="$formatted_path"
             else
                 AC_MSG_ERROR([not found.])
@@ -9192,12 +9235,17 @@ if test "x$enable_postgresql_sdbc" != "xno"; then
             POSTGRESQL_INC=-I$(${PGCONFIG} --includedir)
             POSTGRESQL_LIB="-L$(${PGCONFIG} --libdir)"
         else
-            PKG_CHECK_MODULES(POSTGRESQL, libpq, [
-              POSTGRESQL_INC=$POSTGRESQL_CFLAGS
-              POSTGRESQL_LIB=$POSTGRESQL_LIBS
-            ],[
-              AC_MSG_ERROR([pg_config or 'pkg-config libpq' needed; set PGCONFIG if not in PATH])
-            ])
+            if test $build_os = cygwin; then
+                POSTGRESQL_INC=$POSTGRESQL_CFLAGS
+                POSTGRESQL_LIB=$POSTGRESQL_LIBS
+            else
+                PKG_CHECK_MODULES(POSTGRESQL, libpq, [
+                POSTGRESQL_INC=$POSTGRESQL_CFLAGS
+                POSTGRESQL_LIB=$POSTGRESQL_LIBS
+                ],[
+                AC_MSG_ERROR([pg_config or 'pkg-config libpq' needed; set PGCONFIG if not in PATH])
+                ])
+            fi
         fi
         FilterLibs "${POSTGRESQL_LIB}"
         POSTGRESQL_LIB="${filteredlibs}"
@@ -9306,9 +9354,13 @@ if test "x$enable_postgresql_sdbc" != "xno"; then
         save_LIBS=$LIBS
         CPPFLAGS="${CPPFLAGS} ${POSTGRESQL_INC}"
         LIBS="${LIBS} ${POSTGRESQL_LIB}"
-        AC_CHECK_HEADER([libpq-fe.h], [], [AC_MSG_ERROR([libpq-fe.h is needed])], [])
-        AC_CHECK_LIB([pq], [PQconnectdbParams], [:],
-            [AC_MSG_ERROR(libpq not found or too old. Need >= 9.0)], [])
+        if test "$build_os" = "cygwin"; then
+            AC_MSG_NOTICE([cygwin system - skip PostgreSQL check])
+        else
+            AC_CHECK_HEADER([libpq-fe.h], [], [AC_MSG_ERROR([libpq-fe.h is needed])], [])
+            AC_CHECK_LIB([pq], [PQconnectdbParams], [:],
+                [AC_MSG_ERROR(libpq not found or too old. Need >= 9.0)], [])
+        fi
         CFLAGS=$save_CFLAGS
         CPPFLAGS=$save_CPPFLAGS
         LIBS=$save_LIBS
@@ -9323,6 +9375,8 @@ AC_SUBST(GSSAPI_LIBS)
 AC_SUBST(KRB5_LIBS)
 AC_SUBST(BUILD_POSTGRESQL_SDBC)
 AC_SUBST(SYSTEM_POSTGRESQL)
+AC_SUBST(POSTGRESQL_CFLAGS)
+AC_SUBST(POSTGRESQL_LIBS)
 AC_SUBST(POSTGRESQL_INC)
 AC_SUBST(POSTGRESQL_LIB)
 
@@ -9447,6 +9501,7 @@ if test "$with_system_curl" = "auto"; then
 fi
 
 if test "$with_system_curl" = "yes"; then
+
     AC_MSG_RESULT([external])
     SYSTEM_CURL=TRUE
 
@@ -9476,7 +9531,6 @@ if test "$with_system_curl" = "yes"; then
             ;;
         esac
     fi
-
     ENABLE_CURL=TRUE
 elif test $_os = iOS; then
     # Let's see if we need curl, I think not?
@@ -9500,23 +9554,12 @@ AC_MSG_CHECKING([which boost to use])
 if test "$with_system_boost" = "yes"; then
     AC_MSG_RESULT([external])
     SYSTEM_BOOST=TRUE
-    AX_BOOST_BASE([1.66],,[AC_MSG_ERROR([no suitable Boost found])])
-    AX_BOOST_DATE_TIME
-    AX_BOOST_FILESYSTEM
-    AX_BOOST_IOSTREAMS
-    AX_BOOST_LOCALE
-    AC_LANG_PUSH([C++])
-    save_CXXFLAGS=$CXXFLAGS
-    CXXFLAGS="$CXXFLAGS $BOOST_CPPFLAGS $CXXFLAGS_CXX11"
-    AC_CHECK_HEADER(boost/shared_ptr.hpp, [],
-       [AC_MSG_ERROR(boost/shared_ptr.hpp not found. install boost)], [])
-    AC_CHECK_HEADER(boost/spirit/include/classic_core.hpp, [],
-       [AC_MSG_ERROR(boost/spirit/include/classic_core.hpp not found. install boost >= 1.36)], [])
-    CXXFLAGS=$save_CXXFLAGS
-    AC_LANG_POP([C++])
-    # this is in m4/ax_boost_base.m4
-    FilterLibs "${BOOST_LDFLAGS}"
-    BOOST_LDFLAGS="${filteredlibs}"
+    if test "$build_os" = "cygwin" ; then
+
+        AC_MSG_RESULT([Cygwin boost system $BOOST_SYSTEM_LIB])
+    else  
+        AC_MSG_RESULT([linux boost check skip $BOOST_SYSTEM_LIB])
+    fi
 else
     AC_MSG_RESULT([internal])
     BUILD_TYPE="$BUILD_TYPE BOOST"
@@ -9528,6 +9571,13 @@ else
         BOOST_CPPFLAGS="-I${WORKDIR}/UnpackedTarball/boost"
     fi
 fi
+AC_SUBST(BOOST_CPPFLAGS)
+AC_SUBST(BOOST_CXXFLAGS)
+AC_SUBST(BOOST_LOCALE_LIB)
+AC_SUBST(BOOST_DATE_TIME_LIB)
+AC_SUBST(BOOST_FILESYSTEM_LIB)
+AC_SUBST(BOOST_IOSTREAMS_LIB)
+AC_SUBST(BOOST_LDFLAGS)
 AC_SUBST(SYSTEM_BOOST)
 
 dnl ===================================================================
@@ -9566,7 +9616,7 @@ if test "$with_system_odbc" = "yes" -o '(' "$with_system_headers" = "yes" -a "$w
     if test "$build_os" = "cygwin"; then
         save_CPPFLAGS=$CPPFLAGS
         find_winsdk
-        PathFormat "$winsdktest"
+        PathFormat "$winsdktest" winsdktest
         CPPFLAGS="$CPPFLAGS -I$formatted_path/include/um -I$formatted_path/Include/$winsdklibsubdir/um -I$formatted_path/include -I$formatted_path/include/shared -I$formatted_path/include/$winsdklibsubdir/shared"
         AC_CHECK_HEADER(sqlext.h, [],
             [AC_MSG_ERROR(odbc not found. install odbc)],
@@ -9624,6 +9674,7 @@ AC_SUBST(SYSTEM_OPENLDAP)
 dnl ===================================================================
 dnl Check for system NSS
 dnl ===================================================================
+
 if test $_os != iOS -a "$enable_fuzzers" != "yes"; then
     libo_CHECK_SYSTEM_MODULE([nss],[NSS],[nss >= 3.9.3 nspr >= 4.8])
     AC_DEFINE(HAVE_FEATURE_NSS)
@@ -9700,7 +9751,17 @@ ICU_RECLASSIFIED_PREPEND_SET_EMPTY="TRUE"
 ICU_RECLASSIFIED_CONDITIONAL_JAPANESE_STARTER="TRUE"
 ICU_RECLASSIFIED_HEBREW_LETTER="TRUE"
 AC_MSG_CHECKING([which icu to use])
+
+
 if test "$with_system_icu" = "yes"; then
+
+if test $build_os = cygwin; then
+    SYSTEM_ICU=TRUE
+    SYSTEM_GENBRK=`which genbrk`
+    SYSTEM_GENCCODE=`which genccode`
+    SYSTEM_GENCMN=`which gencmn`
+    AC_MSG_CHECKING([cygwin ICU external - SYSTEM_ICU])
+else
     AC_MSG_RESULT([external])
     SYSTEM_ICU=TRUE
     AC_LANG_PUSH([C++])
@@ -9763,6 +9824,8 @@ You can use --with-system-icu-for-build=force to use it anyway.])
             ICU_MINOR=""
         fi
     fi
+fi
+
 else
     AC_MSG_RESULT([internal])
     SYSTEM_ICU=
@@ -9803,29 +9866,36 @@ AC_MSG_CHECKING([whether to enable breakpad])
 if test "$enable_breakpad" != yes; then
     AC_MSG_RESULT([no])
 else
-    AC_MSG_RESULT([yes])
-    ENABLE_BREAKPAD="TRUE"
-    AC_DEFINE(ENABLE_BREAKPAD)
-    AC_DEFINE(HAVE_FEATURE_BREAKPAD, 1)
-    BUILD_TYPE="$BUILD_TYPE BREAKPAD"
-
-    AC_MSG_CHECKING([for disable crash dump])
-    if test "$enable_crashdump" = no; then
-        DEFAULT_CRASHDUMP_VALUE="false"
-        AC_MSG_RESULT([yes])
+    if test "$BREAKPAD_CFLAGS" != ""; then
+        SYSTEM_BREAKPAD=TRUE
+        AC_MSG_CHECKING([BREAKPAD EXTERNAL])
     else
-       AC_MSG_RESULT([no])
-    fi
+        AC_MSG_RESULT([yes])
+        ENABLE_BREAKPAD="TRUE"
+        AC_DEFINE(ENABLE_BREAKPAD)
+        AC_DEFINE(HAVE_FEATURE_BREAKPAD, 1)
+        BUILD_TYPE="$BUILD_TYPE BREAKPAD"
 
-    AC_MSG_CHECKING([for crashreport config])
-    if test "$with_symbol_config" = "no"; then
-        BREAKPAD_SYMBOL_CONFIG="invalid"
+        AC_MSG_CHECKING([for disable crash dump])
+        if test "$enable_crashdump" = no; then
+            DEFAULT_CRASHDUMP_VALUE="false"
+            AC_MSG_RESULT([yes])
+        else
         AC_MSG_RESULT([no])
-    else
-        BREAKPAD_SYMBOL_CONFIG="$with_symbol_config"
-        AC_DEFINE(BREAKPAD_SYMBOL_CONFIG)
-        AC_MSG_RESULT([yes])
+        fi
+
+        AC_MSG_CHECKING([for crashreport config])
+        if test "$with_symbol_config" = "no"; then
+            BREAKPAD_SYMBOL_CONFIG="invalid"
+            AC_MSG_RESULT([no])
+        else
+            BREAKPAD_SYMBOL_CONFIG="$with_symbol_config"
+            AC_DEFINE(BREAKPAD_SYMBOL_CONFIG)
+            AC_MSG_RESULT([yes])
+        fi
     fi
+    AC_SUBST(BREAKPAD_CFLAGS)
+    AC_SUBST(BREAKPAD_LIBS)
     AC_SUBST(BREAKPAD_SYMBOL_CONFIG)
 fi
 AC_SUBST(ENABLE_BREAKPAD)
@@ -9849,31 +9919,6 @@ dnl ===================================================================
 dnl Orcus
 dnl ===================================================================
 libo_CHECK_SYSTEM_MODULE([orcus],[ORCUS],[liborcus-0.15 >= 0.15.0])
-if test "$with_system_orcus" != "yes"; then
-    if test "$SYSTEM_BOOST" = "TRUE"; then
-        # ===========================================================
-        # Determine if we are going to need to link with Boost.System
-        # ===========================================================
-        dnl This seems to be necessary since boost 1.50 (1.48 does not need it,
-        dnl 1.49 is untested). The macro BOOST_THREAD_DONT_USE_SYSTEM mentioned
-        dnl in documentation has no effect.
-        AC_MSG_CHECKING([if we need to link with Boost.System])
-        AC_LANG_PUSH([C++])
-        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
-                @%:@include <boost/version.hpp>
-            ]],[[
-                #if BOOST_VERSION >= 105000
-                #   error yes, we need to link with Boost.System
-                #endif
-            ]])],[
-                AC_MSG_RESULT([no])
-            ],[
-                AC_MSG_RESULT([yes])
-                AX_BOOST_SYSTEM
-        ])
-        AC_LANG_POP([C++])
-    fi
-fi
 dnl FIXME by renaming SYSTEM_LIBORCUS to SYSTEM_ORCUS in the build system world
 SYSTEM_LIBORCUS=$SYSTEM_ORCUS
 AC_SUBST([BOOST_SYSTEM_LIB])
@@ -10114,12 +10159,16 @@ if test "$enable_openssl" = "yes"; then
         libo_CHECK_SYSTEM_MODULE([openssl],[OPENSSL],[openssl])
     fi
     if test "$with_system_openssl" = "yes"; then
-        AC_MSG_CHECKING([whether openssl supports SHA512])
-        AC_LANG_PUSH([C])
-        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <openssl/sha.h>]],[[
-            SHA512_CTX context;
-]])],[AC_MSG_RESULT([yes])],[AC_MSG_ERROR([no, openssl too old. Need >= 0.9.8.])])
-        AC_LANG_POP(C)
+        if test $build_os = cygwin; then
+            AC_MSG_NOTICE([Cygwin-openssh check skip])
+        else
+            AC_MSG_CHECKING([whether openssl supports SHA512])
+            AC_LANG_PUSH([C])
+            AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <openssl/sha.h>]],[[
+                SHA512_CTX context;
+            ]])],[AC_MSG_RESULT([yes])],[AC_MSG_ERROR([no, openssl too old. Need >= 0.9.8.])])
+            AC_LANG_POP(C)
+        fi
     fi
 else
     AC_MSG_RESULT([yes])
@@ -12430,9 +12479,9 @@ EOF
     if test -z "$ANT_HOME"; then
         ANT_HOME="NO_ANT_HOME"
     else
-        PathFormat "$ANT_HOME"
+        PathFormat "$ANT_HOME" anthome
         ANT_HOME="$formatted_path"
-        PathFormat "$ANT"
+        PathFormat "$ANT" ant
         ANT="$formatted_path"
     fi
     AC_SUBST(ANT_HOME)
@@ -12466,7 +12515,7 @@ EOF
                 fi
             fi
         fi
-        PathFormat "$ANT_LIB"
+        PathFormat "$ANT_LIB" antlib
         ANT_LIB="$formatted_path"
         AC_MSG_RESULT([Ant lib directory found.])
     fi
@@ -12512,7 +12561,7 @@ if test "$ENABLE_JAVA" != "" -a "$with_junit" != "no"; then
         OOO_JUNIT_JAR=$with_junit
     fi
     if test "$_os" = "WINNT"; then
-        OOO_JUNIT_JAR=`cygpath -m "$OOO_JUNIT_JAR"`
+        OOO_JUNIT_JAR=`cygpath -m "$OOO_JUNIT_JAR" `
     fi
     printf 'import org.junit.Before;' > conftest.java
     if "$JAVACOMPILER" -classpath "$OOO_JUNIT_JAR" conftest.java >&5 2>&5; then
@@ -12550,7 +12599,7 @@ if test "$ENABLE_JAVA" != "" -a "$with_junit" != "no"; then
             HAMCREST_JAR=$with_hamcrest
         fi
         if test "$_os" = "WINNT"; then
-            HAMCREST_JAR=`cygpath -m "$HAMCREST_JAR"`
+            HAMCREST_JAR=`cygpath -m "$HAMCREST_JAR" `
         fi
         if "$JAVACOMPILER" -classpath "$HAMCREST_JAR" conftest.java >&5 2>&5; then
             AC_MSG_RESULT([$HAMCREST_JAR])
@@ -13061,7 +13110,7 @@ if test "$build_os" = "cygwin"; then
             ILIB="$ILIB;$WINDOWS_SDK_HOME/lib/$winsdklibsubdir/um/x64"
             ILIB1="$ILIB1 -LIBPATH:$WINDOWS_SDK_HOME/lib/$winsdklibsubdir/um/x64"
         fi
-        PathFormat "${UCRTSDKDIR}lib/$UCRTVERSION/ucrt/x64"
+        PathFormat "${UCRTSDKDIR}lib/$UCRTVERSION/ucrt/x64" ucrtskdir
         ucrtlibpath_formatted=$formatted_path
         ILIB="$ILIB;$ucrtlibpath_formatted"
         ILIB1="$ILIB1 -LIBPATH:$ucrtlibpath_formatted"
@@ -13074,7 +13123,7 @@ if test "$build_os" = "cygwin"; then
             ILIB="$ILIB;$WINDOWS_SDK_HOME/lib/$winsdklibsubdir/um/x86"
             ILIB1="$ILIB1 -LIBPATH:$WINDOWS_SDK_HOME/lib/$winsdklibsubdir/um/x86"
         fi
-        PathFormat "${UCRTSDKDIR}lib/$UCRTVERSION/ucrt/x86"
+        PathFormat "${UCRTSDKDIR}lib/$UCRTVERSION/ucrt/x86" ucrtsdkdirx64
         ucrtlibpath_formatted=$formatted_path
         ILIB="$ILIB;$ucrtlibpath_formatted"
         ILIB1="$ILIB1 -LIBPATH:$ucrtlibpath_formatted"
@@ -13271,15 +13320,15 @@ if test "$build_os" = "cygwin"; then
     ATL_INCLUDE=`win_short_path_for_make "$ATL_INCLUDE"`
 
     # sort.exe and find.exe also exist in C:/Windows/system32 so need /usr/bin/
-    PathFormat "/usr/bin/find.exe"
+    PathFormat "/usr/bin/find.exe" findexe
     FIND="$formatted_path"
-    PathFormat "/usr/bin/sort.exe"
+    PathFormat "/usr/bin/sort.exe" sortexe
     SORT="$formatted_path"
-    PathFormat "/usr/bin/grep.exe"
+    PathFormat "/usr/bin/grep.exe" grepexe
     WIN_GREP="$formatted_path"
-    PathFormat "/usr/bin/ls.exe"
+    PathFormat "/usr/bin/ls.exe" lsexe
     WIN_LS="$formatted_path"
-    PathFormat "/usr/bin/touch.exe"
+    PathFormat "/usr/bin/touch.exe" touchexe
     WIN_TOUCH="$formatted_path"
 else
     FIND=find
@@ -13298,7 +13347,7 @@ AC_SUBST(BUILD_TYPE)
 
 AC_SUBST(SOLARINC)
 
-PathFormat "$PERL"
+PathFormat "$PERL" perl
 PERL="$formatted_path"
 AC_SUBST(PERL)
 
@@ -13308,7 +13357,7 @@ else
     TEMP_DIRECTORY="/tmp"
 fi
 if test "$build_os" = "cygwin"; then
-    TEMP_DIRECTORY=`cygpath -m "$TEMP_DIRECTORY"`
+    TEMP_DIRECTORY=`cygpath -m "$TEMP_DIRECTORY" `
 fi
 AC_SUBST(TEMP_DIRECTORY)
 
@@ -13441,7 +13490,7 @@ AC_CONFIG_HEADERS([config_host/config_version.h])
 AC_CONFIG_HEADERS([config_host/config_oauth2.h])
 AC_CONFIG_HEADERS([config_host/config_poppler.h])
 AC_CONFIG_HEADERS([config_host/config_python.h])
-AC_CONFIG_HEADERS([config_host/config_writerperfect.h])
+#AC_CONFIG_HEADERS([config_host/config_writerperfect.h])
 AC_OUTPUT
 
 if test "$CROSS_COMPILING" = TRUE; then

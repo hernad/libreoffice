@@ -319,7 +319,7 @@ void SvxNotebookbarConfigPage::searchNodeandAttribute(std::vector<NotebookbarEnt
                 xmlFree(UriValue);
 
                 CategoriesEntries aCategoryEntry;
-                if (sClassId == "sfxlo-PriorityHBox")
+                if (sClassId == "sfxzh-PriorityHBox")
                 {
                     aCategoryEntry.sDisplayName = sUIItemId;
                     aCategoryEntry.sUIItemId = sUIItemId;
@@ -328,7 +328,7 @@ void SvxNotebookbarConfigPage::searchNodeandAttribute(std::vector<NotebookbarEnt
 
                     aCurItemEntry = aCategoryEntry;
                 }
-                else if (sClassId == "sfxlo-PriorityMergedHBox")
+                else if (sClassId == "sfxzh-PriorityMergedHBox")
                 {
                     aCategoryEntry.sDisplayName = aCurItemEntry.sDisplayName + " | " + sUIItemId;
                     aCategoryEntry.sUIItemId = sUIItemId;
@@ -344,7 +344,7 @@ void SvxNotebookbarConfigPage::searchNodeandAttribute(std::vector<NotebookbarEnt
                     aCategoryList.push_back(aCategoryEntry);
                     aCurItemEntry = aCategoryEntry;
                 }
-                else if (sClassId == "svtlo-ManagedMenuButton")
+                else if (sClassId == "svtzh-ManagedMenuButton")
                 {
                     sal_Int32 rPos = 1;
                     sSecondVal = sUIItemId.getToken(rPos, ':', rPos);
@@ -364,7 +364,7 @@ void SvxNotebookbarConfigPage::searchNodeandAttribute(std::vector<NotebookbarEnt
                     isCategory = true;
                     if (sClassId == "GtkMenuItem" || sClassId == "GtkToolButton"
                         || sClassId == "GtkMenuToolButton"
-                        || (sClassId == "svtlo-ManagedMenuButton" && sSecondVal.isEmpty()))
+                        || (sClassId == "svtzh-ManagedMenuButton" && sSecondVal.isEmpty()))
                     {
                         nodeEntries.sClassId = sClassId;
                         nodeEntries.sUIItemId = sUIItemId;
@@ -382,9 +382,9 @@ void SvxNotebookbarConfigPage::searchNodeandAttribute(std::vector<NotebookbarEnt
                         nodeEntries.sActionName = "Null";
                         aEntries.push_back(nodeEntries);
                     }
-                    else if (sClassId == "sfxlo-PriorityHBox"
-                             || sClassId == "sfxlo-PriorityMergedHBox"
-                             || sClassId == "svtlo-ManagedMenuButton")
+                    else if (sClassId == "sfxzh-PriorityHBox"
+                             || sClassId == "sfxzh-PriorityMergedHBox"
+                             || sClassId == "svtzh-ManagedMenuButton")
                     {
                         nodeEntries.sClassId = sClassId;
                         nodeEntries.sUIItemId = sUIItemId;
@@ -432,14 +432,14 @@ void SvxNotebookbarConfigPage::SelectElement()
                                        aCategoryList[nIdx].sDisplayName);
     }
     unsigned long nStart = 0;
-    if (aEntries[nStart].sClassId == "sfxlo-PriorityHBox"
-        || aEntries[nStart].sClassId == "sfxlo-PriorityMergedHBox")
+    if (aEntries[nStart].sClassId == "sfxzh-PriorityHBox"
+        || aEntries[nStart].sClassId == "sfxzh-PriorityMergedHBox")
         nStart = 1;
 
     std::vector<NotebookbarEntries> aTempEntries;
     for (std::size_t nIdx = nStart; nIdx < aEntries.size(); nIdx++)
     {
-        if (aEntries[nIdx].sClassId == "svtlo-ManagedMenuButton")
+        if (aEntries[nIdx].sClassId == "svtzh-ManagedMenuButton")
         {
             aTempEntries.push_back(aEntries[nIdx]);
             std::vector<NotebookbarEntries> aGtkEntries;

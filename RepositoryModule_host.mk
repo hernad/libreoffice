@@ -61,7 +61,7 @@ $(eval $(call gb_Module_add_moduledirs,libreoffice,\
 	formula \
 	$(call gb_Helper_optional,DESKTOP,fpicker) \
 	framework \
-	$(call gb_Helper_optional,DESKTOP,helpcompiler) \
+	$(call gb_Helper_optional,HELP,helpcompiler) \
 	$(call gb_Helper_optional,HELP,helpcontent2) \
 	hwpfilter \
 	i18nlangtag \
@@ -152,13 +152,13 @@ $(eval $(call gb_Module_add_moduledirs,libreoffice,\
 	winaccessibility \
 	wizards \
 	writerfilter \
-	writerperfect \
+	$(call gb_Helper_optional,WPFT,writerperfect) \
 	xmerge \
-	$(call gb_Helper_optional,DESKTOP,xmlhelp) \
+	$(call gb_Helper_optional,HELP,xmlhelp) \
 	xmloff \
 	xmlreader \
 	xmlscript \
-	xmlsecurity \
+	$(if $(ENABLE_NSS),xmlsecurity) \
 ))
 
 # Especially when building everything with symbols, the linking of the largest

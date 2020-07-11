@@ -76,6 +76,10 @@ struct CryptoImpl
         EVP_CIPHER_CTX_set_padding(mpContext.get(), 0);
     }
 
+#pragma warning( push )
+#pragma warning( disable : 4701 )
+#pragma warning( disable : 4703 )
+
     void setupCryptoHashContext(std::vector<sal_uInt8>& rKey, CryptoHashType eType)
     {
         mpHmacContext.reset(new HMAC_CTX);
@@ -92,6 +96,8 @@ struct CryptoImpl
         }
         HMAC_Init(mpHmacContext.get(), rKey.data(), rKey.size(), aEvpMd);
     }
+
+#pragma warning( pop )
 
     ~CryptoImpl()
     {

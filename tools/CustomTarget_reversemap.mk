@@ -14,9 +14,9 @@ $(call gb_CustomTarget_get_target,tools/string) : \
 $(call gb_CustomTarget_get_workdir,tools/string)/reversemap.cxx : \
 		$(call gb_Executable_get_runtime_dependencies,bestreversemap) \
 		| $(call gb_CustomTarget_get_workdir,tools/string)/.dir
-	$(call gb_Output_announce,$(subst $(WORKDIR)/,,$@),$(true),BRM,1)
-	$(call gb_Trace_StartRange,$(subst $(WORKDIR)/,,$@),BRM)
+	$(call gb_Output_announce,$(subst $(WORKDIR)/,,$@),$(true),BestRevMap,1)
+	$(call gb_Trace_StartRange,$(subst $(WORKDIR)/,,$@),BestRevMap)
 	$(call gb_Helper_execute,bestreversemap > $@)
-	$(call gb_Trace_EndRange,$(subst $(WORKDIR)/,,$@),BRM)
+	$(call gb_Trace_EndRange,$(subst $(WORKDIR)/,,$@),BestRevMap)
 
 # vim: set noet sw=4 ts=4:

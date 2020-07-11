@@ -341,7 +341,18 @@ define gb_LinkTarget__use_zlib
 $(call gb_LinkTarget_add_defs,$(1),\
 	-DSYSTEM_ZLIB \
 )
+
+ifeq ($(OS),WNT)
+$(call gb_LinkTarget_set_include,$(1),\
+    $$(INCLUDE) \
+	$(ZLIB_CFLAGS) \
+)
+$(call gb_LinkTarget_add_libs,$(1),$(ZLIB_LIBS))
+
+else
 $(call gb_LinkTarget_add_libs,$(1),-lz)
+
+endif
 
 endef
 
@@ -389,6 +400,11 @@ endif # SYSTEM_ZLIB
 ifneq ($(SYSTEM_LIBJPEG),)
 
 define gb_LinkTarget__use_libjpeg
+
+$(call gb_LinkTarget_set_include,$(1),\
+    $$(INCLUDE) \
+	$(LIBJPEG_CFLAGS) \
+)
 $(call gb_LinkTarget_add_libs,$(1),$(LIBJPEG_LIBS))
 $(call gb_LinkTarget_set_ldflags,$(1),\
 	$$(filter-out -L/usr/lib/jvm%,$$(T_LDFLAGS)) \
@@ -3037,17 +3053,19 @@ ifneq ($(SYSTEM_POSTGRESQL),)
 define gb_LinkTarget__use_postgresql
 
 $(call gb_LinkTarget_set_include,$(1),\
-	$(POSTGRESQL_INC) \
+	$(POSTGRESQL_CFLAGS) \
 	$$(INCLUDE) \
 )
 
+ifeq ($(OS),WNT)
+$(call gb_LinkTarget_add_libs,$(1),$(POSTGRESQL_LIBS))
+
+else
 $(call gb_LinkTarget_add_libs,$(1),\
 	-lpq \
 )
 
-$(call gb_LinkTarget_add_ldflags,$(1),\
-	$(POSTGRESQL_LIB) \
-)
+endif
 
 endef
 

@@ -20,6 +20,7 @@ $(eval $(call gb_StaticLibrary_set_include,poppler,\
 	-I$(WORKDIR)/UnpackedTarball/poppler/fofi \
 	-I$(WORKDIR)/UnpackedTarball/poppler/goo \
 	-I$(WORKDIR)/UnpackedTarball/poppler/poppler \
+	$(LIBJPEG_CFLAGS) \
 	$$(INCLUDE) \
 ))
 

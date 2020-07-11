@@ -29,7 +29,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <child>
-                  <object class="sfxlo-EmojiView" id="emoji_view">
+                  <object class="sfxzh-EmojiView" id="emoji_view">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="margin">0</property>

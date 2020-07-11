@@ -32,7 +32,7 @@
 #include <svl/inettype.hxx>
 #include <unotools/pathoptions.hxx>
 
-#if HAVE_FEATURE_DESKTOP
+#if HAVE_FEATURE_HELP
 #include <helpcompiler/compilehelp.hxx>
 #include <helpcompiler/HelpIndexer.hxx>
 #endif
@@ -357,7 +357,7 @@ void BackendImpl::implProcessHelp(
             data.dataUrl = xPackage->getURL();
             if (!package->extensionContainsCompiledHelp())
             {
-#if HAVE_FEATURE_DESKTOP
+#if HAVE_FEATURE_HELP
                 const OUString sHelpFolder = createFolder(xCmdEnv);
                 data.dataUrl = sHelpFolder;
 

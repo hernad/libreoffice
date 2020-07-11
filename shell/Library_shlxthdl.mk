@@ -11,6 +11,7 @@ $(eval $(call gb_Library_Library,shlxthdl))
 
 $(eval $(call gb_Library_set_include,shlxthdl,\
 	-I$(SRCDIR)/shell/inc \
+	$(ZLIB_CFLAGS) \
 	$$(INCLUDE) \
 ))
 
@@ -24,6 +25,14 @@ $(eval $(call gb_Library_use_externals,shlxthdl,\
 	expat \
 	zlib \
 ))
+
+ifneq ($(SYSTEM_ZLIB),)
+    $(call gb_LinkTarget_add_libs,$(1),$(ZLIB_LIBS))
+endif
+
+ifneq ($(SYSTEM_LIBPNG),)
+    $(call gb_LinkTarget_add_libs,$(1),$(LIBPNG_LIBS))
+endif
 
 $(eval $(call gb_Library_use_system_win32_libs,shlxthdl,\
 	advapi32 \

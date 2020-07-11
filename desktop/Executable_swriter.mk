@@ -7,24 +7,24 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #
 
-$(eval $(call gb_Executable_Executable,swriter))
+$(eval $(call gb_Executable_Executable,zwriter))
 
-$(eval $(call gb_Executable_set_targettype_gui,swriter,YES))
+$(eval $(call gb_Executable_set_targettype_gui,zwriter,YES))
 
-$(eval $(call gb_Executable_add_ldflags,swriter,\
+$(eval $(call gb_Executable_add_ldflags,zwriter,\
     /ENTRY:wWinMainCRTStartup \
 ))
 
-$(eval $(call gb_Executable_use_static_libraries,swriter,\
+$(eval $(call gb_Executable_use_static_libraries,zwriter,\
     winlauncher \
 ))
 
-$(eval $(call gb_Executable_add_exception_objects,swriter,\
+$(eval $(call gb_Executable_add_exception_objects,zwriter,\
     desktop/win32/source/applauncher/swriter \
 ))
 
-$(eval $(call gb_Executable_add_nativeres,swriter,swriter/launcher))
+$(eval $(call gb_Executable_add_nativeres,zwriter,swriter/launcher))
 
-$(eval $(call gb_Executable_add_default_nativeres,swriter,$(PRODUCTNAME) Writer))
+$(eval $(call gb_Executable_add_default_nativeres,zwriter,$(PRODUCTNAME) Writer))
 
 # vim: set ts=4 sw=4 et:

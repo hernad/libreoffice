@@ -6033,7 +6033,7 @@ static int lo_initialize(LibreOfficeKit* pThis, const char* pAppPath, const char
                 Application::ReleaseSolarMutex();
             }
 
-            setLanguageAndLocale("en-US");
+            setLanguageAndLocale("bs");
         }
 
         if (eStage != PRE_INIT)

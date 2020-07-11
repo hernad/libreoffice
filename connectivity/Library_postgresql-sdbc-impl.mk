@@ -64,6 +64,15 @@ $(eval $(call gb_Library_add_libs,postgresql-sdbc-impl,\
 ))
 
 endif
+
+else # SYSTEM_POSTGRESQL=TRUE
+$(call gb_LinkTarget_add_libs,postgresql-sdbc-impl,$(POSTGRESQL_LIBS))
+
+$(call gb_LinkTarget_set_include,postgresql-sdbc-impl,\
+	$(POSTGRESQL_CFLAGS) \
+	$$(INCLUDE) \
+)
+
 endif
 
 $(eval $(call gb_Library_set_componentfile,postgresql-sdbc-impl,connectivity/source/drivers/postgresql/postgresql-sdbc-impl))
