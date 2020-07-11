@@ -1388,7 +1388,6 @@ SwTwips SwFlowFrame::CalcUpperSpace( const SwBorderAttrs *pAttrs,
                                    const SwFrame* pPr,
                                    const bool _bConsiderGrid ) const
 {
-
     const SwFrame* pPrevFrame = GetPrevFrameForUpperSpaceCalc_( pPr );
 
     std::unique_ptr<SwBorderAttrAccess> pAccess;
@@ -1420,8 +1419,25 @@ SwTwips SwFlowFrame::CalcUpperSpace( const SwBorderAttrs *pAttrs,
         if( pPrevFrame )
         {
             const bool bUseFormerLineSpacing = rIDSA.get(DocumentSettingId::OLD_LINE_SPACING);
-            const bool bContextualSpacing = pAttrs->GetULSpace().GetContext()
-                                         && lcl_getContextualSpacing(pPrevFrame)
+            const bool bContextualSpacingThis = pAttrs->GetULSpace().GetContext();
+            const bool bContextualSpacingPrev = lcl_getContextualSpacing(pPrevFrame);
+
+            const bool bContextualSpacing = bContextualSpacingThis
+                                         && bContextualSpacingPrev
+                                         && lcl_IdenticalStyles(pPrevFrame, &m_rThis);
+
+            // tdf#125893 always ignore own top margin setting of the actual paragraph
+            // with contextual spacing, if the previous paragraph is identical
+            const bool bHalfContextualSpacing = !bContextualSpacing
+                                         && bContextualSpacingThis
+                                         && !bContextualSpacingPrev
+                                         && lcl_IdenticalStyles(pPrevFrame, &m_rThis);
+
+            // tdf#134463 always ignore own bottom margin setting of the previous paragraph
+            // with contextual spacing, if the actual paragraph is identical
+            const bool bHalfContextualSpacingPrev = !bContextualSpacing
+                                         && !bContextualSpacingThis
+                                         && bContextualSpacingPrev
                                          && lcl_IdenticalStyles(pPrevFrame, &m_rThis);
 
             // i#11860 - use new method to determine needed spacing
@@ -1435,6 +1451,7 @@ SwTwips SwFlowFrame::CalcUpperSpace( const SwBorderAttrs *pAttrs,
                                    bPrevLineSpacingPorportional );
             if( rIDSA.get(DocumentSettingId::PARA_SPACE_MAX) )
             {
+                // FIXME: apply bHalfContextualSpacing for better portability?
                 nUpper = bContextualSpacing ? 0 : nPrevLowerSpace + pAttrs->GetULSpace().GetUpper();
                 SwTwips nAdd = nPrevLineSpacing;
                 // i#11859 - consideration of the line spacing
@@ -1478,8 +1495,10 @@ SwTwips SwFlowFrame::CalcUpperSpace( const SwBorderAttrs *pAttrs,
             }
             else
             {
-                nUpper = bContextualSpacing ? 0 : std::max(static_cast<long>(nPrevLowerSpace),
-                                                           static_cast<long>(pAttrs->GetULSpace().GetUpper()) );
+                nUpper = bContextualSpacing ? 0 : std::max(
+                                bHalfContextualSpacingPrev ? 0 : static_cast<long>(nPrevLowerSpace),
+                                bHalfContextualSpacing     ? 0 : static_cast<long>(pAttrs->GetULSpace().GetUpper()) );
+
                 // i#11859 - consideration of the line spacing
                 //      for the upper spacing of a text frame
                 if ( bUseFormerLineSpacing )
@@ -1691,6 +1710,13 @@ SwTwips SwFlowFrame::CalcLowerSpace( const SwBorderAttrs* _pAttrs ) const
     {
         nLowerSpace += CalcAddLowerSpaceAsLastInTableCell( _pAttrs );
     }
+
+    // tdf#128195 Consider para spacing below last paragraph in header
+    bool bHasSpacingBelowPara = m_rThis.GetUpper()->GetFormat()->getIDocumentSettingAccess().get(
+        DocumentSettingId::HEADER_SPACING_BELOW_LAST_PARA);
+    if (bHasSpacingBelowPara && !m_rThis.IsInFly() && m_rThis.FindFooterOrHeader() && !GetFollow()
+        && !m_rThis.GetIndNext())
+        nLowerSpace += _pAttrs->GetULSpace().GetLower() + _pAttrs->CalcLineSpacing();
 
     return nLowerSpace;
 }

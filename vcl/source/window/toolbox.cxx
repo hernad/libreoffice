@@ -189,10 +189,10 @@ void ToolBox::ImplCalcBorder( WindowAlign eAlign, long& rLeft, long& rTop,
     ImplDockingWindowWrapper *pWrapper = ImplGetDockingManager()->GetDockingWindowWrapper( this );
 
     // reserve DragArea only for dockable toolbars
-    int    dragwidth = ( pWrapper && !pWrapper->IsLocked() ) ? ImplGetDragWidth() : 0;
+    int dragwidth = ( pWrapper && !pWrapper->IsLocked() ) ? ImplGetDragWidth() : 0;
 
-    // no shadow border for dockable toolbars
-    int    borderwidth = pWrapper ? 0: 2;
+    // no shadow border for dockable toolbars and toolbars with WB_NOSHADOW bit set, e.g. Calc's formulabar
+    int borderwidth = ( pWrapper || mnWinStyle & WB_NOSHADOW ) ? 0 : 2;
 
     if ( eAlign == WindowAlign::Top )
     {
@@ -551,8 +551,10 @@ void ToolBox::ImplDrawBorder(vcl::RenderContext& rRenderContext)
 
     ImplDockingWindowWrapper* pWrapper = ImplGetDockingManager()->GetDockingWindowWrapper(this);
 
-    // draw borders for ordinary toolbars only (not dockable)
-    if( pWrapper )
+    // draw borders for ordinary toolbars only (not dockable), do not draw borders for toolbars with WB_NOSHADOW bit set,
+    // e.g. Calc's formulabar
+
+    if( pWrapper || mnWinStyle & WB_NOSHADOW )
         return;
 
     if (meAlign == WindowAlign::Bottom)
@@ -1352,12 +1354,14 @@ static void ImplAddButtonBorder( long &rWidth, long& rHeight, bool bNativeButton
 
 bool ToolBox::ImplCalcItem()
 {
-
     // recalc required ?
     if ( !mbCalc )
         return false;
 
     ImplDisableFlatButtons();
+
+    OutputDevice *pDefault = Application::GetDefaultDevice();
+    float fScaleFactor = pDefault ? pDefault->GetDPIScaleFactor() : 1.0;
 
     long            nDefWidth;
     long            nDefHeight;
@@ -1365,7 +1369,7 @@ bool ToolBox::ImplCalcItem()
     long            nMaxHeight = 0;
     long            nMinWidth   = 6;
     long            nMinHeight  = 6;
-    long            nDropDownArrowWidth = TB_DROPDOWNARROWWIDTH;
+    long            nDropDownArrowWidth = TB_DROPDOWNARROWWIDTH * fScaleFactor;
 #ifdef IOS
     nDropDownArrowWidth *= 3;
 #endif
@@ -2387,26 +2391,27 @@ static void ImplDrawDropdownArrow(vcl::RenderContext& rRenderContext, const tool
             rRenderContext.SetFillColor(COL_BLACK);
     }
 
-    float fScaleFactor = rRenderContext.GetDPIScaleFactor();
-
     tools::Polygon aPoly(4);
 
-    long width = round(rDropDownRect.getHeight()/5.5) * fScaleFactor; // scale triangle depending on theme/toolbar height with 7 for gtk, 5 for gen
-    long height = round(rDropDownRect.getHeight()/9.5) * fScaleFactor; // 4 for gtk, 3 for gen
-    if (width < 4) width = 4;
-    if (height < 3) height = 3;
+    // the assumption is, that the width always specifies the size of the expected arrow.
+    const long nMargin = round(2 * rRenderContext.GetDPIScaleFactor());
+    const long nSize = rDropDownRect.getWidth() - 2 * nMargin;
+    const long nHalfSize = (nSize + 1) / 2;
+    const long x = rDropDownRect.Left() + nMargin + (bRotate ? (rDropDownRect.getWidth() - nHalfSize) / 2 : 0);
+    const long y = rDropDownRect.Top() + nMargin + (rDropDownRect.getHeight() - (bRotate ? nSize : nHalfSize)) / 2;
 
-    long x = rDropDownRect.Left() + (rDropDownRect.getWidth() - width)/2;
-    long y = rDropDownRect.Top() + (rDropDownRect.getHeight() - height)/2;
-
-    long halfwidth = (width+1)>>1;
     aPoly.SetPoint(Point(x, y), 0);
-    aPoly.SetPoint(Point(x + halfwidth, y + height), 1);
-    aPoly.SetPoint(Point(x + halfwidth*2, y), 2);
+    if (bRotate) // >
+    {
+        aPoly.SetPoint(Point(x, y + nSize), 1);
+        aPoly.SetPoint(Point(x + nHalfSize, y + nHalfSize), 2);
+    }
+    else // v
+    {
+        aPoly.SetPoint(Point(x + nHalfSize, y + nHalfSize), 1);
+        aPoly.SetPoint(Point(x + nSize, y), 2);
+    }
     aPoly.SetPoint(Point(x, y), 3);
-
-    if (bRotate) // TESTME: harder ...
-        aPoly.Rotate(Point(x,y+height/2),2700);
 
     auto aaflags = rRenderContext.GetAntialiasing();
     rRenderContext.SetAntialiasing(AntialiasingFlags::EnableB2dDraw);
@@ -2640,13 +2645,11 @@ void ToolBox::ImplDrawItem(vcl::RenderContext& rRenderContext, ImplToolItems::si
     long    nBtnWidth = aBtnSize.Width()-SMALLBUTTON_HSIZE;
     long    nBtnHeight = aBtnSize.Height()-SMALLBUTTON_VSIZE;
     Size    aImageSize;
-    Size    aTxtSize;
 
-    if ( bText )
-    {
-        aTxtSize.setWidth( GetCtrlTextWidth( pItem->maText ) );
-        aTxtSize.setHeight( GetTextHeight() );
-    }
+    const bool bDropDown = (pItem->mnBits & ToolBoxItemBits::DROPDOWN) == ToolBoxItemBits::DROPDOWN;
+    tools::Rectangle aDropDownRect;
+    if (bDropDown)
+        aDropDownRect = pItem->GetDropDownRect(mbHorz);
 
     if ( bImage )
     {
@@ -2676,7 +2679,7 @@ void ToolBox::ImplDrawItem(vcl::RenderContext& rRenderContext, ImplToolItems::si
         }
         else
         {
-            nImageOffX += (nBtnWidth-aImageSize.Width())/2;
+            nImageOffX += (nBtnWidth-(bDropDown ? aDropDownRect.getWidth() : 0)+SMALLBUTTON_OFF_NORMAL_X-aImageSize.Width())/2;
             if ( meTextPosition == ToolBoxTextPosition::Right )
                 nImageOffY += (nBtnHeight-aImageSize.Height())/2;
         }
@@ -2701,6 +2704,7 @@ void ToolBox::ImplDrawItem(vcl::RenderContext& rRenderContext, ImplToolItems::si
     bool bRotate = false;
     if ( bText )
     {
+        const Size aTxtSize(GetCtrlTextWidth(pItem->maText), GetTextHeight());
         long nTextOffX = nOffX;
         long nTextOffY = nOffY;
 
@@ -2738,7 +2742,7 @@ void ToolBox::ImplDrawItem(vcl::RenderContext& rRenderContext, ImplToolItems::si
             else
             {
                 // center horizontally
-                nTextOffX += (nBtnWidth-aTxtSize.Width() - TB_IMAGETEXTOFFSET)/2;
+                nTextOffX += (nBtnWidth-(bDropDown ? aDropDownRect.getWidth() : 0)+SMALLBUTTON_OFF_NORMAL_X-aTxtSize.Width() - TB_IMAGETEXTOFFSET)/2;
                 // set vertical position
                 nTextOffY += nBtnHeight - aTxtSize.Height();
             }
@@ -2764,9 +2768,8 @@ void ToolBox::ImplDrawItem(vcl::RenderContext& rRenderContext, ImplToolItems::si
     }
 
     // paint optional drop down arrow
-    if ( pItem->mnBits & ToolBoxItemBits::DROPDOWN )
+    if (bDropDown)
     {
-        tools::Rectangle aDropDownRect( pItem->GetDropDownRect( mbHorz ) );
         bool bSetColor = true;
         if ( !pItem->mbEnabled || !IsEnabled() )
         {

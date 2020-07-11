@@ -66,7 +66,7 @@ end if
 set found_ooos_all to ""
 -- command might return an error if spotlight is disabled completely
 try
-	set found_ooos_all to (do shell script "mdfind \"kMDItemContentType == 'com.apple.application-bundle' && kMDItemDisplayName == '[PRODUCTNAME]*' && kMDItemDisplayName != '[FULLAPPPRODUCTNAME].app'\"")
+	set found_ooos_all to (do shell script "mdfind \"kMDItemContentType == 'com.apple.application-bundle' && kMDItemDisplayName == '[PRODUCTNAME]'\"")
 end try
 set found_ooos_all to found_ooos_all & "
 " & chooseMyOwn
@@ -126,7 +126,7 @@ end if
 
 -- now only check whether the path is really from [PRODUCTNAME]
 try
-	do shell script "grep '<string>[PRODUCTNAME] [PRODUCTVERSION]'   " & quoted form of (choice as string) & "/Contents/Info.plist"
+	do shell script "mdls --raw --name kMDItemDisplayName --name kMDItemVersion " & quoted form of (choice as string) & " | xargs -0 | fgrep '[PRODUCTNAME] [PRODUCTVERSION]'"
 on error
 	display dialog (choice as string) & appInvalid buttons {InstallLabel} default button 1 with icon 0
 	return 3 --wrong target-directory
@@ -146,10 +146,11 @@ try
 	(* A start of unchanged LO must take place so Gatekeeper will verify
 	   the signature prior to installing the languagepack
 	*)
-	if application choice is not running then
+	set apppath to POSIX path of choice
+	if application apppath is not running then
 		-- this will flash the startcenter once...
-		tell application choice to activate
-		tell application choice to quit
+		tell application apppath to activate
+		tell application apppath to quit
 	end if
 	do shell script tarCommand
 	

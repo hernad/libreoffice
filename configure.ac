@@ -9,7 +9,7 @@ dnl in order to create a configure script.
 # several non-alphanumeric characters, those are split off and used only for the
 # ABOUTBOXPRODUCTVERSIONSUFFIX in openoffice.lst. Why that is necessary, no idea.
 
-AC_INIT([LibreOffice],[7.0.0.0.beta1+],[],[],[http://documentfoundation.org/])
+AC_INIT([LibreOffice],[7.0.0.1.0+],[],[],[http://documentfoundation.org/])
 
 dnl libnumbertext needs autoconf 2.68, but that can pick up autoconf268 just fine if it is installed
 dnl whereas aclocal (as run by autogen.sh) insists on using autoconf and fails hard
@@ -1481,6 +1481,11 @@ AC_ARG_WITH(product-name,
         [Define the product name. Default is AC_PACKAGE_NAME.]),
 ,with_product_name=$PRODUCTNAME)
 
+AC_ARG_WITH(product-flavor,
+    AS_HELP_STRING([--with-product-flavor='My Own Personal Flavor'],
+        [Define the product flavor. Default is Personal.]),
+,with_product_flavor=Personal)
+
 AC_ARG_WITH(package-version,
     AS_HELP_STRING([--with-package-version='3.1.4.5'],
         [Define the package version. Default is AC_PACKAGE_VERSION. Use only if you distribute an own build for macOS.]),
@@ -2342,6 +2347,15 @@ else
 fi
 AC_SUBST(ENABLE_RELEASE_BUILD)
 AC_SUBST(GET_TASK_ALLOW_ENTITLEMENT)
+
+AC_MSG_CHECKING([for product flavor])
+if test "$with_product_flavor" = "no"; then
+    PRODUCTFLAVOR=""
+elif test -n "$with_product_flavor"; then
+    PRODUCTFLAVOR="$with_product_flavor"
+fi
+AC_MSG_RESULT([$PRODUCTFLAVOR])
+AC_DEFINE_UNQUOTED([PRODUCTFLAVOR], ["$PRODUCTFLAVOR"])
 
 dnl ===================================================================
 dnl Test whether to sign Windows Build
@@ -10666,43 +10680,22 @@ R=""
 if test "$USING_X11" != TRUE; then
     enable_gtk3=no
 fi
-GTK3_CFLAGS=""
-GTK3_LIBS=""
+
 ENABLE_GTK3=""
 if test "x$enable_gtk3" = "xyes"; then
-    if test "$with_system_cairo" = no; then
-        AC_MSG_ERROR([System cairo required for gtk3 support, do not combine --enable-gtk3 with --without-system-cairo])
-    fi
-    : ${with_system_cairo:=yes}
-    PKG_CHECK_MODULES(GTK3, gtk+-3.0 >= 3.18 gtk+-unix-print-3.0 gmodule-no-export-2.0 glib-2.0 >= 2.38 cairo, ENABLE_GTK3="TRUE", ENABLE_GTK3="")
-    if test "x$ENABLE_GTK3" = "xTRUE"; then
-        AC_DEFINE(ENABLE_GTK3)
-        R="gtk3"
-    else
-        AC_MSG_ERROR([gtk3 or dependent libraries of the correct versions, not found])
-    fi
-    GTK3_CFLAGS=$(printf '%s' "$GTK3_CFLAGS" | sed -e "s/-I/${ISYSTEM?}/g")
-    FilterLibs "${GTK3_LIBS}"
-    GTK3_LIBS="${filteredlibs}"
-
-    dnl We require egl only for the gtk3 plugin. Otherwise we use glx.
-    if test "$with_system_epoxy" != "yes"; then
-        AC_CHECK_LIB(EGL, eglMakeCurrent, [:], AC_MSG_ERROR([libEGL required.]))
-        AC_CHECK_HEADER(EGL/eglplatform.h, [],
-                        [AC_MSG_ERROR(EGL headers not found. install mesa-libEGL-devel)], [])
-    fi
+    ENABLE_GTK3="TRUE"
+    AC_DEFINE(ENABLE_GTK3)
+    R="$R gtk3"
 fi
-AC_SUBST(GTK3_LIBS)
-AC_SUBST(GTK3_CFLAGS)
 AC_SUBST(ENABLE_GTK3)
 
-if test "$enable_introspection" = yes; then
-    if test "$ENABLE_GTK3" = TRUE; then
-        GOBJECT_INTROSPECTION_REQUIRE(INTROSPECTION_REQUIRED_VERSION)
-    else
-        AC_MSG_ERROR([--enable-introspection requires --enable-gtk3])
-    fi
+ENABLE_GTK3_KDE5=""
+if test "x$enable_gtk3_kde5" = "xyes"; then
+    ENABLE_GTK3_KDE5="TRUE"
+    AC_DEFINE(ENABLE_GTK3_KDE5)
+    R="$R gtk3_kde5"
 fi
+AC_SUBST(ENABLE_GTK3_KDE5)
 
 ENABLE_QT5=""
 if test "x$enable_qt5" = "xyes"; then
@@ -10720,13 +10713,35 @@ if test "x$enable_kf5" = "xyes"; then
 fi
 AC_SUBST(ENABLE_KF5)
 
-ENABLE_GTK3_KDE5=""
-if test "x$enable_gtk3_kde5" = "xyes"; then
-    ENABLE_GTK3_KDE5="TRUE"
-    AC_DEFINE(ENABLE_GTK3_KDE5)
-    R="$R gtk3_kde5"
+GTK3_CFLAGS=""
+GTK3_LIBS=""
+if test "x$enable_gtk3" = "xyes" -o "x$enable_gtk3_kde5" = "xyes"; then
+    if test "$with_system_cairo" = no; then
+        AC_MSG_ERROR([System cairo required for gtk3 support, do not combine --enable-gtk3 with --without-system-cairo])
+    fi
+    : ${with_system_cairo:=yes}
+    PKG_CHECK_MODULES(GTK3, gtk+-3.0 >= 3.18 gtk+-unix-print-3.0 gmodule-no-export-2.0 glib-2.0 >= 2.38 cairo)
+    GTK3_CFLAGS=$(printf '%s' "$GTK3_CFLAGS" | sed -e "s/-I/${ISYSTEM?}/g")
+    FilterLibs "${GTK3_LIBS}"
+    GTK3_LIBS="${filteredlibs}"
+
+    dnl We require egl only for the gtk3 plugin. Otherwise we use glx.
+    if test "$with_system_epoxy" != "yes"; then
+        AC_CHECK_LIB(EGL, eglMakeCurrent, [:], AC_MSG_ERROR([libEGL required.]))
+        AC_CHECK_HEADER(EGL/eglplatform.h, [],
+                        [AC_MSG_ERROR(EGL headers not found. install mesa-libEGL-devel)], [])
+    fi
 fi
-AC_SUBST(ENABLE_GTK3_KDE5)
+AC_SUBST(GTK3_LIBS)
+AC_SUBST(GTK3_CFLAGS)
+
+if test "$enable_introspection" = yes; then
+    if test "$ENABLE_GTK3" = "TRUE" -o "$ENABLE_GTK3_KDE5" = "TRUE"; then
+        GOBJECT_INTROSPECTION_REQUIRE(INTROSPECTION_REQUIRED_VERSION)
+    else
+        AC_MSG_ERROR([--enable-introspection requires --enable-gtk3])
+    fi
+fi
 
 if test "$_os" = "WINNT"; then
     R="$R win"
@@ -10859,7 +10874,7 @@ AC_SUBST(SYSTEM_BLUEZ)
 dnl ===================================================================
 dnl Check whether to enable GIO support
 dnl ===================================================================
-if test "$ENABLE_GTK3" = "TRUE"; then
+if test "$ENABLE_GTK3" = "TRUE" -o "$ENABLE_GTK3_KDE5" = "TRUE"; then
     AC_MSG_CHECKING([whether to enable GIO support])
     if test "$_os" != "WINNT" -a "$_os" != "Darwin" -a "$enable_gio" = "yes"; then
         dnl Need at least 2.26 for the dbus support.
@@ -12774,7 +12789,7 @@ dnl ===================================================================
 AC_MSG_CHECKING([for alternative branding images directory])
 # initialize mapped arrays
 BRAND_INTRO_IMAGES="intro.png intro-highres.png"
-brand_files="$BRAND_INTRO_IMAGES logo.svg logo_inverted.svg about.svg"
+brand_files="$BRAND_INTRO_IMAGES logo.svg logo_inverted.svg logo_flavor.svg about.svg"
 
 if test -z "$with_branding" -o "$with_branding" = "no"; then
     AC_MSG_RESULT([none])

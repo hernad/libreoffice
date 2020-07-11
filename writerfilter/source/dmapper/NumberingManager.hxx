@@ -51,7 +51,7 @@ class ListLevel : public PropertyMap
     OUString                               m_sBulletChar;
     css::awt::Size                         m_aGraphicSize;
     css::uno::Reference<css::awt::XBitmap> m_xGraphicBitmap;
-    sal_Int32                                     m_nTabstop;
+    std::optional<sal_Int32>               m_nTabstop;
     tools::SvRef< StyleSheetEntry >          m_pParaStyle;
     bool                                          m_outline;
     bool m_bHasValues = false;
@@ -65,7 +65,6 @@ public:
         ,m_nStartOverride(-1)
         ,m_nNFC(-1)
         ,m_nXChFollow(SvxNumberFormat::LISTTAB)
-        ,m_nTabstop( 0 )
         ,m_outline(false)
         {}
 
@@ -153,7 +152,7 @@ public:
 
     sal_Int16             Size( ) { return sal_Int16( m_aLevels.size( ) ); };
     ListLevel::Pointer    GetLevel( sal_uInt16 nLvl );
-    void                  AddLevel( );
+    void                  AddLevel( sal_uInt16 nLvl );
 
     const ListLevel::Pointer&  GetCurrentLevel( ) const { return m_pCurrentLevel; };
 
@@ -181,6 +180,9 @@ private:
     /// mapped list style name
     OUString m_StyleName;
 
+    /// not custom outline parent levels
+    sal_Int16 m_nDefaultParentLevels;
+
 public:
     typedef tools::SvRef< ListDef > Pointer;
 
@@ -194,6 +196,8 @@ public:
     // Mapping functions
     OUString GetStyleName() const { return m_StyleName; };
     OUString GetStyleName(sal_Int32 nId, css::uno::Reference<css::container::XNameContainer> const& xStyles);
+
+    sal_Int16 GetDefaultParentLevels() const { return m_nDefaultParentLevels; };
 
     css::uno::Sequence< css::uno::Sequence<css::beans::PropertyValue> > GetMergedPropertyValues();
 

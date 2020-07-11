@@ -236,7 +236,7 @@ ScTable::ScTable( ScDocument* pDoc, SCTAB nNewTab, const OUString& rNewName,
     aCodeName( rNewName ),
     nLinkRefreshDelay( 0 ),
     nLinkMode( ScLinkMode::NONE ),
-    aPageStyle( ScResId(STR_STYLENAME_STANDARD) ),
+    aPageStyle( ScResId(STR_STYLENAME_STANDARD_PAGE) ),
     nRepeatStartX( SCCOL_REPEAT_NONE ),
     nRepeatEndX( SCCOL_REPEAT_NONE ),
     nRepeatStartY( SCROW_REPEAT_NONE ),
@@ -464,6 +464,8 @@ bool ScTable::SetOptimalHeight(
 
     ScProgress* pProgress = GetProgressBar(nCount, GetWeightedCount(), pOuterProgress, pDocument);
 
+    mpRowHeights->enableTreeSearch(false);
+
     GetOptimalHeightsInColumn(rCxt, aCol, nStartRow, nEndRow, pProgress, nProgressStart);
 
     SetRowHeightRangeFunc aFunc(this, rCxt.getPPTY());
@@ -471,6 +473,8 @@ bool ScTable::SetOptimalHeight(
 
     if ( pProgress != pOuterProgress )
         delete pProgress;
+
+    mpRowHeights->enableTreeSearch(true);
 
     return bChanged;
 }

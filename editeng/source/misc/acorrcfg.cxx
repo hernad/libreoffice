@@ -109,9 +109,11 @@ Sequence<OUString>  SvxBaseAutoCorrCfg::GetPropertyNames()
         "ReplaceDoubleQuote",                   // 14
         "DoubleQuoteAtStart",                   // 15
         "DoubleQuoteAtEnd",                     // 16
-        "CorrectAccidentalCapsLock"             // 17
+        "CorrectAccidentalCapsLock",            // 17
+        "TransliterateRTL",                     // 18
+        "ChangeAngleQuotes"                     // 19
     };
-    const int nCount = 18;
+    const int nCount = 20;
     Sequence<OUString> aNames(nCount);
     OUString* pNames = aNames.getArray();
     for(int i = 0; i < nCount; i++)
@@ -214,12 +216,20 @@ void SvxBaseAutoCorrCfg::Load(bool bInit)
                     if(*o3tl::doAccess<bool>(pValues[nProp]))
                         nFlags |= ACFlags::CorrectCapsLock;
                 break;//"CorrectAccidentalCapsLock"
+                case 18:
+                    if(*o3tl::doAccess<bool>(pValues[nProp]))
+                        nFlags |= ACFlags::TransliterateRTL;
+                break;//"TransliterateRTL"
+                case 19:
+                    if(*o3tl::doAccess<bool>(pValues[nProp]))
+                        nFlags |= ACFlags::ChgAngleQuotes;
+                break;//"ChangeAngleQuotes"
             }
         }
     }
     if( nFlags != ACFlags::NONE )
         rParent.pAutoCorrect->SetAutoCorrFlag( nFlags );
-    rParent.pAutoCorrect->SetAutoCorrFlag( ( static_cast<ACFlags>(0x3fff) & ~nFlags ), false );
+    rParent.pAutoCorrect->SetAutoCorrFlag( ( static_cast<ACFlags>(0xffff) & ~nFlags ), false );
 }
 
 SvxBaseAutoCorrCfg::SvxBaseAutoCorrCfg(SvxAutoCorrCfg& rPar) :
@@ -265,8 +275,13 @@ void SvxBaseAutoCorrCfg::ImplCommit()
             // "DoubleQuoteAtStart"
          css::uno::Any(sal_Int32(rParent.pAutoCorrect->GetEndDoubleQuote())),
             // "DoubleQuoteAtEnd"
-        css::uno::Any(bool(nFlags & ACFlags::CorrectCapsLock))});
+         css::uno::Any(bool(nFlags & ACFlags::CorrectCapsLock)),
             // "CorrectAccidentalCapsLock"
+         css::uno::Any(bool(nFlags & ACFlags::TransliterateRTL)),
+            // "TransliterateRTL"
+        css::uno::Any(bool(nFlags & ACFlags::ChgAngleQuotes))});
+            // "ChangeAngleQuotes"
+
 }
 
 void SvxBaseAutoCorrCfg::Notify( const Sequence<OUString>& /* aPropertyNames */)
@@ -324,7 +339,7 @@ Sequence<OUString>  SvxSwAutoCorrCfg::GetPropertyNames()
         "Format/ByInput/ApplyNumbering/SpecialCharacter/Font",          //43
         "Format/ByInput/ApplyNumbering/SpecialCharacter/FontFamily",    //44
         "Format/ByInput/ApplyNumbering/SpecialCharacter/FontCharset",   //45
-        "Format/ByInput/ApplyNumbering/SpecialCharacter/FontPitch"      //46
+        "Format/ByInput/ApplyNumbering/SpecialCharacter/FontPitch",     //46
     };
     const int nCount = 47;
     Sequence<OUString> aNames(nCount);

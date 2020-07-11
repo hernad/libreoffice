@@ -63,7 +63,7 @@ const Bitmap& AlphaMask::ImplGetBitmap() const
 void AlphaMask::ImplSetBitmap( const Bitmap& rBitmap )
 {
     SAL_WARN_IF( 8 != rBitmap.GetBitCount(), "vcl.gdi", "Bitmap should be 8bpp, not " << rBitmap.GetBitCount() << "bpp" );
-    SAL_WARN_IF( !rBitmap.HasGreyPalette(), "vcl.gdi", "Bitmap isn't greyscale" );
+    SAL_WARN_IF( !rBitmap.HasGreyPalette8Bit(), "vcl.gdi", "Bitmap isn't greyscale" );
     *static_cast<Bitmap*>(this) = rBitmap;
 }
 
@@ -147,15 +147,18 @@ void AlphaMask::BlendWith(const Bitmap& rOther)
     {
         const long nHeight = std::min(pOtherAcc->Height(), pAcc->Height());
         const long nWidth = std::min(pOtherAcc->Width(), pAcc->Width());
-        for (long x = 0; x < nWidth; ++x)
+        for (long y = 0; y < nHeight; ++y)
         {
-            for (long y = 0; y < nHeight; ++y)
+            Scanline scanline = pAcc->GetScanline( y );
+            ConstScanline otherScanline = pOtherAcc->GetScanline( y );
+            for (long x = 0; x < nWidth; ++x)
             {
                 // Use sal_uInt16 for following multiplication
-                const sal_uInt16 nGrey1 = pOtherAcc->GetPixelIndex(y, x);
-                const sal_uInt16 nGrey2 = pAcc->GetPixelIndex(y, x);
-                const double fGrey = std::round(nGrey1 + nGrey2 - nGrey1 * nGrey2 / 255.0);
-                pAcc->SetPixelIndex(y, x, static_cast<sal_uInt8>(fGrey));
+                const sal_uInt16 nGrey1 = *scanline;
+                const sal_uInt16 nGrey2 = *otherScanline;
+                *scanline = static_cast<sal_uInt8>(nGrey1 + nGrey2 - nGrey1 * nGrey2 / 255);
+                ++scanline;
+                ++otherScanline;
             }
         }
     }

@@ -36,6 +36,8 @@ bool isVCLSkiaEnabled() { return false; }
 #include <SkCanvas.h>
 #include <SkPaint.h>
 #include <SkSurface.h>
+#include <SkGraphics.h>
+#include <skia_compiler.hxx>
 
 #ifdef DBG_UTIL
 #include <fstream>
@@ -109,7 +111,7 @@ static bool isVulkanBlacklisted(const VkPhysicalDeviceProperties& props)
     CrashReporter::addKeyValue("VulkanDeviceName", OUString::createFromAscii(props.deviceName),
                                CrashReporter::Write);
 
-    SvFileStream logFile(getCacheFolder() + "/skia.log", StreamMode::WRITE);
+    SvFileStream logFile(getCacheFolder() + "/skia.log", StreamMode::WRITE | StreamMode::TRUNC);
     writeToLog(logFile, "RenderMethod", "vulkan");
     writeToLog(logFile, "Vendor", vendorIdStr);
     writeToLog(logFile, "Device", deviceIdStr);
@@ -131,18 +133,10 @@ static bool isVulkanBlacklisted(const VkPhysicalDeviceProperties& props)
 
 static void writeSkiaRasterInfo()
 {
-    SvFileStream logFile(getCacheFolder() + "/skia.log", StreamMode::WRITE);
+    SvFileStream logFile(getCacheFolder() + "/skia.log", StreamMode::WRITE | StreamMode::TRUNC);
     writeToLog(logFile, "RenderMethod", "raster");
     // Log compiler, Skia works best when compiled with Clang.
-#if defined __clang__
-    writeToLog(logFile, "Compiler", "Clang");
-#elif defined __GNUC__
-    writeToLog(logFile, "Compiler", "GCC");
-#elif defined _MSC_VER
-    writeToLog(logFile, "Compiler", "MSVC");
-#else
-    writeToLog(logFile, "Compiler", "?");
-#endif
+    writeToLog(logFile, "Compiler", skia_compiler_name());
 }
 
 static sk_app::VulkanWindowContext::SharedGrContext getTemporaryGrContext();
@@ -244,6 +238,7 @@ bool isVCLSkiaEnabled()
     if (bForceSkia && bSupportsVCLSkia)
     {
         bRet = true;
+        SkGraphics::Init();
         // don't actually block if blacklisted, but log it if enabled, and also get the vendor id
         checkDeviceBlacklisted(true);
     }
@@ -267,7 +262,10 @@ bool isVCLSkiaEnabled()
             bEnable = false;
 
         if (bEnable)
+        {
+            SkGraphics::Init();
             checkDeviceBlacklisted(); // switch to raster if driver is blacklisted
+        }
 
         bRet = bEnable;
     }

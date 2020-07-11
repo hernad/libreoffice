@@ -516,6 +516,8 @@ ImpPDFTabGeneralPage::ImpPDFTabGeneralPage(weld::Container* pPage, weld::DialogC
     , mxSlidesFt(m_xBuilder->weld_label("slides"))
     , mxSheetsFt(m_xBuilder->weld_label("selectedsheets"))
 {
+    if (!officecfg::Office::Common::Misc::ExperimentalMode::get())
+        mxCbPDFUA->set_visible(false);
 }
 
 ImpPDFTabGeneralPage::~ImpPDFTabGeneralPage()
@@ -1533,7 +1535,8 @@ IMPL_LINK_NOARG(ImpPDFTabSigningPage, ClickmaPbSignCertSelect, weld::Button&, vo
 
     // The use may provide a description while choosing a certificate.
     OUString aDescription;
-    maSignCertificate = xSigner->chooseCertificate(aDescription);
+    maSignCertificate = xSigner->selectSigningCertificateWithType(
+        security::CertificateKind::CertificateKind_X509, aDescription);
 
     if (!maSignCertificate.is())
         return;

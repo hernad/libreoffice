@@ -560,7 +560,6 @@ static void lcl_deleteAndResetTheLists( rtl::Reference<sax_fastparser::FastAttri
 
 void DocxAttributeOutput::PopulateFrameProperties(const SwFrameFormat* pFrameFormat, const Size& rSize)
 {
-
     sax_fastparser::FastAttributeList* attrList = FastSerializerHelper::createAttrList();
 
     awt::Point aPos(pFrameFormat->GetHoriOrient().GetPos(), pFrameFormat->GetVertOrient().GetPos());
@@ -571,23 +570,28 @@ void DocxAttributeOutput::PopulateFrameProperties(const SwFrameFormat* pFrameFor
     attrList->add( FSNS( XML_w, XML_x), OString::number(aPos.X));
     attrList->add( FSNS( XML_w, XML_y), OString::number(aPos.Y));
 
+    sal_Int16 nLeft = pFrameFormat->GetLRSpace().GetLeft();
+    sal_Int16 nRight = pFrameFormat->GetLRSpace().GetRight();
+    sal_Int16 nUpper = pFrameFormat->GetULSpace().GetUpper();
+    sal_Int16 nLower = pFrameFormat->GetULSpace().GetLower();
+
+    attrList->add(FSNS(XML_w, XML_hSpace), OString::number((nLeft + nRight) / 2));
+    attrList->add(FSNS(XML_w, XML_vSpace), OString::number((nUpper + nLower) / 2));
+
     OString relativeFromH = convertToOOXMLHoriOrientRel( pFrameFormat->GetHoriOrient().GetRelationOrient() );
     OString relativeFromV = convertToOOXMLVertOrientRel( pFrameFormat->GetVertOrient().GetRelationOrient() );
 
     switch (pFrameFormat->GetSurround().GetValue())
     {
     case css::text::WrapTextMode_NONE:
-        attrList->add( FSNS( XML_w, XML_wrap), "none");
-        break;
-    case css::text::WrapTextMode_THROUGH:
-        attrList->add( FSNS( XML_w, XML_wrap), "through");
-        break;
-    case css::text::WrapTextMode_PARALLEL:
         attrList->add( FSNS( XML_w, XML_wrap), "notBeside");
         break;
     case css::text::WrapTextMode_DYNAMIC:
+        attrList->add(FSNS(XML_w, XML_wrap), "auto");
+        break;
+    case css::text::WrapTextMode_PARALLEL:
     default:
-        attrList->add( FSNS( XML_w, XML_wrap), "auto");
+        attrList->add(FSNS(XML_w, XML_wrap), "around");
         break;
     }
     attrList->add( FSNS( XML_w, XML_vAnchor), relativeFromV );
@@ -5608,6 +5612,31 @@ void DocxAttributeOutput::WriteOLE( SwOLENode& rNode, const Size& rSize, const S
                                     FSNS( XML_r, XML_id ), sImageId.toUtf8(),
                                     FSNS( XML_o, XML_title ), "" );
 
+    //export wrap settings
+    if(rFlyFrameFormat && rFlyFrameFormat->GetAnchor().GetAnchorId() != RndStdIds::FLY_AS_CHAR)
+    {
+        const SwFormatSurround aWrap = rFlyFrameFormat->GetSurround();
+        bool bIsCountur = aWrap.IsContour();
+
+        if (aWrap.GetSurround() == text::WrapTextMode::WrapTextMode_NONE)
+            m_pSerializer->singleElementNS(XML_w10, XML_wrap, XML_type, "topAndBottom");
+        if (aWrap.GetSurround() == text::WrapTextMode::WrapTextMode_PARALLEL && !bIsCountur)
+            m_pSerializer->singleElementNS(XML_w10, XML_wrap, XML_type, "square");
+        if (aWrap.GetSurround() == text::WrapTextMode::WrapTextMode_PARALLEL && bIsCountur)
+            m_pSerializer->singleElementNS(XML_w10, XML_wrap, XML_type, "tight");
+        if (aWrap.GetSurround() == text::WrapTextMode::WrapTextMode_DYNAMIC && !bIsCountur)
+            m_pSerializer->singleElementNS(XML_w10, XML_wrap, XML_type, "square", XML_side, "largest");
+        if (aWrap.GetSurround() == text::WrapTextMode::WrapTextMode_LEFT && !bIsCountur)
+            m_pSerializer->singleElementNS(XML_w10, XML_wrap, XML_type, "square", XML_side, "left");
+        if (aWrap.GetSurround() == text::WrapTextMode::WrapTextMode_RIGHT && !bIsCountur)
+            m_pSerializer->singleElementNS(XML_w10, XML_wrap, XML_type, "square", XML_side, "right");
+        if (aWrap.GetSurround() == text::WrapTextMode::WrapTextMode_DYNAMIC && bIsCountur)
+            m_pSerializer->singleElementNS(XML_w10, XML_wrap, XML_type, "tight", XML_side, "largest");
+        if (aWrap.GetSurround() == text::WrapTextMode::WrapTextMode_LEFT && bIsCountur)
+            m_pSerializer->singleElementNS(XML_w10, XML_wrap, XML_type, "tight", XML_side, "left");
+        if (aWrap.GetSurround() == text::WrapTextMode::WrapTextMode_RIGHT && bIsCountur)
+            m_pSerializer->singleElementNS(XML_w10, XML_wrap, XML_type, "tight", XML_side, "right");
+    }
     m_pSerializer->endElementNS( XML_v, XML_shape );
 
     // OLE object definition
@@ -6996,7 +7025,7 @@ void DocxAttributeOutput::NumberingLevel( sal_uInt8 nLevel,
 
     // indentation
     m_pSerializer->startElementNS(XML_w, XML_pPr);
-    if( nListTabPos != 0 )
+    if( nListTabPos >= 0 )
     {
         m_pSerializer->startElementNS(XML_w, XML_tabs);
         m_pSerializer->singleElementNS( XML_w, XML_tab,

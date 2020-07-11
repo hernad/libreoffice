@@ -36,6 +36,7 @@
 #include <unotools/syslocale.hxx>
 
 #include <memory>
+#include <optional>
 #include <unicode/timezone.h>
 
 using namespace ::com::sun::star;
@@ -60,6 +61,7 @@ public:
     void testSharedString();
     void testSharedStringPool();
     void testSharedStringPoolPurge();
+    void testSharedStringPoolPurgeBug1();
     void testFdo60915();
     void testI116701();
     void testTdf103060();
@@ -77,6 +79,7 @@ public:
     CPPUNIT_TEST(testSharedString);
     CPPUNIT_TEST(testSharedStringPool);
     CPPUNIT_TEST(testSharedStringPoolPurge);
+    CPPUNIT_TEST(testSharedStringPoolPurgeBug1);
     CPPUNIT_TEST(testFdo60915);
     CPPUNIT_TEST(testI116701);
     CPPUNIT_TEST(testTdf103060);
@@ -371,44 +374,53 @@ void Test::testSharedStringPoolPurge()
     CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(0), aPool.getCount());
     CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(0), aPool.getCountIgnoreCase());
 
-    // Now, create string objects on the heap.
-    std::unique_ptr<OUString> pStr1(new OUString("Andy"));
-    std::unique_ptr<OUString> pStr2(new OUString("andy"));
-    std::unique_ptr<OUString> pStr3(new OUString("ANDY"));
-    std::unique_ptr<OUString> pStr4(new OUString("Bruce"));
-    aPool.intern(*pStr1);
-    aPool.intern(*pStr2);
-    aPool.intern(*pStr3);
-    aPool.intern(*pStr4);
+    // Now, create string objects using optional so we can clear them
+    std::optional<svl::SharedString> pStr1 = aPool.intern("Andy");
+    std::optional<svl::SharedString> pStr2 = aPool.intern("andy");
+    std::optional<svl::SharedString> pStr3 = aPool.intern("ANDY");
+    std::optional<svl::SharedString> pStr4 = aPool.intern("Bruce");
 
-    CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(4), aPool.getCount());
+    CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(5), aPool.getCount());
     CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(2), aPool.getCountIgnoreCase());
 
     // This shouldn't purge anything.
     aPool.purge();
-    CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(4), aPool.getCount());
+    CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(5), aPool.getCount());
     CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(2), aPool.getCountIgnoreCase());
 
     // Delete one heap string object, and purge. That should purge one string.
     pStr1.reset();
     aPool.purge();
-    CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(3), aPool.getCount());
+    CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(4), aPool.getCount());
     CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(2), aPool.getCountIgnoreCase());
 
-    // Ditto...
+    // Nothing changes, because the upper-string is still in the map
     pStr3.reset();
     aPool.purge();
-    CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(2), aPool.getCount());
+    CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(4), aPool.getCount());
     CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(2), aPool.getCountIgnoreCase());
 
     // Again.
     pStr2.reset();
     aPool.purge();
-    CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(1), aPool.getCount());
+    CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(2), aPool.getCount());
     CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(1), aPool.getCountIgnoreCase());
 
     // Delete 'Bruce' and purge.
     pStr4.reset();
+    aPool.purge();
+    CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(0), aPool.getCount());
+    CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(0), aPool.getCountIgnoreCase());
+}
+
+void Test::testSharedStringPoolPurgeBug1()
+{
+    // We had a bug where, if we had two strings that mapped to the same uppercase string,
+    // purge() would de-reference a dangling pointer and consequently cause an ASAN failure.
+    SvtSysLocale aSysLocale;
+    svl::SharedStringPool aPool(*aSysLocale.GetCharClassPtr());
+    aPool.intern("Andy");
+    aPool.intern("andy");
     aPool.purge();
     CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(0), aPool.getCount());
     CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(0), aPool.getCountIgnoreCase());

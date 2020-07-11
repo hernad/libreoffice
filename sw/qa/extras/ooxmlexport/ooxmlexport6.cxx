@@ -42,6 +42,16 @@ protected:
     }
 };
 
+DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf133701, "tdf133701.docx")
+{
+    xmlDocUniquePtr pXmlDocument = parseExport("word/document.xml");
+    if (!pXmlDocument)
+        return;
+
+    assertXPath(pXmlDocument, "/w:document/w:body/w:p[2]/w:pPr/w:framePr", "hSpace", "567");
+    assertXPath(pXmlDocument, "/w:document/w:body/w:p[2]/w:pPr/w:framePr", "vSpace", "284");
+}
+
 DECLARE_OOXMLEXPORT_TEST(testDmlShapeTitle, "dml-shape-title.docx")
 {
     CPPUNIT_ASSERT_EQUAL(OUString("Title"), getProperty<OUString>(getShape(1), "Title"));
@@ -959,6 +969,25 @@ DECLARE_OOXMLIMPORT_TEST(testTdf107119, "tdf107119.docx")
 {
     uno::Reference<beans::XPropertySet> XPropsWrap(getShape(1), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(text::WrapTextMode_PARALLEL, getProperty<text::WrapTextMode>(XPropsWrap, "Surround"));
+}
+
+DECLARE_OOXMLEXPORT_TEST(testTdf133457, "tdf133457.docx")
+{
+    xmlDocUniquePtr pXmlDocument = parseExport("word/document.xml");
+    if (!pXmlDocument)
+        return;
+
+    assertXPath(pXmlDocument, "/w:document/w:body/w:p[4]/w:pPr/w:framePr", "vAnchor", "text");
+}
+
+DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf133924, "tdf133924.docx")
+{
+    xmlDocUniquePtr pXmlDocument = parseExport("word/document.xml");
+    if (!pXmlDocument)
+        return;
+
+    assertXPath(pXmlDocument, "/w:document/w:body/w:p[2]/w:pPr/w:framePr", "wrap", "around");
+    assertXPath(pXmlDocument, "/w:document/w:body/w:p[3]/w:pPr/w:framePr", "wrap", "notBeside");
 }
 
 CPPUNIT_PLUGIN_IMPLEMENT();

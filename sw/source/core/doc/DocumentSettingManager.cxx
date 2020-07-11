@@ -78,6 +78,7 @@ sw::DocumentSettingManager::DocumentSettingManager(SwDoc &rDoc)
     mbTabRelativeToIndent(true),
     mbProtectForm(false), // i#78591#
     mbMsWordCompTrailingBlanks(false), // tdf#104349 tdf#104668
+    mbMsWordCompMinLineHeightByFly(false),
     mbInvertBorderSpacing (false),
     mbCollapseEmptyCellPara(true),
     mbTabAtLeftIndentForParagraphsInList(false), //#i89181#
@@ -95,7 +96,8 @@ sw::DocumentSettingManager::DocumentSettingManager(SwDoc &rDoc)
     mbLastBrowseMode( false ),
     mbDisableOffPagePositioning ( false ),
     mbProtectBookmarks(false),
-    mbProtectFields(false)
+    mbProtectFields(false),
+    mbHeaderSpacingBelowLastPara(false)
 
     // COMPATIBILITY FLAGS END
 {
@@ -184,6 +186,7 @@ bool sw::DocumentSettingManager::get(/*[in]*/ DocumentSettingId id) const
         case DocumentSettingId::PROTECT_FORM: return mbProtectForm;
         // tdf#104349 tdf#104668
         case DocumentSettingId::MS_WORD_COMP_TRAILING_BLANKS: return mbMsWordCompTrailingBlanks;
+        case DocumentSettingId::MS_WORD_COMP_MIN_LINE_HEIGHT_BY_FLY: return mbMsWordCompMinLineHeightByFly;
         // #i89181#
         case DocumentSettingId::TAB_AT_LEFT_INDENT_FOR_PARA_IN_LIST: return mbTabAtLeftIndentForParagraphsInList;
         case DocumentSettingId::INVERT_BORDER_SPACING: return mbInvertBorderSpacing;
@@ -222,6 +225,7 @@ bool sw::DocumentSettingManager::get(/*[in]*/ DocumentSettingId id) const
         case DocumentSettingId::CONTINUOUS_ENDNOTES: return mbContinuousEndnotes;
         case DocumentSettingId::PROTECT_BOOKMARKS: return mbProtectBookmarks;
         case DocumentSettingId::PROTECT_FIELDS: return mbProtectFields;
+        case DocumentSettingId::HEADER_SPACING_BELOW_LAST_PARA: return mbHeaderSpacingBelowLastPara;
         default:
             OSL_FAIL("Invalid setting id");
     }
@@ -327,6 +331,10 @@ void sw::DocumentSettingManager::set(/*[in]*/ DocumentSettingId id, /*[in]*/ boo
         // tdf#140349
         case DocumentSettingId::MS_WORD_COMP_TRAILING_BLANKS:
             mbMsWordCompTrailingBlanks = value;
+            break;
+
+        case DocumentSettingId::MS_WORD_COMP_MIN_LINE_HEIGHT_BY_FLY:
+            mbMsWordCompMinLineHeightByFly = value;
             break;
 
         case DocumentSettingId::TABS_RELATIVE_TO_INDENT:
@@ -462,6 +470,9 @@ void sw::DocumentSettingManager::set(/*[in]*/ DocumentSettingId id, /*[in]*/ boo
             break;
         case DocumentSettingId::PROTECT_FIELDS:
             mbProtectFields = value;
+            break;
+        case DocumentSettingId::HEADER_SPACING_BELOW_LAST_PARA:
+            mbHeaderSpacingBelowLastPara = value;
             break;
         default:
             OSL_FAIL("Invalid setting id");
@@ -614,6 +625,7 @@ void sw::DocumentSettingManager::ReplaceCompatibilityOptions(const DocumentSetti
     mbTabRelativeToIndent = rSource.mbTabRelativeToIndent;
     // No mbProtectForm
     mbMsWordCompTrailingBlanks = rSource.mbMsWordCompTrailingBlanks;
+    mbMsWordCompMinLineHeightByFly = rSource.mbMsWordCompMinLineHeightByFly;
     // No mbInvertBorderSpacing
     mbCollapseEmptyCellPara = rSource.mbCollapseEmptyCellPara;
     mbTabAtLeftIndentForParagraphsInList = rSource.mbTabAtLeftIndentForParagraphsInList;
@@ -634,6 +646,7 @@ void sw::DocumentSettingManager::ReplaceCompatibilityOptions(const DocumentSetti
     mbContinuousEndnotes = rSource.mbContinuousEndnotes;
     // No mbProtectBookmarks
     // No mbProtectFields
+    mbHeaderSpacingBelowLastPara = rSource.mbHeaderSpacingBelowLastPara;
 }
 
 sal_uInt32 sw::DocumentSettingManager::Getn32DummyCompatibilityOptions1() const
@@ -836,6 +849,11 @@ void sw::DocumentSettingManager::dumpAsXml(xmlTextWriterPtr pWriter) const
                                 BAD_CAST(OString::boolean(mbMsWordCompTrailingBlanks).getStr()));
     xmlTextWriterEndElement(pWriter);
 
+    xmlTextWriterStartElement(pWriter, BAD_CAST("mbMsWordCompMinLineHeightByFly"));
+    xmlTextWriterWriteAttribute(pWriter, BAD_CAST("value"),
+                                BAD_CAST(OString::boolean(mbMsWordCompMinLineHeightByFly).getStr()));
+    xmlTextWriterEndElement(pWriter);
+
     xmlTextWriterStartElement(pWriter, BAD_CAST("mbInvertBorderSpacing"));
     xmlTextWriterWriteAttribute(pWriter, BAD_CAST("value"),
                                 BAD_CAST(OString::boolean(mbInvertBorderSpacing).getStr()));
@@ -922,6 +940,11 @@ void sw::DocumentSettingManager::dumpAsXml(xmlTextWriterPtr pWriter) const
     xmlTextWriterStartElement(pWriter, BAD_CAST("mbContinuousEndnotes"));
     xmlTextWriterWriteAttribute(pWriter, BAD_CAST("value"),
                                 BAD_CAST(OString::boolean(mbContinuousEndnotes).getStr()));
+    xmlTextWriterEndElement(pWriter);
+
+    xmlTextWriterStartElement(pWriter, BAD_CAST("mbHeaderSpacingBelowLastPara"));
+    xmlTextWriterWriteAttribute(pWriter, BAD_CAST("value"),
+                                BAD_CAST(OString::boolean(mbHeaderSpacingBelowLastPara).getStr()));
     xmlTextWriterEndElement(pWriter);
 
     xmlTextWriterEndElement(pWriter);

@@ -507,6 +507,15 @@ bool ValueSet::MouseMove(const MouseEvent& rMouseEvent)
     return CustomWidgetController::MouseMove(rMouseEvent);
 }
 
+void ValueSet::QueueReformat()
+{
+    queue_resize();
+    RecalcScrollBar();
+    mbFormat = true;
+    if ( IsReallyVisible() && IsUpdateMode() )
+        Invalidate();
+}
+
 void ValueSet::RemoveItem( sal_uInt16 nItemId )
 {
     size_t nPos = GetItemPos( nItemId );
@@ -527,11 +536,7 @@ void ValueSet::RemoveItem( sal_uInt16 nItemId )
         mbNoSelection   = true;
     }
 
-    queue_resize();
-
-    mbFormat = true;
-    if ( IsReallyVisible() && IsUpdateMode() )
-        Invalidate();
+    QueueReformat();
 }
 
 void ValueSet::RecalcScrollBar()
@@ -687,10 +692,17 @@ void ValueSet::RecalculateItemSizes()
     {
         mnUserItemWidth = aLargestItem.Width();
         mnUserItemHeight = aLargestItem.Height();
-        mbFormat = true;
-        queue_resize();
-        if ( IsReallyVisible() && IsUpdateMode() )
-            Invalidate();
+        QueueReformat();
+    }
+}
+
+void ValueSet::SetFirstLine(sal_uInt16 nNewFirstLine)
+{
+    if (nNewFirstLine != mnFirstLine)
+    {
+        mnFirstLine = nNewFirstLine;
+        if (mxScrolledWindow)
+            mxScrolledWindow->vadjustment_set_value(mnFirstLine);
     }
 }
 
@@ -729,12 +741,12 @@ void ValueSet::SelectItem( sal_uInt16 nItemId )
         sal_uInt16 nNewLine = static_cast<sal_uInt16>(nItemPos / mnCols);
         if ( nNewLine < mnFirstLine )
         {
-            mnFirstLine = nNewLine;
+            SetFirstLine(nNewLine);
             bNewLine = true;
         }
         else if ( nNewLine > o3tl::make_unsigned(mnFirstLine+mnVisLines-1) )
         {
-            mnFirstLine = static_cast<sal_uInt16>(nNewLine-mnVisLines+1);
+            SetFirstLine(static_cast<sal_uInt16>(nNewLine-mnVisLines+1));
             bNewLine = true;
         }
     }
@@ -922,12 +934,12 @@ void ValueSet::Format(vcl::RenderContext const & rRenderContext)
 
     if (mnLines <= mnVisLines)
     {
-        mnFirstLine = 0;
+        SetFirstLine(0);
     }
     else
     {
         if (mnFirstLine > o3tl::make_unsigned(mnLines - mnVisLines))
-            mnFirstLine = static_cast<sal_uInt16>(mnLines - mnVisLines);
+            SetFirstLine(static_cast<sal_uInt16>(mnLines - mnVisLines));
     }
 
     // calculate item size
@@ -1456,10 +1468,7 @@ void ValueSet::SetColCount( sal_uInt16 nNewCols )
     if ( mnUserCols != nNewCols )
     {
         mnUserCols = nNewCols;
-        mbFormat = true;
-        queue_resize();
-        if (IsReallyVisible() && IsUpdateMode())
-            Invalidate();
+        QueueReformat();
     }
 }
 
@@ -1636,11 +1645,7 @@ void ValueSet::ImplInsertItem( std::unique_ptr<ValueSetItem> pItem, const size_t
         mItemList.push_back( std::move(pItem) );
     }
 
-    queue_resize();
-
-    mbFormat = true;
-    if ( IsReallyVisible() && IsUpdateMode() )
-        Invalidate();
+    QueueReformat();
 }
 
 int ValueSet::GetScrollWidth() const
@@ -1690,10 +1695,7 @@ void ValueSet::SetLineCount( sal_uInt16 nNewLines )
     if ( mnUserVisLines != nNewLines )
     {
         mnUserVisLines = nNewLines;
-        mbFormat = true;
-        queue_resize();
-        if ( IsReallyVisible() && IsUpdateMode() )
-            Invalidate();
+        QueueReformat();
     }
 }
 
@@ -1702,10 +1704,7 @@ void ValueSet::SetItemWidth( long nNewItemWidth )
     if ( mnUserItemWidth != nNewItemWidth )
     {
         mnUserItemWidth = nNewItemWidth;
-        mbFormat = true;
-        queue_resize();
-        if ( IsReallyVisible() && IsUpdateMode() )
-            Invalidate();
+        QueueReformat();
     }
 }
 
@@ -1727,10 +1726,7 @@ void ValueSet::SetItemHeight( long nNewItemHeight )
     if ( mnUserItemHeight != nNewItemHeight )
     {
         mnUserItemHeight = nNewItemHeight;
-        mbFormat = true;
-        queue_resize();
-        if ( IsReallyVisible() && IsUpdateMode() )
-            Invalidate();
+        QueueReformat();
     }
 }
 
@@ -1762,11 +1758,7 @@ void ValueSet::SetExtraSpacing( sal_uInt16 nNewSpacing )
     if ( GetStyle() & WB_ITEMBORDER )
     {
         mnSpacing = nNewSpacing;
-
-        mbFormat = true;
-        queue_resize();
-        if ( IsReallyVisible() && IsUpdateMode() )
-            Invalidate();
+        QueueReformat();
     }
 }
 

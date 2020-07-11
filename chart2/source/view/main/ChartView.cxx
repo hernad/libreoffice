@@ -1588,7 +1588,8 @@ awt::Rectangle ChartView::impl_createDiagramAndContent( const CreateShapeParam2D
             Sequence<sal_Int32> aCoordinateSystemResolution = pVCooSys->getCoordinateSystemResolution( rPageSize, m_aPageResolution );
             pSeriesPlotter->setCoordinateSystemResolution( aCoordinateSystemResolution );
         }
-
+        // Do not allow to move data labels in case of pie or donut chart, yet!
+        pSeriesPlotter->setPieLabelsAllowToMove(!bIsPieOrDonut);
         pSeriesPlotter->createShapes();
         m_bPointsWereSkipped = m_bPointsWereSkipped || pSeriesPlotter->PointsWereSkipped();
     }
@@ -1627,6 +1628,8 @@ awt::Rectangle ChartView::impl_createDiagramAndContent( const CreateShapeParam2D
             VCoordinateSystem* pVCooSys = lcl_getCooSysForPlotter( rVCooSysList, aPlotter.get() );
             if(nDimensionCount==2)
                 aPlotter->setTransformationSceneToScreen( pVCooSys->getTransformationSceneToScreen() );
+            // Now we can move data labels in case of pie or donut chart!
+            aPlotter->setPieLabelsAllowToMove(bIsPieOrDonut);
             aPlotter->createShapes();
             m_bPointsWereSkipped = m_bPointsWereSkipped || aPlotter->PointsWereSkipped();
         }
@@ -2134,10 +2137,16 @@ std::shared_ptr<VTitle> lcl_createTitle( TitleHelper::eTitleType eType
         return apVTitle;
 
     //create title
+    awt::Size aTextMaxWidth(rPageSize.Width, rPageSize.Height);
+    if (eType == TitleHelper::MAIN_TITLE || eType == TitleHelper::SUB_TITLE)
+    {
+        aTextMaxWidth.Width = static_cast<sal_Int32>(rPageSize.Width * 0.8);
+        aTextMaxWidth.Height = static_cast<sal_Int32>(rPageSize.Height * 0.5);
+    }
     apVTitle = std::make_shared<VTitle>(xTitle);
     OUString aCID = ObjectIdentifier::createClassifiedIdentifierForObject(xTitle, rModel);
     apVTitle->init(xPageShapes, xShapeFactory, aCID);
-    apVTitle->createShapes(awt::Point(0,0), rPageSize);
+    apVTitle->createShapes(awt::Point(0, 0), rPageSize, aTextMaxWidth);
     awt::Size aTitleUnrotatedSize = apVTitle->getUnrotatedSize();
     awt::Size aTitleSize = apVTitle->getFinalSize();
 

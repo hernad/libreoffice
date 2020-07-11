@@ -150,6 +150,7 @@ VSeriesPlotter::VSeriesPlotter( const uno::Reference<XChartType>& xChartTypeMode
         , m_xColorScheme()
         , m_pExplicitCategoriesProvider(nullptr)
         , m_bPointsWereSkipped(false)
+        , m_bPieLabelsAllowToMove(false)
 {
     SAL_WARN_IF(!m_xChartTypeModel.is(),"chart2","no XChartType available in view, fallback to default values may be wrong");
 }
@@ -718,7 +719,7 @@ uno::Reference< drawing::XShape > VSeriesPlotter::createDataLabel( const uno::Re
         }
 
         awt::Point aTextShapePos(xTextShape->getPosition());
-        if( rDataSeries.isLabelCustomPos(nPointIndex) )
+        if( m_bPieLabelsAllowToMove && rDataSeries.isLabelCustomPos(nPointIndex) )
         {
             awt::Point aRelPos = rDataSeries.getLabelPosition(aTextShapePos, nPointIndex);
             if( aRelPos.X != -1 )
@@ -2394,7 +2395,7 @@ bool VSeriesPlotter::shouldSnapRectToUsedArea()
 
 std::vector< ViewLegendEntry > VSeriesPlotter::createLegendEntries(
               const awt::Size& rEntryKeyAspectRatio
-            , css::chart::ChartLegendExpansion eLegendExpansion
+            , LegendPosition eLegendPosition
             , const Reference< beans::XPropertySet >& xTextProperties
             , const Reference< drawing::XShapes >& xTarget
             , const Reference< lang::XMultiServiceFactory >& xShapeFactory
@@ -2450,24 +2451,19 @@ std::vector< ViewLegendEntry > VSeriesPlotter::createLegendEntries(
                         bBreak = true;
                     bFirstSeries = false;
 
-                    // add entries reverse if chart is stacked in y-direction and the legend is not wide.
-                    // If the legend is wide and we have a stacked bar-chart the normal order
+                    // add entries reverse if chart is stacked in y-direction and the legend position is right or left.
+                    // If the legend is top or bottom and we have a stacked bar-chart the normal order
                     // is the correct one, unless the chart type is horizontal bar-chart.
                     bool bReverse = false;
-                    if( eLegendExpansion != css::chart::ChartLegendExpansion_WIDE )
-                    {
-                        StackingDirection eStackingDirection( pSeries->getStackingDirection() );
-                        bReverse = ( eStackingDirection == StackingDirection_Y_STACKING );
-
-                        if( bSwapXAndY )
-                        {
-                            bReverse = !bReverse;
-                        }
-                    }
-                    else if( bSwapXAndY )
+                    if ( bSwapXAndY )
                     {
                         StackingDirection eStackingDirection( pSeries->getStackingDirection() );
                         bReverse = ( eStackingDirection != StackingDirection_Y_STACKING );
+                    }
+                    else if ( eLegendPosition == LegendPosition_LINE_START || eLegendPosition == LegendPosition_LINE_END )
+                    {
+                        StackingDirection eStackingDirection( pSeries->getStackingDirection() );
+                        bReverse = ( eStackingDirection == StackingDirection_Y_STACKING );
                     }
 
                     if (bReverse)

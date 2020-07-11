@@ -1422,7 +1422,8 @@ bool SwCursor::SelectWordWT( SwViewShell const * pViewShell, sal_Int16 nWordType
         // Should we select the whole fieldmark?
         const IDocumentMarkAccess* pMarksAccess = GetDoc()->getIDocumentMarkAccess( );
         sw::mark::IFieldmark const*const pMark(pMarksAccess->getFieldmarkFor(*GetPoint()));
-        if ( pMark )
+        if (pMark && (IDocumentMarkAccess::GetType(*pMark) == IDocumentMarkAccess::MarkType::TEXT_FIELDMARK
+                      || IDocumentMarkAccess::GetType(*pMark) == IDocumentMarkAccess::MarkType::DATE_FIELDMARK))
         {
             *GetPoint() = sw::mark::FindFieldSep(*pMark);
             ++GetPoint()->nContent; // Don't select the separator
@@ -2036,6 +2037,7 @@ bool SwCursor::UpDown( bool bUp, sal_uInt16 nCnt,
                 }
                 pFrame->GetModelPositionForViewPoint( GetPoint(), aPt, &eTmpState );
             }
+            bRet = !IsSelOvr( SwCursorSelOverFlags::Toggle | SwCursorSelOverFlags::ChangePos );
         }
         else
         {
@@ -2047,12 +2049,17 @@ bool SwCursor::UpDown( bool bUp, sal_uInt16 nCnt,
             //if cursor has already been at start or end of file,
             //Update cursor to change nUpDownX.
             if ( aOldPos.nContent.GetIndex() == nOffset )
+            {
                 GetDoc()->GetEditShell()->UpdateCursor();
-            else
+                bRet = false;
+            }
+            else{
                 *GetPoint() = aPos; // just give a new position
+                bRet = true;
+            }
+
         }
 
-        bRet = !IsSelOvr( SwCursorSelOverFlags::Toggle | SwCursorSelOverFlags::ChangePos );
         DoSetBidiLevelUpDown(); // calculate cursor bidi level
     }
     return bRet;

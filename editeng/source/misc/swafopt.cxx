@@ -31,6 +31,8 @@ SvxSwAutoFormatFlags::SvxSwAutoFormatFlags()
     bChgEnumNum =
     bAddNonBrkSpace =
     bChgOrdinalNumber =
+    bTransliterateRTL =
+    bChgAngleQuotes =
     bChgToEnEmDash =
     bChgWeightUnderl =
     bSetINetAttr =

@@ -91,6 +91,7 @@
 
 #include <officecfg/Office/Common.hxx>
 #include <filter/msfilter/util.hxx>
+#include <filter/msfilter/ww8fields.hxx>
 #include <comphelper/sequence.hxx>
 #include <comphelper/propertyvalue.hxx>
 #include <comphelper/propertysequence.hxx>
@@ -1167,10 +1168,21 @@ void DomainMapper_Impl::CheckUnregisteredFrameConversion( )
                     pStyleProperties->IsyValid() ? pStyleProperties->Gety() : DEFAULT_VALUE));
 
             //Default the anchor in case FramePr_vAnchor is missing ECMA 17.3.1.11
-            aFrameProperties.push_back(comphelper::makePropertyValue(getPropertyName(PROP_VERT_ORIENT_RELATION), sal_Int16(
-                rAppendContext.pLastParagraphProperties->GetvAnchor() >= 0 ?
+            if (rAppendContext.pLastParagraphProperties->GetWrap() == text::WrapTextMode::WrapTextMode_MAKE_FIXED_SIZE &&
+                pStyleProperties->GetWrap() == text::WrapTextMode::WrapTextMode_MAKE_FIXED_SIZE)
+            {
+                aFrameProperties.push_back(comphelper::makePropertyValue(getPropertyName(PROP_VERT_ORIENT_RELATION), sal_Int16(
+                    rAppendContext.pLastParagraphProperties->GetvAnchor() >= 0 ?
                     rAppendContext.pLastParagraphProperties->GetvAnchor() :
-                    pStyleProperties->GetvAnchor() >= 0 ? pStyleProperties->GetvAnchor() : text::RelOrientation::PAGE_PRINT_AREA )));
+                    pStyleProperties->GetvAnchor() >= 0 ? pStyleProperties->GetvAnchor() : text::RelOrientation::FRAME)));
+            }
+            else
+            {
+                aFrameProperties.push_back(comphelper::makePropertyValue(getPropertyName(PROP_VERT_ORIENT_RELATION), sal_Int16(
+                    rAppendContext.pLastParagraphProperties->GetvAnchor() >= 0 ?
+                    rAppendContext.pLastParagraphProperties->GetvAnchor() :
+                    pStyleProperties->GetvAnchor() >= 0 ? pStyleProperties->GetvAnchor() : text::RelOrientation::PAGE_PRINT_AREA)));
+            }
 
             aFrameProperties.push_back(comphelper::makePropertyValue(getPropertyName(PROP_SURROUND),
                 rAppendContext.pLastParagraphProperties->GetWrap() != text::WrapTextMode::WrapTextMode_MAKE_FIXED_SIZE
@@ -1392,7 +1404,9 @@ void DomainMapper_Impl::finishParagraph( const PropertyMapPtr& pPropertyMap, con
                 isNumberingViaStyle = true;
                 // Since LO7.0/tdf#131321 fixed the loss of numbering in styles, this OUGHT to be obsolete,
                 // but now other new/critical LO7.0 code expects it, and perhaps some corner cases still need it as well.
-                pParaContext->Insert( PROP_NUMBERING_STYLE_NAME, uno::makeAny(pList->GetStyleName()), true );
+                // So we skip it only for default outline styles, which are recognized by NumberingManager.
+                if (!GetCurrentParaStyleName().startsWith("Heading ") || nListLevel >= pList->GetDefaultParentLevels())
+                    pParaContext->Insert( PROP_NUMBERING_STYLE_NAME, uno::makeAny(pList->GetStyleName()), true );
             }
             else if ( !pList->isOutlineNumbering(nListLevel) )
             {
@@ -1729,11 +1743,13 @@ void DomainMapper_Impl::finishParagraph( const PropertyMapPtr& pPropertyMap, con
                             {
                                 OUString paraId;
                                 m_xPreviousParagraph->getPropertyValue("ListId") >>= paraId;
-                                assert(!paraId.isEmpty()); // must be on some list?
-                                OUString const listId = pAbsList->MapListId(paraId);
-                                if (listId != paraId)
+                                if (!paraId.isEmpty()) // must be on some list?
                                 {
-                                    m_xPreviousParagraph->setPropertyValue("ListId", uno::makeAny(listId));
+                                    OUString const listId = pAbsList->MapListId(paraId);
+                                    if (listId != paraId)
+                                    {
+                                        m_xPreviousParagraph->setPropertyValue("ListId", uno::makeAny(listId));
+                                    }
                                 }
                             }
                             if (pList->GetCurrentLevel())
@@ -2370,6 +2386,7 @@ void DomainMapper_Impl::PushPageHeaderFooter(bool bHeader, SectionPropertyMap::P
     const PropertyIds ePropTextLeft = bHeader? PROP_HEADER_TEXT_LEFT: PROP_FOOTER_TEXT_LEFT;
     const PropertyIds ePropText = bHeader? PROP_HEADER_TEXT: PROP_FOOTER_TEXT;
 
+    m_bDiscardHeaderFooter = true;
     m_eInHeaderFooterImport
         = bHeader ? HeaderFooterImportState::header : HeaderFooterImportState::footer;
 
@@ -2382,6 +2399,11 @@ void DomainMapper_Impl::PushPageHeaderFooter(bool bHeader, SectionPropertyMap::P
         // clear the "Link To Previous" flag so that the header/footer
         // content is not copied from the previous section
         pSectionContext->ClearHeaderFooterLinkToPrevious(bHeader, eType);
+
+        if (!m_bIsNewDoc)
+        {
+            return; // TODO sw cannot Undo insert header/footer without crashing
+        }
 
         uno::Reference< beans::XPropertySet > xPageStyle =
             pSectionContext->GetPageStyle(
@@ -2410,15 +2432,15 @@ void DomainMapper_Impl::PushPageHeaderFooter(bool bHeader, SectionPropertyMap::P
                 xPageStyle->getPropertyValue(getPropertyName(bLeft? ePropTextLeft: ePropText)) >>= xText;
 
                 m_aTextAppendStack.push(TextAppendContext(uno::Reference< text::XTextAppend >(xText, uno::UNO_QUERY_THROW),
-                            m_bIsNewDoc? uno::Reference<text::XTextCursor>(): m_xBodyText->createTextCursorByRange(xText->getStart())));
-            }
-            else
-            {
-                m_bDiscardHeaderFooter = true;
+                    m_bIsNewDoc
+                        ? uno::Reference<text::XTextCursor>()
+                        : xText->createTextCursorByRange(xText->getStart())));
+                m_bDiscardHeaderFooter = false; // set only on success!
             }
         }
         catch( const uno::Exception& )
         {
+            DBG_UNHANDLED_EXCEPTION("writerfilter.dmapper");
         }
     }
 }
@@ -3870,6 +3892,110 @@ void DomainMapper_Impl::AppendFieldCommand(OUString const & rPartOfCommand)
 
 typedef std::multimap < sal_Int32, OUString > TOCStyleMap;
 
+
+static ww::eField GetWW8FieldId(OUString const& rType)
+{
+    std::unordered_map<OUString, ww::eField> mapID
+    {
+        {"ADDRESSBLOCK",    ww::eADDRESSBLOCK},
+        {"ADVANCE",         ww::eADVANCE},
+        {"ASK",             ww::eASK},
+        {"AUTONUM",         ww::eAUTONUM},
+        {"AUTONUMLGL",      ww::eAUTONUMLGL},
+        {"AUTONUMOUT",      ww::eAUTONUMOUT},
+        {"AUTOTEXT",        ww::eAUTOTEXT},
+        {"AUTOTEXTLIST",    ww::eAUTOTEXTLIST},
+        {"AUTHOR",          ww::eAUTHOR},
+        {"BARCODE",         ww::eBARCODE},
+        {"BIDIOUTLINE",     ww::eBIDIOUTLINE},
+        {"DATE",            ww::eDATE},
+        {"COMMENTS",        ww::eCOMMENTS},
+        {"COMPARE",         ww::eCOMPARE},
+        {"CONTROL",         ww::eCONTROL},
+        {"CREATEDATE",      ww::eCREATEDATE},
+        {"DATABASE",        ww::eDATABASE},
+        {"DDEAUTOREF",      ww::eDDEAUTOREF},
+        {"DDEREF",          ww::eDDEREF},
+        {"DOCPROPERTY",     ww::eDOCPROPERTY},
+        {"DOCVARIABLE",     ww::eDOCVARIABLE},
+        {"EDITTIME",        ww::eEDITTIME},
+        {"EMBED",           ww::eEMBED},
+        {"EQ",              ww::eEQ},
+        {"FILLIN",          ww::eFILLIN},
+        {"FILENAME",        ww::eFILENAME},
+        {"FILESIZE",        ww::eFILESIZE},
+        {"FOOTREF",         ww::eFOOTREF},
+//        {"FORMULA",         ww::},
+        {"FORMCHECKBOX",    ww::eFORMCHECKBOX},
+        {"FORMDROPDOWN",    ww::eFORMDROPDOWN},
+        {"FORMTEXT",        ww::eFORMTEXT},
+        {"GLOSSREF",        ww::eGLOSSREF},
+        {"GOTOBUTTON",      ww::eGOTOBUTTON},
+        {"GREETINGLINE",    ww::eGREETINGLINE},
+        {"HTMLCONTROL",     ww::eHTMLCONTROL},
+        {"HYPERLINK",       ww::eHYPERLINK},
+        {"IF",              ww::eIF},
+        {"INFO",            ww::eINFO},
+        {"INCLUDEPICTURE",  ww::eINCLUDEPICTURE},
+        {"INCLUDETEXT",     ww::eINCLUDETEXT},
+        {"INCLUDETIFF",     ww::eINCLUDETIFF},
+        {"KEYWORDS",        ww::eKEYWORDS},
+        {"LASTSAVEDBY",     ww::eLASTSAVEDBY},
+        {"LINK",            ww::eLINK},
+        {"LISTNUM",         ww::eLISTNUM},
+        {"MACRO",           ww::eMACRO},
+        {"MACROBUTTON",     ww::eMACROBUTTON},
+        {"MERGEDATA",       ww::eMERGEDATA},
+        {"MERGEFIELD",      ww::eMERGEFIELD},
+        {"MERGEINC",        ww::eMERGEINC},
+        {"MERGEREC",        ww::eMERGEREC},
+        {"MERGESEQ",        ww::eMERGESEQ},
+        {"NEXT",            ww::eNEXT},
+        {"NEXTIF",          ww::eNEXTIF},
+        {"NOTEREF",         ww::eNOTEREF},
+        {"PAGE",            ww::ePAGE},
+        {"PAGEREF",         ww::ePAGEREF},
+        {"PLUGIN",          ww::ePLUGIN},
+        {"PRINT",           ww::ePRINT},
+        {"PRINTDATE",       ww::ePRINTDATE},
+        {"PRIVATE",         ww::ePRIVATE},
+        {"QUOTE",           ww::eQUOTE},
+        {"RD",              ww::eRD},
+        {"REF",             ww::eREF},
+        {"REVNUM",          ww::eREVNUM},
+        {"SAVEDATE",        ww::eSAVEDATE},
+        {"SECTION",         ww::eSECTION},
+        {"SECTIONPAGES",    ww::eSECTIONPAGES},
+        {"SEQ",             ww::eSEQ},
+        {"SET",             ww::eSET},
+        {"SKIPIF",          ww::eSKIPIF},
+        {"STYLEREF",        ww::eSTYLEREF},
+        {"SUBSCRIBER",      ww::eSUBSCRIBER},
+        {"SUBJECT",         ww::eSUBJECT},
+        {"SYMBOL",          ww::eSYMBOL},
+        {"TA",              ww::eTA},
+        {"TEMPLATE",        ww::eTEMPLATE},
+        {"TIME",            ww::eTIME},
+        {"TITLE",           ww::eTITLE},
+        {"TOA",             ww::eTOA},
+        {"USERINITIALS",    ww::eUSERINITIALS},
+        {"USERADDRESS",     ww::eUSERADDRESS},
+        {"USERNAME",        ww::eUSERNAME},
+
+        {"TOC",             ww::eTOC},
+        {"TC",              ww::eTC},
+        {"NUMCHARS",        ww::eNUMCHARS},
+        {"NUMWORDS",        ww::eNUMWORDS},
+        {"NUMPAGES",        ww::eNUMPAGES},
+        {"INDEX",           ww::eINDEX},
+        {"XE",              ww::eXE},
+        {"BIBLIOGRAPHY",    ww::eBIBLIOGRAPHY},
+        {"CITATION",        ww::eCITATION},
+    };
+    auto const it = mapID.find(rType);
+    return (it == mapID.end()) ? ww::eNONE : it->second;
+}
+
 static const FieldConversionMap_t & lcl_GetFieldConversion()
 {
     static const FieldConversionMap_t aFieldConversionMap
@@ -4849,7 +4975,7 @@ void DomainMapper_Impl::CloseFieldCommand()
             OUString const sFirstParam(vArguments.empty() ? OUString() : vArguments.front());
 
             // apply font size to the form control
-            if (!m_aTextAppendStack.empty() &&  m_pLastCharacterContext && m_pLastCharacterContext->isSet(PROP_CHAR_HEIGHT) )
+            if (!m_aTextAppendStack.empty() &&  m_pLastCharacterContext && ( m_pLastCharacterContext->isSet(PROP_CHAR_HEIGHT) || m_pLastCharacterContext->isSet(PROP_CHAR_FONT_NAME )))
             {
                 uno::Reference< text::XTextAppend >  xTextAppend = m_aTextAppendStack.top().xTextAppend;
                 if (xTextAppend.is())
@@ -4859,9 +4985,14 @@ void DomainMapper_Impl::CloseFieldCommand()
                     {
                         xCrsr->gotoEnd(false);
                         uno::Reference< beans::XPropertySet > xProp( xCrsr, uno::UNO_QUERY );
-                        xProp->setPropertyValue(getPropertyName(PROP_CHAR_HEIGHT), m_pLastCharacterContext->getProperty(PROP_CHAR_HEIGHT)->second);
-                        if ( m_pLastCharacterContext->isSet(PROP_CHAR_HEIGHT_COMPLEX) )
-                            xProp->setPropertyValue(getPropertyName(PROP_CHAR_HEIGHT_COMPLEX), m_pLastCharacterContext->getProperty(PROP_CHAR_HEIGHT_COMPLEX)->second);
+                        if (m_pLastCharacterContext->isSet(PROP_CHAR_HEIGHT))
+                        {
+                            xProp->setPropertyValue(getPropertyName(PROP_CHAR_HEIGHT), m_pLastCharacterContext->getProperty(PROP_CHAR_HEIGHT)->second);
+                            if (m_pLastCharacterContext->isSet(PROP_CHAR_HEIGHT_COMPLEX))
+                                xProp->setPropertyValue(getPropertyName(PROP_CHAR_HEIGHT_COMPLEX), m_pLastCharacterContext->getProperty(PROP_CHAR_HEIGHT_COMPLEX)->second);
+                        }
+                        if (m_pLastCharacterContext->isSet(PROP_CHAR_FONT_NAME))
+                            xProp->setPropertyValue(getPropertyName(PROP_CHAR_FONT_NAME), m_pLastCharacterContext->getProperty(PROP_CHAR_FONT_NAME)->second);
                     }
                 }
             }
@@ -5614,9 +5745,10 @@ void DomainMapper_Impl::CloseFieldCommand()
                     // the ODF_UNHANDLED string!
                     assert(!m_bForceGenericFields || aCode.isEmpty());
                     xNameCont->insertByName(ODF_CODE_PARAM, uno::makeAny(aCode));
-                    if (sType == "CONTROL")
-                    { // tdf#129247 HACK probably this should be imported as something else, like in ww8?
-                        xNameCont->insertByName(ODF_ID_PARAM, uno::makeAny(OUString::number(87))); // ww8::eCONTROL
+                    ww::eField const id(GetWW8FieldId(sType));
+                    if (id != ww::eNONE)
+                    {   // tdf#129247 tdf#134264 set WW8 id for WW8 export
+                        xNameCont->insertByName(ODF_ID_PARAM, uno::makeAny(OUString::number(id)));
                     }
                 }
                 else

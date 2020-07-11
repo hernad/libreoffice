@@ -717,17 +717,38 @@ DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testComboBoxControl, "combobox-control.docx"
     xmlDocUniquePtr pXmlDoc = parseExport("word/document.xml");
     assertXPath(pXmlDoc, "/w:document/w:body/w:p/w:sdt/w:sdtPr/w:dropDownList/w:listItem[1]", "value", "manolo");
     assertXPath(pXmlDoc, "/w:document/w:body/w:p/w:sdt/w:sdtPr/w:dropDownList/w:listItem[2]", "value", "pepito");
-    assertXPathContent(pXmlDoc, "/w:document/w:body/w:p/w:sdt/w:sdtContent/w:r/w:t", "Manolo");
+    assertXPathContent(pXmlDoc, "/w:document/w:body/w:p/w:sdt/w:sdtContent/w:r/w:t", "manolo");
 
     // check imported control
-    uno::Reference<drawing::XControlShape> xControl(getShape(1), uno::UNO_QUERY);
+    if (getShapes() > 0)
+    {
+        uno::Reference<drawing::XControlShape> xControl(getShape(1), uno::UNO_QUERY);
 
-    CPPUNIT_ASSERT_EQUAL(OUString("Manolo"), getProperty<OUString>(xControl->getControl(), "Text"));
+        CPPUNIT_ASSERT_EQUAL(OUString("Manolo"), getProperty<OUString>(xControl->getControl(), "Text"));
 
-    uno::Sequence<OUString> aItems = getProperty< uno::Sequence<OUString> >(xControl->getControl(), "StringItemList");
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(2), aItems.getLength());
-    CPPUNIT_ASSERT_EQUAL(OUString("manolo"), aItems[0]);
-    CPPUNIT_ASSERT_EQUAL(OUString("pepito"), aItems[1]);
+        uno::Sequence<OUString> aItems = getProperty< uno::Sequence<OUString> >(xControl->getControl(), "StringItemList");
+        CPPUNIT_ASSERT_EQUAL(sal_Int32(2), aItems.getLength());
+        CPPUNIT_ASSERT_EQUAL(OUString("manolo"), aItems[0]);
+        CPPUNIT_ASSERT_EQUAL(OUString("pepito"), aItems[1]);
+    }
+    else
+    {
+        // ComboBox was imported as DropDown text field
+        uno::Reference<text::XTextFieldsSupplier> xTextFieldsSupplier(mxComponent, uno::UNO_QUERY);
+        uno::Reference<container::XEnumerationAccess> xFieldsAccess(xTextFieldsSupplier->getTextFields());
+        uno::Reference<container::XEnumeration> xFields(xFieldsAccess->createEnumeration());
+        CPPUNIT_ASSERT(xFields->hasMoreElements());
+        uno::Any aField = xFields->nextElement();
+        uno::Reference<lang::XServiceInfo> xServiceInfo(aField, uno::UNO_QUERY);
+        CPPUNIT_ASSERT(xServiceInfo->supportsService("com.sun.star.text.textfield.DropDown"));
+
+        CPPUNIT_ASSERT_EQUAL(OUString("manolo"), getProperty<OUString>(aField, "SelectedItem"));
+
+        uno::Sequence<OUString> aItems = getProperty< uno::Sequence<OUString> >(aField, "Items");
+        CPPUNIT_ASSERT_EQUAL(sal_Int32(2), aItems.getLength());
+        CPPUNIT_ASSERT_EQUAL(OUString("manolo"), aItems[0]);
+        CPPUNIT_ASSERT_EQUAL(OUString("pepito"), aItems[1]);
+    }
 }
 
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testCheckBoxControl, "checkbox-control.docx")
@@ -1206,6 +1227,19 @@ DECLARE_OOXMLEXPORT_TEST(testUnderlineColorGroupedShapes, "tdf132491_UnderlineCo
         "/a:graphic/a:graphicData/wpg:wgp/wps:wsp[2]/wps:txbx/w:txbxContent/w:p/w:r/w:rPr/w:u", "color", "00B050");
     assertXPathNoAttribute(pXmlDocument, "/w:document/w:body/w:p/w:r/mc:AlternateContent/mc:Choice/w:drawing/wp:anchor"
         "/a:graphic/a:graphicData/wpg:wgp/wps:wsp[3]/wps:txbx/w:txbxContent/w:p/w:r/w:rPr/w:u", "color");
+}
+
+DECLARE_OOXMLEXPORT_TEST(testRelativeAnchorWidthFromRightMargin, "tdf133670_testRelativeAnchorWidthFromRightMargin.docx")
+{
+    // TODO: Fix export.
+    if (mbExported)
+        return;
+
+    // tdf#133670 The width was set relative from right margin, but this was handled relative from page width.
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
+    const sal_Int32 nAnchoredWidth
+        = getXPath(pXmlDoc, "//SwAnchoredDrawObject/bounds", "width").toInt32();
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(2408), nAnchoredWidth);
 }
 
 CPPUNIT_PLUGIN_IMPLEMENT();

@@ -182,7 +182,7 @@ public:
 
     virtual std::vector< ViewLegendEntry > createLegendEntries(
             const css::awt::Size& rEntryKeyAspectRatio,
-            css::chart::ChartLegendExpansion eLegendExpansion,
+            css::chart2::LegendPosition eLegendPosition,
             const css::uno::Reference< css::beans::XPropertySet >& xTextProperties,
             const css::uno::Reference< css::drawing::XShapes >& xTarget,
             const css::uno::Reference< css::lang::XMultiServiceFactory >& xShapeFactory,
@@ -241,6 +241,7 @@ public:
     //better performance for big data
     void setCoordinateSystemResolution( const css::uno::Sequence< sal_Int32 >& rCoordinateSystemResolution );
     bool PointsWereSkipped() const { return m_bPointsWereSkipped;}
+    void setPieLabelsAllowToMove( bool bIsPieOrDonut ) { m_bPieLabelsAllowToMove = bIsPieOrDonut; };
 
     //return the depth for a logic 1
     double  getTransformedDepth() const;
@@ -422,6 +423,7 @@ protected:
     //better performance for big data
     css::uno::Sequence< sal_Int32 >    m_aCoordinateSystemResolution;
     bool m_bPointsWereSkipped;
+    bool m_bPieLabelsAllowToMove;
 
 private:
     typedef std::map< sal_Int32 , ExplicitScaleData > tSecondaryValueScales;

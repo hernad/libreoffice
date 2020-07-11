@@ -1127,7 +1127,8 @@ SvNumberFormatTable& SvNumberFormatter::GetEntryTable(
 
 bool SvNumberFormatter::IsNumberFormat(const OUString& sString,
                                        sal_uInt32& F_Index,
-                                       double& fOutNumber)
+                                       double& fOutNumber,
+                                       SvNumInputOptions eInputOptions)
 {
     ::osl::MutexGuard aGuard( GetInstanceMutex() );
 
@@ -1165,7 +1166,7 @@ bool SvNumberFormatter::IsNumberFormat(const OUString& sString,
     }
     else
     {
-        res = pStringScanner->IsNumberFormat(sString, RType, fOutNumber, pFormat);
+        res = pStringScanner->IsNumberFormat(sString, RType, fOutNumber, pFormat, eInputOptions);
     }
     if (res && !IsCompatible(FType, RType))     // non-matching type
     {
@@ -3047,7 +3048,11 @@ OUString SvNumberFormatter::GenerateFormat(sal_uInt32 nIndex,
     OUStringBuffer sString;
     using comphelper::string::padToLength;
 
-    if (nLeadingZeros == 0)
+    if (eType & SvNumFormatType::TIME)
+    {
+        sString = pFormat->GetFormatStringForTimePrecision( nPrecision );
+    }
+    else if (nLeadingZeros == 0)
     {
         if (!bThousand)
             sString.append('#');
@@ -3087,7 +3092,7 @@ OUString SvNumberFormatter::GenerateFormat(sal_uInt32 nIndex,
             }
         }
     }
-    if (nPrecision > 0 && eType != SvNumFormatType::FRACTION )
+    if (nPrecision > 0 && eType != SvNumFormatType::FRACTION && !( eType & SvNumFormatType::TIME ) )
     {
         sString.append(GetNumDecimalSep());
         padToLength(sString, sString.getLength() + nPrecision, '0');

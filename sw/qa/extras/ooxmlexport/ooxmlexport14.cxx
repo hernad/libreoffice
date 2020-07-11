@@ -74,6 +74,21 @@ DECLARE_OOXMLIMPORT_TEST(Tdf130907, "tdf130907.docx")
         sal_Int16(style::ParagraphAdjust::ParagraphAdjust_RIGHT), nHOri3);
 }
 
+CPPUNIT_TEST_FIXTURE(Test, testTdf128197)
+{
+    load(mpTestDocumentPath, "128197_compat14.docx");
+    xmlDocUniquePtr pLayout14 = parseLayoutDump();
+    sal_Int32 nHeight14 = getXPath(pLayout14, "//page[1]/body/txt[1]/infos/bounds", "height").toInt32();
+
+    load(mpTestDocumentPath, "128197_compat15.docx");
+    xmlDocUniquePtr pLayout15 = parseLayoutDump();
+    sal_Int32 nHeight15 = getXPath(pLayout15, "//page[1]/body/txt[1]/infos/bounds", "height").toInt32();
+
+    // In compat mode=14 second line has size of the shape thus entire paragraph height is smaller
+    // So nHeight14 < nHeight15
+    CPPUNIT_ASSERT_LESS(nHeight15, nHeight14);
+}
+
 DECLARE_OOXMLIMPORT_TEST(testTdf123622, "tdf123622.docx")
 {
     uno::Reference<beans::XPropertySet> XPropsRight(getShape(1),uno::UNO_QUERY);
@@ -112,6 +127,34 @@ DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf123873, "tdf123873.docx")
     CPPUNIT_ASSERT(p_XmlDoc);
     assertXPath(
         p_XmlDoc, "/w:document/w:body/w:p[2]/w:r[2]/w:drawing/wp:anchor/wp:wrapTopAndBottom");
+}
+
+DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(Tdf133065, "tdf133065.odt")
+{
+    auto pxmldoc = parseExport("word/document.xml");
+    CPPUNIT_ASSERT(pxmldoc);
+    OUString aVal;
+
+    aVal = getXPath(pxmldoc, "/w:document/w:body/w:p[3]/w:r[2]/w:object/v:shape/w10:wrap", "type");
+    CPPUNIT_ASSERT(aVal.indexOf("square") > -1);
+    aVal = getXPath(pxmldoc, "/w:document/w:body/w:p[3]/w:r[2]/w:object/v:shape/w10:wrap", "side");
+    CPPUNIT_ASSERT(aVal.indexOf("left") > -1);
+
+    aVal = getXPath(pxmldoc, "/w:document/w:body/w:p[8]/w:r[2]/w:object/v:shape/w10:wrap", "type");
+    CPPUNIT_ASSERT(aVal.indexOf("square") > -1);
+    aVal = getXPath(pxmldoc, "/w:document/w:body/w:p[8]/w:r[2]/w:object/v:shape/w10:wrap", "side");
+    CPPUNIT_ASSERT(aVal.indexOf("right") > -1);
+
+    aVal = getXPath(pxmldoc, "/w:document/w:body/w:p[12]/w:r[2]/w:object/v:shape/w10:wrap", "type");
+    CPPUNIT_ASSERT(aVal.indexOf("square") > -1);
+    aVal = getXPath(pxmldoc, "/w:document/w:body/w:p[12]/w:r[2]/w:object/v:shape/w10:wrap", "side");
+    CPPUNIT_ASSERT(aVal.indexOf("largest") > -1);
+
+    aVal = getXPath(pxmldoc, "/w:document/w:body/w:p[20]/w:r[2]/w:object/v:shape/w10:wrap", "type");
+    CPPUNIT_ASSERT(aVal.indexOf("topAndBottom") > -1);
+
+    aVal = getXPath(pxmldoc, "/w:document/w:body/w:p[24]/w:r[2]/w:object/v:shape/w10:wrap", "type");
+    CPPUNIT_ASSERT(aVal.indexOf("square") > -1);
 }
 
 DECLARE_OOXMLEXPORT_TEST(testTdf130814model, "tdf130814.docx")
@@ -578,6 +621,20 @@ DECLARE_OOXMLIMPORT_TEST(testTdf125038c, "tdf125038c.docx")
     CPPUNIT_ASSERT_EQUAL(OUString("email: test@test.test"), aActual);
 }
 
+DECLARE_OOXMLEXPORT_TEST(testTdf83309, "tdf83309.docx")
+{
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+    OUString sNodeType;
+
+    // First paragraph does not have tab before
+    sNodeType = parseDump("/root/page/body/txt[1]/Text[1]", "nType");
+    CPPUNIT_ASSERT_EQUAL(OUString("PortionType::Text"), sNodeType);
+
+    // Second paragraph starts with tab
+    sNodeType = parseDump("/root/page/body/txt[2]/Text[1]", "nType");
+    CPPUNIT_ASSERT_EQUAL(OUString("PortionType::TabLeft"), sNodeType);
+}
+
 DECLARE_OOXMLEXPORT_TEST(testTdf121661, "tdf121661.docx")
 {
     xmlDocUniquePtr pXmlSettings = parseExport("word/settings.xml");
@@ -887,6 +944,82 @@ DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf128290, "tdf128290.odt")
     assertXPath(pXml, "/w:document/w:body/w:tbl/w:tblPr/w:tblLayout", "type", "fixed");
 }
 
+DECLARE_OOXMLEXPORT_TEST(testTdf120394, "tdf120394.docx")
+{
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(1), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(0), getProperty<sal_Int16>(xPara, "NumberingLevel"));
+        CPPUNIT_ASSERT_EQUAL(OUString("1"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(2), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(1), getProperty<sal_Int16>(xPara, "NumberingLevel"));
+        CPPUNIT_ASSERT_EQUAL(OUString(CHAR_ZWSP), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(3), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(1), getProperty<sal_Int16>(xPara, "NumberingLevel"));
+        CPPUNIT_ASSERT_EQUAL(OUString(CHAR_ZWSP), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(5), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(2), getProperty<sal_Int16>(xPara, "NumberingLevel"));
+        CPPUNIT_ASSERT_EQUAL(OUString("1.2.1"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+}
+
+DECLARE_OOXMLEXPORT_TEST(testTdf133605, "tdf133605.docx")
+{
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(3), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(0), getProperty<sal_Int16>(xPara, "NumberingLevel"));
+        CPPUNIT_ASSERT_EQUAL(OUString(CHAR_ZWSP), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(4), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(1), getProperty<sal_Int16>(xPara, "NumberingLevel"));
+        CPPUNIT_ASSERT_EQUAL(OUString("1."), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(5), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(2), getProperty<sal_Int16>(xPara, "NumberingLevel"));
+        CPPUNIT_ASSERT_EQUAL(OUString("1.1"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(6), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(3), getProperty<sal_Int16>(xPara, "NumberingLevel"));
+        CPPUNIT_ASSERT_EQUAL(OUString("(a)"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+}
+
+DECLARE_OOXMLEXPORT_TEST(testTdf133605_2, "tdf133605_2.docx")
+{
+    // About the same document as tdf133605.docx, but number definition has level definitions in random order
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(3), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(0), getProperty<sal_Int16>(xPara, "NumberingLevel"));
+        CPPUNIT_ASSERT_EQUAL(OUString(CHAR_ZWSP), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(4), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(1), getProperty<sal_Int16>(xPara, "NumberingLevel"));
+        CPPUNIT_ASSERT_EQUAL(OUString("1."), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(5), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(2), getProperty<sal_Int16>(xPara, "NumberingLevel"));
+        CPPUNIT_ASSERT_EQUAL(OUString("1.1"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(6), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(3), getProperty<sal_Int16>(xPara, "NumberingLevel"));
+        CPPUNIT_ASSERT_EQUAL(OUString("(a)"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+}
+
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf123757, "tdf123757.docx")
 {
     xmlDocUniquePtr pXml = parseExport("word/document.xml");
@@ -1016,6 +1149,18 @@ DECLARE_OOXMLEXPORT_TEST(testLineWidthRounding, "tdf126363_LineWidthRounding.doc
         return;
     // this was 57240 (it differs from the original 57150, losing the preset line width)
     assertXPath(pXml, "/w:document/w:body/w:p/w:r/mc:AlternateContent/mc:Choice/w:drawing/wp:anchor/a:graphic/a:graphicData/wps:wsp/wps:spPr/a:ln", "w", "57150");
+}
+
+DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf108505, "tdf108505.docx")
+{
+    uno::Reference<text::XTextRange> xParagraph = getParagraph(3);
+    uno::Reference<text::XTextRange> xText
+        = getRun(xParagraph, 1, "Wrong font when alone on the line");
+
+    // Without the fix in place this would have become Times New Roman
+    CPPUNIT_ASSERT_EQUAL(
+        OUString("Trebuchet MS"),
+        getProperty<OUString>(xText, "CharFontName"));
 }
 
 CPPUNIT_PLUGIN_IMPLEMENT();

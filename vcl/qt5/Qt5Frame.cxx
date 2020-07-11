@@ -764,7 +764,8 @@ void Qt5Frame::ToTop(SalFrameToTop nFlags)
         pWidget->raise();
     if ((nFlags & SalFrameToTop::RestoreWhenMin) || (nFlags & SalFrameToTop::ForegroundTask))
         pWidget->activateWindow();
-    else if ((nFlags & SalFrameToTop::GrabFocus) || (nFlags & SalFrameToTop::GrabFocusOnly))
+    else if ((nFlags & (SalFrameToTop::GrabFocus | SalFrameToTop::GrabFocusOnly))
+             && pWidget->isVisible())
     {
         pWidget->activateWindow();
         pWidget->setFocus();
@@ -1129,6 +1130,9 @@ void Qt5Frame::UpdateSettings(AllSettings& rSettings)
         style.SetMenuBarRolloverTextColor(aMenuFore);
     }
     style.SetMenuBarHighlightTextColor(style.GetMenuHighlightTextColor());
+
+    // Icon theme
+    style.SetPreferredIconTheme(toOUString(QIcon::themeName()));
 
     // Scroll bar size
     style.SetScrollBarSize(QApplication::style()->pixelMetric(QStyle::PM_ScrollBarExtent));

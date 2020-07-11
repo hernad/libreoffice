@@ -313,6 +313,154 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf132236)
     assertXPath(pXmlDoc, "/root/page[1]/body/txt", 1);
 }
 
+CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf131912)
+{
+    SwDoc* const pDoc = createDoc();
+    SwWrtShell* const pWrtShell = pDoc->GetDocShell()->GetWrtShell();
+
+    sw::UndoManager& rUndoManager = pDoc->GetUndoManager();
+
+    sw::UnoCursorPointer pCursor(
+        pDoc->CreateUnoCursor(SwPosition(SwNodeIndex(pDoc->GetNodes().GetEndOfContent(), -1))));
+
+    pDoc->getIDocumentContentOperations().InsertString(*pCursor, "foo");
+
+    {
+        SfxItemSet flySet(pDoc->GetAttrPool(),
+                          svl::Items<RES_FRM_SIZE, RES_FRM_SIZE, RES_ANCHOR, RES_ANCHOR>{});
+        SwFormatAnchor anchor(RndStdIds::FLY_AT_CHAR);
+        pWrtShell->StartOfSection(false);
+        pWrtShell->Right(CRSR_SKIP_CHARS, /*bSelect=*/false, 2, /*bBasicCall=*/false);
+        anchor.SetAnchor(pWrtShell->GetCursor()->GetPoint());
+        flySet.Put(anchor);
+        SwFormatFrameSize size(SwFrameSize::Minimum, 1000, 1000);
+        flySet.Put(size); // set a size, else we get 1 char per line...
+        SwFrameFormat const* pFly = pWrtShell->NewFlyFrame(flySet, /*bAnchValid=*/true);
+        CPPUNIT_ASSERT(pFly != nullptr);
+    }
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+
+    pCursor->SetMark();
+    pCursor->GetMark()->nContent.Assign(pCursor->GetContentNode(), 0);
+    pCursor->GetPoint()->nContent.Assign(pCursor->GetContentNode(), 3);
+
+    // replace with more text
+    pDoc->getIDocumentContentOperations().ReplaceRange(*pCursor, "blahblah", false);
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    CPPUNIT_ASSERT_EQUAL(OUString("blahblah"), pCursor->GetNode().GetTextNode()->GetText());
+
+    rUndoManager.Undo();
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    CPPUNIT_ASSERT_EQUAL(OUString("foo"), pCursor->GetNode().GetTextNode()->GetText());
+
+    rUndoManager.Redo();
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    CPPUNIT_ASSERT_EQUAL(OUString("blahblah"), pCursor->GetNode().GetTextNode()->GetText());
+
+    rUndoManager.Undo();
+
+    pCursor->GetMark()->nContent.Assign(pCursor->GetContentNode(), 0);
+    pCursor->GetPoint()->nContent.Assign(pCursor->GetContentNode(), 3);
+
+    // replace with less text
+    pDoc->getIDocumentContentOperations().ReplaceRange(*pCursor, "x", false);
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    CPPUNIT_ASSERT_EQUAL(OUString("x"), pCursor->GetNode().GetTextNode()->GetText());
+
+    rUndoManager.Undo();
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    CPPUNIT_ASSERT_EQUAL(OUString("foo"), pCursor->GetNode().GetTextNode()->GetText());
+
+    rUndoManager.Redo();
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    CPPUNIT_ASSERT_EQUAL(OUString("x"), pCursor->GetNode().GetTextNode()->GetText());
+
+    rUndoManager.Undo();
+
+    pCursor->GetMark()->nContent.Assign(pCursor->GetContentNode(), 0);
+    pCursor->GetPoint()->nContent.Assign(pCursor->GetContentNode(), 3);
+
+    // regex replace with paragraph breaks
+    pDoc->getIDocumentContentOperations().ReplaceRange(*pCursor, "xyz\\n\\nquux\\n", true);
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    pWrtShell->StartOfSection(false);
+    CPPUNIT_ASSERT_EQUAL(OUString("xyz"),
+                         pWrtShell->GetCursor()->GetNode().GetTextNode()->GetText());
+    pWrtShell->EndOfSection(true);
+    CPPUNIT_ASSERT_EQUAL(OUString("xyz\n\nquux\n"), pWrtShell->GetCursor()->GetText());
+
+    rUndoManager.Undo();
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    CPPUNIT_ASSERT_EQUAL(OUString("foo"), pCursor->GetNode().GetTextNode()->GetText());
+    pWrtShell->StartOfSection(false);
+    pWrtShell->EndOfSection(true);
+    CPPUNIT_ASSERT_EQUAL(OUString("foo"), pWrtShell->GetCursor()->GetText());
+
+    rUndoManager.Redo();
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    pWrtShell->StartOfSection(false);
+    CPPUNIT_ASSERT_EQUAL(OUString("xyz"),
+                         pWrtShell->GetCursor()->GetNode().GetTextNode()->GetText());
+    pWrtShell->EndOfSection(true);
+    CPPUNIT_ASSERT_EQUAL(OUString("xyz\n\nquux\n"), pWrtShell->GetCursor()->GetText());
+
+    // regex replace with paragraph join
+    pWrtShell->StartOfSection(false);
+    pWrtShell->Down(true);
+    pDoc->getIDocumentContentOperations().ReplaceRange(*pWrtShell->GetCursor(), "bar", true);
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    pWrtShell->StartOfSection(false);
+    CPPUNIT_ASSERT_EQUAL(OUString("bar"),
+                         pWrtShell->GetCursor()->GetNode().GetTextNode()->GetText());
+    pWrtShell->EndOfSection(true);
+    CPPUNIT_ASSERT_EQUAL(OUString("bar\nquux\n"), pWrtShell->GetCursor()->GetText());
+
+    rUndoManager.Undo();
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    pWrtShell->StartOfSection(false);
+    CPPUNIT_ASSERT_EQUAL(OUString("xyz"),
+                         pWrtShell->GetCursor()->GetNode().GetTextNode()->GetText());
+    pWrtShell->EndOfSection(true);
+    CPPUNIT_ASSERT_EQUAL(OUString("xyz\n\nquux\n"), pWrtShell->GetCursor()->GetText());
+
+    rUndoManager.Redo();
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    pWrtShell->StartOfSection(false);
+    CPPUNIT_ASSERT_EQUAL(OUString("bar"),
+                         pWrtShell->GetCursor()->GetNode().GetTextNode()->GetText());
+    pWrtShell->EndOfSection(true);
+    CPPUNIT_ASSERT_EQUAL(OUString("bar\nquux\n"), pWrtShell->GetCursor()->GetText());
+
+    rUndoManager.Undo();
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    pWrtShell->StartOfSection(false);
+    CPPUNIT_ASSERT_EQUAL(OUString("xyz"),
+                         pWrtShell->GetCursor()->GetNode().GetTextNode()->GetText());
+    pWrtShell->EndOfSection(true);
+    CPPUNIT_ASSERT_EQUAL(OUString("xyz\n\nquux\n"), pWrtShell->GetCursor()->GetText());
+
+    rUndoManager.Undo();
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    CPPUNIT_ASSERT_EQUAL(OUString("foo"), pCursor->GetNode().GetTextNode()->GetText());
+    pWrtShell->StartOfSection(false);
+    pWrtShell->EndOfSection(true);
+    CPPUNIT_ASSERT_EQUAL(OUString("foo"), pWrtShell->GetCursor()->GetText());
+}
+
 CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf54819)
 {
     load(DATA_DIRECTORY, "tdf54819.fodt");
@@ -997,6 +1145,226 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf105413)
     // first paragraph gets the same heading style
     CPPUNIT_ASSERT_EQUAL(OUString("Heading 1"),
                          getProperty<OUString>(getParagraph(1), "ParaStyleName"));
+}
+
+CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf76817)
+{
+    load(DATA_DIRECTORY, "num-parent-style.docx");
+
+    SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
+    CPPUNIT_ASSERT(pTextDoc);
+
+    CPPUNIT_ASSERT_EQUAL(OUString("Heading 2"),
+                         getProperty<OUString>(getParagraph(2), "ParaStyleName"));
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(2),
+                         getProperty<sal_Int32>(getParagraph(2), "OutlineLevel"));
+    CPPUNIT_ASSERT_EQUAL(OUString("1.1"),
+                         getProperty<OUString>(getParagraph(2), "ListLabelString"));
+
+    CPPUNIT_ASSERT_EQUAL(OUString("Heading 2"),
+                         getProperty<OUString>(getParagraph(4), "ParaStyleName"));
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(2),
+                         getProperty<sal_Int32>(getParagraph(4), "OutlineLevel"));
+    CPPUNIT_ASSERT_EQUAL(OUString("2.1"),
+                         getProperty<OUString>(getParagraph(4), "ListLabelString"));
+
+    // set Heading 2 style of paragraph 2 to Heading 1
+
+    SwWrtShell* pWrtShell = pTextDoc->GetDocShell()->GetWrtShell();
+    pWrtShell->Down(/*bSelect=*/false);
+
+    uno::Sequence<beans::PropertyValue> aPropertyValues = comphelper::InitPropertySequence({
+        { "Style", uno::makeAny(OUString("Heading 1")) },
+        { "FamilyName", uno::makeAny(OUString("ParagraphStyles")) },
+    });
+    dispatchCommand(mxComponent, ".uno:StyleApply", aPropertyValues);
+
+    CPPUNIT_ASSERT_EQUAL(OUString("Heading 1"),
+                         getProperty<OUString>(getParagraph(2), "ParaStyleName"));
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(1),
+                         getProperty<sal_Int32>(getParagraph(2), "OutlineLevel"));
+    // This was "1 Heading" instead of "2 Heading"
+    CPPUNIT_ASSERT_EQUAL(OUString("2"), getProperty<OUString>(getParagraph(2), "ListLabelString"));
+
+    CPPUNIT_ASSERT_EQUAL(OUString("Heading 2"),
+                         getProperty<OUString>(getParagraph(4), "ParaStyleName"));
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(2),
+                         getProperty<sal_Int32>(getParagraph(4), "OutlineLevel"));
+    // This was "2.1 Heading"
+    CPPUNIT_ASSERT_EQUAL(OUString("3.1"),
+                         getProperty<OUString>(getParagraph(4), "ListLabelString"));
+
+    // set Heading 1 style of paragraph 3 to Heading 2
+
+    pWrtShell->Down(/*bSelect=*/false);
+
+    CPPUNIT_ASSERT_EQUAL(OUString("Heading 1"),
+                         getProperty<OUString>(getParagraph(3), "ParaStyleName"));
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(1),
+                         getProperty<sal_Int32>(getParagraph(3), "OutlineLevel"));
+    CPPUNIT_ASSERT_EQUAL(OUString("3"), getProperty<OUString>(getParagraph(3), "ListLabelString"));
+
+    uno::Sequence<beans::PropertyValue> aPropertyValues2 = comphelper::InitPropertySequence({
+        { "Style", uno::makeAny(OUString("Heading 2")) },
+        { "FamilyName", uno::makeAny(OUString("ParagraphStyles")) },
+    });
+    dispatchCommand(mxComponent, ".uno:StyleApply", aPropertyValues2);
+
+    CPPUNIT_ASSERT_EQUAL(OUString("Heading 2"),
+                         getProperty<OUString>(getParagraph(3), "ParaStyleName"));
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(2),
+                         getProperty<sal_Int32>(getParagraph(3), "OutlineLevel"));
+    CPPUNIT_ASSERT_EQUAL(OUString("2.1"),
+                         getProperty<OUString>(getParagraph(3), "ListLabelString"));
+
+    CPPUNIT_ASSERT_EQUAL(OUString("Heading 2"),
+                         getProperty<OUString>(getParagraph(4), "ParaStyleName"));
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(2),
+                         getProperty<sal_Int32>(getParagraph(4), "OutlineLevel"));
+    CPPUNIT_ASSERT_EQUAL(OUString("2.2"),
+                         getProperty<OUString>(getParagraph(4), "ListLabelString"));
+}
+
+CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf76817_round_trip)
+{
+    load(DATA_DIRECTORY, "tdf76817.fodt");
+    SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
+    CPPUNIT_ASSERT(pTextDoc);
+
+    // save it to DOCX
+    reload("Office Open XML Text", "tdf76817.docx");
+    pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
+
+    SwViewShell* pViewShell
+        = pTextDoc->GetDocShell()->GetDoc()->getIDocumentLayoutAccess().GetCurrentViewShell();
+    pViewShell->Reformat();
+
+    CPPUNIT_ASSERT(pTextDoc);
+
+    CPPUNIT_ASSERT_EQUAL(OUString("Heading 2"),
+                         getProperty<OUString>(getParagraph(2), "ParaStyleName"));
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(2),
+                         getProperty<sal_Int32>(getParagraph(2), "OutlineLevel"));
+    CPPUNIT_ASSERT_EQUAL(OUString("1.1"),
+                         getProperty<OUString>(getParagraph(2), "ListLabelString"));
+
+    CPPUNIT_ASSERT_EQUAL(OUString("Heading 2"),
+                         getProperty<OUString>(getParagraph(4), "ParaStyleName"));
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(2),
+                         getProperty<sal_Int32>(getParagraph(4), "OutlineLevel"));
+    CPPUNIT_ASSERT_EQUAL(OUString("2.1"),
+                         getProperty<OUString>(getParagraph(4), "ListLabelString"));
+
+    // set Heading 2 style of paragraph 2 to Heading 1
+
+    SwWrtShell* pWrtShell = pTextDoc->GetDocShell()->GetWrtShell();
+    pWrtShell->Down(/*bSelect=*/false);
+
+    uno::Sequence<beans::PropertyValue> aPropertyValues = comphelper::InitPropertySequence({
+        { "Style", uno::makeAny(OUString("Heading 1")) },
+        { "FamilyName", uno::makeAny(OUString("ParagraphStyles")) },
+    });
+    dispatchCommand(mxComponent, ".uno:StyleApply", aPropertyValues);
+
+    CPPUNIT_ASSERT_EQUAL(OUString("Heading 1"),
+                         getProperty<OUString>(getParagraph(2), "ParaStyleName"));
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(1),
+                         getProperty<sal_Int32>(getParagraph(2), "OutlineLevel"));
+    // This was "1 Heading" instead of "2 Heading"
+    CPPUNIT_ASSERT_EQUAL(OUString("2"), getProperty<OUString>(getParagraph(2), "ListLabelString"));
+
+    CPPUNIT_ASSERT_EQUAL(OUString("Heading 2"),
+                         getProperty<OUString>(getParagraph(4), "ParaStyleName"));
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(2),
+                         getProperty<sal_Int32>(getParagraph(4), "OutlineLevel"));
+    // This was "2.1 Heading"
+    CPPUNIT_ASSERT_EQUAL(OUString("3.1"),
+                         getProperty<OUString>(getParagraph(4), "ListLabelString"));
+
+    // set Heading 1 style of paragraph 3 to Heading 2
+
+    pWrtShell->Down(/*bSelect=*/false);
+
+    CPPUNIT_ASSERT_EQUAL(OUString("Heading 1"),
+                         getProperty<OUString>(getParagraph(3), "ParaStyleName"));
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(1),
+                         getProperty<sal_Int32>(getParagraph(3), "OutlineLevel"));
+    CPPUNIT_ASSERT_EQUAL(OUString("3"), getProperty<OUString>(getParagraph(3), "ListLabelString"));
+
+    uno::Sequence<beans::PropertyValue> aPropertyValues2 = comphelper::InitPropertySequence({
+        { "Style", uno::makeAny(OUString("Heading 2")) },
+        { "FamilyName", uno::makeAny(OUString("ParagraphStyles")) },
+    });
+    dispatchCommand(mxComponent, ".uno:StyleApply", aPropertyValues2);
+
+    CPPUNIT_ASSERT_EQUAL(OUString("Heading 2"),
+                         getProperty<OUString>(getParagraph(3), "ParaStyleName"));
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(2),
+                         getProperty<sal_Int32>(getParagraph(3), "OutlineLevel"));
+    CPPUNIT_ASSERT_EQUAL(OUString("2.1"),
+                         getProperty<OUString>(getParagraph(3), "ListLabelString"));
+
+    CPPUNIT_ASSERT_EQUAL(OUString("Heading 2"),
+                         getProperty<OUString>(getParagraph(4), "ParaStyleName"));
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(2),
+                         getProperty<sal_Int32>(getParagraph(4), "OutlineLevel"));
+    CPPUNIT_ASSERT_EQUAL(OUString("2.2"),
+                         getProperty<OUString>(getParagraph(4), "ListLabelString"));
+}
+
+CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf76817_custom_outline)
+{
+    load(DATA_DIRECTORY, "tdf76817.docx");
+
+    SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
+    CPPUNIT_ASSERT(pTextDoc);
+
+    CPPUNIT_ASSERT_EQUAL(OUString("Heading 1"),
+                         getProperty<OUString>(getParagraph(1), "ParaStyleName"));
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(1),
+                         getProperty<sal_Int32>(getParagraph(1), "OutlineLevel"));
+    CPPUNIT_ASSERT_EQUAL(OUString("1"), getProperty<OUString>(getParagraph(1), "ListLabelString"));
+
+    CPPUNIT_ASSERT_EQUAL(OUString("Heading 2"),
+                         getProperty<OUString>(getParagraph(2), "ParaStyleName"));
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(2),
+                         getProperty<sal_Int32>(getParagraph(2), "OutlineLevel"));
+    // This wasn't numbered
+    CPPUNIT_ASSERT_EQUAL(OUString("1.1"),
+                         getProperty<OUString>(getParagraph(2), "ListLabelString"));
+
+    CPPUNIT_ASSERT_EQUAL(OUString("Heading 2"),
+                         getProperty<OUString>(getParagraph(4), "ParaStyleName"));
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(2),
+                         getProperty<sal_Int32>(getParagraph(4), "OutlineLevel"));
+    // This wasn't numbered
+    CPPUNIT_ASSERT_EQUAL(OUString("2.1"),
+                         getProperty<OUString>(getParagraph(4), "ListLabelString"));
+
+    // set Heading 2 style of paragraph 2 to Heading 1
+
+    SwWrtShell* pWrtShell = pTextDoc->GetDocShell()->GetWrtShell();
+    pWrtShell->Down(/*bSelect=*/false);
+
+    uno::Sequence<beans::PropertyValue> aPropertyValues = comphelper::InitPropertySequence({
+        { "Style", uno::makeAny(OUString("Heading 1")) },
+        { "FamilyName", uno::makeAny(OUString("ParagraphStyles")) },
+    });
+    dispatchCommand(mxComponent, ".uno:StyleApply", aPropertyValues);
+
+    CPPUNIT_ASSERT_EQUAL(OUString("Heading 1"),
+                         getProperty<OUString>(getParagraph(2), "ParaStyleName"));
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(1),
+                         getProperty<sal_Int32>(getParagraph(2), "OutlineLevel"));
+    CPPUNIT_ASSERT_EQUAL(OUString("2"), getProperty<OUString>(getParagraph(2), "ListLabelString"));
+
+    CPPUNIT_ASSERT_EQUAL(OUString("Heading 2"),
+                         getProperty<OUString>(getParagraph(4), "ParaStyleName"));
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(2),
+                         getProperty<sal_Int32>(getParagraph(4), "OutlineLevel"));
+    // This wasn't numbered
+    CPPUNIT_ASSERT_EQUAL(OUString("3.1"),
+                         getProperty<OUString>(getParagraph(4), "ListLabelString"));
 }
 
 CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf123102)

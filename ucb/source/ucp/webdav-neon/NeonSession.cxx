@@ -1635,6 +1635,8 @@ bool NeonSession::LOCK( NeonLock * pLock,
             = lastChanceToSendRefreshRequest( startCall, pLock->timeout );
 
         SAL_INFO( "ucb.ucp.webdav", "LOCK (refresh) - Lock successfully refreshed." );
+        pLock->timeout = timeout;
+        return true;
     }
     else
     {
@@ -1651,8 +1653,6 @@ bool NeonSession::LOCK( NeonLock * pLock,
         }
         return false;
     }
-    pLock->timeout = timeout;
-    return theRetVal;
 }
 
 void NeonSession::UNLOCK( const OUString & inPath,
@@ -1822,8 +1822,6 @@ void NeonSession::HandleError( int nError,
                                const OUString & inPath,
                                const DAVRequestEnvironment & rEnv )
 {
-    m_aEnv = DAVRequestEnvironment();
-
     // Map error code to DAVException.
     switch ( nError )
     {

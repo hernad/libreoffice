@@ -91,6 +91,7 @@
 #include <svx/unobrushitemhelper.hxx>
 #include <comphelper/scopeguard.hxx>
 #include <comphelper/lok.hxx>
+#include <officecfg/Office/Common.hxx>
 
 #include <svx/svxdlg.hxx>
 
@@ -716,6 +717,10 @@ void SwBaseShell::Execute(SfxRequest &rReq)
 
         case FN_UPDATE_ALL:
             {
+                comphelper::EmbeddedObjectContainer& rEmbeddedObjectContainer
+                    = GetObjectShell()->getEmbeddedObjectContainer();
+                rEmbeddedObjectContainer.setUserAllowsLinkUpdate(true);
+
                 SwView&  rTempView = GetView();
                 rSh.EnterStdMode();
                 if( !rSh.GetLinkManager().GetLinks().empty() )
@@ -1851,6 +1856,12 @@ void SwBaseShell::GetState( SfxItemSet &rSet )
                 else
                     rSet.Put( SfxVisibilityItem( nWhich, false ) );
                 break;
+            case SID_ACCESSIBILITY_CHECK:
+            {
+                if (!officecfg::Office::Common::Misc::ExperimentalMode::get())
+                    rSet.Put(SfxVisibilityItem(nWhich, false));
+            }
+            break;
         }
         nWhich = aIter.NextWhich();
     }

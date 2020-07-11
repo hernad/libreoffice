@@ -469,13 +469,6 @@ const ScPatternAttr* ScAttrArray::SetPatternAreaImpl(SCROW nStartRow, SCROW nEnd
         {
             SCSIZE nNeeded = mvData.size() + 2;
             SetDefaultIfNotInit( nNeeded );
-            if ( mvData.capacity() < nNeeded )
-            {
-                size_t nLimit = mvData.capacity() + SC_ATTRARRAY_DELTA;
-                if ( nLimit < nNeeded )
-                    nLimit = nNeeded;
-                mvData.reserve(nLimit);
-            }
 
             ScAddress       aAdrStart( nCol, 0, nTab );
             ScAddress       aAdrEnd  ( nCol, 0, nTab );
@@ -1830,7 +1823,7 @@ void ScAttrArray::FindStyleSheet( const SfxStyleSheetBase* pStyleSheet, ScFlatBo
                 pDocument->GetPool()->Remove(*mvData[nPos].pPattern);
                 pNewPattern->SetStyleSheet( static_cast<ScStyleSheet*>(
                     pDocument->GetStyleSheetPool()->
-                        Find( ScResId(STR_STYLENAME_STANDARD),
+                        Find( ScResId(STR_STYLENAME_STANDARD_CELL),
                               SfxStyleFamily::Para,
                               SfxStyleSearchBits::Auto | SfxStyleSearchBits::ScStandard ) ) );
                 mvData[nPos].pPattern = &pDocument->GetPool()->Put(*pNewPattern);

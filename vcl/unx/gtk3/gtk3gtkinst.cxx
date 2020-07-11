@@ -3670,7 +3670,8 @@ public:
         gtk_widget_set_can_focus(pWindow, true);
         g_object_unref(pWindow);
 
-        xEmbedWindow->Show();
+        // NoActivate otherwise Show grab focus to this widget
+        xEmbedWindow->Show(true, ShowFlags::NoActivate);
         css::uno::Reference<css::awt::XWindow> xWindow(xEmbedWindow->GetComponentInterface(), css::uno::UNO_QUERY);
         return xWindow;
     }
@@ -7410,6 +7411,15 @@ public:
         {
             GtkWidget* pPlaceHolder = gtk_popover_new(GTK_WIDGET(m_pMenuButton));
             gtk_popover_set_transitions_enabled(GTK_POPOVER(pPlaceHolder), false);
+
+            // tdf#132540 theme the unwanted popover into invisibility
+            GtkStyleContext *pPopoverContext = gtk_widget_get_style_context(pPlaceHolder);
+            GtkCssProvider *pProvider = gtk_css_provider_new();
+            static const gchar data[] = "popover { box-shadow: none; padding: 0 0 0 0; margin: 0 0 0 0; border-image: none; border-image-width: 0 0 0 0; background-image: none; background-color: transparent; border-radius: 0 0 0 0; border-width: 0 0 0 0; border-style: none; border-color: transparent; opacity: 0; min-height: 0; min-width: 0; }";
+            gtk_css_provider_load_from_data(pProvider, data, -1, nullptr);
+            gtk_style_context_add_provider(pPopoverContext, GTK_STYLE_PROVIDER(pProvider),
+                                           GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+
             gtk_menu_button_set_popover(m_pMenuButton, pPlaceHolder);
         }
         else
@@ -8652,7 +8662,9 @@ private:
         pThis->signal_activate();
     }
 
-    void signal_activate()
+protected:
+
+    virtual void signal_activate()
     {
         if (m_aActivateHdl.IsSet())
         {
@@ -11834,6 +11846,12 @@ private:
         return GTK_INPUT_ERROR;
     }
 
+    virtual void signal_activate() override
+    {
+        gtk_spin_button_update(m_pButton);
+        GtkInstanceEntry::signal_activate();
+    }
+
     double toGtk(int nValue) const
     {
         return static_cast<double>(nValue) / Power10(get_digits());
@@ -12721,6 +12739,7 @@ private:
     bool m_bAutoComplete;
     bool m_bAutoCompleteCaseSensitive;
     bool m_bChangedByMenu;
+    bool m_bCustomRenderer;
     bool m_bActivateCalled;
     gint m_nTextCol;
     gint m_nIdCol;
@@ -13734,6 +13753,7 @@ public:
         , m_bAutoComplete(false)
         , m_bAutoCompleteCaseSensitive(false)
         , m_bChangedByMenu(false)
+        , m_bCustomRenderer(false)
         , m_bActivateCalled(false)
         , m_nTextCol(gtk_combo_box_get_entry_text_column(pComboBox))
         , m_nIdCol(gtk_combo_box_get_id_column(pComboBox))
@@ -13748,6 +13768,7 @@ public:
         , m_nMRUCount(0)
         , m_nMaxMRUCount(0)
     {
+        int nActive = gtk_combo_box_get_active(m_pComboBox);
         insertAsParent(GTK_WIDGET(m_pComboBox), GTK_WIDGET(getContainer()));
         gtk_widget_set_visible(GTK_WIDGET(m_pComboBox), false);
         gtk_widget_set_no_show_all(GTK_WIDGET(m_pComboBox), true);
@@ -13835,6 +13856,9 @@ public:
         }
 
         g_list_free(cells);
+
+        if (nActive != -1)
+            tree_view_set_cursor(nActive);
 
         g_signal_connect(m_pMenuWindow, "grab-broken-event", G_CALLBACK(signalGrabBroken), this);
         g_signal_connect(m_pMenuWindow, "button-press-event", G_CALLBACK(signalButtonPress), this);
@@ -14252,22 +14276,34 @@ public:
         return m_bChangedByMenu;
     }
 
-    virtual void set_custom_renderer() override
+    virtual void set_custom_renderer(bool bOn) override
     {
+        if (bOn == m_bCustomRenderer)
+            return;
         GList* pColumns = gtk_tree_view_get_columns(m_pTreeView);
         // keep the original height around for optimal popup height calculation
-        m_nNonCustomLineHeight = ::get_height_row(m_pTreeView, pColumns);
+        m_nNonCustomLineHeight = bOn ? ::get_height_row(m_pTreeView, pColumns) : -1;
         GtkTreeViewColumn* pColumn = GTK_TREE_VIEW_COLUMN(pColumns->data);
         gtk_cell_layout_clear(GTK_CELL_LAYOUT(pColumn));
-        GtkCellRenderer *pRenderer = custom_cell_renderer_surface_new();
-        GValue value = G_VALUE_INIT;
-        g_value_init(&value, G_TYPE_POINTER);
-        g_value_set_pointer(&value, static_cast<gpointer>(this));
-        g_object_set_property(G_OBJECT(pRenderer), "instance", &value);
-        gtk_tree_view_column_pack_start(pColumn, pRenderer, true);
-        gtk_tree_view_column_add_attribute(pColumn, pRenderer, "text", m_nTextCol);
-        gtk_tree_view_column_add_attribute(pColumn, pRenderer, "id", m_nIdCol);
+        if (bOn)
+        {
+            GtkCellRenderer *pRenderer = custom_cell_renderer_surface_new();
+            GValue value = G_VALUE_INIT;
+            g_value_init(&value, G_TYPE_POINTER);
+            g_value_set_pointer(&value, static_cast<gpointer>(this));
+            g_object_set_property(G_OBJECT(pRenderer), "instance", &value);
+            gtk_tree_view_column_pack_start(pColumn, pRenderer, true);
+            gtk_tree_view_column_add_attribute(pColumn, pRenderer, "text", m_nTextCol);
+            gtk_tree_view_column_add_attribute(pColumn, pRenderer, "id", m_nIdCol);
+        }
+        else
+        {
+            GtkCellRenderer *pRenderer = gtk_cell_renderer_text_new();
+            gtk_tree_view_column_pack_start(pColumn, pRenderer, true);
+            gtk_tree_view_column_add_attribute(pColumn, pRenderer, "text", m_nTextCol);
+        }
         g_list_free(pColumns);
+        m_bCustomRenderer = bOn;
     }
 
     void call_signal_custom_render(VirtualDevice& rOutput, const tools::Rectangle& rRect, bool bSelected, const OUString& rId)
@@ -14740,7 +14776,7 @@ public:
         return m_bTreeChange;
     }
 
-    virtual void set_custom_renderer() override
+    virtual void set_custom_renderer(bool /*bOn*/) override
     {
         assert(false && "not implemented");
     }
@@ -15721,7 +15757,7 @@ weld::Builder* GtkInstance::CreateInterimBuilder(vcl::Window* pParent, const OUS
     SystemWindowData winData = {};
     winData.bClipUsingNativeWidget = true;
     auto xEmbedWindow = VclPtr<SystemChildWindow>::Create(pParent, 0, &winData, false);
-    xEmbedWindow->Show();
+    xEmbedWindow->Show(true, ShowFlags::NoActivate);
     xEmbedWindow->set_expand(true);
 
     const SystemEnvData* pEnvData = xEmbedWindow->GetSystemData();

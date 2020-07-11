@@ -268,6 +268,8 @@ class OfaQuoteTabPage : public SfxTabPage
 private:
     OUString        sNonBrkSpace;
     OUString        sOrdinal;
+    OUString        sTransliterateRTL;
+    OUString        sAngleQuotes;
 
     sal_UCS4    cSglStartQuote;
     sal_UCS4    cSglEndQuote;
@@ -287,7 +289,7 @@ private:
     std::unique_ptr<weld::Button> m_xDblEndQuotePB;
     std::unique_ptr<weld::Label> m_xDblEndExFT;
     std::unique_ptr<weld::Button> m_xDblStandardPB;
-    std::unique_ptr<weld::Label> m_xStandard;
+    OUString m_sStandard;
     /// For anything but writer
     std::unique_ptr<weld::TreeView> m_xCheckLB;
     /// Just for writer

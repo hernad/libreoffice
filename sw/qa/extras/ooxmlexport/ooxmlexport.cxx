@@ -264,12 +264,26 @@ DECLARE_OOXMLEXPORT_TEST(testDropdownInCell, "dropdown-in-cell.docx")
     CPPUNIT_ASSERT_EQUAL(sal_Int32(1), xTables->getCount());
 
     // Second problem: dropdown shape wasn't anchored inside the B1 cell.
-    uno::Reference<text::XTextContent> xShape(getShape(1), uno::UNO_QUERY);
-    uno::Reference<text::XTextRange> xAnchor = xShape->getAnchor();
-    uno::Reference<text::XTextTable> xTable(xTables->getByIndex(0), uno::UNO_QUERY);
-    uno::Reference<text::XTextRange> xCell(xTable->getCellByName("B1"), uno::UNO_QUERY);
-    uno::Reference<text::XTextRangeCompare> xTextRangeCompare(xCell, uno::UNO_QUERY);
-    CPPUNIT_ASSERT_EQUAL(sal_Int16(0), xTextRangeCompare->compareRegionStarts(xAnchor, xCell));
+    if (getShapes() > 0)
+    {
+        uno::Reference<text::XTextContent> xShape(getShape(1), uno::UNO_QUERY);
+        uno::Reference<text::XTextRange> xAnchor = xShape->getAnchor();
+        uno::Reference<text::XTextTable> xTable(xTables->getByIndex(0), uno::UNO_QUERY);
+        uno::Reference<text::XTextRange> xCell(xTable->getCellByName("B1"), uno::UNO_QUERY);
+        uno::Reference<text::XTextRangeCompare> xTextRangeCompare(xCell, uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(sal_Int16(0), xTextRangeCompare->compareRegionStarts(xAnchor, xCell));
+    }
+    else
+    {
+        // ComboBox was imported as DropDown text field
+        uno::Reference<text::XTextFieldsSupplier> xTextFieldsSupplier(mxComponent, uno::UNO_QUERY);
+        uno::Reference<container::XEnumerationAccess> xFieldsAccess(xTextFieldsSupplier->getTextFields());
+        uno::Reference<container::XEnumeration> xFields(xFieldsAccess->createEnumeration());
+        CPPUNIT_ASSERT(xFields->hasMoreElements());
+        uno::Any aField = xFields->nextElement();
+        uno::Reference<lang::XServiceInfo> xServiceInfo(aField, uno::UNO_QUERY);
+        CPPUNIT_ASSERT(xServiceInfo->supportsService("com.sun.star.text.textfield.DropDown"));
+    }
 }
 
 DECLARE_OOXMLEXPORT_TEST(testTableAlignment, "table-alignment.docx")
@@ -771,9 +785,18 @@ DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testOOxmlOutlineNumberTypes, "outline-number
 
 DECLARE_OOXMLEXPORT_TEST(testNumParentStyle, "num-parent-style.docx")
 {
-//reverting tdf#76817 hard-codes the numbering style on the paragraph, preventing RT of "Outline" style
-//I think this unit test is wrong, but I will revert to its original claim.
-    CPPUNIT_ASSERT(getProperty<OUString>(getParagraph(4), "NumberingStyleName").startsWith("WWNum"));
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(1),
+                        getProperty<sal_Int32>(getParagraph(1), "OutlineLevel"));
+    CPPUNIT_ASSERT_EQUAL(OUString("1"), getProperty<OUString>(getParagraph(1), "ListLabelString"));
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(2),
+                        getProperty<sal_Int32>(getParagraph(2), "OutlineLevel"));
+    CPPUNIT_ASSERT_EQUAL(OUString("1.1"), getProperty<OUString>(getParagraph(2), "ListLabelString"));
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(1),
+                        getProperty<sal_Int32>(getParagraph(3), "OutlineLevel"));
+    CPPUNIT_ASSERT_EQUAL(OUString("2"), getProperty<OUString>(getParagraph(3), "ListLabelString"));
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(2),
+                        getProperty<sal_Int32>(getParagraph(4), "OutlineLevel"));
+    CPPUNIT_ASSERT_EQUAL(OUString("2.1"), getProperty<OUString>(getParagraph(4), "ListLabelString"));
 }
 
 DECLARE_OOXMLEXPORT_TEST(testNumOverrideLvltext, "num-override-lvltext.docx")

@@ -686,7 +686,7 @@ void SbiRuntime::SetParameters( SbxArray* pParams )
             {
                 bByVal |= ( p->eType & SbxBYREF ) == 0;
                 // tdf#79426, tdf#125180 - don't convert missing arguments to the requested parameter type
-                if ( t != SbxEMPTY && !IsMissing( v, 1 ) )
+                if ( !IsMissing( v, 1 ) )
                 {
                     t = static_cast<SbxDataType>( p->eType & 0x0FFF );
                 }
@@ -2827,6 +2827,8 @@ void SbiRuntime::StepLOADNC( sal_uInt32 nOp1 )
     }
     SbxVariable* p = new SbxVariable( eType );
     p->PutDouble( n );
+    // tdf#133913 - create variable with Variant/Type in order to prevent type conversion errors
+    p->ResetFlag( SbxFlagBits::Fixed );
     PushVar( p );
 }
 

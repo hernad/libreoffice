@@ -499,9 +499,10 @@ inline bool ImpSvNumberInputScan::SkipChar( sal_Unicode c, const OUString& rStri
 /**
  * Skips blanks
  */
-inline void ImpSvNumberInputScan::SkipBlanks( const OUString& rString,
+inline bool ImpSvNumberInputScan::SkipBlanks( const OUString& rString,
                                               sal_Int32& nPos )
 {
+    sal_Int32 nHere = nPos;
     if ( nPos < rString.getLength() )
     {
         const sal_Unicode* p = rString.getStr() + nPos;
@@ -511,6 +512,7 @@ inline void ImpSvNumberInputScan::SkipBlanks( const OUString& rString,
             p++;
         }
     }
+    return nHere < nPos;
 }
 
 
@@ -956,7 +958,9 @@ inline bool ImpSvNumberInputScan::GetNextNumber( sal_uInt16& i, sal_uInt16& j ) 
 
 bool ImpSvNumberInputScan::GetTimeRef( double& fOutNumber,
                                        sal_uInt16 nIndex, // j-value of the first numeric time part of input, default 0
-                                       sal_uInt16 nCnt ) const // count of numeric time parts
+                                       sal_uInt16 nCnt,   // count of numeric time parts
+                                       SvNumInputOptions eInputOptions
+                                     ) const
 {
     bool bRet = true;
     sal_uInt16 nHour;
@@ -1005,13 +1009,15 @@ bool ImpSvNumberInputScan::GetTimeRef( double& fOutNumber,
     else if (nIndex - nStartIndex < nCnt)
     {
         nMinute = static_cast<sal_uInt16>(sStrArray[nNums[nIndex++]].toInt32());
-        if (nIndex > 1 && nMinute > 59)
+        if (!(eInputOptions & SvNumInputOptions::LAX_TIME)
+                && nIndex > 1 && nMinute > 59)
             bRet = false;   // 1:60 or 1:123 is invalid, 123:1 is valid
     }
     if (nIndex - nStartIndex < nCnt)
     {
         nSecond = static_cast<sal_uInt16>(sStrArray[nNums[nIndex++]].toInt32());
-        if (nIndex > 1 && nSecond > 59 && !(nHour == 23 && nMinute == 59 && nSecond == 60))
+        if (!(eInputOptions & SvNumInputOptions::LAX_TIME)
+                && nIndex > 1 && nSecond > 59 && !(nHour == 23 && nMinute == 59 && nSecond == 60))
             bRet = false;   // 1:60 or 1:123 or 1:1:123 is invalid, 123:1 or 123:1:1 is valid, or leap second
     }
     if (nIndex - nStartIndex < nCnt)
@@ -2267,10 +2273,13 @@ bool ImpSvNumberInputScan::ScanStartString( const OUString& rString )
     if (nSign && nPos == rString.getLength())
         return true;
 
+    const sal_Int32 nStartBlanks = nPos;
     if ( GetDecSep(rString, nPos) )                 // decimal separator in start string
     {
-        nDecPos = 1;
-        SkipBlanks(rString, nPos);
+        if (SkipBlanks(rString, nPos))
+            nPos = nStartBlanks;                    // `. 2` not a decimal separator
+        else
+            nDecPos = 1;                            // leading decimal separator
     }
     else if ( GetCurrency(rString, nPos) )          // currency (DM 1)?
     {
@@ -2286,8 +2295,13 @@ bool ImpSvNumberInputScan::ScanStartString( const OUString& rString )
         }
         if ( GetDecSep(rString, nPos) )             // decimal separator follows currency
         {
-            nDecPos = 1;
-            SkipBlanks(rString, nPos);
+            if (SkipBlanks(rString, nPos))
+            {
+                nPos = nStartBlanks;                // `DM . 2` not a decimal separator
+                eScannedType = SvNumFormatType::UNDEFINED;  // !!! it is NOT currency !!!
+            }
+            else
+                nDecPos = 1;                        // leading decimal separator
         }
     }
     else
@@ -2393,14 +2407,13 @@ bool ImpSvNumberInputScan::ScanStartString( const OUString& rString )
                 }
             }
         }
+        // Skip one trailing '-' or '/' character to recognize June-2007
+        if (nMonth && nPos + 1 == rString.getLength())
+        {
+            SkipChar('-', rString, nPos) || SkipChar('/', rString, nPos);
+        }
     }
 
-    // skip any trailing '-' or '/' chars
-    if (nPos < rString.getLength())
-    {
-        while (SkipChar ('-', rString, nPos) || SkipChar ('/', rString, nPos))
-            ; // do nothing
-    }
     if (nPos < rString.getLength()) // not everything consumed
     {
         // Does input StartString equal StartString of format?
@@ -2439,7 +2452,8 @@ bool ImpSvNumberInputScan::ScanMidString( const OUString& rString, sal_uInt16 nS
         }
     }
 
-    SkipBlanks(rString, nPos);
+    const sal_Int32 nStartBlanks = nPos;
+    const bool bBlanks = SkipBlanks(rString, nPos);
     if (GetDecSep(rString, nPos))                   // decimal separator?
     {
         if (nDecPos == 1 || nDecPos == 3)           // .12.4 or 1.E2.1
@@ -2469,10 +2483,19 @@ bool ImpSvNumberInputScan::ScanMidString( const OUString& rString, sal_uInt16 nS
                 return MatchedReturn();
             }
         }
+        else if (bBlanks)
+        {
+            // `1 .2` or `1 . 2` not a decimal separator, reset
+            nPos = nStartBlanks;
+        }
+        else if (SkipBlanks(rString, nPos))
+        {
+            // `1. 2` not a decimal separator, reset
+            nPos = nStartBlanks;
+        }
         else
         {
             nDecPos = 2;                            // . in mid string
-            SkipBlanks(rString, nPos);
         }
     }
     else if ( (eScannedType & SvNumFormatType::TIME) &&
@@ -2795,7 +2818,8 @@ bool ImpSvNumberInputScan::ScanEndString( const OUString& rString )
         }
     }
 
-    SkipBlanks(rString, nPos);
+    const sal_Int32 nStartBlanks = nPos;
+    const bool bBlanks = SkipBlanks(rString, nPos);
     if (GetDecSep(rString, nPos))                   // decimal separator?
     {
         if (nDecPos == 1 || nDecPos == 3)           // .12.4 or 12.E4.
@@ -2824,6 +2848,11 @@ bool ImpSvNumberInputScan::ScanEndString( const OUString& rString )
             {
                 return MatchedReturn();
             }
+        }
+        else if (bBlanks)
+        {
+            // not a decimal separator, reset
+            nPos = nStartBlanks;
         }
         else
         {
@@ -3659,9 +3688,10 @@ void ImpSvNumberInputScan::ChangeNullDate( const sal_uInt16 Day,
  * Does rString represent a number (also date, time et al)
  */
 bool ImpSvNumberInputScan::IsNumberFormat( const OUString& rString,         // string to be analyzed
-                                           SvNumFormatType& F_Type,                   // IN: old type, OUT: new type
+                                           SvNumFormatType& F_Type,         // IN: old type, OUT: new type
                                            double& fOutNumber,              // OUT: number if convertible
-                                           const SvNumberformat* pFormat )  // maybe a number format to match against
+                                           const SvNumberformat* pFormat,   // maybe a number format to match against
+                                           SvNumInputOptions eInputOptions )
 {
     OUString aString;
     bool res; // return value
@@ -4062,7 +4092,7 @@ bool ImpSvNumberInputScan::IsNumberFormat( const OUString& rString,         // s
             break;
 
         case SvNumFormatType::TIME:
-            res = GetTimeRef(fOutNumber, 0, nNumericsCnt);
+            res = GetTimeRef(fOutNumber, 0, nNumericsCnt, eInputOptions);
             if ( nSign < 0 )
             {
                 fOutNumber = -fOutNumber;
@@ -4078,7 +4108,7 @@ bool ImpSvNumberInputScan::IsNumberFormat( const OUString& rString,         // s
             if ( res )
             {
                 double fTime;
-                res = GetTimeRef( fTime, k, nNumericsCnt - k );
+                res = GetTimeRef( fTime, k, nNumericsCnt - k, eInputOptions);
                 fOutNumber += fTime;
             }
             break;

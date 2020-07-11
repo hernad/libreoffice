@@ -199,7 +199,7 @@
       <menu:menuitem menu:id=".uno:ViewBounds" menu:style="text"/>
       <menu:menuitem menu:id=".uno:TableBoundaries" menu:style="text"/>
       <menu:menuitem menu:id=".uno:ShowGraphics" menu:style="text"/>
-      <menu:menuitem menu:id=".uno:ShowWhitespace" menu:style="text"/>
+      <menu:menuitem menu:id=".uno:ShowWhitespace"/>
       <menu:menuseparator/>
       <menu:menuitem menu:id=".uno:ViewTrackChanges"/>
       <menu:menuitem menu:id=".uno:ShowAnnotations" menu:style="text"/>
@@ -258,7 +258,7 @@
           <menu:menuitem menu:id=".uno:InsertAVMedia"/>
         </menu:menupopup>
       </menu:menu>
-      <menu:menu menu:id=".uno:ObjectMenu">
+      <menu:menu menu:id=".uno:ObjectMenu" menu:style="text">
         <menu:menupopup>
           <menu:menuitem menu:id=".uno:InsertObjectStarMath"/>
           <menu:menuitem menu:id=".uno:InsertQrCode" menu:style="text"/>

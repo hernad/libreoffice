@@ -110,6 +110,7 @@ enum SwDocumentSettingsPropertyHandles
     HANDLE_USE_OLD_PRINTER_METRICS,
     HANDLE_PROTECT_FORM,
     HANDLE_MS_WORD_COMP_TRAILING_BLANKS,
+    HANDLE_MS_WORD_COMP_MIN_LINE_HEIGHT_BY_FLY,
     HANDLE_TABS_RELATIVE_TO_INDENT,
     HANDLE_RSID,
     HANDLE_RSID_ROOT,
@@ -142,6 +143,7 @@ enum SwDocumentSettingsPropertyHandles
     HANDLE_CONTINUOUS_ENDNOTES,
     HANDLE_PROTECT_BOOKMARKS,
     HANDLE_PROTECT_FIELDS,
+    HANDLE_HEADER_SPACING_BELOW_LAST_PARA,
 };
 
 }
@@ -202,6 +204,7 @@ static MasterPropertySetInfo * lcl_createSettingsInfo()
         { OUString("RsidRoot"), HANDLE_RSID_ROOT, cppu::UnoType<sal_Int32>::get(), 0},
         { OUString("ProtectForm"), HANDLE_PROTECT_FORM, cppu::UnoType<bool>::get(), 0},
         { OUString("MsWordCompTrailingBlanks"), HANDLE_MS_WORD_COMP_TRAILING_BLANKS, cppu::UnoType<bool>::get(), 0 },
+        { OUString("MsWordCompMinLineHeightByFly"), HANDLE_MS_WORD_COMP_MIN_LINE_HEIGHT_BY_FLY, cppu::UnoType<bool>::get(), 0 },
         { OUString("TabAtLeftIndentForParagraphsInList"), HANDLE_TAB_AT_LEFT_INDENT_FOR_PARA_IN_LIST, cppu::UnoType<bool>::get(), 0},
         { OUString("ModifyPasswordInfo"), HANDLE_MODIFYPASSWORDINFO, cppu::UnoType< cppu::UnoSequenceType<css::beans::PropertyValue> >::get(), 0},
         { OUString("MathBaselineAlignment"), HANDLE_MATH_BASELINE_ALIGNMENT, cppu::UnoType<bool>::get(), 0},
@@ -231,6 +234,8 @@ static MasterPropertySetInfo * lcl_createSettingsInfo()
         { OUString("ContinuousEndnotes"), HANDLE_CONTINUOUS_ENDNOTES, cppu::UnoType<bool>::get(), 0 },
         { OUString("ProtectBookmarks"), HANDLE_PROTECT_BOOKMARKS, cppu::UnoType<bool>::get(), 0 },
         { OUString("ProtectFields"), HANDLE_PROTECT_FIELDS, cppu::UnoType<bool>::get(), 0 },
+        { OUString("HeaderSpacingBelowLastPara"), HANDLE_HEADER_SPACING_BELOW_LAST_PARA, cppu::UnoType<bool>::get(), 0 },
+
 /*
  * As OS said, we don't have a view when we need to set this, so I have to
  * find another solution before adding them to this property set - MTG
@@ -748,6 +753,12 @@ void SwXDocumentSettings::_setSingleValue( const comphelper::PropertyInfo & rInf
             mpDoc->getIDocumentSettingAccess().set(DocumentSettingId::MS_WORD_COMP_TRAILING_BLANKS, bTmp);
         }
         break;
+        case HANDLE_MS_WORD_COMP_MIN_LINE_HEIGHT_BY_FLY:
+        {
+            bool bTmp = *o3tl::doAccess<bool>(rValue);
+            mpDoc->getIDocumentSettingAccess().set(DocumentSettingId::MS_WORD_COMP_MIN_LINE_HEIGHT_BY_FLY, bTmp);
+        }
+        break;
         case HANDLE_TAB_AT_LEFT_INDENT_FOR_PARA_IN_LIST:
         {
             bool bTmp = *o3tl::doAccess<bool>(rValue);
@@ -956,6 +967,16 @@ void SwXDocumentSettings::_setSingleValue( const comphelper::PropertyInfo & rInf
             {
                 mpDoc->getIDocumentSettingAccess().set(DocumentSettingId::PROTECT_FIELDS,
                                                        bTmp);
+            }
+        }
+        break;
+        case HANDLE_HEADER_SPACING_BELOW_LAST_PARA:
+        {
+            bool bTmp;
+            if (rValue >>= bTmp)
+            {
+                mpDoc->getIDocumentSettingAccess().set(
+                    DocumentSettingId::HEADER_SPACING_BELOW_LAST_PARA, bTmp);
             }
         }
         break;
@@ -1284,6 +1305,11 @@ void SwXDocumentSettings::_getSingleValue( const comphelper::PropertyInfo & rInf
             rValue <<= mpDoc->getIDocumentSettingAccess().get(DocumentSettingId::MS_WORD_COMP_TRAILING_BLANKS);
         }
         break;
+        case HANDLE_MS_WORD_COMP_MIN_LINE_HEIGHT_BY_FLY:
+        {
+            rValue <<= mpDoc->getIDocumentSettingAccess().get(DocumentSettingId::MS_WORD_COMP_MIN_LINE_HEIGHT_BY_FLY);
+        }
+        break;
         case HANDLE_TAB_AT_LEFT_INDENT_FOR_PARA_IN_LIST:
         {
             rValue <<= mpDoc->getIDocumentSettingAccess().get(DocumentSettingId::TAB_AT_LEFT_INDENT_FOR_PARA_IN_LIST);
@@ -1431,6 +1457,12 @@ void SwXDocumentSettings::_getSingleValue( const comphelper::PropertyInfo & rInf
         {
             rValue <<= mpDoc->getIDocumentSettingAccess().get(
                 DocumentSettingId::PROTECT_FIELDS);
+        }
+        break;
+        case HANDLE_HEADER_SPACING_BELOW_LAST_PARA:
+        {
+            rValue <<= mpDoc->getIDocumentSettingAccess().get(
+                DocumentSettingId::HEADER_SPACING_BELOW_LAST_PARA);
         }
         break;
         default:

@@ -1845,6 +1845,9 @@ void SwWW8ImplReader::ImportDop()
         DocumentSettingId::APPLY_PARAGRAPH_MARK_FORMAT_TO_NUMBERING, true);
     m_rDoc.getIDocumentSettingAccess().set(
         DocumentSettingId::MS_WORD_COMP_TRAILING_BLANKS, true);
+    // tdf#128195
+    m_rDoc.getIDocumentSettingAccess().set(
+        DocumentSettingId::HEADER_SPACING_BELOW_LAST_PARA, true);
 
     // Import Default Tabs
     long nDefTabSiz = m_xWDop->dxaTab;
@@ -6340,8 +6343,8 @@ static void lcl_getListOfStreams(SotStorage * pStorage, comphelper::SequenceAsHa
         OUString sStreamFullName = sPrefix.getLength() ? sPrefix + "/" + aElement.GetName() : aElement.GetName();
         if (aElement.IsStorage())
         {
-            SotStorage * pSubStorage = pStorage->OpenSotStorage(aElement.GetName(), StreamMode::STD_READ | StreamMode::SHARE_DENYALL);
-            lcl_getListOfStreams(pSubStorage, aStreamsData, sStreamFullName);
+            tools::SvRef<SotStorage> xSubStorage = pStorage->OpenSotStorage(aElement.GetName(), StreamMode::STD_READ | StreamMode::SHARE_DENYALL);
+            lcl_getListOfStreams(xSubStorage.get(), aStreamsData, sStreamFullName);
         }
         else
         {

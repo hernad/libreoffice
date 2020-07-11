@@ -207,10 +207,6 @@ uno::Sequence<beans::PropertyValue> ListLevel::GetLevelProperties(bool bDefaults
     {
         if (m_xGraphicBitmap.is())
             nNumberFormat = style::NumberingType::BITMAP;
-        else if (m_sBulletChar.isEmpty() && nNumberFormat != style::NumberingType::CHAR_SPECIAL)
-            // w:lvlText is empty, that means no numbering in Word.
-            // CHAR_SPECIAL is handled separately below.
-            nNumberFormat = style::NumberingType::NUMBER_NONE;
         aNumberingProperties.push_back(lcl_makePropVal(PROP_NUMBERING_TYPE, nNumberFormat));
     }
 
@@ -233,8 +229,10 @@ uno::Sequence<beans::PropertyValue> ListLevel::GetLevelProperties(bool bDefaults
         aNumberingProperties.push_back(lcl_makePropVal(PROP_GRAPHIC_SIZE, m_aGraphicSize));
     }
 
-    if (bDefaults || m_nTabstop != 0)
-        aNumberingProperties.push_back(lcl_makePropVal(PROP_LISTTAB_STOP_POSITION, m_nTabstop));
+    if (m_nTabstop.has_value())
+        aNumberingProperties.push_back(lcl_makePropVal(PROP_LISTTAB_STOP_POSITION, *m_nTabstop));
+    else if (bDefaults)
+        aNumberingProperties.push_back(lcl_makePropVal<sal_Int16>(PROP_LISTTAB_STOP_POSITION, 0));
 
     //TODO: handling of nFLegal?
     //TODO: nFNoRestart lower levels do not restart when higher levels are incremented, like:
@@ -370,11 +368,14 @@ ListLevel::Pointer AbstractListDef::GetLevel( sal_uInt16 nLvl )
     return pLevel;
 }
 
-void AbstractListDef::AddLevel( )
+void AbstractListDef::AddLevel( sal_uInt16 nLvl )
 {
+    if ( nLvl >= m_aLevels.size() )
+        m_aLevels.resize( nLvl+1 );
+
     ListLevel::Pointer pLevel( new ListLevel );
     m_pCurrentLevel = pLevel;
-    m_aLevels.push_back( pLevel );
+    m_aLevels[nLvl] = pLevel;
 }
 
 uno::Sequence<uno::Sequence<beans::PropertyValue>> AbstractListDef::GetPropertyValues(bool bDefaults)
@@ -385,7 +386,8 @@ uno::Sequence<uno::Sequence<beans::PropertyValue>> AbstractListDef::GetPropertyV
     int nLevels = m_aLevels.size( );
     for ( int i = 0; i < nLevels; i++ )
     {
-        aResult[i] = m_aLevels[i]->GetProperties(bDefaults);
+        if (m_aLevels[i])
+            aResult[i] = m_aLevels[i]->GetProperties(bDefaults);
     }
 
     return result;
@@ -404,6 +406,7 @@ const OUString& AbstractListDef::MapListId(OUString const& rId)
 
 ListDef::ListDef( ) : AbstractListDef( )
 {
+    m_nDefaultParentLevels = WW_OUTLINE_MAX + 1;
 }
 
 ListDef::~ListDef( )
@@ -548,40 +551,14 @@ void ListDef::CreateNumberingRules( DomainMapper& rDMapper,
                 if (pLevel && !pLevel->GetBulletChar().isEmpty())
                     sText = pLevel->GetBulletChar( );
 
-                if (sText.isEmpty())
-                {
-                    // Empty <w:lvlText>? Then put a Unicode "zero width space" as a suffix, so LabelFollowedBy is still shown, as in Word.
-                    // With empty suffix, Writer does not show LabelFollowedBy, either.
-                    OUString sSuffix;
-                    auto it = std::find_if(aLvlProps.begin(), aLvlProps.end(), [](const beans::PropertyValue& rValue) { return rValue.Name == "NumberingType"; });
-                    if (it != aLvlProps.end())
-                    {
-                        sal_Int16 nNumberFormat = it->Value.get<sal_Int16>();
+                aLvlProps.push_back(comphelper::makePropertyValue(getPropertyName(PROP_PREFIX), OUString("")));
+                aLvlProps.push_back(comphelper::makePropertyValue(getPropertyName(PROP_SUFFIX), OUString("")));
+                aLvlProps.push_back(comphelper::makePropertyValue(getPropertyName(PROP_LIST_FORMAT), sText));
 
-                        // No need for a zero width space without a real LabelFollowedBy.
-                        bool bLabelFollowedBy = true;
-                        it = std::find_if(aLvlProps.begin(), aLvlProps.end(), [](const beans::PropertyValue& rValue) { return rValue.Name == "LabelFollowedBy"; });
-                        if (it != aLvlProps.end())
-                        {
-                            sal_Int16 nValue;
-                            if (it->Value >>= nValue)
-                                bLabelFollowedBy = nValue != SvxNumberFormat::NOTHING;
-                        }
-
-                        if (bLabelFollowedBy && nNumberFormat == style::NumberingType::NUMBER_NONE)
-                            sSuffix = OUString(u'\x200B');
-                    }
-                    aLvlProps.push_back(comphelper::makePropertyValue(getPropertyName(PROP_SUFFIX), sSuffix));
-                }
-                else
-                {
-                    aLvlProps.push_back(comphelper::makePropertyValue(getPropertyName(PROP_LIST_FORMAT), sText));
-
-                    // Total count of replacement holders is determining amount of required parent numbering to include
-                    // TODO: not sure how "%" symbol is escaped. This is not supported yet
-                    sal_Int16 nParentNum = comphelper::string::getTokenCount(sText, '%');
-                    aLvlProps.push_back(comphelper::makePropertyValue(getPropertyName(PROP_PARENT_NUMBERING), nParentNum));
-                }
+                // Total count of replacement holders is determining amount of required parent numbering to include
+                // TODO: not sure how "%" symbol is escaped. This is not supported yet
+                sal_Int16 nParentNum = comphelper::string::getTokenCount(sText, '%');
+                aLvlProps.push_back(comphelper::makePropertyValue(getPropertyName(PROP_PARENT_NUMBERING), nParentNum));
 
                 aLvlProps.push_back(comphelper::makePropertyValue(getPropertyName(PROP_POSITION_AND_SPACE_MODE), sal_Int16(text::PositionAndSpaceMode::LABEL_ALIGNMENT)));
 
@@ -600,6 +577,16 @@ void ListDef::CreateNumberingRules( DomainMapper& rDMapper,
                     aLvlProps.push_back(comphelper::makePropertyValue(getPropertyName(PROP_HEADING_STYLE_NAME), pParaStyle->sConvertedStyleName));
 
                     xOutlineRules->replaceByIndex(nLevel, uno::makeAny(comphelper::containerToSequence(aLvlProps)));
+                }
+
+                // first level without default outline paragraph style
+                const tools::SvRef< StyleSheetEntry >& aParaStyle = pAbsLevel->GetParaStyle();
+                if ( WW_OUTLINE_MAX + 1 == m_nDefaultParentLevels && ( !aParaStyle ||
+                    aParaStyle->sConvertedStyleName.getLength() != RTL_CONSTASCII_LENGTH( "Heading 1" ) ||
+                    !aParaStyle->sConvertedStyleName.startsWith("Heading ") ||
+                    aParaStyle->sConvertedStyleName[ RTL_CONSTASCII_LENGTH( "Heading " ) ] - u'1' != nLevel ) )
+                {
+                    m_nDefaultParentLevels = nLevel;
                 }
 
                 nLevel++;
@@ -725,14 +712,11 @@ void ListsManager::lcl_attribute( Id nName, Value& rVal )
             AbstractListDef::SetValue( nName );
         break;
         case NS_ooxml::LN_CT_NumLvl_ilvl:
-        {
             //add a new level to the level vector and make it the current one
-            m_pCurrentDefinition->AddLevel();
-
-            writerfilter::Reference<Properties>::Pointer_t pProperties = rVal.getProperties();
-            if(pProperties)
-                pProperties->resolve(*this);
-        }
+            m_pCurrentDefinition->AddLevel(rVal.getString().toUInt32());
+        break;
+        case NS_ooxml::LN_CT_Lvl_ilvl:
+            m_pCurrentDefinition->AddLevel(rVal.getString().toUInt32());
         break;
         case NS_ooxml::LN_CT_AbstractNum_abstractNumId:
         {
@@ -758,7 +742,6 @@ void ListsManager::lcl_attribute( Id nName, Value& rVal )
                 pCurrentLvl->Insert(
                     PROP_FIRST_LINE_INDENT, uno::makeAny( ConversionHelper::convertTwipToMM100( nIntValue ) ));
         break;
-        case NS_ooxml::LN_CT_Lvl_ilvl: //overrides previous level - unsupported
         case NS_ooxml::LN_CT_Lvl_tplc: //template code - unsupported
         case NS_ooxml::LN_CT_Lvl_tentative: //marks level as unused in the document - unsupported
         break;
@@ -920,7 +903,6 @@ void ListsManager::lcl_sprm( Sprm& rSprm )
             break;
             case NS_ooxml::LN_CT_AbstractNum_lvl:
             {
-                m_pCurrentDefinition->AddLevel();
                 writerfilter::Reference<Properties>::Pointer_t pProperties = rSprm.getProps();
                 if(pProperties)
                     pProperties->resolve(*this);

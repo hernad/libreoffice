@@ -36,6 +36,8 @@
 #include <frmatr.hxx>
 #include <IDocumentSettingAccess.hxx>
 
+#include <config_features.h>
+
 static char const DATA_DIRECTORY[] = "/sw/qa/extras/layout/data/";
 
 /// Test to assert layout / rendering result of Writer.
@@ -449,6 +451,15 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineFlysInBody)
         assertXPath(pXmlDoc, "/root/page[1]/body/txt[3]/anchored/fly[1]/txt[3]/Text[2]", "Portion",
                     "hi");
     }
+}
+
+CPPUNIT_TEST_FIXTURE(SwLayoutWriter, TestTdf134272)
+{
+    SwDoc* pDoc = createDoc("tdf134472.odt");
+    CPPUNIT_ASSERT(pDoc);
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
+    assertXPath(pXmlDoc, "/root/page[1]/header/txt[2]/infos/bounds", "height", "843");
+    assertXPath(pXmlDoc, "/root/page[1]/header/txt[2]/infos/bounds", "bottom", "2819");
 }
 
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineFlysInHeader)
@@ -1110,6 +1121,24 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineFlysInFootnote)
                     "PortionType::Text");
         assertXPath(pXmlDoc, "/root/page[1]/ftncont/ftn[2]/txt[3]/Text[2]", "Portion", "az");
     }
+}
+
+CPPUNIT_TEST_FIXTURE(SwLayoutWriter, TestTdf134277)
+{
+    SwDoc* pDoc = createDoc("tdf134277.docx");
+    CPPUNIT_ASSERT(pDoc);
+    SwDocShell* pShell = pDoc->GetDocShell();
+
+    std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
+    MetafileXmlDump dumper;
+
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    CPPUNIT_ASSERT(pXmlDoc);
+
+    xmlXPathObjectPtr pXmlObj = getXPathNode(pXmlDoc, "/metafile/push/push/push/layoutmode[2]");
+    xmlNodeSetPtr pXmlNodes = pXmlObj->nodesetval;
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Bad position of shape in page break!", 0,
+                                 xmlXPathNodeSetGetLength(pXmlNodes));
 }
 
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineFlysInFlys)
@@ -2289,6 +2318,25 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf131707)
     assertXPath(pXmlDoc, "//body/tab/row[3]/cell[2]/txt/anchored/fly/infos/bounds", "top", "2185");
 }
 
+#if HAVE_MORE_FONTS
+CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf122225)
+{
+    SwDoc* pDoc = createDoc("tdf122225.docx");
+    SwDocShell* pShell = pDoc->GetDocShell();
+
+    // Dump the rendering of the first page as an XML file.
+    std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
+    MetafileXmlDump dumper;
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    CPPUNIT_ASSERT(pXmlDoc);
+
+    assertXPathContent(pXmlDoc,
+                       "/metafile/push[1]/push[1]/push[1]/push[4]/push[1]/textarray[8]/text",
+                       "Advanced Diploma");
+    // This failed, if the legend label is not "Advanced Diploma".
+}
+#endif
+
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf125335)
 {
     SwDoc* pDoc = createDoc("tdf125335.odt");
@@ -2305,6 +2353,23 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf125335)
         "/metafile/push[1]/push[1]/push[1]/push[3]/push[1]/push[1]/push[1]/textarray[12]/text",
         "Data3");
     // This failed, if the legend first label is not "Data3". The legend position is bottom.
+}
+
+CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf134247)
+{
+    SwDoc* pDoc = createDoc("legend-itemorder-min.docx");
+    SwDocShell* pShell = pDoc->GetDocShell();
+
+    // Dump the rendering of the first page as an XML file.
+    std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
+    MetafileXmlDump dumper;
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    CPPUNIT_ASSERT(pXmlDoc);
+
+    assertXPathContent(pXmlDoc,
+                       "/metafile/push[1]/push[1]/push[1]/push[4]/push[1]/textarray[14]/text",
+                       "1. adatsor");
+    // This failed, if the legend first label is not "1. adatsor".
 }
 
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf75659)
@@ -2327,6 +2392,23 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf75659)
     assertXPathContent(
         pXmlDoc, "/metafile/push[1]/push[1]/push[1]/push[4]/push[1]/textarray[19]/text", "Series3");
     // These failed, if the legend names are empty strings.
+}
+
+CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf126425)
+{
+    SwDoc* pDoc = createDoc("long_legendentry.docx");
+    SwDocShell* pShell = pDoc->GetDocShell();
+
+    // Dump the rendering of the first page as an XML file.
+    std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
+    MetafileXmlDump dumper;
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    CPPUNIT_ASSERT(pXmlDoc);
+    // Without the accompanying fix in place, this test would have failed with:
+    // - Expected: 14
+    // - Actual  : 12
+    // i.e. the text of the chart legend lost.
+    assertXPath(pXmlDoc, "//textarray", 14);
 }
 
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf123268)
@@ -2742,6 +2824,23 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf132956)
                        "Category 1");
 }
 
+CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf134235)
+{
+    SwDoc* pDoc = createDoc("tdf134235.docx");
+    SwDocShell* pShell = pDoc->GetDocShell();
+
+    // Dump the rendering of the first page as an XML file.
+    std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
+    MetafileXmlDump dumper;
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    CPPUNIT_ASSERT(pXmlDoc);
+    // Without the accompanying fix in place, this test would have failed with:
+    // - Expected: 14
+    // - Actual  : 13
+    // i.e. the chart title flowed out of chart area.
+    assertXPath(pXmlDoc, "//textarray", 14);
+}
+
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf116925)
 {
     SwDoc* pDoc = createDoc("tdf116925.docx");
@@ -2839,15 +2938,6 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTableExtrusion2)
     const OString sXPath = "//polyline/point[@x>" + OString::number(nX) + "]";
 
     assertXPath(pXmlDoc, sXPath, 0);
-}
-
-CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf105478)
-{
-    createDoc("tdf105478_rowMinHeight.odt");
-    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
-
-    // Minimum row height forces the cell (with table header as row 1) to start on page 2, not page 1.
-    assertXPathContent(pXmlDoc, "/root/page[2]/body/tab/row[2]/cell/txt[1]", "Cell 1");
 }
 
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf116848)
@@ -3027,6 +3117,22 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf128611)
     assertXPath(pXmlDoc, "//tab/row/cell[1]/txt/Text", "Portion", "Abcd efghijkl");
 }
 
+CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf125893)
+{
+    createDoc("tdf125893.docx");
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
+    // This was 400. The paragraph must have zero top border.
+    assertXPath(pXmlDoc, "/root/page/body/txt[4]/infos/prtBounds", "top", "0");
+}
+
+CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf134463)
+{
+    createDoc("tdf134463.docx");
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
+    // This was 621. The previous paragraph must have zero bottom border.
+    assertXPath(pXmlDoc, "/root/page/body/txt[3]/infos/prtBounds", "top", "21");
+}
+
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf117188)
 {
     createDoc("tdf117188.docx");
@@ -3078,6 +3184,27 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf120287)
     // default-in-Word printer-independent layout, resulting in an additional
     // line break.
     assertXPath(pXmlDoc, "/root/page/body/txt[1]/LineBreak", 1);
+}
+
+CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf106234)
+{
+    createDoc("tdf106234.fodt");
+    // Ensure that all text portions are calculated before testing.
+    SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
+    CPPUNIT_ASSERT(pTextDoc);
+    SwViewShell* pViewShell
+        = pTextDoc->GetDocShell()->GetDoc()->getIDocumentLayoutAccess().GetCurrentViewShell();
+    CPPUNIT_ASSERT(pViewShell);
+    pViewShell->Reformat();
+
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
+    // In justified paragraphs, there is justification between left tabulators and page breaks
+    assertXPath(pXmlDoc, "/root/page/body/txt[1]/Special", "nType", "PortionType::Margin");
+    assertXPathNoAttribute(pXmlDoc, "/root/page/body/txt[1]/Special", "nWidth");
+    // but not after centered, right and decimal tabulators
+    assertXPath(pXmlDoc, "/root/page/body/txt[2]/Special", "nType", "PortionType::Margin");
+    // This was a justified line, without nWidth
+    assertXPath(pXmlDoc, "/root/page/body/txt[2]/Special", "nWidth", "7881");
 }
 
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf120287b)
@@ -3403,6 +3530,12 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf116501)
     createDoc("tdf116501.odt");
 }
 
+CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testAbi11870)
+{
+    //just care it doesn't assert
+    createDoc("abi11870-2.odt");
+}
+
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf118719)
 {
     // Insert a page break.
@@ -3495,6 +3628,22 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf113014)
     assertXPathContent(pXmlDoc, "/metafile/push[1]/push[1]/push[1]/textarray[1]/text", "1.");
     assertXPathContent(pXmlDoc, "/metafile/push[1]/push[1]/push[1]/textarray[3]/text", "2.");
     assertXPathContent(pXmlDoc, "/metafile/push[1]/push[1]/push[1]/textarray[5]/text", "3.");
+}
+
+CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf130218)
+{
+    SwDoc* pDoc = createDoc("tdf130218.fodt");
+    SwDocShell* pShell = pDoc->GetDocShell();
+
+    // Dump the rendering of the first page as an XML file.
+    std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
+    MetafileXmlDump dumper;
+
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    CPPUNIT_ASSERT(pXmlDoc);
+
+    // This failed, if hanging first line was hidden
+    assertXPathContent(pXmlDoc, "/metafile/push[1]/push[1]/push[1]/textarray[1]/text", "Text");
 }
 
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf127235)

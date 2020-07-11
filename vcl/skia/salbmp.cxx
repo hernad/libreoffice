@@ -114,7 +114,7 @@ bool SkiaSalBitmap::CreateBitmapData()
 #ifdef DBG_UTIL
         allocate += sizeof(CANARY);
 #endif
-        mBuffer = boost::make_shared<sal_uInt8[]>(allocate);
+        mBuffer = boost::make_shared_noinit<sal_uInt8[]>(allocate);
 #ifdef DBG_UTIL
         // fill with random garbage
         sal_uInt8* buffer = mBuffer.get();
@@ -147,6 +147,7 @@ bool SkiaSalBitmap::Create(const SalBitmap& rSalBmp, sal_uInt16 nNewBitCount)
     mSize = src.mSize;
     mPixelsSize = src.mPixelsSize;
     mScanlineSize = src.mScanlineSize;
+    mScaleQuality = src.mScaleQuality;
 #ifdef DBG_UTIL
     mWriteAccessCount = 0;
 #endif
@@ -280,7 +281,7 @@ bool SkiaSalBitmap::GetSystemData(BitmapSystemData&)
     return false;
 }
 
-bool SkiaSalBitmap::ScalingSupported() const { return !mDisableScale; }
+bool SkiaSalBitmap::ScalingSupported() const { return true; }
 
 bool SkiaSalBitmap::Scale(const double& rScaleX, const double& rScaleY, BmpScaleFlag nScaleFlag)
 {
@@ -292,8 +293,8 @@ bool SkiaSalBitmap::Scale(const double& rScaleX, const double& rScaleY, BmpScale
     if (mSize == newSize)
         return true;
 
-    SAL_INFO("vcl.skia.trace", "scale(" << this << "): " << mSize << "->" << newSize << ":"
-                                        << static_cast<int>(nScaleFlag));
+    SAL_INFO("vcl.skia.trace", "scale(" << this << "): " << mSize << "/" << mBitCount << "->"
+                                        << newSize << ":" << static_cast<int>(nScaleFlag));
 
     // The idea here is that the actual scaling will be delayed until the result
     // is actually needed. Usually the scaled bitmap will be drawn somewhere,
@@ -315,7 +316,17 @@ bool SkiaSalBitmap::Scale(const double& rScaleX, const double& rScaleY, BmpScale
             currentQuality = kHigh_SkFilterQuality;
             break;
         default:
+            SAL_INFO("vcl.skia.trace", "scale(" << this << "): unsupported scale algorithm");
             return false;
+    }
+    if (mBitCount < 24 && !mPalette.IsGreyPalette8Bit())
+    {
+        // Scaling can introduce additional colors not present in the original
+        // bitmap (e.g. when smoothing). If the bitmap is indexed (has non-trivial palette),
+        // this would break the bitmap, because the actual scaling is done only somewhen later.
+        // Linear 8bit palette (grey) is ok, since there we use directly the values as colors.
+        SAL_INFO("vcl.skia.trace", "scale(" << this << "): indexed bitmap");
+        return false;
     }
     // if there is already one scale() pending, use the lowest quality of all requested
     static_assert(kMedium_SkFilterQuality < kHigh_SkFilterQuality);
@@ -350,7 +361,7 @@ bool SkiaSalBitmap::ConvertToGreyscale()
     // Avoid the costly SkImage->buffer->SkImage conversion.
     if (!mBuffer && mImage)
     {
-        if (mBitCount == 8 && mPalette == Bitmap::GetGreyPalette(256))
+        if (mBitCount == 8 && mPalette.IsGreyPalette8Bit())
             return true;
         sk_sp<SkSurface> surface = SkiaHelper::createSkSurface(mPixelsSize);
         SkPaint paint;
@@ -379,7 +390,7 @@ bool SkiaSalBitmap::InterpretAs8Bit()
 #ifdef DBG_UTIL
     assert(mWriteAccessCount == 0);
 #endif
-    if (mBitCount == 8 && mPalette == Bitmap::GetGreyPalette(256))
+    if (mBitCount == 8 && mPalette.IsGreyPalette8Bit())
         return true;
     // This is usually used by AlphaMask, the point is just to treat
     // the content as an alpha channel. This is often used
@@ -620,46 +631,18 @@ void SkiaSalBitmap::EnsureBitmapData()
 {
     if (mBuffer)
     {
-        if (mSize != mPixelsSize) // pending scaling?
-        {
-            // This will be pixel->pixel scaling, use VCL algorithm, it should be faster than Skia
-            // (no need to possibly convert bpp, it's multithreaded,...).
-            std::shared_ptr<SkiaSalBitmap> src = std::make_shared<SkiaSalBitmap>();
-            if (!src->Create(*this))
-                abort();
-            // force 'src' to use VCL's scaling
-            src->mDisableScale = true;
-            src->mSize = src->mPixelsSize;
-            Bitmap bitmap(src);
-            BmpScaleFlag scaleFlag;
-            switch (mScaleQuality)
-            {
-                case kNone_SkFilterQuality:
-                    scaleFlag = BmpScaleFlag::Fast;
-                    break;
-                case kMedium_SkFilterQuality:
-                    scaleFlag = BmpScaleFlag::Default;
-                    break;
-                case kHigh_SkFilterQuality:
-                    scaleFlag = BmpScaleFlag::BestQuality;
-                    break;
-                default:
-                    abort();
-            }
-            bitmap.Scale(mSize, scaleFlag);
-            assert(dynamic_cast<const SkiaSalBitmap*>(bitmap.ImplGetSalBitmap().get()));
-            const SkiaSalBitmap* dest
-                = static_cast<const SkiaSalBitmap*>(bitmap.ImplGetSalBitmap().get());
-            assert(dest->mSize == dest->mPixelsSize);
-            assert(dest->mSize == mSize);
-            SAL_INFO("vcl.skia.trace", "ensurebitmapdata(" << this << "): pixels scaled "
-                                                           << mPixelsSize << "->" << mSize << ":"
-                                                           << static_cast<int>(mScaleQuality));
-            Destroy();
-            Create(*dest);
-            mDisableScale = false;
-        }
-        return;
+        if (mSize == mPixelsSize)
+            return;
+        // Pending scaling. Create raster SkImage from the bitmap data
+        // at the pixel size and then the code below will scale at the correct
+        // bpp from the image.
+        SAL_INFO("vcl.skia.trace", "ensurebitmapdata(" << this << "): pixels to be scaled "
+                                                       << mPixelsSize << "->" << mSize << ":"
+                                                       << static_cast<int>(mScaleQuality));
+        Size savedSize = mSize;
+        mSize = mPixelsSize;
+        ResetToSkImage(SkImage::MakeFromBitmap(GetAsSkBitmap()));
+        mSize = savedSize;
     }
     // Try to fill mBuffer from mImage.
     if (!mImage)
@@ -688,7 +671,7 @@ void SkiaSalBitmap::EnsureBitmapData()
                                                        << "->" << mSize << ":"
                                                        << static_cast<int>(mScaleQuality));
         mPixelsSize = mSize;
-        mScaleQuality = kNone_SkFilterQuality;
+        mScaleQuality = kHigh_SkFilterQuality;
         // Information about the pending scaling has been discarded, so make sure we do not
         // keep around any cached images that would still need scaling.
         ResetCachedDataBySize();
@@ -722,7 +705,7 @@ void SkiaSalBitmap::EnsureBitmapData()
             }
         }
     }
-    else if (mBitCount == 8 && mPalette.IsGreyPalette())
+    else if (mBitCount == 8 && mPalette.IsGreyPalette8Bit())
     {
         for (long y = 0; y < mSize.Height(); ++y)
         {
@@ -766,7 +749,7 @@ void SkiaSalBitmap::EnsureBitmapUniqueData()
         assert(memcmp(mBuffer.get() + allocate, CANARY, sizeof(CANARY)) == 0);
         allocate += sizeof(CANARY);
 #endif
-        boost::shared_ptr<sal_uInt8[]> newBuffer = boost::make_shared<sal_uInt8[]>(allocate);
+        boost::shared_ptr<sal_uInt8[]> newBuffer = boost::make_shared_noinit<sal_uInt8[]>(allocate);
         memcpy(newBuffer.get(), mBuffer.get(), allocate);
         mBuffer = newBuffer;
     }
