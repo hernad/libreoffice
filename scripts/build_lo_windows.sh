@@ -120,7 +120,7 @@ ODK_FEATURE=
 #EXTENSIONS=" --disable-extension-integration"
 EXTENSIONS=
 
-SKIA_FEATURE="--disable-skia"
+# SKIA_FEATURE="--disable-skia"
 #SKIA_FEATURE=
 
 
