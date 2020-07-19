@@ -317,6 +317,11 @@ DECLARE_WW8EXPORT_TEST(testTdf133453_realFontSize, "tdf133453_realFontSize.doc")
     CPPUNIT_ASSERT_EQUAL( -95.f, getProperty<float>(getRun(getParagraph(1), 2, "2"), "CharEscapement") );
 }
 
+DECLARE_WW8EXPORT_TEST(testTdf116194, "tdf116194.doc")
+{
+    CPPUNIT_ASSERT_EQUAL( Color(192,0,0), Color(getProperty<sal_uInt32>(getRun(getParagraph(1), 1), "CharColor")) );
+}
+
 DECLARE_WW8EXPORT_TEST(testTdf121111_fillStyleNone, "tdf121111_fillStyleNone.docx")
 {
     uno::Reference<beans::XPropertySet> xStyle(getStyles("ParagraphStyles")->getByName("Numbering - First level"),
@@ -588,6 +593,16 @@ DECLARE_WW8EXPORT_TEST(testTdf120394, "tdf120394.doc")
         uno::Reference<beans::XPropertySet> xPara(getParagraph(10), uno::UNO_QUERY);
         CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(2), getProperty<sal_Int16>(xPara, "NumberingLevel"));
         CPPUNIT_ASSERT_EQUAL(OUString(CHAR_ZWSP), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+}
+
+DECLARE_WW8EXPORT_TEST(testTdf134570, "tdf134570.doc")
+{
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(1), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(1), getProperty<sal_Int16>(xPara, "NumberingLevel"));
+        CPPUNIT_ASSERT_EQUAL(OUString("1"), getProperty<OUString>(xPara, "ListLabelString"));
     }
 }
 

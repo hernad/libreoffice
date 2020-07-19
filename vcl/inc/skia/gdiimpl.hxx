@@ -247,6 +247,7 @@ protected:
 
     // Called by SkiaFlushIdle.
     virtual void performFlush() = 0;
+    void scheduleFlush();
     friend class SkiaFlushIdle;
 
     // get the width of the device
@@ -268,12 +269,22 @@ protected:
     sk_sp<SkImage> mergeCacheBitmaps(const SkiaSalBitmap& bitmap, const SkiaSalBitmap* alphaBitmap,
                                      const Size targetSize);
 
-    // When drawing using GPU, rounding errors may result in off-by-one errors,
+    // Skia uses floating point coordinates, so when we use integer coordinates, sometimes
+    // rounding results in off-by-one errors (down), especially when drawing using GPU,
     // see https://bugs.chromium.org/p/skia/issues/detail?id=9611 . Compensate for
-    // it by using centers of pixels (Skia uses float coordinates). In raster case
-    // it seems better to not do this though.
-    SkScalar toSkX(long x) const { return mIsGPU ? x + 0.5 : x; }
-    SkScalar toSkY(long y) const { return mIsGPU ? y + 0.5 : y; }
+    // it by using centers of pixels. Using 0.5 may sometimes round up, so go with 0.495 .
+    static constexpr SkScalar toSkX(long x) { return x + 0.495; }
+    static constexpr SkScalar toSkY(long y) { return y + 0.495; }
+    // Value to add to be exactly in the middle of the pixel.
+    static constexpr SkScalar toSkXYFix = SkScalar(0.005);
+
+    // Perform any pending drawing such as delayed merging of polygons. Called by preDraw()
+    // and anything that means the next operation cannot be another one in a series (e.g.
+    // changing colors).
+    void checkPendingDrawing();
+    bool mergePolyPolygonToPrevious(const basegfx::B2DPolyPolygon& polygon, double transparency);
+    void performDrawPolyPolygon(const basegfx::B2DPolyPolygon& polygon, double transparency,
+                                bool useAA);
 
     template <typename charT, typename traits>
     friend inline std::basic_ostream<charT, traits>&
@@ -300,6 +311,13 @@ protected:
     std::unique_ptr<SkCanvas> mXorCanvas;
     SkRegion mXorRegion; // the area that needs updating for the xor operation
     std::unique_ptr<SkiaFlushIdle> mFlush;
+    // Info about pending polygons to draw (we try to merge adjacent polygons into one).
+    struct LastPolyPolygonInfo
+    {
+        basegfx::B2DPolyPolygon polygon;
+        double transparency;
+    };
+    LastPolyPolygonInfo mLastPolyPolygonInfo;
 };
 
 #endif

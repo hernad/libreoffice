@@ -147,6 +147,7 @@ $(eval $(call gb_Helper_register_executables_for_install,OOO,brand, \
 	$(if $(filter WNT,$(OS)), \
 		soffice_exe \
 		soffice_com \
+		soffice_safe \
 		unoinfo \
 		unopkg \
 		unopkg_com \
@@ -881,6 +882,7 @@ $(eval $(call gb_Helper_register_packages_for_install,ooo,\
 	extras_gallmytheme \
 	extras_gallroot \
 	extras_gallsystem \
+	extras_gallsystemstr \
 	extras_glade \
 	extras_labels \
 	$(if $(filter WNT,$(OS)),extras_newfiles) \

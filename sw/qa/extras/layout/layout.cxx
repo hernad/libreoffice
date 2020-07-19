@@ -1123,6 +1123,29 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testRedlineFlysInFootnote)
     }
 }
 
+CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTableOverlapFooterFly)
+{
+    // Load a document that has a fly anchored in the footer.
+    // It also has a table which initially overlaps with the fly, but then moves to the next page.
+    load(DATA_DIRECTORY, "footer-fly-table.fodt");
+    xmlDocUniquePtr pLayout = parseLayoutDump();
+    // no fly portions, was: 8
+    assertXPath(
+        pLayout,
+        "/root/page[2]/body/tab[1]/row[5]/cell[5]/txt[1]/Special[@nType='PortionType::Fly']", 0);
+    // one line break, was: 5
+    assertXPath(pLayout, "/root/page[2]/body/tab[1]/row[5]/cell[5]/txt[1]/LineBreak", 1);
+    // one text portion, was: 1
+    assertXPath(pLayout, "/root/page[2]/body/tab[1]/row[5]/cell[5]/txt[1]/Text", 1);
+    assertXPath(pLayout, "/root/page[2]/body/tab[1]/row[5]/cell[5]/txt[1]/Text", "Portion",
+                "Abc def ghi jkl mno pqr stu vwx yz.");
+    // height was: 1517
+    assertXPath(
+        pLayout, "/root/page[2]/body/tab[1]/row[5]/cell[5]/txt[1]/infos/bounds", "height",
+        // "253"); // FIXME: this is correct but 3cccdabf19a99fd3f657985c1822436d7679df2b breaks it
+        "379");
+}
+
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, TestTdf134277)
 {
     SwDoc* pDoc = createDoc("tdf134277.docx");
@@ -2824,6 +2847,23 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf132956)
                        "Category 1");
 }
 
+CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf122014)
+{
+    SwDoc* pDoc = createDoc("tdf122014.docx");
+    SwDocShell* pShell = pDoc->GetDocShell();
+
+    // Dump the rendering of the first page as an XML file.
+    std::shared_ptr<GDIMetaFile> xMetaFile = pShell->GetPreviewMetaFile();
+    MetafileXmlDump dumper;
+    xmlDocUniquePtr pXmlDoc = dumpAndParse(dumper, *xMetaFile);
+    CPPUNIT_ASSERT(pXmlDoc);
+
+    // This failed, if the chart title is aligned to left.
+    sal_Int32 nX1 = getXPath(pXmlDoc, "//textarray[13]", "x").toInt32();
+    sal_Int32 nX2 = getXPath(pXmlDoc, "//textarray[14]", "x").toInt32();
+    CPPUNIT_ASSERT_GREATER(nX1 + 100, nX2);
+}
+
 CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf134235)
 {
     SwDoc* pDoc = createDoc("tdf134235.docx");
@@ -4112,6 +4152,26 @@ CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testStableAtPageAnchoredFlyPosition)
 
     // the anchored frame should not have moved
     CPPUNIT_ASSERT_EQUAL(aOrigRect, aRelayoutRect);
+}
+
+CPPUNIT_TEST_FIXTURE(SwLayoutWriter, testTdf134548)
+{
+    createDoc("tdf134548.odt");
+    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
+
+    // Second paragraph has two non zero width tabs in beginning of line
+    {
+        OUString sNodeType = parseDump("/root/page/body/txt[2]/Text[1]", "nType");
+        CPPUNIT_ASSERT_EQUAL(OUString("PortionType::TabLeft"), sNodeType);
+        sal_Int32 nWidth = parseDump("/root/page/body/txt[2]/Text[1]", "nWidth").toInt32();
+        CPPUNIT_ASSERT_GREATER(sal_Int32(0), nWidth);
+    }
+    {
+        OUString sNodeType = parseDump("/root/page/body/txt[2]/Text[2]", "nType");
+        CPPUNIT_ASSERT_EQUAL(OUString("PortionType::TabLeft"), sNodeType);
+        sal_Int32 nWidth = parseDump("/root/page/body/txt[2]/Text[2]", "nWidth").toInt32();
+        CPPUNIT_ASSERT_GREATER(sal_Int32(0), nWidth);
+    }
 }
 
 CPPUNIT_PLUGIN_IMPLEMENT();
