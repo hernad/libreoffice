@@ -13,6 +13,11 @@ echo set make win32 PATH
 
 export PATH=`pwd`/scripts/win32:$PATH
 
-echo $PATH
+# koristi se MS vsudio llvm/clang-cl
+#echo LLVM
+#export PATH=/cygdrive/c/LLVM/10/bin:$PATH
+#clang --version
+
+#echo $PATH
 
 make --version
