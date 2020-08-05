@@ -267,7 +267,8 @@ rm -f config_host/*.h
     --disable-sdremote \
     --disable-sdremote-bluetooth \
     $EXTENSIONS $PDF_IMPORT $WEBDAV $WITH_SYSTEM $LO_DEBUG $SKIA_FEATURE $JAVA_FEATURE \
-    --enable-breakpad       #Enables breakpad for crash reporting.
+    --enable-breakpad  \
+    --without-ucrt-dir --with-package-format=msi
 
 fi
 
