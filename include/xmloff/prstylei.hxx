@@ -47,12 +47,14 @@ private:
     XMLPropStyleContext(XMLPropStyleContext const &) = delete;
     XMLPropStyleContext& operator =(XMLPropStyleContext const &) = delete;
 
-protected:
+public:
 
     // Helper to check if the local maProperties contains the given
     // FillStyle tag and if the FillStyle there is different from FillStyle_NONE
     bool doNewDrawingLayerFillStyleDefinitionsExist(
         const OUString& rFillStyleTag) const;
+
+protected:
 
     // Helper which will deactivate all old fill definitions (identified by
     // the given OldFillStyleDefinitionSet) in the local maProperties. Deactivation
@@ -100,6 +102,8 @@ public:
 
     virtual void FillPropertySet(
             const css::uno::Reference< css::beans::XPropertySet > & rPropSet );
+
+    virtual bool isEmptyDataStyleName() { return false; };
 
     const SvXMLStylesContext *GetStyles() const { return static_cast<const SvXMLStylesContext *>(mxStyles.get()); }
     const ::std::vector< XMLPropertyState > & GetProperties() const { return maProperties; }

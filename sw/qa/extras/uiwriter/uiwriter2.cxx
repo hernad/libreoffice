@@ -142,6 +142,88 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf47471_paraStyleBackground)
                          getProperty<OUString>(getParagraph(3), "ParaStyleName"));
 }
 
+CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf131684)
+{
+    load(DATA_DIRECTORY, "tdf131684.docx");
+
+    SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
+    CPPUNIT_ASSERT(pTextDoc);
+
+    uno::Reference<text::XTextTablesSupplier> xTextTablesSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<container::XIndexAccess> xIndexAccess(xTextTablesSupplier->getTextTables(),
+                                                         uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(1), xIndexAccess->getCount());
+
+    //Use selectAll 3 times in a row
+    lcl_dispatchCommand(mxComponent, ".uno:SelectAll", {});
+    lcl_dispatchCommand(mxComponent, ".uno:SelectAll", {});
+    lcl_dispatchCommand(mxComponent, ".uno:SelectAll", {});
+
+    lcl_dispatchCommand(mxComponent, ".uno:Cut", {});
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(0), xIndexAccess->getCount());
+
+    lcl_dispatchCommand(mxComponent, ".uno:Undo", {});
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(1), xIndexAccess->getCount());
+
+    lcl_dispatchCommand(mxComponent, ".uno:Paste", {});
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(1), xIndexAccess->getCount());
+
+    // without the fix, it crashes
+    lcl_dispatchCommand(mxComponent, ".uno:Undo", {});
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(1), xIndexAccess->getCount());
+
+    // check that the text frame has the correct upper
+    xmlDocPtr pXmlDoc = parseLayoutDump();
+    OUString const sectionId = getXPath(pXmlDoc, "/root/page[1]/body/section[7]", "id");
+    OUString const sectionLower = getXPath(pXmlDoc, "/root/page[1]/body/section[7]", "lower");
+    OUString const textId = getXPath(pXmlDoc, "/root/page[1]/body/section[7]/txt[1]", "id");
+    OUString const textUpper = getXPath(pXmlDoc, "/root/page[1]/body/section[7]/txt[1]", "upper");
+    CPPUNIT_ASSERT_EQUAL(textId, sectionLower);
+    CPPUNIT_ASSERT_EQUAL(sectionId, textUpper);
+}
+
+CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdfChangeNumberingListAutoFormat)
+{
+    createDoc("tdf117923.docx");
+    // Ensure that all text portions are calculated before testing.
+    SwXTextDocument* pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
+    CPPUNIT_ASSERT(pTextDoc);
+    SwViewShell* pViewShell
+        = pTextDoc->GetDocShell()->GetDoc()->getIDocumentLayoutAccess().GetCurrentViewShell();
+    CPPUNIT_ASSERT(pViewShell);
+    pViewShell->Reformat();
+
+    xmlDocPtr pXmlDoc = parseLayoutDump();
+
+    // Check that we actually test the line we need
+    assertXPathContent(pXmlDoc, "/root/page/body/tab/row/cell/txt[3]", "GHI GHI GHI GHI");
+    assertXPath(pXmlDoc, "/root/page/body/tab/row/cell/txt[3]/Special", "nType",
+                "PortionType::Number");
+    assertXPath(pXmlDoc, "/root/page/body/tab/row/cell/txt[3]/Special", "rText", "2.");
+    // The numbering height was 960 in DOC format.
+    assertXPath(pXmlDoc, "/root/page/body/tab/row/cell/txt[3]/Special", "nHeight", "220");
+
+    // tdf#127606: now it's possible to change formatting of numbering
+    // increase font size (220 -> 260)
+    lcl_dispatchCommand(mxComponent, ".uno:SelectAll", {});
+    lcl_dispatchCommand(mxComponent, ".uno:Grow", {});
+    pViewShell->Reformat();
+    discardDumpedLayout();
+    pXmlDoc = parseLayoutDump();
+    assertXPath(pXmlDoc, "/root/page/body/tab/row/cell/txt[3]/Special", "nHeight", "260");
+
+    // save it to DOCX
+    reload("Office Open XML Text", "tdf117923.docx");
+    pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
+    pViewShell
+        = pTextDoc->GetDocShell()->GetDoc()->getIDocumentLayoutAccess().GetCurrentViewShell();
+    pViewShell->Reformat();
+    discardDumpedLayout();
+    pXmlDoc = parseLayoutDump();
+    // this was 220
+    assertXPath(pXmlDoc, "/root/page/body/tab/row/cell/txt[3]/Special", "nHeight", "260");
+}
+
 CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf101534)
 {
     // Copy the first paragraph of the document.
@@ -262,6 +344,178 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testRedlineInHiddenSection)
     CPPUNIT_ASSERT(
         !pNode->GetNodes()[pNode->GetIndex() + 3]->GetTextNode()->getLayoutFrame(nullptr));
     CPPUNIT_ASSERT(pNode->GetNodes()[pNode->GetIndex() + 4]->IsEndNode());
+}
+
+CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf132236)
+{
+    load(DATA_DIRECTORY, "tdf132236.odt");
+
+    SwXTextDocument* const pTextDoc = dynamic_cast<SwXTextDocument*>(mxComponent.get());
+    CPPUNIT_ASSERT(pTextDoc);
+
+    // select everything and delete
+    SwWrtShell* const pWrtShell(pTextDoc->GetDocShell()->GetWrtShell());
+    pWrtShell->Down(true);
+    pWrtShell->Down(true);
+    pWrtShell->Down(true);
+    pWrtShell->Delete();
+    SwDoc* const pDoc(pWrtShell->GetDoc());
+    sw::UndoManager& rUndoManager(pDoc->GetUndoManager());
+    rUndoManager.Undo();
+
+    // check that the text frames exist inside their sections
+    xmlDocPtr pXmlDoc = parseLayoutDump();
+    assertXPath(pXmlDoc, "/root/page[1]/body/section[1]/txt", 1);
+    assertXPath(pXmlDoc, "/root/page[1]/body/section[2]/txt", 2);
+    assertXPath(pXmlDoc, "/root/page[1]/body/txt", 1);
+}
+
+CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf131912)
+{
+    SwDoc* const pDoc = createDoc();
+    SwWrtShell* const pWrtShell = pDoc->GetDocShell()->GetWrtShell();
+
+    sw::UndoManager& rUndoManager = pDoc->GetUndoManager();
+
+    sw::UnoCursorPointer pCursor(
+        pDoc->CreateUnoCursor(SwPosition(SwNodeIndex(pDoc->GetNodes().GetEndOfContent(), -1))));
+
+    pDoc->getIDocumentContentOperations().InsertString(*pCursor, "foo");
+
+    {
+        SfxItemSet flySet(pDoc->GetAttrPool(),
+                          svl::Items<RES_FRM_SIZE, RES_FRM_SIZE, RES_ANCHOR, RES_ANCHOR>{});
+        SwFormatAnchor anchor(RndStdIds::FLY_AT_CHAR);
+        pWrtShell->StartOfSection(false);
+        pWrtShell->Right(CRSR_SKIP_CHARS, /*bSelect=*/false, 2, /*bBasicCall=*/false);
+        anchor.SetAnchor(pWrtShell->GetCursor()->GetPoint());
+        flySet.Put(anchor);
+        SwFormatFrameSize size(ATT_MIN_SIZE, 1000, 1000);
+        flySet.Put(size); // set a size, else we get 1 char per line...
+        SwFrameFormat const* pFly = pWrtShell->NewFlyFrame(flySet, /*bAnchValid=*/true);
+        CPPUNIT_ASSERT(pFly != nullptr);
+    }
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+
+    pCursor->SetMark();
+    pCursor->GetMark()->nContent.Assign(pCursor->GetContentNode(), 0);
+    pCursor->GetPoint()->nContent.Assign(pCursor->GetContentNode(), 3);
+
+    // replace with more text
+    pDoc->getIDocumentContentOperations().ReplaceRange(*pCursor, "blahblah", false);
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    CPPUNIT_ASSERT_EQUAL(OUString("blahblah"), pCursor->GetNode().GetTextNode()->GetText());
+
+    rUndoManager.Undo();
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    CPPUNIT_ASSERT_EQUAL(OUString("foo"), pCursor->GetNode().GetTextNode()->GetText());
+
+    rUndoManager.Redo();
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    CPPUNIT_ASSERT_EQUAL(OUString("blahblah"), pCursor->GetNode().GetTextNode()->GetText());
+
+    rUndoManager.Undo();
+
+    pCursor->GetMark()->nContent.Assign(pCursor->GetContentNode(), 0);
+    pCursor->GetPoint()->nContent.Assign(pCursor->GetContentNode(), 3);
+
+    // replace with less text
+    pDoc->getIDocumentContentOperations().ReplaceRange(*pCursor, "x", false);
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    CPPUNIT_ASSERT_EQUAL(OUString("x"), pCursor->GetNode().GetTextNode()->GetText());
+
+    rUndoManager.Undo();
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    CPPUNIT_ASSERT_EQUAL(OUString("foo"), pCursor->GetNode().GetTextNode()->GetText());
+
+    rUndoManager.Redo();
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    CPPUNIT_ASSERT_EQUAL(OUString("x"), pCursor->GetNode().GetTextNode()->GetText());
+
+    rUndoManager.Undo();
+
+    pCursor->GetMark()->nContent.Assign(pCursor->GetContentNode(), 0);
+    pCursor->GetPoint()->nContent.Assign(pCursor->GetContentNode(), 3);
+
+    // regex replace with paragraph breaks
+    pDoc->getIDocumentContentOperations().ReplaceRange(*pCursor, "xyz\\n\\nquux\\n", true);
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    pWrtShell->StartOfSection(false);
+    CPPUNIT_ASSERT_EQUAL(OUString("xyz"),
+                         pWrtShell->GetCursor()->GetNode().GetTextNode()->GetText());
+    pWrtShell->EndOfSection(true);
+    CPPUNIT_ASSERT_EQUAL(OUString("xyz\n\nquux\n"), pWrtShell->GetCursor()->GetText());
+
+    rUndoManager.Undo();
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    CPPUNIT_ASSERT_EQUAL(OUString("foo"), pCursor->GetNode().GetTextNode()->GetText());
+    pWrtShell->StartOfSection(false);
+    pWrtShell->EndOfSection(true);
+    CPPUNIT_ASSERT_EQUAL(OUString("foo"), pWrtShell->GetCursor()->GetText());
+
+    rUndoManager.Redo();
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    pWrtShell->StartOfSection(false);
+    CPPUNIT_ASSERT_EQUAL(OUString("xyz"),
+                         pWrtShell->GetCursor()->GetNode().GetTextNode()->GetText());
+    pWrtShell->EndOfSection(true);
+    CPPUNIT_ASSERT_EQUAL(OUString("xyz\n\nquux\n"), pWrtShell->GetCursor()->GetText());
+
+    // regex replace with paragraph join
+    pWrtShell->StartOfSection(false);
+    pWrtShell->Down(true);
+    pDoc->getIDocumentContentOperations().ReplaceRange(*pWrtShell->GetCursor(), "bar", true);
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    pWrtShell->StartOfSection(false);
+    CPPUNIT_ASSERT_EQUAL(OUString("bar"),
+                         pWrtShell->GetCursor()->GetNode().GetTextNode()->GetText());
+    pWrtShell->EndOfSection(true);
+    CPPUNIT_ASSERT_EQUAL(OUString("bar\nquux\n"), pWrtShell->GetCursor()->GetText());
+
+    rUndoManager.Undo();
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    pWrtShell->StartOfSection(false);
+    CPPUNIT_ASSERT_EQUAL(OUString("xyz"),
+                         pWrtShell->GetCursor()->GetNode().GetTextNode()->GetText());
+    pWrtShell->EndOfSection(true);
+    CPPUNIT_ASSERT_EQUAL(OUString("xyz\n\nquux\n"), pWrtShell->GetCursor()->GetText());
+
+    rUndoManager.Redo();
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    pWrtShell->StartOfSection(false);
+    CPPUNIT_ASSERT_EQUAL(OUString("bar"),
+                         pWrtShell->GetCursor()->GetNode().GetTextNode()->GetText());
+    pWrtShell->EndOfSection(true);
+    CPPUNIT_ASSERT_EQUAL(OUString("bar\nquux\n"), pWrtShell->GetCursor()->GetText());
+
+    rUndoManager.Undo();
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    pWrtShell->StartOfSection(false);
+    CPPUNIT_ASSERT_EQUAL(OUString("xyz"),
+                         pWrtShell->GetCursor()->GetNode().GetTextNode()->GetText());
+    pWrtShell->EndOfSection(true);
+    CPPUNIT_ASSERT_EQUAL(OUString("xyz\n\nquux\n"), pWrtShell->GetCursor()->GetText());
+
+    rUndoManager.Undo();
+
+    CPPUNIT_ASSERT_EQUAL(size_t(1), pDoc->GetFlyCount(FLYCNTTYPE_FRM));
+    CPPUNIT_ASSERT_EQUAL(OUString("foo"), pCursor->GetNode().GetTextNode()->GetText());
+    pWrtShell->StartOfSection(false);
+    pWrtShell->EndOfSection(true);
+    CPPUNIT_ASSERT_EQUAL(OUString("foo"), pWrtShell->GetCursor()->GetText());
 }
 
 CPPUNIT_TEST_FIXTURE(SwUiWriterTest2, testTdf54819)

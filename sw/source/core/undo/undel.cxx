@@ -562,6 +562,14 @@ bool SwUndoDelete::CanGrouping( SwDoc* pDoc, const SwPaM& rDelPam )
         rCC.isLetterNumeric( *m_aSttStr, nUChrPos ) )
         return false;
 
+    // tdf#132725 - if at-char/at-para flys would be deleted, don't group!
+    // DelContentIndex() would be called at the wrong time here, the indexes
+    // in the stored SwHistoryTextFlyCnt would be wrong when Undo is invoked
+    if (IsFlySelectedByCursor(*pDoc, *pStt, *pEnd))
+    {
+        return false;
+    }
+
     {
         SwRedlineSaveDatas aTmpSav;
         const bool bSaved = FillSaveData( rDelPam, aTmpSav, false );
@@ -851,6 +859,7 @@ void SwUndoDelete::UndoImpl(::sw::UndoRedoContext & rContext)
         SwPosition aPos( aIdx );
         if( !m_bDelFullPara )
         {
+            assert(!m_bTableDelLastNd || pInsNd->IsTextNode());
             if( pInsNd->IsTableNode() )
             {
                 pInsNd = rDoc.GetNodes().MakeTextNode( aIdx,
@@ -875,7 +884,17 @@ void SwUndoDelete::UndoImpl(::sw::UndoRedoContext & rContext)
         if( m_aEndStr )
         {
             // discard attributes since they all saved!
-            SwTextNode* pTextNd = aPos.nNode.GetNode().GetTextNode();
+            SwTextNode * pTextNd;
+            if (!m_bDelFullPara && aPos.nNode.GetNode().IsSectionNode())
+            {   // tdf#134250 section node wasn't deleted; but aPos must point to it in bNodeMove case below
+                assert(m_nSttContent == 0);
+                assert(!m_aSttStr);
+                pTextNd = rDoc.GetNodes()[aPos.nNode.GetIndex() + 1]->GetTextNode();
+            }
+            else
+            {
+                pTextNd = aPos.nNode.GetNode().GetTextNode();
+            }
 
             if( pTextNd && pTextNd->HasSwAttrSet() )
                 pTextNd->ResetAllAttr();
@@ -895,6 +914,7 @@ void SwUndoDelete::UndoImpl(::sw::UndoRedoContext & rContext)
                     lcl_ReAnchorAtContentFlyFrames(*rDoc.GetSpzFrameFormats(), aPos, nOldIdx);
                 pTextNd = aPos.nNode.GetNode().GetTextNode();
             }
+            assert(pTextNd); // else where does m_aEndStr come from?
             if( pTextNd )
             {
                 OUString const ins( pTextNd->InsertText(*m_aEndStr, aPos.nContent,
@@ -970,7 +990,8 @@ void SwUndoDelete::UndoImpl(::sw::UndoRedoContext & rContext)
                 SwNodeIndex aMvIdx(rDoc.GetNodes(), nMoveIndex);
                 SwNodeRange aRg( aPos.nNode, 0, aPos.nNode, 1 );
                 pMovedNode = &aPos.nNode.GetNode();
-                rDoc.GetNodes().MoveNodes(aRg, rDoc.GetNodes(), aMvIdx);
+                // tdf#131684 without deleting frames
+                rDoc.GetNodes().MoveNodes(aRg, rDoc.GetNodes(), aMvIdx, false);
                 rDoc.GetNodes().Delete( aMvIdx);
             }
         }
@@ -1036,8 +1057,11 @@ void SwUndoDelete::UndoImpl(::sw::UndoRedoContext & rContext)
         }
     }
     // delete the temporarily added Node
-    if( pInsNd )
+    if (pInsNd && !m_bTableDelLastNd)
+    {
+        assert(&aIdx.GetNode() == pInsNd);
         rDoc.GetNodes().Delete( aIdx );
+    }
     if( m_pRedlSaveData )
         SetSaveData(rDoc, *m_pRedlSaveData);
 
@@ -1085,38 +1109,25 @@ void SwUndoDelete::UndoImpl(::sw::UndoRedoContext & rContext)
         // frames
         SwTextNode *const pStartNode(aIdx.GetNodes()[m_nSttNode]->GetTextNode());
         assert(pStartNode);
-        std::vector<SwTextFrame*> frames;
-        SwIterator<SwTextFrame, SwTextNode, sw::IteratorMode::UnwrapMulti> aIter(*pStartNode);
-        for (SwTextFrame* pFrame = aIter.First(); pFrame; pFrame = aIter.Next())
-        {
-            if (pFrame->getRootFrame()->IsHideRedlines())
-            {
-                frames.push_back(pFrame);
-            }
-        }
-        auto eMode(sw::FrameMode::Existing);
-        for (SwTextFrame * pFrame : frames)
-        {
-            // SplitNode could have moved the original frame to the start node
-            // & created a new one on end, or could have created new frame on
-            // start node... grab start node's frame and recreate MergedPara.
-            SwTextNode & rFirstNode(pFrame->GetMergedPara()
-                ? *pFrame->GetMergedPara()->pFirstNode
-                : *pStartNode);
-            assert(rFirstNode.GetIndex() <= pStartNode->GetIndex());
-            pFrame->SetMergedPara(sw::CheckParaRedlineMerge(
-                        *pFrame, rFirstNode, eMode));
-            eMode = sw::FrameMode::New; // Existing is not idempotent!
-            // note: this may or may not delete frames on the end node
-        }
+        sw::RecreateStartTextFrames(*pStartNode);
     }
 
     // create frames after SetSaveData has recreated redlines
     if (0 != m_nNode)
     {
+        if (m_nReplaceDummy != 0)
+        {
+            // tdf#134252 *first* create outer section frames
+            // note: text node m_nSttNode currently has frame with an upper;
+            // there's a hack in InsertCnt_() to move it below new section frame
+            SwNodeIndex const start(rDoc.GetNodes(), m_nSttNode - m_nReplaceDummy);
+            SwNodeIndex const end(rDoc.GetNodes(), m_nSttNode); // exclude m_nSttNode
+            ::MakeFrames(&rDoc, start, end);
+        }
         // tdf#121031 if the start node is a text node, it already has a frame;
         // if it's a table, it does not
         // tdf#109376 exception: end on non-text-node -> start node was inserted
+        assert(!m_bDelFullPara || (m_nSectDiff == 0));
         SwNodeIndex const start(rDoc.GetNodes(), m_nSttNode +
             ((m_bDelFullPara || !rDoc.GetNodes()[m_nSttNode]->IsTextNode() || pInsNd)
                  ? 0 : 1));
@@ -1130,6 +1141,15 @@ void SwUndoDelete::UndoImpl(::sw::UndoRedoContext & rContext)
     if (pMovedNode)
     {   // probably better do this after creating all frames
         lcl_MakeAutoFrames(*rDoc.GetSpzFrameFormats(), pMovedNode->GetIndex());
+    }
+
+    // tdf#134021 only after MakeFrames(), because it may be the only node
+    // that has layout frames
+    if (pInsNd && m_bTableDelLastNd)
+    {
+        assert(&aIdx.GetNode() == pInsNd);
+        SwPaM tmp(aIdx, aIdx);
+        rDoc.getIDocumentContentOperations().DelFullPara(tmp);
     }
 
     AddUndoRedoPaM(rContext, true);

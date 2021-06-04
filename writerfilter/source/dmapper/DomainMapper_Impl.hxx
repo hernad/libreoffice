@@ -30,6 +30,7 @@
 #include <queue>
 #include <stack>
 #include <tuple>
+#include <set>
 #include <unordered_map>
 #include <vector>
 #include <boost/optional.hpp>
@@ -418,13 +419,6 @@ struct SymbolData
     { }
 };
 
-/// Information about a paragraph to be finished after a table end.
-struct TableParagraph
-{
-    PropertyMapPtr m_pPropertyMap;
-    css::uno::Reference<css::beans::XPropertySet> m_rPropertySet;
-};
-
 class DomainMapper;
 class DomainMapper_Impl final
 {
@@ -486,6 +480,8 @@ private:
     // TableManagers are stacked: one for each stream to avoid any confusion
     std::stack< tools::SvRef< DomainMapperTableManager > > m_aTableManagers;
     tools::SvRef<DomainMapperTableHandler> m_pTableHandler;
+    // List of document lists overrides. They are applied only once on first occurrence in document
+    std::set<sal_Int32> m_aListOverrideApplied;
 
     //each context needs a stack of currently used attributes
     std::stack<PropertyMapPtr>  m_aPropertyStacks[NUMBER_OF_CONTEXTS];
@@ -1062,9 +1058,6 @@ public:
     /// store their data, and create them after frame creation
     bool m_bIsActualParagraphFramed;
     std::vector<css::uno::Any> aFramedRedlines;
-
-    /// Table paragraph properties may need style update based on table style
-    std::vector<TableParagraph> m_aParagraphsToEndTable;
 
 private:
     void PushPageHeaderFooter(bool bHeader, SectionPropertyMap::PageType eType);

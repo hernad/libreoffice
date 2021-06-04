@@ -1615,6 +1615,16 @@ DECLARE_ODFEXPORT_TEST(testOdtBorderTypes, "border_types.odt")
     } while (xParaEnum->hasMoreElements());
 }
 
+DECLARE_ODFEXPORT_TEST(testMasterPageWithDrawingPage, "sw_hatch.odt")
+{
+    uno::Reference<container::XNameAccess> xStyles(getStyles("PageStyles"));
+    uno::Reference<beans::XPropertySet> xStyle(xStyles->getByName("Standard"), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL(drawing::FillStyle_HATCH, getProperty<drawing::FillStyle>(xStyle, "FillStyle"));
+    CPPUNIT_ASSERT_EQUAL(OUString("Blue -45 Degrees"), getProperty<OUString>(xStyle, "FillHatchName"));
+    CPPUNIT_ASSERT(!getProperty<sal_Bool>(xStyle, "FillBackground"));
+    CPPUNIT_ASSERT_EQUAL(sal_Int16(0), getProperty<sal_Int16>(xStyle, "FillTransparence"));
+}
+
 DECLARE_ODFEXPORT_TEST(testCellUserDefineAttr, "userdefattr-tablecell.odt")
 {
     uno::Reference<text::XTextTable> xTable(getParagraphOrTable(1), uno::UNO_QUERY);
@@ -2326,6 +2336,35 @@ DECLARE_ODFEXPORT_TEST(tdf121658, "tdf121658.odt")
     uno::Reference<beans::XPropertySet> xStyle1(xParaStyles->getByName(
             "Standard"), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(true, getProperty<bool>(xStyle1, "ParaHyphenationNoCaps"));
+}
+
+DECLARE_ODFEXPORT_TEST(tdf124470, "tdf124470TableAndEmbeddedUsedFonts.odt")
+{
+    // Table styles were exported out of place, inside font-face-decls.
+    // Without the fix in place, this will fail already in ODF validation:
+    // "content.xml[2,2150]:  Error: tag name "style:style" is not allowed. Possible tag names are: <font-face>"
+
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+
+    if (xmlDocPtr pXmlDoc = parseExport("content.xml"))
+    {
+        assertXPath(pXmlDoc, "/office:document-content/office:font-face-decls/style:style", 0);
+        assertXPath(pXmlDoc, "/office:document-content/office:automatic-styles/style:style[@style:family='table']", 1);
+        assertXPath(pXmlDoc, "/office:document-content/office:automatic-styles/style:style[@style:family='table-column']", 2);
+        assertXPath(pXmlDoc, "/office:document-content/office:automatic-styles/style:style[@style:family='paragraph']", 1);
+    }
+}
+
+DECLARE_ODFEXPORT_TEST(tdf135942, "nestedTableInFooter.odt")
+{
+    // All table autostyles should be collected, including nested, and must not crash.
+
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+
+    if (xmlDocPtr pXmlDoc = parseExport("styles.xml"))
+    {
+        assertXPath(pXmlDoc, "/office:document-styles/office:automatic-styles/style:style[@style:family='table']", 2);
+    }
 }
 
 CPPUNIT_PLUGIN_IMPLEMENT();

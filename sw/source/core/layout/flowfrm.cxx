@@ -1696,6 +1696,13 @@ SwTwips SwFlowFrame::CalcLowerSpace( const SwBorderAttrs* _pAttrs ) const
         nLowerSpace += CalcAddLowerSpaceAsLastInTableCell( _pAttrs );
     }
 
+    // tdf#128195 Consider para spacing below last paragraph in header
+    bool bHasSpacingBelowPara = m_rThis.GetUpper()->GetFormat()->getIDocumentSettingAccess().get(
+        DocumentSettingId::HEADER_SPACING_BELOW_LAST_PARA);
+    if (bHasSpacingBelowPara && !m_rThis.IsInFly() && m_rThis.FindFooterOrHeader() && !GetFollow()
+        && !m_rThis.GetIndNext())
+        nLowerSpace += _pAttrs->GetULSpace().GetLower() + _pAttrs->CalcLineSpacing();
+
     return nLowerSpace;
 }
 
@@ -1709,7 +1716,8 @@ SwTwips SwFlowFrame::CalcAddLowerSpaceAsLastInTableCell(
 {
     SwTwips nAdditionalLowerSpace = 0;
 
-    if ( m_rThis.GetUpper()->GetFormat()->getIDocumentSettingAccess().get(DocumentSettingId::ADD_PARA_SPACING_TO_TABLE_CELLS) )
+    IDocumentSettingAccess const& rIDSA(m_rThis.GetUpper()->GetFormat()->getIDocumentSettingAccess());
+    if (rIDSA.get(DocumentSettingId::ADD_PARA_SPACING_TO_TABLE_CELLS))
     {
         const SwFrame* pFrame = &m_rThis;
         if ( pFrame->IsSctFrame() )
@@ -1734,7 +1742,14 @@ SwTwips SwFlowFrame::CalcAddLowerSpaceAsLastInTableCell(
         }
 
         if (_pAttrs)
-            nAdditionalLowerSpace += _pAttrs->GetULSpace().GetLower() + _pAttrs->CalcLineSpacing();
+        {
+            nAdditionalLowerSpace += _pAttrs->GetULSpace().GetLower();
+
+            if (rIDSA.get(DocumentSettingId::ADD_PARA_LINE_SPACING_TO_TABLE_CELLS))
+            {
+                nAdditionalLowerSpace += _pAttrs->CalcLineSpacing();
+            }
+        }
     }
 
     return nAdditionalLowerSpace;

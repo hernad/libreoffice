@@ -272,13 +272,30 @@ DECLARE_OOXMLEXPORT_TEST(testDropdownInCell, "dropdown-in-cell.docx")
     uno::Reference<container::XIndexAccess> xTables(xTablesSupplier->getTextTables(), uno::UNO_QUERY);
     CPPUNIT_ASSERT_EQUAL(sal_Int32(1), xTables->getCount());
 
+    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<drawing::XDrawPage> xDrawPage = xDrawPageSupplier->getDrawPage();
+
     // Second problem: dropdown shape wasn't anchored inside the B1 cell.
-    uno::Reference<text::XTextContent> xShape(getShape(1), uno::UNO_QUERY);
-    uno::Reference<text::XTextRange> xAnchor = xShape->getAnchor();
-    uno::Reference<text::XTextTable> xTable(xTables->getByIndex(0), uno::UNO_QUERY);
-    uno::Reference<text::XTextRange> xCell(xTable->getCellByName("B1"), uno::UNO_QUERY);
-    uno::Reference<text::XTextRangeCompare> xTextRangeCompare(xCell, uno::UNO_QUERY);
-    CPPUNIT_ASSERT_EQUAL(sal_Int16(0), xTextRangeCompare->compareRegionStarts(xAnchor, xCell));
+    if (xDrawPage->getCount() > 0)
+    {
+        uno::Reference<text::XTextContent> xShape(getShape(1), uno::UNO_QUERY);
+        uno::Reference<text::XTextRange> xAnchor = xShape->getAnchor();
+        uno::Reference<text::XTextTable> xTable(xTables->getByIndex(0), uno::UNO_QUERY);
+        uno::Reference<text::XTextRange> xCell(xTable->getCellByName("B1"), uno::UNO_QUERY);
+        uno::Reference<text::XTextRangeCompare> xTextRangeCompare(xCell, uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(sal_Int16(0), xTextRangeCompare->compareRegionStarts(xAnchor, xCell));
+    }
+    else
+    {
+        // ComboBox was imported as DropDown text field
+        uno::Reference<text::XTextFieldsSupplier> xTextFieldsSupplier(mxComponent, uno::UNO_QUERY);
+        uno::Reference<container::XEnumerationAccess> xFieldsAccess(xTextFieldsSupplier->getTextFields());
+        uno::Reference<container::XEnumeration> xFields(xFieldsAccess->createEnumeration());
+        CPPUNIT_ASSERT(xFields->hasMoreElements());
+        uno::Any aField = xFields->nextElement();
+        uno::Reference<lang::XServiceInfo> xServiceInfo(aField, uno::UNO_QUERY);
+        CPPUNIT_ASSERT(xServiceInfo->supportsService("com.sun.star.text.textfield.DropDown"));
+    }
 }
 
 DECLARE_OOXMLEXPORT_TEST(testTableAlignment, "table-alignment.docx")
@@ -780,7 +797,10 @@ DECLARE_OOXMLEXPORT_TEST(testNumOverrideLvltext, "num-override-lvltext.docx")
 {
     uno::Reference<container::XIndexAccess> xRules = getProperty< uno::Reference<container::XIndexAccess> >(getStyles("NumberingStyles")->getByName("WWNum1"), "NumberingRules");
     // This was 1, i.e. the numbering on the second level was "1", not "1.1".
-    CPPUNIT_ASSERT_EQUAL(sal_Int16(2), comphelper::SequenceAsHashMap(xRules->getByIndex(1))["ParentNumbering"].get<sal_Int16>());
+    // Check the praragraph properties, not the list ones, since they can differ due to overrides
+    uno::Reference<beans::XPropertySet> xPara(getParagraph(1), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(1), getProperty<sal_Int16>(xPara, "NumberingLevel"));
+    CPPUNIT_ASSERT_EQUAL(OUString("1.1"), getProperty<OUString>(xPara, "ListLabelString"));
 
     // The paragraph marker's red font color was inherited by the number portion, this was ff0000.
     CPPUNIT_ASSERT_EQUAL(OUString("ffffffff"), parseDump("//Special[@nType='PortionType::Number']/SwFont", "color"));
@@ -789,8 +809,14 @@ DECLARE_OOXMLEXPORT_TEST(testNumOverrideLvltext, "num-override-lvltext.docx")
 DECLARE_OOXMLEXPORT_TEST(testNumOverrideStart, "num-override-start.docx")
 {
     uno::Reference<container::XIndexAccess> xRules = getProperty< uno::Reference<container::XIndexAccess> >(getStyles("NumberingStyles")->getByName("WWNum1"), "NumberingRules");
-    // This was 1, i.e. the numbering on the second level was "1.1", not "1.3".
-    CPPUNIT_ASSERT_EQUAL(sal_Int16(3), comphelper::SequenceAsHashMap(xRules->getByIndex(1))["StartWith"].get<sal_Int16>());
+    // List starts with "1.1"
+    CPPUNIT_ASSERT_EQUAL(sal_Int16(1), comphelper::SequenceAsHashMap(xRules->getByIndex(1))["StartWith"].get<sal_Int16>());
+    // But paragraph starts with "1.3"
+    uno::Reference<beans::XPropertySet> xPara(getParagraph(1), uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(1), getProperty<sal_Int16>(xPara, "NumberingLevel"));
+    OUString listId;
+    CPPUNIT_ASSERT(xPara->getPropertyValue("ListId") >>= listId);
+    CPPUNIT_ASSERT_EQUAL(OUString("1.3"), getProperty<OUString>(xPara, "ListLabelString"));
 }
 
 DECLARE_OOXMLEXPORT_TEST(testTextboxRightEdge, "textbox-right-edge.docx")

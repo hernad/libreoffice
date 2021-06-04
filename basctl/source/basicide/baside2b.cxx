@@ -229,6 +229,7 @@ EditorWindow::EditorWindow (vcl::Window* pParent, ModulWindow* pModulWindow) :
     Window(pParent, WB_BORDER),
     rModulWindow(*pModulWindow),
     nCurTextWidth(0),
+    m_nSetSourceInBasicId(nullptr),
     aHighlighter(HighlighterLanguage::Basic),
     bHighlighting(false),
     bDoSyntaxHighlight(true),
@@ -259,6 +260,12 @@ EditorWindow::~EditorWindow()
 
 void EditorWindow::dispose()
 {
+    if (m_nSetSourceInBasicId)
+    {
+        Application::RemoveUserEvent(m_nSetSourceInBasicId);
+        m_nSetSourceInBasicId = nullptr;
+    }
+
     Reference< beans::XMultiPropertySet > n;
     {
         osl::MutexGuard g(mutex_);
@@ -926,8 +933,18 @@ void EditorWindow::Paint(vcl::RenderContext& rRenderContext, const tools::Rectan
 
 void EditorWindow::LoseFocus()
 {
-    SetSourceInBasic();
+    // tdf#114258 wait until the next event loop cycle to do this so it doesn't
+    // happen during a mouse down/up selection in the treeview whose contents
+    // this may update
+    if (!m_nSetSourceInBasicId)
+        m_nSetSourceInBasicId = Application::PostUserEvent(LINK(this, EditorWindow, SetSourceInBasicHdl));
     Window::LoseFocus();
+}
+
+IMPL_LINK_NOARG(EditorWindow, SetSourceInBasicHdl, void*, void)
+{
+    m_nSetSourceInBasicId = nullptr;
+    SetSourceInBasic();
 }
 
 void EditorWindow::SetSourceInBasic()
@@ -2171,39 +2188,41 @@ void WatchTreeListBox::RequestingChildren( SvTreeListEntry * pParent )
         int nParentLevel = bArrayIsRootArray ? pItem->nDimLevel : 0;
         int nThisLevel = nParentLevel + 1;
         sal_Int32 nMin, nMax;
-        pArray->GetDim32( nThisLevel, nMin, nMax );
-        for( sal_Int32 i = nMin ; i <= nMax ; i++ )
+        if (pArray->GetDim32(nThisLevel, nMin, nMax))
         {
-            WatchItem* pChildItem = new WatchItem(pItem->maName);
-
-            // Copy data and create name
-
-            OUStringBuffer aIndexStr = "(";
-            pChildItem->mpArrayParentItem = pItem;
-            pChildItem->nDimLevel = nThisLevel;
-            pChildItem->nDimCount = pItem->nDimCount;
-            pChildItem->vIndices.resize(pChildItem->nDimCount);
-            sal_Int32 j;
-            for( j = 0 ; j < nParentLevel ; j++ )
+            for( sal_Int32 i = nMin ; i <= nMax ; i++ )
             {
-                short n = pChildItem->vIndices[j] = pItem->vIndices[j];
-                aIndexStr.append(OUString::number( n )).append(",");
+                WatchItem* pChildItem = new WatchItem(pItem->maName);
+
+                // Copy data and create name
+
+                OUStringBuffer aIndexStr = "(";
+                pChildItem->mpArrayParentItem = pItem;
+                pChildItem->nDimLevel = nThisLevel;
+                pChildItem->nDimCount = pItem->nDimCount;
+                pChildItem->vIndices.resize(pChildItem->nDimCount);
+                sal_Int32 j;
+                for( j = 0 ; j < nParentLevel ; j++ )
+                {
+                    short n = pChildItem->vIndices[j] = pItem->vIndices[j];
+                    aIndexStr.append(OUString::number( n )).append(",");
+                }
+                pChildItem->vIndices[nParentLevel] = sal::static_int_cast<short>( i );
+                aIndexStr.append(OUString::number( i )).append(")");
+
+                OUString aDisplayName;
+                WatchItem* pArrayRootItem = pChildItem->GetRootItem();
+                if( pArrayRootItem && pArrayRootItem->mpArrayParentItem )
+                    aDisplayName = pItem->maDisplayName;
+                else
+                    aDisplayName = pItem->maName;
+                aDisplayName += aIndexStr;
+                pChildItem->maDisplayName = aDisplayName;
+
+                SvTreeListEntry* pChildEntry = SvTreeListBox::InsertEntry( aDisplayName, pEntry );
+                nElementCount++;
+                pChildEntry->SetUserData( pChildItem );
             }
-            pChildItem->vIndices[nParentLevel] = sal::static_int_cast<short>( i );
-            aIndexStr.append(OUString::number( i )).append(")");
-
-            OUString aDisplayName;
-            WatchItem* pArrayRootItem = pChildItem->GetRootItem();
-            if( pArrayRootItem && pArrayRootItem->mpArrayParentItem )
-                aDisplayName = pItem->maDisplayName;
-            else
-                aDisplayName = pItem->maName;
-            aDisplayName += aIndexStr;
-            pChildItem->maDisplayName = aDisplayName;
-
-            SvTreeListEntry* pChildEntry = SvTreeListBox::InsertEntry( aDisplayName, pEntry );
-            nElementCount++;
-            pChildEntry->SetUserData( pChildItem );
         }
         if( nElementCount > 0 )
         {

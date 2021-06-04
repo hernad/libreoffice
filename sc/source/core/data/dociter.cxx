@@ -324,7 +324,8 @@ const sc::CellStoreType* ScDBQueryDataIterator::GetColumnCellStore(ScDocument& r
     ScTable* pTab = rDoc.FetchTable(nTab);
     if (!pTab)
         return nullptr;
-
+    if (nCol >= pTab->GetAllocatedColumnsCount())
+        return nullptr;
     return &pTab->aCol[nCol].maCells;
 }
 
@@ -891,14 +892,17 @@ void ScCellIterator::init()
     if (maStartPos.Tab() > maEndPos.Tab())
         maStartPos.SetTab(maEndPos.Tab());
 
-    maCurPos = maStartPos;
-
-    if (!mpDoc->maTabs[maCurPos.Tab()])
+    if (!mpDoc->maTabs[maStartPos.Tab()])
     {
         OSL_FAIL("Table not found");
         maStartPos = ScAddress(mpDoc->MaxCol()+1, mpDoc->MaxRow()+1, MAXTAB+1); // -> Abort on GetFirst.
-        maCurPos = maStartPos;
     }
+    else
+    {
+        maStartPos.SetCol(mpDoc->maTabs[maStartPos.Tab()]->ClampToAllocatedColumns(maStartPos.Col()));
+    }
+
+    maCurPos = maStartPos;
 }
 
 bool ScCellIterator::getCurrent()

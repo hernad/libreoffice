@@ -14,6 +14,7 @@
 #include <com/sun/star/container/XIndexAccess.hpp>
 #include <com/sun/star/drawing/FillStyle.hpp>
 #include <com/sun/star/drawing/LineDash.hpp>
+#include <com/sun/star/document/XDocumentPropertiesSupplier.hpp>
 #include <com/sun/star/graphic/XGraphic.hpp>
 #include <com/sun/star/text/XFormField.hpp>
 #include <com/sun/star/text/XTextTable.hpp>
@@ -49,6 +50,10 @@ DECLARE_WW8EXPORT_TEST(testTdf37778_readonlySection, "tdf37778_readonlySection.d
     // tdf#127862: page fill color (in this case white) was lost
     uno::Reference<beans::XPropertySet> xStyle(getStyles("PageStyles")->getByName("Standard"), uno::UNO_QUERY);
     CPPUNIT_ASSERT(drawing::FillStyle_NONE != getProperty<drawing::FillStyle>(xStyle, "FillStyle"));
+
+    // tdf#136983
+    uno::Reference<document::XDocumentPropertiesSupplier> xDPS(mxComponent, uno::UNO_QUERY);
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Last printed date", sal_Int16(2009), xDPS->getDocumentProperties()->getPrintDate().Year);
 }
 
 DECLARE_WW8EXPORT_TEST(testTdf122429_header, "tdf122429_header.doc")
@@ -408,15 +413,6 @@ DECLARE_WW8EXPORT_TEST(testPresetDash, "tdf127166_prstDash_Word97.doc")
                         && aPresetLineDash.Distance == aShapeLineDash.Distance;
         CPPUNIT_ASSERT_MESSAGE("LineDash differ", bIsEqual);
     }
-}
-
-DECLARE_WW8EXPORT_TEST(testTdf104017, "tdf104017.doc")
-{
-    // Without the accompanying fix in place, this test would have failed with:
-    // - Expected: 2
-    // - Actual  : 1
-    // i.e. the tables on the two pages were merged together to a single one on export.
-    CPPUNIT_ASSERT_EQUAL(2, getPages());
 }
 
 CPPUNIT_PLUGIN_IMPLEMENT();

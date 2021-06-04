@@ -273,6 +273,13 @@ $(call gb_LinkTarget_add_libs,$(1),\
 	-liconv \
 )
 endif
+$(call gb_LinkTarget_use_system_win32_libs,$(1),\
+	ws2_32 \
+	advapi32 \
+	kernel32 \
+	shlwapi \
+	crypt32 \
+)
 
 endef
 define gb_ExternalProject__use_mariadb-connector-c
@@ -4196,6 +4203,8 @@ gb_ExternalProject__use_qrcodegen :=
 
 else # !SYSTEM_QRCODEGEN
 
+ifneq ($(ENABLE_QRCODEGEN),)
+
 define gb_LinkTarget__use_qrcodegen
 $(call gb_LinkTarget_use_unpacked,$(1),qrcodegen)
 $(call gb_LinkTarget_set_include,$(1),\
@@ -4212,6 +4221,13 @@ define gb_ExternalProject__use_qrcodegen
 $(call gb_ExternalProject_use_static_libraries,$(1),qrcodegen)
 
 endef
+
+else # !ENABLE_QRCODEGEN
+
+define gb_LinkTarget__use_qrcodegen
+endef
+
+endif # ENABLE_QRCODEGEN
 
 endif # SYSTEM_QRCODEGEN
 

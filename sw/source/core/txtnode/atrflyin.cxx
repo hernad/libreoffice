@@ -35,6 +35,7 @@
 #include <objectformatter.hxx>
 #include <calbck.hxx>
 #include <dcontact.hxx>
+#include <textboxhelper.hxx>
 
 SwFormatFlyCnt::SwFormatFlyCnt( SwFrameFormat *pFrameFormat )
     : SfxPoolItem( RES_TXTATR_FLYCNT ),
@@ -202,6 +203,32 @@ void SwTextFlyCnt::SetAnchor( const SwTextNode *pNode )
             }
         }
         pFormat->SetFormatAttr( aAnchor );  // only set the anchor
+
+        // If the draw format has a TextBox, then set its anchor as well.
+        if (SwFrameFormat* pTextBox
+            = SwTextBoxHelper::getOtherTextBoxFormat(pFormat, RES_DRAWFRMFMT))
+        {
+            SwFormatAnchor aTextBoxAnchor(pTextBox->GetAnchor());
+            aTextBoxAnchor.SetAnchor(aAnchor.GetContentAnchor());
+
+            // SwFlyAtContentFrame::Modify() assumes the anchor has a matching layout frame, which
+            // may not be the case when we're in the process of a node split, so block
+            // notifications.
+            bool bIsInSplitNode = pNode->GetpSwpHints() && pNode->GetpSwpHints()->IsInSplitNode();
+            if (bIsInSplitNode)
+            {
+                pTextBox->LockModify();
+            }
+
+            pTextBox->SetFormatAttr(aTextBoxAnchor);
+
+            if (bIsInSplitNode)
+            {
+                pOldNode->RemoveAnchoredFly(pTextBox);
+                aPos.nNode.GetNode().AddAnchoredFly(pTextBox);
+                pTextBox->UnlockModify();
+            }
+        }
     }
 
     // The node may have several SwTextFrames - for every SwTextFrame a

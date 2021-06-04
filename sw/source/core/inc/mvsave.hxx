@@ -58,6 +58,8 @@ namespace sw { namespace mark
     private:
             OUString const m_aName;
             OUString m_aShortName;
+            bool m_bHidden;
+            OUString m_aHideCondition;
             vcl::KeyCode m_aCode;
             IDocumentMarkAccess::MarkType const m_eOrigBkmType;
             sal_uLong m_nNode1;
@@ -165,13 +167,6 @@ class ZSortFly
 public:
     ZSortFly( const SwFrameFormat* pFrameFormat, const SwFormatAnchor* pFlyAnchor,
                 sal_uInt32 nArrOrdNum );
-    ZSortFly& operator=( const ZSortFly& rCpy )
-    {
-        pFormat = rCpy.pFormat;
-        pAnchor = rCpy.pAnchor;
-        nOrdNum = rCpy.nOrdNum;
-        return *this;
-    }
 
     bool operator==( const ZSortFly& ) const { return false; }
     bool operator<( const ZSortFly& rCmp ) const

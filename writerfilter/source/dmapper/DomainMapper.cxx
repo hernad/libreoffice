@@ -125,6 +125,10 @@ DomainMapper::DomainMapper( const uno::Reference< uno::XComponentContext >& xCon
 
     // Don't load the default style definitions to avoid weird mix
     m_pImpl->SetDocumentSettingsProperty("StylesNoDefault", uno::makeAny(true));
+    m_pImpl->SetDocumentSettingsProperty("HeaderSpacingBelowLastPara",
+                                         uno::makeAny(true));
+
+    m_pImpl->SetDocumentSettingsProperty("TabAtLeftIndentForParagraphsInList", uno::makeAny(true));
 
     // Initialize RDF metadata, to be able to add statements during the import.
     try
@@ -1996,19 +2000,24 @@ void DomainMapper::sprmWithProps( Sprm& rSprm, const PropertyMapPtr& rContext )
         {
             uno::Reference< text::XLineNumberingProperties > xLineNumberingProperties( m_pImpl->GetTextDocument(), uno::UNO_QUERY_THROW );
             uno::Reference< beans::XPropertySet > xLineNumberingPropSet = xLineNumberingProperties->getLineNumberingProperties();
-            xLineNumberingPropSet->setPropertyValue(getPropertyName( PROP_IS_ON ), uno::makeAny(true) );
-            if( aSettings.nInterval )
-                xLineNumberingPropSet->setPropertyValue(getPropertyName( PROP_INTERVAL ), uno::makeAny(static_cast<sal_Int16>(aSettings.nInterval)) );
-            if( aSettings.nDistance != -1 )
-                xLineNumberingPropSet->setPropertyValue(getPropertyName( PROP_DISTANCE ), uno::makeAny(aSettings.nDistance) );
+            if( aSettings.nInterval == 0 )
+                xLineNumberingPropSet->setPropertyValue(getPropertyName( PROP_IS_ON ), uno::makeAny(false) );
             else
             {
-                // set Auto value (0.5 cm)
-                xLineNumberingPropSet->setPropertyValue(getPropertyName( PROP_DISTANCE ), uno::makeAny(static_cast<sal_Int32>(500)) );
-                if( pSectionContext )
-                    pSectionContext->SetdxaLnn( static_cast<sal_Int32>(283) );
+                xLineNumberingPropSet->setPropertyValue(getPropertyName( PROP_IS_ON ), uno::makeAny(true) );
+                if( aSettings.nInterval )
+                    xLineNumberingPropSet->setPropertyValue(getPropertyName( PROP_INTERVAL ), uno::makeAny(static_cast<sal_Int16>(aSettings.nInterval)) );
+                if( aSettings.nDistance != -1 )
+                    xLineNumberingPropSet->setPropertyValue(getPropertyName( PROP_DISTANCE ), uno::makeAny(aSettings.nDistance) );
+                else
+                {
+                    // set Auto value (0.5 cm)
+                    xLineNumberingPropSet->setPropertyValue(getPropertyName( PROP_DISTANCE ), uno::makeAny(static_cast<sal_Int32>(500)) );
+                    if( pSectionContext )
+                        pSectionContext->SetdxaLnn( static_cast<sal_Int32>(283) );
+                }
+                xLineNumberingPropSet->setPropertyValue(getPropertyName( PROP_RESTART_AT_EACH_PAGE ), uno::makeAny(aSettings.bRestartAtEachPage) );
             }
-            xLineNumberingPropSet->setPropertyValue(getPropertyName( PROP_RESTART_AT_EACH_PAGE ), uno::makeAny(aSettings.bRestartAtEachPage) );
         }
         catch( const uno::Exception& )
         {

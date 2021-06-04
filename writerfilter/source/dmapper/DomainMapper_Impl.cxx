@@ -93,6 +93,7 @@
 #include <vcl/outdev.hxx>
 #include <officecfg/Office/Common.hxx>
 #include <filter/msfilter/util.hxx>
+#include <filter/msfilter/ww8fields.hxx>
 #include <comphelper/sequence.hxx>
 #include <comphelper/propertyvalue.hxx>
 #include <comphelper/propertysequence.hxx>
@@ -1544,9 +1545,7 @@ void DomainMapper_Impl::finishParagraph( const PropertyMapPtr& pPropertyMap, con
                 {
                     // this condition isn't ideal but as it happens all
                     // RES_CHRATR_* have names that start with "Char"
-                    if (it->Name.startsWith("Char")
-// TODO testParagraphMark *wants* this but it's some effort to create a real SwFormatCharFormat...
-                        && !it->Name.startsWith("CharStyleName"))
+                    if (it->Name.startsWith("Char"))
                     {
                         charProperties.emplace_back(it->Name, it->Value);
                         // as testN793262 demonstrates, font size in rPr must
@@ -1674,6 +1673,22 @@ void DomainMapper_Impl::finishParagraph( const PropertyMapPtr& pPropertyMap, con
                                     m_xPreviousParagraph->setPropertyValue("ListId", uno::makeAny(listId));
                                 }
                             }
+                            if (pList->GetCurrentLevel())
+                            {
+                                sal_Int16 nOverrideLevel = pList->GetCurrentLevel()->GetStartOverride();
+                                if (nOverrideLevel != -1 && m_aListOverrideApplied.find(nListId) == m_aListOverrideApplied.end())
+                                {
+                                    // Apply override: we have override instruction for this level
+                                    // And this was not done for this list before: we can do this only once on first occurrence
+                                    // of list with override
+                                    // TODO: Not tested variant with differen levels override in diffent lists.
+                                    // Probably m_aListOverrideApplied as a set of overriden listids is not sufficient
+                                    // and we need to register level overrides separately.
+                                    m_xPreviousParagraph->setPropertyValue("ParaIsNumberingRestart", uno::makeAny(true));
+                                    m_xPreviousParagraph->setPropertyValue("NumberingStartValue", uno::makeAny(nOverrideLevel));
+                                    m_aListOverrideApplied.insert(nListId);
+                                }
+                            }
                         }
                     }
 
@@ -1723,7 +1738,7 @@ void DomainMapper_Impl::finishParagraph( const PropertyMapPtr& pPropertyMap, con
                 if (xParaProps && m_nTableDepth > 0)
                 {
                     TableParagraph aPending{pParaContext, xParaProps};
-                    m_aParagraphsToEndTable.push_back(aPending);
+                    getTableManager().getCurrentParagraphs()->push_back(aPending);
                 }
 
                 // tdf#118521 set paragraph top or bottom margin based on the paragraph style
@@ -2196,6 +2211,7 @@ void DomainMapper_Impl::PushPageHeaderFooter(bool bHeader, SectionPropertyMap::P
     const PropertyIds ePropTextLeft = bHeader? PROP_HEADER_TEXT_LEFT: PROP_FOOTER_TEXT_LEFT;
     const PropertyIds ePropText = bHeader? PROP_HEADER_TEXT: PROP_FOOTER_TEXT;
 
+    m_bDiscardHeaderFooter = true;
     m_eInHeaderFooterImport
         = bHeader ? HeaderFooterImportState::header : HeaderFooterImportState::footer;
 
@@ -2208,6 +2224,11 @@ void DomainMapper_Impl::PushPageHeaderFooter(bool bHeader, SectionPropertyMap::P
         // clear the "Link To Previous" flag so that the header/footer
         // content is not copied from the previous section
         pSectionContext->ClearHeaderFooterLinkToPrevious(bHeader, eType);
+
+        if (!m_bIsNewDoc)
+        {
+            return; // TODO sw cannot Undo insert header/footer without crashing
+        }
 
         uno::Reference< beans::XPropertySet > xPageStyle =
             pSectionContext->GetPageStyle(
@@ -2236,15 +2257,15 @@ void DomainMapper_Impl::PushPageHeaderFooter(bool bHeader, SectionPropertyMap::P
                 xPageStyle->getPropertyValue(getPropertyName(bLeft? ePropTextLeft: ePropText)) >>= xText;
 
                 m_aTextAppendStack.push(TextAppendContext(uno::Reference< text::XTextAppend >(xText, uno::UNO_QUERY_THROW),
-                            m_bIsNewDoc? uno::Reference<text::XTextCursor>(): m_xBodyText->createTextCursorByRange(xText->getStart())));
-            }
-            else
-            {
-                m_bDiscardHeaderFooter = true;
+                    m_bIsNewDoc
+                        ? uno::Reference<text::XTextCursor>()
+                        : xText->createTextCursorByRange(xText->getStart())));
+                m_bDiscardHeaderFooter = false; // set only on success!
             }
         }
         catch( const uno::Exception& )
         {
+            DBG_UNHANDLED_EXCEPTION("writerfilter.dmapper");
         }
     }
 }
@@ -2902,7 +2923,14 @@ static sal_Int16 lcl_ParseNumberingType( const OUString& rCommand )
     sal_Int16 nRet = style::NumberingType::PAGE_DESCRIPTOR;
 
     //  The command looks like: " PAGE \* Arabic "
-    OUString sNumber = msfilter::util::findQuotedText(rCommand, "\\* ", ' ');
+    // tdf#132185: but may as well be "PAGE \* Arabic"
+    OUString sNumber;
+    constexpr OUStringLiteral rSeparator("\\* ");
+    if (sal_Int32 nStartIndex = rCommand.indexOf(rSeparator); nStartIndex >= 0)
+    {
+        nStartIndex += rSeparator.getLength();
+        sNumber = rCommand.getToken(0, ' ', nStartIndex);
+    }
 
     if( !sNumber.isEmpty() )
     {
@@ -3619,6 +3647,110 @@ void DomainMapper_Impl::AppendFieldCommand(OUString const & rPartOfCommand)
 
 
 typedef std::multimap < sal_Int32, OUString > TOCStyleMap;
+
+
+static ww::eField GetWW8FieldId(OUString const& rType)
+{
+    std::unordered_map<OUString, ww::eField> mapID
+    {
+        {"ADDRESSBLOCK",    ww::eADDRESSBLOCK},
+        {"ADVANCE",         ww::eADVANCE},
+        {"ASK",             ww::eASK},
+        {"AUTONUM",         ww::eAUTONUM},
+        {"AUTONUMLGL",      ww::eAUTONUMLGL},
+        {"AUTONUMOUT",      ww::eAUTONUMOUT},
+        {"AUTOTEXT",        ww::eAUTOTEXT},
+        {"AUTOTEXTLIST",    ww::eAUTOTEXTLIST},
+        {"AUTHOR",          ww::eAUTHOR},
+        {"BARCODE",         ww::eBARCODE},
+        {"BIDIOUTLINE",     ww::eBIDIOUTLINE},
+        {"DATE",            ww::eDATE},
+        {"COMMENTS",        ww::eCOMMENTS},
+        {"COMPARE",         ww::eCOMPARE},
+        {"CONTROL",         ww::eCONTROL},
+        {"CREATEDATE",      ww::eCREATEDATE},
+        {"DATABASE",        ww::eDATABASE},
+        {"DDEAUTOREF",      ww::eDDEAUTOREF},
+        {"DDEREF",          ww::eDDEREF},
+        {"DOCPROPERTY",     ww::eDOCPROPERTY},
+        {"DOCVARIABLE",     ww::eDOCVARIABLE},
+        {"EDITTIME",        ww::eEDITTIME},
+        {"EMBED",           ww::eEMBED},
+        {"EQ",              ww::eEQ},
+        {"FILLIN",          ww::eFILLIN},
+        {"FILENAME",        ww::eFILENAME},
+        {"FILESIZE",        ww::eFILESIZE},
+        {"FOOTREF",         ww::eFOOTREF},
+//        {"FORMULA",         ww::},
+        {"FORMCHECKBOX",    ww::eFORMCHECKBOX},
+        {"FORMDROPDOWN",    ww::eFORMDROPDOWN},
+        {"FORMTEXT",        ww::eFORMTEXT},
+        {"GLOSSREF",        ww::eGLOSSREF},
+        {"GOTOBUTTON",      ww::eGOTOBUTTON},
+        {"GREETINGLINE",    ww::eGREETINGLINE},
+        {"HTMLCONTROL",     ww::eHTMLCONTROL},
+        {"HYPERLINK",       ww::eHYPERLINK},
+        {"IF",              ww::eIF},
+        {"INFO",            ww::eINFO},
+        {"INCLUDEPICTURE",  ww::eINCLUDEPICTURE},
+        {"INCLUDETEXT",     ww::eINCLUDETEXT},
+        {"INCLUDETIFF",     ww::eINCLUDETIFF},
+        {"KEYWORDS",        ww::eKEYWORDS},
+        {"LASTSAVEDBY",     ww::eLASTSAVEDBY},
+        {"LINK",            ww::eLINK},
+        {"LISTNUM",         ww::eLISTNUM},
+        {"MACRO",           ww::eMACRO},
+        {"MACROBUTTON",     ww::eMACROBUTTON},
+        {"MERGEDATA",       ww::eMERGEDATA},
+        {"MERGEFIELD",      ww::eMERGEFIELD},
+        {"MERGEINC",        ww::eMERGEINC},
+        {"MERGEREC",        ww::eMERGEREC},
+        {"MERGESEQ",        ww::eMERGESEQ},
+        {"NEXT",            ww::eNEXT},
+        {"NEXTIF",          ww::eNEXTIF},
+        {"NOTEREF",         ww::eNOTEREF},
+        {"PAGE",            ww::ePAGE},
+        {"PAGEREF",         ww::ePAGEREF},
+        {"PLUGIN",          ww::ePLUGIN},
+        {"PRINT",           ww::ePRINT},
+        {"PRINTDATE",       ww::ePRINTDATE},
+        {"PRIVATE",         ww::ePRIVATE},
+        {"QUOTE",           ww::eQUOTE},
+        {"RD",              ww::eRD},
+        {"REF",             ww::eREF},
+        {"REVNUM",          ww::eREVNUM},
+        {"SAVEDATE",        ww::eSAVEDATE},
+        {"SECTION",         ww::eSECTION},
+        {"SECTIONPAGES",    ww::eSECTIONPAGES},
+        {"SEQ",             ww::eSEQ},
+        {"SET",             ww::eSET},
+        {"SKIPIF",          ww::eSKIPIF},
+        {"STYLEREF",        ww::eSTYLEREF},
+        {"SUBSCRIBER",      ww::eSUBSCRIBER},
+        {"SUBJECT",         ww::eSUBJECT},
+        {"SYMBOL",          ww::eSYMBOL},
+        {"TA",              ww::eTA},
+        {"TEMPLATE",        ww::eTEMPLATE},
+        {"TIME",            ww::eTIME},
+        {"TITLE",           ww::eTITLE},
+        {"TOA",             ww::eTOA},
+        {"USERINITIALS",    ww::eUSERINITIALS},
+        {"USERADDRESS",     ww::eUSERADDRESS},
+        {"USERNAME",        ww::eUSERNAME},
+
+        {"TOC",             ww::eTOC},
+        {"TC",              ww::eTC},
+        {"NUMCHARS",        ww::eNUMCHARS},
+        {"NUMWORDS",        ww::eNUMWORDS},
+        {"NUMPAGES",        ww::eNUMPAGES},
+        {"INDEX",           ww::eINDEX},
+        {"XE",              ww::eXE},
+        {"BIBLIOGRAPHY",    ww::eBIBLIOGRAPHY},
+        {"CITATION",        ww::eCITATION},
+    };
+    auto const it = mapID.find(rType);
+    return (it == mapID.end()) ? ww::eNONE : it->second;
+}
 
 static const FieldConversionMap_t & lcl_GetFieldConversion()
 {
@@ -5346,9 +5478,10 @@ void DomainMapper_Impl::CloseFieldCommand()
                     // the ODF_UNHANDLED string!
                     assert(!m_bForceGenericFields || aCode.isEmpty());
                     xNameCont->insertByName(ODF_CODE_PARAM, uno::makeAny(aCode));
-                    if (std::get<0>(field) == "CONTROL")
-                    { // tdf#129247 HACK probably this should be imported as something else, like in ww8?
-                        xNameCont->insertByName(ODF_ID_PARAM, uno::makeAny(OUString::number(87))); // ww8::eCONTROL
+                    ww::eField const id(GetWW8FieldId(std::get<0>(field)));
+                    if (id != ww::eNONE)
+                    {   // tdf#129247 tdf#134264 set WW8 id for WW8 export
+                        xNameCont->insertByName(ODF_ID_PARAM, uno::makeAny(OUString::number(id)));
                     }
                 }
                 else
@@ -6264,10 +6397,19 @@ void DomainMapper_Impl::ExecuteFrameConversion()
                 uno::Reference< text::XTextRange > xRange;
                 aFramedRedlines[i] >>= xRange;
                 uno::Reference<text::XTextCursor> xRangeCursor = GetTopTextAppend()->createTextCursorByRange( xRange );
-                sal_Int32 nLen = xRange->getString().getLength();
-                redLen.push_back(nLen);
-                xRangeCursor->gotoRange(m_xFrameStartRange, true);
-                redPos.push_back(xRangeCursor->getString().getLength() - nLen);
+                if (xRangeCursor.is())
+                {
+                    sal_Int32 nLen = xRange->getString().getLength();
+                    redLen.push_back(nLen);
+                    xRangeCursor->gotoRange(m_xFrameStartRange, true);
+                    redPos.push_back(xRangeCursor->getString().getLength() - nLen);
+                }
+                else
+                {
+                    // failed createTextCursorByRange(), for example, table inside the frame
+                    redLen.push_back(-1);
+                    redPos.push_back(-1);
+                }
             }
 
             const uno::Reference< text::XTextContent >& xTextContent = xTextAppendAndConvert->convertToTextFrame(
@@ -6280,6 +6422,9 @@ void DomainMapper_Impl::ExecuteFrameConversion()
             {
                 OUString sType;
                 beans::PropertyValues aRedlineProperties( 3 );
+                // skip failed createTextCursorByRange()
+                if (redPos[i/3] == -1)
+                    continue;
                 aFramedRedlines[i+1] >>= sType;
                 aFramedRedlines[i+2] >>= aRedlineProperties;
                 uno::Reference< text::XTextFrame > xFrame( xTextContent, uno::UNO_QUERY_THROW );

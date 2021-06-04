@@ -334,11 +334,11 @@ bool ScTable::Search(const SvxSearchItem& rSearchItem, SCCOL& rCol, SCROW& rRow,
     if (!bAll && rSearchItem.GetBackward())
     {
         SCROW nLastNonFilteredRow = pDocument->MaxRow() + 1;
-        nCol = std::min(nCol, static_cast<SCCOL>(nLastCol + 1));
-        nRow = std::min(nRow, static_cast<SCROW>(nLastRow + 1));
         if (rSearchItem.GetRowDirection())
         {
             nCol--;
+            nCol = std::min(nCol, nLastCol);
+            nRow = std::min(nRow, nLastRow);
             while (!bFound && (nRow >= 0))
             {
                 if (bSkipFiltered)
@@ -377,6 +377,8 @@ bool ScTable::Search(const SvxSearchItem& rSearchItem, SCCOL& rCol, SCROW& rRow,
         else
         {
             nRow--;
+            nCol = std::min(nCol, nLastCol);
+            nRow = std::min(nRow, nLastRow);
             while (!bFound && (nCol >= 0))
             {
                 while (!bFound && (nRow >= 0))

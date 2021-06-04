@@ -928,15 +928,6 @@ void SectionPropertyMap::CopyLastHeaderFooter( bool bFirstPage, DomainMapper_Imp
 void SectionPropertyMap::PrepareHeaderFooterProperties( bool bFirstPage )
 {
     bool bCopyFirstToFollow = bFirstPage && m_bTitlePage && m_aFollowPageStyle.is();
-    if (bCopyFirstToFollow)
-    {
-        // This is a first page and has a follow style, then enable the
-        // header/footer there as well to be consistent.
-        if (HasHeader(/*bFirstPage=*/true))
-            m_aFollowPageStyle->setPropertyValue("HeaderIsOn", uno::makeAny(true));
-        if (HasFooter(/*bFirstPage=*/true))
-            m_aFollowPageStyle->setPropertyValue("FooterIsOn", uno::makeAny(true));
-    }
 
     sal_Int32 nTopMargin = m_nTopMargin;
     sal_Int32 nHeaderTop = m_nHeaderTop;
@@ -1232,6 +1223,28 @@ void SectionPropertyMap::HandleIncreasedAnchoredObjectSpacing(DomainMapper_Impl&
         // emulate.
         if (rAnchor.m_aAnchoredObjects.size() < 4)
             continue;
+
+        // Ignore this paragraph if none of the objects are wrapped in the background.
+        sal_Int32 nOpaqueCount = 0;
+        for (const auto& rAnchored : rAnchor.m_aAnchoredObjects)
+        {
+            uno::Reference<beans::XPropertySet> xShape(rAnchored.m_xAnchoredObject, uno::UNO_QUERY);
+            if (!xShape.is())
+            {
+                continue;
+            }
+
+            bool bOpaque = true;
+            xShape->getPropertyValue("Opaque") >>= bOpaque;
+            if (!bOpaque)
+            {
+                ++nOpaqueCount;
+            }
+        }
+        if (nOpaqueCount < 1)
+        {
+            continue;
+        }
 
         // Analyze the anchored objects of this paragraph, now that we know the
         // page width.

@@ -480,6 +480,16 @@ DECLARE_OOXMLEXPORT_TEST(testTdf119054, "tdf119054.docx")
     assertXPath(pXmlDoc, "/w:document/w:body/w:tbl/w:tr[1]/w:tc[1]/w:p[1]/w:pPr/w:spacing", "line", "240");
 }
 
+DECLARE_OOXMLEXPORT_TEST(testTdf132514, "tdf132514.docx")
+{
+    xmlDocPtr pXmlDoc = parseExport();
+    if (!pXmlDoc)
+        return;
+    // Keep table style setting, when the footer also contain a table
+    assertXPath(pXmlDoc, "/w:document/w:body/w:tbl/w:tr[1]/w:tc[2]/w:p[2]/w:pPr/w:spacing", "before", "0");
+    assertXPath(pXmlDoc, "/w:document/w:body/w:tbl/w:tr[1]/w:tc[2]/w:p[2]/w:pPr/w:spacing", "after", "0");
+}
+
 DECLARE_OOXMLEXPORT_TEST(testFdo69636, "fdo69636.docx")
 {
     /*
@@ -500,7 +510,7 @@ DECLARE_OOXMLEXPORT_TEST(testVMLData, "TestVMLData.docx")
 {
     // The problem was exporter was exporting vml data for shape in w:rPr element.
     // vml data should not come under w:rPr element.
-    xmlDocPtr pXmlDoc = parseExport("word/header2.xml");
+    xmlDocPtr pXmlDoc = parseExport("word/header1.xml");
     if (!pXmlDoc)
         return;
     CPPUNIT_ASSERT(getXPath(pXmlDoc, "/w:hdr/w:p/w:r/mc:AlternateContent/mc:Fallback/w:pict/v:shape", "stroked").match("f"));
@@ -510,7 +520,7 @@ DECLARE_OOXMLEXPORT_TEST(testImageData, "image_data.docx")
 {
     // The problem was exporter was exporting v:imagedata data for shape in w:pict as v:fill w element.
 
-    xmlDocPtr pXmlDoc = parseExport("word/header2.xml");
+    xmlDocPtr pXmlDoc = parseExport("word/header1.xml");
     if (!pXmlDoc)
         return;
     CPPUNIT_ASSERT(getXPath(pXmlDoc, "/w:hdr/w:p/w:r/mc:AlternateContent/mc:Fallback/w:pict/v:shape/v:imagedata", "detectmouseclick").match("t"));

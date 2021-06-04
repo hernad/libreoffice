@@ -176,6 +176,83 @@ DECLARE_OOXMLEXPORT_TEST(testTdf95848_2, "tdf95848_2.docx")
     }
 }
 
+DECLARE_OOXMLEXPORT_TEST(testTdf108496, "tdf108496.docx")
+{
+    OUString listId;
+    OUString listStyle;
+    // Lists with override
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(2), uno::UNO_QUERY);
+        CPPUNIT_ASSERT(xPara->getPropertyValue("NumberingStyleName") >>= listStyle);
+        CPPUNIT_ASSERT(listStyle.startsWith("WWNum"));
+        CPPUNIT_ASSERT(xPara->getPropertyValue("ListId") >>= listId);
+        CPPUNIT_ASSERT_EQUAL(OUString("1"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(3), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(listStyle, getProperty<OUString>(xPara, "NumberingStyleName"));
+        CPPUNIT_ASSERT_EQUAL(listId, getProperty<OUString>(xPara, "ListId"));
+        CPPUNIT_ASSERT_EQUAL(OUString("2"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(5), uno::UNO_QUERY);
+        // different numbering style
+        OUString listStyle2;
+        CPPUNIT_ASSERT(xPara->getPropertyValue("NumberingStyleName") >>= listStyle2);
+        CPPUNIT_ASSERT(listStyle2.startsWith("WWNum"));
+        CPPUNIT_ASSERT(listStyle2 != listStyle);
+        // restarted numeration due to override
+        CPPUNIT_ASSERT_EQUAL(OUString("1"), getProperty<OUString>(xPara, "ListLabelString"));
+        CPPUNIT_ASSERT_EQUAL(listId, getProperty<OUString>(xPara, "ListId"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(6), uno::UNO_QUERY);
+        // different numbering style
+        OUString listStyle2;
+        CPPUNIT_ASSERT(xPara->getPropertyValue("NumberingStyleName") >>= listStyle2);
+        CPPUNIT_ASSERT(listStyle2.startsWith("WWNum"));
+        // restarted numeration due to override
+        CPPUNIT_ASSERT_EQUAL(OUString("2"), getProperty<OUString>(xPara, "ListLabelString"));
+        CPPUNIT_ASSERT_EQUAL(listId, getProperty<OUString>(xPara, "ListId"));
+    }
+
+    // Lists without override
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(8), uno::UNO_QUERY);
+        CPPUNIT_ASSERT(xPara->getPropertyValue("NumberingStyleName") >>= listStyle);
+        CPPUNIT_ASSERT(listStyle.startsWith("WWNum"));
+        CPPUNIT_ASSERT(xPara->getPropertyValue("ListId") >>= listId);
+        CPPUNIT_ASSERT_EQUAL(OUString("1"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(9), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(listStyle, getProperty<OUString>(xPara, "NumberingStyleName"));
+        CPPUNIT_ASSERT_EQUAL(listId, getProperty<OUString>(xPara, "ListId"));
+        CPPUNIT_ASSERT_EQUAL(OUString("2"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(11), uno::UNO_QUERY);
+        // different numbering style
+        OUString listStyle2;
+        CPPUNIT_ASSERT(xPara->getPropertyValue("NumberingStyleName") >>= listStyle2);
+        CPPUNIT_ASSERT(listStyle2.startsWith("WWNum"));
+        CPPUNIT_ASSERT(listStyle2 != listStyle);
+        // numeration is continued
+        CPPUNIT_ASSERT_EQUAL(OUString("3"), getProperty<OUString>(xPara, "ListLabelString"));
+        CPPUNIT_ASSERT_EQUAL(listId, getProperty<OUString>(xPara, "ListId"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(12), uno::UNO_QUERY);
+        // different numbering style
+        OUString listStyle2;
+        CPPUNIT_ASSERT(xPara->getPropertyValue("NumberingStyleName") >>= listStyle2);
+        CPPUNIT_ASSERT(listStyle2.startsWith("WWNum"));
+        // numeration is continued
+        CPPUNIT_ASSERT_EQUAL(OUString("4"), getProperty<OUString>(xPara, "ListLabelString"));
+        CPPUNIT_ASSERT_EQUAL(listId, getProperty<OUString>(xPara, "ListId"));
+    }
+}
+
 DECLARE_OOXMLEXPORT_TEST(testTdf126723, "tdf126723.docx")
 {
     CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(0), getProperty<sal_Int32>(getParagraph(2), "ParaLeftMargin"));
@@ -316,6 +393,18 @@ DECLARE_OOXMLEXPORT_TEST(testTdf123636_newlinePageBreak3, "tdf123636_newlinePage
     assertXPath(pDump, "/root/page[1]/body/txt[3]/Text[1]", "Portion", "Last line on page 1");
 }
 
+DECLARE_OOXMLEXPORT_TEST(testTdf134063, "tdf134063.docx")
+{
+    CPPUNIT_ASSERT_EQUAL(2, getPages());
+
+    xmlDocPtr pDump = parseLayoutDump();
+
+    // There are three tabs with default width
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(720), getXPath(pDump, "//page[1]/body/txt[1]/Text[1]", "nWidth").toInt32());
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(720), getXPath(pDump, "//page[1]/body/txt[1]/Text[2]", "nWidth").toInt32());
+    CPPUNIT_ASSERT_EQUAL(sal_Int32(720), getXPath(pDump, "//page[1]/body/txt[1]/Text[3]", "nWidth").toInt32());
+}
+
 DECLARE_OOXMLEXPORT_TEST(testTdf123636_newlinePageBreak4, "tdf123636_newlinePageBreak4.docx")
 {
     //MS Compatibility flag: SplitPgBreakAndParaMark
@@ -428,7 +517,12 @@ DECLARE_OOXMLEXPORT_TEST(testParaAdjustDistribute, "para-adjust-distribute.docx"
 
 DECLARE_OOXMLEXPORT_TEST(testInputListExport, "tdf122186_input_list.odt")
 {
-    if (!mbExported) // importing the ODT, an input field
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+
+    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<drawing::XDrawPage> xDrawPage = xDrawPageSupplier->getDrawPage();
+
+    if (!mbExported || xDrawPage->getCount() == 0) // importing the ODT, an input field
     {
         uno::Reference<text::XTextFieldsSupplier> xTextFieldsSupplier(mxComponent, uno::UNO_QUERY);
         uno::Reference<container::XEnumerationAccess> xFieldsAccess(xTextFieldsSupplier->getTextFields());
@@ -682,6 +776,13 @@ DECLARE_OOXMLEXPORT_TEST(testImageCommentAtChar, "image-comment-at-char.docx")
                          getProperty<OUString>(getRun(xPara, 5), "TextPortionType"));
 }
 
+DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf131594, "tdf131594.docx")
+{
+    xmlDocPtr pXmlDoc = parseExport("word/document.xml");
+    // lnNumType should not be exported if w:countBy="0"
+    assertXPath(pXmlDoc, "/w:document/w:body/w:sectPr/w:lnNumType", 0);
+}
+
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf121663, "tdf121663.docx")
 {
     xmlDocPtr pXmlDoc = parseExport("word/document.xml");
@@ -775,12 +876,32 @@ DECLARE_OOXMLEXPORT_TEST(tdf127085, "tdf127085.docx")
 
 DECLARE_OOXMLEXPORT_TEST(tdf119809, "tdf119809.docx")
 {
+    uno::Reference<drawing::XDrawPageSupplier> xDrawPageSupplier(mxComponent, uno::UNO_QUERY);
+    uno::Reference<drawing::XDrawPage> xDrawPage = xDrawPageSupplier->getDrawPage();
+
     // Combobox without an item list lost during import
-    uno::Reference<drawing::XControlShape> xControlShape(getShape(1), uno::UNO_QUERY);
-    uno::Reference<beans::XPropertySet> xPropertySet(xControlShape->getControl(), uno::UNO_QUERY);
-    uno::Reference<lang::XServiceInfo> xServiceInfo(xPropertySet, uno::UNO_QUERY);
-    CPPUNIT_ASSERT_EQUAL(true, bool(xServiceInfo->supportsService("com.sun.star.form.component.ComboBox")));
-    CPPUNIT_ASSERT_EQUAL(sal_Int32(0), getProperty< uno::Sequence<OUString> >(xPropertySet, "StringItemList").getLength());
+    if (xDrawPage->getCount() > 0)
+    {
+        uno::Reference<drawing::XControlShape> xControlShape(getShape(1), uno::UNO_QUERY);
+        uno::Reference<beans::XPropertySet> xPropertySet(xControlShape->getControl(), uno::UNO_QUERY);
+        uno::Reference<lang::XServiceInfo> xServiceInfo(xPropertySet, uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(true, bool(xServiceInfo->supportsService("com.sun.star.form.component.ComboBox")));
+        CPPUNIT_ASSERT_EQUAL(sal_Int32(0), getProperty< uno::Sequence<OUString> >(xPropertySet, "StringItemList").getLength());
+    }
+    else
+    {
+        // ComboBox was imported as DropDown text field
+        uno::Reference<text::XTextFieldsSupplier> xTextFieldsSupplier(mxComponent, uno::UNO_QUERY);
+        uno::Reference<container::XEnumerationAccess> xFieldsAccess(xTextFieldsSupplier->getTextFields());
+        uno::Reference<container::XEnumeration> xFields(xFieldsAccess->createEnumeration());
+        CPPUNIT_ASSERT(xFields->hasMoreElements());
+        uno::Any aField = xFields->nextElement();
+        uno::Reference<lang::XServiceInfo> xServiceInfo(aField, uno::UNO_QUERY);
+        CPPUNIT_ASSERT(xServiceInfo->supportsService("com.sun.star.text.textfield.DropDown"));
+
+        uno::Sequence<OUString> aItems = getProperty< uno::Sequence<OUString> >(aField, "Items");
+        CPPUNIT_ASSERT_EQUAL(sal_Int32(1), aItems.getLength());
+    }
 }
 
 DECLARE_OOXMLEXPORT_TEST(tdf118169, "tdf118169.docx")

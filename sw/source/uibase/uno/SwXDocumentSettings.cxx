@@ -98,6 +98,7 @@ enum SwDocumentSettingsPropertyHandles
     HANDLE_ALLOW_PRINTJOB_CANCEL,
     HANDLE_USE_FORMER_LINE_SPACING,
     HANDLE_ADD_PARA_SPACING_TO_TABLE_CELLS,
+    HANDLE_ADD_PARA_LINE_SPACING_TO_TABLE_CELLS,
     HANDLE_USE_FORMER_OBJECT_POSITIONING,
     HANDLE_USE_FORMER_TEXT_WRAPPING,
     HANDLE_CHANGES_PASSWORD,
@@ -114,6 +115,7 @@ enum SwDocumentSettingsPropertyHandles
     HANDLE_USE_OLD_PRINTER_METRICS,
     HANDLE_PROTECT_FORM,
     HANDLE_MS_WORD_COMP_TRAILING_BLANKS,
+    HANDLE_MS_WORD_COMP_MIN_LINE_HEIGHT_BY_FLY,
     HANDLE_TABS_RELATIVE_TO_INDENT,
     HANDLE_RSID,
     HANDLE_RSID_ROOT,
@@ -144,6 +146,7 @@ enum SwDocumentSettingsPropertyHandles
     HANDLE_DISABLE_OFF_PAGE_POSITIONING,
     HANDLE_EMPTY_DB_FIELD_HIDES_PARA,
     HANDLE_CONTINUOUS_ENDNOTES,
+    HANDLE_HEADER_SPACING_BELOW_LAST_PARA,
 };
 
 static MasterPropertySetInfo * lcl_createSettingsInfo()
@@ -183,6 +186,7 @@ static MasterPropertySetInfo * lcl_createSettingsInfo()
         { OUString("AllowPrintJobCancel"),        HANDLE_ALLOW_PRINTJOB_CANCEL,           cppu::UnoType<bool>::get(),           0},
         { OUString("UseFormerLineSpacing"),       HANDLE_USE_FORMER_LINE_SPACING,         cppu::UnoType<bool>::get(),           0},
         { OUString("AddParaSpacingToTableCells"), HANDLE_ADD_PARA_SPACING_TO_TABLE_CELLS, cppu::UnoType<bool>::get(),           0},
+        { OUString("AddParaLineSpacingToTableCells"), HANDLE_ADD_PARA_LINE_SPACING_TO_TABLE_CELLS, cppu::UnoType<bool>::get(),           0},
         { OUString("UseFormerObjectPositioning"), HANDLE_USE_FORMER_OBJECT_POSITIONING,   cppu::UnoType<bool>::get(),           0},
         { OUString("UseFormerTextWrapping"),      HANDLE_USE_FORMER_TEXT_WRAPPING,        cppu::UnoType<bool>::get(),           0},
         { OUString("RedlineProtectionKey"),       HANDLE_CHANGES_PASSWORD,                cppu::UnoType< cppu::UnoSequenceType<sal_Int8> >::get(),           0},
@@ -202,6 +206,7 @@ static MasterPropertySetInfo * lcl_createSettingsInfo()
         { OUString("RsidRoot"), HANDLE_RSID_ROOT, cppu::UnoType<sal_Int32>::get(), 0},
         { OUString("ProtectForm"), HANDLE_PROTECT_FORM, cppu::UnoType<bool>::get(), 0},
         { OUString("MsWordCompTrailingBlanks"), HANDLE_MS_WORD_COMP_TRAILING_BLANKS, cppu::UnoType<bool>::get(), 0 },
+        { OUString("MsWordCompMinLineHeightByFly"), HANDLE_MS_WORD_COMP_MIN_LINE_HEIGHT_BY_FLY, cppu::UnoType<bool>::get(), 0 },
         { OUString("TabAtLeftIndentForParagraphsInList"), HANDLE_TAB_AT_LEFT_INDENT_FOR_PARA_IN_LIST, cppu::UnoType<bool>::get(), 0},
         { OUString("ModifyPasswordInfo"), HANDLE_MODIFYPASSWORDINFO, cppu::UnoType< cppu::UnoSequenceType<css::beans::PropertyValue> >::get(), 0},
         { OUString("MathBaselineAlignment"), HANDLE_MATH_BASELINE_ALIGNMENT, cppu::UnoType<bool>::get(), 0},
@@ -229,6 +234,8 @@ static MasterPropertySetInfo * lcl_createSettingsInfo()
         { OUString("DisableOffPagePositioning"),       HANDLE_DISABLE_OFF_PAGE_POSITIONING,         cppu::UnoType<bool>::get(),           0},
         { OUString("EmptyDbFieldHidesPara"), HANDLE_EMPTY_DB_FIELD_HIDES_PARA, cppu::UnoType<bool>::get(), 0 },
         { OUString("ContinuousEndnotes"), HANDLE_CONTINUOUS_ENDNOTES, cppu::UnoType<bool>::get(), 0 },
+        { OUString("HeaderSpacingBelowLastPara"), HANDLE_HEADER_SPACING_BELOW_LAST_PARA, cppu::UnoType<bool>::get(), 0 },
+
 /*
  * As OS said, we don't have a view when we need to set this, so I have to
  * find another solution before adding them to this property set - MTG
@@ -625,6 +632,12 @@ void SwXDocumentSettings::_setSingleValue( const comphelper::PropertyInfo & rInf
             mpDoc->getIDocumentSettingAccess().set(DocumentSettingId::ADD_PARA_SPACING_TO_TABLE_CELLS, bTmp);
         }
         break;
+        case HANDLE_ADD_PARA_LINE_SPACING_TO_TABLE_CELLS:
+        {
+            bool bTmp = *o3tl::doAccess<bool>(rValue);
+            mpDoc->getIDocumentSettingAccess().set(DocumentSettingId::ADD_PARA_LINE_SPACING_TO_TABLE_CELLS, bTmp);
+        }
+        break;
         case HANDLE_USE_FORMER_OBJECT_POSITIONING:
         {
             bool bTmp = *o3tl::doAccess<bool>(rValue);
@@ -744,6 +757,12 @@ void SwXDocumentSettings::_setSingleValue( const comphelper::PropertyInfo & rInf
         {
             bool bTmp = *o3tl::doAccess<bool>(rValue);
             mpDoc->getIDocumentSettingAccess().set(DocumentSettingId::MS_WORD_COMP_TRAILING_BLANKS, bTmp);
+        }
+        break;
+        case HANDLE_MS_WORD_COMP_MIN_LINE_HEIGHT_BY_FLY:
+        {
+            bool bTmp = *o3tl::doAccess<bool>(rValue);
+            mpDoc->getIDocumentSettingAccess().set(DocumentSettingId::MS_WORD_COMP_MIN_LINE_HEIGHT_BY_FLY, bTmp);
         }
         break;
         case HANDLE_TAB_AT_LEFT_INDENT_FOR_PARA_IN_LIST:
@@ -934,6 +953,16 @@ void SwXDocumentSettings::_setSingleValue( const comphelper::PropertyInfo & rInf
             {
                 mpDoc->getIDocumentSettingAccess().set(DocumentSettingId::CONTINUOUS_ENDNOTES,
                                                        bTmp);
+            }
+        }
+        break;
+        case HANDLE_HEADER_SPACING_BELOW_LAST_PARA:
+        {
+            bool bTmp;
+            if (rValue >>= bTmp)
+            {
+                mpDoc->getIDocumentSettingAccess().set(
+                    DocumentSettingId::HEADER_SPACING_BELOW_LAST_PARA, bTmp);
             }
         }
         break;
@@ -1167,6 +1196,11 @@ void SwXDocumentSettings::_getSingleValue( const comphelper::PropertyInfo & rInf
             rValue <<= mpDoc->getIDocumentSettingAccess().get(DocumentSettingId::ADD_PARA_SPACING_TO_TABLE_CELLS);
         }
         break;
+        case HANDLE_ADD_PARA_LINE_SPACING_TO_TABLE_CELLS:
+        {
+            rValue <<= mpDoc->getIDocumentSettingAccess().get(DocumentSettingId::ADD_PARA_LINE_SPACING_TO_TABLE_CELLS);
+        }
+        break;
         case HANDLE_USE_FORMER_OBJECT_POSITIONING:
         {
             rValue <<= mpDoc->getIDocumentSettingAccess().get(DocumentSettingId::USE_FORMER_OBJECT_POS);
@@ -1260,6 +1294,11 @@ void SwXDocumentSettings::_getSingleValue( const comphelper::PropertyInfo & rInf
         case HANDLE_MS_WORD_COMP_TRAILING_BLANKS:
         {
             rValue <<= mpDoc->getIDocumentSettingAccess().get(DocumentSettingId::MS_WORD_COMP_TRAILING_BLANKS);
+        }
+        break;
+        case HANDLE_MS_WORD_COMP_MIN_LINE_HEIGHT_BY_FLY:
+        {
+            rValue <<= mpDoc->getIDocumentSettingAccess().get(DocumentSettingId::MS_WORD_COMP_MIN_LINE_HEIGHT_BY_FLY);
         }
         break;
         case HANDLE_TAB_AT_LEFT_INDENT_FOR_PARA_IN_LIST:
@@ -1397,6 +1436,12 @@ void SwXDocumentSettings::_getSingleValue( const comphelper::PropertyInfo & rInf
         {
             rValue
                 <<= mpDoc->getIDocumentSettingAccess().get(DocumentSettingId::CONTINUOUS_ENDNOTES);
+        }
+        break;
+        case HANDLE_HEADER_SPACING_BELOW_LAST_PARA:
+        {
+            rValue <<= mpDoc->getIDocumentSettingAccess().get(
+                DocumentSettingId::HEADER_SPACING_BELOW_LAST_PARA);
         }
         break;
         default:

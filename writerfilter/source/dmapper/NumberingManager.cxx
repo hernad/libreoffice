@@ -42,6 +42,7 @@
 #include <tools/diagnose_ex.h>
 #include <comphelper/sequence.hxx>
 #include <comphelper/propertyvalue.hxx>
+#include <comphelper/string.hxx>
 
 using namespace com::sun::star;
 
@@ -101,6 +102,9 @@ void ListLevel::SetValue( Id nId, sal_Int32 nValue )
         case NS_ooxml::LN_CT_Lvl_start:
             m_nIStartAt = nValue;
         break;
+        case NS_ooxml::LN_CT_NumLvl_startOverride:
+            m_nStartOverride = nValue;
+            break;
         case NS_ooxml::LN_CT_Lvl_numFmt:
             m_nNFC = nValue;
         break;
@@ -146,55 +150,6 @@ void ListLevel::SetParaStyle( const tools::SvRef< StyleSheetEntry >& pStyle )
         && styleId[ RTL_CONSTASCII_LENGTH( "Heading " ) ] <= '9' );
 }
 
-sal_Int16 ListLevel::GetParentNumbering( const OUString& sText, sal_Int16 nLevel,
-        OUString& rPrefix, OUString& rSuffix )
-{
-    sal_Int16 nParentNumbering = 1;
-
-    //now parse the text to find %n from %1 to %nLevel+1
-    //everything before the first % and the last %x is prefix and suffix
-    OUString sLevelText( sText );
-    sal_Int32 nCurrentIndex = 0;
-    sal_Int32 nFound = sLevelText.indexOf( '%', nCurrentIndex );
-    if( nFound > 0 )
-    {
-        rPrefix = sLevelText.copy( 0, nFound );
-        sLevelText = sLevelText.copy( nFound );
-    }
-    sal_Int32 nMinLevel = nLevel;
-    //now the text should either be empty or start with %
-    nFound = sLevelText.getLength( ) > 1 ? 0 : -1;
-    while( nFound >= 0 )
-    {
-        if( sLevelText.getLength() > 1 )
-        {
-            sal_Unicode cLevel = sLevelText[1];
-            if( cLevel >= '1' && cLevel <= '9' )
-            {
-                if( cLevel - '1' < nMinLevel )
-                    nMinLevel = cLevel - '1';
-                //remove first char - next char is removed later
-                sLevelText = sLevelText.copy( 1 );
-            }
-        }
-        //remove old '%' or number
-        sLevelText = sLevelText.copy( 1 );
-        nCurrentIndex = 0;
-        nFound = sLevelText.indexOf( '%', nCurrentIndex );
-        //remove the text before the next %
-        if(nFound > 0)
-            sLevelText = sLevelText.copy( nFound -1 );
-    }
-    if( nMinLevel < nLevel )
-    {
-        nParentNumbering = sal_Int16( nLevel - nMinLevel + 1);
-    }
-
-    rSuffix = sLevelText;
-
-    return nParentNumbering;
-}
-
 uno::Sequence<beans::PropertyValue> ListLevel::GetProperties(bool bDefaults)
 {
     uno::Sequence<beans::PropertyValue> aLevelProps = GetLevelProperties(bDefaults);
@@ -232,46 +187,42 @@ uno::Sequence<beans::PropertyValue> ListLevel::GetLevelProperties(bool bDefaults
 {
     std::vector<beans::PropertyValue> aNumberingProperties;
 
-    if( m_nIStartAt >= 0)
+    if (m_nIStartAt >= 0)
         aNumberingProperties.push_back(lcl_makePropVal<sal_Int16>(PROP_START_WITH, m_nIStartAt) );
+    else if (bDefaults)
+        aNumberingProperties.push_back(lcl_makePropVal<sal_Int16>(PROP_START_WITH, 0));
 
     sal_Int16 nNumberFormat = ConversionHelper::ConvertNumberingType(m_nNFC);
     if( m_nNFC >= 0)
     {
         if (m_xGraphicBitmap.is())
             nNumberFormat = style::NumberingType::BITMAP;
-        else if (m_sBulletChar.isEmpty() && nNumberFormat != style::NumberingType::CHAR_SPECIAL)
-            // w:lvlText is empty, that means no numbering in Word.
-            // CHAR_SPECIAL is handled separately below.
-            nNumberFormat = style::NumberingType::NUMBER_NONE;
         aNumberingProperties.push_back(lcl_makePropVal(PROP_NUMBERING_TYPE, nNumberFormat));
     }
 
-
-    if( !isOutlineNumbering())
+    // todo: this is not the bullet char
+    if( nNumberFormat == style::NumberingType::CHAR_SPECIAL )
     {
-        // todo: this is not the bullet char
-        if( nNumberFormat == style::NumberingType::CHAR_SPECIAL )
+        if (!m_sBulletChar.isEmpty())
         {
-            if (!m_sBulletChar.isEmpty())
-            {
-                aNumberingProperties.push_back(lcl_makePropVal(PROP_BULLET_CHAR, m_sBulletChar.copy(0, 1)));
-            }
-            else
-            {
-                // If w:lvlText's value is null - set bullet char to zero.
-                aNumberingProperties.push_back(lcl_makePropVal<sal_Unicode>(PROP_BULLET_CHAR, 0));
-            }
+            aNumberingProperties.push_back(lcl_makePropVal(PROP_BULLET_CHAR, m_sBulletChar.copy(0, 1)));
         }
-        if (m_xGraphicBitmap.is())
+        else
         {
-            aNumberingProperties.push_back(lcl_makePropVal(PROP_GRAPHIC_BITMAP, m_xGraphicBitmap));
-            aNumberingProperties.push_back(lcl_makePropVal(PROP_GRAPHIC_SIZE, m_aGraphicSize));
+            // If w:lvlText's value is null - set bullet char to zero.
+            aNumberingProperties.push_back(lcl_makePropVal<sal_Unicode>(PROP_BULLET_CHAR, 0));
         }
     }
+    if (m_xGraphicBitmap.is())
+    {
+        aNumberingProperties.push_back(lcl_makePropVal(PROP_GRAPHIC_BITMAP, m_xGraphicBitmap));
+        aNumberingProperties.push_back(lcl_makePropVal(PROP_GRAPHIC_SIZE, m_aGraphicSize));
+    }
 
-    if (bDefaults || m_nTabstop != 0)
-        aNumberingProperties.push_back(lcl_makePropVal(PROP_LISTTAB_STOP_POSITION, m_nTabstop));
+    if (m_nTabstop.has_value())
+        aNumberingProperties.push_back(lcl_makePropVal(PROP_LISTTAB_STOP_POSITION, *m_nTabstop));
+    else if (bDefaults)
+        aNumberingProperties.push_back(lcl_makePropVal<sal_Int16>(PROP_LISTTAB_STOP_POSITION, 0));
 
     //TODO: handling of nFLegal?
     //TODO: nFNoRestart lower levels do not restart when higher levels are incremented, like:
@@ -585,44 +536,16 @@ void ListDef::CreateNumberingRules( DomainMapper& rDMapper,
                 if (pLevel.get() && !pLevel->GetBulletChar().isEmpty())
                     sText = pLevel->GetBulletChar( );
 
-                OUString sPrefix;
-                OUString sSuffix;
-                OUString& rPrefix = sPrefix;
-                OUString& rSuffix = sSuffix;
-                sal_Int16 nParentNum = ListLevel::GetParentNumbering(
-                       sText, nLevel, rPrefix, rSuffix );
+                aLvlProps.push_back(comphelper::makePropertyValue(getPropertyName(PROP_PREFIX), OUString("")));
+                aLvlProps.push_back(comphelper::makePropertyValue(getPropertyName(PROP_SUFFIX), OUString("")));
+                aLvlProps.push_back(comphelper::makePropertyValue(getPropertyName(PROP_LIST_FORMAT), sText));
 
-                aLvlProps.push_back(comphelper::makePropertyValue(getPropertyName(PROP_PREFIX), rPrefix));
-
-                if (sText.isEmpty())
-                {
-                    // Empty <w:lvlText>? Then put a Unicode "zero width space" as a suffix, so LabelFollowedBy is still shown, as in Word.
-                    // With empty suffix, Writer does not show LabelFollowedBy, either.
-                    auto it = std::find_if(aLvlProps.begin(), aLvlProps.end(), [](const beans::PropertyValue& rValue) { return rValue.Name == "NumberingType"; });
-                    if (it != aLvlProps.end())
-                    {
-                        sal_Int16 nNumberFormat = it->Value.get<sal_Int16>();
-
-                        // No need for a zero width space without a real LabelFollowedBy.
-                        bool bLabelFollowedBy = true;
-                        it = std::find_if(aLvlProps.begin(), aLvlProps.end(), [](const beans::PropertyValue& rValue) { return rValue.Name == "LabelFollowedBy"; });
-                        if (it != aLvlProps.end())
-                        {
-                            sal_Int16 nValue;
-                            if (it->Value >>= nValue)
-                                bLabelFollowedBy = nValue != SvxNumberFormat::NOTHING;
-                        }
-
-                        if (bLabelFollowedBy && nNumberFormat == style::NumberingType::NUMBER_NONE)
-                            rSuffix = OUString(u'\x200B');
-                    }
-                }
-
-                aLvlProps.push_back(comphelper::makePropertyValue(getPropertyName(PROP_SUFFIX), rSuffix));
+                // Total count of replacement holders is determining amount of required parent numbering to include
+                // TODO: not sure how "%" symbol is escaped. This is not supported yet
+                sal_Int16 nParentNum = comphelper::string::getTokenCount(sText, '%');
                 aLvlProps.push_back(comphelper::makePropertyValue(getPropertyName(PROP_PARENT_NUMBERING), nParentNum));
 
                 aLvlProps.push_back(comphelper::makePropertyValue(getPropertyName(PROP_POSITION_AND_SPACE_MODE), sal_Int16(text::PositionAndSpaceMode::LABEL_ALIGNMENT)));
-
 
                 // Replace the numbering rules for the level
                 m_xNumRules->replaceByIndex(nLevel, uno::makeAny(comphelper::containerToSequence(aLvlProps)));
@@ -1076,9 +999,7 @@ void ListsManager::lcl_sprm( Sprm& rSprm )
                 {
                     if (ListLevel::Pointer pCurrentLevel = m_pCurrentDefinition->GetCurrentLevel())
                     {
-                        // <w:num> -> <w:lvlOverride> -> <w:startOverride> is the non-abstract equivalent of
-                        // <w:abstractNum> -> <w:lvl> -> <w:start>
-                        pCurrentLevel->SetValue(NS_ooxml::LN_CT_Lvl_start, nIntValue);
+                        pCurrentLevel->SetValue(NS_ooxml::LN_CT_NumLvl_startOverride, nIntValue);
                     }
                 }
             }
@@ -1087,6 +1008,12 @@ void ListsManager::lcl_sprm( Sprm& rSprm )
             {
                 OUString sStyleName = rSprm.getValue( )->getString( );
                 m_pCurrentDefinition->SetNumStyleLink(sStyleName);
+            }
+            break;
+            case NS_ooxml::LN_CT_AbstractNum_styleLink:
+            {
+                OUString sStyleName = rSprm.getValue()->getString();
+                m_pCurrentDefinition->SetStyleLink(sStyleName);
             }
             break;
             case NS_ooxml::LN_EG_RPrBase_rFonts: //contains font properties
@@ -1127,21 +1054,17 @@ void ListsManager::lcl_entry(writerfilter::Reference<Properties>::Pointer_t ref 
 
 AbstractListDef::Pointer ListsManager::GetAbstractList( sal_Int32 nId )
 {
-    AbstractListDef::Pointer pAbstractList;
-
-    int nLen = m_aAbstractLists.size( );
-    int i = 0;
-    while ( !pAbstractList.get( ) && i < nLen )
+    for (const auto& listDef : m_aAbstractLists)
     {
-        if ( m_aAbstractLists[i]->GetId( ) == nId )
+        if (listDef->GetId( ) == nId)
         {
-            if ( m_aAbstractLists[i]->GetNumStyleLink().getLength() > 0 )
+            if (listDef->GetNumStyleLink().getLength() > 0)
             {
                 // If the abstract num has a style linked, check the linked style's number id.
                 StyleSheetTablePtr pStylesTable = m_rDMapper.GetStyleSheetTable( );
 
                 const StyleSheetEntryPtr pStyleSheetEntry =
-                    pStylesTable->FindStyleSheetByISTD( m_aAbstractLists[i]->GetNumStyleLink() );
+                    pStylesTable->FindStyleSheetByISTD(listDef->GetNumStyleLink() );
 
                 const StyleSheetPropertyMap* pStyleSheetProperties =
                     dynamic_cast<const StyleSheetPropertyMap*>(pStyleSheetEntry ? pStyleSheetEntry->pProperties.get() : nullptr);
@@ -1151,20 +1074,24 @@ AbstractListDef::Pointer ListsManager::GetAbstractList( sal_Int32 nId )
                     ListDef::Pointer pList = GetList( pStyleSheetProperties->GetNumId() );
                     if ( pList!=nullptr )
                         return pList->GetAbstractDefinition();
-                    else
-                        pAbstractList = m_aAbstractLists[i];
                 }
 
+                // In stylesheet we did not found anything useful. Try to find base abstractnum having this stylelink
+                for (const auto & baseListDef : m_aAbstractLists)
+                {
+                    if (baseListDef->GetStyleLink() == listDef->GetNumStyleLink())
+                    {
+                        return baseListDef;
+                    }
+                }
             }
-            else
-            {
-                pAbstractList = m_aAbstractLists[i];
-            }
+
+            // Standalone abstract list
+            return listDef;
         }
-        i++;
     }
 
-    return pAbstractList;
+    return nullptr;
 }
 
 ListDef::Pointer ListsManager::GetList( sal_Int32 nId )

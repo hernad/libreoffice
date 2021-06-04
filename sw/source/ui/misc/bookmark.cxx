@@ -344,6 +344,9 @@ SwInsertBookmarkDlg::SwInsertBookmarkDlg(weld::Window* pParent, SwWrtShell& rS, 
         m_xConditionED->set_visible( false );
     }
 
+    // disabled until "Hide" flag is not checked
+    m_xConditionED->set_sensitive(false);
+    m_xConditionFT->set_sensitive(false);
 }
 
 IMPL_LINK(SwInsertBookmarkDlg, HeaderBarClick, int, nColumn, void)
@@ -364,7 +367,9 @@ IMPL_LINK(SwInsertBookmarkDlg, HeaderBarClick, int, nColumn, void)
     }
     else
     {
-        m_xBookmarksBox->set_sort_indicator(TRISTATE_INDET, m_xBookmarksBox->get_sort_column());
+        int nOldSortColumn = m_xBookmarksBox->get_sort_column();
+        if (nOldSortColumn != -1)
+            m_xBookmarksBox->set_sort_indicator(TRISTATE_INDET, nOldSortColumn);
         m_xBookmarksBox->set_sort_column(nColumn);
     }
 

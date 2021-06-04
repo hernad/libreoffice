@@ -708,11 +708,19 @@ void SwXDrawPage::add(const uno::Reference< drawing::XShape > & xShape)
         pTemp = pPam.get();
     UnoActionContext aAction(pDoc);
     pDoc->getIDocumentContentOperations().InsertDrawObj( *pTemp, *pObj, aSet );
+
+    if (pSvxShape->GetSdrObject()->GetName().isEmpty())
+    {
+        pSvxShape->GetSdrObject()->SetName(pDoc->GetUniqueShapeName());
+    }
+
     SwFrameFormat* pFormat = ::FindFrameFormat( pObj );
     if (pFormat)
     {
         if (pFormat->GetName().isEmpty())
+        {
             pFormat->SetName(pSvxShape->GetSdrObject()->GetName(), false);
+        }
         pShape->SetFrameFormat(pFormat);
     }
     pShape->m_bDescriptor = false;
@@ -744,7 +752,7 @@ uno::Reference< drawing::XShapeGroup >  SwXDrawPage::group(const uno::Reference<
         {
             // mark and return MarkList
             const SdrMarkList& rMarkList = pPage->PreGroup(xShapes);
-            if ( rMarkList.GetMarkCount() > 1 )
+            if ( rMarkList.GetMarkCount() > 0 )
             {
                 for (size_t i = 0; i < rMarkList.GetMarkCount(); ++i)
                 {
@@ -2060,7 +2068,14 @@ uno::Reference< text::XTextRange >  SwXShape::getAnchor()
             (rAnchor.GetContentAnchor() && !rAnchor.GetPageNum()))
         {
             const SwPosition &rPos = *(pFormat->GetAnchor().GetContentAnchor());
-            aRef = SwXTextRange::CreateXTextRange(*pFormat->GetDoc(), rPos, nullptr);
+            if (rAnchor.GetAnchorId() == RndStdIds::FLY_AT_PARA)
+            {   // ensure that SwXTextRange has SwIndex
+                aRef = SwXTextRange::CreateXTextRange(*pFormat->GetDoc(), SwPosition(rPos.nNode), nullptr);
+            }
+            else
+            {
+                aRef = SwXTextRange::CreateXTextRange(*pFormat->GetDoc(), rPos, nullptr);
+            }
         }
     }
     else

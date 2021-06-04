@@ -9,7 +9,9 @@ dnl in order to create a configure script.
 # several non-alphanumeric characters, those are split off and used only for the
 # ABOUTBOXPRODUCTVERSIONSUFFIX in openoffice.lst. Why that is necessary, no idea.
 
-AC_INIT([LibreOffice],[7.0.0.0.alpha0+],[],[],[http://documentfoundation.org/])
+
+AC_INIT([LibreOffice],[6.4.8.0.0+],[],[],[http://documentfoundation.org/])
+
 
 dnl libnumbertext needs autoconf 2.68, but that can pick up autoconf268 just fine if it is installed
 dnl whereas aclocal (as run by autogen.sh) insists on using autoconf and fails hard
@@ -1955,6 +1957,10 @@ AC_ARG_WITH(system-hunspell,
         [Use libhunspell already on system.]),,
     [with_system_hunspell="$with_system_libs"])
 
+libo_FUZZ_ARG_ENABLE(qrcodegen,
+    AS_HELP_STRING([--disable-qrcodegen],
+        [Disable use of qrcodegen external library.]))
+
 AC_ARG_WITH(system-qrcodegen,
     AS_HELP_STRING([--with-system-qrcodegen],
         [Use libqrcodegen already on system.]),,
@@ -2173,6 +2179,12 @@ libo_FUZZ_ARG_WITH(lxml,
          --without-lxml tells it to not use python lxml at all, which means that gla11y will only
          report widget classes and ids.]),
 ,)
+
+libo_FUZZ_ARG_WITH(latest-c++,
+    AS_HELP_STRING([--with-latest-c++],
+        [Try to enable the latest features of the C++ compiler, even if they are not yet part of a
+         published standard.]),,
+        [with_latest_c__=no])
 
 dnl ===================================================================
 dnl Branding
@@ -6541,9 +6553,17 @@ dnl ===================================================================
 AC_MSG_CHECKING([whether $CXX_BASE supports C++17])
 CXXFLAGS_CXX11=
 if test "$COM" = MSC -a "$COM_IS_CLANG" != TRUE; then
-    CXXFLAGS_CXX11='-std:c++17 -Zc:__cplusplus'
+    if test "$with_latest_c__" = yes; then
+        CXXFLAGS_CXX11=-std:c++latest
+    else
+        CXXFLAGS_CXX11=-std:c++17
+    fi
+    CXXFLAGS_CXX11="$CXXFLAGS_CXX11 -Zc:__cplusplus"
 elif test "$GCC" = "yes" -o "$COM_IS_CLANG" = TRUE; then
-    my_flags='-std=c++20 -std=c++2a -std=c++17 -std=c++1z'
+    my_flags='-std=c++17 -std=c++1z'
+    if test "$with_latest_c__" = yes; then
+        my_flags="-std=gnu++2a -std=c++2a $my_flags"
+    fi
     for flag in $my_flags; do
         if test "$COM" = MSC; then
             flag="-Xclang $flag"
@@ -10340,26 +10360,39 @@ AC_SUBST(HUNSPELL_LIBS)
 dnl ===================================================================
 dnl Check for system qrcodegen
 dnl ===================================================================
-AC_MSG_CHECKING([which libqrcodegen to use])
-if test "$with_system_qrcodegen" = "yes"; then
-    AC_MSG_RESULT([external])
-    SYSTEM_QRCODEGEN=TRUE
-    AC_LANG_PUSH([C++])
-    AC_CHECK_HEADER(qrcodegen/QrCode.hpp, [],
-        [AC_MSG_ERROR(qrcodegen headers not found.)], [#include <stdexcept>])
-    AC_CHECK_LIB([qrcodegencpp], [main], [:],
-        [ AC_MSG_ERROR(qrcodegen C++ library not found.) ], [])
-    QRCODEGEN_LIBS=-lqrcodegencpp
-    AC_LANG_POP([C++])
-    QRCODEGEN_CFLAGS=$(printf '%s' "$QRCODEGEN_CFLAGS" | sed -e "s/-I/${ISYSTEM?}/g")
-    FilterLibs "${QRCODEGEN_LIBS}"
-    QRCODEGEN_LIBS="${filteredlibs}"
-else
-    AC_MSG_RESULT([internal])
+AC_MSG_CHECKING([whether to use libqrcodegen])
+if test "$enable_qrcodegen" = "no"; then
+    AC_MSG_RESULT([no])
+    ENABLE_QRCODEGEN=
     SYSTEM_QRCODEGEN=
-    BUILD_TYPE="$BUILD_TYPE QRCODEGEN"
+else
+    AC_MSG_RESULT([yes])
+    ENABLE_QRCODEGEN=TRUE
+    AC_MSG_CHECKING([which libqrcodegen to use])
+    if test "$with_system_qrcodegen" = "yes"; then
+        AC_MSG_RESULT([external])
+        SYSTEM_QRCODEGEN=TRUE
+        AC_LANG_PUSH([C++])
+        AC_CHECK_HEADER(qrcodegen/QrCode.hpp, [],
+            [AC_MSG_ERROR(qrcodegen headers not found.)], [#include <stdexcept>])
+        AC_CHECK_LIB([qrcodegencpp], [main], [:],
+            [ AC_MSG_ERROR(qrcodegen C++ library not found.) ], [])
+        QRCODEGEN_LIBS=-lqrcodegencpp
+        AC_LANG_POP([C++])
+        QRCODEGEN_CFLAGS=$(printf '%s' "$QRCODEGEN_CFLAGS" | sed -e "s/-I/${ISYSTEM?}/g")
+        FilterLibs "${QRCODEGEN_LIBS}"
+        QRCODEGEN_LIBS="${filteredlibs}"
+    else
+        AC_MSG_RESULT([internal])
+        SYSTEM_QRCODEGEN=
+        BUILD_TYPE="$BUILD_TYPE QRCODEGEN"
+    fi
+    if test "$ENABLE_QRCODEGEN" = TRUE; then
+        AC_DEFINE(ENABLE_QRCODEGEN)
+    fi
 fi
 AC_SUBST(SYSTEM_QRCODEGEN)
+AC_SUBST(ENABLE_QRCODEGEN)
 AC_SUBST(QRCODEGEN_CFLAGS)
 AC_SUBST(QRCODEGEN_LIBS)
 
@@ -13284,6 +13317,7 @@ AC_CONFIG_HEADERS([config_host/config_mpl.h])
 AC_CONFIG_HEADERS([config_host/config_oox.h])
 AC_CONFIG_HEADERS([config_host/config_options.h])
 AC_CONFIG_HEADERS([config_host/config_options_calc.h])
+AC_CONFIG_HEADERS([config_host/config_qrcodegen.h])
 AC_CONFIG_HEADERS([config_host/config_typesizes.h])
 AC_CONFIG_HEADERS([config_host/config_vendor.h])
 AC_CONFIG_HEADERS([config_host/config_vcl.h])

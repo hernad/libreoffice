@@ -61,24 +61,6 @@ SwNumRule* MSWordExportBase::DuplicateNumRuleImpl(const SwNumRule *pRule)
     return pMyNumRule;
 }
 
-sal_uInt16 MSWordExportBase::DuplicateNumRule( const SwNumRule *pRule, sal_uInt8 nLevel, sal_uInt16 nVal )
-{
-    sal_uInt16 nNumId = USHRT_MAX;
-
-    SwNumRule *const pMyNumRule = DuplicateNumRuleImpl(pRule);
-
-    SwNumFormat aNumFormat( pMyNumRule->Get( nLevel ) );
-    aNumFormat.SetStart( nVal );
-    pMyNumRule->Set( nLevel, aNumFormat );
-
-    nNumId = GetNumberingId( *pMyNumRule );
-
-    // Map the old list to our new list
-    m_aRuleDuplicates[GetNumberingId( *pRule )] = nNumId;
-
-    return nNumId;
-}
-
 // multiple SwList can be based on the same SwNumRule; ensure one w:abstractNum
 // per SwList
 sal_uInt16 MSWordExportBase::DuplicateAbsNum(OUString const& rListId,
@@ -109,23 +91,26 @@ sal_uInt16 MSWordExportBase::OverrideNumRule(
         OUString const& rListId,
         SwNumRule const& rAbstractRule)
 {
-    assert(&rExistingRule != &rAbstractRule);
-    auto const numdef = GetNumberingId(rExistingRule);
-    auto const absnumdef = rListId == rAbstractRule.GetDefaultListId()
+    const sal_uInt16 numdef = GetNumberingId(rExistingRule);
+
+    const sal_uInt16 absnumdef = rListId == rAbstractRule.GetDefaultListId()
         ? GetNumberingId(rAbstractRule)
         : DuplicateAbsNum(rListId, rAbstractRule);
     auto const mapping = std::make_pair(numdef, absnumdef);
 
-    auto it = m_OverridingNumsR.find(mapping);
-    if (it == m_OverridingNumsR.end())
-    {
-        it = m_OverridingNumsR.insert(std::make_pair(mapping, m_pUsedNumTable->size())).first;
-        m_OverridingNums.insert(std::make_pair(m_pUsedNumTable->size(), mapping));
+    auto it = m_OverridingNums.insert(std::make_pair(m_pUsedNumTable->size(), mapping));
 
-        m_pUsedNumTable->push_back(nullptr); // dummy, it's unique_ptr...
-        ++m_nUniqueList; // counter for DuplicateNumRule...
-    }
-    return it->second;
+    m_pUsedNumTable->push_back(nullptr); // dummy, it's unique_ptr...
+    ++m_nUniqueList; // counter for DuplicateNumRule...
+
+    return it.first->first;
+}
+
+void MSWordExportBase::AddListLevelOverride(sal_uInt16 nListId,
+    sal_uInt16 nLevelNum,
+    sal_uInt16 nStartAt)
+{
+    m_ListLevelOverrides[nListId][nLevelNum] = nStartAt;
 }
 
 sal_uInt16 MSWordExportBase::GetNumberingId( const SwNumRule& rNumRule )
@@ -159,17 +144,6 @@ sal_uInt16 MSWordExportBase::GetNumberingId( const SwNumRule& rNumRule )
     }
     SwNumRule* p = const_cast<SwNumRule*>(&rNumRule);
     sal_uInt16 nRet = static_cast<sal_uInt16>(m_pUsedNumTable->GetPos(p));
-
-    // Is this list now duplicated into a new list which we should use
-    // #i77812# - perform 'deep' search in duplication map
-    std::map<sal_uInt16,sal_uInt16>::const_iterator aResult = m_aRuleDuplicates.end();
-    do {
-        aResult = m_aRuleDuplicates.find(nRet);
-        if ( aResult != m_aRuleDuplicates.end() )
-        {
-            nRet = (*aResult).second;
-        }
-    } while ( aResult != m_aRuleDuplicates.end() );
 
     return nRet;
 }
@@ -248,7 +222,7 @@ void MSWordExportBase::NumberingDefinitions()
             assert(it != m_OverridingNums.end());
             pRule = (*m_pUsedNumTable)[it->second.first];
             assert(pRule);
-            AttrOutput().OverrideNumberingDefinition(*pRule, n + 1, it->second.second + 1);
+            AttrOutput().OverrideNumberingDefinition(*pRule, n + 1, it->second.second + 1, m_ListLevelOverrides[n]);
         }
     }
 }
@@ -463,7 +437,11 @@ void MSWordExportBase::NumberingLevel(
     // #i86652#
     if (rFormat.GetPositionAndSpaceMode() == SvxNumberFormat::LABEL_WIDTH_AND_POSITION)
     {
-        nFollow = 2;     // ixchFollow: 0 - tab, 1 - blank, 2 - nothing
+        // <nFollow = 2>, if minimum label width equals 0 and
+        // minimum distance between label and text equals 0
+        nFollow = (rFormat.GetFirstLineOffset() == 0 &&
+            rFormat.GetCharTextDistance() == 0)
+            ? 2 : 0;     // ixchFollow: 0 - tab, 1 - blank, 2 - nothing
     }
     else if (rFormat.GetPositionAndSpaceMode() == SvxNumberFormat::LABEL_ALIGNMENT)
     {
@@ -504,7 +482,46 @@ void MSWordExportBase::NumberingLevel(
     if (SVX_NUM_CHAR_SPECIAL == rFormat.GetNumberingType() ||
         SVX_NUM_BITMAP == rFormat.GetNumberingType())
     {
+        // Use bullet
         sNumStr = OUString(rFormat.GetBulletChar());
+    }
+    else
+    {
+        // Create level string
+        // For docx it is not the best way: we can just take it from rRule.Get(nLvl).GetListFormat()
+        // But for compatibility with doc we follow same routine
+        if (SVX_NUM_NUMBER_NONE != rFormat.GetNumberingType())
+        {
+            sal_uInt8* pLvlPos = aNumLvlPos;
+            // the numbering string has to be restrict
+            // to the level currently working on.
+            sNumStr = rRule.MakeNumString(aNumVector, false, true, nLvl);
+
+            // now search the nums in the string
+            for (sal_uInt8 i = 0; i <= nLvl; ++i)
+            {
+                OUString sSrch(OUString::number(i));
+                sal_Int32 nFnd = sNumStr.indexOf(sSrch);
+                if (-1 != nFnd)
+                {
+                    *pLvlPos = static_cast<sal_uInt8>(nFnd + rFormat.GetPrefix().getLength() + 1);
+                    ++pLvlPos;
+                    sNumStr = sNumStr.replaceAt(nFnd, 1, OUString(static_cast<char>(i)));
+                }
+            }
+        }
+
+        if (!rRule.Get(nLvl).HasListFormat())
+        {
+            if (!rFormat.GetPrefix().isEmpty())
+                sNumStr = rFormat.GetPrefix() + sNumStr;
+            sNumStr += rFormat.GetSuffix();
+        }
+    }
+
+    if (SVX_NUM_CHAR_SPECIAL == rFormat.GetNumberingType() ||
+        SVX_NUM_BITMAP == rFormat.GetNumberingType())
+    {
         bWriteBullet = true;
 
         pBulletFont = rFormat.GetBulletFont();
@@ -518,55 +535,7 @@ void MSWordExportBase::NumberingLevel(
         eFamily = pBulletFont->GetFamilyType();
 
         if (IsStarSymbol(sFontName))
-            SubstituteBullet( sNumStr, eChrSet, sFontName );
-
-        // #i86652#
-        if (rFormat.GetPositionAndSpaceMode() ==
-                                SvxNumberFormat::LABEL_WIDTH_AND_POSITION)
-        {
-            // <nFollow = 2>, if minimum label width equals 0 and
-            // minimum distance between label and text equals 0
-            nFollow = (rFormat.GetFirstLineOffset() == 0 &&
-                       rFormat.GetCharTextDistance() == 0)
-                      ? 2 : 0;     // ixchFollow: 0 - tab, 1 - blank, 2 - nothing
-        }
-    }
-    else
-    {
-        if (SVX_NUM_NUMBER_NONE != rFormat.GetNumberingType())
-        {
-            sal_uInt8* pLvlPos = aNumLvlPos;
-            // the numbering string has to be restrict
-            // to the level currently working on.
-            sNumStr = rRule.MakeNumString(aNumVector, false, true, nLvl);
-
-            // now search the nums in the string
-            for (sal_uInt8 i = 0; i <= nLvl; ++i)
-            {
-                OUString sSrch( OUString::number( i ));
-                sal_Int32 nFnd = sNumStr.indexOf( sSrch );
-                if( -1 != nFnd )
-                {
-                    *pLvlPos = static_cast<sal_uInt8>(nFnd + rFormat.GetPrefix().getLength() + 1 );
-                    ++pLvlPos;
-                    sNumStr = sNumStr.replaceAt( nFnd, 1, OUString(static_cast<char>(i)) );
-                }
-            }
-            // #i86652#
-            if (rFormat.GetPositionAndSpaceMode() ==
-                                    SvxNumberFormat::LABEL_WIDTH_AND_POSITION)
-            {
-                // <nFollow = 2>, if minimum label width equals 0 and
-                // minimum distance between label and text equals 0
-                nFollow = (rFormat.GetFirstLineOffset() == 0 &&
-                           rFormat.GetCharTextDistance() == 0)
-                          ? 2 : 0;     // ixchFollow: 0 - tab, 1 - blank, 2 - nothing
-            }
-        }
-
-        if (!rFormat.GetPrefix().isEmpty())
-            sNumStr = rFormat.GetPrefix() + sNumStr;
-        sNumStr += rFormat.GetSuffix();
+            SubstituteBullet(sNumStr, eChrSet, sFontName);
     }
 
     // Attributes of the numbering
@@ -599,7 +568,7 @@ void MSWordExportBase::NumberingLevel(
 
     sal_Int16 nIndentAt = 0;
     sal_Int16 nFirstLineIndex = 0;
-    sal_Int16 nListTabPos = 0;
+    sal_Int16 nListTabPos = -1;
 
     // #i86652#
     if (rFormat.GetPositionAndSpaceMode() == SvxNumberFormat::LABEL_WIDTH_AND_POSITION)

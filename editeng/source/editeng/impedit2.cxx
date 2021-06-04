@@ -58,6 +58,8 @@
 #include <com/sun/star/system/SystemShellExecuteFlags.hpp>
 #include <com/sun/star/system/XSystemShellExecute.hpp>
 
+#include <rtl/character.hxx>
+
 #include <sal/log.hxx>
 #include <osl/diagnose.h>
 #include <sot/exchange.hxx>
@@ -494,13 +496,17 @@ void ImpEditEngine::Command( const CommandEvent& rCEvt, EditView* pView )
                 if ( nInputEnd > rLine.GetEnd() )
                     nInputEnd = rLine.GetEnd();
                 tools::Rectangle aR2 = PaMtoEditCursor( EditPaM( aPaM.GetNode(), nInputEnd ), GetCursorFlags::EndOfLine );
-                tools::Rectangle aRect = pView->GetImpEditView()->GetWindowPos( aR1 );
-                pView->GetWindow()->SetCursorRect( &aRect, aR2.Left()-aR1.Right() );
+                if (vcl::Window* pWindow = pView->GetWindow())
+                {
+                    tools::Rectangle aRect = pView->GetImpEditView()->GetWindowPos( aR1 );
+                    pWindow->SetCursorRect( &aRect, aR2.Left()-aR1.Right() );
+                }
             }
         }
         else
         {
-            pView->GetWindow()->SetCursorRect();
+            if (vcl::Window* pWindow = pView->GetWindow())
+              pWindow->SetCursorRect();
         }
     }
     else if ( rCEvt.GetCommand() == CommandEventId::SelectionChange )
@@ -561,7 +567,8 @@ void ImpEditEngine::Command( const CommandEvent& rCEvt, EditView* pView )
                     tools::Rectangle aR2 = GetEditCursor( pParaPortion, nInputPos );
                     aRects[ i ] = pView->GetImpEditView()->GetWindowPos( aR2 );
                 }
-                pView->GetWindow()->SetCompositionCharRect( aRects.get(), mpIMEInfos->nLen );
+                if (vcl::Window* pWindow = pView->GetWindow())
+                    pWindow->SetCompositionCharRect( aRects.get(), mpIMEInfos->nLen );
             }
         }
     }
@@ -3846,6 +3853,13 @@ sal_Int32 ImpEditEngine::GetChar(
                         {
                             nChar = ( std::abs( nRight - nChar ) < std::abs( nLeft - nChar ) ) ? nRight : nLeft;
                         }
+                    }
+                    else
+                    {
+                        OUString aStr(pParaPortion->GetNode()->GetString());
+                        // tdf#102625: don't select middle of a pair of surrogates with mouse cursor
+                        if (rtl::isSurrogate(aStr[nChar]))
+                            --nChar;
                     }
                 }
             }

@@ -1821,9 +1821,6 @@ WinBits RadioButton::ImplInitStyle( const vcl::Window* pPrevWindow, WinBits nSty
             nStyle &= ~WB_TABSTOP;
     }
 
-    if ( IsChecked() && IsRadioCheckEnabled() )
-        ImplUncheckAllOther( /*bSetStyle=*/false );
-
     return nStyle;
 }
 
@@ -2817,7 +2814,7 @@ void RadioButton::ImplSetMinimumNWFSize()
     Pop();
 }
 
-Size RadioButton::CalcMinimumSize() const
+Size RadioButton::CalcMinimumSize(long nMaxWidth) const
 {
     Size aSize;
     if ( !maImage )
@@ -2841,7 +2838,7 @@ Size RadioButton::CalcMinimumSize() const
     {
         bool bTopImage = (GetStyle() & WB_TOP) != 0;
 
-        Size aTextSize = GetTextRect( tools::Rectangle( Point(), Size( 0x7fffffff, 0x7fffffff ) ),
+        Size aTextSize = GetTextRect( tools::Rectangle( Point(), Size( nMaxWidth > 0 ? nMaxWidth : 0x7fffffff, 0x7fffffff ) ),
                                       aText, FixedText::ImplGetTextStyle( GetStyle() ) ).GetSize();
 
         aSize.AdjustWidth(2 );   // for focus rect

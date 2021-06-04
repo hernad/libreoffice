@@ -98,6 +98,7 @@ public:
 
     // SwUndoTableCpyTable needs this information:
     bool IsDelFullPara() const { return m_bDelFullPara; }
+
 };
 
 #endif // INCLUDED_SW_SOURCE_CORE_INC_UNDODELETE_HXX

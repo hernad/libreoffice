@@ -546,16 +546,6 @@ public:
         m_xWidget->SetAccessibleRelationLabelFor(pAtkLabeled);
     }
 
-    virtual void add_extra_accessible_relation(const css::accessibility::AccessibleRelation &rRelation) override
-    {
-        m_xWidget->AddExtraAccessibleRelation(rRelation);
-    }
-
-    virtual void clear_extra_accessible_relations() override
-    {
-        m_xWidget->ClearExtraAccessibleRelations();
-    }
-
     virtual void set_tooltip_text(const OUString& rTip) override
     {
         m_xWidget->SetQuickHelpText(rTip);
@@ -930,7 +920,15 @@ public:
 IMPL_LINK_NOARG(SalInstanceMenu, SelectMenuHdl, ::Menu*, bool)
 {
     signal_activate(m_xMenu->GetCurItemIdent());
-    return true;
+    /* tdf#131333 Menu::Select depends on a false here to allow
+       propogating a submens's selected id to its parent menu to become its
+       selected id.
+
+       without this, while gen menus already have propogated this to its parent
+       in MenuFloatingWindow::EndExecute, SalMenus as used under kf5/macOS
+       won't propogate the selected id
+    */
+    return false;
 }
 
 class SalInstanceToolbar : public SalInstanceWidget, public virtual weld::Toolbar
@@ -1933,8 +1931,9 @@ IMPL_LINK_NOARG(SalInstanceAssistant, OnRoadmapItemSelected, LinkParamNone*, voi
 {
     if (notify_events_disabled())
         return;
-    int nPageIndex(find_id(m_xWizard->GetCurrentRoadmapItemID()));
-    if (!signal_jump_page(get_page_ident(nPageIndex)))
+    auto nCurItemId = m_xWizard->GetCurrentRoadmapItemID();
+    int nPageIndex(find_id(nCurItemId));
+    if (!signal_jump_page(get_page_ident(nPageIndex)) && nCurItemId != m_xWizard->GetCurLevel())
         m_xWizard->SelectRoadmapItemByID(m_xWizard->GetCurLevel());
 }
 

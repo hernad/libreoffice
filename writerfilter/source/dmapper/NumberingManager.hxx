@@ -43,12 +43,13 @@ class StyleSheetEntry;
 class ListLevel : public PropertyMap
 {
     sal_Int32                                     m_nIStartAt;       //LN_CT_Lvl_start
+    sal_Int32                                     m_nStartOverride;
     sal_Int32                                     m_nNFC;            //LN_CT_Lvl_numFmt
     sal_Int16                                     m_nXChFollow;      //LN_IXCHFOLLOW
     OUString                               m_sBulletChar;
     css::awt::Size                         m_aGraphicSize;
     css::uno::Reference<css::awt::XBitmap> m_xGraphicBitmap;
-    sal_Int32                                     m_nTabstop;
+    std::optional<sal_Int32>               m_nTabstop;
     tools::SvRef< StyleSheetEntry >          m_pParaStyle;
     bool                                          m_outline;
     bool m_bHasValues = false;
@@ -59,9 +60,9 @@ public:
 
     ListLevel() :
         m_nIStartAt(-1)
+        ,m_nStartOverride(-1)
         ,m_nNFC(-1)
         ,m_nXChFollow(SvxNumberFormat::LISTTAB)
-        ,m_nTabstop( 0 )
         ,m_outline(false)
         {}
 
@@ -77,16 +78,13 @@ public:
     // Getters
     const OUString& GetBulletChar( ) const { return m_sBulletChar; };
     const tools::SvRef< StyleSheetEntry >& GetParaStyle( ) const { return m_pParaStyle; };
+    sal_Int32 GetStartAt() const { return m_nIStartAt; };
     bool isOutlineNumbering() const { return m_outline; }
+    sal_Int32 GetStartOverride() const { return m_nStartOverride; };
     /// Determines if SetValue() was called at least once.
     bool HasValues() const;
 
     // UNO mapping functions
-
-    // rPrefix and rSuffix are out parameters
-    static sal_Int16 GetParentNumbering( const OUString& sText, sal_Int16 nLevel,
-        OUString& rPrefix, OUString& rSuffix );
-
     css::uno::Sequence<css::beans::PropertyValue> GetProperties(bool bDefaults);
 
     css::uno::Sequence<css::beans::PropertyValue> GetCharStyleProperties();
@@ -131,6 +129,9 @@ private:
     // The style name linked to.
     OUString                      m_sNumStyleLink;
 
+    // This absract numbering is a base definition for this style
+    OUString                      m_sStyleLink;
+
     /// list id to use for all derived numbering definitions
     boost::optional<OUString> m_oListId;
 
@@ -157,6 +158,9 @@ public:
 
     void                  SetNumStyleLink(const OUString& sValue) { m_sNumStyleLink = sValue; };
     const OUString&       GetNumStyleLink() const { return m_sNumStyleLink; };
+
+    void                  SetStyleLink(const OUString& sValue) { m_sStyleLink = sValue; };
+    const OUString&       GetStyleLink() const { return m_sStyleLink; };
 
     const OUString& MapListId(OUString const& rId);
 };

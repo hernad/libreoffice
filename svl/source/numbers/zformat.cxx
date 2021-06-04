@@ -855,7 +855,7 @@ SvNumberformat::SvNumberformat(OUString& rString,
                     {
                         sal_Int32 nDecPos;
                         SvNumFormatType F_Type = SvNumFormatType::UNDEFINED;
-                        if (!pISc->IsNumberFormat(sStr, F_Type, fNumber, nullptr) ||
+                        if (!pISc->IsNumberFormat(sStr, F_Type, fNumber, nullptr, SvNumInputOptions::NONE) ||
                             ( F_Type != SvNumFormatType::NUMBER &&
                               F_Type != SvNumFormatType::SCIENTIFIC) )
                         {
@@ -1036,6 +1036,22 @@ SvNumberformat::SvNumberformat(OUString& rString,
                             {
                                 maLocale = aTmpLocale;
                                 eLan = aTmpLocale.meLanguage;   // return to caller
+
+                                // Set new target locale also at scanner.
+                                // We have to do this because switching locale
+                                // may make replacing keywords and separators
+                                // necessary.
+                                // We can do this because it's the first
+                                // subformat and we're still at parsing the
+                                // modifiers, not keywords.
+                                rScan.SetNewLnge( eLan);
+                                // We can not force conversion though because
+                                // the caller may have explicitly not set it.
+                                // In the usual case the target locale is the
+                                // originating locale the conversion is not
+                                // necessary, when reading alien documents
+                                // conversion is enabled anyway.
+
                                 /* TODO: fiddle with scanner to make this
                                  * known? A change in the locale may affect
                                  * separators and keywords. On the other

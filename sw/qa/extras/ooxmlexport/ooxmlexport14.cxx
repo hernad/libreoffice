@@ -35,6 +35,31 @@ protected:
     }
 };
 
+CPPUNIT_TEST_FIXTURE(Test, testTdf128197)
+{
+    load(mpTestDocumentPath, "128197_compat14.docx");
+    xmlDocPtr pLayout14 = parseLayoutDump();
+    sal_Int32 nHeight14 = getXPath(pLayout14, "//page[1]/body/txt[1]/infos/bounds", "height").toInt32();
+
+    load(mpTestDocumentPath, "128197_compat15.docx");
+    xmlDocPtr pLayout15 = parseLayoutDump();
+    sal_Int32 nHeight15 = getXPath(pLayout15, "//page[1]/body/txt[1]/infos/bounds", "height").toInt32();
+
+    // In compat mode=14 second line has size of the shape thus entire paragraph height is smaller
+    // So nHeight14 < nHeight15
+    CPPUNIT_ASSERT_LESS(nHeight15, nHeight14);
+}
+
+DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf78749, "tdf78749.docx")
+{
+    //Shape lost the background image before, now check if it still has...
+    auto xShape = getShape(1);
+    uno::Reference<beans::XPropertySet> xShpProps(xShape, uno::UNO_QUERY);
+    OUString aPropertyVal;
+    xShpProps->getPropertyValue("FillBitmapName") >>= aPropertyVal;
+    CPPUNIT_ASSERT(!aPropertyVal.isEmpty());
+}
+
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf128207, "tdf128207.docx")
 {
     //There was the charts on each other, because their horizontal and vertical position was 0!
@@ -129,6 +154,15 @@ DECLARE_OOXMLEXPORT_TEST(testTdf130610, "tdf130610_bold_in_2_styles.ott")
     }
 }
 
+DECLARE_OOXMLEXPORT_TEST(testTdf78352, "tdf78352.docx")
+{
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+
+    // Ensure that width of first tab is close to zero (previous value was ~1000 twips)
+    int nWidth = parseDump("/root/page/body/txt[1]/Text[@nType='PortionType::TabLeft']", "nWidth").toInt32();
+    CPPUNIT_ASSERT_LESS(150, nWidth);
+}
+
 DECLARE_OOXMLEXPORT_TEST(testTdf120315, "tdf120315.docx")
 {
     // tdf#120315 cells of the second column weren't vertically merged
@@ -218,6 +252,18 @@ DECLARE_OOXMLIMPORT_TEST(testTdf125038c, "tdf125038c.docx")
     CPPUNIT_ASSERT_EQUAL(OUString("email: test@test.test"), aActual);
 }
 
+DECLARE_OOXMLEXPORT_TEST(testTdf83309, "tdf83309.docx")
+{
+    // Important: bug case had 4 pages
+    CPPUNIT_ASSERT_EQUAL(2, getPages());
+
+    // First paragraph does not have tab before
+    // (same applies to all paragraphs in doc, but lets assume they are
+    // behave same way)
+    OUString sNodeType = parseDump("/root/page[1]/body/txt[1]/Text[1]", "nType");
+    CPPUNIT_ASSERT_EQUAL(OUString("PortionType::Text"), sNodeType);
+}
+
 DECLARE_OOXMLEXPORT_TEST(testTdf121661, "tdf121661.docx")
 {
     xmlDocPtr pXmlSettings = parseExport("word/settings.xml");
@@ -234,6 +280,22 @@ DECLARE_OOXMLEXPORT_TEST(testTdf121658, "tdf121658.docx")
     assertXPath(pXmlSettings, "/w:settings/w:doNotHyphenateCaps");
 }
 
+DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf132766, "tdf132766.docx")
+{
+    xmlDocPtr pXmlDoc = parseExport("word/numbering.xml");
+    CPPUNIT_ASSERT(pXmlDoc);
+
+    // Ensure that for list=1 and level=0 we wrote correct bullet char and correct font
+    assertXPath(pXmlDoc, "//w:numbering/w:abstractNum[@w:abstractNumId='1']/w:lvl[@w:ilvl='0']/w:lvlText",
+                "val", u"\uF0B7");
+    assertXPath(pXmlDoc, "//w:numbering/w:abstractNum[@w:abstractNumId='1']/w:lvl[@w:ilvl='0']/w:rPr/w:rFonts",
+                "ascii", "Symbol");
+    assertXPath(pXmlDoc, "//w:numbering/w:abstractNum[@w:abstractNumId='1']/w:lvl[@w:ilvl='0']/w:rPr/w:rFonts",
+                "hAnsi", "Symbol");
+    assertXPath(pXmlDoc, "//w:numbering/w:abstractNum[@w:abstractNumId='1']/w:lvl[@w:ilvl='0']/w:rPr/w:rFonts",
+                "cs", "Symbol");
+}
+
 DECLARE_OOXMLEXPORT_TEST(testTdf124367, "tdf124367.docx")
 {
     uno::Reference<text::XTextTablesSupplier> xTablesSupplier(mxComponent, uno::UNO_QUERY);
@@ -246,6 +308,38 @@ DECLARE_OOXMLEXPORT_TEST(testTdf124367, "tdf124367.docx")
                          getProperty<uno::Sequence<text::TableColumnSeparator>>(
                              xTableRows->getByIndex(2), "TableColumnSeparators")[0]
                              .Position);
+}
+
+DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf95189, "tdf95189.docx")
+{
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(1), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("1"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(2), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("2"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(3), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("1"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(4), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("2"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(5), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("3"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(6), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("1"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(7), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("2"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
 }
 
 DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf128820, "tdf128820.fodt")
@@ -284,6 +378,22 @@ DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf128889, "tdf128889.fodt")
     assertXPath(pXml, "/w:document/w:body/w:p[1]/w:r[2]/w:br", "type", "page");
 }
 
+DECLARE_OOXMLEXPORT_EXPORTONLY_TEST(testTdf132754, "tdf132754.docx")
+{
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(1), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("0.0.0."), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(2), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("0.0.1."), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(3), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(OUString("0.0.2."), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+}
+
 DECLARE_OOXMLEXPORT_TEST(testTdf129353, "tdf129353.docx")
 {
     CPPUNIT_ASSERT_EQUAL(8, getParagraphs());
@@ -309,6 +419,31 @@ DECLARE_OOXMLEXPORT_TEST(testTdf129353, "tdf129353.docx")
                                   "Verne, J. G. (1870). Twenty Thousand Leagues Under the Sea. \n"
                                   ""), // ending with an empty paragraph
                          aIndexString);
+}
+
+DECLARE_OOXMLEXPORT_TEST(testTdf120394, "tdf120394.docx")
+{
+    CPPUNIT_ASSERT_EQUAL(1, getPages());
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(1), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(0), getProperty<sal_Int16>(xPara, "NumberingLevel"));
+        CPPUNIT_ASSERT_EQUAL(OUString("1"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(2), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(1), getProperty<sal_Int16>(xPara, "NumberingLevel"));
+        CPPUNIT_ASSERT_EQUAL(OUString(CHAR_ZWSP), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(3), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(1), getProperty<sal_Int16>(xPara, "NumberingLevel"));
+        CPPUNIT_ASSERT_EQUAL(OUString(CHAR_ZWSP), getProperty<OUString>(xPara, "ListLabelString"));
+    }
+    {
+        uno::Reference<beans::XPropertySet> xPara(getParagraph(5), uno::UNO_QUERY);
+        CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int16>(2), getProperty<sal_Int16>(xPara, "NumberingLevel"));
+        CPPUNIT_ASSERT_EQUAL(OUString("1.2.1"), getProperty<OUString>(xPara, "ListLabelString"));
+    }
 }
 
 DECLARE_OOXMLEXPORT_TEST(testHyphenationAuto, "hyphenation.odt")

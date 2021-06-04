@@ -1052,7 +1052,15 @@ static bool IsShown(sal_uLong const nIndex,
     {
         return false;
     }
-    if (pIter && rAnch.GetAnchorId() != RndStdIds::FLY_AT_PARA)
+    if (rAnch.GetAnchorId() == RndStdIds::FLY_AT_PARA)
+    {
+        return pIter == nullptr // not merged
+            || pIter != pEnd    // at least one char visible in node
+            || !IsSelectFrameAnchoredAtPara(rAnchor,
+                    SwPosition(const_cast<SwTextNode&>(*pFirstNode), 0),
+                    SwPosition(const_cast<SwTextNode&>(*pLastNode), pLastNode->Len()));
+    }
+    if (pIter)
     {
         // note: frames are not sorted by anchor position.
         assert(pEnd);
@@ -1274,6 +1282,17 @@ bool IsAnchoredObjShown(SwTextFrame const& rFrame, SwFormatAnchor const& rAnchor
         ret = false;
         auto const pAnchor(rAnchor.GetContentAnchor());
         auto iterFirst(pMergedPara->extents.cbegin());
+        if (iterFirst == pMergedPara->extents.end()
+            && (rAnchor.GetAnchorId() == RndStdIds::FLY_AT_PARA
+                || rAnchor.GetAnchorId() == RndStdIds::FLY_AT_CHAR))
+        {
+            ret = (&pAnchor->nNode.GetNode() == pMergedPara->pFirstNode
+                    && (rAnchor.GetAnchorId() == RndStdIds::FLY_AT_PARA
+                        || pAnchor->nContent == 0))
+                || (&pAnchor->nNode.GetNode() == pMergedPara->pLastNode
+                    && (rAnchor.GetAnchorId() == RndStdIds::FLY_AT_PARA
+                        || pAnchor->nContent == pMergedPara->pLastNode->Len()));
+        }
         auto iter(iterFirst);
         SwTextNode const* pNode(pMergedPara->pFirstNode);
         for ( ; ; ++iter)
@@ -1355,6 +1374,40 @@ void AppendAllObjs(const SwFrameFormats* pTable, const SwFrame* pSib)
         }
     }
 }
+
+namespace sw {
+
+void RecreateStartTextFrames(SwTextNode & rNode)
+{
+    std::vector<SwTextFrame*> frames;
+    SwIterator<SwTextFrame, SwTextNode, sw::IteratorMode::UnwrapMulti> aIter(rNode);
+    for (SwTextFrame* pFrame = aIter.First(); pFrame; pFrame = aIter.Next())
+    {
+        if (pFrame->getRootFrame()->IsHideRedlines())
+        {
+            frames.push_back(pFrame);
+        }
+    }
+    auto eMode(sw::FrameMode::Existing);
+    for (SwTextFrame * pFrame : frames)
+    {
+        // SplitNode could have moved the original frame to the start node
+        // & created a new one on end, or could have created new frame on
+        // start node... grab start node's frame and recreate MergedPara.
+        SwTextNode & rFirstNode(pFrame->GetMergedPara()
+            ? *pFrame->GetMergedPara()->pFirstNode
+            : rNode);
+        assert(rFirstNode.GetIndex() <= rNode.GetIndex());
+        // clear old one first to avoid DelFrames confusing updates & asserts...
+        pFrame->SetMergedPara(nullptr);
+        pFrame->SetMergedPara(sw::CheckParaRedlineMerge(
+                    *pFrame, rFirstNode, eMode));
+        eMode = sw::FrameMode::New; // Existing is not idempotent!
+        // note: this may or may not delete frames on the end node
+    }
+}
+
+} // namespace sw
 
 /** local method to set 'working' position for newly inserted frames
 
@@ -1446,7 +1499,23 @@ void InsertCnt_( SwLayoutFrame *pLay, SwDoc *pDoc,
         if( ( !pLay->IsInFootnote() || pSct->IsInFootnote() ) &&
             ( !pLay->IsInTab() || pSct->IsInTab() ) )
         {
-            pActualSection.reset(new SwActualSection( nullptr, pSct, nullptr ));
+            pActualSection.reset(new SwActualSection(nullptr, pSct, pSct->GetSection()->GetFormat()->GetSectionNode()));
+            // tdf#132236 for SwUndoDelete: find outer sections whose start
+            // nodes aren't contained in the range but whose end nodes are,
+            // because section frames may need to be created for them
+            SwActualSection * pUpperSection(pActualSection.get());
+            while (pUpperSection->GetSectionNode()->EndOfSectionIndex() < nEndIndex)
+            {
+                SwStartNode *const pStart(pUpperSection->GetSectionNode()->StartOfSectionNode());
+                if (!pStart->IsSectionNode())
+                {
+                    break;
+                }
+                // note: these don't have a section frame, check it in EndNode case!
+                auto const pTmp(new SwActualSection(nullptr, nullptr, static_cast<SwSectionNode*>(pStart)));
+                pUpperSection->SetUpper(pTmp);
+                pUpperSection = pTmp;
+            }
             OSL_ENSURE( !pLay->Lower() || !pLay->Lower()->IsColumnFrame(),
                 "InsertCnt_: Wrong Call" );
         }
@@ -1565,6 +1634,10 @@ void InsertCnt_( SwLayoutFrame *pLay, SwDoc *pDoc,
                 pPageMaker->CheckInsert( nIndex );
 
             pFrame->InsertBehind( pLay, pPrv );
+            if (pPage) // would null in SwCellFrame ctor
+            {   // tdf#134931 call ResetTurbo(); not sure if Paste() would be
+                pFrame->InvalidatePage(pPage); // better than InsertBehind()?
+            }
             // #i27138#
             // notify accessibility paragraphs objects about changed
             // CONTENT_FLOWS_FROM/_TO relation.
@@ -1644,6 +1717,37 @@ void InsertCnt_( SwLayoutFrame *pLay, SwDoc *pDoc,
                             pPrv = static_cast<SwSectionFrame*>(pPrv)->ContainsContent();
                         if( pPrv && pPrv->IsTextFrame() )
                             static_cast<SwTextFrame*>(pPrv)->Prepare( PREP_QUOVADIS, nullptr, false );
+                    }
+                }
+                if (nIndex + 1 == nEndIndex)
+                {   // tdf#131684 tdf#132236 fix upper of frame moved in
+                    // SwUndoDelete; can't be done there unfortunately
+                    // because empty section frames are deleted here
+                    SwFrame *const pNext(
+                        // if there's a parent section, it has been split
+                        // into 2 SwSectionFrame already :(
+                        (   pFrame->GetNext()
+                         && pFrame->GetNext()->IsSctFrame()
+                         && pActualSection->GetUpper()
+                         && pActualSection->GetUpper()->GetSectionNode() ==
+                             static_cast<SwSectionFrame const*>(pFrame->GetNext())->GetSection()->GetFormat()->GetSectionNode())
+                        ? static_cast<SwSectionFrame *>(pFrame->GetNext())->ContainsContent()
+                        : pFrame->GetNext());
+                    if (pNext
+                        && pNext->IsTextFrame()
+                        && static_cast<SwTextFrame*>(pNext)->GetTextNodeFirst() == pDoc->GetNodes()[nEndIndex]
+                        && (pNext->GetUpper() == pFrame->GetUpper()
+                            || pFrame->GetNext()->IsSctFrame())) // checked above
+                    {
+                        pNext->Cut();
+                        pNext->InvalidateInfFlags(); // mbInfSct changed
+                        // could have columns
+                        SwSectionFrame *const pSection(static_cast<SwSectionFrame*>(pFrame));
+                        assert(!pSection->Lower() || pSection->Lower()->IsLayoutFrame());
+                        SwLayoutFrame *const pParent(pSection->Lower() ? pSection->GetNextLayoutLeaf() : pSection);
+                        assert(!pParent->Lower());
+                        // paste invalidates, section could have indent...
+                        pNext->Paste(pParent, nullptr);
                     }
                 }
                 // #i27138#
@@ -1738,7 +1842,7 @@ void InsertCnt_( SwLayoutFrame *pLay, SwDoc *pDoc,
                 SwSectionFrame* pOuterSectionFrame = pActualSection->GetSectionFrame();
 
                 // a follow has to be appended to the new section frame
-                SwSectionFrame* pFollow = pOuterSectionFrame->GetFollow();
+                SwSectionFrame* pFollow = pOuterSectionFrame ? pOuterSectionFrame->GetFollow() : nullptr;
                 if ( pFollow )
                 {
                     pOuterSectionFrame->SetFollow( nullptr );
@@ -1747,7 +1851,8 @@ void InsertCnt_( SwLayoutFrame *pLay, SwDoc *pDoc,
                 }
 
                 // We don't want to leave empty parts back.
-                if( ! pOuterSectionFrame->IsColLocked() &&
+                if (pOuterSectionFrame &&
+                    ! pOuterSectionFrame->IsColLocked() &&
                     ! pOuterSectionFrame->ContainsContent() )
                 {
                     pOuterSectionFrame->DelEmpty( true );
@@ -2420,7 +2525,7 @@ void SwBorderAttrs::GetBottomLine_( const SwFrame& _rFrame )
 
 void SwBorderAttrs::CalcLineSpacing_()
 {
-    // tdf#125300 compatibility option AddParaSpacingToTableCells needs also line spacing
+    // tdf#125300 compatibility option AddParaLineSpacingToTableCells needs also line spacing
     const SvxLineSpacingItem &rSpace = m_rAttrSet.GetLineSpacing();
     if ( rSpace.GetInterLineSpaceRule() == SvxInterLineSpaceRule::Prop && rSpace.GetPropLineSpace() > 100 )
     {

@@ -271,6 +271,18 @@ DECLARE_OOXMLIMPORT_TEST(testTdf43017, "tdf43017.docx")
                                  getProperty<sal_Int32>(xText, "CharColor"));
 }
 
+CPPUNIT_TEST_FIXTURE(Test, testTdf127778)
+{
+    load(mpTestDocumentPath, "tdf127778.docx");
+    xmlDocPtr pLayout = parseLayoutDump();
+    // Without the accompanying fix in place, this test would have failed with:
+    // equality assertion failed
+    // - Expected: 0
+    // - Actual  : 1
+    // i.e. the 2nd page had an unexpected header.
+    assertXPath(pLayout, "//page[2]/header", 0);
+}
+
 // related tdf#43017
 DECLARE_OOXMLIMPORT_TEST(testTdf124754, "tdf124754.docx")
 {
@@ -397,12 +409,6 @@ DECLARE_OOXMLIMPORT_TEST(testTdf114217, "tdf114217.docx")
     uno::Reference<drawing::XDrawPage> xDrawPage = xDrawPageSupplier->getDrawPage();
     // This was 1, multi-page table was imported as a floating one.
     CPPUNIT_ASSERT_EQUAL(static_cast<sal_Int32>(0), xDrawPage->getCount());
-}
-
-DECLARE_OOXMLIMPORT_TEST(testTdf116486, "tdf116486.docx")
-{
-    OUString aTop = parseDump("/root/page/body/txt/Special", "nHeight");
-    CPPUNIT_ASSERT_EQUAL(OUString("4006"), aTop);
 }
 
 DECLARE_OOXMLIMPORT_TEST(testTdf119200, "tdf119200.docx")

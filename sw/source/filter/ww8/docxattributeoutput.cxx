@@ -2649,6 +2649,10 @@ void DocxAttributeOutput::EndRunProperties( const SwRedlineData* pRedlineData )
     // write footnotes/endnotes if we have any
     FootnoteEndnoteReference();
 
+    // merge the properties _before_ the run text (strictly speaking, just
+    // after the start of the run)
+    m_pSerializer->mergeTopMarks(Tag_StartRunProperties, sax_fastparser::MergeMarks::PREPEND);
+
     WritePostponedGraphic();
 
     WritePostponedDiagram();
@@ -2661,10 +2665,6 @@ void DocxAttributeOutput::EndRunProperties( const SwRedlineData* pRedlineData )
     WritePostponedOLE();
 
     WritePostponedActiveXControl(true);
-
-    // merge the properties _before_ the run text (strictly speaking, just
-    // after the start of the run)
-    m_pSerializer->mergeTopMarks(Tag_StartRunProperties, sax_fastparser::MergeMarks::PREPEND);
 }
 
 void DocxAttributeOutput::GetSdtEndBefore(const SdrObject* pSdrObj)
@@ -5707,7 +5707,7 @@ void DocxAttributeOutput::OutputFlyFrame_Impl( const ww8::Frame &rFrame, const P
             break;
     }
 
-    m_pSerializer->mergeTopMarks(Tag_OutputFlyFrame, sax_fastparser::MergeMarks::POSTPONE);
+    m_pSerializer->mergeTopMarks(Tag_OutputFlyFrame);
 }
 
 void DocxAttributeOutput::WriteOutliner(const OutlinerParaObject& rParaObj)
@@ -6644,9 +6644,41 @@ void DocxAttributeOutput::NumberingDefinition( sal_uInt16 nId, const SwNumRule &
     m_pSerializer->endElementNS( XML_w, XML_num );
 }
 
+// Not all attibutes of SwNumFormat are important for export, so can't just use embedded in
+// that classes comparison.
+static bool lcl_ListLevelsAreDifferentForExport(const SwNumFormat & rFormat1, const SwNumFormat & rFormat2)
+{
+    if (rFormat1 == rFormat2)
+        // They are equal, nothing to do
+        return false;
+
+    if (!rFormat1.GetCharFormat() != !rFormat2.GetCharFormat())
+        // One has charformat, other not. they are different
+        return true;
+
+    if (rFormat1.GetCharFormat() && rFormat2.GetCharFormat())
+    {
+        const SwAttrSet & a1 = rFormat1.GetCharFormat()->GetAttrSet();
+        const SwAttrSet & a2 = rFormat2.GetCharFormat()->GetAttrSet();
+
+        if (!(a1 == a2))
+            // Difference in charformat: they are different
+            return true;
+    }
+
+    // Compare numformats with empty charformats
+    SwNumFormat modified1 = rFormat1;
+    SwNumFormat modified2 = rFormat2;
+    modified1.SetCharFormatName(OUString());
+    modified2.SetCharFormatName(OUString());
+    modified1.SetCharFormat(nullptr);
+    modified2.SetCharFormat(nullptr);
+    return modified1 != modified2;
+}
+
 void DocxAttributeOutput::OverrideNumberingDefinition(
         SwNumRule const& rRule,
-        sal_uInt16 const nNum, sal_uInt16 const nAbstractNum)
+        sal_uInt16 const nNum, sal_uInt16 const nAbstractNum, const std::map< size_t, size_t > & rLevelOverrides )
 {
     m_pSerializer->startElementNS(XML_w, XML_num, FSNS(XML_w, XML_numId), OString::number(nNum));
 
@@ -6657,12 +6689,25 @@ void DocxAttributeOutput::OverrideNumberingDefinition(
         ? WW8ListManager::nMinLevel : WW8ListManager::nMaxLevel);
     for (sal_uInt8 nLevel = 0; nLevel < nLevels; ++nLevel)
     {
-        // only export it if it differs from abstract numbering definition
-        if (rRule.Get(nLevel) != rAbstractRule.Get(nLevel))
+        const auto levelOverride = rLevelOverrides.find(nLevel);
+        bool bListsAreDifferent = lcl_ListLevelsAreDifferentForExport(rRule.Get(nLevel), rAbstractRule.Get(nLevel));
+
+        // Export list override only if it is different to abstract one
+        // or we have a level numbering override
+        if (bListsAreDifferent || levelOverride != rLevelOverrides.end())
         {
             m_pSerializer->startElementNS(XML_w, XML_lvlOverride, FSNS(XML_w, XML_ilvl), OString::number(nLevel));
 
-            GetExport().NumberingLevel(rRule, nLevel);
+            if (bListsAreDifferent)
+            {
+                GetExport().NumberingLevel(rRule, nLevel);
+            }
+            if (levelOverride != rLevelOverrides.end())
+            {
+                // list numbering restart override
+                m_pSerializer->singleElementNS(XML_w, XML_startOverride,
+                    FSNS(XML_w, XML_val), OString::number(levelOverride->second));
+            }
 
             m_pSerializer->endElementNS(XML_w, XML_lvlOverride);
         }
@@ -6795,7 +6840,7 @@ void DocxAttributeOutput::NumberingLevel( sal_uInt8 nLevel,
 
     // indentation
     m_pSerializer->startElementNS(XML_w, XML_pPr);
-    if( nListTabPos != 0 )
+    if( nListTabPos >= 0 )
     {
         m_pSerializer->startElementNS(XML_w, XML_tabs);
         m_pSerializer->singleElementNS( XML_w, XML_tab,
@@ -6826,7 +6871,10 @@ void DocxAttributeOutput::NumberingLevel( sal_uInt8 nLevel,
                     FSNS( XML_w, XML_cs ), aFamilyName,
                     FSNS( XML_w, XML_hint ), "default" );
         }
-        m_rExport.OutputItemSet( *pOutSet, false, true, i18n::ScriptType::LATIN, m_rExport.m_bExportModeRTF );
+        else
+        {
+            m_rExport.OutputItemSet(*pOutSet, false, true, i18n::ScriptType::LATIN, m_rExport.m_bExportModeRTF);
+        }
 
         WriteCollectedRunProperties();
 
@@ -8201,6 +8249,17 @@ void DocxAttributeOutput::FormatULSpace( const SvxULSpaceItem& rULSpace )
         sal_Int32 nHeader = 0;
         if ( aDistances.HasHeader() )
             nHeader = sal_Int32( aDistances.dyaHdrTop );
+        else if (m_rExport.m_pFirstPageFormat)
+        {
+            HdFtDistanceGlue aFirstPageDistances(m_rExport.m_pFirstPageFormat->GetAttrSet());
+            if (aFirstPageDistances.HasHeader())
+            {
+                // The follow page style has no header, but the first page style has. In Word terms,
+                // this means that the header margin of "the" section is coming from the first page
+                // style.
+                nHeader = sal_Int32(aFirstPageDistances.dyaHdrTop);
+            }
+        }
 
         // Page top
         m_pageMargins.nTop = aDistances.dyaTop;

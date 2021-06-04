@@ -142,6 +142,7 @@ class DocumentSettingManager :
     bool mbTabRelativeToIndent                      : 1;   // #i24363# tab stops relative to indent
     bool mbProtectForm                              : 1;
     bool mbMsWordCompTrailingBlanks                 : 1;   // tdf#104349 tdf#104668
+    bool mbMsWordCompMinLineHeightByFly             : 1;
     bool mbInvertBorderSpacing                      : 1;
     bool mbCollapseEmptyCellPara                    : 1;
     bool mbTabAtLeftIndentForParagraphsInList;             // #i89181# - see above
@@ -156,11 +157,13 @@ class DocumentSettingManager :
     bool mbPropLineSpacingShrinksFirstLine; // fdo#79602
     bool mbSubtractFlys; // tdf#86578
     bool mApplyParagraphMarkFormatToNumbering;
+    bool mbAddParaLineSpacingToTableCells; // tdf#125300 tdf#134782
 
     bool mbLastBrowseMode                           : 1;
     bool mbDisableOffPagePositioning; // tdf#112443
     bool mbEmptyDbFieldHidesPara;
     bool mbContinuousEndnotes = false;
+    bool mbHeaderSpacingBelowLastPara;
 
 public:
 

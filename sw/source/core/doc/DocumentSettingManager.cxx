@@ -76,6 +76,7 @@ sw::DocumentSettingManager::DocumentSettingManager(SwDoc &rDoc)
     mbTabRelativeToIndent(true),
     mbProtectForm(false), // i#78591#
     mbMsWordCompTrailingBlanks(false), // tdf#104349 tdf#104668
+    mbMsWordCompMinLineHeightByFly(false),
     mbInvertBorderSpacing (false),
     mbCollapseEmptyCellPara(true),
     mbTabAtLeftIndentForParagraphsInList(false), //#i89181#
@@ -91,7 +92,8 @@ sw::DocumentSettingManager::DocumentSettingManager(SwDoc &rDoc)
     mbSubtractFlys(false),
     mApplyParagraphMarkFormatToNumbering(false),
     mbLastBrowseMode( false ),
-    mbDisableOffPagePositioning ( false )
+    mbDisableOffPagePositioning ( false ),
+    mbHeaderSpacingBelowLastPara(false)
 
     // COMPATIBILITY FLAGS END
 {
@@ -110,6 +112,7 @@ sw::DocumentSettingManager::DocumentSettingManager(SwDoc &rDoc)
         mbAddExternalLeading                = !aOptions.GetDefault( SvtCompatibilityEntry::Index::NoExtLeading );
         mbOldLineSpacing                    = aOptions.GetDefault( SvtCompatibilityEntry::Index::UseLineSpacing );
         mbAddParaSpacingToTableCells        = aOptions.GetDefault( SvtCompatibilityEntry::Index::AddTableSpacing );
+        mbAddParaLineSpacingToTableCells    = aOptions.GetDefault( SvtCompatibilityEntry::Index::AddTableLineSpacing );
         mbUseFormerObjectPos                = aOptions.GetDefault( SvtCompatibilityEntry::Index::UseObjectPositioning );
         mbUseFormerTextWrapping             = aOptions.GetDefault( SvtCompatibilityEntry::Index::UseOurTextWrapping );
         mbConsiderWrapOnObjPos              = aOptions.GetDefault( SvtCompatibilityEntry::Index::ConsiderWrappingStyle );
@@ -129,6 +132,7 @@ sw::DocumentSettingManager::DocumentSettingManager(SwDoc &rDoc)
         mbAddExternalLeading                = true;
         mbOldLineSpacing                    = false;
         mbAddParaSpacingToTableCells        = false;
+        mbAddParaLineSpacingToTableCells    = false;
         mbUseFormerObjectPos                = false;
         mbUseFormerTextWrapping             = false;
         mbConsiderWrapOnObjPos              = false;
@@ -165,6 +169,7 @@ bool sw::DocumentSettingManager::get(/*[in]*/ DocumentSettingId id) const
         case DocumentSettingId::OLD_NUMBERING: return mbOldNumbering;
         case DocumentSettingId::OLD_LINE_SPACING: return mbOldLineSpacing;
         case DocumentSettingId::ADD_PARA_SPACING_TO_TABLE_CELLS: return mbAddParaSpacingToTableCells;
+        case DocumentSettingId::ADD_PARA_LINE_SPACING_TO_TABLE_CELLS: return mbAddParaLineSpacingToTableCells;
         case DocumentSettingId::USE_FORMER_OBJECT_POS: return mbUseFormerObjectPos;
         case DocumentSettingId::USE_FORMER_TEXT_WRAPPING: return mbUseFormerTextWrapping;
         case DocumentSettingId::CONSIDER_WRAP_ON_OBJECT_POSITION: return mbConsiderWrapOnObjPos;
@@ -180,6 +185,7 @@ bool sw::DocumentSettingManager::get(/*[in]*/ DocumentSettingId id) const
         case DocumentSettingId::PROTECT_FORM: return mbProtectForm;
         // tdf#104349 tdf#104668
         case DocumentSettingId::MS_WORD_COMP_TRAILING_BLANKS: return mbMsWordCompTrailingBlanks;
+        case DocumentSettingId::MS_WORD_COMP_MIN_LINE_HEIGHT_BY_FLY: return mbMsWordCompMinLineHeightByFly;
         // #i89181#
         case DocumentSettingId::TAB_AT_LEFT_INDENT_FOR_PARA_IN_LIST: return mbTabAtLeftIndentForParagraphsInList;
         case DocumentSettingId::INVERT_BORDER_SPACING: return mbInvertBorderSpacing;
@@ -217,6 +223,8 @@ bool sw::DocumentSettingManager::get(/*[in]*/ DocumentSettingId id) const
         case DocumentSettingId::EMPTY_DB_FIELD_HIDES_PARA: return mbEmptyDbFieldHidesPara;
         case DocumentSettingId::CONTINUOUS_ENDNOTES:
             return mbContinuousEndnotes;
+        case DocumentSettingId::HEADER_SPACING_BELOW_LAST_PARA:
+            return mbHeaderSpacingBelowLastPara;
         default:
             OSL_FAIL("Invalid setting id");
     }
@@ -278,6 +286,9 @@ void sw::DocumentSettingManager::set(/*[in]*/ DocumentSettingId id, /*[in]*/ boo
         case DocumentSettingId::ADD_PARA_SPACING_TO_TABLE_CELLS:
             mbAddParaSpacingToTableCells = value;
             break;
+        case DocumentSettingId::ADD_PARA_LINE_SPACING_TO_TABLE_CELLS:
+            mbAddParaLineSpacingToTableCells = value;
+            break;
         case DocumentSettingId::USE_FORMER_OBJECT_POS:
             mbUseFormerObjectPos = value;
             break;
@@ -322,6 +333,10 @@ void sw::DocumentSettingManager::set(/*[in]*/ DocumentSettingId id, /*[in]*/ boo
         // tdf#140349
         case DocumentSettingId::MS_WORD_COMP_TRAILING_BLANKS:
             mbMsWordCompTrailingBlanks = value;
+            break;
+
+        case DocumentSettingId::MS_WORD_COMP_MIN_LINE_HEIGHT_BY_FLY:
+            mbMsWordCompMinLineHeightByFly = value;
             break;
 
         case DocumentSettingId::TABS_RELATIVE_TO_INDENT:
@@ -452,6 +467,9 @@ void sw::DocumentSettingManager::set(/*[in]*/ DocumentSettingId id, /*[in]*/ boo
         case DocumentSettingId::CONTINUOUS_ENDNOTES:
             mbContinuousEndnotes = value;
             break;
+        case DocumentSettingId::HEADER_SPACING_BELOW_LAST_PARA:
+            mbHeaderSpacingBelowLastPara = value;
+            break;
         default:
             OSL_FAIL("Invalid setting id");
     }
@@ -576,6 +594,7 @@ void sw::DocumentSettingManager::ReplaceCompatibilityOptions(const DocumentSetti
     mbAddExternalLeading = rSource.mbAddExternalLeading;
     mbOldLineSpacing = rSource.mbOldLineSpacing;
     mbAddParaSpacingToTableCells = rSource.mbAddParaSpacingToTableCells;
+    mbAddParaLineSpacingToTableCells = rSource.mbAddParaLineSpacingToTableCells;
     mbUseFormerObjectPos = rSource.mbUseFormerObjectPos;
     mbUseFormerTextWrapping = rSource.mbUseFormerTextWrapping;
     mbConsiderWrapOnObjPos = rSource.mbConsiderWrapOnObjPos;
@@ -591,9 +610,12 @@ void sw::DocumentSettingManager::ReplaceCompatibilityOptions(const DocumentSetti
     mbClipAsCharacterAnchoredWriterFlyFrames = rSource.mbClipAsCharacterAnchoredWriterFlyFrames;
     mbUnixForceZeroExtLeading = rSource.mbUnixForceZeroExtLeading;
     mbTabRelativeToIndent = rSource.mbTabRelativeToIndent;
+    mbMsWordCompMinLineHeightByFly = rSource.mbMsWordCompMinLineHeightByFly;
     mbTabAtLeftIndentForParagraphsInList = rSource.mbTabAtLeftIndentForParagraphsInList;
+    mbSubtractFlys = rSource.mbSubtractFlys;
     mbMsWordCompTrailingBlanks = rSource.mbMsWordCompTrailingBlanks;
     mbEmptyDbFieldHidesPara = rSource.mbEmptyDbFieldHidesPara;
+    mbHeaderSpacingBelowLastPara = rSource.mbHeaderSpacingBelowLastPara;
 }
 
 sal_uInt32 sw::DocumentSettingManager::Getn32DummyCompatibilityOptions1() const
@@ -615,4 +637,5 @@ void sw::DocumentSettingManager::Setn32DummyCompatibilityOptions2( const sal_uIn
 {
     mn32DummyCompatibilityOptions2 = CompatibilityOptions2;
 }
+
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

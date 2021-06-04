@@ -7,6 +7,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+#include <sal/config.h>
+
+#include <deque>
 #include <stack>
 #include <string.h>
 #include <osl/process.h>
@@ -397,25 +400,24 @@ bool GtkInstance::AnyInput( VclInputFlags nType )
         return true;
 
     bool bRet = false;
-    std::stack<GdkEvent*> aEvents;
+    std::deque<GdkEvent*> aEvents;
     GdkEvent *pEvent = nullptr;
     while ((pEvent = gdk_event_get()))
     {
-        aEvents.push(pEvent);
+        aEvents.push_back(pEvent);
         VclInputFlags nEventType = categorizeEvent(pEvent);
         if ( (nEventType & nType) || ( nEventType == VclInputFlags::NONE && (nType & VclInputFlags::OTHER) ) )
         {
             bRet = true;
-            break;
         }
     }
 
     while (!aEvents.empty())
     {
-        pEvent = aEvents.top();
+        pEvent = aEvents.front();
         gdk_event_put(pEvent);
         gdk_event_free(pEvent);
-        aEvents.pop();
+        aEvents.pop_front();
     }
     return bRet;
 }
@@ -1918,7 +1920,7 @@ private:
     gulong m_nDragLeaveSignalId;
 
     rtl::Reference<GtkDropTarget> m_xDropTarget;
-    std::vector<AtkRelation*> m_aExtraAtkRelations;
+    rtl::Reference<GtkDragSource> m_xDragSource;
 
     static void signalSizeAllocate(GtkWidget*, GdkRectangle* allocation, gpointer widget)
     {
@@ -2505,33 +2507,6 @@ public:
             pRelation = atk_relation_new(obj_array, 1, ATK_RELATION_LABEL_FOR);
             atk_relation_set_add(pRelationSet, pRelation);
         }
-        g_object_unref(pRelationSet);
-    }
-
-    virtual void add_extra_accessible_relation(const css::accessibility::AccessibleRelation &rRelation) override
-    {
-        AtkObject* pAtkObject = gtk_widget_get_accessible(m_pWidget);
-        if (!pAtkObject)
-            return;
-
-        AtkRelationSet *pRelationSet = atk_object_ref_relation_set(pAtkObject);
-        AtkRelation *pRel = atk_object_wrapper_relation_new(rRelation);
-        m_aExtraAtkRelations.push_back(pRel);
-        atk_relation_set_add(pRelationSet, pRel);
-        g_object_unref(pRel);
-        g_object_unref(pRelationSet);
-    }
-
-    virtual void clear_extra_accessible_relations() override
-    {
-        AtkObject* pAtkObject = gtk_widget_get_accessible(m_pWidget);
-        if (!pAtkObject)
-            return;
-
-        AtkRelationSet *pRelationSet = atk_object_ref_relation_set(pAtkObject);
-        for (AtkRelation* pRel : m_aExtraAtkRelations)
-            atk_relation_set_remove(pRelationSet, pRel);
-        m_aExtraAtkRelations.clear();
         g_object_unref(pRelationSet);
     }
 
@@ -5031,6 +5006,9 @@ static GtkMessageType VclToGtk(VclMessageType eType)
             break;
         case VclMessageType::Error:
             eRet = GTK_MESSAGE_ERROR;
+            break;
+        case VclMessageType::Other:
+            eRet = GTK_MESSAGE_OTHER;
             break;
     }
     return eRet;
@@ -9296,7 +9274,10 @@ public:
             GtkTreeModel *pModel = GTK_TREE_MODEL(m_pTreeStore);
             gtk_tree_model_get_iter(pModel, &pGtkIter->iter, path);
         }
-        return path != nullptr;
+        if (!path)
+            return false;
+        gtk_tree_path_free(path);
+        return true;
     }
 
     virtual int get_cursor_index() const override
@@ -11449,12 +11430,12 @@ private:
             case KEY_RETURN:
                 m_aQuickSelectionEngine.Reset();
                 // tdf#131076 don't let bare return toggle menu popup active, but do allow deactive
-                if (nCode == KEY_RETURN && !pEvent->state && !m_bPopupActive)
+                if (nCode == KEY_RETURN && !aKeyCode.GetModifier() && !m_bPopupActive)
                     bDone = combobox_activate();
                 break;
             default:
                 // tdf#131076 let base space toggle menu popup when its not already visible
-                if (nCode == KEY_SPACE && !pEvent->state && !m_bPopupActive)
+                if (nCode == KEY_SPACE && !aKeyCode.GetModifier() && !m_bPopupActive)
                     bDone = false;
                 else
                     bDone = m_aQuickSelectionEngine.HandleKeyEvent(aKEvt);
@@ -12046,7 +12027,7 @@ private:
 
     bool signal_key_press(GdkEventKey* pEvent)
     {
-        if (pEvent->state) // only with no modifiers held
+        if (GtkSalFrame::GetMouseModCode(pEvent->state)) // only with no modifiers held
             return false;
 
         if (pEvent->keyval == GDK_KEY_KP_Up || pEvent->keyval == GDK_KEY_Up || pEvent->keyval == GDK_KEY_KP_Page_Up || pEvent->keyval == GDK_KEY_Page_Up ||

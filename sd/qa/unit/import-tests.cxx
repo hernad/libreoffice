@@ -59,6 +59,7 @@
 #include <com/sun/star/drawing/XMasterPagesSupplier.hpp>
 #include <com/sun/star/drawing/XGluePointsSupplier.hpp>
 #include <com/sun/star/drawing/GluePoint2.hpp>
+#include <com/sun/star/drawing/TextHorizontalAdjust.hpp>
 #include <com/sun/star/container/XIdentifierAccess.hpp>
 #include <com/sun/star/animations/XAnimationNodeSupplier.hpp>
 #include <com/sun/star/animations/XAnimationNode.hpp>
@@ -203,6 +204,7 @@ public:
     void testTdf116266();
     void testTdf126324();
     void testTdf128684();
+    void testTdf119187();
 
     bool checkPattern(sd::DrawDocShellRef const & rDocRef, int nShapeNumber, std::vector<sal_uInt8>& rExpected);
     void testPatternImport();
@@ -220,6 +222,8 @@ public:
     void testTdf127964();
     void testTdf106638();
     void testTdf113198();
+    void testShapeTextAlignment();
+    void testShapeTextAdjustLeft();
 
     CPPUNIT_TEST_SUITE(SdImportTest);
 
@@ -324,6 +328,9 @@ public:
     CPPUNIT_TEST(testTdf106638);
     CPPUNIT_TEST(testTdf128684);
     CPPUNIT_TEST(testTdf113198);
+    CPPUNIT_TEST(testShapeTextAlignment);
+    CPPUNIT_TEST(testShapeTextAdjustLeft);
+    CPPUNIT_TEST(testTdf119187);
 
     CPPUNIT_TEST_SUITE_END();
 };
@@ -3084,6 +3091,66 @@ void SdImportTest::testTdf113198()
     sal_Int16 nParaAdjust = -1;
     xShape->getPropertyValue("ParaAdjust") >>= nParaAdjust;
     CPPUNIT_ASSERT_EQUAL(style::ParagraphAdjust_CENTER, static_cast<style::ParagraphAdjust>(nParaAdjust));
+}
+
+void SdImportTest::testShapeTextAlignment()
+{
+    sd::DrawDocShellRef xDocShRef
+        = loadURL(m_directories.getURLFromSrc("sd/qa/unit/data/pptx/shape-text-alignment.pptx"), PPTX);
+
+    uno::Reference<beans::XPropertySet> xShape(getShapeFromPage(0, 0, xDocShRef));
+    sal_Int16 nParaAdjust = -1;
+    xShape->getPropertyValue("ParaAdjust") >>= nParaAdjust;
+    // Without the accompanying fix in place, this test would have failed with:
+    // - Expected: 0
+    // - Actual  : 3
+    // i.e. text which is meant to be left-aligned was centered at a paragraph level.
+    CPPUNIT_ASSERT_EQUAL(style::ParagraphAdjust_LEFT,
+                         static_cast<style::ParagraphAdjust>(nParaAdjust));
+}
+
+void SdImportTest::testShapeTextAdjustLeft()
+{
+    sd::DrawDocShellRef xDocShRef
+        = loadURL(m_directories.getURLFromSrc("sd/qa/unit/data/pptx/shape-text-adjust-left.pptx"), PPTX);
+
+    uno::Reference<drawing::XDrawPagesSupplier> xDrawPagesSupplier(xDocShRef->GetDoc()->getUnoModel(),
+                                                                   uno::UNO_QUERY);
+    uno::Reference<drawing::XDrawPage> xDrawPage(xDrawPagesSupplier->getDrawPages()->getByIndex(0),
+                                                 uno::UNO_QUERY);
+    uno::Reference<beans::XPropertySet> xShape(xDrawPage->getByIndex(0), uno::UNO_QUERY);
+    drawing::TextHorizontalAdjust eAdjust;
+    // Without the accompanying fix in place, this test would have failed with:
+    // - Expected: 3 (center)
+    // - Actual  : 1 (block)
+    // i.e. text was center-adjusted, not default-adjusted (~left).
+    CPPUNIT_ASSERT(xShape->getPropertyValue("TextHorizontalAdjust") >>= eAdjust);
+    CPPUNIT_ASSERT_EQUAL(drawing::TextHorizontalAdjust_BLOCK, eAdjust);
+}
+
+void SdImportTest::testTdf119187()
+{
+    std::vector< sd::DrawDocShellRef > xDocShRef;
+    // load document
+    xDocShRef.push_back(loadURL(m_directories.getURLFromSrc("sd/qa/unit/data/pptx/tdf119187.pptx"), PPTX));
+    // load resaved document
+    xDocShRef.push_back(saveAndReload( xDocShRef.at(0).get(), PPTX ));
+
+    // check documents
+    for (const sd::DrawDocShellRef& xDoc : xDocShRef)
+    {
+        // get shape properties
+        const SdrPage* pPage = GetPage(1, xDoc);
+        CPPUNIT_ASSERT(pPage);
+        SdrObject* pObj = pPage->GetObj(0);
+        CPPUNIT_ASSERT(pObj);
+        const sdr::properties::BaseProperties & rProperties = pObj->GetProperties();
+
+        // chcek text vertical alignment
+        const SdrTextVertAdjustItem& rSdrTextVertAdjustItem = rProperties.GetItem(SDRATTR_TEXT_VERTADJUST);
+        const SdrTextVertAdjust eTVA = rSdrTextVertAdjustItem.GetValue();
+        CPPUNIT_ASSERT_EQUAL(SDRTEXTVERTADJUST_TOP, eTVA);
+    }
 }
 
 CPPUNIT_TEST_SUITE_REGISTRATION(SdImportTest);

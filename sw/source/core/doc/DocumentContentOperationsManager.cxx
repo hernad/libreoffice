@@ -23,6 +23,7 @@
 #include <IDocumentState.hxx>
 #include <IDocumentLayoutAccess.hxx>
 #include <IDocumentStylePoolAccess.hxx>
+#include <IDocumentSettingAccess.hxx>
 #include <UndoManager.hxx>
 #include <docary.hxx>
 #include <textboxhelper.hxx>
@@ -44,6 +45,7 @@
 #include <redline.hxx>
 #include <txtfrm.hxx>
 #include <rootfrm.hxx>
+#include <frmtool.hxx>
 #include <unocrsr.hxx>
 #include <mvsave.hxx>
 #include <ndtxt.hxx>
@@ -295,6 +297,8 @@ namespace sw
             {
                 pNewBookmark->SetKeyCode(pOldBookmark->GetKeyCode());
                 pNewBookmark->SetShortName(pOldBookmark->GetShortName());
+                pNewBookmark->Hide(pOldBookmark->IsHidden());
+                pNewBookmark->SetHideCondition(pOldBookmark->GetHideCondition());
             }
             ::sw::mark::IFieldmark* const pNewFieldmark =
                 dynamic_cast< ::sw::mark::IFieldmark* const >(pNewMark);
@@ -381,6 +385,12 @@ namespace
                                 lcl_NonCopyCount( rPam, aCorrIdx, pREnd->nNode.GetIndex(), nDelCount );
                                 lcl_SetCpyPos( *pREnd, *pStt, *pCpyStt,
                                                 *pDelPam->GetPoint(), nDelCount );
+                            }
+
+                            if (pDelPam->GetNext() && *pDelPam->GetNext()->End() == *pDelPam->Start())
+                            {
+                                *pDelPam->GetNext()->End() = *pDelPam->End();
+                                pDelPam.reset(pDelPam->GetNext());
                             }
                         }
                     }
@@ -1286,6 +1296,30 @@ namespace //local functions originally from docfmt.cxx
 
         if( pNode && pNode->IsTextNode() )
         {
+            // tdf#127606 at editing, remove different formatting of DOCX-like numbering symbol
+            if (pLayout && pNode->GetTextNode()->getIDocumentSettingAccess()->
+                    get(DocumentSettingId::APPLY_PARAGRAPH_MARK_FORMAT_TO_NUMBERING ))
+            {
+                SwContentNode* pEndNode = pEnd->nNode.GetNode().GetContentNode();
+                SwContentNode* pCurrentNode = pEndNode;
+                auto nStartIndex = pNode->GetIndex();
+                auto nEndIndex = pEndNode->GetIndex();
+                SwNodeIndex aIdx( pEnd->nNode.GetNode() );
+                while ( pCurrentNode != nullptr && nStartIndex <= pCurrentNode->GetIndex() )
+                {
+                    if (pCurrentNode->GetSwAttrSet().HasItem(RES_PARATR_LIST_AUTOFMT) &&
+                        // remove character formatting only on wholly selected paragraphs
+                        (nStartIndex < pCurrentNode->GetIndex() || pStt->nContent.GetIndex() == 0) &&
+                        (pCurrentNode->GetIndex() < nEndIndex || pEnd->nContent.GetIndex() == pEndNode->Len()))
+                    {
+                        pCurrentNode->ResetAttr(RES_PARATR_LIST_AUTOFMT);
+                        // reset also paragraph marker
+                        SwIndex nIdx( pCurrentNode, pCurrentNode->Len() );
+                        pCurrentNode->GetTextNode()->RstTextAttr(nIdx, 1);
+                    }
+                    pCurrentNode = SwNodes::GoPrevious( &aIdx );
+                }
+            }
             // #i27615#
             if (rRg.IsInFrontOfLabel())
             {
@@ -1973,6 +2007,11 @@ void DocumentContentOperationsManager::DeleteRange( SwPaM & rPam )
 {
     lcl_DoWithBreaks( *this, rPam, &DocumentContentOperationsManager::DeleteRangeImpl );
 
+    if (m_rDoc.getIDocumentRedlineAccess().IsRedlineOn())
+    {
+        rPam.Normalize(false); // tdf#127635 put point at the end of deletion
+    }
+
     if (!m_rDoc.getIDocumentRedlineAccess().IsIgnoreRedline()
         && !m_rDoc.getIDocumentRedlineAccess().GetRedlineTable().empty())
     {
@@ -2144,10 +2183,17 @@ bool DocumentContentOperationsManager::DeleteAndJoin( SwPaM & rPam,
     if ( lcl_StrLenOverflow( rPam ) )
         return false;
 
-    return lcl_DoWithBreaks( *this, rPam, (m_rDoc.getIDocumentRedlineAccess().IsRedlineOn())
+    bool const ret = lcl_DoWithBreaks( *this, rPam, (m_rDoc.getIDocumentRedlineAccess().IsRedlineOn())
                 ? &DocumentContentOperationsManager::DeleteAndJoinWithRedlineImpl
                 : &DocumentContentOperationsManager::DeleteAndJoinImpl,
                 bForceJoinNext );
+
+    if (m_rDoc.getIDocumentRedlineAccess().IsRedlineOn())
+    {
+        rPam.Normalize(false); // tdf#127635 put point at the end of deletion
+    }
+
+    return ret;
 }
 
 // It seems that this is mostly used by SwDoc internals; the only
@@ -3397,21 +3443,76 @@ void DocumentContentOperationsManager::CopyWithFlyInFly(
     assert(!pCopiedPaM || pCopiedPaM->second.nNode <= rInsPos);
 
     SwDoc* pDest = rInsPos.GetNode().GetDoc();
-    SwNodeIndex aSavePos( rInsPos, -1 );
-    bool bEndIsEqualEndPos = rInsPos == rRg.aEnd;
+    SwNodeIndex aSavePos( rInsPos );
 
     if (rRg.aStart != rRg.aEnd)
     {
+        bool bEndIsEqualEndPos = rInsPos == rRg.aEnd;
+        bool isRecreateEndNode(false);
+        --aSavePos;
         SaveRedlEndPosForRestore aRedlRest( rInsPos, 0 );
 
         // insert behind the already copied start node
-        m_rDoc.GetNodes().CopyNodes( rRg, rInsPos, bMakeNewFrames, true );
+        m_rDoc.GetNodes().CopyNodes( rRg, rInsPos, false, true );
         aRedlRest.Restore();
+        if (bMakeNewFrames) // tdf#130685 only after aRedlRest
+        {   // recreate from previous node (could be merged now)
+            if (SwTextNode *const pNode = aSavePos.GetNode().GetTextNode())
+            {
+                std::unordered_set<SwTextFrame*> frames;
+                SwTextNode *const pEndNode = rInsPos.GetNode().GetTextNode();
+                if (pEndNode)
+                {
+                    SwIterator<SwTextFrame, SwTextNode, sw::IteratorMode::UnwrapMulti> aIter(*pEndNode);
+                    for (SwTextFrame* pFrame = aIter.First(); pFrame; pFrame = aIter.Next())
+                    {
+                        if (pFrame->getRootFrame()->IsHideRedlines())
+                        {
+                            frames.insert(pFrame);
+                        }
+                    }
+                }
+                sw::RecreateStartTextFrames(*pNode);
+                if (!frames.empty())
+                {   // tdf#132187 check if the end node needs new frames
+                    SwIterator<SwTextFrame, SwTextNode, sw::IteratorMode::UnwrapMulti> aIter(*pEndNode);
+                    for (SwTextFrame* pFrame = aIter.First(); pFrame; pFrame = aIter.Next())
+                    {
+                        if (pFrame->getRootFrame()->IsHideRedlines())
+                        {
+                            auto const it = frames.find(pFrame);
+                            if (it != frames.end())
+                            {
+                                frames.erase(it);
+                            }
+                        }
+                    }
+                    if (!frames.empty()) // existing frame was deleted
+                    {   // all layouts because MakeFrames recreates all layouts
+                        pEndNode->DelFrames(nullptr);
+                        isRecreateEndNode = true;
+                    }
+                }
+            }
+        }
+        bool const isAtStartOfSection(aSavePos.GetNode().IsStartNode());
+        ++aSavePos;
+        if (bMakeNewFrames)
+        {
+            // it's possible that CheckParaRedlineMerge() deleted frames
+            // on rInsPos so have to include it, but it must not be included
+            // if it was the first node in the document so that MakeFrames()
+            // will find the existing (wasn't deleted) frame on it
+            SwNodeIndex const end(rInsPos,
+                    (!isRecreateEndNode || isAtStartOfSection)
+                    ? 0 : +1);
+            ::MakeFrames(pDest, aSavePos, end);
+        }
+        if (bEndIsEqualEndPos)
+        {
+            const_cast<SwNodeIndex&>(rRg.aEnd) = aSavePos;
+        }
     }
-
-    ++aSavePos;
-    if( bEndIsEqualEndPos )
-        const_cast<SwNodeIndex&>(rRg.aEnd) = aSavePos;
 
 #if OSL_DEBUG_LEVEL > 0
     {
@@ -3494,7 +3595,6 @@ void DocumentContentOperationsManager::CopyFlyInFlyImpl(
 
     SwTextBoxHelper::SavedLink aOldTextBoxes;
     SwTextBoxHelper::saveLinks(*m_rDoc.GetSpzFrameFormats(), aOldTextBoxes);
-    SwTextBoxHelper::SavedContent aOldContent;
 
     for ( size_t n = 0; n < nArrLen; ++n )
     {
@@ -3561,9 +3661,6 @@ void DocumentContentOperationsManager::CopyFlyInFlyImpl(
         }
         if( bAdd )
         {
-            // Make sure draw formats don't refer to content, so that such
-            // content can be removed without problems.
-            SwTextBoxHelper::resetLink(pFormat, aOldContent);
             aSet.insert( ZSortFly( pFormat, pAnchor, nArrLen + aSet.size() ));
         }
     }
@@ -3684,6 +3781,14 @@ void DocumentContentOperationsManager::CopyFlyInFlyImpl(
             }
         }
 
+        // Ignore TextBoxes, they are already handled in
+        // sw::DocumentLayoutManager::CopyLayoutFormat().
+        if (SwTextBoxHelper::isTextBox(it->GetFormat(), RES_FLYFRMFMT))
+        {
+            it = aSet.erase(it);
+            continue;
+        }
+
         // Copy the format and set the new anchor
         aVecSwFrameFormat.push_back( pDest->getIDocumentLayoutAccess().CopyLayoutFormat( *(*it).GetFormat(),
                 aAnchor, false, true ) );
@@ -3725,7 +3830,7 @@ void DocumentContentOperationsManager::CopyFlyInFlyImpl(
         // Re-create content property of draw formats, knowing how old shapes
         // were paired with old fly formats (aOldTextBoxes) and that aSet is
         // parallel with aVecSwFrameFormat.
-        SwTextBoxHelper::restoreLinks(aSet, aVecSwFrameFormat, aOldTextBoxes, aOldContent);
+        SwTextBoxHelper::restoreLinks(aSet, aVecSwFrameFormat, aOldTextBoxes);
     }
 }
 
@@ -3810,7 +3915,7 @@ bool DocumentContentOperationsManager::DeleteAndJoinWithRedlineImpl( SwPaM & rPa
     // tdf#54819 current redlining needs also modification of paragraph style and
     // attributes added to the same grouped Undo
     if (m_rDoc.GetIDocumentUndoRedo().DoesGroupUndo())
-        m_rDoc.GetIDocumentUndoRedo().StartUndo(SwUndoId::DELETE, nullptr);
+        m_rDoc.GetIDocumentUndoRedo().StartUndo(SwUndoId::EMPTY, nullptr);
 
     auto & rDMA(*m_rDoc.getIDocumentMarkAccess());
     std::vector<std::unique_ptr<SwUndo>> MarkUndos;
@@ -3914,7 +4019,7 @@ bool DocumentContentOperationsManager::DeleteAndJoinWithRedlineImpl( SwPaM & rPa
     }
 
     if (m_rDoc.GetIDocumentUndoRedo().DoesGroupUndo())
-        m_rDoc.GetIDocumentUndoRedo().EndUndo(SwUndoId::DELETE, nullptr);
+        m_rDoc.GetIDocumentUndoRedo().EndUndo(SwUndoId::EMPTY, nullptr);
 
     return true;
 }
@@ -3970,8 +4075,11 @@ bool DocumentContentOperationsManager::DeleteRangeImplImpl(SwPaM & rPam)
 {
     SwPosition *pStt = rPam.Start(), *pEnd = rPam.End();
 
-    if( !rPam.HasMark() || *pStt >= *pEnd )
+    if (!rPam.HasMark()
+        || (*pStt == *pEnd && !IsFlySelectedByCursor(m_rDoc, *pStt, *pEnd)))
+    {
         return false;
+    }
 
     if( m_rDoc.GetAutoCorrExceptWord() )
     {
@@ -4123,6 +4231,19 @@ bool DocumentContentOperationsManager::DeleteRangeImplImpl(SwPaM & rPam)
 
         if( aSttIdx != nEnde )
         {
+            // tdf#134436 delete section nodes like SwUndoDelete::SwUndoDelete
+            SwNode *pTmpNd;
+            while (pEnd == rPam.GetPoint()
+                && nEnde + 2 < m_rDoc.GetNodes().Count()
+                && (pTmpNd = m_rDoc.GetNodes()[nEnde + 1])->IsEndNode()
+                && pTmpNd->StartOfSectionNode()->IsSectionNode()
+                && aSttIdx <= pTmpNd->StartOfSectionNode()->GetIndex())
+            {
+                SwNodeRange range(*pTmpNd->StartOfSectionNode(), *pTmpNd);
+                m_rDoc.GetNodes().SectionUp(&range);
+                --nEnde; // account for deleted start node
+            }
+
             // delete the Nodes into the NodesArary
             m_rDoc.GetNodes().Delete( aSttIdx, nEnde - aSttIdx.GetIndex() );
         }
@@ -4620,7 +4741,7 @@ bool DocumentContentOperationsManager::CopyImplImpl(SwPaM& rPam, SwPosition& rPo
                           ( !bOneNode && !rPos.nContent.GetIndex() ) );
     bool bCopyBookmarks = true;
     bool bCopyPageSource  = false;
-    bool bStartIsTextNode = nullptr != pSttTextNd;
+    int nDeleteTextNodes = 0;
 
     // #i104585# copy outline num rule to clipboard (for ASCII filter)
     if (pDoc->IsClipBoard() && m_rDoc.GetOutlineNumRule())
@@ -4657,6 +4778,7 @@ bool DocumentContentOperationsManager::CopyImplImpl(SwPaM& rPam, SwPosition& rPo
     do {
         if( pSttTextNd )
         {
+            ++nDeleteTextNodes; // must be joined in Undo
             // Don't copy the beginning completely?
             if( !bCopyCollFormat || bColumnSel || pStt->nContent.GetIndex() )
             {
@@ -4744,10 +4866,10 @@ bool DocumentContentOperationsManager::CopyImplImpl(SwPaM& rPam, SwPosition& rPo
                     }
 
                     // copy at-char flys in rPam
-                    aInsPos = *pDestTextNd; // update to new (start) node for flys
+                    SwNodeIndex temp(*pDestTextNd); // update to new (start) node for flys
                     // tdf#126626 prevent duplicate Undos
                     ::sw::UndoGuard const ug(pDoc->GetIDocumentUndoRedo());
-                    CopyFlyInFlyImpl(aRg, &rPam, aInsPos, false);
+                    CopyFlyInFlyImpl(aRg, &rPam, temp, false);
 
                     break;
                 }
@@ -4766,7 +4888,7 @@ bool DocumentContentOperationsManager::CopyImplImpl(SwPaM& rPam, SwPosition& rPo
             else if( rPos.nContent.GetIndex() )
             {   // Insertion in the middle of a text node, it has to be split
                 // (and joined from undo)
-                bStartIsTextNode = true;
+                ++nDeleteTextNodes;
 
                 const sal_Int32 nContentEnd = pEnd->nContent.GetIndex();
                 {
@@ -4819,11 +4941,9 @@ bool DocumentContentOperationsManager::CopyImplImpl(SwPaM& rPam, SwPosition& rPo
 
                 // if we have to insert an extra text node
                 // at the destination, this node will be our new destination
-                // (text) node, and thus we set bStartisTextNode to true. This
-                // will ensure that this node will be deleted during Undo
-                // using JoinNext.
-                OSL_ENSURE( !bStartIsTextNode, "Oops, undo may be instable now." );
-                bStartIsTextNode = true;
+                // (text) node, and thus we increment nDeleteTextNodes. This
+                // will ensure that this node will be deleted during Undo.
+                ++nDeleteTextNodes; // must be deleted
             }
 
             const bool bEmptyDestNd = pDestTextNd->GetText().isEmpty();
@@ -4957,7 +5077,14 @@ bool DocumentContentOperationsManager::CopyImplImpl(SwPaM& rPam, SwPosition& rPo
     if( rPos.nNode != aInsPos )
     {
         pCopyPam->GetMark()->nNode = aInsPos;
-        pCopyPam->GetMark()->nContent.Assign(pCopyPam->GetContentNode(false), 0);
+        if (aInsPos < rPos.nNode)
+        {   // tdf#134250 decremented in (pEndTextNd && !pDestTextNd) above
+            pCopyPam->GetContentNode(false)->MakeEndIndex(&pCopyPam->GetMark()->nContent);
+        }
+        else // incremented in (!pSttTextNd && pDestTextNd) above
+        {
+            pCopyPam->GetMark()->nContent.Assign(pCopyPam->GetContentNode(false), 0);
+        }
         rPos = *pCopyPam->GetMark();
     }
     else
@@ -4967,10 +5094,10 @@ bool DocumentContentOperationsManager::CopyImplImpl(SwPaM& rPam, SwPosition& rPo
         pCopyPam->Move( fnMoveForward, bCanMoveBack ? GoInContent : GoInNode );
     else
     {
-        // Reset the offset to 0 as it was before the insertion
-        pCopyPam->GetPoint()->nContent = 0;
-
         pCopyPam->GetPoint()->nNode++;
+
+        // Reset the offset to 0 as it was before the insertion
+        pCopyPam->GetPoint()->nContent.Assign(pCopyPam->GetPoint()->nNode.GetNode().GetContentNode(), 0);
         // If the next node is a start node, then step back: the start node
         // has been copied and needs to be in the selection for the undo
         if (pCopyPam->GetPoint()->nNode.GetNode().IsStartNode())
@@ -4997,7 +5124,7 @@ bool DocumentContentOperationsManager::CopyImplImpl(SwPaM& rPam, SwPosition& rPo
     // If Undo is enabled, store the inserted area
     if (pDoc->GetIDocumentUndoRedo().DoesUndo())
     {
-        pUndo->SetInsertRange( *pCopyPam, true, bStartIsTextNode );
+        pUndo->SetInsertRange(*pCopyPam, true, nDeleteTextNodes);
     }
 
     if( pCpyRange )
