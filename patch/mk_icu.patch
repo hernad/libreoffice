@@ -1,0 +1,58 @@
+diff --git a/external/icu/ExternalProject_icu.mk b/external/icu/ExternalProject_icu.mk
+index 1845ec3472a1..1d5d663866a4 100644
+--- a/external/icu/ExternalProject_icu.mk
++++ b/external/icu/ExternalProject_icu.mk
+@@ -17,6 +17,7 @@ icu_CPPFLAGS:="-DHAVE_GCC_ATOMICS=$(if $(filter TRUE,$(GCC_HAVE_BUILTIN_ATOMIC))
+ 
+ ifeq ($(OS),WNT)
+ 
++# ICU_DATA_FILTER_FILE=/cygdrive/c/dev/filters.json \
+ # Note: runConfigureICU ignores everything following the platform name!
+ $(call gb_ExternalProject_get_state_target,icu,build) :
+ 	$(call gb_Trace_StartRange,icu,EXTERNAL)
+diff --git a/external/liblangtag/ExternalProject_liblangtag.mk b/external/liblangtag/ExternalProject_liblangtag.mk
+index 060c6f3601a8..8d63ca3e3c09 100644
+--- a/external/liblangtag/ExternalProject_liblangtag.mk
++++ b/external/liblangtag/ExternalProject_liblangtag.mk
+@@ -35,7 +35,7 @@ $(call gb_ExternalProject_get_state_target,liblangtag,build):
+ 				$(if $(call gb_Module__symbols_enabled,liblangtag),$(gb_DEBUGINFO_FLAGS))' \
+ 		$(if $(CROSS_COMPILING),--build=$(BUILD_PLATFORM) --host=$(HOST_PLATFORM) "ac_cv_va_copy=no") \
+ 		LIBXML2_CFLAGS="$(LIBXML_CFLAGS)" \
+-		LIBXML2_LIBS="$(if $(filter WNT,$(OS)),-L$(call gb_UnpackedTarball_get_dir,libxml2)/win32/bin.msvc -llibxml2,$(LIBXML_LIBS))" \
++		LIBXML2_LIBS="$(if $(filter WNT,$(OS)),$(if $(SYSTEM_LIBXML),$(LIBXML_LIBTOOL_LIBS),-L$(call gb_UnpackedTarball_get_dir,libxml2)/win32/bin.msvc -llibxml2),$(LIBXML_LIBS))" \
+ 		$(if $(filter MACOSX,$(OS)),--prefix=/@.__________________________________________________URELIB) \
+ 		$(if $(filter-out LINUX FREEBSD,$(OS)),,LDFLAGS="-Wl$(COMMA)-z$(COMMA)origin -Wl$(COMMA)-rpath,\\"\$$\$$ORIGIN) \
+ 		$(if $(filter-out SOLARIS,$(OS)),,LDFLAGS="-Wl$(COMMA)-z$(COMMA)origin -Wl$(COMMA)-R$(COMMA)\\"\$$\$$ORIGIN) \
+diff --git a/i18nlangtag/Library_i18nlangtag.mk b/i18nlangtag/Library_i18nlangtag.mk
+index a68a5940344d..274bb8c00ead 100644
+--- a/i18nlangtag/Library_i18nlangtag.mk
++++ b/i18nlangtag/Library_i18nlangtag.mk
+@@ -25,6 +25,7 @@ $(eval $(call gb_Library_use_externals,i18nlangtag,\
+ 	icuuc \
+ ))
+ 
++
+ $(eval $(call gb_Library_add_exception_objects,i18nlangtag,\
+ 	i18nlangtag/source/isolang/insys \
+ 	i18nlangtag/source/isolang/isolang \
+@@ -36,10 +37,18 @@ $(eval $(call gb_Library_add_exception_objects,i18nlangtag,\
+ 
+ $(eval $(call gb_Library_use_external,i18nlangtag,liblangtag))
+ $(eval $(call gb_Library_use_external,i18nlangtag,libxml2))
++
+ $(eval $(call gb_Library_use_system_win32_libs,i18nlangtag,\
+         $(if $(filter $(COM),MSC), \
+                 kernel32 \
+         ) \
+ ))
+ 
+-# vim: set noet sw=4 ts=4:
++# ifeq ($(OS),WINNT)
++# $(eval $(call gb_Library_add_libs,i18nlangtag,\
++#     -LIBPATH:$(LIBPATH) \
++# 	icuuc.lib \
++# ))
++# endif
++
++# vim: set noet sw=4 ts=4:
+\ No newline at end of file

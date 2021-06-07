@@ -1,0 +1,190 @@
+diff --git a/RepositoryExternal.mk b/RepositoryExternal.mk
+index 9cba1af4cb40..58e2e417068c 100644
+--- a/RepositoryExternal.mk
++++ b/RepositoryExternal.mk
+@@ -341,8 +341,19 @@ define gb_LinkTarget__use_zlib
+ $(call gb_LinkTarget_add_defs,$(1),\
+ 	-DSYSTEM_ZLIB \
+ )
++
++ifeq ($(OS),WNT)
++$(call gb_LinkTarget_set_include,$(1),\
++    $$(INCLUDE) \
++	$(ZLIB_CFLAGS) \
++)
++$(call gb_LinkTarget_add_libs,$(1),$(ZLIB_LIBS))
++
++else
+ $(call gb_LinkTarget_add_libs,$(1),-lz)
+ 
++endif
++
+ endef
+ 
+ # nothing on system
+@@ -389,6 +400,11 @@ endif # SYSTEM_ZLIB
+ ifneq ($(SYSTEM_LIBJPEG),)
+ 
+ define gb_LinkTarget__use_libjpeg
++
++$(call gb_LinkTarget_set_include,$(1),\
++    $$(INCLUDE) \
++	$(LIBJPEG_CFLAGS) \
++)
+ $(call gb_LinkTarget_add_libs,$(1),$(LIBJPEG_LIBS))
+ $(call gb_LinkTarget_set_ldflags,$(1),\
+ 	$$(filter-out -L/usr/lib/jvm%,$$(T_LDFLAGS)) \
+@@ -3037,17 +2985,19 @@ ifneq ($(SYSTEM_POSTGRESQL),)
+ define gb_LinkTarget__use_postgresql
+ 
+ $(call gb_LinkTarget_set_include,$(1),\
+-	$(POSTGRESQL_INC) \
++	$(POSTGRESQL_CFLAGS) \
+ 	$$(INCLUDE) \
+ )
+ 
++ifeq ($(OS),WNT)
++$(call gb_LinkTarget_add_libs,$(1),$(POSTGRESQL_LIBS))
++
++else
+ $(call gb_LinkTarget_add_libs,$(1),\
+ 	-lpq \
+ )
+ 
+-$(call gb_LinkTarget_add_ldflags,$(1),\
+-	$(POSTGRESQL_LIB) \
+-)
++endif
+ 
+ endef
+ 
+diff --git a/connectivity/Library_postgresql-sdbc-impl.mk b/connectivity/Library_postgresql-sdbc-impl.mk
+index c372f3f0c6f6..a014b4eb0866 100644
+--- a/connectivity/Library_postgresql-sdbc-impl.mk
++++ b/connectivity/Library_postgresql-sdbc-impl.mk
+@@ -64,6 +64,15 @@ $(eval $(call gb_Library_add_libs,postgresql-sdbc-impl,\
+ ))
+ 
+ endif
++
++else # SYSTEM_POSTGRESQL=TRUE
++$(call gb_LinkTarget_add_libs,postgresql-sdbc-impl,$(POSTGRESQL_LIBS))
++
++$(call gb_LinkTarget_set_include,postgresql-sdbc-impl,\
++	$(POSTGRESQL_CFLAGS) \
++	$$(INCLUDE) \
++)
++
+ endif
+ 
+ $(eval $(call gb_Library_set_componentfile,postgresql-sdbc-impl,connectivity/source/drivers/postgresql/postgresql-sdbc-impl))
+diff --git a/external/liblangtag/ExternalProject_liblangtag.mk b/external/liblangtag/ExternalProject_liblangtag.mk
+index 060c6f3601a8..b93774c1c750 100644
+--- a/external/liblangtag/ExternalProject_liblangtag.mk
++++ b/external/liblangtag/ExternalProject_liblangtag.mk
+@@ -35,7 +35,7 @@ $(call gb_ExternalProject_get_state_target,liblangtag,build):
+ 				$(if $(call gb_Module__symbols_enabled,liblangtag),$(gb_DEBUGINFO_FLAGS))' \
+ 		$(if $(CROSS_COMPILING),--build=$(BUILD_PLATFORM) --host=$(HOST_PLATFORM) "ac_cv_va_copy=no") \
+ 		LIBXML2_CFLAGS="$(LIBXML_CFLAGS)" \
+-		LIBXML2_LIBS="$(if $(filter WNT,$(OS)),-L$(call gb_UnpackedTarball_get_dir,libxml2)/win32/bin.msvc -llibxml2,$(LIBXML_LIBS))" \
++		LIBXML2_LIBS="$(LIBXML_LIBTOOL_LIBS)" \
+ 		$(if $(filter MACOSX,$(OS)),--prefix=/@.__________________________________________________URELIB) \
+ 		$(if $(filter-out LINUX FREEBSD,$(OS)),,LDFLAGS="-Wl$(COMMA)-z$(COMMA)origin -Wl$(COMMA)-rpath,\\"\$$\$$ORIGIN) \
+ 		$(if $(filter-out SOLARIS,$(OS)),,LDFLAGS="-Wl$(COMMA)-z$(COMMA)origin -Wl$(COMMA)-R$(COMMA)\\"\$$\$$ORIGIN) \
+diff --git a/external/poppler/StaticLibrary_poppler.mk b/external/poppler/StaticLibrary_poppler.mk
+index 8bf9f528ee9e..6a2f8e2c2883 100644
+--- a/external/poppler/StaticLibrary_poppler.mk
++++ b/external/poppler/StaticLibrary_poppler.mk
+@@ -20,6 +20,7 @@ $(eval $(call gb_StaticLibrary_set_include,poppler,\
+ 	-I$(WORKDIR)/UnpackedTarball/poppler/fofi \
+ 	-I$(WORKDIR)/UnpackedTarball/poppler/goo \
+ 	-I$(WORKDIR)/UnpackedTarball/poppler/poppler \
++	$(LIBJPEG_CFLAGS) \
+ 	$$(INCLUDE) \
+ ))
+ 
+diff --git a/sdext/Executable_xpdfimport.mk b/sdext/Executable_xpdfimport.mk
+index 360358d450d2..6487b81b90e5 100644
+--- a/sdext/Executable_xpdfimport.mk
++++ b/sdext/Executable_xpdfimport.mk
+@@ -16,6 +16,18 @@ $(eval $(call gb_Executable_use_externals,xpdfimport,\
+     zlib \
+ ))
+ 
++ifneq ($(SYSTEM_ZLIB),)
++    $(call gb_LinkTarget_add_libs,$(1),$(ZLIB_LIBS))
++endif
++
++ifneq ($(SYSTEM_LIBJPEG),)
++    $(call gb_LinkTarget_add_libs,$(1),$(LIBJPEG_LIBS))
++endif
++
++ifneq ($(SYSTEM_LIBPNG),)
++    $(call gb_LinkTarget_add_libs,$(1),$(LIBPNG_LIBS))
++endif
++
+ $(eval $(call gb_Executable_add_exception_objects,xpdfimport,\
+     sdext/source/pdfimport/xpdfwrapper/pdfioutdev_gpl \
+     sdext/source/pdfimport/xpdfwrapper/pnghelper \
+diff --git a/shell/Library_shlxthdl.mk b/shell/Library_shlxthdl.mk
+index 4207c76037b1..43f9cd102616 100644
+--- a/shell/Library_shlxthdl.mk
++++ b/shell/Library_shlxthdl.mk
+@@ -11,6 +11,7 @@ $(eval $(call gb_Library_Library,shlxthdl))
+ 
+ $(eval $(call gb_Library_set_include,shlxthdl,\
+ 	-I$(SRCDIR)/shell/inc \
++	$(ZLIB_CFLAGS) \
+ 	$$(INCLUDE) \
+ ))
+ 
+@@ -25,6 +26,14 @@ $(eval $(call gb_Library_use_externals,shlxthdl,\
+ 	zlib \
+ ))
+ 
++ifneq ($(SYSTEM_ZLIB),)
++    $(call gb_LinkTarget_add_libs,$(1),$(ZLIB_LIBS))
++endif
++
++ifneq ($(SYSTEM_LIBPNG),)
++    $(call gb_LinkTarget_add_libs,$(1),$(LIBPNG_LIBS))
++endif
++
+ $(eval $(call gb_Library_use_system_win32_libs,shlxthdl,\
+ 	advapi32 \
+ 	comctl32 \
+diff --git a/xmlsecurity/Library_xsec_xmlsec.mk b/xmlsecurity/Library_xsec_xmlsec.mk
+index bd2cb6abef20..464405a4a7c6 100644
+--- a/xmlsecurity/Library_xsec_xmlsec.mk
++++ b/xmlsecurity/Library_xsec_xmlsec.mk
+@@ -89,11 +89,17 @@ $(eval $(call gb_Library_add_defs,xsec_xmlsec,\
+ 	-DXMLSEC_CRYPTO_MSCRYPTO \
+ ))
+ 
++ifeq ($(SYSTEM_XMLSEC),)
+ $(eval $(call gb_Library_add_libs,xsec_xmlsec,\
+ 	$(call gb_UnpackedTarball_get_dir,xmlsec)/win32/binaries/libxmlsec-mscng.lib \
+ 	$(call gb_UnpackedTarball_get_dir,xmlsec)/win32/binaries/libxmlsec.lib \
+ ))
+ 
++else
++$(eval $(call gb_Library_add_libs,xsec_xmlsec,$(XMLSEC_LIBS)))
++
++endif
++
+ $(eval $(call gb_Library_use_system_win32_libs,xsec_xmlsec,\
+ 	crypt32 \
+ 	advapi32 \
+diff --git a/config_host.mk.in b/config_host.mk.in
+index d5b68a7a1851..381983cd6668 100644
+--- a/config_host.mk.in
++++ b/config_host.mk.in
+@@ -587,6 +587,8 @@ export SYSTEM_OPENSSL=@SYSTEM_OPENSSL@
+ export SYSTEM_PAGEMAKER=@SYSTEM_PAGEMAKER@
+ export SYSTEM_POPPLER=@SYSTEM_POPPLER@
+ export SYSTEM_POSTGRESQL=@SYSTEM_POSTGRESQL@
++export POSTGRESQL_LIBS=@POSTGRESQL_LIBS@
++export POSTGRESQL_CFLAGS=@POSTGRESQL_CFLAGS@
+ export SYSTEM_PYTHON=@SYSTEM_PYTHON@
+ export SYSTEM_QRCODEGEN=@SYSTEM_QRCODEGEN@
+ export SYSTEM_QXP=@SYSTEM_QXP@
