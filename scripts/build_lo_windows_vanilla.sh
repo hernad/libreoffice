@@ -12,7 +12,7 @@ THEME=colibre
 #THEME=sukapura_svg
 
 LO_PRODUCT_NAME=ZiherO
-LO_PRODUCT_VERSION=7.1.5.100
+LO_PRODUCT_VERSION=7.2.0.100
 
 #LO_DEBUG=" --enable-dbgutil"
 
