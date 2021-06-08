@@ -188,7 +188,7 @@ WITH_SYSTEM=
   #Copyright (C) Microsoft Corporation.  All rights reserved.
   #LINK : fatal error LNK1181: cannot open input file 'libxml2.lib'
 
-
+DISABLE_FEATURES=" --disable-lotuswordpro --disable-firebird-sdbc --disable-mariadb-sdbc --disable-online-update --disable-sdremote --disable-sdremote-bluetooth --disable-breakpad --disable-online-update"
 
 if [ "$MAKE_ONLY" == "0" ]; then
 make clean
@@ -208,18 +208,12 @@ rm -f config_host/*.h
     --enable-release-build \
     --disable-scripting-beanshell \
     --disable-scripting-javascript \
-    --disable-lotuswordpro \
-    --disable-firebird-sdbc \
     --disable-cve-tests $ODK_FEATURE $GALLERY \
     --disable-report-builder \
     --disable-lpsolve \
     --disable-coinmp \
     --with-help=no \
-    --disable-online-update \
-    --disable-sdremote \
-    --disable-sdremote-bluetooth \
-    $EXTENSIONS $PDF_IMPORT $WEBDAV $WITH_SYSTEM $LO_DEBUG $SKIA_FEATURE $JAVA_FEATURE \
-    --enable-breakpad       #Enables breakpad for crash reporting.
+    $DISABLE_FEATURES $EXTENSIONS $PDF_IMPORT $WEBDAV $WITH_SYSTEM $LO_DEBUG $SKIA_FEATURE $JAVA_FEATURE 
 
 fi
 
