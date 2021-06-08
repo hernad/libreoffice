@@ -1,0 +1,24 @@
+diff --git a/oox/source/crypto/CryptTools.cxx b/oox/source/crypto/CryptTools.cxx
+index ff11ebbc0436..60acb9b337cc 100644
+--- a/oox/source/crypto/CryptTools.cxx
++++ b/oox/source/crypto/CryptTools.cxx
+@@ -76,6 +76,10 @@ struct CryptoImpl
+         EVP_CIPHER_CTX_set_padding(mpContext.get(), 0);
+     }
+ 
++#pragma warning( push )
++#pragma warning( disable : 4701 )
++#pragma warning( disable : 4703 )
++
+     void setupCryptoHashContext(std::vector<sal_uInt8>& rKey, CryptoHashType eType)
+     {
+         mpHmacContext.reset(new HMAC_CTX);
+@@ -93,6 +97,8 @@ struct CryptoImpl
+         HMAC_Init(mpHmacContext.get(), rKey.data(), rKey.size(), aEvpMd);
+     }
+ 
++#pragma warning( pop )
++
+     ~CryptoImpl()
+     {
+         if (mpContext)

@@ -1,0 +1,95 @@
+diff --git a/external/Module_external.mk b/external/Module_external.mk
+index 286759927781..5f53bc6a7f1a 100644
+--- a/external/Module_external.mk
++++ b/external/Module_external.mk
+@@ -15,7 +15,7 @@ endif
+ 
+ $(eval $(call gb_Module_add_moduledirs,external,\
+ 	$(if $(filter-out iOS,$(OS)),$(call gb_Helper_optional,XMLSEC,xmlsec)) \
+-	$(call gb_Helper_optional,ABW,libabw) \
++	$(if $(WITH_ABIWORD),$(call gb_Helper_optional,ABW,libabw)) \
+ 	$(call gb_Helper_optional,APACHE_COMMONS,apache-commons) \
+ 	$(call gb_Helper_optional,APR,apr) \
+ 	$(call gb_Helper_optional,BOOST,boost) \
+@@ -23,24 +23,24 @@ $(eval $(call gb_Module_add_moduledirs,external,\
+ 	$(call gb_Helper_optional,BSH,beanshell) \
+ 	$(call gb_Helper_optional,BZIP2,bzip2) \
+ 	$(call gb_Helper_optional,CAIRO,cairo) \
+-	$(call gb_Helper_optional,CDR,libcdr) \
++	$(if $(WITH_CORELDRAW),$(call gb_Helper_optional,CDR,libcdr)) \
+ 	$(call gb_Helper_optional,OPENCL,clew) \
+-	$(call gb_Helper_optional,CLUCENE,clucene) \
++	$(if $(WITH_HELP_BUILD),$(call gb_Helper_optional,CLUCENE,clucene)) \
+ 	$(call gb_Helper_optional,LIBCMIS,libcmis) \
+ 	$(call gb_Helper_optional,COINMP,coinmp) \
+ 	$(call gb_Helper_optional,CPPUNIT,cppunit) \
+ 	$(call gb_Helper_optional,CT2N,ct2n) \
+ 	$(call gb_Helper_optional,CURL,curl) \
+ 	dtoa \
+-	$(call gb_Helper_optional,EBOOK,libebook) \
++	$(if $(WITH_EBOOK_BUILD),$(call gb_Helper_optional,EBOOK,libebook)) \
+ 	$(call gb_Helper_optional,EPM,epm) \
+ 	$(call gb_Helper_optional,EPOXY,epoxy) \
+-	$(call gb_Helper_optional,EPUBGEN,libepubgen) \
++	$(if $(WITH_WORDPERFECT),$(call gb_Helper_optional,EPUBGEN,libepubgen)) \
+ 	$(call gb_Helper_optional,ETONYEK,libetonyek) \
+ 	$(call gb_Helper_optional,EXPAT,expat) \
+ 	$(call gb_Helper_optional,FIREBIRD,firebird) \
+ 	$(call gb_Helper_optional,FONTCONFIG,fontconfig) \
+-	$(call gb_Helper_optional,FREEHAND,libfreehand) \
++	$(if $(WITH_WORDPERFECT),$(call gb_Helper_optional,FREEHAND,libfreehand)) \
+ 	$(call gb_Helper_optional,FREETYPE,freetype) \
+ 	$(call gb_Helper_optional,GLM,glm) \
+ 	$(call gb_Helper_optional,GPGMEPP,gpgmepp) \
+@@ -73,38 +73,38 @@ $(eval $(call gb_Module_add_moduledirs,external,\
+ 	$(call gb_Helper_optional,MDNSRESPONDER,mdnsresponder) \
+ 	$(if $(WITH_EXTRA_EXTENSIONS),misc_extensions) \
+ 	$(call gb_Helper_optional,MORE_FONTS,more_fonts) \
+-	$(call gb_Helper_optional,MSPUB,libmspub) \
+-	$(call gb_Helper_optional,MWAW,libmwaw) \
++	$(if $(WITH_OLD_MSPUBLISHER),$(call gb_Helper_optional,MSPUB,libmspub)) \
++	$(if $(WITH_OLD_MACINTOSH),$(call gb_Helper_optional,MWAW,libmwaw)) \
+ 	$(call gb_Helper_optional,MYTHES,mythes) \
+ 	$(call gb_Helper_optional,NEON,neon) \
+ 	$(call gb_Helper_optional,NSS,nss) \
+-	$(call gb_Helper_optional,ODFGEN,libodfgen) \
++	$(if $(WITH_WORDPERFECT),$(call gb_Helper_optional,ODFGEN,libodfgen)) \
+ 	$(call gb_Helper_optional,OPENLDAP,openldap) \
+ 	$(call gb_Helper_optional,OPENSSL,openssl) \
+ 	$(call gb_Helper_optional,ORCUS,liborcus) \
+ 	$(call gb_Helper_optional,OWNCLOUD_ANDROID_LIB,owncloud-android-lib) \
+-	$(call gb_Helper_optional,PAGEMAKER,libpagemaker) \
++	$(if $(WITH_ADOBEPAGEMAKER),$(call gb_Helper_optional,PAGEMAKER,libpagemaker)) \
+ 	$(call gb_Helper_optional,PDFIUM,pdfium) \
+ 	$(call gb_Helper_optional,POPPLER,poppler) \
+ 	$(call gb_Helper_optional,POSTGRESQL,postgresql) \
+ 	$(call gb_Helper_optional,PYTHON,python3) \
+-	$(call gb_Helper_optional,QXP,libqxp) \
++	$(if $(WITH_QUARKXPRESS),$(call gb_Helper_optional,QXP,libqxp)) \
+ 	$(call gb_Helper_optional,QRCODEGEN,qrcodegen) \
+ 	$(call gb_Helper_optional,REDLAND,redland) \
+-	$(call gb_Helper_optional,REVENGE,librevenge) \
++	$(if $(WITH_WORDPERFECT),$(call gb_Helper_optional,REVENGE,librevenge)) \
+ 	$(call gb_Helper_optional,RHINO,rhino) \
+ 	$(call gb_Helper_optional,SERF,serf) \
+ 	$(call gb_Helper_optional,SKIA,skia) \
+-	$(call gb_Helper_optional,STAROFFICE,libstaroffice) \
++	$(if $(WITH_STAROFFICE),$(call gb_Helper_optional,STAROFFICE,libstaroffice)) \
+ 	$(if $(filter WNT,$(OS)),twain_dsm) \
+ 	$(call gb_Helper_optional,UCPP,ucpp) \
+-	$(call gb_Helper_optional,VISIO,libvisio) \
+-	$(call gb_Helper_optional,WPD,libwpd) \
+-	$(call gb_Helper_optional,WPG,libwpg) \
+-	$(call gb_Helper_optional,WPS,libwps) \
++	$(if $(WITH_VISIO),$(call gb_Helper_optional,VISIO,libvisio)) \
++	$(if $(WITH_STAROFFICE),$(call gb_Helper_optional,WPD,libwpd)) \
++	$(if $(WITH_STAROFFICE),$(call gb_Helper_optional,WPG,libwpg)) \
++	$(if $(WITH_STAROFFICE),$(call gb_Helper_optional,WPS,libwps)) \
+ 	$(call gb_Helper_optional,XSLTML,xsltml) \
+ 	$(call gb_Helper_optional,ZLIB,zlib) \
+-	$(call gb_Helper_optional,ZMF,libzmf) \
++	$(if $(WITH_ZONERDRAW),$(call gb_Helper_optional,ZMF,libzmf)) \
+ ))
+ 
+ # vim: set noet sw=4 ts=4:
+ 

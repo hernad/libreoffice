@@ -1,0 +1,238 @@
+diff --git a/RepositoryModule_build.mk b/RepositoryModule_build.mk
+index 541940515eba..ae58e70a09c4 100644
+--- a/RepositoryModule_build.mk
++++ b/RepositoryModule_build.mk
+@@ -88,8 +88,10 @@ $(eval $(call gb_Module_add_moduledirs,cross_toolset,\
+ 			xmloff \
+ 			xmlscript \
+ 		) \
+-		helpcompiler \
+-		xmlhelp \
++		$(if $(WITH_HELP_BUILD), \
++			helpcompiler \
++			xmlhelp \
++		) \
+ 	) \
+ 	$(call gb_Helper_optional,QADEVOOO,qadevOOo) \
+ ))
+diff --git a/RepositoryModule_host.mk b/RepositoryModule_host.mk
+index 3155224ffd72..8b4018c6a911 100644
+--- a/RepositoryModule_host.mk
++++ b/RepositoryModule_host.mk
+@@ -61,7 +61,7 @@ $(eval $(call gb_Module_add_moduledirs,libreoffice,\
+ 	formula \
+ 	$(call gb_Helper_optional,DESKTOP,fpicker) \
+ 	framework \
+-	$(call gb_Helper_optional,DESKTOP,helpcompiler) \
++	$(call gb_Helper_optional,HELP,helpcompiler) \
+ 	$(call gb_Helper_optional,HELP,helpcontent2) \
+ 	hwpfilter \
+ 	i18nlangtag \
+@@ -152,13 +152,13 @@ $(eval $(call gb_Module_add_moduledirs,libreoffice,\
+ 	winaccessibility \
+ 	wizards \
+ 	writerfilter \
+-	writerperfect \
++	$(call gb_Helper_optional,WPFT,writerperfect) \
+ 	xmerge \
+-	$(call gb_Helper_optional,DESKTOP,xmlhelp) \
++	$(call gb_Helper_optional,HELP,xmlhelp) \
+ 	xmloff \
+ 	xmlreader \
+ 	xmlscript \
+-	xmlsecurity \
++	$(if $(ENABLE_NSS),xmlsecurity) \
+ ))
+ 
+ # Especially when building everything with symbols, the linking of the largest
+diff --git a/connectivity/Module_connectivity.mk b/connectivity/Module_connectivity.mk
+index 6a5dd926331b..24623eefaccd 100644
+--- a/connectivity/Module_connectivity.mk
++++ b/connectivity/Module_connectivity.mk
+@@ -62,11 +62,13 @@ endif
+ endif
+ 
+ ifeq ($(OS),WNT)
++ifeq ($(ENABLE_ADO),TRUE)
+ $(eval $(call gb_Module_add_targets,connectivity,\
+ 	Configuration_ado \
+ 	Library_ado \
+ ))
+ endif
++endif
+ 
+ ifeq ($(ENABLE_EVOAB2),TRUE)
+ $(eval $(call gb_Module_add_targets,connectivity,\
+diff --git a/desktop/Library_deployment.mk b/desktop/Library_deployment.mk
+index 887e9eefa4ec..f4e7e6f5c6a1 100644
+--- a/desktop/Library_deployment.mk
++++ b/desktop/Library_deployment.mk
+@@ -71,7 +71,7 @@ $(eval $(call gb_Library_add_exception_objects,deployment,\
+     desktop/source/deployment/registry/sfwk/dp_sfwk \
+ ))
+ 
+-ifneq (,$(filter DESKTOP,$(BUILD_TYPE)))
++ifneq (,$(filter HELP,$(BUILD_TYPE)))
+ 
+ $(eval $(call gb_Library_use_libraries,deployment,\
+     helplinker \
+diff --git a/desktop/Pagein_common.mk b/desktop/Pagein_common.mk
+index c1661a39b641..b2d8a8872852 100644
+--- a/desktop/Pagein_common.mk
++++ b/desktop/Pagein_common.mk
+@@ -59,7 +59,7 @@ $(eval $(call gb_Pagein_add_objects,common,\
+     svt \
+     spl \
+     avmedia \
+-    helplinker \
++    $(if $(filter HELP,$(BUILD_TYPE)),helplinker) \
+     sax \
+     fsstorage \
+     desktopbe1 \
+
+diff --git a/postprocess/Rdb_services.mk b/postprocess/Rdb_services.mk
+index e28de2ef751a..86948ba1f25f 100644
+--- a/postprocess/Rdb_services.mk
++++ b/postprocess/Rdb_services.mk
+@@ -124,10 +124,12 @@ $(eval $(call gb_Rdb_add_components,services,\
+ 	) \
+ 	sccomp/source/solver/swarmsolver \
+ 	writerfilter/util/writerfilter \
++	$(if $(ENABLE_WPFT), \
+ 	writerperfect/source/draw/wpftdraw \
+ 	writerperfect/source/impress/wpftimpress \
+ 	writerperfect/source/writer/wpftwriter \
+ 	writerperfect/source/calc/wpftcalc \
++	) \
+ 	$(if $(filter MACOSX,$(OS)), \
+ 		$(call gb_Helper_optional,AVMEDIA,avmedia/source/macavf/avmediaMacAVF) \
+ 		fpicker/source/aqua/fps_aqua \
+@@ -244,8 +246,10 @@ $(eval $(call gb_Rdb_add_components,services,\
+ 	connectivity/source/cpool/dbpool2 \
+ 	connectivity/source/dbtools/dbtools \
+ 	$(if $(filter WNT,$(OS)), \
++	$(if $(ENABLE_ADO), \
+ 		connectivity/source/drivers/ado/ado \
+ 	) \
++	) \
+ 	connectivity/source/drivers/calc/calc \
+ 	connectivity/source/drivers/dbase/dbase \
+ 	$(if $(ENABLE_EVOAB2), \
+@@ -272,9 +276,11 @@ $(eval $(call gb_Rdb_add_components,services,\
+ 	dbaccess/util/dbu \
+ 	dbaccess/util/sdbt \
+ 	forms/util/frm \
+-	reportdesign/util/rpt \
+-	reportdesign/util/rptui \
+-	reportdesign/util/rptxml \
++	$(if $(ENABLE_DBACCESS), \
++		reportdesign/util/rpt \
++		reportdesign/util/rptui \
++		reportdesign/util/rptxml \
++	) \
+ 	shell/source/backends/localebe/localebe1 \
+ 	$(if $(filter-out ANDROID iOS,$(OS)),\
+ 		connectivity/source/drivers/odbc/odbc \
+@@ -306,7 +312,9 @@ $(eval $(call gb_Rdb_add_components,services,\
+ 	extensions/source/logging/log \
+ 	extensions/source/scanner/scn \
+ 	extensions/source/update/feed/updatefeed \
+-	xmlhelp/util/ucpchelp1 \
++	$(if $(filter HELP,$(BUILD_TYPE)),\
++		xmlhelp/util/ucpchelp1 \
++	) \
+ 	$(if $(filter-out WNT,$(OS)),\
+ 		shell/source/cmdmail/cmdmail \
+ 	) \
+diff --git a/solenv/gbuild/Package.mk b/solenv/gbuild/Package.mk
+index 90e22806c994..c8c3dc767033 100644
+--- a/solenv/gbuild/Package.mk
++++ b/solenv/gbuild/Package.mk
+@@ -78,12 +78,12 @@ $(call gb_Package_get_preparation_target,%) :
+ # should be check that it does not happen in "normal" use, i.e., in
+ # Package_foo makefiles.
+ $(call gb_Package_get_target,%) :
+-	$(call gb_Output_announce,$*,$(true),PKG,2)
+-	$(call gb_Trace_StartRange,$*,PKG)
++	$(call gb_Output_announce,$*,$(true),PACKAGE,2)
++	$(call gb_Trace_StartRange,$*,PACKAGE)
+ 	$(if $(PACKAGE_DEFINED),,$(call gb_Output_error,Something depends on package $* which does not exist.))
+ 	rm -f $@ && \
+ 	mv $(call var2file,$@.tmp,100,$(sort $(FILES))) $@
+-	$(call gb_Trace_EndRange,$*,PKG)
++	$(call gb_Trace_EndRange,$*,PACKAGE)
+ 
+ # for other targets that want to create Packages, does not register at Module
+ define gb_Package_Package_internal
+diff --git a/solenv/gbuild/SdiTarget.mk b/solenv/gbuild/SdiTarget.mk
+index 1b02e7f1699e..12aed1465a17 100644
+--- a/solenv/gbuild/SdiTarget.mk
++++ b/solenv/gbuild/SdiTarget.mk
+@@ -21,9 +21,13 @@
+ gb_SdiTarget_SVIDLDEPS := $(call gb_Executable_get_runtime_dependencies,svidl)
+ gb_SdiTarget_SVIDLCOMMAND := $(call gb_Executable_get_command,svidl)
+ 
++#StarView Interface Definition Language (IDL) Compiler
++
+ $(call gb_SdiTarget_get_target,%) : $(SRCDIR)/%.sdi $(gb_SdiTarget_SVIDLDEPS)
+-	$(call gb_Output_announce,$*,$(true),SDI,1)
+-	$(call gb_Trace_StartRange,$*,SDI)
++    #$(call gb_Output_info,SVIDLCOMMAND-EXEC: $(gb_SdiTarget_SVIDLCOMMAND),StarViewIDL)
++
++	$(call gb_Output_announce,$*,$(true),StarViewIDL,1)
++	$(call gb_Trace_StartRange,$*,StarViewIDL)
+ 	$(call gb_Helper_abbreviate_dirs,\
+ 		mkdir -p $(dir $@))
+ 	$(call gb_Helper_abbreviate_dirs,\
+@@ -36,7 +40,7 @@ $(call gb_SdiTarget_get_target,%) : $(SRCDIR)/%.sdi $(gb_SdiTarget_SVIDLDEPS)
+ 			$(if $(gb_FULLDEPS),-fM$(call gb_SdiTarget_get_dep_target,$*)) \
+ 			$< \
+ 		&& touch $@.hxx)
+-	$(call gb_Trace_EndRange,$*,SDI)
++	$(call gb_Trace_EndRange,$*,StarViewIDL)
+ # touch the hxx file so it's newer than the target - the .hxx only occurs in
+ # generated .d files, so it's not a target yet when building from scratch!
+ 
+diff --git a/solenv/gbuild/extensions/pre_MergedLibsList.mk b/solenv/gbuild/extensions/pre_MergedLibsList.mk
+index 976de14e8967..550f974ba6aa 100644
+--- a/solenv/gbuild/extensions/pre_MergedLibsList.mk
++++ b/solenv/gbuild/extensions/pre_MergedLibsList.mk
+@@ -46,7 +46,7 @@ MERGE_LIBRARY_LIST := \
+ 	fwl \
+ 	$(if $(filter WNT,$(OS)),gdipluscanvas) \
+ 	guesslang \
+-	$(call gb_Helper_optional,DESKTOP,helplinker) \
++	$(call gb_Helper_optional,HELP,helplinker) \
+ 	hyphen \
+ 	i18nsearch \
+ 	i18npool \
+diff --git a/tools/CustomTarget_reversemap.mk b/tools/CustomTarget_reversemap.mk
+index 94a697f1a6af..becbd8fde886 100644
+--- a/tools/CustomTarget_reversemap.mk
++++ b/tools/CustomTarget_reversemap.mk
+@@ -14,9 +14,9 @@ $(call gb_CustomTarget_get_target,tools/string) : \
+ $(call gb_CustomTarget_get_workdir,tools/string)/reversemap.cxx : \
+ 		$(call gb_Executable_get_runtime_dependencies,bestreversemap) \
+ 		| $(call gb_CustomTarget_get_workdir,tools/string)/.dir
+-	$(call gb_Output_announce,$(subst $(WORKDIR)/,,$@),$(true),BRM,1)
+-	$(call gb_Trace_StartRange,$(subst $(WORKDIR)/,,$@),BRM)
++	$(call gb_Output_announce,$(subst $(WORKDIR)/,,$@),$(true),BestRevMap,1)
++	$(call gb_Trace_StartRange,$(subst $(WORKDIR)/,,$@),BestRevMap)
+ 	$(call gb_Helper_execute,bestreversemap > $@)
+-	$(call gb_Trace_EndRange,$(subst $(WORKDIR)/,,$@),BRM)
++	$(call gb_Trace_EndRange,$(subst $(WORKDIR)/,,$@),BestRevMap)
+ 
+ # vim: set noet sw=4 ts=4:
+diff --git a/xmlhelp/Library_ucpchelp1.mk b/xmlhelp/Library_ucpchelp1.mk
+index 506ddad704d5..cb2e43a3bd16 100644
+--- a/xmlhelp/Library_ucpchelp1.mk
++++ b/xmlhelp/Library_ucpchelp1.mk
+@@ -34,7 +34,7 @@ $(eval $(call gb_Library_use_libraries,ucpchelp1,\
+ 	comphelper \
+ 	cppu \
+ 	cppuhelper \
+-	helplinker \
++	$(if $(filter HELP,$(BUILD_TYPE)),helplinker) \
+ 	sal \
+ 	tl \
+ 	ucbhelper \

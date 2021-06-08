@@ -1,0 +1,13 @@
+diff --git a/desktop/source/lib/init.cxx b/desktop/source/lib/init.cxx
+index a8bf2cb94042..f836ca077165 100644
+--- a/desktop/source/lib/init.cxx
++++ b/desktop/source/lib/init.cxx
+@@ -5997,7 +5997,7 @@ static int lo_initialize(LibreOfficeKit* pThis, const char* pAppPath, const char
+                 Application::ReleaseSolarMutex();
+             }
+ 
+-            setLanguageAndLocale("en-US");
++            setLanguageAndLocale("bs");
+         }
+ 
+         if (eStage != PRE_INIT)
