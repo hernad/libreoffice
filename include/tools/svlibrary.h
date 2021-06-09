@@ -8,7 +8,8 @@
  */
 
 #ifndef SVLIBRARY
-#define SVLIBRARY(Base) SAL_MODULENAME(Base "lo")
+#include <sal/config.h>
+#define SVLIBRARY(Base) SAL_MODULENAME(Base DLL_FNAME_POSTFIX)
 #include <osl/module.h>
 #endif
 
