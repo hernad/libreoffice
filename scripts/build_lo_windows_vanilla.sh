@@ -197,10 +197,14 @@ rm -f config_host/*.h
 
 #   --with-theme="$THEME"
 
+#    --disable-lpsolve \
+#    --disable-coinmp \
+
 ./autogen.sh --with-lang="bs" \
    $ENABLE_64_BIT --with-locales="bs" \
    $TLS_METHOD \
     --with-vendor="hernad" \
+    --disable-community-flavor \
     --with-visual-studio=$VS_VERSION \
     --without-doxygen \
     --with-product-name="$LO_PRODUCT_NAME" \
@@ -212,14 +216,12 @@ rm -f config_host/*.h
     --disable-firebird-sdbc \
     --disable-cve-tests $ODK_FEATURE $GALLERY \
     --disable-report-builder \
-    --disable-lpsolve \
-    --disable-coinmp \
     --with-help=no \
     --disable-online-update \
     --disable-sdremote \
     --disable-sdremote-bluetooth \
     $EXTENSIONS $PDF_IMPORT $WEBDAV $WITH_SYSTEM $LO_DEBUG $SKIA_FEATURE $JAVA_FEATURE \
-    --enable-breakpad       #Enables breakpad for crash reporting.
+    --disable-breakpad       #Enables breakpad for crash reporting.
 
 fi
 
