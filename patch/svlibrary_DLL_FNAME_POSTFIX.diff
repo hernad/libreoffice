@@ -1,0 +1,14 @@
+diff --git a/include/tools/svlibrary.h b/include/tools/svlibrary.h
+index df3f7203140c..96d6731ac1f8 100644
+--- a/include/tools/svlibrary.h
++++ b/include/tools/svlibrary.h
+@@ -8,7 +8,8 @@
+  */
+ 
+ #ifndef SVLIBRARY
+-#define SVLIBRARY(Base) SAL_MODULENAME(Base "lo")
++#include <sal/config.h>
++#define SVLIBRARY(Base) SAL_MODULENAME(Base DLL_FNAME_POSTFIX)
+ #include <osl/module.h>
+ #endif
+ 
