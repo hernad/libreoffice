@@ -4,7 +4,7 @@
 #ENVARS_ONLY=0 MAKE_ONLY=0 PARALLELISM=12 scripts/build_lo_linux.sh
 
 echo "========== fedora ====================="
-echo "sudo dnf install libICE-devel libSM-devel libXt-devel gstreamer1-devel ant"
+echo "sudo dnf install libICE-devel libSM-devel libXt-devel gstreamer1-devel ant nasm"
 
 
 THEME=colibre
