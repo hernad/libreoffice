@@ -41,6 +41,8 @@
 #include "tcvtutf8.hxx"
 #include "tenchelp.hxx"
 
+#define SAL_TEXTENC_MODULE SAL_MODULENAME( "sal_textenc" DLL_FNAME_POSTFIX )
+ 
 #define NOTABUNI_START 0xFF
 #define NOTABUNI_END 0x00
 
@@ -381,7 +383,9 @@ void thisModule() {}
 class FullTextEncodingData {
 public:
     FullTextEncodingData() {
-        if (!module_.loadRelative(&thisModule, SAL_MODULENAME("sal_textenclo")))
+
+
+        if (!module_.loadRelative(&thisModule, SAL_TEXTENC_MODULE ))
         {
             SAL_WARN( "sal.textenc", "Loading sal_textenc library failed" );
             std::abort();

@@ -15,7 +15,7 @@ $(eval $(call gb_Package_add_files,instsetoo_native_setup,$(LIBO_ETC_FOLDER),\
 	$(if $(filter DESKTOP,$(BUILD_TYPE)),$(if $(filter-out MACOSX,$(OS)), \
 	    $(call gb_Helper_get_rcfile,redirect))) \
 	$(call gb_Helper_get_rcfile,setup) \
-	$(call gb_Helper_get_rcfile,soffice) \
+	$(call gb_Helper_get_rcfile,zoffice) \
 	$(call gb_Helper_get_rcfile,louno) \
 	$(call gb_Helper_get_rcfile,version) \
 ))

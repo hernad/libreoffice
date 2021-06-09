@@ -66,7 +66,7 @@ static void copy_ustr_n( void *dest, const void *source, size_t length ) { memcp
 #define SVERSION_NAME       "sversion"
 #define SVERSION_SECTION    "Versions"
 #define SVERSION_SOFFICE    "StarOffice"
-#define SVERSION_PROFILE    "soffice.ini"
+#define SVERSION_PROFILE    "zoffice.ini"
 #define SVERSION_DIRS       { "bin", "program" }
 #define SVERSION_USER       "user"
 

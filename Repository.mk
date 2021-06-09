@@ -168,19 +168,19 @@ $(eval $(call gb_Helper_register_executables_for_install,OOO,base, \
 
 $(eval $(call gb_Helper_register_executables_for_install,OOO,calc_brand, \
 	$(if $(filter WNT,$(OS)), \
-		scalc \
+		zcalc \
 	) \
 ))
 
 $(eval $(call gb_Helper_register_executables_for_install,OOO,draw_brand, \
 	$(if $(filter WNT,$(OS)), \
-		sdraw \
+		zdraw \
 	) \
 ))
 
 $(eval $(call gb_Helper_register_executables_for_install,OOO,impress_brand, \
 	$(if $(filter WNT,$(OS)), \
-		simpress \
+		zimpress \
 	) \
 ))
 
@@ -193,7 +193,7 @@ $(eval $(call gb_Helper_register_executables_for_install,OOO,math_brand, \
 $(eval $(call gb_Helper_register_executables_for_install,OOO,writer_brand, \
 	$(if $(filter WNT,$(OS)), \
 		sweb \
-		swriter \
+		zwriter \
 	) \
 ))
 
@@ -253,7 +253,7 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,calc, \
 	scd \
 	scfilt \
 	scui \
-	wpftcalc \
+	$(call gb_Helper_optional,WPFT,wpftcalc) \
 	solver \
 	$(call gb_Helper_optional,SCRIPTING,vbaobj) \
 ))
@@ -367,7 +367,7 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,ooo, \
 	fwk \
 	$(if $(filter WNT,$(OS)),gdipluscanvas) \
 	guesslang \
-	$(if $(filter DESKTOP,$(BUILD_TYPE)),helplinker) \
+	$(if $(filter HELP,$(BUILD_TYPE)),helplinker) \
 	i18npool \
 	i18nsearch \
     gie \
@@ -445,7 +445,9 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,ooo, \
 	) \
 	vcl \
 	vclcanvas \
-	writerperfect \
+	$(if $(ENABLE_WRITERPERFECT), \
+		writerperfect \
+	) \
 	xmlscript \
 	xmlfa \
 	xmlfd \
@@ -507,6 +509,7 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,reportbuilder, \
 ))
 
 $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,writer, \
+	writerfilter \
 	hwp \
 	$(if $(ENABLE_LWP),lwpft) \
 	msword \
@@ -514,8 +517,7 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,writer, \
 	swui \
 	t602filter \
 	$(call gb_Helper_optional,SCRIPTING,vbaswobj) \
-	wpftwriter \
-	writerfilter \
+	$(call gb_Helper_optional,WPFT,wpftwriter) \
 	$(call gb_Helper_optional,DBCONNECTIVITY,writer) \
 ))
 
@@ -625,8 +627,8 @@ $(eval $(call gb_Helper_register_libraries_for_install,PLAINLIBS_OOO,ooo, \
 	ucphier1 \
 	ucppkg1 \
 	unopkgapp \
-	xmlsecurity \
-	xsec_xmlsec \
+	$(if $(ENABLE_NSS),xmlsecurity) \
+	$(if $(ENABLE_NSS),xsec_xmlsec) \
 	xstor \
 	$(if $(filter $(OS),MACOSX), \
 		macab1 \
@@ -1177,7 +1179,7 @@ $(eval $(call gb_Helper_register_uiconfigs,\
 	svx \
 	uui \
 	vcl \
-	writerperfect \
+	$(if $(ENABLE_WFP),writerperfect) \
 	$(if $(ENABLE_NSS),xmlsec) \
 ))
 

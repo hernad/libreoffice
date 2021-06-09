@@ -43,7 +43,7 @@
     <glade-widget-class title="Vertical box hiding children depending on context" name="sfxlo-ContextVBox"
                         generic-name="ContextVBox" parent="GtkBox"
                         icon-name="widget-gtk-box"/>
-    <glade-widget-class title="Managed Menu Button" name="svtlo-ManagedMenuButton"
+    <glade-widget-class title="Managed Menu Button" name="svtzh-ManagedMenuButton"
                         generic-name="ManagedMenuButton" parent="GtkButton"
                         icon-name="widget-gtk-button"/>
     <glade-widget-class title="NotebookBar Toolbar Addons" name="NotebookBarAddonsToolMergePoint"

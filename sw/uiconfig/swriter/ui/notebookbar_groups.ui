@@ -949,7 +949,7 @@
                 <property name="can_focus">False</property>
                 <property name="spacing">3</property>
                 <child>
-                  <object class="svtlo-ManagedMenuButton" id="paragraphstyleb:stylemenu">
+                  <object class="svtzh-ManagedMenuButton" id="paragraphstyleb:stylemenu">
                     <property name="label" translatable="yes" context="notebookbar_groups|paragraphstyleb">Style</property>
                     <property name="width_request">70</property>
                     <property name="visible">True</property>
@@ -1474,7 +1474,7 @@
           </packing>
         </child>
         <child>
-          <object class="sfxlo-ContextVBox" id="ContextContainer">
+          <object class="sfxzh-ContextVBox" id="ContextContainer">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="orientation">vertical</property>
@@ -1568,7 +1568,7 @@
                         <property name="can_focus">False</property>
                         <property name="orientation">vertical</property>
                         <child>
-                          <object class="svtlo-ManagedMenuButton" id="linksb:linksmenu">
+                          <object class="svtzh-ManagedMenuButton" id="linksb:linksmenu">
                             <property name="label" translatable="yes" context="notebookbar_groups|linksb">Links</property>
                             <property name="height_request">26</property>
                             <property name="visible">True</property>

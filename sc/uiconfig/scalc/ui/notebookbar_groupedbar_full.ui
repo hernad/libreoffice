@@ -3164,14 +3164,14 @@
         <property name="can_focus">False</property>
         <property name="orientation">vertical</property>
         <child>
-          <object class="sfxlo-PriorityHBox" id="DefaultBox1">
+          <object class="sfxzh-PriorityHBox" id="DefaultBox1">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="margin_left">5</property>
             <property name="margin_right">5</property>
             <property name="baseline_position">bottom</property>
             <child>
-              <object class="sfxlo-DropdownBox" id="SectionTools">
+              <object class="sfxzh-DropdownBox" id="SectionTools">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="halign">end</property>
@@ -3192,7 +3192,7 @@
                             <property name="halign">end</property>
                             <property name="hexpand">True</property>
                             <child>
-                              <object class="sfxlo-NotebookbarToolBox" id="SectionBottom2">
+                              <object class="sfxzh-NotebookbarToolBox" id="SectionBottom2">
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="toolbar_style">icons</property>
@@ -3216,7 +3216,7 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="svtlo-ManagedMenuButton" id="menub:MenuSettings">
+                              <object class="svtzh-ManagedMenuButton" id="menub:MenuSettings">
                                 <property name="label" translatable="yes" context="notebookbar_groupedbar_full|menub">_Menu</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -3246,7 +3246,7 @@
                             <property name="halign">end</property>
                             <property name="hexpand">True</property>
                             <child>
-                              <object class="sfxlo-NotebookbarToolBox" id="SectionBottom3">
+                              <object class="sfxzh-NotebookbarToolBox" id="SectionBottom3">
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="toolbar_style">icons</property>
@@ -3270,7 +3270,7 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="svtlo-ManagedMenuButton" id="toolsb:MenuTools">
+                              <object class="svtzh-ManagedMenuButton" id="toolsb:MenuTools">
                                 <property name="label" translatable="yes" context="notebookbar_groupedbar_full|toolsb">_Tools</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -3300,7 +3300,7 @@
                             <property name="halign">end</property>
                             <property name="hexpand">True</property>
                             <child>
-                              <object class="sfxlo-NotebookbarToolBox" id="thirdExt2">
+                              <object class="sfxzh-NotebookbarToolBox" id="thirdExt2">
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="resize_mode">immediate</property>
@@ -3326,7 +3326,7 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="svtlo-ManagedMenuButton" id="helpb:MenuHelp">
+                              <object class="svtzh-ManagedMenuButton" id="helpb:MenuHelp">
                                 <property name="label" translatable="yes" context="notebookbar_groupedbar_full|helpb">_Help</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -3372,7 +3372,7 @@
               </packing>
             </child>
             <child>
-              <object class="sfxlo-DropdownBox" id="SectionFile">
+              <object class="sfxzh-DropdownBox" id="SectionFile">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <child>
@@ -3385,7 +3385,7 @@
                         <property name="can_focus">False</property>
                         <property name="orientation">vertical</property>
                         <child>
-                          <object class="sfxlo-NotebookbarToolBox" id="first">
+                          <object class="sfxzh-NotebookbarToolBox" id="first">
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <property name="toolbar_style">both-horiz</property>
@@ -3408,7 +3408,7 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="sfxlo-NotebookbarToolBox" id="second">
+                          <object class="sfxzh-NotebookbarToolBox" id="second">
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <property name="toolbar_style">both-horiz</property>
@@ -3435,7 +3435,7 @@
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <child>
-                              <object class="svtlo-ManagedMenuButton" id="fileb:MenuFile">
+                              <object class="svtzh-ManagedMenuButton" id="fileb:MenuFile">
                                 <property name="label" translatable="yes" context="notebookbar_groupedbar_full|fileb">_File</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -3452,7 +3452,7 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="sfxlo-NotebookbarToolBox" id="thirdExt">
+                              <object class="sfxzh-NotebookbarToolBox" id="thirdExt">
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="halign">end</property>
@@ -3521,7 +3521,7 @@
               </packing>
             </child>
             <child>
-              <object class="sfxlo-DropdownBox" id="SectionEdit">
+              <object class="sfxzh-DropdownBox" id="SectionEdit">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <child>
@@ -3551,7 +3551,7 @@
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <child>
-                              <object class="sfxlo-NotebookbarToolBox" id="first1">
+                              <object class="sfxzh-NotebookbarToolBox" id="first1">
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="toolbar_style">both-horiz</property>
@@ -3575,7 +3575,7 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="sfxlo-NotebookbarToolBox" id="first12">
+                              <object class="sfxzh-NotebookbarToolBox" id="first12">
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="halign">end</property>
@@ -3612,7 +3612,7 @@
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <child>
-                              <object class="sfxlo-NotebookbarToolBox" id="second1">
+                              <object class="sfxzh-NotebookbarToolBox" id="second1">
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="toolbar_style">both-horiz</property>
@@ -3636,7 +3636,7 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="sfxlo-NotebookbarToolBox" id="second13">
+                              <object class="sfxzh-NotebookbarToolBox" id="second13">
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="halign">end</property>
@@ -3673,7 +3673,7 @@
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <child>
-                              <object class="svtlo-ManagedMenuButton" id="editb:MenuEdit">
+                              <object class="svtzh-ManagedMenuButton" id="editb:MenuEdit">
                                 <property name="label" translatable="yes" context="notebookbar_groupedbar_full|editb">_Edit</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
@@ -3690,7 +3690,7 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="sfxlo-NotebookbarToolBox" id="thirdExt1">
+                              <object class="sfxzh-NotebookbarToolBox" id="thirdExt1">
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="halign">end</property>
@@ -3744,12 +3744,12 @@
               </packing>
             </child>
             <child>
-              <object class="sfxlo-ContextVBox" id="ContextContainer">
+              <object class="sfxzh-ContextVBox" id="ContextContainer">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="orientation">vertical</property>
                 <child>
-                  <object class="sfxlo-PriorityMergedHBox" id="DefaultBox">
+                  <object class="sfxzh-PriorityMergedHBox" id="DefaultBox">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
@@ -3781,7 +3781,7 @@
                                 <property name="vexpand">True</property>
                                 <property name="orientation">vertical</property>
                                 <child>
-                                  <object class="sfxlo-NotebookbarToolBox" id="first2">
+                                  <object class="sfxzh-NotebookbarToolBox" id="first2">
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
                                     <property name="toolbar_style">icons</property>
@@ -3809,7 +3809,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="second2">
+                                      <object class="sfxzh-NotebookbarToolBox" id="second2">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">both-horiz</property>
@@ -3833,7 +3833,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="second12">
+                                      <object class="sfxzh-NotebookbarToolBox" id="second12">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -3870,7 +3870,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="paragraphstyleb:MenuStyle">
+                                      <object class="svtzh-ManagedMenuButton" id="paragraphstyleb:MenuStyle">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|paragraphstyleb">St_yles</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -3887,7 +3887,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="third3Ext">
+                                      <object class="sfxzh-NotebookbarToolBox" id="third3Ext">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -3982,7 +3982,7 @@
                                         <property name="can_focus">False</property>
                                         <property name="orientation">vertical</property>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="first3">
+                                          <object class="sfxzh-NotebookbarToolBox" id="first3">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">icons</property>
@@ -4023,7 +4023,7 @@
                                             <property name="visible">True</property>
                                             <property name="can_focus">False</property>
                                             <child>
-                                              <object class="sfxlo-NotebookbarToolBox" id="second3">
+                                              <object class="sfxzh-NotebookbarToolBox" id="second3">
                                                 <property name="visible">True</property>
                                                 <property name="can_focus">True</property>
                                                 <property name="halign">start</property>
@@ -4081,7 +4081,7 @@
                                               </packing>
                                             </child>
                                             <child>
-                                              <object class="sfxlo-NotebookbarToolBox" id="second5">
+                                              <object class="sfxzh-NotebookbarToolBox" id="second5">
                                                 <property name="visible">True</property>
                                                 <property name="can_focus">True</property>
                                                 <property name="halign">end</property>
@@ -4143,7 +4143,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="formatb:MenuFormat">
+                                      <object class="svtzh-ManagedMenuButton" id="formatb:MenuFormat">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|formatb">F_ont</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -4160,7 +4160,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="thirdExt4">
+                                      <object class="sfxzh-NotebookbarToolBox" id="thirdExt4">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -4270,7 +4270,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="SectionBottom36">
+                                      <object class="sfxzh-NotebookbarToolBox" id="SectionBottom36">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="hexpand">True</property>
@@ -4306,7 +4306,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="second9">
+                                      <object class="sfxzh-NotebookbarToolBox" id="second9">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">icons</property>
@@ -4389,7 +4389,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="numberb:MenuNumber">
+                                      <object class="svtzh-ManagedMenuButton" id="numberb:MenuNumber">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|numberb">_Number</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -4469,7 +4469,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="second6">
+                                      <object class="sfxzh-NotebookbarToolBox" id="second6">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">icons</property>
@@ -4537,7 +4537,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="first6">
+                                      <object class="sfxzh-NotebookbarToolBox" id="first6">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">icons</property>
@@ -4605,7 +4605,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="paragraphb:MenuParagraph">
+                                      <object class="svtzh-ManagedMenuButton" id="paragraphb:MenuParagraph">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|paragraphb">_Alignment</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -4685,7 +4685,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="second55">
+                                      <object class="sfxzh-NotebookbarToolBox" id="second55">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">icons</property>
@@ -4724,7 +4724,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="second56">
+                                      <object class="sfxzh-NotebookbarToolBox" id="second56">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">icons</property>
@@ -4761,7 +4761,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="second34">
+                                      <object class="sfxzh-NotebookbarToolBox" id="second34">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">icons</property>
@@ -4800,7 +4800,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="second54">
+                                      <object class="sfxzh-NotebookbarToolBox" id="second54">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -4839,7 +4839,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="cellb:MenuCell">
+                                      <object class="svtzh-ManagedMenuButton" id="cellb:MenuCell">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|cellb">_Cells</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -4919,7 +4919,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="first7">
+                                      <object class="sfxzh-NotebookbarToolBox" id="first7">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">both-horiz</property>
@@ -4954,7 +4954,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="second7">
+                                      <object class="sfxzh-NotebookbarToolBox" id="second7">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">icons</property>
@@ -5000,7 +5000,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="insertb:MenuInsert">
+                                      <object class="svtzh-ManagedMenuButton" id="insertb:MenuInsert">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|insertb">_Insert</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -5080,7 +5080,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="second57">
+                                      <object class="sfxzh-NotebookbarToolBox" id="second57">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">both-horiz</property>
@@ -5115,7 +5115,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="second59">
+                                      <object class="sfxzh-NotebookbarToolBox" id="second59">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">icons</property>
@@ -5183,7 +5183,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="datab:MenuData">
+                                      <object class="svtzh-ManagedMenuButton" id="datab:MenuData">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|datab">_Data</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -5263,7 +5263,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="first10">
+                                      <object class="sfxzh-NotebookbarToolBox" id="first10">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">both-horiz</property>
@@ -5298,7 +5298,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="second14">
+                                      <object class="sfxzh-NotebookbarToolBox" id="second14">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">icons</property>
@@ -5355,7 +5355,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="reviewb:MenuReview">
+                                      <object class="svtzh-ManagedMenuButton" id="reviewb:MenuReview">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|reviewb">_Review</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -5435,7 +5435,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="first11">
+                                      <object class="sfxzh-NotebookbarToolBox" id="first11">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">both-horiz</property>
@@ -5470,7 +5470,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="second11">
+                                      <object class="sfxzh-NotebookbarToolBox" id="second11">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">icons</property>
@@ -5527,7 +5527,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="viewb:MenuView">
+                                      <object class="svtzh-ManagedMenuButton" id="viewb:MenuView">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|viewb">_View</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -5588,7 +5588,7 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="sfxlo-PriorityMergedHBox" id="GraphicBox">
+                  <object class="sfxzh-PriorityMergedHBox" id="GraphicBox">
                     <property name="can_focus">False</property>
                     <child>
                       <object class="VclOptionalBox" id="SectionGraphic">
@@ -5623,7 +5623,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="first15">
+                                      <object class="sfxzh-NotebookbarToolBox" id="first15">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">both-horiz</property>
@@ -5647,7 +5647,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="CompressGraphicGroup">
+                                      <object class="sfxzh-NotebookbarToolBox" id="CompressGraphicGroup">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">text</property>
@@ -5682,7 +5682,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="second16">
+                                      <object class="sfxzh-NotebookbarToolBox" id="second16">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">both-horiz</property>
@@ -5706,7 +5706,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="second10">
+                                      <object class="sfxzh-NotebookbarToolBox" id="second10">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">icons</property>
@@ -5752,7 +5752,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="graphicB:MenuGraphic">
+                                      <object class="svtzh-ManagedMenuButton" id="graphicB:MenuGraphic">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|graphicB">Im_age</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -5769,7 +5769,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="third3Ext1">
+                                      <object class="sfxzh-NotebookbarToolBox" id="third3Ext1">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -5861,7 +5861,7 @@
                                         <property name="can_focus">False</property>
                                         <property name="orientation">vertical</property>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="OneStep">
+                                          <object class="sfxzh-NotebookbarToolBox" id="OneStep">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">both-horiz</property>
@@ -5885,7 +5885,7 @@
                                           </packing>
                                         </child>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="BackgroundFront">
+                                          <object class="sfxzh-NotebookbarToolBox" id="BackgroundFront">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">both-horiz</property>
@@ -5921,7 +5921,7 @@
                                         <property name="can_focus">False</property>
                                         <property name="orientation">vertical</property>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="OneStep3">
+                                          <object class="sfxzh-NotebookbarToolBox" id="OneStep3">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">icons</property>
@@ -5945,7 +5945,7 @@
                                           </packing>
                                         </child>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="BackgroundFront2">
+                                          <object class="sfxzh-NotebookbarToolBox" id="BackgroundFront2">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">icons</property>
@@ -5994,7 +5994,7 @@
                                         <property name="can_focus">False</property>
                                         <property name="orientation">vertical</property>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="OneStep4">
+                                          <object class="sfxzh-NotebookbarToolBox" id="OneStep4">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">icons</property>
@@ -6040,7 +6040,7 @@
                                           </packing>
                                         </child>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="BackgroundFront3">
+                                          <object class="sfxzh-NotebookbarToolBox" id="BackgroundFront3">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">icons</property>
@@ -6104,7 +6104,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="arrange:MenuArrange">
+                                      <object class="svtzh-ManagedMenuButton" id="arrange:MenuArrange">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|arrange">_Arrange</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -6121,7 +6121,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="thirdExt8">
+                                      <object class="sfxzh-NotebookbarToolBox" id="thirdExt8">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -6207,7 +6207,7 @@
                                 <property name="vexpand">True</property>
                                 <property name="orientation">vertical</property>
                                 <child>
-                                  <object class="sfxlo-NotebookbarToolBox" id="GrafModeGroup">
+                                  <object class="sfxzh-NotebookbarToolBox" id="GrafModeGroup">
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
                                     <property name="toolbar_style">icons</property>
@@ -6231,7 +6231,7 @@
                                   </packing>
                                 </child>
                                 <child>
-                                  <object class="sfxlo-NotebookbarToolBox" id="GraphicFilterToolboxGroup">
+                                  <object class="sfxzh-NotebookbarToolBox" id="GraphicFilterToolboxGroup">
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
                                     <property name="toolbar_style">both-horiz</property>
@@ -6255,7 +6255,7 @@
                                   </packing>
                                 </child>
                                 <child>
-                                  <object class="svtlo-ManagedMenuButton" id="colorb:MenuColor">
+                                  <object class="svtzh-ManagedMenuButton" id="colorb:MenuColor">
                                     <property name="label" translatable="yes" context="notebookbar_groupedbar_full|colorb">C_olor</property>
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
@@ -6364,7 +6364,7 @@
                                   </packing>
                                 </child>
                                 <child>
-                                  <object class="sfxlo-NotebookbarToolBox" id="third1">
+                                  <object class="sfxzh-NotebookbarToolBox" id="third1">
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
                                     <property name="halign">end</property>
@@ -6443,7 +6443,7 @@
                                 <property name="vexpand">True</property>
                                 <property name="orientation">vertical</property>
                                 <child>
-                                  <object class="sfxlo-NotebookbarToolBox" id="first17">
+                                  <object class="sfxzh-NotebookbarToolBox" id="first17">
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
                                     <property name="toolbar_style">both-horiz</property>
@@ -6467,7 +6467,7 @@
                                   </packing>
                                 </child>
                                 <child>
-                                  <object class="sfxlo-NotebookbarToolBox" id="second19">
+                                  <object class="sfxzh-NotebookbarToolBox" id="second19">
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
                                     <property name="toolbar_style">icons</property>
@@ -6506,7 +6506,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="GridB:MenuGrid">
+                                      <object class="svtzh-ManagedMenuButton" id="GridB:MenuGrid">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|GridB">_Grid</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -6564,7 +6564,7 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="sfxlo-PriorityMergedHBox" id="AnnotationBox">
+                  <object class="sfxzh-PriorityMergedHBox" id="AnnotationBox">
                     <property name="can_focus">False</property>
                     <child>
                       <object class="VclOptionalBox" id="SectionLanguage">
@@ -6595,7 +6595,7 @@
                                 <property name="vexpand">True</property>
                                 <property name="orientation">vertical</property>
                                 <child>
-                                  <object class="sfxlo-NotebookbarToolBox" id="first40">
+                                  <object class="sfxzh-NotebookbarToolBox" id="first40">
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
                                     <property name="toolbar_style">both-horiz</property>
@@ -6619,7 +6619,7 @@
                                   </packing>
                                 </child>
                                 <child>
-                                  <object class="sfxlo-NotebookbarToolBox" id="second45">
+                                  <object class="sfxzh-NotebookbarToolBox" id="second45">
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
                                     <property name="toolbar_style">both-horiz</property>
@@ -6643,7 +6643,7 @@
                                   </packing>
                                 </child>
                                 <child>
-                                  <object class="svtlo-ManagedMenuButton" id="languageb:MenuLanguage">
+                                  <object class="svtzh-ManagedMenuButton" id="languageb:MenuLanguage">
                                     <property name="label" translatable="yes" context="notebookbar_groupedbar_full|languageb">_Language</property>
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
@@ -6716,7 +6716,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="TrackChangesGroup">
+                                      <object class="sfxzh-NotebookbarToolBox" id="TrackChangesGroup">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">both</property>
@@ -6746,7 +6746,7 @@
                                         <property name="can_focus">False</property>
                                         <property name="orientation">vertical</property>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="PreviousTrackedChangeGroup">
+                                          <object class="sfxzh-NotebookbarToolBox" id="PreviousTrackedChangeGroup">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">both-horiz</property>
@@ -6770,7 +6770,7 @@
                                           </packing>
                                         </child>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="AcceptTrackedChangeGroup">
+                                          <object class="sfxzh-NotebookbarToolBox" id="AcceptTrackedChangeGroup">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">both-horiz</property>
@@ -6806,7 +6806,7 @@
                                         <property name="can_focus">False</property>
                                         <property name="orientation">vertical</property>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="NextTrackedChangeGroup">
+                                          <object class="sfxzh-NotebookbarToolBox" id="NextTrackedChangeGroup">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">both-horiz</property>
@@ -6830,7 +6830,7 @@
                                           </packing>
                                         </child>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="RejectTrackedChangeGroup">
+                                          <object class="sfxzh-NotebookbarToolBox" id="RejectTrackedChangeGroup">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">both-horiz</property>
@@ -6872,7 +6872,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="revieb:MenuReviews">
+                                      <object class="svtzh-ManagedMenuButton" id="revieb:MenuReviews">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|revieb">_Review</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -6889,7 +6889,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="third8">
+                                      <object class="sfxzh-NotebookbarToolBox" id="third8">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -6987,7 +6987,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="InsertAnnotationGroup">
+                                      <object class="sfxzh-NotebookbarToolBox" id="InsertAnnotationGroup">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="valign">center</property>
@@ -7019,7 +7019,7 @@
                                         <property name="can_focus">False</property>
                                         <property name="orientation">vertical</property>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="ReplyCommentGroup">
+                                          <object class="sfxzh-NotebookbarToolBox" id="ReplyCommentGroup">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">both-horiz</property>
@@ -7043,7 +7043,7 @@
                                           </packing>
                                         </child>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="DeleteCommentGroup">
+                                          <object class="sfxzh-NotebookbarToolBox" id="DeleteCommentGroup">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">both-horiz</property>
@@ -7085,7 +7085,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="commentsb:MenuComments">
+                                      <object class="svtzh-ManagedMenuButton" id="commentsb:MenuComments">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|commentsb">_Comments</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -7102,7 +7102,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="thirdExt17">
+                                      <object class="sfxzh-NotebookbarToolBox" id="thirdExt17">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -7189,7 +7189,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="ProtectTraceChangeModeGroup">
+                                      <object class="sfxzh-NotebookbarToolBox" id="ProtectTraceChangeModeGroup">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">center</property>
@@ -7222,7 +7222,7 @@
                                         <property name="can_focus">False</property>
                                         <property name="orientation">vertical</property>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="CompareDocumentsGroup1">
+                                          <object class="sfxzh-NotebookbarToolBox" id="CompareDocumentsGroup1">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">both-horiz</property>
@@ -7246,7 +7246,7 @@
                                           </packing>
                                         </child>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="MergeDocumentsGroup1">
+                                          <object class="sfxzh-NotebookbarToolBox" id="MergeDocumentsGroup1">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">both-horiz</property>
@@ -7288,7 +7288,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="compareb:MenuCompare">
+                                      <object class="svtzh-ManagedMenuButton" id="compareb:MenuCompare">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|compareb">Com_pare</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -7368,7 +7368,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="first42">
+                                      <object class="sfxzh-NotebookbarToolBox" id="first42">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">both-horiz</property>
@@ -7392,7 +7392,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="first43">
+                                      <object class="sfxzh-NotebookbarToolBox" id="first43">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -7429,7 +7429,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="second47">
+                                      <object class="sfxzh-NotebookbarToolBox" id="second47">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">both-horiz</property>
@@ -7453,7 +7453,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="second48">
+                                      <object class="sfxzh-NotebookbarToolBox" id="second48">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -7490,7 +7490,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="viewa:MenuView">
+                                      <object class="svtzh-ManagedMenuButton" id="viewa:MenuView">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|viewa">_View</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -7507,7 +7507,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="thirdExt20">
+                                      <object class="sfxzh-NotebookbarToolBox" id="thirdExt20">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -7574,7 +7574,7 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="sfxlo-PriorityMergedHBox" id="DrawBox">
+                  <object class="sfxzh-PriorityMergedHBox" id="DrawBox">
                     <property name="can_focus">False</property>
                     <child>
                       <object class="VclOptionalBox" id="SectionDraw">
@@ -7614,7 +7614,7 @@
                                         <property name="can_focus">False</property>
                                         <property name="orientation">vertical</property>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="shapes2">
+                                          <object class="sfxzh-NotebookbarToolBox" id="shapes2">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">both-horiz</property>
@@ -7638,7 +7638,7 @@
                                           </packing>
                                         </child>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="shapes4">
+                                          <object class="sfxzh-NotebookbarToolBox" id="shapes4">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">both-horiz</property>
@@ -7687,7 +7687,7 @@
                                         <property name="can_focus">False</property>
                                         <property name="orientation">vertical</property>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="shapes1">
+                                          <object class="sfxzh-NotebookbarToolBox" id="shapes1">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">icons</property>
@@ -7744,7 +7744,7 @@
                                           </packing>
                                         </child>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="shapes3">
+                                          <object class="sfxzh-NotebookbarToolBox" id="shapes3">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">icons</property>
@@ -7826,7 +7826,7 @@
                                         <property name="can_focus">False</property>
                                         <property name="orientation">vertical</property>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="shapes6">
+                                          <object class="sfxzh-NotebookbarToolBox" id="shapes6">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">icons</property>
@@ -7872,7 +7872,7 @@
                                           </packing>
                                         </child>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="shapes8">
+                                          <object class="sfxzh-NotebookbarToolBox" id="shapes8">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">icons</property>
@@ -7936,7 +7936,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="drawb:MenuDraw">
+                                      <object class="svtzh-ManagedMenuButton" id="drawb:MenuDraw">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|drawb">D_raw</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -7953,7 +7953,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="third3Ext3">
+                                      <object class="sfxzh-NotebookbarToolBox" id="third3Ext3">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -8045,7 +8045,7 @@
                                         <property name="can_focus">False</property>
                                         <property name="orientation">vertical</property>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="first33">
+                                          <object class="sfxzh-NotebookbarToolBox" id="first33">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">both-horiz</property>
@@ -8069,7 +8069,7 @@
                                           </packing>
                                         </child>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="second37">
+                                          <object class="sfxzh-NotebookbarToolBox" id="second37">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="halign">start</property>
@@ -8130,7 +8130,7 @@
                                         <property name="can_focus">False</property>
                                         <property name="orientation">vertical</property>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="third10">
+                                          <object class="sfxzh-NotebookbarToolBox" id="third10">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">text</property>
@@ -8154,7 +8154,7 @@
                                           </packing>
                                         </child>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="third13">
+                                          <object class="sfxzh-NotebookbarToolBox" id="third13">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">text</property>
@@ -8190,7 +8190,7 @@
                                         <property name="can_focus">False</property>
                                         <property name="orientation">vertical</property>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="first41">
+                                          <object class="sfxzh-NotebookbarToolBox" id="first41">
                                             <property name="visible">True</property>
                                             <property name="can_focus">False</property>
                                             <property name="toolbar_style">icons</property>
@@ -8251,7 +8251,7 @@
                                           </packing>
                                         </child>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="SectionBottom29">
+                                          <object class="sfxzh-NotebookbarToolBox" id="SectionBottom29">
                                             <property name="width_request">200</property>
                                             <property name="visible">True</property>
                                             <property name="can_focus">False</property>
@@ -8305,7 +8305,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="editdrawb:MenuDrawEdit">
+                                      <object class="svtzh-ManagedMenuButton" id="editdrawb:MenuDrawEdit">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|editdrawb">_Edit</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -8322,7 +8322,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="third11">
+                                      <object class="sfxzh-NotebookbarToolBox" id="third11">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -8439,7 +8439,7 @@
                                         <property name="can_focus">False</property>
                                         <property name="orientation">vertical</property>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="Wrap4">
+                                          <object class="sfxzh-NotebookbarToolBox" id="Wrap4">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">icons</property>
@@ -8474,7 +8474,7 @@
                                           </packing>
                                         </child>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="Align3">
+                                          <object class="sfxzh-NotebookbarToolBox" id="Align3">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="valign">end</property>
@@ -8536,7 +8536,7 @@
                                         <property name="can_focus">False</property>
                                         <property name="orientation">vertical</property>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="OneStep5">
+                                          <object class="sfxzh-NotebookbarToolBox" id="OneStep5">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">icons</property>
@@ -8582,7 +8582,7 @@
                                           </packing>
                                         </child>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="BackgroundFront4">
+                                          <object class="sfxzh-NotebookbarToolBox" id="BackgroundFront4">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">icons</property>
@@ -8646,7 +8646,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="arrangedrawb:MenuArrange">
+                                      <object class="svtzh-ManagedMenuButton" id="arrangedrawb:MenuArrange">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|arrangedrawb">_Arrange</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -8663,7 +8663,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="thirdExt21">
+                                      <object class="sfxzh-NotebookbarToolBox" id="thirdExt21">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -8750,7 +8750,7 @@
                                 <property name="vexpand">True</property>
                                 <property name="orientation">vertical</property>
                                 <child>
-                                  <object class="sfxlo-NotebookbarToolBox" id="first34">
+                                  <object class="sfxzh-NotebookbarToolBox" id="first34">
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
                                     <property name="toolbar_style">both-horiz</property>
@@ -8774,7 +8774,7 @@
                                   </packing>
                                 </child>
                                 <child>
-                                  <object class="sfxlo-NotebookbarToolBox" id="second38">
+                                  <object class="sfxzh-NotebookbarToolBox" id="second38">
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
                                     <property name="toolbar_style">icons</property>
@@ -8813,7 +8813,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="GridDrawB:MenuGrid">
+                                      <object class="svtzh-ManagedMenuButton" id="GridDrawB:MenuGrid">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|GridDrawB">_View</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -8893,7 +8893,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="first45">
+                                      <object class="sfxzh-NotebookbarToolBox" id="first45">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">both-horiz</property>
@@ -8917,7 +8917,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="first46">
+                                      <object class="sfxzh-NotebookbarToolBox" id="first46">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -8954,7 +8954,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="second50">
+                                      <object class="sfxzh-NotebookbarToolBox" id="second50">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">both-horiz</property>
@@ -8978,7 +8978,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="second51">
+                                      <object class="sfxzh-NotebookbarToolBox" id="second51">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -9015,7 +9015,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="viewDrawb:MenuGroup">
+                                      <object class="svtzh-ManagedMenuButton" id="viewDrawb:MenuGroup">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|viewDrawb">Grou_p</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -9091,7 +9091,7 @@
                                 <property name="vexpand">True</property>
                                 <property name="orientation">vertical</property>
                                 <child>
-                                  <object class="sfxlo-NotebookbarToolBox" id="first38">
+                                  <object class="sfxzh-NotebookbarToolBox" id="first38">
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
                                     <property name="toolbar_style">both-horiz</property>
@@ -9115,7 +9115,7 @@
                                   </packing>
                                 </child>
                                 <child>
-                                  <object class="sfxlo-NotebookbarToolBox" id="second39">
+                                  <object class="sfxzh-NotebookbarToolBox" id="second39">
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <property name="toolbar_style">icons</property>
@@ -9165,7 +9165,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="3Db:Menu3D">
+                                      <object class="svtzh-ManagedMenuButton" id="3Db:Menu3D">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|3Db">3_D</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -9182,7 +9182,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="thirdExt16">
+                                      <object class="sfxzh-NotebookbarToolBox" id="thirdExt16">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -9261,7 +9261,7 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="sfxlo-PriorityMergedHBox" id="DrawTextBox">
+                  <object class="sfxzh-PriorityMergedHBox" id="DrawTextBox">
                     <property name="can_focus">False</property>
                     <child>
                       <object class="VclOptionalBox" id="SectionFormat1">
@@ -9301,7 +9301,7 @@
                                         <property name="can_focus">False</property>
                                         <property name="orientation">vertical</property>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="first35">
+                                          <object class="sfxzh-NotebookbarToolBox" id="first35">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">icons</property>
@@ -9325,7 +9325,7 @@
                                           </packing>
                                         </child>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="second36">
+                                          <object class="sfxzh-NotebookbarToolBox" id="second36">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="halign">start</property>
@@ -9395,7 +9395,7 @@
                                         <property name="can_focus">False</property>
                                         <property name="orientation">vertical</property>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="first36">
+                                          <object class="sfxzh-NotebookbarToolBox" id="first36">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">icons</property>
@@ -9419,7 +9419,7 @@
                                           </packing>
                                         </child>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="second41">
+                                          <object class="sfxzh-NotebookbarToolBox" id="second41">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="halign">end</property>
@@ -9474,7 +9474,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="formatd:MenuFormat">
+                                      <object class="svtzh-ManagedMenuButton" id="formatd:MenuFormat">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|formatd">F_ont</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -9491,7 +9491,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="thirdExt14">
+                                      <object class="sfxzh-NotebookbarToolBox" id="thirdExt14">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -9529,7 +9529,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="thirdExt15">
+                                      <object class="sfxzh-NotebookbarToolBox" id="thirdExt15">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">icons</property>
@@ -9621,7 +9621,7 @@
                                 <property name="vexpand">True</property>
                                 <property name="orientation">vertical</property>
                                 <child>
-                                  <object class="sfxlo-NotebookbarToolBox" id="second43">
+                                  <object class="sfxzh-NotebookbarToolBox" id="second43">
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
                                     <property name="toolbar_style">icons</property>
@@ -9678,7 +9678,7 @@
                                   </packing>
                                 </child>
                                 <child>
-                                  <object class="sfxlo-NotebookbarToolBox" id="first37">
+                                  <object class="sfxzh-NotebookbarToolBox" id="first37">
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
                                     <property name="toolbar_style">icons</property>
@@ -9739,7 +9739,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="paragraphTextb:MenuParagraph">
+                                      <object class="svtzh-ManagedMenuButton" id="paragraphTextb:MenuParagraph">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|paragraphTextb">_Alignment</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -9787,7 +9787,7 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="sfxlo-DropdownBox" id="SectionView1">
+                      <object class="sfxzh-DropdownBox" id="SectionView1">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <child>
@@ -9819,7 +9819,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="first44">
+                                      <object class="sfxzh-NotebookbarToolBox" id="first44">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">both-horiz</property>
@@ -9843,7 +9843,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="first51">
+                                      <object class="sfxzh-NotebookbarToolBox" id="first51">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -9880,7 +9880,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="second42">
+                                      <object class="sfxzh-NotebookbarToolBox" id="second42">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">both-horiz</property>
@@ -9904,7 +9904,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="second46">
+                                      <object class="sfxzh-NotebookbarToolBox" id="second46">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -9941,7 +9941,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="viewd:MenuView">
+                                      <object class="svtzh-ManagedMenuButton" id="viewd:MenuView">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|viewd">_View</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -9958,7 +9958,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="thirdExt18">
+                                      <object class="sfxzh-NotebookbarToolBox" id="thirdExt18">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -10015,7 +10015,7 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="sfxlo-DropdownBox" id="SectionInsert1">
+                      <object class="sfxzh-DropdownBox" id="SectionInsert1">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <child>
@@ -10043,7 +10043,7 @@
                                 <property name="vexpand">True</property>
                                 <property name="orientation">vertical</property>
                                 <child>
-                                  <object class="sfxlo-NotebookbarToolBox" id="first39">
+                                  <object class="sfxzh-NotebookbarToolBox" id="first39">
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
                                     <property name="toolbar_style">both-horiz</property>
@@ -10067,7 +10067,7 @@
                                   </packing>
                                 </child>
                                 <child>
-                                  <object class="sfxlo-NotebookbarToolBox" id="second44">
+                                  <object class="sfxzh-NotebookbarToolBox" id="second44">
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
                                     <property name="toolbar_style">both-horiz</property>
@@ -10095,7 +10095,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="insertTextb:MenuInsert">
+                                      <object class="svtzh-ManagedMenuButton" id="insertTextb:MenuInsert">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|insertTextb">_Insert</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -10112,7 +10112,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="thirdExt19">
+                                      <object class="sfxzh-NotebookbarToolBox" id="thirdExt19">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -10180,7 +10180,7 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="sfxlo-PriorityMergedHBox" id="MediaBox">
+                  <object class="sfxzh-PriorityMergedHBox" id="MediaBox">
                     <property name="can_focus">False</property>
                     <child>
                       <object class="VclOptionalBox" id="SectionAlignment1">
@@ -10211,7 +10211,7 @@
                                 <property name="vexpand">True</property>
                                 <property name="orientation">vertical</property>
                                 <child>
-                                  <object class="sfxlo-NotebookbarToolBox" id="first22">
+                                  <object class="sfxzh-NotebookbarToolBox" id="first22">
                                     <property name="width_request">840</property>
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
@@ -10240,7 +10240,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="media:MenuMedia">
+                                      <object class="svtzh-ManagedMenuButton" id="media:MenuMedia">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|media">_Media</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -10257,7 +10257,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="thirdExt23">
+                                      <object class="sfxzh-NotebookbarToolBox" id="thirdExt23">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -10336,7 +10336,7 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="sfxlo-PriorityMergedHBox" id="OLEBox">
+                  <object class="sfxzh-PriorityMergedHBox" id="OLEBox">
                     <property name="can_focus">False</property>
                     <child>
                       <object class="VclOptionalBox" id="SectionGraphic2">
@@ -10367,7 +10367,7 @@
                                 <property name="vexpand">True</property>
                                 <property name="orientation">vertical</property>
                                 <child>
-                                  <object class="sfxlo-NotebookbarToolBox" id="SectionBottom1">
+                                  <object class="sfxzh-NotebookbarToolBox" id="SectionBottom1">
                                     <property name="width_request">200</property>
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
@@ -10396,7 +10396,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="first47">
+                                      <object class="sfxzh-NotebookbarToolBox" id="first47">
                                         <property name="visible">True</property>
                                         <property name="can_focus">False</property>
                                         <property name="toolbar_style">both-horiz</property>
@@ -10420,7 +10420,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="second40">
+                                      <object class="sfxzh-NotebookbarToolBox" id="second40">
                                         <property name="visible">True</property>
                                         <property name="can_focus">False</property>
                                         <property name="toolbar_style">icons</property>
@@ -10477,7 +10477,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="oleB:MenuOLE">
+                                      <object class="svtzh-ManagedMenuButton" id="oleB:MenuOLE">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|oleB">F_rame</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -10494,7 +10494,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="third3Ext5">
+                                      <object class="sfxzh-NotebookbarToolBox" id="third3Ext5">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -10586,7 +10586,7 @@
                                         <property name="can_focus">False</property>
                                         <property name="orientation">vertical</property>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="Wrap6">
+                                          <object class="sfxzh-NotebookbarToolBox" id="Wrap6">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">icons</property>
@@ -10632,7 +10632,7 @@
                                           </packing>
                                         </child>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="Wrap7">
+                                          <object class="sfxzh-NotebookbarToolBox" id="Wrap7">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">icons</property>
@@ -10703,7 +10703,7 @@
                                         <property name="can_focus">False</property>
                                         <property name="orientation">vertical</property>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="Align5">
+                                          <object class="sfxzh-NotebookbarToolBox" id="Align5">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">icons</property>
@@ -10749,7 +10749,7 @@
                                           </packing>
                                         </child>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="Align6">
+                                          <object class="sfxzh-NotebookbarToolBox" id="Align6">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">icons</property>
@@ -10820,7 +10820,7 @@
                                         <property name="can_focus">False</property>
                                         <property name="orientation">vertical</property>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="OneStep2">
+                                          <object class="sfxzh-NotebookbarToolBox" id="OneStep2">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">icons</property>
@@ -10855,7 +10855,7 @@
                                           </packing>
                                         </child>
                                         <child>
-                                          <object class="sfxlo-NotebookbarToolBox" id="BackgroundFront1">
+                                          <object class="sfxzh-NotebookbarToolBox" id="BackgroundFront1">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="toolbar_style">icons</property>
@@ -10908,7 +10908,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="arrageOLE:MenuArrange">
+                                      <object class="svtzh-ManagedMenuButton" id="arrageOLE:MenuArrange">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|arrageOLE">_Arrange</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -10925,7 +10925,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="thirdExt24">
+                                      <object class="sfxzh-NotebookbarToolBox" id="thirdExt24">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -11011,7 +11011,7 @@
                                 <property name="vexpand">True</property>
                                 <property name="orientation">vertical</property>
                                 <child>
-                                  <object class="sfxlo-NotebookbarToolBox" id="first48">
+                                  <object class="sfxzh-NotebookbarToolBox" id="first48">
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
                                     <property name="toolbar_style">both-horiz</property>
@@ -11035,7 +11035,7 @@
                                   </packing>
                                 </child>
                                 <child>
-                                  <object class="sfxlo-NotebookbarToolBox" id="second49">
+                                  <object class="sfxzh-NotebookbarToolBox" id="second49">
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
                                     <property name="toolbar_style">icons</property>
@@ -11074,7 +11074,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="OleGridB:MenuGrid">
+                                      <object class="svtzh-ManagedMenuButton" id="OleGridB:MenuGrid">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|OleGridB">_Grid</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -11154,7 +11154,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="first49">
+                                      <object class="sfxzh-NotebookbarToolBox" id="first49">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">both-horiz</property>
@@ -11178,7 +11178,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="first50">
+                                      <object class="sfxzh-NotebookbarToolBox" id="first50">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -11215,7 +11215,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="second52">
+                                      <object class="sfxzh-NotebookbarToolBox" id="second52">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="toolbar_style">both-horiz</property>
@@ -11239,7 +11239,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="second53">
+                                      <object class="sfxzh-NotebookbarToolBox" id="second53">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>
@@ -11276,7 +11276,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <child>
-                                      <object class="svtlo-ManagedMenuButton" id="viewf:MenuView">
+                                      <object class="svtzh-ManagedMenuButton" id="viewf:MenuView">
                                         <property name="label" translatable="yes" context="notebookbar_groupedbar_full|viewf">_View</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -11293,7 +11293,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="sfxlo-NotebookbarToolBox" id="thirdExt25">
+                                      <object class="sfxzh-NotebookbarToolBox" id="thirdExt25">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
                                         <property name="halign">end</property>

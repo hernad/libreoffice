@@ -34,11 +34,11 @@ endif
 ifeq ($(OS),MACOSX)
 gb_Executable_FILENAMES := $(patsubst soffice_bin:soffice_bin,soffice_bin:soffice,$(gb_Executable_FILENAMES))
 else
-gb_Executable_FILENAMES := $(patsubst soffice_bin:soffice_bin%,soffice_bin:soffice.bin,$(gb_Executable_FILENAMES))
+gb_Executable_FILENAMES := $(patsubst soffice_bin:soffice_bin%,soffice_bin:zoffice.bin,$(gb_Executable_FILENAMES))
 endif
 
-gb_Executable_FILENAMES := $(patsubst soffice_exe:soffice_exe%,soffice_exe:soffice.exe,$(gb_Executable_FILENAMES))
-gb_Executable_FILENAMES := $(patsubst soffice_com:soffice_com%,soffice_com:soffice.com,$(gb_Executable_FILENAMES))
+gb_Executable_FILENAMES := $(patsubst soffice_exe:soffice_exe%,soffice_exe:zoffice.exe,$(gb_Executable_FILENAMES))
+gb_Executable_FILENAMES := $(patsubst soffice_com:soffice_com%,soffice_com:zoffice.com,$(gb_Executable_FILENAMES))
 
 gb_Executable_FILENAMES_FOR_BUILD := $(subst $(gb_Executable_EXT),$(gb_Executable_EXT_for_build),$(gb_Executable_FILENAMES))
 

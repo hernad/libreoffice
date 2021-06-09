@@ -73,6 +73,10 @@
 #include <tools/svlibrary.h>
 #include <jsdialog/jsdialogbuilder.hxx>
 
+#include <string>
+#define concatc_str(first, second) (std::string(first) + std::string(second)).c_str()
+
+
 #if defined(DISABLE_DYNLOADING) || defined(LINUX)
 #include <dlfcn.h>
 #endif
@@ -1659,7 +1663,8 @@ VclBuilder::customMakeWidget GetCustomMakeWidget(const OString& rName)
                         assert(ok && "couldn't even directly dlsym the sFunction (available via preload)");
                     }
 #endif
-                    assert(ok && "bad module name in .ui");
+                    SAL_WARN("vcl", "modul " << sModule);
+                    assert(ok && "bad module name in .ui ");
                 }
                 else
                 {
@@ -2175,7 +2180,7 @@ VclPtr<vcl::Window> VclBuilder::makeObject(vcl::Window *pParent, const OString &
     }
     else if(name == "NotebookBarAddonsToolMergePoint")
     {
-        customMakeWidget pFunction = GetCustomMakeWidget("sfxlo-NotebookbarToolBox");
+        customMakeWidget pFunction = GetCustomMakeWidget("sfxzh-NotebookbarToolBox");
         if(pFunction != nullptr)
             NotebookBarAddonsMerger::MergeNotebookBarAddons(pParent, pFunction, m_xFrame, *m_pNotebookBarAddonsItem, rMap);
         return nullptr;
