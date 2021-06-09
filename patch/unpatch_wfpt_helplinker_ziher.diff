@@ -1,0 +1,82 @@
+diff --git a/Repository.mk b/Repository.mk
+index ef98d30cdc70..6380eeeedca9 100644
+--- a/Repository.mk
++++ b/Repository.mk
+@@ -253,7 +253,7 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,calc, \
+ 	scd \
+ 	scfilt \
+ 	scui \
+-	$(call gb_Helper_optional,WPFT,wpftcalc) \
++	$(call gb_Helper_optional,DESKTOP,wpftcalc) \
+ 	solver \
+ 	$(call gb_Helper_optional,SCRIPTING,vbaobj) \
+ ))
+@@ -367,7 +367,7 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,ooo, \
+ 	fwk \
+ 	$(if $(filter WNT,$(OS)),gdipluscanvas) \
+ 	guesslang \
+-	$(if $(filter HELP,$(BUILD_TYPE)),helplinker) \
++	$(if $(filter DESKTOP,$(BUILD_TYPE)),helplinker) \
+ 	i18npool \
+ 	i18nsearch \
+     gie \
+@@ -445,9 +445,7 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,ooo, \
+ 	) \
+ 	vcl \
+ 	vclcanvas \
+-	$(if $(ENABLE_WRITERPERFECT), \
+-		writerperfect \
+-	) \
++	writerperfect \
+ 	xmlscript \
+ 	xmlfa \
+ 	xmlfd \
+@@ -517,7 +515,7 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,writer, \
+ 	swui \
+ 	t602filter \
+ 	$(call gb_Helper_optional,SCRIPTING,vbaswobj) \
+-	$(call gb_Helper_optional,WPFT,wpftwriter) \
++	$(call gb_Helper_optional,DESKTOP,wpftwriter) \
+ 	$(call gb_Helper_optional,DBCONNECTIVITY,writer) \
+ ))
+ 
+@@ -1001,7 +999,7 @@ $(eval $(call gb_Helper_register_packages_for_install,ooo_fonts,\
+ 
+ $(eval $(call gb_Helper_register_packages_for_install,ooo_images,\
+ 	postprocess_images \
+-	$(call gb_Helper_optional,HELP,helpcontent2_helpimages) \
++	$(call gb_Helper_optional,DESKTOP,helpcontent2_helpimages) \
+ ))
+ 
+ $(eval $(call gb_Helper_register_packages_for_install,ogltrans,\
+@@ -1179,7 +1177,7 @@ $(eval $(call gb_Helper_register_uiconfigs,\
+ 	svx \
+ 	uui \
+ 	vcl \
+-	$(if $(ENABLE_WFP),writerperfect) \
++	writerperfect \
+ 	$(if $(ENABLE_NSS),xmlsec) \
+ ))
+ 
+diff --git a/instsetoo_native/CustomTarget_install.mk b/instsetoo_native/CustomTarget_install.mk
+index b9991d208dd4..a241cdee7ebe 100644
+--- a/instsetoo_native/CustomTarget_install.mk
++++ b/instsetoo_native/CustomTarget_install.mk
+@@ -121,7 +121,7 @@ else # LIBO_TEST_INSTALL
+ ifeq (ODK,$(filter ODK,$(BUILD_TYPE)))
+ 	$(call instsetoo_native_install_command,sdkoo,en-US,_SDK,,$(PKGFORMAT))
+ endif
+-ifeq (HELP,$(filter HELP,$(BUILD_TYPE))$(filter MACOSX,$(OS)))
++ifeq (DESKTOP,$(filter DESKTOP,$(BUILD_TYPE))$(filter MACOSX,$(OS)))
+ 	$(foreach lang,$(gb_HELP_LANGS),\
+ 		$(call instsetoo_native_install_command,ooohelppack,$(lang),,-helppack,$(PKGFORMAT)))
+ endif
+@@ -135,7 +135,7 @@ endif # LIBO_TEST_INSTALL
+ 
+ TIMESTAMPURL ?= "http://timestamp.globalsign.com/scripts/timestamp.dll"
+ $(call gb_CustomTarget_get_workdir,instsetoo_native/install)/msi_signing.done: \
+-        $(if $(filter HELP,$(BUILD_TYPE)),$(call gb_CustomTarget_get_workdir,instsetoo_native/install)/msi_helppack_signing.done) \
++        $(if $(filter DESKTOP,$(BUILD_TYPE)),$(call gb_CustomTarget_get_workdir,instsetoo_native/install)/msi_helppack_signing.done) \
+         $(if $(filter ODK,$(BUILD_TYPE)),$(call gb_CustomTarget_get_workdir,instsetoo_native/install)/msi_sdk_signing.done) \
+         $(call gb_CustomTarget_get_workdir,instsetoo_native/install)/msi_main_signing.done
+ 	$(call gb_Output_announce,$(subst $(WORKDIR)/,,$@),$(true),PRL,2)

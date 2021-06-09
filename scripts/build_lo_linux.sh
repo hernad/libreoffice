@@ -4,7 +4,7 @@
 #ENVARS_ONLY=0 MAKE_ONLY=0 PARALLELISM=12 scripts/build_lo_linux.sh
 
 echo "========== fedora ====================="
-echo "sudo dnf install libICE-devel libSM-devel libXt-devel gstreamer1-devel ant"
+echo "sudo dnf install libICE-devel libSM-devel libXt-devel gstreamer1-devel ant nasm"
 
 
 THEME=colibre
@@ -12,6 +12,8 @@ THEME=colibre
 
 LO_PRODUCT_NAME=ZiherO
 LO_PRODUCT_VERSION=7.1.5.100
+#RELEASE="--enable-release-build"
+RELEASE="--enable-debug"
 
 #LO_DEBUG=" --enable-dbgutil"
 
@@ -167,28 +169,29 @@ rm -f config_host/*.h
 
 DISABLE="--disable-breakpad --disable-ldap  --disable-gstreamer-1-0"
 
+#DISABLE+=" --disable-lpsolve --disable-coinmp"
+
+DISABLE+=" --disable-sdremote --disable-sdremote-bluetooth"
+
+DISABLE+=" --disable-scripting-beanshell --disable-scripting-javascript"
+
 ./autogen.sh --with-lang="bs" \
    $ENABLE_64_BIT --with-locales="bs" \
    $TLS_METHOD \
+   --disable-community-flavor \
    --with-vendor="hernad" \
    --with-theme="$THEME" \
     --with-visual-studio=$VS_VERSION \
     --without-doxygen \
     --with-product-name="$LO_PRODUCT_NAME" \
     --with-package-version="$LO_PRODUCT_VERSION" \
-    --enable-release-build \
-    --disable-scripting-beanshell \
-    --disable-scripting-javascript \
+    $RELEASE \
     --disable-lotuswordpro \
     --disable-firebird-sdbc \
     --disable-cve-tests $ODK_FEATURE $GALLERY \
     --disable-report-builder \
-    --disable-lpsolve \
-    --disable-coinmp \
     --with-help=no \
     --disable-online-update \
-    --disable-sdremote \
-    --disable-sdremote-bluetooth \
     $EXTENSIONS $PDF_IMPORT $WEBDAV $WITH_SYSTEM $LO_DEBUG $SKIA_FEATURE $JAVA_FEATURE \
     $DISABLE
 
