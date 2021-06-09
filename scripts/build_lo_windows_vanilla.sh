@@ -196,30 +196,30 @@ rm -f config_host.mk
 rm -f config_host/*.h
 
 #   --with-theme="$THEME"
+DISABLE="--disable-breakpad --disable-lpsolve --disable-coinmp"
+DISABLE+=" --disable-sdremote --disable-sdremote-bluetooth"
+
+DISABLE+=" --disable-scripting-beanshell --disable-scripting-javascript"
+DISABLE+=" --disable-lotuswordpro --disable-firebird-sdbc"
+
+DISABLE+=" --disable-report-builder"
+
 
 ./autogen.sh --with-lang="bs" \
    $ENABLE_64_BIT --with-locales="bs" \
    $TLS_METHOD \
+     --disable-community-flavor \
     --with-vendor="hernad" \
     --with-visual-studio=$VS_VERSION \
     --without-doxygen \
     --with-product-name="$LO_PRODUCT_NAME" \
     --with-package-version="$LO_PRODUCT_VERSION" \
     --enable-release-build \
-    --disable-scripting-beanshell \
-    --disable-scripting-javascript \
-    --disable-lotuswordpro \
-    --disable-firebird-sdbc \
     --disable-cve-tests $ODK_FEATURE $GALLERY \
-    --disable-report-builder \
-    --disable-lpsolve \
-    --disable-coinmp \
     --with-help=no \
     --disable-online-update \
-    --disable-sdremote \
-    --disable-sdremote-bluetooth \
     $EXTENSIONS $PDF_IMPORT $WEBDAV $WITH_SYSTEM $LO_DEBUG $SKIA_FEATURE $JAVA_FEATURE \
-    --enable-breakpad       #Enables breakpad for crash reporting.
+    $DISABLE      
 
 fi
 
