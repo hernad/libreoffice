@@ -121,7 +121,7 @@ else # LIBO_TEST_INSTALL
 ifeq (ODK,$(filter ODK,$(BUILD_TYPE)))
 	$(call instsetoo_native_install_command,sdkoo,en-US,_SDK,,$(PKGFORMAT))
 endif
-ifeq (HELP,$(filter HELP,$(BUILD_TYPE))$(filter MACOSX,$(OS)))
+ifeq (DESKTOP,$(filter DESKTOP,$(BUILD_TYPE))$(filter MACOSX,$(OS)))
 	$(foreach lang,$(gb_HELP_LANGS),\
 		$(call instsetoo_native_install_command,ooohelppack,$(lang),,-helppack,$(PKGFORMAT)))
 endif
@@ -135,7 +135,7 @@ endif # LIBO_TEST_INSTALL
 
 TIMESTAMPURL ?= "http://timestamp.globalsign.com/scripts/timestamp.dll"
 $(call gb_CustomTarget_get_workdir,instsetoo_native/install)/msi_signing.done: \
-        $(if $(filter HELP,$(BUILD_TYPE)),$(call gb_CustomTarget_get_workdir,instsetoo_native/install)/msi_helppack_signing.done) \
+        $(if $(filter DESKTOP,$(BUILD_TYPE)),$(call gb_CustomTarget_get_workdir,instsetoo_native/install)/msi_helppack_signing.done) \
         $(if $(filter ODK,$(BUILD_TYPE)),$(call gb_CustomTarget_get_workdir,instsetoo_native/install)/msi_sdk_signing.done) \
         $(call gb_CustomTarget_get_workdir,instsetoo_native/install)/msi_main_signing.done
 	$(call gb_Output_announce,$(subst $(WORKDIR)/,,$@),$(true),PRL,2)

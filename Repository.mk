@@ -253,7 +253,7 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,calc, \
 	scd \
 	scfilt \
 	scui \
-	$(call gb_Helper_optional,WPFT,wpftcalc) \
+	$(call gb_Helper_optional,DESKTOP,wpftcalc) \
 	solver \
 	$(call gb_Helper_optional,SCRIPTING,vbaobj) \
 ))
@@ -367,7 +367,7 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,ooo, \
 	fwk \
 	$(if $(filter WNT,$(OS)),gdipluscanvas) \
 	guesslang \
-	$(if $(filter HELP,$(BUILD_TYPE)),helplinker) \
+	$(if $(filter DESKTOP,$(BUILD_TYPE)),helplinker) \
 	i18npool \
 	i18nsearch \
     gie \
@@ -445,9 +445,7 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,ooo, \
 	) \
 	vcl \
 	vclcanvas \
-	$(if $(ENABLE_WRITERPERFECT), \
-		writerperfect \
-	) \
+	writerperfect \
 	xmlscript \
 	xmlfa \
 	xmlfd \
@@ -517,7 +515,7 @@ $(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,writer, \
 	swui \
 	t602filter \
 	$(call gb_Helper_optional,SCRIPTING,vbaswobj) \
-	$(call gb_Helper_optional,WPFT,wpftwriter) \
+	$(call gb_Helper_optional,DESKTOP,wpftwriter) \
 	$(call gb_Helper_optional,DBCONNECTIVITY,writer) \
 ))
 
@@ -1001,7 +999,7 @@ $(eval $(call gb_Helper_register_packages_for_install,ooo_fonts,\
 
 $(eval $(call gb_Helper_register_packages_for_install,ooo_images,\
 	postprocess_images \
-	$(call gb_Helper_optional,HELP,helpcontent2_helpimages) \
+	$(call gb_Helper_optional,DESKTOP,helpcontent2_helpimages) \
 ))
 
 $(eval $(call gb_Helper_register_packages_for_install,ogltrans,\
@@ -1179,7 +1177,7 @@ $(eval $(call gb_Helper_register_uiconfigs,\
 	svx \
 	uui \
 	vcl \
-	$(if $(ENABLE_WFP),writerperfect) \
+	writerperfect \
 	$(if $(ENABLE_NSS),xmlsec) \
 ))
 
